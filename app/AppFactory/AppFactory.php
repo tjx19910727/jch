@@ -11,6 +11,7 @@ namespace app\AppFactory;
 
 /**
  * Class AppFactory
+ * @method static Management\Application       management($user = [])  管理端
  * @package app\AppFactory
  */
 class AppFactory

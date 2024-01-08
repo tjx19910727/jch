@@ -17,11 +17,16 @@ return [
     // 多语言header变量
     'header_var'      => 'think-lang',
     // 扩展语言包
-    'extend_list'     => [],
+    'extend_list'     => [
+        'zh-cn' => [
+            app()->getBasePath() . 'lang/zh-cn/app.php',
+
+        ],
+    ],
     // Accept-Language转义为对应语言包名称
     'accept_language' => [
         'zh-hans-cn' => 'zh-cn',
     ],
     // 是否支持语言分组
-    'allow_group'     => false,
+    'allow_group'     => true,
 ];

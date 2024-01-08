@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits;
 
 
 use app\AppFactory\Kernel\Support\Qr;
+use think\facade\Lang;
 
 trait ManagementTrait
 {
@@ -51,7 +52,7 @@ trait ManagementTrait
     public function getList($where = [],$pageNum = 0, $field = "*", $order = "",$rQ = 1)
     {
         $this->getController($controller);
-        if (!$controller) return $this->rFail("控制器名不能为空");
+        if (!$controller) return $this->rFail(Lang::get("controller_name_require"));
         $action = "get" . $controller . "List";
         $data = $this->$action($where,$pageNum,$field,$order);
         if ($rQ)
@@ -70,7 +71,7 @@ trait ManagementTrait
     public function add($insert,$rA = 1)
     {
         $this->getController($controller);
-        if (!$controller) return $this->rFail("控制器名不能为空");
+        if (!$controller) return $this->rFail(Lang::get("controller_name_require"));
 //        $action = request()->action();
 //        $check = $this->checkFrequency($controller . ucwords($action));
 //        if ($check !== true) return $check;
@@ -92,7 +93,7 @@ trait ManagementTrait
     public function update($update,$where = [],$field = [],$rU = 1)
     {
         $this->getController($controller);
-        if (!$controller) return $this->rFail("控制器名不能为空");
+        if (!$controller) return $this->rFail(Lang::get("controller_name_require"));
 //        $action = request()->action();
 //        $check = $this->checkFrequency($controller . ucwords($action));
 //        if ($check !== true) return $check;
@@ -112,7 +113,7 @@ trait ManagementTrait
     public function isDel($where,$rU = 1)
     {
         $this->getController($controller);
-        if (!$controller) return $this->rFail("控制器名不能为空");
+        if (!$controller) return $this->rFail(Lang::get("controller_name_require"));
         $action = "update" . $controller;
         $result = $this->$action(["is_del" => 1],$where,["is_del"]);
         if ($rU) return $this->rU($result);
@@ -129,7 +130,7 @@ trait ManagementTrait
     public function del($where,$rD = 1)
     {
         $this->getController($controller);
-        if (!$controller) return $this->rFail("控制器名不能为空");
+        if (!$controller) return $this->rFail(Lang::get("controller_name_require"));
         $action = "del" . $controller;
         $result = $this->$action($where);
         if ($rD) return $this->rD($result);

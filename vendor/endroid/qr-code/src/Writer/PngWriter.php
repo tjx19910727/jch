@@ -2,175 +2,216 @@
 
 declare(strict_types=1);
 
-/*
- * (c) Jeroen van den Enden <info@endroid.nl>
- *
- * This source file is subject to the MIT license that is bundled
- * with this source code in the file LICENSE.
- */
-
 namespace Endroid\QrCode\Writer;
 
-use Endroid\QrCode\Exception\MissingFunctionException;
+use Endroid\QrCode\Bacon\MatrixFactory;
 use Endroid\QrCode\Exception\ValidationException;
-use Endroid\QrCode\LabelAlignment;
+use Endroid\QrCode\ImageData\LabelImageData;
+use Endroid\QrCode\ImageData\LogoImageData;
+use Endroid\QrCode\Label\Alignment\LabelAlignmentLeft;
+use Endroid\QrCode\Label\Alignment\LabelAlignmentRight;
+use Endroid\QrCode\Label\LabelInterface;
+use Endroid\QrCode\Logo\LogoInterface;
 use Endroid\QrCode\QrCodeInterface;
+use Endroid\QrCode\RoundBlockSizeMode\RoundBlockSizeModeNone;
+use Endroid\QrCode\Writer\Result\PngResult;
+use Endroid\QrCode\Writer\Result\ResultInterface;
 use Zxing\QrReader;
 
-class PngWriter extends AbstractWriter
+final class PngWriter implements WriterInterface, ValidatingWriterInterface
 {
-    public function writeString(QrCodeInterface $qrCode): string
+    public function write(QrCodeInterface $qrCode, LogoInterface $logo = null, LabelInterface $label = null, array $options = []): ResultInterface
     {
-        $image = $this->createImage($qrCode->getData(), $qrCode);
-
-        if ($qrCode->getLogoPath()) {
-            $image = $this->addLogo($image, $qrCode->getLogoPath(), $qrCode->getLogoWidth(), $qrCode->getLogoHeight());
+        if (!extension_loaded('gd')) {
+            throw new \Exception('Unable to generate image: please check if the GD extension is enabled and configured correctly');
         }
 
-        if ($qrCode->getLabel()) {
-            $image = $this->addLabel($image, $qrCode->getLabel(), $qrCode->getLabelFontPath(), $qrCode->getLabelFontSize(), $qrCode->getLabelAlignment(), $qrCode->getLabelMargin(), $qrCode->getForegroundColor(), $qrCode->getBackgroundColor());
+        $matrixFactory = new MatrixFactory();
+        $matrix = $matrixFactory->create($qrCode);
+
+        $baseBlockSize = $qrCode->getRoundBlockSizeMode() instanceof RoundBlockSizeModeNone ? 10 : intval($matrix->getBlockSize());
+        $baseImage = imagecreatetruecolor($matrix->getBlockCount() * $baseBlockSize, $matrix->getBlockCount() * $baseBlockSize);
+
+        if (!$baseImage) {
+            throw new \Exception('Unable to generate image: please check if the GD extension is enabled and configured correctly');
         }
 
-        $string = $this->imageToString($image);
+        /** @var int $foregroundColor */
+        $foregroundColor = imagecolorallocatealpha(
+            $baseImage,
+            $qrCode->getForegroundColor()->getRed(),
+            $qrCode->getForegroundColor()->getGreen(),
+            $qrCode->getForegroundColor()->getBlue(),
+            $qrCode->getForegroundColor()->getAlpha()
+        );
 
-        if ($qrCode->getValidateResult()) {
-            $reader = new QrReader($string, QrReader::SOURCE_TYPE_BLOB);
-            if ($reader->text() !== $qrCode->getText()) {
-                throw new ValidationException(
-                    'Built-in validation reader read "'.$reader->text().'" instead of "'.$qrCode->getText().'".
-                     Adjust your parameters to increase readability or disable built-in validation.'
-                );
-            }
-        }
+        /** @var int $transparentColor */
+        $transparentColor = imagecolorallocatealpha($baseImage, 255, 255, 255, 127);
 
-        return $string;
-    }
+        imagefill($baseImage, 0, 0, $transparentColor);
 
-    private function createImage(array $data, QrCodeInterface $qrCode)
-    {
-        $baseSize = $qrCode->getRoundBlockSize() ? $data['block_size'] : 25;
-
-        $baseImage = $this->createBaseImage($baseSize, $data, $qrCode);
-        $interpolatedImage = $this->createInterpolatedImage($baseImage, $data, $qrCode);
-
-        return $interpolatedImage;
-    }
-
-    private function createBaseImage(int $baseSize, array $data, QrCodeInterface $qrCode)
-    {
-        $image = imagecreatetruecolor($data['block_count'] * $baseSize, $data['block_count'] * $baseSize);
-        $foregroundColor = imagecolorallocatealpha($image, $qrCode->getForegroundColor()['r'], $qrCode->getForegroundColor()['g'], $qrCode->getForegroundColor()['b'], $qrCode->getForegroundColor()['a']);
-        $backgroundColor = imagecolorallocatealpha($image, $qrCode->getBackgroundColor()['r'], $qrCode->getBackgroundColor()['g'], $qrCode->getBackgroundColor()['b'], $qrCode->getBackgroundColor()['a']);
-        imagefill($image, 0, 0, $backgroundColor);
-
-        foreach ($data['matrix'] as $row => $values) {
-            foreach ($values as $column => $value) {
-                if (1 === $value) {
-                    imagefilledrectangle($image, $column * $baseSize, $row * $baseSize, ($column + 1) * $baseSize, ($row + 1) * $baseSize, $foregroundColor);
+        for ($rowIndex = 0; $rowIndex < $matrix->getBlockCount(); ++$rowIndex) {
+            for ($columnIndex = 0; $columnIndex < $matrix->getBlockCount(); ++$columnIndex) {
+                if (1 === $matrix->getBlockValue($rowIndex, $columnIndex)) {
+                    imagefilledrectangle(
+                        $baseImage,
+                        $columnIndex * $baseBlockSize,
+                        $rowIndex * $baseBlockSize,
+                        ($columnIndex + 1) * $baseBlockSize - 1,
+                        ($rowIndex + 1) * $baseBlockSize - 1,
+                        $foregroundColor
+                    );
                 }
             }
         }
 
-        return $image;
-    }
+        $targetWidth = $matrix->getOuterSize();
+        $targetHeight = $matrix->getOuterSize();
 
-    private function createInterpolatedImage($baseImage, array $data, QrCodeInterface $qrCode)
-    {
-        $image = imagecreatetruecolor($data['outer_width'], $data['outer_height']);
-        $backgroundColor = imagecolorallocatealpha($image, $qrCode->getBackgroundColor()['r'], $qrCode->getBackgroundColor()['g'], $qrCode->getBackgroundColor()['b'], $qrCode->getBackgroundColor()['a']);
-        imagefill($image, 0, 0, $backgroundColor);
-        imagecopyresampled($image, $baseImage, (int) $data['margin_left'], (int) $data['margin_left'], 0, 0, (int) $data['inner_width'], (int) $data['inner_height'], imagesx($baseImage), imagesy($baseImage));
-        imagesavealpha($image, true);
-
-        return $image;
-    }
-
-    private function addLogo($sourceImage, string $logoPath, int $logoWidth = null, int $logoHeight = null)
-    {
-        $logoImage = imagecreatefromstring(file_get_contents($logoPath));
-        $logoSourceWidth = imagesx($logoImage);
-        $logoSourceHeight = imagesy($logoImage);
-
-        if (null === $logoWidth) {
-            $logoWidth = $logoSourceWidth;
+        if ($label instanceof LabelInterface) {
+            $labelImageData = LabelImageData::createForLabel($label);
+            $targetHeight += $labelImageData->getHeight() + $label->getMargin()->getTop() + $label->getMargin()->getBottom();
         }
 
-        if (null === $logoHeight) {
-            $aspectRatio = $logoWidth / $logoSourceWidth;
-            $logoHeight = intval($logoSourceHeight * $aspectRatio);
-        }
-
-        $logoX = imagesx($sourceImage) / 2 - $logoWidth / 2;
-        $logoY = imagesy($sourceImage) / 2 - $logoHeight / 2;
-
-        imagecopyresampled($sourceImage, $logoImage, (int) $logoX, (int) $logoY, 0, 0, $logoWidth, $logoHeight, $logoSourceWidth, $logoSourceHeight);
-
-        return $sourceImage;
-    }
-
-    private function addLabel($sourceImage, string $label, string $labelFontPath, int $labelFontSize, string $labelAlignment, array $labelMargin, array $foregroundColor, array $backgroundColor)
-    {
-        if (!function_exists('imagettfbbox')) {
-            throw new MissingFunctionException('Missing function "imagettfbbox", please make sure you installed the FreeType library');
-        }
-
-        $labelBox = imagettfbbox($labelFontSize, 0, $labelFontPath, $label);
-        $labelBoxWidth = intval($labelBox[2] - $labelBox[0]);
-        $labelBoxHeight = intval($labelBox[0] - $labelBox[7]);
-
-        $sourceWidth = imagesx($sourceImage);
-        $sourceHeight = imagesy($sourceImage);
-        $targetWidth = $sourceWidth;
-        $targetHeight = $sourceHeight + $labelBoxHeight + $labelMargin['t'] + $labelMargin['b'];
-
-        // Create empty target image
         $targetImage = imagecreatetruecolor($targetWidth, $targetHeight);
-        $foregroundColor = imagecolorallocate($targetImage, $foregroundColor['r'], $foregroundColor['g'], $foregroundColor['b']);
-        $backgroundColor = imagecolorallocate($targetImage, $backgroundColor['r'], $backgroundColor['g'], $backgroundColor['b']);
+
+        if (!$targetImage) {
+            throw new \Exception('Unable to generate image: please check if the GD extension is enabled and configured correctly');
+        }
+
+        /** @var int $backgroundColor */
+        $backgroundColor = imagecolorallocatealpha(
+            $targetImage,
+            $qrCode->getBackgroundColor()->getRed(),
+            $qrCode->getBackgroundColor()->getGreen(),
+            $qrCode->getBackgroundColor()->getBlue(),
+            $qrCode->getBackgroundColor()->getAlpha()
+        );
+
         imagefill($targetImage, 0, 0, $backgroundColor);
 
-        // Copy source image to target image
-        imagecopyresampled($targetImage, $sourceImage, 0, 0, 0, 0, $sourceWidth, $sourceHeight, $sourceWidth, $sourceHeight);
+        imagecopyresampled(
+            $targetImage,
+            $baseImage,
+            $matrix->getMarginLeft(),
+            $matrix->getMarginLeft(),
+            0,
+            0,
+            $matrix->getInnerSize(),
+            $matrix->getInnerSize(),
+            imagesx($baseImage),
+            imagesy($baseImage)
+        );
 
-        switch ($labelAlignment) {
-            case LabelAlignment::LEFT:
-                $labelX = $labelMargin['l'];
-                break;
-            case LabelAlignment::RIGHT:
-                $labelX = $targetWidth - $labelBoxWidth - $labelMargin['r'];
-                break;
-            default:
-                $labelX = intval($targetWidth / 2 - $labelBoxWidth / 2);
-                break;
+        if (PHP_VERSION_ID < 80000) {
+            imagedestroy($baseImage);
         }
 
-        $labelY = $targetHeight - $labelMargin['b'];
-        imagettftext($targetImage, $labelFontSize, 0, $labelX, $labelY, $foregroundColor, $labelFontPath, $label);
+        if ($qrCode->getBackgroundColor()->getAlpha() > 0) {
+            imagesavealpha($targetImage, true);
+        }
 
-        return $targetImage;
+        $result = new PngResult($matrix, $targetImage);
+
+        if ($logo instanceof LogoInterface) {
+            $result = $this->addLogo($logo, $result);
+        }
+
+        if ($label instanceof LabelInterface) {
+            $result = $this->addLabel($label, $result);
+        }
+
+        return $result;
     }
 
-    private function imageToString($image): string
+    private function addLogo(LogoInterface $logo, PngResult $result): PngResult
     {
-        ob_start();
-        imagepng($image);
-        $string = ob_get_clean();
+        $logoImageData = LogoImageData::createForLogo($logo);
 
-        return $string;
+        if ('image/svg+xml' === $logoImageData->getMimeType()) {
+            throw new \Exception('PNG Writer does not support SVG logo');
+        }
+
+        $targetImage = $result->getImage();
+        $matrix = $result->getMatrix();
+
+        if ($logoImageData->getPunchoutBackground()) {
+            /** @var int $transparent */
+            $transparent = imagecolorallocatealpha($targetImage, 255, 255, 255, 127);
+            imagealphablending($targetImage, false);
+            $xOffsetStart = intval($matrix->getOuterSize() / 2 - $logoImageData->getWidth() / 2);
+            $yOffsetStart = intval($matrix->getOuterSize() / 2 - $logoImageData->getHeight() / 2);
+            for ($xOffset = $xOffsetStart; $xOffset < $xOffsetStart + $logoImageData->getWidth(); ++$xOffset) {
+                for ($yOffset = $yOffsetStart; $yOffset < $yOffsetStart + $logoImageData->getHeight(); ++$yOffset) {
+                    imagesetpixel($targetImage, $xOffset, $yOffset, $transparent);
+                }
+            }
+        }
+
+        imagecopyresampled(
+            $targetImage,
+            $logoImageData->getImage(),
+            intval($matrix->getOuterSize() / 2 - $logoImageData->getWidth() / 2),
+            intval($matrix->getOuterSize() / 2 - $logoImageData->getHeight() / 2),
+            0,
+            0,
+            $logoImageData->getWidth(),
+            $logoImageData->getHeight(),
+            imagesx($logoImageData->getImage()),
+            imagesy($logoImageData->getImage())
+        );
+
+        if (PHP_VERSION_ID < 80000) {
+            imagedestroy($logoImageData->getImage());
+        }
+
+        return new PngResult($matrix, $targetImage);
     }
 
-    public static function getContentType(): string
+    private function addLabel(LabelInterface $label, PngResult $result): PngResult
     {
-        return 'image/png';
+        $targetImage = $result->getImage();
+
+        $labelImageData = LabelImageData::createForLabel($label);
+
+        /** @var int $textColor */
+        $textColor = imagecolorallocatealpha(
+            $targetImage,
+            $label->getTextColor()->getRed(),
+            $label->getTextColor()->getGreen(),
+            $label->getTextColor()->getBlue(),
+            $label->getTextColor()->getAlpha()
+        );
+
+        $x = intval(imagesx($targetImage) / 2 - $labelImageData->getWidth() / 2);
+        $y = imagesy($targetImage) - $label->getMargin()->getBottom();
+
+        if ($label->getAlignment() instanceof LabelAlignmentLeft) {
+            $x = $label->getMargin()->getLeft();
+        } elseif ($label->getAlignment() instanceof LabelAlignmentRight) {
+            $x = imagesx($targetImage) - $labelImageData->getWidth() - $label->getMargin()->getRight();
+        }
+
+        imagettftext($targetImage, $label->getFont()->getSize(), 0, $x, $y, $textColor, $label->getFont()->getPath(), $label->getText());
+
+        return new PngResult($result->getMatrix(), $targetImage);
     }
 
-    public static function getSupportedExtensions(): array
+    public function validateResult(ResultInterface $result, string $expectedData): void
     {
-        return ['png'];
-    }
+        $string = $result->getString();
 
-    public function getName(): string
-    {
-        return 'png';
+        if (!class_exists(QrReader::class)) {
+            throw ValidationException::createForMissingPackage('khanamiryan/qrcode-detector-decoder');
+        }
+
+        if (PHP_VERSION_ID >= 80000) {
+            throw ValidationException::createForIncompatiblePhpVersion();
+        }
+
+        $reader = new QrReader($string, QrReader::SOURCE_TYPE_BLOB);
+        if ($reader->text() !== $expectedData) {
+            throw ValidationException::createForInvalidData($expectedData, strval($reader->text()));
+        }
     }
 }

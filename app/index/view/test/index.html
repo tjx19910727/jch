@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试页面</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1, maximum-scale=1, user-scalable=no">
+    <!--<link href="https://cdn.bootcss.com/bootstrap/3.3.2/css/bootstrap.min.css" rel="stylesheet">-->
+    <link href="/static/assets/css/bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+        <!--
+        html, body {
+            min-height: 100%;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            font-family: "Microsoft Yahei", sans-serif, Arial;
+        }
+        .container {
+            text-align: center;
+        }
+        .title {
+            font-size: 16px;
+            color: rgba(0, 0, 0, 0.3);
+            position: fixed;
+            line-height: 30px;
+            height: 30px;
+            left: 0px;
+            right: 0px;
+            background-color: white;
+        }
+        .content {
+            background-color: #f1f1f1;
+            border-top-left-radius: 6px;
+            border-top-right-radius: 6px;
+            margin-top: 30px;
+        }
+        .content .show-area {
+            text-align: left;
+            padding-top: 8px;
+            padding-bottom: 168px;
+        }
+        .content .show-area .message {
+            width: 85%;
+            padding: 5px;
+            word-wrap: break-word;
+            word-break: normal;
+        }
+        .content .write-area {
+            position: fixed;
+            bottom: 0px;
+            right: 0px;
+            left: 0px;
+            background-color: #f1f1f1;
+            z-index: 10;
+            width: 100%;
+            border-top: 1px solid #d8d8d8;
+        }
+
+
+        .content .write-area .send {
+            position: relative;
+            top: -28px;
+            height: 28px;
+            border-top-left-radius: 55px;
+            border-top-right-radius: 55px;
+        }
+
+        .content .write-area .out_goods {
+            position: relative;
+            top: -28px;
+            height: 28px;
+            border-top-left-radius: 55px;
+            border-top-right-radius: 55px;
+        }
+        .content .write-area .connect {
+            position: relative;
+            top: -28px;
+            height: 28px;
+            border-top-left-radius: 55px;
+            border-top-right-radius: 55px;
+        }
+        .content .write-area #code {
+            position: relative;
+            top: -20px;
+            line-height: 28px;
+            font-size: 13px;
+        }
+        .content .write-area #channel {
+            position: relative;
+            top: -20px;
+            line-height: 28px;
+            font-size: 13px;
+        }
+        .content .write-area #num {
+            position: relative;
+            top: -20px;
+            line-height: 28px;
+            font-size: 13px;
+        }
+        -->
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="title">测试页面</div>
+    <div class="content">
+        <div class="show-area"></div>
+        <div class="write-area">
+            <div>
+                <button class="btn btn-default connect">连接</button>
+                <button class="btn btn-default send">查询</button>
+                <button class="btn btn-default out_goods">出货</button>
+            </div>
+            <div>
+                <input name="code" id="code" type="text" placeholder="设备序号">
+                <input name="channel" id="channel" type="text" placeholder="设备货道">
+            </div>
+        </div>
+    </div>
+</div>
+<script src="http://libs.baidu.com/jquery/1.9.1/jquery.min.js"></script>
+<script src="https://cdn.bootcss.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
+<script src="https://cdn.bootcss.com/reconnecting-websocket/1.0.0/reconnecting-websocket.min.js"></script>
+<script>
+    $(function () {
+        var wsurl = 'ws://120.79.38.67:9001';
+        var websocket;
+        var i = 0;
+        if (window.WebSocket) {
+            websocket = new WebSocket(wsurl);
+            //连接建立
+            websocket.onopen = function (evevt) {
+                console.log("Connected to WebSocket server.");
+                $('.show-area').prepend('<p class="bg-info message"><i class="glyphicon glyphicon-info-sign">长连接启动成功,请输入设备序号建立连接</i></p>');
+            }
+            //收到消息
+            websocket.onmessage = function (event) {
+                var msg = event.data; //解析收到的json消息数据
+                console.log("data",event.data);
+//
+            }
+            //发生错误
+            websocket.onerror = function (event) {
+                i++;
+                console.log(event);
+                console.log("Connected to WebSocket server error");
+                $('.show-area').prepend('<p class="bg-danger message"><a name="' + i + '"></a><i class="glyphicon glyphicon-info-sign"></i>Connect to WebSocket server error.</p>');
+            }
+            //连接关闭
+            websocket.onclose = function (event) {
+                i++;
+                console.log('websocket Connection Closed. ');
+                $('.show-area').prepend('<p class="bg-warning message"><a name="' + i + '"></a><i class="glyphicon glyphicon-info-sign"></i>长连接已关闭</p>');
+            }
+
+            //点发送按钮发送消息
+            $('.connect').bind('click', function () {
+                connect();
+            });
+            $('.send').bind('click', function () {
+                send();
+            });
+
+            $('.out_goods').bind('click', function () {
+                out_goods();
+            });
+
+            function connect() {
+                var code = $('#code').val();
+                if (!code) {
+                    alert('请输入设备号!');
+                    return false;
+                }
+               websocket.send('join@web_user@'+code);
+            }
+
+            function out_goods() {
+                var code = $('#code').val();
+                if (!code) {
+                    alert('请输入设备号!');
+                    return false;
+                }
+                var channel = $('#channel').val();
+                if (!channel) {
+                    alert('请输入出货货道!');
+                    return false;
+                }
+                // var num = $('#num').val();
+                // if (!num) {
+                //     alert('请输入出货数量!');
+                //     return false;
+                // }
+
+                $.ajax({
+                    url:"{:url('out_goods')}",
+                    type:'post',
+                    dataType:'Json',
+                    data:{code:code,type:'out_goods',channel:channel},
+                    success:function (res) {
+//                                    alert(res.msg);
+//                        console.log();
+                        i++;
+                        $('.show-area').prepend('<p class="bg-info message"><i class="glyphicon glyphicon-info-sign">'+code+'已发送出货('+res.data+')</i></p>');
+                    },
+                    error: function (data) {
+                        console.log("error",data);
+                        alert("服务器繁忙");
+                    }
+                });
+            }
+
+            function send() {
+                var code = $('#code').val();
+                if (!code) {
+                    alert('请输入设备号!');
+                    return false;
+                }
+                $.ajax({
+                    url:"{:url('send_check')}",
+                    type:'post',
+                    dataType:'Json',
+                    data:{code:code,type:'check'},
+                    success:function (res) {
+//                                    alert(res.msg);
+//                        console.log(res.msg);
+                        i++;
+                        $('.show-area').prepend('<p class="bg-info message"><i class="glyphicon glyphicon-info-sign">'+code+'已发送查询('+res.data+')</i></p>');
+                    },
+                    error: function (data) {
+                        console.log("error",data);
+                        alert("服务器繁忙");
+                    }
+                });
+            }
+        }
+        else {
+            alert('该浏览器不支持web socket');
+        }
+    });
+</script>
+</body>
+</html>

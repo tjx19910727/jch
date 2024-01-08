@@ -31,6 +31,7 @@ abstract class BaseQuery
     use concern\ResultOperation;
     use concern\Transaction;
     use concern\WhereQuery;
+    use concern\JoinAndViewQuery;
 
     /**
      * 当前数据库连接对象

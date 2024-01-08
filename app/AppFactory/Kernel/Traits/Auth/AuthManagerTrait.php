@@ -29,9 +29,20 @@ trait AuthManagerTrait
         return AuthManagerModel::getColumn($where,$column);
     }
 
+    /**
+     * 获取关联组织列表
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @return AuthManagerModel|AuthManagerModel[]|array|\think\Collection|\think\Paginator
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
     public function getAuthManagerList($where,$pageNum = 0,$field = "*",$order = "")
     {
-        $result = AuthManagerModel::getList($where,$pageNum,$field,$order);
+        $result = AuthManagerModel::getJoinOrganizationList($where,$pageNum,$field,$order);
         return $result;
     }
 

@@ -9,6 +9,8 @@
 namespace app\AppFactory\Kernel\Traits;
 
 
+use think\facade\Lang;
+
 trait ReturnTrait
 {
     public function r($state,$msg = "",$data = [],$isJson = true)
@@ -23,7 +25,7 @@ trait ReturnTrait
      */
     public function rQ($data)
     {
-        return returnData($data, "查询成功|查无数据");
+        return returnData($data, Lang::get("query_success") . "|" . Lang::get("query_fail"));
     }
 
     /**
@@ -33,7 +35,7 @@ trait ReturnTrait
      */
     public function rA($data)
     {
-        return returnData($data, "添加成功|添加失败");
+        return returnData($data, Lang::get("add_success") . "|" . Lang::get("add_fail"));
     }
 
     /**
@@ -43,7 +45,7 @@ trait ReturnTrait
      */
     public function rU($data)
     {
-        return returnData($data, "修改成功|修改失败");
+        return returnData($data, Lang::get("update_success") . "|" . Lang::get("update_fail"));
     }
 
     /**
@@ -53,7 +55,7 @@ trait ReturnTrait
      */
     public function rD($data)
     {
-        return returnData($data, "删除成功|删除失败");
+        return returnData($data, Lang::get("del_success") . "|" . Lang::get("del_fail"));
     }
 
     /**
@@ -63,7 +65,7 @@ trait ReturnTrait
      */
     public function rAction($data)
     {
-        return returnData($data, "操作成功|操作失败");
+        return returnData($data, Lang::get("action_success") . "|" . Lang::get("action_fail"));
     }
 
     /**
@@ -73,7 +75,7 @@ trait ReturnTrait
      */
     public function rCopy($data)
     {
-        return returnData($data, '复制成功|复制失败');
+        return returnData($data, Lang::get("copy_success") . "|" . Lang::get("copy_fail"));
     }
 
     /**
@@ -82,7 +84,7 @@ trait ReturnTrait
      */
     public function rNoData()
     {
-        return returnState(100, '查无数据');
+        return returnState(100, Lang::get("query_fail"));
     }
 
     /**
@@ -92,7 +94,7 @@ trait ReturnTrait
      */
     public function rFail($msg = "")
     {
-        $return = "操作失败";
+        $return = Lang::get("action_fail");
         if ($msg) $return = $return . ":" . arr2json($msg);
         return returnState(100,$return);
     }
