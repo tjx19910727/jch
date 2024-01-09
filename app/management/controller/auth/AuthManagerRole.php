@@ -51,7 +51,6 @@ class AuthManagerRole extends Common
         return $result;
     }
 
-
     /**
      * 删除管理员绑定角色关系
      * @return mixed

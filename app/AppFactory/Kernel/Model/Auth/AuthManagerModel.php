@@ -53,12 +53,18 @@ class AuthManagerModel extends BaseModel
     public static function getJoinOrganizationList($where,$pageNum = 0,$field = "*", $order = "")
     {
         $data = self::alias("au")
-            ->join("auth_organization ao","ao.ao_id = au.ao_id")
+            ->join("auth_organization ao","ao.ao_id = au.ao_id","left")
             ->where($where)
             ->field($field)
             ->order($order);
         if ($pageNum) {
-            $data = $data->paginate($pageNum);
+            $data = $data->paginate($pageNum)->each(function ($item) {
+                if (isset($item['ao_id'])) {
+                    $organization = AuthOrganizationRoleModel::getJoinRoleFind(['ao_id' => $item['ao_id'], 'is_del' => 2], 'ar.name', 'or.or_id desc');
+                    if ($organization) $item['organization_role_name'] = $organization['name'];
+                }
+                return $item;
+            });
         } else {
             $data = $data->select();
         }

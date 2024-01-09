@@ -26,6 +26,31 @@ class AuthOrganizationRoleModel extends BaseModel
         "update_time" => "int",
     ];
 
+    protected static function JoinRole($where,$field,$order)
+    {
+        return self::alias("or")
+            ->join("auth_role ar",'ar.role_id = or.role_id',"left")
+            ->where($where)
+            ->field($field)
+            ->order($order);
+    }
+
+    /**
+     * 获取一条关联权限角色信息
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return AuthOrganizationRoleModel|array|mixed|null|\think\Model
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public static function getJoinRoleFind($where,$field = "*",$order = "")
+    {
+        $data = self::JoinRole($where,$field,$order);
+        return $data->find();
+    }
+
     /**
      * 获取关联权限角色列表
      * @param $where
@@ -39,11 +64,7 @@ class AuthOrganizationRoleModel extends BaseModel
      */
     public static function getJoinRoleList($where,$pageNum = 0,$field = "*", $order = "")
     {
-        $data = self::alias("or")
-            ->join("auth_role ar",'ar.role_id = or.role_id',"left")
-            ->where($where)
-            ->field($field)
-            ->order($order);
+        $data = self::JoinRole($where,$field,$order);
         if ($pageNum) {
             $data = $data->paginate($pageNum);
         } else {

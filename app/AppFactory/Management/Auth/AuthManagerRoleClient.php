@@ -11,6 +11,7 @@ namespace app\AppFactory\Management\Auth;
 
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthNodeTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
 use app\AppFactory\Management\ManagementClient;
 use think\response\Json;
@@ -20,6 +21,7 @@ class AuthManagerRoleClient extends ManagementClient
     use AuthManagerRoleTrait;
     use AuthRoleNodeTrait;
     use AuthNodeTrait;
+    use AuthOrganizationRoleTrait;
 
     protected $commonNode = [
         "/management/common/getSelfRoleNode"
@@ -46,7 +48,13 @@ class AuthManagerRoleClient extends ManagementClient
         if ($authNode['is_auth'] == 2) return $authNode;
 
         $role = $this->getAuthManagerRoleColumn(['manager_id' => $this->manager['manager_id']],'role_id');
+        // 查询组织绑定的权限角色
+        $or = $this->getAuthOrganizationRoleColumn(['ao_id' => $this->manager['ao_id'],'is_del' => 2],'role_id');
+        if (!$role) $role = [];
+        if (!$or) $or = [];
+        $role = array_unique(array_merge($role,$or));
         if (!$role) return $this->rFail("查无权限角色");
+
         // 超管全权限免验证
         if ($this->manager['pid'] === 0) return $authNode;
 

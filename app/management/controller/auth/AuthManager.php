@@ -33,7 +33,7 @@ class AuthManager extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['nickname' => "like"]);
-        $field = "manager_id,nickname,account,pid,level,sex,pic,status,creator, create_time";
+        $field = "au.manager_id,au.nickname,au.account,au.pid,au.level,au.sex,au.pic,au.status,au.creator, au.create_time,ao.organization_name";
         $result = $this->app->authManager->getList($where,$pageNum,$field);
         return $result;
     }
@@ -89,6 +89,13 @@ class AuthManager extends Common
         $result = flag_check($flag);
         return $this->app->authManager->checkTrans($result);
     }
+
+
+
+
+
+
+
 
     /**
      * 工作人员绑定公众号接收微信模板消息通知
