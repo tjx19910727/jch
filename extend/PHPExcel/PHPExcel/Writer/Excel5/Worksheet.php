@@ -2060,8 +2060,8 @@ class PHPExcel_Writer_Excel5_Worksheet extends PHPExcel_Writer_Excel5_BIFFwriter
         $record      = 0x0080;   // Record identifier
         $length      = 0x0008;   // Bytes to follow
 
-        $dxRwGut     = 0x0000;   // Size of row gutter
-        $dxColGut    = 0x0000;   // Size of col gutter
+        $dxRwGut     = 0x0000;   // ConfigSizeClient of row gutter
+        $dxColGut    = 0x0000;   // ConfigSizeClient of col gutter
 
         // determine maximum row outline level
         $maxRowOutlineLevel = 0;
@@ -3184,7 +3184,7 @@ class PHPExcel_Writer_Excel5_Worksheet extends PHPExcel_Writer_Excel5_BIFFwriter
             } else {
                 $dataBlockFont = PHPExcel_Shared_String::UTF8toBIFF8UnicodeLong($conditional->getStyle()->getFont()->getName());
             }
-            // Font Size
+            // Font ConfigSizeClient
             if ($conditional->getStyle()->getFont()->getSize() == null) {
                 $dataBlockFont .= pack('V', 20 * 11);
             } else {

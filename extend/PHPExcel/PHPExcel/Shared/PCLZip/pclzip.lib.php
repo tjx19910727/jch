@@ -576,8 +576,8 @@ class PclZip
     //                                given by the user. For an extract function it is the filename
     //                                of the extracted file.
     //         stored_filename : Name of the file / directory stored in the archive.
-    //         size : Size of the stored file.
-    //         compressed_size : Size of the file's data compressed in the archive
+    //         size : ConfigSizeClient of the stored file.
+    //         compressed_size : ConfigSizeClient of the file's data compressed in the archive
     //                                             (without the headers overhead)
     //         mtime : Last known modification date of the file (UNIX timestamp)
     //         comment : Comment associated with the file
@@ -2991,7 +2991,7 @@ class PclZip
     //         $p_info['filename'] : Filename with full path. Given by user (add),
     //                                                     extracted in the filesystem (extract).
     //         $p_info['stored_filename'] : Stored filename in the archive.
-    //         $p_info['size'] = Size of the file.
+    //         $p_info['size'] = ConfigSizeClient of the file.
     //         $p_info['compressed_size'] = Compressed size of the file.
     //         $p_info['mtime'] = Last modification date of the file.
     //         $p_info['comment'] = Comment associated with the file.

@@ -21,6 +21,7 @@ class GoodsCategoryModel extends BaseModel
         "gc_name" => "string",
         "sort" => "int",
         "status" => "int",
+        "desc" => "string",
         "creator" => "int",
         "create_time" => "int",
         "update_id" => "int",

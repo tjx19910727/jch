@@ -75,13 +75,13 @@ class PHPExcel_Shared_OLE
     public $sbat;
 
     /**
-     * Size of big blocks. This is usually 512.
+     * ConfigSizeClient of big blocks. This is usually 512.
      * @var  int  number of octets per block.
     */
     public $bigBlockSize;
 
     /**
-     * Size of small blocks. This is usually 64.
+     * ConfigSizeClient of small blocks. This is usually 64.
      * @var  int  number of octets per block
     */
     public $smallBlockSize;
@@ -110,7 +110,7 @@ class PHPExcel_Shared_OLE
             // This shouldn't be a problem in practice
             throw new PHPExcel_Reader_Exception("Only Little-Endian encoding is supported.");
         }
-        // Size of blocks and short blocks in bytes
+        // ConfigSizeClient of blocks and short blocks in bytes
         $this->bigBlockSize = pow(2, self::_readInt2($fh));
         $this->smallBlockSize  = pow(2, self::_readInt2($fh));
 

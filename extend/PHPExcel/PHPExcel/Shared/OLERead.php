@@ -35,13 +35,13 @@ class PHPExcel_Shared_OLERead
     // OLE identifier
     const IDENTIFIER_OLE                    = IDENTIFIER_OLE;
 
-    // Size of a sector = 512 bytes
+    // ConfigSizeClient of a sector = 512 bytes
     const BIG_BLOCK_SIZE                    = 0x200;
 
-    // Size of a short sector = 64 bytes
+    // ConfigSizeClient of a short sector = 64 bytes
     const SMALL_BLOCK_SIZE                  = 0x40;
 
-    // Size of a directory entry always = 128 bytes
+    // ConfigSizeClient of a directory entry always = 128 bytes
     const PROPERTY_STORAGE_BLOCK_SIZE       = 0x80;
 
     // Minimum size of a standard stream = 4096 bytes, streams smaller than this are stored as short streams

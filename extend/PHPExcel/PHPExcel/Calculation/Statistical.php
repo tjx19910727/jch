@@ -1861,7 +1861,7 @@ class PHPExcel_Calculation_Statistical
      * sample successes, given the sample size, population successes, and population size.
      *
      * @param    float        $sampleSuccesses        Number of successes in the sample
-     * @param    float        $sampleNumber            Size of the sample
+     * @param    float        $sampleNumber            ConfigSizeClient of the sample
      * @param    float        $populationSuccesses    Number of successes in the population
      * @param    float        $populationNumber        Population size
      * @return    float

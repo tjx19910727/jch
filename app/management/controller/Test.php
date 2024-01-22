@@ -11,14 +11,72 @@ namespace app\management\controller;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
+use app\AppFactory\Kernel\Model\Earth\EarthCitiesModel;
+use app\AppFactory\Kernel\Model\Earth\EarthRegionsModel;
+use app\AppFactory\Kernel\Model\Earth\EarthStatesModel;
 use app\AppFactory\Kernel\Support\TDESUtil;
 use app\AppFactory\Management\Application;
 use app\BaseController;
 use think\facade\Cache;
 use think\facade\Config;
+use think\facade\Db;
 
 class Test extends BaseController
 {
+    public function testTemplateView()
+    {
+        $fields = '[{"key":"loop","options":"bars","type":"SELECT","display":{"en_US":"Image Loop Mode",
+"ja_JP": "イメージループモード","zh_CN":"轮播方式","zh_TW":"輪播方式"}}]';
+        $plugin = [
+            "plugin_name" => "广告插件",
+            "display_name" => '{"zh-cn":"广告插件","en":"advertise plugin"}',
+            "type" => 1,
+            "fields" => json2arr($fields)
+        ];
+        $plugin_data = [
+            "layout_id" => 1,
+            "plugin_id" => 1,
+            "height" => 300,
+            "width" => 500,
+            "left" => 20,
+            "top" => 30,
+            "plugin" => $plugin,
+        ];
+        dump($plugin_data);
+        $data = [
+            "name" => "测试视图",
+            "template_id" => "1",
+            "height" => 1920,
+            "width" => 1080,
+            "plugin_data" => json_encode($plugin_data,256+64),
+        ];
+        dump($data);
+        return arr2json($data);
+
+    }
+    public function makeStreet()
+    {
+
+        $province = EarthStatesModel::getList(['country_id' => 44])->toArray();
+        $state_ids = array_column($province,'id');
+//        $state_ids = array_search(,$province);
+//        dump($state_ids);
+//        dump($state_ids);
+        $where[] = ['state_id' , 'in',$state_ids];
+        dump($where);
+        $city = EarthCitiesModel::getList($where)->toArray();
+        dump($city);
+//        $region = EarthRegionsModel::getList([''])
+        die();
+
+
+        foreach ($province as $pk => $pv) {
+            dump($pv);
+            $pro = Db::name("city")->where(['city_title' => $pv['cname']])->find();
+            dump($pro);
+            echo "<br>";
+        }
+    }
     public function testWeek()
     {
         $week = date("w");

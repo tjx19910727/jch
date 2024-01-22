@@ -109,7 +109,7 @@ class PHPExcel_Worksheet_ColumnDimension extends PHPExcel_Worksheet_Dimension
     }
 
     /**
-     * Get Auto Size
+     * Get Auto ConfigSizeClient
      *
      * @return bool
      */
@@ -119,7 +119,7 @@ class PHPExcel_Worksheet_ColumnDimension extends PHPExcel_Worksheet_Dimension
     }
 
     /**
-     * Set Auto Size
+     * Set Auto ConfigSizeClient
      *
      * @param bool $pValue
      * @return PHPExcel_Worksheet_ColumnDimension

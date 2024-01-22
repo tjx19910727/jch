@@ -402,7 +402,7 @@ class PHPExcel_Shared_Font
      * Calculate an (approximate) pixel size, based on inch size
      *
      * @param     int        $sizeInInch    Font size (in inch)
-     * @return     int        Size (in pixels)
+     * @return     int        ConfigSizeClient (in pixels)
      */
     public static function inchSizeToPixels($sizeInInch = 1)
     {
@@ -413,7 +413,7 @@ class PHPExcel_Shared_Font
      * Calculate an (approximate) pixel size, based on centimeter size
      *
      * @param     int        $sizeInCm    Font size (in centimeters)
-     * @return     int        Size (in pixels)
+     * @return     int        ConfigSizeClient (in pixels)
      */
     public static function centimeterSizeToPixels($sizeInCm = 1)
     {

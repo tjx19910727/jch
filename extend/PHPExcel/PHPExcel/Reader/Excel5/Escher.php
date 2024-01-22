@@ -54,7 +54,7 @@ class PHPExcel_Reader_Excel5_Escher
     private $data;
 
     /**
-     * Size in bytes of the Escher stream data
+     * ConfigSizeClient in bytes of the Escher stream data
      *
      * @var int
      */

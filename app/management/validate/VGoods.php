@@ -12,27 +12,30 @@ namespace app\management\validate;
 class VGoods extends VCommon
 {
     protected $rule = [
-        "goods_id" => "require",
-        "goods_name" => "require|max:100",
+        "g_id" => "require",
+        "g_name" => "require|max:100",
         "pic" => "max:100",
-        "sell_by_date" => "max:6|number",
-        "is_public" => "require",
-        "status" => "require",
+        "manufacturer" => "max:100",
+        "service_phone" => "max:100",
     ];
 
     protected $message = [
-        "goods_id.require" => "请选择商品",
-        "goods_name.require" => "商品名称不能为空",
-        "goods_name.max" => "商品名称长度超限制",
-        "pic.max" => "图片路径长度超限制",
-        "sell_by_date.max" => "保质期长度超限制",
-        "sell_by_date.number" => "保质期天数只能纯数字",
-        "is_public.require" => "请确定是否为公共商品库商品",
-        "status.require" => "请选择商品",
+        "g_id.require" => "VGoods.g_id_require",
+        "g_name.require" => "VGoods.g_name_require",
+        "g_name.max" => "VGoods.g_name_max",
+        "pic.max" => "VGoods.pic_max",
+        "manufacturer.max" => "VGoods.manufacturer_max",
+        "service_phone.max" => "VGoods.service_phone_max",
     ];
 
     protected $scene = [
-        "add" => ["goods_name","pic","sell_by_date", "is_public","status"],
-        "update" => ["goods_id", "goods_name","pic","sell_by_date", "is_public","status"],
+        "add" => ["g_name","pic","manufacturer", "service_phone"],
+        "del" => ['g_id'],
     ];
+
+    public function sceneUpdate()
+    {
+        return self::only(["g_id","g_name","pic","manufacturer", "service_phone"])
+            ->remove("g_name","require");
+    }
 }

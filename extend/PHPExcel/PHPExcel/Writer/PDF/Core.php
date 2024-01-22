@@ -241,7 +241,7 @@ abstract class PHPExcel_Writer_PDF_Core extends PHPExcel_Writer_HTML
     }
 
     /**
-     *  Get Paper Size
+     *  Get Paper ConfigSizeClient
      *
      *  @return int
      */
@@ -251,7 +251,7 @@ abstract class PHPExcel_Writer_PDF_Core extends PHPExcel_Writer_HTML
     }
 
     /**
-     *  Set Paper Size
+     *  Set Paper ConfigSizeClient
      *
      *  @param  string  $pValue Paper size
      *  @return PHPExcel_Writer_PDF

@@ -315,7 +315,7 @@ class PHPExcel_Writer_Excel2007_Style extends PHPExcel_Writer_Excel2007_WriterPa
             $objWriter->endElement();
         }
 
-        // Size
+        // ConfigSizeClient
         if ($pFont->getSize() !== null) {
             $objWriter->startElement('sz');
             $objWriter->writeAttribute('val', $pFont->getSize());

@@ -37,14 +37,14 @@ trait GoodsTrait
 
     public function addGoods($insert)
     {
-        $insert['creator'] = $this->manager['manager_id'];
+        !isset($this->manager['manager_id']) ? :$insert['creator'] = $this->manager['manager_id'];
         $data = GoodsModel::create($insert);
-        return $data->goods_id;
+        return $data->g_id;
     }
 
     public function updateGoods($update,$where = [],$field = [])
     {
-        $update['update_id'] = $this->manager['manager_id'];
+        !isset($this->manager['manager_id']) ? : $update['update_id'] = $this->manager['manager_id'];
         return GoodsModel::update($update,$where,$field);
     }
 

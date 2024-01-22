@@ -13,6 +13,7 @@ use app\management\controller\Common;
 
 class Goods extends Common
 {
+    protected $field = "*";
     protected $validatePath = 'app\management\validate\VGoods.';
     /**
      * 查询一条商品列表
@@ -22,8 +23,7 @@ class Goods extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData);
-        $field = "goods_id,goods_name,pic,bar_code,cost_price,retail_price,sell_by_date,is_public,status,gc_id,gc_name,creator";
-        return $this->app->goods->getFind($where,$field);
+        return $this->app->goods->getFind($where,$this->field);
     }
 
     /**
@@ -36,23 +36,7 @@ class Goods extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['goods_name' => "like"]);
         $where['creator'] = $this->manager['manager_id'];
-        $field = "goods_id,goods_name,pic,bar_code,cost_price,retail_price,sell_by_date,is_public,status,gc_id,gc_name,creator";
-        $result = $this->app->goods->getList($where,$pageNum,$field,'goods_id desc');
-        return $result;
-    }
-
-    /**
-     * 获取公用商品库
-     * @return mixed
-     */
-    public function getPublic()
-    {
-        $postData = input();
-        $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData);
-        $where['is_public'] = 1;
-        $field = "goods_id,goods_name,pic,bar_code,cost_price,retail_price,sell_by_date,is_public,status,gc_id,gc_name,creator";
-        $result = $this->app->goods->getList($where,$pageNum,$field,'goods_id desc');
+        $result = $this->app->goods->getList($where,$pageNum,$this->field,'g_id desc');
         return $result;
     }
 
@@ -100,5 +84,20 @@ class Goods extends Common
         $postData = input();
 //        $postData['file_path'] = "/uploads/excel/20231014.xlsx";
         return $this->app->goods->importExcel($postData);
+    }
+
+    /**
+     * 获取公用商品库
+     * @return mixed
+     */
+    public function getPublic()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData);
+        $where['is_public'] = 1;
+        $field = "*";
+        $result = $this->app->goods->getList($where,$pageNum,$field,'goods_id desc');
+        return $result;
     }
 }

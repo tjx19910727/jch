@@ -18,7 +18,7 @@ function flag_check($flag){
 }
 
 
-function returnData($data, $text = "操作成功|操作失败")
+function returnData($data, $text = "")
 {
     $success = "success";
     $fail = "fail";

@@ -154,7 +154,7 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
     const MS_BIFF_CRYPTO_XOR            = 1;
     const MS_BIFF_CRYPTO_RC4            = 2;
     
-    // Size of stream blocks when using RC4 encryption
+    // ConfigSizeClient of stream blocks when using RC4 encryption
     const REKEY_BLOCK                   = 0x400;
 
     /**
@@ -186,7 +186,7 @@ class PHPExcel_Reader_Excel5 extends PHPExcel_Reader_Abstract implements PHPExce
     private $data;
 
     /**
-     * Size in bytes of $this->data
+     * ConfigSizeClient in bytes of $this->data
      *
      * @var int
      */

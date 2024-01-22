@@ -33,7 +33,7 @@ class GoodsClient extends ManagementClient
     public function importExcel($data)
     {
         $path = root_path() . "public" . $data['file_path'];
-        $title = ["goods_name","pic","bar_code","cost_price","retail_price","sell_by_date","is_public","status","gc_id","gc_name"];
+        $title = ["g_name","gc_name","model","sku","sku2","pic","bar_code","cost_price","market_price","retail_price","manufacturer","service_phone","status"];
         $other = ['creator' => $this->manager['manager_id']];
         $goods = Excel::importExcel($path,$title,$other);
         $result = "";

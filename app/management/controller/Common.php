@@ -183,7 +183,7 @@ class Common extends AuthController
             validate(
                 [
                     'file' => [
-                        "fileSize" => 100 * 1024 * 1024,
+                        "fileSize" => 2 * 1024 * 1024,
                         "fileExt" => "jpg,jpeg,gif,png,xls,xlsx,crt,csr,txt,pem,mp3,mp4,wav,aiff,aac,flac,ogg,m4a,amr,wma,pcm",
                     ],
                 ],

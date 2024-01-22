@@ -538,7 +538,7 @@ class PHPExcel_Chart_Axis extends PHPExcel_Chart_Properties
     }
 
     /**
-     * Set Soft Edges Size
+     * Set Soft Edges ConfigSizeClient
      *
      * @param float $size
      */
@@ -550,7 +550,7 @@ class PHPExcel_Chart_Axis extends PHPExcel_Chart_Properties
     }
 
     /**
-     * Get Soft Edges Size
+     * Get Soft Edges ConfigSizeClient
      *
      * @return string
      */

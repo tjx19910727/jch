@@ -1,0 +1,29 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Administrator
+ * Date: 2024/1/19
+ * Time: 16:54
+ */
+
+namespace app\management\validate;
+
+
+class VMachine extends VCommon
+{
+    protected $rule = [
+        "m_id" => "require",
+        "machine_id" => "require",
+    ];
+
+    protected $message = [
+        "m_id.require" => "VMachine.m_id_require",
+        "machine_id.require" => "VMachine.machine_id_require",
+    ];
+
+    protected $scene = [
+        "add" => ["machine_id"],
+        "update" => ["m_id"],
+        "del" => ["m_id"],
+    ];
+}

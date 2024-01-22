@@ -717,7 +717,7 @@ class PHPExcel_Writer_Excel5 extends PHPExcel_Writer_Abstract implements PHPExce
 
         // section header
         // offset: $secOffset; size: 4; section length
-        //         + x  Size of the content (summary + content)
+        //         + x  ConfigSizeClient of the content (summary + content)
         $data .= pack('V', $dataSection_Content_Offset);
         // offset: $secOffset+4; size: 4; property count
         $data .= pack('V', $dataSection_NumProps);
@@ -890,7 +890,7 @@ class PHPExcel_Writer_Excel5 extends PHPExcel_Writer_Abstract implements PHPExce
 
         // section header
         // offset: $secOffset; size: 4; section length
-        //         + x  Size of the content (summary + content)
+        //         + x  ConfigSizeClient of the content (summary + content)
         $data .= pack('V', $dataSection_Content_Offset);
         // offset: $secOffset+4; size: 4; property count
         $data .= pack('V', $dataSection_NumProps);

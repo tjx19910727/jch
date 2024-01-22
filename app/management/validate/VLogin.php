@@ -19,14 +19,14 @@ class VLogin extends VCommon
     ];
 
     protected $message = [
-        "account.require" => "账号不能为空",
-        "password.require" => "密码不能为空",
-        "code.require" => "验证码不能为空",
-        "uniqid.require" => "验证码UUID不能为空",
+        "account.require" => "VLogin.account_require",
+        "password.require" => "VLogin.password_require",
+        "code.require" => "VLogin.code_require",
+        "uniqid.require" => "VLogin.uniqid_require",
     ];
 
     protected $scene = [
-        "login" => ["account","password","code"],
+        "login" => ["account","password","code","uniqid"],
     ];
 
 }

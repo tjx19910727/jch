@@ -78,7 +78,7 @@ class PHPExcel_Writer_PDF_tcPDF extends PHPExcel_Writer_PDF_Core implements PHPE
                 ? 'L'
                 : 'P';
         }
-        //  Override Paper Size
+        //  Override Paper ConfigSizeClient
         if (!is_null($this->getPaperSize())) {
             $printPaperSize = $this->getPaperSize();
         }

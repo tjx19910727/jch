@@ -22,7 +22,6 @@ class AdvertisementPush extends Common
     public function getList()
     {
         $postData = input();
-        if (isset($date))
         $where = $this->getWhere($postData,false,['adv_title' => "like"]);
         return $this->app->advertisementPush->getList($where,($postData['pageNum'] ?? 0));
     }

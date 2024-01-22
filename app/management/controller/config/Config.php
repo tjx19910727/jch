@@ -34,8 +34,6 @@ class Config extends Common
         try { $this->validate($postData,$this->validatePath . 'add');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $content = json2arr($postData['config_content']);
         $checkContent = "";
-        if ($postData['config_name'] == "fluorite") $checkContent = $this->validate($content,$this->validatePath . "fluorite");
-        if ($postData['config_name'] == "openPlatform") $checkContent = $this->validate($content,$this->validatePath . "openPlatform");
         if (!$checkContent) return returnValidate("无对应配置可以修改");
         if ($checkContent !== true) return returnValidate($checkContent);
         return $this->app->config->add($postData);

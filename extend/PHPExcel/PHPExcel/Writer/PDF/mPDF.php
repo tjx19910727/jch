@@ -80,7 +80,7 @@ class PHPExcel_Writer_PDF_mPDF extends PHPExcel_Writer_PDF_Core implements PHPEx
         }
         $orientation = strtoupper($orientation);
 
-        //  Override Paper Size
+        //  Override Paper ConfigSizeClient
         if (!is_null($this->getPaperSize())) {
             $printPaperSize = $this->getPaperSize();
         }

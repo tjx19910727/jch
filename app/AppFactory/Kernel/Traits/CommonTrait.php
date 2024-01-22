@@ -9,6 +9,8 @@
 namespace app\AppFactory\Kernel\Traits;
 
 
+use think\facade\Lang;
+
 trait CommonTrait
 {
 
@@ -32,5 +34,10 @@ trait CommonTrait
         $distance = 2 * asin(sqrt(pow(sin($a_coordinate / 2),2) + cos($rad_start_lat) * cos($rad_end_lat)
                 * pow(sin($b_coordinate / 2),2))) * 6378.137 * 1000;
         return $distance;
+    }
+
+    public function lang($name)
+    {
+        return Lang::get($name);
     }
 }

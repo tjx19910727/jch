@@ -18,14 +18,14 @@ class VGoodsCategory extends VCommon
     ];
 
     protected $message = [
-        "gc_id.require" => "请选择商品分类",
-        "gc_name.require" => "分类名称不能为空",
-        "gc_name.max" => "分类名称长度超限制",
-        "status.require" => "状态不能为空",
+        "gc_id.require" => "VGoodsCategory.gc_id_require",
+        "gc_name.require" => "VGoodsCategory.gc_name_require",
+        "gc_name.max" => "VGoodsCategory.gc_name_max",
+        "status.require" => "VGoodsCategory.status_require",
     ];
 
     protected $scene = [
-        "add" => ["gc_name","status"],
-        "update" => ["gc_id", "gc_name","status"],
+        "add" => ["gc_name"],
+        "update" => ["gc_id"],
     ];
 }

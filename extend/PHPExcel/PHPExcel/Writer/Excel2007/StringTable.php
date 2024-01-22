@@ -190,7 +190,7 @@ class PHPExcel_Writer_Excel2007_StringTable extends PHPExcel_Writer_Excel2007_Wr
                 $objWriter->writeAttribute('rgb', $element->getFont()->getColor()->getARGB());
                 $objWriter->endElement();
 
-                // Size
+                // ConfigSizeClient
                 $objWriter->startElement($prefix.'sz');
                 $objWriter->writeAttribute('val', $element->getFont()->getSize());
                 $objWriter->endElement();

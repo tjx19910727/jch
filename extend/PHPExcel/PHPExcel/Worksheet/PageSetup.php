@@ -282,7 +282,7 @@ class PHPExcel_Worksheet_PageSetup
     }
 
     /**
-     * Get Paper Size
+     * Get Paper ConfigSizeClient
      *
      * @return int
      */
@@ -292,7 +292,7 @@ class PHPExcel_Worksheet_PageSetup
     }
 
     /**
-     * Set Paper Size
+     * Set Paper ConfigSizeClient
      *
      * @param int $pValue
      * @return PHPExcel_Worksheet_PageSetup

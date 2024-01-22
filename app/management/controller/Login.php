@@ -33,7 +33,7 @@ class Login extends BaseController
      */
     public function getCaptcha()
     {
-        return returnState(200,Lang::get('query_success'));
+//        return returnState(200,Lang::get('query_success'));
         $uniqid = uniqid(rand(00000,99999));
         $rs = Captcha::create();
         $base64_image = "data:image/png;base64," . base64_encode($rs->getData());
@@ -78,8 +78,8 @@ class Login extends BaseController
         Session::clear();
         $data = Session::get("manager");
         if (!$data){
-            return returnState(200,'账号已退出登录状态');
+            return returnState(200,'账号已退出登录');
         }
-        return returnState(100,'账号退出登录状态失败');
+        return returnState(100,'账号退出登录失败');
     }
 }

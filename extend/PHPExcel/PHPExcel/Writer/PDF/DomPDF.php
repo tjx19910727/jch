@@ -79,7 +79,7 @@ class PHPExcel_Writer_PDF_DomPDF extends PHPExcel_Writer_PDF_Core implements PHP
                 ? PHPExcel_Worksheet_PageSetup::ORIENTATION_PORTRAIT
                 : $this->getOrientation();
         }
-        //  Override Paper Size
+        //  Override Paper ConfigSizeClient
         if (!is_null($this->getPaperSize())) {
             $printPaperSize = $this->getPaperSize();
         }

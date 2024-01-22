@@ -42,7 +42,7 @@ class PHPExcel_Style_Font extends PHPExcel_Style_Supervisor implements PHPExcel_
     protected $name = 'Calibri';
 
     /**
-     * Font Size
+     * Font ConfigSizeClient
      *
      * @var float
      */
@@ -250,7 +250,7 @@ class PHPExcel_Style_Font extends PHPExcel_Style_Supervisor implements PHPExcel_
     }
 
     /**
-     * Get Size
+     * Get ConfigSizeClient
      *
      * @return double
      */
@@ -263,7 +263,7 @@ class PHPExcel_Style_Font extends PHPExcel_Style_Supervisor implements PHPExcel_
     }
 
     /**
-     * Set Size
+     * Set ConfigSizeClient
      *
      * @param double $pValue
      * @return PHPExcel_Style_Font

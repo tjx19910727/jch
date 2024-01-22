@@ -12,7 +12,9 @@ namespace app\AppFactory\Kernel\Providers\Management;
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\Goods\GoodsCategoryClient;
+use app\AppFactory\Management\Goods\GoodsCategoryLangClient;
 use app\AppFactory\Management\Goods\GoodsClient;
+use app\AppFactory\Management\Goods\GoodsLangClient;
 
 class GoodsProvider implements ServiceProviderInterface
 {
@@ -24,6 +26,12 @@ class GoodsProvider implements ServiceProviderInterface
         };
         $app['goodsCategory'] = function ($app) {
             return new GoodsCategoryClient($app);
+        };
+        $app['goodsCategoryLang'] = function ($app) {
+            return new GoodsCategoryLangClient($app);
+        };
+        $app['goodsLang'] = function ($app) {
+            return new GoodsLangClient($app);
         };
     }
 }

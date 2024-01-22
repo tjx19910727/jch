@@ -465,7 +465,7 @@ class PHPExcel_Reader_Excel2003XML extends PHPExcel_Reader_Abstract implements P
                                 case 'FontName':
                                     $this->styles[$styleID]['font']['name'] = $styleAttributeValue;
                                     break;
-                                case 'Size':
+                                case 'ConfigSizeClient':
                                     $this->styles[$styleID]['font']['size'] = $styleAttributeValue;
                                     break;
                                 case 'Color':
