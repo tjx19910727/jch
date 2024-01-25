@@ -37,6 +37,6 @@ trait ConfigSceneTrait
 
     public function delConfigScene($where)
     {
-        return ConfigSceneModel::destroy($where);
+        return ConfigSceneModel::whereDel($where);
     }
 }

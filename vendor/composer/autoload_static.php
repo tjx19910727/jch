@@ -21,6 +21,7 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
     public static $prefixLengthsPsr4 = array (
         't' => 
         array (
+            'think\\worker\\' => 13,
             'think\\view\\driver\\' => 18,
             'think\\trace\\' => 12,
             'think\\captcha\\' => 14,
@@ -34,6 +35,11 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
         'Z' => 
         array (
             'Zxing\\' => 6,
+        ),
+        'W' => 
+        array (
+            'Workerman\\Mqtt\\' => 15,
+            'Workerman\\' => 10,
         ),
         'S' => 
         array (
@@ -62,6 +68,10 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
             'League\\Flysystem\\Cached\\' => 24,
             'League\\Flysystem\\' => 17,
         ),
+        'G' => 
+        array (
+            'GatewayWorker\\' => 14,
+        ),
         'E' => 
         array (
             'Endroid\\QrCode\\' => 15,
@@ -77,6 +87,10 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
     );
 
     public static $prefixDirsPsr4 = array (
+        'think\\worker\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/topthink/think-worker/src',
+        ),
         'think\\view\\driver\\' => 
         array (
             0 => __DIR__ . '/..' . '/topthink/think-view/src',
@@ -107,6 +121,14 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
         'Zxing\\' => 
         array (
             0 => __DIR__ . '/..' . '/khanamiryan/qrcode-detector-decoder/lib',
+        ),
+        'Workerman\\Mqtt\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/workerman/mqtt/src',
+        ),
+        'Workerman\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/workerman/workerman',
         ),
         'Symfony\\Polyfill\\Php80\\' => 
         array (
@@ -167,6 +189,10 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
         'League\\Flysystem\\' => 
         array (
             0 => __DIR__ . '/..' . '/league/flysystem/src',
+        ),
+        'GatewayWorker\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/workerman/gateway-worker/src',
         ),
         'Endroid\\QrCode\\' => 
         array (

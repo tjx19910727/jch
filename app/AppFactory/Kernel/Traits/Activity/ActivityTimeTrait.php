@@ -57,6 +57,6 @@ trait ActivityTimeTrait
      */
     public function delActivityTime($where)
     {
-        return ActivityTimeModel::destroy($where);
+        return ActivityTimeModel::whereDel($where);
     }
 }

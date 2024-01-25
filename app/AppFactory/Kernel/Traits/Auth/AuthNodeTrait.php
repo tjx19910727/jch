@@ -38,7 +38,7 @@ trait AuthNodeTrait
 
     public function delAuthNode($where)
     {
-        return AuthNodeModel::destroy($where);
+        return AuthNodeModel::whereDel($where);
     }
 
 

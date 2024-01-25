@@ -1,0 +1,1 @@
+php app\AppFactory\WorkerMan\Socket\start_register.php app\AppFactory\WorkerMan\Socket\start_gateway.php app\AppFactory\WorkerMan\Socket\start_businessworker.php app\AppFactory\WorkerMan\Socket\start_ws_gateway.php pause

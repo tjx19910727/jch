@@ -43,7 +43,7 @@ trait MachineTrait
 
     public function delMachine($where)
     {
-        $result = MachineModel::destroy($where);
+        $result = MachineModel::whereDel($where);
         return $result;
     }
 }

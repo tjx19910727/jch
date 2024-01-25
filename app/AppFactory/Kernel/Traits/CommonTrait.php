@@ -9,6 +9,7 @@
 namespace app\AppFactory\Kernel\Traits;
 
 
+use app\AppFactory\Kernel\Util\SignUtil;
 use think\facade\Lang;
 
 trait CommonTrait
@@ -39,5 +40,16 @@ trait CommonTrait
     public function lang($name)
     {
         return Lang::get($name);
+    }
+
+    public function makeSign($data)
+    {
+        return SignUtil::makeSign($data,$this->config['key']);
+    }
+
+    public function checkSign($data)
+    {
+
+        return SignUtil::checkSign($data,$this->config['key']);
     }
 }

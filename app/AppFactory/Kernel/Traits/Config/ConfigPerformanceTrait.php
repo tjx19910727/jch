@@ -38,6 +38,6 @@ trait ConfigPerformanceTrait
 
     public function delConfigPerformance($where)
     {
-        return ConfigPerformanceModel::destroy($where);
+        return ConfigPerformanceModel::whereDel($where);
     }
 }

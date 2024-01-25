@@ -72,7 +72,7 @@ trait ActivityDiscountTrait
      */
     public function delActivityDiscount($where)
     {
-        return ActivityDiscountModel::destroy($where);
+        return ActivityDiscountModel::whereDel($where);
     }
 
     public function calculateADOrder()

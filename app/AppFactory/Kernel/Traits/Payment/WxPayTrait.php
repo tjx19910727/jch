@@ -16,7 +16,7 @@ use EasyWeChatComposer\EasyWeChat;
 /**
  * 微信支付处理文件
  * Trait WxPayTrait
- * @package app\AppFactory\Kernel\Traits\Payment
+ * @package app\AppFactory\Kernel\Traits\Pay
  */
 trait WxPayTrait
 {

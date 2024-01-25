@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="c4180f57-aaaf-409b-b10e-d23be9dcd398" name="翠峰服务器" url="http://kiosk-uat.kalos-blocks.com">
+        <fileTransfer host="kiosk-uat.kalos-blocks.com" port="7022" rootFolder="/app/kiosk/app/backend" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="7022" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

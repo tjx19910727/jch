@@ -38,7 +38,7 @@ trait GoodsCategoryTrait
 
     public function delGoodsCategory($where)
     {
-        $result = GoodsCategoryModel::destroy($where);
+        $result = GoodsCategoryModel::whereDel($where);
         return $result;
     }
 }

@@ -39,7 +39,7 @@ trait TemplatePluginsTrait
 
     public function delTemplatePlugins($where)
     {
-        $result = TemplatePluginsModel::destroy($where);
+        $result = TemplatePluginsModel::whereDel($where);
         return $result;
     }
 }

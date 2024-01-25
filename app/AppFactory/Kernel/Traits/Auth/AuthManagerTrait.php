@@ -65,7 +65,7 @@ trait AuthManagerTrait
 
     public function delAuthManager($where)
     {
-        return AuthManagerModel::destroy($where);
+        return AuthManagerModel::whereDel($where);
     }
 
     public function incAuthManager($where,$field, $inc = 1)

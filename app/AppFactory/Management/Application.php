@@ -21,6 +21,7 @@ use app\AppFactory\Kernel\Providers\Management\LoginProvider;
 use app\AppFactory\Kernel\Providers\Management\MachineProvider;
 use app\AppFactory\Kernel\Providers\Management\ResourceProvider;
 use app\AppFactory\Kernel\Providers\Management\SaleOrdersProvider;
+use app\AppFactory\Kernel\Providers\Management\StrategyProvider;
 use app\AppFactory\Kernel\Providers\Management\TemplateProvider;
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
@@ -76,6 +77,11 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  *
  * @property Sale\SaleOrdersClient                  $saleOrders             销售订单
  *
+ * @property Strategy\StrategyIncomeClient          $strategyIncome         分润策略
+ * @property Strategy\StrategyMachineClient         $strategyMachine        策略绑定设备
+ * @property Strategy\StrategyManagerClient         $strategyManager        策略绑定账号
+ * @property Strategy\StrategyPayeeClient           $strategyPayee          收款策略
+ *
  *
  * @package app\AppFactory\Management
  */
@@ -96,6 +102,7 @@ class Application extends ServiceContainer
         GoodsProvider::class,
         ResourceProvider::class,
         SaleOrdersProvider::class,
+        StrategyProvider::class,
         TemplateProvider::class,
     ];
 

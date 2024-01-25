@@ -57,6 +57,6 @@ trait ActivityGoodsTrait
      */
     public function delActivityGoods($where)
     {
-        return ActivityGoodsModel::destroy($where);
+        return ActivityGoodsModel::whereDel($where);
     }
 }

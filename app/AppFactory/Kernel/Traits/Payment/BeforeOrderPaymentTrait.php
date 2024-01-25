@@ -11,7 +11,7 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 /**
  * Trait BeforeOrderPaymentTrait
  * 订单支付前处理
- * @package app\AppFactory\Kernel\Traits\Payment
+ * @package app\AppFactory\Kernel\Traits\Pay
  */
 trait BeforeOrderPaymentTrait
 {

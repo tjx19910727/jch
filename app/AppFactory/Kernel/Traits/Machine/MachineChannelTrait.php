@@ -37,7 +37,7 @@ trait MachineChannelTrait
 
     public function delMachineChannel($where)
     {
-        $result = MachineChannelModel::destroy($where);
+        $result = MachineChannelModel::whereDel($where);
         return $result;
     }
 }

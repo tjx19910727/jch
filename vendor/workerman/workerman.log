@@ -1,0 +1,281 @@
+2024-01-24 17:43:15 pid:1 RedisException: 由于目标计算机积极拒绝，无法连接。
+ in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:99
+Stack trace:
+#0 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php(99): Redis->connect('127.0.0.1', '6379')
+#1 [internal function]: Events::onClose('7f0000010f3c000...')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(414): call_user_func('Events::onClose', '7f0000010f3c000...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): GatewayWorker\BusinessWorker->onGatewayMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #42)
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#6 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#8 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#9 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#10 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#11 {main}
+2024-01-24 17:43:15 pid:1 Worker process terminated
+2024-01-24 17:43:49 pid:1 RedisException: 由于目标计算机积极拒绝，无法连接。
+ in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:99
+Stack trace:
+#0 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php(99): Redis->connect('127.0.0.1', '6379')
+#1 [internal function]: Events::onClose('7f0000010f3c000...')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(414): call_user_func('Events::onClose', '7f0000010f3c000...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): GatewayWorker\BusinessWorker->onGatewayMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #41)
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#6 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#8 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#9 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#10 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#11 {main}
+2024-01-24 17:43:49 pid:1 Worker process terminated
+2024-01-24 17:43:50 pid:1 SendBufferToWorker fail. The connections between Gateway and BusinessWorker are not ready. See http://doc2.workerman.net/send-buffer-to-worker-fail.html
+2024-01-24 17:43:50 pid:1 SendBufferToWorker fail. The connections between Gateway and BusinessWorker are not ready. See http://doc2.workerman.net/send-buffer-to-worker-fail.html
+2024-01-24 17:44:04 pid:1 RedisException: 由于目标计算机积极拒绝，无法连接。
+ in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:99
+Stack trace:
+#0 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php(99): Redis->connect('127.0.0.1', '6379')
+#1 [internal function]: Events::onClose('7f0000010f3c000...')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(414): call_user_func('Events::onClose', '7f0000010f3c000...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): GatewayWorker\BusinessWorker->onGatewayMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #42)
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#6 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#8 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#9 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#10 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#11 {main}
+2024-01-24 17:44:04 pid:1 Worker process terminated
+2024-01-24 17:50:18 pid:1 Worker process terminated
+2024-01-24 17:51:41 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:51:42 pid:1 Worker process terminated
+2024-01-24 17:51:43 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:51:44 pid:1 Worker process terminated
+2024-01-24 17:51:45 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:51:46 pid:1 Worker process terminated
+2024-01-24 17:51:47 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:51:48 pid:1 Worker process terminated
+2024-01-24 17:51:49 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:51:50 pid:1 Worker process terminated
+2024-01-24 17:51:51 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
+2024-01-24 17:51:51 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:51:52 pid:1 Worker process terminated
+2024-01-24 17:51:53 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
+2024-01-24 17:51:53 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:51:54 pid:1 Worker process terminated
+2024-01-24 17:51:55 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
+2024-01-24 17:51:55 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:51:56 pid:1 Worker process terminated
+2024-01-24 17:51:57 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
+2024-01-24 17:51:57 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:51:58 pid:1 Worker process terminated
+2024-01-24 17:51:59 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
+2024-01-24 17:51:59 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:52:00 pid:1 Worker process terminated
+2024-01-24 17:52:01 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
+2024-01-24 17:52:01 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:52:02 pid:1 Worker process terminated
+2024-01-24 17:52:09 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:52:10 pid:1 Worker process terminated
+2024-01-24 17:52:11 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:52:12 pid:1 Worker process terminated
+2024-01-24 17:52:13 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:52:14 pid:1 Worker process terminated
+2024-01-24 17:52:15 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:52:16 pid:1 Worker process terminated
+2024-01-24 17:52:17 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:52:18 pid:1 Worker process terminated
+2024-01-24 17:52:19 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
+2024-01-24 17:52:19 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+Stack trace:
+#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
+#1 [internal function]: spl_autoload_call('Events')
+#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
+#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#9 {main}
+2024-01-24 17:52:20 pid:1 Worker process terminated
+2024-01-24 17:52:30 pid:1 Worker process terminated
+2024-01-24 17:53:03 pid:1 Worker process terminated

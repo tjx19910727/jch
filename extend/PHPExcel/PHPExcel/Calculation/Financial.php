@@ -800,7 +800,7 @@ class PHPExcel_Calculation_Financial
      * @param    integer    $nper    The total number of payment periods
      * @param    float    $pv        Present Value
      * @param    integer    $start    The first period in the calculation.
-     *                            Payment periods are numbered beginning with 1.
+     *                            Pay periods are numbered beginning with 1.
      * @param    integer    $end    The last period in the calculation.
      * @param    integer    $type    A number 0 or 1 and indicates when payments are due:
      *                                0 or omitted    At the end of the period.
@@ -848,7 +848,7 @@ class PHPExcel_Calculation_Financial
      * @param    integer    $nper    The total number of payment periods
      * @param    float    $pv        Present Value
      * @param    integer    $start    The first period in the calculation.
-     *                            Payment periods are numbered beginning with 1.
+     *                            Pay periods are numbered beginning with 1.
      * @param    integer    $end    The last period in the calculation.
      * @param    integer    $type    A number 0 or 1 and indicates when payments are due:
      *                                0 or omitted    At the end of the period.
@@ -1301,7 +1301,7 @@ class PHPExcel_Calculation_Financial
      * @param    int        $nper    Number of periods
      * @param    float    $pv        Present Value
      * @param    float    $fv        Future Value
-     * @param    int        $type    Payment type: 0 = at the end of each period, 1 = at the beginning of each period
+     * @param    int        $type    Pay type: 0 = at the end of each period, 1 = at the beginning of each period
      * @return    float
      */
     public static function IPMT($rate, $per, $nper, $pv, $fv = 0, $type = 0)
@@ -1520,7 +1520,7 @@ class PHPExcel_Calculation_Financial
      * @param    int        $pmt    Periodic payment (annuity)
      * @param    float    $pv        Present Value
      * @param    float    $fv        Future Value
-     * @param    int        $type    Payment type: 0 = at the end of each period, 1 = at the beginning of each period
+     * @param    int        $type    Pay type: 0 = at the end of each period, 1 = at the beginning of each period
      * @return    float
      */
     public static function NPER($rate = 0, $pmt = 0, $pv = 0, $fv = 0, $type = 0)
@@ -1586,7 +1586,7 @@ class PHPExcel_Calculation_Financial
      * @param    int        $nper    Number of periods
      * @param    float    $pv        Present Value
      * @param    float    $fv        Future Value
-     * @param    int        $type    Payment type: 0 = at the end of each period, 1 = at the beginning of each period
+     * @param    int        $type    Pay type: 0 = at the end of each period, 1 = at the beginning of each period
      * @return    float
      */
     public static function PMT($rate = 0, $nper = 0, $pv = 0, $fv = 0, $type = 0)
@@ -1620,7 +1620,7 @@ class PHPExcel_Calculation_Financial
      * @param    int        $nper    Number of periods
      * @param    float    $pv        Present Value
      * @param    float    $fv        Future Value
-     * @param    int        $type    Payment type: 0 = at the end of each period, 1 = at the beginning of each period
+     * @param    int        $type    Pay type: 0 = at the end of each period, 1 = at the beginning of each period
      * @return    float
      */
     public static function PPMT($rate, $per, $nper, $pv, $fv = 0, $type = 0)
@@ -1806,7 +1806,7 @@ class PHPExcel_Calculation_Financial
      * @param    int        $nper    Number of periods
      * @param    float    $pmt    Periodic payment (annuity)
      * @param    float    $fv        Future Value
-     * @param    int        $type    Payment type: 0 = at the end of each period, 1 = at the beginning of each period
+     * @param    int        $type    Pay type: 0 = at the end of each period, 1 = at the beginning of each period
      * @return    float
      */
     public static function PV($rate = 0, $nper = 0, $pmt = 0, $fv = 0, $type = 0)

@@ -37,6 +37,6 @@ trait ConfigLangTrait
 
     public function delConfigLang($where)
     {
-        return ConfigLangModel::destroy($where);
+        return ConfigLangModel::whereDel($where);
     }
 }

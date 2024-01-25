@@ -20,9 +20,9 @@ trait TerminalTrait
      */
     public function heartbeat()
     {
-        $updateStore['heart_time'] = time();
-        $updateStore['online'] = 1;
-        $this->updateStore($updateStore, ['terminal_no' => $this->message['terminal_no']], ['heart_time', 'online']);
+        $updateMachine['last_online_time'] = time();
+        $updateMachine['online'] = 1;
+        $this->updateMachine($updateMachine, ['machine_id' => $this->message['machine_id']]);
         $details = $this->getStoreOnlineDetailsFind(['terminal_no' => $this->message['terminal_no'], 'offline_time' => 0], '*', 'sod_id asc');
         if ($details) {
             $update = [

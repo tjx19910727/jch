@@ -38,7 +38,7 @@ trait MachineHelpTrait
 
     public function delMachineHelp($where)
     {
-        $result = MachineHelpModel::destroy($where);
+        $result = MachineHelpModel::whereDel($where);
         return $result;
     }
 }

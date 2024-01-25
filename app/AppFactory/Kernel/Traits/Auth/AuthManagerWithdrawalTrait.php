@@ -71,6 +71,6 @@ trait AuthManagerWithdrawalTrait
      */
     public function delAuthManagerWithdrawal($where)
     {
-        return AuthManagerWithdrawalModel::destroy($where);
+        return AuthManagerWithdrawalModel::whereDel($where);
     }
 }

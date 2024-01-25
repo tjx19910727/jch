@@ -38,6 +38,6 @@ trait MachineGroupLangTrait
 
     public function delMachineGroupLang($where)
     {
-        return MachineGroupLangModel::destroy($where);
+        return MachineGroupLangModel::whereDel($where);
     }
 }

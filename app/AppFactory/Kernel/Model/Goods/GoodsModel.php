@@ -40,6 +40,7 @@ class GoodsModel extends BaseModel
         "height" => "int",
         "group_quantity" => "int",
         "status" => "int",
+        "ao_id" => "int",
         "creator" => "int",
         "create_time" => "int",
         "update_id" => "int",

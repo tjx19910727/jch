@@ -39,6 +39,6 @@ trait AuthRoleTrait
 
     public function delAuthRole($where)
     {
-        return AuthRoleModel::destroy($where);
+        return AuthRoleModel::whereDel($where);
     }
 }

@@ -22,8 +22,5 @@ class AdvertisementProvider implements ServiceProviderInterface
         $app['advertisementPush'] = function ($app) {
             return new AdvertisementPushClient($app);
         };
-        $app['advertisementResource'] = function ($app) {
-            return new AdvertisementResourceClient($app);
-        };
     }
 }

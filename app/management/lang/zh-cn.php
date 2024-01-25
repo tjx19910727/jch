@@ -85,6 +85,9 @@ return [
         "length_require" => "高度不能为空",
         "width_require" => "宽度不能为空",
         "size_require" => "素材大小不能为空",
+
+        "query_no_data" => "查无素材",
+        "can_not_use" => "素材不可用",
     ],
 
     "VGoodsCategory" => [
@@ -221,5 +224,20 @@ return [
         "layout_id_require" => "布局ID不能为空",
         "left_require" => "左偏差值不能为空",
         "top_require" => "顶偏差值不能为空",
+    ],
+
+    "VAdvertisement" => [
+        "adv_id_require" => "推送广告ID不能为空",
+        "adv_title_require" => "广告推送标题不能为空",
+        "duration_time_require" => "播放时长不能为空",
+        "total_times_require" => "总播放次数不能为空",
+        "m_id_require" => "请选择设备",
+        "start_date_require" => "日期列表不能为空",
+        "end_date_require" => "日期列表不能为空",
+        "time_list_require" => "时间段列表不能为空",
+        "screen_require" => "请选择屏幕",
+        "screen_full_require" => "请选择是否全屏",
+
+        "query_machine_no_data" => "查无设备信息",
     ],
 ];

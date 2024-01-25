@@ -12,6 +12,7 @@ namespace app\AppFactory;
 /**
  * Class AppFactory
  * @method static Management\Application       management($user = [])  管理端
+ * @method static Machine\Application       machine($config = [])      终端通讯
  * @package app\AppFactory
  */
 class AppFactory

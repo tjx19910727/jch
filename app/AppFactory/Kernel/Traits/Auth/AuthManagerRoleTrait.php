@@ -51,7 +51,7 @@ trait AuthManagerRoleTrait
 
     public function delAuthManagerRole($where)
     {
-        return AuthManagerRoleModel::destroy($where);
+        return AuthManagerRoleModel::whereDel($where);
     }
 
 }

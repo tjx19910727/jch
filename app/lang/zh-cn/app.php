@@ -22,4 +22,5 @@ return [
     "try_catch" => "程序异常",
 
     "controller_name_require" => '控制器名不能为空',
+    "query_machine_no_data" => '查无设备信息',
 ];

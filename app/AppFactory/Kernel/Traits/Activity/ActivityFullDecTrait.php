@@ -71,6 +71,6 @@ trait ActivityFullDecTrait
      */
     public function delActivityFullDesc($where)
     {
-        return ActivityFullDecModel::destroy($where);
+        return ActivityFullDecModel::whereDel($where);
     }
 }

@@ -23,7 +23,7 @@ class AdvertisementPush extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData,false,['adv_title' => "like"]);
-        return $this->app->advertisementPush->getList($where,($postData['pageNum'] ?? 0));
+        return $this->app->advertisementPush->getList($where,($postData['pageNum'] ?? 0),'*',"create_time desc");
     }
 
     /**

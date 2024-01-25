@@ -21,9 +21,33 @@ class AuthOrganizationModel extends BaseModel
         "pid" => "int",
         "level" => "int",
         "organization_name" => "string",
+        "is_top" => "int",
+        "sort" => "int",
         "creator" => "int",
         "create_time" => "int",
         "update_id" => "int",
         "update_time" => "int",
     ];
+
+    public static function getPAoIds($where,&$ids = [])
+    {
+        $pid = self::where($where)->value("pid");
+        if ($pid && $pid != 0) {
+            $ids[] = $pid;
+            self::getPAoIds(['ao_id' => $pid],$ids);
+        }
+    }
+
+    public static function getCAoIds($where,&$ids = [])
+    {
+        $cIds = self::where($where)->order("sort asc,update_time desc")->column("ao_id");
+        if ($cIds) {
+            foreach ($cIds as $v) {
+                if ($v) {
+                    $ids[] = $v;
+                    self::getCAoIds(['pid' => $v], $ids);
+                }
+            }
+        }
+    }
 }

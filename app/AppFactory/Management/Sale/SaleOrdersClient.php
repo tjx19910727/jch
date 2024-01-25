@@ -28,7 +28,7 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyChargeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
-use app\AppFactory\Kernel\Traits\Strategy\StrategyStoreTrait;
+use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\User\UserTrait;
 use app\AppFactory\Management\ManagementClient;
 use app\management\validate\VSaleOrders;
@@ -42,7 +42,7 @@ class SaleOrdersClient extends ManagementClient
     use StoreShelvesTrait;
     use BeforeOrderPaymentTrait;
     use StrategyChargeTrait;
-    use StrategyStoreTrait;
+    use StrategyMachineTrait;
     use StrategyIncomeTrait;
     use StrategyManagerTrait;
     use StoreChargeTrait;

@@ -37,7 +37,7 @@ trait ResourceTrait
 
     public function delResource($where)
     {
-        return ResourceModel::destroy($where);
+        return ResourceModel::whereDel($where);
     }
 
 }

@@ -36,7 +36,7 @@ trait MachineInfoTrait
 
     public function delMachineInfo($where)
     {
-        $result = MachineInfoModel::destroy($where);
+        $result = MachineInfoModel::whereDel($where);
         return $result;
     }
 }

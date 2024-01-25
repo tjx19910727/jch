@@ -38,6 +38,6 @@ trait GoodsLangTrait
 
     public function delGoodsLang($where)
     {
-        return GoodsLangModel::destroy($where);
+        return GoodsLangModel::whereDel($where);
     }
 }

@@ -40,7 +40,7 @@ trait MachineConfigTrait
 
     public function delMachineConfig($where)
     {
-        $result = MachineConfigModel::destroy($where);
+        $result = MachineConfigModel::whereDel($where);
         return $result;
     }
 }

@@ -32,6 +32,16 @@ class BaseModel extends Model
     }
 
     /**
+     * 删除
+     * @param $where
+     * @return bool
+     */
+    public static function whereDel($where)
+    {
+        return self::where($where)->delete();
+    }
+
+    /**
      * @param $where
      * @param int $pageNum
      * @param string $field

@@ -98,6 +98,6 @@ trait AuthOrganizationRoleTrait
      */
     public function delAuthOrganizationRole($where)
     {
-        return AuthOrganizationRoleModel::destroy($where);
+        return AuthOrganizationRoleModel::whereDel($where);
     }
 }

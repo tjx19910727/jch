@@ -18,10 +18,12 @@ class BaseClient
     use ReturnTrait;
     use CommonTrait;
     protected $app;
+    protected $config;
 
     public function __construct(ServiceContainer $app)
     {
         $this->app = $app;
+        $this->config = $app->getConfig();
     }
 
 

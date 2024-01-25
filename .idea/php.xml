@@ -30,6 +30,10 @@
       <path value="$PROJECT_DIR$/vendor/topthink/think-multi-app" />
       <path value="$PROJECT_DIR$/vendor/topthink/think-view" />
       <path value="$PROJECT_DIR$/vendor/topthink/think-template" />
+      <path value="$PROJECT_DIR$/vendor/workerman/workerman" />
+      <path value="$PROJECT_DIR$/vendor/workerman/mqtt" />
+      <path value="$PROJECT_DIR$/vendor/topthink/think-worker" />
+      <path value="$PROJECT_DIR$/vendor/workerman/gateway-worker" />
     </include_path>
   </component>
   <component name="PhpProjectSharedConfiguration" php_language_level="7.1" />

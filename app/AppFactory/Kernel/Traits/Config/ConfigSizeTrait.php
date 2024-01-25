@@ -36,6 +36,6 @@ trait ConfigSizeTrait
 
     public function delConfigSize($where)
     {
-        return ConfigSizeModel::destroy($where);
+        return ConfigSizeModel::whereDel($where);
     }
 }

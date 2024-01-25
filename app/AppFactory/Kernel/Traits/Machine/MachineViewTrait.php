@@ -38,7 +38,7 @@ trait MachineViewTrait
 
     public function delMachineView($where)
     {
-        $result = MachineViewModel::destroy($where);
+        $result = MachineViewModel::whereDel($where);
         return $result;
     }
 }

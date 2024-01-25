@@ -38,6 +38,7 @@ trait GoodsTrait
     public function addGoods($insert)
     {
         !isset($this->manager['manager_id']) ? :$insert['creator'] = $this->manager['manager_id'];
+        !isset($this->manager['ao_id']) ? :$insert['ao_id'] = $this->manager['ao_id'];
         $data = GoodsModel::create($insert);
         return $data->g_id;
     }
@@ -50,6 +51,6 @@ trait GoodsTrait
 
     public function delGoods($where)
     {
-        return GoodsModel::destroy($where);
+        return GoodsModel::whereDel($where);
     }
 }

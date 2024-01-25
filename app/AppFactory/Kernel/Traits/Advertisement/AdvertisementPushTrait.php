@@ -37,7 +37,7 @@ trait AdvertisementPushTrait
 
     public function delAdvertisementPush($where)
     {
-        return AdvertisementPushModel::destroy($where);
+        return AdvertisementPushModel::whereDel($where);
     }
 
     /**

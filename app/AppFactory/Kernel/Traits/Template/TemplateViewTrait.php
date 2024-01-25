@@ -39,7 +39,7 @@ trait TemplateViewTrait
 
     public function delTemplateView($where)
     {
-        $result = TemplateViewModel::destroy($where);
+        $result = TemplateViewModel::whereDel($where);
         return $result;
     }
 }

@@ -39,7 +39,7 @@ trait TemplateLayoutTrait
 
     public function delTemplateLayout($where)
     {
-        $result = TemplateLayoutModel::destroy($where);
+        $result = TemplateLayoutModel::whereDel($where);
         return $result;
     }
 }

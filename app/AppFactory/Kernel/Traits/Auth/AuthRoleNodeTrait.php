@@ -60,6 +60,6 @@ trait AuthRoleNodeTrait
 
     public function delAuthRoleNode($where)
     {
-        return AuthRoleNodeModel::destroy($where);
+        return AuthRoleNodeModel::whereDel($where);
     }
 }

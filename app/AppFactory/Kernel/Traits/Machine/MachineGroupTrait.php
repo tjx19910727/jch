@@ -38,7 +38,7 @@ trait MachineGroupTrait
 
     public function delMachineGroup($where)
     {
-        $result = MachineGroupModel::destroy($where);
+        $result = MachineGroupModel::whereDel($where);
         return $result;
     }
 }

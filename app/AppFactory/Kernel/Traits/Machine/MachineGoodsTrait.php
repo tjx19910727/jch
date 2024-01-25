@@ -36,7 +36,7 @@ trait MachineGoodsTrait
 
     public function delMachineGoods($where)
     {
-        $result = MachineGoodsModel::destroy($where);
+        $result = MachineGoodsModel::whereDel($where);
         return $result;
     }
 }

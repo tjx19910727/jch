@@ -97,7 +97,52 @@ trait AuthOrganizationTrait
      */
     public function delAuthOrganization($where)
     {
-        return AuthOrganizationModel::destroy($where);
+        return AuthOrganizationModel::whereDel($where);
     }
 
+    /**
+     * 获取某组织节点所有上级ID
+     * @param $id
+     * @param int $addSelf
+     * @return array
+     */
+    public function getParentIds($id,$addSelf = 1)
+    {
+        if ($id) {
+            if ($addSelf) $ids[] = $id;
+            AuthOrganizationModel::getPAoIds(['ao_id' => $id], $ids);
+            return $ids;
+        }
+        return [];
+    }
+
+    /**
+     * 获取某组织节点所有下级ID
+     * @param $id
+     * @param int $addSelf
+     * @return array
+     */
+    public function getChildIds($id,$addSelf = 1)
+    {
+        if ($id) {
+            AuthOrganizationModel::getCAoIds(['pid' => $id], $ids);
+            if ($addSelf) $ids[] = $id;
+            return $ids;
+        }
+        return [];
+    }
+
+    /**
+     * 获取某组织节点所有上下级ID
+     * @param $id
+     * @param int $addSelf
+     * @return array
+     */
+    public function getPathIds($id,$addSelf = 1)
+    {
+        $pIds = $this->getParentIds($id,$addSelf);
+        $cIds = $this->getChildIds($id,$addSelf);
+        $ids = array_unique(array_merge($pIds,$cIds));
+        return $ids;
+    }
 }

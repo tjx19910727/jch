@@ -58,6 +58,6 @@ trait ActivityHgGoodsTrait
      */
     public function delActivityHgGoods($where)
     {
-        return ActivityHgGoodsModel::destroy($where);
+        return ActivityHgGoodsModel::whereDel($where);
     }
 }
