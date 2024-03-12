@@ -4,28 +4,28 @@
 namespace InConnect\Kernel;
 
 
+use InConnect\Kernel\Traits\AccessTokenTrait;
 use InConnect\Kernel\Traits\CurlTrait;
 
 class BaseClient
 {
+    use AccessTokenTrait;
     use CurlTrait;
 
     protected $url = "https://ics.inhandiot.com";
     protected $app;
     protected $config;
+    protected $header = [
+        "Content-Type: application/x-www-form-urlencoded; charset=utf-8",
+    ];
 
 
-    public function __construct(ServiceContainer $app)
+    public function __construct(ServiceContainer $app, AccessTokenTrait $accessToken = null)
     {
         $this->app = $app;
         $this->config = $this->app->getConfig();
         if (isset($this->config['international']) && $this->config['international'])
             $this->url = "https://ics.inhandnetworks.com/";
-    }
-
-    public function access_token()
-    {
-        
     }
 
     /**
@@ -58,16 +58,8 @@ class BaseClient
      */
     public function request(string $url, string $method = 'GET', array $options = [])
     {
-//        if ($options) {
-//            $header[] = 'token:' . $token;
-//        }
-        $token = $this->signer($url, $method, $options);
-        $header = array(
-            'token:' . $token,
-            'accessKey:' . $this->config['accessKey'],
-            'timestamp:' . time(),
-            'Content-Type:application/x-www-form-urlencoded;'
-        );
+        $header = $this->header;
+        $header[] = "Authorization: Basic " . $this->config['private_key'];
         $response = $this->curl_request($url, $method, $options, $header);
         return $response;
     }

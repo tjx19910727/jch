@@ -75,8 +75,9 @@ trait MachineChannelReplenishmentTrait
     protected function handleRepData($mc,$quantity)
     {
         $repData = [
-            "m_id" => $mc['m_id'],
-            "machine_id" => $mc['machine_id'],
+            "m_id" => $this->machine['m_id'],
+            "machine_id" => $this->machine['machine_id'],
+            "machine_name" => $this->machine['machine_name'],
             "mc_id" => $mc['mc_id'],
             "channel_code" => $mc['channel_code'],
             "g_id" => $mc['g_id'],

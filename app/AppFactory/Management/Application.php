@@ -63,6 +63,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Goods\GoodsHitClient                   $goodsHit               商品点击
  *
  * @property Machine\MachineChannelClient           $machineChannel         设备货道
+ * @property Machine\MachineChannelReplenishmentClient     $machineChannelReplenishment         设备货道补货
  * @property Machine\MachineClient                  $machine                设备基础信息
  * @property Machine\MachineConfigClient            $machineConfig          设备配置信息
  * @property Machine\MachineGoodsClient             $machineGoods           设备商品信息

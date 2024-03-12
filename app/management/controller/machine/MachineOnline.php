@@ -20,7 +20,7 @@ class MachineOnline extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["machine_id" => "like"]);
         return $this->app->machineOnline->getList($where,$pageNum,$this->field,'online_id desc');
     }
 

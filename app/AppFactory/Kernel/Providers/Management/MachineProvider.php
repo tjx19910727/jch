@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Providers\Management;
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\Machine\MachineChannelClient;
+use app\AppFactory\Management\Machine\MachineChannelReplenishmentClient;
 use app\AppFactory\Management\Machine\MachineClient;
 use app\AppFactory\Management\Machine\MachineConfigClient;
 use app\AppFactory\Management\Machine\MachineGoodsClient;
@@ -31,6 +32,9 @@ class MachineProvider implements ServiceProviderInterface
     public function register(Container $app)
     {
         // TODO: Implement register() method.
+        $app['machineChannelReplenishment'] = function ($app) {
+            return new MachineChannelReplenishmentClient($app);
+        };
         $app['machineChannel'] = function ($app) {
             return new MachineChannelClient($app);
         };
