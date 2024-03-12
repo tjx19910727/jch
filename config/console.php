@@ -5,6 +5,8 @@
 return [
     // 指令定义
     'commands' => [
-        'mqtt' => 'app\command\Mqtt',
+        'dataUpload' => 'app\command\DataUpload',
+        'machineReceive' => 'app\command\MachineReceive',
+        'time_task' => 'app\command\TimeTask',
     ],
 ];

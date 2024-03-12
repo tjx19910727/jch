@@ -19,6 +19,11 @@ use app\AppFactory\Management\Machine\MachineGroupClient;
 use app\AppFactory\Management\Machine\MachineGroupLangClient;
 use app\AppFactory\Management\Machine\MachineHelpClient;
 use app\AppFactory\Management\Machine\MachineInfoClient;
+use app\AppFactory\Management\Machine\MachineOnlineClient;
+use app\AppFactory\Management\Machine\MachineOnlineDetailsClient;
+use app\AppFactory\Management\Machine\MachineSaleClient;
+use app\AppFactory\Management\Machine\MachineVersionClient;
+use app\AppFactory\Management\Machine\MachineVersionPlanClient;
 use app\AppFactory\Management\Machine\MachineViewClient;
 
 class MachineProvider implements ServiceProviderInterface
@@ -52,6 +57,21 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineView'] = function ($app) {
             return new MachineViewClient($app);
+        };
+        $app['machineOnline'] = function ($app) {
+            return new MachineOnlineClient($app);
+        };
+        $app['machineOnlineDetails'] = function ($app) {
+            return new MachineOnlineDetailsClient($app);
+        };
+        $app['machineVersion'] = function ($app) {
+            return new MachineVersionClient($app);
+        };
+        $app['machineVersionPlan'] = function ($app) {
+            return new MachineVersionPlanClient($app);
+        };
+        $app['machineSale'] = function ($app) {
+            return new MachineSaleClient($app);
         };
     }
 }

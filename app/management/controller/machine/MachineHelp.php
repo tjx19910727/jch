@@ -21,7 +21,7 @@ class MachineHelp extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["mh_id" => "in"]);
         return $this->app->machineHelp->getList($where,$pageNum,$this->field);
     }
 

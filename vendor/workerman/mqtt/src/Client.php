@@ -17,7 +17,7 @@ use \Workerman\Connection\AsyncTcpConnection;
 use Workerman\Mqtt\Consts\MQTTConst;
 use Workerman\Mqtt\Consts\ReasonCodeConst;
 use \Workerman\Protocols\Mqtt;
-use \Workerman\Timer;
+use \Workerman\Lib\Timer;
 
 /**
  * Class Client
@@ -192,7 +192,6 @@ class Client
     public function __construct($address, array $options = array())
     {
         $this->setOptions($options);
-
         $class_name = '\Workerman\Protocols\Mqtt';
         if ((int)$this->_options['protocol_level'] === 5) {
             if (!class_exists($class_name)) {

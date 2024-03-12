@@ -17,31 +17,48 @@ class SaleOrdersModel extends BaseModel
     protected $name = "sale_orders";
     protected $createTime = "create_time";
 
-    protected $schema = [
-        "order_id" => "int",
-        "trade_no" => "string",
-        "mch_no" => "string",
-        "user_id" => "int",
-        "user_name" => "string",
-        "store_id" => "int",
-        "store_name" => "string",
-        "store_manager" => "int",
-        "terminal_no" => "string",
-        "order_type" => "int",
-        "supplementary_payment" => "int",
-        "payment_status" => "int",
-        "payment_type" => "int",
-        "payment_method" => "int",
-        "payment_time" => "int",
-        "payment_code" => "string",
-        "refund_status" => "int",
-        "cost_price" => "float",
-        "total_price" => "float",
-        "total_quantity" => "int",
-        "pickup_time" => "int",
-        "remark" => "string",
-        "create_time" => "int",
-        "sp_id" => "int",
-    ];
+//    protected $schema = [
+//        "order_id" => "int",
+//        "trade_no" => "string",
+//        "mch_no" => "string",
+//        "user_id" => "int",
+//        "user_name" => "string",
+//        "store_id" => "int",
+//        "store_name" => "string",
+//        "store_manager" => "int",
+//        "terminal_no" => "string",
+//        "order_type" => "int",
+//        "supplementary_payment" => "int",
+//        "payment_status" => "int",
+//        "payment_type" => "int",
+//        "payment_method" => "int",
+//        "payment_time" => "int",
+//        "payment_code" => "string",
+//        "refund_status" => "int",
+//        "cost_price" => "float",
+//        "total_price" => "float",
+//        "total_quantity" => "int",
+//        "pickup_time" => "int",
+//        "remark" => "string",
+//        "create_time" => "int",
+//        "sp_id" => "int",
+//    ];
+
+    public function saleOrdersDetails()
+    {
+        return $this->hasMany(SaleOrdersDetailsModel::class,'order_id');
+    }
+
+    public static function collectDetailsData($where,$field,$group = "")
+    {
+        $data = self::alias("so")
+            ->join("sale_orders_details sod","sod.order_id = so.order_id","left")
+            ->where($where)
+            ->field($field)
+            ->group($group)
+            ->find();
+        return $data;
+    }
+
 
 }

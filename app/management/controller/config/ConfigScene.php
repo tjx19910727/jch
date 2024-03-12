@@ -14,7 +14,7 @@ use think\facade\Lang;
 
 class ConfigScene extends Common
 {
-    protected $field = "id,name,desc,status,creator,create_time,update_time";
+    protected $field = "id,`name`,`desc`,`status`,creator,create_time,update_time";
     protected $validatePath = 'app\management\validate\VConfigScene.';
 
     /**

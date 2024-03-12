@@ -9,10 +9,12 @@
 namespace app\AppFactory\Kernel\Model\Machine;
 
 
+use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
 use app\AppFactory\Kernel\Model\BaseModel;
 
 class MachineConfigModel extends BaseModel
 {
     protected $pk = "mc_id";
     protected $name = "machine_config";
+
 }

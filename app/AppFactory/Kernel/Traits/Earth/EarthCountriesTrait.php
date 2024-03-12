@@ -12,6 +12,10 @@ use app\AppFactory\Kernel\Model\Earth\EarthCountriesModel;
 
 trait EarthCountriesTrait
 {
+    public function getEarthCountriesFind($where,$field = "*")
+    {
+        return EarthCountriesModel::getFind($where,$field);
+    }
 
     public function getEarthCountriesList($where,$pageNum = 0,$field = "*",$order ="")
     {

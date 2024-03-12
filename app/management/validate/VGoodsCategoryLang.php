@@ -27,5 +27,6 @@ class VGoodsCategoryLang extends VCommon
     protected $scene = [
         "add" => ['gc_name',"gc_id","lang"],
         "update" => ['gcl_id'],
+        "del" => ['gcl_id'],
     ];
 }

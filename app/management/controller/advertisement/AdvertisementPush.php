@@ -70,4 +70,14 @@ class AdvertisementPush extends Common
         try { $this->validate($postData,$this->validatePath . 'upDown');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         return $this->app->advertisementPush->upDown($postData);
     }
+
+    /**
+     * 触发广告更新按钮
+     * @return array|string
+     */
+    public function triggerUpdateAD()
+    {
+        $adv_ids = input();
+        return $this->app->advertisementPush->triggerUpdate([['adv_id','in',$adv_ids]]);
+    }
 }

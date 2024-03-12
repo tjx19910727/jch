@@ -103,4 +103,74 @@ class Excel
         }
         return $data;
     }
+
+    /**
+     * 导出
+     * @param $list
+     * @param $title
+     * @param $filename
+     * @param int $startRow
+     * @param int $isDown
+     * @return bool
+     * @throws \PHPExcel_Exception
+     * @throws \PHPExcel_Writer_Exception
+     */
+    public static function exportExcel($list,$title,$filename,$isDown = 1,$startRow = 1)
+    {
+        if(empty($filename)) return false;
+        if(!is_array($title)) return false;
+        require_once root_path() . '/extend/PHPExcel/PHPExcel.php';
+        require_once root_path() . '/extend/PHPExcel/PHPExcel/Writer/Excel2007.php';
+        $header_arr= ['A','B','C','D','E','F','G','H','I','J','K','L','M', 'N','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD','AE','AF','AG','AH','AI','AJ','AK','AL','AM', 'AN','AO','AP','AQ','AR','AS','AT','AU','AV','AW','AX','AY','AZ'];
+        $objPHPExcel = new \PHPExcel();
+        $objWriter = new \PHPExcel_Writer_Excel2007($objPHPExcel);
+        $filename = $filename.'.xlsx';
+        array_unshift($list,$title);
+        $indexKey = [];
+        foreach ($title as $k=>$v){
+            $indexKey[] = $k;
+        }
+        //接下来就是写数据到表格里面去
+        $objActSheet = $objPHPExcel->getActiveSheet();
+        foreach ($list as $row) {
+            foreach ($indexKey as $key => $value){
+                //这里是设置单元格的内容
+                $objActSheet->setCellValueExplicit($header_arr[$key].$startRow,$row[$value],\PHPExcel_Cell_DataType::TYPE_STRING);
+            }
+            $startRow++;
+        }
+
+        // 保存到本地
+        $savePath = "/export/excel/" . date("Ymd");
+        $path = root_path() . "public" . $savePath;
+        if (!is_dir($path)) {
+            @mkdir($path);
+            @chmod($path,0777);
+        }
+        $path .= ("/" . $filename);
+        $objWriter->save($path);
+
+        if ($isDown) {
+            self::outExcelHeader($filename);
+            $objWriter->save("php://output");
+        }
+        return $savePath . "/" . $filename;
+    }
+
+    /**
+     * 下载头部
+     * @param $fileName
+     */
+    public static function outExcelHeader($fileName){
+        ob_clean();
+        header("Pragma: public");
+        header("Expires: 0");
+        header("Cache-Control:must-revalidate, post-check=0, pre-check=0");
+        header("Content-Type:application/force-download");
+        header("Content-Type:application/vnd.ms-execl");
+        header("Content-Type:application/octet-stream");
+        header("Content-Type:application/download");;
+        header('Content-Disposition:attachment;filename='.$fileName.'');
+        header("Content-Transfer-Encoding:binary");
+    }
 }

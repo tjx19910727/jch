@@ -7,15 +7,18 @@ namespace Composer\Autoload;
 class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
 {
     public static $files = array (
-        '9b552a3cc426e3287cc811caefa3cf53' => __DIR__ . '/..' . '/topthink/think-helper/src/helper.php',
         'a4a119a56e50fbb293281d9a48007e0e' => __DIR__ . '/..' . '/symfony/polyfill-php80/bootstrap.php',
+        '9b552a3cc426e3287cc811caefa3cf53' => __DIR__ . '/..' . '/topthink/think-helper/src/helper.php',
+        '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
         '35fab96057f1bf5e7aba31a8a6d5fdde' => __DIR__ . '/..' . '/topthink/think-orm/stubs/load_stubs.php',
         '320cde22f66dd4f5d3fd621d3e88b98f' => __DIR__ . '/..' . '/symfony/polyfill-ctype/bootstrap.php',
+        'ad155f8f1cf0d418fe49e248db8c661b' => __DIR__ . '/..' . '/react/promise/src/functions_include.php',
         'a9ed0d27b5a698798a89181429f162c5' => __DIR__ . '/..' . '/khanamiryan/qrcode-detector-decoder/lib/Common/customFunctions.php',
-        '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
+        'decc78cc4436b1292c6c0d151b19445c' => __DIR__ . '/..' . '/phpseclib/phpseclib/phpseclib/bootstrap.php',
         '25072dd6e2470089de65ae7bf11d3109' => __DIR__ . '/..' . '/symfony/polyfill-php72/bootstrap.php',
         '667aeda72477189d0494fecd327c3641' => __DIR__ . '/..' . '/symfony/var-dumper/Resources/functions/dump.php',
         '1cfd2761b63b0a29ed23657ea394cb2d' => __DIR__ . '/..' . '/topthink/think-captcha/src/helper.php',
+        'cc56288302d9df745d97c934d6a6e5f0' => __DIR__ . '/..' . '/topthink/think-queue/src/common.php',
     );
 
     public static $prefixLengthsPsr4 = array (
@@ -28,6 +31,10 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
             'think\\app\\' => 10,
             'think\\' => 6,
         ),
+        'p' => 
+        array (
+            'phpseclib3\\' => 11,
+        ),
         'a' => 
         array (
             'app\\' => 4,
@@ -38,6 +45,7 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
         ),
         'W' => 
         array (
+            'Workerman\\RabbitMQ\\' => 19,
             'Workerman\\Mqtt\\' => 15,
             'Workerman\\' => 10,
         ),
@@ -47,17 +55,28 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
             'Symfony\\Polyfill\\Php72\\' => 23,
             'Symfony\\Polyfill\\Mbstring\\' => 26,
             'Symfony\\Polyfill\\Ctype\\' => 23,
+            'Symfony\\Contracts\\Translation\\' => 30,
             'Symfony\\Component\\VarDumper\\' => 28,
+            'Symfony\\Component\\Translation\\' => 30,
             'Symfony\\Component\\PropertyAccess\\' => 33,
+            'Symfony\\Component\\Process\\' => 26,
             'Symfony\\Component\\OptionsResolver\\' => 34,
             'Symfony\\Component\\Inflector\\' => 28,
+        ),
+        'R' => 
+        array (
+            'React\\Promise\\' => 14,
+            'React\\EventLoop\\' => 16,
         ),
         'P' => 
         array (
             'Psr\\SimpleCache\\' => 16,
             'Psr\\Log\\' => 8,
             'Psr\\Container\\' => 14,
+            'Psr\\Clock\\' => 10,
             'Psr\\Cache\\' => 10,
+            'PhpAmqpLib\\' => 11,
+            'ParagonIE\\ConstantTime\\' => 23,
         ),
         'M' => 
         array (
@@ -80,8 +99,14 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
         array (
             'DASPRiD\\Enum\\' => 13,
         ),
+        'C' => 
+        array (
+            'Carbon\\Doctrine\\' => 16,
+            'Carbon\\' => 7,
+        ),
         'B' => 
         array (
+            'Bunny\\' => 6,
             'BaconQrCode\\' => 12,
         ),
     );
@@ -112,7 +137,12 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
             0 => __DIR__ . '/..' . '/topthink/framework/src/think',
             1 => __DIR__ . '/..' . '/topthink/think-helper/src',
             2 => __DIR__ . '/..' . '/topthink/think-orm/src',
-            3 => __DIR__ . '/..' . '/topthink/think-template/src',
+            3 => __DIR__ . '/..' . '/topthink/think-queue/src',
+            4 => __DIR__ . '/..' . '/topthink/think-template/src',
+        ),
+        'phpseclib3\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/phpseclib/phpseclib/phpseclib',
         ),
         'app\\' => 
         array (
@@ -121,6 +151,10 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
         'Zxing\\' => 
         array (
             0 => __DIR__ . '/..' . '/khanamiryan/qrcode-detector-decoder/lib',
+        ),
+        'Workerman\\RabbitMQ\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/workerman/rabbitmq/src',
         ),
         'Workerman\\Mqtt\\' => 
         array (
@@ -146,13 +180,25 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
         array (
             0 => __DIR__ . '/..' . '/symfony/polyfill-ctype',
         ),
+        'Symfony\\Contracts\\Translation\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/translation-contracts',
+        ),
         'Symfony\\Component\\VarDumper\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/var-dumper',
         ),
+        'Symfony\\Component\\Translation\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/translation',
+        ),
         'Symfony\\Component\\PropertyAccess\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/property-access',
+        ),
+        'Symfony\\Component\\Process\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/process',
         ),
         'Symfony\\Component\\OptionsResolver\\' => 
         array (
@@ -161,6 +207,14 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
         'Symfony\\Component\\Inflector\\' => 
         array (
             0 => __DIR__ . '/..' . '/symfony/inflector',
+        ),
+        'React\\Promise\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/react/promise/src',
+        ),
+        'React\\EventLoop\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/react/event-loop/src',
         ),
         'Psr\\SimpleCache\\' => 
         array (
@@ -174,9 +228,21 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
         array (
             0 => __DIR__ . '/..' . '/psr/container/src',
         ),
+        'Psr\\Clock\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/clock/src',
+        ),
         'Psr\\Cache\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/cache/src',
+        ),
+        'PhpAmqpLib\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/php-amqplib/php-amqplib/PhpAmqpLib',
+        ),
+        'ParagonIE\\ConstantTime\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/paragonie/constant_time_encoding/src',
         ),
         'MyCLabs\\Enum\\' => 
         array (
@@ -201,6 +267,18 @@ class ComposerStaticInit42d5cdb936c5a36fbc0b859233831e3d
         'DASPRiD\\Enum\\' => 
         array (
             0 => __DIR__ . '/..' . '/dasprid/enum/src',
+        ),
+        'Carbon\\Doctrine\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/carbonphp/carbon-doctrine-types/src/Carbon/Doctrine',
+        ),
+        'Carbon\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/nesbot/carbon/src/Carbon',
+        ),
+        'Bunny\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/bunny/bunny/src/Bunny',
         ),
         'BaconQrCode\\' => 
         array (

@@ -6,6 +6,7 @@ namespace app\AppFactory\Kernel;
 
 use app\AppFactory\Kernel\Traits\CacheTrait;
 use app\AppFactory\Kernel\Traits\CommonTrait;
+use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
 use app\AppFactory\Kernel\Traits\DbTrait;
 use app\AppFactory\Kernel\Traits\ReturnTrait;
 
@@ -13,10 +14,7 @@ use ZipArchive;
 
 class BaseClient
 {
-    use DbTrait;
-    use CacheTrait;
-    use ReturnTrait;
-    use CommonTrait;
+    use DbTrait, CacheTrait, ReturnTrait, CommonTrait, ConfigTrait;
     protected $app;
     protected $config;
 

@@ -12,130 +12,101 @@ namespace app\management\controller;
 class Index extends Common
 {
     /**
-     * 销售汇总
+     * 获取昨天、今天销售额与销量
      * @return array|string
      */
-    public function salesSummary()
+    public function getSaleData()
+    {
+        $where = $this->getWhere(["pay_status" => 3]);
+        $data = $this->app->saleOrders->getData($where);
+        return returnState(200,'查询成功',$data);
+    }
+
+    /**
+     * 获取设备数据
+     * @return array|string
+     */
+    public function getMachineData()
     {
         $where = $this->getWhere([]);
-        return $this->app->saleData->getSummary($where);
+        $data = $this->app->machine->getData($where);
+        return returnState(200,'查询成功',$data);
     }
 
     /**
-     * 利润汇总
+     * 获取货道数据
      * @return array|string
      */
-    public function profitSummary()
+    public function getChannelData()
     {
         $where = $this->getWhere([]);
-        return $this->app->saleData->getProfitSummary($where);
+        $data = $this->app->machineChannel->getData($where);
+        return returnState(200,'查询成功',$data);
     }
 
     /**
-     * 门店销售排行榜
-     * @return array|string
-     * @throws \Exception
-     */
-    public function storeSaleList()
-    {
-        $postData = input();
-        $where = $this->getWhere($postData);
-        return $this->app->saleData->storeSaleRankingList($where);
-    }
-
-    /**
-     * 商品销售排行榜
+     * 获取空槽列表
      * @return array|string
      */
-    public function goodsSaleList()
-    {
-        $pageNum = input('pageNum', 10);
-        $where = $this->getWhere([]);
-        return $this->app->saleData->goodsSaleRankingList($where, $pageNum);
-    }
-
-    /**
-     * 云值守销售排行榜
-     * @return array|string
-     * @throws \Exception
-     */
-    public function unattendedSaleList()
-    {
-        $pageNum = input('pageNum', 10);
-        $where = $this->getWhere([]);
-        return $this->app->saleData->unattendedSaleList($where, $pageNum);
-    }
-
-    /**
-     * 云仓销售排行榜
-     * @return array|string
-     * @throws \Exception
-     */
-    public function cloudWhSaleList()
-    {
-        $pageNum = input('pageNum', 10);
-        $where = $this->getWhere([]);
-        return $this->app->saleData->unattendedSaleList($where, $pageNum);
-    }
-
-    /**
-     * 获取销售折线图
-     * @return array|string
-     * @throws \Exception
-     */
-    public function getBrokenLine()
-    {
-        $postData = input();
-        $where = $this->getWhere($postData);
-        return $this->app->saleData->getBrokenLine($where);
-    }
-
-    /**
-     * 门店汇总
-     * @return array|string
-     */
-    public function storeSummary()
+    public function getEmptyChannel()
     {
         $where = $this->getWhere([]);
-        return $this->app->storeData->getSummary($where);
+        return $this->app->machineChannel->getEmptyList($where);
     }
 
     /**
-     * 货损汇总
+     * 获取Bad列表
      * @return array|string
      */
-    public function cargoDamageSummary()
+    public function getBadChannel()
     {
         $where = $this->getWhere([]);
-        return $this->app->cargoDamageData->getSummary($where);
+        return $this->app->machineChannel->getBadList($where);
     }
 
     /**
-     * 获取待办事项列表
+     * 获取空货列表
      * @return array|string
-     * @throws \Exception
      */
-    public function getTodoList()
+    public function getStockOutChannel()
     {
-        $pageNum = input('pageNum', 0);
-        return $this->app->todo->getFieldList($pageNum);
+        $where = $this->getWhere([]);
+        return $this->app->machineChannel->getStockOutList($where);
     }
 
     /**
-     * 忽略待办事项
-     * @return mixed
+     * 获取销售折线图数据
+     * @return array|string
      */
-    public function ignoreTodo()
+    public function getSaleChart()
     {
-        $id = input('id');
-        return returnData($this->app->todo->updateStatus($id));
+        $type = input('type');
+        $where['ao_id'] = $this->manager['ao_id'];
+        return $this->app->saleOrders->getChartData($where,$type);
     }
 
-    public function addTodo()
+    /**
+     * 获取设备前10排行榜
+     * @return array|string
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function getMachine10List()
     {
-        $postData = input();
-
+        $where['ao_id'] = $this->manager['ao_id'];
+        $where[] = ['countDate','>=',strtotime("-7 days")];
+        return $this->app->machine->get10List($where);
     }
 
-
+    /**
+     * 获取商品前10排行榜
+     * @return array|string
+     */
+    public function getGoods10List()
+    {
+        $where['ao_id'] = $this->manager['ao_id'];
+        $where[] = ['countDate','>=',strtotime("-7 days")];
+        return $this->app->goods->get10List($where);
+    }
 }

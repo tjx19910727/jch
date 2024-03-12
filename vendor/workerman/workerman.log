@@ -1,281 +1,249 @@
-2024-01-24 17:43:15 pid:1 RedisException: 由于目标计算机积极拒绝，无法连接。
- in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:99
+2024-01-29 16:40:41 pid:1 Error: Class 'Workerman\Timer' not found in E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php:877
 Stack trace:
-#0 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php(99): Redis->connect('127.0.0.1', '6379')
-#1 [internal function]: Events::onClose('7f0000010f3c000...')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(414): call_user_func('Events::onClose', '7f0000010f3c000...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): GatewayWorker\BusinessWorker->onGatewayMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
-#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #42)
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
-#6 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#0 E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php(253): Workerman\Mqtt\Client->setConnectionTimeout(30)
+#1 E:\project\project-70-cf.com\public\mqtt.php(24): Workerman\Mqtt\Client->connect()
+#2 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): {closure}(Object(Workerman\Worker))
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#6 E:\project\project-70-cf.com\public\mqtt.php(27): Workerman\Worker::runAll()
+#7 {main}
+2024-01-29 16:40:42 pid:1 Worker process terminated
+2024-01-29 20:43:30 pid:1 Error: Call to undefined function arr2json() in E:\project\project-70-cf.com\public\mqtt.php:28
+Stack trace:
+#0 [internal function]: {closure}('/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#1 E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php(598): call_user_func(Object(Closure), '/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#2 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): Workerman\Mqtt\Client->onConnectionMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #35)
+#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#8 E:\project\project-70-cf.com\public\mqtt.php(35): Workerman\Worker::runAll()
+#9 {main}
+2024-01-29 20:43:30 pid:1 Worker process terminated
+2024-01-29 20:47:49 pid:1 Exception: Identifier "report" is not defined. in E:\project\project-70-cf.com\app\AppFactory\Kernel\Container.php:52
+Stack trace:
+#0 E:\project\project-70-cf.com\app\AppFactory\Kernel\ServiceContainer.php(76): app\AppFactory\Kernel\Container->offsetGet('report')
+#1 E:\project\project-70-cf.com\public\mqtt.php(26): app\AppFactory\Kernel\ServiceContainer->__get('report')
+#2 [internal function]: {closure}('/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#3 E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php(598): call_user_func(Object(Closure), '/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): Workerman\Mqtt\Client->onConnectionMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #35)
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
 #8 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
 #9 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#10 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
+#10 E:\project\project-70-cf.com\public\mqtt.php(37): Workerman\Worker::runAll()
 #11 {main}
-2024-01-24 17:43:15 pid:1 Worker process terminated
-2024-01-24 17:43:49 pid:1 RedisException: 由于目标计算机积极拒绝，无法连接。
- in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:99
+2024-01-29 20:47:49 pid:1 Worker process terminated
+2024-01-29 20:48:42 pid:1 Error: Call to undefined function app\AppFactory\Machine\actionLog() in E:\project\project-70-cf.com\app\AppFactory\Machine\MachineBaseClient.php:27
 Stack trace:
-#0 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php(99): Redis->connect('127.0.0.1', '6379')
-#1 [internal function]: Events::onClose('7f0000010f3c000...')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(414): call_user_func('Events::onClose', '7f0000010f3c000...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): GatewayWorker\BusinessWorker->onGatewayMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
-#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #41)
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
-#6 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#0 E:\project\project-70-cf.com\app\AppFactory\Machine\Receive\ReceiveBaseClient.php(25): app\AppFactory\Machine\MachineBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#1 E:\project\project-70-cf.com\app\AppFactory\Kernel\Providers\Machine\ReceiveProvider.php(30): app\AppFactory\Machine\Receive\ReceiveBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#2 E:\project\project-70-cf.com\app\AppFactory\Kernel\Container.php(69): app\AppFactory\Kernel\Providers\Machine\ReceiveProvider->app\AppFactory\Kernel\Providers\Machine\{closure}(Object(app\AppFactory\Machine\Application))
+#3 E:\project\project-70-cf.com\app\AppFactory\Kernel\ServiceContainer.php(76): app\AppFactory\Kernel\Container->offsetGet('report')
+#4 E:\project\project-70-cf.com\public\mqtt.php(26): app\AppFactory\Kernel\ServiceContainer->__get('report')
+#5 [internal function]: {closure}('/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#6 E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php(598): call_user_func(Object(Closure), '/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): Workerman\Mqtt\Client->onConnectionMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#8 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #35)
+#9 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#10 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#11 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#12 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#13 E:\project\project-70-cf.com\public\mqtt.php(37): Workerman\Worker::runAll()
+#14 {main}
+2024-01-29 20:48:42 pid:1 Worker process terminated
+2024-01-29 20:49:12 pid:1 Error: Call to undefined function app\AppFactory\Machine\actionLog() in E:\project\project-70-cf.com\app\AppFactory\Machine\MachineBaseClient.php:27
+Stack trace:
+#0 E:\project\project-70-cf.com\app\AppFactory\Machine\Receive\ReceiveBaseClient.php(25): app\AppFactory\Machine\MachineBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#1 E:\project\project-70-cf.com\app\AppFactory\Kernel\Providers\Machine\ReceiveProvider.php(30): app\AppFactory\Machine\Receive\ReceiveBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#2 E:\project\project-70-cf.com\app\AppFactory\Kernel\Container.php(69): app\AppFactory\Kernel\Providers\Machine\ReceiveProvider->app\AppFactory\Kernel\Providers\Machine\{closure}(Object(app\AppFactory\Machine\Application))
+#3 E:\project\project-70-cf.com\app\AppFactory\Kernel\ServiceContainer.php(76): app\AppFactory\Kernel\Container->offsetGet('report')
+#4 E:\project\project-70-cf.com\public\mqtt.php(26): app\AppFactory\Kernel\ServiceContainer->__get('report')
+#5 [internal function]: {closure}('/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#6 E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php(598): call_user_func(Object(Closure), '/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): Workerman\Mqtt\Client->onConnectionMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#8 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #35)
+#9 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#10 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#11 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#12 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#13 E:\project\project-70-cf.com\public\mqtt.php(37): Workerman\Worker::runAll()
+#14 {main}
+2024-01-29 20:49:12 pid:1 Worker process terminated
+2024-01-29 20:49:23 pid:1 Error: Call to undefined function app\AppFactory\Machine\actionLog() in E:\project\project-70-cf.com\app\AppFactory\Machine\MachineBaseClient.php:27
+Stack trace:
+#0 E:\project\project-70-cf.com\app\AppFactory\Machine\Receive\ReceiveBaseClient.php(25): app\AppFactory\Machine\MachineBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#1 E:\project\project-70-cf.com\app\AppFactory\Kernel\Providers\Machine\ReceiveProvider.php(30): app\AppFactory\Machine\Receive\ReceiveBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#2 E:\project\project-70-cf.com\app\AppFactory\Kernel\Container.php(69): app\AppFactory\Kernel\Providers\Machine\ReceiveProvider->app\AppFactory\Kernel\Providers\Machine\{closure}(Object(app\AppFactory\Machine\Application))
+#3 E:\project\project-70-cf.com\app\AppFactory\Kernel\ServiceContainer.php(76): app\AppFactory\Kernel\Container->offsetGet('report')
+#4 E:\project\project-70-cf.com\public\mqtt.php(26): app\AppFactory\Kernel\ServiceContainer->__get('report')
+#5 [internal function]: {closure}('/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#6 E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php(598): call_user_func(Object(Closure), '/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): Workerman\Mqtt\Client->onConnectionMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#8 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #35)
+#9 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#10 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#11 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#12 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#13 E:\project\project-70-cf.com\public\mqtt.php(37): Workerman\Worker::runAll()
+#14 {main}
+2024-01-29 20:49:23 pid:1 Worker process terminated
+2024-01-29 20:49:49 pid:1 Error: Call to a member function connect() on null in E:\project\project-70-cf.com\vendor\topthink\think-orm\src\Model.php:357
+Stack trace:
+#0 E:\project\project-70-cf.com\vendor\topthink\think-orm\src\Model.php(1060): think\Model->db()
+#1 E:\project\project-70-cf.com\app\AppFactory\Kernel\Model\BaseModel.php(24): think\Model::__callStatic('where', Array)
+#2 E:\project\project-70-cf.com\app\AppFactory\Kernel\Traits\Machine\MachineTrait.php(23): app\AppFactory\Kernel\Model\BaseModel::getFind(Array, '*', '')
+#3 E:\project\project-70-cf.com\app\AppFactory\Machine\MachineBaseClient.php(29): app\AppFactory\Machine\MachineBaseClient->getMachineFind(Array)
+#4 E:\project\project-70-cf.com\app\AppFactory\Machine\Receive\ReceiveBaseClient.php(25): app\AppFactory\Machine\MachineBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#5 E:\project\project-70-cf.com\app\AppFactory\Kernel\Providers\Machine\ReceiveProvider.php(30): app\AppFactory\Machine\Receive\ReceiveBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#6 E:\project\project-70-cf.com\app\AppFactory\Kernel\Container.php(69): app\AppFactory\Kernel\Providers\Machine\ReceiveProvider->app\AppFactory\Kernel\Providers\Machine\{closure}(Object(app\AppFactory\Machine\Application))
+#7 E:\project\project-70-cf.com\app\AppFactory\Kernel\ServiceContainer.php(76): app\AppFactory\Kernel\Container->offsetGet('report')
+#8 E:\project\project-70-cf.com\public\mqtt.php(26): app\AppFactory\Kernel\ServiceContainer->__get('report')
+#9 [internal function]: {closure}('/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#10 E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php(598): call_user_func(Object(Closure), '/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#11 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): Workerman\Mqtt\Client->onConnectionMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#12 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #35)
+#13 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#14 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#15 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#16 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#17 E:\project\project-70-cf.com\public\mqtt.php(37): Workerman\Worker::runAll()
+#18 {main}
+2024-01-29 20:49:49 pid:1 Worker process terminated
+2024-01-29 20:50:35 pid:1 Error: Call to a member function connect() on null in E:\project\project-70-cf.com\vendor\topthink\think-orm\src\Model.php:357
+Stack trace:
+#0 E:\project\project-70-cf.com\vendor\topthink\think-orm\src\Model.php(1060): think\Model->db()
+#1 E:\project\project-70-cf.com\app\AppFactory\Kernel\Model\BaseModel.php(24): think\Model::__callStatic('where', Array)
+#2 E:\project\project-70-cf.com\app\AppFactory\Kernel\Traits\Machine\MachineTrait.php(23): app\AppFactory\Kernel\Model\BaseModel::getFind(Array, '*', '')
+#3 E:\project\project-70-cf.com\app\AppFactory\Machine\MachineBaseClient.php(29): app\AppFactory\Machine\MachineBaseClient->getMachineFind(Array)
+#4 E:\project\project-70-cf.com\app\AppFactory\Machine\Receive\ReceiveBaseClient.php(25): app\AppFactory\Machine\MachineBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#5 E:\project\project-70-cf.com\app\AppFactory\Kernel\Providers\Machine\ReceiveProvider.php(30): app\AppFactory\Machine\Receive\ReceiveBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#6 E:\project\project-70-cf.com\app\AppFactory\Kernel\Container.php(69): app\AppFactory\Kernel\Providers\Machine\ReceiveProvider->app\AppFactory\Kernel\Providers\Machine\{closure}(Object(app\AppFactory\Machine\Application))
+#7 E:\project\project-70-cf.com\app\AppFactory\Kernel\ServiceContainer.php(76): app\AppFactory\Kernel\Container->offsetGet('report')
+#8 E:\project\project-70-cf.com\public\mqtt.php(26): app\AppFactory\Kernel\ServiceContainer->__get('report')
+#9 [internal function]: {closure}('/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#10 E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php(598): call_user_func(Object(Closure), '/dataUpload/tes...', '/dataUpload/tes...', Object(Workerman\Mqtt\Client))
+#11 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): Workerman\Mqtt\Client->onConnectionMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#12 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #35)
+#13 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#14 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#15 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#16 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#17 E:\project\project-70-cf.com\public\mqtt.php(37): Workerman\Worker::runAll()
+#18 {main}
+2024-01-29 20:50:35 pid:1 Worker process terminated
+2024-01-29 20:53:12 pid:1 Error: Call to a member function connect() on null in E:\project\project-70-cf.com\vendor\topthink\think-orm\src\Model.php:357
+Stack trace:
+#0 E:\project\project-70-cf.com\vendor\topthink\think-orm\src\Model.php(1060): think\Model->db()
+#1 E:\project\project-70-cf.com\app\AppFactory\Kernel\Model\BaseModel.php(24): think\Model::__callStatic('where', Array)
+#2 E:\project\project-70-cf.com\app\AppFactory\Kernel\Traits\Machine\MachineTrait.php(23): app\AppFactory\Kernel\Model\BaseModel::getFind(Array, '*', '')
+#3 E:\project\project-70-cf.com\app\AppFactory\Machine\MachineBaseClient.php(29): app\AppFactory\Machine\MachineBaseClient->getMachineFind(Array)
+#4 E:\project\project-70-cf.com\app\AppFactory\Machine\Receive\ReceiveBaseClient.php(25): app\AppFactory\Machine\MachineBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#5 E:\project\project-70-cf.com\app\AppFactory\Kernel\Providers\Machine\ReceiveProvider.php(30): app\AppFactory\Machine\Receive\ReceiveBaseClient->__construct(Object(app\AppFactory\Machine\Application))
+#6 E:\project\project-70-cf.com\app\AppFactory\Kernel\Container.php(69): app\AppFactory\Kernel\Providers\Machine\ReceiveProvider->app\AppFactory\Kernel\Providers\Machine\{closure}(Object(app\AppFactory\Machine\Application))
+#7 E:\project\project-70-cf.com\app\AppFactory\Kernel\ServiceContainer.php(76): app\AppFactory\Kernel\Container->offsetGet('report')
+#8 E:\project\project-70-cf.com\public\mqtt.php(32): app\AppFactory\Kernel\ServiceContainer->__get('report')
+#9 [internal function]: {closure}(Array, '{"order_id":2,"...', Object(Workerman\Mqtt\Client))
+#10 E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php(598): call_user_func(Object(Closure), 'dataUpload/test...', '{"order_id":2,"...', Object(Workerman\Mqtt\Client))
+#11 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): Workerman\Mqtt\Client->onConnectionMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#12 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #35)
+#13 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#14 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#15 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#16 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#17 E:\project\project-70-cf.com\public\mqtt.php(43): Workerman\Worker::runAll()
+#18 {main}
+2024-01-29 20:53:12 pid:1 Worker process terminated
+2024-01-30 09:24:51 pid:1 Error: Call to a member function connect() on null in E:\project\project-70-cf.com\vendor\topthink\think-orm\src\Model.php:357
+Stack trace:
+#0 E:\project\project-70-cf.com\vendor\topthink\think-orm\src\Model.php(1060): think\Model->db()
+#1 E:\project\project-70-cf.com\app\AppFactory\Kernel\Model\BaseModel.php(79): think\Model::__callStatic('where', Array)
+#2 E:\project\project-70-cf.com\public\mqtt.php(17): app\AppFactory\Kernel\Model\BaseModel::getColumn(Array, 'machine_id')
+#3 [internal function]: {closure}(Object(Workerman\Mqtt\Client))
+#4 E:\project\project-70-cf.com\vendor\workerman\mqtt\src\Client.php(575): call_user_func(Object(Closure), Object(Workerman\Mqtt\Client))
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): Workerman\Mqtt\Client->onConnectionMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #35)
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
+#8 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#9 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#10 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#11 E:\project\project-70-cf.com\public\mqtt.php(37): Workerman\Worker::runAll()
+#12 {main}
+2024-01-30 09:24:51 pid:1 Worker process terminated
+2024-01-30 14:52:47 pid:1 think\exception\ErrorException: Undefined variable: data in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\RabbitMq\Receive.php:91
+Stack trace:
+#0 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\RabbitMq\Receive.php(91): think\initializer\Error->appError(8, 'Undefined varia...', 'E:\\project\\proj...', 91, Array)
+#1 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): app\AppFactory\WorkerMan\RabbitMq\Receive->onWorkerStart(Object(Workerman\Worker))
+#2 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#5 E:\project\project-70-cf.com\vendor\topthink\think-worker\src\command\Server.php(75): Workerman\Worker::runAll()
+#6 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\console\Command.php(210): think\worker\command\Server->execute(Object(think\console\Input), Object(think\console\Output))
+#7 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(655): think\console\Command->run(Object(think\console\Input), Object(think\console\Output))
+#8 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(314): think\Console->doRunCommand(Object(think\worker\command\Server), Object(think\console\Input), Object(think\console\Output))
+#9 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(251): think\Console->doRun(Object(think\console\Input), Object(think\console\Output))
+#10 E:\project\project-70-cf.com\think(10): think\Console->run()
+#11 {main}
+2024-01-30 14:52:48 pid:1 Worker process terminated
+2024-01-30 15:57:21 pid:1 TypeError: Argument 1 passed to Workerman\RabbitMQ\Client::__construct() must be of the type array, null given, called in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\RabbitMq\Send.php on line 32 and defined in E:\project\project-70-cf.com\vendor\workerman\rabbitmq\src\Client.php:41
+Stack trace:
+#0 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\RabbitMq\Send.php(32): Workerman\RabbitMQ\Client->__construct(NULL)
+#1 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): app\AppFactory\WorkerMan\RabbitMq\Send->onMessage(Object(Workerman\Connection\TcpConnection), '123')
+#2 E:\project\project-70-cf.com\vendor\react\event-loop\src\StreamSelectLoop.php(246): Workerman\Connection\TcpConnection->baseRead(Resource id #177)
+#3 E:\project\project-70-cf.com\vendor\react\event-loop\src\StreamSelectLoop.php(213): React\EventLoop\StreamSelectLoop->waitForStreamActivity(NULL)
+#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\React\Base.php(254): React\EventLoop\StreamSelectLoop->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\React\Base.php(137): Workerman\Events\React\Base->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\React\Base->loop()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
 #8 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
 #9 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#10 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#11 {main}
-2024-01-24 17:43:49 pid:1 Worker process terminated
-2024-01-24 17:43:50 pid:1 SendBufferToWorker fail. The connections between Gateway and BusinessWorker are not ready. See http://doc2.workerman.net/send-buffer-to-worker-fail.html
-2024-01-24 17:43:50 pid:1 SendBufferToWorker fail. The connections between Gateway and BusinessWorker are not ready. See http://doc2.workerman.net/send-buffer-to-worker-fail.html
-2024-01-24 17:44:04 pid:1 RedisException: 由于目标计算机积极拒绝，无法连接。
- in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:99
+#10 E:\project\project-70-cf.com\vendor\topthink\think-worker\src\command\Server.php(75): Workerman\Worker::runAll()
+#11 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\console\Command.php(210): think\worker\command\Server->execute(Object(think\console\Input), Object(think\console\Output))
+#12 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(655): think\console\Command->run(Object(think\console\Input), Object(think\console\Output))
+#13 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(314): think\Console->doRunCommand(Object(think\worker\command\Server), Object(think\console\Input), Object(think\console\Output))
+#14 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(251): think\Console->doRun(Object(think\console\Input), Object(think\console\Output))
+#15 E:\project\project-70-cf.com\think(10): think\Console->run()
+#16 {main}
+2024-01-30 15:57:21 pid:1 Worker process terminated
+2024-01-30 15:59:01 pid:1 think\exception\ErrorException: Array to string conversion in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\RabbitMq\Send.php:32
 Stack trace:
-#0 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php(99): Redis->connect('127.0.0.1', '6379')
-#1 [internal function]: Events::onClose('7f0000010f3c000...')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(414): call_user_func('Events::onClose', '7f0000010f3c000...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): GatewayWorker\BusinessWorker->onGatewayMessage(Object(Workerman\Connection\AsyncTcpConnection), Array)
-#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\Select.php(292): Workerman\Connection\TcpConnection->baseRead(Resource id #42)
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\Select->loop()
-#6 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
+#0 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\RabbitMq\Send.php(32): think\initializer\Error->appError(8, 'Array to string...', 'E:\\project\\proj...', 32, Array)
+#1 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): app\AppFactory\WorkerMan\RabbitMq\Send->onMessage(Object(Workerman\Connection\TcpConnection), '123')
+#2 E:\project\project-70-cf.com\vendor\react\event-loop\src\StreamSelectLoop.php(246): Workerman\Connection\TcpConnection->baseRead(Resource id #177)
+#3 E:\project\project-70-cf.com\vendor\react\event-loop\src\StreamSelectLoop.php(213): React\EventLoop\StreamSelectLoop->waitForStreamActivity(NULL)
+#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\React\Base.php(254): React\EventLoop\StreamSelectLoop->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\React\Base.php(137): Workerman\Events\React\Base->run()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\React\Base->loop()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
 #8 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
 #9 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#10 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#11 {main}
-2024-01-24 17:44:04 pid:1 Worker process terminated
-2024-01-24 17:50:18 pid:1 Worker process terminated
-2024-01-24 17:51:41 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
+#10 E:\project\project-70-cf.com\vendor\topthink\think-worker\src\command\Server.php(75): Workerman\Worker::runAll()
+#11 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\console\Command.php(210): think\worker\command\Server->execute(Object(think\console\Input), Object(think\console\Output))
+#12 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(655): think\console\Command->run(Object(think\console\Input), Object(think\console\Output))
+#13 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(314): think\Console->doRunCommand(Object(think\worker\command\Server), Object(think\console\Input), Object(think\console\Output))
+#14 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(251): think\Console->doRun(Object(think\console\Input), Object(think\console\Output))
+#15 E:\project\project-70-cf.com\think(10): think\Console->run()
+#16 {main}
+2024-01-30 15:59:01 pid:1 Worker process terminated
+2024-01-30 17:50:58 pid:1 Error: Call to undefined method Workerman\RabbitMQ\Client::then() in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\RabbitMq\Send.php:35
 Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:51:42 pid:1 Worker process terminated
-2024-01-24 17:51:43 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:51:44 pid:1 Worker process terminated
-2024-01-24 17:51:45 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:51:46 pid:1 Worker process terminated
-2024-01-24 17:51:47 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:51:48 pid:1 Worker process terminated
-2024-01-24 17:51:49 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:51:50 pid:1 Worker process terminated
-2024-01-24 17:51:51 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
-2024-01-24 17:51:51 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:51:52 pid:1 Worker process terminated
-2024-01-24 17:51:53 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
-2024-01-24 17:51:53 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:51:54 pid:1 Worker process terminated
-2024-01-24 17:51:55 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
-2024-01-24 17:51:55 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:51:56 pid:1 Worker process terminated
-2024-01-24 17:51:57 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
-2024-01-24 17:51:57 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:51:58 pid:1 Worker process terminated
-2024-01-24 17:51:59 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
-2024-01-24 17:51:59 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:52:00 pid:1 Worker process terminated
-2024-01-24 17:52:01 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
-2024-01-24 17:52:01 pid:1 ParseError: syntax error, unexpected 'dump' (T_STRING) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:52:02 pid:1 Worker process terminated
-2024-01-24 17:52:09 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:52:10 pid:1 Worker process terminated
-2024-01-24 17:52:11 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:52:12 pid:1 Worker process terminated
-2024-01-24 17:52:13 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:52:14 pid:1 Worker process terminated
-2024-01-24 17:52:15 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:52:16 pid:1 Worker process terminated
-2024-01-24 17:52:17 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:52:18 pid:1 Worker process terminated
-2024-01-24 17:52:19 pid:1 Register auth timeout (127.0.0.1). See http://doc2.workerman.net/register-auth-timeout.html
-2024-01-24 17:52:19 pid:1 ParseError: syntax error, unexpected 'echo' (T_ECHO) in E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\Events.php:63
-Stack trace:
-#0 [internal function]: Workerman\Autoloader::loadByNamespace('Events')
-#1 [internal function]: spl_autoload_call('Events')
-#2 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(226): is_callable('Events::onWorke...')
-#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2384): GatewayWorker\BusinessWorker->onWorkerStart(Object(GatewayWorker\BusinessWorker))
-#4 E:\project\project-70-cf.com\vendor\workerman\gateway-worker\src\BusinessWorker.php(197): Workerman\Worker->run()
-#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): GatewayWorker\BusinessWorker->run()
-#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
-#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
-#8 E:\project\project-70-cf.com\app\AppFactory\WorkerMan\Socket\start_businessworker.php(32): Workerman\Worker::runAll()
-#9 {main}
-2024-01-24 17:52:20 pid:1 Worker process terminated
-2024-01-24 17:52:30 pid:1 Worker process terminated
-2024-01-24 17:53:03 pid:1 Worker process terminated
+#0 E:\project\project-70-cf.com\vendor\workerman\workerman\Connection\TcpConnection.php(656): app\AppFactory\WorkerMan\RabbitMq\Send->onMessage(Object(Workerman\Connection\TcpConnection), '123')
+#1 E:\project\project-70-cf.com\vendor\react\event-loop\src\StreamSelectLoop.php(246): Workerman\Connection\TcpConnection->baseRead(Resource id #178)
+#2 E:\project\project-70-cf.com\vendor\react\event-loop\src\StreamSelectLoop.php(213): React\EventLoop\StreamSelectLoop->waitForStreamActivity(NULL)
+#3 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\React\Base.php(254): React\EventLoop\StreamSelectLoop->run()
+#4 E:\project\project-70-cf.com\vendor\workerman\workerman\Events\React\Base.php(137): Workerman\Events\React\Base->run()
+#5 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(2399): Workerman\Events\React\Base->loop()
+#6 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1397): Workerman\Worker->run()
+#7 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(1340): Workerman\Worker::forkWorkersForWindows()
+#8 E:\project\project-70-cf.com\vendor\workerman\workerman\Worker.php(539): Workerman\Worker::forkWorkers()
+#9 E:\project\project-70-cf.com\vendor\topthink\think-worker\src\command\Server.php(75): Workerman\Worker::runAll()
+#10 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\console\Command.php(210): think\worker\command\Server->execute(Object(think\console\Input), Object(think\console\Output))
+#11 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(655): think\console\Command->run(Object(think\console\Input), Object(think\console\Output))
+#12 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(314): think\Console->doRunCommand(Object(think\worker\command\Server), Object(think\console\Input), Object(think\console\Output))
+#13 E:\project\project-70-cf.com\vendor\topthink\framework\src\think\Console.php(251): think\Console->doRun(Object(think\console\Input), Object(think\console\Output))
+#14 E:\project\project-70-cf.com\think(10): think\Console->run()
+#15 {main}
+2024-01-30 17:50:58 pid:1 Worker process terminated

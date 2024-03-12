@@ -102,13 +102,13 @@ trait CurlTrait
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
         }
-//        $curlError = curl_error($curl);
+        $curlError = curl_error($curl);
 
         list($content, $status) = [curl_exec($curl), curl_getinfo($curl), curl_close($curl)];
 //        dump($content);
 //        dump($status);
-//        self::$header = explode("\r\n",substr($content, 0, $status['header_size'])); // 根据头大小获取头信息
-//        $this->headerToArr();
+        self::$header = explode("\r\n",substr($content, 0, $status['header_size'])); // 根据头大小获取头信息
+        $this->headerToArr();
         $content = trim(substr($content, $status['header_size']));
         $content = json_decode($content,true);
         return  $content;

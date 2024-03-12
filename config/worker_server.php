@@ -19,7 +19,11 @@ return [
     'port'           => 2345, // 监听端口
     'socket'         => '', // 完整监听地址
     'context'        => [], // socket 上下文选项
-    'worker_class'   => '', // 自定义Workerman服务类名 支持数组定义多个服务
+    'worker_class'   => [
+//        'app\http\Mqtt'
+        'app\AppFactory\WorkerMan\RabbitMq\Send',
+//        'app\AppFactory\WorkerMan\RabbitMq\Receive',
+    ], // 自定义Workerman服务类名 支持数组定义多个服务
 
     // 支持workerman的所有配置参数
     'name'           => 'thinkphp',

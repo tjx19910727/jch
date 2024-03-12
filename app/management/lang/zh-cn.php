@@ -8,12 +8,40 @@
 return [
     "captcha" => [
         "get_success" => "获取验证码成功",
+        "code_error" => "验证码错误",
     ],
     "VLogin" => [
         "account_require" => "账号不能为空",
         "password_require" => "密码不能为空",
         "code_require" => "验证码不能为空",
         "uniqid_require" => "验证码UUID不能为空",
+
+        "logout_success" => "账号已退出登录",
+        "logout_fail" => "账号退出登录失败",
+
+        "account_not_exist" => "登录的账号不存在!",
+        "account_pwd_incorrect" => "账号或密码错误，请重新输入",
+        "account_disabled" => "该账号已被禁用",
+        "login_success" => "登录成功，正在跳转",
+
+    ],
+
+    "VActivityCoupon" => [
+        "c_id_require" => "优惠券ID不能为空",
+        "c_name_require" => "优惠券名称不能为空",
+        "c_name_max" => "优惠券名称长度超过限制",
+        "desc_max" => "优惠券说明长度超过限制",
+        "start_date_require" => "开始日期不能为空",
+        "end_date_require" => "结束日期不能为空",
+        "c_type_require" => "优惠券类型不能为空",
+        "designated_machine_require" => "适用机器不能为空",
+        "designated_goods_require" => "适用商品不能为空",
+    ],
+
+    "VActivityCouponUsed" => [
+        "cu_id_require" => "优惠券使用记录ID不能为空",
+        "c_id_require" => "优惠券ID不能为空",
+        "quantity_require" => "生成数量不能为空",
     ],
 
     "VConfig" => [
@@ -104,13 +132,17 @@ return [
         "gc_name_max" => "分类名称长度超限制",
     ],
 
-    "VGoods" => [
+    "VMachineGoods" => [
         "g_id_require" => "请选择商品",
         "g_name_require" => "商品名称不能为空",
         "g_name_max" => "商品名称长度超限制",
         "pic_max" => "图片路径长度超限制",
         "manufacturer_max" => "供应商名称长度超限制",
         "service_phone_max" => "联系电话长度超限制",
+
+        "mg_id_require" => "请选择设备商品",
+        "m_id_require" => "设备ID不能为空",
+        "machine_id_require" => "设备编号不能为空",
     ],
 
     "VGoodsLang" => [
@@ -143,15 +175,15 @@ return [
     "VMachine" => [
         "m_id_require" => "请选择设备",
         "machine_id_require" => "设备编号不能为空",
+
+        "light_require" => "灯光亮度不能为空",
+        "volume_require" => "音量不能为空",
+        "light_multiple" => "灯光亮度值必须为10的倍数",
+        "volume_multiple" => "音量值必须为10的倍数",
+
+        "machine_offline" => "设备离线",
     ],
 
-    "VMachineGoods" => [
-        "mg_id_require" => "请选择设备商品",
-        "m_id_require" => "设备ID不能为空",
-        "machine_id_require" => "设备编号不能为空",
-        "g_id_require" => "请选择商品",
-        "g_name_require" => "商品名称不能为空",
-    ],
 
     "VMachineChannel" => [
         "mc_id_require" => "货道ID不能为空",
@@ -172,6 +204,9 @@ return [
         "m_id_require" => "设备ID不能为空",
         "m_id_unique" => "设备信息已存在，请勿重复添加",
         "machine_id_require" => "设备编号不能为空",
+        "title_require" => "标题不能为空",
+        "content_require" => "内容不能为空",
+        "lang_require" => "语言类型不能为空",
     ],
 
     "VMachineHelp" => [
@@ -188,6 +223,15 @@ return [
         "machine_id_query_no_data" => "查无设备信息",
         "name_require" => "设备模板名称不能为空",
         "publish_time_require" => "生效时间不能为空",
+    ],
+    "VMachineVersion" => [
+        "mv_id_require" => "软件ID不能为空",
+        "version_no_require" => "版本号不能为空",
+        "version_no_max" => "版本号长度超限制",
+        "path_require" => "文件路径不能为空",
+        "path_max" => "文件路径长度超限制",
+        "size_require" => "文件大小不能为空",
+        "desc_max" => "版本说明超限制",
     ],
 
     "VTemplate" => [
@@ -239,5 +283,13 @@ return [
         "screen_full_require" => "请选择是否全屏",
 
         "query_machine_no_data" => "查无设备信息",
+
+        "remain_times_empty" => "广告播放次数已用完",
+    ],
+
+    "VSaleOrders" => [
+        "order_no_data" => "查无订单信息",
+        "order_id_require" => "订单ID不能为空",
+        "refund_require" => "退款数据不能为空",
     ],
 ];

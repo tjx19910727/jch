@@ -25,12 +25,12 @@ class VAliPay extends SupportValidate
 
     protected $message = [
 
-        "app_id.require" => "应用ID不能为空",
-        "pid.require" => "商户账号（PID）不能为空",
-        "private_key_path.require" => "私钥路径不能为空",
-        "ali_public_key_path.require" => "支付宝平台公钥证书路径不能为空",
-        "ali_root_cert_path.require" => "支付宝根证书路径不能为空",
-        "app_public_key_path.require" => "应用公钥证书路径不能为空",
+        "app_id.require" => "VAliPay.app_id_require",
+        "pid.require" => "VAliPay.pid_require",
+        "private_key_path.require" => "VAliPay.private_key_path_require",
+        "ali_public_key_path.require" => "VAliPay.ali_public_key_path_require",
+        "ali_root_cert_path.require" => "VAliPay.ali_root_cert_path_require",
+        "app_public_key_path.require" => "VAliPay.app_public_key_path_require",
     ];
 
     protected $scene = [
@@ -39,8 +39,8 @@ class VAliPay extends SupportValidate
 
     public function checkPath($value)
     {
-        if (!file_exists(root_path() . "public" . $value)) {
-            return "证书文件不存在";
+        if (!file_exists(root_path() . "public/" . $value)) {
+            return "VAliPay.cert_not_exit";
         }
         return true;
     }

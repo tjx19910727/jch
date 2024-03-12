@@ -14,7 +14,7 @@ class VConfigPerformance extends VCommon
     protected $rule = [
         "cp_id" => "require",
         "name" => "require|max:100",
-        "field" => "require|max:50|unique:config_performance",
+        "field" => "require|max:50",
         "lang" => "require|max:100",
     ];
 
@@ -24,7 +24,7 @@ class VConfigPerformance extends VCommon
         "name.max" => "VConfig.name_max",
         "field.require" => "VConfig.field_require",
         "field.max" => "VConfig.filed_max",
-        "field.unique" => "VConfig.filed_unique",
+//        "field.unique" => "VConfig.filed_unique",
         "lang.require" => "VConfig.lang_require",
         "lang.max" => "VConfig.lang_max",
     ];
@@ -32,5 +32,6 @@ class VConfigPerformance extends VCommon
     protected $scene = [
         "add" => ["name","field","lang"],
         "update" => ["cp_id","name","field","lang"],
+        "del" => ["cp_id"],
     ];
 }

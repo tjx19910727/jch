@@ -21,7 +21,7 @@ class MachineGoods extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["g_name" => "like"]);
         return $this->app->machineGoods->getList($where,$pageNum,$this->field);
     }
 

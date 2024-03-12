@@ -9,7 +9,7 @@
 namespace app\management\validate;
 
 
-class VGoods extends VCommon
+class VGoodsLang extends VCommon
 {
     protected $rule = [
         "gl_id" => "require",

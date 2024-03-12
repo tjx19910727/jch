@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 use AliPay\Factory;
 use AliPay\trade\Application;
+use app\AppFactory\Kernel\Support\Validate\Pay\VAliPay;
 
 trait AliPayTrait
 {
@@ -21,7 +22,8 @@ trait AliPayTrait
 
     protected $aliPaymentMethod = [
         "21" => "aliMobilePay",
-        "22" => "aliScanQr",
+//        "22" => "aliScanQr",
+        "23" => "aliUrlLink",
     ];
 
     /**
@@ -30,21 +32,24 @@ trait AliPayTrait
      */
     public function aliPay()
     {
-        $this->config = $this->strategyPayee;
-        if (!is_array($this->config)) return $this->config;
 
-        $this->config['ali_public_key_path'] = root_path() . "public/" . $this->config['ali_public_key_path'];
-        if (!file_exists($this->config['ali_public_key_path'])) return returnState(100, "支付宝公钥文件不存在", $this->config['ali_public_key_path']);
-        $this->config['ali_root_cert_path'] = root_path() . "public/" . $this->config['ali_root_cert_path'];
-        if (!file_exists($this->config['ali_root_cert_path'])) return returnState(100, "根文件不存在", $this->config['ali_root_cert_path']);
-        $this->config['app_public_key_path'] = root_path() . "public/" . $this->config['app_public_key_path'];
-        if (!file_exists($this->config['app_public_key_path'])) return returnState(100, "应用公钥文件不存在", $this->config['app_public_key_path']);
+        if (!in_array($this->order['pay_method'],array_keys($this->aliPaymentMethod)))
+            return $this->rFail($this->lang("pay_type_not_in_scope"));
+        try {
+            validate(VAliPay::class)->scene('ali')->check($this->strategyPayee);
+        } catch (\Exception $e) {
+            return $this->rValidate($this->lang($e->getMessage()));
+        }
 
-        $this->config['isObject'] = false;
-        $url = $this->getUrl('/http/pay.ali/paymentNotify');
-        $this->config['notifyUrl'] = $url;
-        $this->aliApp = Factory::trade($this->config);
-        $this->order['sp_id'] = $this->config['sp_id'];
+        $this->strategyPayee['ali_public_key_path'] = root_path() . "public/" . $this->strategyPayee['ali_public_key_path'];
+        $this->strategyPayee['ali_root_cert_path'] = root_path() . "public/" . $this->strategyPayee['ali_root_cert_path'];
+        $this->strategyPayee['app_public_key_path'] = root_path() . "public/" . $this->strategyPayee['app_public_key_path'];
+        $this->strategyPayee['isObject'] = false;
+        $url = $this->getUrl('/pay/notify.ali/paymentNotify');
+        $this->strategyPayee['notifyUrl'] = $url;
+
+        $this->aliApp = Factory::trade($this->strategyPayee);
+        $this->order['sp_id'] = $this->strategyPayee['sp_id'];
         $func_name = $this->aliPaymentMethod[$this->order['payment_method']];
         return $this->$func_name();
 
@@ -62,7 +67,7 @@ trait AliPayTrait
             "body" => $goodsName,
             'out_trade_no' => $this->order['trade_no'],
             'total_amount' => $this->order['total_price'],
-            'subject' => $this->order['store_name'] . '购买支付',
+            'subject' => $this->order['machine_id'] . '购买支付',
         ];
         $result = $this->aliApp->wap->Pay($data);
         return $this->rQ($result);
@@ -126,6 +131,29 @@ trait AliPayTrait
         }
         return $return;
     }
+
+    /**
+     * 支付宝创建预生成订单支付二维码
+     * @return mixed
+     */
+    public function aliUrlLink()
+    {
+        $data = [
+            'out_trade_no' => $this->order['trade_no'],
+            'total_amount' => $this->order['total_price'],
+            'subject' => $this->order['machine_id'] . '购买支付',
+        ];
+        $result = $this->aliApp->trade->preCreate($data);
+        if ($result['code'] == 10000) {
+            return $this->r(200,$result['msg'],$result);
+        } else {
+            $msg = $result['msg'] . "；";
+            if (isset($result['sub_msg'])) $msg .= $result['sub_msg'] . "；";
+            return $this->r(100, $this->lang("init_payment_fail") . '：' . $msg, $result);
+        }
+    }
+
+
 
     /**
      * 支付宝订单退款

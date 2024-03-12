@@ -1,0 +1,76 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Administrator
+ * Date: 2024/1/30
+ * Time: 9:00
+ */
+
+namespace app\AppFactory\Machine\Receive;
+
+
+use app\AppFactory\Kernel\ServiceContainer;
+use app\AppFactory\Kernel\Support\Validate\Machine\VReport;
+use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsHitTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
+use app\AppFactory\Kernel\Traits\Mq\OutGoodsTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+
+class MqClient extends ReceiveBaseClient
+{
+    use SaleOrdersTrait,OutGoodsTrait;
+    use MachineTrait,MachineInfoTrait,MachineChannelTrait,MachineVersionPlanTrait;
+    use GoodsTrait,GoodsHitTrait;
+    use ActivityCouponTrait,ActivityCouponUsedTrait;
+
+    protected $message;
+    protected $order;
+    public function __construct(ServiceContainer $app)
+    {
+        parent::__construct($app);
+        if ($this->checkSign($this->data) !== true) {
+            actionLog($this->data,'验签失败',"DataUpload");
+            die(json_encode(["state" => 200, "msg" => "验签失败"],320));
+        }
+        $this->message = json2arr($this->data['data']);
+        actionLog($this->message,'消息数据',"DataUpload");
+        try {
+            validate(VReport::class)->scene('onMessage')->check($this->data);
+        } catch (\Exception $e) {
+            actionLog($e->getMessage(),'数据格式错误','DataUpload');
+            die(json_encode(["state" => 200, "msg" => $e->getMessage()],320));
+        }
+        $this->dataRecord(2);
+    }
+
+    /**
+     * 处理设备上报
+     * msgType: outGoods、heartbeat、updateComplete、goodsHit、transactionVideo
+     * @return int
+     */
+    public function onMessage()
+    {
+        try {
+            $func_name = $this->message['msgType'];
+            if (method_exists(self::class, $func_name)) {
+                try {
+                    validate(VReport::class)->scene($this->message['msgType'])->check($this->message);
+                } catch (\Exception $e) {
+                    actionLog($e->getMessage(), '数据格式错误', 'DataUpload');
+                    return 1;
+                }
+                return $this->$func_name();
+            }
+            return 1;
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return 1;
+        }
+    }
+}

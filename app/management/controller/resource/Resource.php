@@ -14,7 +14,7 @@ use app\management\controller\Common;
 class Resource extends Common
 {
 
-    protected $field = "res_id,title,file_path,type,file_name,desc,length,width,size,status,creator,create_time,update_id,update_time";
+    protected $field = "res_id,title,file_path,type,file_name,`desc`,length,width,size,`status`,creator,create_time,update_id,update_time";
     protected $validatePath = 'app\management\validate\VResource.';
 
     public function getList()

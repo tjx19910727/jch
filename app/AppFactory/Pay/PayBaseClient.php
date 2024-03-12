@@ -10,8 +10,21 @@ namespace app\AppFactory\Pay;
 
 
 use app\AppFactory\Kernel\BaseClient;
+use app\AppFactory\Kernel\ServiceContainer;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 
 class PayBaseClient extends BaseClient
 {
+    use SaleOrdersTrait;
+
+    public $data;
+    public $order;
+    public $payType;
+    public $refundTradeNo;
+    public function __construct(ServiceContainer $app)
+    {
+        parent::__construct($app);
+        $this->data = $this->config['data'];
+    }
 
 }

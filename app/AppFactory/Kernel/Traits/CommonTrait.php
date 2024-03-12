@@ -52,4 +52,15 @@ trait CommonTrait
 
         return SignUtil::checkSign($data,$this->config['key']);
     }
+
+    /**
+     * 左侧补零
+     * @param $str
+     * @param $len
+     * @return string
+     */
+    public function leftHandZero($str,$len)
+    {
+        return covering($str,$len);
+    }
 }

@@ -1,0 +1,124 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Administrator
+ * Date: 2024/3/4
+ * Time: 14:04
+ */
+
+namespace app\AppFactory\Management\Activity;
+
+
+use app\AppFactory\Kernel\Support\Excel;
+use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
+use app\AppFactory\Management\ManagementClient;
+
+class ActivityCouponUsedClient extends ManagementClient
+{
+    use ActivityCouponTrait, ActivityCouponUsedTrait;
+
+    /**
+     * 批量添加
+     * @param $postData
+     * @return array|string
+     * @throws \Exception
+     */
+    public function addMore($postData)
+    {
+        $field = "c_id,reduction,c_type,code";
+        $coupon = $this->getActivityCouponFind(['c_id' => $postData['c_id']], $field);
+        if (!$coupon) return $this->r(100, '查无优惠券信息');
+        $coupon = $coupon->toArray();
+        if ($coupon['code']) return $this->r(100, '当前优惠券不使用随机码，无法生成随机码列表');
+        unset($coupon['code']);
+        $codeList = $this->getActivityCouponUsedColumn([], 'code');
+        $codeList = array_merge($codeList,$this->getActivityCouponColumn('code is not null AND code <> ""','code'));
+        for ($i = 0; $i <= $postData['quantity']; $i++) {
+            $insert = $coupon;
+            while (1) {
+                $code = $this->leftHandZero(random_int(000000, 999999), 6);
+                if (!in_array($code, $codeList)) {
+                    $codeList[] = $code;
+                    break;
+                }
+            }
+            $insert['code'] = $code;
+            $insertAll[] = $insert;
+        }
+        $result = $this->addActivityCouponUsedMore($insertAll);
+        return $this->rAction($result);
+    }
+
+    /**
+     * 导出优惠券码
+     * @param $postData
+     * @return array|string
+     */
+    public function exportCode($postData)
+    {
+        try {
+            $coupon = $this->getActivityCouponFind(['c_id' => $postData['c_id']], "c_name,code");
+            if (!$coupon) return $this->r(100, '查无优惠券信息');
+            if ($coupon['code']) return $this->r(100, '当前优惠券不使用随机码，无法获取随机码列表');
+            $codeList = $this->getActivityCouponUsedList(['c_id' => $postData['c_id']], 0, 'code');
+            if ($codeList) {
+                $codeList = $codeList->toArray();
+                $title = ["code" => "优惠券码"];
+                $filename = "导出【" . $coupon['c_name'] . "】优惠券码-" . date("YmdHis");
+                $result = Excel::exportExcel($codeList, $title, $filename,$postData['isDown'] ?? 1);
+                return $this->r(200, '导出成功', $result);
+            }
+            return $this->rFail("查无优惠券码");
+        } catch (\PHPExcel_Writer_Exception $e) {
+            actionException($e, 1);
+            return $this->rValidate($e->getMessage());
+        } catch (\PHPExcel_Exception $e) {
+            actionException($e, 1);
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
+     * 导出使用报表
+     * @param $postData
+     * @return array|string
+     */
+    public function exportUsedList($postData)
+    {
+        try {
+            $coupon = $this->getActivityCouponFind(['c_id' => $postData['c_id']], "c_name,code,desc");
+            if (!$coupon) return $this->r(100, '查无优惠券信息');
+            $usedList = $this->getActivityCouponUsedList(['c_id' => $postData['c_id']], 0,
+                '("' . $coupon['c_name'] . '") c_name,("' . $coupon['desc'] . '") `desc`,pay_limit,machine_id,machine_name,
+                reduction,original_price,discount_price,retail_price,code,trade_no,
+                (CASE status WHEN 1 THEN "未使用" WHEN 2 THEN "已使用" WHEN 3 THEN "已过期" WHEN 4 THEN "已作废" END ) status, used_time');
+            if ($usedList) {
+                $usedList = $usedList->toArray();
+                $title = [
+                    "c_name" => "优惠券名称",
+                    "desc" => "简介",
+                    "pay_limit" => "订单最低消费金额",
+                    "machine_id" => "设备编号",
+                    "machine_name" => "设备名称",
+                    "code" => "优惠码",
+                    "status" => "激活状态",
+                    "trade_no" => "订单编号",
+                    "discount_price" => "优惠金额",
+                    "retail_price" => "支付金额",
+                    "used_time" => "使用时间",
+                ];
+                $filename = "导出【" . $coupon['c_name'] . "】使用报表-" . date("Ymd");
+                $result = Excel::exportExcel($usedList, $title, $filename, $postData['isDown'] ?? 1);
+                return $this->r(200, '导出成功', $result);
+            }
+            return $this->rFail("查无使用报表信息");
+        } catch (\PHPExcel_Writer_Exception $e) {
+            actionException($e, 1);
+            return $this->rValidate($e->getMessage());
+        } catch (\PHPExcel_Exception $e) {
+            actionException($e, 1);
+            return $this->rValidate($e->getMessage());
+        }
+    }
+}

@@ -12,17 +12,35 @@ namespace app\AppFactory\Management\Goods;
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class GoodsClient extends ManagementClient
 {
     use GoodsTrait;
     use AuthManagerTrait;
+    use SaleOrdersGoodsCountTrait;
 
     public function getPageList($where,$pageNum = 0,$field = "*",$order = "")
     {
         $data = $this->getGoodsList($where,$pageNum,$field,$order);
         return $this->rQ($data);
+    }
+
+    /**
+     * 概览——商品前10排行榜
+     * @param $where
+     * @return array|string
+     */
+    public function get10List($where)
+    {
+        $list = $this->getSaleOrdersGoodsCountList($where,0,
+            'g_name,totalPrice,totalQuantity,retail_price,pic',
+            'totalPrice desc,totalQuantity desc, g_id desc','','',2);
+        if ($list) {
+            $list = $list->toArray();
+        }
+        return $this->rQ($list);
     }
 
     /**

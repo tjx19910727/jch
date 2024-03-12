@@ -18,6 +18,13 @@ trait AuthManagerTrait
         return AuthManagerModel::getFieldValue($where,$value);
     }
 
+    /**
+     * 获取一条管理员信息
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return mixed
+     */
     public function getAuthManagerFind($where,$field = "*",$order = "")
     {
         if (isset($this->manager) && $this->manager && !isset($where['manager_id'])) $where[] = ['manager_id','=',$this->manager['manager_id']];

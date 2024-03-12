@@ -29,7 +29,10 @@
         "topthink/think-view": "^1.0",
         "workerman/mqtt": "^1.5",
         "workerman/workerman": "v3.5.23",
-        "topthink/think-worker": "v3.0.0"
+        "topthink/think-worker": "v3.0.0",
+        "workerman/rabbitmq": "^1.0",
+        "topthink/think-queue": "^3.0",
+        "php-amqplib/php-amqplib": "^3.6"
     },
     "require-dev": {
         "symfony/var-dumper": "^4.2",

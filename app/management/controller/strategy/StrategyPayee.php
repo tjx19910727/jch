@@ -65,13 +65,7 @@ class StrategyPayee extends Common
     public function getList()
     {
         $postData = input();
-        $s_ids = [];
-        if (isset($postData['store_id'])) {
-            $s_ids = $this->app->strategyStore->getStrategyStoreColumn(['store_id' => $postData['store_id'],'s_type' => 1],'s_id');
-            unset($postData['store_id']);
-        }
         $where = $this->getWhere($postData,false,['app_id' => "like"]);
-        if ($s_ids) $where[] = ['sp_id','in',$s_ids];
         $pageNum = $postData['pageNum'] ?? 0;
         $field = "sp_id,sp_name,payee_type,app_id,mch_id,content,status,create_time,update_time";
         return $this->app->strategyPayee->getList($where,$pageNum,$field,"sp_id desc");
@@ -97,5 +91,16 @@ class StrategyPayee extends Common
         $id = input('sp_id');
         if (!$id) return returnState(100,'策略ID不能为空');
         return $this->app->strategyPayee->del($id);
+    }
+
+
+    /**
+     * 2-3. 获取平台证书
+     * @return array|string
+     */
+    public function getPlatformCert()
+    {
+        $sp_id = input('sp_id');
+        return $this->app->strategyPayee->getWxPlatformCert($sp_id);
     }
 }

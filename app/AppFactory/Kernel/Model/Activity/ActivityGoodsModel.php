@@ -2,8 +2,8 @@
 /**
  * Created by PhpStorm.
  * User: Administrator
- * Date: 2023/11/7
- * Time: 11:22
+ * Date: 2024/3/5
+ * Time: 17:39
  */
 
 namespace app\AppFactory\Kernel\Model\Activity;
@@ -15,18 +15,4 @@ class ActivityGoodsModel extends BaseModel
 {
     protected $pk = "ag_id";
     protected $name = "activity_goods";
-    protected $schema = [
-        "ag_id" => "int",
-        "a_type" => "int",
-        "a_id" => "int",
-        "store_id" => "int",
-        "ss_id" => "int",
-        "shelves_number" => "string",
-        "wg_id" => "int",
-        "goods_id" => "int",
-        "goods_name" => "string",
-        "goods_pic" => "string",
-        "goods_c_id" => "int",
-        "goods_c_name" => "string",
-    ];
 }

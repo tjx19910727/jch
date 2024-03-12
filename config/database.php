@@ -13,7 +13,7 @@ return [
     'auto_timestamp'  => true,
 
     // 时间字段取出后的默认时间格式
-    'datetime_format' => 'Y-m-d H:i:s',
+    'datetime_format' => false,
 
     // 时间字段配置 配置格式：create_time,update_time
     'datetime_field'  => '',
@@ -32,7 +32,7 @@ return [
             // 密码
             'password'        => env('database.password', ''),
             // 端口
-            'hostport'        => env('database.hostport', '3336'),
+            'hostport'        => env('database.hostport', '3306'),
             // 数据库连接参数
             'params'          => [],
             // 数据库编码默认采用utf8

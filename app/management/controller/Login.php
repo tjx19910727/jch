@@ -65,7 +65,7 @@ class Login extends BaseController
             $result = $app->login->login($data);
             return $result;
         } else {
-            return returnValidate("验证码错误");
+            return returnValidate(Lang::get("captcha.code_error"));
         }
     }
 
@@ -78,8 +78,8 @@ class Login extends BaseController
         Session::clear();
         $data = Session::get("manager");
         if (!$data){
-            return returnState(200,'账号已退出登录');
+            return returnState(200,Lang::get("VLogin.logout_success"));
         }
-        return returnState(100,'账号退出登录失败');
+        return returnState(100,Lang::get("VLogin.logout_fail"));
     }
 }

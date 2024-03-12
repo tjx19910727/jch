@@ -38,7 +38,7 @@ class ConfigPerformance extends Common
         try {
             $this->validate($postData, $this->validatePath . 'add');
         } catch (\Exception $e) {
-            return returnValidate($e->getMessage());
+            return returnValidate(lang($e->getMessage()));
         }
         return $this->app->configPerformance->add($postData);
     }
@@ -49,7 +49,7 @@ class ConfigPerformance extends Common
         try {
             $this->validate($postData, $this->validatePath . 'update');
         } catch (\Exception $e) {
-            return returnValidate($e->getMessage());
+            return returnValidate(lang($e->getMessage()));
         }
         return $this->app->configPerformance->update($postData);
     }
@@ -60,7 +60,7 @@ class ConfigPerformance extends Common
         try {
             $this->validate($postData, $this->validatePath . 'del');
         } catch (\Exception $e) {
-            return returnValidate($e->getMessage());
+            return returnValidate(lang($e->getMessage()));
         }
         return $this->app->configPerformance->del($postData);
     }

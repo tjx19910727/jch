@@ -9,6 +9,7 @@
 namespace app\AppFactory\Kernel\Traits\Payment;
 
 
+use app\AppFactory\Kernel\Support\Validate\Pay\VJdCashierPay;
 use Jd\Jd;
 use Jd\Payment\Application;
 
@@ -27,11 +28,15 @@ trait JdCashierTrait
 
     public function jdPay()
     {
-        if (!in_array($this->order['payment_method'],array_keys($this->jdPaymentMethod)))
-            return $this->rFail("支付方式不在允许范围内");
-        $this->order['sp_id'] = $this->strategyPayee['sp_id'];
+        if (!in_array($this->order['pay_method'],array_keys($this->jdPaymentMethod)))
+            return $this->rFail($this->lang("VJdCashier.pay_type_not_in_scope"));
+        try {
+            validate(VJdCashierPay::class)->scene('jdPay')->check($this->strategyPayee);
+        } catch (\Exception $e) {
+            return $this->rValidate($this->lang($e->getMessage()));
+        }
         $this->jdApp = Jd::payment($this->strategyPayee);
-        $func_name = $this->jdPaymentMethod[$this->order['payment_method']];
+        $func_name = $this->jdPaymentMethod[$this->order['pay_method']];
         return $this->$func_name();
     }
 
@@ -44,22 +49,22 @@ trait JdCashierTrait
      * @param string $locationN
      * @return bool|string
      */
-    public function jdScanQr($paySource = 'WX', $locationE = '22.5639220000', $locationN = '113.3978830000')
+    protected function jdScanQr($paySource = 'WX', $locationE = '22.5639220000', $locationN = '113.3978830000')
     {
         $extraMap = ['o_id' => $this->order['order_id']];
-        $tradeNo = $this->order['order_trade_no'];
+        $tradeNo = $this->order['trade_no'];
 
         $terminalInfo = [
             'locationE' => $locationE,
             'locationN' => $locationN,
-            'encrypt_rand_num' => substr($this->order['payment_code'], strlen($this->order['payment_code']) - 6, 6),
+            'encrypt_rand_num' => substr($this->order['pay_code'], strlen($this->order['pay_code']) - 6, 6),
         ];
-        $notify =  $this->getUrl("/http/pay.jd_cashier/orderNotify");
+        $notify =  $this->getUrl("/pay/notify.jd_cashier/orderNotify");
         $params = [
             //商户号
             "version" => 'V4.0',
             "customerNum" => $this->strategyPayee['customerNum'],
-            "authCode" => $this->order['payment_code'],
+            "authCode" => $this->order['pay_code'],
             "bankType" => 'WX', // 微信：WX，小程序：WX_XCX，支付宝：ALIPAY，京东：JD，银联：UNIONPAY
             "requestNum" => $tradeNo, // 商户系统内部订单号(商户系统内唯一)
             "orderAmount" => $this->order['total_price'],
@@ -101,24 +106,25 @@ trait JdCashierTrait
                 $this->order['user_id'] = $this->addUser($insert);
             }
         }
-        return $result;
+        return $this->rAction($result);
     }
 
     /**
      * 获取支付地址，可跳转或生成支付二维码
      * @return bool|string
      */
-    public function jdUrlLink()
+    protected function jdUrlLink()
     {
         $extraMap = ['o_id' => $this->order['order_id']];
-        $tradeNo = $this->order['order_trade_no'];
-        $notify =  $this->getUrl("/http/pay.jd_cashier/orderNotify");
+        $tradeNo = $this->order['trade_no'];
+        $notify =  $this->getUrl("/pay/notify.jd_cashier/orderNotify");
+        $orderAmount = round($this->order['total_price'],2);
         $params = [
             //商户号
             "version" => 'V4.0',
             "customerNum" => $this->strategyPayee['customerNum'],
             "requestNum" => $tradeNo,
-            "orderAmount" => $this->order['total_price'],
+            "orderAmount" => "$orderAmount",
             "callbackUrl" => $notify,
             "subOrderType" => 'NORMAL',
             "orderType" => 'SALES', // 消费：SALES，退款：REFUND
@@ -139,25 +145,34 @@ trait JdCashierTrait
             $params['LedgerRequest'] = $LedgerRequest;
             $params['subOrderType'] = 'LEDGER';
         }
+//        dump($this->strategyPayee);
+//        dump($params);
+//        dump(json_encode($params));
         actionLog($params, '京东收银生成支付二维码地址请求参数');
         $result = $this->jdApp->order->qrCodeUrl($params);
         actionLog($result, '京东收银生成支付二维码地址返回结果');
-        return $result;
+        if (isset($result['code']) && $result['code'] == 'success') {
+            return $this->r(200, $this->lang("init_payment_success"), ['paymentUrlLink' => $result['url'], 'order' => $this->order,'result' => $result]);
+        }
+        $msg = '';
+        if (isset($result['error']['errorMsg'])) $msg .= $result['error']['errorMsg'] . "；";
+        if (isset($result['code'])) $msg .= $result['code'] . "；";
+        if (isset($result['msg'])) $msg .= $result['msg'] . "；";
+        return $this->r(100, $this->lang("init_payment_fail") . '：' . $msg, $result);
     }
-
-
+    
     /**
      * JSAPI
      * @return mixed
      */
-    public function jdJsApi()
+    protected function jdJsApi()
     {
         $type = WxOrAli();
         $paySource = $type == 1 ? "WX_XCX" : "ALIPAY";
         $paySource == 'WX_XCX' ? $openid = $this->getUserValue(['user_id' => $this->order['user_id']],'openid') : $openid = '';
         $extraMap = ['o_id' => $this->order['order_id']];
-        $tradeNo = $this->order['order_trade_no'];
-        $notify =  $this->getUrl("/http/pay.jd_cashier/orderNotify");
+        $tradeNo = $this->order['trade_no'];
+        $notify =  $this->getUrl("/pay/notify.jd_cashier/orderNotify");
         $params = [
             //商户号
             "version" => 'V4.0',
@@ -192,13 +207,13 @@ trait JdCashierTrait
         $result = $app->order->jsApi($params);
         actionLog($result, '京东收银JSAPI返回结果');
         if (isset($result['code']) && $result['code'] == 'success') {
-            return $this->r(200, '发起支付成功', ['paymentUrlLink' => $result['bankRequest'], 'order' => $this->order,'result' => $result]);
+            return $this->r(200, $this->lang("init_payment_success"), ['paymentUrlLink' => $result['bankRequest'], 'order' => $this->order,'result' => $result]);
         }
         $msg = '';
         if (isset($result['error']['errorMsg'])) $msg .= $result['error']['errorMsg'] . "；";
         if (isset($result['code'])) $msg .= $result['code'] . "；";
         if (isset($result['msg'])) $msg .= $result['msg'] . "；";
-        return $this->r(100, '京东收银发起支付失败：' . $msg, $result);
+        return $this->r(100, $this->lang("init_payment_fail") . '：' . $msg, $result);
     }
 
     /**
@@ -208,24 +223,62 @@ trait JdCashierTrait
     public function getBillList()
     {
         $billList = [];
-        $revenue = $this->getSaleOrdersRevenueList(['order_id' => $this->order['order_id'],'revenue_type' => 4]);
-        if ($revenue) {
-            $totalAmount = 0;
-            foreach ($revenue as $key => $value) {
-                $billAccount = $this->getAuthManagerValue(['manager_id' => $value['beneficiary']],'bill_account');
-                $bill['customerNum'] = $billAccount;
-                $amount = $value['income_amount'];
-                $bill['amount'] = "$amount";
-                $billList[] = $bill;
-                $totalAmount = bcadd($amount,$totalAmount,3);
+        if (isset($this->strategyPayee['bill_account'])) {
+            $revenue = $this->getSaleOrdersRevenueList(['order_id' => $this->order['order_id'], 'revenue_type' => 4]);
+            if ($revenue) {
+                $totalAmount = 0;
+                foreach ($revenue as $key => $value) {
+                    $billAccount = $this->getAuthManagerValue(['manager_id' => $value['beneficiary']], 'bill_account');
+                    $bill['customerNum'] = $billAccount;
+                    $amount = $value['income_amount'];
+                    $bill['amount'] = "$amount";
+                    $billList[] = $bill;
+                    $totalAmount = bcadd($amount, $totalAmount, 3);
+                }
+                $amount = bcsub($this->order['total_price'], $totalAmount, 2);
+                $billList[] = [
+                    'amount' => "$amount",
+                    'customerNum' => $this->strategyPayee['bill_account'],
+                ];
             }
-            $amount = bcsub($this->order['total_price'],$totalAmount,2);
-            $billList[] = [
-                'amount' => "$amount",
-                'customerNum' => $this->strategyPayee['bill_account'],
-            ];
         }
         return $billList;
+    }
+
+    /**
+     * 退款申请
+     * @return array|string
+     */
+    public function jdRefund()
+    {
+        $this->getUrl("/pay/noti.jd_cashier/refundNotify");
+        $this->totalRefundMoney = number_format($this->totalRefundMoney,2);
+        $params = [
+            //商户号
+            "requestVersion" => 'V4.0',
+            "customerNum" => $this->strategyPayee['customerNum'],
+            "requestNum" => $this->order['trade_no'], // 商户系统内部订单号(商户系统内唯一)
+            "notifyUrl" => $this->getUrl("/pay/notify.jd_cashier/refundNotify"),
+            "refundRequestNum" => $this->refundTradeNo, // 退款单号
+            "refundPartAmount" => "$this->totalRefundMoney", // 退款金额
+        ];
+        if ($this->billList) $params['list'] = $this->billList;
+        $this->jdApp = Jd::payment($this->strategyPayee);
+        actionLog($params, '退款申请参数');
+        $result = $this->jdApp->order->refundByTradeNo($params);
+        actionLog($result, '退款申请结果');
+        if (isset($result['result']) && $result['result'] !== true) return returnState(100, '退款失败', $result);
+        if ($result['refundStatus'] == 'SUCCESS') {
+            return $this->rSuccess( '退款成功');
+        }
+        if ($result['refundStatus'] == 'INIT') {
+            return $this->rSuccess( '发起退款成功，正在退款中，请稍后手动查询');
+        }
+        if ($result['refundStatus'] == 'FAIL') {
+            $this->refundFail();
+            return $this->rFail( '退款失败');
+        }
+        return $this->r( 100,'未识别状态：' . $result['resultStatus'], $result);
     }
 
 }

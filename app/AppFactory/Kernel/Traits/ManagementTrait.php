@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Traits;
 
 
 
+use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
 use app\AppFactory\Kernel\Support\Qr;
 use think\facade\Lang;
 
@@ -32,8 +33,9 @@ trait ManagementTrait
         if (!$controller) return $this->rFail("控制器名不能为空");
         $action = "get" . $controller . "Find";
         $data = $this->$action($where,$field,$order);
-        if ($rQ)
+        if ($rQ) {
             return $this->rQ($data);
+        }
         return $data;
     }
 
@@ -55,8 +57,9 @@ trait ManagementTrait
         if (!$controller) return $this->rFail(Lang::get("controller_name_require"));
         $action = "get" . $controller . "List";
         $data = $this->$action($where,$pageNum,$field,$order);
-        if ($rQ)
+        if ($rQ) {
             return $this->rQ($data);
+        }
         return $data;
     }
 

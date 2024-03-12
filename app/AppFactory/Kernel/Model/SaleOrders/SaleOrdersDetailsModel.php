@@ -16,28 +16,33 @@ class SaleOrdersDetailsModel extends BaseModel
     protected $pk = "sod_id";
     protected $name = "sale_orders_details";
 
-    protected $schema = [
-        "sod_id" => "int",
-        "order_id" => "int",
-        "ss_id" => "int",
-        "shelves_number" => "int",
-        "wg_id" => "int",
-        "goods_id" => "int",
-        "goods_name" => "string",
-        "goods_pic" => "string",
-        "gc_id" => "int",
-        "gc_name" => "string",
-        "cost_price" => "float",
-        "retail_price" => "float",
-        "total_sod_price" => "float",
-        "quantity" => "int",
-        "bar_code" => "string",
-        "batch_number" => "string",
-        "manufacture_time" => "int",
-        "sell_by_date" => "int",
-        "refund_quantity" => "int",
-    ];
+//    protected $schema = [
+//        "sod_id" => "int",
+//        "order_id" => "int",
+//        "ss_id" => "int",
+//        "shelves_number" => "int",
+//        "wg_id" => "int",
+//        "goods_id" => "int",
+//        "goods_name" => "string",
+//        "goods_pic" => "string",
+//        "gc_id" => "int",
+//        "gc_name" => "string",
+//        "cost_price" => "float",
+//        "retail_price" => "float",
+//        "total_sod_price" => "float",
+//        "quantity" => "int",
+//        "bar_code" => "string",
+//        "batch_number" => "string",
+//        "manufacture_time" => "int",
+//        "sell_by_date" => "int",
+//        "refund_quantity" => "int",
+//    ];
 
+
+    public function saleOrders()
+    {
+        return $this->belongsTo(SaleOrdersModel::class,'order_id');
+    }
 
     /**
      * 商品销售排行榜

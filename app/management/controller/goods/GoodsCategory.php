@@ -34,7 +34,7 @@ class GoodsCategory extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['gc_name' => "like"]);
-        $result = $this->app->goodsCategory->getList($where, $pageNum);
+        $result = $this->app->goodsCategory->getList($where, $pageNum,'*','gc_id desc');
         return $result;
     }
 
@@ -68,8 +68,8 @@ class GoodsCategory extends Common
      */
     public function del()
     {
-        $id = input("gc_id");
-        $result = $this->app->goodsCategory->del($id);
+        $postData = input();
+        $result = $this->app->goodsCategory->del($postData);
         return $result;
     }
 }

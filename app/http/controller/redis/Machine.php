@@ -32,16 +32,23 @@ class Machine
     public function machineMsg()
     {
         try {
-            $this->app = AppFactory::machine();
             $redis = new \Redis();
             $redis->connect("127.0.0.1", "6379");
             while (true) {
-                $list = $redis->lRange("machine", 0, -1);
+                $list = $redis->lRange("dataUpload", 0, -1);
                 $num = count($list);
                 if ($num > 0) {
-                    $data = $redis->rPop("machine");
+                    $data = $redis->rPop("dataUpload");
+                    actionLog($data,'redis');
                     if ($data) {
-                        $this->handleMachineMessage($data);
+                        $data = json2arr($data);
+                        $config = [
+                            "machine_id" => $data['machine_id'],
+                            "key" => env("api.md5Key"),
+                            "data" => $data,
+                        ];
+                        $this->app = AppFactory::machine($config);
+                        $this->app->mq->onMessage();
                     }
                 }
                 usleep(100);
@@ -52,23 +59,16 @@ class Machine
         }
     }
 
-    /**
-     * 处理设备终端数据
-     * @param $data
-     * @return array|mixed
-     */
-    public function handleMachineMessage($data)
+
+    public function testRedis()
     {
-        $data = json2arr($data);
-        actionLog($data, '需要处理的数据');
-        if ($data) {
-            $result = $this->app->report->onMessage($data);
-            $result = obj2arr($result);
-            $result = json2arr($result);
-            if ($result) {
-                actionLog($result, '设备上报数据处理结果');
-            }
-            return $result;
-        }
+
+        $redis = new \Redis();
+        $redis->connect("127.0.0.1", "6379");
+        $list = $redis->lRange("dataUpload", 0, -1);
+        $data = $redis->rPop("dataUpload");
+        dump($list);
+        dump($data);
+        $redis->close();
     }
 }

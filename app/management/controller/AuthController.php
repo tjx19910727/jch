@@ -58,7 +58,7 @@ class AuthController extends BaseController
         $key = Config::get("app.salt");
         $token_arr = TDESUtil::decrypt($token,$key);
         $token_arr = json_decode($token_arr,true);
-        if(time() - $token_arr['timeout'] >= 24 * 3600 * 7){  // Token超时，7天
+        if(time() - $token_arr['timeout'] >= 24 * 3600 * 365){  // Token超时，7天
             return "会话超时，请重新登陆";
         }
         return $token_arr;

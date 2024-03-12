@@ -17,7 +17,7 @@ use think\db\exception\ModelNotFoundException;
 class StrategyMachineModel extends BaseModel
 {
     protected $pk = "sm_id";
-    protected $name = "strategy_Machine";
+    protected $name = "strategy_machine";
 
     protected $schema = [
         "sm_id" => "int",
@@ -56,15 +56,6 @@ class StrategyMachineModel extends BaseModel
     public static function getStrategyFind($where, $field = "*", $order = "sm.sort asc")
     {
         try {
-
-//        dump($where['sm.s_type']);
-//            dump(self::$join[$where['sm.s_type']]);
-//        dump(2);
-//            dump(self::$condition[$where['sm.s_type']]);
-//            dump($where);
-//            dump($field);
-//            dump($order);
-//            dump(2);
             $data = self::alias("sm")
                 ->join(self::$join[$where['sm.s_type']], self::$condition[$where['sm.s_type']], "left")
                 ->where($where)

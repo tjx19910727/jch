@@ -42,7 +42,7 @@ class StrategyIncomeModel extends BaseModel
     public static function getJoinStrategyMachineList($where,$field = "*",$order = "")
     {
         $data = self::alias("si")
-            ->join("machine m","m.m_id = si.m_id",'left')
+            ->join("strategy_machine sm","sm.s_id = si.si_id",'left')
             ->where($where)
             ->field($field)
             ->order($order)

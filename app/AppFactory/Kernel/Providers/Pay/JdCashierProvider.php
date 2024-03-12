@@ -11,14 +11,14 @@ namespace app\AppFactory\Kernel\Providers\Pay;
 
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
-use app\AppFactory\Pay\JdCashier\JdCashierClient;
+use app\AppFactory\Pay\Notify\JdCashierClient;
 
 class JdCashierProvider implements ServiceProviderInterface
 {
     public function register(Container $app)
     {
         // TODO: Implement register() method.
-        $app['jdCashier'] = function ($app) {
+        $app['jdNotify'] = function ($app) {
             return new JdCashierClient($app);
         };
     }

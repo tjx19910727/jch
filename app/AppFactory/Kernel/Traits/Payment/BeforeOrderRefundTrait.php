@@ -13,56 +13,132 @@ use app\AppFactory\Kernel\Support\Validate\SaleOrders\VSaleOrdersRefund;
 
 trait BeforeOrderRefundTrait
 {
+
+    protected $insertSor;
+    protected $sodRefundAmount;
+    public $billList;
+
     /**
      * 生成退款记录
-     * @return array
+     * @return array|string
      */
     public function createSor()
     {
         $this->totalRefundMoney = 0;
         $this->refundTradeNo = $this->getRefundNo();
         $flag = [];
-        foreach ($this->postData['refund'] as $key => $value) {
-            try {
-                validate(VSaleOrdersRefund::class)->scene('refund')->check($value);
-            } catch (\Exception $e) {
-                return $this->rValidate($e->getMessage());
-            }
-            $this->sod = $this->getSaleOrdersDetailsFind(['sod_id' => $value['sod_id']]);
-            $this->sod = obj2arr($this->sod);
-            if (!$this->sod) {
-                return $this->rValidate("查无购买的商品信息");
-            }
-            $this->sod['refund_quantity'] = $value['quantity'];
-            $refundAmount = $this->calculateRefundAmount();
-            $this->totalRefundMoney = bcadd($this->totalRefundMoney,$refundAmount,2);
-            $insertSor = [
-                "order_id" => $this->sod['order_id'],
-                "sod_id" => $this->sod['sod_id'],
-                "ss_id" => $this->sod['ss_id'],
-                "goods_id" => $this->sod['goods_id'],
-                "wg_id" => $this->sod['wg_id'],
-                "refund_trade_no" => $this->refundTradeNo,
-                "refund_amount" => $refundAmount,
-                "refund_quantity" => $value['quantity'],
-            ];
-            actionLog($insertSor,'生成退款记录数据');
-            $create = $this->addSaleOrdersRefund($insertSor);
-            actionLog($create,'生成退款记录结果');
+        try {
+            validate(VSaleOrdersRefund::class)->scene('refund')->check($this->postData['refund']);
+        } catch (\Exception $e) {
+            return $this->rValidate($e->getMessage());
         }
-        if ($this->totalRefundMoney <= 0) return $this->rFail("退款金额小于0，退款失败");
+        $this->sod = $this->getSaleOrdersDetailsFind(['sod_id' => $this->postData['refund']['sod_id']]);
+        $this->sod = obj2arr($this->sod);
+        if (!$this->sod) {
+            return $this->rValidate("查无购买的商品信息");
+        }
+        // 本次退款总金额
+        $this->sodRefundAmount = bcmul(bcsub($this->sod['retail_price'], $this->sod['discount_price'],3) , $this->postData['refund']['quantity'],3);
+
+        $this->sod['refund_quantity'] = bcadd($this->sod['refund_quantity'],$this->postData['refund']['quantity']);
+        $this->sod['refund_amount'] = bcadd($this->sod['refund_amount'],$this->sodRefundAmount,3);
+        $amountRefunded = $this->getSaleOrdersRefundSum(['order_id' => $this->sod['order_id'],'status' => 2],'refund_amount');
+        if ($amountRefunded + $this->sodRefundAmount > $this->getSaleOrdersValue(['order_id' => $this->sod['order_id']],'total_price')) {
+            return $this->rValidate("总退款金额超出订单总金额");
+        }
+        $this->handleSorData();
+        $flag[] = $this->revenueRefund();
+        $systemRefund = $this->systemRefund();
+        if (is_object($systemRefund) || is_string($systemRefund)) return $systemRefund;
+        $flag[] = $systemRefund;
+        if ($this->sodRefundAmount <= 0) return $this->rFail("退款金额小于0，退款失败");
         actionLog($flag,'退款记录生成结果');
         return $flag;
     }
 
     /**
-     * 计算退款金额
-     * @return string
+     * 分润退款
+     * @return mixed
      */
-    public function calculateRefundAmount()
+    protected function revenueRefund()
     {
-        $refundAmount = bcmul($this->sod['refund_quantity'],$this->sod['retail_price'],2);
-        return $refundAmount;
+        $flag[] = 1;
+        // 受分润记录
+        $revenue = $this->getSaleOrdersRevenueList(['sod_id' => $this->sod['sod_id'],['status','between',[2,3]]]);
+        if ($revenue) {
+            foreach ($revenue as $key  => $value) {
+                $insertSor = $this->insertSor;
+                $refund_amount = bcmul(bcdiv($this->insertSor['refund_quantity'],$value['sod_quantity'],2),$value['income_amount'],3);
+                // 向下取整并保留两位小数
+                $refund_amount = number_format(floor($refund_amount *100) / 100, 2);
+                $this->totalRefundMoney = bcadd($this->totalRefundMoney,$refund_amount,2);
+                $insertSor['refund_amount'] = $refund_amount;
+                $insertSor['manager_id'] = $value['manager_id'];
+                $insertSor['nickname'] = $this->getAuthManagerValue(['manager_id' => $value['manager_id']],'nickname');
+                $flag[] = $this->addSaleOrdersRefund($insertSor);
+                // 京东收银角色退款退分润
+                if ($this->order['pay_type'] == 4) {
+                    $billList['customerNum'] = $revenue['bill_account'];
+                    $billList['amount'] = $refund_amount; // 小数点两位
+                    $this->billList[] = $billList;
+                }
+            }
+            actionLog($flag,'生成分润退款flag');
+        }
+        return $this->checkFlag($flag);
+    }
+
+    /**
+     * 系统退款
+     * @return int
+     */
+    protected function systemRefund()
+    {
+        if ($this->totalRefundMoney < $this->sodRefundAmount) {
+            $insertSor = $this->insertSor;
+            $insertSor['refund_amount'] = bcsub($this->sodRefundAmount,$this->totalRefundMoney,2);
+            $insertSor['manager_id'] = 0;
+            $insertSor['nickname'] = "收款方";
+            $this->totalRefundMoney = $this->sod['total_sod_price'];
+            // 京东收银系统退款退分润
+            if ($this->order['pay_type'] == 4 && $this->billList) {
+                if (!isset($this->strategyPayee['bill_account'])) {
+                    return $this->rFail("收款方未配置分账账号");
+                }
+                if (!$this->strategyPayee) return $this->rFail("收款方分账账号不能为空");
+                $this->billList[] = [
+                    "customerNum" => $this->strategyPayee['bill_account'],
+                    "amount" => $insertSor['refund_amount'],
+                ];
+            }
+            return $this->addSaleOrdersRefund($insertSor);
+        }
+        return 1;
+    }
+
+    /**
+     * 退款主体数据
+     */
+    protected function handleSorData()
+    {
+        $this->insertSor = [
+            "order_id" => $this->sod['order_id'],
+            "sod_id" => $this->sod['sod_id'],
+            "m_id" => $this->order['m_id'],
+            "machine_id" => $this->order['machine_id'],
+            "mc_id" => $this->sod['mc_id'],
+            "channel_position" => $this->sod['channel_position'],
+            "channel_code" => $this->sod['channel_code'],
+            "g_id" => $this->sod['g_id'],
+            "g_name" => $this->sod['g_name'],
+            "pic" => $this->sod['pic'],
+            "gc_id" => $this->sod['gc_id'],
+            "gc_name" => $this->sod['gc_name'],
+            "mg_id" => $this->sod['mg_id'],
+            "refund_trade_no" => $this->refundTradeNo,
+            "refund_quantity" => $this->postData['refund']['quantity'],
+            "user_id" => $this->order['user_id'],
+        ];
     }
 
 }

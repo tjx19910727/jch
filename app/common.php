@@ -282,14 +282,15 @@ function actionLog($data,$remark = '',$logName = "")
         @mkdir($folderPath);
         @chmod($folderPath,0777);
     }
-
-    $filePath = $folderPath . "/" . $controller . "_" . $action;
-    $newPath = $filePath . '_' . date('His') ;
+    $filePath = $folderPath . "/";
+    if ($controller) $filePath .= $controller . "_" ;
+    if ($action) $filePath .= $action;
     $type = '.log';
     $max = \think\facade\Config::get('app.log_max_size') ?? 1048576;
     if (file_exists($filePath.$type)) {
         $fileSize = abs(filesize($filePath.$type));
         if ($fileSize > $max) {
+            $newPath = $filePath . "_" . date('His') ;
             rename($filePath . $type,$newPath . $type);
         }
     }
@@ -342,4 +343,21 @@ function validateDate($date, $format = 'Y-m-d H:i:s')
 {
     $d = DateTime::createFromFormat($format, $date);
     return $d && $d->format($format) == $date;
+}
+
+
+/**
+ * 判断是微信还是支付宝
+ * @return int
+ */
+function WxOrAli(){
+    /** 判断是微信 */
+    if (strpos($_SERVER['HTTP_USER_AGENT'], 'MicroMessenger') !== false) {
+        return 1;
+    }
+    //判断是不是支付宝
+    if (strpos($_SERVER['HTTP_USER_AGENT'], 'AlipayClient') !== false || strpos($_SERVER['HTTP_USER_AGENT'], 'MicroMessenger') == false) {
+        return 2;
+    }
+    return 0;
 }

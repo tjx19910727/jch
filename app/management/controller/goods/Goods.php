@@ -34,7 +34,7 @@ class Goods extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData,false,['goods_name' => "like"]);
+        $where = $this->getWhere($postData,false,['g_name' => "like"]);
         $where['creator'] = $this->manager['manager_id'];
         $result = $this->app->goods->getList($where,$pageNum,$this->field,'g_id desc');
         return $result;
@@ -70,8 +70,8 @@ class Goods extends Common
      */
     public function del()
     {
-        $id = input("goods_id");
-        $result = $this->app->goods->del($id);
+        $postData = input();
+        $result = $this->app->goods->del($postData);
         return $result;
     }
 
@@ -82,22 +82,7 @@ class Goods extends Common
     public function importExcel()
     {
         $postData = input();
-//        $postData['file_path'] = "/uploads/excel/20231014.xlsx";
         return $this->app->goods->importExcel($postData);
     }
 
-    /**
-     * 获取公用商品库
-     * @return mixed
-     */
-    public function getPublic()
-    {
-        $postData = input();
-        $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData);
-        $where['is_public'] = 1;
-        $field = "*";
-        $result = $this->app->goods->getList($where,$pageNum,$field,'goods_id desc');
-        return $result;
-    }
 }

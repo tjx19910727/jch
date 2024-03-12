@@ -11,23 +11,23 @@ namespace app\AppFactory\Kernel\Providers\Machine;
 
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
+use app\AppFactory\Machine\Receive\ActivityClient;
 use app\AppFactory\Machine\Receive\ApiClient;
-use app\AppFactory\Machine\Receive\SocketClient;
-use app\AppFactory\Machine\Receive\SetClient;
+use app\AppFactory\Machine\Receive\MqClient;
 
 class ReceiveProvider implements ServiceProviderInterface
 {
     public function register(Container $app)
     {
         // TODO: Implement register() method.
+        $app['activity'] = function ($app) {
+            return new ActivityClient($app);
+        };
         $app['api'] = function ($app) {
             return new ApiClient($app);
         };
-        $app['set'] = function ($app) {
-            return new SetClient($app);
-        };
-        $app['socket'] = function ($app) {
-            return new SocketClient($app);
+        $app['mq'] = function ($app) {
+            return new MqClient($app);
         };
     }
 }

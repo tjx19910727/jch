@@ -18,6 +18,7 @@ class GoodsCategoryModel extends BaseModel
 
     protected $schema = [
         "gc_id" => "int",
+        "gc_pid" => "int",
         "gc_name" => "string",
         "sort" => "int",
         "status" => "int",

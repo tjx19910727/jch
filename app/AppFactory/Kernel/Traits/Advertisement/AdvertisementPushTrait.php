@@ -18,9 +18,35 @@ trait AdvertisementPushTrait
         return AdvertisementPushModel::getFind($where,$field,$order);
     }
 
+    /**
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @return \app\AppFactory\Kernel\Model\BaseModel|\app\AppFactory\Kernel\Model\BaseModel[]|array|\think\Collection|\think\Paginator
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
     public function getAdvertisementPushList($where,$pageNum = 0, $field = "*", $order = "adv_id desc")
     {
-        return AdvertisementPushModel::getList($where,$pageNum,$field,$order);
+        return AdvertisementPushModel::getList($where,$pageNum,$field,$order,function($item){
+            $update = [];
+            if (isset($item['status']) && $item['status'] == 1) $update['status'] = 2;
+            if (isset($item['end_date'])) {
+                if ($item['end_date'] < strtotime(date("Y-m-d"))) {
+                    $update['status'] = 3;
+                }
+                if ($item['end_date'] == strtotime(date("Y-m-d")) && isset($item['end_time']) && $item['end_time'] < HourMinuteSec2int(date("H:i:s"))) {
+                    $update['status'] = 3;
+                }
+            }
+            if ($update && isset($item['adv_id'])) {
+                $update['adv_id'] = $item['adv_id'];
+                AdvertisementPushModel::update($update);
+            }
+            return $item;
+        });
     }
 
     public function addAdvertisementPush($insert)
@@ -40,27 +66,4 @@ trait AdvertisementPushTrait
         return AdvertisementPushModel::whereDel($where);
     }
 
-    /**
-     * 门店查询广告
-     * @return mixed
-     */
-    public function queryAdvPush()
-    {
-        $where['status'] = ['<',3];
-        $where['start_date'] = ['<=', time()];
-        $where['end_date'] = ['>',time()];
-        $where['store_id'] = $this->store['store_id'];
-        $field = "adv_id,adv_title,res_id,res_title,concat('" . $this->getUrl() . "',file_path) file_path,duration_time,total_times,start_date,end_date,start_time,end_time,position,screen,screen_full,status";
-        $adv = $this->getAdvertisementPushList($where,0,$field,'start_date asc');
-        return $this->rQ($adv);
-    }
-
-    public function reportAdvPlay()
-    {
-        if (isset($this->message['data']['adv_id'])) {
-            $adv = $this->getAdvertisementPushFind(['adv_id' => $this->message['data']['adv_id']]);
-            if (!$adv) return $this->rFail('查无广告信息');
-
-        }
-    }
 }

@@ -22,8 +22,8 @@ class SignUtil
         ksort($data);
         $signArr = [];
         foreach ($data as $k => $value) {
-            if ($value)
-                $signArr[] = $k . "=" . $value;
+            if (is_array($value)) $value = json_encode($value);
+            $signArr[] = $k . "=" . $value;
         }
         $signArr[] = "key=" . $key;
         $signStr = implode("&",$signArr);

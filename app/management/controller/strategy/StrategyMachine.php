@@ -19,14 +19,13 @@ class StrategyMachine extends Common
     {
         $postData = input();
         try { $this->validate($postData,$this->validatePath . 'bind');} catch (\Exception $e) { return returnValidate($e->getMessage());}
-        return $this->app->strategyMachine->add($postData,0);
+        return $this->app->strategyMachine->addStrategyMachine($postData,0);
     }
 
     public function unbind()
     {
-        $id = input('sm_id');
-        if (!$id) return returnState(100,'策略ID不能为空');
-        return $this->app->strategyMachine->del($id);
+        $postData = input();
+        return $this->app->strategyMachine->del($postData);
     }
 
     public function update()

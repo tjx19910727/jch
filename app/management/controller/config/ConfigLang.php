@@ -25,7 +25,7 @@ class ConfigLang extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["lang" => "like"]);
-        return $this->app->configLang->getList($where,$pageNum,$this->field,'create_time desc');
+        return $this->app->configLang->getList($where,$pageNum,$this->field,'create_time desc,l_id desc');
     }
 
     /**

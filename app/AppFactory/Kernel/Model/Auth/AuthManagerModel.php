@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Model\Auth;
 
 
 use app\AppFactory\Kernel\Model\BaseModel;
+use app\AppFactory\Kernel\Model\Machine\MachineConfigModel;
 
 class AuthManagerModel extends BaseModel
 {

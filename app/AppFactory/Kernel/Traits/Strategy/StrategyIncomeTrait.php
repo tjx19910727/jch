@@ -13,25 +13,30 @@ use app\AppFactory\Kernel\Model\Strategy\StrategyIncomeModel;
 
 trait StrategyIncomeTrait
 {
+    public function getStrategyIncomeValue($where,$value)
+    {
+        return StrategyIncomeModel::getFieldValue($where,$value);
+    }
+
     public function getStrategyIncomeFind($where,$field = "*", $order = "")
     {
         return StrategyIncomeModel::getFind($where,$field,$order);
     }
 
     /**
-     * 通过门店ID获取分润策略
-     * @param $store_id
+     * 通过设备ID获取分润策略
+     * @param $m_id
      * @return StrategyIncomeModel[]|array|\think\Collection
      * @throws \think\db\exception\DataNotFoundException
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function getStrategyIncomeByStoreId($store_id)
+    public function getStrategyIncomeByMachineId($m_id)
     {
-        $where['store_id'] = $store_id;
+        $where['m_id'] = $m_id;
         $where['s_type'] = 3;
         $field = "si.si_id,si.income_value,si.transfer_method";
-        return StrategyIncomeModel::getJoinStrategyStoreList($where,$field,'si.si_id desc');
+        return StrategyIncomeModel::getJoinStrategyMachineList($where,$field,'sm.sort asc,si.si_id desc');
     }
 
     public function getStrategyIncomeList($where,$pageNum = 0, $field = "*", $order = "")

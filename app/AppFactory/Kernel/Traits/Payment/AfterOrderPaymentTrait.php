@@ -9,8 +9,12 @@
 namespace app\AppFactory\Kernel\Traits\Payment;
 
 
+
+use app\AppFactory\RabbitMq\MqProducer;
+
 trait AfterOrderPaymentTrait
 {
+
     /**
      * 处理支付成功
      */
@@ -33,18 +37,62 @@ trait AfterOrderPaymentTrait
     public function paymentSuccessful()
     {
         $flag = [];
-        $this->order['payment_status'] = 2;
-        $this->order['payment_time'] = time();
+        $this->order['pay_status'] = 3;
+        $this->order['pay_time'] = time();
         actionLog($this->order,'订单数据');
         $flag[] = $this->updateSaleOrders($this->order);
         actionLog($this->getLS(),'订单修改数据');
-        $flag[] = $this->pickup();
-        // 结算收费记录
-        $flag[] = $this->settlementCharge();
-        $flag[] = $this->settlementHosting();
         $result = flag_check($flag);
+        if ($result) {
+            $this->outGoods();
+        }
         $this->sendTemp();
         return $result;
+    }
+
+    /**
+     * 出货
+     */
+    public function outGoods()
+    {
+        $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
+        if ($details) {
+            $contentArr = [];
+            foreach ($details as $k => $v) {
+                $dc = [
+                    $v['channel_code'],
+                    $v['quantity'],
+                ];
+                $contentArr[$v['channel_position']][] = $dc;
+            }
+            $content = [
+                "msgType" => "outGoods",
+                "trade_no" => $this->order['trade_no'],
+                "main" => $contentArr,
+            ];
+            $content = json_encode($content);
+            $msg_id = uniqid();
+            $data = [
+                "timestamp" => time(),
+                "msg_id" => $msg_id,
+                "machine_id" => "test0001",
+                "data" => $content,
+            ];
+            $data['sign'] = $this->makeSign($data);
+            actionLog($data,'下发数据');
+            MqProducer::dataSend($data,$data['machine_id']);
+            // 生成发送记录
+            $insertMqRecord = [
+                "m_id" => $this->order['m_id'],
+                "machine_id" => $data['machine_id'],
+                "msg_id" => $msg_id,
+                "content" => json_encode($data),
+                "from" => 2,
+                "type" => 2,
+            ];
+            $this->addMachineMqRecord($insertMqRecord);
+            actionLog($this->getLS(),'生成发送记录');
+        }
     }
 
     /**
@@ -60,65 +108,6 @@ trait AfterOrderPaymentTrait
             }
             $this->sendSalesNotice($this->order);
         }
-    }
-
-    /**
-     * 现场购买或提货码提货，记录时间，减库存
-     * @return int
-     */
-    protected function pickup()
-    {
-        $flag[] = 1;
-        $this->order['pickup_time'] = time();
-        $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
-        foreach ($details as $key => $value) {
-            $ss = $this->getStoreShelvesFind(['ss_id' => $value['ss_id']]);
-            if (!$ss) {
-                actionLog($this->getLS(),'查无货架信息');
-            }
-            $ss = $ss->toArray();
-            // 云值守普通订单
-            if (in_array($this->order['order_type'],[1,2])) {
-                $ss['stock'] = bcsub($ss['stock'],$value['quantity']);
-            }
-            // 云仓订单
-            if (in_array($this->order['order_type'],[3,4])) {
-                $ss['frozen_stock'] = bcsub($ss['frozen_stock'],$value['quantity']);
-            }
-            if ($ss['stock'] <= $ss['warning_stock']) {
-                @$this->sendStockNotice($ss);
-            }
-
-            // 减库存
-            $flag[] = $this->updateStoreShelves($ss);
-            actionLog($this->getLS(),'减库存SQL');
-
-        }
-        actionLog($flag,'减库存flag');
-        return flag_check($flag);
-    }
-
-    /**
-     * 结算收费记录
-     * @return bool
-     */
-    protected function settlementCharge()
-    {
-        $where['order_id'] = $this->order['order_id'];
-        $where['payment_status'] = 1;
-        $sc = $this->storeChargeBe($where);
-        if ($sc) {
-            $update['mch_no'] = $this->order['mch_no'];
-            $update['payment_type'] = $this->order['payment_type'];
-            $update['payment_method'] = $this->order['payment_method'];
-            $update['payment_status'] = 2;
-            $update['payment_time'] = time();
-            $update['status'] = 2;
-            $result = $this->updateStoreCharge($update,$where);
-            actionLog($this->getLS(),'结算收费SQL');
-            return $result;
-        }
-        return true;
     }
 
     /**
@@ -152,17 +141,6 @@ trait AfterOrderPaymentTrait
     }
 
     /**
-     * 结算托管费用
-     * @return mixed
-     */
-    protected function settlementHosting()
-    {
-        $hosting = $this->getStoreHostingFind(['store_id' => $this->order['store_id']],'*','id desc');
-        $result = $this->getTotalAmount($hosting,$this->order);
-        return $result;
-    }
-
-    /**
      * 支付失败处理
      */
 
@@ -172,8 +150,8 @@ trait AfterOrderPaymentTrait
      */
     public function paymentFailed()
     {
-        $this->order['payment_status'] = 3;
-        $this->order['payment_time'] = time();
+        $this->order['pay_status'] = 3;
+        $this->order['pay_time'] = time();
         return $this->updateSaleOrders($this->order);
     }
 }

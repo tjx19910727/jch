@@ -23,6 +23,7 @@ use app\AppFactory\Kernel\Providers\Management\ResourceProvider;
 use app\AppFactory\Kernel\Providers\Management\SaleOrdersProvider;
 use app\AppFactory\Kernel\Providers\Management\StrategyProvider;
 use app\AppFactory\Kernel\Providers\Management\TemplateProvider;
+use app\AppFactory\Kernel\Providers\Management\UpdateLogProvider;
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
 
@@ -33,6 +34,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Common\CityClient                      $city                   城市
  *
  *
+ * @property Activity\ActivityCouponClient           $activityCoupon        优惠券活动
+ * @property Activity\ActivityCouponUsedClient       $activityCouponUsed    优惠券使用记录
  *
  * @property Advertisement\AdvertisementPushClient          $advertisementPush      广告推送
  *
@@ -57,6 +60,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Goods\GoodsLangClient                  $goodsLang              商品多语言信息
  * @property Goods\GoodsCategoryClient              $goodsCategory          商品分类信息
  * @property Goods\GoodsCategoryLangClient          $goodsCategoryLang      商品分类语言信息
+ * @property Goods\GoodsHitClient                   $goodsHit               商品点击
  *
  * @property Machine\MachineChannelClient           $machineChannel         设备货道
  * @property Machine\MachineClient                  $machine                设备基础信息
@@ -67,6 +71,11 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineHelpClient              $machineHelp            设备帮助
  * @property Machine\MachineInfoClient              $machineInfo            设备信息
  * @property Machine\MachineViewClient              $machineView            设备视图
+ * @property Machine\MachineOnlineClient            $machineOnline          设备每天在线时长统计
+ * @property Machine\MachineOnlineDetailsClient     $machineOnlineDetails   设备在线时长详情
+ * @property Machine\MachineVersionClient           $machineVersion         设备软件版本
+ * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
+ * @property Machine\MachineSaleClient              $machineSale            设备销售数据
  *
  * @property Resource\ResourceClient                $resource  广告素材
  *
@@ -81,6 +90,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Strategy\StrategyMachineClient         $strategyMachine        策略绑定设备
  * @property Strategy\StrategyManagerClient         $strategyManager        策略绑定账号
  * @property Strategy\StrategyPayeeClient           $strategyPayee          收款策略
+ *
+ * @property UpdateLog\UpdateLogClient              $updateLog              更新日志
  *
  *
  * @package app\AppFactory\Management
@@ -104,6 +115,7 @@ class Application extends ServiceContainer
         SaleOrdersProvider::class,
         StrategyProvider::class,
         TemplateProvider::class,
+        UpdateLogProvider::class,
     ];
 
 }

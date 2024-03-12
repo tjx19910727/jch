@@ -13,5 +13,10 @@ use app\AppFactory\Kernel\Support\Validate\SupportValidate;
 
 class VJdPay extends SupportValidate
 {
+    protected $rule = [
+    ];
+    protected $message = [];
+    protected $scene = [
 
+    ];
 }
