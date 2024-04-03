@@ -9,6 +9,7 @@
 namespace app\AppFactory\Management\Machine;
 
 
+use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Management\ManagementClient;
 
@@ -51,7 +52,7 @@ class MachineChannelClient extends ManagementClient
     public function getEmptyList($where)
     {
         $where['g_id'] = 0;
-        $list = $this->getMachineChannelList($where,0,'machine_id, 
+        $list = $this->getMachineChannelList($where,0,'m_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
         count(mc_id) empty_num','','','m_id');
         if ($list) {
@@ -73,7 +74,7 @@ class MachineChannelClient extends ManagementClient
     public function getBadList($where)
     {
         $where['status'] = 3;
-        $list = $this->getMachineChannelList($where,0,'machine_id, 
+        $list = $this->getMachineChannelList($where,0,'m_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
         count(mc_id) bad_num','','','m_id');
         if ($list) {
@@ -95,7 +96,7 @@ class MachineChannelClient extends ManagementClient
     public function getStockOutList($where)
     {
         $where['stock'] = 0;
-        $list = $this->getMachineChannelList($where,0,'machine_id, 
+        $list = $this->getMachineChannelList($where,0,'m_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
         count(mc_id) stock_out_num','','','m_id');
         if ($list) {
@@ -107,5 +108,35 @@ class MachineChannelClient extends ManagementClient
             }
         }
         return $this->rQ($list);
+    }
+
+    /**
+     * 修改货道信息
+     * @param $postData
+     * @return array|string
+     */
+    public function updateMc($postData)
+    {
+        $result = $this->updateMachineChannel($postData);
+        if ($result) {
+            $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'machine_id,mc_id');
+            $this->sendMcToMachine($mc);
+            return $this->r(200,$this->lang("action_success"));
+        }
+        return $this->r(100,$this->lang('action_fail'));
+    }
+
+    /**
+     * 发送触发货道更新数据
+     * @param $mc
+     */
+    public function sendMcToMachine($mc)
+    {
+        $config = [
+            "machine_id" => $mc['machine_id'],
+            "key" => env("api.md5Key"),
+        ];
+        $app = AppFactory::machine($config);
+        $app->sendMq->triggerUpdateMc($mc['mc_id']);
     }
 }

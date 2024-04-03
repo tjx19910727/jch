@@ -14,7 +14,12 @@ use app\management\controller\Common;
 class MachineGoods extends Common
 {
 
-    protected $field = "*";
+    protected $field = "mg_id,g_id,g_name,gc_id,gc_name,pic,sku,cost_price,market_price,retail_price,
+    (SELECT sum(mc.stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.status = 1 AND mc.mg_id = a.mg_id) available_stock,
+    (SELECT sum(mc.stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.status > 1 AND mc.mg_id = a.mg_id) disabled_stock,
+    (SELECT sum(mc.frozen_stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.mg_id = a.mg_id) reserve_stock,
+    standby_stock,machine_id,
+    (select machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name";
     protected $validatePath = 'app\management\validate\VMachineGoods.';
 
     public function getList()
@@ -40,7 +45,7 @@ class MachineGoods extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineGoods->add($postData);
+        return $this->app->machineGoods->addMg($postData);
     }
 
     public function update()
@@ -54,6 +59,14 @@ class MachineGoods extends Common
         return $this->app->machineGoods->update($postData);
     }
 
+    public function updateMoreByWhere()
+    {
+        $postData = input();
+        if (!isset($postData['where']) || !$postData['where']) return returnState(100,lang("where_require"));
+        if (!isset($postData['update']) || !$postData['update']) return returnState(100,lang("update_require"));
+        return $this->app->machineGoods->updateByWhere($postData);
+    }
+
     public function del()
     {
         $postData = input();
@@ -62,6 +75,6 @@ class MachineGoods extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineGoods->del($postData);
+        return $this->app->machineGoods->delMg($postData);
     }
 }

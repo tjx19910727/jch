@@ -24,6 +24,12 @@ class AdvertisementPushClient extends ManagementClient
     use ResourceTrait;
     use MachineTrait;
 
+    public function getGroupList($where,$pageNum = 0,$field = "*", $group = "", $order = "")
+    {
+        $data = $this->getAdvertisementPushGroupList($where,$pageNum,$field,$group,$order);
+        return $this->rQ($data);
+    }
+
     /**
      * 批量推送广告
      * @param $data
@@ -39,6 +45,7 @@ class AdvertisementPushClient extends ManagementClient
         if ($data['start_date'] < time()) $data['status'] = 2;
         $data['end_date'] = strtotime($data['end_date']);
         $flag = [];
+        $batch_num = date("YmdHis") . uniqid();
         $this->startTrans();
         foreach ($m_ids as $value) {
             $machine = $this->getMachineFind(['m_id' => $value], 'm_id,machine_name,machine_id');
@@ -67,16 +74,28 @@ class AdvertisementPushClient extends ManagementClient
             $insert['type'] = $res['type'];
             foreach ($time as $tk) {
                 $timeList = explode("~", $tk);
+                $insert['batch_num'] = $batch_num;
                 $insert['start_time'] = HourMinuteSec2int($timeList[0]);
                 $insert['end_time'] = HourMinuteSec2int($timeList[1]);
+                $insert['ao_id'] = $this->manager['ao_id'];
                 $flag[] = $this->addAdvertisementPush($insert);
             }
         }
         $result = flag_check($flag);
-        $result ? $this->commitTrans() : $this->rollbackTrans();
-        return $this->rAction($result);
+        if ($result) {
+            $this->commitTrans();
+            // 触发推送广告下发数据
+            return $this->triggerUpdate([['adv_id','in',$flag]]);
+        }
+        $this->rollbackTrans();
+        return $this->rFail();
     }
 
+    /**
+     * 修改推送广告信息
+     * @param $data
+     * @return array|string
+     */
     public function updatePush($data)
     {
         $data['start_date'] = strtotime($data['start_date']);
@@ -84,24 +103,55 @@ class AdvertisementPushClient extends ManagementClient
         $data['end_date'] = strtotime($data['end_date']);
         $data['start_time'] = HourMinuteSec2int($data['start_time']);
         $data['end_time'] = HourMinuteSec2int($data['end_time']);
-        return $this->rAction($this->updateAdvertisementPush($data, [], ["duration_time", "total_times", "start_date", "end_date", "start_time", "end_time", "screen", "screen_full"]));
+        $result = $this->updateAdvertisementPush($data, [], ["duration_time", "total_times", "start_date", "end_date", "start_time", "end_time", "screen", "screen_full"]);
+        if ($result) {
+            // 触发下发终端广告更新
+            return $this->triggerUpdate(['adv_id' => $data['adv_id']]);
+        }
+        return $this->rFail();
     }
 
     /**
      * 上架下架广告
      * @param $data
-     * @return array|string
+     * @return array|bool|string
+     * @throws DataNotFoundException
+     * @throws DbException
+     * @throws ModelNotFoundException
      */
     public function upDown($data)
     {
-        $adv = $this->getAdvertisementPushFind(['adv_id' => $data['adv_id']]);
-        if ($data['status'] == 2) {
-            if ($adv['status'] == 5) return $this->r(100, '当前广告素材已被删除');
+        $where = [];
+        if (isset($data['adv_id'])) $where = [['adv_id' ,"in", $data['adv_id']]];
+        if (isset($data['m_id'])) $where = [['m_id',"in",$data['m_id']]];
+        if (isset($data['batch_num'])) $where['batch_num'] = $data['batch_num'];
+        if (!$where) return $this->r(100,$this->lang("VAdvertisement.upDown_where_empty"));
+        $adv = $this->getAdvertisementPushList($where,0,'adv_id,adv_title,status');
+        if ($adv) {
+            $advIds = [];
+            $this->startTrans();
+            $flag = [];
+            foreach ($adv as $k => $v) {
+                if ($data['status'] == 2) {
+                    if ($v['status'] == 5) {
+                        $this->rollbackTrans();
+                        return $this->r(100, "【" . $adv['adv_title'] ."】：" . $this->lang("VAdvertisement.resource_is_del"));
+                    }
+                }
+                $update['adv_id'] = $v['adv_id'];
+                $update['status'] = $data['status'];
+                $flag[] = $this->updateAdvertisementPush($update);
+                $advIds[] = $v['adv_id'];
+            }
+            $result = $this->checkFlag($flag);
+            if ($result) {
+                $this->commitTrans();
+                $this->triggerUpdate([['adv_id','in',$advIds]]);
+                return $this->r(200,$this->lang("action_success"),$flag);
+            }
+            $this->rollbackTrans();
         }
-        $update['adv_id'] = $data['adv_id'];
-        $update['status'] = $data['status'];
-        $result = $this->updateAdvertisementPush($update);
-        return $this->rD($result);
+        return $this->r(100,$this->lang("action_fail"));
     }
 
     /**

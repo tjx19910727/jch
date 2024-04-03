@@ -26,6 +26,15 @@ return [
 
     ],
 
+    "VActivity" => [
+        "usedList_no_data" => "查无使用报表信息",
+    ],
+
+    "VActivityMachine" => [
+        "machine_require" => "请选择适用设备",
+        "machine_no_data" => "查无设备信息",
+    ],
+
     "VActivityCoupon" => [
         "c_id_require" => "优惠券ID不能为空",
         "c_name_require" => "优惠券名称不能为空",
@@ -42,6 +51,67 @@ return [
         "cu_id_require" => "优惠券使用记录ID不能为空",
         "c_id_require" => "优惠券ID不能为空",
         "quantity_require" => "生成数量不能为空",
+    ],
+
+    "VActivityLottery" => [
+        "al_no_data" => "查无活动信息",
+        "al_id_require" => "活动ID不能为空",
+        "lottery_name_require" => "活动名称不能为空",
+        "start_time_require" => "开始时间不能为空",
+        "price_require" => "单次抽奖金额不能为空",
+        "desc_max" => "活动说明超过长度限制",
+
+        "config_require" => "活动配置不能为空",
+        "content_require" => "活动内容不能为空",
+        "machineList_require" => "设备列表不能为空",
+        "probability_no_100" => "中奖概率总和不是100%，请重新设置",
+
+        "delContent_require" => "删除活动内容列表为必传项",
+        "delConfig_require" => "删除活动配置列表为必传项",
+
+        "content_name_require" => "活动内容名称不能为空",
+        "designated_goods_require" => "指定商品不能为空",
+        "retain_num_require" => "保留数量不能为空",
+        "probability_require" => "中奖概率不能为空",
+        "ag_require" => "商品列表不能为空",
+
+        "active_num_require" => "抽奖次数不能为空",
+        "active_type_require" => "抽奖类型不能为空",
+    ],
+
+    "VActivityFd" => [
+        "goods_no_data" => "查无商品信息",
+
+        "fd_id_require" => "活动ID不能为空",
+        "fd_name_require" => "活动名称不能为空",
+        "start_date_require" => "开始日期不能为空",
+        "fd_type_require" => "活动类型不能为空",
+        "condition_type_require" => "条件类型不能为空",
+        "machineList_require" => "设备列表不能为空",
+        "content_require" => "活动规则内容不能为空",
+
+        "condition_value_require" => "条件数值不能为空",
+        "active_value_require" => "活动值不能为空",
+        "sort_require" => "规则排序值不能为空",
+    ],
+
+    "VActivityPick" => [
+        "id_require" => "活动ID不能为空",
+        "pick_name_require" => "活动名称不能为空",
+        "start_time_require" => "开始时间不能为空",
+        "pick_type_require" => "派送类型不能为空",
+        "machineList_require" => "适用设备不能为空",
+        "goodsList_require" => "适用商品不能为空",
+    ],
+
+    "VActivityPickCode" => [
+        "apc_id_require" => "提货码ID不能为空",
+        "ap_id_require" => "活动ID不能为空",
+        "quantity_require" => "生成数量不能为空",
+
+        "pick_code_no_data" => "查无提货码信息",
+        "status3" => "活动已结束",
+        "status4" => "活动已下架",
     ],
 
     "VConfig" => [
@@ -101,6 +171,8 @@ return [
         "organization_name_require" => '组织名称不能为空',
 
         "roleList_require" => "权限角色ID不能为空",
+
+        "m_ids_require" => "设备ID不能为空",
     ],
 
     "VResource" => [
@@ -118,6 +190,16 @@ return [
         "can_not_use" => "素材不可用",
     ],
 
+    "VGoods" => [
+        "goods_no_data" => "查无商品信息",
+        "g_id_require" => "请选择商品",
+        "g_name_require" => "商品名称不能为空",
+        "g_name_max" => "商品名称长度超限制",
+        "pic_max" => "图片路径长度超限制",
+        "manufacturer_max" => "供应商名称长度超限制",
+        "service_phone_max" => "联系电话长度超限制",
+    ],
+
     "VGoodsCategory" => [
         "gc_id_require" => "请选择商品分类",
         "gc_name_require" => "分类名称不能为空",
@@ -132,17 +214,27 @@ return [
         "gc_name_max" => "分类名称长度超限制",
     ],
 
+    "VGoodsCorner" => [
+        "id_require" => "角标ID不能为空",
+        "corner_name_require" => "角标名称不能为空",
+        "corner_type_require" => "角标类型不能为空",
+        "style_require" => "角标样式不能为空",
+        "position_require" => "角标位置不能为空",
+        "start_time_require" => "生效时间不能为空",
+        "goodsList_require" => "适用商品不能为空",
+        "machineList_require" => "适用设备不能为空",
+    ] ,
+
     "VMachineGoods" => [
-        "g_id_require" => "请选择商品",
-        "g_name_require" => "商品名称不能为空",
-        "g_name_max" => "商品名称长度超限制",
-        "pic_max" => "图片路径长度超限制",
-        "manufacturer_max" => "供应商名称长度超限制",
-        "service_phone_max" => "联系电话长度超限制",
 
         "mg_id_require" => "请选择设备商品",
         "m_id_require" => "设备ID不能为空",
         "machine_id_require" => "设备编号不能为空",
+
+        "mg_no_data" => "信息不能为空",
+
+        "where_require" => "修改条件不能为空",
+        "update_require" => "修改内容不能为空",
     ],
 
     "VGoodsLang" => [
@@ -161,6 +253,11 @@ return [
         "desc_max" => "分组描述长度超限制",
     ],
 
+    "VMachineGroupMg" => [
+        "mg_id_require" => "设备分组ID不能为空",
+        "m_id_require" => "设备ID不能为空",
+    ],
+
     "VMachineGroupLang" => [
         "mgl_id_require" => "请选择设备分组语言信息",
         "mg_id_require" => "设备分组ID不能为空",
@@ -175,6 +272,7 @@ return [
     "VMachine" => [
         "m_id_require" => "请选择设备",
         "machine_id_require" => "设备编号不能为空",
+        "machine_no_data" => "查无设备信息",
 
         "light_require" => "灯光亮度不能为空",
         "volume_require" => "音量不能为空",
@@ -281,10 +379,14 @@ return [
         "time_list_require" => "时间段列表不能为空",
         "screen_require" => "请选择屏幕",
         "screen_full_require" => "请选择是否全屏",
+        "resource_is_del" => "当前广告素材已被删除",
 
         "query_machine_no_data" => "查无设备信息",
 
+        "upDown_where_empty" => "上下架条件不能为空",
+
         "remain_times_empty" => "广告播放次数已用完",
+        "quantity_not_match" => "抽奖数量与出货数量不匹配",
     ],
 
     "VSaleOrders" => [

@@ -10,6 +10,9 @@ namespace app\AppFactory\Kernel\Model\Goods;
 
 
 use app\AppFactory\Kernel\Model\BaseModel;
+use think\db\exception\DataNotFoundException;
+use think\db\exception\DbException;
+use think\db\exception\ModelNotFoundException;
 
 class GoodsModel extends BaseModel
 {
@@ -46,5 +49,70 @@ class GoodsModel extends BaseModel
 //        "update_id" => "int",
 //        "update_time" => "int",
 //    ];
+
+    /**
+     * 关联设备商品列表
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @param int $m_id
+     * @return GoodsModel|GoodsModel[]|array|string|\think\Collection|\think\Paginator
+     */
+    public static function joinMachineGoodsList($where,$pageNum = 0,$field = "*", $order = "",$m_id = 0)
+    {
+        try {
+            $condition = "mg.g_id = g.g_id";
+            if ($m_id) $condition .= " AND mg.m_id = $m_id";
+            $data = self::alias("g")
+                ->join("machine_goods mg", $condition, "left")
+                ->where($where)
+                ->field($field)
+                ->order($order);
+            if ($pageNum) {
+                $data = $data->paginate($pageNum, false, ["query" => request()->param()]);
+                return $data;
+            }
+            return $data->select();
+        } catch (DataNotFoundException $e) {
+            actionException($e,1);
+            return $e->getMessage();
+        } catch (ModelNotFoundException $e) {
+            actionException($e,1);
+            return $e->getMessage();
+        } catch (DbException $e) {
+            actionException($e,1);
+            return $e->getMessage();
+        }
+    }
+
+    /**
+     * 关联设备商品Find
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return GoodsModel|array|mixed|null|string|\think\Model
+     */
+    public static function joinMachineGoodsFind($where,$field = "*", $order = "")
+    {
+        try {
+            $data = self::alias("g")
+                ->join("machine_goods mg", "mg.g_id = g.g_id", "left")
+                ->where($where)
+                ->field($field)
+                ->order($order)
+                ->find();
+            return $data;
+        } catch (DataNotFoundException $e) {
+            actionException($e,1);
+            return $e->getMessage();
+        } catch (ModelNotFoundException $e) {
+            actionException($e,1);
+            return $e->getMessage();
+        } catch (DbException $e) {
+            actionException($e,1);
+            return $e->getMessage();
+        }
+    }
 
 }

@@ -42,8 +42,21 @@ class Payment extends Common
         $this->app = AppFactory::pay($this->config);
     }
 
+    /**
+     * 订单支付
+     * @return array|string
+     */
     public function sale_order()
     {
         return $this->app->payment->orderPay();
+    }
+
+    /**
+     * 取消支付
+     * @return array|string
+     */
+    public function cancel()
+    {
+        return $this->app->payment->cancelPay();
     }
 }

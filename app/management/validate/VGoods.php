@@ -17,19 +17,21 @@ class VGoods extends VCommon
         "pic" => "max:100",
         "manufacturer" => "max:100",
         "service_phone" => "max:100",
+        "release_time" => "require",
     ];
 
     protected $message = [
-        "g_id.require" => "VMachineGoods.g_id_require",
-        "g_name.require" => "VMachineGoods.g_name_require",
-        "g_name.max" => "VMachineGoods.g_name_max",
-        "pic.max" => "VMachineGoods.pic_max",
-        "manufacturer.max" => "VMachineGoods.manufacturer_max",
-        "service_phone.max" => "VMachineGoods.service_phone_max",
+        "g_id.require" => "VGoods.g_id_require",
+        "g_name.require" => "VGoods.g_name_require",
+        "g_name.max" => "VGoods.g_name_max",
+        "pic.max" => "VGoods.pic_max",
+        "manufacturer.max" => "VGoods.manufacturer_max",
+        "service_phone.max" => "VGoods.service_phone_max",
+        "release_time.require" => "VGoods.release_time_require",
     ];
 
     protected $scene = [
-        "add" => ["g_name","pic","manufacturer", "service_phone"],
+        "add" => ["g_name","pic","manufacturer", "service_phone","release_time"],
         "del" => ['g_id'],
     ];
 

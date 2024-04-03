@@ -21,7 +21,13 @@ class BaseModel extends Model
     protected $updateTime = "update_time";
 
 
-
+    /**
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @param string $group
+     * @return mixed
+     */
     public static function getFind($where,$field = '*',$order = "", $group = "")
     {
         $result = self::where($where)->field($field)->order($order)->group($group)->find();
@@ -63,6 +69,9 @@ class BaseModel extends Model
         $fields = array_column(Db::query("SHOW COLUMNS FROM " . self::getTable()),'Field');
         if (in_array('creator',$fields) && ($field == "*" || strpos($field,"creator") !== false)) {
             $field .= ", (SELECT nickname FROM auth_manager au WHERE au.manager_id = a.creator) creator_nickname";
+        }
+        if (in_array('ao_id',$fields) && ($field == "*" || strpos($field,"ao_id") !== false)) {
+            $field .= ", (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name";
         }
         if (!is_numeric($pageNum)) throw new \Exception("页面数据条数必须为数字");
         $model = self::alias("a")->where($where)->field($field)->order($order);

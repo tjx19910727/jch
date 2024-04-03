@@ -13,6 +13,12 @@ use app\AppFactory\Kernel\Model\Machine\MachineGroupModel;
 
 trait MachineGroupTrait
 {
+    /**
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return MachineGroupModel|mixed
+     */
     public function getMachineGroupFind($where,$field = "*",$order = "")
     {
         return MachineGroupModel::getFind($where,$field,$order);

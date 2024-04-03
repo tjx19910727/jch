@@ -9,6 +9,7 @@
 namespace app\AppFactory\Management\Sale;
 
 
+use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Payment\AliPayTrait;
@@ -146,6 +147,8 @@ class SaleOrdersClient extends ManagementClient
                 $this->commitTrans();
             }
             return $result;
+        } else {
+            $flag[] = $this->refundFail();
         }
         if ($this->order['pay_type'] == 2 || $this->order['pay_type'] == 3) {
             $flag[] = $this->refundFail();
@@ -198,15 +201,208 @@ class SaleOrdersClient extends ManagementClient
         if ($type == 2) {
             $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'Week %v,%x') week";
             $group = "week";
-            $where[] = ['create_date','>=', strtotime("-6 months")];
+            $where[] = ['create_date','>=', strtotime("-15 week")];
         }
         if ($type == 3) {
             $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'%x-%m') month";
             $group = "month";
-            $where[] = ['create_date','>=', strtotime("-1 year")];
+            $where[] = ['create_date','>=', strtotime("-12 month")];
         }
         $data = $this->getSaleOrdersDailyCountList($where,0,$field,'',$group);
         return $this->rQ($data);
     }
 
+    /**
+     * 导出订单数据
+     * @param $where
+     * @return array|string
+     * @throws \Exception
+     */
+    public function exportSo($where)
+    {
+        try {
+            $list = $this->getSaleOrdersList($where, 0,
+                'machine_id,machine_name,trade_no,mch_no,
+                (discount_price + total_price) goods_total_price,discount_price,total_quantity,total_price,
+                pay_code,
+                FROM_UNIXTIME(pay_time,"%Y-%d-%m %H:%i:%s") pay_time,
+                (CASE pay_type WHEN 1 THEN "微信支付" WHEN 2 THEN "支付宝支付" WHEN 3 THEN "" WHEN 4 THEN "京东收银" WHEN 0 THEN "免支付" END) pay_type,
+                (CASE pay_method 
+                    WHEN 1 THEN "免支付" 
+                    WHEN 11 THEN "付款码支付" 
+                    WHEN 12 THEN "JSAPI支付" 
+                    WHEN 13 THEN "小程序支付" 
+                    WHEN 14 THEN "Native支付" 
+                    WHEN 15 THEN "刷脸支付"
+                    WHEN 21 THEN "手机网站支付"
+                    WHEN 22 THEN "当面付（付款码）"
+                    WHEN 23 THEN "当面付（扫码支付）"
+                    WHEN 31 THEN "扫码支付"
+                    WHEN 32 THEN "反扫支付"
+                    WHEN 41 THEN "扫码支付"
+                    WHEN 42 THEN "刷卡支付（被扫支付）"
+                END) pay_method
+                '
+            );
+            if ($list) {
+                $list = $list->toArray();
+                $title = [
+                    "machine_id" => "设备编号",
+                    "machine_name" => "设备名称",
+                    "trade_no" => "订单编号",
+                    "mch_no" => "交易编号",
+                    "goods_total_price" => "商品总价",
+                    "discount_price" => "优惠金额",
+                    "total_quantity" => "总数量",
+                    "total_price" => "实际支付金额",
+                    "pay_code" => "支付操作码（付款码/支付二维码/提货码）",
+                    "pay_time" => "支付时间",
+                    "pay_type" => "支付类型",
+                    "pay_method" => "支付方式",
+                ];
+                $filename = "订单交易-" . date("Ymd");
+                $result = Excel::exportExcel($list, $title, $filename);
+                return $this->rAction($result);
+            }
+            return $this->rFail($this->lang("action_fail"));
+        } catch (\PHPExcel_Writer_Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        } catch (\PHPExcel_Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
+     * 导出商品交易
+     * @param $where
+     * @return array|string
+     */
+    public function exportGoodsSo($where)
+    {
+        try {
+            $field = "so.machine_id,so.machine_name,so.trade_no,sod.batch_number,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
+            (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
+            (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '盲盒活动' WHEN 5 THEN '满减满送活动' END) order_type,
+            sod.deliver_pics,
+            (CASE so.pay_type WHEN 0 THEN '免支付' WHEN 1 THEN '微信支付' WHEN 2 THEN '支付宝支付' WHEN 3 THEN '' WHEN 4 THEN '京东收银' ELSE '' END) pay_type,
+            (CASE so.pay_method 
+            WHEN 1 THEN '免支付' 
+            WHEN 14 THEN 'Native支付' 
+            WHEN 23 THEN '扫码支付' 
+            WHEN 41 THEN '扫码支付' WHEN 42 THEN '被扫支付'
+            ELSE '' END) pay_method,
+            FROM_UNIXTIME(so.create_time,'%Y-%m-%d %H:%i:%s') create_time,
+            FROM_UNIXTIME(so.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
+            pay_code";
+            $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field, "so.trade_no");
+            if ($list) {
+                $list = $list->toArray();
+                $title = [
+                    "machine_id" => "设备编号",
+                    "machine_name" => "设备名称",
+                    "trade_no" => "交易号",
+                    "batch_number" => "商品序列号",
+                    "sku" => "SKU",
+                    "g_name" => "SKU名称",
+                    "channel_code" => "槽位号",
+                    "retail_price" => "单价",
+                    "discount_price" => "优惠价",
+                    "total_sod_price" => "实收金额",
+                    "out_status" => "状态",
+                    "order_type" => "订单类型",
+                    "deliver_pics" => "出货图像",
+                    "pay_type" => "支付类型",
+                    "pay_method" => "支付方式",
+                    "create_time" => "交易时间",
+                    "pay_time" => "支付时间",
+                    "pay_code" => "支付操作码（用户付款码/支付二维码/提货码/优惠码）",
+                ];
+                $filename = "导出商品交易列表-" . date("YmdHis");
+                $result = Excel::exportExcel($list, $title, $filename);
+                return $this->rAction($result);
+            }
+            return $this->rFail($this->lang("action_fail"));
+        } catch (\PHPExcel_Writer_Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        } catch (\PHPExcel_Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
+     * 导出退款记录列表
+     * @param $where
+     * @return array|string
+     */
+    public function exportRefund($where)
+    {
+        try {
+            $field = "sor.machine_id,sor.machine_name,sor.trade_no,
+                sod.batch_number,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
+                (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
+                (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '盲盒活动' WHEN 5 THEN '满减满送活动' END) order_type,
+                sod.deliver_pics,
+                (CASE so.pay_type WHEN 0 THEN '免支付' WHEN 1 THEN '微信支付' WHEN 2 THEN '支付宝支付' WHEN 3 THEN '' WHEN 4 THEN '京东收银' ELSE '' END) pay_type,
+                (CASE so.pay_method 
+                WHEN 1 THEN '免支付' 
+                WHEN 14 THEN 'Native支付' 
+                WHEN 23 THEN '扫码支付' 
+                WHEN 41 THEN '扫码支付' WHEN 42 THEN '被扫支付'
+                ELSE '' END) pay_method,
+                FROM_UNIXTIME(so.create_time,'%Y-%m-%d %H:%i:%s') create_time,
+                FROM_UNIXTIME(so.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
+                so.pay_code,
+                sor.refund_trade_no,
+                sor.refund_no,
+                sor.refund_amount,
+                sor.refund_quantity,
+                (CASE sor.status WHEN 1 THEN '已提交退款申请' WHEN 2 THEN '退款成功' WHEN 3 THEN '退款失败' END) status,
+                sor.remark
+                ";
+            $list = $this->getSaleOrdersRefundListJoinSoSod($where, $field, "sor_id desc");
+            if ($list) {
+                $list = $list->toArray();
+                $title = [
+                    "machine_id" => "设备编号",
+                    "machine_name" => "设备名称",
+                    "trade_no" => "交易号",
+                    "batch_number" => "商品序列号",
+                    "sku" => "SKU",
+                    "g_name" => "SKU名称",
+                    "channel_code" => "槽位号",
+                    "retail_price" => "单价",
+                    "discount_price" => "优惠价",
+                    "total_sod_price" => "实收金额",
+                    "pay_type" => "支付类型",
+                    "pay_method" => "支付方式",
+                    "pay_time" => "支付时间",
+                    "create_time" => "交易时间",
+                    "deliver_pics" => "照片",
+                    "order_type" => "订单类型",
+                    "pay_code" => "支付操作码（用户付款码/支付二维码/提货码/优惠码）",
+                    "out_status" => "出货状态",
+                    "refund_trade_no" => "退款编号",
+                    "refund_no" => "平台退款编号",
+                    "refund_amount" => "退款金额",
+                    "refund_quantity" => "退款数量",
+                    "status" => "退款状态",
+                    "remark" => "备注",
+                ];
+                $filename = "导出退款交易列表-" . date("Ymd");
+                $result = Excel::exportExcel($list, $title, $filename);
+                return $this->rAction($result);
+            }
+            return $this->rFail($this->lang("action_fail"));
+        } catch (\PHPExcel_Writer_Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        } catch (\PHPExcel_Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        }
+    }
 }

@@ -9,10 +9,26 @@
 namespace app\AppFactory\Management\Goods;
 
 
+use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class GoodsCategoryClient extends ManagementClient
 {
-    use GoodsCategoryTrait;
+    use GoodsCategoryTrait,GoodsCategoryLangTrait;
+
+    public function addGc($postData)
+    {
+        $gc_id = $this->addGoodsCategory($postData);
+        if ($gc_id) {
+            $insertGl = [
+                "gc_name" => $postData['gc_name'] ?? "",
+                "desc" => $postData['desc'] ?? "",
+                "lang" => "zh-cn",
+                "gc_id" => $gc_id,
+            ];
+            $this->addGoodsCategoryLang($insertGl);
+        }
+        return $this->rA($gc_id);
+    }
 }

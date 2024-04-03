@@ -15,6 +15,7 @@ namespace app\AppFactory;
  * @method static Machine\Application          machine($config = [])      终端通讯
  * @method static Pay\Application              pay($config = [])       支付
  * @method static TimeTask\Application         timeTask($config = [])       定时任务
+ * @method static Mobile\Application         mobile($config = [])       手机端
  * @package app\AppFactory
  */
 class AppFactory

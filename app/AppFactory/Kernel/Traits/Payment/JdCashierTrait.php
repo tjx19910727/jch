@@ -281,4 +281,30 @@ trait JdCashierTrait
         return $this->r( 100,'未识别状态：' . $result['resultStatus'], $result);
     }
 
+    /**
+     * 撤销订单
+     * @return mixed
+     */
+    public function jdCancel()
+    {
+        $params = [
+            //商户号
+            "version" => 'V4.0',
+            "customerNum" => $this->strategyPayee['customerNum'],
+            "requestNum" => $this->order['trade_no'],
+        ];
+        $this->jdApp = Jd::payment($this->strategyPayee);
+        actionLog($params, '京东收银撤销订单请求参数');
+        $result = $this->jdApp->order->cancel($params);
+        actionLog($result, '京东收银撤销订单返回结果');
+        if (isset($result['code']) && $result['code'] == 'success') {
+            return $this->r(200, $this->lang("cancel_payment_success"));
+        }
+        $msg = '';
+        if (isset($result['error']['errorMsg'])) $msg .= $result['error']['errorMsg'] . "；";
+        if (isset($result['code'])) $msg .= $result['code'] . "；";
+        if (isset($result['msg'])) $msg .= $result['msg'] . "；";
+        return $this->r(100, $this->lang("cancel_payment_fail") . '：' . $msg, $result);
+    }
+
 }

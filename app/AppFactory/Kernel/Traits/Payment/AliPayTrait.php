@@ -50,7 +50,7 @@ trait AliPayTrait
 
         $this->aliApp = Factory::trade($this->strategyPayee);
         $this->order['sp_id'] = $this->strategyPayee['sp_id'];
-        $func_name = $this->aliPaymentMethod[$this->order['payment_method']];
+        $func_name = $this->aliPaymentMethod[$this->order['pay_method']];
         return $this->$func_name();
 
     }
@@ -143,6 +143,8 @@ trait AliPayTrait
             'total_amount' => $this->order['total_price'],
             'subject' => $this->order['machine_id'] . '购买支付',
         ];
+        dump($data);
+        dump($this->strategyPayee);
         $result = $this->aliApp->trade->preCreate($data);
         if ($result['code'] == 10000) {
             return $this->r(200,$result['msg'],$result);

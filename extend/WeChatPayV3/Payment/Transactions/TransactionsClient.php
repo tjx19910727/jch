@@ -22,4 +22,14 @@ class TransactionsClient extends BaseClient
     {
         return $this->httpPost('/v3/pay/transactions/jsapi', $params);
     }
+
+    /**
+     * Native支付
+     * @param $params
+     * @return bool|string
+     */
+    public function native($params)
+    {
+        return $this->httpPost('/v3/pay/transactions/native', $params);
+    }
 }

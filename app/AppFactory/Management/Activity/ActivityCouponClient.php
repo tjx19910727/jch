@@ -23,6 +23,16 @@ class ActivityCouponClient extends ManagementClient
     use ActivityGoodsTrait,ActivityMachineTrait;
     use ActivityCouponTrait, ActivityCouponUsedTrait;
 
+    public function getAcAgAmList($where,$pageNum = 0, $field = "*", $order = "")
+    {
+        return $this->rQ($this->getActivityCouponList($where,$pageNum,$field,$order,function ($ac) {
+            $whereA = ['a_type' => 1, "a_id" => $ac['c_id']];
+            $ac['goodsList'] = $this->getActivityGoodsList($whereA,0,'ag_id,g_id,g_name,sku,market_price,retail_price');
+            $ac['machineList'] = $this->getActivityMachineList($whereA,0,'am_id,m_id,machine_id,machine_name');
+            return $ac;
+        }));
+    }
+
     public function getAcAgAmFind($where,$field = "*")
     {
         $ac = $this->getActivityCouponFind($where,$field);

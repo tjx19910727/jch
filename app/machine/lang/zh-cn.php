@@ -28,6 +28,11 @@ return [
         "timestamp_checkTimestamp_overdue" => "时间戳超时，请更新时间",
 
         "pay_type_require" => "支付类型不能为空",
+        "pay_method_require" => "支付方式不能为空",
+        "total_price_require" => "抽奖金额不能为空",
+        "total_quantity_require" => "抽奖数量不能为空",
+        "alc_id_require" => "抽奖活动配置ID不能为空",
+
         "carList_require" => "购物车不能为空",
 
         "mcList_require" => "货道列表不能为空",
@@ -38,6 +43,11 @@ return [
         "mc_id_require" => "货道ID不能为空",
         "g_id_require" => "商品ID不能为空",
         "quantity_require" => "库存数量不能为空",
+
+        "manager_id_require" => "操作员ID不能为空",
+
+        "order_id_require" => "订单ID不能为空",
+        "fd_id_require" => "满减满送活动ID不能为空",
 
 
     ],
@@ -69,13 +79,12 @@ return [
         "play_time_require" => "播放时间不能为空",
     ],
 
-
-
     "VMachineGoods" => [
         "update_machine_goods_fail" => "修改设备商品失败",
         "goods_no_data" => "查无商品信息",
         "mg_id_require" => "设备商品ID不能为空",
         "g_id_require" => "商品ID不能为空",
+        "machine_goods_exits" => "该商品已存在于设备中，请勿重复添加",
     ],
 
     "QueryMachineInfo" => [
@@ -83,14 +92,22 @@ return [
     ],
 
     "VSubCar" => [
+        "pay_type_no_range" => "系统暂不支持非京东收银支付方式",
         "channel_no_data" => "查无货道信息",
         "make_order_details_fail" => "生成订单详情失败",
         "make_order_success" => "生成订单成功",
         "make_order_fail" => "生成订单失败",
+
+        "goods_outing" => "订单创建成功，正在出货中……",
+
+        "mg_id_require" => "货道未绑定设备商品信息",
     ],
 
     "VChangeChannelGoods" => [
         "goods_no_data" => "查无商品信息",
+        "mg_no_data" => "查无设备商品信息",
+
+        "mg_stock_out" => "设备商品可用库存不足",
     ],
 
     "VActivityCoupon" => [
@@ -107,5 +124,55 @@ return [
 
         "not_begin" => "活动尚未开始",
         "finished" => "活动已结束",
+    ],
+
+    "VActivityPick" => [
+
+        "ap_not_data" => "查无取货码活动",
+        "ag_not_data" => "查无取货码活动商品信息",
+        "check_no_code" => "查无取货码",
+
+        "not_begin" => "活动尚未开始",
+        "finished" => "活动已结束",
+    ],
+
+    "VActivityPickCode" => [
+        "status2" => "此取货码已使用",
+        "status3" => "此取货码已过期",
+        "status4" => "此取货码已作废",
+        "status5" => "此取货码正在使用中",
+    ],
+
+    "VActivityLottery" => [
+        "al_no_data" => "查无活动信息",
+        "al_not_begin" => "活动还未开始",
+        "alc_no_data" => "查无活动配置信息",
+        "content_no_data" => "查无活动商品信息",
+        "order_no_data" => "查无活动订单信息",
+        "order_details_no_data" => "查无订单详细信息",
+        "order_type_error" => "订单不是盲盒活动订单",
+        "order_no_pay" => "订单尚未支付或支付状态异常",
+        "mc_no_data" => "查无货道信息",
+        "under_stock" => "库存不足",
+        "lucky_draw_ended" => "该订单已完成抽奖",
+
+        "used_no_data" => "查无活动订单记录",
+
+        "status3" => "活动已结束",
+        "status4" => "活动已下架",
+
+
+        "lottery_empty" => "无中奖商品，设置错误",
+
+        "probability_no_100" => "中奖概率总和不是100%，无法启用该活动",
+
+        "is_out_goods" => "订单已执行出货",
+    ],
+
+    "VActivityFd" => [
+        "order_no_data" => "查无订单信息",
+        "fd_no_data" => "查无活动信息",
+        "content_no_data" => "查无活动内容信息",
+
     ],
 ];

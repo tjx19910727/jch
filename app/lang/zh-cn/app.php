@@ -16,10 +16,13 @@ return [
 
     "add_success" => '添加成功',
     "add_fail" => '添加失败',
+
     "update_success" => '修改成功',
     "update_fail" => '修改失败',
+
     "del_success" => '删除成功',
     "del_fail" => '删除失败',
+
     "copy_success" => '复制成功',
     "copy_fail" => '复制失败',
 
@@ -31,5 +34,11 @@ return [
     "uploadSuccess" => '上传成功',
     "fileSize" => '文件太大',
     "fileExt" => '不支持的上传文件类型',
+
+
+    "export_success" => '导出成功',
+    "export_fail" => '导出失败',
+
+
 
 ];

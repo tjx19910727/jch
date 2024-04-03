@@ -20,6 +20,7 @@ class GoodsCategoryModel extends BaseModel
         "gc_id" => "int",
         "gc_pid" => "int",
         "gc_name" => "string",
+        "ico" => "string",
         "sort" => "int",
         "status" => "int",
         "desc" => "string",

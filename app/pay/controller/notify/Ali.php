@@ -22,7 +22,7 @@ class Ali
             $postData = input();
             $postData = json2arr($postData);
             actionLog($postData, '回调通知数据');
-            AppFactory::payment()->aliNotify->handle($postData);
+            AppFactory::pay()->aliNotify->handle($postData);
         } catch (\Exception $e) {
             actionException($e,1);
             echo  "success";

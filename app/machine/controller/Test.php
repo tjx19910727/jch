@@ -12,8 +12,11 @@ namespace app\machine\controller;
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Activity\ActivityGoodsModel;
 use app\AppFactory\Kernel\Model\Activity\Coupon\ActivityCouponUsedModel;
+use app\AppFactory\Kernel\Model\Activity\Lottery\ActivityLotteryUsedModel;
 use app\AppFactory\Kernel\Model\Advertisement\AdvertisementPushModel;
 use app\AppFactory\Kernel\Model\Auth\AuthOrganizationModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
+use app\AppFactory\Kernel\Traits\CurlTrait;
 use app\AppFactory\Kernel\Util\SignUtil;
 use app\AppFactory\RabbitMq\MachineConsumer;
 use app\AppFactory\RabbitMq\MqProducer;
@@ -24,6 +27,7 @@ use think\facade\Queue;
 
 class Test extends BaseController
 {
+    use CurlTrait;
     protected $order;
 
 
@@ -31,24 +35,25 @@ class Test extends BaseController
     {
         $msg_id = uniqid();
         $carList[] = [
-            "mc_id" => 192,
-            "quantity" => 2,
+            "mc_id" => 275,
+            "quantity" => 1,
         ];
         $data = [
             "machine_id" => "test0001",
             "msg_id" => $msg_id,
             "timestamp" => time(),
+//            "manager_id" => 5,
             "pay_type" => 4,
             "pay_method" => 41,
-            "coupon_code" => "511663",
+//            "pick_code" => "81879930",
             "carList" => json_encode($carList, 320),
         ];
-//        $data = [
-//            "order_id" => 229,
-//            "timestamp" => time(),
-//            "msg_id" => $msg_id,
-//            "machine_id" => "test0001",
-//        ];
+        $data = [
+            "order_id" => 548,
+            "timestamp" => time(),
+            "msg_id" => $msg_id,
+            "machine_id" => "test0003",
+        ];
 //        $data = [
 //            "machine_id" => "test0001",
 //            "timestamp" => time(),
@@ -77,10 +82,28 @@ class Test extends BaseController
 //            "password" => "123456",
 //        ];
 //        $data = [
-//            "machine_id" => "test0002",
+//            "machine_id" => "test0001",
 //            "timestamp" => time(),
 //            "msg_id" => $msg_id,
-//            "code" => "511663",
+//            "pay_type" => "4",
+//            "pay_method" => "41",
+//            "total_price" => $value['price'] * $quantity,
+//            "total_quantity" => $quantity,
+//            "alc_id" => $value['config'][1]['alc_id'],
+////            "order_id" => 382,
+////            "fd_id" => 9,
+////            "mc_id" => 193,
+////            "mg_id" => 1,
+////            "capacity" => 10,
+////            "quantity" => 3,
+////            "pay_type" => 4,
+////            "pay_method" => 41,
+////            "total_price" => 40,
+////            "total_quantity" => 4,
+////            "al_id" => 8,
+////            "pick_code" => "73702244",
+////            "pay_type" => 0,
+////            "pay_method" => 1,
 //        ];
         $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
         dump($data);
@@ -109,20 +132,21 @@ class Test extends BaseController
     public function testUpload()
     {
         $content = [
-            "msgType" => "goodsHit",
-            "g_id" => "31",
+            "msgType" => "img",
+            "field" => "screen_img",
+            "path" => "/uploads/machine_test0003/20240326/74ba5d16658e34436e54eb34ad78d941.jpg",
         ];
         $content = json_encode($content);
         $msg_id = uniqid();
+        $signKey = env("api.md5Key");
         $data = [
             "timestamp" => time(),
             "msg_id" => $msg_id,
-            "machine_id" => "test0001",
+            "machine_id" => "test0003",
             "data" => $content,
         ];
-        $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
+        $data['sign'] = SignUtil::makeSign($data, $signKey);
         dump(json_encode($data));
-        $this->order['machine_id'] = "test0001";
 
         $result = MqProducer::dataUpload($data);
         dump($result);
@@ -130,13 +154,23 @@ class Test extends BaseController
 
     public function testReturn()
     {
-        $data = '{"timestamp":1708941269,"msg_id":"65dc5fd539db9","machine_id":"test0001","data":"{\"msgType\":\"goodsHit\",\"g_id\":\"33\"}","sign":"790a8192fb7700a15f04f13becea20d1"}';
+        $data = ' {
+  "timestamp": 1709014577,
+  "msg_id": "65dd7e31b68bd",
+  "machine_id": "test0001",
+  "data": "{\"msgType\":\"img\",\"field\":\"screen_img\",\"path\":\"\\/uploads\\/adv\\/20231208\\/afe42f533761931162fabe9ef506eeb9.jpg\"}",
+  "sign": "d4c2d7c091ee38aff4208634a6b5e8e5"
+}';
         $data = json2arr($data);
+        dump($data);
         $config = [
             "machine_id" => $data['machine_id'],
             "key" => env("api.md5Key"),
             "data" => $data,
         ];
+//        unset($data['sign']);
+//        $data['sign'] = SignUtil::makeSign($data,$config['key']);
+//        dump($data);
         $app = AppFactory::machine($config);
         $result = $app->mq->onMessage();
         dump($result);
@@ -169,5 +203,98 @@ class Test extends BaseController
         $field = "adv_title,res_id,res_title,file_path,type,duration_time,total_times,play_times,remain_times,start_date,end_date,start_time,end_time,position,screen,screen_full,status";
         $advList = AdvertisementPushModel::getList($where,10,$field);
         dump(AdvertisementPushModel::getLS());
+    }
+
+    public function testLottery()
+    {
+        $msg_id = uniqid();
+        $data = [
+            "machine_id" => "test0001",
+            "timestamp" => time(),
+            "msg_id" => $msg_id,
+        ];
+        $key = env("api.md5Key");
+        dump($key);
+        $data['sign'] = SignUtil::makeSign($data, $key);
+        dump($data);
+        dump(json_encode($data, 320));
+        $getLotteryUrl = "70cf.com/machine/receive/getLotteryList";
+        $result = $this->curl_request($getLotteryUrl,"POST",$data);
+        dump($result);
+        $lottery = $result['data'];
+        foreach ($lottery as $k => $value) {
+            $msg_id = uniqid();
+            $quantity = 1;
+            $orderData = [
+                "machine_id" => "test0001",
+                "timestamp" => time(),
+                "msg_id" => $msg_id,
+                "pay_type" => "4",
+                "pay_method" => "41",
+                "total_price" => $value['price'] * $quantity,
+                "total_quantity" => $quantity,
+                "alc_id" => $value['config'][1]['alc_id'],
+            ];
+            $orderData['sign'] = SignUtil::makeSign($orderData, $key);
+            dump($orderData);
+            dump(json_encode($orderData,320));
+            $getLotteryOrderUrl = "70cf.com/machine/receive/getLotteryOrder";
+            $orderResult = $this->curl_request($getLotteryOrderUrl,"POST",$orderData);
+            dump($orderResult);
+            dump(json_encode($orderResult,320));
+            SaleOrdersModel::update(['order_id' => $orderResult['data']['order_id'],'pay_status' => 3,"pay_time" => time(),'mch_no' => $orderResult['data']['trade_no']]);
+//            $insert = [
+//                "al_id" => $value['al_id'],
+//                "alc_id" => $value['config'][1]['alc_id'],
+//                "order_id" => $orderResult['data']['order_id'],
+//                "trade_no" => $orderResult['data']['trade_no'],
+//                "m_id" => $orderResult['data']['m_id'],
+//                "machine_id" => $orderResult['data']['machine_id'],
+//                "machine_name" => $orderResult['data']['machine_name'],
+//                "price" => $value['price'],
+//                "quantity" => $orderResult['data']['total_quantity'],
+//                "total_price" => $orderResult['data']['total_price'],
+//                "active_type" => $value['config'][1]['active_type'],
+//            ];
+//            ActivityLotteryUsedModel::insertOneGetId($insert);
+//            dump(ActivityLotteryUsedModel::getLS());
+            $luckyDraw = [
+                "machine_id" => "test0001",
+                "timestamp" => time(),
+                "msg_id" => $msg_id,
+                "order_id" => $orderResult['data']['order_id'],
+            ];
+            $luckyDraw['sign'] = SignUtil::makeSign($luckyDraw, $key);
+            dump($luckyDraw);
+            dump(json_encode($luckyDraw,320));
+            $luckyDrawUrl = "70cf.com/machine/receive/getLuckyDraw";
+            $ldResult = $this->curl_request($luckyDrawUrl,"POST",$luckyDraw);
+            dump($ldResult);
+            dump(json_encode($ldResult,320));
+            $outGoods = [
+                "machine_id" => "test0001",
+                "timestamp" => time(),
+                "msg_id" => $msg_id,
+                "order_id" => $orderResult['data']['order_id'],
+            ];
+            $outGoods['sign'] = SignUtil::makeSign($outGoods, $key);
+            dump($outGoods);
+            dump(json_encode($outGoods,320));
+            $outGoodsUrl = "70cf.com/machine/receive/getLotteryOutGoods";
+            $outResult = $this->curl_request($outGoodsUrl,"POST",$outGoods);
+            dump($outResult);
+            dump(json_encode($outResult,320));
+        }
+    }
+
+    public function testLotteryOutReturn()
+    {
+        $msg_id = uniqid();
+        $outReturn = [
+            "machine_id" => "test0001",
+            "timestamp" => time(),
+            "msg_id" => $msg_id,
+            "trade_no" => "",
+        ];
     }
 }

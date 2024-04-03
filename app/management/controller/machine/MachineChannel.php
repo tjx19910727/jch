@@ -52,7 +52,7 @@ class MachineChannel extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineChannel->update($postData);
+        return $this->app->machineChannel->updateMc($postData);
     }
 
     public function del()

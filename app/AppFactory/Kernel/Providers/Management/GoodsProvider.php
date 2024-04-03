@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\Goods\GoodsCategoryClient;
 use app\AppFactory\Management\Goods\GoodsCategoryLangClient;
 use app\AppFactory\Management\Goods\GoodsClient;
+use app\AppFactory\Management\Goods\GoodsCornerClient;
 use app\AppFactory\Management\Goods\GoodsHitClient;
 use app\AppFactory\Management\Goods\GoodsLangClient;
 
@@ -30,6 +31,9 @@ class GoodsProvider implements ServiceProviderInterface
         };
         $app['goodsCategoryLang'] = function ($app) {
             return new GoodsCategoryLangClient($app);
+        };
+        $app['goodsCorner'] = function ($app) {
+            return new GoodsCornerClient($app);
         };
         $app['goodsLang'] = function ($app) {
             return new GoodsLangClient($app);

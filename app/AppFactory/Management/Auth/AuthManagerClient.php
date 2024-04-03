@@ -30,12 +30,9 @@ class AuthManagerClient extends ManagementClient
             $pid = $this->getAuthManagerValue(['manager_id' => $manager_id], 'pid');
             $pidList = $this->getParentIdList($pid);
             $pidList[] = $manager_id;
-            $initResult = $this->initWxApp();
+            $initResult = $this->initWxApp($pidList);
             if ($initResult !== true) return $initResult;
-            $wx = $this->getOpenPlatformWxFind([['creator', 'in', $pidList], 'status' => 1, 'wx_type' => 1], '*', 'wx_id desc');
-            if (!$wx) return $this->rFail('查无公众号授权信息');
-            $app = $this->opApp->officialAccount($wx['authorizer_appid'], $wx['authorizer_refresh_token']);
-            $result = $app->qrcode->temporary("1_$manager_id", 2 * 3600);
+            $result = $this->wx_app->qrcode->temporary("1_$manager_id", 2 * 3600);
             return $this->r(200, '获取成功', $result);
         } catch (\Exception $e) {
             return $this->rValidate($e->getMessage());

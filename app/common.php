@@ -361,3 +361,27 @@ function WxOrAli(){
     }
     return 0;
 }
+
+
+/**
+ * 将xml转为array
+ * @param $xml
+ * @return mixed|string
+ */
+function FromXml($xml,$isFile = false)
+{
+    if(!$xml){
+        die(returnState(100,"xml数据异常！"));
+    }
+    //将XML转为array
+    //禁止引用外部xml实体
+    libxml_disable_entity_loader(true);
+    if ($isFile){
+        if (!file_exists($xml)) return false;
+        $xmlStr = file_get_contents($xml);
+    } else {
+        $xmlStr = $xml;
+    }
+    $values = json_decode(json_encode(simplexml_load_string($xmlStr, 'SimpleXMLElement', LIBXML_NOCDATA)), true);
+    return $values;
+}

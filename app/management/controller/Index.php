@@ -88,9 +88,6 @@ class Index extends Common
     /**
      * 获取设备前10排行榜
      * @return array|string
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
     public function getMachine10List()
     {

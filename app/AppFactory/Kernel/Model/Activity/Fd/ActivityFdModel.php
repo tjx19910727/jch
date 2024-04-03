@@ -15,4 +15,15 @@ class ActivityFdModel extends BaseModel
 {
     protected $pk = "fd_id";
     protected $name = "activity_fd";
+
+    public static function getListByMachine($where,$field = "*", $order = "")
+    {
+        $data = self::alias("fd")
+            ->join("activity_machine am","am.a_id = fd.fd_id AND am.a_type = 2","left")
+            ->where($where)
+            ->field($field)
+            ->order($order)
+            ->select();
+        return $data;
+    }
 }

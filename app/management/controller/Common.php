@@ -48,6 +48,7 @@ class Common extends AuthController
         $where = [];
         $conData = array_keys($condition);
         foreach ($params as $key => $value) {
+            if ($value == "") continue;
             if ($key == "page" || $key == "pageNum" || $key == "token") continue;
             // 有特定的字段筛选项
             if ($condition && in_array($key,$conData)) {

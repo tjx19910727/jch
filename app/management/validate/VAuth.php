@@ -42,37 +42,43 @@ class VAuth extends VCommon
 
         "roleList" => "require",
 
+        "m_ids" => "require",
     ];
 
     protected $message = [
-        "name.require" => "name_require",
-        "manager_id.require" => "manager_id_require",
-        "account.require" => "account_require",
-        "account.unique" => "account_unique",
-        "password.require" => "password_require",
-        "status.require" => "status_require",
-        "status.in" => "status_in",
-        "mr_id.require" => "mr_id_require",
-        "role_id.require" => "role_id_require",
-        "type.require" => "type_require",
-        "nodeList.require" => "nodeList_require",
-        "rn_id.require" => "rn_id_require",
+        "name.require" => "VAuth.name_require",
+        "manager_id.require" => "VAuth.manager_id_require",
+        "account.require" => "VAuth.account_require",
+        "account.unique" => "VAuth.account_unique",
+        "password.require" => "VAuth.password_require",
+        "status.require" => "VAuth.status_require",
+        "status.in" => "VAuth.status_in",
+        "mr_id.require" => "VAuth.mr_id_require",
+        "role_id.require" => "VAuth.role_id_require",
+        "type.require" => "VAuth.type_require",
+        "nodeList.require" => "VAuth.nodeList_require",
+        "rn_id.require" => "VAuth.rn_id_require",
 
-        'list.require' => 'list_require',
-        'notice_type.require' => 'notice_type_require',
+        'list.require' => 'VAuth.list_require',
+        'notice_type.require' => 'VAuth.notice_type_require',
 
-        "ao_id.require" => "auth_organization.ao_id_require",
-        "pid.require" => "auth_organization.pid_require",
-        "organization_name.require" => "auth_organization.organization_name_require",
+        "ao_id.require" => "VAuth.ao_id_require",
+        "pid.require" => "VAuth.pid_require",
+        "organization_name.require" => "VAuth.organization_name_require",
 
 
-        "roleList.require" => "auth_organization.roleList_require",
+        "roleList.require" => "VAuth.roleList_require",
+
+
+        "m_ids.require" => "VAuth..m_ids_require",
     ];
 
     protected $scene = [
         "AuthManagerAdd" => ["account","password","status"],
         "AuthManagerUpdate" => ["manager_id","status"],
         "UpdatePassword" => ["manager_id","password"],
+
+        "AuthManagerMachine_bind" => ["manager_id","m_ids"],
 
         "AuthManagerNotice" => ["manager_id","list"],
         "AuthManagerNoticeList" => ["notice_type","status"],

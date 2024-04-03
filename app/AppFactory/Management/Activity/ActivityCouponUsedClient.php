@@ -34,7 +34,7 @@ class ActivityCouponUsedClient extends ManagementClient
         unset($coupon['code']);
         $codeList = $this->getActivityCouponUsedColumn([], 'code');
         $codeList = array_merge($codeList,$this->getActivityCouponColumn('code is not null AND code <> ""','code'));
-        for ($i = 0; $i <= $postData['quantity']; $i++) {
+        for ($i = 0; $i < $postData['quantity']; $i++) {
             $insert = $coupon;
             while (1) {
                 $code = $this->leftHandZero(random_int(000000, 999999), 6);
@@ -66,7 +66,7 @@ class ActivityCouponUsedClient extends ManagementClient
                 $codeList = $codeList->toArray();
                 $title = ["code" => "优惠券码"];
                 $filename = "导出【" . $coupon['c_name'] . "】优惠券码-" . date("YmdHis");
-                $result = Excel::exportExcel($codeList, $title, $filename,$postData['isDown'] ?? 1);
+                $result = Excel::exportExcel($codeList, $title, $filename);
                 return $this->r(200, '导出成功', $result);
             }
             return $this->rFail("查无优惠券码");
@@ -109,7 +109,7 @@ class ActivityCouponUsedClient extends ManagementClient
                     "used_time" => "使用时间",
                 ];
                 $filename = "导出【" . $coupon['c_name'] . "】使用报表-" . date("Ymd");
-                $result = Excel::exportExcel($usedList, $title, $filename, $postData['isDown'] ?? 1);
+                $result = Excel::exportExcel($usedList, $title, $filename);
                 return $this->r(200, '导出成功', $result);
             }
             return $this->rFail("查无使用报表信息");

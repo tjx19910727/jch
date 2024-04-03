@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 
 
+use app\AppFactory\AppFactory;
 use app\AppFactory\RabbitMq\MqProducer;
 
 trait AfterOrderPaymentTrait
@@ -37,6 +38,9 @@ trait AfterOrderPaymentTrait
     public function paymentSuccessful()
     {
         $flag = [];
+        if ($this->order['machine_id']) {
+            $this->sendToMachine();
+        }
         $this->order['pay_status'] = 3;
         $this->order['pay_time'] = time();
         actionLog($this->order,'订单数据');
@@ -44,10 +48,24 @@ trait AfterOrderPaymentTrait
         actionLog($this->getLS(),'订单修改数据');
         $result = flag_check($flag);
         if ($result) {
-            $this->outGoods();
+            if ($this->order['order_type'] != 4) {
+                $this->outGoods();
+            }
         }
         $this->sendTemp();
         return $result;
+    }
+
+    /**
+     * 发送给设备终端支付成功状态
+     */
+    private function sendToMachine()
+    {
+        $config = [
+            "machine_id" => $this->order['machine_id'],
+            "key" => env("api.md5Key"),
+        ];
+        AppFactory::machine($config)->sendMq->paySuccess($this->order['trade_no']);
     }
 
     /**
@@ -75,17 +93,20 @@ trait AfterOrderPaymentTrait
             $data = [
                 "timestamp" => time(),
                 "msg_id" => $msg_id,
-                "machine_id" => "test0001",
+                "machine_id" => $this->order['machine_id'],
                 "data" => $content,
             ];
             $data['sign'] = $this->makeSign($data);
             actionLog($data,'下发数据');
-            MqProducer::dataSend($data,$data['machine_id']);
+            $result = MqProducer::dataSend($data,$data['machine_id']);
+            actionLog($result,'下发数据结果');
             // 生成发送记录
             $insertMqRecord = [
                 "m_id" => $this->order['m_id'],
                 "machine_id" => $data['machine_id'],
+                "machine_name" => $this->order['machine_name'],
                 "msg_id" => $msg_id,
+                "path" => "outGoods",
                 "content" => json_encode($data),
                 "from" => 2,
                 "type" => 2,
@@ -128,7 +149,7 @@ trait AfterOrderPaymentTrait
                 if ($update['status'] == 2 || $update['status'] == 3) $update['revenue_time'] = time();
                 // 电子钱包
                 if ($value['revenue_type'] == 1) {
-                    $result = $this->incAuthManager(['manager_id' => $value['beneficiary']],'balance',$value['income_amount']);
+                    $result = $this->incAuthManager(['manager_id' => $value['manager_id']],'balance',$value['income_amount']);
                     actionLog($result,'增加账号余额结果');
                     actionLog($this->getLS(),'增加账号余额SQL');
                 }

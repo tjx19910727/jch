@@ -26,7 +26,9 @@ class ActivityCoupon extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["c_name" => "like"]);
-        return $this->app->activityCoupon->getList($where,$pageNum,$this->field,'c_id desc');
+        $this->field .= ",
+        (CASE WHEN code > 0 THEN 0 ELSE (SELECT count(cu_id) FROM activity_coupon_used cu WHERE  cu.c_id = a.`c_id` ) END) codeNum";
+        return $this->app->activityCoupon->getAcAgAmList($where,$pageNum,$this->field,'c_id desc');
     }
 
     /**
@@ -91,12 +93,8 @@ class ActivityCoupon extends Common
      */
     public function takeDown()
     {
-        $postData = input();
-        try {
-            $this->validate($postData, $this->validatePath . 'takeDown');
-        } catch (\Exception $e) {
-            return returnValidate($e->getMessage());
-        }
-        return $this->app->activityCoupon->activeTakeDown($postData);
+        $c_id = input("c_id");
+        strpos($c_id,',') !== false ? $where[] = ['c_id',"in",$c_id] : $where['c_id'] = $c_id;
+        return $this->app->activityCoupon->activeTakeDown($where);
     }
 }

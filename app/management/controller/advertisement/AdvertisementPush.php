@@ -27,6 +27,32 @@ class AdvertisementPush extends Common
     }
 
     /**
+     * 获取广告分组统计列表
+     * @return array|string
+     */
+    public function getGroupList()
+    {
+        $machine = input("machine");
+        $adv_title = input("adv_title");
+        $groupType = input('groupType',1);
+        $pageNum = input('pageNum',0);
+        $where['ao_id'] = $this->manager['ao_id'];
+        $where[] = ['status',"<",3];
+        // 机器分组
+        if ($groupType == 1) {
+            if ($machine) $where[] = ['machine_id|machine_name','like',"%".$machine."%"];
+            $group = "m_id";
+            $field = "m_id,machine_id,machine_name,count(adv_id) adv_num";
+        }
+        if ($groupType == 2) {
+            if ($adv_title) $where[] = ['adv_title',"like","%" . $adv_title . "%"];
+            $group = "batch_num";
+            $field = "batch_num,adv_title,file_path,type,start_date,end_date,start_time,end_time,position,screen,screen_full,count(m_id) machine_num,status";
+        }
+        return $this->app->advertisementPush->getGroupList($where,$pageNum,$field,$group);
+    }
+
+    /**
      * 广告推送
      * @return array|mixed|string
      */
@@ -62,7 +88,10 @@ class AdvertisementPush extends Common
 
     /**
      * 上架下架广告
-     * @return array|string
+     * @return array|bool|string
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
      */
     public function upDown()
     {

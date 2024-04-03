@@ -16,6 +16,11 @@ use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
 
 trait GoodsTrait
 {
+    public function getGoodsValue($where,$value)
+    {
+        return GoodsModel::getFieldValue($where,$value);
+    }
+
     /**
      * 获取商品信息
      * @param $where
@@ -30,13 +35,17 @@ trait GoodsTrait
 
     public function getGoodsList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = "",$limit = "")
     {
-//        if (!$eachFun) {
-//            $eachFun = function ($item) {
-//                if (isset($item['creator'])) $item['creator_name'] = $this->getAuthManagerValue(['manager_id' => $item['creator']], 'nickname');
-//                return $item;
-//            };
-//        }
         return GoodsModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
+    }
+
+    public function getGoodsJoinMachineGoodsList($where,$pageNum = 0,$field = "*", $order = "",$m_id = 0)
+    {
+        return GoodsModel::joinMachineGoodsList($where,$pageNum,$field,$order,$m_id);
+    }
+
+    public function getGoodsJoinMachineGoodsFind($where,$field,$order)
+    {
+        return GoodsModel::joinMachineGoodsFind($where,$field,$order);
     }
 
     public function addMoreGoods($data)

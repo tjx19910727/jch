@@ -30,8 +30,8 @@ trait ActivityMachineTrait
 
     /**
      * 添加营销活动关联设备信息
-     * activity_coupon
-     * @param $a_id
+     * activity_coupon      activity_pick
+     * @param $insert
      * @param $machineList
      * @return bool|string
      */
@@ -39,12 +39,12 @@ trait ActivityMachineTrait
     {
         $machineList = json2arr($machineList);
         if (!$machineList) {
-            return "请选择适用机器";
+            return $this->lang("VActivityMachine.machine_require");
         }
         foreach ($machineList as $mv) {
             $m = $this->getMachineFind(['machine_id' => $mv], 'm_id,machine_id,machine_name');
             if (!$m) {
-                return "查无设备信息：" . $mv;
+                return $this->lang("VActivityMachine.machine_no_data") . "：" . $mv;
             }
             $m = $m->toArray();
             $insertAm = array_merge($insert, $m);

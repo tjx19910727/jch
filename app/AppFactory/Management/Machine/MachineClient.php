@@ -13,15 +13,101 @@ use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthStatesTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineCheckStockTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineGroupMgTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineGroupTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineHelpTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineVersionTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersMachineCountTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class MachineClient extends ManagementClient
 {
     use EarthCountriesTrait,EarthStatesTrait,EarthCitiesTrait,EarthRegionsTrait;
-    use MachineTrait;
+    use MachineTrait,MachineChannelTrait,MachineChannelReplenishmentTrait,MachineCheckStockTrait,MachineConfigTrait,MachineGoodsTrait,
+        MachineInfoTrait,MachineGroupTrait,MachineGroupMgTrait,MachineHelpTrait,MachineMqRecordTrait,MachineOnlineTrait,MachineOnlineDetailsTrait,MachineVersionTrait,MachineVersionPlanTrait,MachineViewTrait;
     use SaleOrdersMachineCountTrait;
+
+    public function addM($postData)
+    {
+        $machine_group_id = 0;
+        if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
+            $machine_group_id = explode(",",$postData['machine_group_id']);
+            unset($postData['machine_group_id']);
+        }
+        $m = $this->addMachine($postData);
+        if ($m) {
+            $machine = $this->getMachineFind(['m_id' => $m]);
+            $this->addMachineConfig(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
+            $this->addMachineInfo(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
+            if ($machine_group_id) {
+                foreach ($machine_group_id as $mk => $mv) {
+                    $mg = $this->getMachineGroupFind(['mg_id' => $mv], 'mg_id,mg_name');
+                    if (!$mg) {
+                        return $this->r(100, $this->lang("VMachineGoods.mg_no_data"));
+                    }
+                    $mg = $mg->toArray();
+                    $mg['m_id'] = $machine['m_id'];
+                    $mg['machine_id'] = $machine['machine_id'];
+                    $mg['machine_name'] = $machine['machine_name'];
+                    $insertAll[] = $mg;
+                }
+                $this->addMachineGroupMgMore($insertAll);
+            }
+        }
+        return $this->rA($m);
+    }
+
+    public function updateM($postData)
+    {
+        $machine_group_id = [];
+        if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
+            $machine_group_id = explode(",",$postData['machine_group_id']);
+            unset($postData['machine_group_id']);
+        }
+        $this->startTrans();
+        $result = $this->updateMachine($postData);
+        if ($result) {
+            $m = $this->getMachineFind(['m_id' => $postData['m_id']],"m_id,machine_id,machine_name");
+            if (!$m) {
+                return $this->r(100,$this->lang("VMachine.machine_no_data"));
+            }
+            $m = $m->toArray();
+            if ($machine_group_id && is_int($machine_group_id)) $machine_group_id = [$machine_group_id];
+            $oldMgId = $this->getMachineGroupMgColumn(['m_id' => $m['m_id']], "mg_id");
+            $addList = array_diff($machine_group_id, $oldMgId);
+            $delList = array_diff($oldMgId, $machine_group_id);
+            if ($delList) $flag[] = $this->delMachineGroupMg(['m_id' => $m['m_id'], ['mg_id', 'in', $delList]]);
+            if ($addList) {
+                foreach ($addList as $mk => $mv) {
+                    $mg = $this->getMachineGroupFind(['mg_id' => $mv], 'mg_id,mg_name');
+                    if (!$mg) {
+                        $this->rollbackTrans();
+                        return $this->r(100, $this->lang("VMachineGoods.mg_no_data"));
+                    }
+                    $mg = $mg->toArray();
+                    $insertAll[] = array_merge($mg, $m);
+                }
+                $flag[] = $this->addMachineGroupMgMore($insertAll);
+            }
+
+            $this->commitTrans();
+            return $this->r(200,$this->lang("update_success"));
+        }
+        $this->rollbackTrans();
+        return $this->r(100,$this->lang("update_fail"));
+    }
 
     public function getMList($where,$pageNum = 0,$field = "",$order = "")
     {
@@ -32,6 +118,27 @@ class MachineClient extends ManagementClient
             if (isset($item['regions_id']) && $item['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $item['regions_id']],'code,name,cname');
             return $item;
         }));
+    }
+
+    public function delM($m_id)
+    {
+        $where[] = ['m_id',"in",$m_id];
+        $this->delMachine($where);
+        $this->delMachineChannel($where);
+        $this->delMachineChannelReplenishment($where);
+        $this->delMachineCheckStock($where);
+        $this->delMachineConfig($where);
+        $this->delMachineGoods($where);
+        $this->delMachineGroupMg($where);
+        $this->delMachineHelp($where);
+        $this->delMachineInfo($where);
+        $this->delMachineMqRecord($where);
+        $this->delMachineOnline($where);
+        $this->delMachineOnlineDetails($where);
+        $this->delMachineVersion($where);
+        $this->delMachineVersionPlan($where);
+        $this->delMachineView($where);
+        return $this->rSuccess();
     }
 
     public function getMFind($where,$field = "")

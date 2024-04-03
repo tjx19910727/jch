@@ -14,6 +14,11 @@ use app\AppFactory\Kernel\Support\Validate\Machine\VMachineGoods;
 
 trait MachineGoodsTrait
 {
+    public function getMachineGoodsColumn($where,$column)
+    {
+        return MachineGoodsModel::getColumn($where,$column);
+    }
+
     public function getMachineGoodsValue($where,$value)
     {
         return MachineGoodsModel::getFieldValue($where,$value);
@@ -76,6 +81,11 @@ trait MachineGoodsTrait
                 $g = $this->getGoodsFind(['g_id' => $value['g_id']],'g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price');
                 if ($g) {
                     $g = obj2arr($g);
+                    $checkMg = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'],'g_id' => $g['g_id']]);
+                    if ($checkMg) {
+                        $this->rollbackTrans();
+                        return $this->rFail($this->lang("VMachineGoods.machine_goods_exits"));
+                    }
                     $mg = [
                         "m_id" => $this->machine['m_id'],
                         "machine_id" => $this->machine['machine_id'],

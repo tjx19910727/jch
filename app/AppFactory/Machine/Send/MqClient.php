@@ -109,4 +109,46 @@ class MqClient extends SendBaseClient
         ];
         return $this->dataSendRabbitMQ($data);
     }
+
+    /**
+     * 触发设备商品更新
+     * @param $mg_id
+     * @return array|string
+     */
+    public function triggerUpdateMg($mg_id)
+    {
+        $data = [
+            "msgType" => "updateMg",
+            "mg_id" => $mg_id,
+        ];
+        return $this->dataSendRabbitMQ($data);
+    }
+
+    /**
+     * 订单支付成功下发
+     * @param $trade_no
+     * @return array|string
+     */
+    public function paySuccess($trade_no)
+    {
+        $data = [
+            "msgType" => "paySuccess",
+            "trade_no" => $trade_no,
+        ];
+        return $this->dataSendRabbitMQ($data);
+    }
+
+    /**
+     * 触发设备货道更新
+     * @param int $mc_id
+     * @return array|string
+     */
+    public function triggerUpdateMc($mc_id)
+    {
+        $data = [
+            "msgType" => "updateMc",
+            "mc_id" => $mc_id,
+        ];
+        return $this->dataSendRabbitMQ($data);
+    }
 }

@@ -100,11 +100,14 @@ class BaseClient
     public function returnExecute($result, $request)
     {
         $requestNode = str_replace(".", "_", $request->getApiMethodName()) . "_response";
-        $return = isset($result->$requestNode) ? $result->$requestNode : $result->error_response;
-        if (isset($this->config['isObject']) && !$this->config['isObject']) {
-            return json_decode(json_encode($return), true);
+        if ($result) {
+            $return = isset($result->$requestNode) && $result ? $result->$requestNode : $result->error_response;
+            if (isset($this->config['isObject']) && !$this->config['isObject']) {
+                return json_decode(json_encode($return), true);
+            }
+            return $return;
         }
-        return $return;
+        return $result;
     }
 
     /**

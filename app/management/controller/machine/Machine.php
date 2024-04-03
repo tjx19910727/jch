@@ -23,7 +23,7 @@ class Machine extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machine->getMList($where,$pageNum,$this->field,"last_online_time desc");
+        return $this->app->machine->getMList($where,$pageNum,$this->field,"machine_id desc");
     }
 
     public function getFind()
@@ -41,7 +41,7 @@ class Machine extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machine->add($postData);
+        return $this->app->machine->addM($postData);
     }
 
     public function update()
@@ -52,7 +52,7 @@ class Machine extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machine->update($postData);
+        return $this->app->machine->updateM($postData);
     }
 
     public function del()
@@ -63,7 +63,7 @@ class Machine extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machine->del($postData);
+        return $this->app->machine->delM($postData['m_id']);
     }
 
     /**

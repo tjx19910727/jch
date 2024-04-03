@@ -36,10 +36,17 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  *
  * @property Activity\ActivityCouponClient           $activityCoupon        优惠券活动
  * @property Activity\ActivityCouponUsedClient       $activityCouponUsed    优惠券使用记录
+ * @property Activity\ActivityFdClient               $activityFd            满减满送活动
+ * @property Activity\ActivityFdUsedClient           $activityFdUsed        满减满送使用记录
+ * @property Activity\ActivityLotteryClient          $activityLottery       盲盒活动
+ * @property Activity\ActivityLotteryUsedClient      $activityLotteryUsed   盲盒活动使用记录
+ * @property Activity\ActivityPickClient             $activityPick          提货码活动
+ * @property Activity\ActivityPickCodeClient         $activityPickCode      提货码使用记录
  *
  * @property Advertisement\AdvertisementPushClient          $advertisementPush      广告推送
  *
  * @property Auth\AuthManagerRoleClient             $authManagerRole        管理员绑定角色
+ * @property Auth\AuthManagerMachineClient          $authManagerMachine     管理员绑定设备
  * @property Auth\AuthManagerClient                 $authManager            管理员
  * @property Auth\AuthNodeClient                    $authNode               权限节点
  * @property Auth\AuthRoleClient                    $authRole               权限角色
@@ -60,15 +67,19 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Goods\GoodsLangClient                  $goodsLang              商品多语言信息
  * @property Goods\GoodsCategoryClient              $goodsCategory          商品分类信息
  * @property Goods\GoodsCategoryLangClient          $goodsCategoryLang      商品分类语言信息
+ * @property Goods\GoodsCornerClient                $goodsCorner            商品角标信息
  * @property Goods\GoodsHitClient                   $goodsHit               商品点击
  *
  * @property Machine\MachineChannelClient           $machineChannel         设备货道
  * @property Machine\MachineChannelReplenishmentClient     $machineChannelReplenishment         设备货道补货
+ * @property Machine\MachineCheckStockClient        $machineCheckStock      库存盘点详情
+ * @property Machine\MachineCheckStockCountClient   $machineCheckStockCount      库存盘点汇总
  * @property Machine\MachineClient                  $machine                设备基础信息
  * @property Machine\MachineConfigClient            $machineConfig          设备配置信息
  * @property Machine\MachineGoodsClient             $machineGoods           设备商品信息
  * @property Machine\MachineGroupClient             $machineGroup           设备分组
  * @property Machine\MachineGroupLangClient         $machineGroupLang       设备分组多语言信息
+ * @property Machine\MachineGroupMgClient           $machineGroupMg         设备与分组关联
  * @property Machine\MachineHelpClient              $machineHelp            设备帮助
  * @property Machine\MachineInfoClient              $machineInfo            设备信息
  * @property Machine\MachineViewClient              $machineView            设备视图

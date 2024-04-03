@@ -18,6 +18,7 @@ class VMachineGoods extends VCommon
         "machine_id" => "require",
         "g_id" => "require",
         "g_name" => "require",
+
     ];
 
     protected $message = [
@@ -31,6 +32,7 @@ class VMachineGoods extends VCommon
     protected $scene = [
         "add" => ["m_id","machine_id",'g_id',"g_name"],
         "update" => ["mg_id"],
+        "updateMore" => ["mg_id"],
         "del" => ["mg_id"],
     ];
 }

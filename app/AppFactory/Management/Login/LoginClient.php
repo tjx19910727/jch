@@ -9,7 +9,7 @@
 namespace app\AppFactory\Management\Login;
 
 
-use app\AppFactory\Kernel\Support\TDESUtil;
+use app\AppFactory\Kernel\Util\TDESUtil;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Management\ManagementClient;
 use think\facade\Config;

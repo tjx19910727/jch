@@ -42,6 +42,6 @@ class VAdvertisement extends VCommon
     protected $scene = [
         "addPush" => ["adv_title","res_id","duration_time","total_times","m_id","start_date","end_date","time_list","screen","screen_full"],
         "updatePush" => ["adv_id"],
-        "upDown" => ["adv_id","status"],
+        "upDown" => ["status"],
     ];
 }

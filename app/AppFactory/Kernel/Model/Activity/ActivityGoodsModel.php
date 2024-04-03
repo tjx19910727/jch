@@ -15,4 +15,15 @@ class ActivityGoodsModel extends BaseModel
 {
     protected $pk = "ag_id";
     protected $name = "activity_goods";
+
+    public function getListByMachine($where,$field = "*",$order = "")
+    {
+        $data = self::alias("ag")
+            ->join("machine_channel mc","mc.g_id = ag.g_id","left")
+            ->where($where)
+            ->field($field)
+            ->order($order)
+            ->select();
+        return ($data  ? $data->toArray() : $data);
+    }
 }

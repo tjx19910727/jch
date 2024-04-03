@@ -15,4 +15,8 @@ class MachineChannelModel extends BaseModel
 {
     protected $pk = "mc_id";
     protected $name = "machine_channel";
+
+    public static function joinGoodsList($where,$field = "*", $order = "")
+    {
+    }
 }

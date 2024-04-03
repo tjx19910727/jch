@@ -23,6 +23,12 @@ trait MachineHelpTrait
         return MachineHelpModel::getList($where,$pageNum,$field,$order,$eachFun);
     }
 
+    public function addMoreMachineHelp($insertAll)
+    {
+        $mh = new MachineHelpModel();
+        return $mh->saveAll($insertAll);
+    }
+
     public function addMachineHelp($insert)
     {
         !isset($this->manager['manager_id']) ?: $insert['creator'] = $this->manager['manager_id'];

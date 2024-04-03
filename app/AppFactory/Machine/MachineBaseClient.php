@@ -55,7 +55,7 @@ class MachineBaseClient extends BaseClient
             "from" => $from,
             "type" => $type,
         ];
-        $this->addMachineMqRecord($insertMqRecord);
+//        $this->addMachineMqRecord($insertMqRecord);
     }
 
     /**

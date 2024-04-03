@@ -11,15 +11,35 @@ namespace app\AppFactory\Management\Goods;
 
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class GoodsClient extends ManagementClient
 {
-    use GoodsTrait;
+    use GoodsTrait,GoodsLangTrait;
     use AuthManagerTrait;
     use SaleOrdersGoodsCountTrait;
+
+    public function addG($postData)
+    {
+        $g_id = $this->addGoods($postData);
+        if ($g_id) {
+            $insertLang = [
+                "g_id" => $g_id,
+                "g_name" => $postData['g_name'] ?? "",
+                "gc_id" => $postData['gc_id'] ?? "",
+                "gc_name" => $postData['gc_name'] ?? "",
+                "manufacturer" => $postData['manufacturer'] ?? "",
+                "desc" => $postData['desc'] ?? "",
+                "performance" => $postData['performance'] ?? "",
+                "lang" => "zh-cn",
+            ];
+            $this->addGoodsLang($insertLang);
+        }
+        return $this->rA($g_id);
+    }
 
     public function getPageList($where,$pageNum = 0,$field = "*",$order = "")
     {
@@ -50,14 +70,71 @@ class GoodsClient extends ManagementClient
      */
     public function importExcel($data)
     {
-        $path = root_path() . "public" . $data['file_path'];
-        $title = ["g_name","gc_name","model","sku","sku2","pic","bar_code","cost_price","market_price","retail_price","manufacturer","service_phone","status"];
-        $other = ['creator' => $this->manager['manager_id'] ?? 0,'ao_id' => $this->manager['ao_id'] ?? 0];
-        $goods = Excel::importExcel($path,$title,$other);
-        $result = "";
-        if ($goods) {
-            $result = $this->addMoreGoods($goods);
+        try {
+            $path = root_path() . "public" . $data['file_path'];
+            $title = ["g_name","gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status"];
+            $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
+            $goods = Excel::importExcel($path, $title, $other);
+            actionLog($goods,'导入的商品数据');
+            if ($goods) {
+                $result = $this->addMoreGoods($goods);
+                return $this->rAction($result);
+            }
+            return $this->r(100,'获取不到Excel文档中的数据');
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
         }
-        return $this->rAction($result);
+    }
+
+    /**
+     * 导出商品
+     * @param $where
+     * @return array|string
+     */
+    public function exportExcel($where)
+    {
+        try {
+            $list = $this->getGoodsList($where, 0,
+                'g_id,g_name,gc_name,model,sku,sku2,cost_price,market_price,retail_price,manufacturer,service_phone,
+                CONCAT(length,"*",width,"*",height) pack,
+                (CASE sell_channel WHEN 1 THEN "机器" WHEN 2 THEN "微商城" WHEN 3 THEN "机器+商城" END ) sell_channel,
+                expire_notice,
+                (CASE is_recommend WHEN 1 THEN "是" WHEN 2 THEN "否" END) is_recommend,
+                (CASE is_gift WHEN 1 THEN "是" WHEN 2 THEN "否" END) is_gift,
+                group_quantity');
+            if ($list) {
+                $list = $list->toArray();
+                $title = [
+                    'g_id' => "商品ID",
+                    'g_name' => "商品",
+                    'gc_name' => "品类",
+                    'model' => "型号",
+                    'sku' => "SKU",
+                    'sku2' => "关联SKU",
+                    'cost_price' => "成本价",
+                    'market_price' => "默认市场价",
+                    'retail_price' => "默认售价",
+                    'manufacturer' => "生产商",
+                    'service_phone' => "商家电话",
+                    'pack' => "包装（mm）",
+                    'sell_channel' => "销售渠道",
+                    'expire_notice' => "商品有效期提醒",
+                    'is_recommend' => "推荐商品",
+                    'is_gift' => "赠品",
+                    'group_quantity' => "单组数量"
+                ];
+                $filename = "商品列表-" . date("Ymd");
+                $result = Excel::exportExcel($list, $title, $filename);
+                return $this->rAction($result);
+            }
+            return $this->r(100, $this->lang("action_fail"));
+        } catch (\PHPExcel_Writer_Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        } catch (\PHPExcel_Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        }
     }
 }

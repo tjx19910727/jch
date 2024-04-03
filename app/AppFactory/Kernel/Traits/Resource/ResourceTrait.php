@@ -26,6 +26,7 @@ trait ResourceTrait
     public function addResource($insert)
     {
         isset($insert['creator']) ? : $insert['creator'] = ($this->manager['manager_id'] ?? 0);
+        !isset($this->manager['ao_id']) ? : $insert['ao_id'] = $this->manager['ao_id'];
         $r = ResourceModel::create($insert);
         return $r->res_id;
     }

@@ -65,4 +65,19 @@ class SaleOrdersDetailsModel extends BaseModel
             ->paginate($pageNum);
         return $data;
     }
+
+    public static function joinOrderList($where,$pageNum = 0,$field = "*", $order = "",$group = "")
+    {
+        $data = self::alias("sod")
+            ->join("sale_orders so",'so.order_id = sod.order_id','left')
+            ->where($where)
+            ->field($field)
+            ->order($order)
+            ->group($group);
+        if ($pageNum)
+            $data = $data->paginate($pageNum,false,['query' => request()->param()]);
+        else
+            $data = $data->select();
+        return $data;
+    }
 }

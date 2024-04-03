@@ -10,6 +10,9 @@ return  [
     "init_payment_success" => "发起支付成功",
     "init_payment_fail" => "发起支付失败",
 
+    "cancel_payment_success" => "撤销支付成功",
+    "cancel_payment_fail" => "撤销支付失败",
+
     "pay_type_not_in_scope" => "支付方式不在允许范围内",
     "payee_config_no_json" => "收款方配置信息格式错误，不是JSON格式",
     "payee_config_no_data" => "查无收款方配置信息",

@@ -14,7 +14,7 @@ use app\management\controller\Common;
 class MachineGroup extends Common
 {
 
-    protected $field = "*";
+    protected $field = "mg_id,mg_name,`desc`,`sort`,status,create_time";
     protected $validatePath = 'app\management\validate\VMachineGroup.';
 
     public function getList()
@@ -22,6 +22,7 @@ class MachineGroup extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
+        $this->field .= ",(SELECT count(m_id) FROM machine_group_mg mgg where mgg.mg_id = a.mg_id ) machineNum";
         return $this->app->machineGroup->getList($where,$pageNum,$this->field,'mg_id desc');
     }
 
@@ -40,7 +41,7 @@ class MachineGroup extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineGroup->add($postData);
+        return $this->app->machineGroup->addMg($postData);
     }
 
     public function update()
@@ -51,7 +52,7 @@ class MachineGroup extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineGroup->update($postData);
+        return $this->app->machineGroup->updateMg($postData);
     }
 
     public function del()

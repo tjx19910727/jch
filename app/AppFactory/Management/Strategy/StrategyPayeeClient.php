@@ -29,6 +29,7 @@ class StrategyPayeeClient extends ManagementClient
             $config = $this->getStrategyPayeeFind(['sp_id' => $sp_id]);
             if (!$config) return $this->r(100, '查无配置数据');
             $config = $config->toArray();//        $check = $this->validate($config,'app\system\validate\Wechat_pay.v3');
+            if ($config['payee_type'] != 1) return $this->r(100,'微信才需要获取平台证书');
             $config = array_merge($config, json2arr($config['content']));//        if ($check !== true) return returnValidate($check);
             $config['cert_path'] = $this->getUrl($config['cert_path']);//        $config['cert_path'] = ROOT_PATH . "public" . $config['cert_path'];
             $config['key_path'] = $this->getUrl($config['key_path']);//        $config['key_path'] = ROOT_PATH . "public" . $config['key_path'];

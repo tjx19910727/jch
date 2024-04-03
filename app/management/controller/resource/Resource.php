@@ -14,14 +14,14 @@ use app\management\controller\Common;
 class Resource extends Common
 {
 
-    protected $field = "res_id,title,file_path,type,file_name,`desc`,length,width,size,`status`,creator,create_time,update_id,update_time";
+    protected $field = "res_id,title,file_path,type,file_name,`desc`,length,width,size,`status`,ao_id,creator,create_time,update_id,update_time";
     protected $validatePath = 'app\management\validate\VResource.';
 
     public function getList()
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["title" => "like","desc" => "like"]);
         return $this->app->resource->getList($where,$pageNum,$this->field,"res_id desc");
     }
 

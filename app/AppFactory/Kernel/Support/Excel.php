@@ -32,10 +32,10 @@ class Excel
                 $sheet = $objPHPExcel->getSheet(0); //激活当前的表
                 $highestRow = $sheet->getHighestRow(); // 取得总行数
 
-                $imageFilePath='./uploads/goods_img/'.date('Ymd').'/';//图片在本地存储的路径
-                if (!file_exists ($imageFilePath)) {
-                    mkdir("$imageFilePath");
-                    chmod($imageFilePath,0777);
+                $imageFilePath =  './uploads/excel_img/'.date('Ymd').'/';//图片在本地存储的路径
+                if (!file_exists($imageFilePath)) {
+                    @mkdir("$imageFilePath");
+                    @chmod($imageFilePath,0777);
                 }
                 $imgList = self::getImg($sheet,$imageFilePath);
 
@@ -115,7 +115,7 @@ class Excel
      * @throws \PHPExcel_Exception
      * @throws \PHPExcel_Writer_Exception
      */
-    public static function exportExcel($list,$title,$filename,$isDown = 1,$startRow = 1)
+    public static function exportExcel($list,$title,$filename,$isDown = 0,$startRow = 1)
     {
         if(empty($filename)) return false;
         if(!is_array($title)) return false;

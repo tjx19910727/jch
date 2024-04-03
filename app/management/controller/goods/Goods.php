@@ -13,7 +13,9 @@ use app\management\controller\Common;
 
 class Goods extends Common
 {
-    protected $field = "*";
+    protected $field = "g_id,g_name,gc_id,gc_name,model,bar_code,sku,sku2,
+    pic,cost_price,market_price,retail_price,manufacturer,service_phone,`desc`,performance,sell_channel,expire_notice,
+    is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,status,ao_id,creator,create_time,update_time";
     protected $validatePath = 'app\management\validate\VGoods.';
     /**
      * 查询一条商品列表
@@ -35,7 +37,7 @@ class Goods extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['g_name' => "like"]);
-        $where['creator'] = $this->manager['manager_id'];
+//        $where['creator'] = $this->manager['manager_id'];
         $result = $this->app->goods->getList($where,$pageNum,$this->field,'g_id desc');
         return $result;
     }
@@ -48,7 +50,7 @@ class Goods extends Common
     {
         $postData = input();
         try { $this->validate($postData,$this->validatePath . 'add');} catch (\Exception $e) { return returnValidate($e->getMessage());}
-        $result = $this->app->goods->add($postData);
+        $result = $this->app->goods->addG($postData);
         return $result;
     }
 
@@ -70,8 +72,10 @@ class Goods extends Common
      */
     public function del()
     {
-        $postData = input();
-        $result = $this->app->goods->del($postData);
+        $g_id = input("g_id");
+        if (strpos($g_id,",")) $where[] = ['g_id',"in",$g_id];
+        else $where['g_id'] = $g_id;
+        $result = $this->app->goods->del($where);
         return $result;
     }
 
@@ -83,6 +87,17 @@ class Goods extends Common
     {
         $postData = input();
         return $this->app->goods->importExcel($postData);
+    }
+
+    /**
+     * 导出商品Excel
+     * @return array|string
+     */
+    public function exportExcel()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
+        return $this->app->goods->exportExcel($where);
     }
 
 }

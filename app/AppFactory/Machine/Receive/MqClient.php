@@ -13,11 +13,17 @@ use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Support\Validate\Machine\VReport;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryConfigTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryContentTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryUsedGoodsTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryUsedTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsHitTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
-use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Mq\OutGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
@@ -25,9 +31,11 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 class MqClient extends ReceiveBaseClient
 {
     use SaleOrdersTrait,OutGoodsTrait;
-    use MachineTrait,MachineInfoTrait,MachineChannelTrait,MachineVersionPlanTrait;
+    use MachineInfoTrait,MachineChannelTrait,MachineVersionPlanTrait;
     use GoodsTrait,GoodsHitTrait;
     use ActivityCouponTrait,ActivityCouponUsedTrait;
+    use ActivityPickTrait,ActivityPickCodeTrait;
+    use ActivityLotteryTrait,ActivityLotteryConfigTrait,ActivityLotteryContentTrait,ActivityLotteryUsedTrait,ActivityLotteryUsedGoodsTrait;
 
     protected $message;
     protected $order;

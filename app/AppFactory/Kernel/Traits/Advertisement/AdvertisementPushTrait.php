@@ -18,6 +18,11 @@ trait AdvertisementPushTrait
         return AdvertisementPushModel::getFind($where,$field,$order);
     }
 
+    public function getAdvertisementPushGroupList($where,$pageNum = 0,$field = "*",$group = "",$order = "")
+    {
+        return AdvertisementPushModel::getList($where,$pageNum,$field,$order,'',$group);
+    }
+
     /**
      * @param $where
      * @param int $pageNum
@@ -32,13 +37,18 @@ trait AdvertisementPushTrait
     {
         return AdvertisementPushModel::getList($where,$pageNum,$field,$order,function($item){
             $update = [];
-            if (isset($item['status']) && $item['status'] == 1) $update['status'] = 2;
+            if (isset($item['status']) && $item['status'] == 1) {
+                $update['status'] = 2;
+                $item['status'] = 2;
+            }
             if (isset($item['end_date'])) {
                 if ($item['end_date'] < strtotime(date("Y-m-d"))) {
                     $update['status'] = 3;
+                    $item['status'] = 3;
                 }
                 if ($item['end_date'] == strtotime(date("Y-m-d")) && isset($item['end_time']) && $item['end_time'] < HourMinuteSec2int(date("H:i:s"))) {
                     $update['status'] = 3;
+                    $item['status'] = 3;
                 }
             }
             if ($update && isset($item['adv_id'])) {

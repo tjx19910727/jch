@@ -48,6 +48,33 @@ class SaleOrders extends Common
     }
 
     /**
+     * 商品交易列表
+     * @return array|string
+     */
+    public function getDetailsList()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"machine_id" => 'like',"machine_name" => 'like']);
+        $where['so.pay_status'] = 3;
+        $field = "so.machine_id,so.machine_name,so.trade_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,
+        sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
+        sod.success_quantity,sod.fail_quantity,sod.deliver_pics";
+        return returnData($this->app->saleOrders->getSaleOrdersDetailsJoinOrderList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc"));
+    }
+
+    /**
+     * 导出商品交易
+     * @return array|string
+     */
+    public function exportGoodsList()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"machine_id" => 'like',"machine_name" => 'like']);
+        $where['so.pay_status'] = 3;
+        return $this->app->saleOrders->exportGoodsSo($where);
+    }
+
+    /**
      * 订单退款
      * @return array|bool|string
      */
@@ -81,9 +108,39 @@ class SaleOrders extends Common
         return returnState(200,'查询成功',$order);
     }
 
-    public function queryRefund()
+    /**
+     * 导出订单列表信息
+     * @return array|string
+     * @throws \Exception
+     */
+    public function export()
     {
         $postData = input();
-        return $this->app->saleOrders->queryRefund();
+        $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","mch_no" => "like","machine_name" => "like","machine_id" => "like"]);
+        $where['pay_status'] = 3;
+        return $this->app->saleOrders->exportSo($where);
+    }
+
+    /**
+     * 获取订单退款列表
+     * @return array|string
+     */
+    public function getRefundList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData,false,['refund_trade_no' => "like","refund_no" => "like"]);
+        return returnData($this->app->saleOrders->getSaleOrdersRefundList($where,$pageNum));
+    }
+
+    /**
+     * 导出退款记录列表
+     * @return array|string
+     */
+    public function exportRefund()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,['refund_trade_no' => "like","refund_no" => "like"]);
+        return $this->app->saleOrders->exportRefund($where);
     }
 }

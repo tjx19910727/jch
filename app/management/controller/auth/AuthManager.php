@@ -90,13 +90,6 @@ class AuthManager extends Common
         return $this->app->authManager->checkTrans($result);
     }
 
-
-
-
-
-
-
-
     /**
      * 工作人员绑定公众号接收微信模板消息通知
      * @return array|bool|string

@@ -83,13 +83,24 @@ trait ActivityCouponTrait
     public function getAcByMachine()
     {
         $where = "(ac.designated_machine = 1 or (am.m_id = " . $this->machine['m_id'] . " AND am.a_type = 1)) AND start_date < " . strtotime(date("Y-m-d")) . " AND status < 3 AND (
-        end_date is not null or end_date > " . strtotime(date("Y-m-d")) . ")";
+        end_date is null or end_date > " . strtotime(date("Y-m-d")) . ")";
         $field = "c_id,c_name,desc,start_date,end_date,c_type,reduction,used_limit,pay_limit,designated_goods,designated_machine,status";
         $ac = $this->getActivityCouponByMachine($where, $field);
         if ($ac) {
             $ac = $ac->toArray();
             $agField = "g_id,g_name,pic,sku,market_price,retail_price,gc_id,gc_name";
             foreach ($ac as $key => $value) {
+                $update = [];
+                if ($value['status'] == 1) {
+                    $value['status'] = 2;
+                    $update['status'] = 2;
+                }
+                if ($value['end_date'] > 0 && $value['end_date'] < strtotime(date("Y-m-d")) && $value['status'] != 3) {
+                    $value['status'] = 3;
+                    $update['status'] = 3;
+                }
+                if ($update) $this->updateActivityCoupon($update,['c_id' => $value['c_id']]);
+                $ac[$key] = $value;
                 $ac[$key]['ag'] = $this->getActivityGoodsList(['a_id' => $value['c_id'], 'a_type' => 1], 0, $agField);
             }
         }
@@ -240,6 +251,7 @@ trait ActivityCouponTrait
             $this->updateSaleOrders([
                 'order_id' => $this->order['order_id'],
                 'discount_price' => $this->order['discount_price'],
+                'order_type' => 2,
                 'total_price' => $this->order['total_price']
             ]);
             actionLog($this->getLS(), '修改订单优惠数据');

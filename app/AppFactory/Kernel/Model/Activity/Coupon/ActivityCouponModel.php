@@ -19,7 +19,7 @@ class ActivityCouponModel extends BaseModel
     public static function getListByMachine($where,$field = "*",$order = "")
     {
         $data = self::alias("ac")
-            ->join("activity_machine am","am.a_id = ac.c_id","left")
+            ->join("activity_machine am","am.a_id = ac.c_id AND am.a_type = 1","left")
             ->where($where)
             ->field($field)
             ->order($order)

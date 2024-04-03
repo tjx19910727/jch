@@ -98,6 +98,11 @@ trait SaleOrdersTrait
         return SaleOrdersModel::update($update,$where,$field);
     }
 
+    public function getSaleOrdersDetailsJoinOrderList($where,$pageNum = 0,$field = "*", $order = "",$group = "")
+    {
+        return SaleOrdersDetailsModel::joinOrderList($where,$pageNum,$field,$order,$group);
+    }
+
     /**
      * 获取一条订单详情
      * @param $where
@@ -163,6 +168,17 @@ trait SaleOrdersTrait
     public function getSaleOrdersDetailsSum($where,$sum)
     {
         return SaleOrdersDetailsModel::getSum($where,$sum);
+    }
+
+    /**
+     * 统计订单副表条数
+     * @param $where
+     * @return int
+     * @throws \think\db\exception\DbException
+     */
+    public function getSaleOrdersDetailsCount($where)
+    {
+        return SaleOrdersDetailsModel::getCount($where);
     }
 
     /**

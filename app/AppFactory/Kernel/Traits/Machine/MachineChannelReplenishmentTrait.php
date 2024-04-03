@@ -30,6 +30,12 @@ trait MachineChannelReplenishmentTrait
         return $data->id;
     }
 
+    public function delMachineChannelReplenishment($where)
+    {
+        $result = MachineChannelReplenishmentModel::whereDel($where);
+        return $result;
+    }
+
     /**
      * 终端补货上报
      * @return mixed
@@ -80,6 +86,7 @@ trait MachineChannelReplenishmentTrait
             "machine_name" => $this->machine['machine_name'],
             "mc_id" => $mc['mc_id'],
             "channel_code" => $mc['channel_code'],
+            "mg_id" => $mc['mg_id'],
             "g_id" => $mc['g_id'],
             "g_name" => $mc['g_name'],
             "gc_id" => $mc['gc_id'],

@@ -27,19 +27,22 @@ class SendBaseClient extends MachineBaseClient
      */
     public function dataSendRabbitMQ($data)
     {
-        if ($this->machine['online'] == 2) die(json(['state' => 100, "msg" => $this->lang("VMachine.machine_offline")])->send());
-        $this->data = [
-            "msg_id" => uniqid(),
-            "timestamp" => time(),
-            "machine_id" => $this->machine['machine_id'],
-            "data" => json_encode($data),
-        ];
-        $this->data['sign'] = $this->makeSign($this->data);
-        $this->dataRecord(2,2);
-        $result = MqProducer::dataSend($this->data,$this->machine['machine_id']);
-        if ($result != "OK") {
-            return $this->rFail($result);
+//        if ($this->machine['online'] == 2) die(json(['state' => 100, "msg" => $this->lang("VMachine.machine_offline")])->send());
+        if ($this->machine['online'] == 1) {
+            $this->data = [
+                "msg_id" => uniqid(),
+                "timestamp" => time(),
+                "machine_id" => $this->machine['machine_id'],
+                "data" => json_encode($data),
+            ];
+            $this->data['sign'] = $this->makeSign($this->data);
+            $this->dataRecord(2, 2);
+            $result = MqProducer::dataSend($this->data, $this->machine['machine_id']);
+            if ($result != "OK") {
+                return $this->rFail($result);
+            }
+            return $this->rSuccess($result);
         }
-        return $this->rSuccess($result);
+        return $this->rFail("offline");
     }
 }

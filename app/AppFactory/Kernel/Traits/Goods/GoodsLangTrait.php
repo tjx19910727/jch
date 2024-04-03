@@ -13,12 +13,12 @@ use app\AppFactory\Kernel\Model\Goods\GoodsLangModel;
 
 trait GoodsLangTrait
 {
-    public function getGoodsLangFind($where,$field = "*",$order = "gcl_id desc")
+    public function getGoodsLangFind($where,$field = "*",$order = "gl_id desc")
     {
         return GoodsLangModel::getFind($where,$field,$order);
     }
 
-    public function getGoodsLangList($where,$pageNum = 0, $field = "*",$order = "gcl_id desc")
+    public function getGoodsLangList($where,$pageNum = 0, $field = "*",$order = "gl_id desc")
     {
         return GoodsLangModel::getList($where,$pageNum,$field,$order);
     }

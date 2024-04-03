@@ -10,6 +10,8 @@ namespace app\AppFactory\Kernel\Traits\Wx;
 
 
 use app\AppFactory\Kernel\Model\Wx\WxOfficialModel;
+use EasyWeChat\Factory;
+use EasyWeChat\OfficialAccount\Application;
 
 trait WxOfficialTrait
 {
@@ -17,7 +19,7 @@ trait WxOfficialTrait
     /**
      * @var Application
      */
-    protected $opApp;
+    protected $wx_app;
     public function getWxOfficialValue($where,$value)
     {
         return WxOfficialModel::getFieldValue($where,$value);
@@ -81,15 +83,19 @@ trait WxOfficialTrait
 
 
     /**
-     * 初始化微信开放平台
+     * 初始化微信公众号
      * @return array|bool|string
      */
-    public function initWxApp()
+    public function initWxApp($pidList)
     {
-        $where['app_id'] = "app_id";
+        $where[] = ['creator','in', $pidList];
         $where['status'] = 1;
-        $wx = $this->getWxOfficialFind($where);
-        $this->app = Factory::openPlatform($config);
+        $wx = $this->getWxOfficialFind($where,'*','id desc');
+        if (!$wx) {
+            $return = $this->rFail("查无微信公众号配置信息");
+            return $return;
+        }
+        $this->wx_app = Factory::officialAccount($wx);
         return true;
     }
 }

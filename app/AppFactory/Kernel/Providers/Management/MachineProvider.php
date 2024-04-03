@@ -13,11 +13,14 @@ use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\Machine\MachineChannelClient;
 use app\AppFactory\Management\Machine\MachineChannelReplenishmentClient;
+use app\AppFactory\Management\Machine\MachineCheckStockClient;
+use app\AppFactory\Management\Machine\MachineCheckStockCountClient;
 use app\AppFactory\Management\Machine\MachineClient;
 use app\AppFactory\Management\Machine\MachineConfigClient;
 use app\AppFactory\Management\Machine\MachineGoodsClient;
 use app\AppFactory\Management\Machine\MachineGroupClient;
 use app\AppFactory\Management\Machine\MachineGroupLangClient;
+use app\AppFactory\Management\Machine\MachineGroupMgClient;
 use app\AppFactory\Management\Machine\MachineHelpClient;
 use app\AppFactory\Management\Machine\MachineInfoClient;
 use app\AppFactory\Management\Machine\MachineOnlineClient;
@@ -38,6 +41,12 @@ class MachineProvider implements ServiceProviderInterface
         $app['machineChannel'] = function ($app) {
             return new MachineChannelClient($app);
         };
+        $app['machineCheckStock'] = function ($app) {
+            return new MachineCheckStockClient($app);
+        };
+        $app['machineCheckStockCount'] = function ($app) {
+            return new MachineCheckStockCountClient($app);
+        };
         $app['machine'] = function ($app) {
             return new MachineClient($app);
         };
@@ -49,6 +58,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineGroup'] = function ($app) {
             return new MachineGroupClient($app);
+        };
+        $app['machineGroupMg'] = function ($app) {
+            return new MachineGroupMgClient($app);
         };
         $app['machineGroupLang'] = function ($app) {
             return new MachineGroupLangClient($app);

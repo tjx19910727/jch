@@ -123,9 +123,12 @@ trait BeforeOrderRefundTrait
     {
         $this->insertSor = [
             "order_id" => $this->sod['order_id'],
+            "trade_no" => $this->order['trade_no'],
             "sod_id" => $this->sod['sod_id'],
             "m_id" => $this->order['m_id'],
             "machine_id" => $this->order['machine_id'],
+            "machine_name" => $this->order['machine_name'],
+            "ao_id" => $this->order['ao_id'],
             "mc_id" => $this->sod['mc_id'],
             "channel_position" => $this->sod['channel_position'],
             "channel_code" => $this->sod['channel_code'],
@@ -138,6 +141,7 @@ trait BeforeOrderRefundTrait
             "refund_trade_no" => $this->refundTradeNo,
             "refund_quantity" => $this->postData['refund']['quantity'],
             "user_id" => $this->order['user_id'],
+            "remark" => $this->postData['remark'] ?? "",
         ];
     }
 
