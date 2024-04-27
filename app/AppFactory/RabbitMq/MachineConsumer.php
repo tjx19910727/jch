@@ -19,9 +19,6 @@ class MachineConsumer
 
     /**
      *  消费端 消费端需要保持运行状态实现方式
-     *  1 Linux上写定时任务每5分钟运行下该脚本，保证访问服务器的IP比较平缓，不至于旗境
-     *  2 nohup php index.php index/Message_Consume/start & 用nohup命令后台运行该脚本
-     *  3
      * @param AMQPChannel $channel
      * @param AMQPStreamConnection $connection
      * @throws \Exception

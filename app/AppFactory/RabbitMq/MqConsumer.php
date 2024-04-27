@@ -20,9 +20,6 @@ class MqConsumer
 
     /**
      *  消费端 消费端需要保持运行状态实现方式
-     *  1 Linux上写定时任务每5分钟运行下该脚本，保证访问服务器的IP比较平缓，不至于旗境
-     *  2 nohup php index.php index/Message_Consume/start & 用nohup命令后台运行该脚本
-     *  3
      * @param AMQPChannel $channel
      * @param AMQPStreamConnection $connection
      * @throws \Exception
@@ -41,12 +38,10 @@ class MqConsumer
     public function process_message(AMQPMessage $message)
     {
         try {
-            //休眠两秒
-            //sleep(2) ;
+            //手动发送ack
             $message->ack($message->getDeliveryTag());
             $data = $message->body;
             $data = json2arr($data);
-//            dump($data);//自定义日志为rabbitmg-consumer
             actionLog($data, '消息处理', "DataUpload");
             $config = [
                 "machine_id" => $data['machine_id'],
@@ -56,14 +51,6 @@ class MqConsumer
             $app = AppFactory::machine($config);
             $result = $app->mq->onMessage();
             actionLog($result, '处理结果','DataUpload');
-//            if ($result) {
-                //手动发送ack
-                //        $message->delivery_info['channel']->basic_ack($message->delivery_info['delivery_tag']);
-                //        // Send a message with the string "quit" to cancel the consumer .
-//                if ($message->body === 'quit') {
-//                    $message->delivery_info['channel']->basic_cancel($message->delivery_info['consumer_tag']);
-//                }
-//            }
         } catch (\Exception $e) {
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"DataUpload");
             actionLog($e->getTrace(), 'tryCatchTrace',"DataUpload");
@@ -79,21 +66,6 @@ class MqConsumer
     {
         $param = config('rabbit_mq.' . env("RabbitMq.config_name"));
         $amqpDetail = config('rabbit_mq.dataUpload_queue');
-
-//        $amqpDetail = config('rabbit_mq.test_dataSend_queue');
-//        $machine_id = "test0001";
-//        if (strpos($amqpDetail['route_key'], ".")) {
-//            $temp = explode(".", $amqpDetail);
-//            foreach ($temp as $key => $value) {
-//                $value = $value . "/" . $machine_id;
-//                $temp[$key] = $value;
-//            }
-//            $amqpDetail['route_key'] = implode(".", $temp);
-//        } else {
-//            $amqpDetail['route_key'] .= "/" . $machine_id;
-//        }
-//        $amqpDetail['queue_name'] = $amqpDetail['queue_name'] . "_" . $machine_id;
-
         $connection = new AMQPStreamConnection(
             $param['host'],
             $param['port'],

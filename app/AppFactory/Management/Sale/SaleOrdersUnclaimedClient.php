@@ -55,7 +55,7 @@ class SaleOrdersUnclaimedClient extends ManagementClient
         (CASE status WHEN 1 THEN '未取' WHEN 2 THEN '已清除' WHEN 3 THEN '已取消' END)status,
         duration,
         remark";
-        $list = $this->getSaleOrdersUnclaimedList($where,$field);
+        $list = $this->getSaleOrdersUnclaimedList($where,0,$field);
         if (!$list) return $this->r(100,$this->lang("VSaleOrdersUnclaimed.su_no_data"));
         $list = $list->toArray();
         $title = [
