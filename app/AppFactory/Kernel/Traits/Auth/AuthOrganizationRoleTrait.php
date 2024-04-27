@@ -59,7 +59,6 @@ trait AuthOrganizationRoleTrait
      */
     public function getAuthOrganizationRoleList($where,$pageNum = 0,$field = "*",$order = "")
     {
-        $where['is_del'] = 2;
         $result = AuthOrganizationRoleModel::getJoinRoleList($where,$pageNum,$field,$order);
         return $result;
     }

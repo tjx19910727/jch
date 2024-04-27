@@ -231,7 +231,7 @@ class Common extends AuthController
             $where[] = ['node_id', 'in',$this->app->authRoleNode->getAuthRoleNodeColumn($whereArn,'node_id')];
         }
         $where['status'] = 1;
-        $data = $this->app->authNode->getAuthNodeList($where,0,'node_id,pid,name,icon,url,desc,sort,type,is_auth,status','sort asc');
+        $data = $this->app->authNode->getAuthNodeList($where,0,'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status','sort asc');
         $data = obj2arr($data);
         return returnData($data);
     }

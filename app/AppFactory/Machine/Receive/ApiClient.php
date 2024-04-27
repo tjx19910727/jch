@@ -22,6 +22,10 @@ use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationTrait;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
+use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
+use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
+use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
+use app\AppFactory\Kernel\Traits\Earth\EarthStatesTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsCornerTrait;
@@ -68,6 +72,8 @@ class ApiClient extends ReceiveBaseClient
         MachineGoodsTrait,
         MachineHelpTrait,
         TemplateViewTrait,
+
+        EarthCountriesTrait,EarthStatesTrait,EarthCitiesTrait,EarthRegionsTrait,
 
         BeforeOrderPaymentTrait,AfterOrderPaymentTrait,
         SaleOrdersTrait,
@@ -126,12 +132,22 @@ class ApiClient extends ReceiveBaseClient
         return $this->rQ($systemInfo);
     }
 
+    public function ip()
+    {
+        $ip = request()->ip();
+        return $this->rQ($ip);
+    }
+
     /**
      * 查询设备信息
      * @return array|string
      */
     public function machine()
     {
+        if (isset($this->machine['country_id']) && $this->machine['country_id']) $this->machine['country'] = $this->getEarthCountriesFind(['id' => $this->machine['country_id']],'code,name,cname');
+        if (isset($this->machine['state_id']) && $this->machine['state_id']) $this->machine['state'] = $this->getEarthStatesFind(['id' => $this->machine['state_id']],'code,name,cname');
+        if (isset($this->machine['city_id']) && $this->machine['city_id']) $this->machine['city'] = $this->getEarthCitiesFind(['id' => $this->machine['city_id']],'code,name,cname');
+        if (isset($this->machine['regions_id']) && $this->machine['regions_id']) $this->machine['regions'] = $this->getEarthRegionsFind(['id' => $this->machine['regions_id']],'code,name,cname');
         return $this->r(200, 'SUCCESS', $this->machine);
     }
 
@@ -275,12 +291,13 @@ class ApiClient extends ReceiveBaseClient
     public function machineConfig()
     {
         $where["m_id"] = $this->machine['m_id'];
-        $configField = "mc_id,mc_title,buy_flow,qr_code,qr_desc, tax_switch,tax_name,tax_rate,limit_quantity,limit_amount,
-        pay_type,unionpay_terminal_number,scan_pick_up,email_lang,buy_channel,preclaim,random_pickup,more_out,member_login,door_video,
-        face_identification,pre_loading,printer_disable,note_model,receipt,receipt_code1,receipt_code2,receipt_code3,receipt_desc,result_receipt,
-        deal_success_title,deal_success_sub_title,deal_abnormal_pic,deal_fail_title,deal_fail_sub_title,deal_service_phone,terminal_timeout,volume,
-        show_goods,show_goods_view,goods_sort,cabinet_tray_rotation,cabinet_light,light_effect,claim_goods_title,out_goods_title,discount_show,
-        discount_pic,stock_warning,expire_notice";
+//        $configField = "mc_id,mc_title,buy_flow,qr_code,qr_desc, tax_switch,tax_name,tax_rate,limit_quantity,limit_amount,
+//        pay_type,unionpay_terminal_number,scan_pick_up,email_lang,buy_channel,preclaim,random_pickup,more_out,member_login,door_video,
+//        face_identification,pre_loading,printer_disable,note_model,receipt,receipt_code1,receipt_code2,receipt_code3,receipt_desc,result_receipt,
+//        deal_success_title,deal_success_sub_title,deal_abnormal_pic,deal_fail_title,deal_fail_sub_title,deal_service_phone,terminal_timeout,adv_timeout,volume,
+//        show_goods,show_goods_view,goods_sort,cabinet_tray_rotation,cabinet_light,light_effect,claim_goods_title,out_goods_title,discount_show,
+//        discount_pic,stock_warning,expire_notice";
+        $configField = "*";
         $data = $this->getMachineConfigFind($where, $configField);
         actionLog($this->getLS());
         return $this->rQ($data);
@@ -415,7 +432,7 @@ class ApiClient extends ReceiveBaseClient
      */
     public function subCar()
     {
-        if ($this->data['pay_type'] != 4 && $this->data['pay_type'] != 0) return $this->rFail($this->lang("VSubCar.pay_type_no_range"));
+//        if ($this->data['pay_type'] != 4 && $this->data['pay_type'] != 0) return $this->rFail($this->lang("VSubCar.pay_type_no_range"));
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
         $order = [
             "trade_no" => $trade_no,

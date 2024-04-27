@@ -98,7 +98,7 @@ class ActivityClient extends ReceiveBaseClient
     }
 
     /**
-     * 获取设备绑定的盲盒活动
+     * 获取设备绑定的付费抽奖活动
      * @return array|string
      */
     public function getAlByMachine()

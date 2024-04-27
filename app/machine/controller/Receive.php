@@ -346,4 +346,22 @@ class Receive extends Common
     {
         return $this->app->activity->useFd();
     }
+
+    /**
+     * 获取设备公网IP
+     * @return array|string
+     */
+    public function getIp()
+    {
+        return $this->app->api->ip();
+    }
+
+    /**
+     * 未取事件上报
+     * @return array|bool|string
+     */
+    public function unclaimed()
+    {
+        return $this->app->saleOrders->subUnclaimed();
+    }
 }

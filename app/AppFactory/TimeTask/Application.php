@@ -14,8 +14,9 @@ use app\AppFactory\Kernel\ServiceContainer;
 
 /**
  * Class Application
- * @property Machine\MachineClient    $machine               设备定时任务
- * @property Goods\GoodsClient        $goods                 商品定时任务
+ * @property Machine\MachineClient                      $machine               设备定时任务
+ * @property Machine\MachineChannelStockClient          $machineChannelStock   设备库存报表定时任务
+ * @property Goods\GoodsClient                          $goods                 商品定时任务
  * @package app\AppFactory\TimeTask
  */
 class Application extends ServiceContainer

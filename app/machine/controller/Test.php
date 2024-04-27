@@ -35,21 +35,20 @@ class Test extends BaseController
     {
         $msg_id = uniqid();
         $carList[] = [
-            "mc_id" => 275,
+            "mc_id" => 334,
             "quantity" => 1,
         ];
         $data = [
-            "machine_id" => "test0001",
+            "machine_id" => "test0003",
             "msg_id" => $msg_id,
             "timestamp" => time(),
 //            "manager_id" => 5,
-            "pay_type" => 4,
-            "pay_method" => 41,
-//            "pick_code" => "81879930",
+            "pay_type" => 2,
+            "pay_method" => 23,
             "carList" => json_encode($carList, 320),
         ];
         $data = [
-            "order_id" => 548,
+            "order_id" => 633,
             "timestamp" => time(),
             "msg_id" => $msg_id,
             "machine_id" => "test0003",
@@ -104,6 +103,24 @@ class Test extends BaseController
 ////            "pick_code" => "73702244",
 ////            "pay_type" => 0,
 ////            "pay_method" => 1,
+//        ];
+//        $data = [
+//            "order_id" => 626,
+//            "timestamp" => time(),
+//            "msg_id" => $msg_id,
+//            "machine_id" => "test0003",
+//            "details" => [
+//                [
+//                    "sod_id" => "710",
+//                    "is_match" => "1",
+//                    "is_claim" => "1",
+//                    "is_out" => "1",
+//                    "is_close" => "1",
+//                    "quantity" => "1",
+//                    "duration" => "70",
+//                    "deliver_pics" => "/uploads/goods/20240418/109c741f77f41f2a444866a45bc578a8.jpg,/uploads/goods/20240418/109c741f77f41f2a444866a45bc578a8.jpg",
+//                ],
+//            ],
 //        ];
         $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
         dump($data);

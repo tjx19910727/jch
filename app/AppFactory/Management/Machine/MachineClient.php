@@ -9,6 +9,8 @@
 namespace app\AppFactory\Management\Machine;
 
 
+use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
@@ -31,6 +33,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineVersionTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersMachineCountTrait;
 use app\AppFactory\Management\ManagementClient;
+use app\management\validate\VMachine;
 
 class MachineClient extends ManagementClient
 {
@@ -38,6 +41,7 @@ class MachineClient extends ManagementClient
     use MachineTrait,MachineChannelTrait,MachineChannelReplenishmentTrait,MachineCheckStockTrait,MachineConfigTrait,MachineGoodsTrait,
         MachineInfoTrait,MachineGroupTrait,MachineGroupMgTrait,MachineHelpTrait,MachineMqRecordTrait,MachineOnlineTrait,MachineOnlineDetailsTrait,MachineVersionTrait,MachineVersionPlanTrait,MachineViewTrait;
     use SaleOrdersMachineCountTrait;
+    use AuthManagerMachineTrait;
 
     public function addM($postData)
     {
@@ -84,6 +88,7 @@ class MachineClient extends ManagementClient
                 return $this->r(100,$this->lang("VMachine.machine_no_data"));
             }
             $m = $m->toArray();
+            $this->sendToMachine($m);
             if ($machine_group_id && is_int($machine_group_id)) $machine_group_id = [$machine_group_id];
             $oldMgId = $this->getMachineGroupMgColumn(['m_id' => $m['m_id']], "mg_id");
             $addList = array_diff($machine_group_id, $oldMgId);
@@ -107,6 +112,25 @@ class MachineClient extends ManagementClient
         }
         $this->rollbackTrans();
         return $this->r(100,$this->lang("update_fail"));
+    }
+
+    public function updateMore($postData)
+    {
+        foreach ($postData['mList'] as $key => $value) {
+            try {
+                validate(VMachine::class)->scene("updateMore")->check($value);
+            } catch (\Exception $e) {
+                return $this->rValidate($e->getMessage());
+            }
+            $m = $this->getMachineFind(['m_id' => $value['m_id']],"m_id,machine_id,machine_name");
+            if (!$m) {
+                return $this->r(100,$this->lang("VMachine.machine_no_data"));
+            }
+            $this->updateMachine($value);
+            $m = $m->toArray();
+            $this->sendToMachine($m);
+        }
+        return $this->rAction(1);
     }
 
     public function getMList($where,$pageNum = 0,$field = "",$order = "")
@@ -138,6 +162,7 @@ class MachineClient extends ManagementClient
         $this->delMachineVersion($where);
         $this->delMachineVersionPlan($where);
         $this->delMachineView($where);
+        $this->delAuthManagerMachine($where);
         return $this->rSuccess();
     }
 
@@ -205,5 +230,20 @@ class MachineClient extends ManagementClient
             }
         }
         return $this->rQ($list);
+    }
+
+
+    /**
+     * 发送触发更新数据
+     * @param array $machine
+     */
+    public function sendToMachine($machine)
+    {
+        $config = [
+            "machine_id" => $machine['machine_id'],
+            "key" => env("api.md5Key"),
+        ];
+        $app = AppFactory::machine($config);
+        $app->sendMq->triggerUpdateMachine();
     }
 }

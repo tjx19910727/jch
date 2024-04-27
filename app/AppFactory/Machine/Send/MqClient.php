@@ -151,4 +151,28 @@ class MqClient extends SendBaseClient
         ];
         return $this->dataSendRabbitMQ($data);
     }
+
+    /**
+     * 触发设备更新
+     * @return array|string
+     */
+    public function triggerUpdateMachine()
+    {
+        $data = [
+            "msgType" => "updateMachine",
+        ];
+        return $this->dataSendRabbitMQ($data);
+    }
+
+    /**
+     * 触发设备配置更新
+     * @return array|string
+     */
+    public function triggerUpdateMachineConfig()
+    {
+        $data = [
+            "msgType" => "updateMachineConfig",
+        ];
+        return $this->dataSendRabbitMQ($data);
+    }
 }

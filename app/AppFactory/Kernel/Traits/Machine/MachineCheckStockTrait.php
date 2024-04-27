@@ -18,9 +18,9 @@ trait MachineCheckStockTrait
         return MachineCheckStockModel::getFind($where,$field);
     }
 
-    public function getMachineCheckStockList($where,$pageNum = 0,$field = "*", $order = "")
+    public function getMachineCheckStockList($where,$pageNum = 0,$field = "*", $order = "",$group = "")
     {
-        return MachineCheckStockModel::getList($where,$pageNum,$field,$order);
+        return MachineCheckStockModel::getList($where,$pageNum,$field,$order,'',$group);
     }
 
     public function addMachineCheckStock($insert)

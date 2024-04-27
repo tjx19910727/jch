@@ -59,6 +59,7 @@ trait GoodsHitTrait
                 "machine_id" => $this->machine['machine_id'],
                 "machine_name" => $this->machine['machine_name'],
                 "ao_id" => $this->machine['ao_id'],
+                "create_date" => strtotime(date("Y-m-d")),
             ];
             $insert = array_merge($insert,$g);
             $result = $this->addGoodsHit($insert);

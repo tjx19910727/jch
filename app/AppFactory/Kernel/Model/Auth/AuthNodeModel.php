@@ -26,6 +26,7 @@ class AuthNodeModel extends BaseModel
         "sort" => "int",
         "type" => "int",
         "is_auth" => "int",
+        "is_button" => "int",
         "status" => "int",
         "create_time" => "int",
         "update_time" => "int",

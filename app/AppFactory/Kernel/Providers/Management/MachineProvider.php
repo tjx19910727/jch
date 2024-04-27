@@ -13,6 +13,8 @@ use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\Machine\MachineChannelClient;
 use app\AppFactory\Management\Machine\MachineChannelReplenishmentClient;
+use app\AppFactory\Management\Machine\MachineChannelStockClient;
+use app\AppFactory\Management\Machine\MachineChannelStockReportClient;
 use app\AppFactory\Management\Machine\MachineCheckStockClient;
 use app\AppFactory\Management\Machine\MachineCheckStockCountClient;
 use app\AppFactory\Management\Machine\MachineClient;
@@ -40,6 +42,12 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineChannel'] = function ($app) {
             return new MachineChannelClient($app);
+        };
+        $app['machineChannelStock'] = function ($app) {
+            return new MachineChannelStockClient($app);
+        };
+        $app['machineChannelStockReport'] = function ($app) {
+            return new MachineChannelStockReportClient($app);
         };
         $app['machineCheckStock'] = function ($app) {
             return new MachineCheckStockClient($app);

@@ -33,7 +33,7 @@ class ActivityLotteryClient extends ManagementClient
         return $this->r(200,'查询成功',$al);
     }
     /**
-     * 添加盲盒活动
+     * 添加付费抽奖活动
      * @param $postData
      * @return bool|string
      */

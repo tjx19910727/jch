@@ -195,6 +195,7 @@ return [
         "g_id_require" => "请选择商品",
         "g_name_require" => "商品名称不能为空",
         "g_name_max" => "商品名称长度超限制",
+        "sku_require" => "SKU不能为空",
         "pic_max" => "图片路径长度超限制",
         "manufacturer_max" => "供应商名称长度超限制",
         "service_phone_max" => "联系电话长度超限制",
@@ -393,5 +394,13 @@ return [
         "order_no_data" => "查无订单信息",
         "order_id_require" => "订单ID不能为空",
         "refund_require" => "退款数据不能为空",
+    ],
+
+    "VSaleOrdersUnclaimed" => [
+        "su_id_require" => "事件ID不能为空",
+        "status_require" => "操作值不能为空",
+        "remark_max" => "备注信息超过限制",
+
+        "su_no_data" => "查无未取数据",
     ],
 ];

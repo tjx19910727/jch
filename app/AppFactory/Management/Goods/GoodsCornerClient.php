@@ -32,6 +32,19 @@ class GoodsCornerClient extends ManagementClient
     public function getCornerAgAmList($where,$pageNum = 0, $field = "*", $order = "")
     {
         return $this->rQ($this->getGoodsCornerList($where,$pageNum,$field,$order,function ($corner) {
+            $update = [];
+            if ($corner['start_time'] < time() && $corner['status'] == 1) {
+                $corner['status'] = 2;
+                $update['status'] = 2;
+            }
+            if ($corner['end_time'] > 0 && $corner['end_time'] < time() && ($corner['status'] < 3)) {
+                $corner['status'] = 3;
+                $update['status'] = 3;
+            }
+            if ($update) {
+                $update['id'] = $corner['id'];
+                $this->updateGoodsCorner($update);
+            }
             $whereA = ['a_type' => 5, "a_id" => $corner['id']];
             $corner['goodsList'] = $this->getActivityGoodsList($whereA,0,'ag_id,g_id,g_name,sku,market_price,retail_price');
             $corner['machineList'] = $this->getActivityMachineList($whereA,0,'am_id,m_id,machine_id,machine_name');

@@ -19,22 +19,15 @@ class MachineCheckStock extends Common
         $where = $this->getWhere($postData,false,['machine_id' => "like",'sku' => "like"]);
         $pageNum = $postData['pageNum'] ?? 0;
         return $this->app->machineCheckStock->getList($where,$pageNum,'
-            machine_id,machine_name,channel_code,g_name,sku,gc_name,check_stock,stock_reserve,creator,create_date,create_time
+            machine_id,machine_name,channel_code,g_name,sku,gc_name,system_stock,check_stock,creator,status,create_date,create_time
         ','create_date desc');
     }
 
-    public function exportBySku()
+    public function export()
     {
         $postData = input();
         $where = $this->getWhere($postData,false,['machine_id' => "like",'sku' => "like"]);
-        return $this->app->machineCheckStock->exportSku($where);
-    }
-
-    public function exportByMachine()
-    {
-        $postData = input();
-        $where = $this->getWhere($postData,false,['machine_id' => "like",'sku' => "like"]);
-        return $this->app->machineCheckStock->exportMachine($where);
+        return $this->app->machineCheckStock->exportExcel($where);
     }
 
 }

@@ -26,10 +26,6 @@ class AuthTokenMiddleware implements \app\AppFactory\Kernel\Middleware\Middlewar
         $authInfo = null;
         $token = trim(ltrim($request->header('Authori-zation'), 'Bearer'));
         if(!$token)  $token = input("token");
-
-
-
-
         return $next($request);
     }
 }

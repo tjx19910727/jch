@@ -38,8 +38,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Activity\ActivityCouponUsedClient       $activityCouponUsed    优惠券使用记录
  * @property Activity\ActivityFdClient               $activityFd            满减满送活动
  * @property Activity\ActivityFdUsedClient           $activityFdUsed        满减满送使用记录
- * @property Activity\ActivityLotteryClient          $activityLottery       盲盒活动
- * @property Activity\ActivityLotteryUsedClient      $activityLotteryUsed   盲盒活动使用记录
+ * @property Activity\ActivityLotteryClient          $activityLottery       付费抽奖活动
+ * @property Activity\ActivityLotteryUsedClient      $activityLotteryUsed   付费抽奖活动使用记录
  * @property Activity\ActivityPickClient             $activityPick          提货码活动
  * @property Activity\ActivityPickCodeClient         $activityPickCode      提货码使用记录
  *
@@ -71,6 +71,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Goods\GoodsHitClient                   $goodsHit               商品点击
  *
  * @property Machine\MachineChannelClient           $machineChannel         设备货道
+ * @property Machine\MachineChannelStockClient      $machineChannelStock    库存报表-分时段,暂时废弃
+ * @property Machine\MachineChannelStockReportClient      $machineChannelStockReport    库存报表-实时
  * @property Machine\MachineChannelReplenishmentClient     $machineChannelReplenishment         设备货道补货
  * @property Machine\MachineCheckStockClient        $machineCheckStock      库存盘点详情
  * @property Machine\MachineCheckStockCountClient   $machineCheckStockCount      库存盘点汇总
@@ -97,6 +99,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Template\TemplateViewClient            $templateView           模板视图
  *
  * @property Sale\SaleOrdersClient                  $saleOrders             销售订单
+ * @property Sale\SaleOrdersUnclaimedClient         $saleOrdersUnclaimed    销售订单未取商品
  *
  * @property Strategy\StrategyIncomeClient          $strategyIncome         分润策略
  * @property Strategy\StrategyMachineClient         $strategyMachine        策略绑定设备

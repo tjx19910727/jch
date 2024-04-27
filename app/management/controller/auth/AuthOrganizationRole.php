@@ -37,6 +37,7 @@ class AuthOrganizationRole  extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false);
+        $where['or.is_del'] = 2;
         $field = "or.or_id,or.ao_id,or.role_id,or.is_del,or.creator, or.create_time,ar.name";
         $result = $this->app->authOrganizationRole->getList($where,$pageNum,$field,'or.ao_id asc');
         return $result;

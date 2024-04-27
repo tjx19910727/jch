@@ -49,7 +49,7 @@ return [
         "order_id_require" => "订单ID不能为空",
         "fd_id_require" => "满减满送活动ID不能为空",
 
-
+        "details_require" => "订单详情不能为空",
     ],
 
     "VChannel" => [
@@ -150,7 +150,7 @@ return [
         "content_no_data" => "查无活动商品信息",
         "order_no_data" => "查无活动订单信息",
         "order_details_no_data" => "查无订单详细信息",
-        "order_type_error" => "订单不是盲盒活动订单",
+        "order_type_error" => "订单不是付费抽奖活动订单",
         "order_no_pay" => "订单尚未支付或支付状态异常",
         "mc_no_data" => "查无货道信息",
         "under_stock" => "库存不足",
@@ -174,5 +174,11 @@ return [
         "fd_no_data" => "查无活动信息",
         "content_no_data" => "查无活动内容信息",
 
+    ],
+
+    "VSaleOrders" => [
+        "order_no_data" => "查无订单信息",
+        "sod_no_data" => "查无订单详情信息",
+        "detailsList_no_data" => "未取事件数据不能为空",
     ],
 ];

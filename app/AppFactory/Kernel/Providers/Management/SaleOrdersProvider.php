@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Providers\Management;
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\Sale\SaleOrdersClient;
+use app\AppFactory\Management\Sale\SaleOrdersUnclaimedClient;
 
 class SaleOrdersProvider implements ServiceProviderInterface
 {
@@ -20,6 +21,9 @@ class SaleOrdersProvider implements ServiceProviderInterface
         // TODO: Implement register() method.
         $app['saleOrders'] = function ($app) {
             return new SaleOrdersClient($app);
+        };
+        $app['saleOrdersUnclaimed'] = function ($app) {
+            return new SaleOrdersUnclaimedClient($app);
         };
     }
 }

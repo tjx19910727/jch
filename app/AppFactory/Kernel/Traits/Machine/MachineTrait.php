@@ -30,6 +30,30 @@ trait MachineTrait
     }
 
     /**
+     * 增加设备某字段的值
+     * @param $where
+     * @param $field
+     * @param int $inc
+     * @return mixed
+     */
+    public function setMachineIncField($where,$field,$inc = 1)
+    {
+        return MachineModel::setInc($where,$field,$inc);
+    }
+
+    /**
+     * 减少设备某字段的值
+     * @param $where
+     * @param $field
+     * @param int $dec
+     * @return mixed
+     */
+    public function setMachineDecField($where,$field,$dec = 1)
+    {
+        return MachineModel::setDec($where,$field,$dec);
+    }
+
+    /**
      * 获取一条设备信息
      * @param $where
      * @param string $field

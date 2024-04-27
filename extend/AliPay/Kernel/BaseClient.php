@@ -81,6 +81,7 @@ class BaseClient
     /**
      * 发起接口请求
      * @return mixed
+     * @throws \Exception
      */
     public function execute()
     {

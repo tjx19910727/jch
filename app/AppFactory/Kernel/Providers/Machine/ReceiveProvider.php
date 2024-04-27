@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Machine\Receive\ActivityClient;
 use app\AppFactory\Machine\Receive\ApiClient;
 use app\AppFactory\Machine\Receive\MqClient;
+use app\AppFactory\Machine\Receive\SaleOrdersClient;
 
 class ReceiveProvider implements ServiceProviderInterface
 {
@@ -28,6 +29,9 @@ class ReceiveProvider implements ServiceProviderInterface
         };
         $app['mq'] = function ($app) {
             return new MqClient($app);
+        };
+        $app['saleOrders'] = function ($app) {
+            return new SaleOrdersClient($app);
         };
     }
 }

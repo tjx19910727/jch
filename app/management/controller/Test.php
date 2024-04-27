@@ -14,6 +14,8 @@ use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
 use app\AppFactory\Kernel\Model\Earth\EarthCitiesModel;
 use app\AppFactory\Kernel\Model\Earth\EarthRegionsModel;
 use app\AppFactory\Kernel\Model\Earth\EarthStatesModel;
+use app\AppFactory\Kernel\Model\Machine\MachineCheckStockCountView;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDailyCountView;
 use app\AppFactory\Kernel\Support\TDESUtil;
 use app\AppFactory\Management\Application;
 use app\BaseController;
@@ -23,6 +25,25 @@ use think\facade\Db;
 
 class Test extends BaseController
 {
+    public function testMoney()
+    {
+        $money = "12345";
+        dump($money);
+        $wan = floor($money / 10000) . "万";
+        $qian = floor(($money % 10000) / 1000) . "千";
+        $bai = floor(($money % 1000) / 100) . "百";
+        dump($money % 100);
+        $ten = floor(($money % 100) / 10) . "十";
+        $one = floor(($money % 10) / 1) . "个";
+        dump($wan.$qian.$bai.$ten.$one);
+    }
+
+    public function testView()
+    {
+        $result =  SaleOrdersDailyCountView::getFind([],"*","countDate desc")->toArray();
+//        $result = MachineCheckStockCountView::getList([]);
+        dump($result);
+    }
     public function testTemplateView()
     {
         $fields = '[{"key":"loop","options":"bars","type":"SELECT","display":{"en_US":"Image Loop Mode",

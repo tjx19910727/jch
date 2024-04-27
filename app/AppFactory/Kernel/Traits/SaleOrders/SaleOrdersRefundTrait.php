@@ -23,9 +23,9 @@ trait SaleOrdersRefundTrait
         return SaleOrdersRefundModel::getList($where,$pageNum,$field,$order);
     }
 
-    public function getSaleOrdersRefundListJoinSoSod($where,$field = "*",$order = "")
+    public function getSaleOrdersRefundListJoinSoSod($where,$pageNum = 0,$field = "*",$order = "")
     {
-        return SaleOrdersRefundModel::getRefundListJoinSoSod($where,$field,$order);
+        return SaleOrdersRefundModel::getRefundListJoinSoSod($where,$pageNum,$field,$order);
     }
 
     public function addSaleOrdersRefund($insert)

@@ -9,18 +9,18 @@
 namespace app\AppFactory\Kernel\Traits\Machine;
 
 
-use app\AppFactory\Kernel\Model\Machine\MachineCheckStockCountModel;
+use app\AppFactory\Kernel\Model\Machine\MachineCheckStockCountView;
 
 trait MachineCheckStockCountTrait
 {
     public function getMachineCheckStockCountFind($where,$field = "*")
     {
-        return MachineCheckStockCountModel::getFind($where,$field);
+        return MachineCheckStockCountView::getFind($where,$field);
     }
 
     public function getMachineCheckStockCountList($where,$pageNum = 0,$field = "*", $order = "",$eachFunc = '',$group = "")
     {
-        return MachineCheckStockCountModel::getList($where,$pageNum,$field,$order,$eachFunc,$group);
+        return MachineCheckStockCountView::getList($where,$pageNum,$field,$order,$eachFunc,$group);
     }
 
 }

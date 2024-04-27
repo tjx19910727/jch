@@ -39,8 +39,9 @@ trait MachineChannelTrait
         return MachineChannelModel::getList($where,$pageNum,$field,$order,$eachFun,$group);
     }
 
-    public function getMachineChannelJoinGoodsList($where,$field = "*",$order = "")
+    public function getMachineChannelJoinGoodsList($where,$field = "*",$order = "",$group = "")
     {
+        return MachineChannelModel::joinGoodsList($where,$field,$order,$group);
     }
 
     public function addMachineChannel($insert)

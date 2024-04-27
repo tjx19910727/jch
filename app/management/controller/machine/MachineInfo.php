@@ -55,6 +55,12 @@ class MachineInfo extends Common
         return $this->app->machineInfo->update($postData);
     }
 
+    public function updateMoreMi()
+    {
+        $postData = input();
+        return $this->app->machineInfo->updateMore($postData);
+    }
+
     public function del()
     {
         $postData = input();

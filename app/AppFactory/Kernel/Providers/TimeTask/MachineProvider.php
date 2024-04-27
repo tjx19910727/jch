@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Providers\TimeTask;
 
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
+use app\AppFactory\TimeTask\Machine\MachineChannelStockClient;
 use app\AppFactory\TimeTask\Machine\MachineClient;
 
 class MachineProvider implements ServiceProviderInterface
@@ -20,6 +21,9 @@ class MachineProvider implements ServiceProviderInterface
         // TODO: Implement register() method.
         $app['machine'] = function ($app) {
             return new MachineClient($app);
+        };
+        $app['machineChannelStock'] = function ($app) {
+            return new MachineChannelStockClient($app);
         };
     }
 }

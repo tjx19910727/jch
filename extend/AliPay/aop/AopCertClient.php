@@ -585,6 +585,14 @@ class AopCertClient
         return $res;
     }
 
+    /**
+     * @param $request
+     * @param null $authToken
+     * @param null $appInfoAuthtoken
+     * @param null $targetAppId
+     * @return mixed|SimpleXMLElement
+     * @throws Exception
+     */
     public function execute($request, $authToken = null, $appInfoAuthtoken = null,$targetAppId = null) {
         $this->setupCharsets($request);
         //如果两者编码不一致，会出现签名验签或者乱码
@@ -649,12 +657,12 @@ class AopCertClient
         $requestUrl = substr($requestUrl, 0, -1);
 
         //发起HTTP请求
-        try {
+//        try {
             $resp = $this->curl($requestUrl, $apiParams);
-        } catch (Exception $e) {
-            $this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_ERROR_" . $e->getCode(), $e->getMessage());
-            return false;
-        }
+//        } catch (Exception $e) {
+//            $this->logCommunicationError($sysParams["method"], $requestUrl, "HTTP_ERROR_" . $e->getCode(), $e->getMessage());
+//            return false;
+//        }
 
         //解析AOP返回结果
         $respWellFormed = false;

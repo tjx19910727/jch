@@ -98,7 +98,7 @@ class VAuth extends VCommon
         "AuthOrganizationAdd" => ['pid','organization_name'],
         "AuthOrganizationUpdate" => ["or_id",'pid','organization_name'],
 
-        "AuthOrganizationRoleBind" => ['ao_id','roleList'],
+        "AuthOrganizationRoleBind" => ['ao_id'],
 
     ];
 }

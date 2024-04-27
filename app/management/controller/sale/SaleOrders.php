@@ -129,8 +129,14 @@ class SaleOrders extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData,false,['refund_trade_no' => "like","refund_no" => "like"]);
-        return returnData($this->app->saleOrders->getSaleOrdersRefundList($where,$pageNum));
+        $where = $this->authNodeWhere();
+        if (isset($postData['trade_no'])) $where[] = ['sor.trade_no','like',"%" .$postData['trade_no']. "%"];
+        if (isset($postData['machine_id'])) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
+        if (isset($postData['refund_no'])) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
+        if (isset($postData['pay_type'])) $where['pay_type'] = $postData['pay_type'];
+//        $where = $this->getWhere($postData,false,['refund_trade_no' => "like",'machine_id' => "like",'trade_no' => "like","refund_no" => "like"]);
+        $field = "sor.*,so.pay_type";
+        return returnData($this->app->saleOrders->getSaleOrdersRefundListJoinSoSod($where,$pageNum,$field,'sor.sor_id desc'));
     }
 
     /**
@@ -140,7 +146,69 @@ class SaleOrders extends Common
     public function exportRefund()
     {
         $postData = input();
-        $where = $this->getWhere($postData,false,['refund_trade_no' => "like","refund_no" => "like"]);
+        $where = $this->authNodeWhere();
+        if (isset($postData['trade_no'])) $where[] = ['sor.trade_no','like',"%" .$postData['trade_no']. "%"];
+        if (isset($postData['machine_id'])) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
+        if (isset($postData['refund_no'])) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
+        if (isset($postData['pay_type'])) $where['pay_type'] = $postData['pay_type'];
+//        $where = $this->getWhere($postData,false,['refund_trade_no' => "like",'machine_id' => "like",'trade_no' => "like","refund_no" => "like"]);
         return $this->app->saleOrders->exportRefund($where);
+    }
+
+    /**
+     * 获取销售报表概况
+     * @return array|string
+     */
+    public function getReport()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,["machine_id" => "like"]);
+        $field = "ao_name,
+        SUM(order_num) order_num,
+        sum(totalRefundAmount) totalRefundAmount,
+        SUM(totalRefundQuantity) totalRefundQuantity,
+        SUM(totalPrice) totalPrice,
+        SUM(totalDiscountPrice) totalDiscountPrice,
+        SUM(totalQuantity) totalQuantity,
+        SUM(giftQuantity) giftQuantity,
+        SUM(coupon_used) coupon_used,
+        SUM(lottery_used) lottery_used,
+        SUM(lotteryAmount) lotteryAmount,
+        SUM(lotteryQuantity) lotteryQuantity";
+        if (isset($postData['machine_id'])) $field = "machine_id,machine_name," . $field;
+        return $this->app->saleOrders->getTotalReport($where,$field,'countDate desc');
+    }
+
+    /**
+     * 获取销售报表
+     * @return array|string
+     */
+    public function getReportList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $order = "create_date desc";
+        if (isset($postData['order'])) {
+            $order = $postData['order'];
+            unset($postData['order']);
+        }
+        $where = $this->getWhere($postData,false,["machine_id" => "like"]);
+        return $this->app->saleOrders->getReportList($where,$pageNum,$order);
+    }
+
+    /**
+     * 导出销售报表
+     * @return array|string
+     */
+    public function exportReport()
+    {
+        $postData = input();
+        $order = "create_date desc";
+        if (isset($postData['order'])) {
+            $order = $postData['order'];
+            unset($postData['order']);
+        }
+        $where = $this->getWhere($postData,false,["machine_id" => "like"]);
+        return $this->app->saleOrders->exportReport($where,$order);
     }
 }

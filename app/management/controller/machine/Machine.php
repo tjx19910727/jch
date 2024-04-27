@@ -55,6 +55,12 @@ class Machine extends Common
         return $this->app->machine->updateM($postData);
     }
 
+    public function updateMore()
+    {
+        $postData = input();
+        return $this->app->machine->updateMore($postData);
+    }
+
     public function del()
     {
         $postData = input();

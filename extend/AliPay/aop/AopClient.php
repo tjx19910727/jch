@@ -486,7 +486,14 @@ class AopClient
         return $res;
     }
 
-
+    /**
+     * @param $request
+     * @param null $authToken
+     * @param null $appInfoAuthtoken
+     * @param null $targetAppId
+     * @return mixed|SimpleXMLElement
+     * @throws Exception
+     */
     public function execute($request, $authToken = null, $appInfoAuthtoken = null, $targetAppId = null)
     {
 

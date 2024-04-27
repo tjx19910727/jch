@@ -48,6 +48,8 @@ class VReceive extends VCommon
         "order_id" => "require",
         "fd_id" => "require",
 
+        "details" => "require",
+
     ];
 
     protected $message = [
@@ -86,12 +88,16 @@ class VReceive extends VCommon
         "order_id.require" => "VReceive.order_id_require",
         "fd_id.require" => "VReceive.fd_id_require",
 
+
+        "details.require" => "VReceive.details_require",
+
     ];
 
     protected $scene = [
         "login" => ["msg_id","machine_id","timestamp","sign","account","password"],
         "logout" => ["msg_id","machine_id","timestamp","sign"],
 
+        "getIp" => ["msg_id","machine_id","timestamp","sign"],
         "getSystemInfo" => ["msg_id","machine_id","timestamp","sign"],
         "getMachine" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineChannel" => ["msg_id","machine_id","timestamp","sign"],
@@ -134,6 +140,8 @@ class VReceive extends VCommon
         "getFd" => ["msg_id","machine_id","timestamp","sign"],
 
         "useFd" => ["msg_id","machine_id","timestamp","sign","order_id","fd_id"],
+
+        "unclaimed" => ["msg_id","machine_id","timestamp","sign","order_id","details"],
 
     ];
 

@@ -40,4 +40,18 @@ class GoodsHit extends Common
         return returnData($this->app->goodsHit->getGoodsHitList(['g_id' => $g_id],$pageNum,'machine_id,machine_name,max(create_time) create_time,count(g_id) hits','','','g_id,m_id'));
     }
 
+    public function exportBySku()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,['sku' => "like","machine_id" => "like"]);
+        return $this->app->goodsHit->export($where);
+    }
+
+    public function exportByMachine()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,['sku' => "like","machine_id" => "like"]);
+        return $this->app->goodsHit->export($where,2);
+    }
+
 }

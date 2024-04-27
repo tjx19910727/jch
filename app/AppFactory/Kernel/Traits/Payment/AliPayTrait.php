@@ -61,7 +61,7 @@ trait AliPayTrait
      */
     public function aliMobilePay()
     {
-        $details = $this->getSaleOrdersDetailsColumn(['order_id' => $this->order['order_id']], 'goods_name');
+        $details = $this->getSaleOrdersDetailsColumn(['order_id' => $this->order['order_id']], 'g_name');
         $goodsName = implode(",", $details);
         $data = [
             "body" => $goodsName,
@@ -76,6 +76,7 @@ trait AliPayTrait
     /**
      * 发起付款码反扫支付
      * @return mixed
+     * @throws \Exception
      */
     public function aliScanQr()
     {
@@ -138,20 +139,25 @@ trait AliPayTrait
      */
     public function aliUrlLink()
     {
-        $data = [
-            'out_trade_no' => $this->order['trade_no'],
-            'total_amount' => $this->order['total_price'],
-            'subject' => $this->order['machine_id'] . '购买支付',
-        ];
-        dump($data);
-        dump($this->strategyPayee);
-        $result = $this->aliApp->trade->preCreate($data);
-        if ($result['code'] == 10000) {
-            return $this->r(200,$result['msg'],$result);
-        } else {
-            $msg = $result['msg'] . "；";
-            if (isset($result['sub_msg'])) $msg .= $result['sub_msg'] . "；";
-            return $this->r(100, $this->lang("init_payment_fail") . '：' . $msg, $result);
+        try {
+            $data = [
+                'out_trade_no' => $this->order['trade_no'],
+                'total_amount' => $this->order['total_price'],
+                'subject' => $this->order['machine_id'] . '购买支付',
+            ];
+            $result = $this->aliApp->trade->preCreate($data);
+            if ($result) {
+                if ($result['code'] == 10000) {
+                    return $this->r(200, $result['msg'], $result);
+                } else {
+                    $msg = $result['msg'] . "；";
+                    if (isset($result['sub_msg'])) $msg .= $result['sub_msg'] . "；";
+                    return $this->r(100, $this->lang("init_payment_fail") . '：' . $msg, $result);
+                }
+            }
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
         }
     }
 

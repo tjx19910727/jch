@@ -59,7 +59,15 @@ trait AuthOrganizationTrait
      */
     public function getAuthOrganizationList($where,$pageNum = 0,$field = "*",$order = "")
     {
-        $result = AuthOrganizationModel::getList($where,$pageNum,$field,$order);
+        $result = AuthOrganizationModel::getList($where,$pageNum,$field,$order,function($item){
+            $arList = $this->getAuthOrganizationRoleList(['ao_id' => $item['ao_id']],0,'ar.name');
+            $item['roleName'] = '';
+            if ($arList) {
+                $arList = $arList->toArray();
+                $item['roleName'] = implode(",",array_column($arList,'name'));
+            }
+            return $item;
+        });
         return $result;
     }
 
@@ -70,9 +78,11 @@ trait AuthOrganizationTrait
      */
     public function addAuthOrganization($insert)
     {
-        $insert['creator'] = $this->manager['manager_id'] ?? 0;
-        $insert['pid'] = $this->manager['manager_id'] ?? 0;
-        $insert['level'] = ($this->manager['level'] ?? 0) + 1;
+        if ($this->manager['ao_id']) {
+            $ao = $this->getAuthOrganizationFind(['ao_id' => $this->manager['ao_id']]);
+            $insert['creator'] = $this->manager['manager_id'] ?? 0;
+            $insert['level'] = ($ao['level'] ?? 0) + 1;
+        }
         $data = AuthOrganizationModel::create($insert);
         return $data->ao_id;
     }

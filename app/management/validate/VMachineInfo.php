@@ -27,6 +27,7 @@ class VMachineInfo extends VCommon
     protected $scene = [
         "add" => ["m_id", "machine_id"],
         "update" => ["mi_id"],
+        "updateMore" => ["m_id"],
         "del" => ["mi_id"],
     ];
 }

@@ -33,7 +33,7 @@ class AuthManager extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['nickname' => "like"]);
-        $field = "au.manager_id,au.nickname,au.account,au.pid,au.level,au.sex,au.pic,au.status,au.creator, au.create_time,ao.organization_name";
+        $field = "au.manager_id,au.nickname,au.account,au.pid,au.openid,au.bill_account,au.real_name,au.level,au.sex,au.pic,au.status,au.creator,au.ao_id, au.create_time,ao.organization_name";
         $result = $this->app->authManager->getList($where,$pageNum,$field);
         return $result;
     }
@@ -84,8 +84,9 @@ class AuthManager extends Common
     {
         $postData = input();
         $this->app->authManager->startTrans();
-        $flag[] = $this->app->authManager->del($postData['manager_id'],0);
-        $flag[] = $this->app->authManagerRole->updateAuthManagerRole(["is_del" => 1],["manager_id" => $postData['manager_id']]);
+        $flag[] = $this->app->authManager->del(['manager_id' => $postData['manager_id']],0);
+        $flag[] = $this->app->authManagerMachine->del(['manager_id' => $postData['manager_id']],0);
+        $flag[] = $this->app->authManagerRole->del(["manager_id" => $postData['manager_id']],0);
         $result = flag_check($flag);
         return $this->app->authManager->checkTrans($result);
     }

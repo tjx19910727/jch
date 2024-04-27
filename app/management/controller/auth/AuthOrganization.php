@@ -75,7 +75,7 @@ class AuthOrganization  extends Common
         $postData = input();
         $this->app->authOrganization->startTrans();
         $this->app->authManager->updateAuthManager(["ao_id" => 0],["ao_id" => $postData['ao_id']]);
-        $flag[] = $this->app->authOrganization->del($postData['ao_id'],0);
+        $flag[] = $this->app->authOrganization->del(['ao_id' => $postData['ao_id']],0);
         $result = flag_check($flag);
         return $this->app->authOrganization->checkTrans($result);
     }

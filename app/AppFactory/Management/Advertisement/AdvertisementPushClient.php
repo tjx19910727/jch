@@ -165,7 +165,7 @@ class AdvertisementPushClient extends ManagementClient
             $flag = [];
             $adv = $this->getAdvertisementPushList($where);
             foreach ($adv as $key => $value) {
-                if ($value['remain_times'] <= 0) return $this->rFail($this->lang("VAdvertisement.remain_times_empty"));
+//                if ($value['remain_times'] <= 0) return $this->rFail($this->lang("VAdvertisement.remain_times_empty"));
                 if ($value['remain_times'] > 0 && $value['status'] < 3 && $value['start_date'] <= strtotime(date("Y-m-d"))) {
                     if (!$value['end_date'] || ($value['end_date'] > 0 && $value['end_date'] >= strtotime(date("Y-m-d")))) {
                         $config = [

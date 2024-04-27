@@ -10,7 +10,6 @@ namespace app\AppFactory\Kernel\Model\Auth;
 
 
 use app\AppFactory\Kernel\Model\BaseModel;
-use app\AppFactory\Kernel\Model\Machine\MachineConfigModel;
 
 class AuthManagerModel extends BaseModel
 {
@@ -60,10 +59,18 @@ class AuthManagerModel extends BaseModel
             ->order($order);
         if ($pageNum) {
             $data = $data->paginate($pageNum)->each(function ($item) {
+                $item['organization_role_name'] = "";
                 if (isset($item['ao_id'])) {
                     $organization = AuthOrganizationRoleModel::getJoinRoleFind(['ao_id' => $item['ao_id'], 'is_del' => 2], 'ar.name', 'or.or_id desc');
                     if ($organization) $item['organization_role_name'] = $organization['name'];
                 }
+                $roleNames = AuthManagerRoleModel::getJoinRoleList(['mr.manager_id' => $item['manager_id'],'is_del' => 2],0,'ar.name');
+                $item['roleName'] = "";
+                if ($roleNames) {
+                    $roleNames = $roleNames->toArray();
+                    $item['roleName'] = implode(",",array_column($roleNames,'name'));
+                }
+                $item['machineNum'] = AuthManagerMachineModel::getCount(['manager_id' => $item['manager_id']]) ?? 0;
                 return $item;
             });
         } else {

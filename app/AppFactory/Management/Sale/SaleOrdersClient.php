@@ -284,7 +284,7 @@ class SaleOrdersClient extends ManagementClient
         try {
             $field = "so.machine_id,so.machine_name,so.trade_no,sod.batch_number,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
-            (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '盲盒活动' WHEN 5 THEN '满减满送活动' END) order_type,
+            (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '付费抽奖活动' WHEN 5 THEN '满减满送活动' END) order_type,
             sod.deliver_pics,
             (CASE so.pay_type WHEN 0 THEN '免支付' WHEN 1 THEN '微信支付' WHEN 2 THEN '支付宝支付' WHEN 3 THEN '' WHEN 4 THEN '京东收银' ELSE '' END) pay_type,
             (CASE so.pay_method 
@@ -344,7 +344,7 @@ class SaleOrdersClient extends ManagementClient
             $field = "sor.machine_id,sor.machine_name,sor.trade_no,
                 sod.batch_number,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
                 (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
-                (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '盲盒活动' WHEN 5 THEN '满减满送活动' END) order_type,
+                (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '付费抽奖活动' WHEN 5 THEN '满减满送活动' END) order_type,
                 sod.deliver_pics,
                 (CASE so.pay_type WHEN 0 THEN '免支付' WHEN 1 THEN '微信支付' WHEN 2 THEN '支付宝支付' WHEN 3 THEN '' WHEN 4 THEN '京东收银' ELSE '' END) pay_type,
                 (CASE so.pay_method 
@@ -363,7 +363,7 @@ class SaleOrdersClient extends ManagementClient
                 (CASE sor.status WHEN 1 THEN '已提交退款申请' WHEN 2 THEN '退款成功' WHEN 3 THEN '退款失败' END) status,
                 sor.remark
                 ";
-            $list = $this->getSaleOrdersRefundListJoinSoSod($where, $field, "sor_id desc");
+            $list = $this->getSaleOrdersRefundListJoinSoSod($where, 0,$field, "sor_id desc");
             if ($list) {
                 $list = $list->toArray();
                 $title = [
@@ -404,5 +404,59 @@ class SaleOrdersClient extends ManagementClient
             actionException($e,1);
             return $this->rValidate($e->getMessage());
         }
+    }
+
+    public function getTotalReport($where,$field = "*", $order = "")
+    {
+        $data = $this->getSaleOrdersDailyCountFind($where,$field,$order);
+        return $this->rQ($data);
+    }
+
+    public function getReportList($where,$pageNum,$order = "")
+    {
+        $field = "countDate,
+        SUM(totalPrice) totalPrice,
+        SUM(lotteryAmount) lotteryAmount,
+        sum(totalRefundAmount) totalRefundAmount,
+        SUM(totalPrice - totalDiscountPrice - totalRefundAmount) totalSalePrice,
+        SUM(totalQuantity - totalRefundQuantity) totalSaleQuantity,
+        SUM(order_num) order_num,
+        SUM(totalDiscountPrice) totalDiscountPrice,
+        SUM(giftQuantity) giftQuantity";
+        $group = "create_date";
+        return $this->rQ($this->getSaleOrdersDailyCountList($where,$pageNum,$field,$order,$group));
+    }
+
+    public function exportReport($where,$order = "")
+    {
+        $field = "countDate,
+        SUM(totalPrice) totalPrice,
+        SUM(lotteryAmount) lotteryAmount,
+        sum(totalRefundAmount) totalRefundAmount,
+        SUM(totalPrice - totalDiscountPrice - totalRefundAmount) totalSalePrice,
+        SUM(totalQuantity - totalRefundQuantity) totalSaleQuantity,
+        SUM(order_num) order_num,
+        SUM(totalDiscountPrice) totalDiscountPrice,
+        SUM(giftQuantity) giftQuantity";
+        $group = "create_date";
+        $list = $this->getSaleOrdersDailyCountList($where,0,$field,$order,$group);
+        if ($list) {
+            $list = $list->toArray();
+            $title = [
+                "countDate" => "日",
+                "totalPrice" => "设备销售额",
+                "lotteryAmount" => "抽奖销售额",
+                "totalRefundAmount" => "退款金额",
+                "totalSalePrice" => "实际销售金额",
+                "totalSaleQuantity" => "实际销售量",
+                "order_num" => "订单总数",
+                "totalDiscountPrice" => "总优惠额",
+                "giftQuantity" => "赠品数量",
+            ];
+            $filename = "导出销售报表_" . date("Ymd");
+            $result = Excel::exportExcel($list,$title,$filename);
+            return $this->rAction($result);
+        }
+        return $this->rFail();
     }
 }

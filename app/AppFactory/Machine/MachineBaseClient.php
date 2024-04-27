@@ -42,6 +42,7 @@ class MachineBaseClient extends BaseClient
         $controller = request()->controller();
         $action = request()->action();
         $path = "";
+        $this->delMachineMqRecord([['create_time','<',strtotime("-7 days")]]);
         if ($controller) $path = $controller;
         if ($action) $path = "/" . $action;
         if (!$path) $path = ($this->message['msgType'] ?? "");
@@ -55,7 +56,7 @@ class MachineBaseClient extends BaseClient
             "from" => $from,
             "type" => $type,
         ];
-//        $this->addMachineMqRecord($insertMqRecord);
+        $this->addMachineMqRecord($insertMqRecord);
     }
 
     /**

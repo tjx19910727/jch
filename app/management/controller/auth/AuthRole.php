@@ -35,7 +35,7 @@ class AuthRole extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['name' => "like"]);
-        $field = "role_id,name,desc,sort,status,creator,update_id";
+        $field = "role_id,`name`,`desc`,`sort`,`status`,creator,update_id";
         $result = $this->app->authRole->getList($where,$pageNum,$field);
         return $result;
     }

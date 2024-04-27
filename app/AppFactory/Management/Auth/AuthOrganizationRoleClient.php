@@ -26,7 +26,7 @@ class AuthOrganizationRoleClient extends ManagementClient
     public function bind($data)
     {
         $flag = [];
-        $roleId = explode(",", $data['roleList']);
+        $roleId = explode(",", $data['roleList'] ?? "");
 
         $this->startTrans();
         // 查询已存在的关联权限角色ID
@@ -45,11 +45,13 @@ class AuthOrganizationRoleClient extends ManagementClient
             foreach ($add as $value) {
                 $insertOr = $insert;
                 $insertOr['role_id'] = $value;
-                $flag[] = $this->addAuthOrganizationRole($insertOr);
+                if ($value) {
+                    $flag[] = $this->addAuthOrganizationRole($insertOr);
+                }
             }
         }
         if ($del) {
-            $flag[] = $this->updateAuthOrganizationRole(['is_del' => 1],['ao_id' => $data['ao_id'],['role_id','in',$del],'is_del' => 2],['is_del','update_id','update_time']);
+            $flag[] = $this->delAuthOrganizationRole(['ao_id' => $data['ao_id'],['role_id','in',$del]]);
         }
         $result = flag_check($flag);
         return $this->checkTrans($result);

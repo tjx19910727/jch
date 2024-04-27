@@ -14,6 +14,7 @@ class VGoods extends VCommon
     protected $rule = [
         "g_id" => "require",
         "g_name" => "require|max:100",
+        "sku" => "require",
         "pic" => "max:100",
         "manufacturer" => "max:100",
         "service_phone" => "max:100",
@@ -24,6 +25,7 @@ class VGoods extends VCommon
         "g_id.require" => "VGoods.g_id_require",
         "g_name.require" => "VGoods.g_name_require",
         "g_name.max" => "VGoods.g_name_max",
+        "sku.require" => "VGoods.sku_require",
         "pic.max" => "VGoods.pic_max",
         "manufacturer.max" => "VGoods.manufacturer_max",
         "service_phone.max" => "VGoods.service_phone_max",
@@ -31,7 +33,7 @@ class VGoods extends VCommon
     ];
 
     protected $scene = [
-        "add" => ["g_name","pic","manufacturer", "service_phone","release_time"],
+        "add" => ["g_name","sku","pic","manufacturer", "service_phone","release_time"],
         "del" => ['g_id'],
     ];
 

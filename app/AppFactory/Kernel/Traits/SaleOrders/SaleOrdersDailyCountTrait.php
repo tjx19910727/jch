@@ -13,6 +13,11 @@ use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDailyCountView;
 
 trait SaleOrdersDailyCountTrait
 {
+    public function getSaleOrdersDailyCountFind($where,$field = "*",$order = "")
+    {
+        return SaleOrdersDailyCountView::getFind($where,$field,$order);
+    }
+
     public function getSaleOrdersDailyCountList($where,$pageNum = 0, $field = "*", $order = "",$group = "")
     {
         return SaleOrdersDailyCountView::getList($where,$pageNum,$field,$order,'',$group);

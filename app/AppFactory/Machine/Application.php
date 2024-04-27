@@ -18,6 +18,7 @@ use app\AppFactory\Kernel\ServiceContainer;
  * @property Receive\ActivityClient             $activity       营销活动
  * @property Receive\ApiClient                  $api            API接口上报
  * @property Receive\MqClient                   $mq             Mqtt上报
+ * @property Receive\SaleOrdersClient           $saleOrders     订单数据上报
  *
  * @property Send\MqClient                      $sendMq         Mq数据下发
  * @package app\AppFactory\DataUpload

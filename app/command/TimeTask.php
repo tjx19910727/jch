@@ -37,6 +37,8 @@ class TimeTask extends Command
      *      machine：
      *          countOnline                 结算设备昨天在线数据
      *          checkOffline                检查设备最后心跳时间判断在线离线
+     *      machineChannelStock
+     *          countMcStock                统计库存报表
      *      goods：
      * @param Input $input
      * @param Output $output
