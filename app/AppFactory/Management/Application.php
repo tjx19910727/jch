@@ -78,6 +78,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineCheckStockCountClient   $machineCheckStockCount      库存盘点汇总
  * @property Machine\MachineClient                  $machine                设备基础信息
  * @property Machine\MachineConfigClient            $machineConfig          设备配置信息
+ * @property Machine\MachineErrorCodeClient         $machineErrorCode       设备错误码信息
  * @property Machine\MachineGoodsClient             $machineGoods           设备商品信息
  * @property Machine\MachineGroupClient             $machineGroup           设备分组
  * @property Machine\MachineGroupLangClient         $machineGroupLang       设备分组多语言信息

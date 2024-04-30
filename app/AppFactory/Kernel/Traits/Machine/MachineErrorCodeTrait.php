@@ -18,6 +18,11 @@ trait MachineErrorCodeTrait
         return MachineErrorCodeModel::getList($where,$pageNum,$field,$order);
     }
 
+    public function getMachineErrorCodeFind($where,$field = "*", $order = "")
+    {
+        return MachineErrorCodeModel::getFind($where,$field,$order);
+    }
+
     public function addMachineErrorCode($insert)
     {
         $me = MachineErrorCodeModel::create($insert);

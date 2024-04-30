@@ -19,6 +19,7 @@ use app\AppFactory\Management\Machine\MachineCheckStockClient;
 use app\AppFactory\Management\Machine\MachineCheckStockCountClient;
 use app\AppFactory\Management\Machine\MachineClient;
 use app\AppFactory\Management\Machine\MachineConfigClient;
+use app\AppFactory\Management\Machine\MachineErrorCodeClient;
 use app\AppFactory\Management\Machine\MachineGoodsClient;
 use app\AppFactory\Management\Machine\MachineGroupClient;
 use app\AppFactory\Management\Machine\MachineGroupLangClient;
@@ -60,6 +61,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineConfig'] = function ($app) {
             return new MachineConfigClient($app);
+        };
+        $app['machineErrorCode'] = function ($app) {
+            return new MachineErrorCodeClient($app);
         };
         $app['machineGoods'] = function ($app) {
             return new MachineGoodsClient($app);
