@@ -152,4 +152,23 @@ trait MachineTrait
         actionLog($this->getLS(),'【SQL】修改设备音量','DataUpload');
         return $result;
     }
+
+    /**
+     * 整理设备国家、州/省、城市、区域、街道、楼层等位置信息
+     */
+    public function getMachineAddress()
+    {
+        $item = $this->machine;
+        $item['country'] = "";
+        $item['state'] = "";
+        $item['city'] = "";
+        $item['regions'] = "";
+        if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
+        if (isset($item['state_id']) && $item['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $item['state_id']],'code,name,cname');
+        if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
+        if (isset($item['regions_id']) && $item['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $item['regions_id']],'code,name,cname');
+        $address = [$item['country'],$item['state'] , $item['city'], $item['regions'] , ($this->machine['street'] ?? "无街道"), ($this->machine['floor'] ?? "无楼层")];
+        $this->machine = $item;
+        $this->machine['address'] = implode(",",$address);
+    }
 }

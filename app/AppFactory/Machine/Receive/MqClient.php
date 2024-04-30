@@ -20,9 +20,14 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryUsedGoodsTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryUsedTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
+use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
+use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
+use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
+use app\AppFactory\Kernel\Traits\Earth\EarthStatesTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsHitTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Mq\OutGoodsTrait;
@@ -32,10 +37,12 @@ class MqClient extends ReceiveBaseClient
 {
     use SaleOrdersTrait,OutGoodsTrait;
     use MachineInfoTrait,MachineChannelTrait,MachineVersionPlanTrait;
+    use MachineErrorCodeTrait;
     use GoodsTrait,GoodsHitTrait;
     use ActivityCouponTrait,ActivityCouponUsedTrait;
     use ActivityPickTrait,ActivityPickCodeTrait;
     use ActivityLotteryTrait,ActivityLotteryConfigTrait,ActivityLotteryContentTrait,ActivityLotteryUsedTrait,ActivityLotteryUsedGoodsTrait;
+    use EarthCitiesTrait,EarthRegionsTrait,EarthCountriesTrait,EarthStatesTrait;
 
     protected $message;
     protected $order;
@@ -59,7 +66,7 @@ class MqClient extends ReceiveBaseClient
 
     /**
      * 处理设备上报
-     * msgType: outGoods、heartbeat、updateComplete、goodsHit、transactionVideo
+     * msgType: outGoods、heartbeat、updateComplete、goodsHit、transactionVideo、img、channelImg、light、volume、errorCode、
      * @return int
      */
     public function onMessage()
@@ -81,4 +88,5 @@ class MqClient extends ReceiveBaseClient
             return 1;
         }
     }
+
 }

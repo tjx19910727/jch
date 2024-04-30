@@ -33,6 +33,8 @@ class VReport extends SupportValidate
         "value" => "require",
 
         "channel_code" => "require",
+
+        "errorCode" => "require",
     ];
 
     protected $message = [
@@ -56,6 +58,8 @@ class VReport extends SupportValidate
         "value.require" => "数值不能为空",
 
         "channel_code.require" => "货道编号不能为空",
+
+        "errorCode.require" => "错误码不能为空",
     ];
 
     protected $scene = [
@@ -73,6 +77,8 @@ class VReport extends SupportValidate
         "volume" => ["msgType","value"],
 
         "channelImg" => ["msgType","channel_code","path"],
+
+        "errorCode" => ["msgType","errorCode"],
 
     ];
 }

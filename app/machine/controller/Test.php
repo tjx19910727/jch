@@ -34,25 +34,25 @@ class Test extends BaseController
     public function testSign()
     {
         $msg_id = uniqid();
-        $carList[] = [
-            "mc_id" => 334,
-            "quantity" => 1,
-        ];
-        $data = [
-            "machine_id" => "test0003",
-            "msg_id" => $msg_id,
-            "timestamp" => time(),
-//            "manager_id" => 5,
-            "pay_type" => 2,
-            "pay_method" => 23,
-            "carList" => json_encode($carList, 320),
-        ];
-        $data = [
-            "order_id" => 633,
-            "timestamp" => time(),
-            "msg_id" => $msg_id,
-            "machine_id" => "test0003",
-        ];
+//        $carList[] = [
+//            "mc_id" => 334,
+//            "quantity" => 1,
+//        ];
+//        $data = [
+//            "machine_id" => "test0003",
+//            "msg_id" => $msg_id,
+//            "timestamp" => time(),
+////            "manager_id" => 5,
+//            "pay_type" => 2,
+//            "pay_method" => 23,
+//            "carList" => json_encode($carList, 320),
+//        ];
+//        $data = [
+//            "order_id" => 633,
+//            "timestamp" => time(),
+//            "msg_id" => $msg_id,
+//            "machine_id" => "test0003",
+//        ];
 //        $data = [
 //            "machine_id" => "test0001",
 //            "timestamp" => time(),
@@ -149,9 +149,8 @@ class Test extends BaseController
     public function testUpload()
     {
         $content = [
-            "msgType" => "img",
-            "field" => "screen_img",
-            "path" => "/uploads/machine_test0003/20240326/74ba5d16658e34436e54eb34ad78d941.jpg",
+            "msgType" => "errorCode",
+            "errorCode" => "1000001",
         ];
         $content = json_encode($content);
         $msg_id = uniqid();
@@ -171,13 +170,7 @@ class Test extends BaseController
 
     public function testReturn()
     {
-        $data = ' {
-  "timestamp": 1709014577,
-  "msg_id": "65dd7e31b68bd",
-  "machine_id": "test0001",
-  "data": "{\"msgType\":\"img\",\"field\":\"screen_img\",\"path\":\"\\/uploads\\/adv\\/20231208\\/afe42f533761931162fabe9ef506eeb9.jpg\"}",
-  "sign": "d4c2d7c091ee38aff4208634a6b5e8e5"
-}';
+        $data = '{"timestamp":1714449130,"msg_id":"66306aea261de","machine_id":"test0003","data":"{\"msgType\":\"errorCode\",\"errorCode\":\"1000001\"}","sign":"8a15810ef4ee636dfa13c43d12cfa1c9"}';
         $data = json2arr($data);
         dump($data);
         $config = [
