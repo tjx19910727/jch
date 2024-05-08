@@ -17,7 +17,11 @@ function flag_check($flag){
     return $check;
 }
 
-
+/**
+ * @param $data
+ * @param string $text
+ * @return array|\think\response\Json
+ */
 function returnData($data, $text = "")
 {
     $success = "success";
@@ -35,7 +39,7 @@ function returnData($data, $text = "")
 /**
  * 返回验证器数据格式
  * @param $check
- * @return array|string
+ * @return array|\think\response\Json
  */
 function returnValidate($check)
 {
@@ -44,8 +48,8 @@ function returnValidate($check)
 
 /**
  * 返回TryCatch数据格式
- * @param $check
- * @return array|string
+ * @param $msg
+ * @return array|\think\response\Json
  */
 function returnTryCatch($msg)
 {
@@ -58,7 +62,7 @@ function returnTryCatch($msg)
  * @param string $msg
  * @param array $data
  * @param bool $isJson
- * @return array|string
+ * @return array|\think\response\Json
  */
 function returnState($state, $msg = "", $data = [], $isJson = true)
 {

@@ -79,6 +79,7 @@ trait StrategyPayeeTrait
     {
         $payee = $this->getMachinePayeeFind($where,$field,$order);
         if (!$payee) {
+            actionLog($this->getLS(),'查无收款方配置');
             return $this->rFail($this->lang("payee_config_no_data"));
         }
         if (is_string($payee)) return $this->rFail($payee);

@@ -10,6 +10,9 @@ namespace app\AppFactory\Kernel\Model;
 
 
 use app\AppFactory\Kernel\Traits\ModelTrait;
+use think\db\exception\DataNotFoundException;
+use think\db\exception\DbException;
+use think\db\exception\ModelNotFoundException;
 use think\facade\Db;
 use think\Model;
 
@@ -52,37 +55,48 @@ class BaseModel extends Model
 
     /**
      * 查询列表
-     * @param $where
+     * @param string|array $where
      * @param int $pageNum
      * @param string $field
      * @param string $order
      * @param string $eachFn
      * @param string $group
      * @param int $limit
-     * @return BaseModel|BaseModel[]|array|\think\Collection|\think\Paginator
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
+     * @return BaseModel|BaseModel[]|array|string|\think\Collection|\think\Paginator
      */
     public static function getList($where,$pageNum = 0,$field = "*",$order = "",$eachFn = "",$group = "",$limit = 0)
     {
-        $fields = array_column(Db::query("SHOW COLUMNS FROM " . self::getTable()),'Field');
-        if (in_array('creator',$fields) && ($field == "*" || strpos($field,"creator") !== false)) {
-            $field .= ", (SELECT nickname FROM auth_manager au WHERE au.manager_id = a.creator) creator_nickname";
+        try {
+            $fields = array_column(Db::query("SHOW COLUMNS FROM " . self::getTable()), 'Field');
+            if (in_array('creator', $fields) && ($field == "*" || strpos($field, "creator") !== false)) {
+                $field .= ", (SELECT nickname FROM auth_manager au WHERE au.manager_id = a.creator) creator_nickname";
+            }
+            if (in_array('ao_id', $fields) && ($field == "*" || strpos($field, "ao_id") !== false)) {
+                $field .= ", (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name";
+            }
+            if (!is_numeric($pageNum)) throw new \Exception("页面数据条数必须为数字");
+            $model = self::alias("a")->where($where)->field($field)->order($order);
+            if ($group) $model = $model->group($group);
+            if ($limit) $model = $model->limit($limit);
+            if (!$pageNum) return $model->select();
+            $model = $model->paginate($pageNum, false, ["query" => request()->param()]);
+            if (is_callable($eachFn)) {
+                $model = $model->each($eachFn);
+            }
+            return $model;
+        } catch (DataNotFoundException $e) {
+            actionException($e,1);
+            return $e->getMessage();
+        } catch (ModelNotFoundException $e) {
+            actionException($e,1);
+            return $e->getMessage();
+        } catch (DbException $e) {
+            actionException($e,1);
+            return $e->getMessage();
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $e->getMessage();
         }
-        if (in_array('ao_id',$fields) && ($field == "*" || strpos($field,"ao_id") !== false)) {
-            $field .= ", (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name";
-        }
-        if (!is_numeric($pageNum)) throw new \Exception("页面数据条数必须为数字");
-        $model = self::alias("a")->where($where)->field($field)->order($order);
-        if ($group) $model = $model->group($group);
-        if ($limit) $model = $model->limit($limit);
-        if (!$pageNum) return $model->select();
-        $model = $model->paginate($pageNum,false,["query" => request()->param()]);
-        if (is_callable($eachFn)) {
-            $model = $model->each($eachFn);
-        }
-        return $model;
     }
 
     /**

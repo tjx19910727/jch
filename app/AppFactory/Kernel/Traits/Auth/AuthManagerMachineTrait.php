@@ -102,4 +102,13 @@ trait AuthManagerMachineTrait
         return AuthManagerMachineModel::whereDel($where);
     }
 
+    public function getAmmJoinAmList($where,$field = "*", $order = "")
+    {
+        return AuthManagerMachineModel::joinAuthManager($where,$field,$order);
+    }
+
+    public function getAmmJoinMList($where,$field = "*",$order = "")
+    {
+        return AuthManagerMachineModel::joinMachine($where,$field,$order);
+    }
 }

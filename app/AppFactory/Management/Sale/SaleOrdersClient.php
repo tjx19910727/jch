@@ -22,8 +22,6 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
-use app\AppFactory\Kernel\Traits\Send\MobileNoticeTrait;
-use app\AppFactory\Kernel\Traits\Send\WxNoticeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
@@ -40,8 +38,6 @@ class SaleOrdersClient extends ManagementClient
     use StrategyIncomeTrait;
     use StrategyManagerTrait;
     use UserTrait;
-    use WxNoticeTrait;
-    use MobileNoticeTrait;
     use StrategyPayeeTrait;
     use BeforeOrderRefundTrait,AfterOrderRefundTrait;
     use WxPayTrait,AliPayTrait,TlPayTrait,JdCashierTrait;

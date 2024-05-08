@@ -40,6 +40,7 @@ trait MachineErrorCodeTrait
             "address" => $this->machine['address'] ?? "",
             "errorCode" => $this->message['errorCode'],
             "remark" => $this->lang("deviceErrorCode." . $this->message['errorCode']),
+            "msg" => $this->message['msg'] ?? "",
             "ao_id" => $this->machine['ao_id'] ?? 0,
         ];
         $this->addMachineErrorCode($insert);

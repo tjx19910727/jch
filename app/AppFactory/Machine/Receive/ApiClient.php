@@ -513,7 +513,7 @@ class ApiClient extends ReceiveBaseClient
                     $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mg['market_price'], $value['quantity'], 2), 2);
                     $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mg['retail_price'], $value['quantity'], 2), 2);
                     $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $value['quantity']);
-                    $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $updateOrder['retail_price'],2);
+                    $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'],2);
                     $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $value['quantity']);
                 } else {
                     $this->rollbackTrans();

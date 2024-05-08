@@ -13,6 +13,14 @@ use think\facade\Lang;
 
 trait ReturnTrait
 {
+    /**
+     * 自定义返回结果
+     * @param $state
+     * @param string $msg
+     * @param array $data
+     * @param bool $isJson
+     * @return array|\think\response\Json
+     */
     public function r($state,$msg = "",$data = [],$isJson = true)
     {
         return returnState($state,$msg,$data,$isJson);
@@ -21,7 +29,7 @@ trait ReturnTrait
     /**
      * 查询返回结果
      * @param $data
-     * @return array|string
+     * @return array|\think\response\Json
      */
     public function rQ($data)
     {
@@ -31,7 +39,7 @@ trait ReturnTrait
     /**
      * 添加返回结果
      * @param $data
-     * @return array|string
+     * @return array|\think\response\Json
      */
     public function rA($data)
     {
@@ -41,7 +49,7 @@ trait ReturnTrait
     /**
      * 修改返回结果
      * @param $data
-     * @return array|string
+     * @return array|\think\response\Json
      */
     public function rU($data)
     {
@@ -51,7 +59,7 @@ trait ReturnTrait
     /**
      * 删除返回结果
      * @param $data
-     * @return array|string
+     * @return array|\think\response\Json
      */
     public function rD($data)
     {
@@ -61,7 +69,7 @@ trait ReturnTrait
     /**
      * 操作返回结果
      * @param $data
-     * @return array|string
+     * @return array|\think\response\Json
      */
     public function rAction($data)
     {
@@ -71,7 +79,7 @@ trait ReturnTrait
     /**
      * 复制返回结果
      * @param $data
-     * @return array|string
+     * @return array|\think\response\Json
      */
     public function rCopy($data)
     {
@@ -80,7 +88,7 @@ trait ReturnTrait
 
     /**
      * 查无数据
-     * @return array|string
+     * @return array|\think\response\Json
      */
     public function rNoData()
     {
@@ -90,7 +98,7 @@ trait ReturnTrait
     /**
      * 返回失败
      * @param string $msg
-     * @return array|string
+     * @return array|\think\response\Json
      */
     public function rFail($msg = "")
     {
@@ -102,7 +110,7 @@ trait ReturnTrait
     /**
      * 返回成功
      * @param string $msg
-     * @return array|string
+     * @return array|\think\response\Json
      */
     public function rSuccess($msg = "")
     {
@@ -114,7 +122,7 @@ trait ReturnTrait
     /**
      * 返回验证结果
      * @param $check
-     * @return array|string
+     * @return array|\think\response\Json
      */
     public function rValidate($check)
     {

@@ -32,12 +32,17 @@ class AuthManagerModel extends BaseModel
         "withdrawal" => "float",
         "bill_account" => "string",
         "real_name" => "string",
+        "email" => "string",
+        "wx_notice" => "string",
+        "email_notice" => "string",
         "status" => "int",
         "creator" => "int",
         "create_time" => "int",
         "update_id" => "int",
         "update_time" => "int",
     ];
+
+
 
     /**
      * 获取关联组织账号列表

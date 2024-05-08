@@ -130,10 +130,10 @@ class SaleOrders extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->authNodeWhere();
-        if (isset($postData['trade_no'])) $where[] = ['sor.trade_no','like',"%" .$postData['trade_no']. "%"];
-        if (isset($postData['machine_id'])) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
-        if (isset($postData['refund_no'])) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
-        if (isset($postData['pay_type'])) $where['pay_type'] = $postData['pay_type'];
+        if (isset($postData['trade_no']) && $postData['trade_no']) $where[] = ['sor.trade_no','like',"%" .$postData['trade_no']. "%"];
+        if (isset($postData['machine_id']) && $postData['machine_id']) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
+        if (isset($postData['refund_no']) && $postData['refund_no']) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
+        if (isset($postData['pay_type']) && $postData['pay_type']) $where['pay_type'] = $postData['pay_type'];
 //        $where = $this->getWhere($postData,false,['refund_trade_no' => "like",'machine_id' => "like",'trade_no' => "like","refund_no" => "like"]);
         $field = "sor.*,so.pay_type";
         return returnData($this->app->saleOrders->getSaleOrdersRefundListJoinSoSod($where,$pageNum,$field,'sor.sor_id desc'));

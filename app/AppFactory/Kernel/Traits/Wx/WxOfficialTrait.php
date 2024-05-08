@@ -20,6 +20,7 @@ trait WxOfficialTrait
      * @var Application
      */
     protected $wx_app;
+
     public function getWxOfficialValue($where,$value)
     {
         return WxOfficialModel::getFieldValue($where,$value);
@@ -36,51 +37,22 @@ trait WxOfficialTrait
 
     public function addWxOfficial($insert)
     {
+        if (!isset($insert['ao_id'])) $insert['ao_id'] = $this->manager['ao_id'];
+        if (isset($this->manager['manager_id'])) $insert['creator'] = $this->manager['manager_id'];
         $wx = WxOfficialModel::create($insert);
         return $wx->id;
     }
 
     public function updateWxOfficial($update,$where = [], $field = [])
     {
+        if (isset($this->manager['manager_id'])) $update['update_id'] = $this->manager['manager_id'];
         return WxOfficialModel::update($update,$where,$field);
     }
 
-    /**
-     * 处理授权信息
-     * @param $authorizeInfo
-     * @param $manager
-     * @return WxOfficialTrait|array|mixed|null|\think\Model
-     */
-//    public function handleAuthorize($authorizeInfo,$manager)
-//    {
-//        $where['app_id'] = $authorizeInfo['authorizer_appid'];
-//        $wx = $this->getWxOfficialFind($where);
-//        if ($wx) {
-//            $authData['wx_id'] = $wx['wx_id'];
-//            $authData['update_id'] = $manager['manager_id'];
-//            $authData['status'] = 1;
-//            WxOfficialModel::update($authData);
-//        } else {
-//            $wx = $authData;
-//            $wx['creator'] = $manager['manager_id'];
-//            $wx['wx_id'] = $this->addWxOfficial($authData);
-//        }
-//        $func = $this->getWxOfficialFuncFind(['wf_id' => $wx['wx_id']]);
-//        if (!$func) {
-//            // 保存权限集
-//            $funcData = [
-//                'wf_id' => $wx['wx_id'],
-//                'func_info' => json_encode($authorizeInfo['func_info'],JSON_UNESCAPED_UNICODE),
-//            ];
-//            $this->addWxOfficialFunc($funcData);
-//        } else {
-//            $func = $func->toArray();
-//            $func['func_info'] = json_encode($authorizeInfo['func_info'],JSON_UNESCAPED_UNICODE);
-//            $this->updateWxOfficialFunc($func);
-//        }
-//        return $wx;
-//    }
-
+    public function delWxOfficial($where)
+    {
+        return WxOfficialModel::whereDel($where);
+    }
 
     /**
      * 初始化微信公众号
@@ -95,7 +67,12 @@ trait WxOfficialTrait
             $return = $this->rFail("查无微信公众号配置信息");
             return $return;
         }
-        $this->wx_app = Factory::officialAccount($wx);
+        $this->getWxApp($wx);
         return true;
+    }
+
+    public function getWxApp($wx)
+    {
+        $this->wx_app = Factory::officialAccount($wx);
     }
 }

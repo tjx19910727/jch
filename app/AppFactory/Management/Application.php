@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Providers\Management\AuthProvider;
 use app\AppFactory\Kernel\Providers\Management\CommonProvider;
 use app\AppFactory\Kernel\Providers\Management\ConfigProvider;
 use app\AppFactory\Kernel\Providers\Management\EarthProvider;
+use app\AppFactory\Kernel\Providers\Management\EmailProvider;
 use app\AppFactory\Kernel\Providers\Management\GoodsProvider;
 use app\AppFactory\Kernel\Providers\Management\IndexProvider;
 use app\AppFactory\Kernel\Providers\Management\LoginProvider;
@@ -24,6 +25,7 @@ use app\AppFactory\Kernel\Providers\Management\SaleOrdersProvider;
 use app\AppFactory\Kernel\Providers\Management\StrategyProvider;
 use app\AppFactory\Kernel\Providers\Management\TemplateProvider;
 use app\AppFactory\Kernel\Providers\Management\UpdateLogProvider;
+use app\AppFactory\Kernel\Providers\Management\WxProvider;
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
 
@@ -62,6 +64,9 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  *
  * @property Earth\EarthClient                      $earth                  全球地区信息与时区
  *
+ * @property Email\EmailConfigClient                $emailConfig            邮箱配置
+ * @property Email\EmailTemplateClient              $emailTemplate          邮件模板配置
+ * @property Email\EmailTemplateLogClient           $emailTemplateLog       邮件模板通知日志
  *
  * @property Goods\GoodsClient                      $goods                  商品信息
  * @property Goods\GoodsLangClient                  $goodsLang              商品多语言信息
@@ -109,6 +114,10 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  *
  * @property UpdateLog\UpdateLogClient              $updateLog              更新日志
  *
+ * @property Wx\WxOfficialClient                    $wxOfficial             微信公众号
+ * @property Wx\WxTemplateClient                    $wxTemplate             微信公众号消息模板
+ * @property Wx\WxTemplateLogClient                 $wxTemplateLog          微信公众号消息模板通知日志
+ *
  *
  * @package app\AppFactory\Management
  */
@@ -124,6 +133,7 @@ class Application extends ServiceContainer
         CommonProvider::class,
         ConfigProvider::class,
         EarthProvider::class,
+        EmailProvider::class,
         LoginProvider::class,
         MachineProvider::class,
         GoodsProvider::class,
@@ -132,6 +142,7 @@ class Application extends ServiceContainer
         StrategyProvider::class,
         TemplateProvider::class,
         UpdateLogProvider::class,
+        WxProvider::class,
     ];
 
 }

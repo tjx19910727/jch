@@ -29,4 +29,10 @@ class Ali
             die();
         }
     }
+
+    public function userNotify()
+    {
+        $postData = input();
+        actionLog($postData);
+    }
 }

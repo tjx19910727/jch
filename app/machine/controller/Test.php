@@ -30,29 +30,89 @@ class Test extends BaseController
     use CurlTrait;
     protected $order;
 
+    public function testSendEmail()
+    {
+        $config = [
+            "ao_id" => 3,
+            "templateType" => "online",
+            "replaceData" => [
+                "online" => "在线",
+                ""
+            ],
+        ];
+        try {
+            $app = AppFactory::notice($config);
+            $app->send();
+        } catch (\Exception $e) {
+            dump($e->getMessage());
+        }
+//        $result = $app->weChat->send();
+//        dump($result);
+        dump(12312);
+    }
+
+    public function testTemplate()
+    {
+        $data = [
+            "设备编号" => [
+                "value" => '{{$machineCode}}',
+                "field" => 'thing01',
+            ],
+            "销售金额" => [
+                "value" => '{{$money}}',
+                "field" => 'amount03',
+            ],
+            "设备地址" => [
+                "value" => '{{$address}}',
+                "field" => 'character_string',
+            ],
+            "商品名称" => [
+                "value" => '{{$goods_name}}',
+                "field" => 'thing',
+            ],
+        ];
+
+        $str =json_encode($data,320);
+        dump($str);
+        $machine_code = "test0003";
+        $address = "abc";
+        $amount = "0.05";
+        $goods_name = "测试商品";
+        $str = str_replace('{{$machineCode}}',$machine_code,$str);
+        $str = str_replace('{{$address}}',$address,$str);
+        $str = str_replace('{{$money}}',$amount,$str);
+        $str = str_replace('{{$goods_name}}',$goods_name,$str);
+        $str = str_replace('{{$channelCode}}',$goods_name,$str);
+        dump($str);
+        dump(json2arr($str));
+    }
 
     public function testSign()
     {
         $msg_id = uniqid();
-//        $carList[] = [
-//            "mc_id" => 334,
-//            "quantity" => 1,
-//        ];
-//        $data = [
-//            "machine_id" => "test0003",
-//            "msg_id" => $msg_id,
-//            "timestamp" => time(),
-////            "manager_id" => 5,
-//            "pay_type" => 2,
-//            "pay_method" => 23,
-//            "carList" => json_encode($carList, 320),
-//        ];
-//        $data = [
-//            "order_id" => 633,
-//            "timestamp" => time(),
-//            "msg_id" => $msg_id,
-//            "machine_id" => "test0003",
-//        ];
+        $carList[] = [
+            "mc_id" => 339,
+            "quantity" => 1,
+        ];
+        $carList[] = [
+            "mc_id" => 360,
+            "quantity" => 1,
+        ];
+        $data = [
+            "machine_id" => "test0002",
+            "msg_id" => $msg_id,
+            "timestamp" => time(),
+//            "manager_id" => 5,
+            "pay_type" => 4,
+            "pay_method" => 41,
+            "carList" => json_encode($carList, 320),
+        ];
+        $data = [
+            "order_id" => 654,
+            "timestamp" => time(),
+            "msg_id" => $msg_id,
+            "machine_id" => "test0003",
+        ];
 //        $data = [
 //            "machine_id" => "test0001",
 //            "timestamp" => time(),

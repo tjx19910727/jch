@@ -46,7 +46,7 @@ trait WxNoticeTrait
             ],
         ];
         $this->initNoticeApp();
-        $sendResult = @$this->nApp->wxTemplate->send($data);
+        $sendResult = @$this->nApp->weChat->send($data);
         actionLog($sendResult,'发送通知结果');
     }
 
@@ -70,7 +70,7 @@ trait WxNoticeTrait
             ],
         ];
         $this->initNoticeApp();
-        $sendResult = @$this->nApp->wxTemplate->send($data);
+        $sendResult = @$this->nApp->wx->send($data);
         actionLog($sendResult,'发送售卖通知结果');
     }
 

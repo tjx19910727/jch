@@ -72,10 +72,11 @@ class AuthRole extends Common
     {
         $postData = input();
         $this->app->authRole->startTrans();
-        $flag[] = $this->app->authRole->del($postData['role_id'],0);
-        $flag[] = $this->app->authRoleNode->updateAuthRoleNode(['is_del' => 1],['role_id' => $postData['role_id']]);
-        $flag[] = $this->app->authManagerRole->updateAuthManagerRole(['is_del' => 1],['role_id' => $postData['role_id']]);
-        $result = flag_check($flag);
+        $result = $this->app->authRole->del($postData,0);
+        if ($result) {
+            $this->app->authRoleNode->updateAuthRoleNode(['is_del' => 1], ['role_id' => $postData['role_id']]);
+            $this->app->authManagerRole->delAuthManagerRole(['role_id' => $postData['role_id']]);
+        }
         return $this->app->authRole->checkTrans($result);
     }
 }

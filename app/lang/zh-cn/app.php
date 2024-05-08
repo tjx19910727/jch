@@ -78,4 +78,13 @@ return [
         "1097243" => "取货门光检错误 - 返回指令 - 解析",
     ],
 
+    "VNotice" => [
+        "ao_id_require" => "组织架构ID不能为空",
+        "sendType_require" => "发送类型不能为空",
+        "sendType_in" => "发送类型不在范围内",
+        "templateType_require" => "消息类型不能为空",
+        "config_require" => "查无配置信息",
+        "template_require" => "查无消息模板信息",
+        "receiver_require" => "查无收件人信息",
+    ],
 ];

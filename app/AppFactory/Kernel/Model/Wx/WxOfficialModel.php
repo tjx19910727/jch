@@ -26,6 +26,7 @@ class WxOfficialModel extends BaseModel
         "aes_key" => "string",
         "wx_txt" => "string",
         "status" => "int",
+        "ao_id" => "int",
         "creator" => "int",
         "create_time" => "int",
         "update_id" => "int",

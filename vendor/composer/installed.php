@@ -1,11 +1,11 @@
 <?php return array(
     'root' => array(
-        'pretty_version' => 'dev-master',
-        'version' => 'dev-master',
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'reference' => '13fb77c3388e91410590c8e2623dfc97f519cd0f',
+        'reference' => '556c7f6839242705332f4973b2c5e59fa69b1eec',
         'name' => 'topthink/think',
         'dev' => true,
     ),
@@ -188,6 +188,15 @@
             'install_path' => __DIR__ . '/../php-amqplib/php-amqplib',
             'aliases' => array(),
             'reference' => 'fb84e99589de0904a25861451b0552f806284ee5',
+            'dev_requirement' => false,
+        ),
+        'phpmailer/phpmailer' => array(
+            'pretty_version' => 'v6.9.1',
+            'version' => '6.9.1.0',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../phpmailer/phpmailer',
+            'aliases' => array(),
+            'reference' => '039de174cd9c17a8389754d3b877a2ed22743e18',
             'dev_requirement' => false,
         ),
         'phpseclib/phpseclib' => array(
@@ -581,12 +590,12 @@
             'dev_requirement' => false,
         ),
         'topthink/think' => array(
-            'pretty_version' => 'dev-master',
-            'version' => 'dev-master',
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
-            'reference' => '13fb77c3388e91410590c8e2623dfc97f519cd0f',
+            'reference' => '556c7f6839242705332f4973b2c5e59fa69b1eec',
             'dev_requirement' => false,
         ),
         'topthink/think-captcha' => array(

@@ -10,6 +10,8 @@ return  [
     "init_payment_success" => "发起支付成功",
     "init_payment_fail" => "发起支付失败",
 
+    "request_params_require" => "请求参数不能为空",
+
     "cancel_payment_success" => "撤销支付成功",
     "cancel_payment_fail" => "撤销支付失败",
 

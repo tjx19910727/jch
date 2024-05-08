@@ -15,6 +15,35 @@ use Jd\Jd;
 class Test
 {
 
+    public function testCurl()
+    {
+        $url = "https://wurenxinlingshou.com/screen/machine/index";
+        dump($url);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_FAILONERROR, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        $postMultipart = false;
+
+        if (!$postMultipart) {
+            $headers = array('content-type: application/x-www-form-urlencoded;charset=UTF-8');
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        }
+
+        $reponse = curl_exec($ch);
+        dump($reponse);
+        if (curl_errno($ch)) {
+            throw new \Exception(curl_error($ch), 0);
+        } else {
+            $httpStatusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            if (200 !== $httpStatusCode) {
+                throw new \Exception($reponse, $httpStatusCode);
+            }
+        }
+        curl_close($ch);
+    }
+
     public function pay()
     {
         $strategyPayee = StrategyPayeeModel::getFind(['sp_id' => 1]);

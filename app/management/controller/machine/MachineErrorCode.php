@@ -21,15 +21,15 @@ class MachineErrorCode extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
         return $this->app->machineErrorCode->getList($where,$pageNum,$this->field,'create_time desc');
     }
 
     public function getFind()
     {
         $postData = input();
-        $where = $this->getWhere($postData, false, []);
-        return $this->app->machineErrorCode->getFind($where,$this->field);
+        $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
+        return $this->app->machineErrorCode->getFind($where,$this->field,'create_time desc');
     }
 
     public function update()

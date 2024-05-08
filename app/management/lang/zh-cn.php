@@ -21,6 +21,7 @@ return [
 
         "account_not_exist" => "登录的账号不存在!",
         "account_pwd_incorrect" => "账号或密码错误，请重新输入",
+        "pwd_incorrect" => "密码错误，请重新输入",
         "account_disabled" => "该账号已被禁用",
         "login_success" => "登录成功，正在跳转",
 
@@ -402,5 +403,40 @@ return [
         "remark_max" => "备注信息超过限制",
 
         "su_no_data" => "查无未取数据",
+    ],
+
+    "VWxOfficial" => [
+        "official_no_data" => "查无配置信息",
+        "id_require" => "配置ID不能为空",
+        "gh_id_require" => "公众号原始ID不能为空",
+        "wx_name_require" => "公众号名称不能为空",
+        "app_id_require" => "APPID不能为空",
+        "secret_require" => "密钥不能为空",
+        "token_require" => "TOKEN不能为空",
+        "aes_key_require" => "加密密钥不能为空",
+        "wx_txt_require" => "域名设置文件不能为空",
+    ],
+
+    "VWxTemplate" => [
+        "wt_id_require" => "ID不能为空",
+        "wx_id_require" => "公众号配置ID不能为空",
+        "template_id_require" => "公众号消息模板ID不能为空",
+        "body_require" => "消息模板主体信息不能为空",
+    ],
+
+    "VEmailConfig" => [
+        "ec_id_require" => "配置ID不能为空",
+        "host_require" => "邮件服务器不能为空",
+        "username_require" => "发件方账号不能为空",
+        "authCode_require" => "授权码不能为空",
+        "sendEmail_require" => "发送方邮箱地址不能为空",
+    ],
+
+    "VEmailTemplate" => [
+        "et_id_require"   => "消息模板ID不能为空",
+        "subject_require" => "标题不能为空",
+        "body_require"    => "正文信息不能为空",
+        "attachment_max"    => "附件信息超过限制长度",
+        "et_type_require" => "模板类型不能为空",
     ],
 ];

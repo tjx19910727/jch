@@ -43,16 +43,14 @@ trait AfterOrderPaymentTrait
         }
         $this->order['pay_status'] = 3;
         $this->order['pay_time'] = time();
+        if ($this->order['order_type'] != 4) {
+            $this->outGoods();
+        }
         actionLog($this->order,'订单数据');
         $flag[] = $this->updateSaleOrders($this->order);
         actionLog($this->getLS(),'订单修改数据');
         $result = flag_check($flag);
-        if ($result) {
-            if ($this->order['order_type'] != 4) {
-                $this->outGoods();
-            }
-        }
-        $this->sendTemp();
+//        $this->sendTemp();
         return $result;
     }
 
@@ -113,6 +111,7 @@ trait AfterOrderPaymentTrait
             ];
             $this->addMachineMqRecord($insertMqRecord);
             actionLog($this->getLS(),'生成发送记录');
+            $this->order['out_status'] = 2;
         }
     }
 

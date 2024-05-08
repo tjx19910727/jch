@@ -29,9 +29,9 @@ trait MachineGoodsTrait
         return MachineGoodsModel::getFind($where,$field,$order);
     }
 
-    public function getMachineGoodsList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "")
+    public function getMachineGoodsList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = '')
     {
-        return MachineGoodsModel::getList($where,$pageNum,$field,$order,$eachFun);
+        return MachineGoodsModel::getList($where,$pageNum,$field,$order,$eachFun,$group);
     }
 
     public function addMachineGoods($insert)

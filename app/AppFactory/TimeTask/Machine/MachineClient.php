@@ -9,6 +9,7 @@
 namespace app\AppFactory\TimeTask\Machine;
 
 
+use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
@@ -91,6 +92,22 @@ class MachineClient extends TimeTaskBase
                     $flag[] = $this->updateMachineOnlineDetails($update);
                 }
                 $flag[] = $this->updateMachine(['m_id' => $value['m_id'],'online' => 2]);
+
+                /** 发送离线通知 开始 **/
+                try {
+                    $machine = $this->getMachineFind(['m_id' => $value['m_id']], 'm_id,machine_id,machine_name,last_online_time,ao_id')->getData();
+                    $machine['online'] = "离线";
+                    $config = [
+                        "ao_id" => $machine['ao_id'],
+                        "templateType" => "online",
+                        "replaceData" => $machine,
+                    ];
+                    $app = AppFactory::notice($config);
+                    @$app->send();
+                } catch (\Exception $e) {
+                    actionException($e,1);
+                }
+                /** 发送离线通知 结束 **/
             }
 //            actionLog($flag,'检查掉线的在线记录','checkClose');
         }

@@ -27,7 +27,6 @@ class SignUtil
         }
         $signArr[] = "key=" . $key;
         $signStr = implode("&",$signArr);
-        actionLog($signStr,'加签字符串');
         return strtolower(md5($signStr));
     }
 

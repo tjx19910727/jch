@@ -84,10 +84,11 @@ class AuthManager extends Common
     {
         $postData = input();
         $this->app->authManager->startTrans();
-        $flag[] = $this->app->authManager->del(['manager_id' => $postData['manager_id']],0);
-        $flag[] = $this->app->authManagerMachine->del(['manager_id' => $postData['manager_id']],0);
-        $flag[] = $this->app->authManagerRole->del(["manager_id" => $postData['manager_id']],0);
-        $result = flag_check($flag);
+        $result = $this->app->authManager->del(['manager_id' => $postData['manager_id']],0);
+        if ($result) {
+            $this->app->authManagerMachine->delAuthManagerMachine(['manager_id' => $postData['manager_id']]);
+            $this->app->authManagerRole->delAuthManagerRole(["manager_id" => $postData['manager_id']]);
+        }
         return $this->app->authManager->checkTrans($result);
     }
 
