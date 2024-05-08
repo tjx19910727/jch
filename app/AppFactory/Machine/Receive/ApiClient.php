@@ -37,6 +37,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineHelpTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
@@ -71,6 +72,7 @@ class ApiClient extends ReceiveBaseClient
         MachineVersionPlanTrait,
         MachineGoodsTrait,
         MachineHelpTrait,
+        MachineOnOffTrait,
         TemplateViewTrait,
 
         EarthCountriesTrait,EarthStatesTrait,EarthCitiesTrait,EarthRegionsTrait,
@@ -299,7 +301,18 @@ class ApiClient extends ReceiveBaseClient
 //        discount_pic,stock_warning,expire_notice";
         $configField = "*";
         $data = $this->getMachineConfigFind($where, $configField);
-        actionLog($this->getLS());
+        return $this->rQ($data);
+    }
+
+    /**
+     * 设备营业配置
+     * @return array|\think\response\Json
+     */
+    public function machineOnOff()
+    {
+        $where['m_id'] = $this->machine['m_id'];
+        $onOffField = "moo_id,on_off_ckc,on_off_machine";
+        $data = $this->getMachineOnOffFind($where,$onOffField);
         return $this->rQ($data);
     }
 
@@ -347,6 +360,7 @@ class ApiClient extends ReceiveBaseClient
     protected $goodsField = "g.g_id,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
             g.length,g.width,g.height,g.group_quantity,g.status,g.ao_id,g.update_time,g.desc,
             mg.mg_id,mg.cost_price,mg.market_price,mg.retail_price,mg.available_stock,mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf";
+    
     /**
      * 获取设备归属组织所有上级商品
      * @return array|string

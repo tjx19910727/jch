@@ -19,7 +19,7 @@ class Excel
      * @param array $other
      * @return array|string
      */
-    public static function importExcel($filePath, $list=[],$other = [])
+    public static function importExcel($filePath, $list=[],$other = [],$startRow = 2)
     {
         try {
             $data = [];
@@ -40,7 +40,7 @@ class Excel
                 $imgList = self::getImg($sheet,$imageFilePath);
 
                 //接下来就是写数据到表格里面去
-                for ($i = 2; $i <= $highestRow; $i++) {
+                for ($i = $startRow; $i <= $highestRow; $i++) {
                     $row = [];
                     foreach ($list as $key => $value) {
                         if (!isset($imgList[$header_arr[$key] . $i])) {

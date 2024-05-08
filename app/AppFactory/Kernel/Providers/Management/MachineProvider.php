@@ -28,6 +28,7 @@ use app\AppFactory\Management\Machine\MachineHelpClient;
 use app\AppFactory\Management\Machine\MachineInfoClient;
 use app\AppFactory\Management\Machine\MachineOnlineClient;
 use app\AppFactory\Management\Machine\MachineOnlineDetailsClient;
+use app\AppFactory\Management\Machine\MachineOnOffClient;
 use app\AppFactory\Management\Machine\MachineSaleClient;
 use app\AppFactory\Management\Machine\MachineVersionClient;
 use app\AppFactory\Management\Machine\MachineVersionPlanClient;
@@ -91,6 +92,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineOnlineDetails'] = function ($app) {
             return new MachineOnlineDetailsClient($app);
+        };
+        $app['machineOnOff'] = function ($app) {
+            return new MachineOnOffClient($app);
         };
         $app['machineVersion'] = function ($app) {
             return new MachineVersionClient($app);

@@ -10,12 +10,13 @@ namespace app\management\controller\machine;
 
 
 use app\management\controller\Common;
+use app\management\validate\Machine\VMachineHelp;
 
 class MachineHelp extends Common
 {
 
     protected $field = "*";
-    protected $validatePath = 'app\management\validate\VMachineHelp.';
+    protected $validatePath = VMachineHelp::class;
 
     public function getList()
     {
@@ -41,7 +42,7 @@ class MachineHelp extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'add');
+            $this->validate($postData, $this->validatePath . '.add');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -52,7 +53,7 @@ class MachineHelp extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'updateMore');
+            $this->validate($postData, $this->validatePath . '.updateMore');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -63,7 +64,7 @@ class MachineHelp extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'del');
+            $this->validate($postData, $this->validatePath . '.del');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }

@@ -10,12 +10,13 @@ namespace app\management\controller\Machine;
 
 
 use app\management\controller\Common;
+use app\management\validate\Machine\VMachineGroupLang;
 
 class MachineGroupLang extends Common
 {
 
     protected $field = "mgl_id,mg_id,mg_name,desc,lang";
-    protected $validatePath = 'app\management\validate\VMachineGroupLang.';
+    protected $validatePath = VMachineGroupLang::class;
 
     /**
      * 获取设备分组多语言列表
@@ -48,7 +49,7 @@ class MachineGroupLang extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'add');
+            $this->validate($postData, $this->validatePath . '.add');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -63,7 +64,7 @@ class MachineGroupLang extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'update');
+            $this->validate($postData, $this->validatePath . '.update');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }

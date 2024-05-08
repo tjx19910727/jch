@@ -6,8 +6,10 @@
  * Time: 19:19
  */
 
-namespace app\management\validate;
+namespace app\management\validate\Machine;
 
+
+use app\management\validate\VCommon;
 
 class VMachineGoods extends VCommon
 {

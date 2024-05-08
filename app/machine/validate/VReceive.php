@@ -104,6 +104,7 @@ class VReceive extends VCommon
         "getMachineGoods" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineInfo" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineConfig" => ["msg_id","machine_id","timestamp","sign"],
+        "getMachineOnOff" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineHelp" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineView" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineVersionPlan" => ["msg_id","machine_id","timestamp","sign"],

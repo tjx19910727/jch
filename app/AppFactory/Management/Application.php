@@ -93,6 +93,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineViewClient              $machineView            设备视图
  * @property Machine\MachineOnlineClient            $machineOnline          设备每天在线时长统计
  * @property Machine\MachineOnlineDetailsClient     $machineOnlineDetails   设备在线时长详情
+ * @property Machine\MachineOnOffClient             $machineOnOff           设备营业配置
  * @property Machine\MachineVersionClient           $machineVersion         设备软件版本
  * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
  * @property Machine\MachineSaleClient              $machineSale            设备销售数据

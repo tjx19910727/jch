@@ -6,8 +6,10 @@
  * Time: 11:54
  */
 
-namespace app\management\validate;
+namespace app\management\validate\Machine;
 
+
+use app\management\validate\VCommon;
 
 class VMachineVersionPlan extends VCommon
 {

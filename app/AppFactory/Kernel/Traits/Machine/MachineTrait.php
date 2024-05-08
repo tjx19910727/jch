@@ -116,7 +116,7 @@ trait MachineTrait
      */
     public function delMachine($where)
     {
-        $result = MachineModel::whereDel($where);
+        $result = MachineModel::destroy($where);
         return $result;
     }
 

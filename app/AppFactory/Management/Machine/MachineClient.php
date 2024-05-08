@@ -53,8 +53,6 @@ class MachineClient extends ManagementClient
         $m = $this->addMachine($postData);
         if ($m) {
             $machine = $this->getMachineFind(['m_id' => $m]);
-            $this->addMachineConfig(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
-            $this->addMachineInfo(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
             if ($machine_group_id) {
                 foreach ($machine_group_id as $mk => $mv) {
                     $mg = $this->getMachineGroupFind(['mg_id' => $mv], 'mg_id,mg_name');
@@ -83,6 +81,12 @@ class MachineClient extends ManagementClient
         $this->startTrans();
         $result = $this->updateMachine($postData);
         if ($result) {
+            $m = $this->getMachineFind(['m_id' => $postData['m_id']],"m_id,machine_id,machine_name");
+            if (!$m) {
+                return $this->r(100,$this->lang("VMachine.machine_no_data"));
+            }
+            $m = $m->toArray();
+            $this->sendToMachine($m);
             if ($machine_group_id && is_int($machine_group_id)) $machine_group_id = [$machine_group_id];
             $oldMgId = $this->getMachineGroupMgColumn(['m_id' => $m['m_id']], "mg_id");
             $addList = array_diff($machine_group_id, $oldMgId);
@@ -116,7 +120,13 @@ class MachineClient extends ManagementClient
             } catch (\Exception $e) {
                 return $this->rValidate($e->getMessage());
             }
+            $m = $this->getMachineFind(['m_id' => $value['m_id']],"m_id,machine_id,machine_name");
+            if (!$m) {
+                return $this->r(100,$this->lang("VMachine.machine_no_data"));
+            }
             $this->updateMachine($value);
+            $m = $m->toArray();
+            $this->sendToMachine($m);
         }
         return $this->rAction(1);
     }
@@ -134,24 +144,8 @@ class MachineClient extends ManagementClient
 
     public function delM($m_id)
     {
-        $where[] = ['m_id',"in",$m_id];
-        $this->delMachineChannel($where);
-        $this->delMachineChannelReplenishment($where);
-        $this->delMachineCheckStock($where);
-        $this->delMachineConfig($where);
-        $this->delMachineGoods($where);
-        $this->delMachineGroupMg($where);
-        $this->delMachineHelp($where);
-        $this->delMachineInfo($where);
-        $this->delMachineMqRecord($where);
-        $this->delMachineOnline($where);
-        $this->delMachineOnlineDetails($where);
-        $this->delMachineVersion($where);
-        $this->delMachineVersionPlan($where);
-        $this->delMachineView($where);
-        $this->delAuthManagerMachine($where);
-        $this->delMachine($where);
-        return $this->rSuccess();
+        $where['m_id'] = ["in",$m_id];
+        return $this->rAction($this->delMachine($where));
     }
 
     public function getMFind($where,$field = "")

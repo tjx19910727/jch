@@ -6,8 +6,10 @@
  * Time: 9:51
  */
 
-namespace app\management\validate;
+namespace app\management\validate\Machine;
 
+
+use app\management\validate\VCommon;
 
 class VMachineGroupMg extends VCommon
 {

@@ -117,6 +117,15 @@ class Receive extends Common
     }
 
     /**
+     * 获取设备营业配置信息
+     * @return array|\think\response\Json
+     */
+    public function getMachineOnOff()
+    {
+        return $this->app->api->machineOnOff();
+    }
+
+    /**
      * 获取设备配置信息
      * @return array|string
      */

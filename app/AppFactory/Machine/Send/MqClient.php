@@ -175,4 +175,16 @@ class MqClient extends SendBaseClient
         ];
         return $this->dataSendRabbitMQ($data);
     }
+
+    /**
+     * 触发设备营业配置更新
+     * @return array|string
+     */
+    public function triggerUpdateMachineOnOff()
+    {
+        $data = [
+            "msgType" => "updateMachineOnOff",
+        ];
+        return $this->dataSendRabbitMQ($data);
+    }
 }

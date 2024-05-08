@@ -10,12 +10,13 @@ namespace app\management\controller\machine;
 
 
 use app\management\controller\Common;
+use app\management\validate\Machine\VMachineGroup;
 
 class MachineGroup extends Common
 {
 
     protected $field = "mg_id,mg_name,`desc`,`sort`,status,create_time";
-    protected $validatePath = 'app\management\validate\VMachineGroup.';
+    protected $validatePath = VMachineGroup::class;
 
     public function getList()
     {
@@ -37,7 +38,7 @@ class MachineGroup extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'add');
+            $this->validate($postData, $this->validatePath . '.add');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -48,7 +49,7 @@ class MachineGroup extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'update');
+            $this->validate($postData, $this->validatePath . '.update');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -59,7 +60,7 @@ class MachineGroup extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'del');
+            $this->validate($postData, $this->validatePath . '.del');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }

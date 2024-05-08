@@ -10,12 +10,13 @@ namespace app\management\controller\machine;
 
 
 use app\management\controller\Common;
+use app\management\validate\Machine\VMachineConfig;
 
 class MachineConfig extends Common
 {
 
     protected $field = "*";
-    protected $validatePath = 'app\management\validate\VMachineConfig.';
+    protected $validatePath = VMachineConfig::class;
 
     public function getList()
     {
@@ -36,7 +37,7 @@ class MachineConfig extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'add');
+            $this->validate($postData, $this->validatePath . '.add');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -47,7 +48,7 @@ class MachineConfig extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'update');
+            $this->validate($postData, $this->validatePath . '.update');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -64,7 +65,7 @@ class MachineConfig extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'del');
+            $this->validate($postData, $this->validatePath . '.del');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
