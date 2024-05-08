@@ -41,6 +41,14 @@ class GoodsClient extends ManagementClient
         return $this->rA($g_id);
     }
 
+    public function updateG($postData)
+    {
+        $result = $this->updateGoods($postData);
+        if ($result) {
+
+        }
+    }
+
     public function getPageList($where,$pageNum = 0,$field = "*",$order = "")
     {
         $data = $this->getGoodsList($where,$pageNum,$field,$order);

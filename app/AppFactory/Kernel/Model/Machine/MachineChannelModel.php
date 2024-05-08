@@ -9,7 +9,9 @@
 namespace app\AppFactory\Kernel\Model\Machine;
 
 
+use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\BaseModel;
+use think\Model;
 
 class MachineChannelModel extends BaseModel
 {
@@ -27,5 +29,65 @@ class MachineChannelModel extends BaseModel
             ->group($group)
             ->select();
         return $data;
+    }
+
+    /**
+     * 新增后通知下发设备终端更新
+     * @param Model $model
+     */
+    protected static function onAfterInsert(Model $model)
+    {
+        $config = [
+            "machine_id" => $model['machine_id'],
+            "key" => env("api.md5Key"),
+        ];
+        $app = AppFactory::machine($config);
+        @$app->sendMq->triggerUpdateMc($model['mc_id']);
+    }
+
+    /**
+     * 删除后通知下发设备终端更新
+     * @param Model $model
+     */
+    protected static function onAfterDelete(Model $model)
+    {
+        $where = $model->getWhere();
+        if (!$where) $where['mc_id'] = $model['mc_id'];
+        if ($where) {
+            $mc = self::getList($where, 0, 'mg_id,machine_id');
+            if ($mc) {
+                $config = [
+                    "machine_id" => $mc[0]['machine_id'],
+                    "key" => env("api.md5Key"),
+                ];
+                $app = AppFactory::machine($config);
+                foreach ($mc as $k => $v) {
+                    @$app->sendMq->triggerUpdateMc($v['mc_id']);
+                }
+            }
+        }
+    }
+
+    /**
+     * 修改后通知下发设备终端更新
+     * @param Model $model
+     */
+    protected static function onAfterUpdate(Model $model)
+    {
+        $where = $model->getWhere();
+        if (!$where) $where['mc_id'] = $model['mc_id'];
+        if ($where) {
+            $mc = self::getList($where, 0, 'mg_id,machine_id');
+            if ($mc) {
+                $config = [
+                    "machine_id" => $mc[0]['machine_id'],
+                    "key" => env("api.md5Key"),
+                ];
+                $app = AppFactory::machine($config);
+                foreach ($mc as $k => $v) {
+                    @$app->sendMq->triggerUpdateMc($v['mc_id']);
+                }
+            }
+        }
     }
 }

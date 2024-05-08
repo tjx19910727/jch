@@ -84,8 +84,7 @@ class AdvertisementPushClient extends ManagementClient
         $result = flag_check($flag);
         if ($result) {
             $this->commitTrans();
-            // 触发推送广告下发数据
-            return $this->triggerUpdate([['adv_id','in',$flag]]);
+            return $this->rSuccess();
         }
         $this->rollbackTrans();
         return $this->rFail();
@@ -106,7 +105,7 @@ class AdvertisementPushClient extends ManagementClient
         $result = $this->updateAdvertisementPush($data, [], ["duration_time", "total_times", "start_date", "end_date", "start_time", "end_time", "screen", "screen_full"]);
         if ($result) {
             // 触发下发终端广告更新
-            return $this->triggerUpdate(['adv_id' => $data['adv_id']]);
+            return $this->rSuccess();
         }
         return $this->rFail();
     }
@@ -146,7 +145,6 @@ class AdvertisementPushClient extends ManagementClient
             $result = $this->checkFlag($flag);
             if ($result) {
                 $this->commitTrans();
-                $this->triggerUpdate([['adv_id','in',$advIds]]);
                 return $this->r(200,$this->lang("action_success"),$flag);
             }
             $this->rollbackTrans();

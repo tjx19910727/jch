@@ -83,12 +83,6 @@ class MachineClient extends ManagementClient
         $this->startTrans();
         $result = $this->updateMachine($postData);
         if ($result) {
-            $m = $this->getMachineFind(['m_id' => $postData['m_id']],"m_id,machine_id,machine_name");
-            if (!$m) {
-                return $this->r(100,$this->lang("VMachine.machine_no_data"));
-            }
-            $m = $m->toArray();
-            $this->sendToMachine($m);
             if ($machine_group_id && is_int($machine_group_id)) $machine_group_id = [$machine_group_id];
             $oldMgId = $this->getMachineGroupMgColumn(['m_id' => $m['m_id']], "mg_id");
             $addList = array_diff($machine_group_id, $oldMgId);
@@ -122,13 +116,7 @@ class MachineClient extends ManagementClient
             } catch (\Exception $e) {
                 return $this->rValidate($e->getMessage());
             }
-            $m = $this->getMachineFind(['m_id' => $value['m_id']],"m_id,machine_id,machine_name");
-            if (!$m) {
-                return $this->r(100,$this->lang("VMachine.machine_no_data"));
-            }
             $this->updateMachine($value);
-            $m = $m->toArray();
-            $this->sendToMachine($m);
         }
         return $this->rAction(1);
     }
@@ -147,7 +135,6 @@ class MachineClient extends ManagementClient
     public function delM($m_id)
     {
         $where[] = ['m_id',"in",$m_id];
-        $this->delMachine($where);
         $this->delMachineChannel($where);
         $this->delMachineChannelReplenishment($where);
         $this->delMachineCheckStock($where);
@@ -163,6 +150,7 @@ class MachineClient extends ManagementClient
         $this->delMachineVersionPlan($where);
         $this->delMachineView($where);
         $this->delAuthManagerMachine($where);
+        $this->delMachine($where);
         return $this->rSuccess();
     }
 

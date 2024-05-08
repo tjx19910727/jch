@@ -21,15 +21,15 @@ class MachineGoodsClient extends ManagementClient
     {
         $mg_id = $this->addMachineGoods($postData);
         if ($mg_id) {
-            $config = [
-                "machine_id" => $postData['machine_id'],
-                "key" => env("api.md5Key"),
-            ];
-            $app = AppFactory::machine($config);
-            $app->sendMq->triggerUpdateMg($mg_id);
             return $this->r(200,$this->lang("add_success"));
         }
         return $this->r(100,$this->lang("add_fail"));
+    }
+
+    public function updateMg($postData)
+    {
+        $result = $this->updateMachineGoods($postData);
+        return $this->rU($result);
     }
 
     /**
@@ -43,16 +43,6 @@ class MachineGoodsClient extends ManagementClient
         if (isset($postData['where']['m_id'])) $where[] = ['m_id',"in",$postData['where']['m_id']];
         $result = $this->updateMachineGoods($postData['update'],$postData['where']);
         if ($result) {
-            $mgList = $this->getMachineGoodsList($postData['where'],0,'mg_id,machine_id');
-            foreach ($mgList as $k => $v) {
-                $config = [
-                    "machine_id" => $v['machine_id'],
-                    "key" => env("api.md5Key"),
-                ];
-                $app = AppFactory::machine($config);
-                $flag[] = $app->sendMq->triggerUpdateMg($v['mg_id']);
-            }
-            actionLog($flag,'sendFlag');
             return $this->r(200, $this->lang("action_success"));
         }
         return $this->r(100,$this->lang("action_fail"));
@@ -60,18 +50,9 @@ class MachineGoodsClient extends ManagementClient
 
     public function delMg($postData)
     {
-        $mg = $this->getMachineGoodsFind($postData);
-        if ($mg) {
-            $result = $this->delMachineGoods($postData);
-            if ($result) {
-                $config = [
-                    "machine_id" => $mg['machine_id'],
-                    "key" => env("api.md5Key"),
-                ];
-                $app = AppFactory::machine($config);
-                $app->sendMq->triggerUpdateMg($mg['mg_id']);
-                return $this->r(200,$this->lang("del_success"));
-            }
+        $result = $this->delMachineGoods($postData);
+        if ($result) {
+            return $this->r(200,$this->lang("del_success"));
         }
         return $this->r(100,$this->lang("del_fail"));
     }

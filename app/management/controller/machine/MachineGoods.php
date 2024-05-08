@@ -85,12 +85,13 @@ class MachineGoods extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineGoods->update($postData);
+        return $this->app->machineGoods->updateMg($postData);
     }
 
     public function updateMoreByWhere()
     {
         $postData = input();
+        $postData = json2arr($postData);
         if (!isset($postData['where']) || !$postData['where']) return returnState(100, lang("where_require"));
         if (!isset($postData['update']) || !$postData['update']) return returnState(100, lang("update_require"));
         return $this->app->machineGoods->updateByWhere($postData);

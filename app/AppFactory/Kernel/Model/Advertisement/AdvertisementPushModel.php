@@ -9,7 +9,9 @@
 namespace app\AppFactory\Kernel\Model\Advertisement;
 
 
+use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\BaseModel;
+use think\Model;
 
 class AdvertisementPushModel extends BaseModel
 {
@@ -42,4 +44,61 @@ class AdvertisementPushModel extends BaseModel
 //        "update_id" => "int",
 //        "update_time" => "int",
 //    ];
+
+
+    /**
+     * 新增后下发通知设备更新
+     * @param Model $model
+     */
+    protected static function onAfterInsert(Model $model)
+    {
+        $config = [
+            "machine_id" => $model['machine_id'],
+            "key" => env("api.md5Key"),
+        ];
+        $app = AppFactory::machine($config);
+        @$app->sendMq->triggerUpdateAD();
+    }
+
+    /**
+     * 修改后下发通知设备更新
+     * @param Model $model
+     */
+    protected static function onAfterUpdate($model)
+    {
+        $where = $model->getWhere();
+        if (!$where) $where['adv_id'] = $model['adv_id'];
+        if ($where) {
+            $machine_id = self::getValue($where, 'machine_id');
+            if ($machine_id) {
+                $config = [
+                    "machine_id" => $machine_id,
+                    "key" => env("api.md5Key"),
+                ];
+                $app = AppFactory::machine($config);
+                @$app->sendMq->triggerUpdateAD();
+            }
+        }
+    }
+
+    /**
+     * 删除后下发通知设备更新
+     * @param Model $model
+     */
+    protected static function onAfterDelete(Model $model)
+    {
+        $where = $model->getWhere();
+        if (!$where) $where['adv_id'] = $model['adv_id'];
+        if ($where) {
+            $machine_id = self::getValue($where, 'machine_id');
+            if ($machine_id) {
+                $config = [
+                    "machine_id" => $machine_id,
+                    "key" => env("api.md5Key"),
+                ];
+                $app = AppFactory::machine($config);
+                @$app->sendMq->triggerUpdateAD();
+            }
+        }
+    }
 }
