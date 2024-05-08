@@ -41,7 +41,7 @@ class MachineConfigModel extends BaseModel
         $where = $model->getWhere();
         if (!$where) $where['mc_id'] = $model['mc_id'];
         if ($where) {
-            $machine_id = self::getValue($where, 'machine_id');
+            $machine_id = self::getFieldValue($where, 'machine_id');
             if ($machine_id) {
                 $config = [
                     "machine_id" => $machine_id,
@@ -62,7 +62,7 @@ class MachineConfigModel extends BaseModel
         $where = $model->getWhere();
         if (!$where) $where['mc_id'] = $model['mc_id'];
         if ($where) {
-            $machine_id = self::getValue($where, 'machine_id');
+            $machine_id = self::getFieldValue($where, 'machine_id');
             if ($machine_id) {
                 $config = [
                     "machine_id" => $machine_id,

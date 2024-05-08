@@ -37,15 +37,16 @@ class Test extends BaseController
             "templateType" => "online",
             "replaceData" => [
                 "online" => "在线",
-                ""
+                "machine_id" => "test0003",
+                "machine_name" => "测试3号机",
             ],
         ];
-        try {
+//        try {
             $app = AppFactory::notice($config);
             $app->send();
-        } catch (\Exception $e) {
-            dump($e->getMessage());
-        }
+//        } catch (\Exception $e) {
+//            dump($e->getMessage());
+//        }
 //        $result = $app->weChat->send();
 //        dump($result);
         dump(12312);
@@ -128,11 +129,11 @@ class Test extends BaseController
 ////            "folder" => "saleOrders",
 ////            "file" => file_get_contents(root_path("public/uploads/system") . "20240201/a35c07ecb552cec721f77c71fce6c5e2.jpg"),
 //        ];
-//        $data = [
-//            "machine_id" => "test0001",
-//            "timestamp" => time(),
-//            "msg_id" => $msg_id,
-//        ];
+        $data = [
+            "machine_id" => "test0001",
+            "timestamp" => time(),
+            "msg_id" => $msg_id,
+        ];
 //        $data = [
 //            "machine_id" => "test0002",
 //            "timestamp" => time(),

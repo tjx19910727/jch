@@ -151,21 +151,23 @@ class NoticeBaseClient extends BaseClient
      */
     protected function replaceBodyParams()
     {
-        if (isset($this->config['replaceData'])) {
-            foreach ($this->config['replaceData'] as $key => $value) {
-                if (strpos($this->config['template'],'{{' . $key . '}}') !== false) {
-                    $this->config['template'] = str_replace('{{' . $key . '}}', $value, $this->config['template']);
+        if (isset($this->config['template'])) {
+            if (isset($this->config['replaceData'])) {
+                foreach ($this->config['replaceData'] as $key => $value) {
+                    if (strpos($this->config['template'], '{{' . $key . '}}') !== false) {
+                        $this->config['template'] = str_replace('{{' . $key . '}}', $value, $this->config['template']);
+                    }
                 }
             }
+            if (strpos($this->config['template'], '{{now}}') !== false) $this->config['template'] = str_replace('{{now}}', date("Y-m-d H:i:s"), $this->config['template']);
+            if (strpos($this->config['template'], '{{date}}') !== false) $this->config['template'] = str_replace('{{date}}', date("Y-m-d"), $this->config['template']);
+            if (strpos($this->config['template'], '{{time}}') !== false) $this->config['template'] = str_replace('{{time}}', date("H:i:s"), $this->config['template']);
+            if (strpos($this->config['template'], '{{Y}}') !== false) $this->config['template'] = str_replace('{{Y}}', date("Y"), $this->config['template']);
+            if (strpos($this->config['template'], '{{m}}') !== false) $this->config['template'] = str_replace('{{m}}', date("m"), $this->config['template']);
+            if (strpos($this->config['template'], '{{d}}') !== false) $this->config['template'] = str_replace('{{d}}', date("d"), $this->config['template']);
+            if (strpos($this->config['template'], '{{H}}') !== false) $this->config['template'] = str_replace('{{H}}', date("H"), $this->config['template']);
+            if (strpos($this->config['template'], '{{i}}') !== false) $this->config['template'] = str_replace('{{i}}', date("i"), $this->config['template']);
+            if (strpos($this->config['template'], '{{s}}') !== false) $this->config['template'] = str_replace('{{s}}', date("s"), $this->config['template']);
         }
-        if (strpos($this->config['template'],'{{now}}') !== false)   $this->config['template'] = str_replace('{{now}}', date("Y-m-d H:i:s"), $this->config['template']);
-        if (strpos($this->config['template'],'{{date}}') !== false)  $this->config['template'] = str_replace('{{date}}', date("Y-m-d"), $this->config['template']);
-        if (strpos($this->config['template'],'{{time}}') !== false)  $this->config['template'] = str_replace('{{time}}', date("H:i:s"), $this->config['template']);
-        if (strpos($this->config['template'],'{{Y}}') !== false)     $this->config['template'] = str_replace('{{Y}}', date("Y"), $this->config['template']);
-        if (strpos($this->config['template'],'{{m}}') !== false)     $this->config['template'] = str_replace('{{m}}', date("m"), $this->config['template']);
-        if (strpos($this->config['template'],'{{d}}') !== false)     $this->config['template'] = str_replace('{{d}}', date("d"), $this->config['template']);
-        if (strpos($this->config['template'],'{{H}}') !== false)     $this->config['template'] = str_replace('{{H}}', date("H"), $this->config['template']);
-        if (strpos($this->config['template'],'{{i}}') !== false)     $this->config['template'] = str_replace('{{i}}', date("i"), $this->config['template']);
-        if (strpos($this->config['template'],'{{s}}') !== false)     $this->config['template'] = str_replace('{{s}}', date("s"), $this->config['template']);
     }
 }
