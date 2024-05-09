@@ -43,6 +43,8 @@ class MachineBaseClient extends BaseClient
         $action = request()->action();
         $path = "";
         $this->delMachineMqRecord([['create_time','<',strtotime("-7 days")]]);
+        trace($this->getLS(),'info');
+        actionLog($this->getLS(),'删除7天前历史记录');
         if ($controller) $path = $controller;
         if ($action) $path = "/" . $action;
         if (!$path) $path = ($this->message['msgType'] ?? "");
@@ -57,6 +59,8 @@ class MachineBaseClient extends BaseClient
             "type" => $type,
         ];
         $this->addMachineMqRecord($insertMqRecord);
+        actionLog($this->getLS(),'新增下发数据记录');
+        trace($this->getLS(),'info');
     }
 
     /**

@@ -78,6 +78,7 @@ class MachineChannelModel extends BaseModel
         if (!$where) $where['mc_id'] = $model['mc_id'];
         if ($where) {
             $mc = self::getList($where, 0, 'mg_id,machine_id');
+            actionLog($mc,'修改货道信息下发数据');
             if ($mc) {
                 $config = [
                     "machine_id" => $mc[0]['machine_id'],

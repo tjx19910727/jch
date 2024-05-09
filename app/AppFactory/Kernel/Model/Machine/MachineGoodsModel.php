@@ -42,6 +42,7 @@ class MachineGoodsModel extends BaseModel
         if (!$where) $where['mg_id'] = $model['mg_id'];
         if ($where) {
             $mg = self::getList($where, 0, 'mg_id,machine_id');
+            actionLog($mg,"修改设备商品信息下发数据");
             if ($mg) {
                 $config = [
                     "machine_id" => $mg[0]['machine_id'],

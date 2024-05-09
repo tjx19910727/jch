@@ -36,6 +36,7 @@ class SendBaseClient extends MachineBaseClient
                 "data" => json_encode($data),
             ];
             $this->data['sign'] = $this->makeSign($this->data);
+            actionLog($this->data,'发送至MQ服务器的数据');
             $this->dataRecord(2, 2);
             $result = MqProducer::dataSend($this->data, $this->machine['machine_id']);
             if ($result != "OK") {

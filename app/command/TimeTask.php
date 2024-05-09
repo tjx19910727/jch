@@ -40,6 +40,7 @@ class TimeTask extends Command
      *      machineChannelStock
      *          countMcStock                统计库存报表
      *      goods：
+     *          synchronizationGoods       同步商品信息，守护进程触发命令
      * @param Input $input
      * @param Output $output
      * @return int|null|void

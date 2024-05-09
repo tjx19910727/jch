@@ -17,7 +17,7 @@ class Machine
     /**
      * @var Application
      */
-    protected $app;
+//    protected $app;
 
     /**
      * 设备上报数据队列，守护进程Supervisord
@@ -29,46 +29,46 @@ class Machine
      *      supervisorctl start GatewayWorkerQueue 启动当前绑定的守护进程
      *      supervisorctl stop GatewayWorkerQueue  停止守护进程
      */
-    public function machineMsg()
-    {
-        try {
-            $redis = new \Redis();
-            $redis->connect("127.0.0.1", "6379");
-            while (true) {
-                $list = $redis->lRange("dataUpload", 0, -1);
-                $num = count($list);
-                if ($num > 0) {
-                    $data = $redis->rPop("dataUpload");
-                    actionLog($data,'redis');
-                    if ($data) {
-                        $data = json2arr($data);
-                        $config = [
-                            "machine_id" => $data['machine_id'],
-                            "key" => env("api.md5Key"),
-                            "data" => $data,
-                        ];
-                        $this->app = AppFactory::machine($config);
-                        $this->app->mq->onMessage();
-                    }
-                }
-                usleep(100);
-            }
-            $redis->close();
-        } catch (\Exception $e) {
-            actionException($e, 1);
-        }
-    }
-
-
-    public function testRedis()
-    {
-
-        $redis = new \Redis();
-        $redis->connect("127.0.0.1", "6379");
-        $list = $redis->lRange("dataUpload", 0, -1);
-        $data = $redis->rPop("dataUpload");
-        dump($list);
-        dump($data);
-        $redis->close();
-    }
+//    public function machineMsg()
+//    {
+//        try {
+//            $redis = new \Redis();
+//            $redis->connect("127.0.0.1", "6379");
+//            while (true) {
+//                $list = $redis->lRange("dataUpload", 0, -1);
+//                $num = count($list);
+//                if ($num > 0) {
+//                    $data = $redis->rPop("dataUpload");
+//                    actionLog($data,'redis');
+//                    if ($data) {
+//                        $data = json2arr($data);
+//                        $config = [
+//                            "machine_id" => $data['machine_id'],
+//                            "key" => env("api.md5Key"),
+//                            "data" => $data,
+//                        ];
+//                        $this->app = AppFactory::machine($config);
+//                        $this->app->mq->onMessage();
+//                    }
+//                }
+//                usleep(100);
+//            }
+//            $redis->close();
+//        } catch (\Exception $e) {
+//            actionException($e, 1);
+//        }
+//    }
+//
+//
+//    public function testRedis()
+//    {
+//
+//        $redis = new \Redis();
+//        $redis->connect("127.0.0.1", "6379");
+//        $list = $redis->lRange("dataUpload", 0, -1);
+//        $data = $redis->rPop("dataUpload");
+//        dump($list);
+//        dump($data);
+//        $redis->close();
+//    }
 }

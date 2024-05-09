@@ -272,9 +272,13 @@ function actionException($e,$trace = 0)
 
 /**
  * 方法日志
+ * @param $data
+ * @param string $remark
+ * @param string $logName
  */
 function actionLog($data,$remark = '',$logName = "")
 {
+    $module = substr(request()->root(),1);
     $controller = request()->controller();
     $logName ? $action = $logName : $action = request()->action();
     if (is_object($data)) $data = json_decode(json_encode($data),true);
@@ -286,20 +290,29 @@ function actionLog($data,$remark = '',$logName = "")
         @mkdir($folderPath);
         @chmod($folderPath,0777);
     }
-    $filePath = $folderPath . "/";
-    if ($controller) $filePath .= $controller . "_" ;
-    if ($action) $filePath .= $action;
+    $folderPath = $folderPath . "/" . $module;
+    if (!is_dir($folderPath)) {
+        @mkdir($folderPath . "/");
+        @chmod($folderPath,0777);
+    }
+
+    $filePath = $folderPath . "/" . $controller . "_" . $action;
+    $newPath = $filePath . '_' . date('His') ;
     $type = '.log';
-    $max = \think\facade\Config::get('app.log_max_size') ?? 1048576;
+    $max = env('app.log_max_size') ?? 1048576;
     if (file_exists($filePath.$type)) {
         $fileSize = abs(filesize($filePath.$type));
         if ($fileSize > $max) {
-            $newPath = $filePath . "_" . date('His') ;
             rename($filePath . $type,$newPath . $type);
         }
     }
-    @chmod($filePath . $type,0755);
-    file_put_contents($filePath . $type, '[' . date('Y-m-d H:i:s', time()) . ']' . $data . "\r\n", FILE_APPEND);
+    try {
+        file_put_contents($filePath . $type, '[' . date('Y-m-d H:i:s', time()) . ']' . $data . "\r\n", FILE_APPEND);
+    } catch (Exception $e) {
+        if (strpos($e->getMessage(),'Permission denied') !== false) {
+            chmod(root_path("runtime/log"),0777);
+        }
+    }
 }
 
 /**

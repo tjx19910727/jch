@@ -10,9 +10,12 @@ namespace app\AppFactory\Kernel\Model\Goods;
 
 
 use app\AppFactory\Kernel\Model\BaseModel;
+use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
+use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
+use think\Model;
 
 class GoodsModel extends BaseModel
 {
@@ -113,6 +116,18 @@ class GoodsModel extends BaseModel
             actionException($e,1);
             return $e->getMessage();
         }
+    }
+
+    /**
+     * 修改后自动将商品ID放入队列，由守护进程去后台更新设备货道与设备商品库，两个位置在修改后会自动触发终端更新
+     * @param Model $model
+     */
+    protected static function onAfterUpdate(Model $model)
+    {
+        $redis = new \Redis();
+        $redis->connect("127.0.0.1");
+        $redis->lPush("updateGoods",$model['g_id']);
+        $redis->close();
     }
 
 }

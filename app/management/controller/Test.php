@@ -145,6 +145,7 @@ class Test extends BaseController
         $key = Config::get("app.salt");
         $token = TDESUtil::encrypt(json_encode($token_arr),$key);
         dump($token);
+        actionLog($token,'token');
     }
 
     public function checkF()
