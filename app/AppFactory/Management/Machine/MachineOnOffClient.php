@@ -109,4 +109,98 @@ class MachineOnOffClient extends ManagementClient
         }
     }
 
+    /**
+     * 导出设备营业配置Excel
+     * @param $where
+     * @return array|\think\response\Json
+     */
+    public function exportOnOff($where)
+    {
+        try {
+            $list = $this->getMachineOnOffList($where, 0, 'machine_id,machine_name,status,on_off_ckc,on_off_machine');
+            if ($list) {
+                $list = $list->toArray();
+                foreach ($list as $key => $value) {
+                    $onOff = json2arr($value['on_off_machine']);
+                    for ($i = 0; $i <= 6; $i++) {
+                        $onOffArr = [];
+                        if ($onOff[$i]) $onOffArr = explode(",", $onOff[$i]);
+                        $value["off" . $i] = $onOffArr[0] ?? "";
+                        $value["on" . $i] = $onOffArr[1] ?? "";
+                    }
+                    $ckc = json2arr($value['on_off_ckc']);
+                    for ($j = 0; $j <= 6; $j++) {
+                        $ckcArr = explode(",", $ckc[$j] ?? "");
+                        $value["ckcOff" . $j] = $ckcArr[0] ?? "";
+                        $value["ckcOn" . $j] = $ckcArr[1] ?? "";
+                    }
+                    $value['status'] = ($value['status'] == 1 ? "on" : "off");
+                    $list[$key] = $value;
+                }
+                $title = [
+                    "machine_id" => "机器ID",
+                    "machine_name" => "机器名称",
+                    "status" => "开关机应用开关",
+                    "off0" => "关机时间",
+                    "on0" => "开机时间",
+                    "off1" => "关机时间",
+                    "on1" => "开机时间",
+                    "off2" => "关机时间",
+                    "on2" => "开机时间",
+                    "off3" => "关机时间",
+                    "on3" => "开机时间",
+                    "off4" => "关机时间",
+                    "on4" => "开机时间",
+                    "off5" => "关机时间",
+                    "on5" => "开机时间",
+                    "off6" => "关机时间",
+                    "on6" => "开机时间",
+                    "ckcOff0" => "停止营业时间",
+                    "ckcOn0" => "恢复营业时间",
+                    "ckcOff1" => "停止营业时间",
+                    "ckcOn1" => "恢复营业时间",
+                    "ckcOff2" => "停止营业时间",
+                    "ckcOn2" => "恢复营业时间",
+                    "ckcOff3" => "停止营业时间",
+                    "ckcOn3" => "恢复营业时间",
+                    "ckcOff4" => "停止营业时间",
+                    "ckcOn4" => "恢复营业时间",
+                    "ckcOff5" => "停止营业时间",
+                    "ckcOn5" => "恢复营业时间",
+                    "ckcOff6" => "停止营业时间",
+                    "ckcOn6" => "恢复营业时间",
+                ];
+                $merge = [
+                    ["merge" => "A1:A2", "cell" => "A1", "name" => "机器ID"],
+                    ["merge" => "B1:B2", "cell" => "B1", "name" => "机器名称"],
+                    ["merge" => "C1:C2", "cell" => "C1", "name" => "开关机应用开关"],
+                    ["merge" => "D1:E1", "cell" => "D1", "name" => "星期一"],
+                    ["merge" => "F1:G1", "cell" => "F1", "name" => "星期二"],
+                    ["merge" => "H1:I1", "cell" => "H1", "name" => "星期三"],
+                    ["merge" => "J1:K1", "cell" => "J1", "name" => "星期四"],
+                    ["merge" => "L1:M1", "cell" => "L1", "name" => "星期五"],
+                    ["merge" => "N1:O1", "cell" => "N1", "name" => "星期六"],
+                    ["merge" => "P1:Q1", "cell" => "P1", "name" => "星期日"],
+                    ["merge" => "R1:S1", "cell" => "R1", "name" => "星期一"],
+                    ["merge" => "T1:U1", "cell" => "T1", "name" => "星期二"],
+                    ["merge" => "V1:W1", "cell" => "V1", "name" => "星期三"],
+                    ["merge" => "X1:Y1", "cell" => "X1", "name" => "星期四"],
+                    ["merge" => "Z1:AA1", "cell" => "Z1", "name" => "星期五"],
+                    ["merge" => "AB1:AC1", "cell" => "AB1", "name" => "星期六"],
+                    ["merge" => "AD1:AE1", "cell" => "AD1", "name" => "星期日"],
+                    ["merge" => "AF1:AF2", "cell" => "AF1", "name" => "备注"],
+                ];
+                $filename = "导出机器营业配置-" . date("Ymd");
+                return $this->rAction(Excel::exportExcel($list, $title, $filename, 0, 2, $merge));
+            }
+            return $this->rFail($this->lang("query_fail"));
+        } catch (\PHPExcel_Writer_Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        } catch (\PHPExcel_Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
 }

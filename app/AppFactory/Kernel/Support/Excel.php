@@ -109,13 +109,14 @@ class Excel
      * @param $list
      * @param $title
      * @param $filename
-     * @param int $startRow
      * @param int $isDown
-     * @return bool
+     * @param int $startRow
+     * @param array $mergeCells
+     * @return bool|string
      * @throws \PHPExcel_Exception
      * @throws \PHPExcel_Writer_Exception
      */
-    public static function exportExcel($list,$title,$filename,$isDown = 0,$startRow = 1)
+    public static function exportExcel($list,$title,$filename,$isDown = 0,$startRow = 1,$mergeCells = [])
     {
         if(empty($filename)) return false;
         if(!is_array($title)) return false;
@@ -132,6 +133,12 @@ class Excel
         }
         //接下来就是写数据到表格里面去
         $objActSheet = $objPHPExcel->getActiveSheet();
+        if ($mergeCells) {
+            foreach ($mergeCells as $mk => $mv) {
+                if (strpos($mv['merge'], ":") !== false) $objActSheet->mergeCells($mv['merge']);
+                if (isset($mv['cell']) && isset($mv['name']))$objActSheet->setCellValueExplicit($mv["cell"],$mv["name"],\PHPExcel_Cell_DataType::TYPE_STRING);
+            }
+        }
         foreach ($list as $row) {
             foreach ($indexKey as $key => $value){
                 //这里是设置单元格的内容

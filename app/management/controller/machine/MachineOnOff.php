@@ -85,4 +85,15 @@ class MachineOnOff extends Common
         $postData = input();
         return $this->app->machineOnOff->importOnOff($postData);
     }
+
+    /**
+     * 导出营业配置表
+     * @return array|\think\response\Json
+     */
+    public function exportOnOff()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,["machine_id" => "like"]);
+        return $this->app->machineOnOff->exportOnOff($where);
+    }
 }
