@@ -38,7 +38,7 @@ class VResource extends VCommon
     ];
 
     protected $scene = [
-        "add" => ["title",'file_path','type','length','width','size'],
+        "add" => ["title",'file_path','type','size'],
         "del" => ["res_id"],
     ];
 

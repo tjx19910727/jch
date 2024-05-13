@@ -99,21 +99,21 @@ class Test extends BaseController
             "mc_id" => 360,
             "quantity" => 1,
         ];
-        $data = [
-            "machine_id" => "test0002",
-            "msg_id" => $msg_id,
-            "timestamp" => time(),
-//            "manager_id" => 5,
-            "pay_type" => 4,
-            "pay_method" => 41,
-            "carList" => json_encode($carList, 320),
-        ];
 //        $data = [
-//            "order_id" => 654,
-//            "timestamp" => time(),
+//            "machine_id" => "test0002",
 //            "msg_id" => $msg_id,
-//            "machine_id" => "test0003",
+//            "timestamp" => time(),
+////            "manager_id" => 5,
+//            "pay_type" => 4,
+//            "pay_method" => 41,
+//            "carList" => json_encode($carList, 320),
 //        ];
+        $data = [
+//            "order_id" => 654,
+            "timestamp" => time(),
+            "msg_id" => $msg_id,
+            "machine_id" => "test0003",
+        ];
 //        $data = [
 //            "machine_id" => "test0001",
 //            "timestamp" => time(),
