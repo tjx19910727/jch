@@ -39,10 +39,10 @@ class SaleOrdersDetailsModel extends BaseModel
 //    ];
 
 
-    public function saleOrders()
-    {
-        return $this->belongsTo(SaleOrdersModel::class,'order_id');
-    }
+//    public function saleOrders()
+//    {
+//        return $this->belongsTo(SaleOrdersModel::class,'order_id');
+//    }
 
     /**
      * 商品销售排行榜

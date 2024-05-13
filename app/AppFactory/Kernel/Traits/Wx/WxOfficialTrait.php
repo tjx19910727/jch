@@ -60,15 +60,21 @@ trait WxOfficialTrait
      */
     public function initWxApp($pidList)
     {
-        $where[] = ['creator','in', $pidList];
-        $where['status'] = 1;
-        $wx = $this->getWxOfficialFind($where,'*','id desc');
-        if (!$wx) {
-            $return = $this->rFail("查无微信公众号配置信息");
-            return $return;
+        try {
+            $where[] = ['creator', 'in', $pidList];
+            $where['status'] = 1;
+            $wx = $this->getWxOfficialFind($where, '*', 'id desc');
+            if (!$wx) {
+                $return = $this->rFail("查无微信公众号配置信息");
+                return $return;
+            }
+            $wx = $wx->toArray();
+            $this->getWxApp($wx);
+            return true;
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
         }
-        $this->getWxApp($wx);
-        return true;
     }
 
     public function getWxApp($wx)

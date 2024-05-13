@@ -9,10 +9,11 @@
 namespace app\AppFactory\Management\Auth;
 
 
+use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class AuthRoleClient extends ManagementClient
 {
-    use AuthRoleTrait;
+    use AuthRoleTrait,AuthOrganizationRoleTrait;
 }

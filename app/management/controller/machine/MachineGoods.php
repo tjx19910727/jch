@@ -45,7 +45,7 @@ class MachineGoods extends Common
     public function getGcSort()
     {
         $where['m_id'] = input("m_id");
-        return returnData($this->app->machineGoods->getMachineGoodsList($where, 0, "gc_name,gc_id,`gc_sort`", "", '', 'gc_id'));
+        return returnData($this->app->machineGoods->getMachineGoodsList($where, 0, "gc_name,gc_id,`gc_sort`", "gc_sort asc", '', 'gc_id'));
     }
 
     /**

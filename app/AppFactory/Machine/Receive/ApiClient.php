@@ -484,6 +484,7 @@ class ApiClient extends ReceiveBaseClient
                 return $this->rFail("购物车不能为空");
             }
             $this->data['carList'] = json2arr($this->data['carList']);
+
             foreach ($this->data['carList'] as $key => $value) {
                 $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
                 if (!$mc) {
@@ -534,7 +535,12 @@ class ApiClient extends ReceiveBaseClient
                     return $this->r(100,$this->lang("VSubCar.make_order_details_fail"));
                 }
             }
+            $this->commitTrans();
+        } else {
+            $this->rollbackTrans();
+            return $this->r(100,$this->lang("VSubCar.make_order_fail"));
         }
+        $this->startTrans();
         if ($updateOrder) {
             $flag[] = $this->updateSaleOrders($updateOrder);
             $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);

@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Model\Auth\AuthOrganizationRoleModel;
 
 trait AuthOrganizationRoleTrait
 {
+
     /**
      * 获取组织关联角色字段值
      * @param $where

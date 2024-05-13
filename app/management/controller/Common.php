@@ -233,6 +233,21 @@ class Common extends AuthController
         $where['status'] = 1;
         $data = $this->app->authNode->getAuthNodeList($where,0,'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status','sort asc');
         $data = obj2arr($data);
-        return returnData($data);
+        if ($data) return returnState(200,lang("query_success"),$data);
+        return returnState(100,lang("query_fail"));
+    }
+
+    /**
+     * 检查密码
+     * @return array|\think\response\Json
+     */
+    public function checkPwd()
+    {
+        $postData = input();
+        $pwd = $postData['pwd'] ?? '';
+        if (!$pwd) return returnState(100,lang("VLogin.password_require"));
+        if (md5($pwd.config("app.salt")) !=  $this->manager['password'])
+            return returnState(100,lang("VLogin.pwd_incorrect"));
+        return returnState(200,lang("pass_the_verification"));
     }
 }

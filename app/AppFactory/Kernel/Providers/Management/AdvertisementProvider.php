@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Providers\Management;
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\Advertisement\AdvertisementPushClient;
+use app\AppFactory\Management\Advertisement\AdvertisementRecordClient;
 use app\AppFactory\Management\Advertisement\AdvertisementResourceClient;
 
 class AdvertisementProvider implements ServiceProviderInterface
@@ -21,6 +22,9 @@ class AdvertisementProvider implements ServiceProviderInterface
         // TODO: Implement register() method.
         $app['advertisementPush'] = function ($app) {
             return new AdvertisementPushClient($app);
+        };
+        $app['advertisementRecord'] = function ($app) {
+            return new AdvertisementRecordClient($app);
         };
     }
 }

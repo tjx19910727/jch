@@ -13,6 +13,11 @@ use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
 
 trait AuthManagerTrait
 {
+    public function getAuthManagerCount($where)
+    {
+        return AuthManagerModel::getCount($where);
+    }
+
     public function getAuthManagerValue($where,$value)
     {
         return AuthManagerModel::getFieldValue($where,$value);

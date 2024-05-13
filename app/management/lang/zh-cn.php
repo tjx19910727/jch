@@ -22,6 +22,7 @@ return [
         "account_not_exist" => "登录的账号不存在!",
         "account_pwd_incorrect" => "账号或密码错误，请重新输入",
         "pwd_incorrect" => "密码错误，请重新输入",
+        "pass_the_verification" => "验证通过",
         "account_disabled" => "该账号已被禁用",
         "login_success" => "登录成功，正在跳转",
 
@@ -275,6 +276,7 @@ return [
         "m_id_require" => "请选择设备",
         "machine_id_require" => "设备编号不能为空",
         "machine_no_data" => "查无设备信息",
+        "status_in" => "设备状态不在范围内",
 
         "light_require" => "灯光亮度不能为空",
         "volume_require" => "音量不能为空",

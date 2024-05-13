@@ -32,10 +32,6 @@ class MachineConfigClient extends ManagementClient
 
     public function updateMoreMc($postData)
     {
-        $pwd = $postData['pwd'] ?? '';
-        if (!$pwd) return $this->r(100,$this->lang("VLogin.password_require"));
-        if (md5($pwd.config("app.salt")) !=  $this->manager['password'])
-            return $this->r(100,$this->lang("VLogin.pwd_incorrect"));
         $this->startTrans();
         foreach ($postData['mcList'] as $key => $value) {
             $result = $this->updateMachineConfig($value,['m_id' => $value['m_id']]);

@@ -108,12 +108,12 @@ class Test extends BaseController
             "pay_method" => 41,
             "carList" => json_encode($carList, 320),
         ];
-        $data = [
-            "order_id" => 654,
-            "timestamp" => time(),
-            "msg_id" => $msg_id,
-            "machine_id" => "test0003",
-        ];
+//        $data = [
+//            "order_id" => 654,
+//            "timestamp" => time(),
+//            "msg_id" => $msg_id,
+//            "machine_id" => "test0003",
+//        ];
 //        $data = [
 //            "machine_id" => "test0001",
 //            "timestamp" => time(),
@@ -129,11 +129,11 @@ class Test extends BaseController
 ////            "folder" => "saleOrders",
 ////            "file" => file_get_contents(root_path("public/uploads/system") . "20240201/a35c07ecb552cec721f77c71fce6c5e2.jpg"),
 //        ];
-        $data = [
-            "machine_id" => "test0001",
-            "timestamp" => time(),
-            "msg_id" => $msg_id,
-        ];
+//        $data = [
+//            "machine_id" => "test0001",
+//            "timestamp" => time(),
+//            "msg_id" => $msg_id,
+//        ];
 //        $data = [
 //            "machine_id" => "test0002",
 //            "timestamp" => time(),

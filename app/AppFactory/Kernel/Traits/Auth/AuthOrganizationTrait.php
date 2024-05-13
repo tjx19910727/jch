@@ -66,6 +66,7 @@ trait AuthOrganizationTrait
                 $arList = $arList->toArray();
                 $item['roleName'] = implode(",",array_column($arList,'name'));
             }
+            $item['userNum'] = $this->getAuthManagerCount(['ao_id' => $item['ao_id']]);
             return $item;
         });
         return $result;

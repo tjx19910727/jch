@@ -64,22 +64,22 @@ class AdvertisementPushModel extends BaseModel
      * 修改后下发通知设备更新
      * @param Model $model
      */
-    protected static function onAfterUpdate($model)
-    {
-        $where = $model->getWhere();
-        if (!$where) $where['adv_id'] = $model['adv_id'];
-        if ($where) {
-            $machine_id = self::getFieldValue($where, 'machine_id');
-            if ($machine_id) {
-                $config = [
-                    "machine_id" => $machine_id,
-                    "key" => env("api.md5Key"),
-                ];
-                $app = AppFactory::machine($config);
-                @$app->sendMq->triggerUpdateAD();
-            }
-        }
-    }
+//    protected static function onAfterUpdate($model)
+//    {
+//        $where = $model->getWhere();
+//        if (!$where) $where['adv_id'] = $model['adv_id'];
+//        if ($where) {
+//            $machine_id = self::getFieldValue($where, 'machine_id');
+//            if ($machine_id) {
+//                $config = [
+//                    "machine_id" => $machine_id,
+//                    "key" => env("api.md5Key"),
+//                ];
+//                $app = AppFactory::machine($config);
+//                @$app->sendMq->triggerUpdateAD();
+//            }
+//        }
+//    }
 
     /**
      * 删除后下发通知设备更新

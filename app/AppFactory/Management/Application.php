@@ -46,6 +46,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Activity\ActivityPickCodeClient         $activityPickCode      提货码使用记录
  *
  * @property Advertisement\AdvertisementPushClient          $advertisementPush      广告推送
+ * @property Advertisement\AdvertisementRecordClient        $advertisementRecord    广告播放记录
  *
  * @property Auth\AuthManagerRoleClient             $authManagerRole        管理员绑定角色
  * @property Auth\AuthManagerMachineClient          $authManagerMachine     管理员绑定设备

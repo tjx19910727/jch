@@ -16,16 +16,18 @@ class VMachine extends VCommon
     protected $rule = [
         "m_id" => "require",
         "machine_id" => "require",
+        "status" => "in:1,2,3",
     ];
 
     protected $message = [
         "m_id.require" => "VMachine.m_id_require",
         "machine_id.require" => "VMachine.machine_id_require",
+        "status.in" => "VMachine.status_in",
     ];
 
     protected $scene = [
-        "add" => ["machine_id"],
-        "update" => ["m_id"],
+        "add" => ["machine_id","status"],
+        "update" => ["m_id","status"],
         "updateMore" => ["m_id"],
         "del" => ["m_id"],
     ];

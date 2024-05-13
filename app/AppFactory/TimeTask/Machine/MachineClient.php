@@ -56,9 +56,10 @@ class MachineClient extends TimeTaskBase
      */
     public function checkOffline()
     {
-        $details = $this->getMachineonlineDetailsList(['offline_time' => 0, ['heart_time', '<', time() - 180]], 0, 'mod_id,m_id,machine_name,machine_id,online_time,d_date');
+        $details = $this->getMachineOnlineDetailsList(['offline_time' => 0, ['heart_time', '<', time() - 180]], 0, 'mod_id,m_id,machine_name,machine_id,online_time,d_date');
         if ($details) {
             $flag[] = 1;
+            $this->startTrans();
             foreach ($details as $key => $value) {
                 // 跨天处理
                 if ($value['d_date'] != strtotime(date("Y-m-d"))) {
@@ -109,6 +110,8 @@ class MachineClient extends TimeTaskBase
                 }
                 /** 发送离线通知 结束 **/
             }
+            $this->commitTrans();
+            sleep(10);
 //            actionLog($flag,'检查掉线的在线记录','checkClose');
         }
         return "处理成功";
