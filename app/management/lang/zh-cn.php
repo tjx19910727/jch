@@ -301,6 +301,15 @@ return [
         "machine_id_require" => "设备编号不能为空",
     ],
 
+    "VMachineOnOff" => [
+        "moo_id_require" => "配置ID不能为空",
+        "m_id_require" => "设备ID不能为空",
+        "machine_id_require" => "设备编号不能为空",
+        "machine_name_require" => "设备名称不能为空",
+        "on_off_ckc_require" => "营业配置不能为空",
+        "on_off_machine_require" => "定时开关机不能为空",
+    ],
+
     "VMachineInfo" => [
         "mi_id_require" => "设备信息ID不能为空",
         "m_id_require" => "设备ID不能为空",

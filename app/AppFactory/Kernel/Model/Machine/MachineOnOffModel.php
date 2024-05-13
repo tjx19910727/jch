@@ -39,7 +39,7 @@ class MachineOnOffModel extends BaseModel
     protected static function onAfterDelete(Model $model)
     {
         $where = $model->getWhere();
-        if (!$where) $where['mc_id'] = $model['mc_id'];
+        if (!$where) $where['moo_id'] = $model['moo_id'];
         if ($where) {
             $machine_id = self::getFieldValue($where, 'machine_id');
             if ($machine_id) {
@@ -60,7 +60,7 @@ class MachineOnOffModel extends BaseModel
     protected static function onAfterUpdate(Model $model)
     {
         $where = $model->getWhere();
-        if (!$where) $where['mc_id'] = $model['mc_id'];
+        if (!$where) $where['moo_id'] = $model['moo_id'];
         if ($where) {
             $machine_id = self::getFieldValue($where, 'machine_id');
             if ($machine_id) {

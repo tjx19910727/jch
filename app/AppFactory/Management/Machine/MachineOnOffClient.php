@@ -16,7 +16,7 @@ use app\AppFactory\Management\ManagementClient;
 
 class MachineOnOffClient extends ManagementClient
 {
-    use MachineOnOffTrait,MachineTrait;
+    use MachineOnOffTrait, MachineTrait;
 
 
     /**
@@ -28,15 +28,15 @@ class MachineOnOffClient extends ManagementClient
     {
         try {
             $path = root_path() . "public" . $data['file_path'];
-            $title = ["machine_id", "off0", "on0","off1", "on1", "off2", "on2", "off3", "on3", "off4", "on4", "off5", "on5", "off6", "on6"];
+            $title = ["machine_id", "off0", "on0", "off1", "on1", "off2", "on2", "off3", "on3", "off4", "on4", "off5", "on5", "off6", "on6"];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
-            $moo = Excel::importExcel($path, $title, [],4);
-            actionLog($moo,'导入的营业数据');
+            $moo = Excel::importExcel($path, $title, [], 4);
+            actionLog($moo, '导入的营业数据');
             if ($moo) {
                 $flag = [];
                 $this->startTrans();
-                foreach ($moo  as $k => $v) {
-                    $m = $this->getMachineFind(['machine_id' => $v['machine_id']],'m_id,machine_id,machine_name');
+                foreach ($moo as $k => $v) {
+                    $m = $this->getMachineFind(['machine_id' => $v['machine_id']], 'm_id,machine_id,machine_name');
                     $ckc = json_encode([
                         $v['off0'] . "," . $v['on0'],
                         $v['off1'] . "," . $v['on1'],
@@ -46,20 +46,20 @@ class MachineOnOffClient extends ManagementClient
                         $v['off5'] . "," . $v['on5'],
                         $v['off6'] . "," . $v['on6'],
                     ]);
-                    $moo_id = $this->getMachineOnOffValue(['m_id' => $m['m_id']],'moo_id');
+                    $moo_id = $this->getMachineOnOffValue(['m_id' => $m['m_id']], 'moo_id');
                     if (!$moo_id) {
-                        $insert = array_merge($m->toArray(),$other,['on_off_ckc' => $ckc]);
+                        $insert = array_merge($m->toArray(), $other, ['on_off_ckc' => $ckc]);
                         $flag[] = $this->addMachineOnOff($insert);
                     } else {
-                        $flag[] = $this->updateMachineOnOff(['moo_id' => $moo_id,'on_off_ckc' => $ckc]);
+                        $flag[] = $this->updateMachineOnOff(['moo_id' => $moo_id, 'on_off_ckc' => $ckc]);
                     }
                 }
                 $result = flag_check($flag);
                 return $this->checkTrans($result);
             }
-            return $this->r(100,'获取不到Excel文档中的数据');
+            return $this->r(100, '获取不到Excel文档中的数据');
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rValidate($e->getMessage());
         }
     }
@@ -73,15 +73,15 @@ class MachineOnOffClient extends ManagementClient
     {
         try {
             $path = root_path() . "public" . $data['file_path'];
-            $title = ["machine_id","status", "off0", "on0","off1", "on1", "off2", "on2", "off3", "on3", "off4", "on4", "off5", "on5", "off6", "on6"];
+            $title = ["machine_id", "status", "off0", "on0", "off1", "on1", "off2", "on2", "off3", "on3", "off4", "on4", "off5", "on5", "off6", "on6"];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
-            $moo = Excel::importExcel($path, $title, [],4);
-            actionLog($moo,'导入的营业数据');
+            $moo = Excel::importExcel($path, $title, [], 4);
+            actionLog($moo, '导入的营业数据');
             if ($moo) {
                 $flag = [];
                 $this->startTrans();
-                foreach ($moo  as $k => $v) {
-                    $m = $this->getMachineFind(['machine_id' => $v['machine_id']],'m_id,machine_id,machine_name');
+                foreach ($moo as $k => $v) {
+                    $m = $this->getMachineFind(['machine_id' => $v['machine_id']], 'm_id,machine_id,machine_name');
                     $onOff = json_encode([
                         $v['off0'] . "," . $v['on0'],
                         $v['off1'] . "," . $v['on1'],
@@ -91,20 +91,20 @@ class MachineOnOffClient extends ManagementClient
                         $v['off5'] . "," . $v['on5'],
                         $v['off6'] . "," . $v['on6'],
                     ]);
-                    $moo_id = $this->getMachineOnOffValue(['m_id' => $m['m_id']],'moo_id');
+                    $moo_id = $this->getMachineOnOffValue(['m_id' => $m['m_id']], 'moo_id');
                     if (!$moo_id) {
-                        $insert = array_merge($m->toArray(),$other,['on_off_machine' => $onOff]);
+                        $insert = array_merge($m->toArray(), $other, ['on_off_machine' => $onOff]);
                         $flag[] = $this->addMachineOnOff($insert);
                     } else {
-                        $flag[] = $this->updateMachineOnOff(['moo_id' => $moo_id,'on_off_machine' => $onOff]);
+                        $flag[] = $this->updateMachineOnOff(['moo_id' => $moo_id, 'on_off_machine' => $onOff]);
                     }
                 }
                 $result = flag_check($flag);
                 return $this->checkTrans($result);
             }
-            return $this->r(100,'获取不到Excel文档中的数据');
+            return $this->r(100, '获取不到Excel文档中的数据');
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rValidate($e->getMessage());
         }
     }
@@ -123,8 +123,7 @@ class MachineOnOffClient extends ManagementClient
                 foreach ($list as $key => $value) {
                     $onOff = json2arr($value['on_off_machine']);
                     for ($i = 0; $i <= 6; $i++) {
-                        $onOffArr = [];
-                        if ($onOff[$i]) $onOffArr = explode(",", $onOff[$i]);
+                        $onOffArr = explode(",", $onOff[$i] ?? "");
                         $value["off" . $i] = $onOffArr[0] ?? "";
                         $value["on" . $i] = $onOffArr[1] ?? "";
                     }
@@ -195,10 +194,10 @@ class MachineOnOffClient extends ManagementClient
             }
             return $this->rFail($this->lang("query_fail"));
         } catch (\PHPExcel_Writer_Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rValidate($e->getMessage());
         } catch (\PHPExcel_Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rValidate($e->getMessage());
         }
     }
