@@ -32,20 +32,6 @@ class MachineChannelModel extends BaseModel
     }
 
     /**
-     * 新增后通知下发设备终端更新
-     * @param Model $model
-     */
-    public static function AfterInsert(Model $model)
-    {
-        $config = [
-            "machine_id" => $model['machine_id'],
-            "key" => env("api.md5Key"),
-        ];
-        $app = AppFactory::machine($config);
-        @$app->sendMq->triggerUpdateMc($model['mc_id']);
-    }
-
-    /**
      * 删除后通知下发设备终端更新
      * @param Model $model
      */
@@ -55,30 +41,6 @@ class MachineChannelModel extends BaseModel
         if (!$where) $where['mc_id'] = $model['mc_id'];
         if ($where) {
             $mc = self::getList($where, 0, 'mg_id,machine_id');
-            if ($mc) {
-                $config = [
-                    "machine_id" => $mc[0]['machine_id'],
-                    "key" => env("api.md5Key"),
-                ];
-                $app = AppFactory::machine($config);
-                foreach ($mc as $k => $v) {
-                    @$app->sendMq->triggerUpdateMc($v['mc_id']);
-                }
-            }
-        }
-    }
-
-    /**
-     * 修改后通知下发设备终端更新
-     * @param Model $model
-     */
-    public static function AfterUpdate(Model $model)
-    {
-        $where = $model->getWhere();
-        if (!$where) $where['mc_id'] = $model['mc_id'];
-        if ($where) {
-            $mc = self::getList($where, 0, 'mg_id,machine_id');
-            actionLog($mc,'修改货道信息下发数据');
             if ($mc) {
                 $config = [
                     "machine_id" => $mc[0]['machine_id'],
