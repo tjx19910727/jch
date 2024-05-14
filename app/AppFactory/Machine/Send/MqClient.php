@@ -11,6 +11,12 @@ namespace app\AppFactory\Machine\Send;
 
 class MqClient extends SendBaseClient
 {
+    public function confirmSend($msg,$status)
+    {
+        dump($msg);
+        $this->updateMachineMqRecord(["status" => $status],['msg_id' => $msg['msg_id'],'machine_id' => $msg['machine_id']]);
+    }
+
     /**
      * 主体控制
      * @param string $msgType  1. 休眠：sleep, 2. 唤醒：wakeUp, 3. 重启：reboot, 4. 关机：shutdown, 5. 软件升级：update

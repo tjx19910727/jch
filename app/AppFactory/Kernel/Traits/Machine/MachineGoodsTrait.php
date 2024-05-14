@@ -45,6 +45,11 @@ trait MachineGoodsTrait
         return MachineGoodsModel::update($update,$where,$field);
     }
 
+    public function afterMgUpdate($mg)
+    {
+        return MachineGoodsModel::AfterUpdate($mg);
+    }
+
     public function delMachineGoods($where)
     {
         $result = MachineGoodsModel::whereDel($where);

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="c4180f57-aaaf-409b-b10e-d23be9dcd398" name="翠峰服务器" url="http://kiosk-uat.kalos-blocks.com">
+      <webServer id="44c2b501-5e13-4cad-b0eb-9184c79ffcc1" name="翠峰测试服" url="http://kiosk-uat.kalos-blocks.com">
         <fileTransfer host="kiosk-uat.kalos-blocks.com" port="7022" rootFolder="/home/wwwroot/kiosk" accessType="SFTP">
           <advancedOptions>
             <advancedOptions dataProtectionLevel="Private" />

@@ -9,6 +9,7 @@
 namespace app\AppFactory\RabbitMq;
 
 
+use app\AppFactory\AppFactory;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -44,7 +45,17 @@ class MqProducer
                 $param['password'],
                 $param['vhost']
             );
+            $connection->isConnected() or die("Cannot connect to the broker \n");
+
             $channel = $connection->channel();
+            /**
+             * 启用事务
+             */
+//            $channel->tx_select();
+            /**
+             * 启用确认机制
+             */
+            $channel->confirm_select();
             /**
              * 创建队列(Queue)
              * name: hello         // 队列名称
@@ -91,6 +102,27 @@ class MqProducer
              * AMQPMessage::DELIVERY_MODE_NON_PERSISTENT = 1; 不持久化AMOPMessage: :DELIVERY_MODE_PERSISTENT = 2: 持久化
              */
             $message = new AMQPMessage($messageBody, array('content_type' => 'text/plain', 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT));
+
+            $channel->set_ack_handler(function (AMQPMessage $message){
+                $message = json2arr($message->getBody());
+                $config = [
+                    "machine_id" => $message['machine_id'],
+                    "key" => env("app.md5Key")
+                ];
+                actionLog($message,'异步发布者确认信息');
+                $app = AppFactory::machine($config);
+                $app->sendMq->confirmSend($message,1);
+            });
+            $channel->set_nack_handler(function (AMQPMessage $message){
+                $message = json2arr($message->getBody());
+                $config = [
+                    "machine_id" => $message['machine_id'],
+                    "key" => env("app.md5Key")
+                ];
+                actionLog($message,'异步丢失消息回调数据');
+                $app = AppFactory::machine($config);
+                $app->sendMq->confirmSend($message,2);
+            });
             /**
              * 发送消息
              * mSg// AMQP消息内容
@@ -99,11 +131,15 @@ class MqProducer
              *
              */
             $channel->basic_publish($message, $amqpDetail['exchange_name'], $amqpDetail['route_key']);
+            $channel->wait_for_pending_acks(1);
+//            $channel->tx_commit();
+            $return = true;
             $channel->close();
             $connection->close();
-            return "OK";
+            return $return;
         } catch (\Exception $e) {
-            return $e->getMessage();
+            actionException($e,1);
+            return returnTryCatch($e->getMessage());
         }
     }
 
@@ -170,6 +206,7 @@ class MqProducer
          * @return mixed|null
          */
         $channel->queue_bind($amqpDetail['queue_name'], $amqpDetail['exchange_name'], $amqpDetail['route_key']);
+
         /**
          * $messageBody:消息体
          * content_type: 消息的类型 可以不指定
@@ -194,6 +231,7 @@ class MqProducer
          *
          */
         $channel->basic_publish($message, $amqpDetail['exchange_name'], $amqpDetail['route_key']);
+
         $channel->close();
         $connection->close();
         return "OK";

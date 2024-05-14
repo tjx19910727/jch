@@ -22,7 +22,7 @@ class MachineGoodsModel extends BaseModel
      * 新增后下发通知设备更新
      * @param Model $model
      */
-    protected static function onAfterInsert(Model $model)
+    public static function AfterInsert($model)
     {
         $config = [
             "machine_id" => $model['machine_id'],
@@ -33,25 +33,23 @@ class MachineGoodsModel extends BaseModel
     }
 
     /**
-     * 修改后下发通知设备更新
-     * @param Model $model
+     * 修改后修改绑定设备商品的货道信息并下发通知设备更新
+     * @param Model $mg
      */
-    protected static function onAfterUpdate($model)
+    public static function AfterUpdate($mg)
     {
-        $where = $model->getWhere();
-        if (!$where) $where['mg_id'] = $model['mg_id'];
-        if ($where) {
-            $mg = self::getList($where, 0, 'mg_id,machine_id');
-            actionLog($mg,"修改设备商品信息下发数据");
-            if ($mg) {
-                $config = [
-                    "machine_id" => $mg[0]['machine_id'],
-                    "key" => env("api.md5Key"),
+        if ($mg) {
+            $config = [
+                "machine_id" => $mg[0]['machine_id'],
+                "key" => env("api.md5Key"),
+            ];
+            $app = AppFactory::machine($config);
+            foreach ($mg as $k => $v) {
+                $update = [
+                    ""
                 ];
-                $app = AppFactory::machine($config);
-                foreach ($mg as $k => $v) {
-                    $app->sendMq->triggerUpdateMg($v['mg_id']);
-                }
+                MachineChannelModel::update($update,['mg_id' => $v['mg_id']]);
+                $app->sendMq->triggerUpdateMg($v['mg_id']);
             }
         }
     }

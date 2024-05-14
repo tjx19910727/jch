@@ -253,7 +253,8 @@ class Test extends BaseController
         $data = json2arr($data);
         dump($data);
         $time1 = time();
-        MqProducer::dataSend($data,$data['machine_id']);
+        $result = MqProducer::dataSend($data,$data['machine_id']);
+        dump($result);
         $time2 = time();
         dump($time1);
         dump($time2);

@@ -22,7 +22,7 @@ class MachineHelp extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'getList');
+            $this->validate($postData, $this->validatePath . '.getList');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }

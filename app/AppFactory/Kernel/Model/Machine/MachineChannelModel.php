@@ -35,7 +35,7 @@ class MachineChannelModel extends BaseModel
      * 新增后通知下发设备终端更新
      * @param Model $model
      */
-    protected static function onAfterInsert(Model $model)
+    public static function AfterInsert(Model $model)
     {
         $config = [
             "machine_id" => $model['machine_id'],
@@ -72,7 +72,7 @@ class MachineChannelModel extends BaseModel
      * 修改后通知下发设备终端更新
      * @param Model $model
      */
-    protected static function onAfterUpdate(Model $model)
+    public static function AfterUpdate(Model $model)
     {
         $where = $model->getWhere();
         if (!$where) $where['mc_id'] = $model['mc_id'];

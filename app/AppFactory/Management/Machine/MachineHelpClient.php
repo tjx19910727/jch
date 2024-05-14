@@ -12,7 +12,7 @@ namespace app\AppFactory\Management\Machine;
 use app\AppFactory\Kernel\Exceptions\ValidateException;
 use app\AppFactory\Kernel\Traits\Machine\MachineHelpTrait;
 use app\AppFactory\Management\ManagementClient;
-use app\management\validate\VMachineHelp;
+use app\management\validate\Machine\VMachineHelp;
 
 class MachineHelpClient extends ManagementClient
 {
