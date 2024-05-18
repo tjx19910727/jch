@@ -13,7 +13,6 @@ class MqClient extends SendBaseClient
 {
     public function confirmSend($msg,$status)
     {
-        dump($msg);
         $this->updateMachineMqRecord(["status" => $status],['msg_id' => $msg['msg_id'],'machine_id' => $msg['machine_id']]);
     }
 

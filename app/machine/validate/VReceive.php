@@ -118,7 +118,7 @@ class VReceive extends VCommon
         "subMachineGoods" => ["msg_id","machine_id","timestamp","sign","mgList"],
 
         "replenishment" => ["msg_id","machine_id","timestamp","sign","operator","repList"],
-        "changeChannelGoods" => ["msg_id","machine_id","timestamp","sign","mc_id","mg_id","quantity"],
+        "changeChannelGoods" => ["msg_id","machine_id","timestamp","sign","mc_id","g_id","mg_id","quantity"],
         "uploadMedia" => ["msg_id","machine_id","timestamp","sign"],
 
         "getCouponList" => ["msg_id","machine_id","timestamp","sign"],

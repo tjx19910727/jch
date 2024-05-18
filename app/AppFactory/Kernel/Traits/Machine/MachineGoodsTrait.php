@@ -14,6 +14,16 @@ use app\AppFactory\Kernel\Support\Validate\Machine\VMachineGoods;
 
 trait MachineGoodsTrait
 {
+    public function setMachineGoodsInc($where,$field ,$inc = 1)
+    {
+        return MachineGoodsModel::setInc($where,$field,$inc);
+    }
+
+    public function setMachineGoodsDec($where,$field,$dec = 1)
+    {
+        return MachineGoodsModel::setDec($where,$field,$dec);
+    }
+
     public function getMachineGoodsColumn($where,$column)
     {
         return MachineGoodsModel::getColumn($where,$column);
@@ -45,9 +55,9 @@ trait MachineGoodsTrait
         return MachineGoodsModel::update($update,$where,$field);
     }
 
-    public function afterMgUpdate($mg)
+    public function afterMgUpdate($mg_id)
     {
-        return MachineGoodsModel::AfterUpdate($mg);
+        return MachineGoodsModel::AfterUpdate($mg_id);
     }
 
     public function delMachineGoods($where)

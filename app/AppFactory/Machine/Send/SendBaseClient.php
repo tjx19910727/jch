@@ -28,6 +28,7 @@ class SendBaseClient extends MachineBaseClient
     public function dataSendRabbitMQ($data)
     {
 //        if ($this->machine['online'] == 2) die(json(['state' => 100, "msg" => $this->lang("VMachine.machine_offline")])->send());
+
         if ($this->machine['online'] == 1) {
             $this->data = [
                 "msg_id" => uniqid(),
@@ -36,7 +37,7 @@ class SendBaseClient extends MachineBaseClient
                 "data" => json_encode($data),
             ];
             $this->data['sign'] = $this->makeSign($this->data);
-            actionLog($this->data,'发送至MQ服务器的数据');
+            actionLog($this->data, '发送至MQ服务器的数据');
             $this->dataRecord(2, 2);
             $result = MqProducer::dataSend($this->data, $this->machine['machine_id']);
             if ($result != "OK") {

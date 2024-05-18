@@ -16,12 +16,14 @@ class VActivityPickCode extends VCommon
     protected $rule = [
         "apc_id" => "require",
         "id" => "require",
+        "ap_id" => "require",
         "quantity" => "require",
     ];
 
     protected $message = [
         "apc_id.require" => "VActivityPickCode.apc_id_require",
         "id.require" => "VActivityPickCode.ap_id_require",
+        "ap_id.require" => "VActivityPickCode.ap_id_require",
         "quantity.require" => "VActivityPickCode.quantity_require",
     ];
 

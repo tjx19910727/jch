@@ -22,7 +22,7 @@ class MachineGoodsModel extends BaseModel
      * 新增后下发通知设备更新
      * @param Model $model
      */
-    public static function AfterInsert($model)
+    protected static function onAfterInsert($model)
     {
         $config = [
             "machine_id" => $model['machine_id'],
@@ -33,25 +33,16 @@ class MachineGoodsModel extends BaseModel
     }
 
     /**
-     * 修改后修改绑定设备商品的货道信息并下发通知设备更新
-     * @param Model $mg
+     * 修改设备商品库，放入Redis，由系统后台守护进程触发同步到设备货架，下发触发设备更新
+     * @param int $mg_id
      */
-    public static function AfterUpdate($mg)
+    public static function AfterUpdate($mg_id)
     {
-        if ($mg) {
-            $config = [
-                "machine_id" => $mg[0]['machine_id'],
-                "key" => env("api.md5Key"),
-            ];
-            $app = AppFactory::machine($config);
-            foreach ($mg as $k => $v) {
-                $update = [
-                    ""
-                ];
-                MachineChannelModel::update($update,['mg_id' => $v['mg_id']]);
-                $app->sendMq->triggerUpdateMg($v['mg_id']);
-            }
-        }
+        $redis = new \Redis();
+        $redis->connect("127.0.0.1");
+        $redis->lPush("updateMg",$mg_id);
+        $redis->expire("updateMg",300);
+        $redis->close();
     }
 
     /**

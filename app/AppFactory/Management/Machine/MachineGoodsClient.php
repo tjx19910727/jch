@@ -29,6 +29,10 @@ class MachineGoodsClient extends ManagementClient
     public function updateMg($postData)
     {
         $result = $this->updateMachineGoods($postData);
+        if ($result) {
+            $mg_id = $this->getMachineGoodsValue($postData,'mg_id');
+            $this->afterMgUpdate($mg_id);
+        }
         return $this->rU($result);
     }
 
@@ -41,8 +45,13 @@ class MachineGoodsClient extends ManagementClient
     {
         $result = $this->updateMachineGoods($postData['update'],$postData['where']);
         if ($result) {
-            $mg = $this->getMachineGoodsList($postData['where'],0);
-            $this->afterMgUpdate($mg);
+            $mgList = $this->getMachineGoodsList($postData['where'],0,'mg_id');
+            if ($mgList) {
+                $mgList = $mgList->toArray();
+                foreach ($mgList as $mgk => $mgv) {
+                    $this->afterMgUpdate($mgv['mg_id']);
+                }
+            }
             return $this->r(200, $this->lang("action_success"));
         }
         return $this->r(100,$this->lang("action_fail"));

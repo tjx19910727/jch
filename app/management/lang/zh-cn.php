@@ -238,6 +238,8 @@ return [
 
         "where_require" => "修改条件不能为空",
         "update_require" => "修改内容不能为空",
+
+        "synchronization_fail" => "同步设备商品库失败",
     ],
 
     "VGoodsLang" => [
@@ -292,6 +294,7 @@ return [
         "m_id_require" => "设备ID不能为空",
         "machine_id_require" => "设备编号不能为空",
         "channel_code_require" => "货道编号不能为空",
+        "synchronization_fail" => "同步设备货道失败",
     ],
 
     "VMachineConfig" => [
@@ -382,6 +385,7 @@ return [
     ],
 
     "VAdvertisement" => [
+        "adv_no_data" => "查无广告信息",
         "adv_id_require" => "推送广告ID不能为空",
         "adv_title_require" => "广告推送标题不能为空",
         "duration_time_require" => "播放时长不能为空",

@@ -163,20 +163,27 @@ class AdvertisementPushClient extends ManagementClient
         try {
             $flag = [];
             $adv = $this->getAdvertisementPushList($where);
-            foreach ($adv as $key => $value) {
+            if ($adv) {
+                $adv = $adv->toArray();
+                foreach ($adv as $key => $value) {
+                    dump($value);
+                    dump($value['remain_times'] > 0 && $value['status'] < 3 && $value['start_date'] <= strtotime(date("Y-m-d")));
+                    dump(!$value['end_date'] || ($value['end_date'] > 0 && $value['end_date'] >= strtotime(date("Y-m-d"))));
 //                if ($value['remain_times'] <= 0) return $this->rFail($this->lang("VAdvertisement.remain_times_empty"));
-                if ($value['remain_times'] > 0 && $value['status'] < 3 && $value['start_date'] <= strtotime(date("Y-m-d"))) {
-                    if (!$value['end_date'] || ($value['end_date'] > 0 && $value['end_date'] >= strtotime(date("Y-m-d")))) {
-                        $config = [
-                            "machine_id" => $value['machine_id'],
-                            "key" => env("api.md5Key"),
-                        ];
-                        $app = AppFactory::machine($config);
-                        $flag[] = $app->sendMq->triggerUpdateAD();
+                    if ($value['remain_times'] > 0 && $value['status'] < 3 && $value['start_date'] <= strtotime(date("Y-m-d"))) {
+                        if (!$value['end_date'] || ($value['end_date'] > 0 && $value['end_date'] >= strtotime(date("Y-m-d")))) {
+                            $config = [
+                                "machine_id" => $value['machine_id'],
+                                "key" => env("api.md5Key"),
+                            ];
+                            $app = AppFactory::machine($config);
+                            $flag[] = $app->sendMq->triggerUpdateAD();
+                        }
                     }
                 }
+                return $this->r(200, $this->lang("action_success"), $flag);
             }
-            return $this->r(200, $this->lang("action_success"), $flag);
+            return $this->r(100,$this->lang("VAdvertisementPush.adv_no_data"));
         } catch (DataNotFoundException $e) {
             actionException($e,1);
             return $this->rValidate($e->getMessage());

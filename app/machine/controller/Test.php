@@ -108,12 +108,13 @@ class Test extends BaseController
 //            "pay_method" => 41,
 //            "carList" => json_encode($carList, 320),
 //        ];
-        $data = [
-//            "order_id" => 654,
-            "timestamp" => time(),
-            "msg_id" => $msg_id,
-            "machine_id" => "test0003",
-        ];
+//        $data = [
+//            "order_id" => 755,
+//            "timestamp" => "1715913770106092",
+//            "msg_id" => $msg_id,
+//            "machine_id" => "test0003",
+//            "fd_id" => "5",
+//        ];
 //        $data = [
 //            "machine_id" => "test0001",
 //            "timestamp" => time(),
@@ -183,6 +184,17 @@ class Test extends BaseController
 //                ],
 //            ],
 //        ];
+
+        $data = [
+            "msg_id" => $msg_id,
+            "timestamp" => time(),
+            "machine_id" => "test0001",
+            "mc_id" => "251",
+            "g_id" => "30",
+            "mg_id" => "0",
+            "quantity" => "0",
+            "operator" => 1,
+        ];
         $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
         dump($data);
         dump(json_encode($data, 320));

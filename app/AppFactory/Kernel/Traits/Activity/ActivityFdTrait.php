@@ -97,8 +97,9 @@ trait ActivityFdTrait
         if (!$this->fd) return $this->rFail($this->lang("VActivityFd.fd_no_data"));
         $this->fd = $this->fd->toArray();
         actionLog($this->fd,'活动信息');
-        $this->content = $this->getActivityFdContentList(['fd_id' => $this->fd['fd_id']],0,"*","`sort` asc,`fdc_id` asc");
+        $this->content = $this->getActivityFdContentList(['fd_id' => $this->fd['fd_id']],0,"*","fdc_sort ASC");
         if (!$this->content) return $this->rFail($this->lang("VActivityFd.content_no_data"));
+        if (is_string($this->content)) return $this->rFail($this->content);
         $this->content = $this->content->toArray();
         actionLog($this->content,'活动规则内容');
         // 最低消费金额

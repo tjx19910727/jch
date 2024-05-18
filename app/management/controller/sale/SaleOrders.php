@@ -58,8 +58,8 @@ class SaleOrders extends Common
         $where['so.pay_status'] = 3;
         $field = "so.machine_id,so.machine_name,so.trade_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
-        sod.success_quantity,sod.fail_quantity,sod.deliver_pics";
-        return returnData($this->app->saleOrders->getSaleOrdersDetailsJoinOrderList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc"));
+        (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity";
+        return returnData($this->app->saleOrders->getSaleOrdersDetailsJoinOrderList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",'g_id'));
     }
 
     /**

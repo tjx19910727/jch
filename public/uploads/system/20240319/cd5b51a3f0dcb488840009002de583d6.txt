@@ -1,0 +1,75 @@
+<template>
+  <div class="app-container">
+    <el-form :model="data.info" :inline="true" class="w-full" label-width="120" :rules="data.rules">
+      <div  class="mt-2">
+        <el-form-item label="优惠券名称:" prop="c_name" class="w-2/4">
+          <el-input v-model="data.info.c_name" placeholder="请输入优惠券名称" />
+        </el-form-item>
+
+        <el-form-item label="优惠券说明:" prop="desc" class="w-2/4">
+          <el-input type="textarea" v-model="data.info.desc" placeholder="请输入优惠券说明" />
+        </el-form-item>
+        <el-form-item label="设备语言:" prop="lang" class="w-2/4">
+          <el-select v-model="data.lang" placeholder="请选择"  filterable multiple @change="btn">
+            <el-option v-for="item of data.language" :key="item.l_id" :label="item.l_id + '-' + item.name" :value="item.lang" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="优惠券码:" prop="code" class="w-2/4">
+          <el-input v-model="data.info.code" placeholder="请输入" />
+        </el-form-item>
+        <el-form-item label="优惠券类型:" prop="c_type" class="w-2/4">
+            <el-radio-group v-model="data.info.c_type">
+              <el-radio value="1" label="立减金额" border></el-radio>
+              <el-radio value="2" label="优惠折扣" border></el-radio>
+            </el-radio-group>
+        </el-form-item>
+        <el-form-item label="指定机器:" prop="designated_machine" class="w-2/4">
+          <el-radio-group v-model="data.info.designated_machine">
+            <el-radio value="1" border label="全部机器"></el-radio>
+            <el-radio value="2" border label="指定机器"></el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="指定商品:" prop="designated_goods" class="w-2/4">
+
+          <el-radio-group v-model="data.info.designated_goods">
+            <el-radio value="1" label="全部商品" border></el-radio>
+            <el-radio value="2" label="指定商品" border></el-radio>
+            <el-radio value="3" label="部分商品除外" border></el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="开始日期:" prop="start_date" class="w-2/4">
+          <el-date-picker
+              v-model="data.info.start_date"
+              type="date"
+              placeholder="请选择开始日期"
+              value-format="x"
+          />
+        </el-form-item>
+        <el-form-item label="结束日期:" prop="end_date" class="w-2/4">
+          <el-date-picker
+              v-model="data.info.end_date"
+              type="date"
+              placeholder="请选择结束日期"
+              value-format="x"
+          />
+        </el-form-item>
+        <el-form-item label="最低消费金额:" prop="pay_limit" class="w-2/4">
+          <el-input v-model="data.info.pay_limit" placeholder="请输入" maxlength="11" />
+        </el-form-item>
+        <el-form-item label="设备编号:" prop="machineList" class="w-2/4">
+          <el-input type="textarea" v-model="data.info.machineList" placeholder="请输入JSON字符串" />
+        </el-form-item>
+        <el-form-item label="商品ID:" prop="goodsList" class="w-2/4">
+          <el-input type="textarea" v-model="data.info.goodsList" placeholder="请输入JSON字符串" />
+        </el-form-item>
+      </div>
+
+      <div class="w-full text-center">
+        <div class="inline-block">
+          <el-button type="primary" @click="submit(ruleFormRef)">保存</el-button>
+          <el-button @click="cancell">取消</el-button>
+        </div>
+      </div>
+    </el-form>
+  </div>
+</template>

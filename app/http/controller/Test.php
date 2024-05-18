@@ -14,38 +14,18 @@ use app\BaseController;
 
 class Test extends BaseController
 {
-    public function testMachineOnline()
+    public function testSynchronizationGoods()
     {
-        $app = AppFactory::timeTask();
-        $app->machine->countOnline();
+        $redis = new \Redis();
+        $redis->connect("127.0.0.1");
+        $redis->lPush("updateGoods",29);
+        dump($redis->lRange("updateGoods",0,-1));
+        $redis->close();
     }
 
-    public function testMachineSale()
+    public function testTimeTask()
     {
         $app = AppFactory::timeTask();
-        $app->machine->collectDailySalesData();
-    }
-
-    public function testGoodsSale()
-    {
-        $app = AppFactory::timeTask();
-        $app->goods->collectDailySalesData();
-    }
-
-    public function testStatisticalSaleAmount()
-    {
-        $app = AppFactory::timeTask();
-        $app->machine->statisticalSaleAmount();
-    }
-
-    public function testGoodsStatisticalSaleAmount()
-    {
-        $app = AppFactory::timeTask();
-        $app->goods->statisticalSaleAmount();
-    }
-
-    public function testOauth2()
-    {
-
+        $result = $app->goods->synchronizationGoods();
     }
 }
