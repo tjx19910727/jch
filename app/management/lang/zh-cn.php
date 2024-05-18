@@ -217,6 +217,10 @@ return [
         "gc_name_max" => "分类名称长度超限制",
     ],
 
+    "VGoodsChange" => [
+        "create_time_require" => "时间段不能为空",
+    ],
+
     "VGoodsCorner" => [
         "id_require" => "角标ID不能为空",
         "corner_name_require" => "角标名称不能为空",

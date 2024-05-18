@@ -63,6 +63,7 @@ return [
     "VChannelReplenishment" => [
         "non-administrators" => "当前操作员非管理人员，不允许执行补货操作",
         "channel_no_data" => "查无货道信息",
+        "mg_no_data" => "查无设备商品库商品信息，可能该设备商品库商品已被删除，请更换该货道商品后再操作补货。",
 
         "difference_g_id" => "不是原货道商品信息，不允许补货操作",
 
@@ -70,6 +71,8 @@ return [
         "quantity_require" => "补货数量不能为空",
 
         "exceed_capacity_limit" => "超出货道容量限制",
+
+        "exceed_standby_stock_limit" => "备用库存不足，不允许补货",
     ],
 
     "VAdvertisement" => [

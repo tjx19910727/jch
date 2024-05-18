@@ -20,12 +20,12 @@ class TemplateViewClient extends ManagementClient
 
     public function checkAdd($postData)
     {
-        $plugin_data = json2arr($postData['plugin_data']);
-        try {
-            validate(VTemplateView::class)->scene("plugin_data")->check($plugin_data);
-        } catch (ValidateException $e) {
-            return $this->rFail($e->getMessage());
-        }
+//        $plugin_data = json2arr($postData['plugin_data']);
+//        try {
+//            validate(VTemplateView::class)->scene("plugin_data")->check($plugin_data);
+//        } catch (ValidateException $e) {
+//            return $this->rFail($e->getMessage());
+//        }
         return $this->rA($this->addTemplateView($postData));
     }
 }

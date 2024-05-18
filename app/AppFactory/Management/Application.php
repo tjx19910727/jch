@@ -73,6 +73,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Goods\GoodsLangClient                  $goodsLang              商品多语言信息
  * @property Goods\GoodsCategoryClient              $goodsCategory          商品分类信息
  * @property Goods\GoodsCategoryLangClient          $goodsCategoryLang      商品分类语言信息
+ * @property Goods\GoodsChangeClient                $goodsChange            商品变化事件
  * @property Goods\GoodsCornerClient                $goodsCorner            商品角标信息
  * @property Goods\GoodsHitClient                   $goodsHit               商品点击
  *
