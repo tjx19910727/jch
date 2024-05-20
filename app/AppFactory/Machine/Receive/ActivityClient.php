@@ -134,19 +134,28 @@ class ActivityClient extends ReceiveBaseClient
             $updateAl['al_id'] = $al['al_id'];
             $this->updateActivityLottery($updateAl);
         }
-        $al['active_num'] += $al['gifts_num'];
+        // 增加赠送次数
+        $alc['active_num'] += $alc['gifts_num'];
 
         // 检查活动商品
         $content = $this->getActivityLotteryContentList(['al_id' => $al['al_id']], 0,'c_id,retain_num,g_id,probability');
         if (!$content) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
         $content = $content->toArray();
+        // 总中奖概率，必须要刚好100%
         $totalProbability = array_sum(array_column($content,"probability"));
         if ($totalProbability != 100) return $this->rFail($this->lang("probability_no_100"));
+
+        // 如果存在赠送商品，则校对数量再加1
+        $checkStock = $alc['active_num'];
+        if ($alc['designated_gift']) $checkStock = $alc['active_num'] + 1;
+        // 循环活动内容，
         foreach ($content as $k => $v) {
-            $mc = $this->getMachineChannelFind(['m_id' => $this->machine['m_id'], 'g_id' => $v['g_id']], 'channel_code,stock');
+            // 判断货架正常，有这个商品
+            $mc = $this->getMachineChannelFind(['m_id' => $this->machine['m_id'],'status' => 1 , 'g_id' => $v['g_id']], 'channel_code,stock');
             if (!$mc) return $this->rFail($this->lang("VActivityLottery.mc_no_data"));
             $mc = $mc->toArray();
-            if ($mc['stock'] < $alc['active_num'] || $mc['stock'] < $alc['active_num'] + $v['retain_num']) {
+            // 商品的库存值小于校对数量，或者小于校对数值加上保留数量，返回数量不足
+            if ($mc['stock'] < $checkStock || $mc['stock'] < $checkStock + $v['retain_num']) {
                 return $this->rFail($this->lang("VActivityLottery.under_stock"));
             }
         }
@@ -163,7 +172,7 @@ class ActivityClient extends ReceiveBaseClient
             "pay_type" => $this->data['pay_type'],
             "pay_method" => $this->data['pay_method'],
             "total_price" => $this->data['total_price'],
-            "total_quantity" => $alc['active_num'],
+            "total_quantity" => $alc['active_num'],  // 商品总数，执行完成抽奖后需要重新校对
             "create_date" => strtotime(date("Y-m-d")),
         ];
         // 添加订单信息
@@ -179,7 +188,7 @@ class ActivityClient extends ReceiveBaseClient
                 "machine_id" => $this->machine['machine_id'],
                 "machine_name" => $this->machine['machine_name'],
                 "price" => $al['price'],
-                "quantity" => $alc['active_num'],
+                "quantity" => $alc['active_num'],  // 抽奖总次数，包含赠送次数，不包含赠送商品
                 "total_price" => $this->data['total_price'],
                 "active_type" => $alc['active_type'],
                 "used_date" => strtotime(date("Y-m-d")),
@@ -205,48 +214,72 @@ class ActivityClient extends ReceiveBaseClient
         }
         if ($order['order_type'] != 4) return $this->r(100,$this->lang("VActivityLottery.order_type_error"));
         if ($order['pay_status'] != 3) return $this->r(100,$this->lang("VActivityLottery.order_no_pay"));
-        $used = $this->getActivityLotteryUsedFind(['order_id' => $order['order_id']]);
+
+        $used = $this->getActivityLotteryUsedFind(['order_id' => $order['order_id']],'alu_id,al_id,alc_id,quantity,used_quantity');
         if (!$used) {
             return $this->r(100, $this->lang("VActivityLottery.used_no_data"));
         }
-        $alc = $this->getActivityLotteryConfigFind(['alc_id' => $used['alc_id']]);
-        if (!$alc) return $this->r(100,$this->lang("VActivityLottery.alc_no_data"));
-
-        $detailsCount = $this->getSaleOrdersDetailsCount(['order_id' => $order['order_id']]);
-        if ($detailsCount >= $used['quantity']){
+        // 已使用抽奖次数大于等于抽奖总次数，返回抽奖数量已用完
+        if ($used['used_quantity'] >= $used['quantity']){
             return $this->r(100,$this->lang("VActivityLottery.lucky_draw_ended"));
         }
+
+        $alc = $this->getActivityLotteryConfigFind(['alc_id' => $used['alc_id']]);
+        if (!$alc) return $this->r(100,$this->lang("VActivityLottery.alc_no_data"));
         $content = $this->getActivityLotteryContentList(['al_id' => $used['al_id']], 0,'*', "probability asc");
         if (!$content) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
         $content = $content->toArray();
+
+        // 总中奖概率
         $totalProbability = array_sum(array_column($content, 'probability'));
         if ($totalProbability != 100) return $this->rFail($this->lang("VActivityLottery.probability_no_100"));
         $list = [];
+        // 本次执行抽奖次数初始化，总数量减去已抽次数
+        $quantity = bcsub($used['quantity'] , $used['used_quantity']);
+        // 单抽状态下，每次执行投资时抽奖次数重置为1
+        if ($alc['active_type'] == 1) $quantity = 1;
         // 多抽循环，每次抽奖结果放至中奖列表
-        for ($i = 0; $i < $used['quantity']; $i++) {
+        for ($i = 0; $i < $quantity; $i++) {
+            // 已抽奖次数+1
+            $used['used_quantity']++;
+
+            // 每次抽奖的随机数值
             $random = mt_rand(1, $totalProbability);
             $probabilitySum = 0;
-            // 抽奖，循环活动内容，
-            // 活动内容以中奖概率从小到大顺序排序，
-            // 中奖值加上每条活动内容的中奖概率，
-            // 当中奖值大于随机数时为中奖，将活动内容放入中奖列表，跳出当前循环，执行下轮抽奖
+            // 抽奖，循环活动内容，以中奖概率从小到大顺序排序，
             foreach ($content as $key => $value) {
-                if ($alc['designated_gif'] && $alc['designated_gift'] == $value['c_id']) {
-                    $list[$used['quantity']] = $value;
-                }
+                // 当前一条抽奖活动内容中奖数值，叠加前面的活动内容中奖数值
                 $probabilitySum = bcadd($probabilitySum,$value['probability']);
+                // 中奖数值大于随机数值即为中奖，活动内容放入中奖数组中，退出当前抽奖循环，执行下轮抽奖
                 if ($probabilitySum > $random) {
                     $list[$i] = $value;
+                    // 中奖后触发赠送指定商品
+                    if ($alc['designated_gif']) {
+                        // 赠送指定商品只能在活动内容中，再次循环活动内容
+                        foreach ($content as $vc) {
+                            // 找到赠送的商品，放入中奖列表队尾，退出找赠品循环
+                            if ($alc['designated_gift'] == $vc['c_id']) {
+                                $list[$i + $quantity] = $vc;
+                                break;
+                            }
+                        }
+                    }
                     break;
                 }
             }
         }
+
+        $this->startTrans();
+        // 修改已抽奖次数
+        $this->updateActivityFdUsed(['used_quantity' => $used['used_quantity']],['alu_id' => $used['alu_id']]);
+        // 没抽中，返回谢谢惠顾
         if (!$list) {
-            return $this->rFail($this->lang("lottery_empty"));
+            $this->commitTrans();
+            $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0)->toArray();
+            return $this->r(200,$this->lang("lottery_empty"),['lottery_list' => $list,"order" => $order]);
         }
         $averagePrice = bcdiv($order['total_price'],$order['total_quantity'],3);
 
-        $this->startTrans();
         $flag = [];
         $ugAll = [];
         $mcField = "mc_id,shelf_way,channel_position,channel_code,mg_id,g_id,g_name,pic,sku,gc_id,gc_name,cost_price,market_price,stock";
@@ -268,6 +301,7 @@ class ActivityClient extends ReceiveBaseClient
                 "channel_code" => $mc['channel_code'],
                 "quantity" => 1,
             ];
+            // 不存在商品记录则生成，存在商品则数量+1
             $sod = $this->getSaleOrdersDetailsFind(['order_id' => $order['order_id'],'mc_id' => $mc['mc_id']]);
             if (!$sod) {
                 unset($mc['stock']);
@@ -293,7 +327,7 @@ class ActivityClient extends ReceiveBaseClient
         $check = $this->checkFlag($flag);
         if ($check) {
             $this->commitTrans();
-            $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0);
+            $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0)->toArray();
             $totalQuantity = array_sum(array_column($order['details'],'quantity'));
             if ($totalQuantity == $used['quantity']) {
                 $this->updateActivityLotteryUsed(['alu_id' => $used['alu_id'],'status' => 2,'used_date' => strtotime(date("Y-m-d"))]);

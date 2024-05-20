@@ -22,7 +22,7 @@ class MachineGoodsModel extends BaseModel
      * 新增后下发通知设备更新
      * @param Model $model
      */
-    protected static function onAfterInsert($model)
+    public static function afterInsert($model)
     {
         $config = [
             "machine_id" => $model['machine_id'],

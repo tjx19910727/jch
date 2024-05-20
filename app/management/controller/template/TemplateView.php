@@ -10,12 +10,13 @@ namespace app\management\controller\template;
 
 
 use app\management\controller\Common;
+use app\management\validate\VTemplateView;
 
 class TemplateView extends Common
 {
 
     protected $field = "*";
-    protected $validatePath = 'app\management\validate\VTemplateView.';
+    protected $validatePath = VTemplateView::class;
 
     public function getList()
     {
@@ -37,7 +38,7 @@ class TemplateView extends Common
         $postData = input();
         $postData = json2arr($postData);
         try {
-            $this->validate($postData, $this->validatePath . 'add');
+            $this->validate($postData, $this->validatePath . '.add');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -48,7 +49,7 @@ class TemplateView extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'update');
+            $this->validate($postData, $this->validatePath . '.update');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -59,7 +60,7 @@ class TemplateView extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'del');
+            $this->validate($postData, $this->validatePath . '.del');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }

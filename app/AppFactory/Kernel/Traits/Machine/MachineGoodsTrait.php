@@ -55,6 +55,11 @@ trait MachineGoodsTrait
         return MachineGoodsModel::update($update,$where,$field);
     }
 
+    public function afterMgInsert($mg)
+    {
+        return MachineGoodsModel::AfterInsert($mg);
+    }
+
     public function afterMgUpdate($mg_id)
     {
         return MachineGoodsModel::AfterUpdate($mg_id);

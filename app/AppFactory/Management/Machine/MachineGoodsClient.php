@@ -21,6 +21,8 @@ class MachineGoodsClient extends ManagementClient
     {
         $mg_id = $this->addMachineGoods($postData);
         if ($mg_id) {
+            $mg = $this->getMachineGoodsFind(['mg_id' => $mg_id],'mg_id,machine_id');
+            $this->afterMgInsert($mg);
             return $this->r(200,$this->lang("add_success"));
         }
         return $this->r(100,$this->lang("add_fail"));
