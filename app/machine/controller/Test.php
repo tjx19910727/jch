@@ -24,6 +24,7 @@ use app\BaseController;
 use Mqtt\Mqtt;
 use think\facade\Db;
 use think\facade\Queue;
+use think\facade\Request;
 
 class Test extends BaseController
 {
@@ -196,6 +197,22 @@ class Test extends BaseController
 //            "quantity" => "0",
 //            "operator" => 1,
 //        ];
+        $data = [
+            "machine_id" => "test0006",
+            "msg_id" => $msg_id,
+            "timestamp" => time(),
+            "operator" => 1,
+            "repList" => [
+                [
+                    "mc_id" => "513",
+                    "quantity" => "4",
+                ],
+                [
+                    "mc_id" => "514",
+                    "quantity" => "6",
+                ],
+            ],
+        ];
         $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
         dump($data);
         dump(json_encode($data, 320));
@@ -203,10 +220,10 @@ class Test extends BaseController
 
     public function validateSign()
     {
-        $data = '{"machine_id":"test0001", "msg_id": "8dd76668-0f7e-40ba-a451-300e129277ee", "timestamp": "1708589607516841", "mcList": "", "delList": "","sign": "b10f29791842cd915b44f5f9edbae2f8"}';
+        $url = request()->url();
+        dump($url);
+        $data = '{"machine_id":"test0006","msg_id":"d01ac40b-f609-4fea-8b5b-dc94da5ce09c","timestamp":1716343858495464,"pay_type":4,"pay_method":41,"total_price":"1.0","total_quantity":1,"al_id":10,"alc_id":11,"sign":"ceb491d2053d2efb8c2e2e2986f50ce7"}';
         $data = json2arr($data);
-        $data['mcList'] = [];
-        $data['delList'] = [];
         dump($data);
         $result = SignUtil::checkSign($data,env("api.md5Key"));
         dump($result);

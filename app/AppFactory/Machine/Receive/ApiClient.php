@@ -18,6 +18,7 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
 use app\AppFactory\Kernel\Traits\Advertisement\AdvertisementPushTrait;
 use app\AppFactory\Kernel\Traits\Advertisement\AdvertisementRecordTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerLogTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationTrait;
@@ -57,7 +58,7 @@ class ApiClient extends ReceiveBaseClient
         AdvertisementPushTrait,
         AdvertisementRecordTrait,
         AuthOrganizationTrait,
-        AuthManagerTrait,
+        AuthManagerTrait,AuthManagerLogTrait,
         AuthManagerMachineTrait,
         ConfigTrait,
         GoodsTrait, GoodsLangTrait, GoodsCategoryLangTrait, GoodsCategoryTrait, GoodsChangeTrait, GoodsCornerTrait,
@@ -105,6 +106,7 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail($this->lang("VLogin.account_pwd_error"));
         if ($manager['status'] == 2) return $this->rFail($this->lang("VLogin.account_disabled"));
         unset($manager['password'], $manager['status']);
+
         return $this->r(200, $this->lang("VLogin.login_success"), $manager);
     }
 
@@ -272,7 +274,7 @@ class ApiClient extends ReceiveBaseClient
             if ($mc['mg_id'] > 0) {
 
                 // 记录商品变化事件（备用商品库上货）
-                $insertGChange['desc'] = "换货-旧设备商品库退回备用库存";
+                $insertGChange['desc'] = "换货-设备商品库上货备用库存";
                 $insertGChange['position'] = 2;
                 $insertGChange['type'] = 2;
                 $this->addGoodsChange($insertGChange);
@@ -325,7 +327,7 @@ class ApiClient extends ReceiveBaseClient
                 $insertGChange["pic"] = $mg['pic'];
                 $insertGChange["sku"] = $mg['sku'];
                 $insertGChange["bar_code"] = $mg['bar_code'];
-                $insertGChange["desc"] = "换货-使用新设备商品库备用库存";
+                $insertGChange["desc"] = "换货-设备商品库下货备用库存";
                 $insertGChange["change_value"] = $this->data['quantity'];
                 $insertGChange["position"] = 2;
                 $insertGChange["type"] = 3;

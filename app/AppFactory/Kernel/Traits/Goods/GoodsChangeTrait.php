@@ -39,8 +39,22 @@ trait GoodsChangeTrait
         return GoodsChangeModel::getList($where,$pageNum,$field,$order,$eachFun,$group);
     }
 
+    private $desc = [
+        "1" => [
+            "1" => "未知",
+            "2" => "货架上货新商品",
+            "3" => "货架下货旧商品",
+        ],
+        "2" => [
+            "1" => "未知",
+            "2" => "设备商品库上货备用库存",
+            "3" => "设备商品库下货备用库存",
+        ],
+    ];
+
     public function addGoodsChange($insert)
     {
+        if (!isset($insert['desc'])) $insert['desc'] = $this->desc[$insert['position']][$insert['type']];
         $data = GoodsChangeModel::create($insert);
         return $data->change_id;
     }

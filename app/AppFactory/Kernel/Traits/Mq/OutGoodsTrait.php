@@ -57,6 +57,13 @@ trait OutGoodsTrait
         $this->order['out_status'] = 4;
         $this->order['out_time'] = time();
         $this->order['remark'] = json_encode($this->message['main'],320);
+
+        $insertGChange = [
+            "m_id" => $this->machine['m_id'],
+            "machine_id" => $this->machine['machine_id'],
+            "machine_name" => $this->machine['machine_name'],
+            "ao_id" => $this->machine['ao_id'],
+        ];
         foreach ($this->message['main'] as $key => $value) {
             $position = $key;
             foreach ($value as $vv) {
@@ -87,6 +94,26 @@ trait OutGoodsTrait
                     } else {
                         $updateMc['stock'] = bcsub($mc['stock'], $success);
                     }
+
+                    // 销售出货成功后再生成商品变化数据
+                    $insertGc = array_merge($insertGChange,[
+                        "mc_id" => $mc['mc_id'],
+                        "channel_code" => $mc['channel_code'],
+                        "mg_id" => $mc['mg_id'],
+                        "g_id" => $mc['g_id'],
+                        "g_name" => $mc['g_name'],
+                        "gc_id" => $mc['gc_id'],
+                        "gc_name" => $mc['gc_name'],
+                        "pic" => $mc['pic'],
+                        "sku" => $mc['sku'],
+                        "bar_code" => $mc['bar_code'],
+                        "change_value" => $success,
+                    ]);
+                    $insertGc['desc'] = "终端销售-货架减库存";
+                    $insertGc['position'] = 1;
+                    $insertGc['type'] = 2;
+                    $this->addGoodsChange($insertGc);
+
                 }
                 if ($fail > 0) {
                     $updateMc['status'] = 3;

@@ -102,11 +102,25 @@ trait AuthManagerMachineTrait
         return AuthManagerMachineModel::whereDel($where);
     }
 
+    /**
+     * 获取账号信息列表——账号关联设备
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return AuthManagerMachineModel[]|array|\think\Collection
+     */
     public function getAmmJoinAmList($where,$field = "*", $order = "")
     {
         return AuthManagerMachineModel::joinAuthManager($where,$field,$order);
     }
 
+    /**
+     * 获取设备信息列表——账号关联设备
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return AuthManagerMachineModel[]|array|\think\Collection
+     */
     public function getAmmJoinMList($where,$field = "*",$order = "")
     {
         return AuthManagerMachineModel::joinMachine($where,$field,$order);

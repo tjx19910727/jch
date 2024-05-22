@@ -1,0 +1,139 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Administrator
+ * Date: 2024/5/22
+ * Time: 11:30
+ */
+
+namespace app\AppFactory\Kernel\Traits\Auth;
+
+
+
+use app\AppFactory\Kernel\Model\Auth\AuthManagerLogModel;
+
+trait AuthManagerLogTrait
+{
+    /**
+     * 获取字段值
+     * @param $where
+     * @param $value
+     * @return mixed
+     */
+    public function getAuthManagerLogValue($where, $value)
+    {
+        return AuthManagerLogModel::getFieldValue($where, $value);
+    }
+
+    /**
+     * 获取单列
+     * @param $where
+     * @param $column
+     * @return array
+     */
+    public function getAuthManagerLogColumn($where, $column)
+    {
+        return AuthManagerLogModel::getColumn($where, $column);
+    }
+
+    /**
+     * 统计数量
+     * @param $where
+     * @return int
+     * @throws \think\db\exception\DbException
+     */
+    public function getAuthManagerLogCount($where)
+    {
+        return AuthManagerLogModel::getCount($where);
+    }
+
+    /**
+     * 获取列表
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @return \app\AppFactory\Kernel\Model\BaseModel|\app\AppFactory\Kernel\Model\BaseModel[]|array|string|\think\Collection|\think\Paginator
+     */
+    public function getAuthManagerLogList($where, $pageNum = 0, $field = "*", $order = "")
+    {
+        return AuthManagerLogModel::getList($where, $pageNum, $field, $order);
+    }
+
+    /**
+     * 获取一条数据
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return mixed
+     */
+    public function getAuthManagerLogFind($where, $field = "*", $order = "")
+    {
+        return AuthManagerLogModel::getFind($where, $field, $order);
+    }
+
+    /**
+     * 添加
+     * @param $insert
+     * @return mixed
+     */
+    public function addAuthManagerLog($insert)
+    {
+        $data = AuthManagerLogModel::create($insert);
+        return $data->getKey();
+    }
+
+    /**
+     * 修改
+     * @param $update
+     * @param array $where
+     * @param array $field
+     * @return AuthManagerLogModel
+     */
+    public function updateAuthManagerLog($update,$where = [],$field = [])
+    {
+        return AuthManagerLogModel::update($update,$where,$field);
+    }
+
+    /**
+     * 删除
+     * @param $where
+     * @return mixed
+     */
+    public function delAuthManagerLog($where)
+    {
+        return AuthManagerLogModel::whereDel($where);
+    }
+
+    // url转事件类型
+    protected $log_type = [
+        "/machine/receive/login" => "login",
+    ];
+
+    /**
+     * 用户操作事件记录
+     * @param $manager
+     * @param $active_type
+     * @param string $remark
+     * @return mixed
+     */
+    public function recordManagerLog($manager,$remark = "")
+    {
+        $params = arr2json(input());
+        if (strlen($params) > 1024) $params = substr($params,0,1024);
+        $url = request()->url();
+        if (in_array($url,$this->log_type)) {
+            $log = [
+                "ao_id" => $manager['ao_id'] ?? 0,
+                "manager_id" => $manager['manager_id'] ?? 0,
+                "nickname" => $manager['nickname'] ?? "",
+                "account" => $manager['account'] ?? "",
+                "path" => $url,
+                "params" => $params,
+                "log_type" => $this->log_type[$url],
+                "remark" => $remark,
+            ];
+            $this->addAuthManagerLog($log);
+        }
+    }
+}

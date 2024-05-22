@@ -249,7 +249,7 @@ trait ActivityFdTrait
         }
         // 折扣
         if ($this->fd['fd_type'] == 4) {
-            $discount_price = bcmul($this->order['total_price'],bcsub(1,bcdiv($value['active_value'],10,2),2),3);
+            $discount_price = bcmul($this->order['total_price'],bcdiv(bcsub(100,$value['active_value']),100,2),3);
         }
         if ($discount_price) $this->countContent['discount_price'] = $discount_price;
         if ($mc_id) $this->countContent['mc_id'] = $mc_id;
