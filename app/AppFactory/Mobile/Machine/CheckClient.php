@@ -25,7 +25,6 @@ class CheckClient extends MobileBase
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
-        $this->checkToken();
     }
 
     /**
@@ -35,6 +34,8 @@ class CheckClient extends MobileBase
      */
     public function channelStock($postData)
     {
+        $check = $this->checkToken();
+        if ($check) return $check;
         $machine = $this->getMachineFind(['m_id' => $postData['m_id']],'m_id,machine_id,machine_name');
         if (!$machine) return $this->r(100,$this->lang("channelStock.machine_no_data"));
         $machine = $machine->toArray();

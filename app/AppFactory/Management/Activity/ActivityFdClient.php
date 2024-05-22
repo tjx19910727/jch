@@ -43,6 +43,10 @@ class ActivityFdClient extends ManagementClient
         $content = json2arr($postData['content']);
         $mList = explode(",",$postData['machineList']);
         unset($postData['content'],$postData['machineList']);
+
+        if ($postData['start_date'] && $postData['start_date'] <= strtotime(date("Y-m-d"))) {
+            $postData['status'] = 2;
+        }
         $this->startTrans();
         $fd_id = $this->addActivityFd($postData);
         if ($fd_id) {

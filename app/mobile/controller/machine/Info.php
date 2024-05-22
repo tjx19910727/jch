@@ -17,11 +17,11 @@ class Info extends Common
 
     public function getMachine()
     {
-        return returnData($this->app->machineInfo->getMachineFind(['machine_id' => $this->tokenArr['machine_id']],'m_id,machine_id,machine_name'));
+        return $this->app->machineInfo->getInfo();
     }
 
     public function getChannel()
     {
-        return returnData($this->app->machineInfo->getMachineChannelList(['machine_id' => $this->tokenArr['machine_id']],0,'sku,channel_code,g_name,stock,mc_id'));
+        return $this->app->machineInfo->getChannel();
     }
 }

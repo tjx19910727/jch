@@ -62,6 +62,9 @@ class ActivityPickClient extends ManagementClient
             $goodsList = $postData['goodsList'];
             unset($postData['goodsList']);
         }
+        if ($postData['start_time'] && $postData['start_time'] <= time()) {
+            $postData['status'] = 2;
+        }
         $this->startTrans();
         $a_id = $this->addActivityPick($postData);
         if ($a_id) {

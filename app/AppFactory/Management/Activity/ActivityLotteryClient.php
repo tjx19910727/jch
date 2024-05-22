@@ -43,6 +43,9 @@ class ActivityLotteryClient extends ManagementClient
         $content = json2arr($postData['content']);
         $machineList = json2arr($postData['machineList']);
         unset($postData['config'],$postData['content'],$postData['machineList']);
+        if ($postData['start_time'] && $postData['start_time'] <= time()) {
+            $postData['status'] = 2;
+        }
         $flag = [];
         $this->startTrans();
         $al_id = $this->addActivityLottery($postData);

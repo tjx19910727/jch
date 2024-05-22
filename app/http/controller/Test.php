@@ -14,18 +14,37 @@ use app\BaseController;
 
 class Test extends BaseController
 {
-    public function testSynchronizationGoods()
+    public function testGoods()
     {
+        $g_id = input("g_id");
         $redis = new \Redis();
         $redis->connect("127.0.0.1");
-        $redis->lPush("updateGoods",29);
+        $redis->lPush("updateGoods",$g_id);
         dump($redis->lRange("updateGoods",0,-1));
         $redis->close();
     }
 
-    public function testTimeTask()
+    public function testMg()
+    {
+        $mg_id = input("mg_id");
+        $redis = new \Redis();
+        $redis->connect("127.0.0.1");
+        $redis->lPush("updateMg",$mg_id);
+        dump($redis->lRange("updateMg",0,-1));
+        $redis->close();
+    }
+
+    public function testUpdateGoods()
     {
         $app = AppFactory::timeTask();
-        $result = $app->goods->synchronizationGoods();
+        $result = $app->goods->updateGoodsSynchronization();
+        dump($result);
+    }
+
+    public function testUpdateMg()
+    {
+        $app = AppFactory::timeTask();
+        $result = $app->goods->updateMgSynchronization();
+        dump($result);
     }
 }

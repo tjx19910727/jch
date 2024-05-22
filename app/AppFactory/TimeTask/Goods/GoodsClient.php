@@ -41,7 +41,7 @@ class GoodsClient extends TimeTaskBase
                         $this->synchronizationMgMc($data);
                     }
                 }
-                usleep(1000);
+                usleep(100);
             }
             $redis->close();
         } catch (\Exception $e) {
@@ -62,12 +62,12 @@ class GoodsClient extends TimeTaskBase
                 $num = count($list);
                 if ($num > 0) {
                     $data = $redis->rPop("updateMg");
-                    actionLog($data,'修改商品信息后');
+                    actionLog($data,'修改商品信息后','updateMgSynchronization');
                     if ($data) {
                         $this->synchronizationMc($data);
                     }
                 }
-                usleep(1000);
+                usleep(100);
             }
             $redis->close();
         } catch (\Exception $e) {
@@ -85,7 +85,7 @@ class GoodsClient extends TimeTaskBase
         $goods = $this->getGoodsFind(['g_id' => $g_id],'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,is_recommend,is_gift,recoverable,heat');
         if ($goods) {
             $goods = $goods->toArray();
-            actionLog($goods, '需要同步的商品数据');
+            actionLog($goods, '需要同步的商品数据','updateMgSynchronization');
 //            $updateChannel = [
 //                "g_name" => $goods['g_name'],
 //                "gc_id" => $goods['gc_id'],
@@ -137,6 +137,14 @@ class GoodsClient extends TimeTaskBase
         if ($mg) {
             $mg = $mg->toArray();
             $whereMc['mg_id'] = $mg['mg_id'];
+            $config = [
+                "machine_id" => $mgv['machine_id'],
+                "key" => env("api.md5Key"),
+            ];
+            $app = AppFactory::machine($config);
+            $result = $app->sendMq->triggerUpdateMg($mg['mg_id']);
+            actionLog($result,'推送设备商品库');
+
             $this->startTrans();
             try {
                 $this->synchronizationMachineChannel($whereMc, $mg);

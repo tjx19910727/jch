@@ -219,6 +219,7 @@ class ActivityClient extends ReceiveBaseClient
         if (!$used) {
             return $this->r(100, $this->lang("VActivityLottery.used_no_data"));
         }
+        $used = $used->toArray();
         // 已使用抽奖次数大于等于抽奖总次数，返回抽奖数量已用完
         if ($used['used_quantity'] >= $used['quantity']){
             return $this->r(100,$this->lang("VActivityLottery.lucky_draw_ended"));
@@ -248,22 +249,18 @@ class ActivityClient extends ReceiveBaseClient
             $probabilitySum = 0;
             // 抽奖，循环活动内容，以中奖概率从小到大顺序排序，
             foreach ($content as $key => $value) {
+                // 中奖后触发赠送指定商品
+                if ($alc['designated_gif']) {
+                    // 是赠送的商品，放入中奖列表队尾
+                    if ($alc['designated_gift'] == $value['c_id']) {
+                        $list[$i + $quantity] = $value;
+                    }
+                }
                 // 当前一条抽奖活动内容中奖数值，叠加前面的活动内容中奖数值
                 $probabilitySum = bcadd($probabilitySum,$value['probability']);
                 // 中奖数值大于随机数值即为中奖，活动内容放入中奖数组中，退出当前抽奖循环，执行下轮抽奖
                 if ($probabilitySum > $random) {
                     $list[$i] = $value;
-                    // 中奖后触发赠送指定商品
-                    if ($alc['designated_gif']) {
-                        // 赠送指定商品只能在活动内容中，再次循环活动内容
-                        foreach ($content as $vc) {
-                            // 找到赠送的商品，放入中奖列表队尾，退出找赠品循环
-                            if ($alc['designated_gift'] == $vc['c_id']) {
-                                $list[$i + $quantity] = $vc;
-                                break;
-                            }
-                        }
-                    }
                     break;
                 }
             }
@@ -313,9 +310,10 @@ class ActivityClient extends ReceiveBaseClient
                 $sod_id = $this->addSaleOrdersDetails($insertSod);
                 $flag[] = $sod_id;
             } else {
+                $sod = $sod->toArray();
                 $sod_id = $sod['sod_id'];
                 $update['sod_id'] = $sod_id;
-                $update['quantity'] = $sod['quantity']++;
+                $update['quantity'] = $sod['quantity'] + 1;
                 $update['retail_price'] = bcdiv($averagePrice,$update['quantity'],3);
                 $flag[] = $this->updateSaleOrdersDetails($update);
             }
@@ -363,7 +361,15 @@ class ActivityClient extends ReceiveBaseClient
         // 修改分润记录
         $flag[] = $this->settlementRevenue();
         // 修改为发送出货命令状态
-        $flag[] = $this->updateSaleOrders(['order_id' => $this->order['order_id'],'out_status' => 2]);
+        $updateOrder['order_id'] = $this->order['order_id'];
+        $updateOrder['out_status'] = 2;
+        if ($this->order['pay_status'] != 3) {
+            $updateOrder['pay_status'] = 3;
+            $updateOrder['pay_type'] = 0;
+            $updateOrder['pay_method'] = 1;
+            $updateOrder['pay_time'] = time();
+        }
+        $flag[] = $this->updateSaleOrders($updateOrder);
         $check = $this->checkFlag($flag);
         if ($check) {
             $this->outGoods();

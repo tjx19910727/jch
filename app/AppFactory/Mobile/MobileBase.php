@@ -42,10 +42,11 @@ class MobileBase extends BaseClient
     public function checkToken()
     {
         $token = request()->header("token");
-        if (!$token) die(json(['state' => 100,"msg" => '令牌不能为空，请重新登录'])->send());
-        $tokenArr = json2arr(TDESUtil::decrypt($token,env("api.md5Key")));
+        if (!$token) $token = input("token");
+        if (!$token) return $this->r(100,'令牌不能为空，请重新登录');
+        $tokenArr = json_decode(TDESUtil::decrypt($token,env("api.md5Key")),true);
         if ($tokenArr['timestamp'] <= 3600) {
-            die(json(['state' => 100,"msg" => "登录超时，请重新扫码登录"])->send());
+            return $this->r( 100,"登录超时，请重新扫码登录");
         }
         $this->tokenArr = $tokenArr;
     }

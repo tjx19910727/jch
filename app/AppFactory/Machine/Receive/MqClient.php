@@ -13,6 +13,9 @@ use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Support\Validate\Machine\VReport;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityFdContentTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityFdTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityFdUsedTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryConfigTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryContentTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryTrait;
@@ -39,6 +42,7 @@ class MqClient extends ReceiveBaseClient
     use MachineInfoTrait,MachineChannelTrait,MachineVersionPlanTrait;
     use MachineErrorCodeTrait;
     use GoodsTrait,GoodsHitTrait;
+    use ActivityFdUsedTrait,ActivityFdTrait,ActivityFdContentTrait;
     use ActivityCouponTrait,ActivityCouponUsedTrait;
     use ActivityPickTrait,ActivityPickCodeTrait;
     use ActivityLotteryTrait,ActivityLotteryConfigTrait,ActivityLotteryContentTrait,ActivityLotteryUsedTrait,ActivityLotteryUsedGoodsTrait;
@@ -59,7 +63,7 @@ class MqClient extends ReceiveBaseClient
             validate(VReport::class)->scene('onMessage')->check($this->data);
         } catch (\Exception $e) {
             actionLog($e->getMessage(),'数据格式错误','DataUpload');
-            die(json_encode(["state" => 200, "msg" => $e->getMessage()],320));
+            die(json_encode(["state" => 200, "msg" => $e->getMessage(),$this->data],320));
         }
         $this->dataRecord(2);
     }

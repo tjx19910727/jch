@@ -120,7 +120,7 @@ trait ActivityFdTrait
         }
 
         $this->startTrans();
-        $flag[] = $this->handleFd();
+        $flag[] = $this->handleActivityFd();
         if ($this->lastContent) {
             // 生成满减满赠活动使用记录
             $insertUsed = [
@@ -259,7 +259,7 @@ trait ActivityFdTrait
      * 计算完活动结果，处理订单与订单详情
      * @return mixed
      */
-    private function handleFd()
+    private function handleActivityFd()
     {
         $flag[] = 1;
         actionLog($this->countContent,'过滤后的最终优惠');

@@ -130,17 +130,18 @@ class Test extends BaseController
 ////            "folder" => "saleOrders",
 ////            "file" => file_get_contents(root_path("public/uploads/system") . "20240201/a35c07ecb552cec721f77c71fce6c5e2.jpg"),
 //        ];
+        $data = [
+            "machine_id" => "test0003",
+            "timestamp" => time(),
+            "msg_id" => $msg_id,
+            "manager_id" => 2,
+        ];
 //        $data = [
-//            "machine_id" => "test0001",
+//            "machine_id" => "test0003",
 //            "timestamp" => time(),
 //            "msg_id" => $msg_id,
-//        ];
-//        $data = [
-//            "machine_id" => "test0002",
-//            "timestamp" => time(),
-//            "msg_id" => $msg_id,
-//            "account" => "dkm3",
-//            "password" => "123456",
+//            "adv_id" => 91,
+//            "play_time" => time(),
 //        ];
 //        $data = [
 //            "machine_id" => "test0001",
@@ -185,16 +186,16 @@ class Test extends BaseController
 //            ],
 //        ];
 
-        $data = [
-            "msg_id" => $msg_id,
-            "timestamp" => time(),
-            "machine_id" => "test0001",
-            "mc_id" => "251",
-            "g_id" => "30",
-            "mg_id" => "0",
-            "quantity" => "0",
-            "operator" => 1,
-        ];
+//        $data = [
+//            "msg_id" => $msg_id,
+//            "timestamp" => time(),
+//            "machine_id" => "test0001",
+//            "mc_id" => "251",
+//            "g_id" => "30",
+//            "mg_id" => "0",
+//            "quantity" => "0",
+//            "operator" => 1,
+//        ];
         $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
         dump($data);
         dump(json_encode($data, 320));
@@ -241,9 +242,17 @@ class Test extends BaseController
         dump($result);
     }
 
+    public function testTime()
+    {
+        $orderDate = "2012/05/01";
+        dump(strtotime($orderDate));
+        dump(strtotime(date("Y-m-d")));
+        dump(strtotime($orderDate) != strtotime(date("Y-m-d")));
+    }
+
     public function testReturn()
     {
-        $data = '{"timestamp":1714449130,"msg_id":"66306aea261de","machine_id":"test0003","data":"{\"msgType\":\"errorCode\",\"errorCode\":\"1000001\"}","sign":"8a15810ef4ee636dfa13c43d12cfa1c9"}';
+        $data = '{"timestamp":1716278558874495,"msg_id":"2f3b0729-4ad3-4b69-b248-c5b1b4b2b47c","machine_id":"test0006","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"202405211600197166022\",\"main\":{\"1\":[[\"A02\",1,1,0,\"/uploads/machine_test0006/20240521/9c6b81061cf47e34f1fff17bf8c0733b.jpg,/uploads/machine_test0006/20240521/c649c83e3a30eb57ae01688409255f4d.jpg\"]]}}","sign":"12c46966fbc35a47d435d839e631f7ec"}';
         $data = json2arr($data);
         dump($data);
         $config = [

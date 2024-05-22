@@ -61,6 +61,9 @@ class ActivityCouponClient extends ManagementClient
             $goodsList = $postData['goodsList'];
             unset($postData['goodsList']);
         }
+        if ($postData['start_date'] && $postData['start_date'] <= strtotime(date("Y-m-d"))) {
+            $postData['status'] = 2;
+        }
         $this->startTrans();
         $a_id = $this->addActivityCoupon($postData);
         if ($a_id) {

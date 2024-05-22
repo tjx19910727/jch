@@ -22,4 +22,14 @@ class InfoClient extends MobileBase
         parent::__construct($app);
         $this->checkToken();
     }
+
+    public function getInfo()
+    {
+        return $this->rQ($this->getMachineFind(['machine_id' => $this->tokenArr['machine_id']],'m_id,machine_id,machine_name'));
+    }
+
+    public function getChannel()
+    {
+        return $this->rQ($this->getMachineChannelList(['machine_id' => $this->tokenArr['machine_id']],0,'sku,channel_code,g_name,stock,mc_id'));
+    }
 }

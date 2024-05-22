@@ -37,6 +37,8 @@ class MqConsumer
      */
     public function process_message(AMQPMessage $message)
     {
+        //手动发送ack
+        $message->ack($message->getDeliveryTag());
         try {
             $data = $message->body;
             $data = json2arr($data);
@@ -53,8 +55,6 @@ class MqConsumer
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"DataUpload");
             actionLog($e->getTrace(), 'tryCatchTrace',"DataUpload");
         }
-        //手动发送ack
-        $message->ack($message->getDeliveryTag());
     }
 
     /**

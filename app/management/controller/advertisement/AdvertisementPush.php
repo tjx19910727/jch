@@ -106,7 +106,7 @@ class AdvertisementPush extends Common
      */
     public function triggerUpdateAD()
     {
-        $adv_ids = input();
+        $adv_ids = input("adv_id");
         return $this->app->advertisementPush->triggerUpdate([['adv_id','in',$adv_ids]]);
     }
 }

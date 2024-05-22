@@ -436,9 +436,10 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(100, $this->lang("query_mv_no_data"));
     }
 
-    protected $goodsField = "g.g_id,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
-            g.length,g.width,g.height,g.group_quantity,g.status,g.ao_id,g.update_time,g.desc,
-            mg.mg_id,mg.cost_price,mg.market_price,mg.retail_price,mg.available_stock,mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf";
+    protected $goodsField = "
+            g.g_id,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
+            g.length,g.width,g.height,g.group_quantity,g.status,g.ao_id,g.update_time,g.desc,g.cost_price,g.market_price,g.retail_price,
+            mg.mg_id,mg.available_stock,mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf";
 
     /**
      * 获取设备归属组织所有上级商品
@@ -449,7 +450,11 @@ class ApiClient extends ReceiveBaseClient
         $goodsList = [];
         $aoIds = $this->getPathIds($this->machine["ao_id"], 1);
         if ($aoIds) {
-            $goodsList = $this->getGoodsJoinMachineGoodsList([['ao_id', 'in', $aoIds]], $this->data['pageNum'] ?? 0, $this->goodsField, 'g.update_time desc', $this->machine['m_id']);
+            $goodsList = $this->getGoodsJoinMachineGoodsList(
+                [['ao_id', 'in', $aoIds]],
+                $this->data['pageNum'] ?? 0,
+                $this->goodsField,
+                'g.update_time desc', $this->machine['m_id']);
             if (is_string($goodsList)) return $this->rFail($goodsList);
         }
         return $this->rQ($goodsList);
