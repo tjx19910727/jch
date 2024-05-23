@@ -24,4 +24,9 @@ class Info extends Common
     {
         return $this->app->machineInfo->getChannel();
     }
+
+    public function getMachineGoods()
+    {
+        return $this->app->machineInfo->getMachineGoods();
+    }
 }

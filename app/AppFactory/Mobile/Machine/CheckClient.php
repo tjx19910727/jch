@@ -16,10 +16,11 @@ use app\AppFactory\Kernel\Traits\Machine\MachineCheckStockTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Mobile\MobileBase;
+use app\mobile\validate\Machine\VMachineCheck;
 
 class CheckClient extends MobileBase
 {
-    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineCheckStockTrait;
+    use MachineTrait, MachineChannelTrait, MachineGoodsTrait, MachineCheckStockTrait;
     use GoodsTrait;
 
     public function __construct(ServiceContainer $app)
@@ -34,25 +35,53 @@ class CheckClient extends MobileBase
      */
     public function channelStock($postData)
     {
-        $check = $this->checkToken();
-        if ($check) return $check;
-        $machine = $this->getMachineFind(['m_id' => $postData['m_id']],'m_id,machine_id,machine_name');
-        if (!$machine) return $this->r(100,$this->lang("channelStock.machine_no_data"));
-        $machine = $machine->toArray();
-        $mg = $this->getMachineGoodsFind(['g_id' => $mc['g_id'],'m_id' => $machine['m_id']],'mg_id,g_id,g_name,pic,sku,bar_code,gc_id,gc_name, standby_stock system_stock');
-        if (!$machine) return $this->r(100,$this->lang("channelStock.mg_no_data"));
-        $mg = $mg->toArray();
-        $data = array_merge($postData,$machine,$mg);
-        if (isset($postData['mc_id'])) {
-            $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']], 'mc_id,channel_code,stock system_stock');
-            if ($mc) {
-                $mc = $mc->toArray();
-                $data = array_merge($data, $mc);
+        $this->startTrans();
+        try {
+            $check = $this->checkToken();
+            if ($check) return $check;
+            $machine = $this->getMachineFind(['m_id' => $postData['m_id']], 'm_id,machine_id,machine_name');
+            if (!$machine) return $this->r(100, $this->lang("MachineCheck.machine_no_data"));
+            $machine = $machine->toArray();
+            $checkList = json2arr($postData['checkList']);
+            $insert = [
+                "m_id" => $machine['m_id'],
+                "machine_id" => $machine['machine_id'],
+                "machine_name" => $machine['machine_name'],
+                "type" => $postData['type'],
+                "create_date" => strtotime(date("Y-m-d")),
+                "creator" => $this->tokenArr['manager_id'],
+            ];
+            $insertAll = [];
+            foreach ($checkList as $ck => $cv) {
+                validate(VMachineCheck::class)->scene("checkList" . $postData['type'])->check($cv);
+                $insertCs = array_merge($insert,$cv);
+                if ($postData['type'] == 1 && $cv['mc_id'] && $cv['mc_id'] > 0) {
+                    $mc = $this->getMachineChannelFind(['mc_id' =>$cv['mc_id']],'mc_id,channel_code,mg_id,g_id,g_name,pic,sku,gc_id,gc_id,gc_name,stock system_stock');
+                    if (!$mc) {
+                        $this->rollbackTrans();
+                        return $this->rFail($this->lang("MachineCheck.mc_no_data"));
+                    }
+                    $mc = $mc->toArray();
+                    $insertCs = array_merge($insertCs,$mc);
+                }
+                if ($postData['type'] == 2 && $cv['mg_id'] && $cv['mg_id'] > 0) {
+                    $mg = $this->getMachineGoodsFind(['mg_id' => $cv['mg_id']], 'mg_id,g_id,g_name,pic,sku,bar_code,gc_id,gc_name, standby_stock system_stock');
+                    if (!$mg) {
+                        $this->rollbackTrans();
+                        return $this->r(100, $this->lang("MachineCheck.mg_no_data"));
+                    }
+                    $mg = $mg->toArray();
+                    $insertCs = array_merge($insertCs,$mg);
+                }
+                $insertAll[] = $insertCs;
             }
+            $result = $this->addMachineCheckStockMore($insertAll);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return returnValidate($e->getMessage());
         }
-        $data['create_date'] = strtotime(date("Y-m-d"));
-        $data['creator'] = $this->tokenArr['manager_id'];
-        return $this->rAction($this->addMachineCheckStock($data));
     }
 
 }

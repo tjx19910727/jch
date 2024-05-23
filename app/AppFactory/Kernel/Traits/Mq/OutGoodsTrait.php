@@ -87,7 +87,7 @@ trait OutGoodsTrait
                 $whereMc['channel_code'] = $channel_code;
                 $whereMc['m_id'] = $this->machine['m_id'];
                 $whereMc['channel_position'] = $position;
-                $mc = $this->getMachineChannelFind($whereMc,'mc_id,stock,stock_warning');
+                $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,stock_warning');
                 if ($success > 0) {
                     if ($this->order['order_type'] == 3 && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);

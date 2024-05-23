@@ -269,7 +269,7 @@ class Test extends BaseController
 
     public function testReturn()
     {
-        $data = '{"timestamp":1716278558874495,"msg_id":"2f3b0729-4ad3-4b69-b248-c5b1b4b2b47c","machine_id":"test0006","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"202405211600197166022\",\"main\":{\"1\":[[\"A02\",1,1,0,\"/uploads/machine_test0006/20240521/9c6b81061cf47e34f1fff17bf8c0733b.jpg,/uploads/machine_test0006/20240521/c649c83e3a30eb57ae01688409255f4d.jpg\"]]}}","sign":"12c46966fbc35a47d435d839e631f7ec"}';
+        $data = '{"timestamp":1716345052905137,"msg_id":"b383d0fc-e590-423f-9147-17ea35870e7e","machine_id":"test0006","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"202405221029087326049\",\"main\":{\"1\":[[\"A02\",1,1,0,\"/uploads/machine_test0006/20240522/eb1a6886601ccd60b740cc65417fd31e.jpg,/uploads/machine_test0006/20240522/3ec65b75a10627a39bb76a6a84249a32.jpg\"]]}}","sign":"0ef09ee480cb250e8c23ccf8ae9b35c3"}';
         $data = json2arr($data);
         dump($data);
         $config = [

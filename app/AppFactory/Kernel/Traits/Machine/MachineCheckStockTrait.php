@@ -29,6 +29,18 @@ trait MachineCheckStockTrait
         return $mcs->id;
     }
 
+    /**
+     * 批量添加
+     * @param $insertAll
+     * @return \think\Collection
+     * @throws \Exception
+     */
+    public function addMachineCheckStockMore($insertAll)
+    {
+        $mcs = new MachineCheckStockModel();
+        return $mcs->saveAll($insertAll);
+    }
+
     public function delMachineCheckStock($where)
     {
         return MachineCheckStockModel::whereDel($where);

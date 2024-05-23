@@ -27,6 +27,7 @@ use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthStatesTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsHitTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
@@ -41,7 +42,7 @@ class MqClient extends ReceiveBaseClient
     use SaleOrdersTrait,OutGoodsTrait;
     use MachineInfoTrait,MachineChannelTrait,MachineVersionPlanTrait;
     use MachineErrorCodeTrait;
-    use GoodsTrait,GoodsHitTrait;
+    use GoodsTrait,GoodsHitTrait,GoodsChangeTrait;
     use ActivityFdUsedTrait,ActivityFdTrait,ActivityFdContentTrait;
     use ActivityCouponTrait,ActivityCouponUsedTrait;
     use ActivityPickTrait,ActivityPickCodeTrait;
