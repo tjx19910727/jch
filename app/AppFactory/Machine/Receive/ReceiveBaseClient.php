@@ -10,6 +10,7 @@ namespace app\AppFactory\Machine\Receive;
 
 
 use app\AppFactory\Kernel\ServiceContainer;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
 use app\AppFactory\Machine\MachineBaseClient;
 use think\exception\ValidateException;
@@ -18,6 +19,7 @@ use think\facade\Filesystem;
 class ReceiveBaseClient extends MachineBaseClient
 {
     use MachineOnlineDetailsTrait;
+    use AuthManagerTrait;
 
     protected $message = [];
 
@@ -31,6 +33,10 @@ class ReceiveBaseClient extends MachineBaseClient
             $this->heartbeat();
         }
         $this->newRecord();
+
+        $this->ignoreList = (config("auth_manager_log.ignore")['machine'] ?? []);
+        $this->apiUrl = request()->action();
+        $this->recordManagerLog();
     }
 
 

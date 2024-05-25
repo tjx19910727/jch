@@ -26,6 +26,10 @@ class CheckClient extends MobileBase
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
+
+        $this->ignoreList = (config("auth_manager_log.ignore")['mobile'] ?? []);
+        $this->apiUrl = request()->action();
+        $this->recordManagerLog($this->manager);
     }
 
     /**

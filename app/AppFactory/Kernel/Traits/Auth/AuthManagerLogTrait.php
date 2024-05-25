@@ -110,30 +110,40 @@ trait AuthManagerLogTrait
         "/machine/receive/login" => "login",
     ];
 
+    // 忽略不记的API地址列表
+    protected $ignoreList = [];
+    // API地址
+    protected $apiUrl = "";
     /**
      * 用户操作事件记录
      * @param $manager
-     * @param $active_type
-     * @param string $remark
      * @return mixed
      */
-    public function recordManagerLog($manager,$remark = "")
+    public function recordManagerLog($manager = [])
     {
-        $params = arr2json(input());
-        if (strlen($params) > 1024) $params = substr($params,0,1024);
-        $url = request()->url();
-        if (in_array($url,$this->log_type)) {
-            $log = [
-                "ao_id" => $manager['ao_id'] ?? 0,
-                "manager_id" => $manager['manager_id'] ?? 0,
-                "nickname" => $manager['nickname'] ?? "",
-                "account" => $manager['account'] ?? "",
-                "path" => $url,
-                "params" => $params,
-                "log_type" => $this->log_type[$url],
-                "remark" => $remark,
-            ];
-            $this->addAuthManagerLog($log);
+        if (!$this->apiUrl) $this->apiUrl = request()->url();
+        if ($this->apiUrl) {
+            if (!in_array($this->apiUrl,$this->ignoreList)) {
+                $params = input();
+                if (!$manager) {
+                    $where = [];
+                    if (isset($params['operator'])) $where['manager_id'] = $params['operator'];
+                    if (isset($params['manager_id'])) $where['manager_id'] = $params['manager_id'];
+                    if ($where) $manager = $this->getAuthManagerFind($where,'manager_id,nickname,account,ao_id');
+                }
+                if ($manager) {
+                    $params = arr2json($params);
+                    $log = [
+                        "ao_id" => $manager['ao_id'] ?? 0,
+                        "manager_id" => $manager['manager_id'] ?? 0,
+                        "nickname" => $manager['nickname'] ?? "",
+                        "account" => $manager['account'] ?? "",
+                        "path" => request()->url(),
+                        "params" => $params,
+                    ];
+                    $this->addAuthManagerLog($log);
+                }
+            }
         }
     }
 }

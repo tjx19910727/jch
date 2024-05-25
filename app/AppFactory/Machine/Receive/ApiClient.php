@@ -18,9 +18,7 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
 use app\AppFactory\Kernel\Traits\Advertisement\AdvertisementPushTrait;
 use app\AppFactory\Kernel\Traits\Advertisement\AdvertisementRecordTrait;
-use app\AppFactory\Kernel\Traits\Auth\AuthManagerLogTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
-use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationTrait;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
@@ -58,7 +56,6 @@ class ApiClient extends ReceiveBaseClient
         AdvertisementPushTrait,
         AdvertisementRecordTrait,
         AuthOrganizationTrait,
-        AuthManagerTrait,AuthManagerLogTrait,
         AuthManagerMachineTrait,
         ConfigTrait,
         GoodsTrait, GoodsLangTrait, GoodsCategoryLangTrait, GoodsCategoryTrait, GoodsChangeTrait, GoodsCornerTrait,
@@ -683,7 +680,7 @@ class ApiClient extends ReceiveBaseClient
             "manager_id" => $this->data['manager_id'],
         ];
         $params['sign'] = $this->makeSign($params);
-        $url = $this->getUrl("/mobile/common/checkScan.html") . "?" . http_build_query($params);
+        $url = $this->getUrl("/mobile/#/index") . "?" . http_build_query($params);
         return $this->rQ(['url' => $url]);
     }
 

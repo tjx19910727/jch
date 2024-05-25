@@ -56,15 +56,4 @@ class SaleOrdersUnclaimed extends Common
         $where = $this->getWhere($postData, false, ['trade_no' => 'like','machine_id' => 'like','channel_code' => 'like','g_name' => "like"]);
         return $this->app->saleOrdersUnclaimed->export($where);
     }
-
-    public function del()
-    {
-        $postData = input();
-        try {
-            $this->validate($postData, $this->validatePath . 'del');
-        } catch (\Exception $e) {
-            return returnValidate($e->getMessage());
-        }
-        return;
-    }
 }

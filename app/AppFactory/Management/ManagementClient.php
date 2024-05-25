@@ -32,6 +32,11 @@ class ManagementClient extends BaseClient
         $this->manager = $this->app->getConfig();
         $this->salt = Config::get('app.salt');
         $this->systemInfo = $this->getSystemInfo();
+
+
+        $this->ignoreList = (config("auth_manager_log.ignore")['management'] ?? []);
+        $this->apiUrl = request()->action();
+        $this->recordManagerLog($this->manager);
     }
 
 

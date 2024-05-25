@@ -44,7 +44,7 @@ class ActivityClient extends ReceiveBaseClient
     use SaleOrdersTrait,SaleOrdersRevenueTrait;
     use MachineChannelTrait;
     use BeforeOrderPaymentTrait,AfterOrderPaymentTrait;
-    use AuthManagerTrait,StrategyMachineTrait,StrategyManagerTrait,StrategyIncomeTrait;
+    use StrategyMachineTrait,StrategyManagerTrait,StrategyIncomeTrait;
 
     protected $order;
 
