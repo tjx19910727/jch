@@ -17,16 +17,28 @@ class Info extends Common
 
     public function getMachine()
     {
-        return $this->app->machineInfo->getInfo();
+        try {
+            return $this->app->machineInfo->getInfo();
+        } catch (\Exception $e) {
+            return returnTryCatch($e->getMessage());
+        }
     }
 
     public function getChannel()
     {
-        return $this->app->machineInfo->getChannel();
+        try {
+            return $this->app->machineInfo->getChannel();
+        } catch (\Exception $e) {
+            return returnTryCatch($e->getMessage());
+        }
     }
 
     public function getMachineGoods()
     {
-        return $this->app->machineInfo->getMachineGoods();
+        try {
+            return $this->app->machineInfo->getMachineGoods();
+        } catch (\Exception $e) {
+            return returnTryCatch($e->getMessage());
+        }
     }
 }

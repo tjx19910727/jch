@@ -34,7 +34,7 @@ class ManagementClient extends BaseClient
         $this->systemInfo = $this->getSystemInfo();
 
 
-        $this->ignoreList = (config("auth_manager_log.ignore")['management'] ?? []);
+        $this->ignoreList = (config("auth_manager_log_list.ignore")['management'] ?? []);
         $this->apiUrl = request()->action();
         $this->recordManagerLog($this->manager);
     }

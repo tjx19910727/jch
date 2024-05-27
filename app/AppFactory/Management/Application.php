@@ -51,6 +51,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Auth\AuthManagerRoleClient             $authManagerRole        管理员绑定角色
  * @property Auth\AuthManagerMachineClient          $authManagerMachine     管理员绑定设备
  * @property Auth\AuthManagerClient                 $authManager            管理员
+ * @property Auth\AuthManagerLogClient              $authManagerLog         管理员操作日志
  * @property Auth\AuthNodeClient                    $authNode               权限节点
  * @property Auth\AuthRoleClient                    $authRole               权限角色
  * @property Auth\AuthRoleNodeClient                $authRoleNode           权限角色绑定权限节点

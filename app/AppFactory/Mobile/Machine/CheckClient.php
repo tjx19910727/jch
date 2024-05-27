@@ -27,7 +27,11 @@ class CheckClient extends MobileBase
     {
         parent::__construct($app);
 
-        $this->ignoreList = (config("auth_manager_log.ignore")['mobile'] ?? []);
+        $this->manager = $this->getAuthManagerFind(['manager_id' => $this->tokenArr['manager_id']],'manager_id,nickname,account,ao_id');
+        if (!$this->manager) {
+            die($this->r(100,$this->lang('MachineCheck.manager_no_data')));
+        }
+        $this->ignoreList = (config("auth_manager_log_list.ignore")['mobile'] ?? []);
         $this->apiUrl = request()->action();
         $this->recordManagerLog($this->manager);
     }
@@ -84,7 +88,7 @@ class CheckClient extends MobileBase
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e,1);
-            return returnValidate($e->getMessage());
+            return $this->rValidate($e->getMessage());
         }
     }
 

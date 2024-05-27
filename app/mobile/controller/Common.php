@@ -36,6 +36,6 @@ class Common extends BaseController
     {
         $postData = input();
         try { $this->validate($postData, VCommon::class . '.stock');} catch (\Exception $e) { return returnValidate($e->getMessage());}
-        return $this->app->machineCheck->checkScan($postData);
+        return $this->app->checkScan($postData);
     }
 }

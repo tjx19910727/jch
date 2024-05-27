@@ -97,9 +97,13 @@ return [
             "getCaptcha",
         ],
         "mobile" => [
+            "checkScan",
             "getMachine",
             "getChannel",
             "getMachineGoods",
         ],
+    ],
+    "replace" => [
+
     ],
 ];

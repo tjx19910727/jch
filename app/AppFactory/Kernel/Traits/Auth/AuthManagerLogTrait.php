@@ -53,11 +53,12 @@ trait AuthManagerLogTrait
      * @param int $pageNum
      * @param string $field
      * @param string $order
+     * @param string $eachFun
      * @return \app\AppFactory\Kernel\Model\BaseModel|\app\AppFactory\Kernel\Model\BaseModel[]|array|string|\think\Collection|\think\Paginator
      */
-    public function getAuthManagerLogList($where, $pageNum = 0, $field = "*", $order = "")
+    public function getAuthManagerLogList($where, $pageNum = 0, $field = "*", $order = "",$eachFun = "")
     {
-        return AuthManagerLogModel::getList($where, $pageNum, $field, $order);
+        return AuthManagerLogModel::getList($where, $pageNum, $field, $order, $eachFun);
     }
 
     /**
@@ -125,23 +126,29 @@ trait AuthManagerLogTrait
         if ($this->apiUrl) {
             if (!in_array($this->apiUrl,$this->ignoreList)) {
                 $params = input();
-                if (!$manager) {
-                    $where = [];
-                    if (isset($params['operator'])) $where['manager_id'] = $params['operator'];
-                    if (isset($params['manager_id'])) $where['manager_id'] = $params['manager_id'];
-                    if ($where) $manager = $this->getAuthManagerFind($where,'manager_id,nickname,account,ao_id');
-                }
-                if ($manager) {
-                    $params = arr2json($params);
-                    $log = [
-                        "ao_id" => $manager['ao_id'] ?? 0,
-                        "manager_id" => $manager['manager_id'] ?? 0,
-                        "nickname" => $manager['nickname'] ?? "",
-                        "account" => $manager['account'] ?? "",
-                        "path" => request()->url(),
-                        "params" => $params,
-                    ];
-                    $this->addAuthManagerLog($log);
+                $path = request()->url();
+                $log = $this->getAuthManagerLogFind(['path' => $path,['create_time','>=',bcsub(time(),3)]],'ml_id');
+                if (!$log) {
+                    if (!$manager) {
+                        $where = [];
+                        if (isset($params['account'])) $where['account'] = $params['account'];
+                        if (isset($params['operator'])) $where['manager_id'] = $params['operator'];
+                        if (isset($params['manager_id'])) $where['manager_id'] = $params['manager_id'];
+                        if ($where) $manager = $this->getAuthManagerFind($where, 'manager_id,nickname,account,ao_id');
+                    }
+                    if ($manager) {
+                        $params = json_encode($params, 320);
+                        $params = (strlen($params) <= 1024 ? $params : substr($params, 0, 1024));
+                        $log = [
+                            "ao_id" => $manager['ao_id'] ?? 0,
+                            "manager_id" => $manager['manager_id'] ?? 0,
+                            "nickname" => $manager['nickname'] ?? "",
+                            "account" => $manager['account'] ?? "",
+                            "path" => $path,
+                            "params" => $params,
+                        ];
+                        @$this->addAuthManagerLog($log);
+                    }
                 }
             }
         }

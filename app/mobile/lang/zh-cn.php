@@ -8,6 +8,7 @@
 
 return [
     "MachineCheck" => [
+        "manager_no_data" => "查无管理员信息",
         "machine_no_data" => "查无设备信息",
         "mc_no_data" => "查无设备货架信息",
         "mg_no_data" => "查无设备商品信息",

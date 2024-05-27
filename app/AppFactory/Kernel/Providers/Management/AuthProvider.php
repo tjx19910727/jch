@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Providers\Management;
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\Auth\AuthManagerClient;
+use app\AppFactory\Management\Auth\AuthManagerLogClient;
 use app\AppFactory\Management\Auth\AuthManagerMachineClient;
 use app\AppFactory\Management\Auth\AuthManagerRoleClient;
 use app\AppFactory\Management\Auth\AuthNodeClient;
@@ -30,6 +31,9 @@ class AuthProvider implements ServiceProviderInterface
         };
         $app['authManagerRole'] = function ($app) {
             return new AuthManagerRoleClient($app);
+        };
+        $app['authManagerLog'] = function ($app) {
+            return new AuthManagerLogClient($app);
         };
         $app['authManagerMachine'] = function ($app) {
             return new AuthManagerMachineClient($app);

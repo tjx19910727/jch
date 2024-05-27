@@ -684,4 +684,9 @@ class ApiClient extends ReceiveBaseClient
         return $this->rQ(['url' => $url]);
     }
 
+    // 恢复出厂设置
+    public function reset()
+    {
+
+    }
 }

@@ -373,4 +373,9 @@ class Receive extends Common
     {
         return $this->app->saleOrders->subUnclaimed();
     }
+
+    public function resetMachine()
+    {
+        return $this->app->api->reset();
+    }
 }
