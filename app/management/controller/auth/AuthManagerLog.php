@@ -23,11 +23,4 @@ class AuthManagerLog extends Common
         $where = $this->getWhere($postData, false, []);
         return $this->app->authManagerLog->getMlList($where,$pageNum,$this->field);
     }
-
-    public function getFind()
-    {
-        $postData = input();
-        $where = $this->getWhere($postData, false, []);
-        return;
-    }
 }

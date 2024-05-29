@@ -103,7 +103,7 @@ class MachineClient extends TimeTaskBase
                         "templateType" => "online",
                         "replaceData" => $machine,
                     ];
-                    $app = AppFactory::notice($config);
+                    $app = @AppFactory::notice($config);
                     @$app->send();
                 } catch (\Exception $e) {
                     actionException($e,1);

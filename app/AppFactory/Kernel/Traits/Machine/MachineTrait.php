@@ -14,6 +14,17 @@ use app\AppFactory\Kernel\Model\Machine\MachineModel;
 trait MachineTrait
 {
     /**
+     * 获取设备指定列数据
+     * @param $where
+     * @param $column
+     * @return array
+     */
+    public function getMachineColumn($where,$column)
+    {
+        return MachineModel::getColumn($where,$column);
+    }
+
+    /**
      * 获取设备字段数值
      * @param $where
      * @param $value

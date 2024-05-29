@@ -192,4 +192,16 @@ class MqClient extends SendBaseClient
         ];
         return $this->dataSendRabbitMQ($data);
     }
+
+    /**
+     * 触发设备更新系统配置信息
+     * @return array|string
+     */
+    public function triggerUpdateSystemInfo()
+    {
+        $data = [
+            "msgType" => "updateSystemInfo",
+        ];
+        return $this->dataSendRabbitMQ($data);
+    }
 }

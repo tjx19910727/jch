@@ -225,6 +225,28 @@ class Test extends BaseController
         dump(json_encode($data, 320));
     }
 
+    public function getCheckStockQr()
+    {
+        $msg_id = uniqid();
+        $machine_id = input("machine_id");
+        $manager_id = input('manager_id');
+        $data = [
+            "machine_id" => $machine_id,
+            "manager_id" => $manager_id,
+            "timestamp" => time(),
+            "msg_id" => $msg_id,
+        ];
+        $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
+        $config = [
+            "machine_id" => $machine_id,
+            "key" => env("api.md5Key"),
+            "data" => $data,
+        ];
+        $app = AppFactory::machine($config);
+        $result = $app->api->checkStockQrCode();
+        return $result;
+    }
+
     public function validateSign()
     {
         $url = request()->url();

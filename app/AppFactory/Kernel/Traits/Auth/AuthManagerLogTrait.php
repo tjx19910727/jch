@@ -122,11 +122,11 @@ trait AuthManagerLogTrait
      */
     public function recordManagerLog($manager = [])
     {
-        if (!$this->apiUrl) $this->apiUrl = request()->url();
+        if (!$this->apiUrl) $this->apiUrl = request()->baseUrl();
         if ($this->apiUrl) {
             if (!in_array($this->apiUrl,$this->ignoreList)) {
                 $params = input();
-                $path = request()->url();
+                $path = request()->baseUrl();
                 $log = $this->getAuthManagerLogFind(['path' => $path,['create_time','>=',bcsub(time(),3)]],'ml_id');
                 if (!$log) {
                     if (!$manager) {
