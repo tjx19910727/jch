@@ -4,217 +4,16 @@
     <list default="true" id="0b425c8e-253d-4f3f-a4bc-dbf750314eff" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/Send/MqClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/Send/MqClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/DbTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/DbTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/machine/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/controller/Test.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/Test.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/controller/config/Config.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/config/Config.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/controller/machine/MachineVersion.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/machine/MachineVersion.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/machine/MachineVersionPlan.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/machine/MachineVersionPlan.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/config/auth_manager_log_list.php" beforeDir="false" afterPath="$PROJECT_DIR$/config/auth_manager_log_list.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/assets/payee-4ab2b94b.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/payee-4ab2b94b.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojiimages.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojiimages.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojis.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojis.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ar.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ar.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/bg_BG.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/bg_BG.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ca.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ca.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/cs.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/cs.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/da.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/da.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/de.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/de.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/el.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/el.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/en.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/en.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/es.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/es.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/eu.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/eu.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fa.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fa.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fi.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fi.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fr_FR.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fr_FR.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/he_IL.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/he_IL.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hi.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hi.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hr.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hr.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hu_HU.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hu_HU.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/id.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/id.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/it.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/it.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ja.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ja.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/kk.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/kk.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ko_KR.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ko_KR.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ms.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ms.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/nb_NO.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/nb_NO.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/nl.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/nl.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pl.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pl.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pt_BR.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pt_BR.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pt_PT.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pt_PT.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ro.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ro.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ru.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ru.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sk.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sk.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sl_SI.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sl_SI.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sv_SE.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sv_SE.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/th_TH.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/th_TH.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/tr.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/tr.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/uk.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/uk.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/vi.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/vi.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh-Hans.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh-Hans.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh_CN.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh_CN.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh_TW.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh_TW.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/index.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/index.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/plugin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/plugin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/plugin.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/plugin.min.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.js" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.min.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.min.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/tinymce.min.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/tinymce/tinymce.min.js" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -242,24 +41,20 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="AuthManagerLogTrait.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php">
+      <file leaf-file-name="AuthManagerLog.php" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="272">
-              <caret line="131" column="36" selection-start-line="131" selection-start-column="36" selection-end-line="131" selection-end-column="36" />
+            <state relative-caret-position="374">
+              <caret line="22" column="91" selection-start-line="22" selection-start-column="91" selection-end-line="22" selection-end-column="91" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="auth_manager_log_list.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/config/auth_manager_log_list.php">
+      <file leaf-file-name="Check.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Check.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="418">
-              <caret line="106" column="15" selection-start-line="106" selection-start-column="9" selection-end-line="106" selection-end-column="15" />
-              <folding>
-                <element signature="e#199#1012#1#PHP" />
-                <element signature="e#1084#2255#1#PHP" />
-              </folding>
+            <state relative-caret-position="330">
+              <caret line="22" column="25" selection-start-line="22" selection-start-column="20" selection-end-line="22" selection-end-column="25" />
             </state>
           </provider>
         </entry>
@@ -267,80 +62,171 @@
       <file leaf-file-name="AuthManagerLogClient.php" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="440">
-              <caret line="26" column="70" selection-start-line="26" selection-start-column="70" selection-end-line="26" selection-end-column="70" />
+            <state relative-caret-position="663">
+              <caret line="47" column="71" lean-forward="true" selection-start-line="47" selection-start-column="71" selection-end-line="47" selection-end-column="71" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="MachineVersion.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineVersion.php">
+      <file leaf-file-name="auth_manager_log_list.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/config/auth_manager_log_list.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="619">
-              <caret line="60" column="66" selection-start-line="60" selection-start-column="66" selection-end-line="60" selection-end-column="66" />
+            <state relative-caret-position="660">
+              <caret line="117" column="65" lean-forward="true" selection-start-line="117" selection-start-column="65" selection-end-line="117" selection-end-column="65" />
               <folding>
-                <element signature="e#142#179#0#PHP" expanded="true" />
+                <element signature="e#1084#2255#1#PHP" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Config.php" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/app/management/controller/config/Config.php">
+      <file leaf-file-name="ApiClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="737">
+              <caret line="688" column="5" lean-forward="true" selection-start-line="688" selection-start-column="5" selection-end-line="688" selection-end-column="5" />
+              <folding>
+                <element signature="e#3482#3608#0#PHP" />
+                <element signature="e#3637#3688#0#PHP" />
+                <element signature="e#3693#4674#0#PHP" />
+                <element signature="e#3924#4021#0#PHP" />
+                <element signature="e#4680#4731#0#PHP" />
+                <element signature="e#4736#4840#0#PHP" />
+                <element signature="e#4846#4901#0#PHP" />
+                <element signature="e#4906#5231#0#PHP" />
+                <element signature="e#5237#5331#0#PHP" />
+                <element signature="e#5337#5390#0#PHP" />
+                <element signature="e#5395#6253#0#PHP" />
+                <element signature="e#6259#6312#0#PHP" />
+                <element signature="e#6317#6749#0#PHP" />
+                <element signature="e#6755#6812#0#PHP" />
+                <element signature="e#6817#6911#0#PHP" />
+                <element signature="e#6917#6970#0#PHP" />
+                <element signature="e#6975#8956#0#PHP" />
+                <element signature="e#7592#8900#0#PHP" />
+                <element signature="e#7661#8890#0#PHP" />
+                <element signature="e#8116#8698#0#PHP" />
+                <element signature="e#8191#8295#0#PHP" />
+                <element signature="e#8316#8491#0#PHP" />
+                <element signature="e#8512#8680#0#PHP" />
+                <element signature="e#8962#9023#0#PHP" />
+                <element signature="e#9028#9112#0#PHP" />
+                <element signature="e#9118#9162#0#PHP" />
+                <element signature="e#9167#9264#0#PHP" />
+                <element signature="e#9270#9323#0#PHP" />
+                <element signature="e#9328#14903#0#PHP" />
+                <element signature="e#9602#10307#0#PHP" />
+                <element signature="e#10338#11213#0#PHP" />
+                <element signature="e#10635#11028#0#PHP" />
+                <element signature="e#11248#11377#0#PHP" />
+                <element signature="e#11408#11606#0#PHP" />
+                <element signature="e#11616#11755#0#PHP" />
+                <element signature="e#11927#13703#0#PHP" />
+                <element signature="e#12021#12201#0#PHP" />
+                <element signature="e#12215#12364#0#PHP" />
+                <element signature="e#12411#12632#0#PHP" />
+                <element signature="e#12645#13612#0#PHP" />
+                <element signature="e#13789#14647#0#PHP" />
+                <element signature="e#13870#14069#0#PHP" />
+                <element signature="e#14909#14962#0#PHP" />
+                <element signature="e#14967#15958#0#PHP" />
+                <element signature="e#15054#15178#0#PHP" />
+                <element signature="e#15964#16031#0#PHP" />
+                <element signature="e#16036#16283#0#PHP" />
+                <element signature="e#16289#16342#0#PHP" />
+                <element signature="e#16347#16713#0#PHP" />
+                <element signature="e#16719#16772#0#PHP" />
+                <element signature="e#16777#17003#0#PHP" />
+                <element signature="e#17009#17064#0#PHP" />
+                <element signature="e#17069#17609#0#PHP" />
+                <element signature="e#17324#17540#0#PHP" />
+                <element signature="e#17364#17479#0#PHP" />
+                <element signature="e#18116#18177#0#PHP" />
+                <element signature="e#18182#18696#0#PHP" />
+                <element signature="e#18309#18652#0#PHP" />
+                <element signature="e#18348#18569#0#PHP" />
+                <element signature="e#18702#18757#0#PHP" />
+                <element signature="e#18762#19200#0#PHP" />
+                <element signature="e#18994#19160#0#PHP" />
+                <element signature="e#19206#19423#0#PHP" />
+                <element signature="e#19428#19947#0#PHP" />
+                <element signature="e#19953#20024#0#PHP" />
+                <element signature="e#20029#21310#0#PHP" />
+                <element signature="e#20434#21230#0#PHP" />
+                <element signature="e#20636#20718#0#PHP" />
+                <element signature="e#21046#21159#0#PHP" />
+                <element signature="e#21316#21400#0#PHP" />
+                <element signature="e#21405#27735#0#PHP" />
+                <element signature="e#21688#22169#0#PHP" />
+                <element signature="e#22285#26423#0#PHP" />
+                <element signature="e#22335#22681#0#PHP" />
+                <element signature="e#22468#22615#0#PHP" />
+                <element signature="e#23015#23181#0#PHP" />
+                <element signature="e#23266#26252#0#PHP" />
+                <element signature="e#23417#23572#0#PHP" />
+                <element signature="e#23589#23751#0#PHP" />
+                <element signature="e#23928#24026#0#PHP" />
+                <element signature="e#24054#25214#0#PHP" />
+                <element signature="e#25297#26238#0#PHP" />
+                <element signature="e#26080#26238#0#PHP" />
+                <element signature="e#26297#26423#0#PHP" />
+                <element signature="e#26461#27627#0#PHP" />
+                <element signature="e#26765#26860#0#PHP" />
+                <element signature="e#26902#27002#0#PHP" />
+                <element signature="e#27153#27617#0#PHP" />
+                <element signature="e#27211#27603#0#PHP" />
+                <element signature="e#27425#27603#0#PHP" />
+                <element signature="e#27741#27802#0#PHP" />
+                <element signature="e#27807#28102#0#PHP" />
+                <element signature="e#28108#28164#0#PHP" />
+                <element signature="e#28169#28572#0#PHP" />
+                <element signature="e#28228#28387#0#PHP" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="CheckClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="443">
-              <caret line="39" column="13" selection-start-line="39" selection-start-column="13" selection-end-line="39" selection-end-column="13" />
-              <folding>
-                <element signature="e#141#178#0#PHP" expanded="true" />
-              </folding>
+              <caret line="35" column="48" selection-start-line="35" selection-start-column="48" selection-end-line="35" selection-end-column="48" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="ConfigClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php">
+      <file leaf-file-name="ManagementClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="418">
-              <caret line="31" column="15" selection-start-line="31" selection-start-column="15" selection-end-line="31" selection-end-column="15" />
-              <folding>
-                <element signature="e#141#171#0#PHP" expanded="true" />
-              </folding>
+            <state relative-caret-position="462">
+              <caret line="30" column="34" lean-forward="true" selection-start-line="30" selection-start-column="34" selection-end-line="30" selection-end-column="34" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="MachineTrait.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php">
+      <file leaf-file-name="Test.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="242">
-              <caret line="16" column="16" selection-start-line="16" selection-start-column="16" selection-end-line="16" selection-end-column="16" />
+            <state relative-caret-position="401">
+              <caret line="216" column="39" lean-forward="true" selection-start-line="216" selection-start-column="39" selection-end-line="216" selection-end-column="39" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Machine.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/management/controller/machine/Machine.php">
+      <file leaf-file-name="ReceiveBaseClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="594">
-              <caret line="55" column="38" lean-forward="true" selection-start-line="55" selection-start-column="38" selection-end-line="55" selection-end-column="38" />
+            <state relative-caret-position="616">
+              <caret line="38" column="38" lean-forward="true" selection-start-line="38" selection-start-column="38" selection-end-line="38" selection-end-column="38" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="MachineClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php">
+      <file leaf-file-name="AuthManagerLogTrait.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="685">
-              <caret line="227" column="44" lean-forward="true" selection-start-line="227" selection-start-column="44" selection-end-line="227" selection-end-column="44" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="MqClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Send/MqClient.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="509">
-              <caret line="195" column="7" lean-forward="true" selection-start-line="195" selection-start-column="7" selection-end-line="195" selection-end-column="7" />
+            <state relative-caret-position="118">
+              <caret line="120" column="23" lean-forward="true" selection-start-line="120" selection-start-column="23" selection-end-line="120" selection-end-column="23" />
             </state>
           </provider>
         </entry>
@@ -356,8 +242,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>VAdvertisement</find>
-      <find>满</find>
       <find>useFd</find>
       <find>VChange</find>
       <find>change</find>
@@ -386,6 +270,8 @@
       <find>login</find>
       <find>getSystem</find>
       <find>systemInfo</find>
+      <find>query</find>
+      <find>machineGoods</find>
     </findStrings>
     <replaceStrings>
       <replace>ActivityMachine</replace>
@@ -429,17 +315,12 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Advertisement/AdvertisementPushClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityFdClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityLotteryClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityPickClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php" />
         <option value="$PROJECT_DIR$/app/http/controller/Test.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Goods/GoodsClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsChangeTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Auth/AuthManagerLogModel.php" />
         <option value="$PROJECT_DIR$/app/lang/zh-cn/app.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Auth/AuthManagerMachineModel.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerMachineTrait.php" />
@@ -454,9 +335,7 @@
         <option value="$PROJECT_DIR$/app/management/controller/machine/MachineChannel.php" />
         <option value="$PROJECT_DIR$/app/management/controller/sale/SaleOrdersUnclaimed.php" />
         <option value="&lt;44c2b501-5e13-4cad-b0eb-9184c79ffcc1&gt;/public/mobile/index.html" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php" />
         <option value="$PROJECT_DIR$/config/app.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Application.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Providers/Management/AuthProvider.php" />
         <option value="$PROJECT_DIR$/app/mobile/controller/Common.php" />
@@ -465,21 +344,28 @@
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php" />
         <option value="$PROJECT_DIR$/app/mobile/lang/zh-cn.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" />
         <option value="$PROJECT_DIR$/app/mobile/controller/machine/Info.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/InfoClient.php" />
-        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
         <option value="$PROJECT_DIR$/app/common.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php" />
-        <option value="$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php" />
-        <option value="$PROJECT_DIR$/config/auth_manager_log_list.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php" />
         <option value="$PROJECT_DIR$/app/management/controller/machine/MachineVersion.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Send/MqClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php" />
         <option value="$PROJECT_DIR$/app/management/controller/config/Config.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/machine/MachineVersionPlan.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Auth/AuthManagerLogModel.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/Test.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/DbTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php" />
+        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
+        <option value="$PROJECT_DIR$/config/auth_manager_log_list.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php" />
       </list>
     </option>
   </component>
@@ -621,32 +507,6 @@
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
-              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
-              <item name="Traits" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
-              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
-              <item name="Traits" type="462c0819:PsiDirectoryNode" />
-              <item name="Auth" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
-              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
-              <item name="Traits" type="462c0819:PsiDirectoryNode" />
-              <item name="Email" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
               <item name="Machine" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
@@ -664,6 +524,13 @@
               <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
               <item name="Machine" type="462c0819:PsiDirectoryNode" />
               <item name="Send" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Management" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
@@ -740,15 +607,33 @@
               <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="management" type="462c0819:PsiDirectoryNode" />
               <item name="controller" type="462c0819:PsiDirectoryNode" />
-              <item name="config" type="462c0819:PsiDirectoryNode" />
+              <item name="auth" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="management" type="462c0819:PsiDirectoryNode" />
+              <item name="mobile" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="mobile" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="mobile" type="462c0819:PsiDirectoryNode" />
               <item name="controller" type="462c0819:PsiDirectoryNode" />
               <item name="machine" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="config" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -840,12 +725,12 @@
       <workItem from="1715646784377" duration="956000" />
       <workItem from="1715647840869" duration="123416000" />
       <workItem from="1716599820671" duration="1847000" />
-      <workItem from="1716615726467" duration="16540000" />
+      <workItem from="1716615726467" duration="26156000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1489716000" />
+    <option name="totallyTimeSpent" value="1499332000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -928,111 +813,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/app/management/controller/wx/WxOfficial.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-811" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/Index.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="726">
-          <caret line="102" column="34" selection-start-line="102" selection-start-column="20" selection-end-line="102" selection-end-column="34" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/Login.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="528">
-          <caret line="33" column="30" selection-start-line="33" selection-start-column="20" selection-end-line="33" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineChannelClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-2021" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineChannel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="660">
-          <caret line="37" column="5" selection-start-line="37" selection-start-column="5" selection-end-line="37" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/.env">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/config/app.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="311">
-          <caret line="26" lean-forward="true" selection-start-line="26" selection-end-line="26" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/MachineBaseClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="242">
-          <caret line="20" lean-forward="true" selection-start-line="20" selection-end-line="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Providers/Management/AuthProvider.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="440">
-          <caret line="35" column="50" lean-forward="true" selection-start-line="35" selection-start-column="50" selection-end-line="35" selection-end-column="50" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="257">
-          <caret line="38" column="34" lean-forward="true" selection-start-line="38" selection-start-column="34" selection-end-line="38" selection-end-column="34" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/AuthController.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="484">
-          <caret line="38" column="43" selection-start-line="38" selection-start-column="33" selection-end-line="38" selection-end-column="43" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/Common.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5192">
-          <caret line="243" column="28" selection-start-line="243" selection-start-column="20" selection-end-line="243" selection-end-column="28" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="638">
-          <caret line="38" column="21" lean-forward="true" selection-start-line="38" selection-start-column="21" selection-end-line="38" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/CommonTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-525" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/DbTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-767" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/ManagementTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-2659" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Check.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="26" column="46" lean-forward="true" selection-start-line="26" selection-start-column="46" selection-end-line="26" selection-end-column="46" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Application.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="641">
@@ -1064,31 +844,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="509">
-          <caret line="261" column="36" selection-start-line="261" selection-start-column="20" selection-end-line="261" selection-end-column="36" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Info.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="308">
           <caret line="20" column="49" selection-start-line="20" selection-start-column="49" selection-end-line="20" selection-end-column="49" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/InfoClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="242">
-          <caret line="20" selection-start-line="20" selection-end-line="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="511">
-          <caret line="245" column="36" selection-start-line="245" selection-start-column="36" selection-end-line="245" selection-end-column="36" />
         </state>
       </provider>
     </entry>
@@ -1110,20 +869,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="484">
           <caret line="30" column="7" selection-start-line="30" selection-start-column="7" selection-end-line="30" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="443">
-          <caret line="47" column="33" selection-start-line="47" selection-start-column="33" selection-end-line="47" selection-end-column="33" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="25" column="20" selection-start-line="25" selection-start-column="20" selection-end-line="25" selection-end-column="20" />
         </state>
       </provider>
     </entry>
@@ -1183,45 +928,461 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Application.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="272">
-          <caret line="131" column="36" selection-start-line="131" selection-start-column="36" selection-end-line="131" selection-end-column="36" />
+        <state relative-caret-position="294">
+          <caret line="60" column="26" lean-forward="true" selection-start-line="60" selection-start-column="26" selection-end-line="60" selection-end-column="26" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Send/MqClient.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="401">
-          <caret line="126" column="123" selection-start-line="126" selection-start-column="113" selection-end-line="126" selection-end-column="123" />
+        <state relative-caret-position="927">
+          <caret line="199" column="20" selection-start-line="199" selection-start-column="20" selection-end-line="199" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="685">
+          <caret line="227" column="44" selection-start-line="227" selection-start-column="44" selection-end-line="227" selection-end-column="44" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/Machine.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="594">
+          <caret line="55" column="38" selection-start-line="55" selection-start-column="38" selection-end-line="55" selection-end-column="38" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="242">
+          <caret line="16" column="16" selection-start-line="16" selection-start-column="16" selection-end-line="16" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="707">
+          <caret line="65" column="31" lean-forward="true" selection-start-line="65" selection-start-column="31" selection-end-line="65" selection-end-column="31" />
           <folding>
-            <element signature="e#139#182#0#PHP" expanded="true" />
+            <element signature="e#141#171#0#PHP" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php">
+    <entry file="file://$PROJECT_DIR$/app/management/controller/config/Config.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="396">
-          <caret line="23" column="46" selection-start-line="23" selection-start-column="46" selection-end-line="23" selection-end-column="46" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/config/auth_manager_log_list.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="106" column="15" selection-start-line="106" selection-start-column="9" selection-end-line="106" selection-end-column="15" />
+        <state relative-caret-position="839">
+          <caret line="57" column="41" lean-forward="true" selection-start-line="57" selection-start-column="41" selection-end-line="57" selection-end-column="41" />
           <folding>
-            <element signature="e#199#1012#1#PHP" />
-            <element signature="e#1084#2255#1#PHP" />
+            <element signature="e#141#178#0#PHP" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineVersionPlanClient.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="440">
-          <caret line="26" column="70" selection-start-line="26" selection-start-column="70" selection-end-line="26" selection-end-column="70" />
+        <state relative-caret-position="506">
+          <caret line="31" column="41" selection-start-line="31" selection-start-column="41" selection-end-line="31" selection-end-column="41" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-orm/src/db/BaseQuery.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-3590">
+          <caret line="25" column="24" lean-forward="true" selection-start-line="25" selection-start-column="24" selection-end-line="25" selection-end-column="24" />
+          <folding>
+            <element signature="e#869#887#0#PHP" />
+            <element signature="e#1144#1195#0#PHP" />
+            <element signature="e#1228#1279#0#PHP" />
+            <element signature="e#1311#1362#0#PHP" />
+            <element signature="e#1387#1434#0#PHP" />
+            <element signature="e#1464#1509#0#PHP" />
+            <element signature="e#1543#1586#0#PHP" />
+            <element signature="e#1621#1720#0#PHP" />
+            <element signature="e#1725#1903#0#PHP" />
+            <element signature="e#1909#2088#0#PHP" />
+            <element signature="e#2093#3437#0#PHP" />
+            <element signature="e#2159#3431#0#PHP" />
+            <element signature="e#2364#2590#0#PHP" />
+            <element signature="e#2591#2819#0#PHP" />
+            <element signature="e#2820#3044#0#PHP" />
+            <element signature="e#3045#3327#0#PHP" />
+            <element signature="e#3328#3431#0#PHP" />
+            <element signature="e#3443#3519#0#PHP" />
+            <element signature="e#3524#4153#0#PHP" />
+            <element signature="e#3625#3695#0#PHP" />
+            <element signature="e#3705#3860#0#PHP" />
+            <element signature="e#3805#3860#0#PHP" />
+            <element signature="e#3870#3997#0#PHP" />
+            <element signature="e#4007#4123#0#PHP" />
+            <element signature="e#4159#4255#0#PHP" />
+            <element signature="e#4260#4337#0#PHP" />
+            <element signature="e#4343#4457#0#PHP" />
+            <element signature="e#4462#4559#0#PHP" />
+            <element signature="e#4565#4638#0#PHP" />
+            <element signature="e#4643#4743#0#PHP" />
+            <element signature="e#4749#4853#0#PHP" />
+            <element signature="e#4858#4966#0#PHP" />
+            <element signature="e#4972#5086#0#PHP" />
+            <element signature="e#5091#5352#0#PHP" />
+            <element signature="e#5149#5256#0#PHP" />
+            <element signature="e#5358#5461#0#PHP" />
+            <element signature="e#5466#5587#0#PHP" />
+            <element signature="e#5593#5670#0#PHP" />
+            <element signature="e#5675#5771#0#PHP" />
+            <element signature="e#5777#5853#0#PHP" />
+            <element signature="e#5858#5951#0#PHP" />
+            <element signature="e#5957#6065#0#PHP" />
+            <element signature="e#6070#6201#0#PHP" />
+            <element signature="e#6207#6345#0#PHP" />
+            <element signature="e#6350#6582#0#PHP" />
+            <element signature="e#6588#6743#0#PHP" />
+            <element signature="e#6748#7014#0#PHP" />
+            <element signature="e#6885#6983#0#PHP" />
+            <element signature="e#7020#7173#0#PHP" />
+            <element signature="e#7178#7525#0#PHP" />
+            <element signature="e#7314#7496#0#PHP" />
+            <element signature="e#7432#7496#0#PHP" />
+            <element signature="e#7531#7645#0#PHP" />
+            <element signature="e#7650#7737#0#PHP" />
+            <element signature="e#7743#7843#0#PHP" />
+            <element signature="e#7848#8671#0#PHP" />
+            <element signature="e#7892#8065#0#PHP" />
+            <element signature="e#7949#8065#0#PHP" />
+            <element signature="e#8075#8288#0#PHP" />
+            <element signature="e#8112#8215#0#PHP" />
+            <element signature="e#8298#8439#0#PHP" />
+            <element signature="e#8449#8571#0#PHP" />
+            <element signature="e#8677#8790#0#PHP" />
+            <element signature="e#8795#9366#0#PHP" />
+            <element signature="e#8846#8902#0#PHP" />
+            <element signature="e#8912#9008#0#PHP" />
+            <element signature="e#9144#9266#0#PHP" />
+            <element signature="e#9372#9598#0#PHP" />
+            <element signature="e#9603#10628#0#PHP" />
+            <element signature="e#9712#9768#0#PHP" />
+            <element signature="e#9778#9874#0#PHP" />
+            <element signature="e#9884#10035#0#PHP" />
+            <element signature="e#10105#10396#0#PHP" />
+            <element signature="e#10153#10386#0#PHP" />
+            <element signature="e#10300#10386#0#PHP" />
+            <element signature="e#10406#10528#0#PHP" />
+            <element signature="e#10634#10729#0#PHP" />
+            <element signature="e#10734#10842#0#PHP" />
+            <element signature="e#10848#10958#0#PHP" />
+            <element signature="e#10963#11249#0#PHP" />
+            <element signature="e#11027#11220#0#PHP" />
+            <element signature="e#11125#11220#0#PHP" />
+            <element signature="e#11255#11385#0#PHP" />
+            <element signature="e#11390#11555#0#PHP" />
+            <element signature="e#11561#11691#0#PHP" />
+            <element signature="e#11696#11837#0#PHP" />
+            <element signature="e#11843#11945#0#PHP" />
+            <element signature="e#11950#13370#0#PHP" />
+            <element signature="e#11994#13298#0#PHP" />
+            <element signature="e#12031#12920#0#PHP" />
+            <element signature="e#12095#12409#0#PHP" />
+            <element signature="e#12152#12395#0#PHP" />
+            <element signature="e#12410#12920#0#PHP" />
+            <element signature="e#12512#12906#0#PHP" />
+            <element signature="e#12602#12888#0#PHP" />
+            <element signature="e#12818#12888#0#PHP" />
+            <element signature="e#12931#13298#0#PHP" />
+            <element signature="e#13028#13288#0#PHP" />
+            <element signature="e#13080#13274#0#PHP" />
+            <element signature="e#13159#13274#0#PHP" />
+            <element signature="e#13376#13592#0#PHP" />
+            <element signature="e#13597#14913#0#PHP" />
+            <element signature="e#13661#13834#0#PHP" />
+            <element signature="e#13718#13834#0#PHP" />
+            <element signature="e#13844#14592#0#PHP" />
+            <element signature="e#13881#13994#0#PHP" />
+            <element signature="e#14007#14204#0#PHP" />
+            <element signature="e#14114#14204#0#PHP" />
+            <element signature="e#14215#14592#0#PHP" />
+            <element signature="e#14268#14582#0#PHP" />
+            <element signature="e#14319#14568#0#PHP" />
+            <element signature="e#14432#14568#0#PHP" />
+            <element signature="e#14602#14692#0#PHP" />
+            <element signature="e#14702#14884#0#PHP" />
+            <element signature="e#14820#14884#0#PHP" />
+            <element signature="e#14919#15109#0#PHP" />
+            <element signature="e#15114#17089#0#PHP" />
+            <element signature="e#15199#15291#0#PHP" />
+            <element signature="e#15318#15489#0#PHP" />
+            <element signature="e#15500#15778#0#PHP" />
+            <element signature="e#15655#15778#0#PHP" />
+            <element signature="e#16017#16920#0#PHP" />
+            <element signature="e#16323#16684#0#PHP" />
+            <element signature="e#16455#16684#0#PHP" />
+            <element signature="e#16478#16670#0#PHP" />
+            <element signature="e#16588#16670#0#PHP" />
+            <element signature="e#16695#16839#0#PHP" />
+            <element signature="e#16840#16920#0#PHP" />
+            <element signature="e#17095#17339#0#PHP" />
+            <element signature="e#17344#19387#0#PHP" />
+            <element signature="e#17471#17642#0#PHP" />
+            <element signature="e#18152#18478#0#PHP" />
+            <element signature="e#18232#18412#0#PHP" />
+            <element signature="e#18316#18412#0#PHP" />
+            <element signature="e#18423#18478#0#PHP" />
+            <element signature="e#18584#18635#0#PHP" />
+            <element signature="e#18584#18661#0#PHP" />
+            <element signature="e#18584#18687#0#PHP" />
+            <element signature="e#18584#18720#0#PHP" />
+            <element signature="e#18812#19040#0#PHP" />
+            <element signature="e#18971#19040#0#PHP" />
+            <element signature="e#19061#19209#0#PHP" />
+            <element signature="e#19082#19208#1#PHP" />
+            <element signature="e#19061#19240#0#PHP" />
+            <element signature="e#19393#19666#0#PHP" />
+            <element signature="e#19671#20526#0#PHP" />
+            <element signature="e#19822#20151#0#PHP" />
+            <element signature="e#19905#20085#0#PHP" />
+            <element signature="e#19989#20085#0#PHP" />
+            <element signature="e#20096#20151#0#PHP" />
+            <element signature="e#20171#20319#0#PHP" />
+            <element signature="e#20192#20318#1#PHP" />
+            <element signature="e#20171#20334#0#PHP" />
+            <element signature="e#20423#20519#0#PHP" />
+            <element signature="e#20532#20743#0#PHP" />
+            <element signature="e#20748#21222#0#PHP" />
+            <element signature="e#20826#20922#0#PHP" />
+            <element signature="e#20932#21110#0#PHP" />
+            <element signature="e#21228#21439#0#PHP" />
+            <element signature="e#21444#21622#0#PHP" />
+            <element signature="e#21628#21813#0#PHP" />
+            <element signature="e#21818#21994#0#PHP" />
+            <element signature="e#22000#22109#0#PHP" />
+            <element signature="e#22114#22301#0#PHP" />
+            <element signature="e#22205#22272#0#PHP" />
+            <element signature="e#22307#22416#0#PHP" />
+            <element signature="e#22421#22685#0#PHP" />
+            <element signature="e#22465#22656#0#PHP" />
+            <element signature="e#22545#22656#0#PHP" />
+            <element signature="e#22691#22805#0#PHP" />
+            <element signature="e#22810#22939#0#PHP" />
+            <element signature="e#22945#23054#0#PHP" />
+            <element signature="e#23059#23180#0#PHP" />
+            <element signature="e#23186#23292#0#PHP" />
+            <element signature="e#23297#23428#0#PHP" />
+            <element signature="e#23434#23574#0#PHP" />
+            <element signature="e#23579#23766#0#PHP" />
+            <element signature="e#23772#23875#0#PHP" />
+            <element signature="e#23880#23962#0#PHP" />
+            <element signature="e#23968#24076#0#PHP" />
+            <element signature="e#24081#24192#0#PHP" />
+            <element signature="e#24198#24300#0#PHP" />
+            <element signature="e#24305#24482#0#PHP" />
+            <element signature="e#24365#24429#0#PHP" />
+            <element signature="e#24488#24625#0#PHP" />
+            <element signature="e#24630#24755#0#PHP" />
+            <element signature="e#24761#24867#0#PHP" />
+            <element signature="e#24872#24982#0#PHP" />
+            <element signature="e#24988#25155#0#PHP" />
+            <element signature="e#25160#25640#0#PHP" />
+            <element signature="e#25240#25310#0#PHP" />
+            <element signature="e#25404#25571#0#PHP" />
+            <element signature="e#25483#25571#0#PHP" />
+            <element signature="e#25646#25803#0#PHP" />
+            <element signature="e#25808#26036#0#PHP" />
+            <element signature="e#25891#25965#0#PHP" />
+            <element signature="e#26042#26153#0#PHP" />
+            <element signature="e#26158#26253#0#PHP" />
+            <element signature="e#26259#26404#0#PHP" />
+            <element signature="e#26409#26819#0#PHP" />
+            <element signature="e#26491#26576#0#PHP" />
+            <element signature="e#26586#26742#0#PHP" />
+            <element signature="e#26825#26999#0#PHP" />
+            <element signature="e#27004#27344#0#PHP" />
+            <element signature="e#27099#27255#0#PHP" />
+            <element signature="e#27350#27506#0#PHP" />
+            <element signature="e#27511#27658#0#PHP" />
+            <element signature="e#27664#27786#0#PHP" />
+            <element signature="e#27791#28411#0#PHP" />
+            <element signature="e#27851#27968#0#PHP" />
+            <element signature="e#27978#28085#0#PHP" />
+            <element signature="e#28095#28210#0#PHP" />
+            <element signature="e#28220#28355#0#PHP" />
+            <element signature="e#28417#28548#0#PHP" />
+            <element signature="e#28553#29496#0#PHP" />
+            <element signature="e#28609#28725#0#PHP" />
+            <element signature="e#28735#28850#0#PHP" />
+            <element signature="e#28860#29025#0#PHP" />
+            <element signature="e#29035#29399#0#PHP" />
+            <element signature="e#29181#29389#0#PHP" />
+            <element signature="e#29502#29717#0#PHP" />
+            <element signature="e#29722#30328#0#PHP" />
+            <element signature="e#29785#29879#0#PHP" />
+            <element signature="e#29963#30072#0#PHP" />
+            <element signature="e#30104#30294#0#PHP" />
+            <element signature="e#30236#30294#0#PHP" />
+            <element signature="e#30334#30557#0#PHP" />
+            <element signature="e#30562#31193#0#PHP" />
+            <element signature="e#30611#30709#0#PHP" />
+            <element signature="e#30719#30897#0#PHP" />
+            <element signature="e#30827#30897#0#PHP" />
+            <element signature="e#30923#30997#0#PHP" />
+            <element signature="e#31007#31162#0#PHP" />
+            <element signature="e#31110#31162#0#PHP" />
+            <element signature="e#31199#31279#0#PHP" />
+            <element signature="e#31284#32950#0#PHP" />
+            <element signature="e#31394#31486#0#PHP" />
+            <element signature="e#31496#31683#0#PHP" />
+            <element signature="e#31575#31683#0#PHP" />
+            <element signature="e#31693#31906#0#PHP" />
+            <element signature="e#31814#31896#0#PHP" />
+            <element signature="e#31916#32039#0#PHP" />
+            <element signature="e#32049#32257#0#PHP" />
+            <element signature="e#32162#32247#0#PHP" />
+            <element signature="e#32267#32476#0#PHP" />
+            <element signature="e#32384#32466#0#PHP" />
+            <element signature="e#32486#32882#0#PHP" />
+            <element signature="e#32956#33083#0#PHP" />
+            <element signature="e#33088#33903#0#PHP" />
+            <element signature="e#33241#33870#0#PHP" />
+            <element signature="e#33451#33870#0#PHP" />
+            <element signature="e#33488#33860#0#PHP" />
+            <element signature="e#33530#33808#0#PHP" />
+            <element signature="e#33676#33808#0#PHP" />
+            <element signature="e#33909#34051#0#PHP" />
+            <element signature="e#34056#34870#0#PHP" />
+            <element signature="e#34143#34864#0#PHP" />
+            <element signature="e#34198#34310#0#PHP" />
+            <element signature="e#34438#34556#0#PHP" />
+            <element signature="e#34653#34854#0#PHP" />
+            <element signature="e#34739#34854#0#PHP" />
+            <element signature="e#34876#34963#0#PHP" />
+            <element signature="e#34968#35087#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-orm/src/DbManager.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="198">
+          <caret line="28" column="15" lean-forward="true" selection-start-line="28" selection-start-column="15" selection-end-line="28" selection-end-column="15" />
+          <folding>
+            <element signature="e#833#913#0#PHP" />
+            <element signature="e#936#980#0#PHP" />
+            <element signature="e#1016#1058#0#PHP" />
+            <element signature="e#1092#1147#0#PHP" />
+            <element signature="e#1175#1217#0#PHP" />
+            <element signature="e#1251#1293#0#PHP" />
+            <element signature="e#1326#1365#0#PHP" />
+            <element signature="e#1402#1454#0#PHP" />
+            <element signature="e#1482#1535#0#PHP" />
+            <element signature="e#1561#1606#0#PHP" />
+            <element signature="e#1611#1681#0#PHP" />
+            <element signature="e#1687#1754#0#PHP" />
+            <element signature="e#1759#2458#0#PHP" />
+            <element signature="e#1835#1918#0#PHP" />
+            <element signature="e#1928#2451#0#PHP" />
+            <element signature="e#1941#2450#2#PHP" />
+            <element signature="e#2049#2215#0#PHP" />
+            <element signature="e#2281#2440#0#PHP" />
+            <element signature="e#2464#2533#0#PHP" />
+            <element signature="e#2538#2579#0#PHP" />
+            <element signature="e#2585#2686#0#PHP" />
+            <element signature="e#2691#2776#0#PHP" />
+            <element signature="e#2782#2890#0#PHP" />
+            <element signature="e#2895#2991#0#PHP" />
+            <element signature="e#2997#3104#0#PHP" />
+            <element signature="e#3109#3198#0#PHP" />
+            <element signature="e#3204#3342#0#PHP" />
+            <element signature="e#3347#3550#0#PHP" />
+            <element signature="e#3416#3544#0#PHP" />
+            <element signature="e#3486#3544#0#PHP" />
+            <element signature="e#3556#3667#0#PHP" />
+            <element signature="e#3672#3852#0#PHP" />
+            <element signature="e#3769#3823#0#PHP" />
+            <element signature="e#3858#3995#0#PHP" />
+            <element signature="e#4000#4195#0#PHP" />
+            <element signature="e#4076#4139#0#PHP" />
+            <element signature="e#4201#4369#0#PHP" />
+            <element signature="e#4374#4498#0#PHP" />
+            <element signature="e#4504#4670#0#PHP" />
+            <element signature="e#4675#5049#0#PHP" />
+            <element signature="e#4780#4867#0#PHP" />
+            <element signature="e#4877#5003#0#PHP" />
+            <element signature="e#5055#5128#0#PHP" />
+            <element signature="e#5133#5430#0#PHP" />
+            <element signature="e#5263#5387#0#PHP" />
+            <element signature="e#5436#5514#0#PHP" />
+            <element signature="e#5519#6139#0#PHP" />
+            <element signature="e#5728#5885#0#PHP" />
+            <element signature="e#5803#5885#0#PHP" />
+            <element signature="e#6026#6104#0#PHP" />
+            <element signature="e#6145#6246#0#PHP" />
+            <element signature="e#6251#6334#0#PHP" />
+            <element signature="e#6340#6407#0#PHP" />
+            <element signature="e#6412#6493#0#PHP" />
+            <element signature="e#6499#6566#0#PHP" />
+            <element signature="e#6571#6653#0#PHP" />
+            <element signature="e#6659#6729#0#PHP" />
+            <element signature="e#6734#6816#0#PHP" />
+            <element signature="e#6822#6928#0#PHP" />
+            <element signature="e#6933#7030#0#PHP" />
+            <element signature="e#7036#7107#0#PHP" />
+            <element signature="e#7112#7188#0#PHP" />
+            <element signature="e#7198#7268#0#PHP" />
+            <element signature="e#7273#7353#0#PHP" />
+            <element signature="e#7359#7501#0#PHP" />
+            <element signature="e#7506#7624#0#PHP" />
+            <element signature="e#7630#7763#0#PHP" />
+            <element signature="e#7768#8019#0#PHP" />
+            <element signature="e#7837#8013#0#PHP" />
+            <element signature="e#7884#8003#0#PHP" />
+            <element signature="e#8025#8148#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/framework/src/think/Db.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="154">
+          <caret line="19" column="22" lean-forward="true" selection-start-line="19" selection-start-column="22" selection-end-line="19" selection-end-column="22" />
+          <folding>
+            <element signature="e#641#704#0#PHP" />
+            <element signature="e#738#905#0#PHP" />
+            <element signature="e#910#1267#0#PHP" />
+            <element signature="e#1273#1340#0#PHP" />
+            <element signature="e#1345#1388#0#PHP" />
+            <element signature="e#1394#1495#0#PHP" />
+            <element signature="e#1500#1585#0#PHP" />
+            <element signature="e#1591#1728#0#PHP" />
+            <element signature="e#1733#1966#0#PHP" />
+            <element signature="e#1809#1908#0#PHP" />
+            <element signature="e#1972#2027#0#PHP" />
+            <element signature="e#2032#2119#0#PHP" />
+            <element signature="e#2125#2267#0#PHP" />
+            <element signature="e#2272#2445#0#PHP" />
+            <element signature="e#2349#2439#0#PHP" />
+            <element signature="e#2451#2611#0#PHP" />
+            <element signature="e#2616#2814#0#PHP" />
+            <element signature="e#2705#2808#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-orm/src/facade/Db.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="220">
+          <caret line="18" column="3" lean-forward="true" selection-start-line="18" selection-start-column="3" selection-end-line="18" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineVersionPlan.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="443">
+          <caret line="49" column="109" selection-start-line="49" selection-start-column="109" selection-end-line="49" selection-end-column="109" />
+          <folding>
+            <element signature="e#143#180#0#PHP" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
@@ -1235,58 +1396,248 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Application.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineVersionPlanTrait.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="294">
-          <caret line="60" column="26" lean-forward="true" selection-start-line="60" selection-start-column="26" selection-end-line="60" selection-end-column="26" />
+        <state relative-caret-position="289">
+          <caret line="28" column="32" selection-start-line="28" selection-start-column="32" selection-end-line="28" selection-end-column="32" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Send/MqClient.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Machine/MachineVersionPlanModel.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="509">
-          <caret line="195" column="7" lean-forward="true" selection-start-line="195" selection-start-column="7" selection-end-line="195" selection-end-column="7" />
+        <state relative-caret-position="176">
+          <caret line="13" column="6" selection-start-line="13" selection-start-column="6" selection-end-line="13" selection-end-column="6" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/Machine.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="594">
-          <caret line="55" column="38" lean-forward="true" selection-start-line="55" selection-start-column="38" selection-end-line="55" selection-end-column="38" />
+        <state relative-caret-position="707">
+          <caret line="139" column="34" lean-forward="true" selection-start-line="139" selection-start-column="34" selection-end-line="139" selection-end-column="34" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/DbTrait.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="685">
-          <caret line="227" column="44" lean-forward="true" selection-start-line="227" selection-start-column="44" selection-end-line="227" selection-end-column="44" />
+        <state relative-caret-position="539">
+          <caret line="76" column="46" selection-start-line="76" selection-start-column="46" selection-end-line="76" selection-end-column="46" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Auth/AuthManagerLogModel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="264">
+          <caret line="17" lean-forward="true" selection-start-line="17" selection-end-line="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/Test.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="286">
+          <caret line="31" column="22" selection-start-line="31" selection-start-column="22" selection-end-line="31" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineGoodsTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="41" column="20" selection-start-line="41" selection-start-column="20" selection-end-line="41" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="839">
+          <caret line="261" column="36" selection-start-line="261" selection-start-column="20" selection-end-line="261" selection-end-column="36" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="401">
+          <caret line="216" column="39" lean-forward="true" selection-start-line="216" selection-start-column="39" selection-end-line="216" selection-end-column="39" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Check.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="330">
+          <caret line="22" column="25" selection-start-line="22" selection-start-column="20" selection-end-line="22" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="663">
+          <caret line="47" column="71" lean-forward="true" selection-start-line="47" selection-start-column="71" selection-end-line="47" selection-end-column="71" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/MachineBaseClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-877" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config/auth_manager_log_list.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="660">
+          <caret line="117" column="65" lean-forward="true" selection-start-line="117" selection-start-column="65" selection-end-line="117" selection-end-column="65" />
+          <folding>
+            <element signature="e#1084#2255#1#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="118">
+          <caret line="120" column="23" lean-forward="true" selection-start-line="120" selection-start-column="23" selection-end-line="120" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="616">
+          <caret line="38" column="38" lean-forward="true" selection-start-line="38" selection-start-column="38" selection-end-line="38" selection-end-column="38" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="374">
+          <caret line="25" column="20" selection-start-line="25" selection-start-column="20" selection-end-line="25" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/InfoClient.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="242">
-          <caret line="16" column="16" selection-start-line="16" selection-start-column="16" selection-end-line="16" selection-end-column="16" />
+          <caret line="20" selection-start-line="20" selection-end-line="20" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="31" column="15" selection-start-line="31" selection-start-column="15" selection-end-line="31" selection-end-column="15" />
+        <state relative-caret-position="737">
+          <caret line="688" column="5" lean-forward="true" selection-start-line="688" selection-start-column="5" selection-end-line="688" selection-end-column="5" />
           <folding>
-            <element signature="e#141#171#0#PHP" expanded="true" />
+            <element signature="e#3482#3608#0#PHP" />
+            <element signature="e#3637#3688#0#PHP" />
+            <element signature="e#3693#4674#0#PHP" />
+            <element signature="e#3924#4021#0#PHP" />
+            <element signature="e#4680#4731#0#PHP" />
+            <element signature="e#4736#4840#0#PHP" />
+            <element signature="e#4846#4901#0#PHP" />
+            <element signature="e#4906#5231#0#PHP" />
+            <element signature="e#5237#5331#0#PHP" />
+            <element signature="e#5337#5390#0#PHP" />
+            <element signature="e#5395#6253#0#PHP" />
+            <element signature="e#6259#6312#0#PHP" />
+            <element signature="e#6317#6749#0#PHP" />
+            <element signature="e#6755#6812#0#PHP" />
+            <element signature="e#6817#6911#0#PHP" />
+            <element signature="e#6917#6970#0#PHP" />
+            <element signature="e#6975#8956#0#PHP" />
+            <element signature="e#7592#8900#0#PHP" />
+            <element signature="e#7661#8890#0#PHP" />
+            <element signature="e#8116#8698#0#PHP" />
+            <element signature="e#8191#8295#0#PHP" />
+            <element signature="e#8316#8491#0#PHP" />
+            <element signature="e#8512#8680#0#PHP" />
+            <element signature="e#8962#9023#0#PHP" />
+            <element signature="e#9028#9112#0#PHP" />
+            <element signature="e#9118#9162#0#PHP" />
+            <element signature="e#9167#9264#0#PHP" />
+            <element signature="e#9270#9323#0#PHP" />
+            <element signature="e#9328#14903#0#PHP" />
+            <element signature="e#9602#10307#0#PHP" />
+            <element signature="e#10338#11213#0#PHP" />
+            <element signature="e#10635#11028#0#PHP" />
+            <element signature="e#11248#11377#0#PHP" />
+            <element signature="e#11408#11606#0#PHP" />
+            <element signature="e#11616#11755#0#PHP" />
+            <element signature="e#11927#13703#0#PHP" />
+            <element signature="e#12021#12201#0#PHP" />
+            <element signature="e#12215#12364#0#PHP" />
+            <element signature="e#12411#12632#0#PHP" />
+            <element signature="e#12645#13612#0#PHP" />
+            <element signature="e#13789#14647#0#PHP" />
+            <element signature="e#13870#14069#0#PHP" />
+            <element signature="e#14909#14962#0#PHP" />
+            <element signature="e#14967#15958#0#PHP" />
+            <element signature="e#15054#15178#0#PHP" />
+            <element signature="e#15964#16031#0#PHP" />
+            <element signature="e#16036#16283#0#PHP" />
+            <element signature="e#16289#16342#0#PHP" />
+            <element signature="e#16347#16713#0#PHP" />
+            <element signature="e#16719#16772#0#PHP" />
+            <element signature="e#16777#17003#0#PHP" />
+            <element signature="e#17009#17064#0#PHP" />
+            <element signature="e#17069#17609#0#PHP" />
+            <element signature="e#17324#17540#0#PHP" />
+            <element signature="e#17364#17479#0#PHP" />
+            <element signature="e#18116#18177#0#PHP" />
+            <element signature="e#18182#18696#0#PHP" />
+            <element signature="e#18309#18652#0#PHP" />
+            <element signature="e#18348#18569#0#PHP" />
+            <element signature="e#18702#18757#0#PHP" />
+            <element signature="e#18762#19200#0#PHP" />
+            <element signature="e#18994#19160#0#PHP" />
+            <element signature="e#19206#19423#0#PHP" />
+            <element signature="e#19428#19947#0#PHP" />
+            <element signature="e#19953#20024#0#PHP" />
+            <element signature="e#20029#21310#0#PHP" />
+            <element signature="e#20434#21230#0#PHP" />
+            <element signature="e#20636#20718#0#PHP" />
+            <element signature="e#21046#21159#0#PHP" />
+            <element signature="e#21316#21400#0#PHP" />
+            <element signature="e#21405#27735#0#PHP" />
+            <element signature="e#21688#22169#0#PHP" />
+            <element signature="e#22285#26423#0#PHP" />
+            <element signature="e#22335#22681#0#PHP" />
+            <element signature="e#22468#22615#0#PHP" />
+            <element signature="e#23015#23181#0#PHP" />
+            <element signature="e#23266#26252#0#PHP" />
+            <element signature="e#23417#23572#0#PHP" />
+            <element signature="e#23589#23751#0#PHP" />
+            <element signature="e#23928#24026#0#PHP" />
+            <element signature="e#24054#25214#0#PHP" />
+            <element signature="e#25297#26238#0#PHP" />
+            <element signature="e#26080#26238#0#PHP" />
+            <element signature="e#26297#26423#0#PHP" />
+            <element signature="e#26461#27627#0#PHP" />
+            <element signature="e#26765#26860#0#PHP" />
+            <element signature="e#26902#27002#0#PHP" />
+            <element signature="e#27153#27617#0#PHP" />
+            <element signature="e#27211#27603#0#PHP" />
+            <element signature="e#27425#27603#0#PHP" />
+            <element signature="e#27741#27802#0#PHP" />
+            <element signature="e#27807#28102#0#PHP" />
+            <element signature="e#28108#28164#0#PHP" />
+            <element signature="e#28169#28572#0#PHP" />
+            <element signature="e#28228#28387#0#PHP" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/config/Config.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="443">
-          <caret line="39" column="13" selection-start-line="39" selection-start-column="13" selection-end-line="39" selection-end-column="13" />
-          <folding>
-            <element signature="e#141#178#0#PHP" expanded="true" />
-          </folding>
+          <caret line="35" column="48" selection-start-line="35" selection-start-column="48" selection-end-line="35" selection-end-column="48" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="462">
+          <caret line="30" column="34" lean-forward="true" selection-start-line="30" selection-start-column="34" selection-end-line="30" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="374">
+          <caret line="22" column="91" selection-start-line="22" selection-start-column="91" selection-end-line="22" selection-end-column="91" />
         </state>
       </provider>
     </entry>

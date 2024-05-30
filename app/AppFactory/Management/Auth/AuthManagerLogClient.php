@@ -10,29 +10,52 @@ namespace app\AppFactory\Management\Auth;
 
 
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerLogTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthNodeTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class AuthManagerLogClient extends ManagementClient
 {
-    use AuthManagerLogTrait;
+    use AuthManagerLogTrait,AuthNodeTrait;
+
 
     public function getMlList($where,$pageNum = 0, $field = "*", $order = "")
     {
-        $data = $this->getAuthManagerLogList($where,$pageNum,$field,$order,function ($item) {
-            if ($item['params']) {
-                $paramsReplace = config("auth_manager_log_list.replace")['params'] ?? [];
-                if ($paramsReplace) {
-                    foreach ($paramsReplace as $key => $value) {
-                        if (strpos($item['params'], $key) !== false) {
-                            $item['params'] = str_replace($key, $value, $item['params']);
+        $otherComment = config("auth_manager_log_list.otherComment");
+        $otherPath = config("auth_manager_log_list.otherPath");
+
+        $pathList = $this->getAuthNodeList([],0,'url,name');
+        if ($pathList) $pathList = $pathList->toArray();
+        $pathList = array_merge($pathList,$otherPath);
+        $fieldComment = $this->getFieldComment();
+        $fieldComment = array_merge($fieldComment,$otherComment);
+        $data = $this->getAuthManagerLogList($where,$pageNum,$field,$order,function ($item) use ($fieldComment,$pathList) {
+            if ($item['path']) {
+                if ($pathList) {
+                    foreach ($pathList as $pk => $pv) {
+                        if ($item['path'] == $pv['url']) {
+                            $item['path'] = $pv['name'];
+                            break;
                         }
                     }
                 }
+            }
+            if ($item['params']) {
                 $params = json2arr($item['params']);
                 if (isset($params['sign'])) unset($params['sign']);
                 if (isset($params['timestamp'])) unset($params['timestamp']);
                 if (isset($params['msg_id'])) unset($params['msg_id']);
                 if (isset($params['password'])) unset($params['password']);
+                if (isset($params['uniqid'])) unset($params['uniqid']);
+                foreach ($params as $pk => $pv) {
+                    foreach ($fieldComment as $key => $value) {
+                        if ($pk == $value['Field']) {
+                            unset($params[$pk]);
+                            $params[$value['Comment']] = $pv;
+                            break;
+                        }
+                    }
+                }
+                $item['params'] = $params;
             }
             return $item;
         });

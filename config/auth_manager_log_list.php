@@ -103,9 +103,22 @@ return [
             "getMachineGoods",
         ],
     ],
-    "replace" => [
-        "params" => [
-
-        ],
+    // 额外路径
+    "otherPath" => [
+        // 设备
+        ["url" => "/machine/receive/login","name" => "终端-登录"],
+        ["url" => "/machine/receive/subMachineGoods","name" => "终端-设备商品库更新"],
+        ["url" => "/machine/receive/subChannel","name" => "终端-货架更新"],
+        ["url" => "/machine/receive/channelReplenishment","name" => "终端-货架补货"],
+        ["url" => "/machine/receive/changeChannelGoods","name" => "终端-更换货架商品"],
+        ["url" => "/machine/receive/reset","name" => "终端-恢复出厂设置"],
+        // 手机
+        ["url" => "/mobile/machine.check/stock","name" => "手机端-库存盘点"],
+        // 后台管理端
+        ["url" => "/management/login/login","name" => "管理后台-登录"],
+    ],
+    // 额外的字段备注信息
+    "otherComment" => [
+        ["Field" => "operator","Comment" => "操作员"],
     ],
 ];

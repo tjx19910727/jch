@@ -10,6 +10,7 @@ namespace app\management\controller;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Auth\AuthManagerLogModel;
 use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
 use app\AppFactory\Kernel\Model\Earth\EarthCitiesModel;
 use app\AppFactory\Kernel\Model\Earth\EarthRegionsModel;
@@ -25,6 +26,12 @@ use think\facade\Db;
 
 class Test extends BaseController
 {
+    public function testFieldColumn()
+    {
+        $result = AuthManagerLogModel::getFieldComment();
+        dump($result);
+//        return returnState(200,'success',$result);
+    }
     public function testMoney()
     {
         $money = "12345";

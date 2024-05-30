@@ -10,12 +10,12 @@ namespace app\management\controller\machine;
 
 
 use app\management\controller\Common;
+use app\management\validate\Machine\VMachineVersionPlan;
 
 class MachineVersionPlan extends Common
 {
 
     protected $field = "*";
-    protected $validatePath = 'app\management\validate\VMachineVersionPlan.';
 
     public function getList()
     {
@@ -36,7 +36,7 @@ class MachineVersionPlan extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'add');
+            $this->validate($postData, VMachineVersionPlan::class . '.add');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -55,7 +55,7 @@ class MachineVersionPlan extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'del');
+            $this->validate($postData, VMachineVersionPlan::class . '.del');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }

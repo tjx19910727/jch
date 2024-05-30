@@ -36,7 +36,7 @@ class ReceiveBaseClient extends MachineBaseClient
 
         $this->ignoreList = (config("auth_manager_log_list.ignore")['machine'] ?? []);
         $this->apiUrl = request()->action();
-        $this->recordManagerLog();
+        $this->recordManagerLog([],2);
     }
 
 

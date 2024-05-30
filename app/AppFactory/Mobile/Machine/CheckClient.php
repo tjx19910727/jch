@@ -33,7 +33,7 @@ class CheckClient extends MobileBase
         }
         $this->ignoreList = (config("auth_manager_log_list.ignore")['mobile'] ?? []);
         $this->apiUrl = request()->action();
-        $this->recordManagerLog($this->manager);
+        $this->recordManagerLog($this->manager,3);
     }
 
     /**

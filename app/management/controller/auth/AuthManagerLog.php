@@ -20,7 +20,7 @@ class AuthManagerLog extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["nickname" => "like","account" => "like"]);
         return $this->app->authManagerLog->getMlList($where,$pageNum,$this->field);
     }
 }

@@ -118,9 +118,10 @@ trait AuthManagerLogTrait
     /**
      * 用户操作事件记录
      * @param $manager
+     * @param $position
      * @return mixed
      */
-    public function recordManagerLog($manager = [])
+    public function recordManagerLog($manager = [],$position = 1)
     {
         if (!$this->apiUrl) $this->apiUrl = request()->baseUrl();
         if ($this->apiUrl) {
@@ -146,6 +147,7 @@ trait AuthManagerLogTrait
                             "account" => $manager['account'] ?? "",
                             "path" => $path,
                             "params" => $params,
+                            "position" => $position,
                         ];
                         @$this->addAuthManagerLog($log);
                     }

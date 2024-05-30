@@ -214,11 +214,11 @@ class Test extends BaseController
             ],
         ];
         $data = [
-            "machine_id" => "test0003",
+            "machine_id" => "test0007",
             "msg_id" => $msg_id,
             "timestamp" => time(),
-            "account" => "dkm",
-            "password" => "123456",
+//            "account" => "dkm",
+//            "password" => "123456",
         ];
         $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
         dump($data);

@@ -72,4 +72,20 @@ trait DbTrait
         return Db::getLastSql();
     }
 
+    /**
+     * 获取字段名与备注
+     * @param string $table_name 表名，不传查全库所有表字段
+     * @return mixed
+     */
+    public function getFieldComment($table_name = "")
+    {
+        $sql = "SELECT COLUMN_NAME as 'Field', COLUMN_COMMENT as 'Comment' 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE table_schema = 'kiosk' AND COLUMN_NAME <> 'create_time' AND COLUMN_NAME <> 'update_time'  AND COLUMN_NAME <> 'update_id' AND COLUMN_COMMENT is not null AND COLUMN_COMMENT <> ''";
+        if ($table_name) $sql .= " AND table_name='$table_name'";
+        $sql .= " group by COLUMN_NAME";
+        $result = Db::query($sql);
+        return $result;
+    }
+
 }
