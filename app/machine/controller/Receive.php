@@ -374,6 +374,10 @@ class Receive extends Common
         return $this->app->saleOrders->subUnclaimed();
     }
 
+    /**
+     * 重置出厂设置
+     * @return mixed
+     */
     public function resetMachine()
     {
         return $this->app->api->reset();

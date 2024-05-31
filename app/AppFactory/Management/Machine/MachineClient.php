@@ -33,7 +33,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineVersionTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersMachineCountTrait;
 use app\AppFactory\Management\ManagementClient;
-use app\management\validate\VMachine;
+use app\management\validate\Machine\VMachine;
 
 class MachineClient extends ManagementClient
 {

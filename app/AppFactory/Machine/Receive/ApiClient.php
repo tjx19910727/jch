@@ -684,9 +684,18 @@ class ApiClient extends ReceiveBaseClient
         return $this->rQ(['url' => $url]);
     }
 
-    // 恢复出厂设置
+    /**
+     * 重置设备恢复出厂设置
+     * 清除：货架信息、设备商品信息、广告推送、模板绑定关系
+     * @return mixed
+     */
     public function reset()
     {
-
+        $where['m_id'] = $this->machine['m_id'];
+        $this->delMachineChannel($where);
+        $this->delMachineGoods($where);
+        $this->delAdvertisementPush($where);
+        $this->delMachineView($where);
+        return $this->r(200,$this->lang("action_success"));
     }
 }

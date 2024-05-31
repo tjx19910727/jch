@@ -144,6 +144,9 @@ class VReceive extends VCommon
 
         "unclaimed" => ["msg_id","machine_id","timestamp","sign","order_id","details"],
 
+
+        "resetMachine" => ["msg_id","machine_id","timestamp","sign","manager_id"],
+
     ];
 
     public function checkTimestamp($item)

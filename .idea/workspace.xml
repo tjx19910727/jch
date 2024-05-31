@@ -3,17 +3,10 @@
   <component name="ChangeListManager">
     <list default="true" id="0b425c8e-253d-4f3f-a4bc-dbf750314eff" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/DbTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/DbTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/machine/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/controller/Test.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/Test.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/controller/machine/MachineVersionPlan.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/machine/MachineVersionPlan.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/auth_manager_log_list.php" beforeDir="false" afterPath="$PROJECT_DIR$/config/auth_manager_log_list.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/machine/controller/Receive.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/controller/Receive.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/machine/validate/VReceive.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/validate/VReceive.php" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -41,50 +34,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="AuthManagerLog.php" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="374">
-              <caret line="22" column="91" selection-start-line="22" selection-start-column="91" selection-end-line="22" selection-end-column="91" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Check.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Check.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="330">
-              <caret line="22" column="25" selection-start-line="22" selection-start-column="20" selection-end-line="22" selection-end-column="25" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="AuthManagerLogClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="663">
-              <caret line="47" column="71" lean-forward="true" selection-start-line="47" selection-start-column="71" selection-end-line="47" selection-end-column="71" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="auth_manager_log_list.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/config/auth_manager_log_list.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="660">
-              <caret line="117" column="65" lean-forward="true" selection-start-line="117" selection-start-column="65" selection-end-line="117" selection-end-column="65" />
-              <folding>
-                <element signature="e#1084#2255#1#PHP" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ApiClient.php" pinned="false" current-in-tab="false">
+      <file leaf-file-name="ApiClient.php" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="737">
-              <caret line="688" column="5" lean-forward="true" selection-start-line="688" selection-start-column="5" selection-end-line="688" selection-end-column="5" />
+            <state relative-caret-position="333">
+              <caret line="533" column="18" lean-forward="true" selection-start-line="533" selection-start-column="18" selection-end-line="533" selection-end-column="18" />
               <folding>
                 <element signature="e#3482#3608#0#PHP" />
                 <element signature="e#3637#3688#0#PHP" />
@@ -142,9 +96,6 @@
                 <element signature="e#17324#17540#0#PHP" />
                 <element signature="e#17364#17479#0#PHP" />
                 <element signature="e#18116#18177#0#PHP" />
-                <element signature="e#18182#18696#0#PHP" />
-                <element signature="e#18309#18652#0#PHP" />
-                <element signature="e#18348#18569#0#PHP" />
                 <element signature="e#18702#18757#0#PHP" />
                 <element signature="e#18762#19200#0#PHP" />
                 <element signature="e#18994#19160#0#PHP" />
@@ -156,8 +107,6 @@
                 <element signature="e#20636#20718#0#PHP" />
                 <element signature="e#21046#21159#0#PHP" />
                 <element signature="e#21316#21400#0#PHP" />
-                <element signature="e#21405#27735#0#PHP" />
-                <element signature="e#21688#22169#0#PHP" />
                 <element signature="e#22285#26423#0#PHP" />
                 <element signature="e#22335#22681#0#PHP" />
                 <element signature="e#22468#22615#0#PHP" />
@@ -186,6 +135,42 @@
           </provider>
         </entry>
       </file>
+      <file leaf-file-name="SaleOrders.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="374">
+              <caret line="86" column="45" selection-start-line="86" selection-start-column="45" selection-end-line="86" selection-end-column="45" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="SaleOrdersClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="302">
+              <caret line="83" column="35" lean-forward="true" selection-start-line="83" selection-start-column="35" selection-end-line="83" selection-end-column="35" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Machine.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/management/controller/machine/Machine.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-657">
+              <caret line="63" lean-forward="true" selection-start-line="63" selection-end-line="63" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="MachineClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="660">
+              <caret line="35" column="35" selection-start-line="35" selection-start-column="35" selection-end-line="35" selection-end-column="35" />
+            </state>
+          </provider>
+        </entry>
+      </file>
       <file leaf-file-name="CheckClient.php" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php">
           <provider selected="true" editor-type-id="text-editor">
@@ -204,15 +189,6 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Test.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="401">
-              <caret line="216" column="39" lean-forward="true" selection-start-line="216" selection-start-column="39" selection-end-line="216" selection-end-column="39" />
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="ReceiveBaseClient.php" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php">
           <provider selected="true" editor-type-id="text-editor">
@@ -222,11 +198,20 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="AuthManagerLogTrait.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php">
+      <file leaf-file-name="Receive.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="118">
-              <caret line="120" column="23" lean-forward="true" selection-start-line="120" selection-start-column="23" selection-end-line="120" selection-end-column="23" />
+            <state relative-caret-position="678">
+              <caret line="382" column="33" lean-forward="true" selection-start-line="382" selection-start-column="33" selection-end-line="382" selection-end-column="33" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="VReceive.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/machine/validate/VReceive.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="289">
+              <caret line="130" lean-forward="true" selection-start-line="130" selection-end-line="130" />
             </state>
           </provider>
         </entry>
@@ -242,7 +227,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>useFd</find>
       <find>VChange</find>
       <find>change</find>
       <find>g_id</find>
@@ -262,7 +246,6 @@
       <find>库存</find>
       <find>$this-&gt;goodsField</find>
       <find>replenish</find>
-      <find>getGoods</find>
       <find>AuthManagerLog</find>
       <find>repleni</find>
       <find>outGoods</find>
@@ -272,6 +255,8 @@
       <find>systemInfo</find>
       <find>query</find>
       <find>machineGoods</find>
+      <find>manager_id</find>
+      <find>getGoods</find>
     </findStrings>
     <replaceStrings>
       <replace>ActivityMachine</replace>
@@ -315,8 +300,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityPickClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php" />
         <option value="$PROJECT_DIR$/app/http/controller/Test.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Goods/GoodsClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsChangeTrait.php" />
@@ -340,8 +323,6 @@
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Providers/Management/AuthProvider.php" />
         <option value="$PROJECT_DIR$/app/mobile/controller/Common.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Mobile/Application.php" />
-        <option value="$PROJECT_DIR$/app/machine/controller/Receive.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php" />
         <option value="$PROJECT_DIR$/app/mobile/lang/zh-cn.php" />
         <option value="$PROJECT_DIR$/app/mobile/controller/machine/Info.php" />
@@ -350,7 +331,6 @@
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" />
         <option value="$PROJECT_DIR$/app/management/controller/machine/MachineVersion.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Send/MqClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php" />
         <option value="$PROJECT_DIR$/app/management/controller/config/Config.php" />
         <option value="$PROJECT_DIR$/app/management/controller/machine/MachineVersionPlan.php" />
@@ -366,6 +346,11 @@
         <option value="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php" />
         <option value="$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php" />
+        <option value="$PROJECT_DIR$/app/machine/controller/Receive.php" />
+        <option value="$PROJECT_DIR$/app/machine/validate/VReceive.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php" />
       </list>
     </option>
   </component>
@@ -507,6 +492,23 @@
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+              <item name="Traits" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+              <item name="Traits" type="462c0819:PsiDirectoryNode" />
+              <item name="Machine" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
               <item name="Machine" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
@@ -592,6 +594,13 @@
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
+              <item name="validate" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="management" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
@@ -607,7 +616,7 @@
               <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="management" type="462c0819:PsiDirectoryNode" />
               <item name="controller" type="462c0819:PsiDirectoryNode" />
-              <item name="auth" type="462c0819:PsiDirectoryNode" />
+              <item name="sale" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
@@ -629,11 +638,6 @@
               <item name="mobile" type="462c0819:PsiDirectoryNode" />
               <item name="controller" type="462c0819:PsiDirectoryNode" />
               <item name="machine" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="config" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -725,12 +729,12 @@
       <workItem from="1715646784377" duration="956000" />
       <workItem from="1715647840869" duration="123416000" />
       <workItem from="1716599820671" duration="1847000" />
-      <workItem from="1716615726467" duration="26156000" />
+      <workItem from="1716615726467" duration="33922000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1499332000" />
+    <option name="totallyTimeSpent" value="1507098000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -813,30 +817,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Application.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="641">
-          <caret line="42" column="52" lean-forward="true" selection-start-line="42" selection-start-column="52" selection-end-line="42" selection-end-column="52" />
-          <folding>
-            <element signature="e#130#189#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/mobile/validate/VCommon.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="462">
-          <caret line="26" column="43" lean-forward="true" selection-start-line="26" selection-start-column="43" selection-end-line="26" selection-end-column="43" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/BaseClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="154">
-          <caret line="15" column="6" selection-start-line="15" selection-start-column="6" selection-end-line="15" selection-end-column="6" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/mobile/lang/zh-cn.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="110">
@@ -939,27 +919,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="927">
           <caret line="199" column="20" selection-start-line="199" selection-start-column="20" selection-end-line="199" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="685">
-          <caret line="227" column="44" selection-start-line="227" selection-start-column="44" selection-end-line="227" selection-end-column="44" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/Machine.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="594">
-          <caret line="55" column="38" selection-start-line="55" selection-start-column="38" selection-end-line="55" selection-end-column="38" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="242">
-          <caret line="16" column="16" selection-start-line="16" selection-start-column="16" selection-end-line="16" selection-end-column="16" />
         </state>
       </provider>
     </entry>
@@ -1445,13 +1404,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="839">
-          <caret line="261" column="36" selection-start-line="261" selection-start-column="20" selection-end-line="261" selection-end-column="36" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="401">
@@ -1459,33 +1411,9 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Check.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="330">
-          <caret line="22" column="25" selection-start-line="22" selection-start-column="20" selection-end-line="22" selection-end-column="25" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="663">
-          <caret line="47" column="71" lean-forward="true" selection-start-line="47" selection-start-column="71" selection-end-line="47" selection-end-column="71" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/MachineBaseClient.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-877" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/config/auth_manager_log_list.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="660">
-          <caret line="117" column="65" lean-forward="true" selection-start-line="117" selection-start-column="65" selection-end-line="117" selection-end-column="65" />
-          <folding>
-            <element signature="e#1084#2255#1#PHP" />
-          </folding>
-        </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerLogTrait.php">
@@ -1516,10 +1444,104 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="443">
+          <caret line="35" column="48" selection-start-line="35" selection-start-column="48" selection-end-line="35" selection-end-column="48" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="462">
+          <caret line="30" column="34" lean-forward="true" selection-start-line="30" selection-start-column="34" selection-end-line="30" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="440">
+          <caret line="25" column="1" lean-forward="true" selection-start-line="25" selection-start-column="1" selection-end-line="25" selection-end-column="1" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Check.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="330">
+          <caret line="22" column="25" selection-start-line="22" selection-start-column="20" selection-end-line="22" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="663">
+          <caret line="47" column="71" lean-forward="true" selection-start-line="47" selection-start-column="71" selection-end-line="47" selection-end-column="71" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config/auth_manager_log_list.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="660">
+          <caret line="117" column="65" lean-forward="true" selection-start-line="117" selection-start-column="65" selection-end-line="117" selection-end-column="65" />
+          <folding>
+            <element signature="e#1084#2255#1#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="729">
+          <caret line="183" column="5" selection-start-line="183" selection-start-column="5" selection-end-line="183" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/validate/VReceive.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="289">
+          <caret line="130" lean-forward="true" selection-start-line="130" selection-end-line="130" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="660">
+          <caret line="35" column="35" selection-start-line="35" selection-start-column="35" selection-end-line="35" selection-end-column="35" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/Machine.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-657">
+          <caret line="63" lean-forward="true" selection-start-line="63" selection-end-line="63" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="678">
+          <caret line="382" column="33" lean-forward="true" selection-start-line="382" selection-start-column="33" selection-end-line="382" selection-end-column="33" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="374">
+          <caret line="86" column="45" selection-start-line="86" selection-start-column="45" selection-end-line="86" selection-end-column="45" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="83" column="35" lean-forward="true" selection-start-line="83" selection-start-column="35" selection-end-line="83" selection-end-column="35" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="737">
-          <caret line="688" column="5" lean-forward="true" selection-start-line="688" selection-start-column="5" selection-end-line="688" selection-end-column="5" />
+        <state relative-caret-position="333">
+          <caret line="533" column="18" lean-forward="true" selection-start-line="533" selection-start-column="18" selection-end-line="533" selection-end-column="18" />
           <folding>
             <element signature="e#3482#3608#0#PHP" />
             <element signature="e#3637#3688#0#PHP" />
@@ -1577,9 +1599,6 @@
             <element signature="e#17324#17540#0#PHP" />
             <element signature="e#17364#17479#0#PHP" />
             <element signature="e#18116#18177#0#PHP" />
-            <element signature="e#18182#18696#0#PHP" />
-            <element signature="e#18309#18652#0#PHP" />
-            <element signature="e#18348#18569#0#PHP" />
             <element signature="e#18702#18757#0#PHP" />
             <element signature="e#18762#19200#0#PHP" />
             <element signature="e#18994#19160#0#PHP" />
@@ -1591,8 +1610,6 @@
             <element signature="e#20636#20718#0#PHP" />
             <element signature="e#21046#21159#0#PHP" />
             <element signature="e#21316#21400#0#PHP" />
-            <element signature="e#21405#27735#0#PHP" />
-            <element signature="e#21688#22169#0#PHP" />
             <element signature="e#22285#26423#0#PHP" />
             <element signature="e#22335#22681#0#PHP" />
             <element signature="e#22468#22615#0#PHP" />
@@ -1617,27 +1634,6 @@
             <element signature="e#28169#28572#0#PHP" />
             <element signature="e#28228#28387#0#PHP" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="443">
-          <caret line="35" column="48" selection-start-line="35" selection-start-column="48" selection-end-line="35" selection-end-column="48" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="462">
-          <caret line="30" column="34" lean-forward="true" selection-start-line="30" selection-start-column="34" selection-end-line="30" selection-end-column="34" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthManagerLog.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="22" column="91" selection-start-line="22" selection-start-column="91" selection-end-line="22" selection-end-column="91" />
         </state>
       </provider>
     </entry>
