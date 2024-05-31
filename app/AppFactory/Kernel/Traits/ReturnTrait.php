@@ -96,6 +96,16 @@ trait ReturnTrait
     }
 
     /**
+     * 返回异常抛出信息
+     * @param $msg
+     * @return array|\think\response\Json
+     */
+    public function rTryCatch($msg)
+    {
+        return returnTryCatch($msg);
+    }
+
+    /**
      * 返回失败
      * @param string $msg
      * @return array|\think\response\Json

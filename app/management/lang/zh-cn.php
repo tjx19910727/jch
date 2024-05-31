@@ -10,6 +10,11 @@ return [
         "get_success" => "获取验证码成功",
         "code_error" => "验证码错误",
     ],
+
+    "export" => [
+        "export_aul" => "导出用户事件",
+    ],
+
     "VLogin" => [
         "account_require" => "账号不能为空",
         "password_require" => "密码不能为空",

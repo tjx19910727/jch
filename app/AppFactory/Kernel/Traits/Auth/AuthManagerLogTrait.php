@@ -139,7 +139,6 @@ trait AuthManagerLogTrait
                     }
                     if ($manager) {
                         $params = json_encode($params, 320);
-                        $params = (strlen($params) <= 1024 ? $params : substr($params, 0, 1024));
                         $log = [
                             "ao_id" => $manager['ao_id'] ?? 0,
                             "manager_id" => $manager['manager_id'] ?? 0,
