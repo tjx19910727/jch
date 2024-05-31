@@ -127,6 +127,10 @@ class GoodsModel extends BaseModel
         $redis = new \Redis();
         $redis->connect("127.0.0.1");
         $redis->lPush("updateGoods",$model['g_id']);
+        $redis->expire("updateGoods",300);
+        $redisData = $redis->lRange("updateGoods", 0, -1);
+        actionLog($model['g_id'],'修改的商品ID');
+        actionLog($redisData,'放入Redis数据');
         $redis->close();
     }
 

@@ -10,6 +10,7 @@ namespace app\AppFactory\RabbitMq;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
@@ -17,6 +18,8 @@ use think\facade\Log;
 
 class MqConsumer
 {
+
+    use MachineMqRecordTrait;
 
     /**
      *  消费端 消费端需要保持运行状态实现方式
@@ -51,9 +54,13 @@ class MqConsumer
             $app = AppFactory::machine($config);
             $result = $app->mq->onMessage();
             actionLog($result, '处理结果','DataUpload');
+            $updateResult = $this->updateMachineMqRecord(['status' => 2,'msg_id' => $data['msg_id']],['msg_id' => $data['msg_id']]);
+            actionLog($updateResult,'修改MQ记录成功结果','DataUpload');
         } catch (\Exception $e) {
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"DataUpload");
             actionLog($e->getTrace(), 'tryCatchTrace',"DataUpload");
+            $updateResult = $this->updateMachineMqRecord(['status' => 3,'msg_id' => $data['msg_id']],['msg_id' => $data['msg_id']]);
+            actionLog($updateResult,'修改MQ记录失败结果','DataUpload');
         }
     }
 

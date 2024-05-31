@@ -54,6 +54,16 @@ class ActivityClient extends ReceiveBaseClient
     }
 
     /**
+     * 销毁实例时触发
+     */
+    public function __destruct()
+    {
+        // TODO: Implement __destruct() method.
+        $result = $this->updateMachineMqRecord(['status' => 2,'msg_id' => $this->data['msg_id']],['msg_id' => $this->data['msg_id']]);
+        actionLog($result,'处理完成时修改状态为已处理');
+    }
+
+    /**
      * 获取适用设备的优惠券活动列表
      * @return array|string
      */

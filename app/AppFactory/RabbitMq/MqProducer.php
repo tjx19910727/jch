@@ -111,7 +111,7 @@ class MqProducer
                 ];
                 actionLog($message,'异步发布者确认信息');
                 $app = AppFactory::machine($config);
-                $app->sendMq->confirmSend($message,1);
+                $app->sendMq->confirmSend($message,2);
             });
             $channel->set_nack_handler(function (AMQPMessage $message){
                 $message = json2arr($message->getBody());
@@ -121,7 +121,7 @@ class MqProducer
                 ];
                 actionLog($message,'异步丢失消息回调数据');
                 $app = AppFactory::machine($config);
-                $app->sendMq->confirmSend($message,2);
+                $app->sendMq->confirmSend($message,3);
             });
             /**
              * 发送消息

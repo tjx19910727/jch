@@ -138,7 +138,6 @@ trait MachineTrait
     public function heartbeat()
     {
         $result = $this->updateMachine(['m_id' => $this->machine['m_id'],'last_online_time' => time(),'online' => 1]);
-        actionLog($this->getLS(),'【SQL】修改设备上线时间');
         return $result;
     }
 

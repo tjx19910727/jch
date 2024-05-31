@@ -42,6 +42,9 @@ class MachineGoodsModel extends BaseModel
         $redis->connect("127.0.0.1");
         $redis->lPush("updateMg",$mg_id);
         $redis->expire("updateMg",300);
+        $redisData = $redis->lRange("updateMg", 0, -1);
+        actionLog($mg_id,'修改的设备商品ID');
+        actionLog($redisData,'放入Redis数据');
         $redis->close();
     }
 

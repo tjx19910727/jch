@@ -214,7 +214,7 @@ class Test extends BaseController
             ],
         ];
         $data = [
-            "machine_id" => "test0007",
+            "machine_id" => "test0003",
             "msg_id" => $msg_id,
             "timestamp" => time(),
 //            "account" => "dkm",
@@ -435,5 +435,12 @@ class Test extends BaseController
             "msg_id" => $msg_id,
             "trade_no" => "",
         ];
+    }
+
+    public function testTtMg()
+    {
+        $mg_id = 141;
+        $app = AppFactory::timeTask();
+        $app->goods->synchronizationMc($mg_id);
     }
 }

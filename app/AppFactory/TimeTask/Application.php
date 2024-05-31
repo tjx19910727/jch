@@ -8,12 +8,14 @@
 
 namespace app\AppFactory\TimeTask;
 
+use app\AppFactory\Kernel\Providers\TimeTask\AuthManagerProvider;
 use app\AppFactory\Kernel\Providers\TimeTask\GoodsProvider;
 use app\AppFactory\Kernel\Providers\TimeTask\MachineProvider;
 use app\AppFactory\Kernel\ServiceContainer;
 
 /**
  * Class Application
+ * @property AuthManager\AuthManagerLogClient           $log                   用户事件定时任务
  * @property Machine\MachineClient                      $machine               设备定时任务
  * @property Machine\MachineChannelStockClient          $machineChannelStock   设备库存报表定时任务
  * @property Goods\GoodsClient                          $goods                 商品定时任务
@@ -24,5 +26,6 @@ class Application extends ServiceContainer
     protected $providers = [
         MachineProvider::class,
         GoodsProvider::class,
+        AuthManagerProvider::class,
     ];
 }

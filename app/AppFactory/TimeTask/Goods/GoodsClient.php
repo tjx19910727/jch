@@ -131,20 +131,21 @@ class GoodsClient extends TimeTaskBase
      * 修改设备商品库后，同步到设备货道
      * @param $mg_id
      */
-    protected function synchronizationMc($mg_id)
+    public function synchronizationMc($mg_id)
     {
-        $mg = $this->getMachineGoodsFind(['mg_id' => $mg_id],'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price');
+        $mg = $this->getMachineGoodsFind(['mg_id' => $mg_id],'machine_id,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price');
         if ($mg) {
             $mg = $mg->toArray();
             $whereMc['mg_id'] = $mg['mg_id'];
             $config = [
-                "machine_id" => $mgv['machine_id'],
+                "machine_id" => $mg['machine_id'],
                 "key" => env("api.md5Key"),
             ];
             $app = AppFactory::machine($config);
             $result = $app->sendMq->triggerUpdateMg($mg['mg_id']);
             actionLog($result,'推送设备商品库');
 
+            unset($mg['machine_id']);
             $this->startTrans();
             try {
                 $this->synchronizationMachineChannel($whereMc, $mg);
@@ -165,8 +166,10 @@ class GoodsClient extends TimeTaskBase
     protected function synchronizationMachineGoods($whereMg,$goods)
     {
         $machineGoods = $this->getMachineGoodsList($whereMg,0,'mg_id, machine_id');
+        actionLog($this->getLS(),'查询设备商品数据SQL');
         if ($machineGoods) {
             $machineGoods = $machineGoods->toArray();
+            actionLog($machineGoods,'绑定该商品的所有设备商品');
             foreach ($machineGoods as $mgk => $mgv) {
                 // 同步设备商品库
                 $updateMgResult = $this->updateMachineGoods($goods, ['mg_id' => $mgv['mg_id']],

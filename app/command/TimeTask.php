@@ -32,8 +32,10 @@ class TimeTask extends Command
      *
      * command
      *      php think time_task [moduleType] [actionType]
-     * moduleType     machine：设备定时任务，goods：商品定时任务
+     * moduleType     machine：设备定时任务，goods：商品定时任务，authManagerLog
      * actionType
+     *      authManagerLog：
+     *          clearLog                    删除180天前的用户事件记录
      *      machine：
      *          countOnline                 结算设备昨天在线数据
      *          checkOffline                检查设备最后心跳时间判断在线离线
