@@ -111,7 +111,7 @@ class MachineClient extends TimeTaskBase
                 /** 发送离线通知 结束 **/
             }
             $this->commitTrans();
-            sleep(10);
+//            sleep(10);
 //            actionLog($flag,'检查掉线的在线记录','checkClose');
         }
         return "处理成功";

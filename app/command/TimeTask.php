@@ -38,7 +38,7 @@ class TimeTask extends Command
      *          countOnline                 结算设备昨天在线数据
      *          checkOffline                检查设备最后心跳时间判断在线离线
      *      machineChannelStock
-     *          countMcStock                统计库存报表
+     *          countMcStock                统计库存报表，已废弃，使用实时获取
      *      goods：
      *          updateGoodsSynchronization  同步商品信息，守护进程触发命令
      *          updateMgSynchronization     同步设备商品库信息，守护进程触发命令
