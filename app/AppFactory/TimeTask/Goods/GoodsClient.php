@@ -136,7 +136,8 @@ class GoodsClient extends TimeTaskBase
         $mg = $this->getMachineGoodsFind(['mg_id' => $mg_id],'machine_id,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price');
         if ($mg) {
             $mg = $mg->toArray();
-            $whereMc['mg_id'] = $mg['mg_id'];
+            $whereMc['g_id'] = $mg['g_id'];
+            $whereMc['machine_id'] = $mg['machine_id'];
             $config = [
                 "machine_id" => $mg['machine_id'],
                 "key" => env("api.md5Key"),

@@ -120,5 +120,9 @@ return [
     // 额外的字段备注信息
     "otherComment" => [
         ["Field" => "operator","Comment" => "操作员"],
+        ["Field" => "mcList","Comment" => "货道列表"],
+        ["Field" => "delList","Comment" => "删除列表"],
+        ["Field" => "file_path","Comment" => "文件路径"],
+        ["Field" => "folder","Comment" => "目录"],
     ],
 ];

@@ -32,20 +32,20 @@ class MachineOnOffClient extends ManagementClient
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
             $moo = Excel::importExcel($path, $title, [], 4);
             actionLog($moo, '导入的营业数据');
+            dump($moo);
             if ($moo) {
                 $flag = [];
                 $this->startTrans();
                 foreach ($moo as $k => $v) {
                     $m = $this->getMachineFind(['machine_id' => $v['machine_id']], 'm_id,machine_id,machine_name');
-                    $ckc = json_encode([
-                        $v['off0'] . "," . $v['on0'],
-                        $v['off1'] . "," . $v['on1'],
-                        $v['off2'] . "," . $v['on2'],
-                        $v['off3'] . "," . $v['on3'],
-                        $v['off4'] . "," . $v['on4'],
-                        $v['off5'] . "," . $v['on5'],
-                        $v['off6'] . "," . $v['on6'],
-                    ]);
+                    $ckcArr = "";
+                    $ckc = "";
+                    for ($i = 0; $i <= 6; $i++) {
+                        if ($v['off' . $i] || $v['on' . $i]) {
+                            $ckcArr[$i] = $v["off" . $i] . "," . $v['on' . $i];
+                        }
+                    }
+                    if ($ckcArr) $ckc = json_encode($ckcArr);
                     $moo_id = $this->getMachineOnOffValue(['m_id' => $m['m_id']], 'moo_id');
                     if (!$moo_id) {
                         $insert = array_merge($m->toArray(), $other, ['on_off_ckc' => $ckc]);
@@ -54,6 +54,7 @@ class MachineOnOffClient extends ManagementClient
                         $flag[] = $this->updateMachineOnOff(['moo_id' => $moo_id, 'on_off_ckc' => $ckc]);
                     }
                 }
+                dump($flag);
                 $result = flag_check($flag);
                 return $this->checkTrans($result);
             }

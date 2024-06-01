@@ -95,6 +95,10 @@ class AuthManagerLogClient extends ManagementClient
                         }
                     }
                     if ($item['params']) {
+                        foreach ($fieldComment as $key => $value) {
+                            $search = '"' . $value['Field'] . '"';
+                            $item['params'] = str_replace($search,'"' . $value['Comment'] . '"',$item['params']);
+                        }
                         $params = json2arr($item['params']);
                         if ($params) {
                             if (isset($params['sign'])) unset($params['sign']);
@@ -102,18 +106,7 @@ class AuthManagerLogClient extends ManagementClient
                             if (isset($params['msg_id'])) unset($params['msg_id']);
                             if (isset($params['password'])) unset($params['password']);
                             if (isset($params['uniqid'])) unset($params['uniqid']);
-                            $str = "";
-                            foreach ($params as $pk => $pv) {
-                                foreach ($fieldComment as $key => $value) {
-                                    if ($pk == $value['Field']) {
-                                        unset($params[$pk]);
-                                        $params[$value['Comment']] = $pv;
-                                        $str .= $value['Comment'] . "：" . $pv . "\n";
-                                        break;
-                                    }
-                                }
-                            }
-                            $item['params'] = $str;
+                            $item['params'] = $params;
                         }
                     }
                     $data[$key] = $item;
