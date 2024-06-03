@@ -424,9 +424,11 @@ class ApiClient extends ReceiveBaseClient
      */
     public function machineHelp()
     {
-        $where["m_id"] = $this->machine['machine_id'];
+        $where["machine_id"] = $this->machine['machine_id'];
         $helpField = "mh_id,show,title,content,lang";
-        return $this->rQ($this->getMachineHelpList($where, 0, $helpField));
+        $data = $this->getMachineHelpList($where, 0, $helpField);
+        actionLog($this->getLS());
+        return $this->rQ($data);
     }
 
     /**

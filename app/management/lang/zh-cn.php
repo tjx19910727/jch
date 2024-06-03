@@ -311,6 +311,7 @@ return [
         "m_id_require" => "设备ID不能为空",
         "m_id_unique" => "设备配置已存在，请勿重复添加",
         "machine_id_require" => "设备编号不能为空",
+        "mcList_require" => "批量配置列表参数不能为空",
     ],
 
     "VMachineOnOff" => [

@@ -58,6 +58,11 @@ class MachineConfig extends Common
     public function updateMoreMc()
     {
         $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.updateMoreMc');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
         return $this->app->machineConfig->updateMoreMc($postData);
     }
 

@@ -17,6 +17,7 @@ class VMachineConfig extends VCommon
         "mc_id" => "require",
         "m_id" => "require|unique:machine_config",
         "machine_id" => "require",
+        "mcList" => "require",
     ];
 
     protected $message = [
@@ -24,11 +25,14 @@ class VMachineConfig extends VCommon
         "m_id.require" => "VMachineConfig.m_id_require",
         "m_id.unique" => "VMachineConfig.m_id_unique",
         "machine_id.require" => "VMachineConfig.machine_id_require",
+        "mcList.require" => "VMachineConfig.mcList_require",
     ];
 
     protected $scene = [
         "add" => ["m_id", "machine_id"],
         "update" => ["mc_id"],
         "del" => ["mc_id"],
+        "updateMoreMc" => ["mcList"],
+        "mcList" => ["m_id"],
     ];
 }

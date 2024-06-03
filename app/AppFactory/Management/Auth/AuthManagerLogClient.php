@@ -95,10 +95,6 @@ class AuthManagerLogClient extends ManagementClient
                         }
                     }
                     if ($item['params']) {
-                        foreach ($fieldComment as $key => $value) {
-                            $search = '"' . $value['Field'] . '"';
-                            $item['params'] = str_replace($search,'"' . $value['Comment'] . '"',$item['params']);
-                        }
                         $params = json2arr($item['params']);
                         if ($params) {
                             if (isset($params['sign'])) unset($params['sign']);
@@ -106,8 +102,18 @@ class AuthManagerLogClient extends ManagementClient
                             if (isset($params['msg_id'])) unset($params['msg_id']);
                             if (isset($params['password'])) unset($params['password']);
                             if (isset($params['uniqid'])) unset($params['uniqid']);
-                            $item['params'] = $params;
+                            $item['params'] = json_encode($params,true);
                         }
+                        foreach ($fieldComment as $key => $value) {
+                            $search = '"' . $value['Field'] . '"';
+                            $item['params'] = str_replace($search,'"' . $value['Comment'] . '"',$item['params']);
+                        }
+                        $params = json2arr($item['params']);
+                        if ($params) {
+                            $params = $this->paramsToStr($params);
+                        }
+                        $params = str_replace('"','',$params);
+                        $item['params'] = $params;
                     }
                     $data[$key] = $item;
                 };
@@ -132,5 +138,17 @@ class AuthManagerLogClient extends ManagementClient
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    public function paramsToStr($params,$str = "")
+    {
+        foreach ($params as $key => $value) {
+            if (is_array($value)) {
+                $str .= $this->paramsToStr($value);
+            } else {
+                $str .= $key . "：" . $value . " \n";
+            }
+        }
+        return $str;
     }
 }

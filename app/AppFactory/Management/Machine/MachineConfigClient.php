@@ -13,6 +13,7 @@ use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Management\ManagementClient;
+use app\management\validate\Machine\VMachineConfig;
 
 class MachineConfigClient extends ManagementClient
 {
@@ -33,19 +34,25 @@ class MachineConfigClient extends ManagementClient
     public function updateMoreMc($postData)
     {
         $this->startTrans();
-        foreach ($postData['mcList'] as $key => $value) {
-            $result = $this->updateMachineConfig($value,['m_id' => $value['m_id']]);
-            if ($result) {
-                $mc = $this->getMachineConfigFind(['m_id' => $value['m_id']],"machine_id");
-                $mc = $mc->toArray();
-                $this->sendToMachine($mc);
-            } else {
-                $this->rollbackTrans();
-                return $this->r(100,$this->lang("update_fail"), $value);
+        try {
+            foreach ($postData['mcList'] as $key => $value) {
+                validate(VMachineConfig::class)->scene("mcList")->check($value);
+                $result = $this->updateMachineConfig($value, ['m_id' => $value['m_id']]);
+                if ($result) {
+                    $mc = $this->getMachineConfigFind(['m_id' => $value['m_id']], "machine_id");
+                    $mc = $mc->toArray();
+                    $this->sendToMachine($mc);
+                } else {
+                    $this->rollbackTrans();
+                    return $this->r(100, $this->lang("update_fail"), $value);
+                }
             }
+            $this->commitTrans();
+            return $this->r(200, $this->lang("update_success"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            return $this->r(100,$this->lang($e->getMessage()));
         }
-        $this->commitTrans();
-        return $this->r(200,$this->lang("update_success"));
     }
 
     /**
