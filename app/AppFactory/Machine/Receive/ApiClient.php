@@ -303,15 +303,35 @@ class ApiClient extends ReceiveBaseClient
                 $this->rollbackTrans();
                 return $this->rFail($this->lang("VChannelReplenishment.exceed_capacity_limit"));
             }
-            // 查询商品库
-            $g = $this->getGoodsFind(['g_id' => $this->data['g_id']],
-                'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,is_gift,is_recommend,recoverable,heat,release_time');
-            if (!$g) {
-                $this->rollbackTrans();
-                return $this->rFail($this->lang("VChangeChannelGoods.goods_no_data"));
+            // 初始化商品信息，默认重置为空商品
+            $g = [
+                'g_id' => 0,
+                'g_name' => "",
+                'gc_id' => 0,
+                'gc_name' => "",
+                'pic' => "",
+                'sku' => "",
+                'bar_code' => "",
+                'cost_price' => 0,
+                'market_price' => 0,
+                'retail_price' => 0,
+                'is_gift' => 2,
+                'is_recommend' => 2,
+                'recoverable' => 2,
+                'heat' => 0,
+                'release_time' => 0
+            ];
+            if ($this->data['g_id']) {
+                // 查询商品库
+                $g = $this->getGoodsFind(['g_id' => $this->data['g_id']],
+                    'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,is_gift,is_recommend,recoverable,heat,release_time');
+                if (!$g) {
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang("VChangeChannelGoods.goods_no_data"));
+                }
+                $g = $g->toArray();
+                actionLog($g, '商品库信息');
             }
-            $g = $g->toArray();
-            actionLog($g, '商品库信息');
             $mg = [];
             $mc['mg_id'] = 0;
             $insertGChange['mg_id'] = 0;// 有设备商品库ID时
@@ -352,6 +372,13 @@ class ApiClient extends ReceiveBaseClient
 
                 actionLog($mg, '设备商品库信息');
                 unset($mg['standby_stock']);
+            }
+            if (!$this->data['g_id']) {
+                $mc['batch_number'] = "";
+                $mc['manufacture_time'] = "";
+                $mc['sell_by_date'] = "";
+                $mc['frozen_stock'] = 0;
+                $mc['update_price'] = 2;
             }
             $mc = array_merge($mc, $mg, $g);
             actionLog($mc, '要修改的货架数据');
