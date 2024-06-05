@@ -23,14 +23,20 @@ class MachineVersionPlanClient extends ManagementClient
         $mv = $this->getMachineVersionFind(['mv_id' => $postData['mv_id']],"mv_id,version_no,path,size,desc")->toArray();
         if (!$mv) return $this->rFail("查无设备软件信息");
         $this->startTrans();
-        $m_id = explode(",",$postData['m_id']);
-        $flag = [];
-        foreach ($m_id as $v) {
-            $machine = $this->getMachineFind(['m_id' =>  $v],"m_id,machine_id,version original_version")->toArray();
-            $insert = array_merge($mv,$machine);
-            $insert['publish_time'] = $postData['publish_time'] ?? time();
-            $flag[] = $this->addMachineVersionPlan($insert);
+        try {
+            $m_id = explode(",", $postData['m_id']);
+            $flag = [];
+            foreach ($m_id as $v) {
+                $machine = $this->getMachineFind(['m_id' => $v], "m_id,machine_id,version original_version")->toArray();
+                $insert = array_merge($mv, $machine);
+                $insert['publish_time'] = $postData['publish_time'] ?? time();
+                $flag[] = $this->addMachineVersionPlan($insert);
+            }
+            return $this->checkTrans($this->checkFlag($flag));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        return $this->checkTrans($this->checkFlag($flag));
     }
 }

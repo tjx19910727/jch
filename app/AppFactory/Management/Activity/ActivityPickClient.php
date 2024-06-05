@@ -66,27 +66,33 @@ class ActivityPickClient extends ManagementClient
             $postData['status'] = 2;
         }
         $this->startTrans();
-        $a_id = $this->addActivityPick($postData);
-        if ($a_id) {
-            $insert = [
-                "a_id" => $a_id,
-                "a_type" => 4,
-            ];
-            $amResult = $this->addAm($insert,$machineList);
-            if ($amResult !== true) {
-                $this->rollbackTrans();
-                return $this->rFail($amResult);
+        try {
+            $a_id = $this->addActivityPick($postData);
+            if ($a_id) {
+                $insert = [
+                    "a_id" => $a_id,
+                    "a_type" => 4,
+                ];
+                $amResult = $this->addAm($insert, $machineList);
+                if ($amResult !== true) {
+                    $this->rollbackTrans();
+                    return $this->rFail($amResult);
+                }
+                $agResult = $this->addAg($insert, $goodsList);
+                if ($agResult !== true) {
+                    $this->rollbackTrans();
+                    return $this->rFail($agResult);
+                }
+                $this->commitTrans();
+                return $this->r(200, $this->lang("add_success"));
             }
-            $agResult = $this->addAg($insert,$goodsList);
-            if ($agResult !== true) {
-                $this->rollbackTrans();
-                return $this->rFail($agResult);
-            }
-            $this->commitTrans();
-            return $this->r(200,$this->lang("add_success"));
+            $this->rollbackTrans();
+            return $this->rFail($this->lang("add_fail"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
         }
-        $this->rollbackTrans();
-        return $this->rFail($this->lang("add_fail"));
     }
 
     /**
@@ -106,42 +112,48 @@ class ActivityPickClient extends ManagementClient
         }
         $flag[] = 1;
         $this->startTrans();
-        $flag[] = $this->updateActivityPick($postData,[],['pick_name','desc','bg_pic','start_time','end_time']);
 
-        $insert = [
-            "a_id" => $postData['id'],
-            "a_type" => 4,
-        ];
-        if ($machineList) {
-            $oldAmList = $this->getActivityMachineColumn(['a_id' => $postData['id'],'a_type' => 4],'machine_id');
-            $delAmList = array_diff($oldAmList,$machineList);
-            $addAmList = array_diff($machineList,$oldAmList);
-            if ($addAmList) {
-                $amResult = $this->addAm($insert, $addAmList);
-                if ($amResult !== true) {
-                    $this->rollbackTrans();
-                    return $this->rFail($amResult);
+        try {
+            $flag[] = $this->updateActivityPick($postData, [], ['pick_name', 'desc', 'bg_pic', 'start_time', 'end_time']);
+            $insert = [
+                "a_id" => $postData['id'],
+                "a_type" => 4,
+            ];
+            if ($machineList) {
+                $oldAmList = $this->getActivityMachineColumn(['a_id' => $postData['id'], 'a_type' => 4], 'machine_id');
+                $delAmList = array_diff($oldAmList, $machineList);
+                $addAmList = array_diff($machineList, $oldAmList);
+                if ($addAmList) {
+                    $amResult = $this->addAm($insert, $addAmList);
+                    if ($amResult !== true) {
+                        $this->rollbackTrans();
+                        return $this->rFail($amResult);
+                    }
+                    $flag[] = 1;
                 }
-                $flag[] = 1;
+                if ($delAmList) $flag[] = $this->delActivityMachine(['a_id' => $postData['id'], 'a_type' => 4, ['machine_id', 'in', $delAmList]]);
             }
-            if ($delAmList) $flag[] = $this->delActivityMachine(['a_id' => $postData['id'],'a_type' => 4, ['machine_id','in', $delAmList]]);
-        }
-        if ($goodsList) {
-            $oldAgList = $this->getActivityGoodsColumn(['a_id' => $postData['id'],'a_type' => 4],'g_id');
-            $delAgList = array_diff($oldAgList,$goodsList);
-            $addAgList = array_diff($goodsList,$oldAgList);
-            if ($addAgList) {
-                $agResult = $this->addAg($insert, $goodsList);
-                if ($agResult !== true) {
-                    $this->rollbackTrans();
-                    return $this->rFail($agResult);
+            if ($goodsList) {
+                $oldAgList = $this->getActivityGoodsColumn(['a_id' => $postData['id'], 'a_type' => 4], 'g_id');
+                $delAgList = array_diff($oldAgList, $goodsList);
+                $addAgList = array_diff($goodsList, $oldAgList);
+                if ($addAgList) {
+                    $agResult = $this->addAg($insert, $goodsList);
+                    if ($agResult !== true) {
+                        $this->rollbackTrans();
+                        return $this->rFail($agResult);
+                    }
+                    $flag[] = 1;
                 }
-                $flag[] = 1;
+                if ($delAgList) $flag[] = $this->delActivityGoods(['a_id' => $postData['id'], 'a_type' => 4, ['g_id', 'in', $delAgList]]);
             }
-            if ($delAgList) $flag[] = $this->delActivityGoods(['a_id' => $postData['id'],'a_type' => 4,['g_id','in',$delAgList]]);
+            $check = $this->checkFlag($flag);
+            return $this->checkTrans($check);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
         }
-        $check = $this->checkFlag($flag);
-        return $this->checkTrans($check);
     }
 
     /**
@@ -154,10 +166,16 @@ class ActivityPickClient extends ManagementClient
         if (strpos($postData['id'],",") !== false) $where[] = ['id',"in",$postData['id']];
         else $where['id'] = $postData['id'];
         $this->startTrans();
-        $flag[] = $this->updateActivityPick(['status' => 4],$where,['status']);
-        $where['status'] = 1;
-        $flag[] = $this->updateActivityPickCode(['status' => 4],[['ap_id','in',$postData['id']]],['status']);
-        $result = $this->checkFlag($flag);
-        return $this->checkTrans($result);
+        try {
+            $flag[] = $this->updateActivityPick(['status' => 4], $where, ['status']);
+            $where['status'] = 1;
+            $flag[] = $this->updateActivityPickCode(['status' => 4], [['ap_id', 'in', $postData['id']]], ['status']);
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rValidate($e->getMessage());
+        }
     }
 }

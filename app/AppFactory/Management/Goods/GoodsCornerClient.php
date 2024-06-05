@@ -80,31 +80,37 @@ class GoodsCornerClient extends ManagementClient
         $machineList = explode(",",$postData['machineList']);
         unset($postData['goodsList'],$postData['machineList']);
         $this->startTrans();
-        $id = $this->addGoodsCorner($postData);
-        if ($id) {
-            $insert = [
-                "a_id" => $id,
-                "a_type" => 5,
-            ];
-            if ($machineList) {
-                $amResult = $this->addAm($insert,$machineList);
-                if ($amResult !== true) {
-                    $this->rollbackTrans();
-                    return $this->rFail($amResult);
+        try {
+            $id = $this->addGoodsCorner($postData);
+            if ($id) {
+                $insert = [
+                    "a_id" => $id,
+                    "a_type" => 5,
+                ];
+                if ($machineList) {
+                    $amResult = $this->addAm($insert, $machineList);
+                    if ($amResult !== true) {
+                        $this->rollbackTrans();
+                        return $this->rFail($amResult);
+                    }
                 }
-            }
-            if ($goodsList) {
-                $agResult = $this->addAg($insert,$goodsList);
-                if ($agResult !== true) {
-                    $this->rollbackTrans();
-                    return $this->rFail($agResult);
+                if ($goodsList) {
+                    $agResult = $this->addAg($insert, $goodsList);
+                    if ($agResult !== true) {
+                        $this->rollbackTrans();
+                        return $this->rFail($agResult);
+                    }
                 }
+                $this->commitTrans();
+                return $this->r(200, $this->lang("add_success"));
             }
-            $this->commitTrans();
-            return $this->r(200,$this->lang("add_success"));
+            $this->rollbackTrans();
+            return $this->rFail($this->lang("add_fail"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $this->rollbackTrans();
-        return $this->rFail($this->lang("add_fail"));
     }
 
     /**

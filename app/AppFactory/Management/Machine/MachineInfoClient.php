@@ -11,7 +11,7 @@ namespace app\AppFactory\Management\Machine;
 
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Management\ManagementClient;
-use app\management\validate\VMachineInfo;
+use app\management\validate\Machine\VMachineInfo;
 
 class MachineInfoClient extends ManagementClient
 {
@@ -20,16 +20,22 @@ class MachineInfoClient extends ManagementClient
     public function updateMore($postData)
     {
         $this->startTrans();
-        foreach ($postData['miList'] as $key => $value) {
-            try {
-                validate(VMachineInfo::class)->scene("updateMore")->check($value);
-            } catch (\Exception $e) {
-                $this->rollbackTrans();
-                return $this->rValidate($e->getMessage());
+        try {
+            foreach ($postData['miList'] as $key => $value) {
+                try {
+                    validate(VMachineInfo::class)->scene("updateMore")->check($value);
+                } catch (\Exception $e) {
+                    $this->rollbackTrans();
+                    return $this->rValidate($e->getMessage());
+                }
+                $flag[] = $this->updateMachineInfo($value, ['m_id' => $value['m_id']]);
             }
-            $flag[] = $this->updateMachineInfo($value,['m_id' => $value['m_id']]);
+            $check = $this->checkFlag($flag);
+            return $this->checkTrans($check);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $check = $this->checkFlag($flag);
-        return $this->checkTrans($check);
     }
 }

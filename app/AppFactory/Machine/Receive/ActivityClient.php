@@ -277,73 +277,76 @@ class ActivityClient extends ReceiveBaseClient
         }
 
         $this->startTrans();
-        // 修改已抽奖次数
-        $this->updateActivityFdUsed(['used_quantity' => $used['used_quantity']],['alu_id' => $used['alu_id']]);
-        // 没抽中，返回谢谢惠顾
-        if (!$list) {
-            $this->commitTrans();
-            $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0)->toArray();
-            return $this->r(200,$this->lang("lottery_empty"),['lottery_list' => $list,"order" => $order]);
-        }
-        $averagePrice = bcdiv($order['total_price'],$order['total_quantity'],3);
 
-        $flag = [];
-        $ugAll = [];
-        $mcField = "mc_id,shelf_way,channel_position,channel_code,mg_id,g_id,g_name,pic,sku,gc_id,gc_name,cost_price,market_price,stock";
-        foreach ($list as $lk => $lv) {
-            $mc = $this->getMachineChannelFind(['g_id' => $lv['g_id'],'m_id' => $order['m_id']],$mcField,'stock desc');
-            if (!$mc) {
-                $this->rollbackTrans();
-                return $this->rFail($this->lang("VActivityLottery.mc_no_data"));
+        try {// 修改已抽奖次数
+            $this->updateActivityFdUsed(['used_quantity' => $used['used_quantity']], ['alu_id' => $used['alu_id']]);// 没抽中，返回谢谢惠顾
+            if (!$list) {
+                $this->commitTrans();
+                $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0)->toArray();
+                return $this->r(200, $this->lang("lottery_empty"), ['lottery_list' => $list, "order" => $order]);
             }
-            $mc = $mc->toArray();
-            $ug = [
-                "al_id" => $used['al_id'],
-                "alu_id" => $used['alu_id'],
-                "g_id" => $mc['g_id'],
-                "g_name" => $mc['g_name'],
-                "sku" => $mc['sku'],
-                "probability" => $lv['probability'],
-                "mc_id" => $mc['mc_id'],
-                "channel_code" => $mc['channel_code'],
-                "quantity" => 1,
-            ];
-            // 不存在商品记录则生成，存在商品则数量+1
-            $sod = $this->getSaleOrdersDetailsFind(['order_id' => $order['order_id'],'mc_id' => $mc['mc_id']]);
-            if (!$sod) {
-                unset($mc['stock']);
-                $insertSod = $mc;
-                $insertSod['order_id'] = $order['order_id'];
-                $insertSod['quantity'] = 1;
-                $insertSod['total_sod_price'] = $averagePrice;
-                $insertSod['retail_price'] = $averagePrice;
-                $sod_id = $this->addSaleOrdersDetails($insertSod);
-                $flag[] = $sod_id;
-            } else {
-                $sod = $sod->toArray();
-                $sod_id = $sod['sod_id'];
-                $update['sod_id'] = $sod_id;
-                $update['quantity'] = $sod['quantity'] + 1;
-                $update['retail_price'] = bcdiv($averagePrice,$update['quantity'],3);
-                $flag[] = $this->updateSaleOrdersDetails($update);
+            $averagePrice = bcdiv($order['total_price'], $order['total_quantity'], 3);
+            $flag = [];
+            $ugAll = [];
+            $mcField = "mc_id,shelf_way,channel_position,channel_code,mg_id,g_id,g_name,pic,sku,gc_id,gc_name,cost_price,market_price,stock";
+            foreach ($list as $lk => $lv) {
+                $mc = $this->getMachineChannelFind(['g_id' => $lv['g_id'], 'm_id' => $order['m_id']], $mcField, 'stock desc');
+                if (!$mc) {
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang("VActivityLottery.mc_no_data"));
+                }
+                $mc = $mc->toArray();
+                $ug = [
+                    "al_id" => $used['al_id'],
+                    "alu_id" => $used['alu_id'],
+                    "g_id" => $mc['g_id'],
+                    "g_name" => $mc['g_name'],
+                    "sku" => $mc['sku'],
+                    "probability" => $lv['probability'],
+                    "mc_id" => $mc['mc_id'],
+                    "channel_code" => $mc['channel_code'],
+                    "quantity" => 1,
+                ];
+                // 不存在商品记录则生成，存在商品则数量+1
+                $sod = $this->getSaleOrdersDetailsFind(['order_id' => $order['order_id'], 'mc_id' => $mc['mc_id']]);
+                if (!$sod) {
+                    unset($mc['stock']);
+                    $insertSod = $mc;
+                    $insertSod['order_id'] = $order['order_id'];
+                    $insertSod['quantity'] = 1;
+                    $insertSod['total_sod_price'] = $averagePrice;
+                    $insertSod['retail_price'] = $averagePrice;
+                    $sod_id = $this->addSaleOrdersDetails($insertSod);
+                    $flag[] = $sod_id;
+                } else {
+                    $sod = $sod->toArray();
+                    $sod_id = $sod['sod_id'];
+                    $update['sod_id'] = $sod_id;
+                    $update['quantity'] = $sod['quantity'] + 1;
+                    $update['retail_price'] = bcdiv($averagePrice, $update['quantity'], 3);
+                    $flag[] = $this->updateSaleOrdersDetails($update);
+                }
+                $ug['sod_id'] = $sod_id;
+                $ugAll[] = $ug;
             }
-            $ug['sod_id'] = $sod_id;
-            $ugAll[] = $ug;
+            $flag[] = $this->addActivityLotteryUsedGoodsMore($ugAll);
+            $check = $this->checkFlag($flag);
+            if ($check) {
+                $this->commitTrans();
+                $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0)->toArray();
+                $totalQuantity = array_sum(array_column($order['details'], 'quantity'));
+                if ($totalQuantity == $used['quantity']) {
+                    $this->updateActivityLotteryUsed(['alu_id' => $used['alu_id'], 'status' => 2, 'used_date' => strtotime(date("Y-m-d"))]);
+                }
+                return $this->r(200, $this->lang("action_success"), ['lottery_list' => $list, "order" => $order]);
+            }
+            $this->rollbackTrans();
+            return $this->r(100, $this->lang("action_fail"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-
-        $flag[] = $this->addActivityLotteryUsedGoodsMore($ugAll);
-        $check = $this->checkFlag($flag);
-        if ($check) {
-            $this->commitTrans();
-            $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0)->toArray();
-            $totalQuantity = array_sum(array_column($order['details'],'quantity'));
-            if ($totalQuantity == $used['quantity']) {
-                $this->updateActivityLotteryUsed(['alu_id' => $used['alu_id'],'status' => 2,'used_date' => strtotime(date("Y-m-d"))]);
-            }
-            return $this->r(200,$this->lang("action_success"),['lottery_list' => $list,"order" => $order]);
-        }
-        $this->rollbackTrans();
-        return $this->r(100,$this->lang("action_fail"));
     }
 
     /**
@@ -365,29 +368,32 @@ class ActivityClient extends ReceiveBaseClient
         $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'*');
         if (!$this->order['details']) return $this->r(100,$this->lang("VActivityLottery.order_details_no_data"));
         $this->startTrans();
-        $flag = [];
-        // 生成分润记录
-        $flag[] = $this->countIncome();
-        // 修改分润记录
-        $flag[] = $this->settlementRevenue();
-        // 修改为发送出货命令状态
-        $updateOrder['order_id'] = $this->order['order_id'];
-        $updateOrder['out_status'] = 2;
-        if ($this->order['pay_status'] != 3) {
-            $updateOrder['pay_status'] = 3;
-            $updateOrder['pay_type'] = 0;
-            $updateOrder['pay_method'] = 1;
-            $updateOrder['pay_time'] = time();
+        try {
+            $flag = [];// 生成分润记录
+            $flag[] = $this->countIncome();// 修改分润记录
+            $flag[] = $this->settlementRevenue();// 修改为发送出货命令状态
+            $updateOrder['order_id'] = $this->order['order_id'];
+            $updateOrder['out_status'] = 2;
+            if ($this->order['pay_status'] != 3) {
+                $updateOrder['pay_status'] = 3;
+                $updateOrder['pay_type'] = 0;
+                $updateOrder['pay_method'] = 1;
+                $updateOrder['pay_time'] = time();
+            }
+            $flag[] = $this->updateSaleOrders($updateOrder);
+            $check = $this->checkFlag($flag);
+            if ($check) {
+                $this->outGoods();
+                $this->commitTrans();
+                return $this->r(200, $this->lang("action_success"));
+            }
+            $this->rollbackTrans();
+            return $this->r(100, $this->lang("action_fail"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $flag[] = $this->updateSaleOrders($updateOrder);
-        $check = $this->checkFlag($flag);
-        if ($check) {
-            $this->outGoods();
-            $this->commitTrans();
-            return $this->r(200,$this->lang("action_success"));
-        }
-        $this->rollbackTrans();
-        return $this->r(100,$this->lang("action_fail"));
     }
 
     /**

@@ -109,12 +109,17 @@ trait AliPayTrait
 
             if ($result['code'] == 10000) {
                 $this->startTrans();
-                // 结算分润收益
-                $flag[] = $this->settlementRevenue();
-                $flag[] = $this->paymentSuccessful();
-                actionLog($flag,'操作结果');
-                $result = flag_check($flag);
-                $return = $this->checkTrans($result);
+                try {// 结算分润收益
+                    $flag[] = $this->settlementRevenue();
+                    $flag[] = $this->paymentSuccessful();
+                    actionLog($flag, '操作结果');
+                    $result = flag_check($flag);
+                    $return = $this->checkTrans($result);
+                } catch (\Exception $e) {
+                    $this->rollbackTrans();
+                    actionException($e,1);
+                    $return = $this->rTryCatch($e->getMessage());
+                }
             } else if ($result['code'] == 10003) { // 队列轮询
                 $return = $this->r(201, '等待您的支付，超时时间30秒');
                 $redis = new \Redis();

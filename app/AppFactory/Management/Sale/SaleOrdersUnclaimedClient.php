@@ -28,15 +28,21 @@ class SaleOrdersUnclaimedClient extends ManagementClient
     public function updateSuStatus($postData)
     {
         $this->startTrans();
-        $su = $this->getSaleOrdersUnclaimedFind(['su_id' => $postData['su_id']],'m_id,quantity');
-        $flag[] = $this->updateSaleOrdersUnclaimed(['su_id' => $postData['su_id'],'status' => $postData['status'],'remark' => $postData['remark'] ?? ""]);
-        $recycleStock = $this->getMachineValue(['m_id' => $su['m_id']],'recycle_bin_stock');
-        if ($recycleStock > 0) {
-            if ($recycleStock < $su['quantity']) $su['quantity'] = $recycleStock;
-            $flag[] = $this->setMachineDecField(['m_id' => $su['m_id']], 'recycle_bin_stock', $su['quantity']);
+        try {
+            $su = $this->getSaleOrdersUnclaimedFind(['su_id' => $postData['su_id']], 'm_id,quantity');
+            $flag[] = $this->updateSaleOrdersUnclaimed(['su_id' => $postData['su_id'], 'status' => $postData['status'], 'remark' => $postData['remark'] ?? ""]);
+            $recycleStock = $this->getMachineValue(['m_id' => $su['m_id']], 'recycle_bin_stock');
+            if ($recycleStock > 0) {
+                if ($recycleStock < $su['quantity']) $su['quantity'] = $recycleStock;
+                $flag[] = $this->setMachineDecField(['m_id' => $su['m_id']], 'recycle_bin_stock', $su['quantity']);
+            }
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $result = $this->checkFlag($flag);
-        return $this->checkTrans($result);
     }
 
     /**

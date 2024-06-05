@@ -47,12 +47,16 @@ class WxClient extends PayBaseClient
                     $this->order['mch_no'] = $mch_no;
 
                     $this->startTrans();
-                    // 结算分润收益
-                    $flag[] = $this->settlementRevenue();
-                    $flag[] = $this->paymentSuccessful();
-                    $result = flag_check($flag);
-                    $return = $this->checkTrans($result);
-                    actionLog($return,'处理支付成功事务');
+                    try {// 结算分润收益
+                        $flag[] = $this->settlementRevenue();
+                        $flag[] = $this->paymentSuccessful();
+                        $result = flag_check($flag);
+                        $return = $this->checkTrans($result);
+                        actionLog($return, '处理支付成功事务');
+                    } catch (\Exception $e) {
+                        $this->rollbackTrans();
+                        actionException($e,1);
+                    }
                 } elseif ($message['result_code'] === 'FAIL') {
                     $this->paymentFailed();
                 }

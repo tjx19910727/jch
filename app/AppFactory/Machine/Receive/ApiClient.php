@@ -529,15 +529,21 @@ class ApiClient extends ReceiveBaseClient
                 $adv['status'] = 3;
             }
             $this->startTrans();
-            $flag[] = $this->updateAdvertisementPush($adv);
-            $insert['play_time'] = $this->data['play_time'];
-            $flag[] = $this->addAdvertisementRecord($insert);
-            $result = $this->checkFlag($flag);
-            $check = $this->checkTrans($result, 0);
-            if ($check) {
-                return $this->r(200, $this->lang("action_success"), ['adv' => $adv]);
+            try {
+                $flag[] = $this->updateAdvertisementPush($adv);
+                $insert['play_time'] = $this->data['play_time'];
+                $flag[] = $this->addAdvertisementRecord($insert);
+                $result = $this->checkFlag($flag);
+                $check = $this->checkTrans($result, 0);
+                if ($check) {
+                    return $this->r(200, $this->lang("action_success"), ['adv' => $adv]);
+                }
+                return $this->rFail($this->lang("action_fail"));
+            } catch (\Exception $e) {
+                $this->rollbackTrans();
+                actionException($e,1);
+                return $this->rTryCatch($e->getMessage());
             }
-            return $this->rFail($this->lang("action_fail"));
         }
         return $this->r(200, $this->lang("VAdvertisement.adv_complete"));
     }
@@ -564,116 +570,128 @@ class ApiClient extends ReceiveBaseClient
         ];
         $updateOrder = [];
         $this->startTrans();
-        $order_id = $this->addSaleOrders($order);
-        if ($order_id) {
-            // 取货码活动
-            if (isset($this->data['pick_code'])) {
-                $updateOrder = $this->orderUsePickCode($trade_no, $order_id);
-                if (is_string($updateOrder)) {
-                    $this->rollbackTrans();
-                    return $this->rFail($updateOrder);
+        try {
+            $order_id = $this->addSaleOrders($order);
+            if ($order_id) {
+                // 取货码活动
+                if (isset($this->data['pick_code'])) {
+                    $updateOrder = $this->orderUsePickCode($trade_no, $order_id);
+                    if (is_string($updateOrder)) {
+                        $this->rollbackTrans();
+                        return $this->rFail($updateOrder);
+                    }
+                    $updateOrder['mch_no'] = $trade_no;
                 }
-                $updateOrder['mch_no'] = $trade_no;
-            }
-            $updateOrder['order_id'] = $order_id;
-            $updateOrder['cost_price'] = 0;
-            $updateOrder['market_price'] = 0;
-            $updateOrder['retail_price'] = 0;
-            $updateOrder['quantity'] = 0;
-            $updateOrder['total_price'] = 0;
-            $updateOrder['total_quantity'] = 0;
-            if (!isset($this->data['carList']) || !$this->data['carList']) {
-                $this->rollbackTrans();
-                return $this->rFail("购物车不能为空");
-            }
-            $this->data['carList'] = json2arr($this->data['carList']);
+                $updateOrder['order_id'] = $order_id;
+                $updateOrder['cost_price'] = 0;
+                $updateOrder['market_price'] = 0;
+                $updateOrder['retail_price'] = 0;
+                $updateOrder['quantity'] = 0;
+                $updateOrder['total_price'] = 0;
+                $updateOrder['total_quantity'] = 0;
+                if (!isset($this->data['carList']) || !$this->data['carList']) {
+                    $this->rollbackTrans();
+                    return $this->rFail("购物车不能为空");
+                }
+                $this->data['carList'] = json2arr($this->data['carList']);
 
-            foreach ($this->data['carList'] as $key => $value) {
-                $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
-                if (!$mc) {
-                    $this->rollbackTrans();
-                    return $this->r(100, $this->lang("VSubCar.channel_no_data"));
+                foreach ($this->data['carList'] as $key => $value) {
+                    $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
+                    if (!$mc) {
+                        $this->rollbackTrans();
+                        return $this->r(100, $this->lang("VSubCar.channel_no_data"));
+                    }
+                    if (!$mc['mg_id']) {
+                        $this->rollbackTrans();
+                        return $this->r(100, $this->lang("VSubCar.mg_id_require"));
+                    }
+                    $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']], 'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price');
+                    if ($this->data['pay_type'] == 0) {
+                        $mc['retail_price'] = 0;
+                    }
+                    $details = [
+                        "order_id" => $order_id,
+                        "mc_id" => $mc['mc_id'],
+                        "shelf_way" => $mc['shelf_way'],
+                        "channel_position" => $mc['channel_position'],
+                        "channel_code" => $mc['channel_code'],
+                        "mg_id" => $mc['mg_id'],
+                        "g_id" => $mg['g_id'],
+                        "g_name" => $mg['g_name'],
+                        "pic" => $mg['pic'],
+                        "sku" => $mg['sku'],
+                        "gc_id" => $mg['gc_id'],
+                        "gc_name" => $mg['gc_name'],
+                        "cost_price" => $mg['cost_price'],
+                        "market_price" => $mg['market_price'],
+                        "retail_price" => $mg['retail_price'],
+                        "total_sod_price" => bcmul($mg['retail_price'], $value['quantity'], 2),
+                        "quantity" => $value['quantity'],
+                        "bar_code" => $mg['bar_code'],
+                        //                    "batch_number" => $mg['batch_number'],
+                        //                    "manufacture_time" => $mc['manufacture_time'],
+                        //                    "sell_by_date" => $mc['sell_by_date'],
+                    ];
+                    $sod_id = $this->addSaleOrdersDetails($details);
+                    if ($sod_id) {
+                        $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mg['cost_price'], $value['quantity'], 2), 2);
+                        $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mg['market_price'], $value['quantity'], 2), 2);
+                        $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mg['retail_price'], $value['quantity'], 2), 2);
+                        $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $value['quantity']);
+                        $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 2);
+                        $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $value['quantity']);
+                    } else {
+                        $this->rollbackTrans();
+                        return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                    }
                 }
-                if (!$mc['mg_id']) {
-                    $this->rollbackTrans();
-                    return $this->r(100, $this->lang("VSubCar.mg_id_require"));
-                }
-                $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']], 'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price');
-                if ($this->data['pay_type'] == 0) {
-                    $mc['retail_price'] = 0;
-                }
-                $details = [
-                    "order_id" => $order_id,
-                    "mc_id" => $mc['mc_id'],
-                    "shelf_way" => $mc['shelf_way'],
-                    "channel_position" => $mc['channel_position'],
-                    "channel_code" => $mc['channel_code'],
-                    "mg_id" => $mc['mg_id'],
-                    "g_id" => $mg['g_id'],
-                    "g_name" => $mg['g_name'],
-                    "pic" => $mg['pic'],
-                    "sku" => $mg['sku'],
-                    "gc_id" => $mg['gc_id'],
-                    "gc_name" => $mg['gc_name'],
-                    "cost_price" => $mg['cost_price'],
-                    "market_price" => $mg['market_price'],
-                    "retail_price" => $mg['retail_price'],
-                    "total_sod_price" => bcmul($mg['retail_price'], $value['quantity'], 2),
-                    "quantity" => $value['quantity'],
-                    "bar_code" => $mg['bar_code'],
-//                    "batch_number" => $mg['batch_number'],
-//                    "manufacture_time" => $mc['manufacture_time'],
-//                    "sell_by_date" => $mc['sell_by_date'],
-                ];
-                $sod_id = $this->addSaleOrdersDetails($details);
-                if ($sod_id) {
-                    $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mg['cost_price'], $value['quantity'], 2), 2);
-                    $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mg['market_price'], $value['quantity'], 2), 2);
-                    $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mg['retail_price'], $value['quantity'], 2), 2);
-                    $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $value['quantity']);
-                    $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 2);
-                    $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $value['quantity']);
-                } else {
-                    $this->rollbackTrans();
-                    return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
-                }
+                $this->commitTrans();
+            } else {
+                $this->rollbackTrans();
+                return $this->r(100, $this->lang("VSubCar.make_order_fail"));
             }
-            $this->commitTrans();
-        } else {
+        } catch (\Exception $e) {
             $this->rollbackTrans();
-            return $this->r(100, $this->lang("VSubCar.make_order_fail"));
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
         $this->startTrans();
-        if ($updateOrder) {
-            $flag[] = $this->updateSaleOrders($updateOrder);
-            $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
-            $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
-            // 有优惠券码，重新处理订单数据
-            if (isset($this->data['coupon_code'])) {
-                $this->orderUseCoupon();
-            }
-            // 订单金额大于0才能执行分润
-            if ($this->order['total_price'] > 0) {
-                $flag[] = $this->countIncome();
-            }
+        try {
+            if ($updateOrder) {
+                $flag[] = $this->updateSaleOrders($updateOrder);
+                $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
+                $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
+                // 有优惠券码，重新处理订单数据
+                if (isset($this->data['coupon_code'])) {
+                    $this->orderUseCoupon();
+                }
+                // 订单金额大于0才能执行分润
+                if ($this->order['total_price'] > 0) {
+                    $flag[] = $this->countIncome();
+                }
 
-            actionLog($this->getLS(), '修改订单SQL');
-            $result = $this->checkFlag($flag);
-            actionLog($result, '事务结果');
-            if ($result) {
-                // 免费的直接出货
-                if ($this->data['pay_type'] == 0) {
-                    $this->outGoods();
-                    $this->commitTrans();
-                    return $this->r(200, $this->lang("VSubCar.goods_outing"));
-                } else {
-                    $this->commitTrans();
-                    return $this->r(200, $this->lang("VSubCar.make_order_success"), ['order' => $this->order]);
+                actionLog($this->getLS(), '修改订单SQL');
+                $result = $this->checkFlag($flag);
+                actionLog($result, '事务结果');
+                if ($result) {
+                    // 免费的直接出货
+                    if ($this->data['pay_type'] == 0) {
+                        $this->outGoods();
+                        $this->commitTrans();
+                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
+                    } else {
+                        $this->commitTrans();
+                        return $this->r(200, $this->lang("VSubCar.make_order_success"), ['order' => $this->order]);
+                    }
                 }
             }
+            $this->rollbackTrans();
+            return $this->r(100, $this->lang("VSubCar.make_order_fail"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $this->rollbackTrans();
-        return $this->r(100, $this->lang("VSubCar.make_order_fail"));
     }
 
     /**

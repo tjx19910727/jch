@@ -26,16 +26,15 @@ class MachineOnOffClient extends ManagementClient
      */
     public function importCkc($data)
     {
+        $this->startTrans();
         try {
             $path = root_path() . "public" . $data['file_path'];
             $title = ["machine_id", "off0", "on0", "off1", "on1", "off2", "on2", "off3", "on3", "off4", "on4", "off5", "on5", "off6", "on6"];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
             $moo = Excel::importExcel($path, $title, [], 4);
             actionLog($moo, '导入的营业数据');
-            dump($moo);
             if ($moo) {
                 $flag = [];
-                $this->startTrans();
                 foreach ($moo as $k => $v) {
                     $m = $this->getMachineFind(['machine_id' => $v['machine_id']], 'm_id,machine_id,machine_name');
                     $ckcArr = "";
@@ -54,14 +53,15 @@ class MachineOnOffClient extends ManagementClient
                         $flag[] = $this->updateMachineOnOff(['moo_id' => $moo_id, 'on_off_ckc' => $ckc]);
                     }
                 }
-                dump($flag);
                 $result = flag_check($flag);
                 return $this->checkTrans($result);
             }
+            $this->rollbackTrans();
             return $this->r(100, '获取不到Excel文档中的数据');
         } catch (\Exception $e) {
-            actionException($e, 1);
-            return $this->rValidate($e->getMessage());
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
     }
 
@@ -72,6 +72,7 @@ class MachineOnOffClient extends ManagementClient
      */
     public function importOnOff($data)
     {
+        $this->startTrans();
         try {
             $path = root_path() . "public" . $data['file_path'];
             $title = ["machine_id", "status", "off0", "on0", "off1", "on1", "off2", "on2", "off3", "on3", "off4", "on4", "off5", "on5", "off6", "on6"];
@@ -80,7 +81,6 @@ class MachineOnOffClient extends ManagementClient
             actionLog($moo, '导入的营业数据');
             if ($moo) {
                 $flag = [];
-                $this->startTrans();
                 foreach ($moo as $k => $v) {
                     $m = $this->getMachineFind(['machine_id' => $v['machine_id']], 'm_id,machine_id,machine_name');
                     $onOff = json_encode([
@@ -103,10 +103,12 @@ class MachineOnOffClient extends ManagementClient
                 $result = flag_check($flag);
                 return $this->checkTrans($result);
             }
+            $this->rollbackTrans();
             return $this->r(100, '获取不到Excel文档中的数据');
         } catch (\Exception $e) {
-            actionException($e, 1);
-            return $this->rValidate($e->getMessage());
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
     }
 

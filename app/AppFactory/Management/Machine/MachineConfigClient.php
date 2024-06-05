@@ -51,6 +51,7 @@ class MachineConfigClient extends ManagementClient
             return $this->r(200, $this->lang("update_success"));
         } catch (\Exception $e) {
             $this->rollbackTrans();
+            actionException($e,1);
             return $this->r(100,$this->lang($e->getMessage()));
         }
     }

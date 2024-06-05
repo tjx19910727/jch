@@ -28,34 +28,40 @@ class MachineGroupClient extends ManagementClient
             unset($postData['m_id']);
         }
         $this->startTrans();
-        $mg_id = $this->addMachineGroup($postData);
-        if ($mg_id) {
-            $insertLang = [
-                "mg_id" => $mg_id,
-                "mg_name" => $postData['mg_name'],
-                "desc" => $postData['desc'],
-                "lang" => "zh-cn",
-            ];
-            $this->addMachineGroupLang($insertLang);
-            if ($m_id) {
-                if (is_int($m_id)) $m_id  = [$m_id];
-                $mg = $this->getMachineGroupFind(['mg_id' => $mg_id], 'mg_id,mg_name');
-                $mg = $mg->toArray();
-                foreach ($m_id as $mk => $mv) {
-                    $m = $this->getMachineFind(['m_id' => $mv], 'm_id,machine_id,machine_name');
-                    if (!$m) {
-                        return $this->r(100, $this->lang("VMachine.machine_no_data"));
+        try {
+            $mg_id = $this->addMachineGroup($postData);
+            if ($mg_id) {
+                $insertLang = [
+                    "mg_id" => $mg_id,
+                    "mg_name" => $postData['mg_name'],
+                    "desc" => $postData['desc'],
+                    "lang" => "zh-cn",
+                ];
+                $this->addMachineGroupLang($insertLang);
+                if ($m_id) {
+                    if (is_int($m_id)) $m_id = [$m_id];
+                    $mg = $this->getMachineGroupFind(['mg_id' => $mg_id], 'mg_id,mg_name');
+                    $mg = $mg->toArray();
+                    foreach ($m_id as $mk => $mv) {
+                        $m = $this->getMachineFind(['m_id' => $mv], 'm_id,machine_id,machine_name');
+                        if (!$m) {
+                            return $this->r(100, $this->lang("VMachine.machine_no_data"));
+                        }
+                        $m = $m->toArray();
+                        $insertAll[] = array_merge($mg, $m);
                     }
-                    $m = $m->toArray();
-                    $insertAll[] = array_merge($mg, $m);
+                    $flag[] = $this->addMachineGroupMgMore($insertAll);
                 }
-                $flag[] = $this->addMachineGroupMgMore($insertAll);
+                $this->commitTrans();
+                return $this->r(200, $this->lang("add_success"));
             }
-            $this->commitTrans();
-            return $this->r(200,$this->lang("add_success"));
+            $this->rollbackTrans();
+            return $this->r(100, $this->lang("add_fail"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $this->rollbackTrans();
-        return $this->r(100,$this->lang("add_fail"));
     }
 
     public function updateMg($postData)

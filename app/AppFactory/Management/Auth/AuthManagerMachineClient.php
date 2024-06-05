@@ -23,21 +23,27 @@ class AuthManagerMachineClient extends ManagementClient
     {
         $flag = [];
         $this->startTrans();
-        $m_ids = explode(",",$m_ids);
-        $old_M_ids = $this->getAuthManagerMachineColumn(['manager_id' => $manager_id],'m_id');
-        $delList = array_diff($old_M_ids,$m_ids);
-        $addList = array_diff($m_ids,$old_M_ids);
-        if ($delList) $flag[] = $this->delAuthManagerMachine(['manager_id' => $manager_id,['m_id' ,'in',$delList]]);
-        if ($addList) {
-            $manager = $this->getAuthManagerFind(['manager_id' => $manager_id],'manager_id,nickname,account')->toArray();
-            foreach ($addList as $key => $value) {
-                $m = $this->getMachineFind(['m_id' => $value],'m_id,machine_id,machine_name')->toArray();
-                $insert = array_merge($manager,$m);
-                $insertAll[] = $insert;
+        try {
+            $m_ids = explode(",", $m_ids);
+            $old_M_ids = $this->getAuthManagerMachineColumn(['manager_id' => $manager_id], 'm_id');
+            $delList = array_diff($old_M_ids, $m_ids);
+            $addList = array_diff($m_ids, $old_M_ids);
+            if ($delList) $flag[] = $this->delAuthManagerMachine(['manager_id' => $manager_id, ['m_id', 'in', $delList]]);
+            if ($addList) {
+                $manager = $this->getAuthManagerFind(['manager_id' => $manager_id], 'manager_id,nickname,account')->toArray();
+                foreach ($addList as $key => $value) {
+                    $m = $this->getMachineFind(['m_id' => $value], 'm_id,machine_id,machine_name')->toArray();
+                    $insert = array_merge($manager, $m);
+                    $insertAll[] = $insert;
+                }
+                $flag[] = $this->addAuthManagerMachineMore($insertAll);
             }
-            $flag[] = $this->addAuthManagerMachineMore($insertAll);
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $result = $this->checkFlag($flag);
-        return $this->checkTrans($result);
     }
 }

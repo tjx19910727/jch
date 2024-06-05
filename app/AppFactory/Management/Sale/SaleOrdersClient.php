@@ -77,21 +77,26 @@ class SaleOrdersClient extends ManagementClient
             return $check;
         }
         $this->startTrans();
-        $this->postData = $postData;
-        // 生成退款记录
-        $flag = $this->createSor();
-        if (!is_array($flag)) {
+        try {
+            $this->postData = $postData;// 生成退款记录
+            $flag = $this->createSor();
+            if (!is_array($flag)) {
+                $this->rollbackTrans();
+                return $flag;
+            }
+            $result = flag_check($flag);
+            if ($result) {
+                $this->commitTrans();
+                // 调用平台退款
+                return $this->callRefund();
+            }
             $this->rollbackTrans();
-            return $flag;
+            return $this->rFail("退款失败：生成退款记录失败");
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $result = flag_check($flag);
-        if ($result) {
-            $this->commitTrans();
-            // 调用平台退款
-            return $this->callRefund();
-        }
-        $this->rollbackTrans();
-        return $this->rFail("退款失败：生成退款记录失败");
 
     }
 
@@ -133,14 +138,19 @@ class SaleOrdersClient extends ManagementClient
             // 支付宝支付、通联支付退款实时处理，不用异步
             if ($this->order['pay_type'] == 3 || $this->order['pay_type'] == 2) {
                 $this->startTrans();
-                if (isset($check['data']['trxid'])) $this->refund_no = $check['data']['trxid'];
-                if (isset($check['data']['trade_no'])) $this->refund_no = $check['data']['trade_no'];
-                $end = $this->refundSuccess();
-                if ($end !== true) {
+                try {
+                    if (isset($check['data']['trxid'])) $this->refund_no = $check['data']['trxid'];
+                    if (isset($check['data']['trade_no'])) $this->refund_no = $check['data']['trade_no'];
+                    $end = $this->refundSuccess();
+                    if ($end !== true) {
+                        $this->rollbackTrans();
+                        return $end;
+                    }
+                    $this->commitTrans();
+                } catch (\Exception $e) {
                     $this->rollbackTrans();
-                    return $end;
+                    actionException($e,1);
                 }
-                $this->commitTrans();
             }
             return $result;
         } else {

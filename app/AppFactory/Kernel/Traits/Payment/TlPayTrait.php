@@ -127,13 +127,18 @@ trait TlPayTrait
         if ($result['retcode'] == "SUCCESS") {
             if ($result['trxstatus'] == "0000") {
                 $this->startTrans();
-                // 结算分润收益
-                $flag[] = $this->settlementRevenue();
-                $flag[] = $this->paymentSuccessful();
-                $result = flag_check($flag);
-                actionLog($flag,'支付成功flag');
-                $return = $this->checkTrans($result);
-                return $return;
+                try {// 结算分润收益
+                    $flag[] = $this->settlementRevenue();
+                    $flag[] = $this->paymentSuccessful();
+                    $result = flag_check($flag);
+                    actionLog($flag, '支付成功flag');
+                    $return = $this->checkTrans($result);
+                    return $return;
+                } catch (\Exception $e) {
+                    $this->rollbackTrans();
+                    actionException($e,1);
+                    return $this->rTryCatch($e->getMessage());
+                }
             }
             if ($result['trxstatus'] == '2008' || $result['trxstatus'] == '2000') {
                 $this->updateSaleOrders($this->order);

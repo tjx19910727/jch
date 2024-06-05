@@ -154,6 +154,7 @@ trait MachineChannelReplenishmentTrait
             $result = $this->checkFlag($flag);
             return $this->checkTrans($result);
         } catch (\Exception $e) {
+            $this->rollbackTrans();
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());
         }

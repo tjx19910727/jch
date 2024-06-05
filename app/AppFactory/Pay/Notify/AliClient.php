@@ -39,11 +39,16 @@ class AliClient extends PayBaseClient
                 }
                 $this->startTrans();
                 // 结算分润收益
-                $flag[] = $this->settlementRevenue();
-                $flag[] = $this->paymentSuccessful();
-                $result = flag_check($flag);
-                $result = $this->checkTrans($result);
-                actionLog($result,'支付成功处理事务结果');
+                try {
+                    $flag[] = $this->settlementRevenue();
+                    $flag[] = $this->paymentSuccessful();
+                    $result = flag_check($flag);
+                    $result = $this->checkTrans($result);
+                    actionLog($result, '支付成功处理事务结果');
+                } catch (\Exception $e) {
+                    $this->rollbackTrans();
+                    actionException($e,1);
+                }
             } else {
                 actionLog($this->getLS(), "没有查到订单");
             }

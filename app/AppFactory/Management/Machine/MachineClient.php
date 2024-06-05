@@ -79,37 +79,43 @@ class MachineClient extends ManagementClient
             unset($postData['machine_group_id']);
         }
         $this->startTrans();
-        $result = $this->updateMachine($postData);
-        if ($result) {
-            $m = $this->getMachineFind(['m_id' => $postData['m_id']],"m_id,machine_id,machine_name");
-            if (!$m) {
-                return $this->r(100,$this->lang("VMachine.machine_no_data"));
-            }
-            $m = $m->toArray();
-            $this->sendToMachine($m);
-            if ($machine_group_id && is_int($machine_group_id)) $machine_group_id = [$machine_group_id];
-            $oldMgId = $this->getMachineGroupMgColumn(['m_id' => $m['m_id']], "mg_id");
-            $addList = array_diff($machine_group_id, $oldMgId);
-            $delList = array_diff($oldMgId, $machine_group_id);
-            if ($delList) $flag[] = $this->delMachineGroupMg(['m_id' => $m['m_id'], ['mg_id', 'in', $delList]]);
-            if ($addList) {
-                foreach ($addList as $mk => $mv) {
-                    $mg = $this->getMachineGroupFind(['mg_id' => $mv], 'mg_id,mg_name');
-                    if (!$mg) {
-                        $this->rollbackTrans();
-                        return $this->r(100, $this->lang("VMachineGoods.mg_no_data"));
-                    }
-                    $mg = $mg->toArray();
-                    $insertAll[] = array_merge($mg, $m);
+        try {
+            $result = $this->updateMachine($postData);
+            if ($result) {
+                $m = $this->getMachineFind(['m_id' => $postData['m_id']], "m_id,machine_id,machine_name");
+                if (!$m) {
+                    return $this->r(100, $this->lang("VMachine.machine_no_data"));
                 }
-                $flag[] = $this->addMachineGroupMgMore($insertAll);
-            }
+                $m = $m->toArray();
+                $this->sendToMachine($m);
+                if ($machine_group_id && is_int($machine_group_id)) $machine_group_id = [$machine_group_id];
+                $oldMgId = $this->getMachineGroupMgColumn(['m_id' => $m['m_id']], "mg_id");
+                $addList = array_diff($machine_group_id, $oldMgId);
+                $delList = array_diff($oldMgId, $machine_group_id);
+                if ($delList) $flag[] = $this->delMachineGroupMg(['m_id' => $m['m_id'], ['mg_id', 'in', $delList]]);
+                if ($addList) {
+                    foreach ($addList as $mk => $mv) {
+                        $mg = $this->getMachineGroupFind(['mg_id' => $mv], 'mg_id,mg_name');
+                        if (!$mg) {
+                            $this->rollbackTrans();
+                            return $this->r(100, $this->lang("VMachineGoods.mg_no_data"));
+                        }
+                        $mg = $mg->toArray();
+                        $insertAll[] = array_merge($mg, $m);
+                    }
+                    $flag[] = $this->addMachineGroupMgMore($insertAll);
+                }
 
-            $this->commitTrans();
-            return $this->r(200,$this->lang("update_success"));
+                $this->commitTrans();
+                return $this->r(200, $this->lang("update_success"));
+            }
+            $this->rollbackTrans();
+            return $this->r(100, $this->lang("update_fail"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $this->rollbackTrans();
-        return $this->r(100,$this->lang("update_fail"));
     }
 
     public function updateMore($postData)

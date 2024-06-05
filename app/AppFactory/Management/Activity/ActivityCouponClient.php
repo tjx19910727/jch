@@ -65,31 +65,37 @@ class ActivityCouponClient extends ManagementClient
             $postData['status'] = 2;
         }
         $this->startTrans();
-        $a_id = $this->addActivityCoupon($postData);
-        if ($a_id) {
-            $insert = [
-                "a_id" => $a_id,
-                "a_type" => 1,
-            ];
-            if ($postData['designated_machine'] == 2) {
-                $amResult = $this->addAm($insert,$machineList);
-                if ($amResult !== true) {
-                    $this->rollbackTrans();
-                    return $this->rFail($amResult);
+        try {
+            $a_id = $this->addActivityCoupon($postData);
+            if ($a_id) {
+                $insert = [
+                    "a_id" => $a_id,
+                    "a_type" => 1,
+                ];
+                if ($postData['designated_machine'] == 2) {
+                    $amResult = $this->addAm($insert, $machineList);
+                    if ($amResult !== true) {
+                        $this->rollbackTrans();
+                        return $this->rFail($amResult);
+                    }
                 }
-            }
-            if ($postData['designated_goods'] == 2 || $postData['designated_goods'] == 3) {
-                $agResult = $this->addAg($insert,$goodsList);
-                if ($agResult !== true) {
-                    $this->rollbackTrans();
-                    return $this->rFail($agResult);
+                if ($postData['designated_goods'] == 2 || $postData['designated_goods'] == 3) {
+                    $agResult = $this->addAg($insert, $goodsList);
+                    if ($agResult !== true) {
+                        $this->rollbackTrans();
+                        return $this->rFail($agResult);
+                    }
                 }
+                $this->commitTrans();
+                return $this->r(200, $this->lang("add_success"));
             }
-            $this->commitTrans();
-            return $this->r(200,$this->lang("add_success"));
+            $this->rollbackTrans();
+            return $this->rFail($this->lang("add_fail"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $this->rollbackTrans();
-        return $this->rFail($this->lang("add_fail"));
     }
 
     /**
@@ -109,42 +115,48 @@ class ActivityCouponClient extends ManagementClient
         }
         $flag[] = 1;
         $this->startTrans();
-        $flag[] = $this->updateActivityCoupon($postData);
 
-        $insert = [
-            "a_id" => $postData['c_id'],
-            "a_type" => 1,
-        ];
-        if ($machineList && $postData['designated_machine'] == 2) {
-            $oldAmList = $this->getActivityMachineColumn(['a_id' => $postData['c_id'],'a_type' => 1],'machine_id');
-            $delAmList = array_diff($oldAmList,$machineList);
-            $addAmList = array_diff($machineList,$oldAmList);
-            if ($addAmList) {
-                $amResult = $this->addAm($insert, $addAmList);
-                if ($amResult !== true) {
-                    $this->rollbackTrans();
-                    return $this->rFail($amResult);
+        try {
+            $flag[] = $this->updateActivityCoupon($postData);
+            $insert = [
+                "a_id" => $postData['c_id'],
+                "a_type" => 1,
+            ];
+            if ($machineList && $postData['designated_machine'] == 2) {
+                $oldAmList = $this->getActivityMachineColumn(['a_id' => $postData['c_id'], 'a_type' => 1], 'machine_id');
+                $delAmList = array_diff($oldAmList, $machineList);
+                $addAmList = array_diff($machineList, $oldAmList);
+                if ($addAmList) {
+                    $amResult = $this->addAm($insert, $addAmList);
+                    if ($amResult !== true) {
+                        $this->rollbackTrans();
+                        return $this->rFail($amResult);
+                    }
+                    $flag[] = 1;
                 }
-                $flag[] = 1;
+                if ($delAmList) $flag[] = $this->delActivityMachine(['a_id' => $postData['c_id'], 'a_type' => 1, ['machine_id', 'in', $delAmList]]);
             }
-            if ($delAmList) $flag[] = $this->delActivityMachine(['a_id' => $postData['c_id'],'a_type' => 1, ['machine_id','in', $delAmList]]);
-        }
-        if ($goodsList && ($postData['designated_goods'] == 2 || $postData['designated_goods'] == 3)) {
-            $oldAgList = $this->getActivityGoodsColumn(['a_id' => $postData['c_id'],'a_type' => 1],'g_id');
-            $delAgList = array_diff($oldAgList,$goodsList);
-            $addAgList = array_diff($goodsList,$oldAgList);
-            if ($addAgList) {
-                $agResult = $this->addAg($insert, $goodsList);
-                if ($agResult !== true) {
-                    $this->rollbackTrans();
-                    return $this->rFail($agResult);
+            if ($goodsList && ($postData['designated_goods'] == 2 || $postData['designated_goods'] == 3)) {
+                $oldAgList = $this->getActivityGoodsColumn(['a_id' => $postData['c_id'], 'a_type' => 1], 'g_id');
+                $delAgList = array_diff($oldAgList, $goodsList);
+                $addAgList = array_diff($goodsList, $oldAgList);
+                if ($addAgList) {
+                    $agResult = $this->addAg($insert, $goodsList);
+                    if ($agResult !== true) {
+                        $this->rollbackTrans();
+                        return $this->rFail($agResult);
+                    }
+                    $flag[] = 1;
                 }
-                $flag[] = 1;
+                if ($delAgList) $flag[] = $this->delActivityGoods(['a_id' => $postData['c_id'], 'a_type' => 1, ['g_id', 'in', $delAgList]]);
             }
-            if ($delAgList) $flag[] = $this->delActivityGoods(['a_id' => $postData['c_id'],'a_type' => 1,['g_id','in',$delAgList]]);
+            $check = $this->checkFlag($flag);
+            return $this->checkTrans($check);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $check = $this->checkFlag($flag);
-        return $this->checkTrans($check);
     }
 
     /**
@@ -155,10 +167,16 @@ class ActivityCouponClient extends ManagementClient
     public function activeTakeDown($where)
     {
         $this->startTrans();
-        $flag[] = $this->updateActivityCoupon(['status' => 4],$where,['status']);
-        $where['status'] = 1;
-        $flag[] = $this->updateActivityCouponUsed(['status' => 4],$where,['status']);
-        $result = $this->checkFlag($flag);
-        return $this->checkTrans($result);
+        try {
+            $flag[] = $this->updateActivityCoupon(['status' => 4], $where, ['status']);
+            $where['status'] = 1;
+            $flag[] = $this->updateActivityCouponUsed(['status' => 4], $where, ['status']);
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 }

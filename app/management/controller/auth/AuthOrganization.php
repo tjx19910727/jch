@@ -74,9 +74,15 @@ class AuthOrganization  extends Common
     {
         $postData = input();
         $this->app->authOrganization->startTrans();
-        $this->app->authManager->updateAuthManager(["ao_id" => 0],["ao_id" => $postData['ao_id']]);
-        $flag[] = $this->app->authOrganization->delAuthOrganization(['ao_id' => $postData['ao_id']]);
-        $result = flag_check($flag);
-        return $this->app->authOrganization->checkTrans($result);
+        try {
+            $this->app->authManager->updateAuthManager(["ao_id" => 0], ["ao_id" => $postData['ao_id']]);
+            $flag[] = $this->app->authOrganization->delAuthOrganization(['ao_id' => $postData['ao_id']]);
+            $result = flag_check($flag);
+            return $this->app->authOrganization->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->app->authOrganization->rollbackTrans();
+            actionException($e,1);
+            return $this->app->authOrganization->rValidate($e->getMessage());
+        }
     }
 }

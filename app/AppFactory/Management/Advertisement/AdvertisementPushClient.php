@@ -47,47 +47,53 @@ class AdvertisementPushClient extends ManagementClient
         $flag = [];
         $batch_num = date("YmdHis") . uniqid();
         $this->startTrans();
-        foreach ($m_ids as $value) {
-            $machine = $this->getMachineFind(['m_id' => $value], 'm_id,machine_name,machine_id');
-            if (!$machine) {
-                $this->rollbackTrans();
-                return $this->rFail($this->lang("VResource.query_machine_no_data"));
+        try {
+            foreach ($m_ids as $value) {
+                $machine = $this->getMachineFind(['m_id' => $value], 'm_id,machine_name,machine_id');
+                if (!$machine) {
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang("VResource.query_machine_no_data"));
+                }
+                $insert = $data;
+                $insert['remain_times'] = $data['total_times'];
+                $insert['m_id'] = $value;
+                $insert['machine_name'] = $machine['machine_name'];
+                $insert['machine_id'] = $machine['machine_id'];
+                $insert['res_id'] = $res_id;
+                $res = $this->getResourceFind(['res_id' => $res_id], 'title,file_path,status,type');
+                $res = obj2arr($res);
+                if (!$res) {
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang('VResource.query_no_data'));
+                }
+                if ($res['status'] == 2) {
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang('VResource.can_not_use'));
+                }
+                $insert['res_title'] = $res['title'];
+                $insert['file_path'] = $res['file_path'];
+                $insert['type'] = $res['type'];
+                foreach ($time as $tk) {
+                    $timeList = explode("~", $tk);
+                    $insert['batch_num'] = $batch_num;
+                    $insert['start_time'] = HourMinuteSec2int($timeList[0]);
+                    $insert['end_time'] = HourMinuteSec2int($timeList[1]);
+                    $insert['ao_id'] = $this->manager['ao_id'];
+                    $flag[] = $this->addAdvertisementPush($insert);
+                }
             }
-            $insert = $data;
-            $insert['remain_times'] = $data['total_times'];
-            $insert['m_id'] = $value;
-            $insert['machine_name'] = $machine['machine_name'];
-            $insert['machine_id'] = $machine['machine_id'];
-            $insert['res_id'] = $res_id;
-            $res = $this->getResourceFind(['res_id' => $res_id], 'title,file_path,status,type');
-            $res = obj2arr($res);
-            if (!$res) {
-                $this->rollbackTrans();
-                return $this->rFail($this->lang('VResource.query_no_data'));
+            $result = flag_check($flag);
+            if ($result) {
+                $this->commitTrans();
+                return $this->rSuccess();
             }
-            if ($res['status'] == 2) {
-                $this->rollbackTrans();
-                return $this->rFail($this->lang('VResource.can_not_use'));
-            }
-            $insert['res_title'] = $res['title'];
-            $insert['file_path'] = $res['file_path'];
-            $insert['type'] = $res['type'];
-            foreach ($time as $tk) {
-                $timeList = explode("~", $tk);
-                $insert['batch_num'] = $batch_num;
-                $insert['start_time'] = HourMinuteSec2int($timeList[0]);
-                $insert['end_time'] = HourMinuteSec2int($timeList[1]);
-                $insert['ao_id'] = $this->manager['ao_id'];
-                $flag[] = $this->addAdvertisementPush($insert);
-            }
+            $this->rollbackTrans();
+            return $this->rFail();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $result = flag_check($flag);
-        if ($result) {
-            $this->commitTrans();
-            return $this->rSuccess();
-        }
-        $this->rollbackTrans();
-        return $this->rFail();
     }
 
     /**
@@ -129,26 +135,32 @@ class AdvertisementPushClient extends ManagementClient
         if ($adv) {
             $advIds = [];
             $this->startTrans();
-            $flag = [];
-            foreach ($adv as $k => $v) {
-                if ($data['status'] == 2) {
-                    if ($v['status'] == 5) {
-                        $this->rollbackTrans();
-                        return $this->r(100, "【" . $adv['adv_title'] ."】：" . $this->lang("VAdvertisement.resource_is_del"));
+            try {
+                $flag = [];
+                foreach ($adv as $k => $v) {
+                    if ($data['status'] == 2) {
+                        if ($v['status'] == 5) {
+                            $this->rollbackTrans();
+                            return $this->r(100, "【" . $adv['adv_title'] . "】：" . $this->lang("VAdvertisement.resource_is_del"));
+                        }
                     }
+                    $update['adv_id'] = $v['adv_id'];
+                    $update['status'] = $data['status'];
+                    $flag[] = $this->updateAdvertisementPush($update);
+                    $advIds[] = $v['adv_id'];
                 }
-                $update['adv_id'] = $v['adv_id'];
-                $update['status'] = $data['status'];
-                $flag[] = $this->updateAdvertisementPush($update);
-                $advIds[] = $v['adv_id'];
+                $result = $this->checkFlag($flag);
+                if ($result) {
+                    $this->commitTrans();
+                    $this->triggerUpdate([['adv_id', 'in', $advIds]]);
+                    return $this->r(200, $this->lang("action_success"), $flag);
+                }
+                $this->rollbackTrans();
+            } catch (\Exception $e) {
+                $this->rollbackTrans();
+                actionException($e,1);
+                return $this->rTryCatch($e->getMessage());
             }
-            $result = $this->checkFlag($flag);
-            if ($result) {
-                $this->commitTrans();
-                $this->triggerUpdate([['adv_id','in',$advIds]]);
-                return $this->r(200,$this->lang("action_success"),$flag);
-            }
-            $this->rollbackTrans();
         }
         return $this->r(100,$this->lang("action_fail"));
     }

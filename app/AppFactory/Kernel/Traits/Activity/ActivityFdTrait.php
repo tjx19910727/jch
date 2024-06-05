@@ -120,43 +120,50 @@ trait ActivityFdTrait
         }
 
         $this->startTrans();
-        $flag[] = $this->handleActivityFd();
-        if ($this->lastContent) {
-            // 生成满减满赠活动使用记录
-            $insertUsed = [
-                "fd_id" => $this->fd['fd_id'],
-                "fd_name" => $this->fd['fd_name'],
-                "order_id" => $this->order['order_id'],
-                "trade_no" => $this->order['trade_no'],
-                "m_id" => $this->order['m_id'],
-                "machine_id" => $this->order['machine_id'],
-                "machine_name" => $this->order['machine_name'],
-                "fd_type" => $this->fd['fd_type'],
-                "condition_type" => $this->fd['condition_type'],
-                "fdc_id" => $this->lastContent['fdc_id'],
-                "condition_value" => $this->lastContent['condition_value'],
-                "active_value" => $this->lastContent['active_value'],
-                "g_id" => $this->lastContent['g_id'],
-                "g_name" => $this->lastContent['g_name'],
-                "sku" => $this->lastContent['sku'],
-                "pic" => $this->lastContent['pic'],
-            ];
-            $flag[] = $this->addActivityFdUsed($insertUsed);
-            actionLog($this->getLS(),'【SQL】添加活动使用记录');
+        try {
+            $flag[] = $this->handleActivityFd();
+            if ($this->lastContent) {
+                // 生成满减满赠活动使用记录
+                $insertUsed = [
+                    "fd_id" => $this->fd['fd_id'],
+                    "fd_name" => $this->fd['fd_name'],
+                    "order_id" => $this->order['order_id'],
+                    "trade_no" => $this->order['trade_no'],
+                    "m_id" => $this->order['m_id'],
+                    "machine_id" => $this->order['machine_id'],
+                    "machine_name" => $this->order['machine_name'],
+                    "fd_type" => $this->fd['fd_type'],
+                    "condition_type" => $this->fd['condition_type'],
+                    "fdc_id" => $this->lastContent['fdc_id'],
+                    "condition_value" => $this->lastContent['condition_value'],
+                    "active_value" => $this->lastContent['active_value'],
+                    "g_id" => $this->lastContent['g_id'],
+                    "g_name" => $this->lastContent['g_name'],
+                    "sku" => $this->lastContent['sku'],
+                    "pic" => $this->lastContent['pic'],
+                ];
+                $flag[] = $this->addActivityFdUsed($insertUsed);
+                actionLog($this->getLS(), '【SQL】添加活动使用记录');
+            }
+            actionLog($flag, '处理结果flag');
+            $check = $this->checkFlag($flag);
+            actionLog($check, '处理结果');
+            if ($check) {
+                $this->commitTrans();
+                $data['order'] = $this->getSaleOrdersFind(['order_id' => $this->order['order_id']], 'order_id,trade_no,order_type,total_price,discount_price,total_quantity');
+                $data['order']['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']], 0,
+                    'sod_id,mc_id,shelf_way,channel_position,channel_code,mg_id,g_name,pic,sku,gc_name,total_sod_price,quantity,is_gift');
+                $data['fdUsed'] = $this->getActivityFdUsedList(['order_id' => $this->order['order_id']], 0,
+                    'fdu_id,fd_name,fd_type,condition_type,condition_value,active_value,g_id,g_name,pic');
+                return $this->r(200, $this->lang("action_success"), $data);
+            }
+            $this->rollbackTrans();
+            return $this->rFail();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        actionLog($flag,'处理结果flag');
-        $check = $this->checkFlag($flag);
-        actionLog($check,'处理结果');
-        if ($check) {
-            $this->commitTrans();
-            $data['order'] = $this->getSaleOrdersFind(['order_id' => $this->order['order_id']],'order_id,trade_no,order_type,total_price,discount_price,total_quantity');
-            $data['order']['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,
-                'sod_id,mc_id,shelf_way,channel_position,channel_code,mg_id,g_name,pic,sku,gc_name,total_sod_price,quantity,is_gift');
-            $data['fdUsed'] = $this->getActivityFdUsedList(['order_id' => $this->order['order_id']],0,
-                'fdu_id,fd_name,fd_type,condition_type,condition_value,active_value,g_id,g_name,pic');
-            return $this->r(200,$this->lang("action_success"),$data);
-        }
-        return $this->rFail();
     }
 
     /**

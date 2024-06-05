@@ -75,9 +75,15 @@ class AuthNode extends Common
         $postData = input();
         $where = $this->getWhere($postData);
         $this->app->authNode->startTrans();
-        $flag[] = $this->app->authNode->del(['node_id' => $postData['node_id']]);
-        $flag[] = $this->app->authRoleNode->updateAuthRoleNode(["is_del" => 1],$where);
-        $result = flag_check($flag);
-        return $this->app->authNode->checkTrans($result);
+        try {
+            $flag[] = $this->app->authNode->del(['node_id' => $postData['node_id']]);
+            $flag[] = $this->app->authRoleNode->updateAuthRoleNode(["is_del" => 1], $where);
+            $result = flag_check($flag);
+            return $this->app->authNode->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->app->authNode->rollbackTrans();
+            actionException($e,1);
+            return $this->app->authNode->rValidate($e->getMessage());
+        }
     }
 }

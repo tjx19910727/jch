@@ -116,14 +116,18 @@ class GoodsClient extends TimeTaskBase
 //            $this->updateMachineGoods($updateMg, ['g_id' => $g_id]);
 //        }
             $this->startTrans();
-            $whereMg['g_id'] = $goods['g_id'];
-            $this->synchronizationMachineGoods($whereMg,$goods);
-
-            $whereMc['g_id'] = $goods['g_id'];
-            $this->synchronizationMachineChannel($whereMc,$goods);
-
-            $this->commitTrans();
-            return $this->rSuccess();
+            try {
+                $whereMg['g_id'] = $goods['g_id'];
+                $this->synchronizationMachineGoods($whereMg, $goods);
+                $whereMc['g_id'] = $goods['g_id'];
+                $this->synchronizationMachineChannel($whereMc, $goods);
+                $this->commitTrans();
+                return $this->rSuccess();
+            } catch (\Exception $e) {
+                $this->rollbackTrans();
+                actionException($e,1);
+                return $this->rTryCatch($e->getMessage());
+            }
         }
     }
 

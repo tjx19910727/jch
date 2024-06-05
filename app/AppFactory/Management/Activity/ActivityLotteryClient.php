@@ -48,55 +48,77 @@ class ActivityLotteryClient extends ManagementClient
         }
         $flag = [];
         $this->startTrans();
-        $al_id = $this->addActivityLottery($postData);
-        if ($al_id) {
-            $insertConfigAll = [];
-            $totalProbability = 0;
-            foreach ($content as $ck => $cv) {
-                try { validate(VActivityLottery::class)->scene("addContent")->check($cv); } catch (\Exception $e) {$this->rollbackTrans();return $this->rValidate($e->getMessage());}
-                $insertContent = $cv;
-                $insertContent['al_id'] = $al_id;
+        try {
+            $al_id = $this->addActivityLottery($postData);
+            if ($al_id) {
+                $insertConfigAll = [];
+                $totalProbability = 0;
+                foreach ($content as $ck => $cv) {
+                    try {
+                        validate(VActivityLottery::class)->scene("addContent")->check($cv);
+                    } catch (\Exception $e) {
+                        $this->rollbackTrans();
+                        return $this->rValidate($e->getMessage());
+                    }
+                    $insertContent = $cv;
+                    $insertContent['al_id'] = $al_id;
 
-                $g = $this->getGoodsFind(['g_id' => $cv['g_id']],'g_id,g_name,sku');
-                if (!$g) return $this->rFail($this->lang("VGoods.goods_no_data"));
+                    $g = $this->getGoodsFind(['g_id' => $cv['g_id']], 'g_id,g_name,sku');
+                    if (!$g) return $this->rFail($this->lang("VGoods.goods_no_data"));
 
-                $insertContent = array_merge($insertContent,$g->toArray());
-                $c_id = $this->addActivityLotteryContent($insertContent);
-                $content[$ck]['c_id'] = $c_id;
-                $flag[] = $c_id;
+                    $insertContent = array_merge($insertContent, $g->toArray());
+                    $c_id = $this->addActivityLotteryContent($insertContent);
+                    $content[$ck]['c_id'] = $c_id;
+                    $flag[] = $c_id;
 
-                $totalProbability += $cv['probability'];
-            }
-            if ($totalProbability != 100) {
-                $this->rollbackTrans();
-                return $this->rFail($this->lang("VActivityLottery.probability_no_100"));
-            }
-            foreach ($config as $kc => $kv) {
-                try {validate(VActivityLottery::class)->scene("addConfig")->check($kv);} catch (\Exception $e) {$this->rollbackTrans();return $this->rValidate($e->getMessage());}
-                if ($kv['designated_gift'] > 0) {
-                    $designated_gift = $content[$kv['designated_gift']]['c_id'];
-                    $kv['designated_gift'] = "$designated_gift";
+                    $totalProbability += $cv['probability'];
                 }
-                $insertConfig = $kv;
-                $insertConfig['al_id'] = "$al_id";
-                $insertConfigAll[] = $insertConfig;
+                if ($totalProbability != 100) {
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang("VActivityLottery.probability_no_100"));
+                }
+                foreach ($config as $kc => $kv) {
+                    try {
+                        validate(VActivityLottery::class)->scene("addConfig")->check($kv);
+                    } catch (\Exception $e) {
+                        $this->rollbackTrans();
+                        return $this->rValidate($e->getMessage());
+                    }
+                    if ($kv['designated_gift'] > 0) {
+                        $designated_gift = $content[$kv['designated_gift']]['c_id'];
+                        $kv['designated_gift'] = "$designated_gift";
+                    }
+                    $insertConfig = $kv;
+                    $insertConfig['al_id'] = "$al_id";
+                    $insertConfigAll[] = $insertConfig;
+                }
+                $flag[] = $this->addActivityLotteryConfigMore($insertConfigAll);
+                // 指定设备
+                foreach ($machineList as $mk => $mv) {
+                    try {
+                        validate(VActivityLottery::class)->scene("machineList")->check($mv);
+                    } catch (\Exception $e) {
+                        $this->rollbackTrans();
+                        return $this->rValidate($e->getMessage());
+                    }
+                    $insertAm = $this->getMachineFind(['m_id' => $mv['m_id']], 'm_id,machine_id,machine_name')->toArray();
+                    $insertAm['a_type'] = 3;
+                    $insertAm['a_id'] = $al_id;
+                    $flag[] = $this->addActivityMachine($insertAm);
+                }
             }
-            $flag[] = $this->addActivityLotteryConfigMore($insertConfigAll);
-            // 指定设备
-            foreach ($machineList as $mk => $mv) {
-                try {validate(VActivityLottery::class)->scene("machineList")->check($mv);} catch (\Exception $e) {$this->rollbackTrans();return $this->rValidate($e->getMessage());}
-                $insertAm = $this->getMachineFind(['m_id' => $mv['m_id']],'m_id,machine_id,machine_name')->toArray();
-                $insertAm['a_type'] = 3;
-                $insertAm['a_id'] = $al_id;
-                $flag[] = $this->addActivityMachine($insertAm);
-            }
+            $check = $this->checkFlag($flag);
+            return $this->checkTrans($check);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $check = $this->checkFlag($flag);
-        return $this->checkTrans($check);
     }
 
     public function updateAl($postData)
     {
+        $this->startTrans();
         try {
             $config = isset($postData['config']) ? json2arr($postData['config']) : [];
             $content = isset($postData['content']) ? json2arr($postData['content']) : [];
@@ -104,7 +126,7 @@ class ActivityLotteryClient extends ManagementClient
             $delConfig = isset($postData['delConfig']) ? explode(",",$postData['delConfig']) : [];
             $delContent = isset($postData['delContent']) ? explode(",",$postData['delContent']) : [];
             unset($postData['config'], $postData['content'], $postData['machineList'], $postData['delConfig'], $postData['delContent']);
-            $this->startTrans();
+
             if ($postData) $this->updateActivityLottery($postData);
             if ($delContent) $this->delActivityLotteryContent([['c_id', 'in', $delContent]]);
             if ($content) {
@@ -167,6 +189,7 @@ class ActivityLotteryClient extends ManagementClient
             $this->commitTrans();
             return $this->r(200, '操作成功');
         } catch (\Exception $e) {
+            $this->rollbackTrans();
             actionException($e,1);
             return $this->rValidate($e->getMessage());
         }

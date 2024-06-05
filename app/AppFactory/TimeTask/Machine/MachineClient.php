@@ -60,42 +60,42 @@ class MachineClient extends TimeTaskBase
         if ($details) {
             $flag[] = 1;
             $this->startTrans();
-            foreach ($details as $key => $value) {
-                // 跨天处理
-                if ($value['d_date'] != strtotime(date("Y-m-d"))) {
-                    // 结束昨天的在线记录
-                    $offlineTime = strtotime(date("Y-m-d 23:59:59",$value['d_date']));
-                    $update['mod_id'] = $value['mod_id'];
-                    $update['offline_time'] = $offlineTime;
-                    $update['heart_time'] = $offlineTime;
-                    $update['duration'] = bcsub($offlineTime,  $value['online_time']);
-                    $this->updateMachineOnlineDetails($update);
-                    // 生成今天的离线记录
-                    $onlineTime = strtotime(date("Y-m-d 00:00:00"));
-                    $insert = [
-                        "m_id" => $value['m_id'],
-                        "machine_name" => $value['machine_name'],
-                        "machine_id" => $value['machine_id'],
-                        "online_time" => $onlineTime,
-                        "offline_time" => time(),
-                        "heart_time" => $onlineTime,
-                        "duration" => bcsub(time(),strtotime(date("Y-m-d 00:00:00"))),
-                        "d_date" => strtotime(date("Y-m-d")),
-                    ];
-                    $this->addMachineOnlineDetails($insert);
-                } else {
-                    // 修改设备在线记录
-                    $update = [
-                        'mod_id' => $value['mod_id'],
-                        'offline_time' => time(),
-                        'duration' => bcsub(time(), $value['online_time']),
-                    ];
-                    $flag[] = $this->updateMachineOnlineDetails($update);
-                }
-                $flag[] = $this->updateMachine(['m_id' => $value['m_id'],'online' => 2]);
+            try {
+                foreach ($details as $key => $value) {
+                    // 跨天处理
+                    if ($value['d_date'] != strtotime(date("Y-m-d"))) {
+                        // 结束昨天的在线记录
+                        $offlineTime = strtotime(date("Y-m-d 23:59:59", $value['d_date']));
+                        $update['mod_id'] = $value['mod_id'];
+                        $update['offline_time'] = $offlineTime;
+                        $update['heart_time'] = $offlineTime;
+                        $update['duration'] = bcsub($offlineTime, $value['online_time']);
+                        $this->updateMachineOnlineDetails($update);
+                        // 生成今天的离线记录
+                        $onlineTime = strtotime(date("Y-m-d 00:00:00"));
+                        $insert = [
+                            "m_id" => $value['m_id'],
+                            "machine_name" => $value['machine_name'],
+                            "machine_id" => $value['machine_id'],
+                            "online_time" => $onlineTime,
+                            "offline_time" => time(),
+                            "heart_time" => $onlineTime,
+                            "duration" => bcsub(time(), strtotime(date("Y-m-d 00:00:00"))),
+                            "d_date" => strtotime(date("Y-m-d")),
+                        ];
+                        $this->addMachineOnlineDetails($insert);
+                    } else {
+                        // 修改设备在线记录
+                        $update = [
+                            'mod_id' => $value['mod_id'],
+                            'offline_time' => time(),
+                            'duration' => bcsub(time(), $value['online_time']),
+                        ];
+                        $flag[] = $this->updateMachineOnlineDetails($update);
+                    }
+                    $flag[] = $this->updateMachine(['m_id' => $value['m_id'], 'online' => 2]);
 
-                /** 发送离线通知 开始 **/
-                try {
+                    /** 发送离线通知 开始 **/
                     $machine = $this->getMachineFind(['m_id' => $value['m_id']], 'm_id,machine_id,machine_name,last_online_time,ao_id')->getData();
                     $machine['online'] = "离线";
                     $config = [
@@ -105,14 +105,14 @@ class MachineClient extends TimeTaskBase
                     ];
                     $app = @AppFactory::notice($config);
                     @$app->send();
-                } catch (\Exception $e) {
-                    actionException($e,1);
+                    /** 发送离线通知 结束 **/
                 }
-                /** 发送离线通知 结束 **/
+                $this->commitTrans();//            sleep(10);
+                //            actionLog($flag,'检查掉线的在线记录','checkClose');
+            } catch (\Exception $e) {
+                $this->rollbackTrans();
+                actionException($e,1);
             }
-            $this->commitTrans();
-//            sleep(10);
-//            actionLog($flag,'检查掉线的在线记录','checkClose');
         }
         return "处理成功";
     }

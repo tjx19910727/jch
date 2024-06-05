@@ -51,16 +51,22 @@ class MachineHelpClient extends ManagementClient
     {
         $postData['help_list'] = json2arr($postData['help_list']);
         $this->startTrans();
-        foreach ($postData['help_list'] as $key => $value) {
-            try {
-                validate(VMachineHelp::class)->scene("update")->check($value);
-            } catch (ValidateException $e) {
-                $this->rollbackTrans();
-                return $this->rValidate($e->getMessage());
+        try {
+            foreach ($postData['help_list'] as $key => $value) {
+                try {
+                    validate(VMachineHelp::class)->scene("update")->check($value);
+                } catch (ValidateException $e) {
+                    $this->rollbackTrans();
+                    return $this->rValidate($e->getMessage());
+                }
+                $flag[] = $this->updateMachineHelp($value);
             }
-            $flag[] = $this->updateMachineHelp($value);
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $result = $this->checkFlag($flag);
-        return $this->checkTrans($result);
     }
 }

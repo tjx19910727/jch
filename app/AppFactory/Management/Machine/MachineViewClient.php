@@ -29,16 +29,22 @@ class MachineViewClient extends ManagementClient
         unset($postData['m_id']);
         $flag = [];
         $this->startTrans();
-        foreach ($m_ids as $key => $value) {
-            $machine_id = $this->getMachineValue(['m_id' => $value],'machine_id');
-            if (!$machine_id) return $this->rFail($this->lang("VMachineView.machine_id_query_no_data"));
-            $check = $this->getMachineViewFind(['m_id' => $value,'view_id' => $postData['view_id']]);
-            if (!$check) {
-                $postData['m_id'] = $value;
-                $postData['machine_id'] = $machine_id;
-                $flag[] = $this->addMachineView($postData);
+        try {
+            foreach ($m_ids as $key => $value) {
+                $machine_id = $this->getMachineValue(['m_id' => $value], 'machine_id');
+                if (!$machine_id) return $this->rFail($this->lang("VMachineView.machine_id_query_no_data"));
+                $check = $this->getMachineViewFind(['m_id' => $value, 'view_id' => $postData['view_id']]);
+                if (!$check) {
+                    $postData['m_id'] = $value;
+                    $postData['machine_id'] = $machine_id;
+                    $flag[] = $this->addMachineView($postData);
+                }
             }
+            return $this->checkTrans($flag);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        return $this->checkTrans($flag);
     }
 }

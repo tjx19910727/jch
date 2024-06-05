@@ -29,23 +29,28 @@ trait OutGoodsTrait
             return $this->rFail("订单已处理过了");
         }
         $this->startTrans();
-        // 处理修改订单及货道数据
-        $flag = $this->handleData();
-        if ($this->order['order_type'] == 2) {
-            $this->handleCoupon();
+        try {// 处理修改订单及货道数据
+            $flag = $this->handleData();
+            if ($this->order['order_type'] == 2) {
+                $this->handleCoupon();
+            }
+            if ($this->order['order_type'] == 3) {
+                $this->handlePick();
+            }
+            if ($this->order['order_type'] == 4) {
+                $this->handleLottery();
+            }
+            if ($this->order['order_type'] == 5) {
+                $this->handleFd();
+            }
+            $result = $this->checkFlag($flag);
+            if ($result) $this->commitTrans(); else $this->rollbackTrans();
+            return $this->rAction($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        if ($this->order['order_type'] == 3){
-            $this->handlePick();
-        }
-        if ($this->order['order_type'] == 4){
-            $this->handleLottery();
-        }
-        if ($this->order['order_type'] == 5){
-            $this->handleFd();
-        }
-        $result = $this->checkFlag($flag);
-        if ($result) $this->commitTrans(); else $this->rollbackTrans();
-        return $this->rAction($result);
     }
 
     /**

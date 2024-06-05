@@ -59,19 +59,25 @@ trait StrategyMachineTrait
     public function addStrategyMachine($insert)
     {
         $this->startTrans();
-        $flag = [];
-        $m_id = explode(",",$insert['m_id']);
-        foreach ($m_id as $key => $value) {
-            $sm = $this->getStrategyMachineFind(['s_id' => $insert['s_id'],'m_id' => $value,'s_type' => $insert['s_type']],'sm_id');
-            if (!$sm) {
-                $insert['m_id'] = $value;
-                $data = StrategyMachineModel::create($insert);
-                $flag[] = $data->sm_id;
-                continue;
+        try {
+            $flag = [];
+            $m_id = explode(",", $insert['m_id']);
+            foreach ($m_id as $key => $value) {
+                $sm = $this->getStrategyMachineFind(['s_id' => $insert['s_id'], 'm_id' => $value, 's_type' => $insert['s_type']], 'sm_id');
+                if (!$sm) {
+                    $insert['m_id'] = $value;
+                    $data = StrategyMachineModel::create($insert);
+                    $flag[] = $data->sm_id;
+                    continue;
+                }
             }
+            $result = flag_check($flag);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $result = flag_check($flag);
-        return $this->checkTrans($result);
     }
 
     public function updateStrategyMachine($update,$where = [], $field = [])

@@ -101,17 +101,20 @@ class JdCashierClient extends PayBaseClient
 
         $flag = [];
         $this->startTrans();
-        // 分润成功
-        if ($ledger == 1) $flag[] = $this->settlementRevenue();
-        // 分润失败
-        if ($ledger == 2) $flag[] = $this->settlementRevenue(3);
-        if ($this->order['pay_status'] == 1) {
-            $flag[] = $this->paymentSuccessful();
+        try {// 分润成功
+            if ($ledger == 1) $flag[] = $this->settlementRevenue();// 分润失败
+            if ($ledger == 2) $flag[] = $this->settlementRevenue(3);
+            if ($this->order['pay_status'] == 1) {
+                $flag[] = $this->paymentSuccessful();
+            }
+            $result = flag_check($flag);
+            actionLog($flag, 'flag');
+            $return = $this->checkTrans($result);
+            actionLog($return, '处理结果');
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
         }
-        $result = flag_check($flag);
-        actionLog($flag,'flag');
-        $return = $this->checkTrans($result);
-        actionLog($return, '处理结果');
         echo 200;
         die();
     }
@@ -124,13 +127,18 @@ class JdCashierClient extends PayBaseClient
         if ($this->data['refundStatus'] == 'SUCCESS') {
             $this->refund_no = $this->data['orderNum'];
             $this->startTrans();
-            $result = $this->refundSuccess();
-            if ($result === true) {
-                $this->commitTrans();
-            } else {
+            try {
+                $result = $this->refundSuccess();
+                if ($result === true) {
+                    $this->commitTrans();
+                } else {
+                    $this->rollbackTrans();
+                }
+                actionLog($result, '处理退款成功数据结果');
+            } catch (\Exception $e) {
                 $this->rollbackTrans();
+                actionException($e,1);
             }
-            actionLog($result,'处理退款成功数据结果');
             return 200;
         }
         if ($this->data['refundStatus'] == 'FAIL') {

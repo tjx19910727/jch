@@ -82,45 +82,51 @@ trait MachineGoodsTrait
         $this->data['mgList'] = json2arr($this->data['mgList']);
         $mgList = [];
         $this->startTrans();
-        foreach ($this->data['mgList'] as $key => $value) {
-            try {
-                validate(VMachineGoods::class)->scene("subMachineGoods")->check($value);
-            } catch (\Exception $e) {
-                $this->rollbackTrans();
-                return $this->rValidate($this->lang($e->getMessage()));
-            }
-            if ($value['mg_id']) {
-                $mg_id = $value['mg_id'];
-                $result = $this->updateMachineGoods($value);
-                if (!$result) {
+        try {
+            foreach ($this->data['mgList'] as $key => $value) {
+                try {
+                    validate(VMachineGoods::class)->scene("subMachineGoods")->check($value);
+                } catch (\Exception $e) {
                     $this->rollbackTrans();
-                    return $this->rFail($this->lang("VMachineGoods.update_machine_goods_fail"));
+                    return $this->rValidate($this->lang($e->getMessage()));
                 }
-            } else {
-                if (isset($value['mg_id'])) unset($value['mg_id']);
-                $g = $this->getGoodsFind(['g_id' => $value['g_id']],'g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price');
-                if ($g) {
-                    $g = obj2arr($g);
-                    $checkMg = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'],'g_id' => $g['g_id']]);
-                    if ($checkMg) {
+                if ($value['mg_id']) {
+                    $mg_id = $value['mg_id'];
+                    $result = $this->updateMachineGoods($value);
+                    if (!$result) {
                         $this->rollbackTrans();
-                        return $this->rFail($this->lang("VMachineGoods.machine_goods_exits"));
+                        return $this->rFail($this->lang("VMachineGoods.update_machine_goods_fail"));
                     }
-                    $mg = [
-                        "m_id" => $this->machine['m_id'],
-                        "machine_id" => $this->machine['machine_id'],
-                    ];
-                    $mg = array_merge($mg,$value,$g);
-                    $mg_id = $this->addMachineGoods($mg);
                 } else {
-                    $this->rollbackTrans();
-                    return $this->rFail($this->lang("VMachineGoods.goods_no_data"));
+                    if (isset($value['mg_id'])) unset($value['mg_id']);
+                    $g = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price');
+                    if ($g) {
+                        $g = obj2arr($g);
+                        $checkMg = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'], 'g_id' => $g['g_id']]);
+                        if ($checkMg) {
+                            $this->rollbackTrans();
+                            return $this->rFail($this->lang("VMachineGoods.machine_goods_exits"));
+                        }
+                        $mg = [
+                            "m_id" => $this->machine['m_id'],
+                            "machine_id" => $this->machine['machine_id'],
+                        ];
+                        $mg = array_merge($mg, $value, $g);
+                        $mg_id = $this->addMachineGoods($mg);
+                    } else {
+                        $this->rollbackTrans();
+                        return $this->rFail($this->lang("VMachineGoods.goods_no_data"));
+                    }
                 }
+                $mg = $this->getMachineGoodsFind(['mg_id' => $mg_id]);
+                $mgList[] = $mg;
             }
-            $mg = $this->getMachineGoodsFind(['mg_id' => $mg_id]);
-            $mgList[] = $mg;
+            $this->commitTrans();
+            return $this->rAction($mgList);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $this->commitTrans();
-        return $this->rAction($mgList);
     }
 }

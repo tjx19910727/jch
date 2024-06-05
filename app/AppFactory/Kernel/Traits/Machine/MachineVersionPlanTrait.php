@@ -52,13 +52,18 @@ trait MachineVersionPlanTrait
         actionLog($mvp,'查询更新计划',"DataUpload");
         if ($mvp) {
             $this->startTrans();
-            if ($this->message['status'] == 2) {
-                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'],'version' => $mvp['version_no']]);
-                actionLog($this->getLS(),'【SQL】修改设备版本号',"DataUpload");
+            try {
+                if ($this->message['status'] == 2) {
+                    $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'version' => $mvp['version_no']]);
+                    actionLog($this->getLS(), '【SQL】修改设备版本号', "DataUpload");
+                }
+                $flag[] = $this->updateMachineVersionPlan(['mvp_id' => $this->message['mvp_id'], 'status' => $this->message['status']]);
+                actionLog($this->getLS(), '【SQL】修改设备更新计划状态', "DataUpload");
+                $this->checkTrans($this->checkFlag($flag));
+            } catch (\Exception $e) {
+                $this->rollbackTrans();
+                actionException($e,1);
             }
-            $flag[] = $this->updateMachineVersionPlan(['mvp_id' => $this->message['mvp_id'], 'status' => $this->message['status']]);
-            actionLog($this->getLS(),'【SQL】修改设备更新计划状态',"DataUpload");
-            $this->checkTrans($this->checkFlag($flag));
         }
 
     }

@@ -58,11 +58,17 @@ class MachineGoods extends Common
         $gcList = json2arr($gcList);
         if ($gcList) {
             $this->app->machineGoods->startTrans();
-            foreach ($gcList as $k => $v) {
-                $flag[] = $this->app->machineGoods->updateMachineGoods(['gc_sort' => $v['gc_sort']],['gc_id' => $v['gc_id']]);
+            try {
+                foreach ($gcList as $k => $v) {
+                    $flag[] = $this->app->machineGoods->updateMachineGoods(['gc_sort' => $v['gc_sort']], ['gc_id' => $v['gc_id']]);
+                }
+                $result = flag_check($flag);
+                return returnData($this->app->machineGoods->checkTrans($result));
+            } catch (\Exception $e) {
+                $this->app->machineGoods->rollbackTrans();
+                actionException($e,1);
+                return $this->app->machineGoods->rValidate($e->getMessage());
             }
-            $result = flag_check($flag);
-            return returnData($this->app->machineGoods->checkTrans($result));
         }
         return returnState(100,lang("VMachineGoods.update_require"));
     }

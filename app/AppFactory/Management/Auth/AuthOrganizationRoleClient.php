@@ -29,31 +29,34 @@ class AuthOrganizationRoleClient extends ManagementClient
         $roleId = explode(",", $data['roleList'] ?? "");
 
         $this->startTrans();
-        // 查询已存在的关联权限角色ID
-        $where['ao_id'] = $data['ao_id'];
-        $authRoleNode = $this->getAuthOrganizationRoleColumn($where,'role_id');
-        $authRoleNode = obj2arr($authRoleNode);
-        // 存在新增，在数组1中，不在数组2中
-        $add = array_diff($roleId,$authRoleNode);
-        // 存在删除，在数组1中，不在数组2中
-        $del = array_diff($authRoleNode,$roleId);
-        if ($add) {
-            $insert = [
-                "ao_id" => $data['ao_id'],
-                "creator" => $this->manager['manager_id'],
-            ];
-            foreach ($add as $value) {
-                $insertOr = $insert;
-                $insertOr['role_id'] = $value;
-                if ($value) {
-                    $flag[] = $this->addAuthOrganizationRole($insertOr);
+        try {// 查询已存在的关联权限角色ID
+            $where['ao_id'] = $data['ao_id'];
+            $authRoleNode = $this->getAuthOrganizationRoleColumn($where, 'role_id');
+            $authRoleNode = obj2arr($authRoleNode);// 存在新增，在数组1中，不在数组2中
+            $add = array_diff($roleId, $authRoleNode);// 存在删除，在数组1中，不在数组2中
+            $del = array_diff($authRoleNode, $roleId);
+            if ($add) {
+                $insert = [
+                    "ao_id" => $data['ao_id'],
+                    "creator" => $this->manager['manager_id'],
+                ];
+                foreach ($add as $value) {
+                    $insertOr = $insert;
+                    $insertOr['role_id'] = $value;
+                    if ($value) {
+                        $flag[] = $this->addAuthOrganizationRole($insertOr);
+                    }
                 }
             }
+            if ($del) {
+                $flag[] = $this->delAuthOrganizationRole(['ao_id' => $data['ao_id'], ['role_id', 'in', $del]]);
+            }
+            $result = flag_check($flag);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        if ($del) {
-            $flag[] = $this->delAuthOrganizationRole(['ao_id' => $data['ao_id'],['role_id','in',$del]]);
-        }
-        $result = flag_check($flag);
-        return $this->checkTrans($result);
     }
 }
