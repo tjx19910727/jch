@@ -37,7 +37,7 @@ class AuthManagerLog extends Common
         $postData = input();
         $where = $this->getWhere($postData,false,["nickname" => "like","account" => "like"]);
         if (!isset($where['create_time']) || !$where['create_time']) $where[] = ['create_time','between',[strtotime("-1 months"),time()]];
-        $field = "ao_id,nickname,account,path,params,(CASE position WHEN 1 THEN '管理后台' WHEN 2 THEN '终端' WHEN 3 THEN '手机端' END) position,FROM_UNIXTIME(create_time) create_time";
+        $field = "ml_id,ao_id,nickname,account,path,params,(CASE position WHEN 1 THEN '管理后台' WHEN 2 THEN '终端' WHEN 3 THEN '手机端' END) position,FROM_UNIXTIME(create_time) create_time";
         return $this->app->authManagerLog->exportAul($where,$field,"create_time desc");
     }
 }

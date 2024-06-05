@@ -249,131 +249,137 @@ class ApiClient extends ReceiveBaseClient
     {
         actionLog($this->data, '更换货架商品数据');
         $this->startTrans();
-        // 清空旧商品库存，生成退货记录
-        $mc = $this->getMachineChannelFind(['mc_id' => $this->data['mc_id']]);
-        $mc = obj2arr($mc);
-        $insertGChange = [
-            "m_id" => $this->machine['m_id'],
-            "machine_id" => $this->machine['machine_id'],
-            "machine_name" => $this->machine['machine_name'],
-            "mc_id" => $mc['mc_id'],
-            "channel_code" => $mc['channel_code'],
-            "mg_id" => $mc['mg_id'],
-            "g_id" => $mc['g_id'],
-            "g_name" => $mc['g_name'],
-            "gc_id" => $mc['gc_id'],
-            "gc_name" => $mc['gc_name'],
-            "pic" => $mc['pic'],
-            "sku" => $mc['sku'],
-            "bar_code" => $mc['bar_code'],
-            "change_value" => $mc['stock'],
-            "ao_id" => $this->machine['ao_id'],
-            "creator" => $this->data['operator'],
-        ];
-        // 生成原商品退货记录
-        if ($mc['stock'] > 0) {
 
-            // 记录商品变化事件（货架下货旧商品）
-            $insertGChange["desc"] = "换货-货架下货旧商品";
-            $insertGChange['position'] = 1;
-            $insertGChange['type'] = 3;
-            $this->addGoodsChange($insertGChange);
+        try {// 清空旧商品库存，生成退货记录
+            $mc = $this->getMachineChannelFind(['mc_id' => $this->data['mc_id']]);
+            $mc = obj2arr($mc);
+            $insertGChange = [
+                "m_id" => $this->machine['m_id'],
+                "machine_id" => $this->machine['machine_id'],
+                "machine_name" => $this->machine['machine_name'],
+                "mc_id" => $mc['mc_id'],
+                "channel_code" => $mc['channel_code'],
+                "mg_id" => $mc['mg_id'],
+                "g_id" => $mc['g_id'],
+                "g_name" => $mc['g_name'],
+                "gc_id" => $mc['gc_id'],
+                "gc_name" => $mc['gc_name'],
+                "pic" => $mc['pic'],
+                "sku" => $mc['sku'],
+                "bar_code" => $mc['bar_code'],
+                "change_value" => $mc['stock'],
+                "ao_id" => $this->machine['ao_id'],
+                "creator" => $this->data['operator'],
+            ];// 生成原商品退货记录
+            if ($mc['stock'] > 0) {
 
-            // 原货架商品是设备商品库的，退回设备商品库备用库存
-            if ($mc['mg_id'] > 0) {
-
-                // 记录商品变化事件（备用商品库上货）
-                $insertGChange['desc'] = "换货-设备商品库上货备用库存";
-                $insertGChange['position'] = 2;
-                $insertGChange['type'] = 2;
+                // 记录商品变化事件（货架下货旧商品）
+                $insertGChange["desc"] = "换货-货架下货旧商品";
+                $insertGChange['position'] = 1;
+                $insertGChange['type'] = 3;
                 $this->addGoodsChange($insertGChange);
 
-                $flag[] = $this->setMachineGoodsInc(['mg_id' => $mc['mg_id']], 'standby_stock', $mc['stock']);
-            }
-            $repData = $this->handleRepData($mc, bcsub(0, $mc['stock']));
-            $flag[] = $this->addMachineChannelReplenishment($repData);
-            $mc['stock'] = 0;
-        }
-        // 有设置库存容量时重置库存容量
-        if (isset($this->data['capacity']) && $this->data['capacity']) {
-            $mc['capacity'] = $this->data['capacity'];
-        }
-        // 查询商品库
-        $g = $this->getGoodsFind(['g_id' => $this->data['g_id']],
-            'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,is_gift,is_recommend,recoverable,heat,release_time');
-        if (!$g) {
-            $this->rollbackTrans();
-            return $this->rFail($this->lang("VChangeChannelGoods.goods_no_data"));
-        }
-        $g = $g->toArray();
-        actionLog($g, '商品库信息');
+                // 原货架商品是设备商品库的，退回设备商品库备用库存
+                if ($mc['mg_id'] > 0) {
 
-        $mg = [];
-        $mc['mg_id'] = 0;
-        $insertGChange['mg_id'] = 0;
-        // 有设备商品库ID时
-        if ($this->data['mg_id']) {
-            // 查询新商品，修改货道商品信息，重置库存为新数量，生成新的补货记录
-            $mg = $this->getMachineGoodsFind(['mg_id' => $this->data['mg_id']],
-                'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock');
-            if (!$mg) {
-                $this->rollbackTrans();
-                return $this->rFail($this->lang("VChangeChannelGoods.mg_no_data"));
-            }
-            $mg = $mg->toArray();
-            if ($mg['standby_stock'] > 0 && $this->data['quantity'] > $mg['standby_stock']) {
-                $this->rollbackTrans();
-                return $this->rFail($this->lang("VChangeChannelGoods.mg_stock_out"));
-            }
-            if ($mg['standby_stock'] > 0 && $this->data['quantity'] > 0) {
+                    // 记录商品变化事件（备用商品库上货）
+                    $insertGChange['desc'] = "换货-设备商品库上货备用库存";
+                    $insertGChange['position'] = 2;
+                    $insertGChange['type'] = 2;
+                    $this->addGoodsChange($insertGChange);
 
-                // 记录商品变化事件（备用商品库下货）
-                $insertGChange["mg_id"] = $mg['mg_id'];
-                $insertGChange["g_id"] = $mg['g_id'];
-                $insertGChange["g_name"] = $mg['g_name'];
-                $insertGChange["gc_id"] = $mg['gc_id'];
-                $insertGChange["gc_name"] = $mg['gc_name'];
-                $insertGChange["pic"] = $mg['pic'];
-                $insertGChange["sku"] = $mg['sku'];
-                $insertGChange["bar_code"] = $mg['bar_code'];
-                $insertGChange["desc"] = "换货-设备商品库下货备用库存";
-                $insertGChange["change_value"] = $this->data['quantity'];
-                $insertGChange["position"] = 2;
-                $insertGChange["type"] = 3;
-                $this->addGoodsChange($insertGChange);
-
-                $flag[] = $this->setMachineGoodsDec(['mg_id' => $mg['mg_id']], 'standby_stock', $this->data['quantity']);
+                    $flag[] = $this->setMachineGoodsInc(['mg_id' => $mc['mg_id']], 'standby_stock', $mc['stock']);
+                }
+                $repData = $this->handleRepData($mc, bcsub(0, $mc['stock']));
+                $flag[] = $this->addMachineChannelReplenishment($repData);
+                $mc['stock'] = 0;
+            }// 有设置库存容量时重置库存容量
+            if (isset($this->data['capacity']) && $this->data['capacity']) {
+                $mc['capacity'] = $this->data['capacity'];
             }
-
-            actionLog($mg, '设备商品库信息');
-            unset($mg['standby_stock']);
-        }
-        $mc = array_merge($mc, $mg, $g);
-        actionLog($mc, '要修改的货架数据');
-        if (isset($this->data['quantity']) && $this->data['quantity'] > 0) {
-            if ($this->data['quantity'] > $mc['capacity']) {
+            $quantity = $this->data['quantity'];
+            if (isset($this->data['standby_quantity'])) $quantity += $this->data['standby_quantity'];
+            if ($quantity > $mc['capacity']) {
                 $this->rollbackTrans();
                 return $this->rFail($this->lang("VChannelReplenishment.exceed_capacity_limit"));
             }
-            // 先生成补货记录，再重置货架库存值
-            $repNewData = $this->handleRepData($mc, $this->data['quantity']);
-            $mc['stock'] = $this->data['quantity'];
+            // 查询商品库
+            $g = $this->getGoodsFind(['g_id' => $this->data['g_id']],
+                'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,is_gift,is_recommend,recoverable,heat,release_time');
+            if (!$g) {
+                $this->rollbackTrans();
+                return $this->rFail($this->lang("VChangeChannelGoods.goods_no_data"));
+            }
+            $g = $g->toArray();
+            actionLog($g, '商品库信息');
+            $mg = [];
+            $mc['mg_id'] = 0;
+            $insertGChange['mg_id'] = 0;// 有设备商品库ID时
+            if ($this->data['mg_id']) {
+                // 查询新商品，修改货道商品信息，重置库存为新数量，生成新的补货记录
+                $mg = $this->getMachineGoodsFind(['mg_id' => $this->data['mg_id']],
+                    'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock');
+                if (!$mg) {
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang("VChangeChannelGoods.mg_no_data"));
+                }
+                $mg = $mg->toArray();
+                // 换货提交的备用库存大于0
+                if (isset($this->data['standby_quantity']) && $mg['standby_stock'] > 0 && $this->data['standby_quantity'] > 0) {
 
-            // 记录商品变化事件（备用商品库下货）
-            $insertGChange["mg_id"] = $mc['mg_id'];
-            $insertGChange["desc"] = "换货-货架上货新商品";
-            $insertGChange["change_value"] = $mc['stock'];
-            $insertGChange["position"] = 1;
-            $insertGChange["type"] = 2;
-            $this->addGoodsChange($insertGChange);
+                    // 记录商品变化事件（备用商品库下货）
+                    $insertGChange["mg_id"] = $mg['mg_id'];
+                    $insertGChange["g_id"] = $mg['g_id'];
+                    $insertGChange["g_name"] = $mg['g_name'];
+                    $insertGChange["gc_id"] = $mg['gc_id'];
+                    $insertGChange["gc_name"] = $mg['gc_name'];
+                    $insertGChange["pic"] = $mg['pic'];
+                    $insertGChange["sku"] = $mg['sku'];
+                    $insertGChange["bar_code"] = $mg['bar_code'];
+                    $insertGChange["desc"] = "换货-设备商品库下货备用库存";
+                    $insertGChange["change_value"] = $this->data['standby_quantity'];
+                    $insertGChange["position"] = 2;
+                    $insertGChange["type"] = 3;
+                    $this->addGoodsChange($insertGChange);
 
-            $flag[] = $this->addMachineChannelReplenishment($repNewData);
+                    $flag[] = $this->setMachineGoodsDec(['mg_id' => $mg['mg_id']], 'standby_stock', $this->data['standby_quantity']);
+
+                    // 生成备用库存补货记录
+                    $repNewData = $this->handleRepData($mc, $this->data['standby_quantity']);
+                    $flag[] = $this->addMachineChannelReplenishment($repNewData);
+                    $mc['stock'] += $this->data['standby_quantity'];
+                }
+
+                actionLog($mg, '设备商品库信息');
+                unset($mg['standby_stock']);
+            }
+            $mc = array_merge($mc, $mg, $g);
+            actionLog($mc, '要修改的货架数据');
+            if (isset($this->data['quantity']) && $this->data['quantity'] > 0) {
+
+                // 记录商品变化事件（备用商品库下货）
+                $insertGChange["mg_id"] = $mc['mg_id'];
+                $insertGChange["desc"] = "换货-货架上货新商品";
+                $insertGChange["change_value"] = $mc['stock'];
+                $insertGChange["position"] = 1;
+                $insertGChange["type"] = 2;
+                $this->addGoodsChange($insertGChange);
+
+                // 生成上架补货记录
+                $repNewData = $this->handleRepData($mc, $this->data['quantity']);
+                $flag[] = $this->addMachineChannelReplenishment($repNewData);
+                $mc['stock'] += $this->data['quantity'];
+            }
+            $flag[] = $this->updateMachineChannel($mc);
+            actionLog($this->getLS(), '【SQL】修改货道信息');
+            $result = $this->checkFlag($flag);
+            $result ? $this->commitTrans() : $this->rollbackTrans();
+            return $this->rAction($result);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $flag[] = $this->updateMachineChannel($mc);
-        actionLog($this->getLS(), '【SQL】修改货道信息');
-        $result = $this->checkFlag($flag);
-        $result ? $this->commitTrans() : $this->rollbackTrans();
-        return $this->rAction($result);
     }
 
     /**

@@ -43,6 +43,7 @@ return [
         "mc_id_require" => "货道ID不能为空",
         "g_id_require" => "商品ID不能为空",
         "quantity_require" => "库存数量不能为空",
+        "standby_quantity_require" => "备用库存数量不能为空",
 
         "manager_id_require" => "操作员ID不能为空",
 

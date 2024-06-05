@@ -48,76 +48,115 @@ trait MachineChannelReplenishmentTrait
         $this->data['repList'] = json2arr($this->data['repList']);
         $flag = [];
         $this->startTrans();
-        $insertGChange = [
-            "m_id" => $this->machine['m_id'],
-            "machine_id" => $this->machine['machine_id'],
-            "machine_name" => $this->machine['machine_name'],
-            "ao_id" => $this->machine['ao_id'],
-            "creator" => $this->data['operator'],
-        ];
-        foreach ($this->data['repList'] as $key => $value) {
-            try {
-                validate(VChannelReplenishment::class)->scene("replenishment")->check($value);
-            } catch (\Exception $e) {
-                $this->rollbackTrans();
-                return $this->rValidate($this->lang($e->getMessage()));
-            }
-            $insertGc = $insertGChange;
-            $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
-            if (!$mc) {
-                $this->rollbackTrans();
-                return $this->rFail($this->lang("VChannelReplenishment.channel_no_data"));
-            }
-            if (bcadd($mc['stock'],$value['quantity']) > $mc['capacity']) {
-                $this->rollbackTrans();
-                return $this->rFail($this->lang("VChannelReplenishment.exceed_capacity_limit"));
-            }
-            $insertGc = array_merge($insertGc,[
-                "mc_id" => $mc['mc_id'],
-                "channel_code" => $mc['channel_code'],
-                "mg_id" => $mc['mg_id'],
-                "g_id" => $mc['g_id'],
-                "g_name" => $mc['g_name'],
-                "gc_id" => $mc['gc_id'],
-                "gc_name" => $mc['gc_name'],
-                "pic" => $mc['pic'],
-                "sku" => $mc['sku'],
-                "bar_code" => $mc['bar_code'],
-                "change_value" => abs($value['quantity']),
-            ]);
-            if ($mc['mg_id'] > 0) {
-                $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']],'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock');
-                if (!$mg) {
+        try {
+            $insertGChange = [
+                "m_id" => $this->machine['m_id'],
+                "machine_id" => $this->machine['machine_id'],
+                "machine_name" => $this->machine['machine_name'],
+                "ao_id" => $this->machine['ao_id'],
+                "creator" => $this->data['operator'],
+            ];
+            foreach ($this->data['repList'] as $key => $value) {
+                try {
+                    validate(VChannelReplenishment::class)->scene("repList")->check($value);
+                } catch (\Exception $e) {
                     $this->rollbackTrans();
-                    return $this->rFail($this->lang("VChannelReplenishment.mg_no_data") . $mc['channel_code']);
+                    return $this->rValidate($this->lang($e->getMessage()));
                 }
-                if (is_object($mg)) $mg = $mg->toArray();
-                if ($mg['standby_stock'] < $value['quantity']) {
+                $insertGc = $insertGChange;
+                $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
+                if (!$mc) {
                     $this->rollbackTrans();
-                    return $this->rFail($this->lang("VChannelReplenishment.exceed_standby_stock_limit"));
+                    return $this->rFail($this->lang("VChannelReplenishment.channel_no_data"));
                 }
+                $quantity = $mc['stock'] + $value['quantity'];
+                if (isset($value['standby_quantity'])) $quantity += $value['standby_quantity'];
+                if ($quantity > $mc['capacity']) {
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang("VChannelReplenishment.exceed_capacity_limit"));
+                }
+                $insertGc = array_merge($insertGc, [
+                    "mc_id" => $mc['mc_id'],
+                    "channel_code" => $mc['channel_code'],
+                    "mg_id" => $mc['mg_id'],
+                    "g_id" => $mc['g_id'],
+                    "g_name" => $mc['g_name'],
+                    "gc_id" => $mc['gc_id'],
+                    "gc_name" => $mc['gc_name'],
+                    "pic" => $mc['pic'],
+                    "sku" => $mc['sku'],
+                    "bar_code" => $mc['bar_code'],
+                ]);
                 // 补货时使用了备用库存
-                $insertGc['desc'] = "终端补货-设备商品下货备用库存";
-                $insertGc['position'] = 2;
-                $insertGc['type'] = ($value['quantity'] > 0 ? 3 : 2);
-                $this->addGoodsChange($insertGc);
+                if (isset($value['standby_quantity']) && $mc['mg_id'] > 0 && $value['standby_quantity'] != 0) {
+                    $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']], 'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock');
+                    if (!$mg) {
+                        $this->rollbackTrans();
+                        return $this->rFail($this->lang("VChannelReplenishment.mg_no_data") . $mc['channel_code']);
+                    }
+                    if (is_object($mg)) $mg = $mg->toArray();
+                    if ($mg['standby_stock'] < $value['standby_quantity']) {
+                        $this->rollbackTrans();
+                        return $this->rFail($this->lang("VChannelReplenishment.exceed_standby_stock_limit"));
+                    }
+                    $desc = "终端补货-设备商品上货备用库存";
+                    $channelDesc = "终端补货-货架下货备用库存";
+                    $type = 3;
+                    if ($value['standby_quantity'] > 0) {
+                        $desc = "终端补货-设备商品下货备用库存";
+                        $channelDesc = "终端补货-货架上货备用库存";
+                        $type = 2;
+                    }
 
-                $flag[] = $this->setMachineGoodsDec(['mg_id' => $mg['mg_id']],'standby_stock',$value['quantity']);
+                    $insertGc['type'] = $type;
+                    $insertGc["change_value"] = abs($value['standby_quantity']);
+
+                    // 记录商品变化事件（设备商品库备用库存）
+                    $insertGc['desc'] = $desc;
+                    $insertGc['position'] = 2;
+                    $this->addGoodsChange($insertGc);
+
+                    // 记录商品变化事件（货架库存）
+                    $insertGc['desc'] = $channelDesc;
+                    $insertGc['position'] = 1;
+                    $this->addGoodsChange($insertGc);
+
+                    // 生成备用库存补货记录
+                    $repData = $this->handleRepData($mc, $value['standby_quantity']);
+                    $repData['rep_type'] = 2;
+                    $flag[] = $this->addMachineChannelReplenishment($repData);
+                    $mc['stock'] += $value['standby_quantity'];
+
+                    // 修改设备商品库备用库存数
+                    $flag[] = $value['standby_quantity'] > 0 ?
+                        $this->setMachineGoodsDec(['mg_id' => $mg['mg_id']], 'standby_stock', $value['standby_quantity'])
+                        : $this->setMachineGoodsInc(['mg_id' => $mg['mg_id']], 'standby_stock', abs($value['standby_quantity']));
+                }
+
+                if ($value['quantity'] != 0) {
+                    // 记录商品变化事件（货架上架补货）
+                    $channelDesc = "终端补货-上架补货";
+                    if ($value['quantity'] < 0) $channelDesc = "终端补货-下架退货";
+                    $insertGc['desc'] = $channelDesc;
+                    $insertGc['position'] = 1;
+                    $insertGc["change_value"] = abs($value['quantity']);
+                    $insertGc['type'] = ($value['quantity'] > 0 ? 2 : 3);
+                    $this->addGoodsChange($insertGc);
+
+                    // 生成上架补货记录
+                    $repData = $this->handleRepData($mc, $value['quantity']);
+                    $flag[] = $this->addMachineChannelReplenishment($repData);
+                    $mc['stock'] += $value['quantity'];
+                }
+
+                $flag[] = $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $mc['stock']]);
             }
-
-            $insertGc['desc'] = "终端补货-货架上货库存";
-            $insertGc['position'] = 1;
-            $insertGc['type'] = ($value['quantity'] > 0 ? 2 : 3);
-            // 记录商品变化事件（货架上货）
-            $this->addGoodsChange($insertGc);
-
-
-            $repData = $this->handleRepData($mc,$value['quantity']);
-            $flag[] = $this->addMachineChannelReplenishment($repData);
-            $flag[] = $this->updateMachineChannel(['mc_id' => $mc['mc_id'],'stock' => bcadd($mc['stock'],$value['quantity'])]);
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $result = $this->checkFlag($flag);
-        return $this->checkTrans($result);
     }
 
     /**

@@ -30,6 +30,7 @@ class VReceive extends VCommon
         "mc_id" => "require",
         "g_id" => "require",
         "quantity" => "require",
+        "standby_quantity" => "require",
 
         "adv_id" => "require",
         "play_time" => "require",
@@ -76,6 +77,7 @@ class VReceive extends VCommon
         "mc_id.require" => "VReceive.mc_id_require",
         "g_id.require" => "VReceive.g_id_require",
         "quantity.require" => "VReceive.quantity_require",
+        "standby_quantity.require" => "VReceive.standby_quantity_require",
 
         "adv_id.require" => "VAdvertisement.adv_id_require",
         "play_time.require" => "VAdvertisement.play_time_require",
@@ -118,6 +120,7 @@ class VReceive extends VCommon
         "subMachineGoods" => ["msg_id","machine_id","timestamp","sign","mgList"],
 
         "replenishment" => ["msg_id","machine_id","timestamp","sign","operator","repList"],
+        "repList" => ["mc_id","quantity"],
         "changeChannelGoods" => ["msg_id","machine_id","timestamp","sign","mc_id","g_id","mg_id","quantity"],
         "uploadMedia" => ["msg_id","machine_id","timestamp","sign"],
 

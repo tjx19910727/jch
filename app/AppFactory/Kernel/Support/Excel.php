@@ -139,14 +139,19 @@ class Excel
                 if (isset($mv['cell']) && isset($mv['name']))$objActSheet->setCellValueExplicit($mv["cell"],$mv["name"],\PHPExcel_Cell_DataType::TYPE_STRING);
             }
         }
+        $styleArray = array(
+            'alignment' => array(
+                'wrap' => true, // 设置自动换行
+            ),
+        );
         foreach ($list as $row) {
             foreach ($indexKey as $key => $value){
                 //这里是设置单元格的内容
+//                $objActSheet->getStyle($header_arr[$key].$startRow)->applyFromArray($styleArray);
                 $objActSheet->setCellValueExplicit($header_arr[$key].$startRow,$row[$value],\PHPExcel_Cell_DataType::TYPE_STRING);
             }
             $startRow++;
         }
-
         // 保存到本地
         $savePath = "/export/excel/" . date("Ymd");
         $path = root_path() . "public" . $savePath;

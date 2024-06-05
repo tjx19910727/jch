@@ -187,39 +187,43 @@ class Test extends BaseController
 //            ],
 //        ];
 
+        $data = [
+            "msg_id" => $msg_id,
+            "timestamp" => time(),
+            "machine_id" => "test0001",
+            "mc_id" => "251",
+            "capacity" => "5",
+            "g_id" => "62",
+            "mg_id" => "47",
+            "quantity" => "0",
+//            "standby_quantity" => "0",
+            "operator" => 1,
+        ];
 //        $data = [
+//            "machine_id" => "test0001",
 //            "msg_id" => $msg_id,
 //            "timestamp" => time(),
-//            "machine_id" => "test0001",
-//            "mc_id" => "251",
-//            "g_id" => "30",
-//            "mg_id" => "0",
-//            "quantity" => "0",
 //            "operator" => 1,
+//            "repList" => [
+//                [
+//                    "mc_id" => "251",
+//                    "quantity" => "-3",
+////                    "standby_quantity" => "-3",
+//                ],
+////                [
+////                    "mc_id" => "255",
+////                    "quantity" => "2",
+//////                    "standby_quantity" => "0",
+////                ],
+//            ],
 //        ];
-        $data = [
-            "machine_id" => "test0006",
-            "msg_id" => $msg_id,
-            "timestamp" => time(),
-            "operator" => 1,
-            "repList" => [
-                [
-                    "mc_id" => "513",
-                    "quantity" => "4",
-                ],
-                [
-                    "mc_id" => "514",
-                    "quantity" => "6",
-                ],
-            ],
-        ];
-        $data = [
-            "machine_id" => "test0003",
-            "msg_id" => $msg_id,
-            "timestamp" => time(),
-//            "account" => "dkm",
-//            "password" => "123456",
-        ];
+//        $data = [
+//            "machine_id" => "test0003",
+//            "msg_id" => $msg_id,
+//            "timestamp" => time(),
+////            "account" => "dkm",
+////            "password" => "123456",
+//        ];
         $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
         dump($data);
         dump(json_encode($data, 320));

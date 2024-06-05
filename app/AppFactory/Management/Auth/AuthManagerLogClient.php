@@ -73,6 +73,7 @@ class AuthManagerLogClient extends ManagementClient
     public function exportAul($where, $field = "*", $order = "")
     {
         try {
+            $where[] = ['ml_id',"between",[525,530]];
             $data = $this->getAuthManagerLogList($where, 0, $field, $order);
             if ($data) {
                 $data = $data->toArray();
@@ -115,7 +116,7 @@ class AuthManagerLogClient extends ManagementClient
                         $params = str_replace('"','',$params);
                         $item['params'] = $params;
                     }
-                    $data[$key] = $item;
+                    $list[] = $item;
                 };
                 $title = [
                     "organization_name" => "组织架构",
@@ -127,7 +128,7 @@ class AuthManagerLogClient extends ManagementClient
                     "create_time" => "时间",
                 ];
                 $filename = $this->lang("export_aul") . "-" . date("YmdHis");
-                $result = Excel::exportExcel($data, $title, $filename);
+                $result = Excel::exportExcel($list, $title, $filename);
                 return $this->r(200, $this->lang("export_success"), $result);
             }
             return $this->rNoData();
@@ -146,7 +147,10 @@ class AuthManagerLogClient extends ManagementClient
             if (is_array($value)) {
                 $str .= $this->paramsToStr($value);
             } else {
-                $str .= $key . "：" . $value . " \n";
+                $value = str_replace('[]','',$value);
+                if ($value) {
+                    $str .= $key . "：" . $value . " \r\n ";
+                }
             }
         }
         return $str;
