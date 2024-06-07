@@ -26,7 +26,8 @@ class CheckClient extends MobileBase
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
-
+        $check = $this->checkToken();
+        if ($check) die($check);
         $this->manager = $this->getAuthManagerFind(['manager_id' => $this->tokenArr['manager_id']],'manager_id,nickname,account,ao_id');
         if (!$this->manager) {
             die($this->r(100,$this->lang('MachineCheck.manager_no_data')));
@@ -45,8 +46,6 @@ class CheckClient extends MobileBase
     {
         $this->startTrans();
         try {
-            $check = $this->checkToken();
-            if ($check) return $check;
             $machine = $this->getMachineFind(['m_id' => $postData['m_id']], 'm_id,machine_id,machine_name');
             if (!$machine) return $this->r(100, $this->lang("MachineCheck.machine_no_data"));
             $machine = $machine->toArray();

@@ -3,8 +3,8 @@
   <component name="ChangeListManager">
     <list default="true" id="0b425c8e-253d-4f3f-a4bc-dbf750314eff" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/machine/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/controller/Test.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/Common.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/Common.php" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -32,23 +32,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="AuthManagerLogClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="179">
-              <caret line="130" column="36" selection-start-line="130" selection-start-column="36" selection-end-line="130" selection-end-column="36" />
-              <folding>
-                <element signature="e#140#180#0#PHP" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ApiClient.php" pinned="false" current-in-tab="true">
+      <file leaf-file-name="ApiClient.php" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="429">
-              <caret line="380" column="40" lean-forward="true" selection-start-line="380" selection-start-column="40" selection-end-line="380" selection-end-column="40" />
+            <state relative-caret-position="492">
+              <caret line="748" column="42" selection-start-line="748" selection-start-column="42" selection-end-line="748" selection-end-column="42" />
               <folding>
                 <element signature="e#3482#3608#0#PHP" />
                 <element signature="e#3615#3641#0#PHP" />
@@ -95,101 +83,151 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="MachineChannelReplenishmentTrait.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineChannelReplenishmentTrait.php">
+      <file leaf-file-name="Receive.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1281">
-              <caret line="137" column="47" lean-forward="true" selection-start-line="137" selection-start-column="47" selection-end-line="137" selection-end-column="47" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="VReceive.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/machine/validate/VReceive.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="311">
-              <caret line="122" column="40" selection-start-line="122" selection-start-column="40" selection-end-line="122" selection-end-column="40" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Test.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="453">
-              <caret line="200" column="10" lean-forward="true" selection-start-line="200" selection-start-column="10" selection-end-line="200" selection-end-column="10" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ActivityClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3190">
-              <caret line="347" column="54" selection-start-line="347" selection-start-column="54" selection-end-line="347" selection-end-column="54" />
+            <state relative-caret-position="617">
+              <caret line="261" column="36" selection-start-line="261" selection-start-column="20" selection-end-line="261" selection-end-column="36" />
               <folding>
-                <element signature="e#2316#2413#0#PHP" />
-                <element signature="e#2419#2445#0#PHP" />
-                <element signature="e#2450#2717#0#PHP" />
-                <element signature="e#2723#2784#0#PHP" />
-                <element signature="e#2789#2882#0#PHP" />
-                <element signature="e#2888#2948#0#PHP" />
-                <element signature="e#2953#3181#0#PHP" />
-                <element signature="e#3031#3100#0#PHP" />
-                <element signature="e#3187#3247#0#PHP" />
-                <element signature="e#3252#3357#0#PHP" />
-                <element signature="e#3363#3419#0#PHP" />
-                <element signature="e#3424#3664#0#PHP" />
-                <element signature="e#3514#3583#0#PHP" />
-                <element signature="e#3670#3730#0#PHP" />
-                <element signature="e#3735#3843#0#PHP" />
-                <element signature="e#3849#3904#0#PHP" />
-                <element signature="e#3909#8312#0#PHP" />
-                <element signature="e#4773#4948#0#PHP" />
-                <element signature="e#4957#5029#0#PHP" />
-                <element signature="e#5038#5164#0#PHP" />
-                <element signature="e#5878#6453#0#PHP" />
-                <element signature="e#6265#6443#0#PHP" />
-                <element signature="e#6568#7212#0#PHP" />
-                <element signature="e#7299#8236#0#PHP" />
-                <element signature="e#7370#8036#0#PHP" />
-                <element signature="e#8109#8226#0#PHP" />
-                <element signature="e#8318#8395#0#PHP" />
-                <element signature="e#8532#8637#0#PHP" />
-                <element signature="e#8995#9098#0#PHP" />
-                <element signature="e#9179#9321#0#PHP" />
-                <element signature="e#10190#11119#0#PHP" />
-                <element signature="e#10452#11109#0#PHP" />
-                <element signature="e#10538#10771#0#PHP" />
-                <element signature="e#10627#10753#0#PHP" />
-                <element signature="e#10978#11095#0#PHP" />
-                <element signature="e#14437#14516#0#PHP" />
-                <element signature="e#16525#16588#0#PHP" />
-                <element signature="e#16593#16696#0#PHP" />
-                <element signature="e#16702#16752#0#PHP" />
-                <element signature="e#16757#16828#0#PHP" />
+                <element signature="e#225#282#0#PHP" />
+                <element signature="e#405#440#0#PHP" />
+                <element signature="e#467#489#0#PHP" />
+                <element signature="e#494#1490#0#PHP" />
+                <element signature="e#762#937#0#PHP" />
+                <element signature="e#992#1120#0#PHP" />
+                <element signature="e#1145#1275#0#PHP" />
+                <element signature="e#1496#1545#0#PHP" />
+                <element signature="e#1550#1626#0#PHP" />
+                <element signature="e#1632#1683#0#PHP" />
+                <element signature="e#1688#1766#0#PHP" />
+                <element signature="e#1772#1827#0#PHP" />
+                <element signature="e#1832#1921#0#PHP" />
+                <element signature="e#1927#1982#0#PHP" />
+                <element signature="e#1987#2070#0#PHP" />
+                <element signature="e#2076#2131#0#PHP" />
+                <element signature="e#2136#2233#0#PHP" />
+                <element signature="e#2239#2294#0#PHP" />
+                <element signature="e#2299#2392#0#PHP" />
+                <element signature="e#2398#2453#0#PHP" />
+                <element signature="e#2458#2549#0#PHP" />
+                <element signature="e#2555#2626#0#PHP" />
+                <element signature="e#2631#2724#0#PHP" />
+                <element signature="e#2730#2785#0#PHP" />
+                <element signature="e#2790#2885#0#PHP" />
+                <element signature="e#2891#2946#0#PHP" />
+                <element signature="e#3048#3107#0#PHP" />
+                <element signature="e#3112#3203#0#PHP" />
+                <element signature="e#3209#3270#0#PHP" />
+                <element signature="e#3275#3380#0#PHP" />
+                <element signature="e#3386#3439#0#PHP" />
+                <element signature="e#3444#3523#0#PHP" />
+                <element signature="e#3529#3584#0#PHP" />
+                <element signature="e#3589#3676#0#PHP" />
+                <element signature="e#3682#3895#0#PHP" />
+                <element signature="e#3900#3975#0#PHP" />
+                <element signature="e#3981#4034#0#PHP" />
+                <element signature="e#4039#4119#0#PHP" />
+                <element signature="e#4125#4203#0#PHP" />
+                <element signature="e#4208#4286#0#PHP" />
+                <element signature="e#4292#4345#0#PHP" />
+                <element signature="e#4350#4436#0#PHP" />
+                <element signature="e#4442#4499#0#PHP" />
+                <element signature="e#4504#4600#0#PHP" />
+                <element signature="e#4606#4650#0#PHP" />
+                <element signature="e#4760#4813#0#PHP" />
+                <element signature="e#4926#4981#0#PHP" />
+                <element signature="e#4986#5074#0#PHP" />
+                <element signature="e#5080#5136#0#PHP" />
+                <element signature="e#5245#5303#0#PHP" />
+                <element signature="e#5308#5404#0#PHP" />
+                <element signature="e#5410#5472#0#PHP" />
+                <element signature="e#5477#5566#0#PHP" />
+                <element signature="e#5572#5630#0#PHP" />
+                <element signature="e#5635#5731#0#PHP" />
+                <element signature="e#5737#5796#0#PHP" />
+                <element signature="e#5801#5890#0#PHP" />
+                <element signature="e#5896#5951#0#PHP" />
+                <element signature="e#5956#6055#0#PHP" />
+                <element signature="e#6061#6116#0#PHP" />
+                <element signature="e#6121#6219#0#PHP" />
+                <element signature="e#6225#6304#0#PHP" />
+                <element signature="e#6309#6407#0#PHP" />
+                <element signature="e#6413#6492#0#PHP" />
+                <element signature="e#6497#6601#0#PHP" />
+                <element signature="e#6607#6666#0#PHP" />
+                <element signature="e#6671#6761#0#PHP" />
+                <element signature="e#6767#6817#0#PHP" />
+                <element signature="e#6822#6903#0#PHP" />
+                <element signature="e#6909#6964#0#PHP" />
+                <element signature="e#6969#7042#0#PHP" />
+                <element signature="e#7048#7106#0#PHP" />
+                <element signature="e#7111#7205#0#PHP" />
+                <element signature="e#7211#7257#0#PHP" />
+                <element signature="e#7262#7345#0#PHP" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="MachineClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php">
+      <file leaf-file-name="Check.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Check.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="487">
-              <caret line="61" column="32" lean-forward="true" selection-start-line="61" selection-start-column="32" selection-end-line="61" selection-end-column="32" />
-              <folding>
-                <element signature="e#2236#4713#0#PHP" />
-              </folding>
+            <state relative-caret-position="418">
+              <caret line="26" column="49" selection-start-line="26" selection-start-column="49" selection-end-line="26" selection-end-column="49" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Excel.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Excel.php">
+      <file leaf-file-name="CheckClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="250">
-              <caret line="128" column="36" selection-start-line="128" selection-start-column="36" selection-end-line="128" selection-end-column="36" />
+            <state relative-caret-position="456">
+              <caret line="68" column="84" selection-start-line="68" selection-start-column="84" selection-end-line="68" selection-end-column="84" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="VMachineCheck.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/mobile/validate/Machine/VMachineCheck.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="572">
+              <caret line="31" column="20" selection-start-line="31" selection-start-column="9" selection-end-line="31" selection-end-column="20" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="common.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/common.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="592">
+              <caret line="316" selection-start-line="271" selection-end-line="316" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Common.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/management/controller/Common.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="396">
+              <caret line="202" column="129" selection-start-line="202" selection-start-column="126" selection-end-line="202" selection-end-column="129" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="MachineCheckStock.php" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineCheckStock.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="418">
+              <caret line="24" lean-forward="true" selection-start-line="24" selection-end-line="24" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="MobileBase.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="374">
+              <caret line="25" column="20" selection-start-line="25" selection-start-column="20" selection-end-line="25" selection-end-column="20" />
             </state>
           </provider>
         </entry>
@@ -278,7 +316,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/app/mobile/lang/zh-cn.php" />
         <option value="$PROJECT_DIR$/app/mobile/controller/machine/Info.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/InfoClient.php" />
         <option value="$PROJECT_DIR$/app/common.php" />
@@ -292,7 +329,6 @@
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/DbTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php" />
         <option value="$PROJECT_DIR$/app/machine/controller/Receive.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php" />
@@ -329,6 +365,8 @@
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" />
         <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/Common.php" />
       </list>
     </option>
   </component>
@@ -427,9 +465,10 @@
     </include_path>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="1913" />
-    <option name="width" value="974" />
-    <option name="height" value="1087" />
+    <option name="x" value="-8" />
+    <option name="y" value="32" />
+    <option name="width" value="1936" />
+    <option name="height" value="1056" />
   </component>
   <component name="ProjectLevelVcsManager" settingsEditedManually="true">
     <ConfirmationsSetting value="1" id="Add" />
@@ -461,6 +500,13 @@
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="machine" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
@@ -469,6 +515,63 @@
               <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="machine" type="462c0819:PsiDirectoryNode" />
               <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="mobile" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="mobile" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="mobile" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="mobile" type="462c0819:PsiDirectoryNode" />
+              <item name="validate" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="mobile" type="462c0819:PsiDirectoryNode" />
+              <item name="validate" type="462c0819:PsiDirectoryNode" />
+              <item name="Machine" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
@@ -591,12 +694,12 @@
       <workItem from="1716599820671" duration="1847000" />
       <workItem from="1716615726467" duration="43853000" />
       <workItem from="1717140083446" duration="24865000" />
-      <workItem from="1717374900700" duration="21033000" />
+      <workItem from="1717374900700" duration="27356000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1562927000" />
+    <option name="totallyTimeSpent" value="1569250000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -608,8 +711,7 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="1912" y="-8" width="1936" height="1096" extended-state="6" />
-    <editor active="true" />
+    <frame x="-8" y="32" width="1936" height="1056" extended-state="6" />
     <layout>
       <window_info anchor="bottom" id="TODO" order="6" weight="0.3290461" />
       <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" />
@@ -619,7 +721,7 @@
       <window_info anchor="bottom" id="Run" order="2" />
       <window_info anchor="bottom" id="Terminal" order="7" weight="0.32690248" />
       <window_info anchor="right" id="Remote Host" order="4" weight="0.31236672" />
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.21481876" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.21481876" />
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="right" id="Database" order="3" weight="0.32995737" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.3290461" />
@@ -679,79 +781,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Application.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="506">
-          <caret line="28" column="35" lean-forward="true" selection-start-line="28" selection-start-column="35" selection-end-line="28" selection-end-column="35" />
-          <folding>
-            <element signature="e#132#197#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/command/TimeTask.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="561">
-          <caret line="61" column="36" selection-start-line="61" selection-start-column="29" selection-end-line="61" selection-end-column="36" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Providers/TimeTask/AuthManagerProvider.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="352">
-          <caret line="21" column="36" lean-forward="true" selection-start-line="21" selection-start-column="36" selection-end-line="21" selection-end-column="36" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/AuthManager/AuthManagerLogClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="506">
-          <caret line="28" column="1" lean-forward="true" selection-start-line="28" selection-start-column="1" selection-end-line="28" selection-end-column="1" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/ManagementTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="302">
-          <caret line="95" column="20" selection-start-line="95" selection-start-column="20" selection-end-line="95" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="220">
-          <caret line="20" column="12" selection-start-line="20" selection-start-column="12" selection-end-line="20" selection-end-column="12" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="187">
-          <caret line="42" column="19" lean-forward="true" selection-start-line="42" selection-start-column="19" selection-end-line="42" selection-end-column="19" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Machine/MachineGoodsModel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="42" column="41" lean-forward="true" selection-start-line="42" selection-start-column="41" selection-end-line="46" selection-end-column="42" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineGoodsTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="316">
-          <caret line="64" column="42" lean-forward="true" selection-start-line="64" selection-start-column="42" selection-end-line="64" selection-end-column="42" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineGoodsClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="522">
-          <caret line="35" column="25" selection-start-line="35" selection-start-column="25" selection-end-line="35" selection-end-column="25" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineGoods.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="616">
@@ -903,13 +932,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="528">
           <caret line="32" column="32" selection-start-line="32" selection-start-column="32" selection-end-line="32" selection-end-column="32" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/common.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="86">
-          <caret line="278" column="36" selection-start-line="278" selection-start-column="36" selection-end-line="278" selection-end-column="36" />
         </state>
       </provider>
     </entry>
@@ -1072,10 +1094,66 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="453">
+          <caret line="200" column="10" lean-forward="true" selection-start-line="200" selection-start-column="10" selection-end-line="200" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="492">
+          <caret line="748" column="42" selection-start-line="748" selection-start-column="42" selection-end-line="748" selection-end-column="42" />
+          <folding>
+            <element signature="e#3482#3608#0#PHP" />
+            <element signature="e#3615#3641#0#PHP" />
+            <element signature="e#3646#3913#0#PHP" />
+            <element signature="e#3943#3994#0#PHP" />
+            <element signature="e#3999#4980#0#PHP" />
+            <element signature="e#4230#4327#0#PHP" />
+            <element signature="e#4986#5037#0#PHP" />
+            <element signature="e#5042#5146#0#PHP" />
+            <element signature="e#5152#5207#0#PHP" />
+            <element signature="e#5212#5537#0#PHP" />
+            <element signature="e#5543#5637#0#PHP" />
+            <element signature="e#5643#5696#0#PHP" />
+            <element signature="e#5701#6559#0#PHP" />
+            <element signature="e#6565#6618#0#PHP" />
+            <element signature="e#6623#7055#0#PHP" />
+            <element signature="e#7061#7118#0#PHP" />
+            <element signature="e#7123#7217#0#PHP" />
+            <element signature="e#7223#7276#0#PHP" />
+            <element signature="e#7281#9262#0#PHP" />
+            <element signature="e#7898#9206#0#PHP" />
+            <element signature="e#7967#9196#0#PHP" />
+            <element signature="e#8422#9004#0#PHP" />
+            <element signature="e#8497#8601#0#PHP" />
+            <element signature="e#8622#8797#0#PHP" />
+            <element signature="e#8818#8986#0#PHP" />
+            <element signature="e#9268#9329#0#PHP" />
+            <element signature="e#9334#9418#0#PHP" />
+            <element signature="e#9424#9468#0#PHP" />
+            <element signature="e#9576#9629#0#PHP" />
+            <element signature="e#9926#10699#0#PHP" />
+            <element signature="e#12206#12716#0#PHP" />
+            <element signature="e#13617#14993#0#PHP" />
+            <element signature="e#15215#15268#0#PHP" />
+            <element signature="e#15273#16264#0#PHP" />
+            <element signature="e#15360#15484#0#PHP" />
+            <element signature="e#16270#16337#0#PHP" />
+            <element signature="e#16342#16589#0#PHP" />
+            <element signature="e#16595#16648#0#PHP" />
+            <element signature="e#16653#17019#0#PHP" />
+            <element signature="e#17025#17078#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="463">
-          <caret line="245" column="42" selection-start-line="245" selection-start-column="42" selection-end-line="245" selection-end-column="42" />
+        <state relative-caret-position="617">
+          <caret line="261" column="36" selection-start-line="261" selection-start-column="20" selection-end-line="261" selection-end-column="36" />
           <folding>
             <element signature="e#225#282#0#PHP" />
             <element signature="e#405#440#0#PHP" />
@@ -1126,7 +1204,6 @@
             <element signature="e#4926#4981#0#PHP" />
             <element signature="e#4986#5074#0#PHP" />
             <element signature="e#5080#5136#0#PHP" />
-            <element signature="e#5141#5239#0#PHP" />
             <element signature="e#5245#5303#0#PHP" />
             <element signature="e#5308#5404#0#PHP" />
             <element signature="e#5410#5472#0#PHP" />
@@ -1157,59 +1234,70 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+    <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Check.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="453">
-          <caret line="200" column="10" lean-forward="true" selection-start-line="200" selection-start-column="10" selection-end-line="200" selection-end-column="10" />
+        <state relative-caret-position="418">
+          <caret line="26" column="49" selection-start-line="26" selection-start-column="49" selection-end-line="26" selection-end-column="49" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="429">
-          <caret line="380" column="40" lean-forward="true" selection-start-line="380" selection-start-column="40" selection-end-line="380" selection-end-column="40" />
-          <folding>
-            <element signature="e#3482#3608#0#PHP" />
-            <element signature="e#3615#3641#0#PHP" />
-            <element signature="e#3646#3913#0#PHP" />
-            <element signature="e#3943#3994#0#PHP" />
-            <element signature="e#3999#4980#0#PHP" />
-            <element signature="e#4230#4327#0#PHP" />
-            <element signature="e#4986#5037#0#PHP" />
-            <element signature="e#5042#5146#0#PHP" />
-            <element signature="e#5152#5207#0#PHP" />
-            <element signature="e#5212#5537#0#PHP" />
-            <element signature="e#5543#5637#0#PHP" />
-            <element signature="e#5643#5696#0#PHP" />
-            <element signature="e#5701#6559#0#PHP" />
-            <element signature="e#6565#6618#0#PHP" />
-            <element signature="e#6623#7055#0#PHP" />
-            <element signature="e#7061#7118#0#PHP" />
-            <element signature="e#7123#7217#0#PHP" />
-            <element signature="e#7223#7276#0#PHP" />
-            <element signature="e#7281#9262#0#PHP" />
-            <element signature="e#7898#9206#0#PHP" />
-            <element signature="e#7967#9196#0#PHP" />
-            <element signature="e#8422#9004#0#PHP" />
-            <element signature="e#8497#8601#0#PHP" />
-            <element signature="e#8622#8797#0#PHP" />
-            <element signature="e#8818#8986#0#PHP" />
-            <element signature="e#9268#9329#0#PHP" />
-            <element signature="e#9334#9418#0#PHP" />
-            <element signature="e#9424#9468#0#PHP" />
-            <element signature="e#9576#9629#0#PHP" />
-            <element signature="e#9926#10699#0#PHP" />
-            <element signature="e#12206#12716#0#PHP" />
-            <element signature="e#13617#14993#0#PHP" />
-            <element signature="e#15215#15268#0#PHP" />
-            <element signature="e#15273#16264#0#PHP" />
-            <element signature="e#15360#15484#0#PHP" />
-            <element signature="e#16270#16337#0#PHP" />
-            <element signature="e#16342#16589#0#PHP" />
-            <element signature="e#16595#16648#0#PHP" />
-            <element signature="e#16653#17019#0#PHP" />
-            <element signature="e#17025#17078#0#PHP" />
-          </folding>
+        <state relative-caret-position="374">
+          <caret line="25" column="20" selection-start-line="25" selection-start-column="20" selection-end-line="25" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/CheckClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="456">
+          <caret line="68" column="84" selection-start-line="68" selection-start-column="84" selection-end-line="68" selection-end-column="84" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Middleware/Management/CheckLogin.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-129" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Middleware/Mobile/InAppCheck.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/mobile/validate/Machine/VMachineCheck.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="572">
+          <caret line="31" column="20" selection-start-line="31" selection-start-column="9" selection-end-line="31" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/common.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="592">
+          <caret line="316" selection-start-line="271" selection-end-line="316" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineChannelStock.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/Common.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="396">
+          <caret line="202" column="129" selection-start-line="202" selection-start-column="126" selection-end-line="202" selection-end-column="129" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/ManagementTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="751">
+          <caret line="53" column="20" selection-start-line="53" selection-start-column="20" selection-end-line="53" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineCheckStock.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="24" lean-forward="true" selection-start-line="24" selection-end-line="24" />
         </state>
       </provider>
     </entry>
