@@ -204,4 +204,16 @@ class MqClient extends SendBaseClient
         ];
         return $this->dataSendRabbitMQ($data);
     }
+
+    /**
+     * 触发设备更新软件版本
+     * @return array|string
+     */
+    public function triggerUpdateVersion()
+    {
+        $data = [
+            "msgType" => "updateVersionPlan",
+        ];
+        return $this->dataSendRabbitMQ($data);
+    }
 }

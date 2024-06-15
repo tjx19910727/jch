@@ -72,10 +72,11 @@ trait OutGoodsTrait
         foreach ($this->message['main'] as $key => $value) {
             $position = $key;
             foreach ($value as $vv) {
-                $channel_code = $vv[0];
-                $success = $vv[2];
-                $fail = $vv[3];
-                $deliver_pics = $vv[4] ?? "";
+                $channel_code = $vv["channel_code"];
+                $success = $vv["success_quantity"];
+                $fail = $vv["fail_quantity"];
+                $deliver_pics = $vv["deliver_pics"] ?? "";
+                $out_sequence = $vv["out_sequence"] ?? 1;
 
                 // 修改订单副表
                 $where['order_id'] = $this->order['order_id'];
@@ -84,6 +85,7 @@ trait OutGoodsTrait
                 $update['success_quantity'] = $success;
                 $update['fail_quantity'] = $fail;
                 $update['deliver_pics'] = $deliver_pics;
+                $update['out_sequence'] = $out_sequence;
                 $flag[] = $this->updateSaleOrdersDetails($update,$where);
                 actionLog($this->getLS(),'【SQL】修改订单副表','OutGoods');
 

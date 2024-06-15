@@ -89,26 +89,32 @@ class Test extends BaseController
         dump(json2arr($str));
     }
 
+    public function makeSign($otherData)
+    {
+
+        $msg_id = uniqid();
+        $data = [
+            "msg_id" => $msg_id,
+            "timestamp" => time(),
+            ];
+        $data = array_merge($data,$otherData);
+        $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
+        return $data;
+    }
+
     public function testSign()
     {
-        $msg_id = uniqid();
         $carList[] = [
-            "mc_id" => 339,
+        "mc_id" => 1518,
             "quantity" => 1,
         ];
-        $carList[] = [
-            "mc_id" => 360,
-            "quantity" => 1,
+        $data = [
+            "machine_id" => "test0003",
+            "pay_type" => 4,
+            "pay_method" => 41,
+            "coupon_code" => "980429",
+            "carList" => json_encode($carList, 320),
         ];
-//        $data = [
-//            "machine_id" => "test0002",
-//            "msg_id" => $msg_id,
-//            "timestamp" => time(),
-////            "manager_id" => 5,
-//            "pay_type" => 4,
-//            "pay_method" => 41,
-//            "carList" => json_encode($carList, 320),
-//        ];
 //        $data = [
 //            "order_id" => 755,
 //            "timestamp" => "1715913770106092",
@@ -131,12 +137,12 @@ class Test extends BaseController
 ////            "folder" => "saleOrders",
 ////            "file" => file_get_contents(root_path("public/uploads/system") . "20240201/a35c07ecb552cec721f77c71fce6c5e2.jpg"),
 //        ];
-        $data = [
-            "machine_id" => "test0003",
-            "timestamp" => time(),
-            "msg_id" => $msg_id,
-            "manager_id" => 2,
-        ];
+//        $data = [
+//            "machine_id" => "test0003",
+//            "timestamp" => time(),
+//            "msg_id" => $msg_id,
+//            "manager_id" => 2,
+//        ];
 //        $data = [
 //            "machine_id" => "test0003",
 //            "timestamp" => time(),
@@ -186,19 +192,19 @@ class Test extends BaseController
 //                ],
 //            ],
 //        ];
-
-        $data = [
-            "msg_id" => $msg_id,
-            "timestamp" => time(),
-            "machine_id" => "test0001",
-            "mc_id" => "251",
-            "capacity" => "5",
-            "g_id" => "0",
-            "mg_id" => "0",
-            "quantity" => "0",
-//            "standby_quantity" => "0",
-            "operator" => 1,
-        ];
+//
+//        $data = [
+//            "msg_id" => $msg_id,
+//            "timestamp" => time(),
+//            "machine_id" => "test0001",
+//            "mc_id" => "251",
+//            "capacity" => "5",
+//            "g_id" => "0",
+//            "mg_id" => "0",
+//            "quantity" => "0",
+////            "standby_quantity" => "0",
+//            "operator" => 1,
+//        ];
 //        $data = [
 //            "machine_id" => "test0001",
 //            "msg_id" => $msg_id,
@@ -224,9 +230,34 @@ class Test extends BaseController
 ////            "account" => "dkm",
 ////            "password" => "123456",
 //        ];
-        $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
-        dump($data);
-        dump(json_encode($data, 320));
+
+//        dump($data);
+//        $data = $this->makeSign($data);
+//        dump(json_encode($data));
+//        $config = [
+//            "machine_id" => $data['machine_id'],
+//            "key" => env("api.md5Key"),
+//            "data" => $data,
+//        ];
+//        $app = AppFactory::machine($config);
+//        $result = $app->api->subCar();
+//        die();
+//        dump($result);
+        $data = [
+            "machine_id" => "test0003",
+            "order_id" => "944",
+            "fd_id" => "5",
+        ];
+        $data = $this->makeSign($data);
+        $config = [
+            "machine_id" => $data['machine_id'],
+            "key" => env("api.md5Key"),
+            "data" => $data,
+        ];
+        $app = AppFactory::machine($config);
+        $result = $app->activity->useFd();
+
+        return $result;
     }
 
     public function getCheckStockQr()

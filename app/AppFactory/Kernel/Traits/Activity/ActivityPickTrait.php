@@ -78,7 +78,7 @@ trait ActivityPickTrait
     }
 
     /**
-     * 使用取货码获取取货码活动信息
+     * 终端使用取货码获取取货码活动信息
      * @return mixed
      */
     public function getActivityPickByCode()
@@ -100,7 +100,7 @@ trait ActivityPickTrait
                 if ($apc['status'] == 5) return $this->lang("VActivityPickCode.status5");
             }
             $ap = $this->getActivityPickFind(['id' => $apc['ap_id']],'id,pick_name,desc,bg_pic,start_time,end_time,pick_type,status');
-            // 开始时间大于当前时间，优惠券活动还未开始的
+            // 开始时间大于当前时间，取货活动还未开始的
             if ($ap["start_time"] > time()) {
                 return $this->lang("VActivityPick.not_begin");
             }
@@ -166,6 +166,7 @@ trait ActivityPickTrait
         $update['pay_method'] = 1;
         $update['pay_time'] = time();
         $update['pay_code'] = $this->data['pick_code'];
+        $update['pick_id'] = $ap['id'] ?? 0;
         return $update;
     }
 }

@@ -39,7 +39,7 @@ trait AfterOrderPaymentTrait
     {
         $flag = [];
         if ($this->order['machine_id']) {
-            $this->sendToMachine();
+            $this->sendPaySuccessToMachine();
         }
         $this->order['pay_status'] = 3;
         $this->order['pay_time'] = time();
@@ -57,7 +57,7 @@ trait AfterOrderPaymentTrait
     /**
      * 发送给设备终端支付成功状态
      */
-    private function sendToMachine()
+    private function sendPaySuccessToMachine()
     {
         $config = [
             "machine_id" => $this->order['machine_id'],
@@ -74,6 +74,8 @@ trait AfterOrderPaymentTrait
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
         if ($details) {
             $contentArr = [];
+            $outArr = [];
+            // 旧版本数据，待软件更新后删除
             foreach ($details as $k => $v) {
                 $dc = [
                     $v['channel_code'],
@@ -81,10 +83,19 @@ trait AfterOrderPaymentTrait
                 ];
                 $contentArr[$v['channel_position']][] = $dc;
             }
+            // 新数据格式
+            foreach ($details as $k => $v) {
+                $dc = [
+                    "channel_code" => $v['channel_code'],
+                    "quantity" => $v['quantity'],
+                ];
+                $outArr[$v['channel_position']][] = $dc;
+            }
             $content = [
                 "msgType" => "outGoods",
                 "trade_no" => $this->order['trade_no'],
                 "main" => $contentArr,
+                "outGoods" => $outArr,
             ];
             $content = json_encode($content);
             $msg_id = uniqid();
@@ -118,17 +129,17 @@ trait AfterOrderPaymentTrait
     /**
      * 发送购买成功通知、销售成功通知
      */
-    protected function sendTemp()
-    {
-        if ($this->order['user_id']) {
-            $data = $this->order;
-            $data['openid'] = $this->getUserValue(['user_id' => $data['user_id'],['type','in',[2,4]]],'openid');
-            if ($data['openid']) {
-                $this->sendPurchaseSuccessfulNotice($data);
-            }
-            $this->sendSalesNotice($this->order);
-        }
-    }
+//    protected function sendTemp()
+//    {
+//        if ($this->order['user_id']) {
+//            $data = $this->order;
+//            $data['openid'] = $this->getUserValue(['user_id' => $data['user_id'],['type','in',[2,4]]],'openid');
+//            if ($data['openid']) {
+//                $this->sendPurchaseSuccessfulNotice($data);
+//            }
+//            $this->sendSalesNotice($this->order);
+//        }
+//    }
 
     /**
      * 结算收益

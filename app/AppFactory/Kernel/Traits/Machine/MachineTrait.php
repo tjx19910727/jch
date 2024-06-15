@@ -179,6 +179,6 @@ trait MachineTrait
         if (isset($item['regions_id']) && $item['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $item['regions_id']],'code,name,cname');
         $address = [$item['country'],$item['state'] , $item['city'], $item['regions'] , ($this->machine['street'] ?? "无街道"), ($this->machine['floor'] ?? "无楼层")];
         $this->machine = $item;
-        $this->machine['address'] = implode(",",$address);
+        $this->machine['address'] = implode(",",$address) ?? "";
     }
 }

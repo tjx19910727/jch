@@ -97,6 +97,15 @@ trait ActivityFdTrait
         if (!$this->fd) return $this->rFail($this->lang("VActivityFd.fd_no_data"));
         $this->fd = $this->fd->toArray();
         actionLog($this->fd,'活动信息');
+        if ($this->order['order_type'] > 1 && $this->order['order_type'] != 5) {
+            if ($this->fd['exclusion'] == 1)
+                return $this->rFail($this->lang("VActivityFd.exclusion"));
+            else {
+                if ($this->order['coupon_id'] > 0 && $this->getActivityCouponValue(['c_id' => $this->order['coupon_id']],'exclusion') == 1) {
+                    return $this->rFail($this->lang("VActivityCoupon.exclusion"));
+                }
+            }
+        }
         $this->content = $this->getActivityFdContentList(['fd_id' => $this->fd['fd_id']],0,"*","fdc_sort ASC");
         if (!$this->content) return $this->rFail($this->lang("VActivityFd.content_no_data"));
         if (is_string($this->content)) return $this->rFail($this->content);
@@ -272,9 +281,10 @@ trait ActivityFdTrait
         actionLog($this->countContent,'过滤后的最终优惠');
         if ($this->countContent['discount_price']) {
             $updateOrder['order_id'] = $this->order['order_id'];
-            $updateOrder['discount_price'] = $this->countContent['discount_price'];
+            $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
             $updateOrder['total_price'] = bcsub($this->order['total_price'],$this->countContent['discount_price'],3);
             $updateOrder['order_type'] = 5;
+            $updateOrder['fd_id'] = $this->fd['fd_id'] ?? 0;
             $flag[] = $this->updateSaleOrders($updateOrder);
             actionLog($this->getLS(),'【SQL】处理订单信息');
             $averagePrice = bcdiv($updateOrder['total_price'],$this->order['total_quantity'],3);

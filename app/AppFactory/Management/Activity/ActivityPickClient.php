@@ -15,12 +15,13 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class ActivityPickClient extends ManagementClient
 {
     use ActivityPickTrait,ActivityPickCodeTrait,ActivityGoodsTrait,ActivityMachineTrait;
-    use MachineTrait,GoodsTrait;
+    use MachineTrait,GoodsTrait,SaleOrdersTrait;
 
 
     public function getApAgAmList($where,$pageNum = 0, $field = "*",$order = "")
@@ -176,6 +177,64 @@ class ActivityPickClient extends ManagementClient
             $this->rollbackTrans();
             actionException($e,1);
             return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
+     * 取货码查询取货活动
+     * @param $postData
+     * @return array|\think\response\Json
+     */
+    public function getByAmCode($postData)
+    {
+        try {
+            $pickCode = $this->getActivityPickCodeFind(['code' => $postData['code']], 'apc_id,ap_id,code,status,used_time,pick_type');
+            if ($pickCode) {
+                if ($pickCode['status'] == 2) return $this->r(1112, $this->lang("VActivityPickCode.status2"));
+                if ($pickCode['status'] == 3) return $this->r(1113, $this->lang("VActivityPickCode.status3"));
+                if ($pickCode['status'] == 4) return $this->r(1114, $this->lang("VActivityPickCode.status4"));
+                if ($pickCode['status'] == 5) return $this->r(1114, $this->lang("VActivityPickCode.status5"));
+                $pick = $this->getActivityPickFind(['id' => $pickCode['ap_id']], 'id,pick_name,desc,start_time,end_time,pick_type,status');
+                if (!$pick) return $this->r(100, $this->lang("VActivityPick.pick_no_data"));
+                $pick['pickCode'] = $pickCode;
+                $am = $this->getActivityMachineFind(['a_id' => $pick['id'], 'a_type' => 4, 'm_id' => $postData['m_id']], 'am_id');
+                if (!$am) return $this->r(100, $this->lang("VActivityPick.machine_no_data"));
+                if ($pick['status'] == 1) {
+                    if ($pick['start_time'] < time()) {
+                        return $this->r(1101, $this->lang("VActivityPick.status1"));
+                    }
+                    $pick['status'] = 2;
+                    $this->updateActivityPick(['id' => $pick['id'], 'status' => 2]);
+                }
+                if ($pick['status'] == 2) {
+                    if ($pick['end_time'] < time()) {
+                        $this->updateActivityPick(['id' => $pick['id'], 'status' => 3]);
+                        return $this->r(1103, $this->lang("VActivityPick.status3"));
+                    }
+                }
+                if ($pick['status'] == 3) return $this->r(1103, $this->lang("VActivityPick.status3"));
+                if ($pick['status'] == 4) return $this->r(1104, $this->lang("VActivityPick.status4"));
+                if ($pick['pick_type'] == 3) {
+                    $order = $this->getSaleOrdersFind(['order_id' => $pickCode['order_id']], 'order_id,trade_no,pay_time');
+                    if ($order) {
+                        $order = $order->toArray();
+                        $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0, 'g_name,pic,sku,quantity');
+                        if ($order['details']) $order['details'] = $order['details']->toArray();
+                    }
+                    $pick['order'] = $order;
+                }
+                if ($pick['pick_type'] == 2) {
+                    $ag = $this->getActivityGoodsList(['a_id' => $pick['id'], 'a_type' => 4], 0, 'ag_id,g_name,pic,sku');
+                    if ($ag) {
+                        $pick['activity_goods'] = $ag->toArray();
+                    }
+                }
+                return $this->r(200, $this->lang("query_success"), $pick);
+            }
+            return $this->rFail($this->lang("VActivityPickCode.pick_code_no_data"));
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
     }
 }

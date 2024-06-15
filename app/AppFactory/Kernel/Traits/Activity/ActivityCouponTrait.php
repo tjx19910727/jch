@@ -18,6 +18,10 @@ trait ActivityCouponTrait
         return ActivityCouponModel::getColumn($where, $column);
     }
 
+    public function getActivityCouponValue($where,$value)
+    {
+        return ActivityCouponModel::getFieldValue($where,$value);
+    }
     /**
      * 获取一条优惠券活动
      * @param $where
@@ -115,7 +119,7 @@ trait ActivityCouponTrait
     {
         $acUsed = [];
         $where['code'] = $this->data['coupon_code'];
-        $fieldAc = "c_id,code,c_type,pay_limit,reduction,status,start_date,end_date,used_limit,pay_limit,designated_goods";
+        $fieldAc = "c_id,code,c_type,pay_limit,reduction,status,start_date,end_date,used_limit,pay_limit,designated_goods,exclusion";
         $ac = $this->getActivityCouponFind(['code' => $this->data['coupon_code']], $fieldAc);
         // 查无固定码优惠券活动
         if (!$ac) {
@@ -191,8 +195,19 @@ trait ActivityCouponTrait
     {
         // 通过券码获取优惠券活动信息，判断使用条件
         $ac = $this->getAcByCode();
+
         if (is_string($ac)) {
             return $ac;
+        }
+
+        if ($this->order['order_type'] > 1 && $this->order['order_type'] != 2) {
+            if ($ac['exclusion'] == 1)
+                return $this->rFail($this->lang("VActivityCoupon.exclusion"));
+            else {
+                if ($this->order['fd_id'] > 0 && $this->getActivityFdValue(['fd_id' => $this->order['fd_id']],'exclusion') == 1) {
+                    return $this->rFail($this->lang("VActivityFd.exclusion"));
+                }
+            }
         }
 
         // 有订单最低消费金额设置，订单交易金额小于最低消费金额
@@ -210,12 +225,12 @@ trait ActivityCouponTrait
             if ($ac['c_type'] == 2)  $discount_price = bcmul($this->order['total_price'], bcdiv($ac['reduction'], 100, 2), 3);
             if ($discount_price < $this->order['total_price']) {
                 // 优惠金额作用至订单总金额
-                $this->order['discount_price'] = $discount_price;
+                $this->order['discount_price'] = bcadd($this->order['discount_price'],$discount_price,2);
                 $this->order['total_price'] = bcsub($this->order['total_price'], $discount_price, 3);
                 // 平均给所有订单商品单价
                 $average_price = bcdiv($discount_price,$this->order['total_quantity'],3);
                 foreach ($this->order['details'] as $key => $value) {
-                    $value['discount_price'] = $average_price;
+                    $value['discount_price'] = bcadd($value['discount_price'],$average_price,3);
                     $totalDiscountPrice = bcmul($discount_price, $value['quantity'], 3);
                     $value['total_sod_price'] = bcsub($value['total_sod_price'], $totalDiscountPrice, 3);
                     $this->updateSaleOrdersDetails(['sod_id' => $value['sod_id'], 'discount_price' => $discount_price, 'total_sod_price' => $value['total_sod_price']]);
@@ -231,8 +246,9 @@ trait ActivityCouponTrait
                         // 区分优惠券类型，1：立减金额，2：优惠折扣，计算优惠值
                         if ($ac['c_type'] == 1)  $discount_price = $ac['reduction'];
                         if ($ac['c_type'] == 2)  $discount_price = bcmul($value['retail_price'], bcdiv($ac['reduction'], 100, 2), 3);
+                        if ($discount_price < 0.01) continue;
                         if ($value['total_sod_price'] > $discount_price) {
-                            $value['discount_price'] = $discount_price;
+                            $value['discount_price'] = bcadd($value['discount_price'],$discount_price,3);
                             $totalDiscountPrice = bcmul($discount_price, $value['quantity'], 3);
                             $value['total_sod_price'] = bcsub($value['total_sod_price'], $totalDiscountPrice, 3);
                             $this->updateSaleOrdersDetails(['sod_id' => $value['sod_id'], 'discount_price' => $discount_price, 'total_sod_price' => $value['total_sod_price']]);
@@ -252,6 +268,7 @@ trait ActivityCouponTrait
                 'order_id' => $this->order['order_id'],
                 'discount_price' => $this->order['discount_price'],
                 'order_type' => 2,
+                'coupon_id' => $ac['c_id'],
                 'total_price' => $this->order['total_price']
             ]);
             actionLog($this->getLS(), '修改订单优惠数据');

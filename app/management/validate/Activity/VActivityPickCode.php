@@ -18,6 +18,10 @@ class VActivityPickCode extends VCommon
         "id" => "require",
         "ap_id" => "require",
         "quantity" => "require",
+
+        "pick_code" => "require",
+        "m_id" => "require",
+
     ];
 
     protected $message = [
@@ -25,6 +29,8 @@ class VActivityPickCode extends VCommon
         "id.require" => "VActivityPickCode.ap_id_require",
         "ap_id.require" => "VActivityPickCode.ap_id_require",
         "quantity.require" => "VActivityPickCode.quantity_require",
+        "pick_code.require" => "VActivityPickCode.pick_code_require",
+        "m_id.require" => "VActivityPickCode.m_id_require",
     ];
 
     protected $scene = [
@@ -32,5 +38,6 @@ class VActivityPickCode extends VCommon
         "add" => ["id","quantity"],
         "update" => ["apc_id"],
         "del" => ["apc_id"],
+        "usePickCode" => ['pick_code','m_id'],
     ];
 }

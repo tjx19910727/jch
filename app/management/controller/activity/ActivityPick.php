@@ -101,4 +101,19 @@ class ActivityPick extends Common
         }
         return $this->app->activityPick->activeTakeDown($postData);
     }
+
+    /**
+     * 管理端通过取货码查询取货码活动
+     * @return array|\think\response\Json
+     */
+    public function queryByCodeMachine()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'queryByCodeMachine');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->activityPick->getByAmCode($postData);
+    }
 }

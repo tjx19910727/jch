@@ -20,6 +20,9 @@ class VActivityPick extends VCommon
         "pick_type" => "require",
         "machineList" => "require",
         "goodsList" => "require",
+
+        "code" => "require",
+        "m_id" => "require",
     ];
 
     protected $message = [
@@ -29,6 +32,9 @@ class VActivityPick extends VCommon
         "pick_type.require" => "VActivityPick.pick_type_require",
         "machineList.require" => "VActivityPick.machineList_require",
         "goodsList.require" => "VActivityPick.goodsList_require",
+
+        "code.require" => "VActivityPick.code_require",
+        "m_id.require" => "VActivityPick.m_id_require",
     ];
 
     protected $scene = [
@@ -36,5 +42,6 @@ class VActivityPick extends VCommon
         "update" => ["id"],
         "del" => ["id"],
         "takeDown" => ["id"],
+        "queryByCodeMachine" => ["code","m_id"],
     ];
 }

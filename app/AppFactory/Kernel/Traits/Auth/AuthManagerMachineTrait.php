@@ -23,11 +23,12 @@ trait AuthManagerMachineTrait
      * 获取指定字段值
      * @param $where
      * @param $value
+     * @param $order
      * @return mixed
      */
-    public function getAuthManagerMachineValue($where,$value)
+    public function getAuthManagerMachineValue($where,$value,$order = 'id desc')
     {
-        return AuthManagerMachineModel::getFieldValue($where,$value);
+        return AuthManagerMachineModel::getFieldValue($where,$value,$order);
     }
 
     /**

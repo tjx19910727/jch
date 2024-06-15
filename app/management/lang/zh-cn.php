@@ -104,21 +104,38 @@ return [
 
     "VActivityPick" => [
         "id_require" => "活动ID不能为空",
+        "pick_no_data" => "查无取货码活动信息",
         "pick_name_require" => "活动名称不能为空",
         "start_time_require" => "开始时间不能为空",
         "pick_type_require" => "派送类型不能为空",
         "machineList_require" => "适用设备不能为空",
         "goodsList_require" => "适用商品不能为空",
+        "status1" => "活动未开始",
+        "status3" => "活动已结束",
+        "status4" => "活动已下架",
+        "machine_no_data" => "查无适用设备",
+
+        "code_require" => "取货码不能为空",
+        "m_id_require" => "请选择设备",
     ],
 
     "VActivityPickCode" => [
-        "apc_id_require" => "提货码ID不能为空",
+        "apc_id_require" => "取货码ID不能为空",
         "ap_id_require" => "活动ID不能为空",
         "quantity_require" => "生成数量不能为空",
 
-        "pick_code_no_data" => "查无提货码信息",
-        "status3" => "活动已结束",
-        "status4" => "活动已下架",
+        "pick_code_no_data" => "查无取货码信息",
+        "status2" => "取货码已使用",
+        "status3" => "取货码已过期",
+        "status4" => "取货码已作废",
+        "status5" => "取货码使用中",
+
+        "create_order_fail" => "生成订单失败",
+        "pick_type1" => "该取货码为系统随机出货类型的出货码，当前操作不能使用，请在终端上使用",
+
+        "pick_code_require" => "取货码不能为空",
+        "m_id_require" => "请选择设备",
+        "g_id_require" => "请选择商品",
     ],
 
     "VConfig" => [

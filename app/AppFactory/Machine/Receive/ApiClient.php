@@ -134,8 +134,9 @@ class ApiClient extends ReceiveBaseClient
      */
     public function systemInfo()
     {
-        $pIds = $this->getParentIdList($this->machine['manager_id']);
-        $pIds[] = $this->machine['manager_id'];
+        $pIds = $this->getAuthManagerMachineColumn(['m_id' => $this->machine['m_id']],'manager_id');
+        $pIds = array_merge($pIds,$this->getParentIdList($this->machine['creator']));
+        $pIds[] = $this->machine['creator'];
         $systemInfo = $this->getConfigContent([['creator', 'in', $pIds], "config_switch" => 1, 'config_name' => "systemInfo"]);
         return $this->rQ($systemInfo);
     }
@@ -577,8 +578,7 @@ class ApiClient extends ReceiveBaseClient
 
     /**
      * 提交购物车生成订单信息
-     * @return array|string
-     * @throws \Exception
+     * @return array|\think\response\Json
      */
     public function subCar()
     {
@@ -589,7 +589,7 @@ class ApiClient extends ReceiveBaseClient
             "m_id" => $this->machine['m_id'],
             "machine_name" => $this->machine['machine_name'],
             "machine_id" => $this->machine['machine_id'],
-            "manager_id" => $this->machine['manager_id'],
+//            "manager_id" => $this->machine['manager_id'],
             "ao_id" => $this->machine['ao_id'],
             "pay_type" => $this->data['pay_type'],
             "pay_method" => $this->data['pay_method'],
@@ -632,7 +632,6 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->r(100, $this->lang("VSubCar.mg_id_require"));
                     }
-                    $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']], 'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price');
                     if ($this->data['pay_type'] == 0) {
                         $mc['retail_price'] = 0;
                     }
@@ -643,27 +642,27 @@ class ApiClient extends ReceiveBaseClient
                         "channel_position" => $mc['channel_position'],
                         "channel_code" => $mc['channel_code'],
                         "mg_id" => $mc['mg_id'],
-                        "g_id" => $mg['g_id'],
-                        "g_name" => $mg['g_name'],
-                        "pic" => $mg['pic'],
-                        "sku" => $mg['sku'],
-                        "gc_id" => $mg['gc_id'],
-                        "gc_name" => $mg['gc_name'],
-                        "cost_price" => $mg['cost_price'],
-                        "market_price" => $mg['market_price'],
-                        "retail_price" => $mg['retail_price'],
-                        "total_sod_price" => bcmul($mg['retail_price'], $value['quantity'], 2),
+                        "g_id" => $mc['g_id'],
+                        "g_name" => $mc['g_name'],
+                        "pic" => $mc['pic'],
+                        "sku" => $mc['sku'],
+                        "gc_id" => $mc['gc_id'],
+                        "gc_name" => $mc['gc_name'],
+                        "cost_price" => $mc['cost_price'],
+                        "market_price" => $mc['market_price'],
+                        "retail_price" => $mc['retail_price'],
+                        "total_sod_price" => bcmul($mc['retail_price'], $value['quantity'], 2),
                         "quantity" => $value['quantity'],
-                        "bar_code" => $mg['bar_code'],
+                        "bar_code" => $mc['bar_code'],
                         //                    "batch_number" => $mg['batch_number'],
                         //                    "manufacture_time" => $mc['manufacture_time'],
                         //                    "sell_by_date" => $mc['sell_by_date'],
                     ];
                     $sod_id = $this->addSaleOrdersDetails($details);
                     if ($sod_id) {
-                        $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mg['cost_price'], $value['quantity'], 2), 2);
-                        $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mg['market_price'], $value['quantity'], 2), 2);
-                        $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mg['retail_price'], $value['quantity'], 2), 2);
+                        $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $value['quantity'], 2), 2);
+                        $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mc['market_price'], $value['quantity'], 2), 2);
+                        $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mc['retail_price'], $value['quantity'], 2), 2);
                         $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $value['quantity']);
                         $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 2);
                         $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $value['quantity']);
@@ -730,7 +729,7 @@ class ApiClient extends ReceiveBaseClient
         $where['m_id'] = $this->machine['m_id'];
         $where[] = ['publish_time', "<", time()];
         $where['status'] = 1;
-        return $this->rQ($this->getMachineVersionPlanFind($where, 'mv_id,version_no,path,desc,size', 'mvp_id desc'));
+        return $this->rQ($this->getMachineVersionPlanFind($where, 'mv_id,version_no,path,desc,size,update_time', 'mvp_id desc'));
     }
 
     /**

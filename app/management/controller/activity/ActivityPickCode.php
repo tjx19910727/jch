@@ -113,4 +113,19 @@ class ActivityPickCode extends Common
         $postData = input();
         return $this->app->activityPickCode->exportUsedList($postData);
     }
+
+    /**
+     * 核销取货码
+     * @return array|bool|string|\think\response\Json
+     */
+    public function usePickCode()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'usePickCode');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->activityPickCode->usePickCode($postData);
+    }
 }
