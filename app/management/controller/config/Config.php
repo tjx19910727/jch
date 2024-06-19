@@ -10,7 +10,7 @@ namespace app\management\controller\config;
 
 
 use app\management\controller\Common;
-use app\management\validate\VConfig;
+use app\management\validate\Config\VConfig;
 
 class Config extends Common
 {

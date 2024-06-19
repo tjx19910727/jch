@@ -10,12 +10,13 @@ namespace app\management\controller\config;
 
 
 use app\management\controller\Common;
+use app\management\validate\Config\VConfigScene;
 use think\facade\Lang;
 
 class ConfigScene extends Common
 {
     protected $field = "id,`name`,`desc`,`status`,creator,create_time,update_time";
-    protected $validatePath = 'app\management\validate\VConfigScene.';
+    protected $validatePath = VConfigScene::class;
 
     /**
      * 获取场景列表
@@ -47,7 +48,7 @@ class ConfigScene extends Common
     public function add()
     {
         $postData = input();
-        try { $this->validate($postData,$this->validatePath . 'add');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
+        try { $this->validate($postData,$this->validatePath . '.add');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
         return $this->app->configScene->add($postData);
     }
 
@@ -58,7 +59,7 @@ class ConfigScene extends Common
     public function update()
     {
         $postData = input();
-        try { $this->validate($postData,$this->validatePath . 'update');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
+        try { $this->validate($postData,$this->validatePath . '.update');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
         return $this->app->configScene->update($postData);
     }
 
@@ -69,7 +70,7 @@ class ConfigScene extends Common
     public function del()
     {
         $postData = input();
-        try { $this->validate($postData,$this->validatePath . 'del');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
+        try { $this->validate($postData,$this->validatePath . '.del');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
         return $this->app->configScene->del($postData);
     }
 }

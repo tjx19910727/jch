@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Providers\Management;
 
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
+use app\AppFactory\Management\Config\ConfigApiClient;
 use app\AppFactory\Management\Config\ConfigClient;
 use app\AppFactory\Management\Config\ConfigLangClient;
 use app\AppFactory\Management\Config\ConfigPerformanceClient;
@@ -24,6 +25,9 @@ class ConfigProvider implements ServiceProviderInterface
         // TODO: Implement register() method.
         $app['config'] = function ($app) {
             return new ConfigClient($app);
+        };
+        $app['configApi'] = function ($app) {
+            return new ConfigApiClient($app);
         };
         $app['configSize'] = function ($app) {
             return new ConfigSizeClient($app);

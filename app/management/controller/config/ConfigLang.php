@@ -10,11 +10,12 @@ namespace app\management\controller\config;
 
 
 use app\management\controller\Common;
+use app\management\validate\Config\VConfigLang;
 
 class ConfigLang extends Common
 {
     protected $field = "l_id,name,lang,creator,create_time,update_id,update_time";
-    protected $validatePath = 'app\management\validate\VConfigLang.';
+    protected $validatePath = VConfigLang::class;
 
     /**
      * 获取语言列表
@@ -47,7 +48,7 @@ class ConfigLang extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'add');
+            $this->validate($postData, $this->validatePath . '.add');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -62,7 +63,7 @@ class ConfigLang extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'update');
+            $this->validate($postData, $this->validatePath . '.update');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -77,7 +78,7 @@ class ConfigLang extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . 'del');
+            $this->validate($postData, $this->validatePath . '.del');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }

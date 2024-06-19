@@ -38,6 +38,7 @@ trait MachineErrorCodeTrait
             "machine_id" => $this->machine['machine_id'],
             "machine_name" => $this->machine['machine_name'],
             "address" => $this->machine['address'] ?? "",
+            "error_position" => $this->message['error_position'] ?? 1,
             "errorCode" => $this->message['errorCode'],
             "remark" => $this->lang("deviceErrorCode." . $this->message['errorCode']),
             "msg" => $this->message['msg'] ?? "",

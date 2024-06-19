@@ -11,6 +11,7 @@ namespace app\AppFactory;
 
 /**
  * Class AppFactory
+ * @method static Api\Application              api($config = [])               对外API接口
  * @method static Management\Application       management($user = [])     管理端
  * @method static Machine\Application          machine($config = [])      终端通讯
  * @method static Pay\Application              pay($config = [])          支付

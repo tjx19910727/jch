@@ -167,6 +167,13 @@ return [
         "field_unique" => "字段名已存在，不允许重复",
         "lang_max" => "语言编码长度超限制",
     ],
+    "VConfigApi" => [
+        "id_require" => "请选择对外用户",
+        "auth_name_require" => "用户名不能为空",
+        "auth_password_require" => "用户名不能为空",
+        "white_list_require" => "IP白名单不能为空",
+    ],
+
     "VConfigScene" => [
         "id_require" => "请选择场景",
         "name_require" => "场景名称不能为空",

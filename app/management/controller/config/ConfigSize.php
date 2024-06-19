@@ -10,12 +10,13 @@ namespace app\management\controller\config;
 
 
 use app\management\controller\Common;
+use app\management\validate\Config\VConfigSize;
 use think\facade\Lang;
 
 class ConfigSize extends Common
 {
     protected $field = "s_id,label,length,width,type";
-    protected $validatePath = 'app\management\validate\VConfigSize.';
+    protected $validatePath = VConfigSize::class;
 
     /**
      * 获取尺寸列表
@@ -47,7 +48,7 @@ class ConfigSize extends Common
     public function add()
     {
         $postData = input();
-        try { $this->validate($postData,$this->validatePath . 'add');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
+        try { $this->validate($postData,$this->validatePath . '.add');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
         return $this->app->configSize->add($postData);
     }
 
@@ -58,7 +59,7 @@ class ConfigSize extends Common
     public function update()
     {
         $postData = input();
-        try { $this->validate($postData,$this->validatePath . 'update');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
+        try { $this->validate($postData,$this->validatePath . '.update');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
         return $this->app->configSize->update($postData);
     }
 
@@ -69,7 +70,7 @@ class ConfigSize extends Common
     public function del()
     {
         $postData = input();
-        try { $this->validate($postData,$this->validatePath . 'del');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
+        try { $this->validate($postData,$this->validatePath . '.del');} catch (\Exception $e) { return returnValidate(Lang::get($e->getMessage()));}
         return $this->app->configSize->del($postData);
     }
 }

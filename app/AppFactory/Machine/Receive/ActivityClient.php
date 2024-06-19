@@ -179,12 +179,19 @@ class ActivityClient extends ReceiveBaseClient
             "manager_id" => $this->machine['manager_id'],
             "ao_id" => $this->machine['ao_id'],
             "order_type" => 4,
+            "lottery_id" => $al['al_id'],
             "pay_type" => $this->data['pay_type'],
             "pay_method" => $this->data['pay_method'],
             "total_price" => $this->data['total_price'],
             "total_quantity" => $alc['active_num'],  // 商品总数，执行完成抽奖后需要重新校对
             "create_date" => strtotime(date("Y-m-d")),
         ];
+        if ($this->data['total_price'] == 0) {
+            $order['pay_status'] = 2;
+            $order['pay_time'] = time();
+            $order['pay_type'] = 0;
+            $order['pay_method'] = 1;
+        }
         // 添加订单信息
         $order['order_id'] = $this->addSaleOrders($order);
         if ($order['order_id']) {

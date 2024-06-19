@@ -6,7 +6,10 @@
  * Time: 17:22
  */
 
-namespace app\management\validate;
+namespace app\management\validate\Config;
+
+
+use app\management\validate\VCommon;
 
 
 class VConfigPerformance extends VCommon

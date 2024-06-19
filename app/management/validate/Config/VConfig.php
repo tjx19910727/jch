@@ -6,8 +6,10 @@
  * Time: 18:00
  */
 
-namespace app\management\validate;
+namespace app\management\validate\Config;
 
+
+use app\management\validate\VCommon;
 
 class VConfig extends VCommon
 {

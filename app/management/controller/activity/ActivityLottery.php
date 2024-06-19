@@ -14,7 +14,7 @@ use app\management\controller\Common;
 class ActivityLottery extends Common
 {
 
-    protected $field = "`al_id`,`lottery_name`,`start_time`,`end_time`,`price`,share_benefit,`desc`,`status`,`creator`,`create_time`";
+    protected $field = "`al_id`,`lottery_name`,`start_time`,`end_time`,`price`,`position`,share_benefit,`desc`,`status`,`creator`,`create_time`";
     protected $validatePath = 'app\management\validate\Activity\VActivityLottery.';
 
     public function getList()

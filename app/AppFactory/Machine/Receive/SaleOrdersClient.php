@@ -70,6 +70,7 @@ class SaleOrdersClient extends MachineBaseClient
                     "is_claim" => $value['is_claim'],
                     "is_out" => $value['is_out'],
                     "is_close" => $value['is_close'],
+                    "out_sequence" => $value["out_sequence"] ?? 1,
                     "quantity" => $value['quantity'],
                     "duration" => $value['duration'],
                     "deliver_pics" => $value['deliver_pics'],

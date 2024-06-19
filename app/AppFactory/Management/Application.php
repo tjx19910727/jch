@@ -59,6 +59,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Auth\AuthOrganizationRoleClient        $authOrganizationRole   组织架构关联权限角色
  *
  * @property Config\ConfigClient                    $config                 系统配置
+ * @property Config\ConfigApiClient                 $configApi              API对外用户
  * @property Config\ConfigSizeClient                $configSize             尺寸管理
  * @property Config\ConfigSceneClient               $configScene            场景管理
  * @property Config\ConfigLangClient                $configLang             语言管理

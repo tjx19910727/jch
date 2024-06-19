@@ -14,7 +14,7 @@ use app\management\controller\Common;
 class MachineErrorCode extends Common
 {
 
-    protected $field = "me_id,m_id,machine_id,machine_name,address,errorCode,remark,create_time";
+    protected $field = "me_id,m_id,machine_id,machine_name,address,error_position,errorCode,remark,create_time";
 
     public function getList()
     {

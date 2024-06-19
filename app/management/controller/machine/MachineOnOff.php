@@ -22,7 +22,7 @@ class MachineOnOff extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, ["machine_id" => "like"]);
+        $where = $this->getWhere($postData, false, ["machine_id" => "like","machine_name" => "like"]);
         return $this->app->machineOnOff->getList($where,$pageNum,$this->field,'update_time desc');
     }
 
