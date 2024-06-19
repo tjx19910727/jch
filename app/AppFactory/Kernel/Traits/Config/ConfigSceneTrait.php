@@ -13,6 +13,11 @@ use app\AppFactory\Kernel\Model\Config\ConfigSceneModel;
 
 trait ConfigSceneTrait
 {
+    public function getConfigSceneValue($where,$value)
+    {
+        return ConfigSceneModel::getFieldValue($where,$value);
+    }
+
     public function getConfigSceneFind($where,$field = "*",$order = "")
     {
         return ConfigSceneModel::getFind($where,$field,$order);

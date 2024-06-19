@@ -18,8 +18,8 @@ class V2 extends Common
     public function testMakeSign()
     {
         $params = [
-            "machine_id" => "test0003",
-            "shelf_on" => 1,
+            "machine_id" => "test0007,0010",
+//            "shelf_on" => 1,
         ];
         $data = [
             "auth_name" => "JCH",
@@ -29,12 +29,13 @@ class V2 extends Common
         ];
         $string1 = strtoupper(md5($data['auth_password'] . $data['timestamp']));
         ksort($params);
+        $signArr = [];
         foreach ($params as $k => $v) {
             $signArr[] = $k . "=" . $v;
         }
         $signStr = implode(",",$signArr);
         $data['sign'] =  strtoupper(md5($string1.$signStr));
-        $data['api'] = "get_inventory_list";
+        $data['api'] = "get_machines";
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));

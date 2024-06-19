@@ -112,12 +112,14 @@ class ApiBaseClient extends BaseClient
      */
     public function checkParams()
     {
-        $this->config['params'] = json_decode($this->config['params'],true);
-        if (!$this->config['params']) {
-            $this->returnData(5,$this->msg[5])->send();
-            die();
+        if ($this->config['params']) {
+            $this->config['params'] = json_decode($this->config['params'],true);
+            if (!$this->config['params']) {
+                $this->returnData(5,$this->msg[5])->send();
+                die();
+            }
+            $this->validateParams();
         }
-        $this->validateParams();
     }
 
     /**
@@ -127,7 +129,7 @@ class ApiBaseClient extends BaseClient
     {
         $sign = $this->makeApiSign();
         if ($sign != $this->config['sign']) {
-            $this->returnData(17,'Sign Error')->send();
+            $this->returnData(17,$this->msg[17])->send();
             die();
         }
     }
@@ -140,7 +142,7 @@ class ApiBaseClient extends BaseClient
         try {
             validate(VV2::class)->scene($this->config['api'])->check($this->config['params']);
         } catch (\Exception $e) {
-            $this->returnData(6,$this->msg[6] . "：" . $e->getMessage());
+            $this->returnData(6,$this->msg[6] . "：" . $this->lang("VV2." . $e->getMessage()))->send();
             die();
         }
     }
@@ -171,7 +173,7 @@ class ApiBaseClient extends BaseClient
      */
     public function returnData($status_code,$msg = "", $data = "",$isJson = 1)
     {
-        if (is_array($data)) $data = json_encode($data,320);
+//        if (is_array($data)) $data = json_encode($data,320);
         $return = ["status_code" => $status_code,"msg" => $msg,"data" => $data];
         if ($isJson) return json($return);
         return $return;

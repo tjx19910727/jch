@@ -21,7 +21,7 @@ class MachineErrorCode extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
-        return $this->app->machineErrorCode->getList($where,$pageNum,$this->field,'create_time desc');
+        return $this->app->machineErrorCode->getEcList($where,$pageNum,$this->field,'create_time desc','errorCode');
     }
 
     public function getFind()
@@ -29,5 +29,29 @@ class MachineErrorCode extends Common
         $postData = input();
         $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
         return $this->app->machineErrorCode->getFind($where,$this->field,'create_time desc');
+    }
+
+    /**
+     * 获取系统日志
+     * @return array|\think\response\Json
+     */
+    public function getErrorCodeLog()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
+        return $this->app->machineErrorCode->getEcList($where,$pageNum,$this->field,'create_time desc');
+    }
+
+    /**
+     * 导出系统日志
+     * @return array|bool|string|\think\response\Json
+     */
+    public function exportErrorCode()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
+        if (!isset($postData['create_time']) || !$postData['create_time']) $where[] = ['create_time','>=',strtotime("-1 month")];
+        return $this->app->machineErrorCode->exportEc($where,$this->field,'create_time desc');
     }
 }

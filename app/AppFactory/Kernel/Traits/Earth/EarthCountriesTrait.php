@@ -12,6 +12,11 @@ use app\AppFactory\Kernel\Model\Earth\EarthCountriesModel;
 
 trait EarthCountriesTrait
 {
+    public function getEarthCountriesValue($where,$value)
+    {
+        return EarthCountriesModel::getFieldValue($where,$value);
+    }
+
     public function getEarthCountriesFind($where,$field = "*")
     {
         return EarthCountriesModel::getFind($where,$field);

@@ -13,6 +13,10 @@ use app\AppFactory\Kernel\Model\Earth\EarthCitiesModel;
 
 trait EarthCitiesTrait
 {
+    public function getEarthCitiesValue($where,$value)
+    {
+        return EarthCitiesModel::getFieldValue($where,$value);
+    }
     public function getEarthCitiesFind($where,$field = "*")
     {
         return EarthCitiesModel::getFind($where,$field);

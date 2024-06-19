@@ -19,6 +19,10 @@ trait MachineChannelTrait
         return MachineChannelModel::getCount($where);
     }
 
+    public function getMachineChannelSum($where,$sum)
+    {
+        return MachineChannelModel::getSum($where,$sum);
+    }
     public function getMachineChannelValue($where,$value)
     {
         return MachineChannelModel::getFieldValue($where,$value);

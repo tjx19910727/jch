@@ -12,6 +12,10 @@ use app\AppFactory\Kernel\Model\Earth\EarthRegionsModel;
 
 trait EarthRegionsTrait
 {
+    public function getEarthRegionsValue($where,$value)
+    {
+        return EarthRegionsModel::getFieldValue($where,$value);
+    }
     public function getEarthRegionsFind($where,$field = "*")
     {
         return EarthRegionsModel::getFind($where,$field);

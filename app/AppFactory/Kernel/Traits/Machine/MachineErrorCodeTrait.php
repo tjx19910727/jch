@@ -13,9 +13,9 @@ use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 
 trait MachineErrorCodeTrait
 {
-    public function getMachineErrorCodeList($where,$pageNum = 0,$field = "*", $order = "")
+    public function getMachineErrorCodeList($where,$pageNum = 0,$field = "*", $order = "",$eachFunc = "", $group = "")
     {
-        return MachineErrorCodeModel::getList($where,$pageNum,$field,$order);
+        return MachineErrorCodeModel::getList($where,$pageNum,$field,$order,$eachFunc,$group);
     }
 
     public function getMachineErrorCodeFind($where,$field = "*", $order = "")
