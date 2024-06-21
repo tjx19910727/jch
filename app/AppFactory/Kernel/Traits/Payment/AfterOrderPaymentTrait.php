@@ -68,6 +68,7 @@ trait AfterOrderPaymentTrait
 
     /**
      * 出货
+     * @return string
      */
     public function outGoods()
     {
@@ -91,6 +92,8 @@ trait AfterOrderPaymentTrait
                 ];
                 $outArr[$v['channel_position']][] = $dc;
             }
+
+            $msg_id = uniqid();
             $content = [
                 "msgType" => "outGoods",
                 "trade_no" => $this->order['trade_no'],
@@ -98,7 +101,6 @@ trait AfterOrderPaymentTrait
                 "outGoods" => $outArr,
             ];
             $content = json_encode($content);
-            $msg_id = uniqid();
             $data = [
                 "timestamp" => time(),
                 "msg_id" => $msg_id,
@@ -107,8 +109,7 @@ trait AfterOrderPaymentTrait
             ];
             $data['sign'] = $this->makeSign($data);
             actionLog($data,'下发数据');
-            $result = MqProducer::dataSend($data,$data['machine_id']);
-            actionLog($result,'下发数据结果');
+
             // 生成发送记录
             $insertMqRecord = [
                 "m_id" => $this->order['m_id'],
@@ -122,8 +123,13 @@ trait AfterOrderPaymentTrait
             ];
             $this->addMachineMqRecord($insertMqRecord);
             actionLog($this->getLS(),'生成发送记录');
+
+            $result = MqProducer::dataSend($data,$data['machine_id']);
+            actionLog($result,'下发数据结果');
             $this->order['out_status'] = 2;
+            return $result;
         }
+        return $this->r(100,$this->lang("VOutGoods.details_no_data"));
     }
 
     /**

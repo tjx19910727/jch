@@ -31,16 +31,16 @@ trait OutGoodsTrait
         $this->startTrans();
         try {// 处理修改订单及货道数据
             $flag = $this->handleData();
-            if ($this->order['order_type'] == 2) {
+            if ($this->order['coupon_id']) {
                 $this->handleCoupon();
             }
-            if ($this->order['order_type'] == 3) {
+            if ($this->order['apc_id']) {
                 $this->handlePick();
             }
-            if ($this->order['order_type'] == 4) {
+            if ($this->order['lottery_id']) {
                 $this->handleLottery();
             }
-            if ($this->order['order_type'] == 5) {
+            if ($this->order['fd_id']) {
                 $this->handleFd();
             }
             $result = $this->checkFlag($flag);
@@ -96,7 +96,7 @@ trait OutGoodsTrait
                 $whereMc['channel_position'] = $position;
                 $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,stock_warning');
                 if ($success > 0) {
-                    if ($this->order['order_type'] == 3 && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
+                    if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);
                     } else {
                         $updateMc['stock'] = bcsub($mc['stock'], $success);

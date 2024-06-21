@@ -600,15 +600,6 @@ class ApiClient extends ReceiveBaseClient
         try {
             $order_id = $this->addSaleOrders($order);
             if ($order_id) {
-                // 取货码活动
-                if (isset($this->data['pick_code'])) {
-                    $updateOrder = $this->orderUsePickCode($trade_no, $order_id);
-                    if (is_string($updateOrder)) {
-                        $this->rollbackTrans();
-                        return $this->rFail($updateOrder);
-                    }
-                    $updateOrder['mch_no'] = $trade_no;
-                }
                 $updateOrder['order_id'] = $order_id;
                 $updateOrder['cost_price'] = 0;
                 $updateOrder['market_price'] = 0;
@@ -687,15 +678,6 @@ class ApiClient extends ReceiveBaseClient
                 $flag[] = $this->updateSaleOrders($updateOrder);
                 $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
                 $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
-                // 有优惠券码，重新处理订单数据
-                if (isset($this->data['coupon_code'])) {
-                    $this->orderUseCoupon();
-                }
-                // 订单金额大于0才能执行分润
-                if ($this->order['total_price'] > 0) {
-                    $flag[] = $this->countIncome();
-                }
-
                 actionLog($this->getLS(), '修改订单SQL');
                 $result = $this->checkFlag($flag);
                 actionLog($result, '事务结果');

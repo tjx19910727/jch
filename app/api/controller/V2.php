@@ -20,8 +20,8 @@ class V2 extends Common
 //            "machine_id" => "test0007,0010",
 //            "shelf_on" => 1,
             "kiosk_id" => "test0001",
-            "order_no" => "11111111",
-            "pick_code" => "123456",
+            "order_no" => "2235236256",
+//            "pick_code" => "",
             "payment_method" => "wechat",
             "customer_name" => "test",
             "expire_time" => date("Y-m-d H:i:s"),
@@ -51,10 +51,10 @@ class V2 extends Common
                 ],
             ]),
         ];
-        $params = [
-            "kiosk_id" => "test0001",
-            "order_no" => "11111111",
-        ];
+//        $params = [
+//            "kiosk_id" => "test0001",
+//            "order_no" => "11111111",
+//        ];
         $data = [
             "auth_name" => "JCH",
             "auth_password" => "karrie@2024",
@@ -69,7 +69,7 @@ class V2 extends Common
         }
         $signStr = implode(",", $signArr);
         $data['sign'] = strtoupper(md5($string1 . $signStr));
-        $data['api'] = "cancel_order";
+        $data['api'] = "reserve_order";
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));

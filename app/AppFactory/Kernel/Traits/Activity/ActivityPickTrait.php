@@ -99,28 +99,32 @@ trait ActivityPickTrait
                 // 使用中
                 if ($apc['status'] == 5) return $this->lang("VActivityPickCode.status5");
             }
-            $ap = $this->getActivityPickFind(['id' => $apc['ap_id']],'id,pick_name,desc,bg_pic,start_time,end_time,pick_type,status');
-            // 开始时间大于当前时间，取货活动还未开始的
-            if ($ap["start_time"] > time()) {
-                return $this->lang("VActivityPick.not_begin");
+            if ($apc['ap_id'] > 0) {
+                $ap = $this->getActivityPickFind(['id' => $apc['ap_id']], 'id,pick_name,desc,bg_pic,start_time,end_time,pick_type,status');
+                if ($ap) {
+                    // 开始时间大于当前时间，取货活动还未开始的
+                    if ($ap["start_time"] > time()) {
+                        return $this->lang("VActivityPick.not_begin");
+                    }
+                    // 有设置结束时间，并且结束时间小于当前时间，活动已结束
+                    if ($ap["end_time"] > 0 && $ap['end_time'] < time()) {
+                        // 修改取货码活动为3.已过期
+                        $this->updateActivityPick(['id' => $ap['id'], 'status' => 3]);
+                        // 修改取货码使用记录为3.已过期
+                        $this->updateActivityPickCode(['status' => 3], ['ap_id' => $ap['id'], 'status' => 1]);
+                        return $this->lang("VActivityPick.finished");
+                    }
+                    // 取货码状态由1.未开始修改为2.进行中
+                    if ($ap['status'] == 1) $this->updateActivityPick(['status' => 2], ['id' => $ap['id']]);
+                    // 有指定商品且不是全部商品，查询指定商品列表
+                    $ag = $this->getActivityGoodsList(['a_id' => $ap['id'], 'a_type' => 4], 0,
+                        'g_id,g_name,pic,sku,market_price,retail_price,gc_id,gc_name'
+                    );
+                    $ap['ag'] = $ag->toArray();
+                }
+                $apc['ap'] = $ap;
             }
-            // 有设置结束时间，并且结束时间小于当前时间，活动已结束
-            if ($ap["end_time"] > 0 && $ap['end_time'] < time()) {
-                // 修改取货码活动为3.已过期
-                $this->updateActivityPick(['id' => $ap['id'], 'status' => 3]);
-                // 修改取货码使用记录为3.已过期
-                $this->updateActivityPickCode(['status' => 3], ['ap_id' => $ap['id'], 'status' => 1]);
-                return $this->lang("VActivityPick.finished");
-            }
-            // 取货码状态由1.未开始修改为2.进行中
-            if ($ap['status'] == 1) $this->updateActivityPick(['status' => 2], ['id' => $ap['id']]);
-            // 有指定商品且不是全部商品，查询指定商品列表
-            $ag = $this->getActivityGoodsList(['a_id' => $ap['id'], 'a_type' => 4], 0,
-                'g_id,g_name,pic,sku,market_price,retail_price,gc_id,gc_name'
-            );
-            $ap['ag'] = $ag->toArray();
-            $ap['apc'] = $apc;
-            return $ap;
+            return $apc;
         }
         return $this->lang('VActivityPick.ap_not_data');
     }
@@ -141,7 +145,7 @@ trait ActivityPickTrait
         }
 
         // 系统随机派送
-        if ($ap['pick_type'] == 1) {
+        if ($ap['apc']['pick_type'] == 1) {
             if (!$ap['ag']) {
                 return $this->lang("VActivityPick.ag_not_data");
             }

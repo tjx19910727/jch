@@ -23,6 +23,8 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryUsedGoodsTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryUsedTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
+use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
+use app\AppFactory\Kernel\Traits\Api\ApiCallbackTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
@@ -43,6 +45,7 @@ class MqClient extends ReceiveBaseClient
     use MachineInfoTrait,MachineChannelTrait,MachineVersionPlanTrait;
     use MachineErrorCodeTrait;
     use GoodsTrait,GoodsHitTrait,GoodsChangeTrait;
+    use ApiAdvanceTrait,ApiCallbackTrait;
     use ActivityFdUsedTrait,ActivityFdTrait,ActivityFdContentTrait;
     use ActivityCouponTrait,ActivityCouponUsedTrait;
     use ActivityPickTrait,ActivityPickCodeTrait;

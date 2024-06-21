@@ -65,18 +65,9 @@ trait ActivityPickCodeTrait
     /**
      * 生成取货码记录，对外API预订商品提货码
      * @return int|\think\response\Json
-     * @throws \Exception
      */
     protected function createApc()
     {
-        // 不存在则重新生成一个8位纯数字取货码
-        if (!isset($this->config['params']['pick_code']) || !$this->config['params']['pick_code']) {
-            while(1) {
-                $this->config['params']['pick_code'] = $this->leftHandZero(random_int(00000000, 99999999), 8);
-                $check = $this->getActivityPickCodeCount(['code' => $this->config['params']['pick_code']]);
-                if (!$check) break;
-            }
-        }
         $apc = $this->getActivityPickCodeFind(['code' => $this->config['params']['pick_code'],'pick_type' => 3]);
         if ($apc) return $this->returnData(7,$this->msg[7] . "：" . $this->lang("reserve_order.apc_already_exist"));
         $insert = [

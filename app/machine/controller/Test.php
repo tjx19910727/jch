@@ -105,14 +105,14 @@ class Test extends BaseController
     public function testSign()
     {
         $carList[] = [
-        "mc_id" => 1518,
+            "mc_id" => 1518,
             "quantity" => 1,
         ];
         $data = [
             "machine_id" => "test0003",
             "pay_type" => 4,
             "pay_method" => 41,
-            "coupon_code" => "980429",
+//            "coupon_code" => "980429",
             "carList" => json_encode($carList, 320),
         ];
 //        $data = [
@@ -244,20 +244,20 @@ class Test extends BaseController
 //        die();
 //        dump($result);
         $data = [
-            "machine_id" => "test0003",
-            "order_id" => "944",
-            "fd_id" => "5",
+            "machine_id" => "test0001",
+            "pick_code" => "123456",
         ];
         $data = $this->makeSign($data);
-        $config = [
-            "machine_id" => $data['machine_id'],
-            "key" => env("api.md5Key"),
-            "data" => $data,
-        ];
-        $app = AppFactory::machine($config);
-        $result = $app->activity->useFd();
+        dump(json_encode($data,320));
+//        $config = [
+//            "machine_id" => $data['machine_id'],
+//            "key" => env("api.md5Key"),
+//            "data" => $data,
+//        ];
+//        $app = AppFactory::machine($config);
+//        $result = $app->activity->useFd();
 
-        return $result;
+//        return $result;
     }
 
     public function getCheckStockQr()

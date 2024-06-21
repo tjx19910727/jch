@@ -348,12 +348,30 @@ class Receive extends Common
     }
 
     /**
+     * 使用提货码
+     * @return array|\think\response\Json
+     */
+    public function usePickCode()
+    {
+        return $this->app->activity->usePickCode();
+    }
+
+    /**
      * 订单使用满减满送活动
      * @return mixed
      */
     public function useFd()
     {
         return $this->app->activity->useFd();
+    }
+
+    /**
+     * 订单使用优惠券
+     * @return array|\think\response\Json
+     */
+    public function useCoupon()
+    {
+        return $this->app->activity->useCoupon();
     }
 
     /**

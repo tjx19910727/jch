@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits\SaleOrders;
 
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
+use app\AppFactory\Kernel\Support\Validate\Api\VV2;
 
 trait SaleOrdersTrait
 {

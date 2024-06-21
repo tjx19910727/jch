@@ -1,1 +1,0 @@
-import{d as t,u as a,o,c as n,e as _,t as c,g as r,_ as d}from"./index-0a729942.js";const i={class:"dashboard-container"},p={class:"dashboarrd-text"},u=t({__name:"index",setup(l){const e=a(),{name:s}=e;return(m,x)=>(o(),n("div",i,[_("div",p,"name: "+c(r(s)),1)]))}});const h=d(u,[["__scopeId","data-v-39886320"]]);export{h as default};

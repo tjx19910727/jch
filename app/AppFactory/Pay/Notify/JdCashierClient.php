@@ -86,23 +86,12 @@ class JdCashierClient extends PayBaseClient
             }
         }
 
-//        if ($ledger) {
-//            if (JdBillModel::be(['bill_order_id' => $order['order_id'],'bill_result_status' => 3])) {
-////                $updateBill['bill_status'] = 1;
-////                if ($result['ledgerStatus'] == "SUCCESS") $updateBill['bill_result_status'] = 1;
-////                if ($result['ledgerStatus'] == "FAIL") $updateBill['bill_result_status'] = 2;
-////                JdBillModel::updateWhere(['bill_order_id' => $order['order_id']], $updateBill);
-////                actionLog(JdBillModel::getLS(), '修改分账状态');
-////                HandlePay::updateProfit($order['order_id'], 1);
-//                $this->updateProfit($order,$ledger);
-//            }
-//        }
-//        actionLog($ledger,'ledger的值');
-
         $flag = [];
         $this->startTrans();
-        try {// 分润成功
-            if ($ledger == 1) $flag[] = $this->settlementRevenue();// 分润失败
+        try {
+            // 分润成功
+            if ($ledger == 1) $flag[] = $this->settlementRevenue();
+            // 分润失败
             if ($ledger == 2) $flag[] = $this->settlementRevenue(3);
             if ($this->order['pay_status'] == 1) {
                 $flag[] = $this->paymentSuccessful();

@@ -1,1 +1,0 @@
-import{I as e}from"./index-d8c2b3a8.js";function o(t){return e({url:"/management/updateLog.update_log/getList",method:"post",data:t})}function u(t){return e({url:"/management/updateLog.update_log/add",method:"post",data:t})}function d(t){return e({url:"/management/updateLog.update_log/update",method:"post",data:t})}export{u as a,o as g,d as u};

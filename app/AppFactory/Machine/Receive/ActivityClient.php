@@ -24,6 +24,7 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryUsedTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityMachineTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
+use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
@@ -39,12 +40,13 @@ class ActivityClient extends ReceiveBaseClient
     use ActivityCouponTrait, ActivityCouponUsedTrait;
     use ActivityLotteryTrait, ActivityLotteryConfigTrait, ActivityLotteryContentTrait, ActivityLotteryUsedTrait, ActivityLotteryUsedGoodsTrait;
     use ActivityPickTrait, ActivityPickCodeTrait;
-    use ActivityFdTrait,ActivityFdContentTrait,ActivityFdUsedTrait;
+    use ActivityFdTrait, ActivityFdContentTrait, ActivityFdUsedTrait;
     use ActivityMachineTrait, ActivityGoodsTrait;
-    use SaleOrdersTrait,SaleOrdersRevenueTrait;
+    use SaleOrdersTrait, SaleOrdersRevenueTrait;
     use MachineChannelTrait;
-    use BeforeOrderPaymentTrait,AfterOrderPaymentTrait;
-    use StrategyMachineTrait,StrategyManagerTrait,StrategyIncomeTrait;
+    use BeforeOrderPaymentTrait, AfterOrderPaymentTrait;
+    use StrategyMachineTrait, StrategyManagerTrait, StrategyIncomeTrait;
+    use ApiAdvanceTrait;
 
     protected $order;
 
@@ -59,8 +61,8 @@ class ActivityClient extends ReceiveBaseClient
     public function __destruct()
     {
         // TODO: Implement __destruct() method.
-        $result = $this->updateMachineMqRecord(['status' => 2,'msg_id' => $this->data['msg_id']],['msg_id' => $this->data['msg_id']]);
-        actionLog($result,'处理完成时修改状态为已处理');
+        $result = $this->updateMachineMqRecord(['status' => 2, 'msg_id' => $this->data['msg_id']], ['msg_id' => $this->data['msg_id']]);
+        actionLog($result, '处理完成时修改状态为已处理');
     }
 
     /**
@@ -107,6 +109,142 @@ class ActivityClient extends ReceiveBaseClient
         return $this->r(200, $this->lang("query_success"), ['ap' => $ap]);
     }
 
+    // 使用优惠券
+    public function useCoupon()
+    {
+        $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
+        if (!$this->order) return $this->r(100, $this->lang("VActivityPickCode.order_no_data"));
+        if ($this->order['out_status'] != 1) return $this->r(100, $this->lang("VActivityPickCode."));
+
+        // 有优惠券码，重新处理订单数据
+        if (isset($this->data['coupon_code'])) {
+            $this->orderUseCoupon();
+        }
+    }
+
+    /**
+     * 使用取货码
+     * @return array|int|string|\think\response\Json
+     */
+    public function usePickCode()
+    {
+        try {
+            $this->startTrans();
+            $apc = $this->getActivityPickByCode();
+            if (!is_array($apc)) {
+                $this->rollbackTrans();
+                return $this->rFail($apc);
+            }
+            actionLog($apc, "使用的取货码");
+            $flag = [];
+            // 预订订单取货
+            if ($apc['pick_type'] == 3) {
+                $this->order = $this->getSaleOrdersFind(['order_id' => $apc['order_id']]);
+                if (!$this->order) return $this->r(100, $this->lang("VActivityPickCode.order_no_data"));
+                if ($this->order['out_status'] != 1) return $this->r(100, $this->lang("VActivityPickCode."));
+            } else {
+                // 系统随机取货，随机获取货架商品信息生成取货商品，整理carList，如果pick_type==2，则carList由外部传入
+                if ($apc['pick_type'] == 1) {
+                    $ap = $apc['ap'];
+                    if (!$ap['ag']) {
+                        return $this->lang("VActivityPick.ag_not_data");
+                    }
+                    $apg_id = array_column($ap['ag'], 'g_id');
+                    $whereMc[] = ['g_id', 'in', $apg_id];
+                    $whereMc['status'] = 1;
+                    $whereMc['m_id'] = $this->machine['m_id'];
+                    $mc = $this->getMachineChannelColumn($whereMc, 'mc_id');
+                    $mc_count = count($mc);
+                    $num = random_int(1, $mc_count);
+                    // 只取一个商品
+                    $this->data['carList'][] = ["mc_id" => $mc[($num - 1)], 'quantity' => 1];
+                }
+                $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
+                $order = [
+                    "trade_no" => $trade_no,
+                    "mch_no" => $trade_no,
+                    "m_id" => $this->machine['m_id'],
+                    "machine_name" => $this->machine['machine_name'],
+                    "machine_id" => $this->machine['machine_id'],
+                    "order_type" => 3,
+                    "pay_status" => 2,
+                    "pay_time" => time(),
+                    "pay_code" => $this->data['pick_code'],
+                    "apc_id" => $apc['apc_id'],
+                    "ao_id" => $this->machine['ao_id'],
+                    "create_date" => strtotime(date("Y-m-d")),
+                ];
+                $order_id = $this->addSaleOrders($order);
+                if ($order_id) {
+                    $mcField = "mc_id,channel_code,frozen_stock,stock,shelf_way,channel_position,manufacture_time,sell_by_date,
+                            mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
+                            cost_price,market_price";
+                    $updateOrder['order_id'] = $order_id;
+                    $updateOrder['total_quantity'] = 0;
+                    foreach ($this->data['carList'] as $key => $value) {
+                        $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']], $mcField);
+                        if (!$mc) {
+                            $this->rollbackTrans();
+                            return $this->r(100, $this->lang("VSubCar.channel_no_data"));
+                        }
+                        $mc = $mc->toArray();
+                        if ($mc['stock'] < $value['quantity']) {
+                            $this->rollbackTrans();
+                            return $this->r(100, $this->lang("VSubCar.under_stock"));
+                        }
+                        $details = [
+                            "order_id" => $order_id,
+                            "retail_price" => 0,
+                            "total_sod_price" => 0,
+                            "quantity" => $value['quantity'],
+                        ];
+                        $details = array_merge($details, $mc);
+                        $sod_id = $this->addSaleOrdersDetails($details);
+                        actionLog($this->getLS(), '生成订单详情数据');
+                        if ($sod_id) {
+                            $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $value['quantity']);
+                        } else {
+                            $this->rollbackTrans();
+                            return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                        }
+                    }
+                    $flag[] = $this->updateSaleOrders($updateOrder);
+                    actionLog($this->getLS(), '修改订单数据');
+                    $flag[] = $this->updateActivityPickCode(['apc_id' => $apc['apc_id'], 'order_id' => $order_id, 'trade_no' => $trade_no]);
+                    actionLog($this->getLS(), '修改取货码数据');
+                }
+                if (!$order_id) {
+                    $this->rollbackTrans();
+                    return $this->r(100, $this->lang("VActivityPickCode.add_order_fail"));
+                }
+                $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
+            }
+
+            $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
+            if ($this->order['total_price'] > 0) {
+                $flag[] = $this->countIncome();
+            }
+            $result = flag_check($flag);
+            if ($result) {
+                $result = $this->outGoods();
+                if ($result !== true) {
+                    $this->rollbackTrans();
+                    return $result;
+                }
+                $this->updateActivityPickCode(['apc_id' => $apc['apc_id'],'status' => 5]);
+                $this->updateApiAdvance(['status' => "PROCESSING"],['apc_id' => $apc['apc_id']]);
+                $this->commitTrans();
+                return $this->rSuccess();
+            }
+            $this->rollbackTrans();
+            return $this->rFail();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
     /**
      * 获取设备绑定的付费抽奖活动
      * @return array|string
@@ -148,11 +286,11 @@ class ActivityClient extends ReceiveBaseClient
         $alc['active_num'] += $alc['gifts_num'];
 
         // 检查活动商品
-        $content = $this->getActivityLotteryContentList(['al_id' => $al['al_id']], 0,'c_id,retain_num,g_id,probability');
+        $content = $this->getActivityLotteryContentList(['al_id' => $al['al_id']], 0, 'c_id,retain_num,g_id,probability');
         if (!$content) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
         $content = $content->toArray();
         // 总中奖概率，必须要刚好100%
-        $totalProbability = array_sum(array_column($content,"probability"));
+        $totalProbability = array_sum(array_column($content, "probability"));
         if ($totalProbability != 100) return $this->rFail($this->lang("probability_no_100"));
 
         // 如果存在赠送商品，则校对数量再加1
@@ -161,7 +299,7 @@ class ActivityClient extends ReceiveBaseClient
         // 循环活动内容，
         foreach ($content as $k => $v) {
             // 判断货架正常，有这个商品
-            $mc = $this->getMachineChannelFind(['m_id' => $this->machine['m_id'],'status' => 1 , 'g_id' => $v['g_id']], 'channel_code,stock');
+            $mc = $this->getMachineChannelFind(['m_id' => $this->machine['m_id'], 'status' => 1, 'g_id' => $v['g_id']], 'channel_code,stock');
             if (!$mc) return $this->rFail($this->lang("VActivityLottery.mc_no_data"));
             $mc = $mc->toArray();
             // 商品的库存值小于校对数量，或者小于校对数值加上保留数量，返回数量不足
@@ -229,22 +367,22 @@ class ActivityClient extends ReceiveBaseClient
         if (!$order) {
             return $this->r(100, $this->lang("VActivityLottery.order_no_data"));
         }
-        if ($order['order_type'] != 4) return $this->r(100,$this->lang("VActivityLottery.order_type_error"));
-        if ($order['pay_status'] != 3) return $this->r(100,$this->lang("VActivityLottery.order_no_pay"));
+        if ($order['order_type'] != 4) return $this->r(100, $this->lang("VActivityLottery.order_type_error"));
+        if ($order['pay_status'] != 3) return $this->r(100, $this->lang("VActivityLottery.order_no_pay"));
 
-        $used = $this->getActivityLotteryUsedFind(['order_id' => $order['order_id']],'alu_id,al_id,alc_id,quantity,used_quantity');
+        $used = $this->getActivityLotteryUsedFind(['order_id' => $order['order_id']], 'alu_id,al_id,alc_id,quantity,used_quantity');
         if (!$used) {
             return $this->r(100, $this->lang("VActivityLottery.used_no_data"));
         }
         $used = $used->toArray();
         // 已使用抽奖次数大于等于抽奖总次数，返回抽奖数量已用完
-        if ($used['used_quantity'] >= $used['quantity']){
-            return $this->r(100,$this->lang("VActivityLottery.lucky_draw_ended"));
+        if ($used['used_quantity'] >= $used['quantity']) {
+            return $this->r(100, $this->lang("VActivityLottery.lucky_draw_ended"));
         }
 
         $alc = $this->getActivityLotteryConfigFind(['alc_id' => $used['alc_id']]);
-        if (!$alc) return $this->r(100,$this->lang("VActivityLottery.alc_no_data"));
-        $content = $this->getActivityLotteryContentList(['al_id' => $used['al_id']], 0,'*', "probability asc");
+        if (!$alc) return $this->r(100, $this->lang("VActivityLottery.alc_no_data"));
+        $content = $this->getActivityLotteryContentList(['al_id' => $used['al_id']], 0, '*', "probability asc");
         if (!$content) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
         $content = $content->toArray();
 
@@ -253,7 +391,7 @@ class ActivityClient extends ReceiveBaseClient
         if ($totalProbability != 100) return $this->rFail($this->lang("VActivityLottery.probability_no_100"));
         $list = [];
         // 本次执行抽奖次数初始化，总数量减去已抽次数
-        $quantity = bcsub($used['quantity'] , $used['used_quantity']);
+        $quantity = bcsub($used['quantity'], $used['used_quantity']);
         // 单抽状态下，每次执行投资时抽奖次数重置为1
         if ($alc['active_type'] == 1) $quantity = 1;
         // 多抽循环，每次抽奖结果放至中奖列表
@@ -274,7 +412,7 @@ class ActivityClient extends ReceiveBaseClient
                     }
                 }
                 // 当前一条抽奖活动内容中奖数值，叠加前面的活动内容中奖数值
-                $probabilitySum = bcadd($probabilitySum,$value['probability']);
+                $probabilitySum = bcadd($probabilitySum, $value['probability']);
                 // 中奖数值大于随机数值即为中奖，活动内容放入中奖数组中，退出当前抽奖循环，执行下轮抽奖
                 if ($probabilitySum > $random) {
                     $list[$i] = $value;
@@ -351,7 +489,7 @@ class ActivityClient extends ReceiveBaseClient
             return $this->r(100, $this->lang("action_fail"));
         } catch (\Exception $e) {
             $this->rollbackTrans();
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
     }
@@ -370,10 +508,10 @@ class ActivityClient extends ReceiveBaseClient
         $whereDetails['order_id'] = $this->order['order_id'];
         $used = $this->getActivityLotteryUsedFind(['order_id' => $this->order['order_id']]);
         if (!$used) return $this->r(100, $this->lang("VActivityLottery.used_no_data"));
-        $quantity = $this->getSaleOrdersDetailsSum($whereDetails,'quantity');
-        if ($used['quantity'] != $quantity) return $this->r(100,$this->lang("VActivityLottery.quantity_not_match"));
-        $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'*');
-        if (!$this->order['details']) return $this->r(100,$this->lang("VActivityLottery.order_details_no_data"));
+        $quantity = $this->getSaleOrdersDetailsSum($whereDetails, 'quantity');
+        if ($used['quantity'] != $quantity) return $this->r(100, $this->lang("VActivityLottery.quantity_not_match"));
+        $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']], 0, '*');
+        if (!$this->order['details']) return $this->r(100, $this->lang("VActivityLottery.order_details_no_data"));
         $this->startTrans();
         try {
             $flag = [];// 生成分润记录
@@ -398,7 +536,7 @@ class ActivityClient extends ReceiveBaseClient
             return $this->r(100, $this->lang("action_fail"));
         } catch (\Exception $e) {
             $this->rollbackTrans();
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
     }

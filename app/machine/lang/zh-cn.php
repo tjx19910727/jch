@@ -49,6 +49,7 @@ return [
 
         "order_id_require" => "订单ID不能为空",
         "fd_id_require" => "满减满送活动ID不能为空",
+        "pick_code_require" => "提货码不能为空",
 
         "details_require" => "订单详情不能为空",
     ],
@@ -105,6 +106,11 @@ return [
         "goods_outing" => "订单创建成功，正在出货中……",
 
         "mg_id_require" => "货道未绑定设备商品信息",
+        "under_stock" => "货道库存不足",
+    ],
+
+    "VOutGoods" => [
+        "details_no_data" => "查无出货数据",
     ],
 
     "VChangeChannelGoods" => [
@@ -142,6 +148,12 @@ return [
     ],
 
     "VActivityPickCode" => [
+
+        "apc_no_data" => "查无取货码记录",
+        "order_no_data" => "查无订单数据",
+        "order_out" => "查无订单数据",
+        "add_order_fail" => "创建订单信息失败",
+
         "status2" => "此取货码已使用",
         "status3" => "此取货码已过期",
         "status4" => "此取货码已作废",

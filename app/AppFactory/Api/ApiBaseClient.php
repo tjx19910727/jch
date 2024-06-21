@@ -42,6 +42,7 @@ class ApiBaseClient extends BaseClient
         17 => "Sign Error",
         18 => "Failed to generate the fetch code record",
         19 => "Action fail",
+        20 => "Pickup code in use",
         99 => "Service Unavailable",
     ];
 

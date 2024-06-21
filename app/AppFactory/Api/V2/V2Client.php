@@ -10,7 +10,6 @@ namespace app\AppFactory\Api\V2;
 
 
 use app\AppFactory\Api\ApiBaseClient;
-use app\AppFactory\Kernel\Support\Validate\Api\VV2;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiCallbackTrait;
@@ -128,8 +127,8 @@ class V2Client extends ApiBaseClient
      */
     public function reserve_order()
     {
-        $checkOrder = $this->getSaleOrdersFind(['trade_no' => $this->config['params']['order_no']],'order_id');
-        if ($checkOrder) return $this->returnData(0,$this->msg[0],['pick_code' => $this->config['params']['pick_code'],'success' => true, "order_no" => $this->config['params']['order_no']]);
+        $checkOrder = $this->getSaleOrdersFind(['trade_no' => $this->config['params']['order_no']], 'order_id');
+        if ($checkOrder) return $this->returnData(0, $this->msg[0], ['pick_code' => $this->config['params']['pick_code'], 'success' => true, "order_no" => $this->config['params']['order_no']]);
 
         $this->machine = $this->getMachineFind(['machine_id' => $this->config['params']['kiosk_id']], 'm_id,machine_id,machine_name,online,ao_id');
         if (!$this->machine) return $this->returnData(15, $this->msg[15] . "：" . $this->lang("reserve_order.machine_no_data"));
@@ -137,6 +136,14 @@ class V2Client extends ApiBaseClient
 
         $this->startTrans();
         try {
+            // 不存在则重新生成一个8位纯数字取货码
+            if (!isset($this->config['params']['pick_code']) || !$this->config['params']['pick_code']) {
+                while (1) {
+                    $this->config['params']['pick_code'] = $this->leftHandZero(random_int(00000000, 99999999), 8);
+                    $check = $this->getActivityPickCodeCount(['code' => $this->config['params']['pick_code']]);
+                    if (!$check) break;
+                }
+            }
             $this->createSo();
             actionLog($this->getLS(), '生成订单');
             if ($this->order['order_id']) {
@@ -170,9 +177,9 @@ class V2Client extends ApiBaseClient
             $this->rollbackTrans();
             return $this->returnData(99, $this->msg[99]);
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             $this->rollbackTrans();
-            return $this->returnData(99,$this->msg[99] . "：" . $e->getMessage());
+            return $this->returnData(99, $this->msg[99] . "：" . $e->getMessage());
         }
     }
 
@@ -186,17 +193,18 @@ class V2Client extends ApiBaseClient
         $this->machine = $this->getMachineFind(['machine_id' => $this->config['params']['kiosk_id']], 'm_id,machine_id,machine_name,online,ao_id');
         if (!$this->machine) return $this->returnData(15, $this->msg[15] . "：" . $this->lang("reserve_order.machine_no_data"));
         if ($this->machine['online'] != 1) return $this->returnData(99, $this->msg[99] . "：" . $this->lang("reserve_order.machine_offline"),
-            ['success' => false,"order_no" => $this->config['params']['order_no']]);
+            ['success' => false, "order_no" => $this->config['params']['order_no']]);
 
         // 查询有生成过订单
-        $this->order = $this->getSaleOrdersFind(['trade_no' => $this->config['params']['order_no']],'order_id');
-        if (!$this->order) return $this->returnData(10,$this->msg[10],['success' => true, "order_no" => $this->config['params']['order_no']]);
-        if ($this->order['pay_status'] == 5) return $this->returnData(0,$this->msg[0]);
+        $this->order = $this->getSaleOrdersFind(['trade_no' => $this->config['params']['order_no']], 'order_id');
+        if (!$this->order) return $this->returnData(10, $this->msg[10], ['success' => true, "order_no" => $this->config['params']['order_no']]);
+        if ($this->order['pay_status'] == 5) return $this->returnData(0, $this->msg[0]);
 
         // 查询预订商品记录
         $advance = $this->getApiAdvanceFind(['trade_no' => $this->config['params']['order_no']]);
-        if (!$advance) return $this->returnData(10,$this->msg[10]);
-        if ($advance['status'] == "CANCELED") return $this->returnData(0,$this->msg[0]);
+        if (!$advance) return $this->returnData(10, $this->msg[10]);
+        if ($advance['status'] == "CANCELED") return $this->returnData(0, $this->msg[0]);
+        if ($advance['status'] == "PROCESSING") return $this->returnData(20, $this->msg[20]);
 
         $this->startTrans();
         try {
@@ -233,7 +241,7 @@ class V2Client extends ApiBaseClient
             return $this->returnData(19, $this->msg[19]);
         } catch (\Exception $e) {
             $this->rollbackTrans();
-            return $this->returnData(99,$this->msg[99]);
+            return $this->returnData(99, $this->msg[99]);
         }
     }
 
@@ -244,11 +252,11 @@ class V2Client extends ApiBaseClient
     public function get_order_info()
     {
         $field = "status,machine_id,machine_name,trade_no machine_transaction_no,charge_amount,total_amount item_total_amount,quantity,pick_code,payment_method,total_amount,discount_amount,pick_time";
-        $advance = $this->getApiAdvanceFind(['trade_no' => $this->config['params']['order_no']],$field);
+        $advance = $this->getApiAdvanceFind(['trade_no' => $this->config['params']['order_no']], $field);
         if (!$advance) {
-            return $this->returnData(10,$this->msg[10]);
+            return $this->returnData(10, $this->msg[10]);
         }
-        return $this->returnData(0,$this->msg[0],$advance);
+        return $this->returnData(0, $this->msg[0], $advance);
     }
 
 }

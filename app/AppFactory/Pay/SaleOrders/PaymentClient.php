@@ -97,6 +97,12 @@ class PaymentClient extends PayBaseClient
         actionLog($this->machine,'发起支付设备数据');
         $paymentType = 1;
 
+        // 订单金额大于0才能执行分润，生成分润记录
+        if ($this->order['total_price'] > 0) {
+            $flag[] = $this->countIncome();
+        }
+
+
         // 反扫支付二维码
         if (isset($this->data['authCode'])) {
             $paymentType = AuthCode::getCodePayee($this->data['authCode']);
