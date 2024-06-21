@@ -9,7 +9,6 @@
 namespace app\api\controller;
 
 
-
 use app\AppFactory\AppFactory;
 
 class V2 extends Common
@@ -18,14 +17,49 @@ class V2 extends Common
     public function testMakeSign()
     {
         $params = [
-            "machine_id" => "test0007,0010",
+//            "machine_id" => "test0007,0010",
 //            "shelf_on" => 1,
+            "kiosk_id" => "test0001",
+            "order_no" => "11111111",
+            "pick_code" => "123456",
+            "payment_method" => "wechat",
+            "customer_name" => "test",
+            "expire_time" => date("Y-m-d H:i:s"),
+            "charge_time" => date("Y-m-d H:i:s"),
+            "notify_url" => "http://www.baidu.com",
+            "order_detail" => json_encode([
+                "63" => [
+                    "quantity" => 1,
+                    "item_price" => 100,
+                    "discount_amount" => 1,
+                    "charge_amount" => 99,
+                    "type" => "sale",
+                ],
+                "87" => [
+                    "quantity" => 2,
+                    "item_price" => 50,
+                    "discount_amount" => 3,
+                    "charge_amount" => 97,
+                    "type" => "sale",
+                ],
+                "69" => [
+                    "quantity" => 1,
+                    "item_price" => 0,
+                    "discount_amount" => 0,
+                    "charge_amount" => 0,
+                    "type" => "gift",
+                ],
+            ]),
+        ];
+        $params = [
+            "kiosk_id" => "test0001",
+            "order_no" => "11111111",
         ];
         $data = [
             "auth_name" => "JCH",
             "auth_password" => "karrie@2024",
             "timestamp" => time(),
-            "params" => json_encode($params,320),
+            "params" => json_encode($params, 320),
         ];
         $string1 = strtoupper(md5($data['auth_password'] . $data['timestamp']));
         ksort($params);
@@ -33,9 +67,9 @@ class V2 extends Common
         foreach ($params as $k => $v) {
             $signArr[] = $k . "=" . $v;
         }
-        $signStr = implode(",",$signArr);
-        $data['sign'] =  strtoupper(md5($string1.$signStr));
-        $data['api'] = "get_machines";
+        $signStr = implode(",", $signArr);
+        $data['sign'] = strtoupper(md5($string1 . $signStr));
+        $data['api'] = "cancel_order";
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));
@@ -47,9 +81,9 @@ class V2 extends Common
         $postData = json2arr($postData);
         $funcName = $postData['api'];
         $app = AppFactory::api($postData);
-        if (method_exists($app->v2,$funcName)) {
+        if (method_exists($app->v2, $funcName)) {
             return $app->v2->$funcName();
         }
-        return $app->v2->returnData(4,$app->v2->msg[4]);
+        return $app->v2->returnData(4, $app->v2->msg[4]);
     }
 }  

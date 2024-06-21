@@ -55,5 +55,7 @@ class VV2 extends SupportValidate
             "get_machines" => ["machine_id"],
             "reserve_order" => ["kiosk_id","order_no","payment_method","expire_time","charge_time","order_detail"],
             "order_detail" => ["quantity","item_price","discount_amount","charge_amount","type"],
+            "cancel_order" => ["kiosk_id","order_no"],
+            "get_order_info" => ["kiosk_id","order_no"],
         ];
 }

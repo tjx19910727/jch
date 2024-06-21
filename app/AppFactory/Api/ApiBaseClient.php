@@ -40,6 +40,8 @@ class ApiBaseClient extends BaseClient
         15 => "table is nonexistent.",
         16 => "Invalid Timestamp",
         17 => "Sign Error",
+        18 => "Failed to generate the fetch code record",
+        19 => "Action fail",
         99 => "Service Unavailable",
     ];
 

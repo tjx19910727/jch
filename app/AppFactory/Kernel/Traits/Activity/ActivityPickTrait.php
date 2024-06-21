@@ -166,7 +166,7 @@ trait ActivityPickTrait
         $update['pay_method'] = 1;
         $update['pay_time'] = time();
         $update['pay_code'] = $this->data['pick_code'];
-        $update['pick_id'] = $ap['id'] ?? 0;
+        $update['apc_id'] = $ap['apc']['apc_id'] ?? 0;
         return $update;
     }
 }

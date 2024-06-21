@@ -330,6 +330,9 @@ return [
         "synchronization_fail" => "同步设备货道失败",
     ],
 
+    "VMachineErrorCode" => [
+        "me_id_require" => "请选择错误码信息",
+    ],
     "VMachineConfig" => [
         "mc_id_require" => "设备配置ID不能为空",
         "m_id_require" => "设备ID不能为空",

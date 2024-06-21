@@ -14,6 +14,11 @@ use app\AppFactory\Kernel\Model\Activity\Pick\ActivityPickCodeModel;
 trait ActivityPickCodeTrait
 {
 
+    public function getActivityPickCodeCount($where)
+    {
+        return ActivityPickCodeModel::getCount($where);
+    }
+
     public function getActivityPickCodeValue($where,$value)
     {
         return ActivityPickCodeModel::getFieldValue($where,$value);
@@ -43,7 +48,8 @@ trait ActivityPickCodeTrait
     public function addActivityPickCode($insert)
     {
         $apc = ActivityPickCodeModel::create($insert);
-        return $apc->id;
+        $id = $apc->getPk();
+        return $apc->$id;
     }
 
     public function updateActivityPickCode($update,$where = [],$field = [])
@@ -54,5 +60,40 @@ trait ActivityPickCodeTrait
     public function delActivityPickCode($where)
     {
         return ActivityPickCodeModel::whereDel($where);
+    }
+
+    /**
+     * 生成取货码记录，对外API预订商品提货码
+     * @return int|\think\response\Json
+     * @throws \Exception
+     */
+    protected function createApc()
+    {
+        // 不存在则重新生成一个8位纯数字取货码
+        if (!isset($this->config['params']['pick_code']) || !$this->config['params']['pick_code']) {
+            while(1) {
+                $this->config['params']['pick_code'] = $this->leftHandZero(random_int(00000000, 99999999), 8);
+                $check = $this->getActivityPickCodeCount(['code' => $this->config['params']['pick_code']]);
+                if (!$check) break;
+            }
+        }
+        $apc = $this->getActivityPickCodeFind(['code' => $this->config['params']['pick_code'],'pick_type' => 3]);
+        if ($apc) return $this->returnData(7,$this->msg[7] . "：" . $this->lang("reserve_order.apc_already_exist"));
+        $insert = [
+            "code" => $this->config['params']['pick_code'],
+            "order_id" => $this->order['order_id'],
+            "trade_no" => $this->order['trade_no'],
+            "m_id" => $this->order['m_id'],
+            "machine_id" => $this->order['machine_id'],
+            "machine_name" => $this->order['machine_name'],
+            "pick_type" => 3,
+            "status" => 1,
+        ];
+        $apc_id = $this->addActivityPickCode($insert);
+        if (!$apc_id) {
+            return $this->returnData(18,$this->msg[18] . "：" . $this->lang("reserve_order.apc_id_add_fail"));
+        }
+        $this->order['apc_id'] = $apc_id;
+        return 1;
     }
 }

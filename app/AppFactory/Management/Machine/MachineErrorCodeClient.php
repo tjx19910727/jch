@@ -17,6 +17,20 @@ class MachineErrorCodeClient extends ManagementClient
 {
     use MachineErrorCodeTrait;
 
+    /**
+     * 确认处理
+     * @param $me_id
+     * @return array|\think\response\Json
+     */
+    public function confirmHandle($me_id)
+    {
+        $me = $this->getMachineErrorCodeFind(['me_id' => $me_id]);
+        $update = ['status' => 2];
+        $where['errorCode'] = $me['errorCode'];
+        $where['m_id'] = $me['m_id'];
+        return $this->rAction($this->updateMachineErrorCode($update,$where));
+    }
+
     protected $errorPosition = [
         "1" => "机器结构",
         "2" => "控制主板",
@@ -39,7 +53,7 @@ class MachineErrorCodeClient extends ManagementClient
     public function exportEc($where,$field = "*",$order = "create_time desc")
     {
         try {
-            $list = $this->getMachineErrorCodeList($where, 0, $field, $order);
+            $list = $this->getMachineErrorCodeList($where, 0, $field . ",msg", $order);
             if ($list) {
                 $list = $list->toArray();
                 foreach ($list as $k => $v) {

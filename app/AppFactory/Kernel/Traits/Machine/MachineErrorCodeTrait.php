@@ -29,6 +29,11 @@ trait MachineErrorCodeTrait
         return $me->me_id;
     }
 
+    public function updateMachineErrorCode($update,$where = [],$field = [])
+    {
+        return MachineErrorCodeModel::update($update,$where,$field);
+    }
+
     public function errorCode()
     {
         actionLog($this->message,'故障码上报');

@@ -195,6 +195,133 @@ trait SaleOrdersTrait
     }
 
     /**
+     * 对外API预订商品生成订单
+     */
+    protected function createSo()
+    {
+        $pay_type = 0;
+        $pay_method = 1;
+        $this->order = [
+            "trade_no" => $this->config['params']['order_no'],
+            "mch_no" => $this->config['params']['order_no'],
+            "user_name" => $this->config['params']['customer_name'] ?? "",
+            "m_id" => $this->machine['m_id'],
+            "machine_name" => $this->machine['machine_name'],
+            "machine_id" => $this->machine['machine_id'],
+            "ao_id" => $this->machine['ao_id'],
+            "pay_type" => $pay_type,
+            "pay_method" => $pay_method,
+            "pay_status" => 3,
+            "pay_time" => strtotime($this->config['params']['charge_time']),
+            "pay_code" => $this->config['params']['pick_code'],
+            "cost_price" => 0,
+            "market_price" => 0,
+            "retail_price" => 0,
+            "total_quantity" => 0,
+            "total_price" => 0,
+            "discount_price" => 0,
+            "create_date" => strtotime(date("Y-m-d")),
+        ];
+        $this->order['order_id'] = $this->addSaleOrders($this->order);
+    }
+
+    /**
+     * 对外API预订商品生成订单数据
+     * 创建订单副表数据，增加货架冻结库存，减少货架售卖库存
+     * @return array|int|\think\response\Json
+     */
+    protected function createSod()
+    {
+        $flag = [];
+        $details = json2arr($this->config['params']['order_detail']);
+        actionLog($details,'商品数据');
+        foreach ($details as $dk => $dv) {
+            try {
+                validate(VV2::class)->scene("order_detail")->check($dv);
+            } catch (\Exception $e) {
+                actionException($e, 1);
+                return $this->returnData(6, $this->msg[6] . "：" . $e->getMessage());
+            }
+            $whereMc = [];
+            $whereMc['m_id'] = $this->machine['m_id'];
+            $whereMc['g_id'] = $dk;
+            $whereMc['status'] = 1;
+            $mc = $this->getMachineChannelList($whereMc, 0,
+                'mc_id,channel_code,frozen_stock,stock,shelf_way,channel_position,manufacture_time,sell_by_date,
+                        mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
+                        cost_price,market_price',
+                "stock desc");
+            if (!$mc) return $this->returnData(10, $this->msg[10]);
+            if (is_string($mc)) return $this->returnData(10, $this->msg[10] . "：" . $mc);
+            $mc = $mc->toArray();
+            actionLog($mc,"该设备下货架列表数据");
+            // 总库存不足
+            $totalStock = array_sum(array_column($mc, "stock"));
+            if ($totalStock < $dv['quantity']) {
+                $this->returnData[] = ["success" => false,"order_no" => $this->config['params']['order_no'],"error_msg" => [$dk => $dv['quantity']]];
+                return $this->returnData(14, $this->msg[14] . "：" . $this->lang("reserve_order.under_stock"),$this->returnData);
+            }
+
+            $insertSod = [];
+            $insertSod['order_id'] = $this->order['order_id'];
+            $insertSod['quantity'] = 0;
+            $insertSod['discount_price'] = 0;
+            $insertSod['retail_price'] = bcdiv($dv['item_price'], 100, 3);
+            $insertDetails = [];
+            $dvDiscountPrice = bcdiv($dv['discount_amount'], 100, 3);
+            $dvQuantity = $dv['quantity'];
+            foreach ($mc as $mck => $mcv) {
+                if (!$insertDetails) {
+                    $insertDetails = array_merge($mcv, $insertSod);
+                    unset($insertDetails['frozen_stock'], $insertDetails['stock']);
+                }
+                // 一条货道库存不够
+                if ($dv['quantity'] > $mcv['stock']) {
+                    $insertDetails['quantity'] = $mcv['stock'];
+                }
+                if ($dv['quantity'] <= $mcv['stock']) {
+                    $insertDetails['quantity'] = $dv['quantity'];
+                }
+                // 销售
+                if ($dv['type'] == "sale") {
+                    $insertDetails['total_sod_price'] = bcmul($insertDetails['retail_price'], $insertDetails['quantity'], 3);
+                    $insertDetails['discount_price'] = bcmul($dvDiscountPrice, bcdiv($insertDetails['quantity'], $dvQuantity, 2), 3);
+                }
+                // 赠品
+                if ($dv['type'] == "gift") {
+                    $insertDetails['total_sod_price'] = 0;
+                    $insertDetails['discount_price'] = 0;
+                    $insertDetails['is_gift'] = 1;
+                }
+                $dv['quantity'] = bcsub($dv['quantity'], $insertDetails['quantity']);
+                $updateMc = [
+                    'frozen_stock' => bcadd($mcv['frozen_stock'], $insertDetails['quantity']),
+                    'stock' => bcsub($mcv['stock'], $insertDetails['quantity']),
+                    "mc_id" => $mcv['mc_id'],
+                ];
+                $flag[] = $this->addSaleOrdersDetails($insertDetails);
+                actionLog($this->getLS(),'生成订单详情');
+                $flag[] = $this->updateMachineChannel($updateMc);
+                actionLog($this->getLS(),'修改货架库存');
+                $this->order['cost_price'] = bcadd($this->order['cost_price'],$insertDetails['cost_price'],3);
+                $this->order['market_price'] = bcadd($this->order['market_price'],$insertDetails['market_price'],3);
+                $this->order['retail_price'] = bcadd($this->order['retail_price'],$insertDetails['retail_price'],3);
+                $this->order['total_quantity'] = bcadd($this->order['total_quantity'],$insertDetails['quantity'],3);
+                $insertDetails = [];
+                if ($dv['quantity'] == 0)
+                    break;
+            }
+            $this->order['total_price'] = bcadd($this->order['total_price'],bcdiv($dv['charge_amount'],100,3),3);
+            $this->order['discount_price'] = bcadd($this->order['discount_price'],bcdiv($dv['discount_amount'],100,3),3);
+        }
+        actionLog($flag,'生成订单详情结果集');
+        $result = flag_check($flag);
+        if (!$result) return $this->returnData(14, $this->msg[14]);
+        return $result;
+    }
+
+
+    /**
      * 修改订单详情
      * @param $update
      * @param array $where

@@ -21,6 +21,7 @@ class MachineErrorCode extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
+        $where['status'] = 1;
         return $this->app->machineErrorCode->getEcList($where,$pageNum,$this->field,'create_time desc','errorCode');
     }
 
@@ -29,6 +30,17 @@ class MachineErrorCode extends Common
         $postData = input();
         $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
         return $this->app->machineErrorCode->getFind($where,$this->field,'create_time desc');
+    }
+
+    /**
+     * 确认已处理
+     * @return array|mixed|\think\response\Json
+     */
+    public function confirmHandle()
+    {
+        $me_id = input('me_id');
+        if (!$me_id) return returnValidate(lang("VMachineErrorCode.me_id_require"));
+        return $this->app->machineErrorCode->confirmHandle($me_id);
     }
 
     /**
