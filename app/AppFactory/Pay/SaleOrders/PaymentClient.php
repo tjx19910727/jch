@@ -154,23 +154,27 @@ class PaymentClient extends PayBaseClient
         $this->order = $this->order->toArray();
         actionLog($this->order,'发起支付订单数据');
 
-        $where['sm.s_type'] = 1;
-        $where['sp.status'] = 1;
-        $where['sp.payee_type'] = $this->order['pay_type'];
-        $where['sm.m_id'] = $this->order['m_id'];
-        $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');
-        if (!is_array($this->strategyPayee)) return $this->strategyPayee;
-        if (!in_array($this->strategyPayee['payee_type'],array_keys($this->cancelType))) {
-            return $this->rFail($this->lang("VOrderPay.unKnow_pay_type"));
+        if ($this->order['sp_id']) {
+            $where['sp_id'] = $this->order['sp_id'];
+//        $where['sm.s_type'] = 1;
+//        $where['sp.status'] = 1;
+//        $where['sp.payee_type'] = $this->order['pay_type'];
+//        $where['sm.m_id'] = $this->order['m_id'];
+            $this->strategyPayee = $this->getStrategyPayeeContent($where, 'sp.*', '');
+            if (!is_array($this->strategyPayee)) return $this->strategyPayee;
+            if (!in_array($this->strategyPayee['payee_type'], array_keys($this->cancelType))) {
+                return $this->rFail($this->lang("VOrderPay.unKnow_pay_type"));
+            }
+            actionLog($this->strategyPayee, '收款配置数据');
+            $this->order['pay_status'] = 5;
+            $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status']);
+            if ($uOrder) {
+                $func_name = $this->cancelType[$this->strategyPayee['payee_type']];
+                $result = $this->$func_name();
+                return $result;
+            }
+            return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
         }
-        actionLog($this->strategyPayee,'收款配置数据');
-        $this->order['pay_status'] = 5;
-        $uOrder = $this->updateSaleOrders($this->order,[],['pay_status']);
-        if ($uOrder) {
-            $func_name = $this->cancelType[$this->strategyPayee['payee_type']];
-            $result = $this->$func_name();
-            return $result;
-        }
-        return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
+        return $this->rSuccess();
     }
 }

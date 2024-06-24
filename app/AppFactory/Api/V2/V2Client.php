@@ -9,7 +9,7 @@
 namespace app\AppFactory\Api\V2;
 
 
-use app\AppFactory\Api\ApiBaseClient;
+use app\AppFactory\Api\V2BaseClient;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiCallbackTrait;
@@ -27,7 +27,7 @@ use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
 
-class V2Client extends ApiBaseClient
+class V2Client extends V2BaseClient
 {
     use MachineTrait, MachineChannelTrait;
     use ConfigSceneTrait;

@@ -45,30 +45,35 @@ class MachineClient extends ManagementClient
 
     public function addM($postData)
     {
-        $machine_group_id = 0;
-        if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
-            $machine_group_id = explode(",",$postData['machine_group_id']);
-            unset($postData['machine_group_id']);
-        }
-        $m = $this->addMachine($postData);
-        if ($m) {
-            $machine = $this->getMachineFind(['m_id' => $m]);
-            if ($machine_group_id) {
-                foreach ($machine_group_id as $mk => $mv) {
-                    $mg = $this->getMachineGroupFind(['mg_id' => $mv], 'mg_id,mg_name');
-                    if (!$mg) {
-                        return $this->r(100, $this->lang("VMachineGoods.mg_no_data"));
-                    }
-                    $mg = $mg->toArray();
-                    $mg['m_id'] = $machine['m_id'];
-                    $mg['machine_id'] = $machine['machine_id'];
-                    $mg['machine_name'] = $machine['machine_name'];
-                    $insertAll[] = $mg;
-                }
-                $this->addMachineGroupMgMore($insertAll);
+        try {
+            $machine_group_id = 0;
+            if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
+                $machine_group_id = explode(",", $postData['machine_group_id']);
+                unset($postData['machine_group_id']);
             }
+            $m = $this->addMachine($postData);
+            if ($m) {
+                $machine = $this->getMachineFind(['m_id' => $m]);
+                if ($machine_group_id) {
+                    foreach ($machine_group_id as $mk => $mv) {
+                        $mg = $this->getMachineGroupFind(['mg_id' => $mv], 'mg_id,mg_name');
+                        if (!$mg) {
+                            return $this->r(100, $this->lang("VMachineGoods.mg_no_data"));
+                        }
+                        $mg = $mg->toArray();
+                        $mg['m_id'] = $machine['m_id'];
+                        $mg['machine_id'] = $machine['machine_id'];
+                        $mg['machine_name'] = $machine['machine_name'];
+                        $insertAll[] = $mg;
+                    }
+                    $this->addMachineGroupMgMore($insertAll);
+                }
+            }
+            return $this->rA($m);
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        return $this->rA($m);
     }
 
     public function updateM($postData)

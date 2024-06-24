@@ -136,6 +136,7 @@ return [
         "pick_code_require" => "取货码不能为空",
         "m_id_require" => "请选择设备",
         "g_id_require" => "请选择商品",
+        "goods_no_data" => "查无商品信息",
     ],
 
     "VConfig" => [

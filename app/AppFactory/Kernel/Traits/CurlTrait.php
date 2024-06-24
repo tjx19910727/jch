@@ -58,7 +58,6 @@ trait CurlTrait
 
         list($content, $status) = [curl_exec($curl), curl_getinfo($curl), curl_close($curl)];
         $content = trim(substr($content, $status['header_size']));
-        $content = json_decode($content,true);
         return  $content;
     }
 

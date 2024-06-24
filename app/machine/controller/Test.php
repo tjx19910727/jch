@@ -245,7 +245,7 @@ class Test extends BaseController
 //        dump($result);
         $data = [
             "machine_id" => "test0001",
-            "pick_code" => "123456",
+//            "pick_code" => "88464098",
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));
@@ -304,8 +304,33 @@ class Test extends BaseController
     public function testUpload()
     {
         $content = [
-            "msgType" => "errorCode",
-            "errorCode" => "1000001",
+            "msgType" => "outGoods",
+            "trade_no" => "1234554654",
+            "main" => [
+                "1" => [
+                    [
+                        "channel_code" => "A01",
+                        "success_quantity" => 1,
+                        "fail_quantity" => 0,
+                        "deliver_pics" => "",
+                        "out_sequence" => 1,
+                    ],
+                    [
+                        "channel_code" => "B01",
+                        "success_quantity" => 2,
+                        "fail_quantity" => 0,
+                        "deliver_pics" => "",
+                        "out_sequence" => 1,
+                    ],
+                    [
+                        "channel_code" => "C01",
+                        "success_quantity" => 1,
+                        "fail_quantity" => 0,
+                        "deliver_pics" => "",
+                        "out_sequence" => 1,
+                    ],
+                ],
+            ],
         ];
         $content = json_encode($content);
         $msg_id = uniqid();
@@ -313,7 +338,7 @@ class Test extends BaseController
         $data = [
             "timestamp" => time(),
             "msg_id" => $msg_id,
-            "machine_id" => "test0003",
+            "machine_id" => "test0001",
             "data" => $content,
         ];
         $data['sign'] = SignUtil::makeSign($data, $signKey);
@@ -333,7 +358,7 @@ class Test extends BaseController
 
     public function testReturn()
     {
-        $data = '{"timestamp":1716345052905137,"msg_id":"b383d0fc-e590-423f-9147-17ea35870e7e","machine_id":"test0006","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"202405221029087326049\",\"main\":{\"1\":[[\"A02\",1,1,0,\"/uploads/machine_test0006/20240522/eb1a6886601ccd60b740cc65417fd31e.jpg,/uploads/machine_test0006/20240522/3ec65b75a10627a39bb76a6a84249a32.jpg\"]]}}","sign":"0ef09ee480cb250e8c23ccf8ae9b35c3"}';
+        $data = '{"timestamp":"1719024838","msg_id":"ea113122-726c-498f-9638-dae0bb53955d","machine_id":"test0004","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"202406221051415759680\",\"main\":{\"1\":[{\"channel_code\":\"A01\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"\/uploads\/machine_test0004\/20240622\/b21c62ed53e0c1f8873a9bae142ddfbb.jpg,\/uploads\/machine_test0004\/20240622\/30184d77d0da2e94d6d0f44717b694b4.jpg\",\"out_sequence\":1}]}}","sign":"75b6dd516f9909ffb3d5441925fa62f5"}';
         $data = json2arr($data);
         dump($data);
         $config = [
@@ -477,5 +502,12 @@ class Test extends BaseController
         $mg_id = 141;
         $app = AppFactory::timeTask();
         $app->goods->synchronizationMc($mg_id);
+    }
+
+    public function testReceiveCallback()
+    {
+        $postData = input();
+        actionLog($postData,"接收数据");
+        return "123";
     }
 }

@@ -710,8 +710,12 @@ class ApiClient extends ReceiveBaseClient
     {
         $where['m_id'] = $this->machine['m_id'];
         $where[] = ['publish_time', "<", time()];
-        $where['status'] = 1;
-        return $this->rQ($this->getMachineVersionPlanFind($where, 'mvp_id,mv_id,version_no,path,`desc`,size,update_time', 'mvp_id desc'));
+        $result = $this->getMachineVersionPlanFind($where, 'mvp_id,mv_id,version_no,path,`desc`,size,update_time', 'mvp_id desc');
+        if (!$result) {
+            return $this->rFail();
+        }
+        if ($result['status'] != 1) return $this->rFail();
+        return $this->rQ($result);
     }
 
     /**

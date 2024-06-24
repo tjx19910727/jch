@@ -1,0 +1,1 @@
+import{d as t,o as n,c as o,e}from"./index-e395bda9.js";const s=e("div",{class:"app-container"},null,-1),a=e("div",{class:"app-container"}," 123 ",-1),c=[s,a],p=t({__name:"index",setup(_){return reactive({}),(i,r)=>(n(),o("div",null,c))}});export{p as default};

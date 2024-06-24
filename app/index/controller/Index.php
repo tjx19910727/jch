@@ -27,8 +27,6 @@ class Index extends BaseController
             'title'=> 'fanout->'.rand(1,100),
         ];
         dump($data);
-        $result = MqProducer::topic($data,"test0001"); //指向topic主题
-        dump($result);
 
     }
 }

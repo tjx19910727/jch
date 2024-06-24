@@ -227,6 +227,10 @@ class ActivityPickCodeClient extends ManagementClient
                 }
                 $order['order_id'] = $order_id;
                 $g = $this->getGoodsFind(['g_id' => $this->data['g_id']], 'g_id,g_name,pic,sku,gc_id,gc_name,bar_code');
+                if (!$g) {
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang("VActivityPickCode.goods_no_data"));
+                }
                 $details = [
                     "order_id" => $order_id,
                     "channel_position" => 3,

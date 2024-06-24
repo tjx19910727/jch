@@ -96,6 +96,7 @@ trait OutGoodsTrait
                 $whereMc['channel_position'] = $position;
                 $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,stock_warning');
                 if ($success > 0) {
+                    // 外部预订提货码订单，减冻结库存
                     if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);
                     } else {
@@ -185,19 +186,47 @@ trait OutGoodsTrait
             $update['used_time'] = time();
             // 出货成功才是使用成功
             if ($this->order['out_status'] == 4) {
+                $adStatus = 1;
+                $aaStatus = "PICKED";
                 $update['status'] = 2;
-                // 网上预售的订单，出货成功需要发至商城或第三方平台核销
-                if ($pickCode['pick_type'] == 3) {
-
-                }
             } else {
-                // 网上预售的订单修改为待使用，即取货失败
-//                if ($pickCode['pick_type'] == 3) {
+                $adStatus = 6;
+                $aaStatus = "OPEN";
                 $update['status'] = 1;
-//                }
             }
-            $this->updateActivityPickCode($update);
+            // 网上预售的订单，出货成功需要发至商城或第三方平台核销
+            if ($pickCode['pick_type'] == 3) {
+                $advance = $this->getApiAdvanceFind(['apc_id' => $pickCode['apc_id']]);
+                $flag[] = $this->updateApiAdvance(['status' => $aaStatus,"pick_time" => date("Y-m-d H:i:s")],['apc_id' => $pickCode['apc_id']]);
+                actionLog($this->getLS(),'【SQL】修改API预订商品记录',"DataUpload");
+                $message = [
+                    "status" => $adStatus,
+                    "machine_id" => $advance['machine_id'],
+                    "machine_name" => $advance['machine_name'],
+                    "order_no" => $advance['trade_no'],
+                    "pick_code" => $advance['pick_code'],
+                    "payment_method" => $advance['payment_method'],
+                    "quantity" => $advance['quantity'],
+                    "detail_status" => "ALL PENDING",
+                    "products_list" => $advance['order_detail'],
+                ];
+                $insertCallback = [
+                    "aa_id" => $advance['aa_id'],
+                    "notify_url" => $advance['notify_url'],
+                    "callback_type" => 2,
+                    "message" => json_encode($message,320),
+                ];
+                $ac_id = $this->addApiCallback($insertCallback);
+                $ac = $this->getApiCallbackFind(['ac_id' => $ac_id]);
+                if ($ac) {
+                    $cb = cache("callback0");
+                    $cb[] = $ac->toArray();
+                    cache("callback0",$cb,60);
+                }
+            }
+            $flag[] = $this->updateActivityPickCode($update);
             actionLog($this->getLS(),'【SQL】修改取货码使用记录',"DataUpload");
+            actionLog($flag,'处理结果集',"DataUpload");
         }
     }
 

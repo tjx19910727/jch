@@ -224,7 +224,7 @@ class ActivityPickClient extends ManagementClient
                     $pick['order'] = $order;
                 }
                 if ($pick['pick_type'] == 2) {
-                    $ag = $this->getActivityGoodsList(['a_id' => $pick['id'], 'a_type' => 4], 0, 'ag_id,g_name,pic,sku');
+                    $ag = $this->getActivityGoodsList(['a_id' => $pick['id'], 'a_type' => 4], 0, 'ag_id,g_id,g_name,pic,sku');
                     if ($ag) {
                         $pick['activity_goods'] = $ag->toArray();
                     }

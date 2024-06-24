@@ -102,11 +102,11 @@ class ActivityClient extends ReceiveBaseClient
      */
     public function getApByCode()
     {
-        $ap = $this->getActivityPickByCode();
-        if (is_string($ap)) {
-            return $this->rFail($ap);
+        $apc = $this->getActivityPickByCode();
+        if (is_string($apc)) {
+            return $this->rFail($apc);
         }
-        return $this->r(200, $this->lang("query_success"), ['ap' => $ap]);
+        return $this->r(200, $this->lang("query_success"), ['apc' => $apc]);
     }
 
     // 使用优惠券
@@ -231,6 +231,8 @@ class ActivityClient extends ReceiveBaseClient
                     $this->rollbackTrans();
                     return $result;
                 }
+                if (isset($this->order['details'])) unset($this->order['details']);
+                $this->updateSaleOrders($this->order);
                 $this->updateActivityPickCode(['apc_id' => $apc['apc_id'],'status' => 5]);
                 $this->updateApiAdvance(['status' => "PROCESSING"],['apc_id' => $apc['apc_id']]);
                 $this->commitTrans();
@@ -325,7 +327,7 @@ class ActivityClient extends ReceiveBaseClient
             "create_date" => strtotime(date("Y-m-d")),
         ];
         if ($this->data['total_price'] == 0) {
-            $order['pay_status'] = 2;
+            $order['pay_status'] = 3;
             $order['pay_time'] = time();
             $order['pay_type'] = 0;
             $order['pay_method'] = 1;
