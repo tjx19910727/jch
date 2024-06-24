@@ -19,6 +19,7 @@ class CallbackClient extends ApiBaseClient
 
     public $callbackData;
 
+
     /**
      * @var array 各类型数据推送时间间隔，最多8次，最大7560秒
      */
@@ -33,7 +34,28 @@ class CallbackClient extends ApiBaseClient
     ];
     public $frequency = 0;
 
-    public function initCallback()
+    /**
+     * 触发推送通知
+     */
+    public function trigger_send()
+    {
+        for ($i = 0; $i < 8; $i++) {
+            if ($i > 0) {
+                $start = cache("start");
+                if (!$start) break;
+            }
+            $this->frequency = $i;
+            $this->initCallback();
+            if ($i == 0  && $this->callbackData) cache("start",1,7600);
+            $this->push();
+        }
+        return "处理完毕";
+    }
+
+    /**
+     * 初始货每次推送数据
+     */
+    protected function initCallback()
     {
         $this->callbackData = cache("callback" . $this->frequency);
         if (!$this->callbackData) {
@@ -45,7 +67,10 @@ class CallbackClient extends ApiBaseClient
         }
     }
 
-    public function push()
+    /**
+     * 推送主程序
+     */
+    protected function push()
     {
         if ($this->callbackData) {
             $nextCallbackData = cache("callback" . ($this->frequency+1));

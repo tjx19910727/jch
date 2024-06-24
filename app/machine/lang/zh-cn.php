@@ -50,6 +50,7 @@ return [
         "order_id_require" => "订单ID不能为空",
         "fd_id_require" => "满减满送活动ID不能为空",
         "pick_code_require" => "提货码不能为空",
+        "coupon_code_require" => "优惠码不能为空",
 
         "details_require" => "订单详情不能为空",
     ],

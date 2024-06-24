@@ -199,6 +199,11 @@ trait OutGoodsTrait
                 $advance = $this->getApiAdvanceFind(['apc_id' => $pickCode['apc_id']]);
                 $flag[] = $this->updateApiAdvance(['status' => $aaStatus,"pick_time" => date("Y-m-d H:i:s")],['apc_id' => $pickCode['apc_id']]);
                 actionLog($this->getLS(),'【SQL】修改API预订商品记录',"DataUpload");
+                $details = $this->getSaleOrdersDetailsList(['order_id' => $advance['order_id']],0,'g_id product_id,success_quantity,fail_quantity');
+                $details = $details->toArray();
+                $detail_status = "ALL PENDING";
+                if ($this->order['total_quantity'] != array_sum(array_column($details,'success_quantity'))) $detail_status = "PARTIAL MISVEND";
+                if ($this->order['total_quantity'] == array_sum(array_column($details,'fail_quantity'))) $detail_status = "ALL MISVEND";
                 $message = [
                     "status" => $adStatus,
                     "machine_id" => $advance['machine_id'],
@@ -207,8 +212,8 @@ trait OutGoodsTrait
                     "pick_code" => $advance['pick_code'],
                     "payment_method" => $advance['payment_method'],
                     "quantity" => $advance['quantity'],
-                    "detail_status" => "ALL PENDING",
-                    "products_list" => $advance['order_detail'],
+                    "detail_status" => $detail_status,
+                    "products_list" => json_encode($details,320),
                 ];
                 $insertCallback = [
                     "aa_id" => $advance['aa_id'],

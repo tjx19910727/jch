@@ -109,7 +109,10 @@ class ActivityClient extends ReceiveBaseClient
         return $this->r(200, $this->lang("query_success"), ['apc' => $apc]);
     }
 
-    // 使用优惠券
+    /**
+     * 使用优惠券
+     * @return array|bool|\think\response\Json
+     */
     public function useCoupon()
     {
         $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
@@ -118,8 +121,21 @@ class ActivityClient extends ReceiveBaseClient
 
         // 有优惠券码，重新处理订单数据
         if (isset($this->data['coupon_code'])) {
-            $this->orderUseCoupon();
+            try {
+                $this->startTrans();
+                $result = $this->orderUseCoupon();
+                if ($result !== true) {
+                    $this->rollbackTrans();
+                    return $result;
+                }
+                $this->commitTrans();
+            } catch (\Exception $e) {
+                $this->rollbackTrans();
+                actionException($e,1);
+                return $this->rTryCatch($e->getMessage());
+            }
         }
+        return $this->rSuccess($this->order);
     }
 
     /**

@@ -93,6 +93,7 @@ class VReceive extends VCommon
         "fd_id.require" => "VReceive.fd_id_require",
 
         "pick_code.require" => "VReceive.pick_code_require",
+        "coupon_code.require" => "VReceive.coupon_code_require",
 
 
         "details.require" => "VReceive.details_require",
@@ -149,6 +150,7 @@ class VReceive extends VCommon
 
         "useFd" => ["msg_id","machine_id","timestamp","sign","order_id","fd_id"],
         "usePickCode" => ["msg_id","machine_id","timestamp","sign","pick_code"],
+        "useCoupon" => ["msg_id","machine_id","timestamp","sign","coupon_code"],
 
         "unclaimed" => ["msg_id","machine_id","timestamp","sign","order_id","details"],
 

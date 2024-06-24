@@ -195,11 +195,11 @@ trait ActivityCouponTrait
     {
         // 通过券码获取优惠券活动信息，判断使用条件
         $ac = $this->getAcByCode();
-
         if (is_string($ac)) {
-            return $ac;
+            return $this->rFail($ac);
         }
 
+        // 互斥活动
         if ($this->order['order_type'] > 1 && $this->order['order_type'] != 2) {
             if ($ac['exclusion'] == 1)
                 return $this->rFail($this->lang("VActivityCoupon.exclusion"));
@@ -298,5 +298,6 @@ trait ActivityCouponTrait
                 actionLog($this->getLS(), '新增待使用记录，绑定订单');
             }
         }
+        return true;
     }
 }
