@@ -26,6 +26,19 @@ class ActivityCouponClient extends ManagementClient
     public function getAcAgAmList($where,$pageNum = 0, $field = "*", $order = "")
     {
         return $this->rQ($this->getActivityCouponList($where,$pageNum,$field,$order,function ($ac) {
+            // 优惠券状态由1.未开始修改为2.进行中
+            if ($ac['status'] == 1 && $ac['start_date'] > strtotime(date("Y-m-d"))) {
+                $this->updateActivityCoupon(['status' => 2], ['c_id' => $ac['c_id']]);
+                $ac['status'] = 2;
+            }
+            // 有设置结束时间，并且结束时间小于当前时间，活动已结束
+            if ($ac['status'] < 4 && $ac["end_date"] > 0 && $ac['end_date'] < time()) {
+                // 修改优惠券活动为3.已过期
+                $this->updateActivityCoupon(['c_id' => $ac['c_id'], 'status' => 3]);
+                // 修改随机码优惠券使用记录为3.已过期
+                if (!$ac['code']) $this->updateActivityCouponUsed(['status' => 3], ['c_id' => $ac['c_id'], 'status' => 1]);
+                $ac['status'] = 3;
+            }
             $whereA = ['a_type' => 1, "a_id" => $ac['c_id']];
             $ac['goodsList'] = $this->getActivityGoodsList($whereA,0,'ag_id,g_id,g_name,sku,market_price,retail_price');
             $ac['machineList'] = $this->getActivityMachineList($whereA,0,'am_id,m_id,machine_id,machine_name');

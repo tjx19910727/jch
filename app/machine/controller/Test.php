@@ -244,9 +244,9 @@ class Test extends BaseController
 //        die();
 //        dump($result);
         $data = [
-            "machine_id" => "test0001",
-            "order_id" => "test0001",
-            "coupon_code" => "88464098",
+            "machine_id" => "0001",
+            "order_id" => "1153",
+            "coupon_code" => "533617",
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));

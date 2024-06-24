@@ -122,20 +122,17 @@ class ActivityClient extends ReceiveBaseClient
         // 有优惠券码，重新处理订单数据
         if (isset($this->data['coupon_code'])) {
             try {
-                $this->startTrans();
                 $result = $this->orderUseCoupon();
                 if ($result !== true) {
-                    $this->rollbackTrans();
                     return $result;
                 }
-                $this->commitTrans();
+                $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'*');
             } catch (\Exception $e) {
-                $this->rollbackTrans();
                 actionException($e,1);
                 return $this->rTryCatch($e->getMessage());
             }
         }
-        return $this->rSuccess($this->order);
+        return $this->r(200,"操作成功",$this->order);
     }
 
     /**
