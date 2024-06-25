@@ -11,16 +11,21 @@ namespace app\AppFactory\TimeTask\Machine;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\TimeTask\TimeTaskBase;
+use think\db\exception\DataNotFoundException;
+use think\db\exception\DbException;
+use think\db\exception\ModelNotFoundException;
 
 class MachineClient extends TimeTaskBase
 {
     use MachineOnlineTrait,MachineOnlineDetailsTrait,MachineTrait;
     use SaleOrdersTrait;
+    use AuthManagerMachineTrait;
     use ActivityCouponUsedTrait;
 
     /**
@@ -28,25 +33,70 @@ class MachineClient extends TimeTaskBase
      */
     public function countOnline()
     {
-        $yesterday = strtotime(date("Y-m-d",strtotime("-1 days")));
-        $where["d_date"] = $yesterday;
-        $where['online_id'] = 0;
-        $field = "m_id,machine_name,machine_id,sum(duration) duration ,d_date online_date";
-        $onlineDetails = $this->getMachineOnlineDetailsList($where,0,$field,'','','machine_id')->toArray();
-        if ($onlineDetails) {
-            $flag[] = 1;
-            foreach ($onlineDetails as $key => $value) {
-                $value['manager_id'] = $this->getMachineValue(['m_id' => $value['m_id']], "manager_id");
-                $online_id = $this->addMachineOnline($value);
-                if ($online_id) {
-                    // 生成结算记录ID，修改每天在线详情绑定的结算记录ID
-                    $update['online_id'] = $online_id;
-                    $where['d_date'] = $value['online_date'];
+        try {
+            $yesterday = strtotime(date("Y-m-d", strtotime("-1 days")));
+            $machine = $this->getMachineList([], 0, 'm_id,machine_id,machine_name');
+            if ($machine) {
+                $machine = $machine->toArray();
+                $flag = [];
+                foreach ($machine as $key => $value) {
+                    $whereDetails['m_id'] = $value['m_id'];
+                    $whereDetails['d_date'] = $yesterday;
+                    $whereDetails['duration'] = 0;
+                    // 先统计没有离线时间并且是跨天的记录在线时长，生成新的上线记录
+                    $checkDetails = $this->getMachineOnlineDetailsList($whereDetails);
+                    $checkDetails = $checkDetails->toArray();
+                    if ($checkDetails) {
+                        foreach ($checkDetails as $odk => $odv) {
+                            if (!$odv['offline_time']) {
+                                // 生成今天的上线记录
+                                $onlineTime = strtotime(date("Y-m-d 00:00:00"));
+                                $insert = [
+                                    "m_id" => $odv['m_id'],
+                                    "machine_name" => $odv['machine_name'],
+                                    "machine_id" => $odv['machine_id'],
+                                    "online_time" => $onlineTime,
+                                    "heart_time" => $onlineTime,
+                                    "d_date" => strtotime(date("Y-m-d")),
+                                ];
+                                $flag[] = $this->addMachineOnlineDetails($insert);
+                                actionLog($this->getLS(), '【SQL】生成以当天0点为上线时间的记录', 'countOnline');
+                                // 当前记录的离线时间点
+                                $odv['offline_time'] = strtotime(date("Y-m-d 23:59:59", $yesterday));
+                            }
+                            $odv['duration'] = bcsub($odv['offline_time'], $odv['online_time']);
+                            $flag[] = $this->updateMachineOnlineDetails($odv);
+                            actionLog($this->getLS(), '【SQL】修改设备详情的在线时长', 'countOnline');
+                        }
+                    }
+                    // 统计昨天的在线时长
                     $where['m_id'] = $value['m_id'];
-                    $this->updateMachineOnlineDetails($update,$where);
+                    $where["d_date"] = $yesterday;
+                    $field = "m_id,machine_name,machine_id,sum(duration) duration ,d_date online_date";
+                    $onlineDetails = $this->getMachineOnlineDetailsFind($where, $field, 'mod_id desc', "m_id");
+                    if ($onlineDetails) {
+                        $onlineDetails = $onlineDetails->toArray();
+                        $manager_id = $this->getAuthManagerMachineValue(['m_id' => $value['m_id']], 'manager_id', 'manager_id desc');
+                        $onlineDetails['manager_id'] = $manager_id;
+
+                        // 增加统计全天的记录，并绑定ID至详情
+                        $online_id = $this->addMachineOnline($onlineDetails);
+                        actionLog($this->getLS(), '【SQL】统计全天在线时长', 'countOnline');
+                        if ($online_id) {
+                            $update['online_id'] = $online_id;
+                            $flag[] = $this->updateMachineOnlineDetails($update, $where);
+                            actionLog($this->getLS(), '【SQL】修改全天离线时长', 'countOnline');
+                        }
+                    }
                 }
+                actionLog($flag, '处理结果');
             }
-            actionLog($flag, '结算昨天在线时长', 'countOnline');
+        } catch (DataNotFoundException $e) {
+            actionException($e,1);
+        } catch (ModelNotFoundException $e) {
+            actionException($e,1);
+        } catch (DbException $e) {
+            actionException($e,1);
         }
         return "处理成功";
     }

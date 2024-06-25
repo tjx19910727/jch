@@ -7,6 +7,7 @@
  */
 
 namespace app\AppFactory\Kernel\Traits\Payment;
+
 use WeChatPayV3\Factory;
 use WeChatPayV3\Payment\Application;
 
@@ -202,7 +203,7 @@ trait WxPayTrait
                     break;
             }
             return $return;
-        } catch (InvalidConfigException $e) {
+        } catch (\Exception $e) {
             actionException($e,1);
             return $this->rValidate($e->getMessage());
         }

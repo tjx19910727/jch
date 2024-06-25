@@ -15,9 +15,9 @@ use app\AppFactory\Kernel\Model\Machine\MachineOnlineDetailsModel;
 trait MachineOnlineDetailsTrait
 {
 
-    public function getMachineOnlineDetailsFind($where,$field = "*",$order = "")
+    public function getMachineOnlineDetailsFind($where,$field = "*",$order = "", $group = "")
     {
-        return MachineOnlineDetailsModel::getFind($where,$field,$order);
+        return MachineOnlineDetailsModel::getFind($where,$field,$order,$group);
     }
 
     public function getMachineOnlineDetailsList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = "")

@@ -110,8 +110,8 @@ class Test extends BaseController
         ];
         $data = [
             "machine_id" => "test0003",
-            "pay_type" => 4,
-            "pay_method" => 41,
+            "pay_type" => 2,
+            "pay_method" => 23,
 //            "coupon_code" => "980429",
             "carList" => json_encode($carList, 320),
         ];
@@ -244,9 +244,9 @@ class Test extends BaseController
 //        die();
 //        dump($result);
         $data = [
-            "machine_id" => "0001",
-            "order_id" => "1153",
-            "coupon_code" => "533617",
+            "machine_id" => "test0003",
+            "order_id" => "1205",
+//            "coupon_code" => "533617",
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));
