@@ -30,7 +30,9 @@ class GoodsClient extends TimeTaskBase
     {
         try {
             $redis = new \Redis();
-            $redis->connect("127.0.0.1", "6379");
+            $config = config("redis");
+            $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
+            $redis->auth($config['password']);
             while (true) {
                 $list = $redis->lRange("updateGoods", 0, -1);
                 $num = count($list);
@@ -56,7 +58,9 @@ class GoodsClient extends TimeTaskBase
     {
         try {
             $redis = new \Redis();
-            $redis->connect("127.0.0.1", "6379");
+            $config = config("redis");
+            $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
+            $redis->auth($config['password']);
             while (true) {
                 $list = $redis->lRange("updateMg", 0, -1);
                 $num = count($list);

@@ -125,7 +125,9 @@ class GoodsModel extends BaseModel
     protected static function onAfterUpdate(Model $model)
     {
         $redis = new \Redis();
-        $redis->connect("127.0.0.1");
+        $config = config("redis");
+        $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
+        $redis->auth($config['password']);
         $redis->lPush("updateGoods",$model['g_id']);
         $redis->expire("updateGoods",300);
         $redisData = $redis->lRange("updateGoods", 0, -1);

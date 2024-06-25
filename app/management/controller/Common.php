@@ -234,7 +234,7 @@ class Common extends AuthController
         $data = $this->app->authNode->getAuthNodeList($where,0,'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status','sort asc');
         $data = obj2arr($data);
         if ($data) return returnState(200,lang("query_success"),$data);
-        return returnState(100,lang("query_fail"));
+        return returnState(100,lang("getSelfRoleNode.no_data"));
     }
 
     /**

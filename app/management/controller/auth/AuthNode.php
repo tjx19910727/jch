@@ -36,7 +36,6 @@ class AuthNode extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['name' => "like",'url' => 'like']);
-        dump($where);
         $field = "node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status";
         $result = $this->app->authNode->getList($where,$pageNum,$field);
         return $result;

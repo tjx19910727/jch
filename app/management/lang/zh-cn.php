@@ -15,6 +15,10 @@ return [
         "export_aul" => "导出用户事件",
     ],
 
+    "getSelfRoleNode" => [
+        "no_data" => "当前账号未授权，无法登录系统",
+    ],
+
     "VLogin" => [
         "account_require" => "账号不能为空",
         "password_require" => "密码不能为空",

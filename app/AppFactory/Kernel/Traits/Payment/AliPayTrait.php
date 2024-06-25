@@ -123,7 +123,9 @@ trait AliPayTrait
             } else if ($result['code'] == 10003) { // 队列轮询
                 $return = $this->r(201, '等待您的支付，超时时间30秒');
                 $redis = new \Redis();
-                $redis->connect("127.0.0.1");
+                $config = config("redis");
+                $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
+                $redis->auth($config['password']);
                 $redis->lPush("aliMicroPay", $this->order['order_id']);
                 $redis->expire("aliMicroPay", 30);
                 $redis->close();

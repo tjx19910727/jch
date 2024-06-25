@@ -22,6 +22,7 @@ use app\AppFactory\RabbitMq\MachineConsumer;
 use app\AppFactory\RabbitMq\MqProducer;
 use app\BaseController;
 use Mqtt\Mqtt;
+use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Queue;
 use think\facade\Request;
@@ -244,8 +245,8 @@ class Test extends BaseController
 //        die();
 //        dump($result);
         $data = [
-            "machine_id" => "test0003",
-            "order_id" => "1205",
+            "machine_id" => "0011",
+//            "order_id" => "1205",
 //            "coupon_code" => "533617",
         ];
         $data = $this->makeSign($data);
@@ -507,8 +508,19 @@ class Test extends BaseController
 
     public function testReceiveCallback()
     {
-        $postData = input();
-        actionLog($postData,"接收数据");
-        return "123";
+        $ckcTime = ["24:00","00:00"];
+        $endTime = HourMinuteSec2int($ckcTime[0]);
+        $startTime = HourMinuteSec2int($ckcTime[1]);
+        dump($endTime);
+        dump($startTime);
+        dump($endTime - $startTime);
+    }
+
+    public function testCache()
+    {
+
+        $config = config("redis");
+        dump($config);
+
     }
 }
