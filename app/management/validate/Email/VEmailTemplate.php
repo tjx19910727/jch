@@ -19,7 +19,7 @@ class VEmailTemplate extends VCommon
             "subject" => "require",
             "body" => "require",
             "attachment" => "max:1000",
-            "et_type" => "require",
+            "template_type" => "require",
         ];
 
         protected $message = [
@@ -27,11 +27,11 @@ class VEmailTemplate extends VCommon
             "subject.require" => "VEmailTemplate.subject_require",
             "body.require" => "VEmailTemplate.body_require",
             "attachment.max" => "VEmailTemplate.attachment_max",
-            "et_type.require" => "VEmailTemplate.et_type_require",
+            "template_type.require" => "VEmailTemplate.template_type_require",
         ];
 
         protected $scene = [
-            "add" => ["subject","body","attachment","et_type"],
+            "add" => ["subject","body","attachment","template_type"],
             "update" => ["et_id"],
             "del" => ["et_id"],
         ];

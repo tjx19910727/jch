@@ -494,6 +494,6 @@ return [
         "subject_require" => "标题不能为空",
         "body_require"    => "正文信息不能为空",
         "attachment_max"    => "附件信息超过限制长度",
-        "et_type_require" => "模板类型不能为空",
+        "template_type_require" => "模板类型不能为空",
     ],
 ];
