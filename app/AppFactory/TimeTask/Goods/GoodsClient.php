@@ -32,14 +32,14 @@ class GoodsClient extends TimeTaskBase
             $redis = new \Redis();
             $config = config("redis");
             $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
-            $redis->auth($config['password']);
+            if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
             while (true) {
                 $list = $redis->lRange("updateGoods", 0, -1);
-                $num = count($list);
+                $num = $list ? count($list) : 0;
                 if ($num > 0) {
                     $data = $redis->rPop("updateGoods");
-                    actionLog($data,'修改商品信息后');
                     if ($data) {
+                        actionLog($data,'修改商品信息后');
                         $this->synchronizationMgMc($data);
                     }
                 }
@@ -49,6 +49,7 @@ class GoodsClient extends TimeTaskBase
         } catch (\Exception $e) {
             actionException($e, 1);
         }
+        return "处理完成";
     }
 
     /**
@@ -60,10 +61,10 @@ class GoodsClient extends TimeTaskBase
             $redis = new \Redis();
             $config = config("redis");
             $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
-            $redis->auth($config['password']);
+            if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
             while (true) {
                 $list = $redis->lRange("updateMg", 0, -1);
-                $num = count($list);
+                $num = $list ? count($list) : 0;
                 if ($num > 0) {
                     $data = $redis->rPop("updateMg");
                     actionLog($data,'修改商品信息后','updateMgSynchronization');
@@ -77,6 +78,7 @@ class GoodsClient extends TimeTaskBase
         } catch (\Exception $e) {
             actionException($e, 1);
         }
+        return "处理完成";
     }
 
     /**

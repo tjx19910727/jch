@@ -55,7 +55,6 @@ class NoticeBaseClient extends BaseClient
     {
         parent::__construct($app);
         $this->config = $app->getConfig();
-        dump($this->config);
         actionLog($this->config,'接收数据');
         try {
             validate(VNotice::class)->scene("getConfig")->check($this->config);
@@ -90,13 +89,13 @@ class NoticeBaseClient extends BaseClient
         if (!isset($this->config['config']) || !$this->config['config']) {
             if ($this->config['sendType'] == 1) {
                 $this->config['config'] = $this->getWxOfficialFind(['ao_id' => $this->config['ao_id'],'status' => 1],
-                    'id,gh_id,wx_name,app_id,secret,token,aes_key,ao_id','update_time desc');
+                    'id,gh_id,wx_name,app_id,secret,token,aes_key,ao_id,creator','update_time desc');
                 if ($this->config['config']) $this->config['config'] = $this->config['config']->toArray();
                 return $this->config['config'];
             }
             if ($this->config['sendType'] == 2) {
                 $this->config['config'] = $this->getEmailConfigFind(['ao_id' => $this->config['ao_id'],'status' => 1],
-                    'ec_id,host,username,authCode,sendEmail,nickname,replyMail,replyNickname,isHtml,ao_id','update_time desc');
+                    'ec_id,host,username,authCode,sendEmail,nickname,replyMail,replyNickname,isHtml,ao_id,creator','update_time desc');
                 if ($this->config['config']) $this->config['config'] = $this->config['config']->toArray();
                 return $this->config['config'];
             }
@@ -168,6 +167,7 @@ class NoticeBaseClient extends BaseClient
             if (strpos($this->config['template'], '{{H}}') !== false) $this->config['template'] = str_replace('{{H}}', date("H"), $this->config['template']);
             if (strpos($this->config['template'], '{{i}}') !== false) $this->config['template'] = str_replace('{{i}}', date("i"), $this->config['template']);
             if (strpos($this->config['template'], '{{s}}') !== false) $this->config['template'] = str_replace('{{s}}', date("s"), $this->config['template']);
+            if (is_string($this->config['template'])) $this->config['template'] = json_decode($this->config['template'],true);
         }
     }
 }

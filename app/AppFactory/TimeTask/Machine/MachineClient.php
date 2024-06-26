@@ -17,6 +17,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
 use app\AppFactory\TimeTask\TimeTaskBase;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
@@ -28,6 +29,7 @@ class MachineClient extends TimeTaskBase
     use SaleOrdersTrait;
     use AuthManagerMachineTrait;
     use ActivityCouponUsedTrait;
+    use ToManagerTrait;
 
     /**
      * 定时任务，每天定时一次，结算昨天在线时长
@@ -134,6 +136,7 @@ class MachineClient extends TimeTaskBase
             $flag[] = 1;
             $this->startTrans();
             try {
+                $details = $details->toArray();
                 foreach ($details as $key => $value) {
                     // 跨天处理
                     if ($value['d_date'] != strtotime(date("Y-m-d"))) {
@@ -165,23 +168,29 @@ class MachineClient extends TimeTaskBase
                             'duration' => bcsub(time(), $value['online_time']),
                         ];
                         $flag[] = $this->updateMachineOnlineDetails($update);
+                        actionLog($this->getLS(),'修改设备在线记录详情状态');
                     }
                     $flag[] = $this->updateMachine(['m_id' => $value['m_id'], 'online' => 2]);
+                    actionLog($this->getLS(),'修改设备在线状态');
 
                     /** 发送离线通知 开始 **/
-                    $machine = $this->getMachineFind(['m_id' => $value['m_id']], 'm_id,machine_id,machine_name,last_online_time,ao_id')->getData();
-                    $machine['online'] = "离线";
-                    $config = [
-                        "ao_id" => $machine['ao_id'],
-                        "templateType" => "online",
-                        "replaceData" => $machine,
-                    ];
-                    $app = @AppFactory::notice($config);
-                    @$app->send();
+                    $machine = $this->getMachineFind(['m_id' => $value['m_id']], 'm_id,machine_id,machine_name,last_online_time,ao_id');
+                    if ($machine) {
+                        $machine = $machine->toArray();
+                        $machine['online'] = "offline";
+                        $this->noticeSendData = [
+                            "ao_id" => $machine['ao_id'],
+                            "m_id" => $machine['m_id'],
+                            "templateType" => "online",
+                            "replaceData" => $machine,
+                        ];
+                        $this->noticeSend();
+                    }
                     /** 发送离线通知 结束 **/
                 }
-                $this->commitTrans();//            sleep(10);
-                //            actionLog($flag,'检查掉线的在线记录','checkClose');
+                $this->commitTrans();
+                //            sleep(10);
+                            actionLog($flag,'检查掉线的在线记录','checkOffline');
             } catch (\Exception $e) {
                 $this->rollbackTrans();
                 actionException($e,1);

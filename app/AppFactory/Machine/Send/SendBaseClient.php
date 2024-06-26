@@ -46,6 +46,6 @@ class SendBaseClient extends MachineBaseClient
             }
             return $this->rSuccess($result);
         }
-        return $this->rFail("offline");
+        return $this->rFail($this->lang("offline"));
     }
 }

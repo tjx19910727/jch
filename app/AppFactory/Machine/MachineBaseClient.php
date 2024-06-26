@@ -13,11 +13,13 @@ use app\AppFactory\Kernel\BaseClient;
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
 use Mqtt\Mqtt;
 
 class MachineBaseClient extends BaseClient
 {
     use MachineTrait,MachineMqRecordTrait;
+    use ToManagerTrait;
 
     public $machine;
     public $data;
@@ -29,8 +31,34 @@ class MachineBaseClient extends BaseClient
 //        actionLog($this->config,'接收数据');
         $this->machine = $this->getMachineFind(['machine_id' => $this->config['machine_id']]);
         if (!$this->machine) die(json_encode(['state' => 100, "msg" => $this->lang("query_machine_no_data")],320));
+        // 设备离线状态下收到数据，认为已上线，触发发送上线通知
+        $this->sendOnline();
     }
 
+    /**
+     * 发送上线通知
+     */
+    public function sendOnline()
+    {
+        if ($this->machine['online'] == 2) {
+            try {
+                $this->noticeSendData = [
+                    "ao_id" => $this->machine['ao_id'],
+                    "m_id" => $this->machine['m_id'],
+                    "templateType" => "online",
+                    "replaceData" => [
+                        "online" => "online",
+                        "machine_id" => $this->machine['machine_id'],
+                        "machine_name" => $this->machine['machine_name'],
+                    ]
+                ];
+                $this->noticeSend();
+            } catch (\Exception $e) {
+                actionLog("发送在线通知抛出异常");
+                actionException($e,1);
+            }
+        }
+    }
 
     /**
      * 记录接收到的上报数据
@@ -57,28 +85,5 @@ class MachineBaseClient extends BaseClient
             "type" => $type,
         ];
         $this->addMachineMqRecord($insertMqRecord);
-    }
-
-    /**
-     * 发布Mqtt，暂停使用
-     * @param $content
-     * @return bool
-     */
-    public function sendMqtt2Machine($content)
-    {
-        $server = "broker.emqx.io";     // 服务代理地址(mqtt服务端地址)
-        $port = 1883;                     // 通信端口
-        $username = "dkm";                   // thing的Key
-        $password = "dkm123456";                   // Token
-        $client_id = $this->machine['machine_id'] . "_000002";           // APPID
-        $mqtt = new Mqtt($server, $port, $client_id); //实例化MQTT类
-        if ($mqtt->connect(true, NULL, $username, $password)) {
-            actionLog($content,'发布MQTT');
-            $mqtt->publish("dataSend/" . $this->machine['machine_id'], $content);
-            $mqtt->close();
-            return true;
-        } else {
-            return false;
-        }
     }
 }

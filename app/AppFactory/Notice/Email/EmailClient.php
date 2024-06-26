@@ -30,6 +30,7 @@ class EmailClient extends NoticeBaseClient
             isset($this->config['template']) && $this->config['template'] &&
             isset($this->config['receiver']) && $this->config['receiver']) {
             $result = $this->sendTemplate();
+            actionLog($result,'发送邮件结果');
             if ($result) {
                 $this->addTemplateLog($result);
             }

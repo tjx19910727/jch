@@ -19,7 +19,7 @@ class AuthManagerMachineModel extends BaseModel
     public static function joinAuthManager($where,$field = "*",$order = "")
     {
         $data = self::alias("amm")
-            ->join("auth_manager au","au.manager_id = amm.manager_id",'left')
+            ->join("auth_manager am","am.manager_id = amm.manager_id",'left')
             ->where($where)
             ->field($field)
             ->order($order)

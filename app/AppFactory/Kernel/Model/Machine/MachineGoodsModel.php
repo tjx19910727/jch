@@ -41,7 +41,7 @@ class MachineGoodsModel extends BaseModel
         $redis = new \Redis();
         $config = config("redis");
         $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
-        $redis->auth($config['password']);
+        if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
         $redis->lPush("updateMg",$mg_id);
         $redis->expire("updateMg",300);
         $redisData = $redis->lRange("updateMg", 0, -1);

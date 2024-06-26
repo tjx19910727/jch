@@ -14,5 +14,5 @@ use app\AppFactory\Kernel\Model\BaseModel;
 class EmailTemplateLogModel extends BaseModel
 {
     protected $pk = "el_id";
-    protected $name = "email_log";
+    protected $name = "email_template_log";
 }

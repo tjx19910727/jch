@@ -127,7 +127,7 @@ class GoodsModel extends BaseModel
         $redis = new \Redis();
         $config = config("redis");
         $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
-        $redis->auth($config['password']);
+        if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
         $redis->lPush("updateGoods",$model['g_id']);
         $redis->expire("updateGoods",300);
         $redisData = $redis->lRange("updateGoods", 0, -1);

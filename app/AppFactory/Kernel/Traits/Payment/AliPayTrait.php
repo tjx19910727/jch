@@ -125,7 +125,7 @@ trait AliPayTrait
                 $redis = new \Redis();
                 $config = config("redis");
                 $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
-                $redis->auth($config['password']);
+                if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
                 $redis->lPush("aliMicroPay", $this->order['order_id']);
                 $redis->expire("aliMicroPay", 30);
                 $redis->close();

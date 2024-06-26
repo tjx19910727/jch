@@ -35,8 +35,9 @@ class Test extends BaseController
     public function testSendEmail()
     {
         $config = [
-            "ao_id" => 3,
+            "ao_id" => 6,
             "templateType" => "online",
+            "m_id" => "1",
             "replaceData" => [
                 "online" => "在线",
                 "machine_id" => "test0003",
@@ -45,7 +46,8 @@ class Test extends BaseController
         ];
 //        try {
             $app = AppFactory::notice($config);
-            $app->send();
+            $result = $app->send();
+            dump($result);
 //        } catch (\Exception $e) {
 //            dump($e->getMessage());
 //        }
@@ -245,7 +247,7 @@ class Test extends BaseController
 //        die();
 //        dump($result);
         $data = [
-            "machine_id" => "0011",
+            "machine_id" => "test0001",
 //            "order_id" => "1205",
 //            "coupon_code" => "533617",
         ];
@@ -284,24 +286,6 @@ class Test extends BaseController
         return $result;
     }
 
-    public function validateSign()
-    {
-        $url = request()->url();
-        dump($url);
-        $data = '{"machine_id":"test0006","msg_id":"d01ac40b-f609-4fea-8b5b-dc94da5ce09c","timestamp":1716343858495464,"pay_type":4,"pay_method":41,"total_price":"1.0","total_quantity":1,"al_id":10,"alc_id":11,"sign":"ceb491d2053d2efb8c2e2e2986f50ce7"}';
-        $data = json2arr($data);
-        dump($data);
-        $result = SignUtil::checkSign($data,env("api.md5Key"));
-        dump($result);
-    }
-
-    public function testArrayColumn()
-    {
-        $list = ActivityGoodsModel::getList([],0)->toArray();
-        dump($list);
-        $g_ids = array_column($list,'g_id');
-        dump($g_ids);
-    }
 
     public function testUpload()
     {
