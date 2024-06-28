@@ -37,7 +37,8 @@ class BaseClient
      * GET请求
      * @param $url
      * @param string $params
-     * @return bool|string
+     * @return mixed|\Psr\Http\Message\ResponseInterface
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function httpGet($url,string $params = '')
     {
@@ -48,7 +49,8 @@ class BaseClient
      * POST请求
      * @param $url
      * @param array $params
-     * @return bool|string
+     * @return mixed|\Psr\Http\Message\ResponseInterface
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function httpPost($url,array $params)
     {

@@ -2,8 +2,27 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0b425c8e-253d-4f3f-a4bc-dbf750314eff" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/app/management/lang/zh-cn.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/lang/zh-cn.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/validate/Email/VEmailTemplate.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/validate/Email/VEmailTemplate.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderRefundTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderRefundTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/JdCashierTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/JdCashierTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/TlPayTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/TlPayTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Pay/Notify/JdCashierClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Pay/Notify/JdCashierClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Pay/Notify/WxClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Pay/Notify/WxClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/machine/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/controller/Test.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/Login.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/Login.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/auth/AuthManager.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/auth/AuthManager.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/pay/controller/notify/JdCashier.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/pay/controller/notify/JdCashier.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/pay/controller/notify/Wx.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/pay/controller/notify/Wx.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/extend/WeChatPayV3/Kernel/BaseClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/extend/WeChatPayV3/Kernel/BaseClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Support/AesGcm.php" beforeDir="false" afterPath="$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Support/AesGcm.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Support/AesInterface.php" beforeDir="false" afterPath="$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Support/AesInterface.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Application.php" beforeDir="false" afterPath="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Application.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Kernel/BaseClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Kernel/BaseClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Transactions/TransactionsClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Transactions/TransactionsClient.php" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -31,29 +50,63 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="ToManagerTrait.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Send/ToManagerTrait.php">
+      <file leaf-file-name="Test.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="671">
+              <caret line="514" column="34" selection-start-line="514" selection-start-column="34" selection-end-line="514" selection-end-column="34" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="BaseClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Kernel/BaseClient.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="509">
+              <caret line="55" column="25" lean-forward="true" selection-start-line="55" selection-start-column="25" selection-end-line="55" selection-end-column="25" />
+              <folding>
+                <element signature="e#1305#1376#0#PHP" />
+                <element signature="e#1381#3327#0#PHP" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="AuthNode.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthNode.php">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="594">
-              <caret line="32" column="27" selection-start-line="32" selection-start-column="27" selection-end-line="32" selection-end-column="27" />
+              <caret line="41" column="5" lean-forward="true" selection-start-line="41" selection-start-column="5" selection-end-line="41" selection-end-column="5" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="EmailTemplate.php" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/app/management/controller/email/EmailTemplate.php">
+      <file leaf-file-name="AuthManager.php" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthManager.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="575">
-              <caret line="58" column="28" selection-start-line="58" selection-start-column="28" selection-end-line="58" selection-end-column="28" />
+            <state relative-caret-position="440">
+              <caret line="80" column="13" selection-start-line="80" selection-start-column="13" selection-end-line="80" selection-end-column="13" />
+              <folding>
+                <element signature="e#139#176#0#PHP" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="VEmailTemplate.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/management/validate/Email/VEmailTemplate.php">
+      <file leaf-file-name="Application.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Application.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="528">
-              <caret line="29" column="78" selection-start-line="29" selection-start-column="78" selection-end-line="29" selection-end-column="78" />
+            <state relative-caret-position="302">
+              <caret line="52" column="30" lean-forward="true" selection-start-line="52" selection-start-column="30" selection-end-line="52" selection-end-column="30" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="AuthManagerClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerClient.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="440">
+              <caret line="27" column="60" selection-start-line="27" selection-start-column="60" selection-end-line="27" selection-end-column="60" />
             </state>
           </provider>
         </entry>
@@ -61,74 +114,35 @@
       <file leaf-file-name="zh-cn.php" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/management/lang/zh-cn.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="663">
-              <caret line="494" column="40" selection-start-line="494" selection-start-column="40" selection-end-line="494" selection-end-column="40" />
+            <state relative-caret-position="460">
+              <caret line="32" column="22" selection-start-line="32" selection-start-column="9" selection-end-line="32" selection-end-column="22" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Test.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+      <file leaf-file-name="AuthManagerTrait.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerTrait.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="319">
-              <caret line="249" column="37" selection-start-line="249" selection-start-column="37" selection-end-line="249" selection-end-column="37" />
-              <folding>
-                <element signature="e#1341#1376#0#PHP" />
-                <element signature="e#1603#1703#1#PHP" />
-                <element signature="e#1727#1822#1#PHP" />
-                <element signature="e#1846#1951#1#PHP" />
-                <element signature="e#1975#2072#1#PHP" />
-                <element signature="e#2632#2966#0#PHP" />
-                <element signature="e#2720#2803#0#PHP" />
-                <element signature="e#3026#3095#0#PHP" />
-                <element signature="e#3113#3319#0#PHP" />
-                <element signature="e#3321#3340#0#PHP" />
-                <element signature="e#7270#7292#0#PHP" />
-                <element signature="e#7880#7901#0#PHP" />
-                <element signature="e#8169#8853#0#PHP" />
-                <element signature="e#8339#8500#0#PHP" />
-                <element signature="e#8607#8728#0#PHP" />
-              </folding>
+            <state relative-caret-position="352">
+              <caret line="72" column="93" selection-start-line="72" selection-start-column="88" selection-end-line="72" selection-end-column="99" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="EmailClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Notice/Email/EmailClient.php">
+      <file leaf-file-name="MachineConfig.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineConfig.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="52">
-              <caret line="17" column="33" selection-start-line="17" selection-start-column="33" selection-end-line="17" selection-end-column="33" />
+            <state relative-caret-position="726">
+              <caret line="72" column="69" selection-start-line="72" selection-start-column="69" selection-end-line="72" selection-end-column="69" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="NoticeBaseClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Notice/NoticeBaseClient.php">
+      <file leaf-file-name="Login.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/management/controller/Login.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="448">
-              <caret line="157" column="21" selection-start-line="157" selection-start-column="21" selection-end-line="157" selection-end-column="21" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="MachineBaseClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/MachineBaseClient.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="421">
-              <caret line="49" column="43" selection-start-line="49" selection-start-column="37" selection-end-line="49" selection-end-column="43" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="MachineClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="594">
-              <caret line="136" column="32" selection-start-line="136" selection-start-column="32" selection-end-line="136" selection-end-column="32" />
-              <folding>
-                <element signature="e#1003#1042#0#PHP" />
-                <element signature="e#1047#6321#0#PHP" />
-              </folding>
+            <state relative-caret-position="707">
+              <caret line="72" column="52" selection-start-line="72" selection-start-column="52" selection-end-line="72" selection-end-column="52" />
             </state>
           </provider>
         </entry>
@@ -144,10 +158,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>346</find>
-      <find>outGoods</find>
-      <find>fd_id_require</find>
-      <find>VActivityPickCode</find>
       <find>202406212109585220455</find>
       <find>202406221051415759680</find>
       <find>CurlTrait</find>
@@ -174,6 +184,10 @@
       <find>new \Redis();</find>
       <find>Notice()</find>
       <find>et_type_require</find>
+      <find>$refundTradeNo</find>
+      <find>$refund_no</find>
+      <find>$this-&gt;refund_no</find>
+      <find>VLogin</find>
     </findStrings>
     <replaceStrings>
       <replace>SaleOrdersMachine</replace>
@@ -217,29 +231,7 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/app/AppFactory/Api/Application.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityPickCodeClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php" />
-        <option value="$PROJECT_DIR$/app/index/controller/Index.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/BaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Pay/SaleOrders/PaymentClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityPickClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Api/V2BaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Api/ApiBaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Api/V2/V2BaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/CurlTrait.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Mq/OutGoodsTrait.php" />
-        <option value="$PROJECT_DIR$/app/machine/validate/VReceive.php" />
-        <option value="$PROJECT_DIR$/config/console.php" />
-        <option value="$PROJECT_DIR$/app/api/controller/SendCallback.php" />
-        <option value="$PROJECT_DIR$/app/command/Api.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Api/Send/CallbackClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" />
-        <option value="$PROJECT_DIR$/app/machine/lang/zh-cn.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Wx/WxOfficialClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineOnlineDetailsTrait.php" />
         <option value="$PROJECT_DIR$/app/management/controller/auth/AuthNode.php" />
         <option value="$PROJECT_DIR$/app/management/controller/Common.php" />
@@ -253,7 +245,6 @@
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Send/SendBaseClient.php" />
         <option value="$PROJECT_DIR$/app/command/TimeTask.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Goods/GoodsClient.php" />
-        <option value="$PROJECT_DIR$/.env" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AliPayTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Send/EmailTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Send/MobileNoticeTrait.php" />
@@ -261,13 +252,36 @@
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Send/ToManagerTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Auth/AuthManagerMachineModel.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Email/EmailTemplateLogModel.php" />
-        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Notice/Email/EmailClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/MachineBaseClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Notice/NoticeBaseClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" />
         <option value="$PROJECT_DIR$/app/management/lang/zh-cn.php" />
         <option value="$PROJECT_DIR$/app/management/validate/Email/VEmailTemplate.php" />
+        <option value="$PROJECT_DIR$/extend/WeChatPayV3/Refund/Application.php" />
+        <option value="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Refund/RefundProvider.php" />
+        <option value="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Application.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/JdCashierTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/TlPayTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderRefundTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Pay/Notify/JdCashierClient.php" />
+        <option value="$PROJECT_DIR$/app/pay/controller/notify/JdCashier.php" />
+        <option value="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Refund/RefundClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Pay/PayBaseClient.php" />
+        <option value="$PROJECT_DIR$/app/pay/controller/notify/Wx.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Pay/Notify/WxClient.php" />
+        <option value="$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Support/AesInterface.php" />
+        <option value="$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Support/AesGcm.php" />
+        <option value="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Kernel/BaseClient.php" />
+        <option value="$PROJECT_DIR$/extend/WeChatPayV3/Kernel/BaseClient.php" />
+        <option value="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Transactions/TransactionsClient.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/Login.php" />
+        <option value="$PROJECT_DIR$/.env" />
+        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerClient.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/auth/AuthManager.php" />
       </list>
     </option>
   </component>
@@ -365,7 +379,7 @@
       <path value="$PROJECT_DIR$/vendor/phpmailer/phpmailer" />
     </include_path>
   </component>
-  <component name="ProjectFrameBounds" extendedState="7">
+  <component name="ProjectFrameBounds" extendedState="6">
     <option name="x" value="1912" />
     <option name="y" value="-8" />
     <option name="width" value="1936" />
@@ -395,89 +409,13 @@
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="api" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="api" type="462c0819:PsiDirectoryNode" />
-              <item name="controller" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="api" type="462c0819:PsiDirectoryNode" />
-              <item name="lang" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
-              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
-              <item name="Machine" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
-              <item name="Notice" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
-              <item name="Notice" type="462c0819:PsiDirectoryNode" />
-              <item name="Email" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
-              <item name="TimeTask" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
-              <item name="TimeTask" type="462c0819:PsiDirectoryNode" />
-              <item name="Machine" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="command" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="machine" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="machine" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
               <item name="controller" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
@@ -485,11 +423,20 @@
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="management" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+              <item name="auth" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="config" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
+              <item name="lang" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="vendor" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -525,11 +472,11 @@
       <recent name="E:\project\project-70-cf.com\app\management\validate\Machine" />
     </key>
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\project\project-70-cf.com\extend\WeChatPayV3\Kernel\Support" />
       <recent name="E:\project\project-70-cf.com\app\command" />
       <recent name="E:\project\project-70-cf.com\public\uploads" />
       <recent name="E:\project\project-70-cf.com\public\uploads\excel" />
       <recent name="E:\project\project-70-cf.com\extend" />
-      <recent name="E:\project\project-70-cf.com\app\AppFactory\Kernel\Traits\Email" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -588,12 +535,12 @@
       <workItem from="1718611885150" duration="103415000" />
       <workItem from="1719035279464" duration="595000" />
       <workItem from="1719036103322" duration="672000" />
-      <workItem from="1719037768860" duration="69677000" />
+      <workItem from="1719037768860" duration="89262000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1791993000" />
+    <option name="totallyTimeSpent" value="1811578000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -605,7 +552,8 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="1912" y="-8" width="1936" height="1096" extended-state="7" />
+    <frame x="1912" y="-8" width="1936" height="1096" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info anchor="bottom" id="TODO" order="6" weight="0.3290461" />
       <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" />
@@ -675,336 +623,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsLangTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="401">
-          <caret line="25" column="20" selection-start-line="25" selection-start-column="20" selection-end-line="25" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="346">
-          <caret line="26" column="26" selection-start-line="26" selection-start-column="26" selection-end-line="26" selection-end-column="26" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/CacheTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="425">
-          <caret line="33" column="5" selection-start-line="33" selection-start-column="5" selection-end-line="33" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="390">
-          <caret line="60" column="21" selection-start-line="60" selection-start-column="21" selection-end-line="60" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-queue/src/queue/job/Redis.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="88">
-          <caret line="33" column="55" lean-forward="true" selection-start-line="33" selection-start-column="55" selection-end-line="33" selection-end-column="55" />
-          <folding>
-            <element signature="e#626#640#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/config/cache.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="616">
-          <caret line="28" column="2" lean-forward="true" selection-start-line="28" selection-start-column="2" selection-end-line="28" selection-end-column="2" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/config/redis.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="198">
-          <caret line="14" column="19" selection-start-line="14" selection-start-column="5" selection-end-line="14" selection-end-column="19" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineVersionPlan.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="396">
-          <caret line="42" column="50" selection-start-line="42" selection-start-column="50" selection-end-line="42" selection-end-column="50" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/config/rabbit_mq.php">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/command/TimeTask.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="553">
-          <caret line="60" column="20" lean-forward="true" selection-start-line="60" selection-start-column="20" selection-end-line="60" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineVersionPlanClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="707">
-          <caret line="55" column="33" lean-forward="true" selection-start-line="55" selection-start-column="33" selection-end-line="55" selection-end-column="33" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Send/SendBaseClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="514">
-          <caret line="37" column="14" lean-forward="true" selection-start-line="37" selection-start-column="14" selection-end-line="37" selection-end-column="14" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AliPayTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="338">
-          <caret line="126" column="131" selection-start-line="126" selection-start-column="131" selection-end-line="126" selection-end-column="131" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Machine/MachineGoodsModel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="206">
-          <caret line="40" column="17" selection-start-line="40" selection-start-column="17" selection-end-line="40" selection-end-column="17" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Goods/GoodsModel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="157">
-          <caret line="111" column="45" lean-forward="true" selection-start-line="111" selection-start-column="45" selection-end-line="111" selection-end-column="45" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Goods/GoodsClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="660">
-          <caret line="35" column="26" lean-forward="true" selection-start-line="35" selection-start-column="26" selection-end-line="35" selection-end-column="26" />
-          <folding>
-            <element signature="e#138#168#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Send/MqClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="201">
-          <caret line="193" column="5" lean-forward="true" selection-start-line="193" selection-start-column="5" selection-end-line="193" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/.env">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="247">
-          <caret line="17" column="20" lean-forward="true" selection-start-line="17" selection-start-column="20" selection-end-line="17" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="729">
-          <caret line="137" column="20" selection-start-line="137" selection-start-column="20" selection-end-line="137" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/AppFactory.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="286">
-          <caret line="19" column="32" lean-forward="true" selection-start-line="19" selection-start-column="32" selection-end-line="19" selection-end-column="32" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Send/EmailTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="22" column="41" selection-start-line="22" selection-start-column="41" selection-end-line="22" selection-end-column="41" />
-          <folding>
-            <element signature="e#143#173#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Email/EmailTemplateTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-41" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Notice/WeChat/WeChatClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="113">
-          <caret line="11" column="4" lean-forward="true" selection-start-line="11" selection-start-column="4" selection-end-line="11" selection-end-column="4" />
-          <folding>
-            <element signature="e#136#179#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/AuthController.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="47" column="60" selection-start-line="47" selection-start-column="60" selection-end-line="47" selection-end-column="60" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-7609" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Mq/OutGoodsTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-410">
-          <caret line="96" column="140" selection-start-line="96" selection-start-column="140" selection-end-line="96" selection-end-column="140" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/MqClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="572">
-          <caret line="71" column="19" selection-start-line="71" selection-start-column="19" selection-end-line="71" selection-end-column="19" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineOnlineDetailsTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="223">
-          <caret line="52" column="47" selection-start-line="52" selection-start-column="38" selection-end-line="52" selection-end-column="47" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="44">
-          <caret line="18" column="39" lean-forward="true" selection-start-line="18" selection-start-column="39" selection-end-line="18" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="352">
-          <caret line="153" column="27" selection-start-line="153" selection-start-column="20" selection-end-line="153" selection-end-column="27" />
-          <folding>
-            <element signature="e#139#182#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/goods/Goods.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="440">
-          <caret line="55" lean-forward="true" selection-start-line="55" selection-end-line="55" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="390">
-          <caret line="41" column="31" lean-forward="true" selection-start-line="41" selection-start-column="31" selection-end-line="41" selection-end-column="31" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/vendor/phpmailer/phpmailer/src/PHPMailer.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="500">
-          <caret line="1515" column="20" selection-start-line="1515" selection-start-column="20" selection-end-line="1515" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Email/EmailTemplateLogModel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="264">
-          <caret line="17" column="1" lean-forward="true" selection-start-line="17" selection-start-column="1" selection-end-line="17" selection-end-column="1" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Auth/AuthManagerMachineModel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="308">
-          <caret line="19" column="5" lean-forward="true" selection-start-line="19" selection-start-column="5" selection-end-line="19" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerMachineTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="399">
-          <caret line="112" column="29" lean-forward="true" selection-start-line="112" selection-start-column="29" selection-end-line="112" selection-end-column="29" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Email/EmailTemplateLogTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="484">
-          <caret line="27" column="23" selection-start-line="27" selection-start-column="23" selection-end-line="27" selection-end-column="23" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="438">
-          <caret line="84" column="27" lean-forward="true" selection-start-line="84" selection-start-column="27" selection-end-line="84" selection-end-column="27" />
-          <folding>
-            <element signature="e#130#160#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="319">
-          <caret line="249" column="37" selection-start-line="249" selection-start-column="37" selection-end-line="249" selection-end-column="37" />
-          <folding>
-            <element signature="e#1341#1376#0#PHP" />
-            <element signature="e#1603#1703#1#PHP" />
-            <element signature="e#1727#1822#1#PHP" />
-            <element signature="e#1846#1951#1#PHP" />
-            <element signature="e#1975#2072#1#PHP" />
-            <element signature="e#2632#2966#0#PHP" />
-            <element signature="e#2720#2803#0#PHP" />
-            <element signature="e#3026#3095#0#PHP" />
-            <element signature="e#3113#3319#0#PHP" />
-            <element signature="e#3321#3340#0#PHP" />
-            <element signature="e#7270#7292#0#PHP" />
-            <element signature="e#7880#7901#0#PHP" />
-            <element signature="e#8169#8853#0#PHP" />
-            <element signature="e#8339#8500#0#PHP" />
-            <element signature="e#8607#8728#0#PHP" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Send/MobileNoticeTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="731">
-          <caret line="39" column="29" lean-forward="true" selection-start-line="39" selection-start-column="29" selection-end-line="39" selection-end-column="29" />
-          <folding>
-            <element signature="e#141#171#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Send/WxNoticeTrait.php">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/MachineBaseClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="421">
-          <caret line="49" column="43" selection-start-line="49" selection-start-column="37" selection-end-line="49" selection-end-column="43" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Notice/NoticeBaseClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="448">
-          <caret line="157" column="21" selection-start-line="157" selection-start-column="21" selection-end-line="157" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Notice/Email/EmailClient.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="52">
@@ -1037,13 +655,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/lang/zh-cn.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="663">
-          <caret line="494" column="40" selection-start-line="494" selection-start-column="40" selection-end-line="494" selection-end-column="40" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/management/validate/Email/VEmailTemplate.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="528">
@@ -1051,10 +662,348 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Refund/Application.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="242">
+          <caret line="16" column="8" selection-start-line="16" selection-start-column="8" selection-end-line="16" selection-end-column="8" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Payment/Refund/RefundServiceProvider.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="352">
+          <caret line="21" column="10" selection-start-line="21" selection-start-column="10" selection-end-line="21" selection-end-column="10" />
+          <folding>
+            <element signature="e#136#169#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Payment/Transfer/TransferClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-679" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Factory.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="550">
+          <caret line="30" lean-forward="true" selection-start-line="30" selection-end-line="30" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/app/management/controller/email/EmailTemplate.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="575">
-          <caret line="58" column="28" selection-start-line="58" selection-start-column="28" selection-end-line="58" selection-end-column="28" />
+        <state relative-caret-position="1166">
+          <caret line="58" column="28" lean-forward="true" selection-start-line="58" selection-start-column="28" selection-end-line="58" selection-end-column="28" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Payment/Application.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="264">
+          <caret line="15" column="68" selection-start-line="15" selection-start-column="68" selection-end-line="15" selection-end-column="68" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="572">
+          <caret line="86" column="42" selection-start-line="86" selection-start-column="42" selection-end-line="86" selection-end-column="42" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderRefundTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="176">
+          <caret line="13" column="22" lean-forward="true" selection-start-line="13" selection-start-column="22" selection-end-line="13" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/Notify/AliClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-198" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="528">
+          <caret line="89" column="25" lean-forward="true" selection-start-line="89" selection-start-column="25" selection-end-line="89" selection-end-column="25" />
+          <folding>
+            <element signature="e#3325#3383#0#PHP" />
+            <element signature="e#3388#3917#0#PHP" />
+            <element signature="e#5471#5546#0#PHP" />
+            <element signature="e#5551#6620#0#PHP" />
+            <element signature="e#6626#6798#0#PHP" />
+            <element signature="e#6803#7680#0#PHP" />
+            <element signature="e#7686#7786#0#PHP" />
+            <element signature="e#7791#10145#0#PHP" />
+            <element signature="e#10151#10225#0#PHP" />
+            <element signature="e#10230#12864#0#PHP" />
+            <element signature="e#12870#12946#0#PHP" />
+            <element signature="e#12951#16213#0#PHP" />
+            <element signature="e#16219#16402#0#PHP" />
+            <element signature="e#16408#17043#0#PHP" />
+            <element signature="e#17049#18345#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/TlPayTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="544">
+          <caret line="151" lean-forward="true" selection-start-line="151" selection-end-line="151" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/JdCashierTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-217">
+          <caret line="262" column="68" lean-forward="true" selection-start-line="262" selection-start-column="68" selection-end-line="262" selection-end-column="68" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/Notify/JdCashierClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="707">
+          <caret line="145" column="9" lean-forward="true" selection-start-line="117" selection-start-column="5" selection-end-line="145" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/pay/controller/notify/JdCashier.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="685">
+          <caret line="47" column="59" lean-forward="true" selection-start-line="47" selection-start-column="59" selection-end-line="47" selection-end-column="59" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/pay/controller/Payment.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="509">
+          <caret line="51" column="41" lean-forward="true" selection-start-line="51" selection-start-column="41" selection-end-line="51" selection-end-column="41" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/PayBaseClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="132">
+          <caret line="13" column="60" lean-forward="true" selection-start-line="13" selection-start-column="60" selection-end-line="13" selection-end-column="60" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/pay/controller/notify/Wx.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="795">
+          <caret line="45" column="56" selection-start-line="45" selection-start-column="56" selection-end-line="45" selection-end-column="56" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Payment/Refund/RefundClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="462">
+          <caret line="26" column="23" selection-start-line="26" selection-start-column="23" selection-end-line="26" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/SaleOrders/PaymentClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="264">
+          <caret line="122" column="73" selection-start-line="121" selection-start-column="80" selection-end-line="122" selection-end-column="73" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Strategy/StrategyPayeeTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="77" column="20" selection-start-line="77" selection-start-column="20" selection-end-line="77" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/Notify/WxClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1257">
+          <caret line="84" column="30" selection-start-line="84" selection-start-column="30" selection-end-line="84" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$USER_HOME$/Desktop/wechatpay-php-main/src/Crypto/AesGcm.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-965" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Support/AesEcb.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Support/AesInterface.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-371">
+          <caret line="7" column="22" lean-forward="true" selection-start-line="7" selection-start-column="22" selection-end-line="7" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Support/AesGcm.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1543">
+          <caret line="87" column="25" selection-start-line="87" selection-start-column="15" selection-end-line="87" selection-end-column="25" />
+          <folding>
+            <element signature="e#61#83#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Support/Rsa.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-6091" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Kernel/Traits/CurlTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="426">
+          <caret line="57" column="30" selection-start-line="57" selection-start-column="26" selection-end-line="57" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1427">
+          <caret line="25" column="11" selection-start-line="25" selection-start-column="11" selection-end-line="25" selection-end-column="11" />
+          <folding>
+            <element signature="e#144#168#0#PHP" expanded="true" />
+            <element signature="e#1443#1464#0#PHP" />
+            <element signature="e#3931#4004#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Payment/Kernel/BaseClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="751">
+          <caret line="59" column="7" selection-start-line="59" selection-start-column="7" selection-end-line="59" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/Common.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1826">
+          <caret line="114" column="54" lean-forward="true" selection-start-line="114" selection-start-column="54" selection-end-line="114" selection-end-column="54" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Payment/Transactions/TransactionsClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="484">
+          <caret line="27" column="15" selection-start-line="27" selection-start-column="15" selection-end-line="27" selection-end-column="15" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineConfigClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="33" column="20" selection-start-line="33" selection-start-column="20" selection-end-line="33" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/Login.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="707">
+          <caret line="72" column="52" selection-start-line="72" selection-start-column="52" selection-end-line="72" selection-end-column="52" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="jar://$APPLICATION_HOME_DIR$/plugins/php/lib/php.jar!/stubs/mysqli/mysqli.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="494" column="20" selection-start-line="494" selection-start-column="20" selection-end-line="494" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="671">
+          <caret line="514" column="34" selection-start-line="514" selection-start-column="34" selection-end-line="514" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config/database.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="484">
+          <caret line="22" column="20" lean-forward="true" selection-start-line="22" selection-start-column="20" selection-end-line="22" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.env">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="242">
+          <caret line="11" column="25" lean-forward="true" selection-start-line="11" selection-start-column="11" selection-end-line="11" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineConfig.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="726">
+          <caret line="72" column="69" selection-start-line="72" selection-start-column="69" selection-end-line="72" selection-end-column="69" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/extend/WeChatPayV3/Kernel/BaseClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="509">
+          <caret line="55" column="25" lean-forward="true" selection-start-line="55" selection-start-column="25" selection-end-line="55" selection-end-column="25" />
+          <folding>
+            <element signature="e#1305#1376#0#PHP" />
+            <element signature="e#1381#3327#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthNode.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="594">
+          <caret line="41" column="5" lean-forward="true" selection-start-line="41" selection-start-column="5" selection-end-line="41" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/ManagementTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="95" column="20" selection-start-line="95" selection-start-column="20" selection-end-line="95" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Application.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="52" column="30" lean-forward="true" selection-start-line="52" selection-start-column="30" selection-end-line="52" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="352">
+          <caret line="72" column="93" selection-start-line="72" selection-start-column="88" selection-end-line="72" selection-end-column="99" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/lang/zh-cn.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="460">
+          <caret line="32" column="22" selection-start-line="32" selection-start-column="9" selection-end-line="32" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="440">
+          <caret line="27" column="60" selection-start-line="27" selection-start-column="60" selection-end-line="27" selection-end-column="60" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthManager.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="440">
+          <caret line="80" column="13" selection-start-line="80" selection-start-column="13" selection-end-line="80" selection-end-column="13" />
+          <folding>
+            <element signature="e#139#176#0#PHP" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

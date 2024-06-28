@@ -10,6 +10,7 @@ namespace app\AppFactory\Pay\Notify;
 
 
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\Payment\WxPayTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Pay\PayBaseClient;
 
@@ -17,9 +18,12 @@ class WxClient extends PayBaseClient
 {
     use StrategyPayeeTrait;
     use AfterOrderPaymentTrait;
+    use WxPayTrait;
 
     protected $wxConfig;
     protected $order;
+    public $refund_no;
+    public $strategyPayee;
 
     public function handle($message)
     {
@@ -66,5 +70,46 @@ class WxClient extends PayBaseClient
             return true; // 返回处理完成
 //        });
 //        $response->send();
+    }
+
+    public function handleRefund()
+    {
+        try {
+            $this->refundTradeNo = $this->data['refundRequestNum'];
+            if ($this->data['event_type'] == 'REFUND.SUCCESS') {
+                $this->strategyPayee = $this->getStrategyPayeeContent(['sp_id' => $this->data['sp_id']]);
+                if (!is_array($this->strategyPayee)) return $this->strategyPayee;
+
+                $this->initWpApp();
+
+                $this->wpApp->
+
+                $this->refund_no = $this->data['orderNum'];
+
+
+                $this->startTrans();
+                try {
+                    $result = $this->refundSuccess();
+                    if ($result === true) {
+                        $this->commitTrans();
+                    } else {
+                        $this->rollbackTrans();
+                    }
+                    actionLog($result, '处理退款成功数据结果');
+                } catch (\Exception $e) {
+                    $this->rollbackTrans();
+                    actionException($e, 1);
+                }
+                return 200;
+            }
+            if ($this->data['refundStatus'] == 'FAIL') {
+                $this->refundFail();
+                return 200;
+            }
+            return 200;
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return 200;
+        }
     }
 }

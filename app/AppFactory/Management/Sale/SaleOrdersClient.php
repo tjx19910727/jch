@@ -46,6 +46,7 @@ class SaleOrdersClient extends ManagementClient
     protected $sod;
     protected $strategyPayee;
     protected $refundData;
+    protected $refund_no;
 
     /**
      * @var array 退款类型
@@ -58,7 +59,6 @@ class SaleOrdersClient extends ManagementClient
     ];
 
     protected $postData;
-    protected $refundTradeNo;
     protected $totalRefundMoney;
 
     /**
@@ -97,7 +97,6 @@ class SaleOrdersClient extends ManagementClient
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());
         }
-
     }
 
     /**

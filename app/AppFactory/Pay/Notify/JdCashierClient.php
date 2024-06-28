@@ -110,28 +110,38 @@ class JdCashierClient extends PayBaseClient
 
     protected $refund_no;
 
+    /**
+     * 处理退款回调数据
+     * @return int
+     */
     public function handleRefund()
     {
-        $this->refundTradeNo = $this->data['refundRequestNum'];
-        if ($this->data['refundStatus'] == 'SUCCESS') {
-            $this->refund_no = $this->data['orderNum'];
-            $this->startTrans();
-            try {
-                $result = $this->refundSuccess();
-                if ($result === true) {
-                    $this->commitTrans();
-                } else {
+        try {
+            $this->refundTradeNo = $this->data['refundRequestNum'];
+            if ($this->data['refundStatus'] == 'SUCCESS') {
+                $this->refund_no = $this->data['orderNum'];
+                $this->startTrans();
+                try {
+                    $result = $this->refundSuccess();
+                    if ($result === true) {
+                        $this->commitTrans();
+                    } else {
+                        $this->rollbackTrans();
+                    }
+                    actionLog($result, '处理退款成功数据结果');
+                } catch (\Exception $e) {
                     $this->rollbackTrans();
+                    actionException($e, 1);
                 }
-                actionLog($result, '处理退款成功数据结果');
-            } catch (\Exception $e) {
-                $this->rollbackTrans();
-                actionException($e,1);
+                return 200;
+            }
+            if ($this->data['refundStatus'] == 'FAIL') {
+                $this->refundFail();
+                return 200;
             }
             return 200;
-        }
-        if ($this->data['refundStatus'] == 'FAIL') {
-            $this->refundFail();
+        } catch (\Exception $e) {
+            actionException($e,1);
             return 200;
         }
     }

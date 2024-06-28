@@ -19,7 +19,6 @@ trait AfterOrderRefundTrait
      */
     public function refundSuccess()
     {
-        $order_id = 0;
         $sor = $this->getSaleOrdersRefundList(['refund_trade_no' => $this->refundTradeNo,'status' => 1]);
         actionLog($this->getLS(),'退款成功查询退款记录');
         $sor = obj2arr($sor);

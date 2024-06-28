@@ -52,20 +52,25 @@ class Login extends BaseController
      */
     public function login()
     {
-        $data = input();
         try {
-            $this->validate($data, $this->validatePath . 'login');
+            $data = input();
+            try {
+                $this->validate($data, $this->validatePath . 'login');
+            } catch (\Exception $e) {
+                return returnValidate($e->getMessage());
+            }
+            $key = cache("management_" . $data['uniqid']);
+            if ($key && password_verify(mb_strtolower($data['code'], 'UTF-8'), $key)) {
+                cache("management_" . $data['uniqid'], null);
+                $app = AppFactory::management();
+                $result = $app->login->login($data);
+                return $result;
+            } else {
+                return returnValidate(Lang::get("captcha.code_error"));
+            }
         } catch (\Exception $e) {
-            return returnValidate($e->getMessage());
-        }
-        $key = cache("management_" . $data['uniqid']);
-        if ($key && password_verify(mb_strtolower($data['code'],'UTF-8'),$key)) {
-            cache("management_" . $data['uniqid'],null);
-            $app = AppFactory::management();
-            $result = $app->login->login($data);
-            return $result;
-        } else {
-            return returnValidate(Lang::get("captcha.code_error"));
+            actionException($e,1);
+            return returnTryCatch($e->getMessage());
         }
     }
 

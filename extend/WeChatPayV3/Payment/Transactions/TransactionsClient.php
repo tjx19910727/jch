@@ -16,7 +16,8 @@ class TransactionsClient extends BaseClient
     /**
      * JSAPI支付
      * @param $params
-     * @return bool|string
+     * @return mixed|\Psr\Http\Message\ResponseInterface
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function jsapi($params)
     {
@@ -26,7 +27,8 @@ class TransactionsClient extends BaseClient
     /**
      * Native支付
      * @param $params
-     * @return bool|string
+     * @return mixed|\Psr\Http\Message\ResponseInterface
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function native($params)
     {

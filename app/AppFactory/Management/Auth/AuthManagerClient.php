@@ -18,6 +18,15 @@ class AuthManagerClient extends ManagementClient
     use AuthManagerTrait;
     use WxOfficialTrait;
 
+    public function updateSelfPwd($postData)
+    {
+        if ($this->manager['password'] != md5($postData['old_pwd'] .$this->salt )) {
+            return $this->r(100,$this->lang("VLogin.pwd_incorrect"));
+        }
+        $update['password'] = md5($postData['password'] . $this->salt);
+        $update['manager_id'] = $this->manager['manager_id'];
+        return $this->rU($this->updateAuthManager($update));
+    }
 
     /**
      * 获取微信公众号带参二维码

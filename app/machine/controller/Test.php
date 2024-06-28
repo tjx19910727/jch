@@ -507,4 +507,17 @@ class Test extends BaseController
         dump($config);
 
     }
+
+    public function testConnectMysql()
+    {
+        $connection = mysqli_connect("120.79.140.44:3306","kiosk","Karrie&KOS2019","kiosk");
+        $machine = $connection->query("select * from machine");
+        dump($machine->fetch_all());
+        if (mysqli_connect_errno()) {
+            echo "连接失败：" . mysqli_connect_error();
+        } else {
+            echo "连接成功";
+        }
+        dump($connection);
+    }
 }

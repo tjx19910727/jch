@@ -10,6 +10,7 @@ namespace app\management\controller\auth;
 
 
 use app\management\controller\Common;
+use app\management\validate\VAuth;
 
 class AuthManager extends Common
 {
@@ -74,6 +75,21 @@ class AuthManager extends Common
         $update['password'] = $postData['password'];
         $result = $this->app->authManager->update($update);
         return $result;
+    }
+
+    /**
+     * 修改自己密码
+     * @return array|\think\response\Json
+     */
+    public function updateSelfPwd()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, VAuth::class . '.UpdateSelfPwd');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->authManager->updateSelfPwd($postData);
     }
 
     /**

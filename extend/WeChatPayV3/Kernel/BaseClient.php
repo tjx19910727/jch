@@ -5,6 +5,7 @@ namespace WeChatPayV3\Kernel;
 
 
 use WeChatPayV3\Kernel\GuzzleMiddleware\Util\AesUtil;
+use WeChatPayV3\Kernel\Support\AesGcm;
 use WeChatPayV3\Kernel\Traits\CurlTrait;
 
 class BaseClient
@@ -17,6 +18,7 @@ class BaseClient
      * @var string
      */
     protected $baseUri;
+
     public function __construct(ServiceContainer $app)
     {
         $this->app = $app;
@@ -46,10 +48,10 @@ class BaseClient
 
     public function request(string $url, string $method = 'GET', array $options = [])
     {
-        $this->signer($url,$method,$options);
+        $this->signer($url, $method, $options);
         self::$defaults['headers'][] = 'Wechatpay-Serial:' . $this->config['platform_serial'];
         $header = self::$defaults['headers'];
-        $response = $this->curl_request($url,$method,$options,$header);
+        $response = $this->curl_request($url, $method, $options, $header);
 //        $response = $this->guzzle_request($url,$method,$options);
         return $response;
     }
@@ -62,9 +64,9 @@ class BaseClient
     public function getPlatformCertificate()
     {
         $url = '/v3/certificates';
-        $this->signer($url,"GET",'');
+        $this->signer($url, "GET", '');
         $header = self::$defaults['headers'];
-        $list = $this->curl_request($url,"GET",'',$header);
+        $list = $this->curl_request($url, "GET", '', $header);
         if (!isset($list['data'])) {
             return $list;
         }
@@ -96,11 +98,11 @@ class BaseClient
 //        }
 //        dump($this->config);
 //        dump($this->config['cert_path']);
-        $path = substr($this->config['cert_path'],0,(strripos($this->config['cert_path'],"/") + 1));
+        $path = substr($this->config['cert_path'], 0, (strripos($this->config['cert_path'], "/") + 1));
 
         // 输出证书信息，并保存到文件
         foreach ($list['data'] as $index => $item) {
-            $outPath = $path . 'wechatpay_'.$item['serial_no'].'.pem';
+            $outPath = $path . 'wechatpay_' . $item['serial_no'] . '.pem';
             $outPaths[] = [
                 'serial_no' => $item['serial_no'],
                 'path' => $outPath,
@@ -108,5 +110,15 @@ class BaseClient
             file_put_contents($outPath, $plainCerts[$index]);
         }
         return $outPaths;
+    }
+
+    /**
+     * 解密
+     * @param $ciphertext
+     * @return string
+     */
+    public function decrypt($ciphertext)
+    {
+        return AesGcm::decrypt($ciphertext,$this->config['key']);
     }
 }

@@ -23,7 +23,7 @@ trait WxPayTrait
     /**
      * @var Application
      */
-    protected $wpApp;
+    public $wpApp;
 
     protected $wxPaymentMethod = [
         "11" => "wxScanQr",
@@ -33,6 +33,11 @@ trait WxPayTrait
         "15" => "wxFacePay",
     ];
 
+    public function initWpApp()
+    {
+        $this->wpApp = Factory::payment($this->strategyPayee);
+    }
+
     // 微信支付入口
     // 查询订单门店绑定的支付配置
     // 根据订单的要求调用不同的支付方式，获取二维码，付款码支付
@@ -40,7 +45,7 @@ trait WxPayTrait
     {
         if (!in_array($this->order['pay_method'],array_keys($this->wxPaymentMethod)))
             return $this->rFail("支付方式不在允许范围内");
-        $this->wpApp = Factory::payment($this->strategyPayee);
+        $this->initWpApp();
         $this->order['sp_id'] = $this->strategyPayee['sp_id'];
         if ($this->order['payment_method'] != "14") {
             return $this->rFail("当前模式下微信仅支持Native支付");
@@ -176,26 +181,37 @@ trait WxPayTrait
     public function wxRefund()
     {
         try {
-            $notifyUrl = $this->getUrl('/http/pay.wx/refundOrderNotify');
+            $notifyUrl = $this->getUrl('/pay/notify.wx/refundOrderNotify');
             $app = Factory::payment($this->strategyPayee);
-            $result = $app->refund->byTransactionId($this->order['mch_no'], $this->refundData['refund_trade_no'], bcmul($this->order['total_price'], 100), bcmul($this->refundData['refund_amount'], 100),
-                [
-                    'refund_desc' => "商品退款",
-                    'notify_url' => $notifyUrl,
-                ]);
+            $params = [
+                "out_trade_no" => $this->refundData['trade_no'],
+                "out_refund_no" => $this->refundData['refund_trade_no'],
+                "reason" => "商品退款",
+                "notify_url" => $notifyUrl,
+                "amount" => [
+                    "refund" => bcmul($this->refundData['refund_amount'], 100),
+                    "total" => bcmul($this->order['total_price'], 100),
+                ],
+                "currency" => "CNY",
+            ];
+            $result = $app->refund->domestic($params);
             actionLog($result, "微信退款返回数据");
             $return = $this->r(100, "无此退款状态", $result);
-            switch ($result['result_code']) {
+            switch ($result['status']) {
                 case "SUCCESS":
-                    $return = $this->r(200, "退款申请成功");
+                    $this->refundTradeNo = $result['out_refund_no'];
+                    $this->refundSuccess();
+                    $return = $this->r(200, "退款成功");
                     break;
                 case "CLOSED":
+                    $this->refundFail();
                     $return = $this->r(401, "退款关闭");
                     break;
                 case "PROCESSING":
                     $return = $this->r(402, "退款处理中");
                     break;
                 case "ABNORMAL":
+                    $this->refundFail();
                     $return = $this->r(403, "退款异常");
                     break;
                 case "FAIL":
@@ -209,64 +225,4 @@ trait WxPayTrait
         }
     }
 
-
-    /**
-     * 企业付款到零钱
-     * @param $data
-     * @return array|\EasyWeChat\Kernel\Support\Collection|object|\Psr\Http\Message\ResponseInterface|string
-     * @throws InvalidConfigException
-     * @throws \EasyWeChat\Kernel\Exceptions\InvalidArgumentException
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     */
-    public function transferBalance($data)
-    {
-        $app = Factory::payment($this->strategyPayee);
-        $params = [
-            "partner_trade_no" => $data['trade_no'], // 商户订单号，需保持唯一性(只能是字母或者数字，不能包含有符号)
-            "openid" => $data['openid'],
-            "check_name" => "NO_CHECK",  // NO_CHECK：不校验真实姓名, FORCE_CHECK：强校验真实姓名
-            "re_user_name" => '',   // 如果 check_name 设置为FORCE_CHECK，则必填用户真实姓名
-            "amount" => $data['amount'],
-            "desc" => $data['desc'],
-        ];
-        $result = $app->transfer->toBalance($params);
-        return $result;
-    }
-
-    /**
-     * 查询企业付款至零钱
-     * @param $trade_no
-     * @return array|\EasyWeChat\Kernel\Support\Collection|object|\Psr\Http\Message\ResponseInterface|string
-     * @throws InvalidConfigException
-     * @throws \EasyWeChat\Kernel\Exceptions\InvalidArgumentException
-     * @throws \GuzzleHttp\Exception\GuzzleException
-     */
-    public function queryTransferBalance($trade_no)
-    {
-        $app = Factory::payment($this->strategyPayee);
-        $result = $app->transfer->queryBalanceOrder($trade_no);
-        return $result;
-    }
-
-    /**
-     * 商户转账至零钱
-     * @param $data
-     * @return bool|string
-     */
-    public function transferBatches($data)
-    {
-        $app = \WeChatPayV3\Factory::payment($this->strategyPayee);
-        $details = $data['details'];
-        $params = [
-            "appid" => $this->strategyPayee['app_id'],
-            "out_batch_no" => $data['trade_no'],
-            "batch_name" => $data['batch_name'],
-            "batch_remark" => $data['desc'],
-            "total_amount" => $data['amount'],
-            "total_num" => 1,
-            "transfer_detail_list" => [$details],
-        ];
-        $result = $app->transfer->batches($params);
-        return $result;
-    }
 }

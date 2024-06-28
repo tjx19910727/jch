@@ -35,4 +35,14 @@ class Wx
             echo  "success";
         }
     }
+
+    public function refundOrderNotify()
+    {
+        $postData = input();
+        actionLog($postData,'回调数据');
+        $postData = json2arr($postData);
+        $config['key'] =  env("api.md5Key");
+        $config['data'] = $postData;
+        $result = AppFactory::pay($config)->wxNotify->handleRefund();
+    }
 }

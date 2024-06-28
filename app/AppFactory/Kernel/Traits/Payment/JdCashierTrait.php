@@ -251,7 +251,7 @@ trait JdCashierTrait
      */
     public function jdRefund()
     {
-        $this->getUrl("/pay/noti.jd_cashier/refundNotify");
+        $this->getUrl("/pay/notify.jd_cashier/refundNotify");
         $this->totalRefundMoney = number_format($this->totalRefundMoney,2);
         $params = [
             //商户号

@@ -34,6 +34,10 @@ class JdCashier extends Common
         }
     }
 
+    /**
+     * 退款回调通知
+     * @return int
+     */
     public function refundNotify()
     {
         $postData = input();

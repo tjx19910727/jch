@@ -150,7 +150,6 @@ trait TlPayTrait
         return $this->rFail('支付失败：'.$result['retmsg']);
     }
 
-    protected $refund_no;
     /**
      * 通联退款
      * @return mixed
