@@ -17,6 +17,7 @@ class VAuth extends VCommon
         "manager_id" => 'require',
         "account" => 'require|unique:auth_manager',
         "password" => 'require',
+        "old_pwd" => 'require',
         "status" => 'require|in:1,2',
 
         // auth_manager_role
@@ -51,6 +52,7 @@ class VAuth extends VCommon
         "account.require" => "VAuth.account_require",
         "account.unique" => "VAuth.account_unique",
         "password.require" => "VAuth.password_require",
+        "old_pwd.require" => "VAuth.old_pwd_require",
         "status.require" => "VAuth.status_require",
         "status.in" => "VAuth.status_in",
         "mr_id.require" => "VAuth.mr_id_require",
@@ -77,6 +79,7 @@ class VAuth extends VCommon
         "AuthManagerAdd" => ["account","password","status"],
         "AuthManagerUpdate" => ["manager_id","status"],
         "UpdatePassword" => ["manager_id","password"],
+        "UpdateSelfPwd" => ["old_pwd","password"],
 
         "AuthManagerMachine_bind" => ["manager_id","m_ids"],
 

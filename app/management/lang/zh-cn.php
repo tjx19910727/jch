@@ -191,6 +191,7 @@ return [
         "account_require" => "账号不能为空",
         "account_unique" => "账号已存在，请勿重复添加",
         "password_require" => "密码不能为空",
+        "old_pwd_require" => "请输入密码",
         "status_require" => "状态不能为空",
         "status_in" => "状态超出范围",
         "mr_id_require" => "管理员关联角色ID不能为空",

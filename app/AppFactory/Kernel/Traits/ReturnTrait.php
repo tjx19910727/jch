@@ -33,7 +33,11 @@ trait ReturnTrait
      */
     public function rQ($data)
     {
-        return returnData($data, Lang::get("query_success") . "|" . Lang::get("query_fail"));
+        $msg = Lang::get("query_success");
+        if (!$data) {
+            $msg = Lang::get("query_fail");
+        }
+        return returnState(200,$msg,$data);
     }
 
     /**

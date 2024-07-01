@@ -70,7 +70,7 @@ trait AliPayTrait
             'subject' => $this->order['machine_id'] . '购买支付',
         ];
         $result = $this->aliApp->wap->Pay($data);
-        return $this->rQ($result);
+        return $this->rAction($result);
     }
 
     /**

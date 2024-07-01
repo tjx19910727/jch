@@ -30,7 +30,7 @@ trait ManagementTrait
     public function getFind($where = [],$field = "*", $order = "",$rQ = 1)
     {
         $this->getController($controller);
-        if (!$controller) return $this->rFail("控制器名不能为空");
+        if (!$controller) return $this->rFail(Lang::get("controller_name_require"));
         $action = "get" . $controller . "Find";
         $data = $this->$action($where,$field,$order);
         if ($rQ) {
