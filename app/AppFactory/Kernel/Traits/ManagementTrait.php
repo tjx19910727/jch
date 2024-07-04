@@ -95,15 +95,19 @@ trait ManagementTrait
      */
     public function update($update,$where = [],$field = [],$rU = 1)
     {
-        $this->getController($controller);
-        if (!$controller) return $this->rFail(Lang::get("controller_name_require"));
-//        $action = request()->action();
-//        $check = $this->checkFrequency($controller . ucwords($action));
-//        if ($check !== true) return $check;
-        $action = "update" . $controller;
-        $result = $this->$action($update,$where,$field);
-        if ($rU) return $this->rU($result);
-        return $result;
+        try {
+            $this->getController($controller);
+            if (!$controller) return $this->rFail(Lang::get("controller_name_require"));//        $action = request()->action();
+            //        $check = $this->checkFrequency($controller . ucwords($action));
+            //        if ($check !== true) return $check;
+            $action = "update" . $controller;
+            $result = $this->$action($update, $where, $field);
+            if ($rU) return $this->rU($result);
+            return $result;
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 
     /**

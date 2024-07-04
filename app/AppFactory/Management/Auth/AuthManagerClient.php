@@ -23,7 +23,7 @@ class AuthManagerClient extends ManagementClient
         if ($this->manager['password'] != md5($postData['old_pwd'] .$this->salt )) {
             return $this->r(100,$this->lang("VLogin.pwd_incorrect"));
         }
-        $update['password'] = md5($postData['password'] . $this->salt);
+        $update['password'] = $postData['password'];
         $update['manager_id'] = $this->manager['manager_id'];
         return $this->rU($this->updateAuthManager($update));
     }

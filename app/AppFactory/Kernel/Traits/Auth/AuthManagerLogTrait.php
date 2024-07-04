@@ -81,7 +81,8 @@ trait AuthManagerLogTrait
     public function addAuthManagerLog($insert)
     {
         $data = AuthManagerLogModel::create($insert);
-        return $data->getKey();
+        $pk = $data->getPk();
+        return $data->$pk;
     }
 
     /**
@@ -123,35 +124,40 @@ trait AuthManagerLogTrait
      */
     public function recordManagerLog($manager = [],$position = 1)
     {
-        if (!$this->apiUrl) $this->apiUrl = request()->baseUrl();
-        if ($this->apiUrl) {
-            if (!in_array($this->apiUrl,$this->ignoreList)) {
-                $params = input();
-                $path = request()->baseUrl();
-                $log = $this->getAuthManagerLogFind(['path' => $path,['create_time','>=',bcsub(time(),3)]],'ml_id');
-                if (!$log) {
-                    if (!$manager) {
-                        $where = [];
-                        if (isset($params['account'])) $where['account'] = $params['account'];
-                        if (isset($params['operator'])) $where['manager_id'] = $params['operator'];
-                        if (isset($params['manager_id'])) $where['manager_id'] = $params['manager_id'];
-                        if ($where) $manager = $this->getAuthManagerFind($where, 'manager_id,nickname,account,ao_id');
-                    }
-                    if ($manager) {
-                        $params = json_encode($params, 320);
-                        $log = [
-                            "ao_id" => $manager['ao_id'] ?? 0,
-                            "manager_id" => $manager['manager_id'] ?? 0,
-                            "nickname" => $manager['nickname'] ?? "",
-                            "account" => $manager['account'] ?? "",
-                            "path" => $path,
-                            "params" => $params,
-                            "position" => $position,
-                        ];
-                        @$this->addAuthManagerLog($log);
+        try {
+            if (!$this->apiUrl) $this->apiUrl = request()->baseUrl();
+            if ($this->apiUrl) {
+                if (!in_array($this->apiUrl, $this->ignoreList)) {
+                    $params = input();
+                    $path = request()->baseUrl();
+                    $log = $this->getAuthManagerLogFind(['path' => $path, ['create_time', '>=', bcsub(time(), 3)]], 'ml_id');
+                    if (!$log) {
+                        if (!$manager) {
+                            $where = [];
+                            if (isset($params['account'])) $where['account'] = $params['account'];
+                            if (isset($params['operator'])) $where['manager_id'] = $params['operator'];
+                            if (isset($params['manager_id'])) $where['manager_id'] = $params['manager_id'];
+                            if ($where) $manager = $this->getAuthManagerFind($where, 'manager_id,nickname,account,ao_id');
+                        }
+                        if ($manager) {
+                            $params = json_encode($params, 320);
+                            $log = [
+                                "ao_id" => $manager['ao_id'] ?? 0,
+                                "manager_id" => $manager['manager_id'] ?? 0,
+                                "nickname" => $manager['nickname'] ?? "",
+                                "account" => $manager['account'] ?? "",
+                                "path" => $path,
+                                "params" => $params,
+                                "position" => $position,
+                            ];
+                            @$this->addAuthManagerLog($log);
+                        }
                     }
                 }
             }
+        } catch (\Exception $e) {
+            actionException($e,1);
+            die(json($this->r(3301,$e->getMessage(),[],false))->send());
         }
     }
 }

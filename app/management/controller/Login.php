@@ -34,16 +34,21 @@ class Login extends BaseController
     public function getCaptcha()
     {
 //        return returnState(200,Lang::get('query_success'));
-        $uniqid = uniqid(rand(00000,99999));
-        $rs = Captcha::create();
-        $base64_image = "data:image/png;base64," . base64_encode($rs->getData());
-        $key = session("captcha.key");
-        cache("management_" . $uniqid,$key);
-        $data = [
-            "uniqid" => $uniqid,
-            "content" => $base64_image,
-        ];
-        return returnState(200,Lang::get("captcha.get_success"),$data);
+        try {
+            $uniqid = uniqid(rand(00000, 99999));
+            $rs = Captcha::create();
+            $base64_image = "data:image/png;base64," . base64_encode($rs->getData());
+            $key = session("captcha.key");
+            cache("management_" . $uniqid, $key);
+            $data = [
+                "uniqid" => $uniqid,
+                "content" => $base64_image,
+            ];
+            return returnState(200, Lang::get("captcha.get_success"), $data);
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return returnTryCatch($e->getMessage());
+        }
     }
 
     /**
