@@ -21,4 +21,12 @@ class MachineChannelReplenishment extends Common
         return $this->app->machineChannelReplenishment->getList($where,$pageNum,'*','id desc');
     }
 
+    // 导出补货报表
+    public function export()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,['machine_id' => "like","machine_name" => "like","sku" => "like","channel_code" => "like"]);
+        return $this->app->machineChannelReplenishment->export($where);
+    }
+
 }

@@ -247,8 +247,8 @@ class Test extends BaseController
 //        die();
 //        dump($result);
         $data = [
-            "machine_id" => "0011",
-            "order_id" => "1251",
+            "machine_id" => "0009",
+//            "order_id" => "1251",
 //            "coupon_code" => "533617",
         ];
         $data = $this->makeSign($data);

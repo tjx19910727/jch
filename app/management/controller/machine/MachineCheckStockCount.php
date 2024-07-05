@@ -21,10 +21,10 @@ class MachineCheckStockCount extends Common
         return $this->app->machineCheckStockCount->getList($where,$pageNum,'*','create_time desc');
     }
 
-//    public function exportCheckStockCount()
-//    {
-//        $postData = input();
-//        $where = $this->getWhere($postData,false,['machine_id' => "like","creator_nickname" => "like"]);
-//        return $this->app->machineCheckStockCount->export($where);
-//    }
+    public function exportCheckStockCount()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,['machine_id' => "like","creator_nickname" => "like"]);
+        return $this->app->machineCheckStockCount->export($where);
+    }
 }
