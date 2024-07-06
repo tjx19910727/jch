@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Model\Advertisement;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\BaseModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use think\Model;
 
 class AdvertisementPushModel extends BaseModel
@@ -54,10 +55,12 @@ class AdvertisementPushModel extends BaseModel
     {
         $config = [
             "machine_id" => $model['machine_id'],
-            "key" => env("api.md5Key"),
+            "key" =>
+                cache($model['machine_id'] . ".signKey") ??
+                (MachineModel::getFieldValue(['machine_id' => $model['machine_id']],'signKey') ?? env("api.md5Key")),
         ];
         $app = AppFactory::machine($config);
-        @$app->sendMq->triggerUpdateAD();
+        @$app->sendMq->sendMq('updateAD');
     }
 
     /**
@@ -94,10 +97,12 @@ class AdvertisementPushModel extends BaseModel
             if ($machine_id) {
                 $config = [
                     "machine_id" => $machine_id,
-                    "key" => env("api.md5Key"),
+                    "key" =>
+                        cache($machine_id . ".signKey") ??
+                        (MachineModel::getFieldValue(['machine_id' => $machine_id],'signKey') ?? env("api.md5Key")),
                 ];
                 $app = AppFactory::machine($config);
-                @$app->sendMq->triggerUpdateAD();
+                @$app->sendMq->sendMq('updateAD');
             }
         }
     }

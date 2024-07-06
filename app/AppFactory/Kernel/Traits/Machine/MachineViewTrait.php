@@ -13,6 +13,11 @@ use app\AppFactory\Kernel\Model\Machine\MachineViewModel;
 
 trait MachineViewTrait
 {
+    public function getMachineViewValue($where,$value,$order = "")
+    {
+        return MachineViewModel::getFieldValue($where,$value,$order);
+    }
+
     public function getMachineViewFind($where,$field = "*",$order = "")
     {
         return MachineViewModel::getFind($where,$field,$order);

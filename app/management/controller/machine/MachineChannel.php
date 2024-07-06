@@ -88,12 +88,7 @@ class MachineChannel extends Common
                 return returnState(200,lang("query_success"),$channelImg);
             }
             if (!$send) {
-                $config = [
-                    "machine_id" => $machine_id,
-                    "key" => env("api.md5Key"),
-                ];
-                $app = AppFactory::machine($config);
-                $send = $app->sendMq->getChannelImg($channel_code);
+                $this->app->machine->sendToMachine(['machine_id' => $machine_id],"channelImg",['channel_code' => $channel_code]);
             }
             sleep(1);
             $n++;

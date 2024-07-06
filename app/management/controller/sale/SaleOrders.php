@@ -97,12 +97,8 @@ class SaleOrders extends Common
         $order = $this->app->saleOrders->getFind(['trade_no' => $trade_no],'transaction_video,machine_id','',0);
         if (!$order) return returnState(100,lang("VSaleOrders.order_no_data"));
         if (!$order['transaction_video']) {
-            $config = [
-                "machine_id" => $order['machine_id'],
-                "key" => env("api.md5Key"),
-            ];
-            $app = AppFactory::machine($config);
-            $app->sendMq->getTransactionVideo($trade_no);
+            $otherData = ['trade_no' => $trade_no];
+            $this->app->machine->sendToMachine(['machine_id' => $order['machine_id']],'transactionVideo',$otherData);
             return returnState(200,'正在从机器端获取视频文件，请稍做等待后下载');
         }
         return returnState(200,'查询成功',$order);

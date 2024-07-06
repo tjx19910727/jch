@@ -48,7 +48,7 @@ class MqConsumer
             actionLog($data, '消息处理', "DataUpload");
             $config = [
                 "machine_id" => $data['machine_id'],
-                "key" => env("api.md5Key"),
+                "key" => cache($data['machine_id'] . ".signKey"),
                 "data" => $data,
             ];
             $app = AppFactory::machine($config);

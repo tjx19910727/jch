@@ -26,10 +26,12 @@ class MachineOnOffModel extends BaseModel
     {
         $config = [
             "machine_id" => $model['machine_id'],
-            "key" => env("api.md5Key"),
+            "key" =>
+                cache($model['machine_id'] . ".signKey") ??
+                (MachineModel::getFieldValue(['machine_id' => $model['machine_id']],'signKey') ?? env("api.md5Key")),
         ];
         $app = AppFactory::machine($config);
-        @$app->sendMq->triggerUpdateMachineOnOff();
+        @$app->sendMq->sendMq("updateMachineOnOff");
     }
 
     /**
@@ -45,10 +47,12 @@ class MachineOnOffModel extends BaseModel
             if ($machine_id) {
                 $config = [
                     "machine_id" => $machine_id,
-                    "key" => env("api.md5Key"),
+                    "key" =>
+                        cache($machine_id . ".signKey") ??
+                        (MachineModel::getFieldValue(['machine_id' => $machine_id],'signKey') ?? env("api.md5Key")),
                 ];
                 $app = AppFactory::machine($config);
-                @$app->sendMq->triggerUpdateMachineOnOff();
+                @$app->sendMq->sendMq("updateMachineOnOff");
             }
         }
     }
@@ -66,10 +70,12 @@ class MachineOnOffModel extends BaseModel
             if ($machine_id) {
                 $config = [
                     "machine_id" => $machine_id,
-                    "key" => env("api.md5Key"),
+                    "key" =>
+                        cache($machine_id . ".signKey") ??
+                        (MachineModel::getFieldValue(['machine_id' => $machine_id],'signKey') ?? env("api.md5Key")),
                 ];
                 $app = AppFactory::machine($config);
-                @$app->sendMq->triggerUpdateMachineOnOff();
+                @$app->sendMq->sendMq("updateMachineOnOff");
             }
         }
     }

@@ -181,12 +181,7 @@ class AdvertisementPushClient extends ManagementClient
 //                if ($value['remain_times'] <= 0) return $this->rFail($this->lang("VAdvertisement.remain_times_empty"));
 //                    if ($value['remain_times'] > 0 && $value['status'] < 3 && $value['start_date'] <= strtotime(date("Y-m-d"))) {
 //                        if (!$value['end_date'] || ($value['end_date'] > 0 && $value['end_date'] >= strtotime(date("Y-m-d")))) {
-                            $config = [
-                                "machine_id" => $value['machine_id'],
-                                "key" => env("api.md5Key"),
-                            ];
-                            $app = AppFactory::machine($config);
-                            $flag[] = $app->sendMq->triggerUpdateAD();
+                    $this->sendToMachine(['machine_id' => $value['machine_id']],"updateAD");
 //                        }
 //                    }
                 }

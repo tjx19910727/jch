@@ -92,7 +92,7 @@ class MachineClient extends ManagementClient
                     return $this->r(100, $this->lang("VMachine.machine_no_data"));
                 }
                 $m = $m->toArray();
-                $this->sendToMachine($m);
+                $this->sendToMachine($m,'updateMachine');
                 if ($machine_group_id && is_int($machine_group_id)) $machine_group_id = [$machine_group_id];
                 $oldMgId = $this->getMachineGroupMgColumn(['m_id' => $m['m_id']], "mg_id");
                 $addList = array_diff($machine_group_id, $oldMgId);
@@ -137,7 +137,7 @@ class MachineClient extends ManagementClient
             }
             $this->updateMachine($value);
             $m = $m->toArray();
-            $this->sendToMachine($m);
+            $this->sendToMachine($m,'updateMachine');
         }
         return $this->rAction(1);
     }
@@ -223,20 +223,5 @@ class MachineClient extends ManagementClient
             }
         }
         return $this->rQ($list);
-    }
-
-
-    /**
-     * 发送触发更新数据
-     * @param array $machine
-     */
-    public function sendToMachine($machine)
-    {
-        $config = [
-            "machine_id" => $machine['machine_id'],
-            "key" => env("api.md5Key"),
-        ];
-        $app = AppFactory::machine($config);
-        $app->sendMq->triggerUpdateMachine();
     }
 }

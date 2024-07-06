@@ -101,7 +101,8 @@ class Test extends BaseController
             "timestamp" => time(),
             ];
         $data = array_merge($data,$otherData);
-        $data['sign'] = SignUtil::makeSign($data, "1e9cf702b9a561e183e6fc450b243262");
+        dump(\cache($otherData['machine_id'] . ".signKey"));
+        $data['sign'] = SignUtil::makeSign($data, \cache($otherData['machine_id'] . ".signKey"));
         return $data;
     }
 
@@ -247,7 +248,7 @@ class Test extends BaseController
 //        die();
 //        dump($result);
         $data = [
-            "machine_id" => "0009",
+            "machine_id" => "test0001",
 //            "order_id" => "1251",
 //            "coupon_code" => "533617",
         ];
@@ -325,9 +326,10 @@ class Test extends BaseController
             "timestamp" => time(),
             "msg_id" => $msg_id,
             "machine_id" => "test0001",
-            "data" => $content,
+            "mac" => "192.168.6.1",
+//            "data" => $content,
         ];
-        $data['sign'] = SignUtil::makeSign($data, $signKey);
+//        $data['sign'] = SignUtil::makeSign($data, $signKey);
         dump(json_encode($data));
 
         $result = MqProducer::dataUpload($data);

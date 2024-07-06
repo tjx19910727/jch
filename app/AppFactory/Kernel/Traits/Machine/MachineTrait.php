@@ -9,6 +9,7 @@
 namespace app\AppFactory\Kernel\Traits\Machine;
 
 
+use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 
 trait MachineTrait
@@ -180,5 +181,38 @@ trait MachineTrait
         $address = [$item['country'],$item['state'] , $item['city'], $item['regions'] , ($this->machine['street'] ?? "无街道"), ($this->machine['floor'] ?? "无楼层")];
         $this->machine = $item;
         $this->machine['address'] = implode(",",$address) ?? "";
+    }
+
+    /**
+     * 获取设备的加签密钥
+     * @param $machine
+     * @return mixed
+     */
+    public function getMachineSignKey($machine)
+    {
+        $signKey = cache($machine['machine_id'] . ".signKey");
+        $signKey ? : $signKey = (MachineModel::getFieldValue(['machine_id' => $machine['machine_id']],"signKey") ?? env("api.md5Key"));
+        return $signKey;
+    }
+
+    /**
+     * 发送触发数据
+     * @param $machine
+     * @param $msgType
+     * @param array $otherData
+     * @return array|bool|string
+     */
+    public function sendToMachine($machine,$msgType,$otherData = [])
+    {
+        $key = $this->getMachineSignKey($machine);
+        if ($key) {
+            $config = [
+                "machine_id" => $machine['machine_id'],
+                "key" => $key,
+            ];
+            $app = AppFactory::machine($config);
+            return $app->sendMq->sendMq($msgType,$otherData);
+        }
+        return false;
     }
 }

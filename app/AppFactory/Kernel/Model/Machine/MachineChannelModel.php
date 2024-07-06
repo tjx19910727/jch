@@ -44,11 +44,13 @@ class MachineChannelModel extends BaseModel
             if ($mc) {
                 $config = [
                     "machine_id" => $mc[0]['machine_id'],
-                    "key" => env("api.md5Key"),
+                    "key" =>
+                        cache($mc[0]['machine_id'] . ".signKey") ??
+                        (MachineModel::getFieldValue(['machine_id' => $mc[0]['machine_id']],'signKey') ?? env("api.md5Key")),
                 ];
                 $app = AppFactory::machine($config);
                 foreach ($mc as $k => $v) {
-                    @$app->sendMq->triggerUpdateMc($v['mc_id']);
+                    @$app->sendMq->sendMq("updateMc",['mc_id' => $v['mc_id']]);
                 }
             }
         }

@@ -11,11 +11,12 @@ namespace app\AppFactory\Management\Machine;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class MachineChannelClient extends ManagementClient
 {
-    use MachineChannelTrait;
+    use MachineTrait,MachineChannelTrait;
 
     /**
      * 获取空槽、BAD、空货数量
@@ -120,24 +121,12 @@ class MachineChannelClient extends ManagementClient
         $result = $this->updateMachineChannel($postData);
         if ($result) {
             $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'machine_id,mc_id');
-            $this->sendMcToMachine($mc);
+            // 发送触发货道更新数据
+            $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMc',['mc_id' => $mc['mc_id']]);
             return $this->r(200,$this->lang("action_success"));
         }
         return $this->r(100,$this->lang('action_fail'));
     }
 
 
-    /**
-     * 发送触发货道更新数据
-     * @param $mc
-     */
-    public function sendMcToMachine($mc)
-    {
-        $config = [
-            "machine_id" => $mc['machine_id'],
-            "key" => env("api.md5Key"),
-        ];
-        $app = AppFactory::machine($config);
-        $app->sendMq->triggerUpdateMc($mc['mc_id']);
-    }
 }

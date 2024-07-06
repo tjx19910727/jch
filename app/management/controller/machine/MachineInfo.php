@@ -92,12 +92,8 @@ class MachineInfo extends Common
                 return returnState(200,lang("query_success"),$shotImg);
             }
             if (!$send) {
-                $config = [
-                    "machine_id" => $machine_id,
-                    "key" => env("api.md5Key"),
-                ];
-                $app = AppFactory::machine($config);
-                $send = $app->sendMq->getImg($field);
+                // 下发获取首页截屏、设备内部照片、出货箱照片
+                $this->app->machine->sendToMachine(['machine_id' => $machine_id],"img",["field" => $field]);
             }
             sleep(1);
             $n++;

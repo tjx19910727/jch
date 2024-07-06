@@ -39,7 +39,8 @@ trait AfterOrderPaymentTrait
     {
         $flag = [];
         if ($this->order['machine_id']) {
-            $this->sendPaySuccessToMachine();
+            // 发送给设备终端支付成功状态
+            $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paySuccess',['trade_no' => $this->order['trade_no']]);
         }
         $this->order['pay_status'] = 3;
         $this->order['pay_time'] = time();
@@ -52,18 +53,6 @@ trait AfterOrderPaymentTrait
         $result = flag_check($flag);
 //        $this->sendTemp();
         return $result;
-    }
-
-    /**
-     * 发送给设备终端支付成功状态
-     */
-    private function sendPaySuccessToMachine()
-    {
-        $config = [
-            "machine_id" => $this->order['machine_id'],
-            "key" => env("api.md5Key"),
-        ];
-        AppFactory::machine($config)->sendMq->paySuccess($this->order['trade_no']);
     }
 
     /**

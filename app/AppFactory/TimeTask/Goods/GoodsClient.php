@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\TimeTask\TimeTaskBase;
 
@@ -21,7 +22,7 @@ class GoodsClient extends TimeTaskBase
 {
     use GoodsTrait,GoodsCategoryTrait;
     use SaleOrdersTrait;
-    use MachineChannelTrait,MachineGoodsTrait;
+    use MachineTrait,MachineChannelTrait,MachineGoodsTrait;
 
     /**
      * 修改商品库后，同步修改设备商品库、设备货道，这两个位置修改后会自动触发下发通知设备更新数据
@@ -148,12 +149,7 @@ class GoodsClient extends TimeTaskBase
             $mg = $mg->toArray();
             $whereMc['g_id'] = $mg['g_id'];
             $whereMc['machine_id'] = $mg['machine_id'];
-            $config = [
-                "machine_id" => $mg['machine_id'],
-                "key" => env("api.md5Key"),
-            ];
-            $app = AppFactory::machine($config);
-            $result = $app->sendMq->triggerUpdateMg($mg['mg_id']);
+            $result = $this->sendToMachine(['machine_id' => $mg['machine_id']],'updateMg',['mg_id' => $mg_id]);
             actionLog($result,'推送设备商品库');
 
             unset($mg['machine_id']);
@@ -189,12 +185,7 @@ class GoodsClient extends TimeTaskBase
                 if (!$updateMgResult) {
                     return $this->rFail($this->lang("VMachineGoods.synchronization_fail"));
                 }
-                $config = [
-                    "machine_id" => $mgv['machine_id'],
-                    "key" => env("api.md5Key"),
-                ];
-                $app = AppFactory::machine($config);
-                $result = $app->sendMq->triggerUpdateMg($mgv['mg_id']);
+                $result = $this->sendToMachine(['machine_id' => $mgv['machine_id']],'updateMg',['mg_id' => $mgv['mg_id']]);
                 actionLog($result,$mgv['machine_id'] . "设备商品【" . $mgv['mg_id'] . '】更新发送数据结果');
             }
         }
@@ -223,12 +214,7 @@ class GoodsClient extends TimeTaskBase
                 if (!$updateMcResult) {
                     return $this->rFail($this->lang("VMachineChannel.synchronization_fail"));
                 }
-                $config = [
-                    "machine_id" => $value['machine_id'],
-                    "key" => env("api.md5Key"),
-                ];
-                $app = AppFactory::machine($config);
-                $result = $app->sendMq->triggerUpdateMc($value['mc_id']);
+                $result = $this->sendToMachine(['machine_id' => $value['machine_id']],'updateMc',['mc_id' => $value['mc_id']]);
                 actionLog($result,$value['machine_id'] . "货架【" . $value['mc_id'] . '】更新发送数据结果');
             }
         }

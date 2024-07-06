@@ -80,12 +80,8 @@ class Machine extends Common
     public function sendMainControl()
     {
         $postData = input();
-        $config = [
-            "machine_id" => $postData['machine_id'],
-            "key" => env("api.md5Key"),
-        ];
-        $app = AppFactory::machine($config);
-        return $app->sendMq->main_control($postData['msgType'],$postData['time_point'] ?? "");
+        $otherData  = ["time_point" => ($postData['time_point'] ?? time())];
+        return $this->app->machine->sendToMachine($postData,$postData['msgType'],$otherData);
     }
 
     /**
@@ -99,12 +95,8 @@ class Machine extends Common
         if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
         if (!$light) return returnValidate(lang("VMachine.light_require"));
         if ($light%10 != 0) return returnValidate(lang("VMachine.light_multiple"));
-        $config = [
-            "machine_id" => $machine_id,
-            "key" => env("api.md5Key"),
-        ];
-        $app = AppFactory::machine($config);
-        return $app->sendMq->setLight($light);
+        $otherData  = ["value" => $light];
+        return $this->app->machine->sendToMachine(['machine_id' => $machine_id],"light",$otherData);
     }
 
     /**
@@ -118,11 +110,7 @@ class Machine extends Common
         if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
         if (!$volume) return returnValidate(lang("VMachine.volume_require"));
         if ($volume%10 != 0) return returnValidate(lang("VMachine.volume_multiple"));
-        $config = [
-            "machine_id" => $machine_id,
-            "key" => env("api.md5Key"),
-        ];
-        $app = AppFactory::machine($config);
-        return $app->sendMq->setVolume($volume);
+        $otherData  = ["value" => $volume];
+        return $this->app->machine->sendToMachine(['machine_id' => $machine_id],"volume",$otherData);
     }
 }

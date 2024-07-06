@@ -52,7 +52,7 @@ class MachineView extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineView->update($postData);
+        return $this->app->machineView->updateMv($postData);
     }
 
     public function del()
@@ -63,6 +63,6 @@ class MachineView extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineView->del($postData);
+        return $this->app->machineView->delMv($postData);
     }
 }

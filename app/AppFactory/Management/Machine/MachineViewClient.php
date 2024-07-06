@@ -38,6 +38,7 @@ class MachineViewClient extends ManagementClient
                     $postData['m_id'] = $value;
                     $postData['machine_id'] = $machine_id;
                     $flag[] = $this->addMachineView($postData);
+                    $this->sendToMachine(['machine_id' => $machine_id],'updateMachineView');
                 }
             }
             return $this->checkTrans($flag);
@@ -46,5 +47,27 @@ class MachineViewClient extends ManagementClient
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    public function updateMv($postData)
+    {
+        $result = $this->updateMachineView($postData);
+        if ($result) {
+            $machine_id = $postData['machine_id'] ?? $this->getMachineViewValue(['mv_id' => $postData['mv_id']],'machine_id');
+            $this->sendToMachine(['machine_id' => $machine_id],'updateMachineView');
+            return $this->rSuccess();
+        }
+        return $this->rFail();
+    }
+
+    public function delMv($postData)
+    {
+        $machine_id = $this->getMachineViewValue(['mv_id' => $postData['mv_id']],'machine_id');
+        $result = $this->delMachineView($postData);
+        if ($result) {
+            $this->sendToMachine(['machine_id' => $machine_id],'updateMachineView');
+            return $this->rSuccess();
+        }
+        return $this->rFail();
     }
 }

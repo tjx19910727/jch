@@ -26,10 +26,12 @@ class MachineGoodsModel extends BaseModel
     {
         $config = [
             "machine_id" => $model['machine_id'],
-            "key" => env("api.md5Key"),
+            "key" =>
+                cache($model['machine_id'] . ".signKey") ??
+                (MachineModel::getFieldValue(['machine_id' => $model['machine_id']],'signKey') ?? env("api.md5Key")),
         ];
         $app = AppFactory::machine($config);
-        @$app->sendMq->triggerUpdateMg($model['mg_id']);
+        @$app->sendMq->sendMq("updateMg",['mg_id' => $model['mg_id']]);
     }
 
     /**
@@ -63,11 +65,13 @@ class MachineGoodsModel extends BaseModel
             if ($mg) {
                 $config = [
                     "machine_id" => $mg[0]['machine_id'],
-                    "key" => env("api.md5Key"),
+                    "key" =>
+                        cache($mg[0]['machine_id'] . ".signKey") ??
+                        (MachineModel::getFieldValue(['machine_id' => $mg[0]['machine_id']],'signKey') ?? env("api.md5Key")),
                 ];
                 $app = AppFactory::machine($config);
                 foreach ($mg as $k => $v) {
-                    $app->sendMq->triggerUpdateMg($v['mg_id']);
+                    $app->sendMq->sendMq("updateMg",['mg_id' => $v['mg_id']]);
                 }
             }
         }

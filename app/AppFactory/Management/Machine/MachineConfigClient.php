@@ -12,12 +12,13 @@ namespace app\AppFactory\Management\Machine;
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
 use app\management\validate\Machine\VMachineConfig;
 
 class MachineConfigClient extends ManagementClient
 {
-    use MachineConfigTrait;
+    use MachineTrait,MachineConfigTrait;
     use AuthManagerTrait;
 
     public function updateMc($postData)
@@ -26,7 +27,7 @@ class MachineConfigClient extends ManagementClient
         if ($result) {
             $mc = $this->getMachineConfigFind(['mc_id' => $postData['mc_id']],'machine_id');
             $mc = $mc->toArray();
-            $this->sendToMachine($mc);
+            $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMachineConfig');
         }
         return $this->rU($result);
     }
@@ -41,7 +42,7 @@ class MachineConfigClient extends ManagementClient
                 if ($result) {
                     $mc = $this->getMachineConfigFind(['m_id' => $value['m_id']], "machine_id");
                     $mc = $mc->toArray();
-                    $this->sendToMachine($mc);
+                    $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMachineConfig');
                 } else {
                     $this->rollbackTrans();
                     return $this->r(100, $this->lang("update_fail"), $value);
@@ -56,17 +57,4 @@ class MachineConfigClient extends ManagementClient
         }
     }
 
-    /**
-     * 发送触发更新数据
-     * @param array $machine
-     */
-    public function sendToMachine($machine)
-    {
-        $config = [
-            "machine_id" => $machine['machine_id'],
-            "key" => env("api.md5Key"),
-        ];
-        $app = AppFactory::machine($config);
-        $app->sendMq->triggerUpdateMachineConfig();
-    }
 }

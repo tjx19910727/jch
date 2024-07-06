@@ -53,7 +53,7 @@ class TemplateView extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->templateView->update($postData);
+        return $this->app->templateView->updateTv($postData);
     }
 
     public function del()
@@ -64,6 +64,6 @@ class TemplateView extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->templateView->del($postData);
+        return $this->app->templateView->delTv($postData);
     }
 }

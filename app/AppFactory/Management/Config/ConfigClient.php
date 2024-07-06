@@ -44,7 +44,7 @@ class ConfigClient extends ManagementClient
                 $machineIds = $this->getMachineList(['online' => 1],0,'machine_id');
                 if ($machineIds) {
                     foreach ($machineIds as $v) {
-                        $this->sendToMachine($v);
+                        $this->sendToMachine($v,'updateSystemInfo');
                     }
                 }
             }
@@ -52,17 +52,4 @@ class ConfigClient extends ManagementClient
         return $this->rU($result);
     }
 
-    /**
-     * 发送触发更新数据
-     * @param array $machine
-     */
-    protected function sendToMachine($machine)
-    {
-        $config = [
-            "machine_id" => $machine['machine_id'],
-            "key" => env("api.md5Key"),
-        ];
-        $app = AppFactory::machine($config);
-        $app->sendMq->triggerUpdateSystemInfo();
-    }
 }

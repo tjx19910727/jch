@@ -32,7 +32,8 @@ class MachineVersionPlanClient extends ManagementClient
                 $insert = array_merge($mv, $machine);
                 $insert['publish_time'] = $postData['publish_time'] ?? time();
                 $flag[] = $this->addMachineVersionPlan($insert);
-                $this->sendPlanToMachine($machine);
+                // 发送触发软件更新
+                $this->sendToMachine(['machine_id' => $insert['machine_id']],'updateVersionPlan');
             }
             return $this->checkTrans($this->checkFlag($flag));
         } catch (\Exception $e) {
@@ -40,19 +41,5 @@ class MachineVersionPlanClient extends ManagementClient
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());
         }
-    }
-
-    /**
-     * 发送触发货道更新数据
-     * @param $machine
-     */
-    public function sendPlanToMachine($machine)
-    {
-        $config = [
-            "machine_id" => $machine['machine_id'],
-            "key" => env("api.md5Key"),
-        ];
-        $app = AppFactory::machine($config);
-        $app->sendMq->triggerUpdateVersion();
     }
 }

@@ -11,209 +11,106 @@ namespace app\AppFactory\Machine\Send;
 
 class MqClient extends SendBaseClient
 {
+    /**
+     * 修改MQ消息记录确认已发送数据
+     * @param $msg
+     * @param $status
+     */
     public function confirmSend($msg,$status)
     {
         $this->updateMachineMqRecord(["status" => $status],['msg_id' => $msg['msg_id'],'machine_id' => $msg['machine_id']]);
     }
 
+
     /**
-     * 主体控制
-     * @param string $msgType  1. 休眠：sleep, 2. 唤醒：wakeUp, 3. 重启：reboot, 4. 关机：shutdown, 5. 软件升级：update
+     * 主体控制 休眠：sleep, 唤醒：wakeUp, 重启：reboot, 关机：shutdown, 软件升级：update
+     * @param string $msgType
      * @param string $time_point  生效的时间点
      * @return array|string
      */
-    public function main_control($msgType,$time_point = "")
-    {
-        if ($time_point && is_string($time_point)) $time_point = strtotime($time_point);
-        $data = [
-            "msgType" => $msgType,
-            "time_point" => ($time_point ? $time_point : time()),
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
     /**
-     * 交易视频
+     * 交易视频 transactionVideo
      * @param $msgType
      * @param $trade_no
      * @return array|string
      */
-    public function getTransactionVideo($trade_no)
-    {
-        $data = [
-            "msgType" => "transactionVideo",
-            "trade_no" => $trade_no,
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
     /**
-     * 下发获取首页截屏、设备内部照片、出货箱照片
+     * 下发获取首页截屏、设备内部照片、出货箱照片  img
      * @param $field
      * @return array|string
      */
-    public function getImg($field)
-    {
-        $data = [
-            "msgType" => "img",
-            "field" => $field,
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
     /**
-     * 下发设置灯光亮度
+     * 下发设置灯光亮度   light
      * @param $light
      * @return array|string
      */
-    public function setLight($light)
-    {
-        $data = [
-            "msgType" => "light",
-            "value" => $light,
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
     /**
-     * 下发设置音量
+     * 下发设置音量   volume
      * @param $volume
      * @return array|string
      */
-    public function setVolume($volume)
-    {
-        $data = [
-            "msgType" => "volume",
-            "value" => $volume,
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
     /**
-     * 下发货道槽位拍照
+     * 下发货道槽位拍照   channelImg
      * @param string $channel_code 货道号
      * @return array|string
      */
-    public function getChannelImg($channel_code)
-    {
-        $data = [
-            "msgType" => "channelImg",
-            "channel_code" => $channel_code,
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
     /**
-     * 触发广告更新
+     * 触发广告更新   updateAd
      * @return array|string
      */
-    public function triggerUpdateAD()
-    {
-        $data = [
-            "msgType" => "updateAD",
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
     /**
-     * 触发设备商品更新
+     * 触发设备商品更新  updateMg
      * @param $mg_id
      * @return array|string
      */
-    public function triggerUpdateMg($mg_id)
-    {
-        $data = [
-            "msgType" => "updateMg",
-            "mg_id" => $mg_id,
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
     /**
-     * 订单支付成功下发
+     * 订单支付成功下发  paySuccess
      * @param $trade_no
      * @return array|string
      */
-    public function paySuccess($trade_no)
-    {
-        $data = [
-            "msgType" => "paySuccess",
-            "trade_no" => $trade_no,
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
     /**
-     * 触发设备货道更新
+     * 触发设备货道更新 updateMc
      * @param int $mc_id
      * @return array|string
      */
-    public function triggerUpdateMc($mc_id)
+    /**
+     * 触发设备更新  updateMachine
+     * @return array|string
+     */
+    /**
+     * 触发设备配置更新 updateMachineConfig
+     * @return array|string
+     */
+    /**
+     * 触发设备营业配置更新  updateMachineOnOff
+     * @return array|string
+     */
+    /**
+     * 触发设备更新系统配置信息  updateSystemInfo
+     * @return array|string
+     */
+    /**
+     * 触发设备更新软件版本 updateVersionPlan
+     * @return array|string
+     */
+    /**
+     * 触发设备首页模板界面更新  updateMachineView
+     * @return array|string
+     */
+
+    /**
+     * 主动发送至MQ
+     * @param $msgType
+     * @param array $otherData
+     * @return array|string
+     */
+    public function sendMq($msgType,$otherData = [])
     {
-        $data = [
-            "msgType" => "updateMc",
-            "mc_id" => $mc_id,
-        ];
+        $data = ['msgType' => $msgType];
+        if ($otherData) $data = array_merge($data,$otherData);
         return $this->dataSendRabbitMQ($data);
     }
 
-    /**
-     * 触发设备更新
-     * @return array|string
-     */
-    public function triggerUpdateMachine()
-    {
-        $data = [
-            "msgType" => "updateMachine",
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
 
-    /**
-     * 触发设备配置更新
-     * @return array|string
-     */
-    public function triggerUpdateMachineConfig()
-    {
-        $data = [
-            "msgType" => "updateMachineConfig",
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
 
-    /**
-     * 触发设备营业配置更新
-     * @return array|string
-     */
-    public function triggerUpdateMachineOnOff()
-    {
-        $data = [
-            "msgType" => "updateMachineOnOff",
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
-    /**
-     * 触发设备更新系统配置信息
-     * @return array|string
-     */
-    public function triggerUpdateSystemInfo()
-    {
-        $data = [
-            "msgType" => "updateSystemInfo",
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
-
-    /**
-     * 触发设备更新软件版本
-     * @return array|string
-     */
-    public function triggerUpdateVersion()
-    {
-        $data = [
-            "msgType" => "updateVersionPlan",
-        ];
-        return $this->dataSendRabbitMQ($data);
-    }
 }
