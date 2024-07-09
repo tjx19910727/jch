@@ -24,7 +24,6 @@ class JdCashier extends Common
             $postData = json2arr($postData);
             actionLog($postData, '回调通知数据');
             if (!$postData) die("success");
-            $config['key'] =  env("api.md5Key");
             $config['data'] = $postData;
             AppFactory::pay($config)->jdNotify->handle();
             echo  "success";
@@ -43,7 +42,6 @@ class JdCashier extends Common
         $postData = input();
         actionLog($postData, '退款结果通知数据');
         $postData = json2arr($postData);
-        $config['key'] =  env("api.md5Key");
         $config['data'] = $postData;
         $result = AppFactory::pay($config)->jdNotify->handleRefund();
         return $result;

@@ -44,12 +44,14 @@ trait CommonTrait
 
     public function makeSign($data)
     {
-        return SignUtil::makeSign($data,$this->config['key'] ?? env("api.md5Key"));
+        return SignUtil::makeSign($data,$this->config['key'] ?? (cache($this->config['machine_id'] . ".signKey") ??
+            ($this->getMachineValue(['machine_id' => $this->config['machine_id']],'signKey') ?? env("api.md5Key"))));
     }
 
     public function checkSign($data)
     {
-        return SignUtil::checkSign($data,$this->config['key'] ?? env("api.md5Key"));
+        return SignUtil::checkSign($data,$this->config['key'] ?? (cache($this->config['machine_id'] . ".signKey") ??
+                ($this->getMachineValue(['machine_id' => $this->config['machine_id']],'signKey') ?? env("api.md5Key"))));
     }
 
     /**

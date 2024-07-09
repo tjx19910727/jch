@@ -47,10 +47,11 @@ trait MachineVersionPlanTrait
      */
     public function updateComplete()
     {
-        $mvp = $this->getMachineVersionPlanFind(['mvp_id' => $this->message['mvp_id']])->toArray();
+        $mvp = $this->getMachineVersionPlanFind(['mvp_id' => $this->message['mvp_id']]);
         actionLog($this->getLS(),'【SQL】查询更新计划',"DataUpload");
-        actionLog($mvp,'查询更新计划',"DataUpload");
         if ($mvp) {
+            $mvp = $mvp->toArray();
+            actionLog($mvp,'查询更新计划',"DataUpload");
             $this->startTrans();
             try {
                 if ($this->message['status'] == 2) {

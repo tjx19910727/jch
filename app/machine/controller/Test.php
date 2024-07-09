@@ -101,8 +101,9 @@ class Test extends BaseController
             "timestamp" => time(),
             ];
         $data = array_merge($data,$otherData);
+        $signKey = \cache($otherData['machine_id'] . ".signKey") ?? "b3976bd290d7f1a8061c0b0a6be71de1";
         dump(\cache($otherData['machine_id'] . ".signKey"));
-        $data['sign'] = SignUtil::makeSign($data, \cache($otherData['machine_id'] . ".signKey"));
+        $data['sign'] = SignUtil::makeSign($data,$signKey );
         return $data;
     }
 
@@ -248,9 +249,14 @@ class Test extends BaseController
 //        die();
 //        dump($result);
         $data = [
-            "machine_id" => "test0001",
+            "machine_id" => "test0003",
 //            "order_id" => "1251",
 //            "coupon_code" => "533617",
+//            "data" => [
+//                "msgType" => "updateComplete",
+//                "mvp_id" => 184,
+//                "status" => 2,
+//            ],
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));
@@ -321,15 +327,21 @@ class Test extends BaseController
         ];
         $content = json_encode($content);
         $msg_id = uniqid();
-        $signKey = env("api.md5Key");
+//        $signKey = env("api.md5Key");
+        $signKey = "12da2ed86ebb06a199ac1d27ab062dcf";
         $data = [
             "timestamp" => time(),
             "msg_id" => $msg_id,
-            "machine_id" => "test0001",
-            "mac" => "192.168.6.1",
+            "machine_id" => "test0003",
+//            "mac" => "192.168.6.1",
 //            "data" => $content,
+//            "data" => [
+//                "msgType" => "updateComplete",
+//                "mvp_id" => 184,
+//                "status" => 2,
+//            ],
         ];
-//        $data['sign'] = SignUtil::makeSign($data, $signKey);
+        $data['sign'] = SignUtil::makeSign($data, $signKey);
         dump(json_encode($data));
 
         $result = MqProducer::dataUpload($data);

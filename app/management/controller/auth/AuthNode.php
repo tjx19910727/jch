@@ -23,7 +23,7 @@ class AuthNode extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData);
-        $field = "node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status";
+        $field = "node_id,pid,name,icon,url,desc,sort,type,data_auth,is_auth,is_button,status";
         return $this->app->authNode->getFind($where,$field);
     }
 
@@ -36,7 +36,7 @@ class AuthNode extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['name' => "like",'url' => 'like']);
-        $field = "node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status";
+        $field = "node_id,pid,name,icon,url,desc,sort,type,data_auth,is_auth,is_button,status";
         $result = $this->app->authNode->getList($where,$pageNum,$field);
         return $result;
     }

@@ -7,6 +7,7 @@
  */
 
 namespace app\machine\controller;
+
 use app\AppFactory\AppFactory;
 use app\AppFactory\Machine\Application;
 use think\facade\Lang;
@@ -42,10 +43,9 @@ class Receive extends Common
             $frequency = obj2arr($frequency);
             die(json_encode($frequency,320));
         }
-        $this->key = cache($postData['machine_id'] . ".signKey");
         $this->config = [
             "machine_id" => $postData['machine_id'],
-            "key" => $this->key,
+//            "key" => $this->key,
             "data" => $postData,
         ];
         $this->app = AppFactory::machine($this->config);

@@ -12,6 +12,7 @@ namespace app\AppFactory\TimeTask\Machine;
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
@@ -25,7 +26,7 @@ use think\db\exception\ModelNotFoundException;
 
 class MachineClient extends TimeTaskBase
 {
-    use MachineOnlineTrait,MachineOnlineDetailsTrait,MachineTrait,MachineOnOffTrait;
+    use MachineOnlineTrait,MachineOnlineDetailsTrait,MachineTrait,MachineOnOffTrait,MachineMqRecordTrait;
     use SaleOrdersTrait;
     use AuthManagerMachineTrait;
     use ActivityCouponUsedTrait;
@@ -114,7 +115,9 @@ class MachineClient extends TimeTaskBase
                         }
                     }
                 }
+
                 actionLog($flag, '处理结果');
+                $this->delMachineMqRecord([['create_time','<',strtotime("-7 days")]]);
             }
         } catch (DataNotFoundException $e) {
             actionException($e,1);
