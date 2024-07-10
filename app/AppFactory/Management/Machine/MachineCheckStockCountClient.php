@@ -27,7 +27,7 @@ class MachineCheckStockCountClient extends ManagementClient
                 "machine_name" => "设备名称",
                 "check_stock" => "盘点数量",
                 "stock_reserve" => "备用库存盘点",
-                "creator" => "盘点人员",
+                "creator_nickname" => "盘点人员",
                 "create_time" => "盘点时间",
             ];
             $filename = "导出库存盘点号总览-"  . date("YmdHis");

@@ -577,6 +577,18 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 上报广告素材下载进度，百分比
+     * @return array|\think\response\Json
+     */
+    public function reportAdvDownload()
+    {
+        $update['adv_id'] = $this->data['adv_id'];
+        $update['download_progress'] = $this->data['download_progress'];
+        $result = $this->updateAdvertisementPush($update);
+        return $this->rU($result);
+    }
+
+    /**
      * 提交购物车生成订单信息
      * @return array|\think\response\Json
      */
@@ -716,6 +728,18 @@ class ApiClient extends ReceiveBaseClient
         }
         if ($result['status'] != 1) return $this->rFail();
         return $this->rQ($result);
+    }
+
+    /**
+     * 上报设备软件更新下载进度
+     * @return array|\think\response\Json
+     */
+    public function machineVersionDownload()
+    {
+        $update['mvp_id'] = $this->data['mvp_id'];
+        $update['download_progress'] = $this->data['download_progress'];
+        $result = $this->updateMachineVersionPlan($update);
+        return $this->rU($result);
     }
 
     /**

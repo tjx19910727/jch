@@ -163,6 +163,15 @@ class Receive extends Common
     }
 
     /**
+     * 上报设备软件更新下载进度
+     * @return array|\think\response\Json
+     */
+    public function reportMachineVersionDownload()
+    {
+        return $this->app->api->machineVersionDownload();
+    }
+
+    /**
      * 获取商品信息
      * @return array|string
      */
@@ -199,6 +208,15 @@ class Receive extends Common
     public function playAdv()
     {
         return $this->app->api->playAdv();
+    }
+
+    /**
+     * 上报广告素材下载百分比
+     * @return array|\think\response\Json
+     */
+    public function reportAdvDownLoad()
+    {
+        return $this->app->api->reportAdvDownLoad();
     }
 
     /**

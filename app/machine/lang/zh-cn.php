@@ -53,6 +53,9 @@ return [
         "coupon_code_require" => "优惠码不能为空",
 
         "details_require" => "订单详情不能为空",
+
+        "mvp_id_require" => "版本更新记录ID不能为空",
+        "download_progress_require" => "下载进度不能为空",
     ],
 
     "VChannel" => [

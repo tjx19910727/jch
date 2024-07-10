@@ -101,7 +101,7 @@ class Test extends BaseController
             "timestamp" => time(),
             ];
         $data = array_merge($data,$otherData);
-        $signKey = \cache($otherData['machine_id'] . ".signKey") ?? "b3976bd290d7f1a8061c0b0a6be71de1";
+        $signKey = \cache($otherData['machine_id'] . ".signKey") ?? "d01a3011636d053f6f07ae76e1231746";
         dump(\cache($otherData['machine_id'] . ".signKey"));
         $data['sign'] = SignUtil::makeSign($data,$signKey );
         return $data;
@@ -250,6 +250,8 @@ class Test extends BaseController
 //        dump($result);
         $data = [
             "machine_id" => "test0003",
+            "mvp_id" => "186",
+            "download_progress" => "50",
 //            "order_id" => "1251",
 //            "coupon_code" => "533617",
 //            "data" => [

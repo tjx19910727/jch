@@ -53,6 +53,8 @@ class VReceive extends VCommon
 
         "details" => "require",
 
+        "mvp_id" => "require",
+        "download_progress" => "require",
     ];
 
     protected $message = [
@@ -98,6 +100,9 @@ class VReceive extends VCommon
 
         "details.require" => "VReceive.details_require",
 
+        "mvp_id.require" => "VReceive.mvp_id_require",
+        "download_progress.require" => "VReceive.download_progress_require",
+
     ];
 
     protected $scene = [
@@ -115,10 +120,12 @@ class VReceive extends VCommon
         "getMachineHelp" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineView" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineVersionPlan" => ["msg_id","machine_id","timestamp","sign"],
+        "reportMachineVersionDownload" => ["msg_id","machine_id","timestamp","sign","mvp_id","download_progress"],
 
         "getGoods" => ["msg_id","machine_id","timestamp","sign"],
         "getAdv" => ["msg_id","machine_id","timestamp","sign"],
         "playAdv" => ["msg_id","machine_id","timestamp","sign","adv_id","play_time"],
+        "reportAdvDownload" => ["msg_id","machine_id","timestamp","sign","adv_id","download_progress"],
         "subCar" => ["msg_id","machine_id","timestamp","sign","pay_type","pay_method"],
         "subChannel" => ["msg_id","machine_id","timestamp","sign"],
 
