@@ -50,8 +50,10 @@ trait CommonTrait
 
     public function checkSign($data)
     {
-        return SignUtil::checkSign($data,$this->config['key'] ?? (cache($this->config['machine_id'] . ".signKey") ??
-                ($this->getMachineValue(['machine_id' => $this->config['machine_id']],'signKey') ?? env("api.md5Key"))));
+        $signKey = $this->config['key'] ?? (cache($this->config['machine_id'] . ".signKey") ??
+                ($this->getMachineValue(['machine_id' => $this->config['machine_id']],'signKey') ?? env("api.md5Key")));
+        actionLog($signKey,'验签的Key','DataUpload');
+        return SignUtil::checkSign($data,$signKey);
     }
 
     /**

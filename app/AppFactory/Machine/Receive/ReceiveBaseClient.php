@@ -53,7 +53,7 @@ class ReceiveBaseClient extends MachineBaseClient
             if ($this->machine['mac_address'] && $this->machine['mac_address'] == $this->data['mac']) {
                 $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
                 cache($this->machine['machine_id'] . ".signKey",$signKey,86400);
-                actionLog(cache($this->machine['machine_id'].".signKey"),'生成SignKey' , "dataUpload");
+                actionLog(cache($this->machine['machine_id'].".signKey"),$this->machine['machine_id'] . '生成SignKey');
                 $this->updateMachine(['m_id' => $this->machine['m_id'],'signKey' => $signKey]);
 
                 $data = [

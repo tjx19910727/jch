@@ -41,8 +41,8 @@ class SendBaseClient extends MachineBaseClient
             $this->dataRecord(2, 2);
             $result = MqProducer::dataSend($this->data, $this->machine['machine_id']);
             actionLog($result,'发送结果');
-            if ($result != "OK") {
-                return $this->rFail($result);
+            if ($result !== true) {
+                return $result;
             }
             return $this->rSuccess($result);
         }

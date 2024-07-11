@@ -262,6 +262,7 @@ class Test extends BaseController
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));
+        dump(\cache("test0003.signKey"));
 //        $config = [
 //            "machine_id" => $data['machine_id'],
 //            "key" => env("api.md5Key"),
@@ -271,6 +272,18 @@ class Test extends BaseController
 //        $result = $app->activity->useFd();
 
 //        return $result;
+    }
+
+    public function checkSign()
+    {
+        $data = '{"timestamp":"1720604606","msg_id":"bf059113-75ee-4d23-b4ff-42b9e3e35e64","machine_id":"test0003","data":"{\"msgType\":\"goodsHit\",\"g_id\":87}","sign":"f6141e8b7d927303a4f34fbfc3efb7bf"}';
+        $data = json2arr($data);
+        dump($data);
+        $result = SignUtil::checkSign($data,'c9243c5b87560b0308af05a204d32590');
+        dump($result);
+        unset($data['sign']);
+        $sign = SignUtil::makeSign($data,'c9243c5b87560b0308af05a204d32590');
+        dump($sign);
     }
 
     public function getCheckStockQr()
@@ -346,6 +359,8 @@ class Test extends BaseController
         $data['sign'] = SignUtil::makeSign($data, $signKey);
         dump(json_encode($data));
 
+        $data = '{"timestamp":"1720604606","msg_id":"bf059113-75ee-4d23-b4ff-42b9e3e35e64","machine_id":"test0003","data":"{\"msgType\":\"goodsHit\",\"g_id\":87}","sign":"f6141e8b7d927303a4f34fbfc3efb7bf"}';
+        $data = json2arr($data);
         $result = MqProducer::dataUpload($data);
         dump($result);
     }
