@@ -133,10 +133,9 @@ class MqProducer
             $channel->basic_publish($message, $amqpDetail['exchange_name'], $amqpDetail['route_key']);
             $channel->wait_for_pending_acks(1);
 //            $channel->tx_commit();
-            $return = true;
             $channel->close();
             $connection->close();
-            return $return;
+            return true;
         } catch (\Exception $e) {
             actionException($e,1);
             return returnTryCatch($e->getMessage());

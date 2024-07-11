@@ -59,17 +59,18 @@ class MqClient extends ReceiveBaseClient
         parent::__construct($app);
         if ($this->checkSign($this->data) !== true) {
             actionLog($this->data,'验签失败',"DataUpload");
-            die(json_encode(["state" => 200, "msg" => "验签失败"],320));
+//            die(json_encode(["state" => 200, "msg" => "验签失败"],320));
+        } else {
+            $this->message = json2arr($this->data['data']);
+            actionLog($this->message, '消息数据', "DataUpload");
+            try {
+                validate(VReport::class)->scene('onMessage')->check($this->data);
+            } catch (\Exception $e) {
+                actionLog($e->getMessage(), '数据格式错误', 'DataUpload');
+//                die(json_encode(["state" => 200, "msg" => $e->getMessage(), $this->data], 320));
+            }
+            $this->dataRecord(2);
         }
-        $this->message = json2arr($this->data['data']);
-        actionLog($this->message,'消息数据',"DataUpload");
-        try {
-            validate(VReport::class)->scene('onMessage')->check($this->data);
-        } catch (\Exception $e) {
-            actionLog($e->getMessage(),'数据格式错误','DataUpload');
-            die(json_encode(["state" => 200, "msg" => $e->getMessage(),$this->data],320));
-        }
-        $this->dataRecord(2);
     }
 
     /**
@@ -80,15 +81,17 @@ class MqClient extends ReceiveBaseClient
     public function onMessage()
     {
         try {
-            $func_name = $this->message['msgType'];
-            if (method_exists(self::class, $func_name)) {
-                try {
-                    validate(VReport::class)->scene($this->message['msgType'])->check($this->message);
-                } catch (\Exception $e) {
-                    actionLog($e->getMessage(), '数据格式错误', 'DataUpload');
-                    return 1;
+            if ($this->message) {
+                $func_name = $this->message['msgType'];
+                if (method_exists(self::class, $func_name)) {
+                    try {
+                        validate(VReport::class)->scene($this->message['msgType'])->check($this->message);
+                    } catch (\Exception $e) {
+                        actionLog($e->getMessage(), '数据格式错误', 'DataUpload');
+                        return 1;
+                    }
+                    return $this->$func_name();
                 }
-                return $this->$func_name();
             }
             return 1;
         } catch (\Exception $e) {

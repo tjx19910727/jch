@@ -359,8 +359,8 @@ class Test extends BaseController
         $data['sign'] = SignUtil::makeSign($data, $signKey);
         dump(json_encode($data));
 
-        $data = '{"timestamp":"1720604606","msg_id":"bf059113-75ee-4d23-b4ff-42b9e3e35e64","machine_id":"test0003","data":"{\"msgType\":\"goodsHit\",\"g_id\":87}","sign":"f6141e8b7d927303a4f34fbfc3efb7bf"}';
-        $data = json2arr($data);
+//        $data = '{"timestamp":"1720604606","msg_id":"bf059113-75ee-4d23-b4ff-42b9e3e35e64","machine_id":"test0003","data":"{\"msgType\":\"goodsHit\",\"g_id\":87}","sign":"f6141e8b7d927303a4f34fbfc3efb7bf"}';
+//        $data = json2arr($data);
         $result = MqProducer::dataUpload($data);
         dump($result);
     }

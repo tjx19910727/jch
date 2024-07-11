@@ -50,24 +50,25 @@ class ReceiveBaseClient extends MachineBaseClient
     {
         if (isset($this->data['mac'])) {
             actionLog(['mac_address' => $this->machine['mac_address'], "mac" => $this->data['mac']],"系统-终端Mac地址");
+            $signKey = $this->machine['signKey'];
             if ($this->machine['mac_address'] && $this->machine['mac_address'] == $this->data['mac']) {
-                $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
-                cache($this->machine['machine_id'] . ".signKey",$signKey,86400);
-                actionLog(cache($this->machine['machine_id'].".signKey"),$this->machine['machine_id'] . '生成SignKey');
-                $this->updateMachine(['m_id' => $this->machine['m_id'],'signKey' => $signKey]);
-
-                $data = [
-                    "msg_id" => uniqid(),
-                    "timestamp" => time(),
-                    "machine_id" => $this->machine['machine_id'],
-                    "signKey" => $signKey,
-                ];
-                actionLog($data, '发送至MQ服务器的数据');
-                $this->dataRecord(2, 2);
-                $result = MqProducer::dataSend($data, $this->machine['machine_id']);
-                actionLog($result,'发送结果');
+                if (!$signKey || ($this->machine['signKeyTime'] < time() - 3600)) {
+                    $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
+                    cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 18);
+                    actionLog(cache($this->machine['machine_id'] . ".signKey"), $this->machine['machine_id'] . '生成SignKey');
+                    $this->updateMachine(['m_id' => $this->machine['m_id'], 'signKey' => $signKey, 'signKeyTime' => time()]);
+                }
             }
-            die();
+            $data = [
+                "msg_id" => uniqid(),
+                "timestamp" => time(),
+                "machine_id" => $this->machine['machine_id'],
+                "signKey" => $signKey,
+            ];
+            actionLog($data, '发送至MQ服务器的数据');
+            $this->dataRecord(2, 2);
+            $result = MqProducer::dataSend($data, $this->machine['machine_id']);
+            actionLog($result,'发送结果');
         }
     }
 
