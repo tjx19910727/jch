@@ -140,7 +140,7 @@ trait AuthManagerLogTrait
                             if ($where) $manager = $this->getAuthManagerFind($where, 'manager_id,nickname,account,ao_id');
                         }
                         if ($manager) {
-                            $params = json_encode($params, 320);
+                            $params = substr(json_encode($params, 320),0, 4294967295);
                             $log = [
                                 "ao_id" => $manager['ao_id'] ?? 0,
                                 "manager_id" => $manager['manager_id'] ?? 0,
