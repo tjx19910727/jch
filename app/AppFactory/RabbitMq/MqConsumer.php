@@ -71,7 +71,13 @@ class MqConsumer
     public function dataUpload()
     {
         $param = config('rabbit_mq.' . env("RabbitMq.config_name"));
+        if (!$param) {
+            die("获取不到RabbitMQ【" . env("RabbitMq.config_name") . "】的连接配置参数 \n");
+        }
         $amqpDetail = config('rabbit_mq.dataUpload_queue');
+        if (!$amqpDetail) {
+            die("获取不到终端上传相关配置参数【dataUpload_queue】 \n");
+        }
         $connection = new AMQPStreamConnection(
             $param['host'],
             $param['port'],

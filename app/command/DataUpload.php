@@ -21,7 +21,12 @@ class DataUpload extends Command
     {
         // 指令输出
 //        $output->writeln('comer');
-        $consumer = new MqConsumer();
-        $consumer->dataUpload();
+        try {
+            $consumer = new MqConsumer();
+            $consumer->dataUpload();
+        } catch (\Exception $e) {
+            actionException($e,1);
+            echo $e->getMessage();
+        }
     }
 }

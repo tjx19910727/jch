@@ -49,26 +49,34 @@ class ReceiveBaseClient extends MachineBaseClient
     public function setSignKey()
     {
         if (isset($this->data['mac'])) {
-            actionLog(['mac_address' => $this->machine['mac_address'], "mac" => $this->data['mac']],"系统-终端Mac地址");
-            $signKey = $this->machine['signKey'];
-            if ($this->machine['mac_address'] && $this->machine['mac_address'] == $this->data['mac']) {
-                if (!$signKey || ($this->machine['signKeyTime'] < time() - 3600)) {
-                    $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
-                    cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 18);
-                    actionLog(cache($this->machine['machine_id'] . ".signKey"), $this->machine['machine_id'] . '生成SignKey');
-                    $this->updateMachine(['m_id' => $this->machine['m_id'], 'signKey' => $signKey, 'signKeyTime' => time()]);
+            try {
+                actionLog(['mac_address' => $this->machine['mac_address'], "mac" => $this->data['mac']], "系统-终端Mac地址");
+                $signKey = $this->machine['signKey'];
+                if ($this->machine['mac_address'] && $this->machine['mac_address'] == $this->data['mac']) {
+                    if (!$signKey || ($this->machine['signKeyTime'] < time() - 3600)) {
+                        $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
+                        $this->updateMachine(['m_id' => $this->machine['m_id'], 'signKey' => $signKey, 'signKeyTime' => time()]);
+                    }
                 }
+
+                $data = [
+                    "msg_id" => uniqid(),
+                    "timestamp" => time(),
+                    "machine_id" => $this->machine['machine_id'],
+                    "signKey" => $signKey,
+                ];
+                actionLog($data, '发送至MQ服务器的数据');
+                $this->dataRecord(2, 2);
+                $result = MqProducer::dataSend($data, $this->machine['machine_id']);
+                actionLog($result, '发送结果');
+
+                @cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 5);
+                actionLog(@cache($this->machine['machine_id'] . ".signKey"), $this->machine['machine_id'] . '生成SignKey');
+                $this->r(200,'处理成功')->send();
+            } catch (\Exception $e) {
+                actionException($e,1);
+                $this->rTryCatch($e->getMessage())->send();
             }
-            $data = [
-                "msg_id" => uniqid(),
-                "timestamp" => time(),
-                "machine_id" => $this->machine['machine_id'],
-                "signKey" => $signKey,
-            ];
-            actionLog($data, '发送至MQ服务器的数据');
-            $this->dataRecord(2, 2);
-            $result = MqProducer::dataSend($data, $this->machine['machine_id']);
-            actionLog($result,'发送结果');
         }
     }
 

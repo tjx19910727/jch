@@ -375,12 +375,12 @@ class Test extends BaseController
 
     public function testReturn()
     {
-        $data = '{"timestamp":"1719024838","msg_id":"ea113122-726c-498f-9638-dae0bb53955d","machine_id":"test0004","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"202406221051415759680\",\"main\":{\"1\":[{\"channel_code\":\"A01\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"\/uploads\/machine_test0004\/20240622\/b21c62ed53e0c1f8873a9bae142ddfbb.jpg,\/uploads\/machine_test0004\/20240622\/30184d77d0da2e94d6d0f44717b694b4.jpg\",\"out_sequence\":1}]}}","sign":"75b6dd516f9909ffb3d5441925fa62f5"}';
+        $data = '{"timestamp":"1721222424","msg_id":"5ca2337a-6b39-40ae-b16f-f35123c4cf98","machine_id":"0016","data":"{}","mac":"04:2B:58:12:15:BA"}';
         $data = json2arr($data);
         dump($data);
         $config = [
             "machine_id" => $data['machine_id'],
-            "key" => env("api.md5Key"),
+//            "key" => env("api.md5Key"),
             "data" => $data,
         ];
 //        unset($data['sign']);
