@@ -52,6 +52,9 @@ class ReceiveBaseClient extends MachineBaseClient
             try {
                 actionLog(['mac_address' => $this->machine['mac_address'], "mac" => $this->data['mac']], "系统-终端Mac地址");
                 $signKey = $this->machine['signKey'];
+                // 上报的Mac地址与后台设置的Mac地址不一致时，不下发Key
+                if ($this->machine['mac_address'] != $this->data['mac']) $signKey = "";
+                // 后台配置Mac地址，并且Mac地址与上报的Mac地址一致，并且Key为空或上一个Key的时间大于3600秒，重新生成一个Key
                 if ($this->machine['mac_address'] && $this->machine['mac_address'] == $this->data['mac']) {
                     if (!$signKey || ($this->machine['signKeyTime'] < time() - 3600)) {
                         $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
@@ -59,16 +62,18 @@ class ReceiveBaseClient extends MachineBaseClient
                     }
                 }
 
-                $data = [
-                    "msg_id" => uniqid(),
-                    "timestamp" => time(),
-                    "machine_id" => $this->machine['machine_id'],
-                    "signKey" => $signKey,
-                ];
-                actionLog($data, '发送至MQ服务器的数据');
-                $this->dataRecord(2, 2);
-                $result = MqProducer::dataSend($data, $this->machine['machine_id']);
-                actionLog($result, '发送结果');
+                if ($signKey) {
+                    $data = [
+                        "msg_id" => uniqid(),
+                        "timestamp" => time(),
+                        "machine_id" => $this->machine['machine_id'],
+                        "signKey" => $signKey,
+                    ];
+                    actionLog($data, '发送至MQ服务器的数据');
+                    $this->dataRecord(2, 2);
+                    $result = MqProducer::dataSend($data, $this->machine['machine_id']);
+                    actionLog($result, '发送结果');
+                }
 
                 @cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 5);
                 actionLog(@cache($this->machine['machine_id'] . ".signKey"), $this->machine['machine_id'] . '生成SignKey');

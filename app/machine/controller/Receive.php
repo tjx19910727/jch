@@ -49,8 +49,10 @@ class Receive extends Common
             "data" => $postData,
         ];
         $this->app = AppFactory::machine($this->config);
-        if ($this->app->api->checkSign($postData) !== true)
-            die(json_encode(["state" => 100,"msg" => Lang::get("check_sign_fail")],320));
+        if ($this->app->api->checkSign($postData) !== true) {
+            @cache($postData['machine_id'] . ".signKey",null);
+            die(json_encode(["state" => 100, "msg" => Lang::get("check_sign_fail")], 320));
+        }
 
     }
 

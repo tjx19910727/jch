@@ -101,8 +101,9 @@ class Test extends BaseController
             "timestamp" => time(),
             ];
         $data = array_merge($data,$otherData);
-        $signKey = \cache($otherData['machine_id'] . ".signKey") ?? "d01a3011636d053f6f07ae76e1231746";
-        dump(\cache($otherData['machine_id'] . ".signKey"));
+//        $signKey = \cache($otherData['machine_id'] . ".signKey") ?? "d01a3011636d053f6f07ae76e1231746";
+//        dump(\cache($otherData['machine_id'] . ".signKey"));
+        $signKey = env("api.md5Key");
         $data['sign'] = SignUtil::makeSign($data,$signKey );
         return $data;
     }
@@ -249,9 +250,9 @@ class Test extends BaseController
 //        die();
 //        dump($result);
         $data = [
-            "machine_id" => "test0003",
-            "mvp_id" => "186",
-            "download_progress" => "50",
+            "machine_id" => "0012",
+//            "mvp_id" => "186",
+//            "download_progress" => "50",
 //            "order_id" => "1251",
 //            "coupon_code" => "533617",
 //            "data" => [
@@ -262,7 +263,7 @@ class Test extends BaseController
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));
-        dump(\cache("test0003.signKey"));
+//        dump(\cache("test0003.signKey"));
 //        $config = [
 //            "machine_id" => $data['machine_id'],
 //            "key" => env("api.md5Key"),
@@ -342,12 +343,12 @@ class Test extends BaseController
         ];
         $content = json_encode($content);
         $msg_id = uniqid();
-//        $signKey = env("api.md5Key");
-        $signKey = "12da2ed86ebb06a199ac1d27ab062dcf";
+        $signKey = env("api.md5Key");
+//        $signKey = "12da2ed86ebb06a199ac1d27ab062dcf";
         $data = [
             "timestamp" => time(),
             "msg_id" => $msg_id,
-            "machine_id" => "test0003",
+            "machine_id" => "0012",
 //            "mac" => "192.168.6.1",
 //            "data" => $content,
 //            "data" => [

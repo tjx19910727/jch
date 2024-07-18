@@ -57,6 +57,8 @@ class MqClient extends ReceiveBaseClient
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
+        if (!isset($this->data['mac']) && !isset($this->data['sign']))
+            json(['state' => 100,"msg" => '缺少签名'])->send();
         if ($this->checkSign($this->data) !== true) {
             actionLog($this->data,'验签失败',"DataUpload");
 //            die(json_encode(["state" => 200, "msg" => "验签失败"],320));

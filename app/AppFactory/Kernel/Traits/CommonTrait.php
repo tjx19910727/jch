@@ -44,15 +44,20 @@ trait CommonTrait
 
     public function makeSign($data)
     {
-        return SignUtil::makeSign($data,$this->config['key'] ?? (cache($this->config['machine_id'] . ".signKey") ??
-            ($this->getMachineValue(['machine_id' => $this->config['machine_id']],'signKey') ?? env("api.md5Key"))));
+        $signKey = $this->config['key'] ?? "";
+        if (!$signKey) $signKey = cache($this->config['machine_id'] . ".signKey");
+        if (!$signKey) $signKey = $this->getMachineValue(['machine_id' => $this->config['machine_id']],'signKey');
+        if (!$signKey) $signKey = env("api.md5Key");
+        return SignUtil::makeSign($data,$signKey);
     }
 
     public function checkSign($data)
     {
-        $signKey = $this->config['key'] ?? (cache($this->config['machine_id'] . ".signKey") ??
-                ($this->getMachineValue(['machine_id' => $this->config['machine_id']],'signKey') ?? env("api.md5Key")));
-        actionLog($signKey,'验签的Key','DataUpload');
+        $signKey = $this->config['key'] ?? "";
+        if (!$signKey) $signKey = cache($this->config['machine_id'] . ".signKey");
+        if (!$signKey) $signKey = $this->getMachineValue(['machine_id' => $this->config['machine_id']],'signKey');
+        if (!$signKey) $signKey = env("api.md5Key");
+        actionLog($signKey,'验签的Key');
         return SignUtil::checkSign($data,$signKey);
     }
 
