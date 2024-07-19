@@ -21,7 +21,7 @@ class EmailConfig extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["host" => "like","username" => "like",'sendEmail' => "like"]);
         return $this->app->emailConfig->getList($where,$pageNum,$this->field,'ec_id desc');
     }
 

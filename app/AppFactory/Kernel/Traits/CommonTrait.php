@@ -45,8 +45,10 @@ trait CommonTrait
     public function makeSign($data)
     {
         $signKey = $this->config['key'] ?? "";
-        if (!$signKey) $signKey = cache($this->config['machine_id'] . ".signKey");
-        if (!$signKey) $signKey = $this->getMachineValue(['machine_id' => $this->config['machine_id']],'signKey');
+        $machine_id = $data['machine_id'] ?? "";
+        if (!$machine_id) $machine_id = $this->config['machine_id'] ?? "";
+        if (!$signKey) $signKey = cache($machine_id . ".signKey");
+        if (!$signKey) $signKey = $this->getMachineValue(['machine_id' => $machine_id],'signKey');
         if (!$signKey) $signKey = env("api.md5Key");
         return SignUtil::makeSign($data,$signKey);
     }
@@ -54,8 +56,10 @@ trait CommonTrait
     public function checkSign($data)
     {
         $signKey = $this->config['key'] ?? "";
-        if (!$signKey) $signKey = cache($this->config['machine_id'] . ".signKey");
-        if (!$signKey) $signKey = $this->getMachineValue(['machine_id' => $this->config['machine_id']],'signKey');
+        $machine_id = $data['machine_id'] ?? "";
+        if (!$machine_id) $machine_id = $this->config['machine_id'] ?? "";
+        if (!$signKey) $signKey = cache($machine_id . ".signKey");
+        if (!$signKey) $signKey = $this->getMachineValue(['machine_id' => $machine_id],'signKey');
         if (!$signKey) $signKey = env("api.md5Key");
         actionLog($signKey,'验签的Key');
         return SignUtil::checkSign($data,$signKey);

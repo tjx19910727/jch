@@ -96,6 +96,7 @@ trait AfterOrderPaymentTrait
                 "machine_id" => $this->order['machine_id'],
                 "data" => $content,
             ];
+            $this->config['machine_id'] = $this->order['machine_id'];
             $data['sign'] = $this->makeSign($data);
             actionLog($data,'下发数据');
 

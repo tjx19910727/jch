@@ -753,6 +753,7 @@ class ApiClient extends ReceiveBaseClient
             "machine_id" => $this->machine['machine_id'],
             "manager_id" => $this->data['manager_id'],
         ];
+        $this->config['machine_id'] = $this->machine['machine_id'];
         $params['sign'] = $this->makeSign($params);
         $url = $this->getUrl("/mobile/#/index") . "?" . http_build_query($params);
         return $this->rQ(['url' => $url]);

@@ -26,10 +26,10 @@ class JdCashier extends Common
             if (!$postData) die("success");
             $config['data'] = $postData;
             AppFactory::pay($config)->jdNotify->handle();
-            echo  "success";
+            return  "success";
         } catch (\Exception $e) {
             actionException($e,1);
-            echo  "success";
+            return  "success";
         }
     }
 

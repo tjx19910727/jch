@@ -43,7 +43,7 @@ class Common extends AuthController
      * @param array $condition
      * @return array
      */
-    public function getWhere($params,$is_string = false,$condition = [])
+    public function getWhere($params,$is_string = false,$condition = [],$prefix = "")
     {
         $where = [];
         $conData = array_keys($condition);
@@ -54,61 +54,62 @@ class Common extends AuthController
             if ($condition && in_array($key,$conData)) {
                 // like
                 if ($condition[$key] == "like") {
-                    $where[] = [$key,'like',"%$value%"];
+                    $where[] = [$prefix . $key,'like',"%$value%"];
                     continue;
                 }
                 // in
                 if (strpos($value,",") || $condition[$key] == "in") {
-                    $where[] = [$key,'in',$value];
+                    $where[] = [$prefix . $key,'in',$value];
                     continue;
                 }
                 // between
                 if (strpos($value,"~") && $condition[$key] == "between") {
-                    $this->between($key,$value,$where);
+                    $this->between($key,$value,$where,$prefix);
                     continue;
                 }
             } else {
                 if (is_numeric($value)) { // 数值型，等于
-                    $where[] = [$key, "=", $value];
+                    $where[] = [$prefix . $key, "=", $value];
                     continue;
                 }
                 if (is_string($value)) { // 字符串
                     if (strpos($value, "~") !== false) { //  ~ 隔开的时间段，用BETWEEN
-                        $this->between($key,$value,$where);
+                        $this->between($key,$value,$where,$prefix);
                         continue;
                     }
                     // ,隔开的字符串，用IN
                     if (strpos($value, ",") !== false) {
-                        $where[] = [$key, 'in', $value];
+                        $where[] = [$prefix . $key, 'in', $value];
                         continue;
                     }
                     // LIKE查询
-                    $where[] = [$key, 'like', "%$value%"];
+                    $where[] = [$prefix . $key, 'like', "%$value%"];
                     continue;
                 }
             }
         }
-        $where = array_merge($where,$this->authNodeWhere());
+        $where = $this->authNodeWhere($where);
         // 转为SQL语句格式
         if ($is_string && $where) {
-            $this->where2Str($where);
+            $this->where2Str($where,$prefix);
         }
         return $where;
     }
 
     /**
      * 数据权限筛选条件
+     * @param array $where
      * @return array
      */
-    public function authNodeWhere()
+    public function authNodeWhere($where = [])
     {
-        $where = [];
         // 数据权限
         if (isset($this->currentMenu['d_type']) && $this->currentMenu['d_type'] > 0) {
             // 数据权限，1：查所有，2：查部门，3：查本人，4：查所有下属，5：查直接下属，默认0，0为不开启数据权限验证
             // 优先级高的覆盖低的，优先级：1. 查所有 > 2. 查部门 > 3. 查本人 > 4. 查所有下属 > 5. 查直接下属
             // 查数据权限区域内的账号ID，根据不同的接口字段名附加账号ID筛选条件
             if ($this->currentMenu['d_type'] == 2 && $this->manager['ao_id'] > 0) {
+                if (isset($where['creator'])) unset($where['creator']);
                 $where["ao_id"] = $this->manager['ao_id'];
             }
             if ($this->currentMenu['d_type'] >= 3) {
@@ -125,29 +126,37 @@ class Common extends AuthController
         return $where;
     }
 
-    public function between($key,$value,&$where = [])
+    /**
+     * Between
+     * @param $key
+     * @param $value
+     * @param array $where
+     * @param string $prefix
+     */
+    public function between($key,$value,&$where = [],$prefix = "")
     {
         $value = explode("~", $value);
         if ((validateDate($value[0], 'Y-m-d') && validateDate($value[1], 'Y-m-d')) ||
             (validateDate($value[0], 'Y-m-d H:i:s') && validateDate($value[1], 'Y-m-d H:i:s'))) {
-            $where[] = [$key, 'between', [strtotime($value[0]), strtotime($value[1])]];
+            $where[] = [$prefix . $key, 'between', [strtotime($value[0]), strtotime($value[1])]];
         }
         if ((validateDate($value[0], 'H:i:s') && validateDate($value[1], 'H:i:s')) ||
             (validateDate($value[0], 'H:i') && validateDate($value[1], 'H:i'))) {
-            $where[] = [$key, 'between', [HourMinuteSec2int($value[0]), HourMinuteSec2int($value[1])]];
+            $where[] = [$prefix . $key, 'between', [HourMinuteSec2int($value[0]), HourMinuteSec2int($value[1])]];
         }
     }
 
     /**
      * 数组条件转SQL语句
      * @param $where
+     * @param string $prefix
      */
-    public function where2Str(&$where)
+    public function where2Str(&$where,$prefix = "")
     {
         if (is_array($where)) {
             $strArr = [];
             foreach ($where as $wk => $wv) {
-                $str = $wv[0];
+                $str = $prefix . $wv[0];
                 if (count($wv) > 2) {
                     if ($wv[1] == "like") {
                         $wv[2] = "'$wv[2]'";
@@ -185,37 +194,36 @@ class Common extends AuthController
      */
     public function uploadFile()
     {
-        $folder = input('folder');
-        $file = request()->file("file");
-        if (!$file) return returnState(100,'上传失败，file不能为空');
-        if ($folder) {
-            $folderPath = root_path("public/uploads/" . $folder);
-            if (!is_dir($folderPath)) {
-                @mkdir($folderPath);
-                @chmod($folderPath,0777);
-            }
-        }
         try {
+            $folder = input('folder');
+            $file = request()->file("file");
+            if (!$file) return returnState(100, '上传失败，file不能为空');
+            if ($folder) {
+                $folderPath = root_path("public/uploads/" . $folder);
+                if (!is_dir($folderPath)) {
+                    @mkdir($folderPath);
+                    @chmod($folderPath, 0777);
+                }
+            }
             validate(
                 [
                     'file' => [
-//                        "fileSize" => 2 * 1024 * 1024,
+                        //                        "fileSize" => 2 * 1024 * 1024,
                         "fileExt" => "jpg,jpeg,gif,png,xls,xlsx,crt,csr,txt,pem,mp3,mp4,wav,aiff,aac,flac,ogg,m4a,amr,wma,pcm,zip",
                     ],
                 ],
                 [
-//                    "file.fileSize" => "文件太大",
+                    //                    "file.fileSize" => "文件太大",
                     "file.fileExt" => "不支持的上传文件类型",
                 ]
             )->check(['file' => $file]);
-            $diskName = env("fileSystem.diskName");     // 上传本地
-//            $diskName = "aliyun";    // 上传OSS服务器
+            $diskName = env("fileSystem.diskName");// 上传本地
+            //            $diskName = "aliyun";    // 上传OSS服务器
             $saveName = Filesystem::disk($diskName)->putFile($folder, $file);
-
             $path = Filesystem::getDiskConfig($diskName, 'url') . str_replace('\\', '/', $saveName);
-            return returnState(200,'上传成功',$path);
-        } catch (ValidateException $e) {
-            return returnValidate($e->getMessage());
+            return returnState(200, '上传成功', $path);
+        } catch (\Exception $e) {
+            return returnTryCatch($e->getMessage());
         }
     }
 

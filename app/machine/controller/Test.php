@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Model\Activity\Coupon\ActivityCouponUsedModel;
 use app\AppFactory\Kernel\Model\Activity\Lottery\ActivityLotteryUsedModel;
 use app\AppFactory\Kernel\Model\Advertisement\AdvertisementPushModel;
 use app\AppFactory\Kernel\Model\Auth\AuthOrganizationModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
 use app\AppFactory\Kernel\Traits\CurlTrait;
 use app\AppFactory\Kernel\Util\SignUtil;
@@ -101,9 +102,9 @@ class Test extends BaseController
             "timestamp" => time(),
             ];
         $data = array_merge($data,$otherData);
-//        $signKey = \cache($otherData['machine_id'] . ".signKey") ?? "d01a3011636d053f6f07ae76e1231746";
+        $signKey = MachineModel::getFieldValue(['machine_id' => $data['machine_id']],'signKey');
 //        dump(\cache($otherData['machine_id'] . ".signKey"));
-        $signKey = env("api.md5Key");
+        if (!$signKey) $signKey = env("api.md5Key");
         $data['sign'] = SignUtil::makeSign($data,$signKey );
         return $data;
     }
@@ -250,7 +251,7 @@ class Test extends BaseController
 //        die();
 //        dump($result);
         $data = [
-            "machine_id" => "0012",
+            "machine_id" => "test0002",
 //            "mvp_id" => "186",
 //            "download_progress" => "50",
 //            "order_id" => "1251",

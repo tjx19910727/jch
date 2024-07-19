@@ -21,7 +21,7 @@ class WxTemplate extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["template_name" => "like"]);
         return $this->app->wxTemplate->getList($where,$pageNum,$this->field,'update_time desc');
     }
 

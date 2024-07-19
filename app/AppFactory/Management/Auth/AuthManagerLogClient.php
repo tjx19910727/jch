@@ -73,7 +73,9 @@ class AuthManagerLogClient extends ManagementClient
     public function exportAul($where, $field = "*", $order = "")
     {
         try {
-            $where[] = ['ml_id',"between",[525,530]];
+            $create_time = input("create_time");
+            if (!$create_time) $where[] = ['create_time',"between",[strtotime("-7 days"),time()]];
+//            $where[] = ['ml_id',"between",[525,530]];
             $data = $this->getAuthManagerLogList($where, 0, $field, $order);
             if ($data) {
                 $data = $data->toArray();
@@ -84,6 +86,7 @@ class AuthManagerLogClient extends ManagementClient
                 $pathList = array_merge($pathList, $otherPath);
                 $fieldComment = $this->getFieldComment();
                 $fieldComment = array_merge($fieldComment, $otherComment);
+                $list = [];
                 foreach ($data as $key => $item) {
                     if ($item['path']) {
                         if ($pathList) {
@@ -114,22 +117,26 @@ class AuthManagerLogClient extends ManagementClient
                             $params = $this->paramsToStr($params);
                         }
                         $params = str_replace('"','',$params);
+                        if (!$params) $params = "";
                         $item['params'] = $params;
                     }
                     $list[] = $item;
                 };
-                $title = [
-                    "organization_name" => "组织架构",
-                    "nickname" => "用户姓名",
-                    "account" => "账号",
-                    "position" => "位置",
-                    "path" => "事件",
-                    "params" => "详情",
-                    "create_time" => "时间",
-                ];
-                $filename = $this->lang("export_aul") . "-" . date("YmdHis");
-                $result = Excel::exportExcel($list, $title, $filename);
-                return $this->r(200, $this->lang("export_success"), $result);
+                if ($list) {
+                    $title = [
+                        "organization_name" => "组织架构",
+                        "nickname" => "用户姓名",
+                        "account" => "账号",
+                        "position" => "位置",
+                        "path" => "事件",
+                        "params" => "详情",
+                        "create_time" => "时间",
+                    ];
+                    $filename = $this->lang("export_aul") . "-" . date("YmdHis");
+                    $result = Excel::exportExcel($list, $title, $filename);
+                    return $this->r(200, $this->lang("export_success"), $result);
+                }
+                return $this->r(100,$this->lang("query_fail"));
             }
             return $this->rNoData();
         } catch (\PHPExcel_Writer_Exception $e) {

@@ -25,7 +25,7 @@ class ActivityPick extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["pick_name" => "like"]);
         $this->field .= ",
         (SELECT count(apc_id) FROM activity_pick_code apc WHERE  apc.ap_id = a.`id` ) codeNum";
         return $this->app->activityPick->getApAgAmList($where,$pageNum,$this->field,'id desc');

@@ -24,7 +24,9 @@ class AuthManagerRoleClient extends ManagementClient
     use AuthOrganizationRoleTrait;
 
     protected $commonNode = [
-        "/management/common/getSelfRoleNode"
+        "/management/common/getSelfRoleNode",
+        "/management/common/getMineInfo",
+        "/management/common/checkPwd",
     ];
 
     /**
@@ -39,7 +41,6 @@ class AuthManagerRoleClient extends ManagementClient
         $field = "node_id,pid,name,icon,url,desc,sort,type,is_auth,status";
         $authNode = $this->getAuthNodeFind($where,$field,'node_id desc');
         $authNode = obj2arr($authNode);
-        return $authNode ?? [];
         if (in_array($url,$this->commonNode)) return $authNode ?? [];
         if (!$authNode) return $this->rFail("该功能尚未开放");
         $authNode['d_type'] = 0;
@@ -58,7 +59,7 @@ class AuthManagerRoleClient extends ManagementClient
         // 超管全权限免验证
         if ($this->manager['pid'] === 0) return $authNode;
 
-        $roleNode = $this->getAuthRoleNodeFind([["role_id","in",$role],'node_id' => $authNode['node_id'],'is_del' => 2],'rn_id,d_type','rn_id desc');
+        $roleNode = $this->getAuthRoleNodeFind([["role_id","in",$role],'node_id' => $authNode['node_id'],'is_del' => 2],'rn_id,d_type','d_type desc,rn_id desc');
         if (!$roleNode) return $this->rFail("您无权限执行此操作");
         $authNode['d_type'] = $roleNode['d_type'];
         return $authNode;

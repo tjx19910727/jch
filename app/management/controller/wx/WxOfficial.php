@@ -21,7 +21,7 @@ class WxOfficial extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["wx_name" => "like","app_id" => "like"]);
         return $this->app->wxOfficial->getList($where,$pageNum,$this->field,'id desc');
     }
 

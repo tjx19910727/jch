@@ -36,6 +36,7 @@ class SendBaseClient extends MachineBaseClient
                 "machine_id" => $this->machine['machine_id'],
                 "data" => json_encode($data),
             ];
+            $this->config['machine_id'] = $this->machine['machine_id'];
             $this->data['sign'] = $this->makeSign($this->data);
             actionLog($this->data, '发送至MQ服务器的数据');
             $this->dataRecord(2, 2);

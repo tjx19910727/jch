@@ -10,6 +10,9 @@ namespace app\AppFactory\Kernel\Traits\Auth;
 
 
 use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
+use think\db\exception\DataNotFoundException;
+use think\db\exception\DbException;
+use think\db\exception\ModelNotFoundException;
 
 trait AuthManagerTrait
 {
@@ -101,20 +104,31 @@ trait AuthManagerTrait
      */
     public function getChildIdList($pid,$ids = [],$level = 1,$maxLevel = 999)
     {
-        $level++;
-        if ($maxLevel < $level) return $ids;
-        $where['pid'] = $pid;
-        $where['level'] = $level;
-        $childId = $this->getAuthManagerList($where,0,'manager_id,level');
-        if ($childId) {
-            $childId = $childId->toArray();
-            foreach ($childId as $value) {
-                $ids[] = $value['manager_id'];
-                $ids = $this->getChildIdList($value['manager_id'],$ids,$value['level'],$maxLevel);
+        try {
+            $level++;
+            if ($maxLevel < $level) return $ids;
+            $where['au.pid'] = $pid;
+            $where['au.level'] = $level;
+            $childId = $this->getAuthManagerList($where, 0, 'manager_id,au.level');
+            if ($childId) {
+                $childId = $childId->toArray();
+                foreach ($childId as $value) {
+                    $ids[] = $value['manager_id'];
+                    $ids = $this->getChildIdList($value['manager_id'], $ids, $value['level'], $maxLevel);
+                }
+                return $ids;
             }
             return $ids;
+        } catch (DataNotFoundException $e) {
+            actionException($e,1);
+            return [];
+        } catch (ModelNotFoundException $e) {
+            actionException($e,1);
+            return [];
+        } catch (DbException $e) {
+            actionException($e,1);
+            return [];
         }
-        return $ids;
     }
 
     /**

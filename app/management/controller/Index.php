@@ -81,7 +81,7 @@ class Index extends Common
     public function getSaleChart()
     {
         $type = input('type');
-        $where['ao_id'] = $this->manager['ao_id'];
+        $where = $this->getWhere([]);
         return $this->app->saleOrders->getChartData($where,$type);
     }
 
@@ -91,7 +91,7 @@ class Index extends Common
      */
     public function getMachine10List()
     {
-        $where['ao_id'] = $this->manager['ao_id'];
+        $where = $this->getWhere([]);
         $where[] = ['countDate','>=',strtotime("-7 days")];
         return $this->app->machine->get10List($where);
     }
@@ -102,7 +102,7 @@ class Index extends Common
      */
     public function getGoods10List()
     {
-        $where['ao_id'] = $this->manager['ao_id'];
+        $where = $this->getWhere([]);
         $where[] = ['countDate','>=',strtotime("-7 days")];
         return $this->app->goods->get10List($where);
     }

@@ -104,8 +104,10 @@ trait MachineTrait
     public function addMachine($insert)
     {
         !isset($this->manager['manager_id']) ? :$insert['creator'] = $this->manager['manager_id'];
+        !isset($this->manager['ao_id']) ? : $insert['ao_id'] = $this->manager['ao_id'];
         $data = MachineModel::create($insert);
-        return $data->m_id;
+        $pk = $data->getPk();
+        return $data->$pk;
     }
 
     /**

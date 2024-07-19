@@ -93,6 +93,9 @@ return [
             "getMachine10List",
             "getGoods10List",
 
+            // 获取错误码列表
+            "getErrorCodeList",
+
             // 获取验证码
             "getCaptcha",
         ],

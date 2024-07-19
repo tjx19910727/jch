@@ -21,7 +21,7 @@ class EmailTemplate extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["subject" => "like"]);
         return $this->app->emailTemplate->getList($where,$pageNum,$this->field,'et_id desc');
     }
 

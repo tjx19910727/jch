@@ -36,7 +36,7 @@ class AuthOrganization  extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData,false,['organization' => "like"]);
+        $where = $this->getWhere($postData,false,['organization_name' => "like"]);
         $field = "ao_id,pid,level,organization_name,sort,creator, create_time";
         $result = $this->app->authOrganization->getList($where,$pageNum,$field,'level asc,sort asc');
         return $result;
