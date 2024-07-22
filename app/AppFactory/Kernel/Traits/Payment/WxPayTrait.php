@@ -7,9 +7,8 @@
  */
 
 namespace app\AppFactory\Kernel\Traits\Payment;
-
-use WeChatPayV3\Factory;
-use WeChatPayV3\Payment\Application;
+use EasyWeChat\Factory;
+use EasyWeChat\Payment\Application;
 
 
 /**
@@ -26,15 +25,19 @@ trait WxPayTrait
     public $wpApp;
 
     protected $wxPaymentMethod = [
-        "11" => "wxScanQr",
-        "12" => "wxJsApi",
-        "13" => "wxMini",
-        "14" => "wxNative",
-        "15" => "wxFacePay",
+        "1" => "wxNative",
+        "2" => "wxScanQr",
+//        "12" => "wxJsApi",
+//        "13" => "wxMini",
+//        "15" => "wxFacePay",
     ];
 
     public function initWpApp()
     {
+        $this->strategyPayee['mchid'] = $this->strategyPayee['mch_id'];
+        $this->strategyPayee['key_path'] = root_path() . "public" . $this->strategyPayee['key_path'];
+        $this->strategyPayee['cert_path'] = root_path() . "public" . $this->strategyPayee['cert_path'];
+        $this->strategyPayee['privateKey'] = $this->strategyPayee['key_path'];
         $this->wpApp = Factory::payment($this->strategyPayee);
     }
 
@@ -47,10 +50,10 @@ trait WxPayTrait
             return $this->rFail("支付方式不在允许范围内");
         $this->initWpApp();
         $this->order['sp_id'] = $this->strategyPayee['sp_id'];
-        if ($this->order['payment_method'] != "14") {
+        if ($this->order['pay_method'] != "14") {
             return $this->rFail("当前模式下微信仅支持Native支付");
         }
-        $func_name = $this->wxPaymentMethod[$this->order['payment_method']];
+        $func_name = $this->wxPaymentMethod[$this->order['pay_method']];
         return $this->$func_name();
     }
 
@@ -149,29 +152,28 @@ trait WxPayTrait
     /**
      * Native支付
      * @return mixed
+     * @throws \EasyWeChat\Kernel\Exceptions\InvalidArgumentException
+     * @throws \EasyWeChat\Kernel\Exceptions\InvalidConfigException
+     * @throws \GuzzleHttp\Exception\GuzzleException
      */
     public function wxNative()
     {
         $param = [
-            'appid' => $this->strategyPayee['appid'],
-            'mchid' => $this->strategyPayee['mchid'],
-            'description' => $this->order['machine_id'] . '商品购买',
+            'body' => "购买支付",
             'out_trade_no' => $this->order['trade_no'],
-            'time_expire' => date("Y-m-dTH:i:s+08:00"),
-            "attach" => json_encode(['sp_id' => $this->strategyPayee['sp_id'],'order_id' => $this->order['order_id']]),
+            'time_expire' => date("YmdHis",(time()+300)),
+            'total_fee' => round($this->order['total_price'] * 100),
             'notify_url' => $this->getUrl('/pay/notify.wx/pay_notify'), // 支付结果通知网址，如果不设置则会使用配置里的默认地址
-            'amount' => [
-                "total" => round($this->order['total_price'] * 100), // 单位分
-                "currency" => "CNY", // 人民币
-            ]
+            'trade_type' => "NATIVE",
+            "attach" => $this->order['order_id'] . "|" . $this->strategyPayee['sp_id'],
         ];
         actionLog($param,'统一下单请求参数');
-        $result = $this->wpApp->transactions->native($param);
+        $result = $this->wpApp->order->unify($param);
         actionLog($result,'统一下单返回参数');
         if (isset($result['code_url'])) {
-            return $this->r(200,'SUCCESS',['code_url' => $result['code_url']]);
+            return $this->r(200,'SUCCESS',['paymentUrlLink' => $result['code_url'],'order' => $this->order,'result' => $result]);
         }
-        return $this->r(100,'fail：' . $result['message']);
+        return $this->r(100, $result['err_code_des']);
     }
 
     /**
@@ -181,27 +183,20 @@ trait WxPayTrait
     public function wxRefund()
     {
         try {
-            $notifyUrl = $this->getUrl('/pay/notify.wx/refundOrderNotify');
-            $app = Factory::payment($this->strategyPayee);
-            $params = [
-                "out_trade_no" => $this->refundData['trade_no'],
-                "out_refund_no" => $this->refundData['refund_trade_no'],
-                "reason" => "商品退款",
+            $notifyUrl = $this->getUrl('/pay/notify.wx/refundOrderNotify/sp_id/' . $this->strategyPayee['sp_id'] . "/order_id/" . $this->order['order_id']);
+            $this->initWpApp();
+
+            $totalFee = bcmul($this->order['total_price'], 100);
+            $refundFee = bcmul($this->refundData['refund_amount'], 100);
+            $result = $this->wpApp->refund->byOutTradeNumber($this->refundData['order_trade_no'],$this->refundData['refund_trade_no'],$totalFee,$refundFee,[
+                "refund_desc" => $this->refundData['remark'],
                 "notify_url" => $notifyUrl,
-                "amount" => [
-                    "refund" => bcmul($this->refundData['refund_amount'], 100),
-                    "total" => bcmul($this->order['total_price'], 100),
-                ],
-                "currency" => "CNY",
-            ];
-            $result = $app->refund->domestic($params);
+            ]);
             actionLog($result, "微信退款返回数据");
             $return = $this->r(100, "无此退款状态", $result);
-            switch ($result['status']) {
+            switch ($result['result_code']) {
                 case "SUCCESS":
-                    $this->refundTradeNo = $result['out_refund_no'];
-                    $this->refundSuccess();
-                    $return = $this->r(200, "退款成功");
+                    $return = $this->r(200, "退款申请成功");
                     break;
                 case "CLOSED":
                     $this->refundFail();

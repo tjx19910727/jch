@@ -41,6 +41,7 @@ class GoodsClient extends TimeTaskBase
                     $data = $redis->rPop("updateGoods");
                     if ($data) {
                         actionLog($data,'修改商品信息后');
+                        $this->synchronizationGoods($data);
                         $this->synchronizationMgMc($data);
                     }
                 }
@@ -80,6 +81,26 @@ class GoodsClient extends TimeTaskBase
             actionException($e, 1);
         }
         return "处理完成";
+    }
+
+    /**
+     * 修改商品库，通知设备更新该商品
+     * @param $g_id
+     */
+    protected function synchronizationGoods($g_id)
+    {
+        $ao_id = $this->getGoodsValue(['g_id' => $g_id],"ao_id");
+        actionLog($ao_id,'商品组织架构ID','synchronizationGoods');
+        if ($ao_id) {
+            $machine_ids = $this->getMachineColumn(['ao_id' => $ao_id,'status' => 1, 'online' => 1], 'machine_id');
+            actionLog($this->getLS(),'查询设备编号SQL','synchronizationGoods');
+            actionLog($machine_ids,'可下发设备编号','synchronizationGoods');
+            if ($machine_ids) {
+                foreach ($machine_ids as $machine_id) {
+                    $this->sendToMachine(['machine_id' => $machine_id], 'updateGoods', ['g_id' => $g_id]);
+                }
+            }
+        }
     }
 
     /**

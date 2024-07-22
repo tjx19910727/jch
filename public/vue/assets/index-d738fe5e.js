@@ -1,1 +1,0 @@
-import{_ as a}from"./index.vue_vue_type_script_setup_true_lang-497c5319.js";import{d as o,o as s,c as t,e,f as n}from"./index-524cfc73.js";const c={class:"app-container"},r=e("div",{class:"app-container"}," 123 ",-1),l=o({__name:"index",setup(_){return(i,p)=>(s(),t("div",null,[e("div",c,[n(a)]),r]))}});export{l as default};

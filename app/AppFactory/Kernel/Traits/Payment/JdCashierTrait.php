@@ -21,9 +21,10 @@ trait JdCashierTrait
     protected $jdApp;
 
     protected $jdPaymentMethod = [
+        "1" => "jdUrlLink",
+        "2" => "jdScanQr",
         "41" => "jdUrlLink",
-        "42" => "jdScanQr",
-        "43" => "jdJsApi",
+//        "43" => "jdJsApi",
     ];
 
     public function jdPay()

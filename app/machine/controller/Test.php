@@ -117,8 +117,8 @@ class Test extends BaseController
         ];
         $data = [
             "machine_id" => "test0003",
-            "pay_type" => 2,
-            "pay_method" => 23,
+            "pay_type" => 1,
+            "pay_method" => 14,
 //            "coupon_code" => "980429",
             "carList" => json_encode($carList, 320),
         ];
@@ -250,8 +250,8 @@ class Test extends BaseController
 //        $result = $app->api->subCar();
 //        die();
 //        dump($result);
-        $data = [
-            "machine_id" => "test0002",
+//        $data = [
+//            "machine_id" => "test0002",
 //            "mvp_id" => "186",
 //            "download_progress" => "50",
 //            "order_id" => "1251",
@@ -261,7 +261,7 @@ class Test extends BaseController
 //                "mvp_id" => 184,
 //                "status" => 2,
 //            ],
-        ];
+//        ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));
 //        dump(\cache("test0003.signKey"));

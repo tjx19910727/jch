@@ -26,7 +26,7 @@ class PayBaseClient extends BaseClient
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
-        $this->data = $this->config['data'];
+        $this->data = $this->config['data'] ?? [];
     }
 
 }

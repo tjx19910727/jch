@@ -89,7 +89,7 @@ trait StrategyPayeeTrait
         try {
             validate($this->vClass[$payee['payee_type']])->scene($this->scene[$payee['payee_type']])->check($content);
         } catch (ValidateException $e) {
-            return $this->rFail($e->getMessage());
+            return $this->rValidate($e->getMessage());
         }
         return array_merge($payee,$content);
     }

@@ -47,6 +47,7 @@ class SaleOrdersClient extends ManagementClient
     protected $strategyPayee;
     protected $refundData;
     protected $refund_no;
+    public $refundTradeNo;
 
     /**
      * @var array 退款类型
@@ -71,13 +72,13 @@ class SaleOrdersClient extends ManagementClient
         $this->order = $this->getSaleOrdersFind(['order_id' => $postData['order_id']]);
         if (!$this->order) return $this->rFail("查无订单数据");
         $this->order = $this->order->toArray();
-        if ($this->order['pay_type'] != 4) return $this->rFail("当前仅支持京东收银收款的订单退款");
+//        if ($this->order['pay_type'] != 4) return $this->rFail("当前仅支持京东收银收款的订单退款");
         $check = $this->getSPayee();
         if ($check !== true) {
             return $check;
         }
         $this->startTrans();
-        try {
+//        try {
             $this->postData = $postData;// 生成退款记录
             $flag = $this->createSor();
             if (!is_array($flag)) {
@@ -92,11 +93,11 @@ class SaleOrdersClient extends ManagementClient
             }
             $this->rollbackTrans();
             return $this->rFail("退款失败：生成退款记录失败");
-        } catch (\Exception $e) {
-            $this->rollbackTrans();
-            actionException($e,1);
-            return $this->rTryCatch($e->getMessage());
-        }
+//        } catch (\Exception $e) {
+//            $this->rollbackTrans();
+//            actionException($e,1);
+//            return $this->rTryCatch($e->getMessage());
+//        }
     }
 
     /**
@@ -128,6 +129,7 @@ class SaleOrdersClient extends ManagementClient
             "order_trade_no" => $this->order['trade_no'],
             "refund_trade_no" => $this->refundTradeNo,
             "refund_amount" => $this->totalRefundMoney,
+            "remark" => $this->postData['remark'],
         ];
 
         $func_name = $this->refundType[$this->order['pay_type']];

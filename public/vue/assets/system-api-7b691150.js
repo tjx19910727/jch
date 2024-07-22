@@ -1,1 +1,0 @@
-import{J as e}from"./index-93b5204f.js";function o(t){return e({url:"/management/config.config_api/getList",method:"post",data:t})}function a(t){return e({url:"/management/config.config_api/add",method:"post",data:t})}export{a,o as g};

@@ -97,6 +97,11 @@ class MqClient extends SendBaseClient
      * 触发设备首页模板界面更新  updateMachineView
      * @return array|string
      */
+    /**
+     * 触发设备更新商品库  updateGoods
+     * @param int $g_id
+     * @return array|string
+     */
 
     /**
      * 主动发送至MQ

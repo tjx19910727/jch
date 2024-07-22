@@ -44,12 +44,12 @@ class VWxPay extends SupportValidate
     ];
 
     protected $scene = [
-        "wx" => ["app_id","mch_id","key","serial","cert_path","key_path","v3_key","platform_serial","platform_path","platform_update_time","to_balance","to_batches"],
+        "wx" => ["app_id","mch_id","key","cert_path","key_path","v3_key","to_balance","to_batches"],
     ];
 
     public function checkPath($value)
     {
-        if (!file_exists(root_path() . "public" . $value)) {
+        if ($value && !file_exists(root_path() . "public" . $value)) {
             return "证书文件不存在";
         }
         return true;
