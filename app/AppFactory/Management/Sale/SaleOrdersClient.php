@@ -16,7 +16,6 @@ use app\AppFactory\Kernel\Traits\Payment\AliPayTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Payment\JdCashierTrait;
-use app\AppFactory\Kernel\Traits\Payment\TlPayTrait;
 use app\AppFactory\Kernel\Traits\Payment\WxPayTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
@@ -40,14 +39,15 @@ class SaleOrdersClient extends ManagementClient
     use UserTrait;
     use StrategyPayeeTrait;
     use BeforeOrderRefundTrait,AfterOrderRefundTrait;
-    use WxPayTrait,AliPayTrait,TlPayTrait,JdCashierTrait;
+    use WxPayTrait,AliPayTrait,JdCashierTrait;
 
-    protected $order;
-    protected $sod;
-    protected $strategyPayee;
-    protected $refundData;
-    protected $refund_no;
+    public $order;
+    public $sod;
+    public $strategyPayee;
+    public $refundData;
+    public $refund_no;
     public $refundTradeNo;
+    public $data;
 
     /**
      * @var array 退款类型
@@ -61,6 +61,7 @@ class SaleOrdersClient extends ManagementClient
 
     protected $postData;
     protected $totalRefundMoney;
+
 
     /**
      * 发起订单退款
@@ -78,7 +79,7 @@ class SaleOrdersClient extends ManagementClient
             return $check;
         }
         $this->startTrans();
-//        try {
+        try {
             $this->postData = $postData;// 生成退款记录
             $flag = $this->createSor();
             if (!is_array($flag)) {
@@ -93,11 +94,11 @@ class SaleOrdersClient extends ManagementClient
             }
             $this->rollbackTrans();
             return $this->rFail("退款失败：生成退款记录失败");
-//        } catch (\Exception $e) {
-//            $this->rollbackTrans();
-//            actionException($e,1);
-//            return $this->rTryCatch($e->getMessage());
-//        }
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 
     /**
@@ -135,14 +136,17 @@ class SaleOrdersClient extends ManagementClient
         $func_name = $this->refundType[$this->order['pay_type']];
         $result = $this->$func_name();
         $check = obj2arr($result);
+        actionLog($check,'退款结果');
         if ($check['state'] == "200") {
             // 支付宝支付、通联支付退款实时处理，不用异步
             if ($this->order['pay_type'] == 3 || $this->order['pay_type'] == 2) {
                 $this->startTrans();
                 try {
+                    $this->data['refundAmount'] = $this->totalRefundMoney;
                     if (isset($check['data']['trxid'])) $this->refund_no = $check['data']['trxid'];
                     if (isset($check['data']['trade_no'])) $this->refund_no = $check['data']['trade_no'];
                     $end = $this->refundSuccess();
+                    actionLog($end,'处理退款成功结果');
                     if ($end !== true) {
                         $this->rollbackTrans();
                         return $end;

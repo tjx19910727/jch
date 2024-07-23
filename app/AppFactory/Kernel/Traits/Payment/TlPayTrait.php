@@ -9,9 +9,6 @@
 namespace app\AppFactory\Kernel\Traits\Payment;
 
 
-use tonglian\ApiWeb\Application;
-use tonglian\Kernel\Exceptions\Exception;
-use tonglian\TlFactory;
 
 trait TlPayTrait
 {

@@ -20,11 +20,10 @@ trait AfterOrderRefundTrait
     public function refundSuccess()
     {
         $sor = $this->getSaleOrdersRefundList(['refund_trade_no' => $this->refundTradeNo,'status' => 1]);
-//        actionLog($this->getLS(),'退款成功查询退款记录');
+        actionLog($this->getLS(),'退款成功查询退款记录');
         $sor = obj2arr($sor);
         if (!$sor) return $this->r(100,'查无退款记录');
-//        actionLog($sor,'退款记录');
-        dump($sor);
+        actionLog($sor,'退款记录');
         $quantity = 0;
         foreach ($sor as $key => $value) {
             $this->refund = obj2arr($value);
@@ -43,6 +42,7 @@ trait AfterOrderRefundTrait
         $this->order['refund_quantity'] += $quantity;
         // 修改订单退款状态
         $flag[] = $this->refundSuccessUpdateOrder();
+        actionLog($flag,'退款处理结果');
         $result = flag_check($flag);
         if (!$result) return $this->r(100,'修改退款记录失败');
         return true;

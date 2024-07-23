@@ -120,6 +120,7 @@ class TradeClient extends BaseClient
      *
      * 统一收单线下交易预创建，生成支付二维码
      * @param $data
+     * @param array $optional
      * @return mixed
      * {
     "alipay_trade_precreate_response": {
@@ -132,7 +133,7 @@ class TradeClient extends BaseClient
     }
      * @throws \Exception
      */
-    public function preCreate($data)
+    public function preCreate($data,$optional = [])
     {
         $this->onceName = "AlipayTradePrecreateRequest";
         $this->bizContent = [
@@ -140,6 +141,7 @@ class TradeClient extends BaseClient
             "total_amount" => $data['total_amount'],
             "subject" => $data['subject'],
         ];
+        if ($optional) $this->bizContent = array_merge($this->bizContent,$optional);
         $this->notifyUrl ? : ($this->notifyUrl = ($data['notifyUrl'] ?? ""));
         return $this->execute();
     }

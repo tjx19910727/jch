@@ -21,8 +21,9 @@ trait AliPayTrait
     protected $aliApp;
 
     protected $aliPaymentMethod = [
-        "21" => "aliMobilePay",
-//        "22" => "aliScanQr",
+//        "2" => "aliMobilePay",
+        "1" => "aliUrlLink",
+        "2" => "aliScanQr",
         "23" => "aliUrlLink",
     ];
 
@@ -41,9 +42,9 @@ trait AliPayTrait
             return $this->rValidate($this->lang($e->getMessage()));
         }
 
-        $this->strategyPayee['ali_public_key_path'] = root_path() . "public/" . $this->strategyPayee['ali_public_key_path'];
-        $this->strategyPayee['ali_root_cert_path'] = root_path() . "public/" . $this->strategyPayee['ali_root_cert_path'];
-        $this->strategyPayee['app_public_key_path'] = root_path() . "public/" . $this->strategyPayee['app_public_key_path'];
+        $this->strategyPayee['ali_public_key_path'] = root_path() . "public" . $this->strategyPayee['ali_public_key_path'];
+        $this->strategyPayee['ali_root_cert_path'] = root_path() . "public" . $this->strategyPayee['ali_root_cert_path'];
+        $this->strategyPayee['app_public_key_path'] = root_path() . "public" . $this->strategyPayee['app_public_key_path'];
         $this->strategyPayee['isObject'] = false;
         $url = $this->getUrl('/pay/notify.ali/paymentNotify');
         $this->strategyPayee['notifyUrl'] = $url;
@@ -90,8 +91,6 @@ trait AliPayTrait
         actionLog($data, '请求支付宝反扫支付参数');
         if ($data['total_amount'] == 0) return $this->rFail('支付金额不能等于0');
         $result = $this->aliApp->trade->pay($data);
-//        $result = '{"code":"10000","msg":"Success","buyer_logon_id":"136******90","buyer_pay_amount":"0.14","buyer_user_id":"2088012243580922","fund_bill_list":[{"amount":"0.14","fund_channel":"PCREDIT"}],"gmt_payment":"2023-08-03 17:04:27","invoice_amount":"0.14","out_trade_no":"20230803170425","point_amount":"0.00","receipt_amount":"0.14","total_amount":"0.14","trade_no":"2023080322001480921416306571"}';
-//        $result = json2arr($result);
         actionLog($result, '请求支付宝反扫支付结果');
         $return = $this->r(99, "请求支付异常", $result);
         if (isset($result['code'])) {
@@ -149,7 +148,7 @@ trait AliPayTrait
         try {
             $data = [
                 'out_trade_no' => $this->order['trade_no'],
-                'total_amount' => $this->order['total_price'],
+                'total_amount' => round($this->order['total_price'],2),
                 'subject' => $this->order['machine_id'] . '购买支付',
             ];
             $result = $this->aliApp->trade->preCreate($data);
@@ -168,11 +167,10 @@ trait AliPayTrait
         }
     }
 
-
-
     /**
      * 支付宝订单退款
      * @return mixed
+     * @throws \Exception
      */
     public function aliRefund()
     {
@@ -180,16 +178,16 @@ trait AliPayTrait
         $config['isObject'] = false;
         $data = [
             "out_trade_no" => $this->order['trade_no'],
-            "trade_no" => $this->order['mch_no'],
             "refund_amount" => round($this->refundData['refund_amount'], 2),
             "out_request_no" => $this->refundData['refund_trade_no'],
             "refund_reason" => "商品退款",
         ];
+        if ($this->order['mch_no']) $data["trade_no"] = $this->order['mch_no'];
         $app = Factory::trade($config);
         $result = $app->trade->refund($data);
         if ($result["code"] == "10000") {
             return $this->r(200, "退款成功");
         }
-        return $this->r(100, "退款失败，支付宝返回信息：" . $result['msg']);
+        return $this->r(100, "退款失败，支付宝返回信息：" . $result['msg'] . $result['sub_msg']);
     }
 }

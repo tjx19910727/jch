@@ -50,16 +50,6 @@ class PaymentClient extends PayBaseClient
         "4" => "jdCancel",
     ];
 
-    /**
-     * 反扫支付方式
-     * @var array
-     */
-    protected $microPaymentMethod = [
-        1 => 11,
-        2 => 22,
-        3 => 32,
-        4 => 42,
-    ];
 
     /**
      * 通联支付类型
@@ -113,7 +103,6 @@ class PaymentClient extends PayBaseClient
             if ($paymentType == 2)
                 $where[] = ['payee_type', 'between', [2, 4]];
             $this->order['pay_code'] = $this->data['authCode'];
-            $this->order['pay_method'] = $this->microPaymentMethod[$this->strategyPayee['payee_type']];
         }
 
         $where['sm.s_type'] = 1;

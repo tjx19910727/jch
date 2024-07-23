@@ -207,6 +207,7 @@ trait MachineTrait
     public function sendToMachine($machine,$msgType,$otherData = [])
     {
         $key = $this->getMachineSignKey($machine);
+        if (!$key) $key = env("api.md5Key");
         if ($key) {
             $config = [
                 "machine_id" => $machine['machine_id'],

@@ -104,7 +104,7 @@ class AopCertClient
 
     /**
      * 从证书中提取序列号
-     * @param $cert
+     * @param $certPath
      * @return string
      */
     public function getCertSN($certPath)
@@ -193,7 +193,7 @@ class AopCertClient
 
     /**
      * 从证书中提取公钥
-     * @param $cert
+     * @param $certPath
      * @return mixed
      */
     public function getPublicKey($certPath)

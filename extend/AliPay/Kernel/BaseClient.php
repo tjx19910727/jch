@@ -140,7 +140,7 @@ class BaseClient
         $aop->format = "json";
         $aop->postCharset = "utf-8";
         $aop->signType = "RSA2";
-        $aop->alipayrsaPublicKey = $aop->getPublicKey($config['app_public_key_path']);
+        $aop->alipayrsaPublicKey = $aop->getPublicKey($config['ali_public_key_path']);
         $aop->isCheckAlipayPublicCert = true;
         $aop->appCertSN = $aop->getCertSN($config['app_public_key_path']);
         $aop->alipayRootCertSN = $aop->getRootCertSN($config['ali_root_cert_path']);

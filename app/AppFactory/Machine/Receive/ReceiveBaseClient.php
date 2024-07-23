@@ -31,7 +31,11 @@ class ReceiveBaseClient extends MachineBaseClient
         $this->machine['last_online_time'] = time();
         $this->machine['online'] = 1;
 
-        $this->setSignKey();
+        $set = $this->setSignKey();
+        if ($set !== true) {
+            $set->send();
+            die();
+        }
 
         if (!isset($this->data['msgType']) || (isset($this->data['msgType']) && $this->data['msgType'] != "heartbeat")) {
             $this->heartbeat();
@@ -77,12 +81,13 @@ class ReceiveBaseClient extends MachineBaseClient
 
                 @cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 5);
                 actionLog(@cache($this->machine['machine_id'] . ".signKey"), $this->machine['machine_id'] . '生成SignKey');
-                $this->r(200,'处理成功')->send();
+                return $this->r(200,'处理成功');
             } catch (\Exception $e) {
                 actionException($e,1);
-                $this->rTryCatch($e->getMessage())->send();
+                return $this->rTryCatch($e->getMessage());
             }
         }
+        return true;
     }
 
 

@@ -39,12 +39,12 @@ class Excel
                 }
                 $imgList = self::getImg($sheet,$imageFilePath);
 
-                //接下来就是写数据到表格里面去
                 for ($i = $startRow; $i <= $highestRow; $i++) {
                     $row = [];
                     foreach ($list as $key => $value) {
                         if (!isset($imgList[$header_arr[$key] . $i])) {
                             $row[$value] = $objPHPExcel->getActiveSheet()->getCell($header_arr[$key] . $i)->getValue();
+                            if ($row[$value] === null) $row[$value] = "";
                         } else {
                             $row[$value] = $imgList[$header_arr[$key] . $i];
                         }

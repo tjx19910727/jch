@@ -14,7 +14,7 @@ class Ali
 {
 
     /**
-     * 订单通联支付回调
+     * 订单支付宝支付回调
      */
     public function paymentNotify()
     {
@@ -25,7 +25,7 @@ class Ali
             AppFactory::pay()->aliNotify->handle($postData);
         } catch (\Exception $e) {
             actionException($e,1);
-            echo  "success";
+            echo  "ok";
             die();
         }
     }

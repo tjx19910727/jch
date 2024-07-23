@@ -50,8 +50,7 @@ trait GoodsTrait
 
     public function addMoreGoods($data)
     {
-        $goods = new GoodsModel();
-        return $goods->saveAll($data);
+        return GoodsModel::insertAll($data);
     }
 
     public function addGoods($insert)

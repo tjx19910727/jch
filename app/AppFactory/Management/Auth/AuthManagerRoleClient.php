@@ -43,6 +43,9 @@ class AuthManagerRoleClient extends ManagementClient
         $authNode = obj2arr($authNode);
         if (in_array($url,$this->commonNode)) return $authNode ?? [];
         if (!$authNode) return $this->r(100,"该功能尚未开放");
+        // 超管全权限免验证
+        if ($this->manager['pid'] === 0) return $authNode;
+
         $authNode['d_type'] = 0;
         if ($authNode['status'] == 2) return $this->rFail("该功能已被禁用");
         // 不需要绝对校验
@@ -56,8 +59,6 @@ class AuthManagerRoleClient extends ManagementClient
         $role = array_unique(array_merge($role,$or));
         if (!$role) return $this->rFail("您暂未被授予权限角色，无法使用系统");
 
-        // 超管全权限免验证
-        if ($this->manager['pid'] === 0) return $authNode;
 
         $roleNode = $this->getAuthRoleNodeFind([["role_id","in",$role],'node_id' => $authNode['node_id'],'is_del' => 2],'rn_id,d_type','d_type desc,rn_id desc');
         if (!$roleNode) return $this->rFail("您无权限操作【" . $authNode['name']. "】");

@@ -62,17 +62,18 @@ class MqClient extends ReceiveBaseClient
         if (isset($this->data['sign']) && $this->checkSign($this->data) !== true) {
             actionLog($this->data,'验签失败',"DataUpload");
 //            die(json_encode(["state" => 200, "msg" => "验签失败"],320));
-        } else {
-            $this->message = json2arr($this->data['data']);
-            actionLog($this->message, '消息数据', "DataUpload");
-            try {
-                validate(VReport::class)->scene('onMessage')->check($this->data);
-            } catch (\Exception $e) {
-                actionLog($e->getMessage(), '数据格式错误', 'DataUpload');
-//                die(json_encode(["state" => 200, "msg" => $e->getMessage(), $this->data], 320));
-            }
-            $this->dataRecord(2);
         }
+        $this->message = json2arr($this->data['data']);
+        actionLog($this->message, '消息数据', "DataUpload");
+        if (!$this->message)
+            json(['state' => 100,"msg" => 'message数据为空'])->send();
+        try {
+            validate(VReport::class)->scene('onMessage')->check($this->data);
+        } catch (\Exception $e) {
+            actionLog($e->getMessage(), '数据格式错误', 'DataUpload');
+//                die(json_encode(["state" => 200, "msg" => $e->getMessage(), $this->data], 320));
+        }
+        $this->dataRecord(2);
     }
 
     /**
