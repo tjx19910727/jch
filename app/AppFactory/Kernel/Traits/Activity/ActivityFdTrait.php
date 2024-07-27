@@ -278,22 +278,20 @@ trait ActivityFdTrait
     private function handleActivityFd()
     {
         $flag[] = 1;
+        $updateOrder = [];
         actionLog($this->countContent,'过滤后的最终优惠');
         if ($this->countContent['discount_price']) {
-            $updateOrder['order_id'] = $this->order['order_id'];
             $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
             $updateOrder['total_price'] = bcsub($this->order['total_price'],$this->countContent['discount_price'],3);
-            $updateOrder['order_type'] = 5;
-            $updateOrder['fd_id'] = $this->fd['fd_id'] ?? 0;
-            $flag[] = $this->updateSaleOrders($updateOrder);
-            actionLog($this->getLS(),'【SQL】处理订单信息');
-            $averagePrice = bcdiv($updateOrder['total_price'],$this->order['total_quantity'],3);
+            // 平均优惠金额
+            $averagePrice = bcdiv($updateOrder['discount_price'],$this->order['total_quantity'],3);
             $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
             if (!$details) return $this->lang("VActivityFd.sod_no_data");
             $details = $details->toArray();
             foreach ($details as $dk => $dv) {
                 $updateSod['sod_id'] = $dv['sod_id'];
-                $updateSod['total_sod_price'] = bcmul($averagePrice,$dv['quantity'],3);
+                $updateSod['discount_price'] = $averagePrice;
+                $updateSod['total_sod_price'] = bcsub(bcmul($dv['retail_price'],$dv['quantity'],3),$averagePrice);
                 $flag[] = $this->updateSaleOrdersDetails($updateSod);
                 actionLog($this->getLS(),'【SQL】处理订单详情信息');
             }
@@ -310,13 +308,16 @@ trait ActivityFdTrait
                 $insertSod['order_id'] = $this->order['order_id'];
                 $flag[] = $this->addSaleOrdersDetails($insertSod);
                 actionLog($this->getLS(),'【SQL】添加赠品订单详情信息');
-                $updateOrder['order_id'] = $this->order['order_id'];
                 $updateOrder['total_quantity'] = $this->order['total_quantity']++;
-                $updateOrder['order_type'] = 5;
-                $flag[] = $this->updateSaleOrders($updateOrder);
                 actionLog($this->getLS(),'【SQL】处理订单信息');
             }
-
+        }
+        if ($updateOrder) {
+            $updateOrder['order_id'] = $this->order['order_id'];
+            $updateOrder['order_type'] = 5;
+            $updateOrder['fd_id'] = $this->fd['fd_id'] ?? 0;
+            $flag[] = $this->updateSaleOrders($updateOrder);
+            actionLog($this->getLS(),'【SQL】处理订单信息');
         }
         return $this->checkFlag($flag);
     }

@@ -436,7 +436,7 @@ class ApiClient extends ReceiveBaseClient
     {
         $where['m_id'] = $this->machine['m_id'];
         $onOffField = "moo_id,on_off_ckc,on_off_machine";
-        $data = $this->getMachineOnOffFind($where, $onOffField);
+        $data = $this->getMachineOnOffFind($where, $onOffField,'update_time desc');
         return $this->rQ($data);
     }
 
@@ -687,6 +687,7 @@ class ApiClient extends ReceiveBaseClient
         $this->startTrans();
         try {
             if ($updateOrder) {
+                $updateOrder['retail_price'] = $updateOrder['total_price'];
                 $flag[] = $this->updateSaleOrders($updateOrder);
                 $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
                 $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);

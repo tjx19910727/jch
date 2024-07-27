@@ -73,6 +73,6 @@ trait AuthNodeTrait
 
             // 首页数据
         ];
-        return $urlAuthDataField[$url];
+        return isset($urlAuthDataField[$url]) ? $urlAuthDataField[$url] : [];
     }
 }

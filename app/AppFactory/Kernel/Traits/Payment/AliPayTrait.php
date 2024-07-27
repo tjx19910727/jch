@@ -125,8 +125,8 @@ trait AliPayTrait
                 $config = config("redis");
                 $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
                 if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
-                $redis->lPush("aliMicroPay", $this->order['order_id']);
-                $redis->expire("aliMicroPay", 30);
+                $redis->lPush("microPay", $this->order['order_id']);
+                $redis->expire("microPay", 30);
                 $redis->close();
             } else if ($result['code'] == 40004) {
                 $this->paymentFailed();
