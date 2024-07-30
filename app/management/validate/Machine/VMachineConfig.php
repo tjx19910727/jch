@@ -35,4 +35,9 @@ class VMachineConfig extends VCommon
         "updateMoreMc" => ["mcList"],
         "mcList" => ["m_id"],
     ];
+
+    public function sceneMcList()
+    {
+        return $this->only(['m_id'])->remove("m_id",'unique');
+    }
 }

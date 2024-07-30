@@ -25,7 +25,7 @@ class VMachineAdvance extends VCommon
         "time_list" => "require",
         "screen" => "require",
         "screen_full" => "require",
-        "push_type" => "require|in,(2,3)",
+        "push_type" => "require|in:2,3",
     ];
 
     protected $message = [

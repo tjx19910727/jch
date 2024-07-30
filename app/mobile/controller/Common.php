@@ -35,7 +35,7 @@ class Common extends BaseController
     public function checkScan()
     {
         $postData = input();
-        try { $this->validate($postData, VCommon::class . '.stock');} catch (\Exception $e) { return returnValidate($e->getMessage());}
+        try { $this->validate($postData, VCommon::class . '.checkScan');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         return $this->app->checkScan($postData);
     }
 }

@@ -39,7 +39,7 @@ class AuthManagerRoleClient extends ManagementClient
         // 查节点数据
         $where['url'] = $url;
         $field = "node_id,pid,name,icon,url,desc,sort,type,is_auth,status";
-        $authNode = $this->getAuthNodeFind($where,$field,'node_id desc');
+        $authNode = $this->getAuthNodeFind($where,$field);
         $authNode = obj2arr($authNode);
         if (in_array($url,$this->commonNode)) return $authNode ?? [];
         // 超管全权限免验证
@@ -61,7 +61,7 @@ class AuthManagerRoleClient extends ManagementClient
 
 
         $roleNode = $this->getAuthRoleNodeFind([["role_id","in",$role],'node_id' => $authNode['node_id'],'is_del' => 2],'rn_id,d_type','d_type desc,rn_id desc');
-        if (!$roleNode) return $this->rFail("您无权限操作【" . $authNode['name']. "】");
+        if (!$roleNode) return $this->r(200,"您无权限操作【" . $authNode['name']. "】");
         $authNode['d_type'] = $roleNode['d_type'];
         return $authNode;
     }

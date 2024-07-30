@@ -8,6 +8,7 @@
 
 namespace app\AppFactory\TimeTask;
 
+use app\AppFactory\Kernel\Providers\TimeTask\ActivityProvider;
 use app\AppFactory\Kernel\Providers\TimeTask\AuthManagerProvider;
 use app\AppFactory\Kernel\Providers\TimeTask\ExportProvider;
 use app\AppFactory\Kernel\Providers\TimeTask\GoodsProvider;
@@ -25,6 +26,7 @@ use app\AppFactory\Kernel\ServiceContainer;
  * @property Payment\AliClient                          $ali                   支付宝定时查询反扫付款码支付结果
  * @property Payment\WxClient                           $wx                    微信定时查询反扫付款码支付结果
  * @property Export\ExportClient                        $export                导出Excel处理
+ * @property Activity\CouponClient                      $coupon                优惠券
  * @package app\AppFactory\TimeTask
  */
 class Application extends ServiceContainer
@@ -35,5 +37,6 @@ class Application extends ServiceContainer
         AuthManagerProvider::class,
         PaymentProvider::class,
         ExportProvider::class,
+        ActivityProvider::class,
     ];
 }

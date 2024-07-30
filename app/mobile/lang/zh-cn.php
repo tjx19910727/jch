@@ -22,4 +22,10 @@ return [
         "check_stock_require" => "货道真实库存不能为空",
         "status_require" => "盘点状态不能为空",
     ],
+
+    "checkToken" => [
+        "token_empty" => "令牌不能为空，请重新登录",
+        "token_timeout" => "登录超时，请重新扫码登录",
+        "token_error" => "错误令牌，无法解析",
+    ],
 ];

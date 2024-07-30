@@ -72,6 +72,12 @@ trait AuthNodeTrait
             "/management/user.user/getList" => "creator",
 
             // 首页数据
+            "/management/index/getMachineData" => "creator",
+            "/management/index/getChannelData" => "creator",
+            "/management/index/getGift" => "manager_id",
+            "/management/index/getSaleChart" => "manager_id",
+            "/management/index/getMachine10List" => "creator",
+            "/management/index/getGoods10List" => "creator",
         ];
         return isset($urlAuthDataField[$url]) ? $urlAuthDataField[$url] : [];
     }

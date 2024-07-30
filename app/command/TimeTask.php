@@ -27,12 +27,15 @@ class TimeTask extends Command
     /**
      * 定时任务
      *
+     * php /home/wwwroot/kiosk/think time_task authManagerLog clearLog          删除180天前的用户事件记录，每月或每周或每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task machine countOnline              结算昨天在线数据，每天定时任务运行一次
-     * php /home/wwwroot/kiosk/think time_task machine checkOffline             检查设备最后心跳时间判断在线离线，每隔30秒执行一次定时任务，判断120秒内未更新心跳的为离线
+     * php /home/wwwroot/kiosk/think time_task machine checkOffline             检查设备最后心跳时间判断在线离线，每隔1分钟执行一次定时任务，判断30秒内未更新心跳的为离线
+     * php /home/wwwroot/kiosk/think time_task export clearExcel                清除超过3天的Excel，每天定时任务运行一次
+     * php /home/wwwroot/kiosk/think time_task coupon clearCouponUsed           清除已过期或已作废未使用的优惠券码，每天定时任务运行一次
      *
      * command
      *      php think time_task [moduleType] [actionType]
-     * moduleType     machine：设备定时任务，goods：商品定时任务，export：导出
+     * moduleType     machine：设备定时任务，goods：商品定时任务，export：导出， activity：营销活动
      * actionType
      *      authManagerLog：
      *          clearLog                    删除180天前的用户事件记录
@@ -46,6 +49,8 @@ class TimeTask extends Command
      *          updateMgSynchronization     同步设备商品库信息，守护进程触发命令
      *      export：
      *          clearExcel                  清除超过3天的Excel
+     *      coupon：
+     *          clearCouponUsed             清除已过期或已作废未使用的优惠券码
      * @param Input $input
      * @param Output $output
      * @return int|null|void

@@ -41,11 +41,12 @@ class ExportClient extends TimeTaskBase
 
     /**
      * 超过3天删除Excel表格
+     * 定时任务：php think time_task export clearExcel
+     * @return string
      */
     public function clearExcel()
     {
-//        $where[] = ['create_time','<=', strtotime("-3 days")];
-        $where[] = ['create_time','<=', time()];
+        $where[] = ['create_time','<=', strtotime("-3 days")];
         $where['status'] = 2;
         $log = $this->getExportLogList($where);
         if ($log) {

@@ -27,10 +27,11 @@ class MobileBase extends BaseClient
     {
         $token = request()->header("token");
         if (!$token) $token = input("token");
-        if (!$token) return $this->r(100,'令牌不能为空，请重新登录');
+        if (!$token) return $this->r(100,$this->lang("checkToken.token_empty"));
         $tokenArr = json_decode(TDESUtil::decrypt($token,env("api.md5Key")),true);
+        if (!$tokenArr) return $this->r(100,$this->lang("checkToken.token_error"));
         if ($tokenArr['timestamp'] <= 3600) {
-            return $this->r( 100,"登录超时，请重新扫码登录");
+            return $this->r( 100,$this->lang("checkToken.token_timeout"));
         }
         $this->tokenArr = $tokenArr;
     }

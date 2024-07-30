@@ -127,9 +127,10 @@ class Test extends BaseController
             "carList" => json_encode($carList, 320),
         ];
         $data = [
-            "machine_id" => "0018",
-            "order_id" => 2065,
-            "coupon_code" => "555555",
+            "machine_id" => "test0003",
+            "manager_id" => 1,
+//            "order_id" => 2065,
+//            "coupon_code" => "555555",
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));
