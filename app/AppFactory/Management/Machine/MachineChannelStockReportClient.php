@@ -73,7 +73,7 @@ class MachineChannelStockReportClient extends ManagementClient
                     "bad_stock" => "Bad库存",
                     "total_stock" => "总库存",
                 ];
-                $filename = "导出库存报表(按商品)-" . date("Ymd");
+                $filename = "库存报表(按商品)-" . date("Ymd");
             }
             if ($eType == 2) {
                 $title = [
@@ -90,10 +90,9 @@ class MachineChannelStockReportClient extends ManagementClient
                     "bad_stock" => "Bad库存",
                     "total_stock" => "总库存",
                 ];
-                $filename = "导出库存报表(按商品)-" . date("Ymd");
+                $filename = "库存报表(按设备)-" . date("Ymd");
             }
-            $result = Excel::exportExcel($list,$title,$filename);
-            return $this->rAction($result);
+            return $this->sendToExport("统计报表-库存报表", $filename, $title, $list);
         }
         return $this->rFail();
     }

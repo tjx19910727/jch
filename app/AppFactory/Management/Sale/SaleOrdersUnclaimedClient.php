@@ -49,8 +49,6 @@ class SaleOrdersUnclaimedClient extends ManagementClient
      * 导出Excel表格
      * @param $where
      * @return array|string
-     * @throws \PHPExcel_Exception
-     * @throws \PHPExcel_Writer_Exception
      */
     public function export($where)
     {
@@ -79,7 +77,6 @@ class SaleOrdersUnclaimedClient extends ManagementClient
             "remark" => "备注",
         ];
         $filename = "未取商品-" . date("YmdHis");
-        $result = Excel::exportExcel($list,$title,$filename);
-        return $this->rAction($result);
+        return $this->sendToExport("事件日志-未取商品", $filename, $title, $list);
     }
 }

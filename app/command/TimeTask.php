@@ -32,7 +32,7 @@ class TimeTask extends Command
      *
      * command
      *      php think time_task [moduleType] [actionType]
-     * moduleType     machine：设备定时任务，goods：商品定时任务，authManagerLog
+     * moduleType     machine：设备定时任务，goods：商品定时任务，export：导出
      * actionType
      *      authManagerLog：
      *          clearLog                    删除180天前的用户事件记录
@@ -44,6 +44,8 @@ class TimeTask extends Command
      *      goods：
      *          updateGoodsSynchronization  同步商品信息，守护进程触发命令
      *          updateMgSynchronization     同步设备商品库信息，守护进程触发命令
+     *      export：
+     *          clearExcel                  清除超过3天的Excel
      * @param Input $input
      * @param Output $output
      * @return int|null|void

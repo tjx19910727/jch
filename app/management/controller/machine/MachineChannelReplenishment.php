@@ -21,7 +21,10 @@ class MachineChannelReplenishment extends Common
         return $this->app->machineChannelReplenishment->getList($where,$pageNum,'*','id desc');
     }
 
-    // 导出补货报表
+    /**
+     * 导出补货报表
+     * @return array|\think\response\Json
+     */
     public function export()
     {
         $postData = input();

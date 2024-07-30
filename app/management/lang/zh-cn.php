@@ -13,6 +13,9 @@ return [
 
     "export" => [
         "export_aul" => "导出用户事件",
+
+        "export_log_create_fail" => "导出日志记录生成失败",
+        "exporting" => "数据导出中",
     ],
 
     "getSelfRoleNode" => [

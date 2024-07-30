@@ -18,7 +18,7 @@ use app\AppFactory\Management\ManagementClient;
 
 class GoodsClient extends ManagementClient
 {
-    use GoodsTrait,GoodsLangTrait;
+    use GoodsTrait, GoodsLangTrait;
     use AuthManagerTrait;
     use SaleOrdersGoodsCountTrait;
 
@@ -41,9 +41,9 @@ class GoodsClient extends ManagementClient
         return $this->rA($g_id);
     }
 
-    public function getPageList($where,$pageNum = 0,$field = "*",$order = "")
+    public function getPageList($where, $pageNum = 0, $field = "*", $order = "")
     {
-        $data = $this->getGoodsList($where,$pageNum,$field,$order);
+        $data = $this->getGoodsList($where, $pageNum, $field, $order);
         return $this->rQ($data);
     }
 
@@ -54,11 +54,30 @@ class GoodsClient extends ManagementClient
      */
     public function get10List($where)
     {
-        $list = $this->getSaleOrdersGoodsCountList($where,0,
+        $list = $this->getSaleOrdersGoodsCountList($where, 0,
             'g_name,totalPrice,totalQuantity,retail_price,pic',
-            'totalPrice desc,totalQuantity desc, g_id desc','','',2);
+            'totalPrice desc,totalQuantity desc, g_id desc', '', '', 10);
         if ($list) {
             $list = $list->toArray();
+        }
+        return $this->rQ($list);
+    }
+
+    public function exportRankingList($where)
+    {
+        $list = $this->getSaleOrdersGoodsCountList($where, 0,
+            'g_name,totalPrice,totalQuantity,retail_price,pic',
+            'totalPrice desc,totalQuantity desc, g_id desc', '', '', 10);
+        if ($list) {
+            $list = $list->toArray();
+            $title = [
+                "g_name" => "商品名称",
+                "totalQuantity" => "销售量",
+                "retail_price" => "单价",
+            ];
+            $filename = "人气商品排行榜（最近7天）-" . date("YmdHis");
+            $result = $this->sendToExport("首页-人气商品排行榜（最近7天）", $filename, $title, $list);
+            return $result;
         }
         return $this->rQ($list);
     }
@@ -72,17 +91,17 @@ class GoodsClient extends ManagementClient
     {
         try {
             $path = root_path() . "public" . $data['file_path'];
-            $title = ["g_name","gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status"];
+            $title = ["g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status"];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
             $goods = Excel::importExcel($path, $title, $other);
-            actionLog($goods,'导入的商品数据');
+            actionLog($goods, '导入的商品数据');
             if ($goods) {
                 $result = $this->addMoreGoods($goods);
                 return $this->rAction($result);
             }
-            return $this->r(100,'获取不到Excel文档中的数据');
+            return $this->r(100, '获取不到Excel文档中的数据');
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rValidate($e->getMessage());
         }
     }
@@ -94,47 +113,39 @@ class GoodsClient extends ManagementClient
      */
     public function exportExcel($where)
     {
-        try {
-            $list = $this->getGoodsList($where, 0,
-                'g_id,g_name,gc_name,model,sku,sku2,cost_price,market_price,retail_price,manufacturer,service_phone,
+        $list = $this->getGoodsList($where, 0,
+            'g_id,g_name,gc_name,model,sku,sku2,cost_price,market_price,retail_price,manufacturer,service_phone,
                 CONCAT(length,"*",width,"*",height) pack,
                 (CASE sell_channel WHEN 1 THEN "机器" WHEN 2 THEN "微商城" WHEN 3 THEN "机器+商城" END ) sell_channel,
                 expire_notice,
                 (CASE is_recommend WHEN 1 THEN "是" WHEN 2 THEN "否" END) is_recommend,
                 (CASE is_gift WHEN 1 THEN "是" WHEN 2 THEN "否" END) is_gift,
                 group_quantity');
-            if ($list) {
-                $list = $list->toArray();
-                $title = [
-                    'g_id' => "商品ID",
-                    'g_name' => "商品",
-                    'gc_name' => "品类",
-                    'model' => "型号",
-                    'sku' => "SKU",
-                    'sku2' => "关联SKU",
-                    'cost_price' => "成本价",
-                    'market_price' => "默认市场价",
-                    'retail_price' => "默认售价",
-                    'manufacturer' => "生产商",
-                    'service_phone' => "商家电话",
-                    'pack' => "包装（mm）",
-                    'sell_channel' => "销售渠道",
-                    'expire_notice' => "商品有效期提醒",
-                    'is_recommend' => "推荐商品",
-                    'is_gift' => "赠品",
-                    'group_quantity' => "单组数量"
-                ];
-                $filename = "商品列表-" . date("Ymd");
-                $result = Excel::exportExcel($list, $title, $filename);
-                return $this->rAction($result);
-            }
-            return $this->r(100, $this->lang("action_fail"));
-        } catch (\PHPExcel_Writer_Exception $e) {
-            actionException($e,1);
-            return $this->rValidate($e->getMessage());
-        } catch (\PHPExcel_Exception $e) {
-            actionException($e,1);
-            return $this->rValidate($e->getMessage());
+        if ($list) {
+            $list = $list->toArray();
+            $title = [
+                'g_id' => "商品ID",
+                'g_name' => "商品",
+                'gc_name' => "品类",
+                'model' => "型号",
+                'sku' => "SKU",
+                'sku2' => "关联SKU",
+                'cost_price' => "成本价",
+                'market_price' => "默认市场价",
+                'retail_price' => "默认售价",
+                'manufacturer' => "生产商",
+                'service_phone' => "商家电话",
+                'pack' => "包装（mm）",
+                'sell_channel' => "销售渠道",
+                'expire_notice' => "商品有效期提醒",
+                'is_recommend' => "推荐商品",
+                'is_gift' => "赠品",
+                'group_quantity' => "单组数量"
+            ];
+            $filename = "商品列表-" . date("Ymd");
+            $result = $this->sendToExport("商品管理-商品列表", $filename, $title, $list);
+            return $result;
         }
+        return $this->r(100, $this->lang("action_fail"));
     }
 }

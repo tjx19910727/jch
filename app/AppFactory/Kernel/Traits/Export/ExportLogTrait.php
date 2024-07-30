@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits\Export;
 
 
 use app\AppFactory\Kernel\Model\Export\ExportLogModel;
+use app\AppFactory\RabbitMq\MqProducer;
 
 trait ExportLogTrait
 {
@@ -104,5 +105,34 @@ trait ExportLogTrait
     public function delExportLog($where)
     {
         return ExportLogModel::whereDel($where);
+    }
+
+    public function sendToExport($position,$filename,$title,$list,$otherData = [])
+    {
+        $insert = [
+            "request_time" => time(),
+            "export_position" => $position,
+            "file_name" => $filename,
+            "status" => 1,
+            "creator" => $this->manager['manager_id'],
+            "create_time" => time(),
+        ];
+        $export_id = $this->addExportLog($insert);
+        if ($export_id) {
+            $data = [
+                "export_id" => $export_id,
+                "filename" => $filename,
+                "title" => $title,
+                "list" => $list,
+                "otherData" => $otherData,
+            ];
+            $result = MqProducer::export($data);
+            if ($result != "OK") {
+                $this->updateExportLog(['export_id' => $export_id,'status' => 4]);
+                return $this->rFail($result);
+            }
+            return $this->r(200,$this->lang("export.exporting"));
+        }
+        return $this->rFail($this->lang("export.export_log_create_fail"));
     }
 }

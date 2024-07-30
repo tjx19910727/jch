@@ -31,15 +31,15 @@ use app\AppFactory\Management\ManagementClient;
 class SaleOrdersClient extends ManagementClient
 {
     use AuthManagerTrait;
-    use SaleOrdersTrait,SaleOrdersRefundTrait,SaleOrdersRevenueTrait,SaleOrdersDailyCountTrait;
+    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersDailyCountTrait;
     use BeforeOrderPaymentTrait;
     use StrategyMachineTrait;
     use StrategyIncomeTrait;
     use StrategyManagerTrait;
     use UserTrait;
     use StrategyPayeeTrait;
-    use BeforeOrderRefundTrait,AfterOrderRefundTrait;
-    use WxPayTrait,AliPayTrait,JdCashierTrait;
+    use BeforeOrderRefundTrait, AfterOrderRefundTrait;
+    use WxPayTrait, AliPayTrait, JdCashierTrait;
 
     public $order;
     public $sod;
@@ -95,7 +95,7 @@ class SaleOrdersClient extends ManagementClient
             return $this->rFail("退款失败：生成退款记录失败");
         } catch (\Exception $e) {
             $this->rollbackTrans();
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
     }
@@ -108,10 +108,10 @@ class SaleOrdersClient extends ManagementClient
     {
         $where['sm.s_type'] = 1;
         $where['sp.sp_id'] = $this->order['sp_id'];
-        $strategyPayee = $this->getStrategyPayeeContent($where,'sp.*');
+        $strategyPayee = $this->getStrategyPayeeContent($where, 'sp.*');
         if (!is_array($strategyPayee)) return $strategyPayee;
         if (!$strategyPayee) return $this->rFail("查无收款方配置信息");
-        if (!in_array($strategyPayee['payee_type'],array_keys($this->refundType))) {
+        if (!in_array($strategyPayee['payee_type'], array_keys($this->refundType))) {
             return $this->rFail("未定义的支付类型");
         }
         $this->strategyPayee = $strategyPayee;
@@ -135,7 +135,7 @@ class SaleOrdersClient extends ManagementClient
         $func_name = $this->refundType[$this->order['pay_type']];
         $result = $this->$func_name();
         $check = obj2arr($result);
-        actionLog($check,'退款结果');
+        actionLog($check, '退款结果');
         if ($check['state'] == "200") {
             // 支付宝支付、通联支付退款实时处理，不用异步
             if ($this->order['pay_type'] == 3 || $this->order['pay_type'] == 2) {
@@ -145,7 +145,7 @@ class SaleOrdersClient extends ManagementClient
                     if (isset($check['data']['trxid'])) $this->refund_no = $check['data']['trxid'];
                     if (isset($check['data']['trade_no'])) $this->refund_no = $check['data']['trade_no'];
                     $end = $this->refundSuccess();
-                    actionLog($end,'处理退款成功结果');
+                    actionLog($end, '处理退款成功结果');
                     if ($end !== true) {
                         $this->rollbackTrans();
                         return $end;
@@ -153,7 +153,7 @@ class SaleOrdersClient extends ManagementClient
                     $this->commitTrans();
                 } catch (\Exception $e) {
                     $this->rollbackTrans();
-                    actionException($e,1);
+                    actionException($e, 1);
                 }
             }
             return $result;
@@ -174,17 +174,17 @@ class SaleOrdersClient extends ManagementClient
     public function getData($where)
     {
         $data = [
-            "today" => ["saleMoney" => 0.00,"saleQuantity" => 0,'discountMoney' => 0],
-            "yesterday" => ["saleMoney" => 0.00,"saleQuantity" => 0,'discountMoney' => 0],
+            "today" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
+            "yesterday" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
         ];
         $whereToday = $where;
-        $whereToday[] = ['create_date','=',strtotime(date("Y-m-d"))];
-        $today = $this->getSaleOrdersFind($whereToday,'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney','','create_date');
+        $whereToday[] = ['create_date', '=', strtotime(date("Y-m-d"))];
+        $today = $this->getSaleOrdersFind($whereToday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
         if ($today) $today = $today->toArray();
 
         $whereYesterday = $where;
-        $whereYesterday[] = ['create_date', '=', strtotime(date("Y-m-d 00:00:00",strtotime("-1 days")))];
-        $yesterday = $this->getSaleOrdersFind($whereYesterday,'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney','','create_date');
+        $whereYesterday[] = ['create_date', '=', strtotime(date("Y-m-d 00:00:00", strtotime("-1 days")))];
+        $yesterday = $this->getSaleOrdersFind($whereYesterday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
         if ($yesterday) $yesterday = $yesterday->toArray();
         if ($today) $data['today'] = $today;
         if ($yesterday) $data['yesterday'] = $yesterday;
@@ -193,32 +193,32 @@ class SaleOrdersClient extends ManagementClient
 
     /**
      * 获取销售视图数据
-        销售额、销量折线图
-        默认1个月内每天的数据
-        半年内每周的数据
-        1年内每月的数据
+     * 销售额、销量折线图
+     * 默认1个月内每天的数据
+     * 半年内每周的数据
+     * 1年内每月的数据
      * @param $where
      * @param int $type
      * @return array|string
      */
-    public function getChartData($where,$type = 1)
+    public function getChartData($where, $type = 1)
     {
         if ($type == 1) {
             $field = "totalPrice,totalQuantity,countDate";
             $group = "";
-            $where[] = ['create_date','>=', strtotime("-1 months")];
+            $where[] = ['create_date', '>=', strtotime("-1 months")];
         }
         if ($type == 2) {
             $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'Week %v,%x') week";
             $group = "week";
-            $where[] = ['create_date','>=', strtotime("-15 week")];
+            $where[] = ['create_date', '>=', strtotime("-15 week")];
         }
         if ($type == 3) {
             $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'%x-%m') month";
             $group = "month";
-            $where[] = ['create_date','>=', strtotime("-12 month")];
+            $where[] = ['create_date', '>=', strtotime("-12 month")];
         }
-        $data = $this->getSaleOrdersDailyCountList($where,0,$field,'',$group);
+        $data = $this->getSaleOrdersDailyCountList($where, 0, $field, '', $group);
         return $this->rQ($data);
     }
 
@@ -230,9 +230,8 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportSo($where)
     {
-        try {
-            $list = $this->getSaleOrdersList($where, 0,
-                'machine_id,machine_name,trade_no,mch_no,
+        $list = $this->getSaleOrdersList($where, 0,
+            'machine_id,machine_name,trade_no,mch_no,
                 (discount_price + total_price) goods_total_price,discount_price,total_quantity,total_price,
                 pay_code,
                 FROM_UNIXTIME(pay_time,"%Y-%d-%m %H:%i:%s") pay_time,
@@ -253,35 +252,27 @@ class SaleOrdersClient extends ManagementClient
                     WHEN 42 THEN "刷卡支付（被扫支付）"
                 END) pay_method
                 '
-            );
-            if ($list) {
-                $list = $list->toArray();
-                $title = [
-                    "machine_id" => "设备编号",
-                    "machine_name" => "设备名称",
-                    "trade_no" => "订单编号",
-                    "mch_no" => "交易编号",
-                    "goods_total_price" => "商品总价",
-                    "discount_price" => "优惠金额",
-                    "total_quantity" => "总数量",
-                    "total_price" => "实际支付金额",
-                    "pay_code" => "支付操作码（付款码/支付二维码/提货码）",
-                    "pay_time" => "支付时间",
-                    "pay_type" => "支付类型",
-                    "pay_method" => "支付方式",
-                ];
-                $filename = "订单交易-" . date("Ymd");
-                $result = Excel::exportExcel($list, $title, $filename);
-                return $this->rAction($result);
-            }
-            return $this->rFail($this->lang("action_fail"));
-        } catch (\PHPExcel_Writer_Exception $e) {
-            actionException($e,1);
-            return $this->rValidate($e->getMessage());
-        } catch (\PHPExcel_Exception $e) {
-            actionException($e,1);
-            return $this->rValidate($e->getMessage());
+        );
+        if ($list) {
+            $list = $list->toArray();
+            $title = [
+                "machine_id" => "设备编号",
+                "machine_name" => "设备名称",
+                "trade_no" => "订单编号",
+                "mch_no" => "交易编号",
+                "goods_total_price" => "商品总价",
+                "discount_price" => "优惠金额",
+                "total_quantity" => "总数量",
+                "total_price" => "实际支付金额",
+                "pay_code" => "支付操作码（付款码/支付二维码/提货码）",
+                "pay_time" => "支付时间",
+                "pay_type" => "支付类型",
+                "pay_method" => "支付方式",
+            ];
+            $filename = "订单交易-" . date("Ymd");
+            return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
         }
+        return $this->rFail($this->lang("action_fail"));
     }
 
     /**
@@ -291,8 +282,7 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportGoodsSo($where)
     {
-        try {
-            $field = "so.machine_id,so.machine_name,so.trade_no,sod.batch_number,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
+        $field = "so.machine_id,so.machine_name,so.trade_no,sod.batch_number,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
             (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '付费抽奖活动' WHEN 5 THEN '满减满送活动' END) order_type,
             sod.deliver_pics,
@@ -306,41 +296,33 @@ class SaleOrdersClient extends ManagementClient
             FROM_UNIXTIME(so.create_time,'%Y-%m-%d %H:%i:%s') create_time,
             FROM_UNIXTIME(so.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
             pay_code";
-            $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field, "so.trade_no");
-            if ($list) {
-                $list = $list->toArray();
-                $title = [
-                    "machine_id" => "设备编号",
-                    "machine_name" => "设备名称",
-                    "trade_no" => "交易号",
-                    "batch_number" => "商品序列号",
-                    "sku" => "SKU",
-                    "g_name" => "SKU名称",
-                    "channel_code" => "槽位号",
-                    "retail_price" => "单价",
-                    "discount_price" => "优惠价",
-                    "total_sod_price" => "实收金额",
-                    "out_status" => "状态",
-                    "order_type" => "订单类型",
-                    "deliver_pics" => "出货图像",
-                    "pay_type" => "支付类型",
-                    "pay_method" => "支付方式",
-                    "create_time" => "交易时间",
-                    "pay_time" => "支付时间",
-                    "pay_code" => "支付操作码（用户付款码/支付二维码/提货码/优惠码）",
-                ];
-                $filename = "导出商品交易列表-" . date("YmdHis");
-                $result = Excel::exportExcel($list, $title, $filename);
-                return $this->rAction($result);
-            }
-            return $this->rFail($this->lang("action_fail"));
-        } catch (\PHPExcel_Writer_Exception $e) {
-            actionException($e,1);
-            return $this->rValidate($e->getMessage());
-        } catch (\PHPExcel_Exception $e) {
-            actionException($e,1);
-            return $this->rValidate($e->getMessage());
+        $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field, "so.trade_no");
+        if ($list) {
+            $list = $list->toArray();
+            $title = [
+                "machine_id" => "设备编号",
+                "machine_name" => "设备名称",
+                "trade_no" => "交易号",
+                "batch_number" => "商品序列号",
+                "sku" => "SKU",
+                "g_name" => "SKU名称",
+                "channel_code" => "槽位号",
+                "retail_price" => "单价",
+                "discount_price" => "优惠价",
+                "total_sod_price" => "实收金额",
+                "out_status" => "状态",
+                "order_type" => "订单类型",
+                "deliver_pics" => "出货图像",
+                "pay_type" => "支付类型",
+                "pay_method" => "支付方式",
+                "create_time" => "交易时间",
+                "pay_time" => "支付时间",
+                "pay_code" => "支付操作码（用户付款码/支付二维码/提货码/优惠码）",
+            ];
+            $filename = "商品交易列表-" . date("YmdHis");
+            return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
         }
+        return $this->rFail($this->lang("action_fail"));
     }
 
     /**
@@ -350,8 +332,7 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportRefund($where)
     {
-        try {
-            $field = "sor.machine_id,sor.machine_name,sor.trade_no,
+        $field = "sor.machine_id,sor.machine_name,sor.trade_no,
                 sod.batch_number,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
                 (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
                 (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '付费抽奖活动' WHEN 5 THEN '满减满送活动' END) order_type,
@@ -373,47 +354,39 @@ class SaleOrdersClient extends ManagementClient
                 (CASE sor.status WHEN 1 THEN '已提交退款申请' WHEN 2 THEN '退款成功' WHEN 3 THEN '退款失败' END) status,
                 sor.remark
                 ";
-            $list = $this->getSaleOrdersRefundListJoinSoSod($where, 0,$field, "sor_id desc");
-            if ($list) {
-                $list = $list->toArray();
-                $title = [
-                    "machine_id" => "设备编号",
-                    "machine_name" => "设备名称",
-                    "trade_no" => "交易号",
-                    "batch_number" => "商品序列号",
-                    "sku" => "SKU",
-                    "g_name" => "SKU名称",
-                    "channel_code" => "槽位号",
-                    "retail_price" => "单价",
-                    "discount_price" => "优惠价",
-                    "total_sod_price" => "实收金额",
-                    "pay_type" => "支付类型",
-                    "pay_method" => "支付方式",
-                    "pay_time" => "支付时间",
-                    "create_time" => "交易时间",
-                    "deliver_pics" => "照片",
-                    "order_type" => "订单类型",
-                    "pay_code" => "支付操作码（用户付款码/支付二维码/提货码/优惠码）",
-                    "out_status" => "出货状态",
-                    "refund_trade_no" => "退款编号",
-                    "refund_no" => "平台退款编号",
-                    "refund_amount" => "退款金额",
-                    "refund_quantity" => "退款数量",
-                    "status" => "退款状态",
-                    "remark" => "备注",
-                ];
-                $filename = "导出退款交易列表-" . date("Ymd");
-                $result = Excel::exportExcel($list, $title, $filename);
-                return $this->rAction($result);
-            }
-            return $this->rFail($this->lang("action_fail"));
-        } catch (\PHPExcel_Writer_Exception $e) {
-            actionException($e,1);
-            return $this->rValidate($e->getMessage());
-        } catch (\PHPExcel_Exception $e) {
-            actionException($e,1);
-            return $this->rValidate($e->getMessage());
+        $list = $this->getSaleOrdersRefundListJoinSoSod($where, 0, $field, "sor_id desc");
+        if ($list) {
+            $list = $list->toArray();
+            $title = [
+                "machine_id" => "设备编号",
+                "machine_name" => "设备名称",
+                "trade_no" => "交易号",
+                "batch_number" => "商品序列号",
+                "sku" => "SKU",
+                "g_name" => "SKU名称",
+                "channel_code" => "槽位号",
+                "retail_price" => "单价",
+                "discount_price" => "优惠价",
+                "total_sod_price" => "实收金额",
+                "pay_type" => "支付类型",
+                "pay_method" => "支付方式",
+                "pay_time" => "支付时间",
+                "create_time" => "交易时间",
+                "deliver_pics" => "照片",
+                "order_type" => "订单类型",
+                "pay_code" => "支付操作码（用户付款码/支付二维码/提货码/优惠码）",
+                "out_status" => "出货状态",
+                "refund_trade_no" => "退款编号",
+                "refund_no" => "平台退款编号",
+                "refund_amount" => "退款金额",
+                "refund_quantity" => "退款数量",
+                "status" => "退款状态",
+                "remark" => "备注",
+            ];
+            $filename = "退款交易列表-" . date("Ymd");
+            return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
         }
+        return $this->rFail($this->lang("action_fail"));
     }
 
     /**
@@ -423,9 +396,9 @@ class SaleOrdersClient extends ManagementClient
      * @param string $order
      * @return array|\think\response\Json
      */
-    public function getTotalReport($where,$field = "*", $order = "")
+    public function getTotalReport($where, $field = "*", $order = "")
     {
-        $data = $this->getSaleOrdersDailyCountFind($where,$field,$order);
+        $data = $this->getSaleOrdersDailyCountFind($where, $field, $order);
         return $this->rQ($data);
     }
 
@@ -436,7 +409,7 @@ class SaleOrdersClient extends ManagementClient
      * @param string $order
      * @return array|\think\response\Json
      */
-    public function getReportList($where,$pageNum,$order = "")
+    public function getReportList($where, $pageNum, $order = "")
     {
         $field = "countDate,
         SUM(totalPrice) totalPrice,
@@ -448,7 +421,7 @@ class SaleOrdersClient extends ManagementClient
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
         $group = "create_date";
-        return $this->rQ($this->getSaleOrdersDailyCountList($where,$pageNum,$field,$order,$group));
+        return $this->rQ($this->getSaleOrdersDailyCountList($where, $pageNum, $field, $order, $group));
     }
 
     /**
@@ -456,10 +429,8 @@ class SaleOrdersClient extends ManagementClient
      * @param $where
      * @param string $order
      * @return array|\think\response\Json
-     * @throws \PHPExcel_Exception
-     * @throws \PHPExcel_Writer_Exception
      */
-    public function exportReport($where,$order = "")
+    public function exportReport($where, $order = "")
     {
         $field = "countDate,
         SUM(totalPrice) totalPrice,
@@ -471,7 +442,7 @@ class SaleOrdersClient extends ManagementClient
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
         $group = "create_date";
-        $list = $this->getSaleOrdersDailyCountList($where,0,$field,$order,$group);
+        $list = $this->getSaleOrdersDailyCountList($where, 0, $field, $order, $group);
         if ($list) {
             $list = $list->toArray();
             $title = [
@@ -486,8 +457,7 @@ class SaleOrdersClient extends ManagementClient
                 "giftQuantity" => "赠品数量",
             ];
             $filename = "导出销售报表_" . date("Ymd");
-            $result = Excel::exportExcel($list,$title,$filename);
-            return $this->rAction($result);
+            return $this->sendToExport("订单管理-销售报表", $filename, $title, $list);
         }
         return $this->rFail();
     }
@@ -502,11 +472,11 @@ class SaleOrdersClient extends ManagementClient
         $where['sod.is_gift'] = 1;
         $where['so.out_status'] = 4;
         $whereToday = $where;
-        $whereToday[] = ['so.create_time','between',[strtotime(date("Y-m-d 00:00:00")),strtotime(date("Y-m-d 23:59:59"))]];
-        $today = $this->joinSaleOrdersSum($whereToday,'sod.quantity');
+        $whereToday[] = ['so.create_time', 'between', [strtotime(date("Y-m-d 00:00:00")), strtotime(date("Y-m-d 23:59:59"))]];
+        $today = $this->joinSaleOrdersSum($whereToday, 'sod.quantity');
         $whereYesterday = $where;
-        $whereYesterday[] = ['so.create_time','between',[strtotime(date("Y-m-d 00:00:00",strtotime("-1 days"))),strtotime(date("Y-m-d 23:59:59",strtotime("-1 days")))]];
-        $yesterday = $this->joinSaleOrdersSum($whereYesterday,'sod.quantity');
+        $whereYesterday[] = ['so.create_time', 'between', [strtotime(date("Y-m-d 00:00:00", strtotime("-1 days"))), strtotime(date("Y-m-d 23:59:59", strtotime("-1 days")))]];
+        $yesterday = $this->joinSaleOrdersSum($whereYesterday, 'sod.quantity');
         $data = [
             "today" => $today,
             "yesterday" => $yesterday,

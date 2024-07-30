@@ -58,7 +58,7 @@ class GoodsHitClient extends ManagementClient
                     "saleNum" => "销量",
                     "conversion_rate" => "转化率",
                 ];
-                $filename = "导出互动报表(按商品)-" . date("Ymd");
+                $filename = "互动报表(按商品)-" . date("Ymd");
             }
             if ($eType == 2) {
                 $title = [
@@ -71,12 +71,9 @@ class GoodsHitClient extends ManagementClient
                     "saleNum" => "销量",
                     "conversion_rate" => "转化率",
                 ];
-                $filename = "导出互动报表(按设备)-" . date("Ymd");
+                $filename = "互动报表(按设备)-" . date("Ymd");
             }
-            $result = Excel::exportExcel($list,$title,$filename);
-            if ($result) {
-                return $this->rAction($result);
-            }
+            return $this->sendToExport("统计报表-互动报表", $filename, $title, $list);
         }
         return $this->rFail();
     }

@@ -107,6 +107,17 @@ class Index extends Common
     }
 
     /**
+     * 导出设备排行榜
+     * @return array|\think\response\Json
+     */
+    public function exportMachineList()
+    {
+        $where = $this->getWhere([]);
+        $where[] = ['countDate','>=',strtotime("-7 days")];
+        return $this->app->machine->exportRankingList($where);
+    }
+
+    /**
      * 获取商品前10排行榜
      * @return array|string
      */
@@ -115,5 +126,16 @@ class Index extends Common
         $where = $this->getWhere([]);
         $where[] = ['countDate','>=',strtotime("-7 days")];
         return $this->app->goods->get10List($where);
+    }
+
+    /**
+     * 导出商品排行榜
+     * @return array|\think\response\Json
+     */
+    public function exportGoodsList()
+    {
+        $where = $this->getWhere([]);
+        $where[] = ['countDate','>=',strtotime("-7 days")];
+        return $this->app->goods->exportRankingList($where);
     }
 }

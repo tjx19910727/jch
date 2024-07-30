@@ -28,7 +28,7 @@ class MachineErrorCodeClient extends ManagementClient
         $update = ['status' => 2];
         $where['errorCode'] = $me['errorCode'];
         $where['m_id'] = $me['m_id'];
-        return $this->rAction($this->updateMachineErrorCode($update,$where));
+        return $this->rAction($this->updateMachineErrorCode($update, $where));
     }
 
     protected $errorPosition = [
@@ -37,9 +37,9 @@ class MachineErrorCodeClient extends ManagementClient
         "3" => "工控电脑",
     ];
 
-    public function getEcList($where,$pageNum = 0,$field = "*",$order = "",$group = "")
+    public function getEcList($where, $pageNum = 0, $field = "*", $order = "", $group = "")
     {
-        $data = $this->getMachineErrorCodeList($where,$pageNum,$field,$order,'',$group);
+        $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, '', $group);
         return $this->rQ($data);
     }
 
@@ -50,36 +50,27 @@ class MachineErrorCodeClient extends ManagementClient
      * @param string $order
      * @return array|bool|string|\think\response\Json
      */
-    public function exportEc($where,$field = "*",$order = "create_time desc")
+    public function exportEc($where, $field = "*", $order = "create_time desc")
     {
-        try {
-            $list = $this->getMachineErrorCodeList($where, 0, $field . ",msg", $order);
-            if ($list) {
-                $list = $list->toArray();
-                foreach ($list as $k => $v) {
-                    $v['error_position'] = $this->errorPosition[$v['error_position']];
-                    $list[$k] = $v;
-                }
-                $title = [
-                    "machine_id" => "设备编号",
-                    "machine_name" => "设备编号",
-                    "error_position" => "位置",
-                    "errorCode" => "类型",
-                    "remark" => "简介",
-                    "msg" => "说明",
-                    "create_time" => "记录时间",
-                ];
-                $filename = "导出系统事件-" . date("YmdHis");
-                $result = Excel::exportExcel($list, $title, $filename);
-                return $this->rAction($result);
+        $list = $this->getMachineErrorCodeList($where, 0, $field . ",msg", $order);
+        if ($list) {
+            $list = $list->toArray();
+            foreach ($list as $k => $v) {
+                $v['error_position'] = $this->errorPosition[$v['error_position']];
+                $list[$k] = $v;
             }
-            return $this->rNoData();
-        } catch (\PHPExcel_Writer_Exception $e) {
-            actionException($e,1);
-            return $this->rTryCatch($e->getMessage());
-        } catch (\PHPExcel_Exception $e) {
-            actionException($e,1);
-            return $this->rTryCatch($e->getMessage());
+            $title = [
+                "machine_id" => "设备编号",
+                "machine_name" => "设备编号",
+                "error_position" => "位置",
+                "errorCode" => "类型",
+                "remark" => "简介",
+                "msg" => "说明",
+                "create_time" => "记录时间",
+            ];
+            $filename = "系统事件-" . date("YmdHis");
+            return $this->sendToExport("事件日志-系统日志", $filename, $title, $list);
         }
+        return $this->rNoData();
     }
 }

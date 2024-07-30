@@ -21,8 +21,6 @@ class GoodsChangeClient extends ManagementClient
      * 导出商品变化Excel
      * @param $where
      * @return array|\think\response\Json
-     * @throws \PHPExcel_Exception
-     * @throws \PHPExcel_Writer_Exception
      */
     public function exportGoodsChange($where)
     {
@@ -58,8 +56,7 @@ class GoodsChangeClient extends ManagementClient
                 "create_time" => "操作时间",
             ];
             $filename = "商品变化-" . date("Ymd");
-            $path = Excel::exportExcel($list,$title,$filename);
-            return $this->r(200,$this->lang("action_success"),$path);
+            return $this->sendToExport("事件日志-商品变化", $filename, $title, $list);
         }
         return $this->rFail($this->lang("action_fail"));
     }

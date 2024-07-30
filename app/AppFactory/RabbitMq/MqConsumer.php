@@ -130,9 +130,9 @@ class MqConsumer
         if (!$param) {
             die("获取不到RabbitMQ【" . env("RabbitMq.config_name") . "】的连接配置参数 \n");
         }
-        $amqpDetail = config('rabbit_mq.dataUpload_queue');
+        $amqpDetail = config('rabbit_mq.export_queue');
         if (!$amqpDetail) {
-            die("获取不到终端上传相关配置参数【dataUpload_queue】 \n");
+            die("获取不到终端上传相关配置参数【export_queue】 \n");
         }
         $connection = new AMQPStreamConnection(
             $param['host'],
@@ -180,7 +180,7 @@ class MqConsumer
      * 消息处理
      * @param $message
      */
-    protected function export_message(AMQPMessage $message)
+    public function export_message(AMQPMessage $message)
     {
         //手动发送ack
         $message->ack($message->getDeliveryTag());
@@ -192,8 +192,8 @@ class MqConsumer
             $app = AppFactory::timeTask();
             $app->export->makeExcel($data);
         } catch (\Exception $e) {
-            actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"DataUpload");
-            actionLog($e->getTrace(), 'tryCatchTrace',"DataUpload");
+            actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"export_message");
+            actionLog($e->getTrace(), 'tryCatchTrace',"export_message");
         }
     }
 }

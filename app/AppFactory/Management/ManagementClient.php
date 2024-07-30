@@ -12,6 +12,7 @@ namespace app\AppFactory\Management;
 use app\AppFactory\Kernel\BaseClient;
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
+use app\AppFactory\Kernel\Traits\Export\ExportLogTrait;
 use app\AppFactory\Kernel\Traits\ManagementTrait;
 use think\facade\Config;
 
@@ -19,6 +20,7 @@ class ManagementClient extends BaseClient
 {
     use ConfigTrait;
     use ManagementTrait;
+    use ExportLogTrait;
 
     /**
      * @var Application

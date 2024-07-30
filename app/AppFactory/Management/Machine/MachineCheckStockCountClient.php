@@ -30,8 +30,8 @@ class MachineCheckStockCountClient extends ManagementClient
                 "creator_nickname" => "盘点人员",
                 "create_time" => "盘点时间",
             ];
-            $filename = "导出库存盘点号总览-"  . date("YmdHis");
-            return $this->r(200,'导出成功',Excel::exportExcel($list,$title,$filename));
+            $filename = "库存盘点总览-"  . date("YmdHis");
+            return $this->sendToExport("统计报表-盘点报表", $filename, $title, $list);
         }
         return $this->r(100,'查无导出数据');
     }

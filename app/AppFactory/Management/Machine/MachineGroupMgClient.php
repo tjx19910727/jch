@@ -17,23 +17,23 @@ use app\AppFactory\Management\ManagementClient;
 
 class MachineGroupMgClient extends ManagementClient
 {
-    use MachineTrait,MachineGroupTrait;
+    use MachineTrait, MachineGroupTrait;
     use MachineGroupMgTrait;
 
     public function mgBindMachine($postData)
     {
         $mg_id = $postData['mg_id'];
-        $m_id = array_unique(explode(",",$postData['m_id']));
-        $mg = $this->getMachineGroupFind(['mg_id' => $mg_id],'mg_id,mg_name');
+        $m_id = array_unique(explode(",", $postData['m_id']));
+        $mg = $this->getMachineGroupFind(['mg_id' => $mg_id], 'mg_id,mg_name');
         if (!$mg) {
-            return $this->r(100,$this->lang("VMachineGoods.mg_no_data"));
+            return $this->r(100, $this->lang("VMachineGoods.mg_no_data"));
         }
         $mg = $mg->toArray();
-        $oldMid = $this->getMachineGroupMgColumn(['mg_id' => $mg_id],"m_id");
-        $addList = array_diff($m_id,$oldMid);
-        $delList = array_diff($oldMid,$m_id);
+        $oldMid = $this->getMachineGroupMgColumn(['mg_id' => $mg_id], "m_id");
+        $addList = array_diff($m_id, $oldMid);
+        $delList = array_diff($oldMid, $m_id);
         $flag = [];
-        if ($delList) $flag[] = $this->delMachineGroupMg(['mg_id' => $mg_id,['m_id','in',$delList]]);
+        if ($delList) $flag[] = $this->delMachineGroupMg(['mg_id' => $mg_id, ['m_id', 'in', $delList]]);
         if ($addList) {
             foreach ($addList as $mk => $mv) {
                 $m = $this->getMachineFind(['m_id' => $mv], 'm_id,machine_id,machine_name');
@@ -52,17 +52,17 @@ class MachineGroupMgClient extends ManagementClient
     public function machineBindMg($postData)
     {
         $m_id = $postData['m_id'];
-        $mg_id = array_unique(explode(",",$postData['mg_id']));
-        $m = $this->getMachineFind(['m_id' => $m_id],'m_id,machine_id,machine_name');
+        $mg_id = array_unique(explode(",", $postData['mg_id']));
+        $m = $this->getMachineFind(['m_id' => $m_id], 'm_id,machine_id,machine_name');
         if (!$m) {
-            return $this->r(100,$this->lang("VMachine.machine_no_data"));
+            return $this->r(100, $this->lang("VMachine.machine_no_data"));
         }
         $m = $m->toArray();
-        $oldMgId = $this->getMachineGroupMgColumn(['m_id' => $m_id],"mg_id");
-        $addList = array_diff($mg_id,$oldMgId);
-        $delList = array_diff($oldMgId,$mg_id);
+        $oldMgId = $this->getMachineGroupMgColumn(['m_id' => $m_id], "mg_id");
+        $addList = array_diff($mg_id, $oldMgId);
+        $delList = array_diff($oldMgId, $mg_id);
         $flag = [];
-        if ($delList) $flag[] = $this->delMachineGroupMg(['m_id' => $m_id,['mg_id','in',$delList]]);
+        if ($delList) $flag[] = $this->delMachineGroupMg(['m_id' => $m_id, ['mg_id', 'in', $delList]]);
         if ($addList) {
             foreach ($addList as $mk => $mv) {
                 $mg = $this->getMachineGroupFind(['mg_id' => $mv], 'mg_id,mg_name');
@@ -85,23 +85,14 @@ class MachineGroupMgClient extends ManagementClient
      */
     public function exportMachine($where)
     {
-        try {
-            $list = $this->getMachineGroupMgList($where, 0, 'mg_name,machine_id,machine_name');
-            if ($list) {
-                $list = $list->toArray();
-                $title = ["mg_name" => "分组名称",'machine_id' => "设备编号", "machine_name" => "设备名称"];
-                $filename = "设备分组-" . date("Ymd");
-                $result = Excel::exportExcel($list, $title, $filename);
-                return $this->rAction($result);
-            }
-            return $this->r(100, $this->lang("action_fail"));
-        } catch (\PHPExcel_Writer_Exception $e) {
-            actionException($e,1);
-            return $this->rValidate($e->getMessage());
-        } catch (\PHPExcel_Exception $e) {
-            actionException($e,1);
-            return $this->rValidate($e->getMessage());
+        $list = $this->getMachineGroupMgList($where, 0, 'mg_name,machine_id,machine_name');
+        if ($list) {
+            $list = $list->toArray();
+            $title = ["mg_name" => "分组名称", 'machine_id' => "设备编号", "machine_name" => "设备名称"];
+            $filename = "设备分组-" . date("Ymd");
+            return $this->sendToExport("设备管理-设备分组", $filename, $title, $list);
         }
+        return $this->r(100, $this->lang("action_fail"));
 
     }
 }

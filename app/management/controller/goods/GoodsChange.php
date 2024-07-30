@@ -22,15 +22,15 @@ class GoodsChange extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, ["machine_id" => "like","machine_name" => "like","sku" => "like","g_name" => "like"]);
-        return $this->app->goodsChange->getList($where,$pageNum,$this->field,'create_time desc');
+        $where = $this->getWhere($postData, false, ["machine_id" => "like", "machine_name" => "like", "sku" => "like", "g_name" => "like"]);
+        return $this->app->goodsChange->getList($where, $pageNum, $this->field, 'create_time desc');
     }
 
     public function getFind()
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->goodsChange->getFind($where,$this->field);
+        return $this->app->goodsChange->getFind($where, $this->field);
     }
 
     /**
@@ -39,18 +39,10 @@ class GoodsChange extends Common
      */
     public function exportGc()
     {
-        try {
-            $postData = input();
-            $this->validate($postData, $this->validatePath . '.exportGc');
-            $where = $this->getWhere($postData, false, ["machine_id" => "like", "machine_name" => "like", "sku" => "like", "g_name" => "like"]);
-            return $this->app->goodsChange->exportGoodsChange($where);
-        } catch (\PHPExcel_Writer_Exception $e) {
-            return returnValidate($e->getMessage());
-        } catch (\PHPExcel_Exception $e) {
-            return returnValidate($e->getMessage());
-        } catch (\Exception $e) {
-            return returnValidate($e->getMessage());
-        }
+        $postData = input();
+        $this->validate($postData, $this->validatePath . '.exportGc');
+        $where = $this->getWhere($postData, false, ["machine_id" => "like", "machine_name" => "like", "sku" => "like", "g_name" => "like"]);
+        return $this->app->goodsChange->exportGoodsChange($where);
     }
 
 }

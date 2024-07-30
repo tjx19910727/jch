@@ -210,7 +210,7 @@ class MachineClient extends ManagementClient
     {
         $list = $this->getSaleOrdersMachineCountList($where,0,
             'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
-            'totalPrice desc,totalQuantity desc, m_id desc','','m_id',2);
+            'totalPrice desc,totalQuantity desc, m_id desc','','m_id',10);
         if ($list) {
             $list = $list->toArray();
             foreach ($list as $key => $item) {
@@ -223,5 +223,40 @@ class MachineClient extends ManagementClient
             }
         }
         return $this->rQ($list);
+    }
+
+    /**
+     * 导出设备排行榜
+     * @param $where
+     * @return array|\think\response\Json
+     */
+    public function exportRankingList($where)
+    {
+        $list = $this->getSaleOrdersMachineCountList($where,0,
+            'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
+            'totalPrice desc,totalQuantity desc, m_id desc','','m_id');
+        if ($list) {
+            $list = $list->toArray();
+            foreach ($list as $key => $item) {
+                $item['address'] = "";
+                $m = $this->getMachineFind(['m_id' => $item['m_id']],"country_id,state_id,city_id,regions_id");
+                if ($m['country_id']) $item['address'] = $this->getEarthCountriesValue(['id' => $m['country_id']],'name');
+                if ($m['state_id']) $item['address'] .= "-" . $this->getEarthStatesValue(['id' => $m['state_id']],'name');
+                if ($m['city_id']) $item['address'] .= "-" . $this->getEarthCitiesValue(['id' => $m['city_id']],'name');
+                if ($m['regions_id']) $item['address'] .= "-" . $this->getEarthRegionsValue(['id' => $m['regions_id']],'name');
+                $list[$key] = $item;
+            }
+            $title = [
+                "machine_id" => "机器ID",
+                "machine_name" => "机器名称",
+                "address" => "机器位置",
+                "totalPrice" => "销售额",
+                "coupon_used" => "优惠券",
+            ];
+            $filename = "设备排行榜（最近7天）-" . date("YmdHis");
+            $result = $this->sendToExport("首页-设备排行榜（最近7天）",$filename,$title,$list);
+            return $result;
+        }
+        return $this->r(100,$this->lang("query_fail"));
     }
 }

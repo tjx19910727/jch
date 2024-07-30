@@ -40,8 +40,7 @@ class MachineCheckStockClient extends ManagementClient
                 "status" => "盘点结果",
                 "create_time" => "盘点时间",
             ];
-            $result = Excel::exportExcel($list, $title, $filename);
-            return $this->rAction($result);
+            return $this->sendToExport("统计报表-盘点报表", $filename, $title, $list);
         }
         return $this->rFail();
     }

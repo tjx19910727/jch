@@ -21,8 +21,8 @@ use app\AppFactory\Management\ManagementClient;
 
 class ActivityPickCodeClient extends ManagementClient
 {
-    use ActivityPickCodeTrait,ActivityPickTrait,ActivityGoodsTrait,ActivityMachineTrait;
-    use SaleOrdersTrait,MachineTrait,GoodsTrait;
+    use ActivityPickCodeTrait, ActivityPickTrait, ActivityGoodsTrait, ActivityMachineTrait;
+    use SaleOrdersTrait, MachineTrait, GoodsTrait;
 
     public $data;
 
@@ -38,8 +38,8 @@ class ActivityPickCodeClient extends ManagementClient
         $pick = $this->getActivityPickFind(['id' => $postData['id']], $field);
         if (!$pick) return $this->r(100, $this->lang("VActivityPickCode.pick_code_no_data"));
         $pick = $pick->toArray();
-        if ($pick['status'] == 3) return $this->r(100,$this->lang("VActivityPickCode.status3"));
-        if ($pick['status'] == 4) return $this->r(100,$this->lang("VActivityPickCode.status4"));
+        if ($pick['status'] == 3) return $this->r(100, $this->lang("VActivityPickCode.status3"));
+        if ($pick['status'] == 4) return $this->r(100, $this->lang("VActivityPickCode.status4"));
         $update = [];
         if ($pick['start_time'] > time()) {
             $update['status'] = 2;
@@ -47,7 +47,7 @@ class ActivityPickCodeClient extends ManagementClient
         if ($pick['end_time'] > 0 && $pick['end_time'] < time()) {
             $update['status'] = 3;
             $this->updateActivityPick($update);
-            return $this->r(100,$this->lang("VActivityPickCode.status3"));
+            return $this->r(100, $this->lang("VActivityPickCode.status3"));
         }
         if ($update) {
             $update['id'] = $pick['id'];
@@ -80,25 +80,16 @@ class ActivityPickCodeClient extends ManagementClient
      */
     public function exportCode($postData)
     {
-        try {
-            $ap = $this->getActivityPickFind(['id' => $postData['id']], "pick_name");
-            if (!$ap) return $this->r(100, '查无提货码活动信息');
-            $codeList = $this->getActivityPickCodeList(['ap_id' => $postData['id'],'status' => 1], 0, 'code');
-            if ($codeList) {
-                $codeList = $codeList->toArray();
-                $title = ["code" => "提货码"];
-                $filename = "导出【" . $ap['pick_name'] . "】提货码-" . date("YmdHis");
-                $result = Excel::exportExcel($codeList, $title, $filename);
-                return $this->r(200, '导出成功', $result);
-            }
-            return $this->rFail("查无提货码");
-        } catch (\PHPExcel_Writer_Exception $e) {
-            actionException($e, 1);
-            return $this->rValidate($e->getMessage());
-        } catch (\PHPExcel_Exception $e) {
-            actionException($e, 1);
-            return $this->rValidate($e->getMessage());
+        $ap = $this->getActivityPickFind(['id' => $postData['id']], "pick_name");
+        if (!$ap) return $this->r(100, '查无提货码活动信息');
+        $list = $this->getActivityPickCodeList(['ap_id' => $postData['id'], 'status' => 1], 0, 'code');
+        if ($list) {
+            $list = $list->toArray();
+            $title = ["code" => "提货码"];
+            $filename = "【" . $ap['pick_name'] . "】提货码-" . date("YmdHis");
+            return $this->sendToExport("营销活动-取货码活动", $filename, $title, $list);
         }
+        return $this->rFail("查无提货码");
     }
 
     /**
@@ -108,37 +99,28 @@ class ActivityPickCodeClient extends ManagementClient
      */
     public function exportUsedList($postData)
     {
-        try {
-            $ap = $this->getActivityPickFind(['id' => $postData['id']], "pick_name,`desc`");
-            if (!$ap) return $this->r(100, '查无提货码信息');
-            $usedList = $this->getActivityPickCodeList(['ap_id' => $postData['id']], 0,
-                '("' . $ap['pick_name'] . '") pick_name,("' . $ap['desc'] . '") `desc`,machine_id,machine_name,
+        $ap = $this->getActivityPickFind(['id' => $postData['id']], "pick_name,`desc`");
+        if (!$ap) return $this->r(100, '查无提货码信息');
+        $list = $this->getActivityPickCodeList(['ap_id' => $postData['id']], 0,
+            '("' . $ap['pick_name'] . '") pick_name,("' . $ap['desc'] . '") `desc`,machine_id,machine_name,
                 code,trade_no,
                 (CASE pick_type WHEN 1 THEN "未使用" WHEN 2 THEN "已使用" WHEN 3 THEN "已过期" WHEN 4 THEN "已作废" WHEN 5 THEN "使用中" END ) status, used_time');
-            if ($usedList) {
-                $usedList = $usedList->toArray();
-                $title = [
-                    "pick_name" => "提货码活动名称",
-                    "desc" => "简介",
-                    "machine_id" => "设备编号",
-                    "machine_name" => "设备名称",
-                    "code" => "提货码",
-                    "status" => "激活状态",
-                    "trade_no" => "订单编号",
-                    "used_time" => "使用时间",
-                ];
-                $filename = "导出【" . $ap['pick_name'] . "】使用报表-" . date("Ymd");
-                $result = Excel::exportExcel($usedList, $title, $filename);
-                return $this->r(200, '导出成功', $result);
-            }
-            return $this->rFail("查无使用报表信息");
-        } catch (\PHPExcel_Writer_Exception $e) {
-            actionException($e, 1);
-            return $this->rValidate($e->getMessage());
-        } catch (\PHPExcel_Exception $e) {
-            actionException($e, 1);
-            return $this->rValidate($e->getMessage());
+        if ($list) {
+            $list = $list->toArray();
+            $title = [
+                "pick_name" => "提货码活动名称",
+                "desc" => "简介",
+                "machine_id" => "设备编号",
+                "machine_name" => "设备名称",
+                "code" => "提货码",
+                "status" => "激活状态",
+                "trade_no" => "订单编号",
+                "used_time" => "使用时间",
+            ];
+            $filename = "【" . $ap['pick_name'] . "】使用报表-" . date("Ymd");
+            return $this->sendToExport("营销活动-取货码活动", $filename, $title, $list);
         }
+        return $this->rFail("查无使用报表信息");
     }
 
     /**
@@ -152,23 +134,23 @@ class ActivityPickCodeClient extends ManagementClient
         try {
             $time = time();
             $this->data = $postData;
-            $apc = $this->getActivityPickCodeFind(['code' => $this->data['pick_code']],'apc_id,ap_id,code,order_id,trade_no,m_id,machine_id,machine_name,pick_type,status,used_time','apc_id desc');
+            $apc = $this->getActivityPickCodeFind(['code' => $this->data['pick_code']], 'apc_id,ap_id,code,order_id,trade_no,m_id,machine_id,machine_name,pick_type,status,used_time', 'apc_id desc');
             if (!$apc) {
                 $this->rollbackTrans();
-                return $this->r(100,$this->lang("VActivityPickCode.pick_code_no_data"));
+                return $this->r(100, $this->lang("VActivityPickCode.pick_code_no_data"));
             }
             $apc = $apc->toArray();
 
-            if ($apc['status'] == 2) return $this->r(1112, $this->lang("VActivityPickCode.status2"),$apc);
-            if ($apc['status'] == 3) return $this->r(1113, $this->lang("VActivityPickCode.status3"),$apc);
-            if ($apc['status'] == 4) return $this->r(1114, $this->lang("VActivityPickCode.status4"),$apc);
-            if ($apc['status'] == 5) return $this->r(1114, $this->lang("VActivityPickCode.status5"),$apc);
+            if ($apc['status'] == 2) return $this->r(1112, $this->lang("VActivityPickCode.status2"), $apc);
+            if ($apc['status'] == 3) return $this->r(1113, $this->lang("VActivityPickCode.status3"), $apc);
+            if ($apc['status'] == 4) return $this->r(1114, $this->lang("VActivityPickCode.status4"), $apc);
+            if ($apc['status'] == 5) return $this->r(1114, $this->lang("VActivityPickCode.status5"), $apc);
 
-            $ap = $this->getActivityPickFind(['id' => $apc['ap_id']],'id,pick_name,desc,bg_pic,start_time,end_time,pick_type,status');
+            $ap = $this->getActivityPickFind(['id' => $apc['ap_id']], 'id,pick_name,desc,bg_pic,start_time,end_time,pick_type,status');
             // 开始时间大于当前时间，取货活动还未开始的
             if ($ap["start_time"] > $time) {
                 $this->rollbackTrans();
-                return $this->r(1101,$this->lang("VActivityPick.not_begin"),$ap);
+                return $this->r(1101, $this->lang("VActivityPick.not_begin"), $ap);
             }
             // 有设置结束时间，并且结束时间小于当前时间，活动已结束
             if ($ap["end_time"] > 0 && $ap['end_time'] < $time) {
@@ -177,19 +159,19 @@ class ActivityPickCodeClient extends ManagementClient
                 // 修改取货码使用记录为3.已过期
                 $this->updateActivityPickCode(['status' => 3], ['ap_id' => $ap['id'], 'status' => 1]);
                 $this->commitTrans();
-                return $this->r(1103,$this->lang("VActivityPick.finished"),$ap);
+                return $this->r(1103, $this->lang("VActivityPick.finished"), $ap);
             }
-            if ($ap['status'] == 4) return $this->r(1104, $this->lang("VActivityPick.status4"),$ap);
+            if ($ap['status'] == 4) return $this->r(1104, $this->lang("VActivityPick.status4"), $ap);
             // 取货码活动状态由1.未开始修改为2.进行中
             if ($ap['status'] == 1) $flag[] = $this->updateActivityPick(['status' => 2], ['id' => $ap['id']]);
             $machine = $this->getMachineFind(['m_id' => $this->data['m_id']], 'm_id,machine_name,machine_id,ao_id');
             if (!$machine) {
                 $this->rollbackTrans();
-                return $this->r(100,$this->lang("VMachine.machine_no_data"));
+                return $this->r(100, $this->lang("VMachine.machine_no_data"));
             }
             if ($apc['pick_type'] == 1) {
                 $this->rollbackTrans();
-                return $this->r(100,$this->lang("VActivityPickCode.pick_type1"),$ap);
+                return $this->r(100, $this->lang("VActivityPickCode.pick_type1"), $ap);
             }
             if ($apc['pick_type'] == 3) {
                 $order = $this->getSaleOrdersFind(['order_id' => $apc['order_id']], 'order_id,trade_no,pay_time');
@@ -201,7 +183,7 @@ class ActivityPickCodeClient extends ManagementClient
             } else {
                 if (!isset($this->data['g_id'])) {
                     $this->rollbackTrans();
-                    return $this->r(300,$this->lang("VActivityPickCode.g_id_require"));
+                    return $this->r(300, $this->lang("VActivityPickCode.g_id_require"));
                 }
                 $trade_no = date("YmdHis") . $machine['m_id'] . $this->get_rand_string(6, "num");
                 $order = [

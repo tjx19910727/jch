@@ -16,6 +16,7 @@ use app\AppFactory\Kernel\Providers\Management\CommonProvider;
 use app\AppFactory\Kernel\Providers\Management\ConfigProvider;
 use app\AppFactory\Kernel\Providers\Management\EarthProvider;
 use app\AppFactory\Kernel\Providers\Management\EmailProvider;
+use app\AppFactory\Kernel\Providers\Management\ExportProvider;
 use app\AppFactory\Kernel\Providers\Management\GoodsProvider;
 use app\AppFactory\Kernel\Providers\Management\IndexProvider;
 use app\AppFactory\Kernel\Providers\Management\LoginProvider;
@@ -66,6 +67,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Config\ConfigPerformanceClient         $configPerformance      性能参数配置
  *
  * @property Earth\EarthClient                      $earth                  全球地区信息与时区
+ *
+ * @property Export\ExportLogClient                 $exportLog                 导出日志
  *
  * @property Email\EmailConfigClient                $emailConfig            邮箱配置
  * @property Email\EmailTemplateClient              $emailTemplate          邮件模板配置
@@ -139,6 +142,7 @@ class Application extends ServiceContainer
         ConfigProvider::class,
         EarthProvider::class,
         EmailProvider::class,
+        ExportProvider::class,
         LoginProvider::class,
         MachineProvider::class,
         GoodsProvider::class,
