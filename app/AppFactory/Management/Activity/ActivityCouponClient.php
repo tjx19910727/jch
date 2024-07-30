@@ -77,6 +77,10 @@ class ActivityCouponClient extends ManagementClient
         if ($postData['start_date'] && $postData['start_date'] <= strtotime(date("Y-m-d"))) {
             $postData['status'] = 2;
         }
+        if (isset($postData['code']) && $postData['code']) {
+            $check = $this->getActivityCouponFind(['code' => $postData['code'],'status' => 2],'c_id');
+            if ($check) return $this->r(100,'当前优惠码已存在，不能重复使用');
+        }
         $this->startTrans();
         try {
             $a_id = $this->addActivityCoupon($postData);
@@ -126,6 +130,11 @@ class ActivityCouponClient extends ManagementClient
         if (isset($postData['goodsList'])) {
             $goodsList = $postData['goodsList'];
         }
+        if (isset($postData['code']) && $postData['code']) {
+            $check = $this->getActivityCouponFind(['code' => $postData['code'],['status','in',[1,2]]],'c_id');
+            if ($check) return $this->r(100,'当前优惠码已存在，不能重复使用');
+        }
+
         $flag[] = 1;
         $this->startTrans();
 

@@ -46,7 +46,7 @@ class AuthController extends BaseController
 //        $this->manager['watch_store_ids'] = $this->app->storeClerk->getStoreClerkColumn(['manager_id' => $this->manager['manager_id'],'clerk_type' => 2],'store_id');
         $this->app = AppFactory::management($this->manager);
         $checkAuthNode = $this->app->authManagerRole->checkAuthNode();
-        if (!is_array($checkAuthNode)) {
+        if ($checkAuthNode && !is_array($checkAuthNode)) {
             json($checkAuthNode->getData())->send();
             die();
         }

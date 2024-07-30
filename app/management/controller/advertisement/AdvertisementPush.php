@@ -23,6 +23,7 @@ class AdvertisementPush extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData,false,['adv_title' => "like"]);
+        $where['push_type'] = 1;
         return $this->app->advertisementPush->getList($where,($postData['pageNum'] ?? 0),'*',"create_time desc");
     }
 
@@ -36,8 +37,9 @@ class AdvertisementPush extends Common
         $adv_title = input("adv_title");
         $groupType = input('groupType',1);
         $pageNum = input('pageNum',0);
-        $where['ao_id'] = $this->manager['ao_id'];
+        $where = $this->getWhere([]);
         $where[] = ['status',"<",3];
+        $where['push_type'] = 1;
         // 机器分组
         if ($groupType == 1) {
             if ($machine) $where[] = ['machine_id|machine_name','like',"%".$machine."%"];

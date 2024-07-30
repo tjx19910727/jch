@@ -80,4 +80,19 @@ class SaleOrdersDetailsModel extends BaseModel
             $data = $data->select();
         return $data;
     }
+
+    /**
+     * 关联订单表求合
+     * @param $where
+     * @param $sum
+     * @return float
+     */
+    public static function joinOrderSum($where,$sum)
+    {
+        $data = self::alias("sod")
+            ->join("sale_orders so",'so.order_id = sod.order_id','left')
+            ->where($where)
+            ->sum($sum);
+        return $data;
+    }
 }

@@ -9,7 +9,6 @@
 namespace app\AppFactory\TimeTask\Machine;
 
 
-use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
@@ -134,7 +133,7 @@ class MachineClient extends TimeTaskBase
      */
     public function checkOffline()
     {
-        $details = $this->getMachineOnlineDetailsList(['offline_time' => 0, ['heart_time', '<', time() - 180]], 0, 'mod_id,m_id,machine_name,machine_id,online_time,d_date');
+        $details = $this->getMachineOnlineDetailsList(['offline_time' => 0, ['heart_time', '<', time() - env("machine.timeout",20)]], 0, 'mod_id,m_id,machine_name,machine_id,online_time,d_date');
         if ($details) {
             $flag[] = 1;
             $this->startTrans();
@@ -171,10 +170,10 @@ class MachineClient extends TimeTaskBase
                             'duration' => bcsub(time(), $value['online_time']),
                         ];
                         $flag[] = $this->updateMachineOnlineDetails($update);
-                        actionLog($this->getLS(),'修改设备在线记录详情状态');
+                        actionLog($this->getLS(),'修改设备在线记录详情状态','checkOffline');
                     }
                     $flag[] = $this->updateMachine(['m_id' => $value['m_id'], 'online' => 2]);
-                    actionLog($this->getLS(),'修改设备在线状态');
+                    actionLog($this->getLS(),'修改设备在线状态','checkOffline');
 
                     /** 发送离线通知 开始 **/
                     $machine = $this->getMachineFind(['m_id' => $value['m_id']], 'm_id,machine_id,machine_name,last_online_time,ao_id');
@@ -196,7 +195,8 @@ class MachineClient extends TimeTaskBase
                             actionLog($flag,'检查掉线的在线记录','checkOffline');
             } catch (\Exception $e) {
                 $this->rollbackTrans();
-                actionException($e,1);
+                actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage', 'checkOffline');
+                actionLog($e->getTrace(), 'tryCatchTrace','checkOffline');
             }
         }
         return "处理成功";

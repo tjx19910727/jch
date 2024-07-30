@@ -138,6 +138,9 @@ return [
         "ac_not_data" => "查无优惠券活动",
         "check_no_code" => "查无优惠券码",
 
+        "no_am_data" => "当前设备不能使用此优惠券",
+        "no_ag_data" => "当前设备没有指定商品",
+
         "not_begin" => "活动尚未开始",
         "finished" => "活动已结束",
     ],
@@ -195,6 +198,9 @@ return [
         "order_no_data" => "查无订单信息",
         "fd_no_data" => "查无活动信息",
         "content_no_data" => "查无活动内容信息",
+        "fd_used" => "已使用该满减活动",
+        "no_am_data" => "当前设备不能使用此活动",
+        "no_ag_data" => "当前设备没有指定活动商品",
 
         "exclusion" => "当前订单已使用其他优惠活动，不允许使用满减满赠活动",
 

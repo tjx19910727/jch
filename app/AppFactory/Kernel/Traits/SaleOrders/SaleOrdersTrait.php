@@ -171,6 +171,11 @@ trait SaleOrdersTrait
         return SaleOrdersDetailsModel::getSum($where,$sum);
     }
 
+    public function joinSaleOrdersSum($where,$sum)
+    {
+        return SaleOrdersDetailsModel::joinOrderSum($where,$sum);
+    }
+
     /**
      * 统计订单副表条数
      * @param $where

@@ -132,7 +132,7 @@ class AuthManagerLogClient extends ManagementClient
                         "params" => "详情",
                         "create_time" => "时间",
                     ];
-                    $filename = $this->lang("export_aul") . "-" . date("YmdHis");
+                    $filename = $this->lang("export.export_aul") . "-" . date("YmdHis");
                     $result = Excel::exportExcel($list, $title, $filename);
                     return $this->r(200, $this->lang("export_success"), $result);
                 }

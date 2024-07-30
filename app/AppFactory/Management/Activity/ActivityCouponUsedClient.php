@@ -32,8 +32,8 @@ class ActivityCouponUsedClient extends ManagementClient
         $coupon = $coupon->toArray();
         if ($coupon['code']) return $this->r(100, '当前优惠券不使用随机码，无法生成随机码列表');
         unset($coupon['code']);
-        $codeList = $this->getActivityCouponUsedColumn([], 'code');
-        $codeList = array_merge($codeList,$this->getActivityCouponColumn('code is not null AND code <> ""','code'));
+        $codeList = $this->getActivityCouponUsedColumn(["status" => 1], 'code');
+        $codeList = array_merge($codeList,$this->getActivityCouponColumn([['status','in',[1,2]]],'code'));
         for ($i = 0; $i < $postData['quantity']; $i++) {
             $insert = $coupon;
             while (1) {

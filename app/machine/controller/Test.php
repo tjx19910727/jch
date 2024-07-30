@@ -112,167 +112,27 @@ class Test extends BaseController
     public function testSign()
     {
         $carList[] = [
-            "mc_id" => 1518,
+            "mc_id" => 29482,
             "quantity" => 1,
         ];
+        $carList[] = [
+            "mc_id" => 29483,
+            "quantity" => 2,
+        ];
         $data = [
-            "machine_id" => "test0003",
+            "machine_id" => "0018",
             "pay_type" => 2,
             "pay_method" => 1,
 //            "coupon_code" => "980429",
             "carList" => json_encode($carList, 320),
         ];
-//        $data = [
-//            "order_id" => 755,
-//            "timestamp" => "1715913770106092",
-//            "msg_id" => $msg_id,
-//            "machine_id" => "test0003",
-//            "fd_id" => "5",
-//        ];
-//        $data = [
-//            "machine_id" => "test0001",
-//            "timestamp" => time(),
-//            "msg_id" => $msg_id,
-//            "delList" => "41,43",
-//        ];
-//        $data = [
-//            "machine_id" => "test0001",
-//            "timestamp" => time(),
-//            "msg_id" => $msg_id,
-//            "adv_id" => 13,
-//            "play_time" => time(),
-////            "folder" => "saleOrders",
-////            "file" => file_get_contents(root_path("public/uploads/system") . "20240201/a35c07ecb552cec721f77c71fce6c5e2.jpg"),
-//        ];
-//        $data = [
-//            "machine_id" => "test0003",
-//            "timestamp" => time(),
-//            "msg_id" => $msg_id,
-//            "manager_id" => 2,
-//        ];
-//        $data = [
-//            "machine_id" => "test0003",
-//            "timestamp" => time(),
-//            "msg_id" => $msg_id,
-//            "adv_id" => 91,
-//            "play_time" => time(),
-//        ];
-//        $data = [
-//            "machine_id" => "test0001",
-//            "timestamp" => time(),
-//            "msg_id" => $msg_id,
-//            "pay_type" => "4",
-//            "pay_method" => "41",
-//            "total_price" => $value['price'] * $quantity,
-//            "total_quantity" => $quantity,
-//            "alc_id" => $value['config'][1]['alc_id'],
-////            "order_id" => 382,
-////            "fd_id" => 9,
-////            "mc_id" => 193,
-////            "mg_id" => 1,
-////            "capacity" => 10,
-////            "quantity" => 3,
-////            "pay_type" => 4,
-////            "pay_method" => 41,
-////            "total_price" => 40,
-////            "total_quantity" => 4,
-////            "al_id" => 8,
-////            "pick_code" => "73702244",
-////            "pay_type" => 0,
-////            "pay_method" => 1,
-//        ];
-//        $data = [
-//            "order_id" => 626,
-//            "timestamp" => time(),
-//            "msg_id" => $msg_id,
-//            "machine_id" => "test0003",
-//            "details" => [
-//                [
-//                    "sod_id" => "710",
-//                    "is_match" => "1",
-//                    "is_claim" => "1",
-//                    "is_out" => "1",
-//                    "is_close" => "1",
-//                    "quantity" => "1",
-//                    "duration" => "70",
-//                    "deliver_pics" => "/uploads/goods/20240418/109c741f77f41f2a444866a45bc578a8.jpg,/uploads/goods/20240418/109c741f77f41f2a444866a45bc578a8.jpg",
-//                ],
-//            ],
-//        ];
-//
-//        $data = [
-//            "msg_id" => $msg_id,
-//            "timestamp" => time(),
-//            "machine_id" => "test0001",
-//            "mc_id" => "251",
-//            "capacity" => "5",
-//            "g_id" => "0",
-//            "mg_id" => "0",
-//            "quantity" => "0",
-////            "standby_quantity" => "0",
-//            "operator" => 1,
-//        ];
-//        $data = [
-//            "machine_id" => "test0001",
-//            "msg_id" => $msg_id,
-//            "timestamp" => time(),
-//            "operator" => 1,
-//            "repList" => [
-//                [
-//                    "mc_id" => "251",
-//                    "quantity" => "-3",
-////                    "standby_quantity" => "-3",
-//                ],
-////                [
-////                    "mc_id" => "255",
-////                    "quantity" => "2",
-//////                    "standby_quantity" => "0",
-////                ],
-//            ],
-//        ];
-//        $data = [
-//            "machine_id" => "test0003",
-//            "msg_id" => $msg_id,
-//            "timestamp" => time(),
-////            "account" => "dkm",
-////            "password" => "123456",
-//        ];
-//        dump($data);
-//        $data = $this->makeSign($data);
-//        dump(json_encode($data));
-//        $config = [
-//            "machine_id" => $data['machine_id'],
-//            "key" => env("api.md5Key"),
-//            "data" => $data,
-//        ];
-//        $app = AppFactory::machine($config);
-//        $result = $app->api->subCar();
-//        die();
-//        dump($result);
-//        $data = [
-//            "machine_id" => "test0002",
-//            "mvp_id" => "186",
-//            "download_progress" => "50",
-//            "order_id" => "1251",
-//            "coupon_code" => "533617",
-//            "data" => [
-//                "msgType" => "updateComplete",
-//                "mvp_id" => 184,
-//                "status" => 2,
-//            ],
-//        ];
+        $data = [
+            "machine_id" => "0018",
+            "order_id" => 2065,
+            "coupon_code" => "555555",
+        ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));
-//        dump(\cache("test0003.signKey"));
-//        $config = [
-//            "machine_id" => $data['machine_id'],
-//            "key" => env("api.md5Key"),
-//            "data" => $data,
-//        ];
-//        $app = AppFactory::machine($config);
-//        $result = $app->activity->useFd();
-
-//        return $result;
     }
 
     public function checkSign()

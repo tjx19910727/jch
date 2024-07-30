@@ -42,9 +42,9 @@ class AuthManagerRoleClient extends ManagementClient
         $authNode = $this->getAuthNodeFind($where,$field,'node_id desc');
         $authNode = obj2arr($authNode);
         if (in_array($url,$this->commonNode)) return $authNode ?? [];
-        if (!$authNode) return $this->r(100,"该功能尚未开放");
         // 超管全权限免验证
         if ($this->manager['pid'] === 0) return $authNode;
+        if (!$authNode) return $this->r(100,"该功能尚未开放");
 
         $authNode['d_type'] = 0;
         if ($authNode['status'] == 2) return $this->rFail("该功能已被禁用");

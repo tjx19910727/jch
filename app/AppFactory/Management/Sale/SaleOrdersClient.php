@@ -73,11 +73,10 @@ class SaleOrdersClient extends ManagementClient
         $this->order = $this->getSaleOrdersFind(['order_id' => $postData['order_id']]);
         if (!$this->order) return $this->rFail("查无订单数据");
         $this->order = $this->order->toArray();
-//        if ($this->order['pay_type'] != 4) return $this->rFail("当前仅支持京东收银收款的订单退款");
         $check = $this->getSPayee();
-        if ($check !== true) {
-            return $check;
-        }
+//        if ($check !== true) {
+//            return $check;
+//        }
         $this->startTrans();
         try {
             $this->postData = $postData;// 生成退款记录
@@ -132,7 +131,7 @@ class SaleOrdersClient extends ManagementClient
             "refund_amount" => $this->totalRefundMoney,
             "remark" => $this->postData['remark'],
         ];
-
+//        return $this->r(100,'测试中，暂停使用',$this->refundData);
         $func_name = $this->refundType[$this->order['pay_type']];
         $result = $this->$func_name();
         $check = obj2arr($result);
@@ -417,12 +416,26 @@ class SaleOrdersClient extends ManagementClient
         }
     }
 
+    /**
+     * 获取销售报表汇总
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return array|\think\response\Json
+     */
     public function getTotalReport($where,$field = "*", $order = "")
     {
         $data = $this->getSaleOrdersDailyCountFind($where,$field,$order);
         return $this->rQ($data);
     }
 
+    /**
+     * 销售报表
+     * @param $where
+     * @param $pageNum
+     * @param string $order
+     * @return array|\think\response\Json
+     */
     public function getReportList($where,$pageNum,$order = "")
     {
         $field = "countDate,
@@ -438,6 +451,14 @@ class SaleOrdersClient extends ManagementClient
         return $this->rQ($this->getSaleOrdersDailyCountList($where,$pageNum,$field,$order,$group));
     }
 
+    /**
+     * 导出销售报表
+     * @param $where
+     * @param string $order
+     * @return array|\think\response\Json
+     * @throws \PHPExcel_Exception
+     * @throws \PHPExcel_Writer_Exception
+     */
     public function exportReport($where,$order = "")
     {
         $field = "countDate,
@@ -469,5 +490,27 @@ class SaleOrdersClient extends ManagementClient
             return $this->rAction($result);
         }
         return $this->rFail();
+    }
+
+    /**
+     * 礼品赠送数量，今天/昨天
+     * @param $where
+     * @return array|\think\response\Json
+     */
+    public function getGift($where)
+    {
+        $where['sod.is_gift'] = 1;
+        $where['so.out_status'] = 4;
+        $whereToday = $where;
+        $whereToday[] = ['so.create_time','between',[strtotime(date("Y-m-d 00:00:00")),strtotime(date("Y-m-d 23:59:59"))]];
+        $today = $this->joinSaleOrdersSum($whereToday,'sod.quantity');
+        $whereYesterday = $where;
+        $whereYesterday[] = ['so.create_time','between',[strtotime(date("Y-m-d 00:00:00",strtotime("-1 days"))),strtotime(date("Y-m-d 23:59:59",strtotime("-1 days")))]];
+        $yesterday = $this->joinSaleOrdersSum($whereYesterday,'sod.quantity');
+        $data = [
+            "today" => $today,
+            "yesterday" => $yesterday,
+        ];
+        return $this->rQ($data);
     }
 }

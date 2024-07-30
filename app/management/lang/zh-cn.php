@@ -439,6 +439,10 @@ return [
         "time_list_require" => "时间段列表不能为空",
         "screen_require" => "请选择屏幕",
         "screen_full_require" => "请选择是否全屏",
+        "push_type_require" => "推送类型不能为空",
+        "push_type_in" => "推送类型超出范围",
+
+
         "resource_is_del" => "当前广告素材已被删除",
 
         "query_machine_no_data" => "查无设备信息",
@@ -453,6 +457,9 @@ return [
         "order_no_data" => "查无订单信息",
         "order_id_require" => "订单ID不能为空",
         "refund_require" => "退款数据不能为空",
+
+        "payee_config_no_data" => "查无收款方配置信息",
+        "payee_config_no_json" => "收款方配置信息不是JSON方式",
     ],
 
     "VSaleOrdersUnclaimed" => [

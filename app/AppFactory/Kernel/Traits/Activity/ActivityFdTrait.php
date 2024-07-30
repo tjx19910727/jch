@@ -92,10 +92,17 @@ trait ActivityFdTrait
         $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
         if (!$this->order) return $this->rFail($this->lang("VActivityFd.order_no_data"));
         $this->order = $this->order->toArray();
+        if ($this->order['fd_id'] == $this->data['fd_id']) {
+            return $this->r(100,'VActivityFd.fd_used');
+        }
         actionLog($this->order,'订单信息');
         $this->fd = $this->getActivityFdFind(['fd_id' => $this->data['fd_id']]);
         if (!$this->fd) return $this->rFail($this->lang("VActivityFd.fd_no_data"));
         $this->fd = $this->fd->toArray();
+        $am = $this->getActivityMachineFind(['a_id' => $this->fd['fd_id'],'a_type' => 2, 'm_id' => $this->machine['machine_id']]);
+        if (!$am) return $this->r(100,$this->lang("VActivityFd.no_am_data"));
+
+
         actionLog($this->fd,'活动信息');
         if ($this->order['order_type'] > 1 && $this->order['order_type'] != 5) {
             if ($this->fd['exclusion'] == 1)
@@ -281,6 +288,7 @@ trait ActivityFdTrait
         $updateOrder = [];
         actionLog($this->countContent,'过滤后的最终优惠');
         if ($this->countContent['discount_price']) {
+            if (!$this->order['retail_price']) $updateOrder['retail_price'] = $this->order['total_price'];
             $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
             $updateOrder['total_price'] = bcsub($this->order['total_price'],$this->countContent['discount_price'],3);
             // 平均优惠金额
@@ -290,7 +298,7 @@ trait ActivityFdTrait
             $details = $details->toArray();
             foreach ($details as $dk => $dv) {
                 $updateSod['sod_id'] = $dv['sod_id'];
-                $updateSod['discount_price'] = $averagePrice;
+                $updateSod['discount_price'] = bcadd($dv['discount_price'], bcmul($averagePrice,$dv['quantity'],3), 3);;
                 $updateSod['total_sod_price'] = bcsub(bcmul($dv['retail_price'],$dv['quantity'],3),$averagePrice);
                 $flag[] = $this->updateSaleOrdersDetails($updateSod);
                 actionLog($this->getLS(),'【SQL】处理订单详情信息');

@@ -75,6 +75,16 @@ class Index extends Common
     }
 
     /**
+     * 礼品赠送，今天/昨天
+     * @return array|\think\response\Json
+     */
+    public function getGift()
+    {
+        $where = $this->getWhere([],false,[],'so.');
+        return $this->app->saleOrders->getGift($where);
+    }
+
+    /**
      * 获取销售折线图数据
      * @return array|string
      */

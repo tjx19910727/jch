@@ -29,9 +29,6 @@ trait AdvertisementPushTrait
      * @param string $field
      * @param string $order
      * @return \app\AppFactory\Kernel\Model\BaseModel|\app\AppFactory\Kernel\Model\BaseModel[]|array|\think\Collection|\think\Paginator
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
      */
     public function getAdvertisementPushList($where,$pageNum = 0, $field = "*", $order = "adv_id desc")
     {

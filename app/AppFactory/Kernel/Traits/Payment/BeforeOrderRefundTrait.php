@@ -37,8 +37,16 @@ trait BeforeOrderRefundTrait
         if (!$this->sod) {
             return $this->rValidate("查无购买的商品信息");
         }
+        if ($this->sod['quantity'] == $this->postData['refund']['quantity']) $this->sodRefundAmount = $this->sod['total_sod_price'];
         // 本次退款总金额
-        $this->sodRefundAmount = bcmul(bcsub($this->sod['retail_price'], $this->sod['discount_price'],3) , $this->postData['refund']['quantity'],3);
+        if (!$this->sodRefundAmount)
+            $this->sodRefundAmount = bcmul(bcdiv($this->sod['total_sod_price'],$this->sod['quantity'],2) , $this->postData['refund']['quantity'],3);
+
+        // 超过订单剩余可退金额或退款数量为最后剩下的数量时，重置为剩余可退金额
+        $refundAmount = bcsub($this->order['total_price'], $this->order['refund_amount'], 3);
+        if ($this->sodRefundAmount > $refundAmount || $this->order['total_quantity'] == $this->order['refund_quantity'] + $this->postData['refund']['quantity'])
+            $this->sodRefundAmount = $refundAmount;
+
 
         $this->sod['refund_quantity'] = bcadd($this->sod['refund_quantity'],$this->postData['refund']['quantity']);
         $this->sod['refund_amount'] = bcadd($this->sod['refund_amount'],$this->sodRefundAmount,3);
@@ -99,7 +107,7 @@ trait BeforeOrderRefundTrait
             $insertSor['refund_amount'] = bcsub($this->sodRefundAmount,$this->totalRefundMoney,2);
             $insertSor['manager_id'] = 0;
             $insertSor['nickname'] = "收款方";
-            $this->totalRefundMoney = $this->sod['total_sod_price'];
+            $this->totalRefundMoney = $this->sodRefundAmount;
             // 京东收银系统退款退分润
             if ($this->order['pay_type'] == 4 && $this->billList) {
                 if (!isset($this->strategyPayee['bill_account'])) {

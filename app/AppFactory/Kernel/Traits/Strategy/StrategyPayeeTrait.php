@@ -80,11 +80,11 @@ trait StrategyPayeeTrait
         $payee = $this->getMachinePayeeFind($where,$field,$order);
         if (!$payee) {
             actionLog($this->getLS(),'查无收款方配置');
-            return $this->rFail($this->lang("payee_config_no_data"));
+            return $this->rFail($this->lang("VSaleOrders.payee_config_no_data"));
         }
         if (is_string($payee)) return $this->rFail($payee);
         $content = json2arr($payee['content']);
-        if (!$content) return $this->rFail($this->lang("payee_config_no_json"));
+        if (!$content) return $this->rFail($this->lang("VSaleOrders.payee_config_no_json"));
         $content['sp_id'] = $payee['sp_id'];
         try {
             validate($this->vClass[$payee['payee_type']])->scene($this->scene[$payee['payee_type']])->check($content);

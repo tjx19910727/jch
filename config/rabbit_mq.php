@@ -41,6 +41,15 @@ return [
         'consumer_tag' => 'dataUpload',
     ],
 
+    # 导出Excel队列
+    'export_queue' => [
+        'exchange_name' => 'export_exchange',
+        'exchange_type' => 'topic',#主题
+        'queue_name' => 'export_queue',
+        'route_key' => 'export',
+        'consumer_tag' => 'export',
+    ],
+
     # 发送设备信息队列
     'dataSend_queue' => [
         'exchange_name' => 'dataSend_exchange',

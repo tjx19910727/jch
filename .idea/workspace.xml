@@ -2,16 +2,445 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0b425c8e-253d-4f3f-a4bc-dbf750314eff" name="Default" comment="">
-      <change afterPath="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/AliClient.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/WxClient.php" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/http/controller/redis/MicroPay.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersDetailsModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersDetailsModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthNodeTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthNodeTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AliPayTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AliPayTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Advertisement/AdvertisementPushTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Advertisement/AdvertisementPushTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/BeforeOrderRefundTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/BeforeOrderRefundTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Strategy/StrategyPayeeTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Strategy/StrategyPayeeTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponUsedClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponUsedClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/AppFactory/TimeTask/Application.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/TimeTask/Application.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/controller/goods/Goods.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/goods/Goods.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/machine/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/controller/Test.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/machine/lang/zh-cn.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/lang/zh-cn.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/AuthController.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/AuthController.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/Index.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/Index.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/advertisement/AdvertisementPush.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/advertisement/AdvertisementPush.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/lang/zh-cn.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/lang/zh-cn.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/config/rabbit_mq.php" beforeDir="false" afterPath="$PROJECT_DIR$/config/rabbit_mq.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404-538aa4d7.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404-a469b0f6.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404-ecc767d7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404_cloud-13362335.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404_cloud-98e7ac66.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/account-c99ab190.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/advment-76c4b5ab.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/assignDevices-6611423d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/bofang-77783c65.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/bofang-7c74f27f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/corner_bg-99f2f094.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/earth-b66cb6bc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/edit-15a83b3f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/edit-4e19ac8b.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-cascader-panel-737e395b.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-checkbox-9d92dfac.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-col-e302774d.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-collapse-item-a55878fe.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-date-picker-2727a897.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-dialog-042a3985.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-form-item-b118bbed.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-icon-593dfdc2.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-image-viewer-71675928.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-input-4058b509.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-link-1a8c6e48.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-message-box-9b1bd60e.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-overlay-f6b2674f.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-progress-72ebe088.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-radio-button-24e8de87.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-radio-ee15435e.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-radio-group-cacb5b7d.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-select-69f05b93.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-switch-b454e5d4.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-tab-pane-b2a6bdee.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-table-column-6ced8ba0.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-tag-390f8905.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-time-picker-0cff6c83.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/eventlog-f6e8ae45.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/excel-ff4bd26c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/getupdateplan-440fe830.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/getupdateplan-f8dd293c.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/goods-352f3202.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/guessDetails-e6400ff2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/hierarchy-bccfe207.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/images_Js-84e2a144.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0226b794.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0556d990.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-06e58db7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0cd7b6a1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0ede950a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0f22eeff.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-118ccb64.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-137aba92.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1756f6e3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-180a0187.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-19ea9bf0.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1a467576.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1a726c3d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1f056378.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1f3a36e7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1f85bec1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2324d719.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-24a607d9.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-25e6615a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-27f898b5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-28b0d567.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2a5359b6.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2a6b422d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2c1c9d07.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2d9c2d1b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2dd529f8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-30c56b9b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-321ac480.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-32c401de.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3343a723.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-34463789.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-369e144a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3813bb9f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3d5d6d60.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3d72c4a8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3f12d7b4.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-45fe2380.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-47c7f40f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-47e5b998.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-485f276c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-48f525bb.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4b02a7ea.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4b46a934.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4b49bd3d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4e228965.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4edd8fdf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5abaff8d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5c39b78e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5dee40a0.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-65f5a06b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-66a1810a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-67eddfb8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-69770f17.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6baf83ea.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6ee00170.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6f0bfd5f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-72ccbd6d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-75170b83.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-756fd453.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-77e41ada.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7caa3f07.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-80794ad4.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-85e97a20.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-86d7f50f.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-8e5a2efd.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-8e73db6d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-90985ead.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-91388641.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-91a4f3d3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-93f51533.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-95f6622a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-96fc27ed.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-97b97462.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-99e98282.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9bb26090.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9e4a1d6e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a00d17ea.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a45d0c32.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a499a40b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ad23b5f0.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ad847a22.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b449b950.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b4600532.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b5a08928.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b79938a6.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b8fc252e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-bb45f423.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-bd1457ad.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-bd910907.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-be5e71af.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c3938490.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c4675944.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c78753e4.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-caaea5c2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-cca41531.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-cd2f8e34.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ce33e82c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ceeb3543.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-cefe9dfc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-cf3402dd.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d104b200.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d37787e6.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d46426e2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-dc87b9d2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e029528a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e040b119.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e2aef664.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e2ffbfd2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e49d476e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e4a50fea.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e624d8eb.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e721ef90.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e9b16e23.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ea6e9b88.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f054ceaa.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f19e4461.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f318ee11.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f6bec92e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-fa75f2b6.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-fb34778d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-0573ab6d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-1ac0cf89.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-2e4ed81a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-ea214d31.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/level-ce004cf5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/list_info.vue_vue_type_script_setup_true_lang-0c633586.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/log-c6f214f7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/login-bg-cc6fd711.webp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine-0bb2dc01.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine-bc605870.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine-d636ea92.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_software-314c3de6.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_top-14a3f544.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_top.vue_vue_type_script_setup_true_lang-1e606cdd.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_trade-3f844bd5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_type-f0e0e6e3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/manage-1d304e01.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/manager-34765fc3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/marketing-a4e2817e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/newsurprise1zh-32f825fd.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/newsurprise2zh-e962832e.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/order-b1850b8e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/payee-5ed49694.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/pickupCodeDetails-044d8287.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/preferentialDetails-85ee190c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/presets-2742672f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/preview-d567de8c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/product-51d0f21d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/reductionDetails-e3214675.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/replace-d3acaac8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/report-88d580da.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/sao-9e4f9943.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/shop-b3b4fb7f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/sketch_map_zh-7b01daa4.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/sound-9662ae57.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/strategy-037df8ce.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/system-api-b051839b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/system-mail-4e55f750.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/template-4752c387.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/template-63c0f673.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/title-3c66ca8d.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/unPic-20a26dea.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/unPic-e1bc9dbb.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/useRequset-f4021161.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/vuedraggable.umd-0929a93e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/config.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/config.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/langs/zh-Hans.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojiimages.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojiimages.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojis.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojis.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ar.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/bg_BG.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ca.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/cs.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/da.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/de.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/el.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/en.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/es.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/eu.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fa.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fr_FR.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/he_IL.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hr.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hu_HU.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/id.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/it.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ja.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/kk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ko_KR.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ms.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/nb_NO.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/nl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pt_BR.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pt_PT.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ro.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ru.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sl_SI.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sv_SE.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/th_TH.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/tr.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/uk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/vi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh-Hans.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh_CN.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh_TW.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/tinymce.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/vite.svg" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -39,76 +468,79 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="ActivityClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
+      <file leaf-file-name="SaleOrdersClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="467">
-              <caret line="561" column="7" lean-forward="true" selection-start-line="561" selection-start-column="7" selection-end-line="561" selection-end-column="7" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ActivityFdTrait.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="5896">
-              <caret line="313" column="9" selection-start-line="313" selection-start-column="9" selection-end-line="313" selection-end-column="9" />
+            <state relative-caret-position="447">
+              <caret line="272" column="50" lean-forward="true" selection-start-line="272" selection-start-column="50" selection-end-line="272" selection-end-column="50" />
               <folding>
-                <element signature="e#7316#7341#0#PHP" />
-                <element signature="e#7346#7711#0#PHP" />
-                <element signature="e#7717#7746#0#PHP" />
-                <element signature="e#7751#8116#0#PHP" />
-                <element signature="e#8122#8150#0#PHP" />
-                <element signature="e#8155#8586#0#PHP" />
+                <element signature="e#139#179#0#PHP" expanded="true" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="ApiClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
+      <file leaf-file-name="AuthManagerLogClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="13178">
-              <caret line="689" column="75" selection-start-line="689" selection-start-column="75" selection-end-line="689" selection-end-column="75" />
+            <state relative-caret-position="91">
+              <caret line="134" column="52" selection-start-line="134" selection-start-column="52" selection-end-line="134" selection-end-column="52" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="MqConsumer.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="531">
+              <caret line="188" column="36" lean-forward="true" selection-start-line="188" selection-start-column="36" selection-end-line="188" selection-end-column="36" />
               <folding>
-                <element signature="e#25813#28891#0#PHP" />
+                <element signature="e#133#163#0#PHP" expanded="true" />
+                <element signature="e#816#2052#0#PHP" />
+                <element signature="e#2115#4225#0#PHP" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="SaleOrdersTrait.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php">
+      <file leaf-file-name="ExportClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Export/ExportClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1958">
-              <caret line="96" column="20" selection-start-line="96" selection-start-column="20" selection-end-line="96" selection-end-column="20" />
+            <state relative-caret-position="421">
+              <caret line="25" column="42" lean-forward="true" selection-start-line="25" selection-start-column="42" selection-end-line="25" selection-end-column="42" />
+              <folding>
+                <element signature="e#140#180#0#PHP" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Index.php" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/app/management/controller/Index.php">
+      <file leaf-file-name="Test.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-1009">
-              <caret line="28" column="34" selection-start-line="28" selection-start-column="20" selection-end-line="28" selection-end-column="34" />
+            <state relative-caret-position="665">
+              <caret line="130" column="31" lean-forward="true" selection-start-line="130" selection-start-column="31" selection-end-line="130" selection-end-column="31" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Common.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/management/controller/Common.php">
+      <file leaf-file-name="ActivityCouponTrait.php" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2508">
-              <caret line="121" column="60" selection-start-line="121" selection-start-column="60" selection-end-line="121" selection-end-column="60" />
+            <state relative-caret-position="624">
+              <caret line="178" column="13" lean-forward="true" selection-start-line="178" selection-start-column="13" selection-end-line="178" selection-end-column="13" />
+              <folding>
+                <element signature="e#146#214#0#PHP" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="AuthNodeTrait.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthNodeTrait.php">
+      <file leaf-file-name="Excel.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Excel.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="1540">
-              <caret line="75" column="76" selection-start-line="75" selection-start-column="76" selection-end-line="75" selection-end-column="76" />
+            <state relative-caret-position="800">
+              <caret line="168" column="24" selection-start-line="168" selection-start-column="15" selection-end-line="168" selection-end-column="24" />
             </state>
           </provider>
         </entry>
@@ -124,14 +556,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>getMachine</find>
-      <find>021</find>
-      <find>10021002407190836240705030859441</find>
-      <find>2024071911112638931436</find>
-      <find>goods</find>
-      <find>$this-&gt;currentMenu</find>
-      <find>getMachineChannel</find>
-      <find>subCar</find>
       <find>2024072009301137233020</find>
       <find>onAfterInsert</find>
       <find>2024072015460432024957</find>
@@ -145,7 +569,6 @@
       <find>aliRefund</find>
       <find>upload</find>
       <find>dump</find>
-      <find>refund</find>
       <find>0021</find>
       <find>getMachineOno</find>
       <find>满减</find>
@@ -154,6 +577,15 @@
       <find>$this-&gt;fd</find>
       <find>sub</find>
       <find>1923</find>
+      <find>VAdvertis</find>
+      <find>MachinePay</find>
+      <find>payee_config_no_json</find>
+      <find>totalRefundMoney</find>
+      <find>$averagePrice</find>
+      <find>VActivityFd</find>
+      <find>refund</find>
+      <find>Excel::</find>
+      <find>designated_machine</find>
     </findStrings>
     <replaceStrings>
       <replace>WxOfficial</replace>
@@ -197,57 +629,57 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/CommonTrait.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerTrait.php" />
-        <option value="$PROJECT_DIR$/app/management/controller/Common.php" />
-        <option value="$PROJECT_DIR$/app/management/controller/Index.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Validate/Pay/VWxPay.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Strategy/StrategyPayeeTrait.php" />
-        <option value="$PROJECT_DIR$/extend/WeChatPayV3/Payment/Kernel/BaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Pay/PayBaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/JdCashierTrait.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php" />
-        <option value="$PROJECT_DIR$/app/pay/controller/notify/Wx.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Send/MqClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Goods/GoodsClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Goods/GoodsModel.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Pay/Notify/WxClient.php" />
-        <option value="$PROJECT_DIR$/app/wx/controller/Official.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Wx/WxBaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Wx/Official/OfficialClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Wx/Official/OfficialProvider.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Wx/Application.php" />
-        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Pay/SaleOrders/PaymentClient.php" />
-        <option value="$PROJECT_DIR$/extend/AliPay/trade/TradeClient.php" />
-        <option value="$PROJECT_DIR$/extend/AliPay/Kernel/BaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/MqClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsTrait.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php" />
-        <option value="$PROJECT_DIR$/extend/AliPay/aop/AopCertClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Pay/Notify/AliClient.php" />
         <option value="$PROJECT_DIR$/app/pay/controller/notify/Ali.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php" />
-        <option value="$PROJECT_DIR$/public/vue/config.js" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Excel.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderRefundTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/TlPayTrait.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AliPayTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Pay/MicroPayClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Pay/MicroPayProvider.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Application.php" />
         <option value="$PROJECT_DIR$/app/http/controller/redis/MicroPay.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/WxClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/AliClient.php" />
         <option value="$PROJECT_DIR$/app/management/controller/goods/Goods.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthNodeTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Export/ExportLogModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Export/ExportLogTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Export/ExportClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Providers/Management/ExportProvider.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Export/ExportLogClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersDetailsModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/Index.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/advertisement/AdvertisementPush.php" />
+        <option value="$PROJECT_DIR$/app/management/validate/Machine/VMachineAdvance.php" />
+        <option value="$PROJECT_DIR$/.env" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Advertisement/AdvertisementPushTrait.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/machine/MachineAdvance.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponUsedClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponClient.php" />
+        <option value="$PROJECT_DIR$/public/vue/config.js" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Strategy/StrategyPayeeTrait.php" />
+        <option value="$PROJECT_DIR$/app/management/lang/zh-cn.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/AuthController.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/BeforeOrderRefundTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" />
+        <option value="$PROJECT_DIR$/app/machine/lang/zh-cn.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php" />
+        <option value="$PROJECT_DIR$/config/rabbit_mq.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Providers/TimeTask/ExportProvider.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Providers/TimeTask/PaymentProvider.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Application.php" />
+        <option value="$PROJECT_DIR$/app/command/ExportQueue.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Export/ExportClient.php" />
+        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php" />
       </list>
     </option>
   </component>
@@ -376,7 +808,67 @@
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="api" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="api" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+              <item name="Traits" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+              <item name="Traits" type="462c0819:PsiDirectoryNode" />
+              <item name="Activity" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Management" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Management" type="462c0819:PsiDirectoryNode" />
+              <item name="Advertisement" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Management" type="462c0819:PsiDirectoryNode" />
+              <item name="Sale" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
@@ -389,34 +881,44 @@
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="TimeTask" type="462c0819:PsiDirectoryNode" />
+              <item name="Export" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="TimeTask" type="462c0819:PsiDirectoryNode" />
+              <item name="Goods" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="TimeTask" type="462c0819:PsiDirectoryNode" />
+              <item name="Payment" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="command" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="http" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="http" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
               <item name="controller" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="http" type="462c0819:PsiDirectoryNode" />
-              <item name="controller" type="462c0819:PsiDirectoryNode" />
-              <item name="redis" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
-              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="index" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
@@ -437,17 +939,19 @@
               <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="management" type="462c0819:PsiDirectoryNode" />
               <item name="controller" type="462c0819:PsiDirectoryNode" />
-              <item name="goods" type="462c0819:PsiDirectoryNode" />
+              <item name="advertisement" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="public" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
+              <item name="lang" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
-              <item name="runtime" type="462c0819:PsiDirectoryNode" />
+              <item name="config" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -474,19 +978,19 @@
     <property name="settings.editor.selected.configurable" value="reference.webide.settings.project.settings.php" />
   </component>
   <component name="RecentsManager">
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="E:\project\project-70-cf.com\app\AppFactory\TimeTask" />
-      <recent name="E:\project\project-70-cf.com\extend\WeChatPayV3\Kernel\Support" />
-      <recent name="E:\project\project-70-cf.com\app\command" />
-      <recent name="E:\project\project-70-cf.com\public\uploads" />
-      <recent name="E:\project\project-70-cf.com\public\uploads\excel" />
-    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="E:\project\project-70-cf.com\app\AppFactory\Wx\Official" />
       <recent name="E:\project\project-70-cf.com\app\AppFactory\Api\V2" />
       <recent name="E:\project\project-70-cf.com\app\management\validate\Config" />
       <recent name="E:\project\project-70-cf.com\app\AppFactory\Kernel\Model\Goods" />
       <recent name="E:\project\project-70-cf.com\app\AppFactory\Kernel\Traits\Goods" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\project\project-70-cf.com\app\command" />
+      <recent name="E:\project\project-70-cf.com\app\AppFactory\TimeTask" />
+      <recent name="E:\project\project-70-cf.com\extend\WeChatPayV3\Kernel\Support" />
+      <recent name="E:\project\project-70-cf.com\public\uploads" />
+      <recent name="E:\project\project-70-cf.com\public\uploads\excel" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -549,12 +1053,12 @@
       <workItem from="1719811900884" duration="5676000" />
       <workItem from="1719988985157" duration="157329000" />
       <workItem from="1721962927714" duration="3034000" />
-      <workItem from="1722058578930" duration="1521000" />
+      <workItem from="1722058578930" duration="27978000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="1987316000" />
+    <option name="totallyTimeSpent" value="2013773000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -567,17 +1071,20 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="1912" y="-8" width="1936" height="1096" extended-state="6" />
+    <editor active="true" />
     <layout>
       <window_info anchor="bottom" id="TODO" order="6" weight="0.3290461" />
       <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" />
       <window_info anchor="bottom" id="Database Changes" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="File Transfer" order="8" weight="0.33226153" />
       <window_info anchor="bottom" id="Version Control" order="7" weight="0.3290461" />
       <window_info anchor="bottom" id="Run" order="2" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="7" visible="true" weight="0.32583067" />
+      <window_info anchor="bottom" id="Terminal" order="7" weight="0.32583067" />
       <window_info anchor="right" id="Remote Host" order="4" weight="0.26226014" />
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.2238806" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.2238806" />
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="right" id="Database" order="3" weight="0.32995737" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.3290461" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
@@ -587,8 +1094,6 @@
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="File Transfer" order="8" weight="0.33226153" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.3290461" />
     </layout>
     <layout-to-restore>
       <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
@@ -636,59 +1141,239 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/app/pay/lang/zh-cn.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="522">
+          <caret line="45" column="58" selection-start-line="45" selection-start-column="58" selection-end-line="45" selection-end-column="58" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/Index.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="531">
+          <caret line="83" column="55" lean-forward="true" selection-start-line="83" selection-start-column="55" selection-end-line="83" selection-end-column="55" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/validate/VAdvertisement.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="729">
+          <caret line="45" column="6" lean-forward="true" selection-start-line="12" selection-start-column="1" selection-end-line="45" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineChannelStockClient.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/validate/Machine/VMachineAdvance.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="509">
+          <caret line="40" column="60" lean-forward="true" selection-start-line="40" selection-start-column="60" selection-end-line="40" selection-end-column="60" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/advertisement/AdvertisementRecord.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="264">
-          <caret line="17" column="26" selection-start-line="17" selection-start-column="5" selection-end-line="17" selection-end-column="26" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Config/ConfigTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="599">
-          <caret line="70" column="7" lean-forward="true" selection-start-line="70" selection-start-column="7" selection-end-line="70" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ReceiveBaseClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="550">
-          <caret line="36" column="18" selection-start-line="36" selection-start-column="18" selection-end-line="36" selection-end-column="18" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/CommonTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="302">
-          <caret line="55" column="36" selection-start-line="55" selection-start-column="36" selection-end-line="55" selection-end-column="36" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Goods/GoodsModel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-88">
-          <caret line="19" column="30" selection-start-line="19" selection-start-column="30" selection-end-line="19" selection-end-column="30" />
+          <caret line="17" column="55" selection-start-line="17" selection-start-column="55" selection-end-line="17" selection-end-column="55" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="729">
-          <caret line="140" column="5" lean-forward="true" selection-start-line="140" selection-start-column="5" selection-end-line="140" selection-end-column="5" />
+        <state relative-caret-position="-94">
+          <caret line="66" column="27" selection-start-line="66" selection-start-column="27" selection-end-line="66" selection-end-column="27" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Advertisement/AdvertisementPushTrait.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="445">
-          <caret line="47" lean-forward="true" selection-start-line="47" selection-end-line="47" />
+        <state relative-caret-position="192">
+          <caret line="22" column="41" selection-start-line="22" selection-start-column="41" selection-end-line="22" selection-end-column="41" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="333">
+          <caret line="133" column="99" selection-start-line="133" selection-start-column="99" selection-end-line="133" selection-end-column="99" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponUsedClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="412">
+          <caret line="40" column="50" lean-forward="true" selection-start-line="40" selection-start-column="50" selection-end-line="40" selection-end-column="50" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/activity/ActivityCoupon.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="528">
+          <caret line="56" column="46" selection-start-line="56" selection-start-column="46" selection-end-line="56" selection-end-column="46" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/api/controller/Common.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/api/controller/V2.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/activity/ActivityCouponUsed.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="550">
+          <caret line="57" column="33" selection-start-line="57" selection-start-column="33" selection-end-line="57" selection-end-column="33" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/public/vue/config.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="66">
+          <caret line="3" selection-start-line="3" selection-end-line="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineAdvance.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="311">
+          <caret line="28" column="99" lean-forward="true" selection-start-line="28" selection-start-column="99" selection-end-line="28" selection-end-column="99" />
+          <folding>
+            <element signature="e#143#180#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Strategy/StrategyPayeeTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="412">
+          <caret line="82" column="81" lean-forward="true" selection-start-line="82" selection-start-column="81" selection-end-line="82" selection-end-column="81" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/BeforeOrderRefundTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="377">
+          <caret line="39" column="32" selection-start-line="39" selection-start-column="24" selection-end-line="39" selection-end-column="32" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/app/management/controller/AuthController.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="533">
-          <caret line="54" lean-forward="true" selection-start-line="54" selection-end-line="54" />
+        <state relative-caret-position="267">
+          <caret line="25" column="5" selection-start-line="25" selection-start-column="5" selection-end-line="25" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="267">
+          <caret line="172" column="78" selection-start-line="172" selection-start-column="78" selection-end-line="172" selection-end-column="78" />
+          <folding>
+            <element signature="e#141#207#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/validate/VReceive.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="440">
+          <caret line="25" lean-forward="true" selection-start-line="25" selection-end-line="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/lang/zh-cn.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="370">
+          <caret line="140" column="37" selection-start-line="140" selection-start-column="37" selection-end-line="140" selection-end-column="37" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="181">
+          <caret line="74" column="5" lean-forward="true" selection-start-line="74" selection-start-column="5" selection-end-line="74" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/common.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="324">
+          <caret line="265" column="1" lean-forward="true" selection-start-line="265" selection-start-column="1" selection-end-line="268" selection-end-column="51" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="135">
+          <caret line="371" column="12" lean-forward="true" selection-start-line="371" selection-start-column="12" selection-end-line="371" selection-end-column="12" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/Common.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="308">
+          <caret line="21" lean-forward="true" selection-start-line="21" selection-end-line="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="707">
+          <caret line="573" column="29" selection-start-line="573" selection-start-column="29" selection-end-line="573" selection-end-column="29" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="382">
+          <caret line="66" column="29" lean-forward="true" selection-start-line="66" selection-start-column="29" selection-end-line="66" selection-end-column="29" />
+          <folding>
+            <element signature="e#7316#7341#0#PHP" />
+            <element signature="e#7346#7711#0#PHP" />
+            <element signature="e#7717#7746#0#PHP" />
+            <element signature="e#7751#8116#0#PHP" />
+            <element signature="e#8122#8150#0#PHP" />
+            <element signature="e#8155#8586#0#PHP" />
+            <element signature="e#8592#8622#0#PHP" />
+            <element signature="e#8627#8862#0#PHP" />
+            <element signature="e#8868#8921#0#PHP" />
+            <element signature="e#8926#10401#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Export/ExportLogClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="242">
+          <caret line="16" column="16" selection-start-line="16" selection-start-column="16" selection-end-line="16" selection-end-column="16" />
+          <folding>
+            <element signature="e#142#197#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/lang/zh-cn/app.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/lang/zh-cn.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="308">
+          <caret line="14" column="19" selection-start-line="14" selection-start-column="9" selection-end-line="14" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.env">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="445">
+          <caret line="31" column="23" lean-forward="true" selection-start-line="31" selection-start-column="23" selection-end-line="31" selection-end-column="23" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config/rabbit_mq.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="553">
+          <caret line="43" column="15" lean-forward="true" selection-start-line="43" selection-start-column="15" selection-end-line="43" selection-end-column="15" />
         </state>
       </provider>
     </entry>
@@ -699,296 +1384,143 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Providers/TimeTask/ExportProvider.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="338">
-          <caret line="54" column="19" selection-start-line="54" selection-start-column="12" selection-end-line="54" selection-end-column="19" />
+        <state relative-caret-position="374">
+          <caret line="22" column="10" selection-start-line="22" selection-start-column="10" selection-end-line="22" selection-end-column="10" />
+          <folding>
+            <element signature="e#150#186#0#PHP" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/MqClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="25">
-          <caret line="72" column="50" lean-forward="true" selection-start-line="72" selection-start-column="50" selection-end-line="72" selection-end-column="50" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/pay/controller/Payment.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="533">
-          <caret line="51" column="39" lean-forward="true" selection-start-line="51" selection-start-column="39" selection-end-line="51" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/SaleOrders/PaymentClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1273">
-          <caret line="28" column="24" lean-forward="true" selection-start-line="28" selection-start-column="24" selection-end-line="28" selection-end-column="24" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersRefundTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="302">
-          <caret line="25" column="20" selection-start-line="25" selection-start-column="20" selection-end-line="25" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/PayBaseClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="176">
-          <caret line="16" column="6" selection-start-line="16" selection-start-column="6" selection-end-line="16" selection-end-column="6" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/pay/controller/notify/JdCashier.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="355">
-          <caret line="27" column="49" selection-start-line="27" selection-start-column="49" selection-end-line="27" selection-end-column="49" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/Notify/JdCashierClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="465">
-          <caret line="73" column="14" lean-forward="true" selection-start-line="73" selection-start-column="14" selection-end-line="78" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="352">
-          <caret line="49" selection-start-line="49" selection-end-line="49" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/.env">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="291">
-          <caret line="21" column="41" selection-start-line="21" selection-start-column="9" selection-end-line="21" selection-end-column="41" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1149">
-          <caret line="209" column="44" selection-start-line="209" selection-start-column="44" selection-end-line="209" selection-end-column="44" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineVersionPlanClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="572">
-          <caret line="35" column="32" selection-start-line="35" selection-start-column="32" selection-end-line="35" selection-end-column="32" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineVersionPlan.php">
+    <entry file="file://$PROJECT_DIR$/app/command/TimeTask.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="506">
-          <caret line="29" column="28" lean-forward="true" selection-start-line="29" selection-start-column="28" selection-end-line="29" selection-end-column="28" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/pay/controller/notify/Ali.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="396">
-          <caret line="23" column="38" lean-forward="true" selection-start-line="23" selection-start-column="38" selection-end-line="23" selection-end-column="38" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/Notify/AliClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="333">
-          <caret line="39" column="36" lean-forward="true" selection-start-line="39" selection-start-column="36" selection-end-line="39" selection-end-column="36" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/public/vue/config.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="66">
-          <caret line="3" lean-forward="true" selection-start-line="3" selection-end-line="3" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/extend/AliPay/aop/AopCertClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="467">
-          <caret line="109" column="40" lean-forward="true" selection-start-line="109" selection-start-column="40" selection-end-line="109" selection-end-column="40" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/extend/AliPay/Kernel/BaseClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="514">
-          <caret line="144" column="39" selection-start-line="144" selection-start-column="39" selection-end-line="144" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/extend/AliPay/trade/TradeClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="382">
-          <caret line="157" column="29" lean-forward="true" selection-start-line="157" selection-start-column="29" selection-end-line="157" selection-end-column="29" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="487">
-          <caret line="86" column="45" selection-start-line="86" selection-start-column="45" selection-end-line="86" selection-end-column="45" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderRefundTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="528">
-          <caret line="41" column="20" selection-start-line="41" selection-start-column="15" selection-end-line="41" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/TlPayTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="33" column="89" lean-forward="true" selection-start-line="33" selection-start-column="89" selection-end-line="33" selection-end-column="89" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="264">
-          <caret line="17" column="56" selection-start-line="17" selection-start-column="56" selection-end-line="17" selection-end-column="56" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Pay/PayProvider.php" />
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Pay/MicroPayClient.php" />
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Application.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="28" column="31" lean-forward="true" selection-start-line="28" selection-start-column="31" selection-end-line="28" selection-end-column="31" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AliPayTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="572">
-          <caret line="127" column="33" selection-start-line="127" selection-start-column="33" selection-end-line="127" selection-end-column="33" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/http/controller/redis/MicroPay.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="484">
-          <caret line="28" column="49" selection-start-line="28" selection-start-column="49" selection-end-line="28" selection-end-column="49" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/WxClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="902">
-          <caret line="52" column="42" selection-start-line="52" selection-start-column="42" selection-end-line="52" selection-end-column="42" />
+          <caret line="57" column="50" lean-forward="true" selection-start-line="57" selection-start-column="50" selection-end-line="58" selection-end-column="46" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/AliClient.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1760">
-          <caret line="91" column="36" selection-start-line="91" selection-start-column="36" selection-end-line="91" selection-end-column="36" />
+        <state relative-caret-position="-129" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/command/ExportQueue.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="484">
+          <caret line="25" column="31" lean-forward="true" selection-start-line="25" selection-start-column="31" selection-end-line="25" selection-end-column="31" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsTrait.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Providers/TimeTask/PaymentProvider.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="528">
-          <caret line="51" column="5" lean-forward="true" selection-start-line="51" selection-start-column="5" selection-end-line="51" selection-end-column="5" />
+        <state relative-caret-position="374">
+          <caret line="22" column="39" lean-forward="true" selection-start-line="22" selection-start-column="39" selection-end-line="22" selection-end-column="39" />
+          <folding>
+            <element signature="e#150#186#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Application.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="682">
+          <caret line="36" column="30" lean-forward="true" selection-start-line="36" selection-start-column="30" selection-end-line="36" selection-end-column="30" />
+          <folding>
+            <element signature="e#132#197#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Export/ExportLogTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-198">
+          <caret line="14" column="6" selection-start-line="14" selection-start-column="6" selection-end-line="14" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Advertisement/AdvertisementPushClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-3077">
+          <caret line="28" column="44" selection-start-line="28" selection-start-column="44" selection-end-line="28" selection-end-column="44" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/advertisement/AdvertisementPush.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="396">
+          <caret line="42" column="15" lean-forward="true" selection-start-line="42" selection-start-column="15" selection-end-line="42" selection-end-column="15" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Excel.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="24" column="23" lean-forward="true" selection-start-line="24" selection-start-column="23" selection-end-line="24" selection-end-column="23" />
+        <state relative-caret-position="800">
+          <caret line="168" column="24" selection-start-line="168" selection-start-column="15" selection-end-line="168" selection-end-column="24" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsClient.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Export/ExportClient.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="492">
-          <caret line="76" column="33" selection-start-line="76" selection-start-column="33" selection-end-line="76" selection-end-column="33" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/goods/Goods.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="22" column="7" selection-start-line="22" selection-start-column="7" selection-end-line="22" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="8316">
-          <caret line="385" column="40" selection-start-line="385" selection-start-column="40" selection-end-line="385" selection-end-column="40" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/Common.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2508">
-          <caret line="121" column="60" selection-start-line="121" selection-start-column="60" selection-end-line="121" selection-end-column="60" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="467">
-          <caret line="561" column="7" lean-forward="true" selection-start-line="561" selection-start-column="7" selection-end-line="561" selection-end-column="7" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthNodeTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1540">
-          <caret line="75" column="76" selection-start-line="75" selection-start-column="76" selection-end-line="75" selection-end-column="76" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1958">
-          <caret line="96" column="20" selection-start-line="96" selection-start-column="20" selection-end-line="96" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="13178">
-          <caret line="689" column="75" selection-start-line="689" selection-start-column="75" selection-end-line="689" selection-end-column="75" />
+        <state relative-caret-position="421">
+          <caret line="25" column="42" lean-forward="true" selection-start-line="25" selection-start-column="42" selection-end-line="25" selection-end-column="42" />
           <folding>
-            <element signature="e#25813#28891#0#PHP" />
+            <element signature="e#140#180#0#PHP" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="5896">
-          <caret line="313" column="9" selection-start-line="313" selection-start-column="9" selection-end-line="313" selection-end-column="9" />
+        <state relative-caret-position="352">
+          <caret line="25" column="19" lean-forward="true" selection-start-line="25" selection-start-column="19" selection-end-line="25" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="447">
+          <caret line="272" column="50" lean-forward="true" selection-start-line="272" selection-start-column="50" selection-end-line="272" selection-end-column="50" />
           <folding>
-            <element signature="e#7316#7341#0#PHP" />
-            <element signature="e#7346#7711#0#PHP" />
-            <element signature="e#7717#7746#0#PHP" />
-            <element signature="e#7751#8116#0#PHP" />
-            <element signature="e#8122#8150#0#PHP" />
-            <element signature="e#8155#8586#0#PHP" />
+            <element signature="e#139#179#0#PHP" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/Index.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1009">
-          <caret line="28" column="34" selection-start-line="28" selection-start-column="20" selection-end-line="28" selection-end-column="34" />
+        <state relative-caret-position="531">
+          <caret line="188" column="36" lean-forward="true" selection-start-line="188" selection-start-column="36" selection-end-line="188" selection-end-column="36" />
+          <folding>
+            <element signature="e#133#163#0#PHP" expanded="true" />
+            <element signature="e#816#2052#0#PHP" />
+            <element signature="e#2115#4225#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="91">
+          <caret line="134" column="52" selection-start-line="134" selection-start-column="52" selection-end-line="134" selection-end-column="52" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="665">
+          <caret line="130" column="31" lean-forward="true" selection-start-line="130" selection-start-column="31" selection-end-line="130" selection-end-column="31" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="624">
+          <caret line="178" column="13" lean-forward="true" selection-start-line="178" selection-start-column="13" selection-end-line="178" selection-end-column="13" />
+          <folding>
+            <element signature="e#146#214#0#PHP" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
