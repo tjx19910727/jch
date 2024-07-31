@@ -44,7 +44,7 @@ class AuthManagerClient extends ManagementClient
             $result = $this->wx_app->qrcode->temporary("1_$manager_id", 2 * 3600);
             return $this->r(200, '获取成功', $result);
         } catch (\Exception $e) {
-            return $this->rValidate($e->getMessage());
+            return $this->r(100,'微信返回错误信息：' . $e->getMessage());
         }
     }
 }

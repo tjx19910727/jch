@@ -207,4 +207,29 @@ class SaleOrders extends Common
         $where = $this->getWhere($postData,false,["machine_id" => "like"]);
         return $this->app->saleOrders->exportReport($where,$order);
     }
+
+    /**
+     * 销售数据概况
+     * @return array|\think\response\Json
+     */
+    public function saleDataCollect()
+    {
+        $postData = input();
+        if (!isset($postData['create_time'])) $postData['create_time'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
+        $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
+        return $this->app->saleOrders->saleDataCollect($where);
+
+    }
+
+    /**
+     * 销售数据列表
+     * @return array|\think\response\Json
+     */
+    public function saleDataList()
+    {
+        $postData = input();
+        if (!isset($postData['create_time'])) $postData['create_time'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
+        $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
+        return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20);
+    }
 }

@@ -99,6 +99,11 @@ trait SaleOrdersTrait
         return SaleOrdersModel::update($update,$where,$field);
     }
 
+    public function joinSoSodColumn($where,$column,$group = "")
+    {
+        return SaleOrdersModel::joinSodColumn($where,$column,$group);
+    }
+
     public function getSaleOrdersDetailsJoinOrderList($where,$pageNum = 0,$field = "*", $order = "",$group = "")
     {
         return SaleOrdersDetailsModel::joinOrderList($where,$pageNum,$field,$order,$group);

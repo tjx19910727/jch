@@ -10,12 +10,47 @@ namespace app\AppFactory\Management\Machine;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Support\Tree;
+use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class MachineGoodsClient extends ManagementClient
 {
     use MachineGoodsTrait;
+    use GoodsCategoryTrait;
+
+    public function getGcList($where)
+    {
+        $tree = [];
+        $data = $this->getMachineGoodsColumn($where, "gc_id");
+        if ($data) {
+            $tree = $this->buildGcTree($data);
+        }
+        return $this->r(200,$this->lang("query_success"),$tree);
+    }
+
+    protected function buildGcTree($gcIds)
+    {
+        $tree = [];
+        $packData = [];
+        foreach ($gcIds as $k => $v) {
+            $gc = $this->getGoodsCategoryFind(['gc_id' => $v],"gc_id,gc_name,sort gc_sort,gc_pid");
+            if ($gc) {
+                $gc = $gc->toArray();
+                $packData[] = $gc;
+                if ($gc['gc_pid']) {
+                    $packData = array_merge($packData,$this->getGcParent($gc['gc_pid'], 'gc_id,gc_name,sort gc_sort,gc_pid'));
+                }
+            }
+        }
+        if ($packData) {
+            $tree = Tree::generateTree($packData,'gc_id','gc_pid');
+        }
+        return $tree;
+    }
+
+
 
     public function addMg($postData)
     {

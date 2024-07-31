@@ -60,5 +60,15 @@ class SaleOrdersModel extends BaseModel
         return $data;
     }
 
+    public static function joinSodColumn($where,$column,$group = "")
+    {
+        $data = self::alias("so")
+            ->join("sale_orders_details sod","sod.order_id = so.order_id","left")
+            ->where($where)
+            ->group($group)
+            ->column($column);
+        return $data;
+    }
+
 
 }

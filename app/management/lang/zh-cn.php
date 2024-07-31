@@ -303,6 +303,8 @@ return [
     "VMachineGroupMg" => [
         "mg_id_require" => "设备分组ID不能为空",
         "m_id_require" => "设备ID不能为空",
+
+        "machine_list_empty" => "当前分组没有绑定设备",
     ],
 
     "VMachineGroupLang" => [
@@ -341,6 +343,7 @@ return [
 
     "VMachineErrorCode" => [
         "me_id_require" => "请选择错误码信息",
+        "error_code_require" => "错误码不能为空",
     ],
     "VMachineConfig" => [
         "mc_id_require" => "设备配置ID不能为空",

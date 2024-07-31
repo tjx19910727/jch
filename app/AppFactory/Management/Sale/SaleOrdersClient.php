@@ -11,6 +11,7 @@ namespace app\AppFactory\Management\Sale;
 
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsHitTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Payment\AliPayTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
@@ -40,6 +41,7 @@ class SaleOrdersClient extends ManagementClient
     use StrategyPayeeTrait;
     use BeforeOrderRefundTrait, AfterOrderRefundTrait;
     use WxPayTrait, AliPayTrait, JdCashierTrait;
+    use GoodsHitTrait;
 
     public $order;
     public $sod;
@@ -482,5 +484,98 @@ class SaleOrdersClient extends ManagementClient
             "yesterday" => $yesterday,
         ];
         return $this->rQ($data);
+    }
+
+    /**
+     *  销售数据概况
+     *  totalQuantity 总销售量（包含赠品）
+     *
+     *  totalClick           点击次数
+     *  clickConversionRate  点击转化率
+     *  totalSaleQuantity    实际销售量 = 总销售量 - 赠品数量
+     *  totalPrice           实际销售额 = SUM（实际支付金额 - 退款金额）
+     *  totalDiscountPrice   总优惠额
+     *  totalGift            赠品数量
+     *  totalCostPrice       总成本
+     *  profitAmount         利润额 = 实际销售额 - 总成本
+     *  averageRetailPrice   平均售价 = 实际销售额 / 实际销售量
+     *  averageCostPrice     平均成本价 = 总成本 /  实际销售量
+     *  grossProfitRate      毛利率 = 利润额 / 总销售额
+     *
+     * @param $where
+     * @return array|\think\response\Json
+     */
+    public function saleDataCollect($where)
+    {
+        $whereCollect = $where;
+        $whereCollect['so.pay_status'] = 3;
+        $field = "
+        IFNULL(sum(so.total_quantity - so.refund_quantity),0) totalQuantity,
+        IFNULL(sum(so.total_price - so.refund_amount),0) totalPrice,
+        IFNULL(sum(so.discount_price),0) totalDiscountPrice,
+        IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
+        IFNULL(sum(so.cost_price),0) totalCostPrice
+        ";
+        $collectData = $this->getSaleOrdersDetailsData($whereCollect,$field)->toArray();
+        $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'],$collectData['totalGift']);
+        $whereGIds = $where;
+        $whereGIds[] = ['g_id',">",0];
+        $gIds = $this->joinSoSodColumn($whereGIds,'g_id','g_id');
+        $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $gIds]) ?? 0;
+        $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'],$collectData['totalClick'],4),100,2) . "%" : "0%";
+        $collectData['profitAmount'] = bcsub($collectData['totalPrice'],$collectData['totalCostPrice'],2);
+        $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'],$collectData['totalSaleQuantity'], 2) : 0.00;
+        $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'],2) : 0.00;
+        $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ?  bcmul(bcdiv($collectData['profitAmount'],$collectData['totalPrice'],4),100,2) . "%"  : "0%";
+        unset($collectData['totalQuantity']);
+        return $this->r(200,$this->lang("query_success"),$collectData);
+    }
+
+    /**
+     *  销售数据列表
+     *  totalQuantity 总销售量（包含赠品）
+     *
+     *  machine_id           设备编号
+     *  machine_name         设备名称
+     *  sku                  商品SKU
+     *  g_name               商品名称
+     *  totalClick           点击次数
+     *  clickConversionRate  点击转化率
+     *  totalSaleQuantity    实际销售量 = 总销售量 - 赠品数量
+     *  totalPrice           实际销售额 = SUM（实际支付金额 - 退款金额）
+     *  totalDiscountPrice   总优惠额
+     *  totalGift            赠品数量
+     *  totalCostPrice       总成本
+     *  profitAmount         利润额 = 实际销售额 - 总成本
+     *  averageRetailPrice   平均售价 = 实际销售额 / 实际销售量
+     *  averageCostPrice     平均成本价 = 总成本 /  实际销售量
+     *  grossProfitRate      毛利率 = 利润额 / 总销售额
+     *
+     * @param array|string $where
+     * @param int $pageNum      页面数据条数
+     * @return array|\think\response\Json
+     */
+    public function saleDataCollectList($where,$pageNum = 0)
+    {
+        $field = "
+        sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
+        IFNULL(sum(so.total_quantity - so.refund_quantity),0) totalQuantity,
+        IFNULL(sum(so.total_price - so.refund_amount),0) totalPrice,
+        IFNULL(sum(so.discount_price),0) totalDiscountPrice,
+        IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
+        IFNULL(sum(so.cost_price),0) totalCostPrice
+        ";
+        $collectList = $this->getSaleOrdersDetailsJoinOrderList($where,$pageNum,$field,'totalPrice desc','m_id,g_id')->each(function ($collectData) {
+            $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
+            $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'],$collectData['totalClick'],4),100,2) . "%" : "0%";
+            $collectData['profitAmount'] = bcsub($collectData['totalPrice'],$collectData['totalCostPrice'],2);
+            $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'],$collectData['totalSaleQuantity'], 2) : 0.00;
+            $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'],2) : 0.00;
+            $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ?  bcmul(bcdiv($collectData['profitAmount'],$collectData['totalPrice'],4),100,2) . "%"  : "0%";
+
+            unset($collectData['totalQuantity'],$collectData['g_id']);
+            return $collectData;
+        });
+        return $this->r(200,$this->lang("query_success"),$collectList);
     }
 }

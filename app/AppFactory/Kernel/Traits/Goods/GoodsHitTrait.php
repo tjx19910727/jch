@@ -13,6 +13,10 @@ use app\AppFactory\Kernel\Model\Goods\GoodsHitModel;
 
 trait GoodsHitTrait
 {
+    public function getGoodsHitCount($where)
+    {
+        return GoodsHitModel::getCount($where,"gh_id");
+    }
     public function getGoodsHitFind($where,$field = "*",$order = "")
     {
         return GoodsHitModel::getFind($where,$field,$order);

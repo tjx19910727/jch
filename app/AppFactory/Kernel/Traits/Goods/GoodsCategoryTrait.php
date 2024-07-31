@@ -17,6 +17,11 @@ use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
 
 trait GoodsCategoryTrait
 {
+    public function getGoodsCategoryValue($where,$value)
+    {
+        return GoodsCategoryModel::getFieldValue($where,$value);
+    }
+
     public function getGoodsCategoryColumn($where,$column)
     {
         return GoodsCategoryModel::getColumn($where,$column);
@@ -36,7 +41,8 @@ trait GoodsCategoryTrait
     {
         $insert['creator'] = $this->manager['manager_id'];
         $data = GoodsCategoryModel::create($insert);
-        return $data->gc_id;
+        $pk = $data->getPk();
+        return $data->$pk;
     }
 
     public function updateGoodsCategory($update,$where = [],$field = [])
@@ -66,6 +72,26 @@ trait GoodsCategoryTrait
         $result = GoodsCategoryModel::whereDel($where);
         GoodsCategoryModel::whereDel([['gc_id','in',$childIds]]);
         return $result;
+    }
+
+    /**
+     * 查找分类上级ID列表
+     * @param $pid
+     * @param string $field
+     * @return array
+     */
+    public function getGcParent($pid,$field = "*")
+    {
+        $list = [];
+        $parent = $this->getGoodsCategoryFind(['gc_id' => $pid],$field);
+        if ($parent) {
+            $parent = $parent->toArray();
+            $list[] = $parent;
+            if (isset($parent['gc_pid']) && $parent['gc_pid'] > 0) {
+                $list = array_merge($list,$this->getGcParent($parent['gc_pid'],$field));
+            }
+        }
+        return $list;
     }
 
     /**

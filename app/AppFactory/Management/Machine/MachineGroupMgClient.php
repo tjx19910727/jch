@@ -88,11 +88,13 @@ class MachineGroupMgClient extends ManagementClient
         $list = $this->getMachineGroupMgList($where, 0, 'mg_name,machine_id,machine_name');
         if ($list) {
             $list = $list->toArray();
-            $title = ["mg_name" => "分组名称", 'machine_id' => "设备编号", "machine_name" => "设备名称"];
-            $filename = "设备分组-" . date("Ymd");
-            return $this->sendToExport("设备管理-设备分组", $filename, $title, $list);
+            if ($list) {
+                $title = ["mg_name" => "分组名称", 'machine_id' => "设备编号", "machine_name" => "设备名称"];
+                $filename = "设备分组-" . date("Ymd");
+                return $this->sendToExport("设备管理-设备分组", $filename, $title, $list);
+            }
         }
-        return $this->r(100, $this->lang("action_fail"));
+        return $this->r(100, $this->lang("VMachineGroupMg.machine_list_empty"));
 
     }
 }

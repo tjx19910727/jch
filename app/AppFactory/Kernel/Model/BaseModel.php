@@ -105,9 +105,9 @@ class BaseModel extends Model
      * @return int
      * @throws \think\db\exception\DbException
      */
-    public static function getCount($where)
+    public static function getCount($where,$field = "*")
     {
-        return self::where($where)->count();
+        return self::where($where)->count($field);
     }
 
     public static function getColumn($where,$column)

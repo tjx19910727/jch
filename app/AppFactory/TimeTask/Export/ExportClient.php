@@ -25,17 +25,26 @@ class ExportClient extends TimeTaskBase
      */
     public function makeExcel($data)
     {
+        $data = json2arr($data);
         if ($data) {
             actionLog($data,'导出Excel的数据');
-            $result = Excel::exportExcel($data['list'], $data['title'], $data['filename'],0,
-                $data['otherData']['startRow'] ?? '',
-                $data['otherData']['merge'] ?? []);
-            $updateEL["export_id"] = $data['export_id'];
-            $updateEL["file_name"] = $data['filename'];
-            $updateEL["file_path"] = $result;
-            $updateEL["export_time"] = time();
-            $updateEL["status"] = 2;
-            $this->updateExportLog($updateEL);
+            try {
+                $result = Excel::exportExcel($data['list'], $data['title'], $data['filename'], 0,
+                    $data['otherData']['startRow'] ?? 1,
+                    $data['otherData']['merge'] ?? []);
+                $updateEL["export_id"] = $data['export_id'];
+                $updateEL["file_name"] = $data['filename'];
+                $updateEL["file_path"] = $result;
+                $updateEL["export_time"] = time();
+                $updateEL["status"] = 2;
+                $this->updateExportLog($updateEL);
+            } catch (\PHPExcel_Writer_Exception $e) {
+                actionException($e,1);
+                $this->updateExportLog(['export_id' => $data['export_id'],'status' => 4]);
+            } catch (\PHPExcel_Exception $e) {
+                actionException($e,1);
+                $this->updateExportLog(['export_id' => $data['export_id'],'status' => 4]);
+            }
         }
     }
 

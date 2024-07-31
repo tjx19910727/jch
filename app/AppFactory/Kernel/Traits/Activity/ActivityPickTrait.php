@@ -102,6 +102,7 @@ trait ActivityPickTrait
             if ($apc['ap_id'] > 0) {
                 $ap = $this->getActivityPickFind(['id' => $apc['ap_id']], 'id,pick_name,desc,bg_pic,start_time,end_time,pick_type,status');
                 if ($ap) {
+                    $ap = $ap->toArray();
                     // 开始时间大于当前时间，取货活动还未开始的
                     if ($ap["start_time"] > time()) {
                         return $this->lang("VActivityPick.not_begin");

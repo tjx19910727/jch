@@ -3,19 +3,26 @@
   <component name="ChangeListManager">
     <list default="true" id="0b425c8e-253d-4f3f-a4bc-dbf750314eff" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthNodeTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthNodeTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Mobile/Application.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Mobile/Application.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/TimeTask/Application.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/TimeTask/Application.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersDetailsModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersDetailsModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Providers/Management/MachineProvider.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Providers/Management/MachineProvider.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityPickTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityPickTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsCategoryTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsCategoryTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsHitTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsHitTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Application.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Application.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineGoodsClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineGoodsClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineGroupMgClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineGroupMgClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/AppFactory/TimeTask/Export/ExportClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/TimeTask/Export/ExportClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/command/TimeTask.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/command/TimeTask.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/machine/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/controller/Test.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/validate/Machine/VMachineAdvance.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/validate/Machine/VMachineAdvance.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/validate/Machine/VMachineConfig.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/validate/Machine/VMachineConfig.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/mobile/controller/Common.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/mobile/controller/Common.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/mobile/controller/machine/Info.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/mobile/controller/machine/Info.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/mobile/lang/zh-cn.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/mobile/lang/zh-cn.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/machine/MachineGoods.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/machine/MachineGoods.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/lang/zh-cn.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/lang/zh-cn.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/pay/controller/Payment.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/pay/controller/Payment.php" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -43,64 +50,20 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="Common.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/mobile/controller/Common.php">
+      <file leaf-file-name="SaleOrders.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="726">
-              <caret line="38" column="31" lean-forward="true" selection-start-line="38" selection-start-column="31" selection-end-line="38" selection-end-column="31" />
-              <folding>
-                <element signature="e#130#160#0#PHP" expanded="true" />
-              </folding>
+            <state relative-caret-position="693">
+              <caret line="232" column="50" selection-start-line="232" selection-start-column="50" selection-end-line="232" selection-end-column="50" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="Application.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Application.php">
+      <file leaf-file-name="SaleOrdersClient.php" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="729">
-              <caret line="52" column="59" lean-forward="true" selection-start-line="52" selection-start-column="59" selection-end-line="52" selection-end-column="59" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Check.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Check.php">
-          <provider selected="true" editor-type-id="text-editor" />
-        </entry>
-      </file>
-      <file leaf-file-name="Info.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Info.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="308">
-              <caret line="20" column="47" lean-forward="true" selection-start-line="20" selection-start-column="47" selection-end-line="20" selection-end-column="47" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="InfoClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/InfoClient.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="308">
-              <caret line="23" column="21" lean-forward="true" selection-start-line="23" selection-start-column="21" selection-end-line="23" selection-end-column="21" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="MobileBase.php" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="550">
-              <caret line="33" column="70" selection-start-line="33" selection-start-column="70" selection-end-line="33" selection-end-column="70" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="zh-cn.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/mobile/lang/zh-cn.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="506">
-              <caret line="28" column="37" lean-forward="true" selection-start-line="28" selection-start-column="37" selection-end-line="28" selection-end-column="37" />
+            <state relative-caret-position="323">
+              <caret line="575" column="66" selection-start-line="575" selection-start-column="66" selection-end-line="575" selection-end-column="66" />
             </state>
           </provider>
         </entry>
@@ -116,9 +79,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>testSign</find>
-      <find>microPaymentMethod</find>
-      <find>支付方式不在允许范围内</find>
       <find>pay_type_not_in_scope</find>
       <find>消息数据</find>
       <find>'0021'</find>
@@ -146,6 +106,9 @@
       <find>导出</find>
       <find>getSaleChar</find>
       <find>盘点</find>
+      <find>usePick</find>
+      <find>VMachineEr</find>
+      <find>VMachineGroupMg</find>
     </findStrings>
     <replaceStrings>
       <replace>WxOfficial</replace>
@@ -189,37 +152,11 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/RabbitMq/MqProducer.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php" />
-        <option value="$PROJECT_DIR$/config/console.php" />
-        <option value="$PROJECT_DIR$/app/command/ExportQueue.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php" />
-        <option value="$PROJECT_DIR$/app/management/lang/zh-cn.php" />
-        <option value="$PROJECT_DIR$/app/management/controller/export/Export.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Application.php" />
-        <option value="$PROJECT_DIR$/app/management/controller/export/ExportLog.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineGroupMgClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Export/ExportLogTrait.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineOnOffClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineErrorCodeClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersUnclaimedClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsChangeClient.php" />
-        <option value="$PROJECT_DIR$/app/management/controller/goods/GoodsChange.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerLogClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponUsedClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityFdUsedClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityLotteryUsedClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityPickCodeClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineChannelReplenishmentClient.php" />
         <option value="$PROJECT_DIR$/app/management/controller/machine/MachineChannelReplenishment.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineCheckStockCountClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineCheckStockClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineChannelStockReportClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsHitClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Export/ExportClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php" />
         <option value="$PROJECT_DIR$/app/management/controller/Index.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php" />
@@ -234,12 +171,38 @@
         <option value="$PROJECT_DIR$/app/management/validate/Machine/VMachineConfig.php" />
         <option value="$PROJECT_DIR$/app/mobile/validate/VCommon.php" />
         <option value="$PROJECT_DIR$/app/mobile/controller/Common.php" />
-        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
-        <option value="$PROJECT_DIR$/app/mobile/controller/machine/Info.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Mobile/Machine/InfoClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Mobile/Application.php" />
         <option value="$PROJECT_DIR$/app/mobile/lang/zh-cn.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php" />
+        <option value="$PROJECT_DIR$/app/mobile/controller/machine/Info.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityPickTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Machine/MachineErrorCodeSolutionModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineErrorCodeSolutionClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Providers/Management/MachineProvider.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Application.php" />
+        <option value="$PROJECT_DIR$/app/management/validate/Machine/VMachineErrorCodeSolution.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineErrorCodeSolutionTrait.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/machine/MachineErrorCodeSolution.php" />
+        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Excel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Export/ExportClient.php" />
+        <option value="$PROJECT_DIR$/app/pay/controller/Payment.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsCategoryTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineGoodsClient.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/machine/MachineGoods.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Tree.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerClient.php" />
+        <option value="$PROJECT_DIR$/app/management/lang/zh-cn.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineGroupMgClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsHitTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersDetailsModel.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" />
       </list>
     </option>
   </component>
@@ -368,29 +331,73 @@
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="mobile" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="mobile" type="462c0819:PsiDirectoryNode" />
-              <item name="controller" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="mobile" type="462c0819:PsiDirectoryNode" />
-              <item name="controller" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+              <item name="Support" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
               <item name="machine" type="462c0819:PsiDirectoryNode" />
             </path>
             <path>
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
-              <item name="mobile" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
               <item name="lang" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="public" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="public" type="462c0819:PsiDirectoryNode" />
+              <item name="export" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="public" type="462c0819:PsiDirectoryNode" />
+              <item name="export" type="462c0819:PsiDirectoryNode" />
+              <item name="excel" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -492,12 +499,12 @@
       <workItem from="1719811900884" duration="5676000" />
       <workItem from="1719988985157" duration="157329000" />
       <workItem from="1721962927714" duration="3034000" />
-      <workItem from="1722058578930" duration="46470000" />
+      <workItem from="1722058578930" duration="69892000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="2032265000" />
+    <option name="totallyTimeSpent" value="2055687000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -510,7 +517,6 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="1912" y="-8" width="1936" height="1096" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info anchor="bottom" id="TODO" order="6" weight="0.3290461" />
       <window_info anchor="bottom" id="Event Log" order="7" side_tool="true" />
@@ -518,9 +524,9 @@
       <window_info anchor="bottom" id="File Transfer" order="8" weight="0.33226153" />
       <window_info anchor="bottom" id="Version Control" order="7" weight="0.3290461" />
       <window_info anchor="bottom" id="Run" order="2" />
-      <window_info anchor="bottom" id="Terminal" order="7" weight="0.32583067" />
+      <window_info active="true" anchor="bottom" id="Terminal" order="7" visible="true" weight="0.32583067" />
       <window_info anchor="right" id="Remote Host" order="4" weight="0.26226014" />
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.2238806" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.2238806" />
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="right" id="Database" order="3" weight="0.32995737" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.3290461" />
@@ -580,321 +586,17 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityLotteryUsedClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="663">
-          <caret line="59" column="53" selection-start-line="59" selection-start-column="53" selection-end-line="59" selection-end-column="53" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/activity/ActivityLotteryUsed.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="223">
-          <caret line="35" column="77" lean-forward="true" selection-start-line="35" selection-start-column="77" selection-end-line="35" selection-end-column="77" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityFdUsedClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-41">
-          <caret line="18" column="44" lean-forward="true" selection-start-line="18" selection-start-column="44" selection-end-line="18" selection-end-column="44" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/activity/ActivityFdUsed.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="550">
-          <caret line="30" column="49" lean-forward="true" selection-start-line="30" selection-start-column="49" selection-end-line="30" selection-end-column="49" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponUsedClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1276">
-          <caret line="10" selection-start-line="10" selection-end-line="10" />
-          <folding>
-            <element signature="e#143#205#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/activity/ActivityCouponUsed.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="487">
-          <caret line="100" column="56" selection-start-line="100" selection-start-column="56" selection-end-line="100" selection-end-column="56" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/goods/Goods.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="509">
-          <caret line="89" column="37" selection-start-line="89" selection-start-column="37" selection-end-line="89" selection-end-column="37" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersUnclaimedClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="707">
-          <caret line="79" column="74" selection-start-line="79" selection-start-column="74" selection-end-line="79" selection-end-column="74" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineChannelReplenishmentClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="531">
-          <caret line="32" column="37" lean-forward="true" selection-start-line="32" selection-start-column="37" selection-end-line="32" selection-end-column="37" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineCheckStockCountClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="572">
-          <caret line="33" column="78" selection-start-line="33" selection-start-column="78" selection-end-line="33" selection-end-column="78" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsHitClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1298">
-          <caret line="67" column="39" lean-forward="true" selection-start-line="67" selection-start-column="39" selection-end-line="67" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/goods/GoodsHit.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="685">
-          <caret line="53" column="40" selection-start-line="53" selection-start-column="40" selection-end-line="53" selection-end-column="40" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineChannelStockReportClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="751">
-          <caret line="92" column="37" selection-start-line="92" selection-start-column="37" selection-end-line="92" selection-end-column="37" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineChannelStockReport.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="553">
-          <caret line="37" column="57" lean-forward="true" selection-start-line="37" selection-start-column="57" selection-end-line="37" selection-end-column="57" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="597">
-          <caret line="202" column="40" lean-forward="true" selection-start-line="202" selection-start-column="40" selection-end-line="202" selection-end-column="40" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineCheckStockClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="528">
-          <caret line="34" column="35" lean-forward="true" selection-start-line="34" selection-start-column="35" selection-end-line="34" selection-end-column="35" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineCheckStock.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="528">
-          <caret line="29" column="52" lean-forward="true" selection-start-line="29" selection-start-column="52" selection-end-line="29" selection-end-column="52" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineCheckStockCount.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="484">
-          <caret line="27" column="54" lean-forward="true" selection-start-line="27" selection-start-column="54" selection-end-line="27" selection-end-column="54" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineChannelReplenishment.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="22" lean-forward="true" selection-start-line="22" selection-end-line="22" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/AuthController.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="355">
-          <caret line="47" column="62" lean-forward="true" selection-start-line="47" selection-start-column="62" selection-end-line="47" selection-end-column="62" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerRoleClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="751">
-          <caret line="63" column="44" lean-forward="true" selection-start-line="63" selection-start-column="44" selection-end-line="63" selection-end-column="44" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="338">
-          <caret line="181" column="48" selection-start-line="181" selection-start-column="48" selection-end-line="181" selection-end-column="48" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Export/ExportClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="597">
-          <caret line="48" column="58" selection-start-line="48" selection-start-column="58" selection-end-line="48" selection-end-column="58" />
-          <folding>
-            <element signature="e#140#180#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/Common.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="484">
-          <caret line="122" selection-start-line="122" selection-end-line="122" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthNodeTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="597">
-          <caret line="76" column="56" lean-forward="true" selection-start-line="76" selection-start-column="56" selection-end-line="76" selection-end-column="56" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/Index.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="372">
-          <caret line="94" column="45" lean-forward="true" selection-start-line="94" selection-start-column="45" selection-end-line="94" selection-end-column="45" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="594">
-          <caret line="220" column="50" selection-start-line="220" selection-start-column="23" selection-end-line="220" selection-end-column="50" />
-          <folding>
-            <element signature="e#139#179#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Application.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="487">
-          <caret line="28" column="82" selection-start-line="28" selection-start-column="82" selection-end-line="28" selection-end-column="82" />
-          <folding>
-            <element signature="e#132#194#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Providers/TimeTask/ActivityProvider.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="22" column="10" selection-start-line="22" selection-start-column="10" selection-end-line="22" selection-end-column="10" />
-          <folding>
-            <element signature="e#150#186#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Activity/CouponClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="352">
-          <caret line="21" column="35" selection-start-line="21" selection-start-column="20" selection-end-line="21" selection-end-column="35" />
-          <folding>
-            <element signature="e#142#208#0#PHP" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/AuthManager/AuthManagerLogClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="286">
-          <caret line="19" column="23" lean-forward="true" selection-start-line="19" selection-start-column="23" selection-end-line="19" selection-end-column="23" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/command/TimeTask.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="286">
-          <caret line="29" selection-start-line="29" selection-end-line="33" selection-end-column="108" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/validate/VAdvertisement.php">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/validate/Machine/VMachineAdvance.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="308">
-          <caret line="25" column="30" lean-forward="true" selection-start-line="25" selection-start-column="30" selection-end-line="25" selection-end-column="30" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineConfig.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="572">
-          <caret line="65" column="45" lean-forward="true" selection-start-line="65" selection-start-column="45" selection-end-line="65" selection-end-column="45" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/validate/Machine/VMachineConfig.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="770">
-          <caret line="40" column="62" selection-start-line="40" selection-start-column="62" selection-end-line="40" selection-end-column="62" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/mobile/validate/Machine/VMachineCheck.php">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineConfigClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="404">
-          <caret line="39" column="80" lean-forward="true" selection-start-line="39" selection-start-column="80" selection-end-line="39" selection-end-column="80" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/mobile/validate/VCommon.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="550">
-          <caret line="30" column="18" selection-start-line="30" selection-start-column="9" selection-end-line="30" selection-end-column="18" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/CommonTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="478">
-          <caret line="52" column="48" selection-start-line="52" selection-start-column="40" selection-end-line="52" selection-end-column="48" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="294">
-          <caret line="749" column="20" selection-start-line="749" selection-start-column="20" selection-end-line="749" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="350">
-          <caret line="282" column="36" selection-start-line="282" selection-start-column="20" selection-end-line="282" selection-end-column="36" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="506">
-          <caret line="126" column="52" lean-forward="true" selection-start-line="126" selection-start-column="52" selection-end-line="126" selection-end-column="52" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Util/SignUtil.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="599">
           <caret line="38" column="27" selection-start-line="38" selection-start-column="27" selection-end-line="38" selection-end-column="27" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Info.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="484">
+          <caret line="28" column="13" lean-forward="true" selection-start-line="28" selection-start-column="13" selection-end-line="28" selection-end-column="13" />
         </state>
       </provider>
     </entry>
@@ -908,6 +610,20 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="572">
+          <caret line="34" column="9" lean-forward="true" selection-start-line="34" selection-start-column="9" selection-end-line="34" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/mobile/lang/zh-cn.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="176">
+          <caret line="13" column="35" lean-forward="true" selection-start-line="13" selection-start-column="35" selection-end-line="13" selection-end-column="35" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/app/mobile/controller/Common.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="726">
@@ -918,13 +634,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/mobile/controller/machine/Info.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="308">
-          <caret line="20" column="47" lean-forward="true" selection-start-line="20" selection-start-column="47" selection-end-line="20" selection-end-column="47" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Machine/InfoClient.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="308">
@@ -932,17 +641,303 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/mobile/lang/zh-cn.php">
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="506">
-          <caret line="28" column="37" lean-forward="true" selection-start-line="28" selection-start-column="37" selection-end-line="28" selection-end-column="37" />
+        <state relative-caret-position="5014">
+          <caret line="376" column="44" selection-start-line="376" selection-start-column="44" selection-end-line="376" selection-end-column="44" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/MobileBase.php">
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Machine/MachineErrorCodeSolutionModel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="220">
+          <caret line="15" column="27" lean-forward="true" selection-start-line="15" selection-start-column="27" selection-end-line="15" selection-end-column="27" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="308">
+          <caret line="20" column="7" lean-forward="true" selection-start-line="20" selection-start-column="7" selection-end-line="20" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityPickTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="360">
+          <caret line="83" column="43" lean-forward="true" selection-start-line="83" selection-start-column="43" selection-end-line="83" selection-end-column="43" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="553">
+          <caret line="253" column="34" lean-forward="true" selection-start-line="253" selection-start-column="34" selection-end-line="253" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineErrorCodeSolutionClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="242">
+          <caret line="16" column="38" selection-start-line="16" selection-start-column="38" selection-end-line="16" selection-end-column="38" />
+          <folding>
+            <element signature="e#143#214#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/config/app.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="396">
+          <caret line="27" column="20" lean-forward="true" selection-start-line="27" selection-start-column="20" selection-end-line="27" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.env">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/ManagementClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="528">
+          <caret line="34" column="43" selection-start-line="34" selection-start-column="39" selection-end-line="34" selection-end-column="43" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/validate/Machine/VMachineErrorCodeSolution.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="374">
+          <caret line="22" column="73" selection-start-line="22" selection-start-column="73" selection-end-line="22" selection-end-column="73" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Login/LoginClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="352">
+          <caret line="24" column="73" selection-start-line="24" selection-start-column="73" selection-end-line="24" selection-end-column="73" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/Login.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="484">
+          <caret line="70" column="42" selection-start-line="70" selection-start-column="42" selection-end-line="70" selection-end-column="42" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineErrorCodeSolutionTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="401">
+          <caret line="87" column="7" selection-start-line="87" selection-start-column="7" selection-end-line="87" selection-end-column="7" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Application.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="294">
+          <caret line="94" column="32" lean-forward="true" selection-start-line="94" selection-start-column="32" selection-end-line="94" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Providers/Management/MachineProvider.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="440">
+          <caret line="70" column="60" lean-forward="true" selection-start-line="70" selection-start-column="60" selection-end-line="70" selection-end-column="60" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineGoodsTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="294">
+          <caret line="41" column="20" selection-start-line="41" selection-start-column="20" selection-end-line="41" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineErrorCodeSolution.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="462">
+          <caret line="35" selection-start-line="35" selection-end-line="35" />
+          <folding>
+            <element signature="e#143#180#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="352">
+          <caret line="98" column="37" selection-start-line="98" selection-start-column="37" selection-end-line="98" selection-end-column="37" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Excel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="294">
+          <caret line="142" column="33" lean-forward="true" selection-start-line="142" selection-start-column="33" selection-end-line="142" selection-end-column="33" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Export/ExportClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="734">
+          <caret line="45" column="90" selection-start-line="45" selection-start-column="90" selection-end-line="45" selection-end-column="90" />
+          <folding>
+            <element signature="e#140#180#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/pay/controller/notify/JdCashier.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/JdCashierTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="638">
+          <caret line="108" column="9" lean-forward="true" selection-start-line="108" selection-start-column="9" selection-end-line="108" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/SaleOrders/PaymentClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1562">
+          <caret line="28" column="39" selection-start-line="28" selection-start-column="39" selection-end-line="28" selection-end-column="39" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/pay/controller/Payment.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="531">
+          <caret line="52" column="38" selection-start-line="52" selection-start-column="38" selection-end-line="52" selection-end-column="38" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineGoodsClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="660">
+          <caret line="42" column="68" lean-forward="true" selection-start-line="42" selection-start-column="68" selection-end-line="42" selection-end-column="68" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsCategoryTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="396">
+          <caret line="93" column="21" lean-forward="true" selection-start-line="93" selection-start-column="21" selection-end-line="93" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Tree.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="550">
-          <caret line="33" column="70" selection-start-line="33" selection-start-column="70" selection-end-line="33" selection-end-column="70" />
+          <caret line="30" column="40" lean-forward="true" selection-start-line="30" selection-start-column="40" selection-end-line="30" selection-end-column="40" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/auth/AuthManager.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="685">
+          <caret line="124" column="48" lean-forward="true" selection-start-line="124" selection-start-column="48" selection-end-line="124" selection-end-column="48" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/ReturnTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="140" column="20" selection-start-line="140" selection-start-column="20" selection-end-line="140" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Auth/AuthManagerClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="401">
+          <caret line="32" column="25" lean-forward="true" selection-start-line="32" selection-start-column="25" selection-end-line="32" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/lang/zh-cn.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="328">
+          <caret line="304" column="37" lean-forward="true" selection-start-line="304" selection-start-column="37" selection-end-line="304" selection-end-column="37" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineGroupMgClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="729">
+          <caret line="96" column="76" selection-start-line="96" selection-start-column="76" selection-end-line="96" selection-end-column="76" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineGroupMg.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="707">
+          <caret line="55" column="48" selection-start-line="55" selection-start-column="48" selection-end-line="55" selection-end-column="48" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineGroup.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-613" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersDetailsModel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="434">
+          <caret line="69" column="13" selection-start-line="69" selection-start-column="13" selection-end-line="69" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-orm/src/db/concern/AggregateQuery.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="104">
+          <caret line="41" column="20" selection-start-line="41" selection-start-column="20" selection-end-line="41" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="27">
+          <caret line="107" column="27" selection-start-line="107" selection-start-column="27" selection-end-line="107" selection-end-column="27" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsHitTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="264">
+          <caret line="17" column="34" lean-forward="true" selection-start-line="17" selection-start-column="34" selection-end-line="17" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/SaleOrders/SaleOrdersModel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-63">
+          <caret line="36" column="35" lean-forward="true" selection-start-line="36" selection-start-column="35" selection-end-line="36" selection-end-column="35" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="338">
+          <caret line="53" column="44" selection-start-line="53" selection-start-column="44" selection-end-line="53" selection-end-column="44" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineGoods.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-198">
+          <caret line="48" column="45" selection-start-line="48" selection-start-column="45" selection-end-line="48" selection-end-column="45" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="693">
+          <caret line="232" column="50" selection-start-line="232" selection-start-column="50" selection-end-line="232" selection-end-column="50" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="323">
+          <caret line="575" column="66" selection-start-line="575" selection-start-column="66" selection-end-line="575" selection-end-column="66" />
         </state>
       </provider>
     </entry>

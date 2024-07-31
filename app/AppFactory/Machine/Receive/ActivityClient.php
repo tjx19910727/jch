@@ -141,6 +141,7 @@ class ActivityClient extends ReceiveBaseClient
      */
     public function usePickCode()
     {
+
         try {
             $this->startTrans();
             $apc = $this->getActivityPickByCode();
@@ -149,8 +150,7 @@ class ActivityClient extends ReceiveBaseClient
                 return $this->rFail($apc);
             }
             actionLog($apc, "使用的取货码");
-            $flag = [];
-            // 预订订单取货
+            $flag = [];// 预订订单取货
             if ($apc['pick_type'] == 3) {
                 $this->order = $this->getSaleOrdersFind(['order_id' => $apc['order_id']]);
                 if (!$this->order) return $this->r(100, $this->lang("VActivityPickCode.order_no_data"));
@@ -230,9 +230,8 @@ class ActivityClient extends ReceiveBaseClient
                     $this->rollbackTrans();
                     return $this->r(100, $this->lang("VActivityPickCode.add_order_fail"));
                 }
-                $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
+                $this->order = $this->getSaleOrdersFind(['order_id' => $order_id])->toArray();
             }
-
             $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
             if ($this->order['total_price'] > 0) {
                 $flag[] = $this->countIncome();
@@ -246,8 +245,8 @@ class ActivityClient extends ReceiveBaseClient
                 }
                 if (isset($this->order['details'])) unset($this->order['details']);
                 $this->updateSaleOrders($this->order);
-                $this->updateActivityPickCode(['apc_id' => $apc['apc_id'],'status' => 5]);
-                $this->updateApiAdvance(['status' => "PROCESSING"],['apc_id' => $apc['apc_id']]);
+                $this->updateActivityPickCode(['apc_id' => $apc['apc_id'], 'status' => 5]);
+                $this->updateApiAdvance(['status' => "PROCESSING"], ['apc_id' => $apc['apc_id']]);
                 $this->commitTrans();
                 return $this->rSuccess();
             }

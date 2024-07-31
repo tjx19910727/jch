@@ -93,6 +93,12 @@ class Test extends BaseController
         dump(json2arr($str));
     }
 
+    public function testExport()
+    {
+        $app = AppFactory::timeTask();
+        $result = $app->export->makeExcel([]);
+    }
+
     public function makeSign($otherData)
     {
 

@@ -39,14 +39,24 @@ class MachineGoods extends Common
     }
 
     /**
-     * 获取设备商品品类排序列表
+     * 获取设备商品品类排序树形数据
      * @return array|\think\response\Json
      */
     public function getGcSort()
     {
         $where['m_id'] = input("m_id");
-        return returnData($this->app->machineGoods->getMachineGoodsList($where, 0, "gc_name,gc_id,`gc_sort`", "gc_sort asc", '', 'gc_id'));
+        if (!$where['m_id']) return returnState(100,lang("query_fail"));
+        return $this->app->machineGoods->getGcList($where);
     }
+    /**
+     * 获取设备商品品类排序列表
+     * @return array|\think\response\Json
+     */
+//    public function getGcSort()
+//    {
+//        $where['m_id'] = input("m_id");
+//        return returnState(200,lang("query_success"),$this->app->machineGoods->getMachineGoodsList($where, 0, "gc_name,gc_id,`gc_sort`", "gc_sort asc", '', 'gc_id'));
+//    }
 
     /**
      * 修改设备商品品类排序

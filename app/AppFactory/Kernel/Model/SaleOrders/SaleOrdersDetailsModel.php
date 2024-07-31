@@ -66,6 +66,15 @@ class SaleOrdersDetailsModel extends BaseModel
         return $data;
     }
 
+    /**
+     * 关联订单列表
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @param string $group
+     * @return mixed
+     */
     public static function joinOrderList($where,$pageNum = 0,$field = "*", $order = "",$group = "")
     {
         $data = self::alias("sod")
