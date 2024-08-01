@@ -161,6 +161,7 @@ return [
         "order_no_data" => "查无订单数据",
         "order_out" => "查无订单数据",
         "add_order_fail" => "创建订单信息失败",
+        "out_status1" => "该订单已处理，请勿重复提交",
 
         "status2" => "此取货码已使用",
         "status3" => "此取货码已过期",

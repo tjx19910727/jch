@@ -177,7 +177,7 @@ trait AfterOrderPaymentTrait
      */
     public function paymentFailed()
     {
-        $this->order['pay_status'] = 3;
+        $this->order['pay_status'] = 4;
         $this->order['pay_time'] = time();
         return $this->updateSaleOrders($this->order);
     }

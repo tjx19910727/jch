@@ -52,7 +52,7 @@ class AdvertisementPushClient extends ManagementClient
                 $machine = $this->getMachineFind(['m_id' => $value], 'm_id,machine_name,machine_id');
                 if (!$machine) {
                     $this->rollbackTrans();
-                    return $this->rFail($this->lang("VResource.query_machine_no_data"));
+                    return $this->rFail($value . "：" . $this->lang("VAdvertisement.query_machine_no_data"));
                 }
                 $insert = $data;
                 $insert['remain_times'] = $data['total_times'];

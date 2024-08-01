@@ -68,10 +68,10 @@ trait ActivityPickCodeTrait
      */
     protected function createApc()
     {
-        $apc = $this->getActivityPickCodeFind(['code' => $this->config['params']['pick_code'],'pick_type' => 3]);
-        if ($apc) return $this->returnData(7,$this->msg[7] . "：" . $this->lang("reserve_order.apc_already_exist"));
+        $apc = $this->getActivityPickCodeFind(['code' => $this->params['pick_code'],'pick_type' => 3]);
+        if ($apc) return $this->returnData(7,$this->lang("msg." . 7) . "：" . $this->lang("reserve_order.apc_already_exist"));
         $insert = [
-            "code" => $this->config['params']['pick_code'],
+            "code" => $this->params['pick_code'],
             "order_id" => $this->order['order_id'],
             "trade_no" => $this->order['trade_no'],
             "m_id" => $this->order['m_id'],
@@ -82,7 +82,7 @@ trait ActivityPickCodeTrait
         ];
         $apc_id = $this->addActivityPickCode($insert);
         if (!$apc_id) {
-            return $this->returnData(18,$this->msg[18] . "：" . $this->lang("reserve_order.apc_id_add_fail"));
+            return $this->returnData(18,$this->lang("msg." . 18) . "：" . $this->lang("reserve_order.apc_id_add_fail"));
         }
         $this->order['apc_id'] = $apc_id;
         return 1;

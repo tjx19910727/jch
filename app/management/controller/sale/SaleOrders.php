@@ -9,7 +9,6 @@
 namespace app\management\controller\sale;
 
 
-use app\AppFactory\AppFactory;
 use app\management\controller\Common;
 
 class SaleOrders extends Common
@@ -58,8 +57,8 @@ class SaleOrders extends Common
         $where['so.pay_status'] = 3;
         $field = "so.machine_id,so.machine_name,so.trade_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
-        (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity";
-        return returnData($this->app->saleOrders->getSaleOrdersDetailsJoinOrderList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",'g_id'));
+        (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
+        return returnData($this->app->saleOrders->getSaleOrdersDetailsJoinOrderList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc"));
     }
 
     /**
@@ -231,5 +230,17 @@ class SaleOrders extends Common
         if (!isset($postData['create_time'])) $postData['create_time'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
         return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20);
+    }
+
+    /**
+     * 导出销售数据
+     * @return array|\think\response\Json
+     */
+    public function exportSaleData()
+    {
+        $postData = input();
+        if (!isset($postData['create_time'])) $postData['create_time'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
+        $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
+        return $this->app->saleOrders->exportSaleDataCollect($where);
     }
 }

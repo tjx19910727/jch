@@ -60,7 +60,7 @@ class WxClient extends PayBaseClient
                 // 用户是否支付成功
                 if ($message['result_code'] === 'SUCCESS') {
                     // 使用通知里的 "微信支付订单号" 或者 "商户订单号" 去自己的数据库找到订单
-                    $this->order['payment_type'] = 1;
+                    $this->order['pay_type'] = 1;
                     $this->order['mch_no'] = $mch_no;
 
                     $this->startTrans();

@@ -301,28 +301,30 @@ class SaleOrdersClient extends ManagementClient
         $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field, "so.trade_no");
         if ($list) {
             $list = $list->toArray();
-            $title = [
-                "machine_id" => "设备编号",
-                "machine_name" => "设备名称",
-                "trade_no" => "交易号",
-                "batch_number" => "商品序列号",
-                "sku" => "SKU",
-                "g_name" => "SKU名称",
-                "channel_code" => "槽位号",
-                "retail_price" => "单价",
-                "discount_price" => "优惠价",
-                "total_sod_price" => "实收金额",
-                "out_status" => "状态",
-                "order_type" => "订单类型",
-                "deliver_pics" => "出货图像",
-                "pay_type" => "支付类型",
-                "pay_method" => "支付方式",
-                "create_time" => "交易时间",
-                "pay_time" => "支付时间",
-                "pay_code" => "支付操作码（用户付款码/支付二维码/提货码/优惠码）",
-            ];
-            $filename = "商品交易列表-" . date("YmdHis");
-            return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
+            if ($list) {
+                $title = [
+                    "machine_id" => "设备编号",
+                    "machine_name" => "设备名称",
+                    "trade_no" => "交易号",
+                    "batch_number" => "商品序列号",
+                    "sku" => "SKU",
+                    "g_name" => "SKU名称",
+                    "channel_code" => "槽位号",
+                    "retail_price" => "单价",
+                    "discount_price" => "优惠价",
+                    "total_sod_price" => "实收金额",
+                    "out_status" => "状态",
+                    "order_type" => "订单类型",
+                    "deliver_pics" => "出货图像",
+                    "pay_type" => "支付类型",
+                    "pay_method" => "支付方式",
+                    "create_time" => "交易时间",
+                    "pay_time" => "支付时间",
+                    "pay_code" => "支付操作码（用户付款码/支付二维码/提货码/优惠码）",
+                ];
+                $filename = "商品交易列表-" . date("YmdHis");
+                return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
+            }
         }
         return $this->rFail($this->lang("action_fail"));
     }
@@ -513,6 +515,7 @@ class SaleOrdersClient extends ManagementClient
         IFNULL(sum(so.total_quantity - so.refund_quantity),0) totalQuantity,
         IFNULL(sum(so.total_price - so.refund_amount),0) totalPrice,
         IFNULL(sum(so.discount_price),0) totalDiscountPrice,
+        IFNULL(sum(so.total_price),0) totalSalePrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(so.cost_price),0) totalCostPrice
         ";
@@ -526,7 +529,7 @@ class SaleOrdersClient extends ManagementClient
         $collectData['profitAmount'] = bcsub($collectData['totalPrice'],$collectData['totalCostPrice'],2);
         $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'],$collectData['totalSaleQuantity'], 2) : 0.00;
         $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'],2) : 0.00;
-        $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ?  bcmul(bcdiv($collectData['profitAmount'],$collectData['totalPrice'],4),100,2) . "%"  : "0%";
+        $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ?  bcmul(bcdiv($collectData['profitAmount'],$collectData['totalSalePrice'],4),100,2) . "%"  : "0%";
         unset($collectData['totalQuantity']);
         return $this->r(200,$this->lang("query_success"),$collectData);
     }
@@ -561,21 +564,79 @@ class SaleOrdersClient extends ManagementClient
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
         IFNULL(sum(so.total_quantity - so.refund_quantity),0) totalQuantity,
         IFNULL(sum(so.total_price - so.refund_amount),0) totalPrice,
+        IFNULL(sum(so.total_price),0) totalSalePrice,
         IFNULL(sum(so.discount_price),0) totalDiscountPrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(so.cost_price),0) totalCostPrice
         ";
         $collectList = $this->getSaleOrdersDetailsJoinOrderList($where,$pageNum,$field,'totalPrice desc','m_id,g_id')->each(function ($collectData) {
+            $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'],$collectData['totalGift']);
             $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
             $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'],$collectData['totalClick'],4),100,2) . "%" : "0%";
             $collectData['profitAmount'] = bcsub($collectData['totalPrice'],$collectData['totalCostPrice'],2);
             $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'],$collectData['totalSaleQuantity'], 2) : 0.00;
             $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'],2) : 0.00;
-            $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ?  bcmul(bcdiv($collectData['profitAmount'],$collectData['totalPrice'],4),100,2) . "%"  : "0%";
+            $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ?  bcmul(bcdiv($collectData['profitAmount'],$collectData['totalSalePrice'],4),100,2) . "%"  : "0%";
 
             unset($collectData['totalQuantity'],$collectData['g_id']);
             return $collectData;
         });
         return $this->r(200,$this->lang("query_success"),$collectList);
+    }
+
+    /**
+     * 导出销售数据
+     * @param $where
+     * @return array|\think\response\Json
+     */
+    public function exportSaleDataCollect($where)
+    {
+        $field = "
+        sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
+        IFNULL(sum(so.total_quantity - so.refund_quantity),0) totalQuantity,
+        IFNULL(sum(so.total_price - so.refund_amount),0) totalPrice,
+        IFNULL(sum(so.refund_amount),0) totalRefund,
+        IFNULL(sum(so.total_price),0) totalSalePrice,
+        IFNULL(sum(so.discount_price),0) totalDiscountPrice,
+        IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
+        IFNULL(sum(so.cost_price),0) totalCostPrice
+        ";
+        $list = $this->getSaleOrdersDetailsJoinOrderList($where,0,$field,'totalPrice desc','m_id,g_id');
+        if ($list) {
+            $list = $list->toArray();
+            foreach($list as $k => $collectData) {
+                $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'],$collectData['totalGift']);
+                $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
+                $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'],$collectData['totalClick'],4),100,2) . "%" : "0%";
+                $collectData['profitAmount'] = bcsub($collectData['totalPrice'],$collectData['totalCostPrice'],2);
+                $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'],$collectData['totalSaleQuantity'], 2) : 0.00;
+                $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'],2) : 0.00;
+                $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ?  bcmul(bcdiv($collectData['profitAmount'],$collectData['totalPrice'],4),100,2) . "%"  : "0%";
+                unset($collectData['totalQuantity'],$collectData['g_id']);
+                $list[$k] = $collectData;
+            };
+            $title = [
+                "machine_id" =>           "设备编号",
+                "machine_name" =>         "设备名称",
+                "sku" =>                  "商品SKU",
+                "g_name" =>               "商品名称",
+                "totalClick" =>           "点击次数",
+                "clickConversionRate" =>  "点击转化率",
+                "totalSaleQuantity" =>    "实际销售量",
+                "totalPrice" =>           "实际销售额",
+                "totalSalePrice" =>       "销售总额",
+                "totalRefund" =>          "退款总额",
+                "totalDiscountPrice" =>   "总优惠额",
+                "totalGift" =>            "赠品数量",
+                "totalCostPrice" =>       "总成本",
+                "profitAmount" =>         "利润额",
+                "averageRetailPrice" =>   "平均售价",
+                "averageCostPrice" =>     "平均成本价",
+                "grossProfitRate" =>      "毛利率",
+            ];
+            $filename = "销售数据-" . date("YmdHis");
+            return $this->sendToExport("运营数据-销售数据",$filename,$title,$list);
+        }
+        return $this->r(100,$this->lang("query_fail"));
     }
 }

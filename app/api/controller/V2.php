@@ -35,26 +35,30 @@ class V2 extends Common
                     "charge_amount" => 99,
                     "type" => "sale",
                 ],
-                "87" => [
-                    "quantity" => 2,
-                    "item_price" => 50,
-                    "discount_amount" => 3,
-                    "charge_amount" => 97,
-                    "type" => "sale",
-                ],
-                "69" => [
-                    "quantity" => 1,
-                    "item_price" => 0,
-                    "discount_amount" => 0,
-                    "charge_amount" => 0,
-                    "type" => "gift",
-                ],
+//                "87" => [
+//                    "quantity" => 2,
+//                    "item_price" => 50,
+//                    "discount_amount" => 3,
+//                    "charge_amount" => 97,
+//                    "type" => "sale",
+//                ],
+//                "69" => [
+//                    "quantity" => 1,
+//                    "item_price" => 0,
+//                    "discount_amount" => 0,
+//                    "charge_amount" => 0,
+//                    "type" => "gift",
+//                ],
             ]),
         ];
 //        $params = [
 //            "kiosk_id" => "test0001",
 //            "order_no" => "11111111",
 //        ];
+        $params = [
+            "trade_no" => "202407291443503775978",
+            "pay_status" => 1,
+        ];
         $data = [
             "auth_name" => "JCH",
             "auth_password" => "karrie@2024",
@@ -79,11 +83,12 @@ class V2 extends Common
     {
         $postData = input();
         $postData = json2arr($postData);
+        actionLog($postData,'接收到的数据');
         $funcName = $postData['api'];
         $app = AppFactory::api($postData);
         if (method_exists($app->v2, $funcName)) {
             return $app->v2->$funcName();
         }
-        return $app->v2->returnData(4, $app->v2->msg[4]);
+        return $app->v2->returnData(4, lang("msg." . 4));
     }
 }  

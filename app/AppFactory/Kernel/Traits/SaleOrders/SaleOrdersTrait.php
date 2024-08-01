@@ -224,7 +224,7 @@ trait SaleOrdersTrait
             "pay_method" => $pay_method,
             "pay_status" => 3,
             "pay_time" => strtotime($this->config['params']['charge_time']),
-            "pay_code" => $this->config['params']['pick_code'],
+            "pay_code" => $this->params['pick_code'],
             "cost_price" => 0,
             "market_price" => 0,
             "retail_price" => 0,
@@ -251,7 +251,7 @@ trait SaleOrdersTrait
                 validate(VV2::class)->scene("order_detail")->check($dv);
             } catch (\Exception $e) {
                 actionException($e, 1);
-                return $this->returnData(6, $this->msg[6] . "：" . $e->getMessage());
+                return $this->returnData(6, $this->lang("msg." . 6) . "：" . $e->getMessage());
             }
             $whereMc = [];
             $whereMc['m_id'] = $this->machine['m_id'];
@@ -262,15 +262,15 @@ trait SaleOrdersTrait
                         mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
                         cost_price,market_price',
                 "stock desc");
-            if (!$mc) return $this->returnData(10, $this->msg[10]);
-            if (is_string($mc)) return $this->returnData(10, $this->msg[10] . "：" . $mc);
+            if (!$mc) return $this->returnData(10, $this->lang("msg." . 10));
+            if (is_string($mc)) return $this->returnData(10, $this->lang("msg." . 10) . "：" . $mc);
             $mc = $mc->toArray();
             actionLog($mc,"该设备下货架列表数据");
             // 总库存不足
             $totalStock = array_sum(array_column($mc, "stock"));
             if ($totalStock < $dv['quantity']) {
                 $this->returnData[] = ["success" => false,"order_no" => $this->config['params']['order_no'],"error_msg" => [$dk => $dv['quantity']]];
-                return $this->returnData(14, $this->msg[14] . "：" . $this->lang("reserve_order.under_stock"),$this->returnData);
+                return $this->returnData(14, $this->lang("msg." . 14) . "：" . $this->lang("reserve_order.under_stock"),$this->returnData);
             }
 
             $insertSod = [];
@@ -327,7 +327,7 @@ trait SaleOrdersTrait
         }
         actionLog($flag,'生成订单详情结果集');
         $result = flag_check($flag);
-        if (!$result) return $this->returnData(14, $this->msg[14]);
+        if (!$result) return $this->returnData(14, $this->lang("msg." . 14));
         return $result;
     }
 

@@ -15,7 +15,7 @@ use app\management\validate\Machine\VMachineErrorCodeSolution;
 class MachineErrorCodeSolution extends Common
 {
 
-    protected $field = "s_id,error_code,title,creator,create_time,update_id,update_time";
+    protected $field = "s_id,error_code,title,content,creator,create_time,update_id,update_time";
     protected $validatePath = VMachineErrorCodeSolution::class . ".";
 
     public function getList()
@@ -30,7 +30,6 @@ class MachineErrorCodeSolution extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        $this->field .= ",content";
         return $this->app->machineErrorCodeSolution->getFind($where,$this->field);
     }
 
