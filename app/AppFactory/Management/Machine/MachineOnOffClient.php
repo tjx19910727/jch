@@ -36,21 +36,28 @@ class MachineOnOffClient extends ManagementClient
             if ($moo) {
                 $flag = [];
                 foreach ($moo as $k => $v) {
-                    $m = $this->getMachineFind(['machine_id' => $v['machine_id']], 'm_id,machine_id,machine_name');
-                    $ckcArr = "";
-                    $ckc = "";
-                    for ($i = 0; $i <= 6; $i++) {
-                        if ($v['off' . $i] || $v['on' . $i]) {
-                            $ckcArr[$i] = $v["off" . $i] . "," . $v['on' . $i];
+                    if ($v['machine_id']) {
+                        $m = $this->getMachineFind(['machine_id' => $v['machine_id']], 'm_id,machine_id,machine_name');
+                        if ($m) {
+                            $m = $m->toArray();
+                            if ($m) {
+                                $ckcArr = [];
+                                $ckc = "";
+                                for ($i = 0; $i <= 6; $i++) {
+                                    if ($v['off' . $i] || $v['on' . $i]) {
+                                        $ckcArr[$i] = $v["off" . $i] . "," . $v['on' . $i];
+                                    }
+                                }
+                                if ($ckcArr) $ckc = json_encode($ckcArr);
+                                $moo_id = $this->getMachineOnOffValue(['m_id' => $m['m_id']], 'moo_id');
+                                if (!$moo_id) {
+                                    $insert = array_merge($m, $other, ['on_off_ckc' => $ckc]);
+                                    $flag[] = $this->addMachineOnOff($insert);
+                                } else {
+                                    $flag[] = $this->updateMachineOnOff(['moo_id' => $moo_id, 'on_off_ckc' => $ckc]);
+                                }
+                            }
                         }
-                    }
-                    if ($ckcArr) $ckc = json_encode($ckcArr);
-                    $moo_id = $this->getMachineOnOffValue(['m_id' => $m['m_id']], 'moo_id');
-                    if (!$moo_id) {
-                        $insert = array_merge($m->toArray(), $other, ['on_off_ckc' => $ckc]);
-                        $flag[] = $this->addMachineOnOff($insert);
-                    } else {
-                        $flag[] = $this->updateMachineOnOff(['moo_id' => $moo_id, 'on_off_ckc' => $ckc]);
                     }
                 }
                 $result = flag_check($flag);

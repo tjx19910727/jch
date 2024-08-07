@@ -96,7 +96,10 @@ class Test extends BaseController
     public function testExport()
     {
         $app = AppFactory::timeTask();
-        $result = $app->export->makeExcel([]);
+        $data = '{"export_id":45,"filename":"订单交易-20240802","title":{"machine_id":"设备编号","machine_name":"设备名称","trade_no":"订单编号","mch_no":"交易编号","goods_total_price":"商品总价","discount_price":"优惠金额","total_quantity":"总数量","total_price":"实际支付金额","pay_code":"支付操作码（付款码/支付二维码/提货码）","pay_time":"支付时间","pay_type":"支付类型","pay_method":"支付方式"},"list":[{"machine_id":"JCHH1D-003","machine_name":"JCHH1D-003嘉乐汇","trade_no":"2024080121112642830649","mch_no":"10021002408012111270685030859137","goods_total_price":"9.900","discount_price":"0.00","total_quantity":1,"total_price":"9.900","pay_code":null,"pay_time":"2024-01-08 21:11:35","pay_type":"京东收银","pay_method":"扫码支付","details":[]}],"otherData":[]}';
+        $data = json2arr($data);
+        $result = $app->export->makeExcel($data);
+        dump($result);
     }
 
     public function makeSign($otherData)
@@ -118,25 +121,59 @@ class Test extends BaseController
     public function testSign()
     {
         $carList[] = [
-            "mc_id" => 29482,
+            "mc_id" => 393,
             "quantity" => 1,
         ];
         $carList[] = [
-            "mc_id" => 29483,
+            "mc_id" => 392,
             "quantity" => 2,
         ];
+        $hotelLiset = [
+            "hotelId" => "102903119",
+            "roomId" => "99769192",
+            "totalPrice" => "219.69",
+            "pay_amount" => "219.69",
+            "checkInDate" => "2024-08-06",
+            "checkOutDate" => "2024-08-07",
+            "guestNames" => "测试",
+        ];
         $data = [
-            "machine_id" => "0018",
-            "pay_type" => 2,
+            "machine_id" => "test0002",
+            "pay_type" => 5,
             "pay_method" => 1,
 //            "coupon_code" => "980429",
             "carList" => json_encode($carList, 320),
         ];
+//        $data = [
+//            "machine_id" => "test0002",
+//            "order_id" => 2276,
+//            "mobile" => "13640445590",
+//        ];
+        // 获取酒店列表
+//        $data = [
+//            "machine_id" => "test0003",
+//            "cityId" => '3' ,
+//            "checkInDate" => "2024-08-06",
+//            "checkOutDate" => "2024-08-07",
+//            "pageNo" => 1,
+//            "pageSize" => 15,
+//        ];
+//        // 获取酒店详情
+//        $data = [
+//            "machine_id" => "test0003",
+//            "hotelId" => "102903119",
+//        ];
+//        // 获取酒店可定售卖房型列表
+//        $data = [
+//            "machine_id" => "test0003",
+//            "hotelId" => "102903119",
+//            "checkInDate" => "2024-08-06",
+//            "checkOutDate" => "2024-08-07",
+//        ];
         $data = [
-            "machine_id" => "test0003",
-            "manager_id" => 1,
-//            "order_id" => 2065,
-//            "coupon_code" => "555555",
+            "machine_id" => "test0002",
+            "order_id" => "2276",
+            "hotelList" => $hotelLiset,
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));
@@ -227,8 +264,8 @@ class Test extends BaseController
         $data['sign'] = SignUtil::makeSign($data, $signKey);
         dump(json_encode($data));
 
-//        $data = '{"timestamp":"1720604606","msg_id":"bf059113-75ee-4d23-b4ff-42b9e3e35e64","machine_id":"test0003","data":"{\"msgType\":\"goodsHit\",\"g_id\":87}","sign":"f6141e8b7d927303a4f34fbfc3efb7bf"}';
-//        $data = json2arr($data);
+        $data = '{"timestamp":"1722842359","msg_id":"034be881-8c50-4aba-b8f4-cb320a37e5b3","machine_id":"0004","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"2024080515164570798038\",\"main\":{\"1\":[{\"channel_code\":\"D01\",\"success_quantity\":2,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0004/20240805/9c71a4607b937e39344bc5b7603a1d9d.jpg,/uploads/machine_0004/20240805/ddc2bf4a4fb22a3250de7896515a54cb.jpg\",\"out_sequence\":1}]}}","sign":"69a744b05efdb01736123c64165d8150"}';
+        $data = json2arr($data);
         $result = MqProducer::dataUpload($data);
         dump($result);
     }
@@ -243,7 +280,7 @@ class Test extends BaseController
 
     public function testReturn()
     {
-        $data = '{"timestamp":"1721222424","msg_id":"5ca2337a-6b39-40ae-b16f-f35123c4cf98","machine_id":"0016","data":"{}","mac":"04:2B:58:12:15:BA"}';
+        $data = '{"timestamp":"1722829353","msg_id":"7056a53c-9f95-4651-8664-eef5bc54651d","machine_id":"0004","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"2024080511245670130276\",\"main\":{\"1\":[{\"channel_code\":\"E03\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0004/20240805/254db2b67f2280816c1eaa66ed54e6ef.jpg,/uploads/machine_0004/20240805/8f3e71e10128e364602e0e5934bbe0d2.jpg\",\"out_sequence\":1},{\"channel_code\":\"E02\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0004/20240805/dfdc45fd09db3fc3e3c8d09a887ca0de.jpg,/uploads/machine_0004/20240805/e789c762afa829e911e70750141c9e70.jpg\",\"out_sequence\":2},{\"channel_code\":\"E01\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0004/20240805/fbd0957326f50464d43b259df0594898.jpg,/uploads/machine_0004/20240805/9f7652c045f0426ecdfe27ebb8210880.jpg\",\"out_sequence\":3},{\"channel_code\":\"E04\",\"success_quantity\":0,\"fail_quantity\":1,\"deliver_pics\":\"/uploads/machine_0004/20240805/8f51964212aa14b2699a740d7a2240fa.jpg,/uploads/machine_0004/20240805/f7884f825ab3c0fa073f62598b841a5c.jpg\",\"out_sequence\":4},{\"channel_code\":\"F03\",\"success_quantity\":0,\"fail_quantity\":1,\"deliver_pics\":\"/uploads/machine_0004/20240805/7fdd5deaa8b30e25f628cf17bb91104e.jpg,/uploads/machine_0004/20240805/6bf8efef755a3686b0ded543ce530f98.jpg\",\"out_sequence\":5},{\"channel_code\":\"F01\",\"success_quantity\":0,\"fail_quantity\":1,\"deliver_pics\":\"/uploads/machine_0004/20240805/1397542b5f6a79120e10a5f58b0968ee.jpg,/uploads/machine_0004/20240805/13f85e135f17e7c02f368b87225205c7.jpg\",\"out_sequence\":6},{\"channel_code\":\"F04\",\"success_quantity\":0,\"fail_quantity\":1,\"deliver_pics\":\"/uploads/machine_0004/20240805/7ee6393888594e371b164654626e661f.jpg,/uploads/machine_0004/20240805/3a329c61ac73b08122cf60f476fe91df.jpg\",\"out_sequence\":7},{\"channel_code\":\"F02\",\"success_quantity\":0,\"fail_quantity\":1,\"deliver_pics\":\"/uploads/machine_0004/20240805/380f2f47f89e646b350397a2da031747.jpg,/uploads/machine_0004/20240805/4b5d30f654e64988e69bd986d9275ce1.jpg\",\"out_sequence\":8}]}}","sign":"d211f01d93b94296d6f25f156a93d7cd"}';
         $data = json2arr($data);
         dump($data);
         $config = [
@@ -253,7 +290,7 @@ class Test extends BaseController
         ];
 //        unset($data['sign']);
 //        $data['sign'] = SignUtil::makeSign($data,$config['key']);
-//        dump($data);
+        dump($data);
         $app = AppFactory::machine($config);
         $result = $app->mq->onMessage();
         dump($result);

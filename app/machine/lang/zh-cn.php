@@ -34,6 +34,7 @@ return [
         "alc_id_require" => "抽奖活动配置ID不能为空",
 
         "carList_require" => "购物车不能为空",
+        "hotelList_require" => "酒店信息不能为空",
 
         "mcList_require" => "货道列表不能为空",
 
@@ -167,6 +168,8 @@ return [
         "status3" => "此取货码已过期",
         "status4" => "此取货码已作废",
         "status5" => "此取货码正在使用中",
+
+        "mc_id_empty" => "查无可随机取货的货架信息",
     ],
 
     "VActivityLottery" => [
@@ -211,5 +214,14 @@ return [
         "order_no_data" => "查无订单信息",
         "sod_no_data" => "查无订单详情信息",
         "detailsList_no_data" => "未取事件数据不能为空",
+    ],
+
+    "VHotel" => [
+        "pageNum_require" => "页面条数不能为空",
+        "page_require" => "页码不能为空",
+        "cityId_require" => "城市ID不能为空",
+        "hotelId_require" => "酒店ID不能为空",
+        "checkInDate_require" => "入住日期不能为空",
+        "checkOutDate_require" => "离店日期不能为空",
     ],
 ];

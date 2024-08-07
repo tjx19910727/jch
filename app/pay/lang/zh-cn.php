@@ -15,9 +15,11 @@ return  [
     "cancel_payment_success" => "撤销支付成功",
     "cancel_payment_fail" => "撤销支付失败",
 
+    "StrategyPayee" => [
+        "payee_config_no_json" => "收款方配置信息格式错误，不是JSON格式",
+        "payee_config_no_data" => "查无收款方配置信息",
+    ],
     "pay_type_not_in_scope" => "支付方式不在允许范围内",
-    "payee_config_no_json" => "收款方配置信息格式错误，不是JSON格式",
-    "payee_config_no_data" => "查无收款方配置信息",
 
     "VOrderPay" => [
         "order_no_data" => "查无订单信息",
@@ -48,5 +50,11 @@ return  [
         "ali_root_cert_path_require" => "支付宝根证书路径不能为空",
         "app_public_key_path_require" => "应用公钥证书路径不能为空",
 
+    ],
+
+    "VTrip" => [
+        "appId_require" => "appId不能为空",
+        "appSecret_require" => "appSecret不能为空",
+        "baseUrl_require" => "请求地址不能为空",
     ],
 ];

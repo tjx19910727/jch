@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Machine\Receive\ActivityClient;
 use app\AppFactory\Machine\Receive\ApiClient;
+use app\AppFactory\Machine\Receive\HotelClient;
 use app\AppFactory\Machine\Receive\MqClient;
 use app\AppFactory\Machine\Receive\SaleOrdersClient;
 
@@ -32,6 +33,9 @@ class ReceiveProvider implements ServiceProviderInterface
         };
         $app['saleOrders'] = function ($app) {
             return new SaleOrdersClient($app);
+        };
+        $app['hotel'] = function ($app) {
+            return new HotelClient($app);
         };
     }
 }

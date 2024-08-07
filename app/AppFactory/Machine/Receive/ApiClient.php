@@ -42,11 +42,13 @@ use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
+use app\machine\validate\VReceive;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -74,6 +76,7 @@ class ApiClient extends ReceiveBaseClient
         BeforeOrderPaymentTrait, AfterOrderPaymentTrait,
         SaleOrdersTrait,
         SaleOrdersRevenueTrait,
+        SaleHotelTrait,
         StrategyIncomeTrait,
         StrategyManagerTrait;
 
@@ -90,8 +93,8 @@ class ApiClient extends ReceiveBaseClient
     public function __destruct()
     {
         // TODO: Implement __destruct() method.
-        $result = $this->updateMachineMqRecord(['status' => 2,'msg_id' => $this->data['msg_id']],['msg_id' => $this->data['msg_id']]);
-        actionLog($result,'处理完成时修改状态为已处理');
+        $result = $this->updateMachineMqRecord(['status' => 2, 'msg_id' => $this->data['msg_id']], ['msg_id' => $this->data['msg_id']]);
+        actionLog($result, '处理完成时修改状态为已处理');
     }
 
 
@@ -134,8 +137,8 @@ class ApiClient extends ReceiveBaseClient
      */
     public function systemInfo()
     {
-        $pIds = $this->getAuthManagerMachineColumn(['m_id' => $this->machine['m_id']],'manager_id');
-        $pIds = array_merge($pIds,$this->getParentIdList($this->machine['creator']));
+        $pIds = $this->getAuthManagerMachineColumn(['m_id' => $this->machine['m_id']], 'manager_id');
+        $pIds = array_merge($pIds, $this->getParentIdList($this->machine['creator']));
         $pIds[] = $this->machine['creator'];
         $systemInfo = $this->getConfigContent([['creator', 'in', $pIds], "config_switch" => 1, 'config_name' => "systemInfo"]);
         return $this->rQ($systemInfo);
@@ -405,7 +408,7 @@ class ApiClient extends ReceiveBaseClient
             return $this->rAction($result);
         } catch (\Exception $e) {
             $this->rollbackTrans();
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
     }
@@ -436,7 +439,7 @@ class ApiClient extends ReceiveBaseClient
     {
         $where['m_id'] = $this->machine['m_id'];
         $onOffField = "moo_id,on_off_ckc,on_off_machine";
-        $data = $this->getMachineOnOffFind($where, $onOffField,'update_time desc');
+        $data = $this->getMachineOnOffFind($where, $onOffField, 'update_time desc');
         return $this->rQ($data);
     }
 
@@ -569,7 +572,7 @@ class ApiClient extends ReceiveBaseClient
                 return $this->rFail($this->lang("action_fail"));
             } catch (\Exception $e) {
                 $this->rollbackTrans();
-                actionException($e,1);
+                actionException($e, 1);
                 return $this->rTryCatch($e->getMessage());
             }
         }
@@ -657,9 +660,6 @@ class ApiClient extends ReceiveBaseClient
                         "total_sod_price" => bcmul($mc['retail_price'], $value['quantity'], 2),
                         "quantity" => $value['quantity'],
                         "bar_code" => $mc['bar_code'],
-                        //                    "batch_number" => $mg['batch_number'],
-                        //                    "manufacture_time" => $mc['manufacture_time'],
-                        //                    "sell_by_date" => $mc['sell_by_date'],
                     ];
                     $sod_id = $this->addSaleOrdersDetails($details);
                     if ($sod_id) {
@@ -681,7 +681,7 @@ class ApiClient extends ReceiveBaseClient
             }
         } catch (\Exception $e) {
             $this->rollbackTrans();
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
         $this->startTrans();
@@ -710,7 +710,51 @@ class ApiClient extends ReceiveBaseClient
             return $this->r(100, $this->lang("VSubCar.make_order_fail"));
         } catch (\Exception $e) {
             $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 订单增加酒店信息
+     * @return array|bool|string|\think\response\Json
+     */
+    public function subHotel()
+    {
+        $updateOrder = [];
+        $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
+        try {
+            validate(VReceive::class)->scene("hotel")->check($this->data['hotelList']);
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+        $insertHotel = [
+            "order_id" => $this->order['order_id'],
+            "m_id" => $this->order['m_id'],
+            "machine_id" => $this->order['machine_id'],
+            "machine_name" => $this->order['machine_name'],
+            "hotel_trade_no" => "",
+            "hotelId" => $this->data['hotelList']['hotelId'],
+            "roomId" => $this->data['hotelList']['roomId'],
+            "totalPrice" => bcmul($this->data['hotelList']['totalPrice'], 100),
+            "pay_amount" => bcmul($this->data['hotelList']['pay_amount'], 100),
+            "checkInDate" => $this->data['hotelList']['checkInDate'],
+            "checkOutDate" => $this->data['hotelList']['checkOutDate'],
+            "guestNames" => $this->data['hotelList']['guestNames'] ?? "",
+        ];
+        $this->startTrans();
+        try {
+            $flag[] = $this->addSaleHotel($insertHotel);
+            $updateOrder['order_id'] = $this->order['order_id'];
+            $updateOrder['has_hotel'] = 1;
+            $updateOrder['total_price'] = bcadd($this->order['total_price'], $this->data['hotelList']['pay_amount'], 2);
+            $flag[] = $this->updateSaleOrders($updateOrder);
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result);
+        } catch (\Exception $e) {
             actionException($e,1);
+            $this->rollbackTrans();
             return $this->rTryCatch($e->getMessage());
         }
     }
@@ -772,6 +816,6 @@ class ApiClient extends ReceiveBaseClient
         $this->delMachineGoods($where);
         $this->delAdvertisementPush($where);
         $this->delMachineView($where);
-        return $this->r(200,$this->lang("action_success"));
+        return $this->r(200, $this->lang("action_success"));
     }
 }

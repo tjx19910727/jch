@@ -39,6 +39,7 @@ class V2BaseClient extends ApiBaseClient
     public function getAuthConfig()
     {
         $this->authConfig = $this->getConfigApiFind(['auth_name' => $this->config['auth_name']]);
+        actionLog($this->authConfig,'API配置信息');
         if (!$this->authConfig) {
             $this->returnData(99, $this->lang("msg." . 99))->send();
             die();
@@ -53,6 +54,7 @@ class V2BaseClient extends ApiBaseClient
     {
         $this->authConfig['white_list'] = explode(",",$this->authConfig['white_list']);
         $this->ip = request()->ip();
+        actionLog($this->ip,'请求IP地址');
         if ($this->authConfig['white_list'] && !in_array($this->ip,$this->authConfig['white_list'])) {
             $this->returnData(1,$this->lang("msg." . 1))->send();
             die();
@@ -94,6 +96,7 @@ class V2BaseClient extends ApiBaseClient
     {
         if ($this->config['params']) {
             $this->config['params'] = json_decode($this->config['params'],true);
+            actionLog($this->config['params'],'接口参数');
             if (!$this->config['params']) {
                 $this->returnData(5,$this->lang("msg." . 5))->send();
                 die();
@@ -108,6 +111,7 @@ class V2BaseClient extends ApiBaseClient
     public function checkApiSign()
     {
         $sign = $this->makeApiSign();
+        actionLog($sign,'生成的签名');
         if ($sign != $this->config['sign']) {
             $this->returnData(17,$this->lang("msg." . 17))->send();
             die();

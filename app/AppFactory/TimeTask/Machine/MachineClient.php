@@ -133,7 +133,7 @@ class MachineClient extends TimeTaskBase
      */
     public function checkOffline()
     {
-        $details = $this->getMachineOnlineDetailsList(['offline_time' => 0, ['heart_time', '<', time() - env("machine.timeout",20)]], 0, 'mod_id,m_id,machine_name,machine_id,online_time,d_date');
+        $details = $this->getMachineOnlineDetailsList(['offline_time' => 0, ['heart_time', '<', time() - env("machine.timeout",60)]], 0, 'mod_id,m_id,machine_name,machine_id,online_time,d_date');
         if ($details) {
             $flag[] = 1;
             $this->startTrans();

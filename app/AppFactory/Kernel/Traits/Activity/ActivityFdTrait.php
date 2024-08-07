@@ -99,7 +99,7 @@ trait ActivityFdTrait
         $this->fd = $this->getActivityFdFind(['fd_id' => $this->data['fd_id']]);
         if (!$this->fd) return $this->rFail($this->lang("VActivityFd.fd_no_data"));
         $this->fd = $this->fd->toArray();
-        $am = $this->getActivityMachineFind(['a_id' => $this->fd['fd_id'],'a_type' => 2, 'm_id' => $this->machine['machine_id']]);
+        $am = $this->getActivityMachineFind(['a_id' => $this->fd['fd_id'],'a_type' => 2, 'm_id' => $this->machine['m_id']]);
         if (!$am) return $this->r(100,$this->lang("VActivityFd.no_am_data"));
 
 
@@ -291,17 +291,19 @@ trait ActivityFdTrait
             if (!$this->order['retail_price']) $updateOrder['retail_price'] = $this->order['total_price'];
             $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
             $updateOrder['total_price'] = bcsub($this->order['total_price'],$this->countContent['discount_price'],3);
-            // 平均优惠金额
-            $averagePrice = bcdiv($updateOrder['discount_price'],$this->order['total_quantity'],3);
-            $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
-            if (!$details) return $this->lang("VActivityFd.sod_no_data");
-            $details = $details->toArray();
-            foreach ($details as $dk => $dv) {
-                $updateSod['sod_id'] = $dv['sod_id'];
-                $updateSod['discount_price'] = bcadd($dv['discount_price'], bcmul($averagePrice,$dv['quantity'],3), 3);;
-                $updateSod['total_sod_price'] = bcsub(bcmul($dv['retail_price'],$dv['quantity'],3),$averagePrice);
-                $flag[] = $this->updateSaleOrdersDetails($updateSod);
-                actionLog($this->getLS(),'【SQL】处理订单详情信息');
+            if ($this->order['has_hotel'] == 2) {
+                // 平均优惠金额
+                $averagePrice = bcdiv($updateOrder['discount_price'], $this->order['total_quantity'], 3);
+                $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
+                if (!$details) return $this->lang("VActivityFd.sod_no_data");
+                $details = $details->toArray();
+                foreach ($details as $dk => $dv) {
+                    $updateSod['sod_id'] = $dv['sod_id'];
+                    $updateSod['discount_price'] = bcadd($dv['discount_price'], bcmul($averagePrice, $dv['quantity'], 3), 3);;
+                    $updateSod['total_sod_price'] = bcsub(bcmul($dv['retail_price'], $dv['quantity'], 3), $averagePrice);
+                    $flag[] = $this->updateSaleOrdersDetails($updateSod);
+                    actionLog($this->getLS(), '【SQL】处理订单详情信息');
+                }
             }
         }
         if ($this->countContent['mc_id']) {

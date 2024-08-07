@@ -61,7 +61,7 @@ trait OutGoodsTrait
     {
         $this->order['out_status'] = 4;
         $this->order['out_time'] = time();
-        $this->order['remark'] = json_encode($this->message['main'],320);
+        $this->order['remark'] = "接收到出货结果";
 
         $insertGChange = [
             "m_id" => $this->machine['m_id'],

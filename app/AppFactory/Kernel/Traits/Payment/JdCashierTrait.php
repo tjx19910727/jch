@@ -277,7 +277,7 @@ trait JdCashierTrait
         }
         if ($result['refundStatus'] == 'FAIL') {
             $this->refundFail();
-            return $this->rFail( '退款失败');
+            return $this->rFail( '退款失败：' . $result['message']);
         }
         return $this->r( 100,'未识别状态：' . $result['resultStatus'], $result);
     }

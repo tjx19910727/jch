@@ -31,7 +31,7 @@ class Tree
             if ($value[$pid] == $root) {
                 $tree[] = &$packData[$key];
             } else {
-                $packData[$value[$pid]][$child] = &$packData[$key];
+                $packData[$value[$pid]][$child][] = &$packData[$key];
             }
         }
         return $tree;

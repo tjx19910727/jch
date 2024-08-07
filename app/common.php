@@ -310,7 +310,7 @@ function actionLog($data,$remark = '',$logName = "")
         file_put_contents($filePath . $type, '[' . date('Y-m-d H:i:s', time()) . ']' . $data . "\r\n", FILE_APPEND);
     } catch (Exception $e) {
         if (strpos($e->getMessage(),'Permission denied') !== false) {
-            chmod(root_path("runtime/log"),0777);
+            @chmod(root_path("runtime/log"),0777);
         }
     }
 }

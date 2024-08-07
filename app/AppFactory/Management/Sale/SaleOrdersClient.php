@@ -236,7 +236,7 @@ class SaleOrdersClient extends ManagementClient
             'machine_id,machine_name,trade_no,mch_no,
                 (discount_price + total_price) goods_total_price,discount_price,total_quantity,total_price,
                 pay_code,
-                FROM_UNIXTIME(pay_time,"%Y-%d-%m %H:%i:%s") pay_time,
+                FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
                 (CASE pay_type WHEN 1 THEN "微信支付" WHEN 2 THEN "支付宝支付" WHEN 3 THEN "" WHEN 4 THEN "京东收银" WHEN 0 THEN "免支付" END) pay_type,
                 (CASE pay_method 
                     WHEN 1 THEN "免支付" 
@@ -252,7 +252,12 @@ class SaleOrdersClient extends ManagementClient
                     WHEN 32 THEN "反扫支付"
                     WHEN 41 THEN "扫码支付"
                     WHEN 42 THEN "刷卡支付（被扫支付）"
-                END) pay_method
+                END) pay_method,
+                (CASE refund_status
+                    WHEN 1 THEN "未退款"
+                    WHEN 2 THEN "已退款"
+                    WHEN 3 THEN "退款失败"
+                END) refund_status
                 '
         );
         if ($list) {
@@ -270,6 +275,7 @@ class SaleOrdersClient extends ManagementClient
                 "pay_time" => "支付时间",
                 "pay_type" => "支付类型",
                 "pay_method" => "支付方式",
+                "refund_status" => "退款",
             ];
             $filename = "订单交易-" . date("Ymd");
             return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
@@ -287,18 +293,17 @@ class SaleOrdersClient extends ManagementClient
         $field = "so.machine_id,so.machine_name,so.trade_no,sod.batch_number,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
             (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '付费抽奖活动' WHEN 5 THEN '满减满送活动' END) order_type,
-            sod.deliver_pics,
             (CASE so.pay_type WHEN 0 THEN '免支付' WHEN 1 THEN '微信支付' WHEN 2 THEN '支付宝支付' WHEN 3 THEN '' WHEN 4 THEN '京东收银' ELSE '' END) pay_type,
             (CASE so.pay_method 
-            WHEN 1 THEN '免支付' 
-            WHEN 14 THEN 'Native支付' 
-            WHEN 23 THEN '扫码支付' 
-            WHEN 41 THEN '扫码支付' WHEN 42 THEN '被扫支付'
+            WHEN 0 THEN '免支付' 
+            WHEN 1 THEN '扫码支付' 
+            WHEN 41 THEN '扫码支付' 
+            WHEN 2 THEN '被扫支付'
             ELSE '' END) pay_method,
             FROM_UNIXTIME(so.create_time,'%Y-%m-%d %H:%i:%s') create_time,
             FROM_UNIXTIME(so.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
             pay_code";
-        $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field, "so.trade_no");
+        $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
             if ($list) {
@@ -315,7 +320,6 @@ class SaleOrdersClient extends ManagementClient
                     "total_sod_price" => "实收金额",
                     "out_status" => "状态",
                     "order_type" => "订单类型",
-                    "deliver_pics" => "出货图像",
                     "pay_type" => "支付类型",
                     "pay_method" => "支付方式",
                     "create_time" => "交易时间",

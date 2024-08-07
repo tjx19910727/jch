@@ -142,7 +142,7 @@ class Test extends BaseController
 
     public function getToken()
     {
-        $manager = AuthManagerModel::getFind(['manager_id' => 5]);
+        $manager = AuthManagerModel::getFind(['manager_id' => 1]);
         session("manager",$manager);
         $token_arr = [
             "session_id" => session_id(),

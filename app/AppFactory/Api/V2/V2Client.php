@@ -19,9 +19,11 @@ use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthStatesTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use think\db\exception\DataNotFoundException;
@@ -33,10 +35,11 @@ class V2Client extends V2BaseClient
     use MachineTrait, MachineChannelTrait;
     use ConfigSceneTrait;
     use EarthCountriesTrait, EarthCitiesTrait, EarthRegionsTrait, EarthAreaTrait, EarthStatesTrait;
-    use SaleOrdersDailyCountTrait, SaleOrdersTrait;
+    use SaleOrdersDailyCountTrait, SaleOrdersTrait, SaleHotelTrait;
     use ActivityPickCodeTrait;
     use ApiAdvanceTrait, ApiCallbackTrait, ApiLockStockTrait;
     use AfterOrderPaymentTrait;
+    use GoodsTrait;
 
     protected $machine;
     protected $order;
@@ -49,13 +52,14 @@ class V2Client extends V2BaseClient
     public function get_inventory_list()
     {
         try {
-            $field = "mc_id,channel_code,
-            (CASE status WHEN 3 THEN 0 ELSE stock END) quantity,retail_price sale_price,sku, 
-            (CASE status WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,market_price,frozen_stock reserver_quantity, capacity slot_max_count";
-            $where['machine_id'] = $this->params['machine_id'];
-            if (isset($this->params['product_id'])) $where['g_id'] = $this->config['product_id'];
-            $where[] = ['status','<>',2];
-            $data = $this->getMachineChannelList($where, 0, $field, 'stock desc');
+            $field = "mc.mc_id,mc.channel_code,
+            (CASE mc.status WHEN 3 THEN 0 ELSE mc.stock END) quantity,mc.retail_price sale_price,mc.sku, 
+            (CASE mc.status WHEN 3 THEN mc.stock ELSE 0 END) mismatch_quantity,mc.g_id product_id,mc.g_name,g.`desc` g_desc,
+            mc.market_price,mc.frozen_stock reserver_quantity, mc.capacity slot_max_count";
+            $where['mc.machine_id'] = $this->params['machine_id'];
+            if (isset($this->params['product_id'])) $where['mc.g_id'] = $this->config['product_id'];
+            $where[] = ['mc.status','<>',2];
+            $data = $this->getMachineChannelJoinGoodsList($where, 0, $field, 'mc.stock desc');
             if ($data) {
                 return $this->returnData(0, $this->lang("msg." . 0), $data);
             }
@@ -283,6 +287,8 @@ class V2Client extends V2BaseClient
                 try {// 结算分润收益
                     $flag[] = $this->settlementRevenue();
                     $flag[] = $this->paymentSuccessful();
+                    // 修改订单酒店详情支付状态
+                    $flag[] = $this->updateSaleHotel(['pay_status' => 3],['order_id' => $this->order['order_id']]);
                     $result = flag_check($flag);
                     actionLog($result, '处理支付成功事务');
                     if (!$result) {

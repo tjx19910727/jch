@@ -74,17 +74,20 @@ class MachineBaseClient extends BaseClient
         if ($action) $path = "/" . $action;
         if (!$path) $path = ($this->message['msgType'] ?? "");
         if ($path != "heartbeat") {
-            $insertMqRecord = [
-                "m_id" => $this->machine['m_id'],
-                "machine_id" => $this->machine['machine_id'],
-                "machine_name" => $this->machine['machine_name'],
-                "msg_id" => $this->data['msg_id'],
-                "path" => $path,
-                "content" => json_encode($this->data),
-                "from" => $from,
-                "type" => $type,
-            ];
-            $this->addMachineMqRecord($insertMqRecord);
+            $msg = $this->getMachineMqRecordFind(['msg_id' => $this->data['msg_id']]);
+            if (!$msg) {
+                $insertMqRecord = [
+                    "m_id" => $this->machine['m_id'],
+                    "machine_id" => $this->machine['machine_id'],
+                    "machine_name" => $this->machine['machine_name'],
+                    "msg_id" => $this->data['msg_id'],
+                    "path" => $path,
+                    "content" => json_encode($this->data),
+                    "from" => $from,
+                    "type" => $type,
+                ];
+                $this->addMachineMqRecord($insertMqRecord);
+            }
         }
 
     }

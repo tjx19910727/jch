@@ -166,7 +166,11 @@ class ActivityClient extends ReceiveBaseClient
                     $whereMc[] = ['g_id', 'in', $apg_id];
                     $whereMc['status'] = 1;
                     $whereMc['m_id'] = $this->machine['m_id'];
+                    $whereMc[] = ['stock', '>',0];
                     $mc = $this->getMachineChannelColumn($whereMc, 'mc_id');
+                    if (!$mc) {
+                        return $this->r(100,$this->lang("VActivityPickCode.mc_id_empty"));
+                    }
                     $mc_count = count($mc);
                     $num = random_int(1, $mc_count);
                     // 只取一个商品
@@ -406,7 +410,7 @@ class ActivityClient extends ReceiveBaseClient
         $list = [];
         // 本次执行抽奖次数初始化，总数量减去已抽次数
         $quantity = bcsub($used['quantity'], $used['used_quantity']);
-        // 单抽状态下，每次执行投资时抽奖次数重置为1
+        // 单抽状态下，每次执行抽奖时抽奖次数重置为1
         if ($alc['active_type'] == 1) $quantity = 1;
         // 多抽循环，每次抽奖结果放至中奖列表
         for ($i = 0; $i < $quantity; $i++) {
@@ -438,7 +442,8 @@ class ActivityClient extends ReceiveBaseClient
         $this->startTrans();
 
         try {// 修改已抽奖次数
-            $this->updateActivityFdUsed(['used_quantity' => $used['used_quantity']], ['alu_id' => $used['alu_id']]);// 没抽中，返回谢谢惠顾
+            $this->updateActivityFdUsed(['used_quantity' => $used['used_quantity']], ['alu_id' => $used['alu_id']]);
+            // 没抽中，返回谢谢惠顾
             if (!$list) {
                 $this->commitTrans();
                 $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0)->toArray();

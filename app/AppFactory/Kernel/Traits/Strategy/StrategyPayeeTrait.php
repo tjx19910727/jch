@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Model\Strategy\StrategyPayeeModel;
 use app\AppFactory\Kernel\Support\Validate\Pay\VAliPay;
 use app\AppFactory\Kernel\Support\Validate\Pay\VJdCashierPay;
 use app\AppFactory\Kernel\Support\Validate\Pay\VTlPay;
+use app\AppFactory\Kernel\Support\Validate\Pay\VTrip;
 use app\AppFactory\Kernel\Support\Validate\Pay\VWxPay;
 use think\exception\ValidateException;
 
@@ -60,12 +61,14 @@ trait StrategyPayeeTrait
         2 => VAliPay::class,
         3 => VTlPay::class,
         4 => VJdCashierPay::class,
+        5 => VTrip::class,
     ];
     protected $scene = [
         1 => "wx",
         2 => "ali",
         3 => "tl",
         4 => "jdPay",
+        5 => "tripPay",
     ];
 
     /**
@@ -80,11 +83,11 @@ trait StrategyPayeeTrait
         $payee = $this->getMachinePayeeFind($where,$field,$order);
         if (!$payee) {
             actionLog($this->getLS(),'查无收款方配置');
-            return $this->rFail($this->lang("VSaleOrders.payee_config_no_data"));
+            return $this->rFail($this->lang("StrategyPayee.payee_config_no_data"));
         }
         if (is_string($payee)) return $this->rFail($payee);
         $content = json2arr($payee['content']);
-        if (!$content) return $this->rFail($this->lang("VSaleOrders.payee_config_no_json"));
+        if (!$content) return $this->rFail($this->lang("StrategyPayee.payee_config_no_json"));
         $content['sp_id'] = $payee['sp_id'];
         try {
             validate($this->vClass[$payee['payee_type']])->scene($this->scene[$payee['payee_type']])->check($content);
