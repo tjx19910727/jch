@@ -39,6 +39,8 @@ class MachineErrorCodeClient extends ManagementClient
 
     public function getEcList($where, $pageNum = 0, $field = "*", $order = "", $group = "")
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, '', $group);
         return $this->rQ($data);
     }
@@ -52,6 +54,8 @@ class MachineErrorCodeClient extends ManagementClient
      */
     public function exportEc($where, $field = "*", $order = "create_time desc")
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $list = $this->getMachineErrorCodeList($where, 0, $field . ",msg", $order);
         if ($list) {
             $list = $list->toArray();
@@ -61,12 +65,11 @@ class MachineErrorCodeClient extends ManagementClient
             }
             $title = [
                 "machine_id" => "设备编号",
-                "machine_name" => "设备编号",
-                "error_position" => "位置",
-                "errorCode" => "类型",
+                "machine_name" => "设备名称",
+                "error_position" => "错误位置",
+                "errorCode" => "错误码类型",
                 "remark" => "简介",
-                "msg" => "说明",
-                "create_time" => "记录时间",
+                "create_time" => "上报时间",
             ];
             $filename = "系统事件-" . date("YmdHis");
             return $this->sendToExport("事件日志-系统日志", $filename, $title, $list);

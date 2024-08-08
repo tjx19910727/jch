@@ -15,19 +15,20 @@ use app\AppFactory\Kernel\Support\Validate\Api\VV2;
 
 trait SaleOrdersTrait
 {
-    public function getSaleOrdersValue($where,$value)
+    public function getSaleOrdersValue($where, $value)
     {
-        return SaleOrdersModel::getFieldValue($where,$value);
+        return SaleOrdersModel::getFieldValue($where, $value);
     }
+
     /**
      * 订单主表字段求和
      * @param $where
      * @param $sum
      * @return float
      */
-    public function getSaleOrdersSum($where,$sum)
+    public function getSaleOrdersSum($where, $sum)
     {
-        return SaleOrdersModel::getSum($where,$sum);
+        return SaleOrdersModel::getSum($where, $sum);
     }
 
     /**
@@ -37,9 +38,9 @@ trait SaleOrdersTrait
      * @param string $order
      * @return SaleOrdersModel|array|mixed|null|\think\Model
      */
-    public function getSaleOrdersFind($where,$field = "*",$order = "",$group = "")
+    public function getSaleOrdersFind($where, $field = "*", $order = "", $group = "")
     {
-        return SaleOrdersModel::getFind($where,$field,$order,$group);
+        return SaleOrdersModel::getFind($where, $field, $order, $group);
     }
 
     /**
@@ -49,9 +50,9 @@ trait SaleOrdersTrait
      * @param string $group
      * @return mixed
      */
-    public function getSaleOrdersDetailsData($where,$field = "*", $group = "")
+    public function getSaleOrdersDetailsData($where, $field = "*", $group = "")
     {
-        return SaleOrdersModel::collectDetailsData($where,$field,$group);
+        return SaleOrdersModel::collectDetailsData($where, $field, $group);
     }
 
     /**
@@ -65,12 +66,14 @@ trait SaleOrdersTrait
      * @return SaleOrdersModel|SaleOrdersModel[]|array|\think\Collection|\think\Paginator
      * @throws \Exception
      */
-    public function getSaleOrdersList($where,$pageNum = 0, $field = "*",$order = "",$eachFn = '',$group = '', $limit = 0)
+    public function getSaleOrdersList($where, $pageNum = 0, $field = "*", $order = "", $eachFn = '', $group = '', $limit = 0)
     {
-        $data = SaleOrdersModel::getList($where,$pageNum,$field,$order,$eachFn,$group,$limit)->each(function ($item) {
-            $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']],0);
-            return $item;
-        });
+        $data = SaleOrdersModel::getList($where, $pageNum, $field, $order, $eachFn, $group, $limit);
+        if ($pageNum)
+            $data = $data->each(function ($item) {
+                $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
+                return $item;
+            });
         return $data;
     }
 
@@ -82,8 +85,8 @@ trait SaleOrdersTrait
     public function addSaleOrders($insert)
     {
         $order = SaleOrdersModel::create($insert);
-        actionLog($this->getLS(),'生成订单SQL');
-        actionLog($order,'生成订单结果');
+        actionLog($this->getLS(), '生成订单SQL');
+        actionLog($order, '生成订单结果');
         return $order->order_id;
     }
 
@@ -94,19 +97,19 @@ trait SaleOrdersTrait
      * @param array $field
      * @return SaleOrdersModel
      */
-    public function updateSaleOrders($update,$where = [],$field = [])
+    public function updateSaleOrders($update, $where = [], $field = [])
     {
-        return SaleOrdersModel::update($update,$where,$field);
+        return SaleOrdersModel::update($update, $where, $field);
     }
 
-    public function joinSoSodColumn($where,$column,$group = "")
+    public function joinSoSodColumn($where, $column, $group = "")
     {
-        return SaleOrdersModel::joinSodColumn($where,$column,$group);
+        return SaleOrdersModel::joinSodColumn($where, $column, $group);
     }
 
-    public function getSaleOrdersDetailsJoinOrderList($where,$pageNum = 0,$field = "*", $order = "",$group = "")
+    public function getSaleOrdersDetailsJoinOrderList($where, $pageNum = 0, $field = "*", $order = "", $group = "")
     {
-        return SaleOrdersDetailsModel::joinOrderList($where,$pageNum,$field,$order,$group);
+        return SaleOrdersDetailsModel::joinOrderList($where, $pageNum, $field, $order, $group);
     }
 
     /**
@@ -116,9 +119,9 @@ trait SaleOrdersTrait
      * @param string $order
      * @return SaleOrdersDetailsModel|array|mixed|null|\think\Model
      */
-    public function getSaleOrdersDetailsFind($where,$field = "*",$order = "")
+    public function getSaleOrdersDetailsFind($where, $field = "*", $order = "")
     {
-        return SaleOrdersDetailsModel::getFind($where,$field,$order);
+        return SaleOrdersDetailsModel::getFind($where, $field, $order);
     }
 
     /**
@@ -130,12 +133,12 @@ trait SaleOrdersTrait
      * @return SaleOrdersDetailsModel|SaleOrdersDetailsModel[]|array|\think\Collection|\think\Paginator
      * @throws \Exception
      */
-    public function getSaleOrdersDetailsList($where,$pageNum = 0,$field = "*",$order = "")
+    public function getSaleOrdersDetailsList($where, $pageNum = 0, $field = "*", $order = "")
     {
-        $data = SaleOrdersDetailsModel::getList($where,$pageNum,$field,$order)->each(function ($item) {
-            $item['cost_price'] = round($item['cost_price'],2);
-            $item['retail_price'] = round($item['retail_price'],2);
-            $item['total_sod_price'] = round($item['total_sod_price'],2);
+        $data = SaleOrdersDetailsModel::getList($where, $pageNum, $field, $order)->each(function ($item) {
+            $item['cost_price'] = round($item['cost_price'], 2);
+            $item['retail_price'] = round($item['retail_price'], 2);
+            $item['total_sod_price'] = round($item['total_sod_price'], 2);
             return $item;
         });
         return $data;
@@ -147,9 +150,9 @@ trait SaleOrdersTrait
      * @param $column
      * @return array
      */
-    public function getSaleOrdersColumn($where,$column)
+    public function getSaleOrdersColumn($where, $column)
     {
-        $data = SaleOrdersDetailsModel::getColumn($where,$column);
+        $data = SaleOrdersDetailsModel::getColumn($where, $column);
         return $data;
     }
 
@@ -159,9 +162,9 @@ trait SaleOrdersTrait
      * @param $column
      * @return array
      */
-    public function getSaleOrdersDetailsColumn($where,$column)
+    public function getSaleOrdersDetailsColumn($where, $column)
     {
-        $data = SaleOrdersDetailsModel::getColumn($where,$column);
+        $data = SaleOrdersDetailsModel::getColumn($where, $column);
         return $data;
     }
 
@@ -171,14 +174,14 @@ trait SaleOrdersTrait
      * @param $sum
      * @return float
      */
-    public function getSaleOrdersDetailsSum($where,$sum)
+    public function getSaleOrdersDetailsSum($where, $sum)
     {
-        return SaleOrdersDetailsModel::getSum($where,$sum);
+        return SaleOrdersDetailsModel::getSum($where, $sum);
     }
 
-    public function joinSaleOrdersSum($where,$sum)
+    public function joinSaleOrdersSum($where, $sum)
     {
-        return SaleOrdersDetailsModel::joinOrderSum($where,$sum);
+        return SaleOrdersDetailsModel::joinOrderSum($where, $sum);
     }
 
     /**
@@ -200,8 +203,8 @@ trait SaleOrdersTrait
     public function addSaleOrdersDetails($insert)
     {
         $sod = SaleOrdersDetailsModel::create($insert);
-        actionLog($this->getLS(),'生成订单详情SQL');
-        actionLog($sod,'生成订单详情结果');
+        actionLog($this->getLS(), '生成订单详情SQL');
+        actionLog($sod, '生成订单详情结果');
         return $sod->sod_id;
     }
 
@@ -245,7 +248,7 @@ trait SaleOrdersTrait
     {
         $flag = [];
         $details = json2arr($this->config['params']['order_detail']);
-        actionLog($details,'商品数据');
+        actionLog($details, '商品数据');
         foreach ($details as $dk => $dv) {
             try {
                 validate(VV2::class)->scene("order_detail")->check($dv);
@@ -265,12 +268,12 @@ trait SaleOrdersTrait
             if (!$mc) return $this->returnData(10, $this->lang("msg." . 10));
             if (is_string($mc)) return $this->returnData(10, $this->lang("msg." . 10) . "：" . $mc);
             $mc = $mc->toArray();
-            actionLog($mc,"该设备下货架列表数据");
+            actionLog($mc, "该设备下货架列表数据");
             // 总库存不足
             $totalStock = array_sum(array_column($mc, "stock"));
             if ($totalStock < $dv['quantity']) {
-                $this->returnData[] = ["success" => false,"order_no" => $this->config['params']['order_no'],"error_msg" => [$dk => $dv['quantity']]];
-                return $this->returnData(14, $this->lang("msg." . 14) . "：" . $this->lang("reserve_order.under_stock"),$this->returnData);
+                $this->returnData[] = ["success" => false, "order_no" => $this->config['params']['order_no'], "error_msg" => [$dk => $dv['quantity']]];
+                return $this->returnData(14, $this->lang("msg." . 14) . "：" . $this->lang("reserve_order.under_stock"), $this->returnData);
             }
 
             $insertSod = [];
@@ -311,21 +314,21 @@ trait SaleOrdersTrait
                     "mc_id" => $mcv['mc_id'],
                 ];
                 $flag[] = $this->addSaleOrdersDetails($insertDetails);
-                actionLog($this->getLS(),'生成订单详情');
+                actionLog($this->getLS(), '生成订单详情');
                 $flag[] = $this->updateMachineChannel($updateMc);
-                actionLog($this->getLS(),'修改货架库存');
-                $this->order['cost_price'] = bcadd($this->order['cost_price'],$insertDetails['cost_price'],3);
-                $this->order['market_price'] = bcadd($this->order['market_price'],$insertDetails['market_price'],3);
-                $this->order['retail_price'] = bcadd($this->order['retail_price'],$insertDetails['retail_price'],3);
-                $this->order['total_quantity'] = bcadd($this->order['total_quantity'],$insertDetails['quantity'],3);
+                actionLog($this->getLS(), '修改货架库存');
+                $this->order['cost_price'] = bcadd($this->order['cost_price'], $insertDetails['cost_price'], 3);
+                $this->order['market_price'] = bcadd($this->order['market_price'], $insertDetails['market_price'], 3);
+                $this->order['retail_price'] = bcadd($this->order['retail_price'], $insertDetails['retail_price'], 3);
+                $this->order['total_quantity'] = bcadd($this->order['total_quantity'], $insertDetails['quantity'], 3);
                 $insertDetails = [];
                 if ($dv['quantity'] == 0)
                     break;
             }
-            $this->order['total_price'] = bcadd($this->order['total_price'],bcdiv($dv['charge_amount'],100,3),3);
-            $this->order['discount_price'] = bcadd($this->order['discount_price'],bcdiv($dv['discount_amount'],100,3),3);
+            $this->order['total_price'] = bcadd($this->order['total_price'], bcdiv($dv['charge_amount'], 100, 3), 3);
+            $this->order['discount_price'] = bcadd($this->order['discount_price'], bcdiv($dv['discount_amount'], 100, 3), 3);
         }
-        actionLog($flag,'生成订单详情结果集');
+        actionLog($flag, '生成订单详情结果集');
         $result = flag_check($flag);
         if (!$result) return $this->returnData(14, $this->lang("msg." . 14));
         return $result;
@@ -339,9 +342,9 @@ trait SaleOrdersTrait
      * @param array $field
      * @return SaleOrdersDetailsModel
      */
-    public function updateSaleOrdersDetails($update ,$where = [],$field = [])
+    public function updateSaleOrdersDetails($update, $where = [], $field = [])
     {
-        return SaleOrdersDetailsModel::update($update,$where,$field);
+        return SaleOrdersDetailsModel::update($update, $where, $field);
     }
 
     /**
@@ -351,11 +354,11 @@ trait SaleOrdersTrait
      * @param int $inc
      * @return mixed
      */
-    public function incSaleOrdersDetails($where,$field,$inc = 1)
+    public function incSaleOrdersDetails($where, $field, $inc = 1)
     {
-        return SaleOrdersDetailsModel::setInc($where,$field,$inc);
+        return SaleOrdersDetailsModel::setInc($where, $field, $inc);
     }
-    
+
     /**
      * 获取订单编号
      * @param string $msg
@@ -363,7 +366,7 @@ trait SaleOrdersTrait
      */
     public function getSaleOrdersTradeNo($msg = "")
     {
-        while(1){
+        while (1) {
             $trade_no = date("YmdHis") . ($msg ? $msg : $this->get_rand_string(6));
             if (!SaleOrdersModel::be(['trade_no' => $trade_no])) {
                 return $trade_no;
@@ -381,9 +384,9 @@ trait SaleOrdersTrait
      * @return \think\Paginator
      * @throws \think\db\exception\DbException
      */
-    public function getSaleGoodsRankingList($where,$pageNum,$field = '*',$order = '',$group = '')
+    public function getSaleGoodsRankingList($where, $pageNum, $field = '*', $order = '', $group = '')
     {
-        return SaleOrdersDetailsModel::goodsRankingList($where,$pageNum,$field,$order,$group);
+        return SaleOrdersDetailsModel::goodsRankingList($where, $pageNum, $field, $order, $group);
     }
 
     /**
@@ -392,7 +395,7 @@ trait SaleOrdersTrait
      */
     public function transactionVideo()
     {
-        return $this->updateSaleOrders(['transaction_video' => $this->message['transaction_video']],['trade_no' => $this->message['trade_no']]);
+        return $this->updateSaleOrders(['transaction_video' => $this->message['transaction_video']], ['trade_no' => $this->message['trade_no']]);
     }
 
 }

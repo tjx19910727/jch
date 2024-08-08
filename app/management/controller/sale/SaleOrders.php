@@ -26,7 +26,7 @@ class SaleOrders extends Common
         $where = $this->getWhere($postData,false,['trade_no' => "like","mch_no" => "like","machine_name" => "like","machine_id" => "like"]);
         $where['pay_status'] = 3;
         $field = "*";
-        return $this->app->saleOrders->getList($where,$pageNum,$field,"order_id desc");
+        return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc");
     }
 
     /**
@@ -58,7 +58,7 @@ class SaleOrders extends Common
         $field = "so.machine_id,so.machine_name,so.trade_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
-        return returnData($this->app->saleOrders->getSaleOrdersDetailsJoinOrderList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc"));
+        return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc"));
     }
 
     /**
@@ -130,6 +130,8 @@ class SaleOrders extends Common
         if (isset($postData['refund_no']) && $postData['refund_no']) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
         if (isset($postData['pay_type']) && $postData['pay_type']) $where['pay_type'] = $postData['pay_type'];
 //        $where = $this->getWhere($postData,false,['refund_trade_no' => "like",'machine_id' => "like",'trade_no' => "like","refund_no" => "like"]);
+        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
+        if ($machineIds) $where[] = ['sor.machine_id','in',$machineIds];
         $field = "sor.*,so.pay_type";
         return returnData($this->app->saleOrders->getSaleOrdersRefundListJoinSoSod($where,$pageNum,$field,'sor.sor_id desc'));
     }
@@ -158,6 +160,9 @@ class SaleOrders extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData,false,["machine_id" => "like"]);
+
+        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $field = "ao_name,
         SUM(order_num) order_num,
         sum(totalRefundAmount) totalRefundAmount,
@@ -188,6 +193,8 @@ class SaleOrders extends Common
             unset($postData['order']);
         }
         $where = $this->getWhere($postData,false,["machine_id" => "like"]);
+        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         return $this->app->saleOrders->getReportList($where,$pageNum,$order);
     }
 
@@ -204,6 +211,8 @@ class SaleOrders extends Common
             unset($postData['order']);
         }
         $where = $this->getWhere($postData,false,["machine_id" => "like"]);
+        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         return $this->app->saleOrders->exportReport($where,$order);
     }
 
@@ -216,6 +225,8 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_time'])) $postData['create_time'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
+        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         return $this->app->saleOrders->saleDataCollect($where);
 
     }
@@ -229,6 +240,8 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_time'])) $postData['create_time'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
+        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20);
     }
 
@@ -241,6 +254,8 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_time'])) $postData['create_time'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
+        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         return $this->app->saleOrders->exportSaleDataCollect($where);
     }
 }

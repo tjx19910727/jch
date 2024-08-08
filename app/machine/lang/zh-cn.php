@@ -217,6 +217,13 @@ return [
     ],
 
     "VHotel" => [
+        "machine_id_require" => "设备编号不能为空",
+        "msg_id_require" => "消息ID不能为空",
+        "msg_id_unique" => "消息ID已存在，请重新上报",
+        "timestamp_require" => "时间戳不能为空",
+        "sign_require" => "签名不能为空",
+        "timestamp_checkTimestamp_overdue" => "时间戳超时，请更新时间",
+
         "pageNum_require" => "页面条数不能为空",
         "page_require" => "页码不能为空",
         "cityId_require" => "城市ID不能为空",

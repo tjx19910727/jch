@@ -20,12 +20,21 @@ class GoodsHitClient extends ManagementClient
 
     public function getTotalList($where,$pageNum = 0,$field = "*",$order = "")
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
         $return = $this->rQ($this->getGoodsHitList($where,$pageNum,$field,$order,function ($item) {
             $item['saleNum'] = $this->getSaleOrdersGoodsCountSum(['g_id' => $item['g_id']],'totalQuantity');
             $item['conversion_rate'] = ($item['saleNum'] > 0 ? bcmul(bcdiv($item['saleNum'],$item['hits'],3),100,1) : 0) . "%";
             return $item;
         },"g_id"));
         return $return;
+    }
+
+    public function getHitList($where,$pageNum = 0,$field = "*",$order = "",$eachFun = "",$group = "")
+    {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+        return $this->r(200,$this->lang("query_success"),$this->getGoodsHitList($where,$pageNum,$field,$order,$eachFun,$group));
     }
 
     public function export($where,$eType = 1)
@@ -38,6 +47,8 @@ class GoodsHitClient extends ManagementClient
             $field = "g_id,g_name,sku,gc_name,count(gh_id) hits";
         }
         if ($eType == 2) {
+            $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+            if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
             $field = 'machine_id,machine_name,g_name,gc_name,sku,g_id,count(gh_id) hits, date_format(create_date,"%Y-%m-%d") create_date';
             $group = "m_id,g_id,create_date";
         }

@@ -232,15 +232,6 @@ class Receive extends Common
     }
 
     /**
-     * 上报酒店
-     * @return array|bool|string|\think\response\Json
-     */
-    public function subHotel()
-    {
-        return $this->app->api->subHotel();
-    }
-
-    /**
      * 提交货道信息
      * @return array|string
      */

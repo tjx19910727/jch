@@ -24,7 +24,8 @@ class GoodsChangeClient extends ManagementClient
      */
     public function exportGoodsChange($where)
     {
-        $list = $this->getGoodsChangeList($where,0,'machine_id,machine_name,channel_code,sku,g_name,change_value,position,
+        $list = $this->getGoodsChangeList($where,0,'machine_id,machine_name,channel_code,sku,g_name,change_value,
+        (CASE position WHEN 1 THEN "货架" WHEN 2 THEN "设备商品库" END) position,
         (CASE type 
             WHEN 1 THEN "未知" 
             WHEN 2 THEN "上货" 
@@ -47,11 +48,9 @@ class GoodsChangeClient extends ManagementClient
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
                 "channel_code" => "货架编号",
-                "sku" => "SKU",
-                "g_name" => "商品名称",
                 "change_value" => "变化数量",
-                "type" => "类型",
-                "desc" => "备注",
+                "type" => "变化类型",
+                "position" => "位置",
                 "creator_nickname" => "操作人",
                 "create_time" => "操作时间",
             ];

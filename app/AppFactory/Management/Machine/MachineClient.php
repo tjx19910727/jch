@@ -144,6 +144,8 @@ class MachineClient extends ManagementClient
 
     public function getMList($where,$pageNum = 0,$field = "",$order = "")
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
         return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) {
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
             if (isset($item['state_id']) && $item['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $item['state_id']],'code,name,cname');
@@ -179,6 +181,8 @@ class MachineClient extends ManagementClient
      */
     public function getData($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $total = $this->getMachineCount($where);
         $where['status'] = 2;
         $disable = $this->getMachineCount($where);
@@ -208,6 +212,8 @@ class MachineClient extends ManagementClient
      */
     public function get10List($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $list = $this->getSaleOrdersMachineCountList($where,0,
             'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
             'totalPrice desc,totalQuantity desc, m_id desc','','m_id',10);
@@ -232,6 +238,8 @@ class MachineClient extends ManagementClient
      */
     public function exportRankingList($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $list = $this->getSaleOrdersMachineCountList($where,0,
             'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
             'totalPrice desc,totalQuantity desc, m_id desc','','m_id');

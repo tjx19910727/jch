@@ -18,6 +18,14 @@ class SaleOrdersUnclaimedClient extends ManagementClient
 {
     use SaleOrdersUnclaimedTrait,MachineTrait;
 
+    public function getSouList($where,$pageNum = 0,$field = "*", $order = "")
+    {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+        return $this->r(200,$this->lang("query_success"),$this->getSaleOrdersUnclaimedList($where,$pageNum,$field,$order));
+    }
+
+
     /**
      * 修改未取事件状态
      * status：2.已清除（人工清除回收箱），3.已取消（人工判定设备为误判）
@@ -52,10 +60,14 @@ class SaleOrdersUnclaimedClient extends ManagementClient
      */
     public function export($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
         $field = "machine_id,machine_name,trade_no,
         FROM_UNIXTIME(transfer_time,'%Y-%d-%m %H:%i:%s') transfer_time,
         channel_code,sku,g_name,retail_price,
-        (case is_out WHEN 1 THEN 'done' ELSE 'none' END) is_out,
+        (case is_match WHEN 1 THEN '是' ELSE '否' END) is_match,
+        (case is_claim WHEN 1 THEN '是' ELSE '否' END) is_claim,
+        (case is_out WHEN 1 THEN '是' ELSE '否' END) is_out,
         (CASE status WHEN 1 THEN '未取' WHEN 2 THEN '已清除' WHEN 3 THEN '已取消' END)status,
         duration,
         remark";
@@ -63,18 +75,13 @@ class SaleOrdersUnclaimedClient extends ManagementClient
         if (!$list) return $this->r(100,$this->lang("VSaleOrdersUnclaimed.su_no_data"));
         $list = $list->toArray();
         $title = [
+            "trade_no" => "订单编号",
             "machine_id" => "设备编号",
-            "machine_name" => "设备名称",
-            "trade_no" => "交易号",
-            "transfer_time" => "交易时间",
-            "channel_code" => "槽位",
-            "sku" => "SKU",
             "g_name" => "商品名称",
-            "retail_price" => "单价",
-            "is_out" => "开门",
+            "is_match" => "匹配",
+            "is_claim" => "取货",
+            "is_close" => "关门",
             "status" => "状态",
-            "duration" => "用时（支付至关门）秒",
-            "remark" => "备注",
         ];
         $filename = "未取商品-" . date("YmdHis");
         return $this->sendToExport("事件日志-未取商品", $filename, $title, $list);

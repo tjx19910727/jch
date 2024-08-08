@@ -80,7 +80,7 @@ class BaseModel extends Model
             if ($limit) $model = $model->limit($limit);
             if (!$pageNum) return $model->select();
             $model = $model->paginate($pageNum, false, ["query" => request()->param()]);
-            if (is_callable($eachFn)) {
+            if ($eachFn && is_callable($eachFn)) {
                 $model = $model->each($eachFn);
             }
             return $model;

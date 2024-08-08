@@ -10,6 +10,7 @@ namespace app\management\controller;
 
 
 use app\AppFactory\Management\Application;
+use app\management\validate\VCommon;
 use think\exception\ValidateException;
 use think\facade\Filesystem;
 
@@ -205,18 +206,11 @@ class Common extends AuthController
                     @chmod($folderPath, 0777);
                 }
             }
-            validate(
-                [
-                    'file' => [
-                        //                        "fileSize" => 2 * 1024 * 1024,
-                        "fileExt" => "jpg,jpeg,gif,png,xls,xlsx,crt,csr,txt,pem,mp3,mp4,wav,aiff,aac,flac,ogg,m4a,amr,wma,pcm,zip",
-                    ],
-                ],
-                [
-                    //                    "file.fileSize" => "文件太大",
-                    "file.fileExt" => "不支持的上传文件类型",
-                ]
-            )->check(['file' => $file]);
+            validate(VCommon::class)->scene("file")->check(['file' => $file]);
+            $extension = $file->getOriginalExtension();
+            if (in_array($extension,['jpg','jpeg','gif','png'])) {
+                validate(VCommon::class)->rule(['image' => 'fileSize:' . env("fileSystem.maxImageSize")])->scene("uploadImage")->check(['image' => $file]);
+            }
             $diskName = env("fileSystem.diskName");// 上传本地
             //            $diskName = "aliyun";    // 上传OSS服务器
             $saveName = Filesystem::disk($diskName)->putFile($folder, $file);

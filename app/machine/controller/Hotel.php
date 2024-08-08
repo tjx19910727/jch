@@ -87,4 +87,13 @@ class Hotel extends Common
     {
         return $this->app->hotel->getRoomList();
     }
+
+    /**
+     * 订单上报酒店
+     * @return array|bool|string|\think\response\Json
+     */
+    public function subHotel()
+    {
+        return $this->app->hotel->subHotel();
+    }
 }

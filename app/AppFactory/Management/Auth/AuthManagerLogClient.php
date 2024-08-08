@@ -125,10 +125,10 @@ class AuthManagerLogClient extends ManagementClient
                 $title = [
                     "organization_name" => "组织架构",
                     "nickname" => "用户姓名",
-                    "account" => "账号",
                     "position" => "位置",
-                    "path" => "事件",
+                    "account" => "账号",
                     "params" => "详情",
+                    "path" => "事件",
                     "create_time" => "时间",
                 ];
                 $filename = $this->lang("export.export_aul") . "-" . date("YmdHis");

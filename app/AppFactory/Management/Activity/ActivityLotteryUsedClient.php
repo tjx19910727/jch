@@ -38,21 +38,13 @@ class ActivityLotteryUsedClient extends ManagementClient
             if ($list) {
                 $list = $list->toArray();
                 $title = [
-                    "machine_id" => "设备编号",
-                    "machine_name" => "设备名称",
                     "trade_no" => "订单编号",
+                    "machine_name" => "设备名称",
+                    "machine_id" => "设备编号",
                     "price" => "抽奖单价",
                     "total_quantity" => "抽奖次数",
-                    "total_price" => "总价",
-                    "active_type" => "抽奖方式",
-                    "g_name" => "商品名称",
-                    "sku" => "SKU",
-                    "channel_code" => "货架编号",
-                    "quantity" => "商品数量",
-                    "probability" => "中奖概率",
-                    "out_success" => "出货成功",
-                    "out_fail" => "出货失败",
-                    "used_date" => "日期",
+                    "total_price" => "实际支付总金额",
+                    "active_type" => "抽奖类型",
                     "status" => "状态",
                     "create_time" => "创建时间",
                 ];

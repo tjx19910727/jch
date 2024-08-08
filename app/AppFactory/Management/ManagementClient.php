@@ -11,6 +11,7 @@ namespace app\AppFactory\Management;
 
 use app\AppFactory\Kernel\BaseClient;
 use app\AppFactory\Kernel\ServiceContainer;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
 use app\AppFactory\Kernel\Traits\Export\ExportLogTrait;
 use app\AppFactory\Kernel\Traits\ManagementTrait;
@@ -21,6 +22,7 @@ class ManagementClient extends BaseClient
     use ConfigTrait;
     use ManagementTrait;
     use ExportLogTrait;
+    use AuthManagerMachineTrait;
 
     /**
      * @var Application

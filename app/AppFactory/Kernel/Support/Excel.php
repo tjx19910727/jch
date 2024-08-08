@@ -9,6 +9,9 @@
 namespace app\AppFactory\Kernel\Support;
 
 
+use think\Exception;
+use think\facade\Lang;
+
 class Excel
 {
 
@@ -38,7 +41,6 @@ class Excel
                     @chmod($imageFilePath,0777);
                 }
                 $imgList = self::getImg($sheet,$imageFilePath);
-
                 for ($i = $startRow; $i <= $highestRow; $i++) {
                     $row = [];
                     foreach ($list as $key => $value) {
@@ -69,39 +71,49 @@ class Excel
      * 获取导入数据中的图片信息，保存图片至文件夹并返回路径
      * @param \PHPExcel_Worksheet $worksheet
      * @param $imageFilePath
-     * @return array
+     * @return array|string
      */
     public static function getImg(\PHPExcel_Worksheet $worksheet,$imageFilePath)
     {
-        $data = [];
-        foreach ($worksheet->getDrawingCollection() as $drawing) {
-            $xy=$drawing->getCoordinates();//得到单元数据 比如G2单元
-            if ($drawing instanceof \PHPExcel_Worksheet_Drawing) {//支持excel2007后缀为（.xlsx）
-                $filename = $drawing->getPath();
-                $imgData = file_get_contents($filename);
-                $imageFileName = $drawing->getIndexedFilename();
-                $type = explode(".", $imageFileName);
-                $imageName = $imageFilePath . md5(time() . rand(00000000,99999999)) . '.' . $type[1];
-                if (file_put_contents($imageName, $imgData)) {
-                    $data[$xy] = substr($imageName, 1);
-                }  //把文件保存到本地
-            }elseif($drawing instanceof \PHPExcel_Worksheet_MemoryDrawing) {//支持excel2003后缀为（.xls）
-                $imageFileNames = $drawing->getIndexedFilename();
-                ob_start();
-                call_user_func(
-                    $drawing->getRenderingFunction(),
-                    $drawing->getImageResource()
-                );
-                $imageContents = ob_get_contents();
-                ob_end_clean();
-                $type = explode(".",$imageFileNames);
-                $imageName = $imageFilePath.md5(time().rand(00000000,99999999)).'.'.$type[1];
-                if (file_put_contents($imageName,$imageContents)){
-                    $data[$xy] = substr($imageName,1);
-                }  //把文件保存到本地
+        try {
+            $data = [];
+            foreach ($worksheet->getDrawingCollection() as $drawing) {
+                $xy = $drawing->getCoordinates();//得到单元数据 比如G2单元
+                if ($drawing instanceof \PHPExcel_Worksheet_Drawing) {//支持excel2007后缀为（.xlsx）
+                    $filename = $drawing->getPath();
+                    $imgData = file_get_contents($filename);
+                    if (strlen($imgData) > env("fileSystem.maxImageSize")) {
+                        throw new Exception(Lang::get("fileSize") . "：" . strlen($imgData) . "/" . env("fileSystem.maxImageSize"));
+                    }
+                    $imageFileName = $drawing->getIndexedFilename();
+                    $type = explode(".", $imageFileName);
+                    $imageName = $imageFilePath . md5(time() . rand(00000000, 99999999)) . '.' . $type[1];
+                    if (file_put_contents($imageName, $imgData)) {
+                        $data[$xy] = substr($imageName, 1);
+                    }  //把文件保存到本地
+                } elseif ($drawing instanceof \PHPExcel_Worksheet_MemoryDrawing) {//支持excel2003后缀为（.xls）
+                    $imageFileNames = $drawing->getIndexedFilename();
+                    ob_start();
+                    call_user_func(
+                        $drawing->getRenderingFunction(),
+                        $drawing->getImageResource()
+                    );
+                    $imageContents = ob_get_contents();
+                    if (strlen($imageContents) > env("fileSystem.maxImageSize")) {
+                        throw new \Exception(Lang::get("fileSize") . "：" . strlen($imageContents) . "/" . env("fileSystem.maxImageSize"));
+                    }
+                    ob_end_clean();
+                    $type = explode(".", $imageFileNames);
+                    $imageName = $imageFilePath . md5(time() . rand(00000000, 99999999)) . '.' . $type[1];
+                    if (file_put_contents($imageName, $imageContents)) {
+                        $data[$xy] = substr($imageName, 1);
+                    }  //把文件保存到本地
+                }
             }
+            return $data;
+        } catch (\Exception $e) {
+            return $e->getMessage();
         }
-        return $data;
     }
 
     /**

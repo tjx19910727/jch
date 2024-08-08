@@ -10,6 +10,7 @@ namespace app\AppFactory\Management\Goods;
 
 
 use app\AppFactory\Kernel\Support\Excel;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
@@ -114,33 +115,17 @@ class GoodsClient extends ManagementClient
     public function exportExcel($where)
     {
         $list = $this->getGoodsList($where, 0,
-            'g_id,g_name,gc_name,model,sku,sku2,cost_price,market_price,retail_price,manufacturer,service_phone,
-                CONCAT(length,"*",width,"*",height) pack,
-                (CASE sell_channel WHEN 1 THEN "机器" WHEN 2 THEN "微商城" WHEN 3 THEN "机器+商城" END ) sell_channel,
-                expire_notice,
-                (CASE is_recommend WHEN 1 THEN "是" WHEN 2 THEN "否" END) is_recommend,
-                (CASE is_gift WHEN 1 THEN "是" WHEN 2 THEN "否" END) is_gift,
-                group_quantity');
+            'g_id,g_name,model,sku,cost_price,market_price,retail_price');
         if ($list) {
             $list = $list->toArray();
             $title = [
                 'g_id' => "商品ID",
-                'g_name' => "商品",
-                'gc_name' => "品类",
-                'model' => "型号",
-                'sku' => "SKU",
-                'sku2' => "关联SKU",
+                'g_name' => "商品名称",
+                'model' => "商品型号",
+                'sku' => "SKU码",
                 'cost_price' => "成本价",
-                'market_price' => "默认市场价",
-                'retail_price' => "默认售价",
-                'manufacturer' => "生产商",
-                'service_phone' => "商家电话",
-                'pack' => "包装（mm）",
-                'sell_channel' => "销售渠道",
-                'expire_notice' => "商品有效期提醒",
-                'is_recommend' => "推荐商品",
-                'is_gift' => "赠品",
-                'group_quantity' => "单组数量"
+                'market_price' => "市场价",
+                'retail_price' => "零售价",
             ];
             $filename = "商品列表-" . date("Ymd");
             $result = $this->sendToExport("商品管理-商品列表", $filename, $title, $list);

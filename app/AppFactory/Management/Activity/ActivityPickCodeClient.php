@@ -108,13 +108,11 @@ class ActivityPickCodeClient extends ManagementClient
         if ($list) {
             $list = $list->toArray();
             $title = [
-                "pick_name" => "提货码活动名称",
-                "desc" => "简介",
+                "code" => "提货码",
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
-                "code" => "提货码",
-                "status" => "激活状态",
                 "trade_no" => "订单编号",
+                "status" => "激活状态",
                 "used_time" => "使用时间",
             ];
             $filename = "【" . $ap['pick_name'] . "】使用报表-" . date("Ymd");

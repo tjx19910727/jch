@@ -10,6 +10,7 @@ namespace app\AppFactory\Management\Machine;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
@@ -17,6 +18,7 @@ use app\AppFactory\Management\ManagementClient;
 class MachineChannelClient extends ManagementClient
 {
     use MachineTrait,MachineChannelTrait;
+    use AuthManagerMachineTrait;
 
     /**
      * 获取空槽、BAD、空货数量
@@ -25,6 +27,8 @@ class MachineChannelClient extends ManagementClient
      */
     public function getData($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $whereEmpty = $where;
         $whereEmpty['g_id'] = 0;
         $empty = $this->getMachineChannelCount($whereEmpty);
@@ -52,6 +56,8 @@ class MachineChannelClient extends ManagementClient
      */
     public function getEmptyList($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $where['g_id'] = 0;
         $list = $this->getMachineChannelList($where,0,'m_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
@@ -74,6 +80,8 @@ class MachineChannelClient extends ManagementClient
      */
     public function getBadList($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $where['status'] = 3;
         $list = $this->getMachineChannelList($where,0,'m_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
@@ -96,6 +104,8 @@ class MachineChannelClient extends ManagementClient
      */
     public function getStockOutList($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $where['stock'] = 0;
         $list = $this->getMachineChannelList($where,0,'m_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,

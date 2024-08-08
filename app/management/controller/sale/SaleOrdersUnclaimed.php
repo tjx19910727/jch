@@ -23,7 +23,7 @@ class SaleOrdersUnclaimed extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['trade_no' => 'like','machine_id' => 'like','channel_code' => 'like','g_name' => "like"]);
-        return $this->app->saleOrdersUnclaimed->getList($where,$pageNum,$this->field,'create_time desc');
+        return $this->app->saleOrdersUnclaimed->getSouList($where,$pageNum,$this->field,'create_time desc');
     }
 
     public function getFind()

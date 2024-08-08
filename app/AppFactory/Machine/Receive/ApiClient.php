@@ -48,7 +48,6 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
-use app\machine\validate\VReceive;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -711,50 +710,6 @@ class ApiClient extends ReceiveBaseClient
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);
-            return $this->rTryCatch($e->getMessage());
-        }
-    }
-
-    /**
-     * 订单增加酒店信息
-     * @return array|bool|string|\think\response\Json
-     */
-    public function subHotel()
-    {
-        $updateOrder = [];
-        $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
-        try {
-            validate(VReceive::class)->scene("hotel")->check($this->data['hotelList']);
-        } catch (\Exception $e) {
-            actionException($e, 1);
-            return $this->rTryCatch($e->getMessage());
-        }
-        $insertHotel = [
-            "order_id" => $this->order['order_id'],
-            "m_id" => $this->order['m_id'],
-            "machine_id" => $this->order['machine_id'],
-            "machine_name" => $this->order['machine_name'],
-            "hotel_trade_no" => "",
-            "hotelId" => $this->data['hotelList']['hotelId'],
-            "roomId" => $this->data['hotelList']['roomId'],
-            "totalPrice" => bcmul($this->data['hotelList']['totalPrice'], 100),
-            "pay_amount" => bcmul($this->data['hotelList']['pay_amount'], 100),
-            "checkInDate" => $this->data['hotelList']['checkInDate'],
-            "checkOutDate" => $this->data['hotelList']['checkOutDate'],
-            "guestNames" => $this->data['hotelList']['guestNames'] ?? "",
-        ];
-        $this->startTrans();
-        try {
-            $flag[] = $this->addSaleHotel($insertHotel);
-            $updateOrder['order_id'] = $this->order['order_id'];
-            $updateOrder['has_hotel'] = 1;
-            $updateOrder['total_price'] = bcadd($this->order['total_price'], $this->data['hotelList']['pay_amount'], 2);
-            $flag[] = $this->updateSaleOrders($updateOrder);
-            $result = $this->checkFlag($flag);
-            return $this->checkTrans($result);
-        } catch (\Exception $e) {
-            actionException($e,1);
-            $this->rollbackTrans();
             return $this->rTryCatch($e->getMessage());
         }
     }

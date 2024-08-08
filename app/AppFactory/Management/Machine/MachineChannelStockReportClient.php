@@ -28,6 +28,8 @@ class MachineChannelStockReportClient extends ManagementClient
      */
     public function getMcsList($where,$pageNum = 0,$field = "*",$order = "",$group = "")
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
         $data = $this->getMachineChannelStockReportList($where,$pageNum,$field,$order,$group);
         return $this->rQ($data);
     }
@@ -55,6 +57,8 @@ class MachineChannelStockReportClient extends ManagementClient
             $group = "g_id";
         }
         if ($eType == 2) {
+            $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+            if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
             $field = "machine_id,machine_name,sku,g_name,model,gc_name,retail_price,mc_stock,pre_stock,standby_stock,bad_stock,total_stock";
         }
         $list = $this->getMachineChannelStockReportList($where,0,$field,"total_stock desc",$group);
@@ -64,14 +68,14 @@ class MachineChannelStockReportClient extends ManagementClient
                 $title = [
                     "sku" => "SKU",
                     "g_name" => "商品名称",
-                    "model" => "型号",
-                    "gc_name" => "品类",
-                    "retail_price" => "默认售价",
+                    "bar_code" => "商品条码",
+                    "model" => "商品型号",
                     "mc_stock" => "库存",
                     "pre_stock" => "预定数量",
                     "standby_stock" => "备用库存",
                     "bad_stock" => "Bad库存",
-                    "total_stock" => "总库存",
+                    "total_stock" => "总数",
+                    "retail_price" => "默认售价",
                 ];
                 $filename = "库存报表(按商品)-" . date("Ymd");
             }

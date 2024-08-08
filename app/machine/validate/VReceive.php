@@ -129,8 +129,6 @@ class VReceive extends VCommon
         "playAdv" => ["msg_id","machine_id","timestamp","sign","adv_id","play_time"],
         "reportAdvDownload" => ["msg_id","machine_id","timestamp","sign","adv_id","download_progress"],
         "subCar" => ["msg_id","machine_id","timestamp","sign","pay_type","pay_method"],
-        "subHotel" => ["msg_id","machine_id","timestamp","sign","order_id","hotelList"],
-        "hotel" =>  ["hotelId","roomId","totalPrice","pay_amount","checkInDate","checkOutDate","guestNames"],
 
         "subChannel" => ["msg_id","machine_id","timestamp","sign"],
 

@@ -23,6 +23,8 @@ class GoodsChange extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["machine_id" => "like", "machine_name" => "like", "sku" => "like", "g_name" => "like"]);
+        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         return $this->app->goodsChange->getList($where, $pageNum, $this->field, 'create_time desc');
     }
 
@@ -42,6 +44,8 @@ class GoodsChange extends Common
         $postData = input();
         $this->validate($postData, $this->validatePath . '.exportGc');
         $where = $this->getWhere($postData, false, ["machine_id" => "like", "machine_name" => "like", "sku" => "like", "g_name" => "like"]);
+        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         return $this->app->goodsChange->exportGoodsChange($where);
     }
 

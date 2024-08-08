@@ -12,28 +12,51 @@ namespace app\machine\validate;
 class VHotel extends VCommon
 {
 
-        protected $rule = [
-            "cityId" => "require",
-            "hotelId" => "require",
-            "checkInDate" => "require",
-            "checkOutDate" => "require",
-            "pageNum" => "require",
-            "page" => "require",
-        ];
+    protected $rule = [
+        "machine_id" => "require",
+        "msg_id" => "require|unique:machine_mq_record",
+        "timestamp" => "require|checkTimestamp",
+        "sign" => "require",
 
-        protected $message = [
-            "cityId.require" => "VHotel.cityId_require",
-            "hotelId.require" => "VHotel.hotelId_require",
-            "checkInDate.require" => "VHotel.checkInDate_require",
-            "checkOutDate.require" => "VHotel.checkOutDate_require",
-            "pageNum.require" => "VHotel.pageNum_require",
-            "page.require" => "VHotel.page_require",
-        ];
+        "cityId" => "require",
+        "hotelId" => "require",
+        "checkInDate" => "require",
+        "checkOutDate" => "require",
+        "pageNum" => "require",
+        "page" => "require",
+    ];
 
-        protected $scene = [
-            "getTripCity" => ["pageNum","page"],
-            "getList" => ["cityId","checkInDate","checkOutDate","pageNum","page"],
-            "getDetailsList" => ["hotelId"],
-            "getRoomList" => ["hotelId","checkInDate","checkOutDate"],
-        ];
+    protected $message = [
+        "machine_id.require" => "VReceive.machine_id_require",
+        "msg_id.require" => "VReceive.msg_id_require",
+        "msg_id.unique" => "VReceive.msg_id_unique",
+        "timestamp.require" => "VReceive.timestamp_require",
+        "sign.require" => "VReceive.sign_require",
+
+        "cityId.require" => "VHotel.cityId_require",
+        "hotelId.require" => "VHotel.hotelId_require",
+        "checkInDate.require" => "VHotel.checkInDate_require",
+        "checkOutDate.require" => "VHotel.checkOutDate_require",
+        "pageNum.require" => "VHotel.pageNum_require",
+        "page.require" => "VHotel.page_require",
+
+        "hotelList.require" => "VReceive.hotelList_require",
+
+    ];
+
+    protected $scene = [
+        "getTripCity" => ["pageNum", "page"],
+        "getList" => ["cityId", "checkInDate", "checkOutDate", "pageNum", "page"],
+        "getDetailsList" => ["hotelId"],
+        "getRoomList" => ["hotelId", "checkInDate", "checkOutDate"],
+        "subHotel" => ["msg_id", "machine_id", "timestamp", "sign", "order_id", "hotelList"],
+        "hotel" => ["hotelId", "roomId", "totalPrice", "pay_amount", "checkInDate", "checkOutDate", "guestNames"],
+    ];
+
+    public function checkTimestamp($item)
+    {
+//        if (!$item) return "时间戳不能为空";
+//        if (time() - $item > 120) return "VReceive.timestamp_checkTimestamp_overdue";
+        return true;
+    }
 }

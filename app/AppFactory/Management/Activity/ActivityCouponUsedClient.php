@@ -81,18 +81,21 @@ class ActivityCouponUsedClient extends ManagementClient
         $list = $this->getActivityCouponUsedList(['c_id' => $postData['c_id']], 0,
             '("' . $coupon['c_name'] . '") c_name,("' . $coupon['desc'] . '") `desc`,pay_limit,machine_id,machine_name,
                 reduction,original_price,discount_price,retail_price,code,trade_no,
-                (CASE status WHEN 1 THEN "未使用" WHEN 2 THEN "已使用" WHEN 3 THEN "已过期" WHEN 4 THEN "已作废" END ) status, used_time');
+                (CASE c_type WHEN 1 THEN "立减金额" WHEN 2 THEN "优惠折扣" END) c_type,
+                (CASE status WHEN 1 THEN "未使用" WHEN 2 THEN "已使用" WHEN 3 THEN "已过期" WHEN 4 THEN "已作废" END ) status, 
+                FROM_UNIXTIME(used_time,"%Y-%m-%d %H:%i:%s") used_time');
         if ($list) {
             $list = $list->toArray();
             $title = [
-                "c_name" => "优惠券名称",
-                "desc" => "简介",
-                "pay_limit" => "订单最低消费金额",
-                "machine_id" => "设备编号",
-                "machine_name" => "设备名称",
+//                "c_name" => "优惠券名称",
+//                "desc" => "简介",
+//                "pay_limit" => "订单最低消费金额",
+//                "machine_name" => "设备名称",
                 "code" => "优惠码",
-                "status" => "激活状态",
                 "trade_no" => "订单编号",
+                "machine_id" => "设备编号",
+                "c_type" => "优惠券类型",
+                "status" => "状态",
                 "discount_price" => "优惠金额",
                 "retail_price" => "支付金额",
                 "used_time" => "使用时间",

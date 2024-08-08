@@ -10,6 +10,7 @@ namespace app\AppFactory\Management\Sale;
 
 
 use app\AppFactory\Kernel\Support\Excel;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsHitTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
@@ -64,6 +65,33 @@ class SaleOrdersClient extends ManagementClient
     protected $postData;
     protected $totalRefundMoney;
 
+
+    /**
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @return array|\think\response\Json
+     */
+    public function getSoList($where,$pageNum = 0, $field = "*",$order = "")
+    {
+        try {
+            $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+            if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+            return $this->r(200, $this->lang("query_success"), $this->getSaleOrdersList($where, $pageNum, $field, $order));
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    public function getDetailsList($where,$pageNum = 0,$field = "*", $order = "")
+    {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) $where[] = ['so.machine_id', 'in', $machineIds];
+        return $this->r(200,'query_success',$this->getSaleOrdersDetailsJoinOrderList($where,$pageNum,$field,$order));
+
+    }
 
     /**
      * 发起订单退款
@@ -179,6 +207,8 @@ class SaleOrdersClient extends ManagementClient
             "today" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
             "yesterday" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
         ];
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $whereToday = $where;
         $whereToday[] = ['create_date', '=', strtotime(date("Y-m-d"))];
         $today = $this->getSaleOrdersFind($whereToday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
@@ -205,6 +235,8 @@ class SaleOrdersClient extends ManagementClient
      */
     public function getChartData($where, $type = 1)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         if ($type == 1) {
             $field = "totalPrice,totalQuantity,countDate";
             $group = "";
@@ -232,50 +264,42 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportSo($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $list = $this->getSaleOrdersList($where, 0,
-            'machine_id,machine_name,trade_no,mch_no,
-                (discount_price + total_price) goods_total_price,discount_price,total_quantity,total_price,
-                pay_code,
+            'order_id,machine_id,machine_name,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,
+                (CASE order_type 
+                    WHEN 1 THEN "普通订单"
+                    WHEN 2 THEN "优惠券订单"
+                    WHEN 3 THEN "取货码订单"
+                    WHEN 4 THEN "盲盒活动"
+                    WHEN 5 THEN "满减满送活动"
+                    WHEN 6 THEN "叠加营销活动"
+                    END 
+                ) order_type,
+                (CASE refund_status WHEN 1 THEN "正常" WHEN 2 THEN "已退款" WHEN 3 THEN "退款失败" END) refund_status,
+                (CASE pay_type WHEN 1 THEN "微信支付" WHEN 2 THEN "支付宝支付" WHEN 3 THEN "" WHEN 4 THEN "京东收银" WHEN 5 THEN "会员支付" WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
-                (CASE pay_type WHEN 1 THEN "微信支付" WHEN 2 THEN "支付宝支付" WHEN 3 THEN "" WHEN 4 THEN "京东收银" WHEN 0 THEN "免支付" END) pay_type,
-                (CASE pay_method 
-                    WHEN 1 THEN "免支付" 
-                    WHEN 11 THEN "付款码支付" 
-                    WHEN 12 THEN "JSAPI支付" 
-                    WHEN 13 THEN "小程序支付" 
-                    WHEN 14 THEN "Native支付" 
-                    WHEN 15 THEN "刷脸支付"
-                    WHEN 21 THEN "手机网站支付"
-                    WHEN 22 THEN "当面付（付款码）"
-                    WHEN 23 THEN "当面付（扫码支付）"
-                    WHEN 31 THEN "扫码支付"
-                    WHEN 32 THEN "反扫支付"
-                    WHEN 41 THEN "扫码支付"
-                    WHEN 42 THEN "刷卡支付（被扫支付）"
-                END) pay_method,
-                (CASE refund_status
-                    WHEN 1 THEN "未退款"
-                    WHEN 2 THEN "已退款"
-                    WHEN 3 THEN "退款失败"
-                END) refund_status
+                FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time
                 '
         );
         if ($list) {
             $list = $list->toArray();
             $title = [
+                "order_id" => "订单ID",
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
                 "trade_no" => "订单编号",
-                "mch_no" => "交易编号",
-                "goods_total_price" => "商品总价",
+                "mch_no" => "支付编号",
+                "total_quantity" => "订单总数",
+                "total_price" => "支付金额",
                 "discount_price" => "优惠金额",
-                "total_quantity" => "总数量",
-                "total_price" => "实际支付金额",
-                "pay_code" => "支付操作码（付款码/支付二维码/提货码）",
-                "pay_time" => "支付时间",
+                "retail_price" => "原订单总额",
+                "refund_status" => "订单状态",
+                "order_type" => "订单类型",
                 "pay_type" => "支付类型",
-                "pay_method" => "支付方式",
-                "refund_status" => "退款",
+                "pay_time" => "支付时间",
+                "out_time" => "出货时间",
             ];
             $filename = "订单交易-" . date("Ymd");
             return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
@@ -290,19 +314,24 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportGoodsSo($where)
     {
-        $field = "so.machine_id,so.machine_name,so.trade_no,sod.batch_number,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['so.machine_id','in',$machineIds];
+        $field = "so.machine_id,so.machine_name,so.trade_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
-            (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '付费抽奖活动' WHEN 5 THEN '满减满送活动' END) order_type,
-            (CASE so.pay_type WHEN 0 THEN '免支付' WHEN 1 THEN '微信支付' WHEN 2 THEN '支付宝支付' WHEN 3 THEN '' WHEN 4 THEN '京东收银' ELSE '' END) pay_type,
             (CASE so.pay_method 
             WHEN 0 THEN '免支付' 
             WHEN 1 THEN '扫码支付' 
             WHEN 41 THEN '扫码支付' 
             WHEN 2 THEN '被扫支付'
             ELSE '' END) pay_method,
-            FROM_UNIXTIME(so.create_time,'%Y-%m-%d %H:%i:%s') create_time,
+            (CASE 
+            WHEN so.refund_amount > 0 THEN so.refund_amount
+             ELSE
+             '未退款' END) order_status,
             FROM_UNIXTIME(so.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
-            pay_code";
+            FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
+            (sod.quantity) quantity,
+            (sod.success_quantity) success_quantity";
         $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
@@ -311,20 +340,19 @@ class SaleOrdersClient extends ManagementClient
                     "machine_id" => "设备编号",
                     "machine_name" => "设备名称",
                     "trade_no" => "交易号",
-                    "batch_number" => "商品序列号",
                     "sku" => "SKU",
-                    "g_name" => "SKU名称",
-                    "channel_code" => "槽位号",
+                    "g_name" => "商品名称",
+                    "channel_code" => "槽位",
                     "retail_price" => "单价",
                     "discount_price" => "优惠价",
-                    "total_sod_price" => "实收金额",
-                    "out_status" => "状态",
-                    "order_type" => "订单类型",
-                    "pay_type" => "支付类型",
+                    "total_sod_price" => "支付金额",
+                    "out_status" => "出货状态",
+                    "order_status" => "订单状态",
                     "pay_method" => "支付方式",
-                    "create_time" => "交易时间",
                     "pay_time" => "支付时间",
-                    "pay_code" => "支付操作码（用户付款码/支付二维码/提货码/优惠码）",
+                    "out_time" => "出货时间",
+                    "quantity" => "商品总数",
+                    "success_quantity" => "出货成功数量",
                 ];
                 $filename = "商品交易列表-" . date("YmdHis");
                 return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
@@ -340,27 +368,16 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportRefund($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['so.machine_id','in',$machineIds];
         $field = "sor.machine_id,sor.machine_name,sor.trade_no,
-                sod.batch_number,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
-                (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
-                (CASE so.order_type WHEN 1 THEN '普通订单' WHEN 2 THEN '优惠券订单' WHEN 3 THEN '取货码订单' WHEN 4 THEN '付费抽奖活动' WHEN 5 THEN '满减满送活动' END) order_type,
-                sod.deliver_pics,
-                (CASE so.pay_type WHEN 0 THEN '免支付' WHEN 1 THEN '微信支付' WHEN 2 THEN '支付宝支付' WHEN 3 THEN '' WHEN 4 THEN '京东收银' ELSE '' END) pay_type,
-                (CASE so.pay_method 
-                WHEN 1 THEN '免支付' 
-                WHEN 14 THEN 'Native支付' 
-                WHEN 23 THEN '扫码支付' 
-                WHEN 41 THEN '扫码支付' WHEN 42 THEN '被扫支付'
-                ELSE '' END) pay_method,
-                FROM_UNIXTIME(so.create_time,'%Y-%m-%d %H:%i:%s') create_time,
-                FROM_UNIXTIME(so.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
-                so.pay_code,
                 sor.refund_trade_no,
-                sor.refund_no,
+                (CASE sod.channel_position WHEN 1 THEN '主柜' WHEN 2 THEN '副柜') channel_position,
+                sod.channel_code,
+                sod.g_name,
                 sor.refund_amount,
                 sor.refund_quantity,
-                (CASE sor.status WHEN 1 THEN '已提交退款申请' WHEN 2 THEN '退款成功' WHEN 3 THEN '退款失败' END) status,
-                sor.remark
+                (CASE sor.status WHEN 1 THEN '已提交退款申请' WHEN 2 THEN '退款成功' WHEN 3 THEN '退款失败' END) status
                 ";
         $list = $this->getSaleOrdersRefundListJoinSoSod($where, 0, $field, "sor_id desc");
         if ($list) {
@@ -368,28 +385,14 @@ class SaleOrdersClient extends ManagementClient
             $title = [
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
-                "trade_no" => "交易号",
-                "batch_number" => "商品序列号",
-                "sku" => "SKU",
-                "g_name" => "SKU名称",
-                "channel_code" => "槽位号",
-                "retail_price" => "单价",
-                "discount_price" => "优惠价",
-                "total_sod_price" => "实收金额",
-                "pay_type" => "支付类型",
-                "pay_method" => "支付方式",
-                "pay_time" => "支付时间",
-                "create_time" => "交易时间",
-                "deliver_pics" => "照片",
-                "order_type" => "订单类型",
-                "pay_code" => "支付操作码（用户付款码/支付二维码/提货码/优惠码）",
-                "out_status" => "出货状态",
+                "trade_no" => "订单编号",
                 "refund_trade_no" => "退款编号",
-                "refund_no" => "平台退款编号",
+                "channel_position" => "货道位置",
+                "channel_code" => "槽位",
+                "g_name" => "商品名称",
                 "refund_amount" => "退款金额",
                 "refund_quantity" => "退款数量",
                 "status" => "退款状态",
-                "remark" => "备注",
             ];
             $filename = "退款交易列表-" . date("Ymd");
             return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
@@ -454,14 +457,14 @@ class SaleOrdersClient extends ManagementClient
         if ($list) {
             $list = $list->toArray();
             $title = [
-                "countDate" => "日",
+                "countDate" => "日期",
                 "totalPrice" => "设备销售额",
                 "lotteryAmount" => "抽奖销售额",
                 "totalRefundAmount" => "退款金额",
                 "totalSalePrice" => "实际销售金额",
                 "totalSaleQuantity" => "实际销售量",
                 "order_num" => "订单总数",
-                "totalDiscountPrice" => "总优惠额",
+                "totalDiscountPrice" => "优惠金额",
                 "giftQuantity" => "赠品数量",
             ];
             $filename = "导出销售报表_" . date("Ymd");
@@ -477,6 +480,8 @@ class SaleOrdersClient extends ManagementClient
      */
     public function getGift($where)
     {
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         $where['sod.is_gift'] = 1;
         $where['so.out_status'] = 4;
         $whereToday = $where;
@@ -624,19 +629,19 @@ class SaleOrdersClient extends ManagementClient
                 "machine_name" =>         "设备名称",
                 "sku" =>                  "商品SKU",
                 "g_name" =>               "商品名称",
-                "totalClick" =>           "点击次数",
-                "clickConversionRate" =>  "点击转化率",
-                "totalSaleQuantity" =>    "实际销售量",
                 "totalPrice" =>           "实际销售额",
-                "totalSalePrice" =>       "销售总额",
-                "totalRefund" =>          "退款总额",
                 "totalDiscountPrice" =>   "总优惠额",
                 "totalGift" =>            "赠品数量",
                 "totalCostPrice" =>       "总成本",
+                "totalSaleQuantity" =>    "实际销售量",
+                "totalClick" =>           "点击次数",
+                "clickConversionRate" =>  "点击转化率",
                 "profitAmount" =>         "利润额",
                 "averageRetailPrice" =>   "平均售价",
                 "averageCostPrice" =>     "平均成本价",
                 "grossProfitRate" =>      "毛利率",
+//                "totalSalePrice" =>       "销售总额",
+//                "totalRefund" =>          "退款总额",
             ];
             $filename = "销售数据-" . date("YmdHis");
             return $this->sendToExport("运营数据-销售数据",$filename,$title,$list);

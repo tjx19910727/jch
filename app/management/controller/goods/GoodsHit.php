@@ -34,10 +34,9 @@ class GoodsHit extends Common
      */
     public function getHitList()
     {
-        $g_id = input('g_id');
-        if (!$g_id) return returnState(100,'商品ID不能为空');
-        $pageNum = input('pageNum',10);
-        return returnData($this->app->goodsHit->getGoodsHitList(['g_id' => $g_id],$pageNum,'machine_id,machine_name,max(create_time) create_time,count(g_id) hits','','','g_id,m_id'));
+        $postData = input();
+        $where = $this->getWhere($postData);
+        return $this->app->goodsHit->getHitList($where,$postData['pageNum'] ?? 0,'machine_id,machine_name,max(create_time) create_time,count(g_id) hits','','','g_id,m_id');
     }
 
     public function exportBySku()
