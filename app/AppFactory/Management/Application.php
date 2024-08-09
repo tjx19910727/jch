@@ -21,6 +21,7 @@ use app\AppFactory\Kernel\Providers\Management\GoodsProvider;
 use app\AppFactory\Kernel\Providers\Management\IndexProvider;
 use app\AppFactory\Kernel\Providers\Management\LoginProvider;
 use app\AppFactory\Kernel\Providers\Management\MachineProvider;
+use app\AppFactory\Kernel\Providers\Management\MicroMallProvider;
 use app\AppFactory\Kernel\Providers\Management\ResourceProvider;
 use app\AppFactory\Kernel\Providers\Management\SaleOrdersProvider;
 use app\AppFactory\Kernel\Providers\Management\StrategyProvider;
@@ -106,6 +107,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
  * @property Machine\MachineSaleClient              $machineSale            设备销售数据
  *
+ * @property MicroMall\MicroMallClient              $microMall              微商城
+ *
  * @property Resource\ResourceClient                $resource  广告素材
  *
  * @property Template\TemplateClient                $template               模板
@@ -146,6 +149,7 @@ class Application extends ServiceContainer
         ExportProvider::class,
         LoginProvider::class,
         MachineProvider::class,
+        MicroMallProvider::class,
         GoodsProvider::class,
         ResourceProvider::class,
         SaleOrdersProvider::class,

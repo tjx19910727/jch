@@ -89,6 +89,7 @@ class MachineChannel extends Common
             }
             if (!$send) {
                 $this->app->machine->sendToMachine(['machine_id' => $machine_id],"channelImg",['channel_code' => $channel_code]);
+                $send = 1;
             }
             sleep(1);
             $n++;

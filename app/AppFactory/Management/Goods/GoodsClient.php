@@ -76,7 +76,7 @@ class GoodsClient extends ManagementClient
                 "totalQuantity" => "销售量",
                 "retail_price" => "单价",
             ];
-            $filename = "人气商品排行榜（最近7天）-" . date("YmdHis");
+            $filename = "人气商品排行榜（最近7天）-" . date("Ymd");
             $result = $this->sendToExport("首页-人气商品排行榜（最近7天）", $filename, $title, $list);
             return $result;
         }

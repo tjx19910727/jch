@@ -31,8 +31,6 @@ class MachineChannelReplenishment extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData,false,['machine_id' => "like","machine_name" => "like","sku" => "like","channel_code" => "like"]);
-        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         return $this->app->machineChannelReplenishment->export($where);
     }
 

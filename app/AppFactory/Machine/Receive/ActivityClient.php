@@ -412,6 +412,7 @@ class ActivityClient extends ReceiveBaseClient
         $quantity = bcsub($used['quantity'], $used['used_quantity']);
         // 单抽状态下，每次执行抽奖时抽奖次数重置为1
         if ($alc['active_type'] == 1) $quantity = 1;
+        $giftNum = 0;
         // 多抽循环，每次抽奖结果放至中奖列表
         for ($i = 0; $i < $quantity; $i++) {
             // 已抽奖次数+1
@@ -426,6 +427,8 @@ class ActivityClient extends ReceiveBaseClient
                 if ($alc['designated_gif']) {
                     // 是赠送的商品，放入中奖列表队尾
                     if ($alc['designated_gift'] == $value['c_id']) {
+                        $value['is_gift'] = 1;
+                        $giftNum++;
                         $list[$i + $quantity] = $value;
                     }
                 }
@@ -449,7 +452,7 @@ class ActivityClient extends ReceiveBaseClient
                 $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0)->toArray();
                 return $this->r(200, $this->lang("lottery_empty"), ['lottery_list' => $list, "order" => $order]);
             }
-            $averagePrice = bcdiv($order['total_price'], $order['total_quantity'], 3);
+            $averagePrice = bcdiv($order['total_price'], $used['quantity'], 3);
             $flag = [];
             $ugAll = [];
             $mcField = "mc_id,shelf_way,channel_position,channel_code,mg_id,g_id,g_name,pic,sku,gc_id,gc_name,cost_price,market_price,stock";
@@ -473,13 +476,17 @@ class ActivityClient extends ReceiveBaseClient
                 ];
                 // 不存在商品记录则生成，存在商品则数量+1
                 $sod = $this->getSaleOrdersDetailsFind(['order_id' => $order['order_id'], 'mc_id' => $mc['mc_id']]);
-                if (!$sod) {
+                if (!$sod || ($sod && isset($lv['is_gift']))) {
                     unset($mc['stock']);
                     $insertSod = $mc;
                     $insertSod['order_id'] = $order['order_id'];
                     $insertSod['quantity'] = 1;
                     $insertSod['total_sod_price'] = $averagePrice;
                     $insertSod['retail_price'] = $averagePrice;
+                    if (isset($lv['is_gift'])) {
+                        $insertSod['total_sod_price'] = 0;
+                        $insertSod['retail_price'] = 0;
+                    }
                     $sod_id = $this->addSaleOrdersDetails($insertSod);
                     $flag[] = $sod_id;
                 } else {

@@ -33,4 +33,16 @@ class MachineOnline extends Common
         return $this->app->machineOnline->getFind($where);
     }
 
+    public function export()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData, false, ["machine_id" => "like"]);
+        if (!isset($where['machine_id'])) {
+            $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'machine_id');
+            if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+        }
+        return $this->app->machineOnline->export($where);
+
+    }
+
 }

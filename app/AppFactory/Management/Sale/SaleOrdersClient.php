@@ -405,11 +405,12 @@ class SaleOrdersClient extends ManagementClient
      * @param $where
      * @param string $field
      * @param string $order
+     * @param string $group
      * @return array|\think\response\Json
      */
-    public function getTotalReport($where, $field = "*", $order = "")
+    public function getTotalReport($where, $field = "*", $order = "",$group = "")
     {
-        $data = $this->getSaleOrdersDailyCountFind($where, $field, $order);
+        $data = $this->getSaleOrdersDailyCountFind($where, $field, $order,$group);
         return $this->rQ($data);
     }
 
@@ -418,11 +419,29 @@ class SaleOrdersClient extends ManagementClient
      * @param $where
      * @param $pageNum
      * @param string $order
+     * @param string $group
      * @return array|\think\response\Json
      */
-    public function getReportList($where, $pageNum, $order = "")
+    public function getReportList($where, $pageNum, $order = "",$group = "")
     {
-        $field = "countDate,
+        $field = "countDate,";
+        if ($group) {
+            // 日
+            if ($group == "day") {
+                $field = "countDate,";
+            }
+            // 月
+            if ($group == "month") {
+                $field = "DATE_FORMAT(countDate ,'%Y-%m') countDate,";
+            }
+            // 年
+            if ($group == "year") {
+                $field = "DATE_FORMAT(countDate ,'%Y') countDate,";
+            }
+            $group = "countDate";
+        }
+        if (!$group) $group = "create_date";
+        $field = $field . "
         SUM(totalPrice) totalPrice,
         SUM(lotteryAmount) lotteryAmount,
         sum(totalRefundAmount) totalRefundAmount,
@@ -431,7 +450,6 @@ class SaleOrdersClient extends ManagementClient
         SUM(order_num) order_num,
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
-        $group = "create_date";
         return $this->rQ($this->getSaleOrdersDailyCountList($where, $pageNum, $field, $order, $group));
     }
 

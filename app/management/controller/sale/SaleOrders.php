@@ -159,6 +159,10 @@ class SaleOrders extends Common
     public function getReport()
     {
         $postData = input();
+        if (isset($postData['group'])) {
+            $group = $postData['group'];
+            unset($postData['group']);
+        }
         $where = $this->getWhere($postData,false,["machine_id" => "like"]);
 
         $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
@@ -176,7 +180,7 @@ class SaleOrders extends Common
         SUM(lotteryAmount) lotteryAmount,
         SUM(lotteryQuantity) lotteryQuantity";
         if (isset($postData['machine_id'])) $field = "machine_id,machine_name," . $field;
-        return $this->app->saleOrders->getTotalReport($where,$field,'countDate desc');
+        return $this->app->saleOrders->getTotalReport($where,$field,'countDate desc',$group);
     }
 
     /**
@@ -188,6 +192,10 @@ class SaleOrders extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $order = "create_date desc";
+        if (isset($postData['group'])) {
+            $group = $postData['group'];
+            unset($postData['group']);
+        }
         if (isset($postData['order'])) {
             $order = $postData['order'];
             unset($postData['order']);
@@ -195,7 +203,7 @@ class SaleOrders extends Common
         $where = $this->getWhere($postData,false,["machine_id" => "like"]);
         $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
         if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        return $this->app->saleOrders->getReportList($where,$pageNum,$order);
+        return $this->app->saleOrders->getReportList($where,$pageNum,$order,$group);
     }
 
     /**

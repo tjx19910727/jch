@@ -74,4 +74,9 @@ trait CommonTrait
     {
         return covering($str,$len);
     }
+
+    public function int2HourMinuteSec($time,$length = "")
+    {
+        return Int2HourMinuteSec($time,$length);
+    }
 }

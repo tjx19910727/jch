@@ -510,4 +510,9 @@ return [
         "attachment_max"    => "附件信息超过限制长度",
         "template_type_require" => "模板类型不能为空",
     ],
+
+    "VMicroMall" => [
+        "mm_id_require" => "微商城ID不能为空",
+        "mall_name_require" => "微商城名称不能为空",
+    ],
 ];

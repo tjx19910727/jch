@@ -100,7 +100,7 @@ class PaymentClient extends PayBaseClient
 
 
         // 反扫支付二维码
-        if (isset($this->data['authCode'])) {
+        if (isset($this->data['authCode']) && $this->order['pay_method'] == 2) {
             $paymentType = AuthCode::getCodePayee($this->data['authCode']);
             if (!$paymentType) return $this->rFail($this->lang("VOrderPay.unKnow_auth_code"));
             if ($paymentType == 1)

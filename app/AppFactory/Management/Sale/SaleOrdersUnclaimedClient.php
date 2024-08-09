@@ -68,6 +68,7 @@ class SaleOrdersUnclaimedClient extends ManagementClient
         (case is_match WHEN 1 THEN '是' ELSE '否' END) is_match,
         (case is_claim WHEN 1 THEN '是' ELSE '否' END) is_claim,
         (case is_out WHEN 1 THEN '是' ELSE '否' END) is_out,
+        (case is_close WHEN 1 THEN '是' ELSE '否' END) is_close,
         (CASE status WHEN 1 THEN '未取' WHEN 2 THEN '已清除' WHEN 3 THEN '已取消' END)status,
         duration,
         remark";
