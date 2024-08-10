@@ -11,6 +11,8 @@ return [
         "machine_id_require" => "机器编号不能为空",
         "shelf_on_require" => "是否上架不能为空",
 
+        "pageNum_require" => "页面数据条数不能为空",
+
 
     ],
     "msg" => [

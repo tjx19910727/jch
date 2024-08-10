@@ -39,7 +39,7 @@ class V2BaseClient extends ApiBaseClient
     public function getAuthConfig()
     {
         $this->authConfig = $this->getConfigApiFind(['auth_name' => $this->config['auth_name']]);
-        actionLog($this->authConfig,'API配置信息');
+        actionLog($this->authConfig, 'API配置信息');
         if (!$this->authConfig) {
             $this->returnData(99, $this->lang("msg." . 99))->send();
             die();
@@ -52,11 +52,11 @@ class V2BaseClient extends ApiBaseClient
      */
     public function checkIp()
     {
-        $this->authConfig['white_list'] = explode(",",$this->authConfig['white_list']);
+        $this->authConfig['white_list'] = explode(",", $this->authConfig['white_list']);
         $this->ip = request()->ip();
-        actionLog($this->ip,'请求IP地址');
-        if ($this->authConfig['white_list'] && !in_array($this->ip,$this->authConfig['white_list'])) {
-            $this->returnData(1,$this->lang("msg." . 1))->send();
+        actionLog($this->ip, '请求IP地址');
+        if ($this->authConfig['white_list'] && !in_array($this->ip, $this->authConfig['white_list'])) {
+            $this->returnData(1, $this->lang("msg." . 1))->send();
             die();
         }
     }
@@ -74,19 +74,19 @@ class V2BaseClient extends ApiBaseClient
         } else {
             // 同1个IP调用同1个接口超过1天总限制次数1000次
             if ($frequency[$this->config['api']]['num'] >= 1000) {
-                $this->returnData(8,$this->lang("msg." . 8))->send();
+                $this->returnData(8, $this->lang("msg." . 8))->send();
                 die();
             }
             // 10秒内，同IP同api同样params的数据
             if ($frequency[$this->config['api']]['params'] == $this->config['params'] && time() - $frequency[$this->config['api']]['time'] <= 10) {
-                $this->returnData(9,$this->lang("msg." . 9))->send();
+                $this->returnData(9, $this->lang("msg." . 9))->send();
                 die();
             }
             $frequency[$this->config['api']]['num']++;
             $frequency[$this->config['api']]['time'] = time();
         }
-        $time = strtotime(date("Y-m-d",strtotime("+1 day"))) - time();
-        cache($this->ip,$frequency,$time);
+        $time = strtotime(date("Y-m-d", strtotime("+1 day"))) - time();
+        cache($this->ip, $frequency, $time);
     }
 
     /**
@@ -95,10 +95,10 @@ class V2BaseClient extends ApiBaseClient
     public function checkParams()
     {
         if ($this->config['params']) {
-            $this->config['params'] = json_decode($this->config['params'],true);
-            actionLog($this->config['params'],'接口参数');
+            $this->config['params'] = json_decode($this->config['params'], true);
+            actionLog($this->config['params'], '接口参数');
             if (!$this->config['params']) {
-                $this->returnData(5,$this->lang("msg." . 5))->send();
+                $this->returnData(5, $this->lang("msg." . 5))->send();
                 die();
             }
             $this->validateParams();
@@ -111,9 +111,9 @@ class V2BaseClient extends ApiBaseClient
     public function checkApiSign()
     {
         $sign = $this->makeApiSign();
-        actionLog($sign,'生成的签名');
+        actionLog($sign, '生成的签名');
         if ($sign != $this->config['sign']) {
-            $this->returnData(17,$this->lang("msg." . 17))->send();
+            $this->returnData(17, $this->lang("msg." . 17))->send();
             die();
         }
     }
@@ -124,12 +124,15 @@ class V2BaseClient extends ApiBaseClient
     public function validateParams()
     {
         try {
-            validate(VV2::class)->scene($this->config['api'])->check($this->config['params']);
+            if ($this->config['api'] != "get_machines") {
+                validate(VV2::class)->scene($this->config['api'])->check($this->config['params']);
+            }
             $this->params = $this->config['params'];
         } catch (\Exception $e) {
-            $this->returnData(6,$this->lang("msg." . 6) . "：" . $this->lang("VV2." . $e->getMessage()))->send();
+            $this->returnData(6, $this->lang("msg." . 6) . "：" . $this->lang("VV2." . $e->getMessage()))->send();
             die();
         }
+
     }
 
     /**
@@ -156,10 +159,10 @@ class V2BaseClient extends ApiBaseClient
      * @param int $isJson
      * @return array|\think\response\Json
      */
-    public function returnData($status_code,$msg = "", $data = "",$isJson = 1)
+    public function returnData($status_code, $msg = "", $data = "", $isJson = 1)
     {
 //        if (is_array($data)) $data = json_encode($data,320);
-        $return = ["status_code" => $status_code,"msg" => $msg,"data" => $data];
+        $return = ["status_code" => $status_code, "msg" => $msg, "data" => $data];
         if ($isJson) return json($return);
         return $return;
     }

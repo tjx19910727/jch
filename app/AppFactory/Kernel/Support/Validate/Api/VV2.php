@@ -17,6 +17,7 @@ class VV2 extends SupportValidate
         protected $rule = [
             "machine_id" => "require",
             "shelf_on" => "require",
+            "pageNum" => "require",
 
             "kiosk_id" => "require",
             "order_no" => "require",
@@ -35,6 +36,7 @@ class VV2 extends SupportValidate
         protected $message = [
             "machine_id.require" => "machine_id_require",
             "shelf_on.require" => "shelf_on_require",
+            "pageNum.require" => "pageNum_require",
 
             "kiosk_id.require" => "reserve_order.kiosk_id_require",
             "order_no.require" => "reserve_order.order_no_require",
@@ -51,8 +53,8 @@ class VV2 extends SupportValidate
         ];
 
         protected $scene = [
-            "get_inventory_list" => ["machine_id","shelf_on"],
-            "get_machines" => ["machine_id"],
+            "get_inventory_list" => ["machine_id","shelf_on","pageNum"],
+            "get_machines" => ["pageNum"],
             "reserve_order" => ["kiosk_id","order_no","payment_method","expire_time","charge_time","order_detail"],
             "order_detail" => ["quantity","item_price","discount_amount","charge_amount","type"],
             "cancel_order" => ["kiosk_id","order_no"],

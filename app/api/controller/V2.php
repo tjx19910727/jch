@@ -59,21 +59,31 @@ class V2 extends Common
             "trade_no" => "202407291443503775978",
             "pay_status" => 1,
         ];
+        $params = [
+            "pageNum" => 15,
+            "machine_id" => "test0001",
+        ];
+        $data = '{"auth_name":"Lc_test","sign":"87ED5F99A692D8F32C758B5B5CA94055","api":"get_inventory_list","params":"{\"product_id\":\"\",\"machine_id\":\"test0003\",\"shelf_on\":1}","timestamp":"1723207274"}';
+        $data = json2arr($data);
+        $params = json_decode($data['params'],true);
+        $params['pageNum'] = 15;
         $data = [
             "auth_name" => "JCH",
-            "auth_password" => "karrie@2024",
+            "auth_password" => "jlz123456",
             "timestamp" => time(),
             "params" => json_encode($params, 320),
         ];
         $string1 = strtoupper(md5($data['auth_password'] . $data['timestamp']));
+        dump($string1);
         ksort($params);
         $signArr = [];
         foreach ($params as $k => $v) {
             $signArr[] = $k . "=" . $v;
         }
-        $signStr = implode(",", $signArr);
-        $data['sign'] = strtoupper(md5($string1 . $signStr));
-        $data['api'] = "reserve_order";
+        $signStr = $string1 . implode(",", $signArr);
+        dump($signStr);
+        $data['sign'] = strtoupper(md5($signStr));
+        $data['api'] = "get_inventory_list";
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));
