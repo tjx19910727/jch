@@ -31,8 +31,8 @@ class Api extends Command
      *
      * command
      *      php think api [moduleType] [actionType]
-     * moduleType     send_callback：推送回调通知数据
-     * actionType     send：触发循环最多8次的推送
+     * moduleType     callback：推送回调通知数据
+     * actionType     trigger_send：触发循环最多8次的推送
      * @param Input $input
      * @param Output $output
      * @return int|null|void

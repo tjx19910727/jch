@@ -43,6 +43,7 @@ class VTemplateView extends VCommon
         "update" => ["id"],
         "del" => ["id"],
 
-        "plugin_data" => ['layout_id','height','width','left','top']
+        "plugin_data" => ['layout_id','height','width','left','top'],
+        "copy" => ["id","name"],
     ];
 }

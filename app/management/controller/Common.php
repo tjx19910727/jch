@@ -46,7 +46,7 @@ class Common extends AuthController
      */
     public function getWhere($params,$is_string = false,$condition = [],$prefix = "")
     {
-        $where = [];
+        $where = $is_string == true ? "" : [];
         $conData = array_keys($condition);
         foreach ($params as $key => $value) {
             if ($value == "") continue;
@@ -214,7 +214,7 @@ class Common extends AuthController
             $diskName = env("fileSystem.diskName");// 上传本地
             //            $diskName = "aliyun";    // 上传OSS服务器
             $saveName = Filesystem::disk($diskName)->putFile($folder, $file);
-            $path = Filesystem::getDiskConfig($diskName, 'url') . str_replace('\\', '/', $saveName);
+            $path = env("APP.host") . Filesystem::getDiskConfig($diskName, 'url') . str_replace('\\', '/', $saveName);
             return returnState(200, '上传成功', $path);
         } catch (\Exception $e) {
             return returnTryCatch($e->getMessage());

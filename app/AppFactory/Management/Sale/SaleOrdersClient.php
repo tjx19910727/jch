@@ -429,16 +429,18 @@ class SaleOrdersClient extends ManagementClient
             // 日
             if ($group == "day") {
                 $field = "countDate,";
+                $group = "countDate";
             }
             // 月
             if ($group == "month") {
                 $field = "DATE_FORMAT(countDate ,'%Y-%m') countDate,";
+                $group = " DATE_FORMAT(countDate ,'%Y-%m')";
             }
             // 年
             if ($group == "year") {
                 $field = "DATE_FORMAT(countDate ,'%Y') countDate,";
+                $group = "DATE_FORMAT(countDate ,'%Y') ";
             }
-            $group = "countDate";
         }
         if (!$group) $group = "create_date";
         $field = $field . "
@@ -450,7 +452,12 @@ class SaleOrdersClient extends ManagementClient
         SUM(order_num) order_num,
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
-        return $this->rQ($this->getSaleOrdersDailyCountList($where, $pageNum, $field, $order, $group));
+//        $sql = "SELECT " . $field . " FROM sale_orders_daily_count WHERE " . $where ;
+//        if ($order) $sql .= " order by " . $order;
+//        if ($group) $sql .= " group by " . $group;
+//        $data = $this->query($sql);
+        $data = $this->getSaleOrdersDailyCountList($where, $pageNum, $field, $order, $group);
+        return $this->rQ($data);
     }
 
     /**

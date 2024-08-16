@@ -475,12 +475,34 @@ class ApiClient extends ReceiveBaseClient
     {
         $where['m_id'] = $this->machine['m_id'];
         $where['status'] = 1;
-        $mv = $this->getMachineViewFind($where, 'mv_id,view_id,m_id,machine_id,name,notes,publish_time,expire_time', 'mv_id desc');
+        $mv = $this->getMachineViewFind($where, 'mv_id,view_id,m_id,machine_id,name,position,notes,publish_time,expire_time', 'mv_id desc');
         if ($mv) {
             $mv['details'] = $this->getTemplateViewFind(['id' => $mv['view_id']], '
                 name,height,width,plugin_data
             ');
             return $this->r(200, 'SUCCESS', $mv);
+        }
+        return $this->r(100, $this->lang("query_mv_no_data"));
+    }
+
+    /**
+     * 设备模板视图列表
+     * @return array|string
+     */
+    public function machineViewList()
+    {
+        $where['m_id'] = $this->machine['m_id'];
+        $where['status'] = 1;
+        $where[] = function ($query) {
+            $query->where("expire_time is null or expire_time > '" . time() . "'");
+        };
+        $mvList = $this->getMachineViewList($where, 0,'mv_id,view_id,m_id,machine_id,name,position,notes,publish_time,expire_time', 'mv_id desc','','position');
+        if ($mvList) {
+            $mvList = $mvList->toArray();
+            foreach ($mvList as $key => $value) {
+                $mvList[$key]['details'] = $this->getTemplateViewFind(['id' => $value['view_id']], 'name,height,width,plugin_data');
+            }
+            return $this->r(200, 'SUCCESS', $mvList);
         }
         return $this->r(100, $this->lang("query_mv_no_data"));
     }

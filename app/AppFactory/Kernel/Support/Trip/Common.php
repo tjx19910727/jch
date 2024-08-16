@@ -35,7 +35,9 @@ class Common
             $this->token = $tokenArr['token'];
         }
         if (!$tokenArr || (isset($tokenArr['expire_time']) && $tokenArr['expire_time'] <= time() + 60)) {
-            $response = $this->curl_request($this->baseUrl . "/openservice/getToken?appId=$this->appId&appSecret=$this->appSecret","GET");
+            $url = $this->baseUrl . "/openservice/getToken?appId=$this->appId&appSecret=$this->appSecret";
+//            $url = "http://yantest.dakemakeji.com/machine/test/testNotify";
+            $response = $this->curl_request($url,"GET");
             if (is_string($response)) $response = json_decode($response,true);
             if ($response && isset($response['token'])) {
                 $this->token = $response['token'];
@@ -57,7 +59,9 @@ class Common
         if (!$this->token) return ["code" => 99,"message" => "查无Token"];
         $url = $this->baseUrl . $url;
         $params = json_encode($params,320);
-        return $this->curl_request($url,"POST",$params);
+        $header[] = "token:" . $this->token;
+        $header[] = "Content-Type: application/json";
+        return $this->curl_request($url,"POST",$params,$header);
     }
 
     /**
@@ -70,8 +74,6 @@ class Common
      */
     public function curl_request($url, $method = 'get', $data = array(), $header = false)
     {
-        $header[] = "token:" . $this->token;
-        $header[] = "Content-Type: application/json";
         dump($data);
         dump($url);
         dump($header);
@@ -107,9 +109,13 @@ class Common
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
         }
-//        $curlError = curl_error($curl);
-
+        $curlError = curl_error($curl);
+        echo "请求错误：";
+        dump($curlError);
+        curl_setopt($curl,CURLOPT_VERBOSE,1);
         list($content, $status) = [curl_exec($curl), curl_getinfo($curl), curl_close($curl)];
+        dump($content);
+        dump($status);
         $content = trim(substr($content, $status['header_size']));
         return  $content;
     }

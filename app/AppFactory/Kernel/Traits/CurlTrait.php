@@ -54,9 +54,11 @@ trait CurlTrait
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
         }
-//        $curlError = curl_error($curl);
-
+        $curlError = curl_error($curl);
+        actionLog($curlError,'请求错误',"CURL");
         list($content, $status) = [curl_exec($curl), curl_getinfo($curl), curl_close($curl)];
+        actionLog($content,'请求结果内容',"CURL");
+        actionLog($status,'请求结果status',"CURL");
         $content = trim(substr($content, $status['header_size']));
         return  $content;
     }

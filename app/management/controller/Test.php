@@ -26,6 +26,56 @@ use think\facade\Db;
 
 class Test extends BaseController
 {
+
+    public function testUpdateImgPrefix()
+    {
+        $filePath = public_path() . "updateImagePath.sql";
+        // 打开文件，如果文件不存在则创建
+        $file = fopen($filePath, 'a+');
+        $sql = "show tables";
+        $tables = Db::query($sql);
+        foreach ($tables as $key => $value) {
+            $table_name = $value['Tables_in_kiosk'];
+            $sql = "SELECT COLUMN_NAME as 'Field'
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE table_schema = 'kiosk' AND 
+        COLUMN_NAME <> 'create_time' AND COLUMN_NAME <> 'update_time'  AND COLUMN_NAME <> 'update_id' ";
+            if ($table_name) $sql .= " AND table_name='$table_name'";
+            $sql .= " group by COLUMN_NAME";
+            $fieldList = Db::query($sql);
+            $data = Db::query("SELECT * FROM " . $table_name);
+            foreach ($data as $dk => $dv) {
+                $update = [];
+                foreach ($fieldList as $key => $value) {
+                    if (strpos($dv[$value['Field']],"uploads") == 1) {
+                        if (strpos($dv[$value['Field']],",") !== false) {
+                            $fieldTemp = explode(",",$dv[$value['Field']]);
+                            $tempArr = [];
+                            foreach ($fieldTemp as $v) {
+                                $v = env("APP.host") . $v;
+                                $tempArr[] = $v;
+                            }
+                            $update[] = "`" . $value['Field'] . "` = '"  . implode(",",$tempArr) . "'";
+                        } else {
+                            $update[] = "`" . $value['Field'] . "` = '" . env("APP.host") . $dv[$value['Field']] . "'";
+                        }
+                    }
+                }
+
+                if ($update) {
+                    $updateSql = "UPDATE FROM " . $table_name . " SET " . implode(",", $update) . " WHERE " . $fieldList[0]['Field'] . "=" . $dv[$fieldList[0]['Field']] . ";";
+                    // 移动到文件末尾
+                    fseek($file, 0, SEEK_END);
+                    // 写入数据
+                    fwrite($file, $updateSql . "\r\n");
+                }
+            }
+        }
+        // 关闭文件
+        fclose($file);
+        echo "OK";
+    }
+
     public function testFieldColumn()
     {
         $result = AuthManagerLogModel::getFieldComment();

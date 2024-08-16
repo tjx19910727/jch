@@ -66,4 +66,15 @@ class TemplateView extends Common
         }
         return $this->app->templateView->delTv($postData);
     }
+
+    public function copy()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.copy');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->templateView->copy($postData);
+    }
 }

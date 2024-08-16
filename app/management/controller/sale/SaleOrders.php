@@ -159,6 +159,8 @@ class SaleOrders extends Common
     public function getReport()
     {
         $postData = input();
+        $field = "";
+        $group = "";
         if (isset($postData['group'])) {
             $group = $postData['group'];
             unset($postData['group']);
@@ -167,7 +169,22 @@ class SaleOrders extends Common
 
         $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
         if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        $field = "ao_name,
+        if ($group) {
+            // 日
+            if ($group == "day") {
+                $field = "countDate,";
+            }
+            // 月
+            if ($group == "month") {
+                $field = "DATE_FORMAT(countDate ,'%Y-%m') countDate,";
+            }
+            // 年
+            if ($group == "year") {
+                $field = "DATE_FORMAT(countDate ,'%Y') countDate,";
+            }
+            $group = "countDate";
+        }
+        $field .= "ao_name,
         SUM(order_num) order_num,
         sum(totalRefundAmount) totalRefundAmount,
         SUM(totalRefundQuantity) totalRefundQuantity,
@@ -200,9 +217,14 @@ class SaleOrders extends Common
             $order = $postData['order'];
             unset($postData['order']);
         }
-        $where = $this->getWhere($postData,false,["machine_id" => "like"]);
+        $where = $this->getWhere($postData,true,["machine_id" => "like"]);
         $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
+        if ($machineIds) {
+            foreach ($machineIds as $k => $v) {
+                $machineIds[$k] = "'" . $v . "'";
+            }
+            $where .= 'machine_id in (' . implode(",",$machineIds) . ')';
+        }
         return $this->app->saleOrders->getReportList($where,$pageNum,$order,$group);
     }
 

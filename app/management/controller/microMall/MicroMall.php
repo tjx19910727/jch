@@ -65,4 +65,26 @@ class MicroMall extends Common
         }
         return $this->app->microMall->del($postData);
     }
+
+    public function bind()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'bind');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->microMallMachine->bind($postData);
+    }
+
+    public function getBindList()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'getBindList');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->microMallMachine->getBindList($postData);
+    }
 }

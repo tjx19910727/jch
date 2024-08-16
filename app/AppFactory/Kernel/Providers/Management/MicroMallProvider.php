@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Providers\Management;
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\MicroMall\MicroMallClient;
+use app\AppFactory\Management\MicroMall\MicroMallMachineClient;
 
 class MicroMallProvider implements ServiceProviderInterface
 {
@@ -20,6 +21,9 @@ class MicroMallProvider implements ServiceProviderInterface
         // TODO: Implement register() method.
         $app['microMall'] = function ($app) {
             return new MicroMallClient($app);
+        };
+        $app['microMallMachine'] = function ($app) {
+            return new MicroMallMachineClient($app);
         };
     }
 }

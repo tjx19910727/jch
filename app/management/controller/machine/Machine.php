@@ -81,6 +81,10 @@ class Machine extends Common
     {
         $postData = input();
         $otherData  = ["time_point" => ($postData['time_point'] ?? time())];
+        if (isset($postData['msgType'])  && is_int($postData['msgType'])) {
+            $typeList = [1 => "sleep",2 => "wakeUp",3 => "reboot", 4 => "shutdown", 5 => "update"];
+            $postData['msgType'] = $typeList[$postData['msgType']];
+        }
         return $this->app->machine->sendToMachine($postData,$postData['msgType'],$otherData);
     }
 

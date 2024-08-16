@@ -108,6 +108,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineSaleClient              $machineSale            设备销售数据
  *
  * @property MicroMall\MicroMallClient              $microMall              微商城
+ * @property MicroMall\MicroMallMachineClient       $microMallMachine       微商城绑定设备
  *
  * @property Resource\ResourceClient                $resource  广告素材
  *

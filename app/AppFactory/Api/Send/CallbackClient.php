@@ -13,12 +13,13 @@ use app\AppFactory\Api\ApiBaseClient;
 use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiCallbackTrait;
 
+define("LOG_NAME","callback");
+define("TEST",1);
 class CallbackClient extends ApiBaseClient
 {
     use ApiCallbackTrait,ApiAdvanceTrait;
 
     public $callbackData;
-
 
     /**
      * @var array 各类型数据推送时间间隔，最多8次，最大7560秒
@@ -26,6 +27,7 @@ class CallbackClient extends ApiBaseClient
     protected $intervalTime = [
         "1" => [0,60,300,900,900,1800,3600,7200],
         "2" => [0,60,300,900,900,1800,3600,7200],
+//        "2" => [0,0,0,0,0,0,0,0],
         "3" => [0,60,300,900,900,1800,3600,7200],
         "4" => [0,60,300,900,900,1800,3600,7200],
         "5" => [0,60,300],
@@ -49,6 +51,7 @@ class CallbackClient extends ApiBaseClient
             if ($i == 0  && $this->callbackData) cache("start",1,7600);
             $this->push();
         }
+        sleep(1);
         return "处理完毕";
     }
 
@@ -78,14 +81,15 @@ class CallbackClient extends ApiBaseClient
             foreach ($this->callbackData as $key => $value) {
                 if (!isset($this->intervalTime[$value['callback_type']][($value['callback_frequency']+ 1)])) $noNext = 1;
                 $time = $this->intervalTime[$value['callback_type']][$value['callback_frequency']];
+                if (TEST == 1) $time = 0;
 
                 // 达到间隔时间，推送数据
                 if (time() - $value['create_time'] >= $time) {
                     if (!$value['uuid']) $value['uuid'] = uniqid();
                     // 发起当前推送
-                    $curl = $this->curl_request($value['notify_url'], "POST", $value['message']);
-                    actionLog($value['message'],'推送数据');
-                    actionLog($curl,'推送结果');
+                    $curl = $this->curl_request($value['notify_url'], "POST", $value['message'],['Content-Type:application/json']);
+                    actionLog($value['message'],'推送数据',LOG_NAME);
+                    actionLog($curl,'推送结果',LOG_NAME);
                     $value['callback_time'] = date("Y-m-d H:i:s");
                     $value['result'] = is_string($curl) ? $curl : json_encode($curl,320);
                     // 返回成功

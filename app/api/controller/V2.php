@@ -13,7 +13,6 @@ use app\AppFactory\AppFactory;
 
 class V2 extends Common
 {
-
     public function testMakeSign()
     {
         $params = [
@@ -35,13 +34,13 @@ class V2 extends Common
                     "charge_amount" => 99,
                     "type" => "sale",
                 ],
-//                "87" => [
-//                    "quantity" => 2,
-//                    "item_price" => 50,
-//                    "discount_amount" => 3,
-//                    "charge_amount" => 97,
-//                    "type" => "sale",
-//                ],
+                "87" => [
+                    "quantity" => 2,
+                    "item_price" => 50,
+                    "discount_amount" => 3,
+                    "charge_amount" => 97,
+                    "type" => "sale",
+                ],
 //                "69" => [
 //                    "quantity" => 1,
 //                    "item_price" => 0,
@@ -55,24 +54,37 @@ class V2 extends Common
 //            "kiosk_id" => "test0001",
 //            "order_no" => "11111111",
 //        ];
-        $params = [
-            "trade_no" => "202407291443503775978",
-            "pay_status" => 1,
-        ];
-        $params = [
-            "pageNum" => 15,
-            "machine_id" => "test0001",
-        ];
-        $data = '{"auth_name":"Lc_test","sign":"87ED5F99A692D8F32C758B5B5CA94055","api":"get_inventory_list","params":"{\"product_id\":\"\",\"machine_id\":\"test0003\",\"shelf_on\":1}","timestamp":"1723207274"}';
-        $data = json2arr($data);
-        $params = json_decode($data['params'],true);
-        $params['pageNum'] = 15;
+//        $params = [
+//            "trade_no" => "202407291443503775978",
+//            "pay_status" => 1,
+//        ];
+//        $params = [
+//            "pageNum" => 15,
+//            "machine_id" => "test0001",
+//        ];
+//        $data = '{"auth_name":"Lc_test","sign":"87ED5F99A692D8F32C758B5B5CA94055","api":"get_inventory_list","params":"{\"product_id\":\"\",\"machine_id\":\"test0003\",\"shelf_on\":1}","timestamp":"1723207274"}';
+//        $data = json2arr($data);
+//        $params = json_decode($data['params'],true);
+//        $params['pageNum'] = 15;
+        $params = '{
+    "order_no": "22",
+    "expire_time": "2024-08-14 18:53:57",
+    "order_detail": "[{\"152\":{\"quantity\":1,\"type\":\"sale\",\"item_price\":8,\"discount_amount\":0,\"charge_amount\":8}},{\"168\":{\"quantity\":1,\"type\":\"sale\",\"item_price\":8,\"discount_amount\":0,\"charge_amount\":8}}]",
+    "kiosk_id": "test0001",
+    "payment_method": "wechat",
+    "charge_time": "2024-08-14 10:53:57"
+}';
+        $params = json_decode($params,true);
+        dump($params);
+        $details = json_decode($params['order_detail'],true);
+        dump($details);
         $data = [
             "auth_name" => "JCH",
             "auth_password" => "jlz123456",
             "timestamp" => time(),
             "params" => json_encode($params, 320),
         ];
+        dump($data['params']);
         $string1 = strtoupper(md5($data['auth_password'] . $data['timestamp']));
         dump($string1);
         ksort($params);
@@ -83,7 +95,7 @@ class V2 extends Common
         $signStr = $string1 . implode(",", $signArr);
         dump($signStr);
         $data['sign'] = strtoupper(md5($signStr));
-        $data['api'] = "get_inventory_list";
+        $data['api'] = "reserve_order";
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));
@@ -91,14 +103,25 @@ class V2 extends Common
 
     public function index()
     {
-        $postData = input();
-        $postData = json2arr($postData);
-        actionLog($postData,'接收到的数据');
-        $funcName = $postData['api'];
-        $app = AppFactory::api($postData);
-        if (method_exists($app->v2, $funcName)) {
-            return $app->v2->$funcName();
+        if (!request()->isPost()) {
+            return json(["status_code" => 98,"msg" => lang("msg." . 98)]);
         }
-        return $app->v2->returnData(4, lang("msg." . 4));
+        if (strpos(request()->header("content-type"),'multipart/form-data') === false ) {
+            return json(["status_code" => 97,"msg" => lang("msg." . 97)]);
+        }
+        try {
+            $postData = input();
+            $postData = json2arr($postData);
+            actionLog($postData, '接收到的数据');
+            $funcName = $postData['api'];
+            $app = AppFactory::api($postData);
+            if (method_exists($app->v2, $funcName)) {
+                return $app->v2->$funcName();
+            }
+            return $app->v2->returnData(4, lang("msg." . 4));
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return  json(["status_code" => 99, "msg" => lang("msg." . 99)]);
+        }
     }
 }  

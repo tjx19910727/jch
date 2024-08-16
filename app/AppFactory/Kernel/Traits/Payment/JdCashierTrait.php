@@ -227,20 +227,23 @@ trait JdCashierTrait
         if (isset($this->strategyPayee['bill_account'])) {
             $revenue = $this->getSaleOrdersRevenueList(['order_id' => $this->order['order_id'], 'revenue_type' => 4]);
             if ($revenue) {
-                $totalAmount = 0;
-                foreach ($revenue as $key => $value) {
-                    $billAccount = $this->getAuthManagerValue(['manager_id' => $value['beneficiary']], 'bill_account');
-                    $bill['customerNum'] = $billAccount;
-                    $amount = $value['income_amount'];
-                    $bill['amount'] = "$amount";
-                    $billList[] = $bill;
-                    $totalAmount = bcadd($amount, $totalAmount, 3);
+                $revenue = $revenue->toArray();
+                if ($revenue && $this->strategyPayee['bill_account']) {
+                    $totalAmount = 0;
+                    foreach ($revenue as $key => $value) {
+                        $billAccount = $this->getAuthManagerValue(['manager_id' => $value['beneficiary']], 'bill_account');
+                        $bill['customerNum'] = $billAccount;
+                        $amount = $value['income_amount'];
+                        $bill['amount'] = "$amount";
+                        $billList[] = $bill;
+                        $totalAmount = bcadd($amount, $totalAmount, 3);
+                    }
+                    $amount = bcsub($this->order['total_price'], $totalAmount, 2);
+                    $billList[] = [
+                        'amount' => "$amount",
+                        'customerNum' => $this->strategyPayee['bill_account'],
+                    ];
                 }
-                $amount = bcsub($this->order['total_price'], $totalAmount, 2);
-                $billList[] = [
-                    'amount' => "$amount",
-                    'customerNum' => $this->strategyPayee['bill_account'],
-                ];
             }
         }
         return $billList;

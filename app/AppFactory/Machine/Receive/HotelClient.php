@@ -32,6 +32,16 @@ class HotelClient extends ReceiveBaseClient
     }
 
     /**
+     * 销毁实例时触发
+     */
+    public function __destruct()
+    {
+        // TODO: Implement __destruct() method.
+        $result = $this->updateMachineMqRecord(['status' => 2, 'msg_id' => $this->data['msg_id']], ['msg_id' => $this->data['msg_id']]);
+        actionLog($result, '处理完成时修改状态为已处理');
+    }
+
+    /**
      * 获取携程城市列表
      * @return array|\think\response\Json
      */
@@ -53,8 +63,8 @@ class HotelClient extends ReceiveBaseClient
             "cityId" => $this->data['cityId'],
             "checkInDate" => $this->data['checkInDate'],
             "checkOutDate" => $this->data['checkOutDate'],
-            "pageNo" => $this->data['pageNo'],
-            "pageSize" => $this->data['pageSize'],
+            "pageNo" => $this->data['page'],
+            "pageSize" => $this->data['pageNum'],
         ];
         $result = Trip::hotel()->getList($params);
         $result = json2arr($result);

@@ -98,10 +98,10 @@ trait ApiAdvanceTrait
             "apc_id" => $this->order['apc_id'],
             "pick_code" => $this->order['pay_code'],
             "payment_method" => $this->config["params"]['payment_method'],
-            "customer_name" => $this->config["params"]['customer_name'],
+            "customer_name" => $this->config["params"]['customer_name'] ?? "",
             "expire_time" => $this->config["params"]['expire_time'],
             "charge_time" => $this->config["params"]['charge_time'],
-            "notify_url" => $this->config["params"]['notify_url'],
+            "notify_url" => $this->config["params"]['notify_url'] ?? "",
             "order_detail" => $this->config["params"]['order_detail'],
             "charge_amount" => $this->order["total_price"],
             "quantity" => $this->order['total_quantity'],
@@ -112,7 +112,7 @@ trait ApiAdvanceTrait
         $aa_id = $this->addApiAdvance($insertAdvance);
         if (!$aa_id) {
             actionLog($this->getLS(),'生成预订商品记录失败');
-            return $this->returnData(99,$this->msg[99]);
+            return $this->returnData(99,$this->lang("msg.99"));
         }
         return 1;
     }

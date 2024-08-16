@@ -28,5 +28,7 @@ class VMicroMall extends VCommon
             "add" => ["mall_name"],
             "update" => ["mm_id"],
             "del" => ["mm_id"],
+            "bind" => ["mm_id"],
+            "getBindList" => ["mm_id"],
         ];
 }

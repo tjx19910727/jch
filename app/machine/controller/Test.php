@@ -150,14 +150,14 @@ class Test extends BaseController
 //            "mobile" => "13640445590",
 //        ];
         // 获取酒店列表
-//        $data = [
-//            "machine_id" => "test0003",
-//            "cityId" => '3' ,
-//            "checkInDate" => "2024-08-06",
-//            "checkOutDate" => "2024-08-07",
-//            "pageNo" => 1,
-//            "pageSize" => 15,
-//        ];
+        $data = [
+            "machine_id" => "test0003",
+            "cityId" => '3' ,
+            "checkInDate" => "2024-08-06",
+            "checkOutDate" => "2024-08-07",
+            "page" => 1,
+            "pageNum" => 15,
+        ];
 //        // 获取酒店详情
 //        $data = [
 //            "machine_id" => "test0003",
@@ -170,11 +170,12 @@ class Test extends BaseController
 //            "checkInDate" => "2024-08-06",
 //            "checkOutDate" => "2024-08-07",
 //        ];
-        $data = [
-            "machine_id" => "test0002",
-            "order_id" => "2276",
-            "hotelList" => $hotelLiset,
-        ];
+//        $data = [
+//            "machine_id" => "test0003",
+//            "pick_code" => "71491792",
+////            "order_id" => "2276",
+////            "hotelList" => $hotelLiset,
+//        ];
         $data = $this->makeSign($data);
         dump(json_encode($data,320));
     }
@@ -218,25 +219,11 @@ class Test extends BaseController
     {
         $content = [
             "msgType" => "outGoods",
-            "trade_no" => "1234554654",
+            "trade_no" => "307",
             "main" => [
                 "1" => [
                     [
-                        "channel_code" => "A01",
-                        "success_quantity" => 1,
-                        "fail_quantity" => 0,
-                        "deliver_pics" => "",
-                        "out_sequence" => 1,
-                    ],
-                    [
-                        "channel_code" => "B01",
-                        "success_quantity" => 2,
-                        "fail_quantity" => 0,
-                        "deliver_pics" => "",
-                        "out_sequence" => 1,
-                    ],
-                    [
-                        "channel_code" => "C01",
+                        "channel_code" => "F05",
                         "success_quantity" => 1,
                         "fail_quantity" => 0,
                         "deliver_pics" => "",
@@ -254,7 +241,7 @@ class Test extends BaseController
             "msg_id" => $msg_id,
             "machine_id" => "0012",
 //            "mac" => "192.168.6.1",
-//            "data" => $content,
+            "data" => $content,
 //            "data" => [
 //                "msgType" => "updateComplete",
 //                "mvp_id" => 184,
@@ -264,8 +251,8 @@ class Test extends BaseController
         $data['sign'] = SignUtil::makeSign($data, $signKey);
         dump(json_encode($data));
 
-        $data = '{"timestamp":"1722842359","msg_id":"034be881-8c50-4aba-b8f4-cb320a37e5b3","machine_id":"0004","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"2024080515164570798038\",\"main\":{\"1\":[{\"channel_code\":\"D01\",\"success_quantity\":2,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0004/20240805/9c71a4607b937e39344bc5b7603a1d9d.jpg,/uploads/machine_0004/20240805/ddc2bf4a4fb22a3250de7896515a54cb.jpg\",\"out_sequence\":1}]}}","sign":"69a744b05efdb01736123c64165d8150"}';
-        $data = json2arr($data);
+//        $data = '{"timestamp":"1722842359","msg_id":"034be881-8c50-4aba-b8f4-cb320a37e5b3","machine_id":"0004","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"2024080515164570798038\",\"main\":{\"1\":[{\"channel_code\":\"D01\",\"success_quantity\":2,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0004/20240805/9c71a4607b937e39344bc5b7603a1d9d.jpg,/uploads/machine_0004/20240805/ddc2bf4a4fb22a3250de7896515a54cb.jpg\",\"out_sequence\":1}]}}","sign":"69a744b05efdb01736123c64165d8150"}';
+//        $data = json2arr($data);
         $result = MqProducer::dataUpload($data);
         dump($result);
     }
@@ -278,9 +265,17 @@ class Test extends BaseController
         dump(strtotime($orderDate) != strtotime(date("Y-m-d")));
     }
 
+    public function testGetCache()
+    {
+        for ($i=0;$i<=8;$i++) {
+            $cache = cache("callback$i");
+            dump($cache);
+        }
+    }
+
     public function testReturn()
     {
-        $data = '{"timestamp":"1722829353","msg_id":"7056a53c-9f95-4651-8664-eef5bc54651d","machine_id":"0004","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"2024080511245670130276\",\"main\":{\"1\":[{\"channel_code\":\"E03\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0004/20240805/254db2b67f2280816c1eaa66ed54e6ef.jpg,/uploads/machine_0004/20240805/8f3e71e10128e364602e0e5934bbe0d2.jpg\",\"out_sequence\":1},{\"channel_code\":\"E02\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0004/20240805/dfdc45fd09db3fc3e3c8d09a887ca0de.jpg,/uploads/machine_0004/20240805/e789c762afa829e911e70750141c9e70.jpg\",\"out_sequence\":2},{\"channel_code\":\"E01\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0004/20240805/fbd0957326f50464d43b259df0594898.jpg,/uploads/machine_0004/20240805/9f7652c045f0426ecdfe27ebb8210880.jpg\",\"out_sequence\":3},{\"channel_code\":\"E04\",\"success_quantity\":0,\"fail_quantity\":1,\"deliver_pics\":\"/uploads/machine_0004/20240805/8f51964212aa14b2699a740d7a2240fa.jpg,/uploads/machine_0004/20240805/f7884f825ab3c0fa073f62598b841a5c.jpg\",\"out_sequence\":4},{\"channel_code\":\"F03\",\"success_quantity\":0,\"fail_quantity\":1,\"deliver_pics\":\"/uploads/machine_0004/20240805/7fdd5deaa8b30e25f628cf17bb91104e.jpg,/uploads/machine_0004/20240805/6bf8efef755a3686b0ded543ce530f98.jpg\",\"out_sequence\":5},{\"channel_code\":\"F01\",\"success_quantity\":0,\"fail_quantity\":1,\"deliver_pics\":\"/uploads/machine_0004/20240805/1397542b5f6a79120e10a5f58b0968ee.jpg,/uploads/machine_0004/20240805/13f85e135f17e7c02f368b87225205c7.jpg\",\"out_sequence\":6},{\"channel_code\":\"F04\",\"success_quantity\":0,\"fail_quantity\":1,\"deliver_pics\":\"/uploads/machine_0004/20240805/7ee6393888594e371b164654626e661f.jpg,/uploads/machine_0004/20240805/3a329c61ac73b08122cf60f476fe91df.jpg\",\"out_sequence\":7},{\"channel_code\":\"F02\",\"success_quantity\":0,\"fail_quantity\":1,\"deliver_pics\":\"/uploads/machine_0004/20240805/380f2f47f89e646b350397a2da031747.jpg,/uploads/machine_0004/20240805/4b5d30f654e64988e69bd986d9275ce1.jpg\",\"out_sequence\":8}]}}","sign":"d211f01d93b94296d6f25f156a93d7cd"}';
+        $data = '{"timestamp":1723706543,"msg_id":"66bdacaf4dba2","machine_id":"0012","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"307\",\"main\":{\"1\":[{\"channel_code\":\"F05\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"\",\"out_sequence\":1}]}}","sign":"e1647d6f8dca0ea0dad85b579f2f7025"}';
         $data = json2arr($data);
         dump($data);
         $config = [
@@ -456,4 +451,5 @@ class Test extends BaseController
         }
         dump($connection);
     }
+
 }

@@ -18,6 +18,34 @@ class MachineOnOffClient extends ManagementClient
 {
     use MachineOnOffTrait, MachineTrait;
 
+    public function addOf($postData)
+    {
+        $result = $this->addMachineOnOff($postData);
+        if ($result) {
+            $this->sendToMachine(['machine_id' => $postData['machine_id']],'updateMachineOnOff');
+        }
+        return $this->rA($result);
+    }
+
+    public function updateOf($postData)
+    {
+        $result = $this->updateMachineOnOff($postData);
+        if ($result) {
+            $machine = $this->getMachineOnOffFind(['moo_id' => $postData['moo_id']],'machine_id')->toArray();
+            $this->sendToMachine($machine,'updateMachineOnOff');
+        }
+        return $this->rU($result);
+    }
+
+    public function delOf($where)
+    {
+        $machine = $this->getMachineOnOffFind($where,'machine_id')->toArray();
+        $result = $this->delMachineOnOff($where);
+        if ($result) {
+            $this->sendToMachine($machine,'updateMachineOnOff');
+        }
+        return $this->rD($result);
+    }
 
     /**
      * 导入营业配置Excel

@@ -156,6 +156,15 @@ class Receive extends Common
     }
 
     /**
+     * 获取设备屏幕视图模板列表，兼容包含首页视图模板
+     * @return array|string
+     */
+    public function getMachineViewList()
+    {
+        return $this->app->api->machineViewList();
+    }
+
+    /**
      * 获取最新一条设备软件更新信息
      * @return array|string
      */

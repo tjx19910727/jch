@@ -23,9 +23,9 @@ trait MachineViewTrait
         return MachineViewModel::getFind($where,$field,$order);
     }
 
-    public function getMachineViewList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "")
+    public function getMachineViewList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = '')
     {
-        return MachineViewModel::getList($where,$pageNum,$field,$order,$eachFun);
+        return MachineViewModel::getList($where,$pageNum,$field,$order,$eachFun,$group);
     }
 
     public function addMachineView($insert)

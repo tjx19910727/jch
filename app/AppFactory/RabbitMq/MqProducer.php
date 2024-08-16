@@ -107,7 +107,7 @@ class MqProducer
                 $message = json2arr($message->getBody());
                 $config = [
                     "machine_id" => $message['machine_id'],
-                    "key" => env("app.md5Key")
+//                    "key" => env("app.md5Key")
                 ];
                 actionLog($message,'异步发布者确认信息');
                 $app = AppFactory::machine($config);
@@ -117,7 +117,7 @@ class MqProducer
                 $message = json2arr($message->getBody());
                 $config = [
                     "machine_id" => $message['machine_id'],
-                    "key" => env("app.md5Key")
+//                    "key" => env("app.md5Key")
                 ];
                 actionLog($message,'异步丢失消息回调数据');
                 $app = AppFactory::machine($config);

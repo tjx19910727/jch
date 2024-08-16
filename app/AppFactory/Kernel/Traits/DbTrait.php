@@ -72,6 +72,11 @@ trait DbTrait
         return Db::getLastSql();
     }
 
+    public function query($sql)
+    {
+        return Db::query($sql);
+    }
+
     /**
      * 获取字段名与备注
      * @param string $table_name 表名，不传查全库所有表字段

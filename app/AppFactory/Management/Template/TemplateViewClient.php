@@ -31,6 +31,22 @@ class TemplateViewClient extends ManagementClient
     }
 
     /**
+     * 复制视图
+     * @param $postData
+     * @return array|\think\response\Json
+     */
+    public function copy($postData)
+    {
+        $tv = $this->getTemplateViewFind(['id' => $postData['id']]);
+        if (!$tv) return $this->r(100,$this->lang("query_fail"));
+        $tv = $tv->toArray();
+        unset($tv['id']);
+        $tv['name'] = $postData['name'];
+        $result = $this->addTemplateView($tv);
+        return $this->rA($result);
+    }
+
+    /**
      * 修改模板视图，修改成功后，检查已绑定的设备下发更新通知
      * @param $postData
      * @return array|\think\response\Json

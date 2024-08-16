@@ -43,7 +43,7 @@ class MachineOnOff extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineOnOff->add($postData);
+        return $this->app->machineOnOff->addOf($postData);
     }
 
     public function update()
@@ -54,7 +54,7 @@ class MachineOnOff extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineOnOff->update($postData);
+        return $this->app->machineOnOff->updateOf($postData);
     }
 
     public function del()
@@ -65,7 +65,7 @@ class MachineOnOff extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineOnOff->del($postData);
+        return $this->app->machineOnOff->delOf($postData);
     }
 
     /**
