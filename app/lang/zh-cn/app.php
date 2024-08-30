@@ -6,6 +6,8 @@
  * Time: 10:15
  */
 return [
+
+    "where_not_empty" => "查询条件不能为空",
     "query_success" => '查询成功',
     "query_fail" => '查无数据',
     "query_out_range" => "查询类型不在范围内",

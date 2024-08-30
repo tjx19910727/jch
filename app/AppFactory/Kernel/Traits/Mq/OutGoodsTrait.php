@@ -264,4 +264,52 @@ trait OutGoodsTrait
         }
     }
 
+    /**
+     * 处理会员支付
+     */
+    protected function handleTripPayCallback()
+    {
+        if ($this->order['pay_type'] == 5) {
+            $sp = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id']]);
+            if ($sp) {
+                $sp = $sp->toArray();
+                // 出货成功才是使用成功
+                if ($this->order['out_status'] == 4) {
+                    $adStatus = 1;
+                } else {
+                    $adStatus = 6;
+                }
+                $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'g_id product_id,success_quantity,fail_quantity');
+                $details = $details->toArray();
+                $detail_status = "ALL PENDING";
+                if ($this->order['total_quantity'] != array_sum(array_column($details,'success_quantity'))) $detail_status = "PARTIAL MISVEND";
+                if ($this->order['total_quantity'] == array_sum(array_column($details,'fail_quantity'))) $detail_status = "ALL MISVEND";
+                $message = [
+                    "status" => $adStatus,
+                    "machine_id" => $this->order['machine_id'],
+                    "machine_name" => $this->order['machine_name'],
+                    "order_no" => $this->order['trade_no'],
+                    "pick_code" => "",
+                    "payment_method" => "",
+                    "quantity" => $this->order['total_quantity'],
+                    "detail_status" => $detail_status,
+                    "products_list" => json_encode($details,320),
+                ];
+                $insertCallback = [
+                    "aa_id" => 0,
+                    "notify_url" => $sp['callbackUrl'],
+                    "callback_type" => 8,
+                    "message" => json_encode($message,320),
+                ];
+                $ac_id = $this->addApiCallback($insertCallback);
+                $ac = $this->getApiCallbackFind(['ac_id' => $ac_id]);
+                if ($ac) {
+                    $cb = cache("callback0");
+                    $cb[] = $ac->toArray();
+                    cache("callback0",$cb,60);
+                }
+            }
+        }
+    }
+
 }

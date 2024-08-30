@@ -27,20 +27,24 @@ class MachineChannelClient extends ManagementClient
      */
     public function getData($where)
     {
+        $empty = 0;
+        $bad = 0;
+        $stockOut = 0;
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        $whereEmpty = $where;
-        $whereEmpty['g_id'] = 0;
-        $empty = $this->getMachineChannelCount($whereEmpty);
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $whereEmpty = $where;
+            $whereEmpty['g_id'] = 0;
+            $empty = $this->getMachineChannelCount($whereEmpty);
 
-        $whereBad = $where;
-        $whereBad['status'] = 3;
-        $bad = $this->getMachineChannelCount($whereBad);
+            $whereBad = $where;
+            $whereBad['status'] = 3;
+            $bad = $this->getMachineChannelCount($whereBad);
 
-        $whereStockOut = $where;
-        $whereStockOut['stock'] = 0;
-        $stockOut = $this->getMachineChannelCount($whereStockOut);
-
+            $whereStockOut = $where;
+            $whereStockOut['stock'] = 0;
+            $stockOut = $this->getMachineChannelCount($whereStockOut);
+        }
         $data = [
             "empty" => $empty,
             "bad" => $bad,
@@ -56,18 +60,21 @@ class MachineChannelClient extends ManagementClient
      */
     public function getEmptyList($where)
     {
+        $list = [];
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        $where['g_id'] = 0;
-        $list = $this->getMachineChannelList($where,0,'m_id,machine_id, 
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $where['g_id'] = 0;
+            $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
-        count(mc_id) empty_num','','','m_id');
-        if ($list) {
-            foreach ($list as $key => $value) {
-                $value['total_channel'] = $this->getMachineChannelCount(['machine_id' => $value['machine_id']]);
-                $emptyList = $this->getMachineChannelColumn(['machine_id' => $value['machine_id'],'g_id' => 0],'channel_code');
-                $value['empty_channel'] = implode(",",$emptyList ?? []);
-                $value['empty_ratio'] =  bcmul(bcdiv($value['empty_num'],$value['total_channel'],3),100,1) . "%";
+        count(mc_id) empty_num', '', '', 'm_id');
+            if ($list) {
+                foreach ($list as $key => $value) {
+                    $value['total_channel'] = $this->getMachineChannelCount(['machine_id' => $value['machine_id']]);
+                    $emptyList = $this->getMachineChannelColumn(['machine_id' => $value['machine_id'], 'g_id' => 0], 'channel_code');
+                    $value['empty_channel'] = implode(",", $emptyList ?? []);
+                    $value['empty_ratio'] = bcmul(bcdiv($value['empty_num'], $value['total_channel'], 3), 100, 1) . "%";
+                }
             }
         }
         return $this->rQ($list);
@@ -80,18 +87,21 @@ class MachineChannelClient extends ManagementClient
      */
     public function getBadList($where)
     {
+        $list = [];
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        $where['status'] = 3;
-        $list = $this->getMachineChannelList($where,0,'m_id,machine_id, 
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $where['status'] = 3;
+            $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
-        count(mc_id) bad_num','','','m_id');
-        if ($list) {
-            foreach ($list as $key => $value) {
-                $value['total_channel'] = $this->getMachineChannelCount(['machine_id' => $value['machine_id']]);
-                $badList = $this->getMachineChannelColumn(['machine_id' => $value['machine_id'],'status' => 3],'channel_code');
-                $value['bad_channel'] = implode(",",$badList ?? []);
-                $value['bad_ratio'] =  bcmul(bcdiv($value['bad_num'],$value['total_channel'],3),100,1) . "%";
+        count(mc_id) bad_num', '', '', 'm_id');
+            if ($list) {
+                foreach ($list as $key => $value) {
+                    $value['total_channel'] = $this->getMachineChannelCount(['machine_id' => $value['machine_id']]);
+                    $badList = $this->getMachineChannelColumn(['machine_id' => $value['machine_id'], 'status' => 3], 'channel_code');
+                    $value['bad_channel'] = implode(",", $badList ?? []);
+                    $value['bad_ratio'] = bcmul(bcdiv($value['bad_num'], $value['total_channel'], 3), 100, 1) . "%";
+                }
             }
         }
         return $this->rQ($list);
@@ -104,18 +114,21 @@ class MachineChannelClient extends ManagementClient
      */
     public function getStockOutList($where)
     {
+        $list = [];
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        $where['stock'] = 0;
-        $list = $this->getMachineChannelList($where,0,'m_id,machine_id, 
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $where['stock'] = 0;
+            $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
-        count(mc_id) stock_out_num','','','m_id');
-        if ($list) {
-            foreach ($list as $key => $value) {
-                $value['total_channel'] = $this->getMachineChannelCount(['machine_id' => $value['machine_id']]);
-                $stockOutList = $this->getMachineChannelColumn(['machine_id' => $value['machine_id'],'stock' => 0],'channel_code');
-                $value['stock_out_channel'] = implode(",",$stockOutList ?? []);
-                $value['stock_out_ratio'] =  bcmul(bcdiv($value['stock_out_num'],$value['total_channel'],3),100,1) . "%";
+        count(mc_id) stock_out_num', '', '', 'm_id');
+            if ($list) {
+                foreach ($list as $key => $value) {
+                    $value['total_channel'] = $this->getMachineChannelCount(['machine_id' => $value['machine_id']]);
+                    $stockOutList = $this->getMachineChannelColumn(['machine_id' => $value['machine_id'], 'stock' => 0], 'channel_code');
+                    $value['stock_out_channel'] = implode(",", $stockOutList ?? []);
+                    $value['stock_out_ratio'] = bcmul(bcdiv($value['stock_out_num'], $value['total_channel'], 3), 100, 1) . "%";
+                }
             }
         }
         return $this->rQ($list);

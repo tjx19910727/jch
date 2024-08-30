@@ -112,6 +112,11 @@ trait SaleOrdersTrait
         return SaleOrdersDetailsModel::joinOrderList($where, $pageNum, $field, $order, $group);
     }
 
+    public function getSaleOrdersDetailsJoinOrderFind($where,$field = "*")
+    {
+        return SaleOrdersDetailsModel::joinOrderFind($where,$field);
+    }
+
     /**
      * 获取一条订单详情
      * @param $where
@@ -142,6 +147,22 @@ trait SaleOrdersTrait
             return $item;
         });
         return $data;
+    }
+
+    /**
+     * 获取门票核销码
+     * @return mixed
+     * @throws \think\db\exception\DbException
+     */
+    public function getDetailsCheckOffCode()
+    {
+        while(1){
+            $code = $this->get_rand_string(8,'num');
+            if (!SaleOrdersDetailsModel::getCount(['checkOff_code' => $code,'checkOff_status' => 1])) {
+                break;
+            }
+        }
+        return $code;
     }
 
     /**
@@ -265,14 +286,16 @@ trait SaleOrdersTrait
                         mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
                         cost_price,market_price',
                 "stock desc");
+            actionLog($this->getLS(),'【SQL】查询设备货架');
             if (!$mc) return $this->returnData(10, $this->lang("msg." . 10));
             if (is_string($mc)) return $this->returnData(10, $this->lang("msg." . 10) . "：" . $mc);
             $mc = $mc->toArray();
+            if (!$mc) return $this->returnData(10, $dk . $this->lang("msg." . 10));
             actionLog($mc, "该设备下货架列表数据");
             // 总库存不足
             $totalStock = array_sum(array_column($mc, "stock"));
             if ($totalStock < $dv['quantity']) {
-                $this->returnData[] = ["success" => false, "order_no" => $this->config['params']['order_no'], "error_msg" => [$dk => $dv['quantity']]];
+                $this->returnData = ["success" => false, "order_no" => $this->config['params']['order_no'], "error_msg" => [$dk => $dv['quantity']]];
                 return $this->returnData(14, $this->lang("msg." . 14) . "：" . $this->lang("reserve_order.under_stock"), $this->returnData);
             }
 

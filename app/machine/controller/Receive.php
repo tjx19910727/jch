@@ -430,4 +430,31 @@ class Receive extends Common
     {
         return $this->app->api->reset();
     }
+
+    /**
+     * 获取组合商品列表
+     * @return array|\think\response\Json
+     */
+    public function getGoodsMultiple()
+    {
+        return $this->app->api->getGoodsMultiple();
+    }
+
+    /**
+     * 提交固定组合商品数据生成订单数据
+     * @return array|\think\response\Json
+     */
+    public function subGoodsMultiple()
+    {
+        return $this->app->api->subGoodsMultipleOrder();
+    }
+
+    /**
+     * 获取设备自由组合配置
+     * @return array|\think\response\Json
+     */
+    public function getMachineFree()
+    {
+        return $this->app->api->getMachineFree();
+    }
 }

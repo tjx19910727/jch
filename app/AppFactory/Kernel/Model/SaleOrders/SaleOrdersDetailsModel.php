@@ -104,4 +104,14 @@ class SaleOrdersDetailsModel extends BaseModel
             ->sum($sum);
         return $data;
     }
+
+    public static function joinOrderFind($where,$field = "*")
+    {
+        $data = self::alias("sod")
+            ->join("sale_orders so","so.order_id = sod.order_id","left")
+            ->where($where)
+            ->field($field)
+            ->find();
+        return $data;
+    }
 }

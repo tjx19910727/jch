@@ -14,7 +14,7 @@ use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiCallbackTrait;
 
 define("LOG_NAME","callback");
-define("TEST",1);
+define("TEST",0);
 class CallbackClient extends ApiBaseClient
 {
     use ApiCallbackTrait,ApiAdvanceTrait;
@@ -27,7 +27,6 @@ class CallbackClient extends ApiBaseClient
     protected $intervalTime = [
         "1" => [0,60,300,900,900,1800,3600,7200],
         "2" => [0,60,300,900,900,1800,3600,7200],
-//        "2" => [0,0,0,0,0,0,0,0],
         "3" => [0,60,300,900,900,1800,3600,7200],
         "4" => [0,60,300,900,900,1800,3600,7200],
         "5" => [0,60,300],

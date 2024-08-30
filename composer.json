@@ -34,7 +34,8 @@
         "topthink/think-queue": "^3.0",
         "php-amqplib/php-amqplib": "^3.6",
         "overtrue/wechat": "~5.0",
-        "phpmailer/phpmailer": "*"
+        "phpmailer/phpmailer": "*",
+        "tencentcloud/sms": "^3.0"
     },
     "require-dev": {
         "symfony/var-dumper": "^4.2",

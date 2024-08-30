@@ -13,7 +13,6 @@ return [
 
         "pageNum_require" => "页面数据条数不能为空",
 
-
     ],
     "msg" => [
         0 => "成功",
@@ -42,6 +41,7 @@ return [
         23 => "无效订单编号 ",
         24 => "订单处理中",
         25 => "订单支付类型不匹配",
+        26 => "查无酒店信息",
         97 => "请使用multipart/form-data",
         98 => "请使用Post请求方式",
         99 => "服务不可用",
@@ -68,6 +68,11 @@ return [
         "discount_amount_require" => "优惠价格不能为空",
         "charge_amount_require" => "实际支付总价格不能为空",
         "type_require" => "类型不能为空",
+    ],
+
+    "payNotify" => [
+        "order_no_require" => "订单编号不能为空",
+        "pay_status" => "支付结果不能为空",
     ],
 
 ];

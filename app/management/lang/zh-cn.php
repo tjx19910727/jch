@@ -270,6 +270,25 @@ return [
         "machineList_require" => "适用设备不能为空",
     ] ,
 
+    "VGoodsMultiple" => [
+        "gm_id_require" => "组合商品ID不能为空",
+        "gm_name_require" => "商品名称不能为空",
+        "start_time_require" => "请设置开始日期",
+        "mList_require" => "请选择适用设备",
+        "m_id_require" => "设备ID不能为空",
+        "machine_id_require" => "设备编号不能为空",
+        "gList_require" => "请选择组合商品",
+        "g_id_require" => "商品ID不能为空",
+        "selling_price_require" => "售卖价格不能为空",
+        "rise_fall_ratio_require" => "涨跌比例不能为空",
+    ],
+
+    "VHotel" => [
+        "cityId_require" => "城市ID不能为空",
+        "page_require" => "查询页码不能为空",
+        "pageNum_require" => "每页大小不能为空",
+    ],
+
     "VMachineGoods" => [
 
         "mg_id_require" => "请选择设备商品",
@@ -397,6 +416,28 @@ return [
         "desc_max" => "版本说明超限制",
     ],
 
+    "VMachineFree" => [
+        "delHotel_notEmpty" => "请选择需要删除的酒店",
+        "delGoods_notEmpty" => "请选择需要删除的商品",
+
+        "mf_id_require" => "自由组合ID不能为空",
+        "m_id_require" => "设备ID不能为空",
+        "machine_id_require" => "设备编号不能为空",
+        "machine_name_require" => "设备名称不能为空",
+        "free_status_require" => "自由组合商品开关不能为空",
+        "designated_hotel_require" => "指定酒店不能为空",
+        "designated_goods_require" => "指定商品不能为空",
+
+        "mfh_id_require" => "指定酒店ID不能为空",
+        "tc_id_require" => "请选择携程城市",
+        "hotelId_require" => "请选择携程酒店",
+        "mfg_id_require" => "指定商品不能为空",
+        "g_id_require" => "请选择指定商品",
+        "sale_amount_require" => "请设置售卖价格",
+        "hotelId_unique" => "该酒店信息已存在",
+        "g_id_unique" => "该商品信息已存在",
+    ],
+
     "VTemplate" => [
         "id_require" => "模板ID不能为空",
         "name_require" => "模板名称不能为空",
@@ -464,6 +505,9 @@ return [
         "order_id_require" => "订单ID不能为空",
         "refund_require" => "退款数据不能为空",
 
+        "sod_id_require" => "订单详情ID不能为空",
+        "checkOff_status_error" => "核销状态错误",
+
         "payee_config_no_data" => "查无收款方配置信息",
         "payee_config_no_json" => "收款方配置信息不是JSON方式",
     ],
@@ -514,5 +558,13 @@ return [
     "VMicroMall" => [
         "mm_id_require" => "微商城ID不能为空",
         "mall_name_require" => "微商城名称不能为空",
+    ],
+
+    "VSuggest" => [
+        "s_id_require" => "请选择意见信息",
+        "content_require" => "建议内容不能为空",
+        "content_length" => "内容超过长度范围限制",
+        "pic_length" => "图片附件超过限制",
+        "email_require" => "电子邮箱不能为空",
     ],
 ];

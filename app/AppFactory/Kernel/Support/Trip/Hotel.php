@@ -12,6 +12,28 @@ namespace app\AppFactory\Kernel\Support\Trip;
 class Hotel extends Common
 {
     /**
+     * 获取酒店静态列表
+     * @param $params
+     * @return array|bool|string
+     */
+    public function getStaticHotelList($params)
+    {
+        $url = "/hotel/getStaticHotelList";
+        return $this->requestPost($url,$params);
+    }
+
+    /**
+     * 获取酒店静态物理房型列表-通过酒店ID查询
+     * @param $hotelId
+     * @return array|bool|string
+     */
+    public function getHotelStaticRoomType($hotelId)
+    {
+        $url = "/hotel/getHotelStaticRoomType";
+        return $this->requestPost($url,['hotelId' => $hotelId]);
+    }
+
+    /**
      * 获取酒店列表
      * @param $params
      * @return array|bool|string

@@ -82,6 +82,8 @@ class SaleOrders extends Common
         $postData = input();
         actionLog($postData,'退款数据');
         try { $this->validate($postData,$this->validatePath . 'refund');} catch (\Exception $e) { return returnValidate($e->getMessage());}
+        $check = checkFrequency("refund" . $postData['order_id'],3);
+        if ($check !== true) return returnState(100,$check);
         $postData['refund'] = json2arr($postData['refund']);
         return $this->app->saleOrders->refundOrder($postData);
     }
@@ -209,6 +211,7 @@ class SaleOrders extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $order = "create_date desc";
+        $group = "";
         if (isset($postData['group'])) {
             $group = $postData['group'];
             unset($postData['group']);
@@ -223,6 +226,7 @@ class SaleOrders extends Common
             foreach ($machineIds as $k => $v) {
                 $machineIds[$k] = "'" . $v . "'";
             }
+            if ($where) $where .= " AND ";
             $where .= 'machine_id in (' . implode(",",$machineIds) . ')';
         }
         return $this->app->saleOrders->getReportList($where,$pageNum,$order,$group);
@@ -287,5 +291,53 @@ class SaleOrders extends Common
         $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
         if ($machineIds) $where[] = ['machine_id','in',$machineIds];
         return $this->app->saleOrders->exportSaleDataCollect($where);
+    }
+
+    /**
+     * 查询门票商品
+     * @return array|\think\response\Json
+     */
+    public function queryTicket()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,['trade_no' => "like","mobile" => "like","checkOff_code"]);
+        $field = "sod.sod_id,so.trade_no,so.machine_id,so.machine_name,so.mobile,sod.checkOff_code,sod.g_name,sod.checkOff_status,sod.checkOff_time,so.pay_time";
+        $pageNum = $postData['pageNum'] ?? 0;
+//        $g_ids = $this->app->goods->getGoodsColumn(["creator" => $this->manager['manager_id']],"g_id");
+
+        $order = "sod.checkOff_time desc";
+        return $this->app->saleOrders->queryCheckOffList($where,$pageNum,$field,$order);
+    }
+
+    /**
+     * 核销门票商品
+     * @return array|\think\response\Json
+     */
+    public function checkOffTicket()
+    {
+        $postData = input();
+        if (!isset($postData['sod_id']) || !$postData['sod_id']) return returnState(100,lang("VSaleOrders.sod_id_require"));
+        if (!isset($postData['checkOff_status']) || !$postData['checkOff_status'] || in_array($postData['checkOff_status'],[2,3]))
+            return returnState(100,lang("VSaleOrders.checkOff_status_error"));
+        $where['sod_id'] = $postData['sod_id'];
+        return $this->app->saleOrders->checkOffTicket($postData['sod_id'],$postData['checkOff_status']);
+    }
+
+    public function queryHotel()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,[]);
+        $pageNum = $postData['pageNum'] ?? 0;
+        return $this->app->saleOrders->getSaleHotelList($where,$pageNum);
+    }
+
+    public function checkOffHotel()
+    {
+        $postData = input();
+        if (!isset($postData['sh_id']) || !$postData['sh_id']) return returnState(100,lang("VSaleOrders.sh_id_require"));
+        if (!isset($postData['checkOff_status']) || !$postData['checkOff_status'] || in_array($postData['checkOff_status'],[2,3]))
+            return returnState(100,lang("VSaleOrders.checkOff_status_error"));
+        $where = $this->getWhere($postData,false,[]);
+        return $this->app->saleOrders->getHotelJoinSaleOrdersList($where,$postData['pageNum'] ?? 0,$field = "*",$order);
     }
 }

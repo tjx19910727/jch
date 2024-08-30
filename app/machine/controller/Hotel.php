@@ -74,9 +74,9 @@ class Hotel extends Common
      * 获取酒店详情
      * @return array|\think\response\Json
      */
-    public function getDetailsList()
+    public function getDetails()
     {
-        return $this->app->hotel->getDetailsList();
+        return $this->app->hotel->getDetails();
     }
 
     /**
@@ -86,6 +86,15 @@ class Hotel extends Common
     public function getRoomList()
     {
         return $this->app->hotel->getRoomList();
+    }
+
+    /**
+     * 验证房间是否可订
+     * @return array|\think\response\Json
+     */
+    public function availableCheck()
+    {
+        return $this->app->hotel->availableCheck();
     }
 
     /**

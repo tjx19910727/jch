@@ -24,6 +24,11 @@ class VHotel extends VCommon
         "checkOutDate" => "require",
         "pageNum" => "require",
         "page" => "require",
+
+        "count" => "require",
+        "quantity" => "require",
+        "tripData" => "require",
+        "nightlyPrice" => "require",
     ];
 
     protected $message = [
@@ -42,15 +47,20 @@ class VHotel extends VCommon
 
         "hotelList.require" => "VReceive.hotelList_require",
 
+        "count.require" => "VHotel.count_require",
+        "quantity.require" => "VHotel.quantity_require",
+        "tripData.require" => "VHotel.tripData_require",
+        "nightlyPrice.require" => "VHotel.nightlyPrice_require",
     ];
 
     protected $scene = [
         "getTripCity" => ["pageNum", "page"],
-        "getList" => ["cityId", "checkInDate", "checkOutDate", "pageNum", "page"],
-        "getDetailsList" => ["hotelId"],
-        "getRoomList" => ["hotelId", "checkInDate", "checkOutDate"],
+        "getList" => ["cityId","quantity", "checkInDate", "checkOutDate", "pageNum", "page"],
+        "getDetails" => ["hotelId"],
+        "getRoomList" => ["hotelId","quantity", "checkInDate", "checkOutDate"],
         "subHotel" => ["msg_id", "machine_id", "timestamp", "sign", "order_id", "hotelList"],
         "hotel" => ["hotelId", "roomId", "totalPrice", "pay_amount", "checkInDate", "checkOutDate", "guestNames"],
+        "availableCheck" => ["machine_id","hotelId","roomId", "count", "quantity", "checkInDate", "checkOutDate", "tripData","nightlyPrice"],
     ];
 
     public function checkTimestamp($item)

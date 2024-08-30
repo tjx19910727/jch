@@ -31,6 +31,9 @@ class VV2 extends SupportValidate
             "discount_amount" => "require",
             "charge_amount" => "require",
             "type" => "require",
+
+            "pay_status" => "require",
+            "reservation_status" => "require",
         ];
 
         protected $message = [
@@ -45,11 +48,14 @@ class VV2 extends SupportValidate
             "charge_time.require" => "reserve_order.charge_time_require",
             "order_detail.require" => "reserve_order.order_detail_require",
 
-            "quantity" => "order_detail.quantity_require",
-            "item_price" => "order_detail.item_price_require",
-            "discount_amount" => "order_detail.discount_amount_require",
-            "charge_amount" => "order_detail.charge_amount_require",
-            "type" => "order_detail.type_require",
+            "quantity.require" => "order_detail.quantity_require",
+            "item_price.require" => "order_detail.item_price_require",
+            "discount_amount.require" => "order_detail.discount_amount_require",
+            "charge_amount.require" => "order_detail.charge_amount_require",
+            "type.require" => "order_detail.type_require",
+
+            "pay_status.require" => "payNotify.pay_status_require",
+            "reservation_status.require" => "hotelNotify.reservation_status_require",
         ];
 
         protected $scene = [
@@ -59,5 +65,7 @@ class VV2 extends SupportValidate
             "order_detail" => ["quantity","item_price","discount_amount","charge_amount","type"],
             "cancel_order" => ["kiosk_id","order_no"],
             "get_order_info" => ["kiosk_id","order_no"],
+            "payNotify" => ["order_no","pay_status"],
+            "hotelNotify" => ["order_no","reservation_status"],
         ];
 }

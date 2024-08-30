@@ -18,6 +18,7 @@ use app\AppFactory\Management\Goods\GoodsClient;
 use app\AppFactory\Management\Goods\GoodsCornerClient;
 use app\AppFactory\Management\Goods\GoodsHitClient;
 use app\AppFactory\Management\Goods\GoodsLangClient;
+use app\AppFactory\Management\Goods\GoodsMultipleClient;
 
 class GoodsProvider implements ServiceProviderInterface
 {
@@ -44,6 +45,9 @@ class GoodsProvider implements ServiceProviderInterface
         };
         $app['goodsHit'] = function ($app) {
             return new GoodsHitClient($app);
+        };
+        $app['goodsMultiple'] = function ($app) {
+            return new GoodsMultipleClient($app);
         };
     }
 }

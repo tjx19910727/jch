@@ -43,6 +43,21 @@ trait MachineChannelTrait
         return MachineChannelModel::getList($where,$pageNum,$field,$order,$eachFun,$group);
     }
 
+    /**
+     * 获取货道关联的自由组合商品表
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return MachineChannelModel[]|array|\think\Collection
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function getMachineChannelJoinMfgList($where,$field = "*", $order = "")
+    {
+        return MachineChannelModel::joinMfgList($where,$field,$order);
+    }
+
     public function getMachineChannelJoinGoodsList($where,$field = "*",$order = "",$group = "")
     {
         return MachineChannelModel::joinGoodsList($where,$field,$order,$group);

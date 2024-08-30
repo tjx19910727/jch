@@ -15,32 +15,32 @@ class V2 extends Common
 {
     public function testMakeSign()
     {
-        $params = [
-//            "machine_id" => "test0007,0010",
-//            "shelf_on" => 1,
-            "kiosk_id" => "test0001",
-            "order_no" => "2235236256",
-//            "pick_code" => "",
-            "payment_method" => "wechat",
-            "customer_name" => "test",
-            "expire_time" => date("Y-m-d H:i:s"),
-            "charge_time" => date("Y-m-d H:i:s"),
-            "notify_url" => "http://www.baidu.com",
-            "order_detail" => json_encode([
-                "63" => [
-                    "quantity" => 1,
-                    "item_price" => 100,
-                    "discount_amount" => 1,
-                    "charge_amount" => 99,
-                    "type" => "sale",
-                ],
-                "87" => [
-                    "quantity" => 2,
-                    "item_price" => 50,
-                    "discount_amount" => 3,
-                    "charge_amount" => 97,
-                    "type" => "sale",
-                ],
+//        $params = [
+////            "machine_id" => "test0007,0010",
+////            "shelf_on" => 1,
+//            "kiosk_id" => "test0001",
+//            "order_no" => "2235236256",
+////            "pick_code" => "",
+//            "payment_method" => "wechat",
+//            "customer_name" => "test",
+//            "expire_time" => date("Y-m-d H:i:s"),
+//            "charge_time" => date("Y-m-d H:i:s"),
+//            "notify_url" => "http://www.baidu.com",
+//            "order_detail" => json_encode([
+//                "63" => [
+//                    "quantity" => 1,
+//                    "item_price" => 100,
+//                    "discount_amount" => 1,
+//                    "charge_amount" => 99,
+//                    "type" => "sale",
+//                ],
+//                "87" => [
+//                    "quantity" => 2,
+//                    "item_price" => 50,
+//                    "discount_amount" => 3,
+//                    "charge_amount" => 97,
+//                    "type" => "sale",
+//                ],
 //                "69" => [
 //                    "quantity" => 1,
 //                    "item_price" => 0,
@@ -48,8 +48,8 @@ class V2 extends Common
 //                    "charge_amount" => 0,
 //                    "type" => "gift",
 //                ],
-            ]),
-        ];
+//            ]),
+//        ];
 //        $params = [
 //            "kiosk_id" => "test0001",
 //            "order_no" => "11111111",
@@ -66,22 +66,26 @@ class V2 extends Common
 //        $data = json2arr($data);
 //        $params = json_decode($data['params'],true);
 //        $params['pageNum'] = 15;
-        $params = '{
-    "order_no": "22",
-    "expire_time": "2024-08-14 18:53:57",
-    "order_detail": "[{\"152\":{\"quantity\":1,\"type\":\"sale\",\"item_price\":8,\"discount_amount\":0,\"charge_amount\":8}},{\"168\":{\"quantity\":1,\"type\":\"sale\",\"item_price\":8,\"discount_amount\":0,\"charge_amount\":8}}]",
-    "kiosk_id": "test0001",
-    "payment_method": "wechat",
-    "charge_time": "2024-08-14 10:53:57"
-}';
-        $params = json_decode($params,true);
-        dump($params);
-        $details = json_decode($params['order_detail'],true);
-        dump($details);
+//        $params = '{
+//    "order_no": "22",
+//    "expire_time": "2024-08-14 18:53:57",
+//    "order_detail": "[{\"152\":{\"quantity\":1,\"type\":\"sale\",\"item_price\":8,\"discount_amount\":0,\"charge_amount\":8}},{\"168\":{\"quantity\":1,\"type\":\"sale\",\"item_price\":8,\"discount_amount\":0,\"charge_amount\":8}}]",
+//    "kiosk_id": "test0001",
+//    "payment_method": "wechat",
+//    "charge_time": "2024-08-14 10:53:57"
+//}';
+//        $params = json_decode($params,true);
+//        dump($params);
+//        $details = json_decode($params['order_detail'],true);
+//        dump($details);
+        $params = [
+            "order_no" => "136",
+            "pay_status" => 1,
+        ];
         $data = [
-            "auth_name" => "JCH",
-            "auth_password" => "jlz123456",
-            "timestamp" => time(),
+            "auth_name" => "Lc_test",
+            "auth_password" => "123456",
+            "timestamp" => "1724052083",
             "params" => json_encode($params, 320),
         ];
         dump($data['params']);
@@ -95,7 +99,7 @@ class V2 extends Common
         $signStr = $string1 . implode(",", $signArr);
         dump($signStr);
         $data['sign'] = strtoupper(md5($signStr));
-        $data['api'] = "reserve_order";
+        $data['api'] = "payNotify";
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));

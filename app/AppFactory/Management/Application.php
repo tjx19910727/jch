@@ -18,6 +18,7 @@ use app\AppFactory\Kernel\Providers\Management\EarthProvider;
 use app\AppFactory\Kernel\Providers\Management\EmailProvider;
 use app\AppFactory\Kernel\Providers\Management\ExportProvider;
 use app\AppFactory\Kernel\Providers\Management\GoodsProvider;
+use app\AppFactory\Kernel\Providers\Management\HotelProvider;
 use app\AppFactory\Kernel\Providers\Management\IndexProvider;
 use app\AppFactory\Kernel\Providers\Management\LoginProvider;
 use app\AppFactory\Kernel\Providers\Management\MachineProvider;
@@ -25,6 +26,7 @@ use app\AppFactory\Kernel\Providers\Management\MicroMallProvider;
 use app\AppFactory\Kernel\Providers\Management\ResourceProvider;
 use app\AppFactory\Kernel\Providers\Management\SaleOrdersProvider;
 use app\AppFactory\Kernel\Providers\Management\StrategyProvider;
+use app\AppFactory\Kernel\Providers\Management\SuggestProvider;
 use app\AppFactory\Kernel\Providers\Management\TemplateProvider;
 use app\AppFactory\Kernel\Providers\Management\UpdateLogProvider;
 use app\AppFactory\Kernel\Providers\Management\WxProvider;
@@ -82,6 +84,9 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Goods\GoodsChangeClient                $goodsChange            商品变化事件
  * @property Goods\GoodsCornerClient                $goodsCorner            商品角标信息
  * @property Goods\GoodsHitClient                   $goodsHit               商品点击
+ * @property Goods\GoodsMultipleClient              $goodsMultiple          组合商品
+ *
+ * @property Hotel\HotelClient                      $hotel                  携程酒店
  *
  * @property Machine\MachineChannelClient           $machineChannel         设备货道
  * @property Machine\MachineChannelStockClient      $machineChannelStock    库存报表-分时段,暂时废弃
@@ -106,6 +111,9 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineVersionClient           $machineVersion         设备软件版本
  * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
  * @property Machine\MachineSaleClient              $machineSale            设备销售数据
+ * @property Machine\MachineFreeClient              $machineFree            自由组合
+ * @property Machine\MachineFreeHotelClient         $machineFreeHotel       自由组合-指定酒店
+ * @property Machine\MachineFreeGoodsClient         $machineFreeGoods       自由组合-指定商品
  *
  * @property MicroMall\MicroMallClient              $microMall              微商城
  * @property MicroMall\MicroMallMachineClient       $microMallMachine       微商城绑定设备
@@ -124,6 +132,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Strategy\StrategyMachineClient         $strategyMachine        策略绑定设备
  * @property Strategy\StrategyManagerClient         $strategyManager        策略绑定账号
  * @property Strategy\StrategyPayeeClient           $strategyPayee          收款策略
+ *
+ * @property Suggest\SuggestClient                  $suggest                意见与建议
  *
  * @property UpdateLog\UpdateLogClient              $updateLog              更新日志
  *
@@ -149,12 +159,14 @@ class Application extends ServiceContainer
         EmailProvider::class,
         ExportProvider::class,
         LoginProvider::class,
+        HotelProvider::class,
         MachineProvider::class,
         MicroMallProvider::class,
         GoodsProvider::class,
         ResourceProvider::class,
         SaleOrdersProvider::class,
         StrategyProvider::class,
+        SuggestProvider::class,
         TemplateProvider::class,
         UpdateLogProvider::class,
         WxProvider::class,

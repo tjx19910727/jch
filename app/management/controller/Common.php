@@ -42,11 +42,12 @@ class Common extends AuthController
      * @param array $params
      * @param boolean|int $is_string
      * @param array $condition
+     * @param string $prefix
      * @return array
      */
     public function getWhere($params,$is_string = false,$condition = [],$prefix = "")
     {
-        $where = $is_string == true ? "" : [];
+        $where = [];
         $conData = array_keys($condition);
         foreach ($params as $key => $value) {
             if ($value == "") continue;
@@ -94,6 +95,7 @@ class Common extends AuthController
         if ($is_string && $where) {
             $this->where2Str($where,$prefix);
         }
+        if ($is_string && !$where) $where = "";
         return $where;
     }
 
@@ -208,13 +210,15 @@ class Common extends AuthController
             }
             validate(VCommon::class)->scene("file")->check(['file' => $file]);
             $extension = $file->getOriginalExtension();
+            $path = "";
             if (in_array($extension,['jpg','jpeg','gif','png'])) {
                 validate(VCommon::class)->rule(['image' => 'fileSize:' . env("fileSystem.maxImageSize")])->scene("uploadImage")->check(['image' => $file]);
+                $path = env("APP.host");
             }
             $diskName = env("fileSystem.diskName");// 上传本地
             //            $diskName = "aliyun";    // 上传OSS服务器
             $saveName = Filesystem::disk($diskName)->putFile($folder, $file);
-            $path = env("APP.host") . Filesystem::getDiskConfig($diskName, 'url') . str_replace('\\', '/', $saveName);
+            $path .= Filesystem::getDiskConfig($diskName, 'url') . str_replace('\\', '/', $saveName);
             return returnState(200, '上传成功', $path);
         } catch (\Exception $e) {
             return returnTryCatch($e->getMessage());

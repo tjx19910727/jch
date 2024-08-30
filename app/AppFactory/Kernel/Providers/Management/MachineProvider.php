@@ -21,6 +21,9 @@ use app\AppFactory\Management\Machine\MachineClient;
 use app\AppFactory\Management\Machine\MachineConfigClient;
 use app\AppFactory\Management\Machine\MachineErrorCodeClient;
 use app\AppFactory\Management\Machine\MachineErrorCodeSolutionClient;
+use app\AppFactory\Management\Machine\MachineFreeClient;
+use app\AppFactory\Management\Machine\MachineFreeGoodsClient;
+use app\AppFactory\Management\Machine\MachineFreeHotelClient;
 use app\AppFactory\Management\Machine\MachineGoodsClient;
 use app\AppFactory\Management\Machine\MachineGroupClient;
 use app\AppFactory\Management\Machine\MachineGroupLangClient;
@@ -109,5 +112,15 @@ class MachineProvider implements ServiceProviderInterface
         $app['machineSale'] = function ($app) {
             return new MachineSaleClient($app);
         };
+        $app['machineFree'] = function ($app) {
+            return new MachineFreeClient($app);
+        };
+        $app['machineFreeHotel'] = function ($app) {
+            return new MachineFreeHotelClient($app);
+        };
+        $app['machineFreeGoods'] = function ($app) {
+            return new MachineFreeGoodsClient($app);
+        };
+
     }
 }

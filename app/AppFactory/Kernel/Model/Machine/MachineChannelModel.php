@@ -18,6 +18,14 @@ class MachineChannelModel extends BaseModel
     protected $pk = "mc_id";
     protected $name = "machine_channel";
 
+    /**
+     * 关联商品列表
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @param string $group
+     * @return mixed
+     */
     public static function joinGoodsList($where,$field = "*", $order = "",$group = "")
     {
         $data = self::alias("mc")
@@ -27,6 +35,28 @@ class MachineChannelModel extends BaseModel
             ->field($field)
             ->order($order)
             ->group($group)
+            ->select();
+        return $data;
+    }
+
+    /**
+     * 关联自由组合商品列表
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return MachineChannelModel[]|array|\think\Collection
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public static function joinMfgList($where,$field = "*",$order = "")
+    {
+        $data = self::alias("mc")
+            ->join("machine_free_goods mfg","mfg.g_id = mc.g_id","left")
+            ->join("goods g","g.g_id = mc.g_id",'left')
+            ->where($where)
+            ->field($field)
+            ->order($order)
             ->select();
         return $data;
     }

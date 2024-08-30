@@ -19,6 +19,7 @@ use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Payment\JdCashierTrait;
 use app\AppFactory\Kernel\Traits\Payment\WxPayTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
@@ -33,7 +34,7 @@ use app\AppFactory\Management\ManagementClient;
 class SaleOrdersClient extends ManagementClient
 {
     use AuthManagerTrait;
-    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersDailyCountTrait;
+    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersDailyCountTrait, SaleHotelTrait;
     use BeforeOrderPaymentTrait;
     use StrategyMachineTrait;
     use StrategyIncomeTrait;
@@ -73,23 +74,23 @@ class SaleOrdersClient extends ManagementClient
      * @param string $order
      * @return array|\think\response\Json
      */
-    public function getSoList($where,$pageNum = 0, $field = "*",$order = "")
+    public function getSoList($where, $pageNum = 0, $field = "*", $order = "")
     {
         try {
             $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
             if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
             return $this->r(200, $this->lang("query_success"), $this->getSaleOrdersList($where, $pageNum, $field, $order));
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
     }
 
-    public function getDetailsList($where,$pageNum = 0,$field = "*", $order = "")
+    public function getDetailsList($where, $pageNum = 0, $field = "*", $order = "")
     {
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
         if ($machineIds) $where[] = ['so.machine_id', 'in', $machineIds];
-        return $this->r(200,'query_success',$this->getSaleOrdersDetailsJoinOrderList($where,$pageNum,$field,$order));
+        return $this->r(200, 'query_success', $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, $order));
 
     }
 
@@ -207,19 +208,21 @@ class SaleOrdersClient extends ManagementClient
             "today" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
             "yesterday" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
         ];
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        $whereToday = $where;
-        $whereToday[] = ['create_date', '=', strtotime(date("Y-m-d"))];
-        $today = $this->getSaleOrdersFind($whereToday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
-        if ($today) $today = $today->toArray();
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $whereToday = $where;
+            $whereToday[] = ['create_date', '=', strtotime(date("Y-m-d"))];
+            $today = $this->getSaleOrdersFind($whereToday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
+            if ($today) $today = $today->toArray();
 
-        $whereYesterday = $where;
-        $whereYesterday[] = ['create_date', '=', strtotime(date("Y-m-d 00:00:00", strtotime("-1 days")))];
-        $yesterday = $this->getSaleOrdersFind($whereYesterday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
-        if ($yesterday) $yesterday = $yesterday->toArray();
-        if ($today) $data['today'] = $today;
-        if ($yesterday) $data['yesterday'] = $yesterday;
+            $whereYesterday = $where;
+            $whereYesterday[] = ['create_date', '=', strtotime(date("Y-m-d 00:00:00", strtotime("-1 days")))];
+            $yesterday = $this->getSaleOrdersFind($whereYesterday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
+            if ($yesterday) $yesterday = $yesterday->toArray();
+            if ($today) $data['today'] = $today;
+            if ($yesterday) $data['yesterday'] = $yesterday;
+        }
         return $data;
     }
 
@@ -235,24 +238,27 @@ class SaleOrdersClient extends ManagementClient
      */
     public function getChartData($where, $type = 1)
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        if ($type == 1) {
-            $field = "totalPrice,totalQuantity,countDate";
-            $group = "";
-            $where[] = ['create_date', '>=', strtotime("-1 months")];
+        $data = [];
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            if ($type == 1) {
+                $field = "totalPrice,totalQuantity,countDate";
+                $group = "";
+                $where[] = ['create_date', '>=', strtotime("-1 months")];
+            }
+            if ($type == 2) {
+                $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'Week %v,%x') week";
+                $group = "week";
+                $where[] = ['create_date', '>=', strtotime("-15 week")];
+            }
+            if ($type == 3) {
+                $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'%x-%m') month";
+                $group = "month";
+                $where[] = ['create_date', '>=', strtotime("-12 month")];
+            }
+            $data = $this->getSaleOrdersDailyCountList($where, 0, $field, '', $group);
         }
-        if ($type == 2) {
-            $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'Week %v,%x') week";
-            $group = "week";
-            $where[] = ['create_date', '>=', strtotime("-15 week")];
-        }
-        if ($type == 3) {
-            $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'%x-%m') month";
-            $group = "month";
-            $where[] = ['create_date', '>=', strtotime("-12 month")];
-        }
-        $data = $this->getSaleOrdersDailyCountList($where, 0, $field, '', $group);
         return $this->rQ($data);
     }
 
@@ -264,8 +270,8 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportSo($where)
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
         $list = $this->getSaleOrdersList($where, 0,
             'order_id,machine_id,machine_name,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,
                 (CASE order_type 
@@ -314,8 +320,8 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportGoodsSo($where)
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['so.machine_id','in',$machineIds];
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) $where[] = ['so.machine_id', 'in', $machineIds];
         $field = "so.machine_id,so.machine_name,so.trade_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
             (CASE so.pay_method 
@@ -368,8 +374,8 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportRefund($where)
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['so.machine_id','in',$machineIds];
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) $where[] = ['so.machine_id', 'in', $machineIds];
         $field = "sor.machine_id,sor.machine_name,sor.trade_no,
                 sor.refund_trade_no,
                 (CASE sod.channel_position WHEN 1 THEN '主柜' WHEN 2 THEN '副柜') channel_position,
@@ -408,9 +414,9 @@ class SaleOrdersClient extends ManagementClient
      * @param string $group
      * @return array|\think\response\Json
      */
-    public function getTotalReport($where, $field = "*", $order = "",$group = "")
+    public function getTotalReport($where, $field = "*", $order = "", $group = "")
     {
-        $data = $this->getSaleOrdersDailyCountFind($where, $field, $order,$group);
+        $data = $this->getSaleOrdersDailyCountFind($where, $field, $order, $group);
         return $this->rQ($data);
     }
 
@@ -422,7 +428,7 @@ class SaleOrdersClient extends ManagementClient
      * @param string $group
      * @return array|\think\response\Json
      */
-    public function getReportList($where, $pageNum, $order = "",$group = "")
+    public function getReportList($where, $pageNum, $order = "", $group = "")
     {
         $field = "countDate,";
         if ($group) {
@@ -505,16 +511,20 @@ class SaleOrdersClient extends ManagementClient
      */
     public function getGift($where)
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        $where['sod.is_gift'] = 1;
-        $where['so.out_status'] = 4;
-        $whereToday = $where;
-        $whereToday[] = ['so.create_time', 'between', [strtotime(date("Y-m-d 00:00:00")), strtotime(date("Y-m-d 23:59:59"))]];
-        $today = $this->joinSaleOrdersSum($whereToday, 'sod.quantity');
-        $whereYesterday = $where;
-        $whereYesterday[] = ['so.create_time', 'between', [strtotime(date("Y-m-d 00:00:00", strtotime("-1 days"))), strtotime(date("Y-m-d 23:59:59", strtotime("-1 days")))]];
-        $yesterday = $this->joinSaleOrdersSum($whereYesterday, 'sod.quantity');
+        $today = 0;
+        $yesterday = 0;
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $where['sod.is_gift'] = 1;
+            $where['so.out_status'] = 4;
+            $whereToday = $where;
+            $whereToday[] = ['so.create_time', 'between', [strtotime(date("Y-m-d 00:00:00")), strtotime(date("Y-m-d 23:59:59"))]];
+            $today = $this->joinSaleOrdersSum($whereToday, 'sod.quantity');
+            $whereYesterday = $where;
+            $whereYesterday[] = ['so.create_time', 'between', [strtotime(date("Y-m-d 00:00:00", strtotime("-1 days"))), strtotime(date("Y-m-d 23:59:59", strtotime("-1 days")))]];
+            $yesterday = $this->joinSaleOrdersSum($whereYesterday, 'sod.quantity');
+        }
         $data = [
             "today" => $today,
             "yesterday" => $yesterday,
@@ -553,19 +563,19 @@ class SaleOrdersClient extends ManagementClient
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(so.cost_price),0) totalCostPrice
         ";
-        $collectData = $this->getSaleOrdersDetailsData($whereCollect,$field)->toArray();
-        $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'],$collectData['totalGift']);
+        $collectData = $this->getSaleOrdersDetailsData($whereCollect, $field)->toArray();
+        $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
         $whereGIds = $where;
-        $whereGIds[] = ['g_id',">",0];
-        $gIds = $this->joinSoSodColumn($whereGIds,'g_id','g_id');
+        $whereGIds[] = ['g_id', ">", 0];
+        $gIds = $this->joinSoSodColumn($whereGIds, 'g_id', 'g_id');
         $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $gIds]) ?? 0;
-        $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'],$collectData['totalClick'],4),100,2) . "%" : "0%";
-        $collectData['profitAmount'] = bcsub($collectData['totalPrice'],$collectData['totalCostPrice'],2);
-        $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'],$collectData['totalSaleQuantity'], 2) : 0.00;
-        $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'],2) : 0.00;
-        $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ?  bcmul(bcdiv($collectData['profitAmount'],$collectData['totalSalePrice'],4),100,2) . "%"  : "0%";
+        $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
+        $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
+        $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
+        $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
+        $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ? bcmul(bcdiv($collectData['profitAmount'], $collectData['totalSalePrice'], 4), 100, 2) . "%" : "0%";
         unset($collectData['totalQuantity']);
-        return $this->r(200,$this->lang("query_success"),$collectData);
+        return $this->r(200, $this->lang("query_success"), $collectData);
     }
 
     /**
@@ -589,10 +599,10 @@ class SaleOrdersClient extends ManagementClient
      *  grossProfitRate      毛利率 = 利润额 / 总销售额
      *
      * @param array|string $where
-     * @param int $pageNum      页面数据条数
+     * @param int $pageNum 页面数据条数
      * @return array|\think\response\Json
      */
-    public function saleDataCollectList($where,$pageNum = 0)
+    public function saleDataCollectList($where, $pageNum = 0)
     {
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
@@ -603,19 +613,19 @@ class SaleOrdersClient extends ManagementClient
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(so.cost_price),0) totalCostPrice
         ";
-        $collectList = $this->getSaleOrdersDetailsJoinOrderList($where,$pageNum,$field,'totalPrice desc','m_id,g_id')->each(function ($collectData) {
-            $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'],$collectData['totalGift']);
+        $collectList = $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, 'totalPrice desc', 'm_id,g_id')->each(function ($collectData) {
+            $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
             $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
-            $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'],$collectData['totalClick'],4),100,2) . "%" : "0%";
-            $collectData['profitAmount'] = bcsub($collectData['totalPrice'],$collectData['totalCostPrice'],2);
-            $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'],$collectData['totalSaleQuantity'], 2) : 0.00;
-            $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'],2) : 0.00;
-            $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ?  bcmul(bcdiv($collectData['profitAmount'],$collectData['totalSalePrice'],4),100,2) . "%"  : "0%";
+            $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
+            $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
+            $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
+            $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
+            $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ? bcmul(bcdiv($collectData['profitAmount'], $collectData['totalSalePrice'], 4), 100, 2) . "%" : "0%";
 
-            unset($collectData['totalQuantity'],$collectData['g_id']);
+            unset($collectData['totalQuantity'], $collectData['g_id']);
             return $collectData;
         });
-        return $this->r(200,$this->lang("query_success"),$collectList);
+        return $this->r(200, $this->lang("query_success"), $collectList);
     }
 
     /**
@@ -635,42 +645,85 @@ class SaleOrdersClient extends ManagementClient
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(so.cost_price),0) totalCostPrice
         ";
-        $list = $this->getSaleOrdersDetailsJoinOrderList($where,0,$field,'totalPrice desc','m_id,g_id');
+        $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field, 'totalPrice desc', 'm_id,g_id');
         if ($list) {
             $list = $list->toArray();
-            foreach($list as $k => $collectData) {
-                $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'],$collectData['totalGift']);
+            foreach ($list as $k => $collectData) {
+                $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
                 $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
-                $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'],$collectData['totalClick'],4),100,2) . "%" : "0%";
-                $collectData['profitAmount'] = bcsub($collectData['totalPrice'],$collectData['totalCostPrice'],2);
-                $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'],$collectData['totalSaleQuantity'], 2) : 0.00;
-                $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'],2) : 0.00;
-                $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ?  bcmul(bcdiv($collectData['profitAmount'],$collectData['totalPrice'],4),100,2) . "%"  : "0%";
-                unset($collectData['totalQuantity'],$collectData['g_id']);
+                $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
+                $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
+                $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
+                $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
+                $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ? bcmul(bcdiv($collectData['profitAmount'], $collectData['totalPrice'], 4), 100, 2) . "%" : "0%";
+                unset($collectData['totalQuantity'], $collectData['g_id']);
                 $list[$k] = $collectData;
             };
             $title = [
-                "machine_id" =>           "设备编号",
-                "machine_name" =>         "设备名称",
-                "sku" =>                  "商品SKU",
-                "g_name" =>               "商品名称",
-                "totalPrice" =>           "实际销售额",
-                "totalDiscountPrice" =>   "总优惠额",
-                "totalGift" =>            "赠品数量",
-                "totalCostPrice" =>       "总成本",
-                "totalSaleQuantity" =>    "实际销售量",
-                "totalClick" =>           "点击次数",
-                "clickConversionRate" =>  "点击转化率",
-                "profitAmount" =>         "利润额",
-                "averageRetailPrice" =>   "平均售价",
-                "averageCostPrice" =>     "平均成本价",
-                "grossProfitRate" =>      "毛利率",
+                "machine_id" => "设备编号",
+                "machine_name" => "设备名称",
+                "sku" => "商品SKU",
+                "g_name" => "商品名称",
+                "totalPrice" => "实际销售额",
+                "totalDiscountPrice" => "总优惠额",
+                "totalGift" => "赠品数量",
+                "totalCostPrice" => "总成本",
+                "totalSaleQuantity" => "实际销售量",
+                "totalClick" => "点击次数",
+                "clickConversionRate" => "点击转化率",
+                "profitAmount" => "利润额",
+                "averageRetailPrice" => "平均售价",
+                "averageCostPrice" => "平均成本价",
+                "grossProfitRate" => "毛利率",
 //                "totalSalePrice" =>       "销售总额",
 //                "totalRefund" =>          "退款总额",
             ];
             $filename = "销售数据-" . date("YmdHis");
-            return $this->sendToExport("运营数据-销售数据",$filename,$title,$list);
+            return $this->sendToExport("运营数据-销售数据", $filename, $title, $list);
         }
-        return $this->r(100,$this->lang("query_fail"));
+        return $this->r(100, $this->lang("query_fail"));
+    }
+
+    /**
+     * 查询门票
+     * @param $where
+     * @param string $field
+     * @return array|\think\response\Json
+     */
+    public function queryTicketOrder($where,$field = "*")
+    {
+        $data = $this->getSaleOrdersDetailsJoinOrderFind($where,$field);
+        return $this->r(200,$this->lang("query_success"),$data);
+    }
+
+    /**
+     * 核销门票，2：已核销，3：已作废
+     * @param $sod_id
+     * @param $status
+     * @return array|\think\response\Json
+     */
+    public function checkOffTicket($sod_id,$status)
+    {
+        $result = $this->updateSaleOrdersDetails([
+            "sod_id" => $sod_id,
+            "checkOff_status" => $status,
+            "canceller" => $this->manager['manager_id'],
+            "checkOff_time" => time(),
+        ]);
+        return $this->rAction($result);
+    }
+
+    /**
+     * 查询已核销订单列表
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @return array|\think\response\Json
+     */
+    public function queryCheckOffList($where,$pageNum = 0,$field = "*",$order = "")
+    {
+        $data = $this->getSaleOrdersDetailsJoinOrderList($where,$pageNum,$field,$order);
+        return $this->r(200,$this->lang("query_success"),$data);
     }
 }

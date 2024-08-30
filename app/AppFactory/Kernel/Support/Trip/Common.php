@@ -74,9 +74,8 @@ class Common
      */
     public function curl_request($url, $method = 'get', $data = array(), $header = false)
     {
-        dump($data);
-        dump($url);
-        dump($header);
+        actionLog($url,'请求地址','trip');
+        actionLog($data,'请求数据','trip');
         $curl = curl_init($url);
         $method = strtoupper($method);
         //请求方式
@@ -109,13 +108,15 @@ class Common
             curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
             curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
         }
-        $curlError = curl_error($curl);
-        echo "请求错误：";
-        dump($curlError);
-        curl_setopt($curl,CURLOPT_VERBOSE,1);
+//        $curlError = curl_error($curl);
+//        echo "请求错误：";
+//        dump($curlError);
+//        curl_setopt($curl,CURLOPT_VERBOSE,1);
         list($content, $status) = [curl_exec($curl), curl_getinfo($curl), curl_close($curl)];
-        dump($content);
-        dump($status);
+        actionLog($content,'接口返回数据Content',"trip");
+        actionLog($status,'接口返回数据status',"trip");
+//        dump($content);
+//        dump($status);
         $content = trim(substr($content, $status['header_size']));
         return  $content;
     }

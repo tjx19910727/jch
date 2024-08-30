@@ -10,6 +10,14 @@
           <option name="port" value="7022" />
         </fileTransfer>
       </webServer>
+      <webServer id="8644bd57-a96c-4039-ba43-8f4eedc1b48c" name="翠峰正式服" url="http://39.108.238.161">
+        <fileTransfer host="39.108.238.161" port="22" rootFolder="/app/kiosk/backend" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>

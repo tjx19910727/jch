@@ -21,10 +21,12 @@ use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthStatesTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
@@ -32,10 +34,10 @@ use think\db\exception\ModelNotFoundException;
 
 class V2Client extends V2BaseClient
 {
-    use MachineTrait, MachineChannelTrait;
+    use MachineTrait, MachineChannelTrait,MachineMqRecordTrait;
     use ConfigSceneTrait;
     use EarthCountriesTrait, EarthCitiesTrait, EarthRegionsTrait, EarthAreaTrait, EarthStatesTrait;
-    use SaleOrdersDailyCountTrait, SaleOrdersTrait, SaleHotelTrait;
+    use SaleOrdersDailyCountTrait, SaleOrdersTrait, SaleHotelTrait, SaleOrdersRevenueTrait;
     use ActivityPickCodeTrait;
     use ApiAdvanceTrait, ApiCallbackTrait, ApiLockStockTrait;
     use AfterOrderPaymentTrait;
@@ -140,7 +142,7 @@ class V2Client extends V2BaseClient
         $this->startTrans();
         try {
             $checkOrder = $this->getSaleOrdersFind(['trade_no' => $this->params['order_no']], 'order_id');
-            if ($checkOrder) return $this->returnData(0, $this->lang("msg." . 0), ['pick_code' => $this->params['pick_code'], 'success' => true, "order_no" => $this->params['order_no']]);
+            if ($checkOrder) return $this->returnData(0, $this->lang("msg." . 0), ['pick_code' => $this->params['pick_code'] ?? "", 'success' => true, "order_no" => $this->params['order_no']]);
 
             $this->machine = $this->getMachineFind(['machine_id' => $this->params['kiosk_id']], 'm_id,machine_id,machine_name,online,ao_id');
             if (!$this->machine) return $this->returnData(15, $this->lang("msg." . 15) . "：" . $this->lang("reserve_order.machine_no_data"));
@@ -276,24 +278,24 @@ class V2Client extends V2BaseClient
     public function payNotify()
     {
         try {
-            $this->order = $this->getSaleOrdersFind(['trade_no' => $this->params['trade_no']]);
+            $this->order = $this->getSaleOrdersFind(['trade_no' => $this->params['order_no']]);
             if (!$this->order) return $this->returnData(23, $this->lang("msg." . 23));
             if ($this->order['pay_status'] > 2) return $this->returnData(24, $this->lang("msg." . 24));// 用户是否支付成功
             if ($this->order['pay_type'] != 5) return $this->returnData(25, $this->lang("msg" . 25));
-            if ($this->params['pay_status'] === 1) {
+            $this->order = $this->order->toArray();
+            if ($this->params['pay_status'] == 1) {
                 // 外部支付
                 $this->order['pay_type'] = 5;
-                $this->order['mch_no'] = $this->params['mch_no'];
+                if (isset($this->params['mch_no']) && $this->params['mch_no']) $this->order['mch_no'] = $this->params['mch_no'];
 
                 $this->startTrans();
                 try {// 结算分润收益
                     $flag[] = $this->settlementRevenue();
                     $flag[] = $this->paymentSuccessful();
-                    // 修改订单酒店详情支付状态
-                    $flag[] = $this->updateSaleHotel(['pay_status' => 3], ['order_id' => $this->order['order_id']]);
                     $result = flag_check($flag);
                     actionLog($result, '处理支付成功事务');
                     if (!$result) {
+                        $this->rollbackTrans();
                         return $this->returnData(19, $this->lang("msg." . 19));
                     }
                 } catch (\Exception $e) {
@@ -301,18 +303,42 @@ class V2Client extends V2BaseClient
                     actionException($e, 1);
                     return $this->returnData(99, $this->lang("msg." . 99) . "：" . $e->getMessage());
                 }
+                $this->commitTrans();
             } elseif ($this->params['pay_status'] === 2) {
                 $result = $this->paymentFailed();
                 if (!$result) {
                     return $this->returnData(19, $this->lang("msg." . 19));
                 }
             }
-            return $this->returnData(0, $this->lang("msg" . 0));
+            return $this->returnData(0, $this->lang("msg." . 0));
         } catch (\Exception $e) {
             actionException($e, 1);
             return $this->returnData(99, $this->lang("msg." . 99) . "：" . $e->getMessage());
         }
     }
 
-
+    /**
+     * 酒店预订通知回调
+     * @return array|\think\response\Json
+     */
+    public function hotelNotify()
+    {
+        try {
+            $this->order = $this->getSaleOrdersFind(['out_trade_no' => $this->params['order_no']]);
+            if (!$this->order) return $this->returnData(23, $this->lang("msg.23"));
+            $sh = $this->getSaleHotelFind(['order_id' => $this->order['order_id']]);
+            if (!$sh) return $this->returnData(26, $this->lang("msg.26"));
+            $sh = $sh->toArray();
+            $updateSh['sh_id'] = $sh['sh_id'];
+            $updateSh['reservation_status'] = $this->params['reservation_status'];
+            $result = $this->updateSaleHotel($updateSh);
+            if ($result) {
+                return $this->returnData(0, $this->lang("msg.0"));
+            }
+            return $this->returnData(19, $this->lang('msg.19'));
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->returnData(99,$this->lang("msg.99"));
+        }
+    }
 }

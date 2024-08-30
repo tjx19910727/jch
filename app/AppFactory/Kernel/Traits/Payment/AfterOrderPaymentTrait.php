@@ -11,6 +11,8 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Support\TencentCloud;
+use app\AppFactory\Kernel\Support\Trip\Trip;
 use app\AppFactory\RabbitMq\MqProducer;
 
 trait AfterOrderPaymentTrait
@@ -47,6 +49,7 @@ trait AfterOrderPaymentTrait
         if ($this->order['order_type'] != 4) {
             $this->outGoods();
         }
+        $this->handleHotel(1);
         actionLog($this->order,'订单数据');
         $flag[] = $this->updateSaleOrders($this->order);
         actionLog($this->getLS(),'订单修改数据');
@@ -59,7 +62,7 @@ trait AfterOrderPaymentTrait
      * 出货
      * @return string
      */
-    public function outGoods()
+    protected function outGoods()
     {
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
         if ($details) {
@@ -67,19 +70,38 @@ trait AfterOrderPaymentTrait
             $outArr = [];
             // 旧版本数据，待软件更新后删除
             foreach ($details as $k => $v) {
-                $dc = [
-                    $v['channel_code'],
-                    $v['quantity'],
-                ];
-                $contentArr[$v['channel_position']][] = $dc;
+                if ($v['g_type'] == 1) {
+                    $dc = [
+                        $v['channel_code'],
+                        $v['quantity'],
+                    ];
+                    $contentArr[$v['channel_position']][] = $dc;
+                }
             }
             // 新数据格式
             foreach ($details as $k => $v) {
-                $dc = [
-                    "channel_code" => $v['channel_code'],
-                    "quantity" => $v['quantity'],
-                ];
-                $outArr[$v['channel_position']][] = $dc;
+                if ($v['g_type'] == 1) {
+                    $dc = [
+                        "channel_code" => $v['channel_code'],
+                        "quantity" => $v['quantity'],
+                    ];
+                    $outArr[$v['channel_position']][] = $dc;
+                }
+                if ($v['g_type'] == 3) {
+                    $updateSod['sod_id'] = $v['sod_id'];
+                    // 获取核销码
+                    $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
+                    // 发送门票预订通知
+                    $smsParam = [
+                        $updateSod['checkOff_code'],
+                    ];
+                    $phoneNumber = [
+                        $this->order['mobile'],
+                    ];
+                    $result = TencentCloud::sendSms($smsParam,$phoneNumber);
+                    actionLog($result,'预订酒店发送短信通知');
+                    $this->updateSaleOrdersDetails($updateSod);
+                }
             }
 
             $msg_id = uniqid();
@@ -123,21 +145,6 @@ trait AfterOrderPaymentTrait
     }
 
     /**
-     * 发送购买成功通知、销售成功通知
-     */
-//    protected function sendTemp()
-//    {
-//        if ($this->order['user_id']) {
-//            $data = $this->order;
-//            $data['openid'] = $this->getUserValue(['user_id' => $data['user_id'],['type','in',[2,4]]],'openid');
-//            if ($data['openid']) {
-//                $this->sendPurchaseSuccessfulNotice($data);
-//            }
-//            $this->sendSalesNotice($this->order);
-//        }
-//    }
-
-    /**
      * 结算收益
      * @param string $status 分润成功时不能传参，分润失败传3
      * @return int
@@ -179,6 +186,61 @@ trait AfterOrderPaymentTrait
     {
         $this->order['pay_status'] = 4;
         $this->order['pay_time'] = time();
+        $this->handleHotel(2);
         return $this->updateSaleOrders($this->order);
+    }
+
+    /**
+     * 处理订单酒店数据
+     * @param int $status 1：支付成功，2：支付失败
+     * @return mixed
+     */
+    public function handleHotel($status)
+    {
+        // 有酒店数据
+        if ($this->order['has_hotel'] == 1) {
+            $sh = $this->getSaleHotelFind(['order_id' => $this->order['order_id']]);
+            if ($sh) {
+                $sh = $sh->toArray();
+                actionLog($sh,'酒店数据');
+                $updateSh['sh_id'] = $sh['sh_id'];
+                $updateSh['pay_time'] = time();
+                $updateSh['pay_status'] = ($status == 1 ? 3 : 4);
+                $updateSh['create_status'] = 1;
+                // 自营酒店
+                if ($sh['hotelFrom'] == 2 && $status == 1) {
+                    $updateSh['checkOff_code'] = $this->getHotelCheckOffCode();
+                    $updateSh['create_status'] = 2;
+                    $updateSh['reservation_status'] = 2;
+                    // 发送酒店预订通知
+                    $smsParam = [
+                        $updateSh['checkOff_code'],
+                    ];
+                    $phoneNumber = [
+                        $this->order['mobile'],
+                    ];
+                    $result = TencentCloud::sendSms($smsParam,$phoneNumber);
+                    actionLog($result,'预订酒店发送短信通知');
+                }
+                if ($sh['hotelFrom'] == 1) {
+                    $params = [
+                        "tradeNo" => $this->order['out_trade_no'],
+                        "payStatus" => $status,
+                    ];
+                    actionLog($params,'支付结果通知丽呈小程序');
+                    $result = Trip::order()->payNotify($params);
+                    $result = json2arr($result);
+                    actionLog($result,'支付结果通知丽呈小程序结果');
+                    if (isset($result['result']['orderStatus']) && $result['result']['orderStatus'] == 1) {
+                        $updateSh['create_status'] = 1;
+                    } else {
+                        $updateSh['create_status'] = 2;
+                    }
+                }
+                $updateResult = $this->updateSaleHotel($updateSh);
+                actionLog($this->getLS(),'修改订单酒店数据');
+                return $updateResult;
+            }
+        }
     }
 }

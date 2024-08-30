@@ -44,6 +44,9 @@ trait MachineChannelStockTrait
         return $mcs->saveAll($insertAll);
     }
 
-
+    public function delMachineChannelStock($where)
+    {
+        return MachineChannelStockModel::destroy($where);
+    }
 
 }

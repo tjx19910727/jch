@@ -27,6 +27,7 @@ return [
         "sign_require" => "签名不能为空",
         "timestamp_checkTimestamp_overdue" => "时间戳超时，请更新时间",
 
+        "mobile_require" => "手机号码不能为空",
         "pay_type_require" => "支付类型不能为空",
         "pay_method_require" => "支付方式不能为空",
         "total_price_require" => "抽奖金额不能为空",
@@ -107,6 +108,8 @@ return [
         "make_order_details_fail" => "生成订单详情失败",
         "make_order_success" => "生成订单成功",
         "make_order_fail" => "生成订单失败",
+        "make_sale_hotel_fail" => "生成酒店数据失败",
+        "make_hotel_nightly_fail" => "生成每日价格数据失败",
 
         "goods_outing" => "订单创建成功，正在出货中……",
 
@@ -230,5 +233,10 @@ return [
         "hotelId_require" => "酒店ID不能为空",
         "checkInDate_require" => "入住日期不能为空",
         "checkOutDate_require" => "离店日期不能为空",
+
+        "count_require" => "总入住人数不能为空",
+        "quantity_require" => "房间数量不能为空",
+        "tripData_require" => "携程可售房型加密标识不能为空",
+        "nightlyPrice_require" => "每日的价格信息不能为空",
     ],
 ];

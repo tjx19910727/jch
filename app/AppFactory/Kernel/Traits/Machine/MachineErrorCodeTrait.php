@@ -52,4 +52,9 @@ trait MachineErrorCodeTrait
         $this->addMachineErrorCode($insert);
         return 1;
     }
+
+    public function delMachineErrorCode($where)
+    {
+        return MachineErrorCodeModel::destroy($where);
+    }
 }

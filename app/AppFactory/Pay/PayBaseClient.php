@@ -12,11 +12,12 @@ namespace app\AppFactory\Pay;
 use app\AppFactory\Kernel\BaseClient;
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 
 class PayBaseClient extends BaseClient
 {
-    use SaleOrdersTrait;
+    use SaleOrdersTrait,SaleHotelTrait;
     use MachineTrait;
 
     public $data;

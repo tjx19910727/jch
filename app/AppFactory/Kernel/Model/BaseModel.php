@@ -66,7 +66,7 @@ class BaseModel extends Model
      */
     public static function getList($where,$pageNum = 0,$field = "*",$order = "",$eachFn = "",$group = "",$limit = 0)
     {
-        try {
+//        try {
             $fields = array_column(Db::query("SHOW COLUMNS FROM " . self::getTable()), 'Field');
             if (in_array('creator', $fields) && ($field == "*" || strpos($field, "creator") !== false)) {
                 $field .= ", (SELECT nickname FROM auth_manager au WHERE au.manager_id = a.creator) creator_nickname";
@@ -84,19 +84,19 @@ class BaseModel extends Model
                 $model = $model->each($eachFn);
             }
             return $model;
-        } catch (DataNotFoundException $e) {
-            actionException($e,1);
-            return $e->getMessage();
-        } catch (ModelNotFoundException $e) {
-            actionException($e,1);
-            return $e->getMessage();
-        } catch (DbException $e) {
-            actionException($e,1);
-            return $e->getMessage();
-        } catch (\Exception $e) {
-            actionException($e,1);
-            return $e->getMessage();
-        }
+//        } catch (DataNotFoundException $e) {
+//            actionException($e,1);
+//            return $e->getMessage();
+//        } catch (ModelNotFoundException $e) {
+//            actionException($e,1);
+//            return $e->getMessage();
+//        } catch (DbException $e) {
+//            actionException($e,1);
+//            return $e->getMessage();
+//        } catch (\Exception $e) {
+//            actionException($e,1);
+//            return $e->getMessage();
+//        }
     }
 
     /**

@@ -11,6 +11,8 @@ namespace app\AppFactory\Machine\Receive;
 
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Support\Trip\Trip;
+use app\AppFactory\Kernel\Traits\Payment\TripPay;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelNightlyTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Trip\TripCityTrait;
@@ -18,9 +20,9 @@ use app\machine\validate\VHotel;
 
 class HotelClient extends ReceiveBaseClient
 {
-    use TripCityTrait;
+    use TripCityTrait,TripPay;
     use SaleOrdersTrait,
-        SaleHotelTrait;
+        SaleHotelTrait,SaleHotelNightlyTrait;
 
     protected $order;
 
@@ -61,6 +63,8 @@ class HotelClient extends ReceiveBaseClient
     {
         $params = [
             "cityId" => $this->data['cityId'],
+            "adults" => $this->data['adults'],
+            "quantity" => $this->data['quantity'],
             "checkInDate" => $this->data['checkInDate'],
             "checkOutDate" => $this->data['checkOutDate'],
             "pageNo" => $this->data['page'],
@@ -69,7 +73,7 @@ class HotelClient extends ReceiveBaseClient
         $result = Trip::hotel()->getList($params);
         $result = json2arr($result);
         if ($result && isset($result['code']) && $result['code'] == 0) {
-            return $this->r(200,$this->lang('query_success'),$result['result']);
+            return $this->r(200,$this->lang('query_success'),['list' => $result['result'],'totalCount' => $result['totalCount']]);
         }
         return $this->r(100,$this->lang('query_fail') . isset($result['message']) ? ":" . $result['message'] : "");
     }
@@ -78,7 +82,7 @@ class HotelClient extends ReceiveBaseClient
      * 获取酒店详情
      * @return array|\think\response\Json
      */
-    public function getDetailsList()
+    public function getDetails()
     {
         $result = Trip::hotel()->getDetailsList(['hotelId' => $this->data['hotelId']]);
         $result = json2arr($result);
@@ -94,12 +98,44 @@ class HotelClient extends ReceiveBaseClient
      */
     public function getRoomList()
     {
-        $result = Trip::hotel()->getRoomList(['hotelId' => $this->data['hotelId'],'checkInDate' => $this->data['checkInDate'],'checkOutDate' => $this->data['checkOutDate']]);
+        $result = Trip::hotel()->getRoomList([
+            'hotelId' => $this->data['hotelId'],
+            'adults' => $this->data['adults'],
+            'quantity' => $this->data['quantity'],
+            'checkInDate' => $this->data['checkInDate'],
+            'checkOutDate' => $this->data['checkOutDate']]);
         $result = json2arr($result);
         if ($result && $result['code'] == 0) {
-            return $this->r(200,$this->lang('query_success'),$result['result']);
+            return $this->r(200,$this->lang('query_success'),['result' => $result['result'],'logId' => $result['logId']]);
         }
         return $this->r(100,$this->lang('query_fail') . isset($result['message']) ? ":" . $result['message'] : "");
+    }
+
+    /**
+     * 验证房间是否可订
+     * @return array|\think\response\Json
+     */
+    public function availableCheck()
+    {
+        $params = [
+            "machineId" => $this->data['machine_id'],
+            "hotelId" => $this->data['hotelId'],
+            "roomId" => $this->data['roomId'],
+            "count" => $this->data['count'],
+            "quantity" => $this->data['quantity'],
+            "checkInDate" => $this->data['checkInDate'],
+            "checkOutDate" => $this->data['checkOutDate'],
+            "logId" => $this->data['logId'],
+            "tripData" => $this->data['tripData'],
+            "nightlyPrice" => $this->data['nightlyPrice'],
+        ];
+        $result = Trip::order()->availableCheck($params);
+        $result = json2arr($result);
+        actionLog($result,'验证可订房型结果');
+        if (isset($result['code']) && $result['code'] == 0) {
+            return $this->r(200,$this->lang("query_success"),$result['result']);
+        }
+        return $this->r(100,$this->lang("query_fail") . "：" . $result['message'] ?? "");
     }
 
     /**
@@ -123,20 +159,61 @@ class HotelClient extends ReceiveBaseClient
             "machine_name" => $this->order['machine_name'],
             "hotel_trade_no" => "",
             "hotelId" => $this->data['hotelList']['hotelId'],
+            "hotelFrom" => $this->data['hotelList']['hotelFrom'],
             "roomId" => $this->data['hotelList']['roomId'],
+            "num" => $this->data['hotelList']['num'],
+            "adults" => $this->data['hotelList']['adults'],
             "totalPrice" => bcmul($this->data['hotelList']['totalPrice'], 100),
+            "mobile" => $this->order['mobile'],
             "pay_amount" => bcmul($this->data['hotelList']['pay_amount'], 100),
             "checkInDate" => $this->data['hotelList']['checkInDate'],
             "checkOutDate" => $this->data['hotelList']['checkOutDate'],
             "guestNames" => $this->data['hotelList']['guestNames'] ?? "",
         ];
+        if ($this->data['hotelList']['hotelFrom'] == 1) {
+            if (!isset($this->data['hotelList']['logId']) || !$this->data['hotelList']['logId']) {
+                return $this->r(100,"logId不能为空");
+            }
+            if (!isset($this->data['hotelList']['tripData']) || !$this->data['hotelList']['tripData']) {
+                return $this->r(100,'tripData不能为空');
+            }
+            $insertHotel['logId'] = $this->data['hotelList']['logId'];
+            $insertHotel['tripData'] = $this->data['hotelList']['tripData'];
+        }
         $this->startTrans();
         try {
-            $flag[] = $this->addSaleHotel($insertHotel);
+            $sh_id = $this->addSaleHotel($insertHotel);
+            if ($sh_id) {
+                $flag[] = 1;
+                if (isset($this->data['hotelList']['roomPriceList'])) {
+                    foreach ($this->data['hotelList']['roomPriceList'] as $key => $value) {
+                        $insert = [
+                            "sh_id" => $sh_id,
+                            "hotelId" => $this->data['hotelList']['hotelId'],
+                            "roomId" => $this->data['hotelList']['roomId'],
+                            "effectiveDate" => $value['effectiveDate'],
+                            "amount" => $value['amount'],
+                        ];
+                        $flag[] = $this->addSaleHotelNightly($insert);
+                    }
+                }
+            }
             $updateOrder['order_id'] = $this->order['order_id'];
             $updateOrder['has_hotel'] = 1;
+            $updateOrder['goods_type'] = $this->data['hotelList']['hotelFrom'] == 1 ? 2 : 3;
             $updateOrder['total_price'] = bcadd($this->order['total_price'], $this->data['hotelList']['pay_amount'], 2);
             $flag[] = $this->updateSaleOrders($updateOrder);
+            if ($this->data['hotelList']['hotelFrom'] == 1) {
+                $result = $this->createHotelOrder();
+                if ($result && isset($result['code']) && $result['code'] == 0){
+                    $this->updateSaleOrders(['order_id' => $this->order['order_id'],'out_trade_no' => $result['result']['tradeNo']]);
+                    $this->order['out_trade_no'] = $result['result']['tradeNo'];
+                    $flag[] = 1;
+                } else {
+                    $this->rollbackTrans();
+                    return $this->r(100,$this->lang(""));
+                }
+            }
             $result = $this->checkFlag($flag);
             return $this->checkTrans($result);
         } catch (\Exception $e) {

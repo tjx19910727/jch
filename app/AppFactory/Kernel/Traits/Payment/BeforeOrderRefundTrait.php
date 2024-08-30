@@ -41,18 +41,22 @@ trait BeforeOrderRefundTrait
         // 本次退款总金额
         if (!$this->sodRefundAmount)
             $this->sodRefundAmount = bcmul(bcdiv($this->sod['total_sod_price'],$this->sod['quantity'],2) , $this->postData['refund']['quantity'],3);
-
+        actionLog($this->sodRefundAmount,'本次退款总金额');
         // 超过订单剩余可退金额或退款数量为最后剩下的数量时，重置为剩余可退金额
         $refundAmount = bcsub($this->order['total_price'], $this->order['refund_amount'], 3);
-        if ($this->sodRefundAmount > $refundAmount || $this->order['total_quantity'] == $this->order['refund_quantity'] + $this->postData['refund']['quantity'])
+        if ($this->sodRefundAmount > $refundAmount || $this->order['total_quantity'] == $this->order['refund_quantity'] + $this->postData['refund']['quantity']) {
             $this->sodRefundAmount = $refundAmount;
-
+            actionLog($this->sodRefundAmount, "本次退款总金额【重置后】");
+        }
 
         $this->sod['refund_quantity'] = bcadd($this->sod['refund_quantity'],$this->postData['refund']['quantity']);
         $this->sod['refund_amount'] = bcadd($this->sod['refund_amount'],$this->sodRefundAmount,3);
         $amountRefunded = $this->getSaleOrdersRefundSum(['order_id' => $this->sod['order_id'],'status' => 2],'refund_amount');
-        if ($amountRefunded + $this->sodRefundAmount > $this->getSaleOrdersValue(['order_id' => $this->sod['order_id']],'total_price')) {
-            return $this->rValidate("总退款金额超出订单总金额");
+        actionLog($amountRefunded,'已退款总金额');
+        $saleAmount = $this->getSaleOrdersValue(['order_id' => $this->sod['order_id']],'total_price');
+        actionLog($saleAmount,'订单销售金额');
+        if (bcadd($amountRefunded , $this->sodRefundAmount,3) > $saleAmount) {
+            return $this->rFail("总退款金额超出订单总金额");
         }
         $this->handleSorData();
         $flag[] = $this->revenueRefund();

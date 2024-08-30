@@ -54,10 +54,16 @@ trait SaleHotelTrait
      * @param string $field
      * @param string $order
      * @return \app\AppFactory\Kernel\Model\BaseModel|\app\AppFactory\Kernel\Model\BaseModel[]|array|string|\think\Collection|\think\Paginator
+     * @throws \Exception
      */
     public function getSaleHotelList($where, $pageNum = 0, $field = "*", $order = "")
     {
         return SaleHotelModel::getList($where, $pageNum, $field, $order);
+    }
+
+    public function getHotelJoinSaleOrdersList($where,$pageNum = 0,$field = "*", $order = "")
+    {
+        return SaleHotelModel::joinSaleOrdersList($where,$pageNum,$field,$order);
     }
 
     /**
@@ -70,6 +76,22 @@ trait SaleHotelTrait
     public function getSaleHotelFind($where, $field = "*", $order = "")
     {
         return SaleHotelModel::getFind($where, $field, $order);
+    }
+
+    /**
+     * 获取自营酒店核销码
+     * @return mixed
+     * @throws \think\db\exception\DbException
+     */
+    public function getHotelCheckOffCode()
+    {
+        while(1){
+            $code = $this->get_rand_string(8,'num');
+            if (!SaleHotelModel::getCount(['checkOff_code' => $code,'checkOff_status' => 1])) {
+                break;
+            }
+        }
+        return $code;
     }
 
     /**

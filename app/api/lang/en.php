@@ -40,6 +40,7 @@ return [
         23 => "Invalid trade_no",
         24 => "Order processed",
         25 => "The order payment type does not match",
+        26 => "No hotel information found",
         99 => "Service Unavailable",
     ],
 

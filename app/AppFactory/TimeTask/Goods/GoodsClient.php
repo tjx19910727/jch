@@ -45,7 +45,7 @@ class GoodsClient extends TimeTaskBase
                         $this->synchronizationMgMc($data);
                     }
                 }
-                usleep(100);
+                sleep(1);
             }
             $redis->close();
         } catch (\Exception $e) {
@@ -74,7 +74,7 @@ class GoodsClient extends TimeTaskBase
                         $this->synchronizationMc($data);
                     }
                 }
-                usleep(100);
+                sleep(1);
             }
             $redis->close();
         } catch (\Exception $e) {

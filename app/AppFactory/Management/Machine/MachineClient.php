@@ -16,9 +16,14 @@ use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthStatesTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineChannelStockTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineCheckStockTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineFreeGoodsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineFreeHotelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineFreeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGroupMgTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGroupTrait;
@@ -27,6 +32,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionTrait;
@@ -38,8 +44,13 @@ use app\management\validate\Machine\VMachine;
 class MachineClient extends ManagementClient
 {
     use EarthCountriesTrait,EarthStatesTrait,EarthCitiesTrait,EarthRegionsTrait;
-    use MachineTrait,MachineChannelTrait,MachineChannelReplenishmentTrait,MachineCheckStockTrait,MachineConfigTrait,MachineGoodsTrait,
-        MachineInfoTrait,MachineGroupTrait,MachineGroupMgTrait,MachineHelpTrait,MachineMqRecordTrait,MachineOnlineTrait,MachineOnlineDetailsTrait,MachineVersionTrait,MachineVersionPlanTrait,MachineViewTrait;
+    use MachineTrait,MachineChannelTrait,MachineChannelReplenishmentTrait,MachineChannelStockTrait,MachineCheckStockTrait,MachineConfigTrait,MachineErrorCodeTrait,
+        MachineFreeTrait,
+        MachineFreeHotelTrait,
+        MachineFreeGoodsTrait,
+        MachineGoodsTrait,
+        MachineInfoTrait,MachineGroupTrait,MachineGroupMgTrait,MachineHelpTrait,MachineMqRecordTrait,MachineOnOffTrait,
+        MachineOnlineTrait,MachineOnlineDetailsTrait,MachineVersionTrait,MachineVersionPlanTrait,MachineViewTrait;
     use SaleOrdersMachineCountTrait;
     use AuthManagerMachineTrait;
 
@@ -155,10 +166,38 @@ class MachineClient extends ManagementClient
         }));
     }
 
+    /**
+     * 删除设备信息
+     * @param $m_id
+     * @return array|\think\response\Json
+     */
     public function delM($m_id)
     {
         $where['m_id'] = ["in",$m_id];
-        return $this->rAction($this->delMachine($where));
+        $this->delMachine($where);
+        $this->delMachineChannel($where);
+        $this->delMachineChannelReplenishment($where);
+        $this->delMachineChannelStock($where);
+        $this->delMachineCheckStock($where);
+        $this->delMachineConfig($where);
+        $this->delMachineErrorCode($where);
+        $mfIds = $this->getMachineFreeColumn($where,'mf_id');
+        if ($mfIds) {
+            $this->delMachineFree([['mf_id',"in",$mfIds]]);
+            $this->delMachineFreeHotel([['mf_id',"in",$mfIds]]);
+            $this->delMachineFreeGoods([['mf_id',"in",$mfIds]]);
+        }
+        $this->delMachineGoods($where);
+        $this->delMachineGroupMg($where);
+        $this->delMachineHelp($where);
+        $this->delMachineInfo($where);
+        $this->delMachineMqRecord($where);
+        $this->delMachineOnOff($where);
+        $this->delMachineOnline($where);
+        $this->delMachineOnlineDetails($where);
+        $this->delMachineVersionPlan($where);
+        $this->delMachineView($where);
+        return $this->r(200,$this->lang("action_success"));
     }
 
     public function getMFind($where,$field = "")
@@ -181,19 +220,27 @@ class MachineClient extends ManagementClient
      */
     public function getData($where)
     {
+        $total = 0;
+        $normal = 0;
+        $disable = 0;
+        $maintain = 0;
+        $online = 0;
+        $offline = 0;
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        $total = $this->getMachineCount($where);
-        $where['status'] = 2;
-        $disable = $this->getMachineCount($where);
-        $where['status'] = 3;
-        $maintain = $this->getMachineCount($where);
-        $where['status'] = 1;
-        $normal = $this->getMachineCount($where);
-        $where['online'] = 1;
-        $online = $this->getMachineCount($where);
-        $where['online'] = 2;
-        $offline = $this->getMachineCount($where);
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $total = $this->getMachineCount($where);
+            $where['status'] = 2;
+            $disable = $this->getMachineCount($where);
+            $where['status'] = 3;
+            $maintain = $this->getMachineCount($where);
+            $where['status'] = 1;
+            $normal = $this->getMachineCount($where);
+            $where['online'] = 1;
+            $online = $this->getMachineCount($where);
+            $where['online'] = 2;
+            $offline = $this->getMachineCount($where);
+        }
         $data = [
             "total" => $total,
             "normal" => $normal,
@@ -212,20 +259,23 @@ class MachineClient extends ManagementClient
      */
     public function get10List($where)
     {
+        $list = [];
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        $list = $this->getSaleOrdersMachineCountList($where,0,
-            'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
-            'totalPrice desc,totalQuantity desc, m_id desc','','m_id',10);
-        if ($list) {
-            $list = $list->toArray();
-            foreach ($list as $key => $item) {
-                $m = $this->getMachineFind(['m_id' => $item['m_id']],"country_id,state_id,city_id,regions_id");
-                if ($m['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $m['country_id']],'code,name,cname');
-                if ($m['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $m['state_id']],'code,name,cname');
-                if ($m['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $m['city_id']],'code,name,cname');
-                if ($m['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $m['regions_id']],'code,name,cname');
-                $list[$key] = $item;
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $list = $this->getSaleOrdersMachineCountList($where, 0,
+                'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
+                'totalPrice desc,totalQuantity desc, m_id desc', '', 'm_id', 10);
+            if ($list) {
+                $list = $list->toArray();
+                foreach ($list as $key => $item) {
+                    $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                    if ($m['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $m['country_id']], 'code,name,cname');
+                    if ($m['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $m['state_id']], 'code,name,cname');
+                    if ($m['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $m['city_id']], 'code,name,cname');
+                    if ($m['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $m['regions_id']], 'code,name,cname');
+                    $list[$key] = $item;
+                }
             }
         }
         return $this->rQ($list);
@@ -239,31 +289,33 @@ class MachineClient extends ManagementClient
     public function exportRankingList($where)
     {
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        $list = $this->getSaleOrdersMachineCountList($where,0,
-            'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
-            'totalPrice desc,totalQuantity desc, m_id desc','','m_id');
-        if ($list) {
-            $list = $list->toArray();
-            foreach ($list as $key => $item) {
-                $item['address'] = "";
-                $m = $this->getMachineFind(['m_id' => $item['m_id']],"country_id,state_id,city_id,regions_id");
-                if ($m['country_id']) $item['address'] = $this->getEarthCountriesValue(['id' => $m['country_id']],'name');
-                if ($m['state_id']) $item['address'] .= "-" . $this->getEarthStatesValue(['id' => $m['state_id']],'name');
-                if ($m['city_id']) $item['address'] .= "-" . $this->getEarthCitiesValue(['id' => $m['city_id']],'name');
-                if ($m['regions_id']) $item['address'] .= "-" . $this->getEarthRegionsValue(['id' => $m['regions_id']],'name');
-                $list[$key] = $item;
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $list = $this->getSaleOrdersMachineCountList($where, 0,
+                'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
+                'totalPrice desc,totalQuantity desc, m_id desc', '', 'm_id');
+            if ($list) {
+                $list = $list->toArray();
+                foreach ($list as $key => $item) {
+                    $item['address'] = "";
+                    $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                    if ($m['country_id']) $item['address'] = $this->getEarthCountriesValue(['id' => $m['country_id']], 'name');
+                    if ($m['state_id']) $item['address'] .= "-" . $this->getEarthStatesValue(['id' => $m['state_id']], 'name');
+                    if ($m['city_id']) $item['address'] .= "-" . $this->getEarthCitiesValue(['id' => $m['city_id']], 'name');
+                    if ($m['regions_id']) $item['address'] .= "-" . $this->getEarthRegionsValue(['id' => $m['regions_id']], 'name');
+                    $list[$key] = $item;
+                }
+                $title = [
+                    "machine_id" => "机器ID",
+                    "machine_name" => "机器名称",
+                    "address" => "机器位置",
+                    "totalPrice" => "销售额",
+                    "coupon_used" => "优惠券",
+                ];
+                $filename = "设备排行榜（最近7天）-" . date("YmdHis");
+                $result = $this->sendToExport("首页-设备排行榜（最近7天）", $filename, $title, $list);
+                return $result;
             }
-            $title = [
-                "machine_id" => "机器ID",
-                "machine_name" => "机器名称",
-                "address" => "机器位置",
-                "totalPrice" => "销售额",
-                "coupon_used" => "优惠券",
-            ];
-            $filename = "设备排行榜（最近7天）-" . date("YmdHis");
-            $result = $this->sendToExport("首页-设备排行榜（最近7天）",$filename,$title,$list);
-            return $result;
         }
         return $this->r(100,$this->lang("query_fail"));
     }

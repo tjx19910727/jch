@@ -13,7 +13,7 @@ use app\management\controller\Common;
 
 class Goods extends Common
 {
-    protected $field = "g_id,g_name,gc_id,gc_name,model,bar_code,sku,sku2,
+    protected $field = "g_id,g_name,gc_id,gc_name,g_type,model,bar_code,sku,sku2,
     pic,cost_price,market_price,retail_price,manufacturer,service_phone,performance,sell_channel,expire_notice,
     is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,status,ao_id,creator,create_time,update_time";
     protected $validatePath = 'app\management\validate\VGoods.';

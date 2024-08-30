@@ -95,6 +95,7 @@ class GoodsClient extends ManagementClient
             $title = ["g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status"];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
             $goods = Excel::importExcel($path, $title, $other);
+            if (is_string($goods)) return $goods;
             actionLog($goods, '导入的商品数据');
             if ($goods) {
                 $result = $this->addMoreGoods($goods);

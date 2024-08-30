@@ -129,7 +129,7 @@ class V2BaseClient extends ApiBaseClient
             }
             $this->params = $this->config['params'];
         } catch (\Exception $e) {
-            $this->returnData(6, $this->lang("msg." . 6) . "：" . $this->lang("VV2." . $e->getMessage()))->send();
+            $this->returnData(6, $this->lang("msg." . 6) . "：" . $this->lang($e->getMessage()))->send();
             die();
         }
 

@@ -21,6 +21,11 @@ trait GoodsTrait
         return GoodsModel::getFieldValue($where,$value);
     }
 
+    public function getGoodsColumn($where,$column)
+    {
+        return GoodsModel::getColumn($where,$column);
+    }
+
     /**
      * 获取商品信息
      * @param $where

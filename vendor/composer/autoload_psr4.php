@@ -18,6 +18,7 @@ return array(
     'Workerman\\RabbitMQ\\' => array($vendorDir . '/workerman/rabbitmq/src'),
     'Workerman\\Mqtt\\' => array($vendorDir . '/workerman/mqtt/src'),
     'Workerman\\' => array($vendorDir . '/workerman/workerman'),
+    'TencentCloud\\' => array($vendorDir . '/tencentcloud/common/src/TencentCloud', $vendorDir . '/tencentcloud/sms/src/TencentCloud'),
     'Symfony\\Polyfill\\Php80\\' => array($vendorDir . '/symfony/polyfill-php80'),
     'Symfony\\Polyfill\\Php73\\' => array($vendorDir . '/symfony/polyfill-php73'),
     'Symfony\\Polyfill\\Php72\\' => array($vendorDir . '/symfony/polyfill-php72'),

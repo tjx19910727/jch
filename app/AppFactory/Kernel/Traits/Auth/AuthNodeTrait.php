@@ -61,6 +61,9 @@ trait AuthNodeTrait
             "/management/sale.sale_orders_refund/getList" => "creator",
             "/management/sale.sale_orders_revenue/getList" => "beneficiary",
 
+            // 门票核销列表
+            "/management/sale.sale_orders/queryTicket" => "canceller",
+
             // 策略管理
             "/management/strategy.strategy_agreement/getList" => "creator",
             "/management/strategy.strategy_hosting/getList" => "creator",
@@ -75,7 +78,6 @@ trait AuthNodeTrait
             "/management/index/getMachineData" => "creator",
             "/management/index/getChannelData" => "creator",
             "/management/index/getGift" => "manager_id",
-            "/management/index/getSaleChart" => "manager_id",
             "/management/index/getMachine10List" => "creator",
             "/management/index/getGoods10List" => "creator",
         ];

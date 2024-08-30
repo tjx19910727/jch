@@ -15,7 +15,6 @@ use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Payment\JdCashierTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
-use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\User\UserTrait;
@@ -23,7 +22,7 @@ use app\AppFactory\Pay\PayBaseClient;
 
 class JdCashierClient extends PayBaseClient
 {
-    use SaleOrdersTrait,SaleOrdersRefundTrait,SaleOrdersRevenueTrait;
+    use SaleOrdersRefundTrait,SaleOrdersRevenueTrait;
     use StrategyPayeeTrait;
     use StrategyMachineTrait;
     use UserTrait;

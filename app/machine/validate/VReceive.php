@@ -167,6 +167,7 @@ class VReceive extends VCommon
 
 
         "resetMachine" => ["msg_id","machine_id","timestamp","sign","manager_id"],
+        "getGoodsMultiple" => ["msg_id","machine_id","timestamp","sign"],
 
     ];
 

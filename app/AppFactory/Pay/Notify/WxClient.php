@@ -15,7 +15,6 @@ use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Payment\WxPayTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
-use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Pay\PayBaseClient;
@@ -24,7 +23,7 @@ use EasyWeChat\Factory;
 class WxClient extends PayBaseClient
 {
     use StrategyPayeeTrait, StrategyMachineTrait;
-    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait;
+    use SaleOrdersRefundTrait, SaleOrdersRevenueTrait;
     use AfterOrderPaymentTrait, AfterOrderRefundTrait;
     use WxPayTrait;
     use MachineMqRecordTrait;
