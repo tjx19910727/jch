@@ -37,10 +37,17 @@ trait TripPay
         $result = $this->createHotelOrder();
         if ($result && isset($result['code']) && $result['code'] == 0){
             $this->updateSaleOrders(['order_id' => $this->order['order_id'],'out_trade_no' => $result['result']['tradeNo']]);
-            $this->order['out_trade_no'] = $result['result']['tradeNo'];
+            $this->order = $this->getSaleOrdersFind(['order_id' => $this->order['order_id']]);
+            $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
+            if ($this->order['has_hotel'] == 1) {
+                $this->order['hotelList'] = $this->getSaleHotelFind(["order_id" => $this->order['order_id']]);
+                if ($this->order['hotelList']) {
+                    $this->order['hotelList']['nightList'] = $this->getSaleHotelNightlyList(['sh_id' => $this->order['hotelList']['sh_id']]);
+                }
+            }
             return $this->r(200, $this->lang("init_payment_success"), ['paymentUrlLink' => $result['result']['miniProgramCode'], 'order' => $this->order,'result' => $result]);
         }
-        return $this->r(100,$this->lang("init_payment_fail"));
+        return $this->r(100,$this->lang("init_payment_fail") . "：" . $result['message'] ?? "",$result);
     }
 
     /**
@@ -57,7 +64,17 @@ trait TripPay
         $mallOrderInfo = [];
         $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
         if ($this->order['details']) {
+            $this->order['details'] = $this->order['details']->toArray();
+            $d = [];
             foreach ($this->order['details'] as $key => $value) {
+                if (isset($d[$value['g_id']])) {
+                    $d[$value['g_id']]['quantity']++;
+                    $d[$value['g_id']]['total_sod_price'] += $value['total_sod_price'];
+                    continue;
+                }
+                $d[$value['g_id']] = $value;
+            }
+            foreach ($d as $key => $value) {
                 $productInfo = [
                     "productId" => $value['g_id'],
                     "productName" => $value['g_name'],

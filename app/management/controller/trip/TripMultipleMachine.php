@@ -2,35 +2,35 @@
 /**
  * Created by PhpStorm.
  * User: Administrator
- * Date: 2024/8/26
- * Time: 15:36
+ * Date: 2024/9/10
+ * Time: 10:22
  */
 
-namespace app\management\controller\machine;
+namespace app\management\controller\trip;
 
 
 use app\management\controller\Common;
-use app\management\validate\Machine\VMachineFree;
+use app\management\validate\Trip\VTripMultipleMachine;
 
-class MachineFree extends Common
+class TripMultipleMachine extends Common
 {
 
     protected $field = "*";
-    protected $validatePath = VMachineFree::class  . ".";
+    protected $validatePath = VTripMultipleMachine::class . ".";
 
     public function getList()
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineFree->getList($where,$pageNum,$this->field);
+        return $this->app->tripMultipleMachine->getList($where, $pageNum, $this->field);
     }
 
     public function getFind()
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineFree->getMfFind($where);
+        return $this->app->tripMultipleMachine->getFind($where, $this->field);
     }
 
     public function add()
@@ -41,7 +41,9 @@ class MachineFree extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineFree->addMf($postData);
+        $check = $this->app->tripMultipleMachine->getTripMultipleMachineFind(['tm_id' => $postData['tm_id'],'m_id' => $postData['m_id']]);
+        if ($check) return returnState(100,lang("VTripMultiple.m_id_unique"));
+        return $this->app->tripMultipleMachine->add($postData);
     }
 
     public function update()
@@ -52,7 +54,7 @@ class MachineFree extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineFree->updateMf($postData);
+        return $this->app->tripMultipleMachine->update($postData,[],["machine_name"]);
     }
 
     public function del()
@@ -63,6 +65,6 @@ class MachineFree extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineFree->delMf($postData['mf_id']);
+        return $this->app->tripMultipleMachine->del($postData);
     }
 }

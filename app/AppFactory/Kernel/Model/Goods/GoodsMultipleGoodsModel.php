@@ -25,4 +25,14 @@ class GoodsMultipleGoodsModel extends BaseModel
             ->order($order)
             ->select();
     }
+
+    public static function getJoinGoodsFind($where,$field = "*",$order = "")
+    {
+        return self::alias("gmg")
+            ->join("goods g","gmg.g_id = g.g_id","left")
+            ->where($where)
+            ->field($field)
+            ->order($order)
+            ->find();
+    }
 }

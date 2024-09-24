@@ -9,7 +9,6 @@
 namespace app\AppFactory\Management\Machine;
 
 
-use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
@@ -21,9 +20,6 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineCheckStockTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
-use app\AppFactory\Kernel\Traits\Machine\MachineFreeGoodsTrait;
-use app\AppFactory\Kernel\Traits\Machine\MachineFreeHotelTrait;
-use app\AppFactory\Kernel\Traits\Machine\MachineFreeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGroupMgTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGroupTrait;
@@ -45,9 +41,6 @@ class MachineClient extends ManagementClient
 {
     use EarthCountriesTrait,EarthStatesTrait,EarthCitiesTrait,EarthRegionsTrait;
     use MachineTrait,MachineChannelTrait,MachineChannelReplenishmentTrait,MachineChannelStockTrait,MachineCheckStockTrait,MachineConfigTrait,MachineErrorCodeTrait,
-        MachineFreeTrait,
-        MachineFreeHotelTrait,
-        MachineFreeGoodsTrait,
         MachineGoodsTrait,
         MachineInfoTrait,MachineGroupTrait,MachineGroupMgTrait,MachineHelpTrait,MachineMqRecordTrait,MachineOnOffTrait,
         MachineOnlineTrait,MachineOnlineDetailsTrait,MachineVersionTrait,MachineVersionPlanTrait,MachineViewTrait;
@@ -181,12 +174,6 @@ class MachineClient extends ManagementClient
         $this->delMachineCheckStock($where);
         $this->delMachineConfig($where);
         $this->delMachineErrorCode($where);
-        $mfIds = $this->getMachineFreeColumn($where,'mf_id');
-        if ($mfIds) {
-            $this->delMachineFree([['mf_id',"in",$mfIds]]);
-            $this->delMachineFreeHotel([['mf_id',"in",$mfIds]]);
-            $this->delMachineFreeGoods([['mf_id',"in",$mfIds]]);
-        }
         $this->delMachineGoods($where);
         $this->delMachineGroupMg($where);
         $this->delMachineHelp($where);

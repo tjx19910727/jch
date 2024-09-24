@@ -26,6 +26,12 @@ use think\facade\Db;
 
 class Test extends BaseController
 {
+    public function dumpSession()
+    {
+        dump(session(""));
+        $check = checkFrequency("dumpSession",10);
+        dump($check);
+    }
 
     public function testUpdateImgPrefix()
     {
@@ -52,12 +58,16 @@ class Test extends BaseController
                             $fieldTemp = explode(",",$dv[$value['Field']]);
                             $tempArr = [];
                             foreach ($fieldTemp as $v) {
-                                $v = env("APP.host") . $v;
+                                if ($v && strpos($v,env("APP.host")) === false ) {
+                                    $v = env("APP.host") . $v;
+                                }
                                 $tempArr[] = $v;
                             }
                             $update[] = "`" . $value['Field'] . "` = '"  . implode(",",$tempArr) . "'";
                         } else {
-                            $update[] = "`" . $value['Field'] . "` = '" . env("APP.host") . $dv[$value['Field']] . "'";
+                            if (strpos($dv[$value['Field']],env("APP.host")) === false && $dv[$value['Field']]) {
+                                $update[] = "`" . $value['Field'] . "` = '" . env("APP.host") . $dv[$value['Field']] . "'";
+                            }
                         }
                     }
                 }

@@ -34,28 +34,55 @@ class Test extends BaseController
     use CurlTrait;
     protected $order;
 
+    public function testArr()
+    {
+        $data = [
+            ["g_id" => 5],
+            ["g_id" => 6],
+            ["g_id" => 7],
+            ["g_id" => 4],
+        ];
+        $gIds = array_column($data,"g_id");
+        dump($gIds);
+    }
+    public function testBc()
+    {
+        $value = '{"sod_id":5246,"discount_price":"0.000","total_sod_price":1,"retail_price":1,"quantity":1,"g_id":156,"cost_price":0}';
+        $value = json2arr($value);
+        $this->order = '{"order_id":3689,"trade_no":"2024090510173754820433","out_trade_no":null,"mch_no":null,"user_id":0,"user_name":null,"mobile":"","m_id":54,"machine_name":"JCHS2D-0022","machine_id":"0022","ao_id":1,"order_type":1,"fd_id":0,"coupon_id":0,"apc_id":0,"lottery_id":0,"pay_status":1,"pay_type":4,"pay_method":1,"pay_time":null,"pay_code":null,"refund_status":1,"refund_amount":"0.000","refund_quantity":0,"discount_price":"0.50","cost_price":"25.000","market_price":"66.000","retail_price":"2.500","total_price":"2.000","total_quantity":2,"out_status":1,"out_time":null,"goods_type":1,"has_hotel":2,"transaction_video":null,"remark":null,"manager_id":0,"create_date":1725465600,"create_time":1725502657,"update_time":1725502657,"sp_id":0}';
+        $this->order = json2arr($this->order);
+        dump($this->order);
+        dump($value);
+        $discount = bcmul($this->order['discount_price'],bcdiv($value['total_sod_price'],$this->order['total_price'],2),3);
+        dump($discount);
+    }
     public function testSendEmail()
     {
         $config = [
-            "ao_id" => 6,
-            "templateType" => "online",
-            "m_id" => "1",
+            "ao_id" => 1,
+            "templateType" => "understock",
+            "m_id" => "3",
             "replaceData" => [
-                "online" => "在线",
-                "machine_id" => "test0003",
                 "machine_name" => "测试3号机",
+                "channel_code" => "C03",
             ],
+            "sendType" => 1,
         ];
 //        try {
         $app = AppFactory::notice($config);
-        $result = $app->send();
+        $result = $app->weChat->send();
         dump($result);
+        die();
 //        } catch (\Exception $e) {
 //            dump($e->getMessage());
 //        }
 //        $result = $app->weChat->send();
 //        dump($result);
-        dump(12312);
+        $config['sendType'] = 2;
+        $app = AppFactory::notice($config);
+        $result = $app->email->send();
+        dump($result);
+//        dump(12312);
     }
 
     public function testTemplate()
@@ -126,6 +153,7 @@ class Test extends BaseController
         $pay_type = input("pay_type",4);
         $pay_method = input("pay_method",1);
         $mc_id = input("mc_id",43217);
+        $g_id = input("g_id",596);
         $mobile = input("mobile",15822483748);
         $cityId = input("cityId",3);
         $adults = input("adults",2);
@@ -134,6 +162,7 @@ class Test extends BaseController
         $checkOutDate = input("checkOutDate",date("Y-m-d",strtotime("+2 days")));
         $page = input('page',1);
         $pageNum = input("pageNum",5);
+        $tm_id = input("tm_id",1);
         $hotelId = input("hotelId","102903119");
         $roomId = input("roomId","99769192");
         $logId = input("logId");
@@ -145,6 +174,10 @@ class Test extends BaseController
         $amount1 = input("amount1");
         $amount2 = input('amount2');
         $count = input("count",2);
+        $effectiveDate1 = input("effectiveDate1");
+        $effectiveDate2 = input("effectiveDate2");
+        $gmg_id = input('gmg_id');
+        $gm_id = input("gm_id");
 
 //        $carList[] = [
 //            "mc_id" => 30352,
@@ -154,7 +187,8 @@ class Test extends BaseController
         echo "提交购物车";
         $carList[] = [
             "mc_id" => $mc_id,
-            "quantity" => 1,
+            "g_id" => $g_id,
+            "quantity" => $quantity,
         ];
         $data = [
             "machine_id" => $machine_id,
@@ -203,10 +237,28 @@ class Test extends BaseController
         dump(json_encode($data, 320));
 
         // 订单增加酒店内容
-        echo "订单增加酒店内容";
+        echo "提交携程套餐商品数据";
+
+        $carList = [
+            [
+                "mc_id" => 43194,
+                "g_id" => 596,
+                "quantity" => 2,
+                "sod_price" => 0.2
+            ],
+//            [
+//                "mc_id" => 43198,
+//                "g_id" => 977,
+//                "quantity" => 2,
+//                "sod_price" => 17.82
+//            ],
+        ];
         $data = [
             "machine_id" => $machine_id,
-            "order_id" => $order_id,
+            "tm_id" => $tm_id,
+            "total_price" => 349.55,
+            "mobile" => $mobile,
+            "carList" => json_encode($carList,320),
             "hotelList" => [
                 "hotelId" => $hotelId,
                 "roomId" => $roomId,
@@ -222,11 +274,11 @@ class Test extends BaseController
                 "guestNames" => $guestNames,
                 "roomPriceList" => [
                     [
-                        "effectiveDate" => $checkInDate,
+                        "effectiveDate" => $effectiveDate1,
                         "amount" => $amount1
                     ],
                     [
-                        "effectiveDate" => $checkOutDate,
+                        "effectiveDate" => $effectiveDate2,
                         "amount" => $amount2
                     ]
                 ],
@@ -266,6 +318,59 @@ class Test extends BaseController
                     "salePrice" => $amount2,
                 ],
             ],
+        ];
+        $data = $this->makeSign($data);
+        dump(json_encode($data));
+
+        echo "提交固定组合商品订单";
+        $car[] = [
+            "mc_id" => $mc_id,
+            "quantity" => 1,
+        ];
+        $hotel = [
+            "pay_amount" => $pay_amount,
+            "hotelId" => $hotelId,
+            "roomId" => $roomId,
+            "num" => $quantity,
+            "adults" => $adults,
+            "totalPrice" => $totalPrice,
+            "checkInDate" => $checkInDate,
+            "checkOutDate" => $checkOutDate,
+            "guestNames" => $guestNames,
+            "nightly" => [
+                [
+                    "effectiveDate" => $effectiveDate1,
+                    "amount" => $amount1,
+                ],
+                [
+                    "effectiveDate" => $effectiveDate2,
+                    "amount" => $amount2,
+                ]
+            ],
+        ];
+        $data = [
+            "machine_id" => $machine_id,
+            "pay_type" => $pay_type,
+            "pay_method" => $pay_method,
+            "mobile" => $mobile,
+//            "coupon_code" => "980429",
+            "carList" => $car,
+            "hotel" => $hotel,
+        ];
+        $data = $this->makeSign($data);
+        dump(json_encode($data));
+
+        echo "上传文件";
+        $data = [
+            "folder" => $machine_id,
+            "machine_id" => $machine_id,
+        ];
+        $data = $this->makeSign($data);
+        dump(json_encode($data));
+
+        echo "获取设备信息";
+        $data = [
+            "machine_id" => $machine_id,
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data));
@@ -376,7 +481,7 @@ class Test extends BaseController
 
     public function testReturn()
     {
-        $data = '{"timestamp":1723886907,"msg_id":"66c06d3bb6307","machine_id":"test0003","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"754896811549786112\",\"main\":{\"1\":[{\"channel_code\":\"C02\",\"success_quantity\":2,\"fail_quantity\":0,\"deliver_pics\":\"\",\"out_sequence\":1},{\"channel_code\":\"F05\",\"success_quantity\":3,\"fail_quantity\":0,\"deliver_pics\":\"\",\"out_sequence\":1}]}}","sign":"cce36dd39767db3483669776f56b8724"}';
+        $data = '{"timestamp":"1726220271","msg_id":"b783f642-e274-44cc-9cdf-b54f4ce727af","machine_id":"0019","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"2024091317362338277680\",\"main\":{\"1\":[{\"channel_code\":\"B02\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"\/uploads\/machine_0019\/20240913\/9f779e221cb43352bb3c4949e9323a04.jpg,\/uploads\/machine_0019\/20240913\/d3542789036fe2ddd8c885d194f5ad22.jpg\",\"out_sequence\":1}]}}","sign":"5b10fb703526a9a6d0d746e48c81b25e"}';
         $data = json2arr($data);
         dump($data);
         $config = [
@@ -534,15 +639,16 @@ class Test extends BaseController
 
     public function testCache()
     {
-
-        $config = config("redis");
-        dump($config);
+        $sale = "422.15";
+        $refund = "20.1";
+        $total = $sale-$refund;
+        dump($total);
 
     }
 
     public function testConnectMysql()
     {
-        $connection = mysqli_connect("120.79.140.44:3306", "kiosk", "Karrie&KOS2019", "kiosk");
+        $connection = mysqli_connect("172.16.0.80:3306", "kiosk", "Karrie*KOS2019", "kiosk");
         $machine = $connection->query("select * from machine");
         dump($machine->fetch_all());
         if (mysqli_connect_errno()) {
@@ -553,4 +659,59 @@ class Test extends BaseController
         dump($connection);
     }
 
+
+    public function testGm()
+    {
+        $carList = [
+            [
+                "gmg_id" => 26,
+                "mc_id" => 0,
+                "g_id" => 984,
+                "quantity" => 2,
+                "sod_price" => 2.2
+            ],
+            [
+                "gmg_id" => 27,
+                "mc_id" => 43198,
+                "g_id" => 548,
+                "quantity" => 2,
+                "sod_price" => 17.82
+            ],
+        ];
+        $roomList = [
+            [
+                "effectiveDate" => "2024-12-01",
+                "amount" => 21000,
+            ],
+            [
+                "effectiveDate" => "2024-12-02",
+                "amount" => 21000,
+            ],
+        ];
+        $hotel = [
+            "gmg_id" => 24,
+            "totalPrice" => 40000,
+            "hotelId" => "",
+            "roomId" => "",
+            "num" => 2,
+            "adults" => 4,
+            "pay_amount" => 42000,
+            "checkInDate" => "2024-12-01",
+            "checkOutDate" => "2024-12-03",
+            "guestNames" => "赵大，张三，李四，王五",
+            "roomPriceList" => $roomList,
+        ];
+        $data = [
+            "machine_id" => "test0003",
+            "total_price" => 440.02,
+            "pay_type" => 5,
+            "pay_method" => 1,
+            "mobile" => "15822483748",
+            "gm_id" => 17,
+            "carList" => json_encode($carList,320),
+            "hotel" => json_encode($hotel,320),
+        ];
+        $data = $this->makeSign($data);
+        dump(json_encode($data,320));
+    }
 }

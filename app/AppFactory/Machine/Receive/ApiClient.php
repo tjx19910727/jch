@@ -37,9 +37,6 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
-use app\AppFactory\Kernel\Traits\Machine\MachineFreeGoodsTrait;
-use app\AppFactory\Kernel\Traits\Machine\MachineFreeHotelTrait;
-use app\AppFactory\Kernel\Traits\Machine\MachineFreeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineHelpTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
@@ -55,6 +52,7 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
+use app\machine\validate\VReceive;
 use think\db\exception\DbException;
 
 class ApiClient extends ReceiveBaseClient
@@ -77,7 +75,6 @@ class ApiClient extends ReceiveBaseClient
         MachineGoodsTrait,
         MachineHelpTrait,
         MachineOnOffTrait,
-        MachineFreeTrait,MachineFreeGoodsTrait,MachineFreeHotelTrait,
         TemplateViewTrait,
 
         EarthCountriesTrait, EarthStatesTrait, EarthCitiesTrait, EarthRegionsTrait,
@@ -344,6 +341,12 @@ class ApiClient extends ReceiveBaseClient
                 }
                 $g = $g->toArray();
                 actionLog($g, '商品库信息');
+                // 设备商品库有相同商品，并且是未上架状态的，修改为已上架
+                $mgShelf = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'],'g_id' => $this->data['g_id']],'mg_id,is_shelf');
+                if ($mgShelf && $mgShelf['is_shelf'] == 2) {
+                    $this->updateMachineGoods(['mg_id'=> $mgShelf['mg_id'],'is_shelf' => 1]);
+                    actionLog($this->getLS(),'修改设备商品库为已上架状态');
+                }
             }
             $mg = [];
             $mc['mg_id'] = 0;
@@ -351,7 +354,7 @@ class ApiClient extends ReceiveBaseClient
             if ($this->data['mg_id']) {
                 // 查询新商品，修改货道商品信息，重置库存为新数量，生成新的补货记录
                 $mg = $this->getMachineGoodsFind(['mg_id' => $this->data['mg_id']],
-                    'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock');
+                    'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock,is_shelf');
                 if (!$mg) {
                     $this->rollbackTrans();
                     return $this->rFail($this->lang("VChangeChannelGoods.mg_no_data"));
@@ -519,7 +522,7 @@ class ApiClient extends ReceiveBaseClient
 
     protected $goodsField = "
             g.g_id,g.g_name,g.gc_id,g.gc_name,g.model,g.pic,g.sku,g.bar_code,g.sku2,g.manufacturer,g.service_phone,g.performance,g.sell_channel,g.is_gift,g.is_recommend,g.recoverable,g.heat,g.release_time,
-            g.length,g.width,g.height,g.group_quantity,g.status,g.ao_id,g.update_time,g.desc,g.cost_price,g.market_price,g.retail_price,
+            g.length,g.width,g.height,g.group_quantity,g.status,g.ao_id,g.update_time,g.desc,g.cost_price,g.market_price,g.retail_price,g.g_type,
             mg.mg_id,mg.available_stock,mg.disabled_stock,mg.reserve_stock,mg.standby_stock,mg.pre_loading_stock,mg.is_shelf";
 
     /**
@@ -548,14 +551,14 @@ class ApiClient extends ReceiveBaseClient
     public function goodsFind()
     {
         $goods = $this->getGoodsFind(["g_id" => $this->data['g_id']],
-            "g_id,g_name,gc_id,gc_name,model,pic,sku,bar_code,sku2,manufacturer,service_phone,performance,
+            "g_id,g_name,gc_id,gc_name,model,pic,sku,bar_code,sku2,manufacturer,service_phone,performance,g_type,
             sell_channel,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,
             `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price", 'update_time desc');
         if (is_string($goods)) return $this->rFail($goods);
         if ($goods) {
             $goods = $goods->toArray();
             $goods['lang'] = $this->getGoodsLangList(['g_id' => $this->data['g_id']], 0, 'g_name,gc_name,manufacturer,desc,performance,lang');
-            $mg = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'],'g_id' => $goods['g_id']],'mg_id,available_stock,disabled_stock,reserve_stock,standby_stock,pre_loading_stock,is_shelf');
+            $mg = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'],'g_id' => $goods['g_id']],'mg_id,available_stock,disabled_stock,cost_price,market_price,retail_price,reserve_stock,standby_stock,pre_loading_stock,is_shelf');
             if ($mg) $goods = array_merge($goods,$mg->toArray());
         }
         return $this->rQ($goods);
@@ -667,53 +670,56 @@ class ApiClient extends ReceiveBaseClient
                     return $this->rFail("购物车不能为空");
                 }
                 $this->data['carList'] = json2arr($this->data['carList']);
-
                 foreach ($this->data['carList'] as $key => $value) {
-                    $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
-                    if (!$mc) {
-                        $this->rollbackTrans();
-                        return $this->r(100, $this->lang("VSubCar.channel_no_data"));
-                    }
-                    if (!$mc['mg_id']) {
-                        $this->rollbackTrans();
-                        return $this->r(100, $this->lang("VSubCar.mg_id_require"));
-                    }
-                    if ($this->data['pay_type'] == 0) {
-                        $mc['retail_price'] = 0;
-                    }
-                    $goods = $this->getGoodsFind(['g_id' => $mc['g_id']],'g_id,g_name,g_type');
-                    $details = [
-                        "order_id" => $order_id,
-                        "mc_id" => $mc['mc_id'],
-                        "shelf_way" => $mc['shelf_way'],
-                        "channel_position" => $mc['channel_position'],
-                        "channel_code" => $mc['channel_code'],
-                        "mg_id" => $mc['mg_id'],
-                        "g_id" => $mc['g_id'],
-                        "g_name" => $mc['g_name'],
-                        "g_type" => $goods['g_type'],
-                        "pic" => $mc['pic'],
-                        "sku" => $mc['sku'],
-                        "gc_id" => $mc['gc_id'],
-                        "gc_name" => $mc['gc_name'],
-                        "cost_price" => $mc['cost_price'],
-                        "market_price" => $mc['market_price'],
-                        "retail_price" => $mc['retail_price'],
-                        "total_sod_price" => bcmul($mc['retail_price'], $value['quantity'], 2),
-                        "quantity" => $value['quantity'],
-                        "bar_code" => $mc['bar_code'],
-                    ];
-                    $sod_id = $this->addSaleOrdersDetails($details);
-                    if ($sod_id) {
-                        $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $value['quantity'], 2), 2);
-                        $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mc['market_price'], $value['quantity'], 2), 2);
-                        $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mc['retail_price'], $value['quantity'], 2), 2);
-                        $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $value['quantity']);
-                        $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 2);
-                        $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $value['quantity']);
-                    } else {
-                        $this->rollbackTrans();
-                        return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                    for ($i = 0; $i < $value['quantity']; $i++) {
+                        $quantity = 1;
+//                        $quantity = $value['quantity'];
+                        $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
+                        if (!$mc) {
+                            $this->rollbackTrans();
+                            return $this->r(100, $this->lang("VSubCar.channel_no_data"));
+                        }
+                        if (!$mc['mg_id']) {
+                            $this->rollbackTrans();
+                            return $this->r(100, $this->lang("VSubCar.mg_id_require"));
+                        }
+                        if ($this->data['pay_type'] == 0) {
+                            $mc['retail_price'] = 0;
+                        }
+                        $goods = $this->getGoodsFind(['g_id' => $mc['g_id']], 'g_id,g_name,g_type');
+                        $details = [
+                            "order_id" => $order_id,
+                            "mc_id" => $mc['mc_id'],
+                            "shelf_way" => $mc['shelf_way'],
+                            "channel_position" => $mc['channel_position'],
+                            "channel_code" => $mc['channel_code'],
+                            "mg_id" => $mc['mg_id'],
+                            "g_id" => $mc['g_id'],
+                            "g_name" => $mc['g_name'],
+                            "g_type" => $goods['g_type'],
+                            "pic" => $mc['pic'],
+                            "sku" => $mc['sku'],
+                            "gc_id" => $mc['gc_id'],
+                            "gc_name" => $mc['gc_name'],
+                            "cost_price" => $mc['cost_price'],
+                            "market_price" => $mc['market_price'],
+                            "retail_price" => $mc['retail_price'],
+                            "total_sod_price" => bcmul($mc['retail_price'], $quantity, 2),
+                            "quantity" => $quantity,
+                            "bar_code" => $mc['bar_code'],
+                        ];
+                        $sod_id = $this->addSaleOrdersDetails($details);
+                        if ($sod_id) {
+                            $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $quantity, 2), 2);
+                            $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mc['market_price'], $quantity, 2), 2);
+                            $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mc['retail_price'], $quantity, 2), 2);
+                            $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $quantity);
+                            $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 2);
+                            $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
+                        } else {
+                            $this->rollbackTrans();
+                            return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                        }
                     }
                 }
                 $this->commitTrans();
@@ -846,6 +852,11 @@ class ApiClient extends ReceiveBaseClient
      */
     public function subGoodsMultipleOrder()
     {
+        $gm = $this->getGoodsMultipleFind(["gm_id" => $this->data['gm_id']]);
+        if (!$gm) return $this->r(100,$this->lang("gm_not_data"));
+        $gmm = $this->getGoodsMultipleMachineFind(['gm_id' => $this->data['gm_id'],'m_id' => $this->machine['m_id']]);
+        if (!$gmm) return $this->r(100,$this->lang("gmm_not_data"));
+
         if ($this->data['pay_method'] == "41") $this->data['pay_method'] = 1;
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
         if ($this->data['pay_type'] == 5 && (!isset($this->data['mobile']) || !$this->data['mobile'])) return $this->r(100,$this->lang("mobile_require"));
@@ -859,6 +870,8 @@ class ApiClient extends ReceiveBaseClient
             "pay_type" => $this->data['pay_type'],
             "pay_method" => $this->data['pay_method'],
             "mobile" => $this->data['mobile'] ?? "",
+            "gm_id" => $this->data['gm_id'],
+            "goods_type" => 3,
             "create_date" => strtotime(date("Y-m-d")),
         ];
         $updateOrder = [];
@@ -866,6 +879,7 @@ class ApiClient extends ReceiveBaseClient
         try {
             $order_id = $this->addSaleOrders($order);
             if ($order_id) {
+                $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
                 $updateOrder['order_id'] = $order_id;
                 $updateOrder['cost_price'] = 0;
                 $updateOrder['market_price'] = 0;
@@ -875,77 +889,133 @@ class ApiClient extends ReceiveBaseClient
                 $updateOrder['total_quantity'] = 0;
                 if (!isset($this->data['carList']) || !$this->data['carList']) {
                     $this->rollbackTrans();
-                    return $this->rFail("购物车不能为空");
+                    return $this->rFail($this->lang("VSubGoodsMultipleOrder.carList"));
                 }
                 $this->data['carList'] = json2arr($this->data['carList']);
 
                 foreach ($this->data['carList'] as $key => $value) {
-                    $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
-                    if (!$mc) {
+                    try {
+                        validate(VReceive::class)->scene("carList")->check($value);
+                    } catch (\Exception $e) {
                         $this->rollbackTrans();
-                        return $this->r(100, $this->lang("VSubCar.channel_no_data"));
+                        return $this->rFail($e->getMessage());
                     }
-                    if (!$mc['mg_id']) {
+                    if (!isset($value['gmg_id']) || !$value['gmg_id']) {
                         $this->rollbackTrans();
-                        return $this->r(100, $this->lang("VSubCar.mg_id_require"));
+                        return $this->rFail($this->lang("VSubGoodsMultipleOrder.gmg_id_require"));
                     }
-                    if ($this->data['pay_type'] == 0) {
-                        $mc['retail_price'] = 0;
-                    }
-                    $goods = $this->getGoodsFind(['g_id' => $mc['g_id']],'g_id,g_name,g_type');
-                    $details = [
-                        "order_id" => $order_id,
-                        "mc_id" => $mc['mc_id'],
-                        "shelf_way" => $mc['shelf_way'],
-                        "channel_position" => $mc['channel_position'],
-                        "channel_code" => $mc['channel_code'],
-                        "mg_id" => $mc['mg_id'],
-                        "g_id" => $mc['g_id'],
-                        "g_name" => $mc['g_name'],
-                        "g_type" => $goods['g_type'],
-                        "pic" => $mc['pic'],
-                        "sku" => $mc['sku'],
-                        "gc_id" => $mc['gc_id'],
-                        "gc_name" => $mc['gc_name'],
-                        "cost_price" => $mc['cost_price'],
-                        "market_price" => $mc['market_price'],
-                        "retail_price" => $mc['retail_price'],
-                        "total_sod_price" => bcmul($mc['retail_price'], $value['quantity'], 2),
-                        "quantity" => $value['quantity'],
-                        "bar_code" => $mc['bar_code'],
-                    ];
-                    $sod_id = $this->addSaleOrdersDetails($details);
-                    if ($sod_id) {
-                        $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $value['quantity'], 2), 2);
-                        $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mc['market_price'], $value['quantity'], 2), 2);
-                        $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mc['retail_price'], $value['quantity'], 2), 2);
-                        $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $value['quantity']);
-                        $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 2);
-                        $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $value['quantity']);
-                    } else {
+                        // 查组合商品详情
+                    $gmg = $this->getGoodsMultipleGoodsFind(['gmg_id' => $value['gmg_id']]);
+                    if (!$gmg) {
                         $this->rollbackTrans();
-                        return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                        return $this->r(100, $this->lang("VSubGoodsMultipleOrder.gmg_not_data"));
+                    }
+                    $gmg = $gmg->toArray();
+                    $selling_price = bcmul($gmg['selling_price'],bcadd(1,bcdiv($gmg['rise_fall_ratio'],100,2),2),2);
+
+                    $goods = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_id,g_name,g_type,pic,sku,gc_id,gc_name,cost_price,market_price,retail_price,bar_code');
+                    if ($goods['g_type'] == 2) {
+                        $this->rollbackTrans();
+                        return $this->r(100,$this->lang("VSubGoodsMultipleOrder.goods_type_error"));
+                    }
+                    $cost_price = $goods['cost_price'];
+                    $market_price = $goods['market_price'];
+                    $retail_price = $goods['retail_price'];
+                    // 普通商品，需要匹配货道
+                    if ($goods['g_type'] == 1) {
+                        $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
+                        if (!$mc) {
+                            $this->rollbackTrans();
+                            return $this->r(100, $this->lang("VSubCar.channel_no_data"));
+                        }
+                        if ($mc['status'] != 1) {
+                            $this->rollbackTrans();
+                            return $this->r(100,$this->lang("VSubCar.mc_status_error"));
+                        }
+                        if ($mc['stock'] < $value['quantity']) {
+                            $this->rollbackTrans();
+                            return $this->r(100,$this->lang("VSubCar.under_stock"));
+                        }
+                        if ($this->data['pay_type'] == 0) {
+                            $mc['retail_price'] = 0;
+                        }
+                        $cost_price = $mc['cost_price'];
+                        $market_price = $mc['market_price'];
+                        $retail_price = $mc['retail_price'];
+                    }
+                    $sod_price = 0;
+                    for ($i = 0; $i < $value['quantity']; $i++) {
+                        $quantity = 1;
+                        $details = [
+                            "order_id" => $order_id,
+                            "mc_id" => $mc['mc_id'] ?? 0,
+                            "shelf_way" => $mc['shelf_way'] ?? null,
+                            "channel_position" => $mc['channel_position'] ?? 1,
+                            "channel_code" => $mc['channel_code'] ?? "",
+                            "gmg_id" => $gmg['gmg_id'],
+                            "mg_id" => $mc['mg_id'] ?? 0,
+                            "g_id" => $goods['g_id'],
+                            "g_name" => $goods['g_name'],
+                            "g_type" => $goods['g_type'],
+                            "pic" => $goods['pic'],
+                            "sku" => $goods['sku'],
+                            "gc_id" => $goods['gc_id'],
+                            "gc_name" => $goods['gc_name'],
+                            "cost_price" => $cost_price,
+                            "market_price" => $market_price,
+                            "retail_price" => $retail_price,
+                            "total_sod_price" => bcmul($selling_price, $quantity, 2),
+                            "quantity" => $quantity,
+                            "bar_code" => $goods['bar_code'],
+                        ];
+                        $sod_id = $this->addSaleOrdersDetails($details);
+                        if ($sod_id) {
+                            $sod_price = bcadd($sod_price,$details['total_sod_price'],2);
+                            $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($cost_price, $quantity, 2), 2);
+                            $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($market_price, $quantity, 2), 2);
+                            $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($retail_price, $quantity, 2), 2);
+                            $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $quantity);
+                            $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 2);
+                            $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
+                        } else {
+                            $this->rollbackTrans();
+                            return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                        }
+                    }
+                    if ($value['sod_price'] != $sod_price) {
+                        $this->rollbackTrans();
+                        return $this->r(100,$this->lang("VSubGoodsMultipleOrder.sod_price_not_eq"));
                     }
                 }
 
+
                 $this->data['hotel'] = json2arr($this->data['hotel']);
                 if ($this->data['hotel']) {
-                    $updateOrder['hasHotel'] = 1;
-                    $updateOrder['total_price'] = bcadd($updateOrder['total_price'],$this->data['hotel']['pay_amount'],2);
+                    try {
+                        validate(VReceive::class)->scene("hotel")->check($this->data['hotel']);
+                    } catch (\Exception $e) {
+                        $this->rollbackTrans();
+                        return $this->rFail($e->getMessage());
+                    }
+                    $gmg = $this->getGoodsMultipleGoodsJoinGoodsFind(['gm_id' => $gm['gm_id'],'g_type' => 2],'gmg_id');
+                    $updateOrder['has_hotel'] = 1;
+                    $updateOrder['total_price'] = bcadd($updateOrder['total_price'],bcdiv($this->data['hotel']['pay_amount'],100,2),2);
                     $insertHotel = [
                         "order_id" => $this->order['order_id'],
                         "m_id" => $this->order['m_id'],
                         "machine_id" => $this->order['machine_id'],
                         "machine_name" => $this->order['machine_name'],
+                        "gm_id" => $this->data['gm_id'] ?? 0,
+                        "gmg_id" => $gmg['gmg_id'] ?? 0,
                         "hotel_trade_no" => "",
-                        "hotelId" => $this->data['hotel']['hotelId'],
+                        "hotelId" => $this->data['hotel']['hotelId'] ?? null,
                         "hotelFrom" => 2,
-                        "roomId" => $this->data['hotel']['roomId'],
+                        "roomId" => $this->data['hotel']['roomId'] ?? null,
                         "num" => $this->data['hotel']['num'],
                         "adults" => $this->data['hotel']['adults'],
-                        "totalPrice" => bcmul($this->data['hotel']['totalPrice'], 100),
+                        "totalPrice" => $this->data['hotel']['totalPrice'],
                         "mobile" => $this->data['mobile'],
-                        "pay_amount" => bcmul($this->data['hotel']['pay_amount'], 100),
+                        "pay_amount" => $this->data['hotel']['pay_amount'],
                         "checkInDate" => $this->data['hotel']['checkInDate'],
                         "checkOutDate" => $this->data['hotel']['checkOutDate'],
                         "guestNames" => $this->data['hotel']['guestNames'] ?? "",
@@ -955,11 +1025,21 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->r(100,$this->lang("VSubCar.make_sale_hotel_fail"));
                     }
-                    foreach ($this->data['hotel']['nightly'] as $nk => $nv) {
+                    if ($this->data['hotel']['pay_amount'] != array_sum(array_column($this->data['hotel']['roomPriceList'],'amount'))) {
+                        $this->rollbackTrans();
+                        return $this->r(100,$this->lang("VSubGoodsMultipleOrder.hotel_amount_not_eq_total_room_price"));
+                    }
+                    foreach ($this->data['hotel']['roomPriceList'] as $nk => $nv) {
+                        try {
+                            validate(VReceive::class)->scene("nightly")->check($nv);
+                        } catch (\Exception $e) {
+                            $this->rollbackTrans();
+                            return $this->rFail($e->getMessage());
+                        }
                         $insertN = [
                             "sh_id" => $sh_id,
-                            "hotelId" => $this->data['hotel']['hotelId'],
-                            "roomId" => $this->data['hotel']['roomId'],
+                            "hotelId" => $this->data['hotel']['hotelId'] ?? null,
+                            "roomId" => $this->data['hotel']['roomId'] ?? null,
                             "effectiveDate" => $nv['effectiveDate'],
                             "amount" => $nv['amount'],
                         ];
@@ -983,21 +1063,36 @@ class ApiClient extends ReceiveBaseClient
         $this->startTrans();
         try {
             if ($updateOrder) {
+                if ($this->data['total_price'] != $updateOrder['total_price']) {
+                    $this->rollbackTrans();
+                    return $this->r(100,$this->lang("VSubGoodsMultipleOrder.total_price_not_eq"),['calculate_price' => $updateOrder['total_price'],'total_price' => $this->data['total_price']]);
+                }
                 $updateOrder['retail_price'] = $updateOrder['total_price'];
                 $flag[] = $this->updateSaleOrders($updateOrder);
-                $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
-                $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
                 actionLog($this->getLS(), '修改订单SQL');
                 $result = $this->checkFlag($flag);
                 actionLog($result, '事务结果');
                 if ($result) {
+                    $this->commitTrans();
+                    $field = "order_id,trade_no,out_trade_no,mobile,order_type,pay_status,pay_type,pay_method,cost_price,market_price,total_price,total_quantity,has_hotel,goods_type,create_time";
+                    $this->order = $this->getSaleOrdersFind(['order_id' => $this->order['order_id']], $field);
+                    $detailsField = "sod_id,order_id,mc_id,channel_position,channel_code,mg_id,
+                    g_id,g_name,g_type,pic,sku,gc_name,cost_price,market_price,retail_price,discount_price,total_sod_price,quantity,bar_code,batch_number,is_gift";
+                    $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']], 0, $detailsField);
+                    if ($this->order['has_hotel'] == 1) {
+                        $hotelField = "sh_id,order_id,hotelId,hotelFrom,roomId,logId,tripData,totalPrice,mobile,num,adults,checkInDate,checkOutDate,guestNames,expectCheckInTime,pay_amount,reservation_status,create_status,create_time";
+                        $this->order['hotelList'] = $this->getSaleHotelFind(["order_id" => $this->order['order_id']], $hotelField);
+                        if ($this->order['hotelList']) {
+                            $this->order['hotelList']['nightList'] = $this->getSaleHotelNightlyList(['sh_id' => $this->order['hotelList']['sh_id']], 0,
+                                'sn_id,sh_id,hotelId,roomId,effectiveDate,amount');
+                        }
+                    }
                     // 免费的直接出货
 //                    if ($this->data['pay_type'] == 0) {
 ////                        $this->outGoods();
 //                        $this->commitTrans();
 //                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
 //                    } else {
-                        $this->commitTrans();
                         return $this->r(200, $this->lang("VSubCar.make_order_success"), ['order' => $this->order]);
 //                    }
                 }
@@ -1012,33 +1107,11 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
-     * 获取设备自由组合商品
-     * @return array|\think\response\Json
+     * 设备退出H5页面
+     * @return array|bool|string
      */
-    public function getMachineFree()
+    public function logoutH5()
     {
-        try {
-            $data = $this->getMachineFreeFind(['m_id' => $this->machine['m_id']]);
-            if ($data) {
-                if ($data['designated_hotel'] > 1) {
-                    $data['hotelList'] = $this->getMachineFreeHotelList(['mf_id' => $data['mf_id']], 0);
-                }
-                if ($data['designated_goods'] > 1) {
-                    $where['mfg.mf_id'] = $data['mf_id'];
-                    $where['mc.m_id'] = $this->machine['m_id'];
-                    if ($data['designated_goods'] == 3 ){
-                        $gIds = $this->getMachineFreeGoodsColumn(['mf_id' => $data['mf_id']],'g_id');
-                        $where[] = ['mfg_id','not in',$gIds];
-                    }
-                    $field = "mc.mc_id,mc.channel_code,mc.g_id,mc.g_name,mc.pic,mc.gc_id,mc.gc_name,mc.status,mc.stock,mfg.sale_amount,mfg.rise_fall_ratio,g.g_type,g.sku,g.retail_price";
-                    $goodsList = $this->getMachineChannelJoinMfgList($where,$field);
-                    $data['goodsList'] = $goodsList;
-                }
-            }
-            return $this->r(200, $this->lang("query_success"), $data);
-        } catch (\Exception $e) {
-            actionException($e,1);
-            return $this->rTryCatch($e->getMessage());
-        }
+        return $this->sendToMachine($this->machine,'logoutH5');
     }
 }

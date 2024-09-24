@@ -52,6 +52,10 @@ class SaleOrdersClient extends MachineBaseClient
                     $this->rollbackTrans();
                     return $this->r(100, $this->lang("VSaleOrders.sod_no_data"));
                 }
+                $updateSod['sod_id'] = $value['sod_id'];
+                $updateSod['deliver_pics'] = $value['deliver_pics'];
+                $updateSod['out_sequence'] = $value['out_sequence'];
+                $flag[] = $this->updateSaleOrdersDetails($updateSod);
                 $insert = [
                     "order_id" => $order['order_id'],
                     "trade_no" => $order['trade_no'],

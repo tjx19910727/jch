@@ -388,7 +388,8 @@ function WxOrAli(){
 function FromXml($xml,$isFile = false)
 {
     if(!$xml){
-        die(returnState(100,"xml数据异常！"));
+        returnState(100,"xml数据异常！")->send();
+        die();
     }
     //将XML转为array
     //禁止引用外部xml实体

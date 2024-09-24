@@ -88,7 +88,6 @@ trait OutGoodsTrait
                 $update['out_sequence'] = $out_sequence;
                 $flag[] = $this->updateSaleOrdersDetails($update,$where);
                 actionLog($this->getLS(),'【SQL】修改订单副表','OutGoods');
-
                 // 修改货道
                 $updateMc = [];
                 $whereMc['channel_code'] = $channel_code;
@@ -99,8 +98,39 @@ trait OutGoodsTrait
                     // 外部预订提货码订单，减冻结库存
                     if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);
+                        $stock = $mc['stock'];
                     } else {
                         $updateMc['stock'] = bcsub($mc['stock'], $success);
+                        $stock = $updateMc['stock'];
+                    }
+                    // 库存达到货道库存预警值
+                    actionLog($mc,"货道数据");
+                    actionLog($stock,'库存值');
+                    if (!$mc['stock_warning']) {
+                        $machineConfig = $this->getMachineConfigFind(['m_id' => $this->machine['m_id']],'stock_warning');
+                        if ($machineConfig['stock_warning'] > 0 ) $mc['stock_warning'] = $machineConfig['stock_warning'];
+                    }
+                    if ($stock <= $mc['stock_warning']) {
+                        try {
+                            $this->noticeSendData = [
+                                "ao_id" => $this->machine['ao_id'],
+                                "m_id" => $this->machine['m_id'],
+                                "templateType" => "understock",
+                                "replaceData" => [
+                                    "machine_id" => $this->machine['machine_id'],
+                                    "machine_name" => $this->machine['machine_name'],
+                                    "stock" => $stock,
+                                    "channel_code" => $mc['channel_code'],
+                                    "stock_warning" => $mc['stock_warning'] ?? 0,
+                                ]
+                            ];
+                            actionLog($this->noticeSendData,'发送通知');
+                            $result = $this->noticeSend();
+                            actionLog($result, '发送结果');
+                        } catch (\Exception $e) {
+                            actionLog("发送库存预警抛出异常");
+                            actionException($e, 1);
+                        }
                     }
 
                     // 销售出货成功后再生成商品变化数据

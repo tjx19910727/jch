@@ -73,6 +73,7 @@ return [
     "payNotify" => [
         "order_no_require" => "订单编号不能为空",
         "pay_status" => "支付结果不能为空",
+        "shelf_on_require" => "商品上架状态不能为空",
     ],
 
 ];

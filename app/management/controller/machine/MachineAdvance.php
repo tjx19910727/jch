@@ -40,7 +40,8 @@ class MachineAdvance extends Common
         $groupType = input('groupType',1);
         $pageNum = input('pageNum',0);
         $pushType = input("pushType");
-        $where = $this->getWhere(["push_type" => $pushType,"adv_title" => $adv_title,"machine_id|machine_name" => $machine],false,['adv_title' => "like","machine_id|machine_name" => "like"]);
+        $m_id = input("m_id");
+        $where = $this->getWhere(["push_type" => $pushType,"adv_title" => $adv_title,"machine_id|machine_name" => $machine,'m_id' => $m_id],false,['adv_title' => "like","machine_id|machine_name" => "like"]);
         $where[] = ['status',"<",3];
         if (!isset($where['push_type'])) $where[] = ['push_type','between',[2,3]];
         // 机器分组

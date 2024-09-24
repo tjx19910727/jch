@@ -10,11 +10,11 @@ namespace app\machine\controller;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Machine\Application;
-use think\facade\Lang;
+use app\machine\validate\VHotel;
 
 class Hotel extends Common
 {
-    protected $validatePath = 'app\machine\validate\VHotel.';
+    protected $validatePath = VHotel::class . ".";
     protected $config;
     /**
      * @var Application
@@ -31,15 +31,25 @@ class Hotel extends Common
         $postData = json2arr($postData);
         actionLog($postData,'接收到的数据');
         $action = $this->request->action();
+        $reflection = new \ReflectionClass(__CLASS__);
+        $methods = $reflection->getMethods();
+        $methodNames = array_map(function ($method) {
+            return $method->getName();
+        },$methods);
+        if (!in_array($action,$methodNames)) {
+            returnState(300,lang("error_api"))->send();
+            die();
+        }
         try {
             $this->validate($postData,$this->validatePath . $action);
         } catch (\Exception $e) {
-            die(json_encode(['state' => 300, 'msg' => Lang::get($e->getMessage())],320));
+            returnTryCatch(lang($e->getMessage()))->send();
+            die();
         }
         $frequency = checkFrequency($action);
         if ($frequency !== true) {
-            $frequency = obj2arr($frequency);
-            die(json_encode($frequency,320));
+            returnState(300,lang($frequency))->send();
+            die();
         }
         $this->config = [
             "machine_id" => $postData['machine_id'],
@@ -48,8 +58,18 @@ class Hotel extends Common
         $this->app = AppFactory::machine($this->config);
         if ($this->app->hotel->checkSign($postData) !== true) {
             @cache($postData['machine_id'] . ".signKey",null);
-            die(json_encode(["state" => 100, "msg" => Lang::get("check_sign_fail")], 320));
+            returnTryCatch(lang(lang("check_sign_fail")))->send();
+            die();
         }
+    }
+
+    /**
+     * 获取携程套餐商品列表
+     * @return array|\think\response\Json
+     */
+    public function getTripMultiple()
+    {
+        return $this->app->hotel->getTripMultiple();
     }
 
     /**
@@ -86,15 +106,6 @@ class Hotel extends Common
     public function getRoomList()
     {
         return $this->app->hotel->getRoomList();
-    }
-
-    /**
-     * 验证房间是否可订
-     * @return array|\think\response\Json
-     */
-    public function availableCheck()
-    {
-        return $this->app->hotel->availableCheck();
     }
 
     /**

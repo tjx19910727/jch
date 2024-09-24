@@ -54,7 +54,6 @@ trait AfterOrderPaymentTrait
         $flag[] = $this->updateSaleOrders($this->order);
         actionLog($this->getLS(),'订单修改数据');
         $result = flag_check($flag);
-//        $this->sendTemp();
         return $result;
     }
 
@@ -80,6 +79,10 @@ trait AfterOrderPaymentTrait
             }
             // 新数据格式
             foreach ($details as $k => $v) {
+                if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
+                    $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
+                    actionLog($this->getLS(),'减固定组合商品酒店库存');
+                }
                 if ($v['g_type'] == 1) {
                     $dc = [
                         "channel_code" => $v['channel_code'],
@@ -174,6 +177,27 @@ trait AfterOrderPaymentTrait
         return flag_check($flag);
     }
 
+    private function sendNotice()
+    {
+        try {
+            $this->noticeSendData = [
+                "ao_id" => $this->machine['ao_id'],
+                "m_id" => $this->machine['m_id'],
+                "templateType" => "sale",
+                "replaceData" => [
+                    "machine_id" => $this->machine['machine_id'],
+                    "machine_name" => $this->machine['machine_name'],
+                    "trade_no" => $this->order['trade_no'],
+                    "money" => number_format($this->order['total_price'],2,'.',','),
+                ]
+            ];
+            $result = $this->noticeSend();
+            actionLog($result, '发送结果');
+        } catch (\Exception $e) {
+            actionLog("发送库存预警抛出异常");
+            actionException($e, 1);
+        }
+    }
     /**
      * 支付失败处理
      */
@@ -209,18 +233,22 @@ trait AfterOrderPaymentTrait
                 $updateSh['create_status'] = 1;
                 // 自营酒店
                 if ($sh['hotelFrom'] == 2 && $status == 1) {
-                    $updateSh['checkOff_code'] = $this->getHotelCheckOffCode();
-                    $updateSh['create_status'] = 2;
-                    $updateSh['reservation_status'] = 2;
-                    // 发送酒店预订通知
-                    $smsParam = [
-                        $updateSh['checkOff_code'],
-                    ];
-                    $phoneNumber = [
-                        $this->order['mobile'],
-                    ];
-                    $result = TencentCloud::sendSms($smsParam,$phoneNumber);
-                    actionLog($result,'预订酒店发送短信通知');
+                    if ($sh['gmg_id']) {
+                        $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $sh['gmg_id']],'stock');
+                        actionLog($this->getLS(),'减固定组合商品酒店库存');
+                    }
+//                    $updateSh['checkOff_code'] = $this->getHotelCheckOffCode();
+//                    $updateSh['create_status'] = 2;
+//                    $updateSh['reservation_status'] = 2;
+//                    // 发送酒店预订通知
+//                    $smsParam = [
+//                        $updateSh['checkOff_code'],
+//                    ];
+//                    $phoneNumber = [
+//                        $this->order['mobile'],
+//                    ];
+//                    $result = TencentCloud::sendSms($smsParam,$phoneNumber);
+//                    actionLog($result,'预订酒店发送短信通知');
                 }
                 if ($sh['hotelFrom'] == 1) {
                     $params = [

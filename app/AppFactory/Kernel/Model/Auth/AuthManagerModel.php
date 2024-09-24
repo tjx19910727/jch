@@ -15,32 +15,32 @@ class AuthManagerModel extends BaseModel
 {
     protected $name = "auth_manager";
     protected $pk = "manager_id";
-    protected $schema = [
-        "manager_id" => "int",
-        "ao_id" => "int",
-        "nickname" => "string",
-        "account" => "string",
-        "password" => "string",
-        "pid" => "int",
-        "level" => "int",
-        "user_id" => "int",
-        "openid" => "string",
-        "sex" => "int",
-        "pic" => "string",
-        "balance" => "float",
-        "frozen" => "float",
-        "withdrawal" => "float",
-        "bill_account" => "string",
-        "real_name" => "string",
-        "email" => "string",
-        "wx_notice" => "string",
-        "email_notice" => "string",
-        "status" => "int",
-        "creator" => "int",
-        "create_time" => "int",
-        "update_id" => "int",
-        "update_time" => "int",
-    ];
+//    protected $schema = [
+//        "manager_id" => "int",
+//        "ao_id" => "int",
+//        "nickname" => "string",
+//        "account" => "string",
+//        "password" => "string",
+//        "pid" => "int",
+//        "level" => "int",
+//        "user_id" => "int",
+//        "openid" => "string",
+//        "sex" => "int",
+//        "pic" => "string",
+//        "balance" => "float",
+//        "frozen" => "float",
+//        "withdrawal" => "float",
+//        "bill_account" => "string",
+//        "real_name" => "string",
+//        "email" => "string",
+//        "wx_notice" => "string",
+//        "email_notice" => "string",
+//        "status" => "int",
+//        "creator" => "int",
+//        "create_time" => "int",
+//        "update_id" => "int",
+//        "update_time" => "int",
+//    ];
 
 
 

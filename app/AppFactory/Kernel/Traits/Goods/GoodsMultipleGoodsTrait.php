@@ -36,6 +36,16 @@ trait GoodsMultipleGoodsTrait
         return GoodsMultipleGoodsModel::getColumn($where, $column);
     }
 
+    public function setGoodsMultipleGoodsInc($where,$field,$inc = 1)
+    {
+        return GoodsMultipleGoodsModel::setInc($where,$field,$inc);
+    }
+
+    public function setGoodsMultipleGoodsDec($where,$field,$dec = 1)
+    {
+        return GoodsMultipleGoodsModel::setDec($where,$field,$dec);
+    }
+
     /**
      * 统计数量
      * @param $where
@@ -71,6 +81,11 @@ trait GoodsMultipleGoodsTrait
     public function getGoodsMultipleGoodsFind($where, $field = "*", $order = "")
     {
         return GoodsMultipleGoodsModel::getFind($where, $field, $order);
+    }
+
+    public function getGoodsMultipleGoodsJoinGoodsFind($where,$field = "*",$order = "")
+    {
+        return GoodsMultipleGoodsModel::getJoinGoodsFind($where,$field,$order);
     }
 
     /**

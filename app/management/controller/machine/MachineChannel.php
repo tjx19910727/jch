@@ -56,6 +56,16 @@ class MachineChannel extends Common
         return $this->app->machineChannel->updateMc($postData);
     }
 
+    /**
+     * 锁定/解锁货道价格
+     * @return array|\think\response\Json
+     */
+    public function lockPrice()
+    {
+        $postData = input();
+        return $this->app->machineChannel->lockPrice($postData);
+    }
+
     public function del()
     {
         $postData = input();
@@ -93,7 +103,7 @@ class MachineChannel extends Common
             }
             sleep(1);
             $n++;
-            if ($n >= 120) {
+            if ($n >= 60) {
                 return returnState(100,lang("action_machine_overtime"));
             }
         }

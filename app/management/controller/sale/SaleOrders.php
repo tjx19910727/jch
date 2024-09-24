@@ -25,7 +25,7 @@ class SaleOrders extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['trade_no' => "like","mch_no" => "like","machine_name" => "like","machine_id" => "like"]);
         $where['pay_status'] = 3;
-        $field = "*";
+        $field = "*,(total_price - refund_amount) total_price";
         return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc");
     }
 
@@ -56,7 +56,7 @@ class SaleOrders extends Common
         $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"machine_id" => 'like',"machine_name" => 'like']);
         $where['so.pay_status'] = 3;
         $field = "so.machine_id,so.machine_name,so.trade_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,
-        sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
+        sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
         return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc"));
     }
@@ -82,7 +82,8 @@ class SaleOrders extends Common
         $postData = input();
         actionLog($postData,'退款数据');
         try { $this->validate($postData,$this->validatePath . 'refund');} catch (\Exception $e) { return returnValidate($e->getMessage());}
-        $check = checkFrequency("refund" . $postData['order_id'],3);
+        $check = checkFrequency("refund" . $postData['order_id'],10);
+        actionLog($check,"间隔日志");
         if ($check !== true) return returnState(100,$check);
         $postData['refund'] = json2arr($postData['refund']);
         return $this->app->saleOrders->refundOrder($postData);
@@ -99,8 +100,8 @@ class SaleOrders extends Common
         if (!$order) return returnState(100,lang("VSaleOrders.order_no_data"));
         if (!$order['transaction_video']) {
             $otherData = ['trade_no' => $trade_no];
-            $this->app->machine->sendToMachine(['machine_id' => $order['machine_id']],'transactionVideo',$otherData);
-            return returnState(200,'正在从机器端获取视频文件，请稍做等待后下载');
+            $result = $this->app->machine->sendToMachine(['machine_id' => $order['machine_id']],'transactionVideo',$otherData);
+            return returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result);
         }
         return returnState(200,'查询成功',$order);
     }
@@ -127,6 +128,7 @@ class SaleOrders extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->authNodeWhere();
+        if (isset($postData['m_id']) && $postData['m_id']) $where['sor.m_id'] = $postData['m_id'];
         if (isset($postData['trade_no']) && $postData['trade_no']) $where[] = ['sor.trade_no','like',"%" .$postData['trade_no']. "%"];
         if (isset($postData['machine_id']) && $postData['machine_id']) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
         if (isset($postData['refund_no']) && $postData['refund_no']) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
@@ -146,6 +148,7 @@ class SaleOrders extends Common
     {
         $postData = input();
         $where = $this->authNodeWhere();
+        if (isset($postData['m_id']) && $postData['m_id']) $where['sor.m_id'] = $postData['m_id'];
         if (isset($postData['trade_no'])) $where[] = ['sor.trade_no','like',"%" .$postData['trade_no']. "%"];
         if (isset($postData['machine_id'])) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
         if (isset($postData['refund_no'])) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
@@ -303,8 +306,6 @@ class SaleOrders extends Common
         $where = $this->getWhere($postData,false,['trade_no' => "like","mobile" => "like","checkOff_code"]);
         $field = "sod.sod_id,so.trade_no,so.machine_id,so.machine_name,so.mobile,sod.checkOff_code,sod.g_name,sod.checkOff_status,sod.checkOff_time,so.pay_time";
         $pageNum = $postData['pageNum'] ?? 0;
-//        $g_ids = $this->app->goods->getGoodsColumn(["creator" => $this->manager['manager_id']],"g_id");
-
         $order = "sod.checkOff_time desc";
         return $this->app->saleOrders->queryCheckOffList($where,$pageNum,$field,$order);
     }
@@ -319,10 +320,14 @@ class SaleOrders extends Common
         if (!isset($postData['sod_id']) || !$postData['sod_id']) return returnState(100,lang("VSaleOrders.sod_id_require"));
         if (!isset($postData['checkOff_status']) || !$postData['checkOff_status'] || in_array($postData['checkOff_status'],[2,3]))
             return returnState(100,lang("VSaleOrders.checkOff_status_error"));
-        $where['sod_id'] = $postData['sod_id'];
         return $this->app->saleOrders->checkOffTicket($postData['sod_id'],$postData['checkOff_status']);
     }
 
+    /**
+     * 查询酒店
+     * @return \app\AppFactory\Kernel\Model\BaseModel|\app\AppFactory\Kernel\Model\BaseModel[]|array|string|\think\Collection|\think\Paginator
+     * @throws \Exception
+     */
     public function queryHotel()
     {
         $postData = input();
@@ -331,13 +336,16 @@ class SaleOrders extends Common
         return $this->app->saleOrders->getSaleHotelList($where,$pageNum);
     }
 
+    /**
+     *
+     * @return \app\AppFactory\Management\Sale\SaleOrdersClient|\app\AppFactory\Management\Sale\SaleOrdersClient[]|array|\think\Collection|\think\Paginator|\think\response\Json
+     */
     public function checkOffHotel()
     {
         $postData = input();
         if (!isset($postData['sh_id']) || !$postData['sh_id']) return returnState(100,lang("VSaleOrders.sh_id_require"));
         if (!isset($postData['checkOff_status']) || !$postData['checkOff_status'] || in_array($postData['checkOff_status'],[2,3]))
             return returnState(100,lang("VSaleOrders.checkOff_status_error"));
-        $where = $this->getWhere($postData,false,[]);
-        return $this->app->saleOrders->getHotelJoinSaleOrdersList($where,$postData['pageNum'] ?? 0,$field = "*",$order);
+        return $this->app->saleOrders->checkOffHotel($postData['sh_id'],$postData['checkOff_status']);
     }
 }

@@ -72,6 +72,10 @@ trait SaleOrdersTrait
         if ($pageNum)
             $data = $data->each(function ($item) {
                 $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
+                if ($item['has_hotel'] == 1) {
+                    $item['hotel'] = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
+                    $item['hotel']['nightly'] = $this->getSaleHotelNightlyList(['sh_id' => $item['hotel']['sh_id']]);
+                }
                 return $item;
             });
         return $data;

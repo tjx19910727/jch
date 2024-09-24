@@ -24,6 +24,7 @@ class EmailClient extends NoticeBaseClient
      */
     public function send()
     {
+        actionLog($this->config,'发送邮件config参数');
         // 发送类型为邮件，配置信息、模板信息、收件人信息不能为空
         if ($this->config['sendType'] == 2 &&
             isset($this->config['config']) && $this->config['config'] &&
@@ -43,6 +44,7 @@ class EmailClient extends NoticeBaseClient
      */
     public function addTemplateLog($result)
     {
+        $flag = [];
         foreach ($this->config['receiver'] as $k => $v) {
             $insert = [
                 "send_id" => $this->config['config']['creator'],
@@ -86,7 +88,7 @@ class EmailClient extends NoticeBaseClient
             $mail->SMTPAuth = true;// 开启SMTP授权验证
             $mail->Username = $config['username'];// SMTP 账号
             $mail->Password = $config['authCode'];// SMTP 授权码
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;// 开启SSL
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;// 开启SSL
             $mail->Port = 465;// 端口号
             //Recipients
             $mail->setFrom($config['sendEmail'], $config['nickname']);
@@ -112,8 +114,10 @@ class EmailClient extends NoticeBaseClient
             $mail->Subject = $this->config['template']['subject'];// 标题
             $mail->Body = $this->config['template']['body'];// HTML正文
             $mail->AltBody = $this->config['template']['altBody'] ?? '';// 纯文本正文
+            actionLog($mail,'发送数据');
             return $mail->send();
         } catch (Exception $e) {
+            actionException($e,1);
             return $e->getMessage();
         }
     }

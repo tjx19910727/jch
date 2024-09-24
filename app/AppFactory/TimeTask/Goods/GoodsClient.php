@@ -40,7 +40,7 @@ class GoodsClient extends TimeTaskBase
                 if ($num > 0) {
                     $data = $redis->rPop("updateGoods");
                     if ($data) {
-                        actionLog($data,'修改商品信息后');
+                        actionLog($data,'修改商品信息后','updateGoodsSynchronization');
                         $this->synchronizationGoods($data);
                         $this->synchronizationMgMc($data);
                     }
@@ -83,6 +83,12 @@ class GoodsClient extends TimeTaskBase
         return "处理完成";
     }
 
+    public function testUpdateMg()
+    {
+        $data = "444";
+        $this->synchronizationMc($data);
+    }
+
     /**
      * 修改商品库，通知设备更新该商品
      * @param $g_id
@@ -113,7 +119,7 @@ class GoodsClient extends TimeTaskBase
         $goods = $this->getGoodsFind(['g_id' => $g_id],'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,is_recommend,is_gift,recoverable,heat');
         if ($goods) {
             $goods = $goods->toArray();
-            actionLog($goods, '需要同步的商品数据','updateMgSynchronization');
+            actionLog($goods, '需要同步的商品数据','synchronizationMgMc');
 //            $updateChannel = [
 //                "g_name" => $goods['g_name'],
 //                "gc_id" => $goods['gc_id'],
@@ -165,15 +171,15 @@ class GoodsClient extends TimeTaskBase
      */
     public function synchronizationMc($mg_id)
     {
-        $mg = $this->getMachineGoodsFind(['mg_id' => $mg_id],'machine_id,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price');
+        $mg = $this->getMachineGoodsFind(['mg_id' => $mg_id],'mg_id,machine_id,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price');
         if ($mg) {
             $mg = $mg->toArray();
             $whereMc['g_id'] = $mg['g_id'];
             $whereMc['machine_id'] = $mg['machine_id'];
-            $result = $this->sendToMachine(['machine_id' => $mg['machine_id']],'updateMg',['mg_id' => $mg_id]);
-            actionLog($result,'推送设备商品库');
+            $result = $this->sendToMachine(['machine_id' => $mg['machine_id']],'updateMg',['mg_id' => $mg['mg_id']]);
+            actionLog($result,'推送设备商品库','synchronizationMc');
 
-            unset($mg['machine_id']);
+            unset($mg['machine_id'],$mg['mg_id']);
             $this->startTrans();
             try {
                 $this->synchronizationMachineChannel($whereMc, $mg);
@@ -194,20 +200,20 @@ class GoodsClient extends TimeTaskBase
     protected function synchronizationMachineGoods($whereMg,$goods)
     {
         $machineGoods = $this->getMachineGoodsList($whereMg,0,'mg_id, machine_id');
-        actionLog($this->getLS(),'查询设备商品数据SQL');
+        actionLog($this->getLS(),'查询设备商品数据SQL','synchronizationMachineGoods');
         if ($machineGoods) {
             $machineGoods = $machineGoods->toArray();
-            actionLog($machineGoods,'绑定该商品的所有设备商品');
+            actionLog($machineGoods,'绑定该商品的所有设备商品','synchronizationMachineGoods');
             foreach ($machineGoods as $mgk => $mgv) {
                 // 同步设备商品库
                 $updateMgResult = $this->updateMachineGoods($goods, ['mg_id' => $mgv['mg_id']],
                     ["g_id", "g_name", "gc_id", "gc_name", "pic", "sku", "bar_code", "cost_price", "market_price", "retail_price"]);
-                actionLog($this->getLS(),'修改设备商品库SQL');
+                actionLog($this->getLS(),'修改设备商品库SQL','synchronizationMachineGoods');
                 if (!$updateMgResult) {
                     return $this->rFail($this->lang("VMachineGoods.synchronization_fail"));
                 }
                 $result = $this->sendToMachine(['machine_id' => $mgv['machine_id']],'updateMg',['mg_id' => $mgv['mg_id']]);
-                actionLog($result,$mgv['machine_id'] . "设备商品【" . $mgv['mg_id'] . '】更新发送数据结果');
+                actionLog($result,$mgv['machine_id'] . "设备商品【" . $mgv['mg_id'] . '】更新发送数据结果','synchronizationMachineGoods');
             }
         }
     }
@@ -231,12 +237,12 @@ class GoodsClient extends TimeTaskBase
                 }
                 $update['mc_id'] = $value['mc_id'];
                 $updateMcResult = $this->updateMachineChannel($update);
-                actionLog($this->getLS(),'修改设备货架商品信息SQL');
+                actionLog($this->getLS(),'修改设备货架商品信息SQL','synchronizationMachineChannel');
                 if (!$updateMcResult) {
                     return $this->rFail($this->lang("VMachineChannel.synchronization_fail"));
                 }
                 $result = $this->sendToMachine(['machine_id' => $value['machine_id']],'updateMc',['mc_id' => $value['mc_id']]);
-                actionLog($result,$value['machine_id'] . "货架【" . $value['mc_id'] . '】更新发送数据结果');
+                actionLog($result,$value['machine_id'] . "货架【" . $value['mc_id'] . '】更新发送数据结果','synchronizationMachineChannel');
             }
         }
     }

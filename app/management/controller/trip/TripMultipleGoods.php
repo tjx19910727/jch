@@ -2,36 +2,37 @@
 /**
  * Created by PhpStorm.
  * User: Administrator
- * Date: 2024/8/27
- * Time: 8:45
+ * Date: 2024/9/10
+ * Time: 10:17
  */
 
-namespace app\management\controller\machine;
+namespace app\management\controller\trip;
 
 
 use app\management\controller\Common;
-use app\management\validate\Machine\VMachineFreeHotel;
+use app\management\validate\Trip\VTripMultipleGoods;
 
-class MachineFreeHotel extends Common
+class TripMultipleGoods extends Common
 {
 
     protected $field = "*";
-    protected $validatePath = VMachineFreeHotel::class . ".";
+    protected $validatePath = VTripMultipleGoods::class . ".";
 
     public function getList()
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
-        if (!isset($where['mf_id']) || !$where['mf_id']) return returnState(100,lang("VMachineFree.mf_id_require"));
-        return $this->app->machineFreeHotel->getList($where,$pageNum,$this->field);
+        $field = "tmg_id,tm_id,tmg.g_id,tmg.is_required,tmg.buy_lower,tmg.buy_upper,tmg.sale_amount,tmg.rise_fall_ratio,
+        g.g_name,g.gc_name,g.pic,g.sku,g.model,g.performance,g.g_type,g.retail_price";
+        return returnState(200,lang("query_success"),$this->app->tripMultipleGoods->getTripMultipleGoodsJoinGoodsList($where,$pageNum,$field,"tmg_id desc"));
     }
 
     public function getFind()
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineFreeHotel->getFind($where);
+        return $this->app->tripMultipleGoods->getFind($where,$this->field);
     }
 
     public function add()
@@ -42,9 +43,9 @@ class MachineFreeHotel extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        $check = $this->app->machineFreeHotel->getMachineFreeHotelFind(['mf_id' => $postData['mf_id'],'hotelId' => $postData['hotelId']]);
-        if ($check) return returnState(100,lang("VMachineFree.hotelId_unique"));
-        return $this->app->machineFreeHotel->add($postData);
+        $check = $this->app->tripMultipleGoods->getTripMultipleGoodsFind(['tm_id' => $postData['tm_id'],'g_id' => $postData['g_id']]);
+        if ($check) return returnState(100,lang("VTripMultiple.g_id_unique"));
+        return $this->app->tripMultipleGoods->add($postData);
     }
 
     public function update()
@@ -55,7 +56,7 @@ class MachineFreeHotel extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineFreeHotel->update($postData,[],['hotelTel','imageUrl','address','openYear','renovationYear','roomQuantity','guestOverallRating','rise_fall_ratio']);
+        return $this->app->tripMultipleGoods->update($postData,[],['sale_amount','rise_fall_ratio','buy_lower','buy_upper']);
     }
 
     public function del()
@@ -66,6 +67,6 @@ class MachineFreeHotel extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineFreeHotel->del($postData);
+        return $this->app->tripMultipleGoods->del($postData);
     }
 }

@@ -36,7 +36,6 @@ class Common
         }
         if (!$tokenArr || (isset($tokenArr['expire_time']) && $tokenArr['expire_time'] <= time() + 60)) {
             $url = $this->baseUrl . "/openservice/getToken?appId=$this->appId&appSecret=$this->appSecret";
-//            $url = "http://yantest.dakemakeji.com/machine/test/testNotify";
             $response = $this->curl_request($url,"GET");
             if (is_string($response)) $response = json_decode($response,true);
             if ($response && isset($response['token'])) {

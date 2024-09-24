@@ -17,6 +17,14 @@ class VHotel extends VCommon
         "msg_id" => "require|unique:machine_mq_record",
         "timestamp" => "require|checkTimestamp",
         "sign" => "require",
+        "mobile" => "require",
+        "tm_id" => "require",
+
+        "carList" => "require",
+        "g_id" => "require",
+        "hotelList" => "require",
+        "effectiveDate" => "require",
+        "amount" => "require|number",
 
         "cityId" => "require",
         "hotelId" => "require",
@@ -38,6 +46,15 @@ class VHotel extends VCommon
         "timestamp.require" => "VReceive.timestamp_require",
         "sign.require" => "VReceive.sign_require",
 
+        "mobile.require" => "VHotel.mobile_require",
+        "tm_id.require" => "VHotel.tm_id_require",
+
+        "carList.require" => "VHotel.carList_require",
+        "g_id.require" => "VHotel.g_id_require",
+        "effectiveDate.require" => "VHotel.effectiveDate_require",
+        "amount.require" => "VHotel.amount_require",
+        "amount.number" => "VHotel.amount_number",
+
         "cityId.require" => "VHotel.cityId_require",
         "hotelId.require" => "VHotel.hotelId_require",
         "checkInDate.require" => "VHotel.checkInDate_require",
@@ -54,12 +71,15 @@ class VHotel extends VCommon
     ];
 
     protected $scene = [
+        "getTripMultiple" => ["msg_id", "machine_id", "timestamp", "sign"],
         "getTripCity" => ["pageNum", "page"],
         "getList" => ["cityId","quantity", "checkInDate", "checkOutDate", "pageNum", "page"],
         "getDetails" => ["hotelId"],
         "getRoomList" => ["hotelId","quantity", "checkInDate", "checkOutDate"],
-        "subHotel" => ["msg_id", "machine_id", "timestamp", "sign", "order_id", "hotelList"],
-        "hotel" => ["hotelId", "roomId", "totalPrice", "pay_amount", "checkInDate", "checkOutDate", "guestNames"],
+        "subHotel" => ["msg_id", "machine_id", "timestamp", "sign", "tm_id", "mobile","carList", "hotelList"],
+        "carList" => ["g_id","quantity"],
+        "hotelList" => ["hotelId", "roomId", "totalPrice", "pay_amount", "checkInDate", "checkOutDate", "guestNames","roomPriceList"],
+        "roomPriceList" => ["effectiveDate","amount"],
         "availableCheck" => ["machine_id","hotelId","roomId", "count", "quantity", "checkInDate", "checkOutDate", "tripData","nightlyPrice"],
     ];
 

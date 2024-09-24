@@ -32,8 +32,9 @@ class Application extends ServiceContainer
     public function send()
     {
         $this->config['sendType'] = 1;
-        $this->weChat->send();
+        $flag[] = $this->weChat->send();
         $this->config['sendType'] = 2;
-        $this->email->send();
+        $flag[] = $this->email->send();
+        return $flag;
     }
 }

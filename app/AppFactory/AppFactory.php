@@ -18,6 +18,7 @@ namespace app\AppFactory;
  * @method static TimeTask\Application         timeTask($config = [])     定时任务
  * @method static Mobile\Application           mobile($config = [])       手机端
  * @method static Notice\Application           notice($config = [])       消息通知
+ * @method static Wx\Application               wx()                       微信处理
  * @package app\AppFactory
  */
 class AppFactory

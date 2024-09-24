@@ -28,7 +28,7 @@ class V2BaseClient extends ApiBaseClient
         parent::__construct($app);
         $this->getAuthConfig();
         $this->checkIp();
-//        $this->checkApiFrequency();
+        $this->checkApiFrequency();
         $this->checkParams();
         $this->checkApiSign();
     }
@@ -41,7 +41,7 @@ class V2BaseClient extends ApiBaseClient
         $this->authConfig = $this->getConfigApiFind(['auth_name' => $this->config['auth_name']]);
         actionLog($this->authConfig, 'API配置信息');
         if (!$this->authConfig) {
-            $this->returnData(99, $this->lang("msg." . 99))->send();
+            $this->returnData(2, $this->lang("msg." . 2))->send();
             die();
         }
         $this->authConfig = $this->authConfig->toArray();
@@ -72,8 +72,8 @@ class V2BaseClient extends ApiBaseClient
             $frequency[$this->config['api']]['time'] = time();
             $frequency[$this->config['api']]['params'] = $this->config['params'];
         } else {
-            // 同1个IP调用同1个接口超过1天总限制次数1000次
-            if ($frequency[$this->config['api']]['num'] >= 1000) {
+            // 同1个IP调用同1个接口超过1天总限制次数8640次
+            if ($frequency[$this->config['api']]['num'] >= 8640) {
                 $this->returnData(8, $this->lang("msg." . 8))->send();
                 die();
             }

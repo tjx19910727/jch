@@ -115,6 +115,7 @@ return [
 
         "mg_id_require" => "货道未绑定设备商品信息",
         "under_stock" => "货道库存不足",
+        "mc_status_error" => "货道状态异常",
     ],
 
     "VOutGoods" => [
@@ -166,6 +167,7 @@ return [
         "order_out" => "查无订单数据",
         "add_order_fail" => "创建订单信息失败",
         "out_status1" => "该订单已处理，请勿重复提交",
+        "pick_code_can_not_use" => "该取货码无法在此设备上使用",
 
         "status2" => "此取货码已使用",
         "status3" => "此取货码已过期",
@@ -225,7 +227,14 @@ return [
         "msg_id_unique" => "消息ID已存在，请重新上报",
         "timestamp_require" => "时间戳不能为空",
         "sign_require" => "签名不能为空",
+        "mobile_require" => "手机号码不能为空",
+        "tm_id_require" => "携程套餐ID不能为空",
         "timestamp_checkTimestamp_overdue" => "时间戳超时，请更新时间",
+        "carList_require" => "商品信息不能为空",
+        "g_id_require" => "商品ID不能为空",
+        "effectiveDate_require" => "生效日期不能为空",
+        "amount_require" => "售价不能为空",
+        "amount_number" => "售价必须为正整数，单位分",
 
         "pageNum_require" => "页面条数不能为空",
         "page_require" => "页码不能为空",
@@ -238,5 +247,30 @@ return [
         "quantity_require" => "房间数量不能为空",
         "tripData_require" => "携程可售房型加密标识不能为空",
         "nightlyPrice_require" => "每日的价格信息不能为空",
+
+        "tripMultipleNotData" => "查无携程套餐数据",
+    ],
+
+    "VSubGoodsMultipleOrder" => [
+        "gm_id_require" => "固定组合商品ID不能为空",
+        "gmg_id_require" => "固定组合商品详情ID不能为空",
+        "gm_not_data" => "查无组合商品数据",
+        "gmm_not_data" => "当前设备不能使用该组合商品",
+        "total_price_not_eq" => "总价不相等",
+        "sod_price_not_eq" => "商品总价不相等",
+        "goods_type_error" => "商品类型异常",
+        "hotel_amount_not_eq_total_room_price" => "酒店支付金额不等于房间总价",
+
+        "carList" => "购物车不能为空",
+        "designated_goods_except" => "该商品已被排除，不允许使用",
+        "designated_goods_not_in" => "该商品不在允许范围内，不允许使用",
+
+        "designated_hotel_except" => "非指定酒店，不允许使用",
+        "designated_hotel_not_in" => "该酒店不在允许范围内，不允许使用",
+        "gmg_not_data" => "组合商品详情不能为空",
+
+        "logId_required" => "单次请求唯一标识不能为空",
+        "tripData_required" => "携程可售房型加密标签不能为空",
+        "roomPriceList_required" => "房间价格列表不能为空",
     ],
 ];

@@ -52,7 +52,8 @@ class MachineBaseClient extends BaseClient
                         "machine_name" => $this->machine['machine_name'],
                     ]
                 ];
-                $this->noticeSend();
+                $result = $this->noticeSend();
+                actionLog($result,'发送结果');
             } catch (\Exception $e) {
                 actionLog("发送在线通知抛出异常");
                 actionException($e,1);

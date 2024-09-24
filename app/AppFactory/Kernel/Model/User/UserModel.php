@@ -16,26 +16,26 @@ class UserModel extends BaseModel
     protected $pk = "user_id";
     protected $name = "user";
 
-    protected $schema = [
-        "user_id" => "int",
-        "unionid" => "string",
-        "openid" => "string",
-        "name" => "string",
-        "pic" => "string",
-        "gender" => "int",
-        "mobile" => "string",
-        "province" => "string",
-        "city" => "string",
-        "address" => "string",
-        "Latitude" => "string",
-        "Longitude" => "string",
-        "Precision" => "string",
-        "type" => "int",
-        "blacklist" => "int",
-        "manager_id" => "int",
-        "creator" => "int",
-        "create_time" => "int",
-        "update_id" => "int",
-        "update_time" => "int",
-    ];
+//    protected $schema = [
+//        "user_id" => "int",
+//        "unionid" => "string",
+//        "openid" => "string",
+//        "name" => "string",
+//        "pic" => "string",
+//        "gender" => "int",
+//        "mobile" => "string",
+//        "province" => "string",
+//        "city" => "string",
+//        "address" => "string",
+//        "Latitude" => "string",
+//        "Longitude" => "string",
+//        "Precision" => "string",
+//        "type" => "int",
+//        "blacklist" => "int",
+//        "manager_id" => "int",
+//        "creator" => "int",
+//        "create_time" => "int",
+//        "update_id" => "int",
+//        "update_time" => "int",
+//    ];
 }

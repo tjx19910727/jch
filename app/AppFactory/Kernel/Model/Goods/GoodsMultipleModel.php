@@ -22,10 +22,11 @@ class GoodsMultipleModel extends BaseModel
      * @param int $pageNum
      * @param string $field
      * @param string $order
+     * @param int $page
      * @return GoodsMultipleModel|array|\think\Paginator
      * @throws \think\db\exception\DbException
      */
-    public static function joinGmm($where,$pageNum = 0,$field = "*",$order = "")
+    public static function joinGmm($where,$pageNum = 0,$field = "*",$order = "",$page = 1)
     {
         $data = self::alias("gm")
             ->join("goods_multiple_machine gmm","gmm.gm_id = gm.gm_id","left")
@@ -33,9 +34,10 @@ class GoodsMultipleModel extends BaseModel
             ->field($field)
             ->order($order);
         if ($pageNum) {
-            $data = $data->paginate($pageNum, false, ["query" => request()->param()])->each(function ($item) {
+            $data = $data->paginate(['list_rows' => $pageNum,'page' => $page,"query" => request()->param()], false)
+                ->each(function ($item) {
                 $item['gList'] = GoodsMultipleGoodsModel::getJoinGoodsList(['gm_id' => $item['gm_id']],
-                    'gmg_id,gmg.g_id,selling_price,rise_fall_ratio,g_name,g.pic,g.sku,g.g_type,g.performance');
+                    'gmg_id,gmg.g_id,selling_price,rise_fall_ratio,gmg.stock,g_name,g.pic,g.sku,g.g_type,g.performance');
                 return $item;
             });
             return $data;

@@ -36,9 +36,11 @@ class AdvertisementPush extends Common
         $machine = input("machine");
         $adv_title = input("adv_title");
         $groupType = input('groupType',1);
+        $m_id = input('m_id');
         $pageNum = input('pageNum',0);
         $where = $this->getWhere([]);
         $where[] = ['status',"<",3];
+        if ($m_id) $where['m_id'] = $m_id;
         $where['push_type'] = 1;
         // 机器分组
         if ($groupType == 1) {

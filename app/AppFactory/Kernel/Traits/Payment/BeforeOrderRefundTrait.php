@@ -35,9 +35,14 @@ trait BeforeOrderRefundTrait
         $this->sod = $this->getSaleOrdersDetailsFind(['sod_id' => $this->postData['refund']['sod_id']]);
         $this->sod = obj2arr($this->sod);
         if (!$this->sod) {
-            return $this->rValidate("查无购买的商品信息");
+            return $this->rFail("查无购买的商品信息");
         }
+        if ($this->sod['is_gift'] == 1)
+            return $this->rFail("赠品不允许退款");
         if ($this->sod['quantity'] == $this->postData['refund']['quantity']) $this->sodRefundAmount = $this->sod['total_sod_price'];
+        if ($this->sod['refund_quantity'] + $this->postData['refund']['quantity'] > $this->sod['quantity']) {
+            return $this->rFail("退款数量大于当前订单详情数量");
+        }
         // 本次退款总金额
         if (!$this->sodRefundAmount)
             $this->sodRefundAmount = bcmul(bcdiv($this->sod['total_sod_price'],$this->sod['quantity'],2) , $this->postData['refund']['quantity'],3);

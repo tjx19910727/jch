@@ -156,6 +156,7 @@ class ActivityClient extends ReceiveBaseClient
                 $this->order = $this->getSaleOrdersFind(['order_id' => $apc['order_id']]);
                 if (!$this->order) return $this->r(100, $this->lang("VActivityPickCode.order_no_data"));
                 $this->order = $this->order->toArray();
+                if ($this->order['m_id'] != $this->machine['m_id']) return $this->r(100,$this->lang("VActivityPickCode.pick_code_can_not_use"));
                 if ($this->order['out_status'] != 1) return $this->r(100, $this->lang("VActivityPickCode.out_status1"));
             } else {
                 // 系统随机取货，随机获取货架商品信息生成取货商品，整理carList，如果pick_type==2，则carList由外部传入

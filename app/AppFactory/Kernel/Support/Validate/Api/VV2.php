@@ -67,5 +67,6 @@ class VV2 extends SupportValidate
             "get_order_info" => ["kiosk_id","order_no"],
             "payNotify" => ["order_no","pay_status"],
             "hotelNotify" => ["order_no","reservation_status"],
+            "get_goods_multiple" => ["kiosk_id"],
         ];
 }

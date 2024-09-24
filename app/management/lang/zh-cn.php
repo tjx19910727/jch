@@ -358,6 +358,7 @@ return [
         "machine_id_require" => "设备编号不能为空",
         "channel_code_require" => "货道编号不能为空",
         "synchronization_fail" => "同步设备货道失败",
+        "update_price_error" => "锁定货架价格错误",
     ],
 
     "VMachineErrorCode" => [
@@ -416,26 +417,45 @@ return [
         "desc_max" => "版本说明超限制",
     ],
 
-    "VMachineFree" => [
+    "VTripMultiple" => [
         "delHotel_notEmpty" => "请选择需要删除的酒店",
         "delGoods_notEmpty" => "请选择需要删除的商品",
+        "delMachine_notEmpty" => "请选择需要删除的设备",
 
-        "mf_id_require" => "自由组合ID不能为空",
+//        "tm_exits" => "设备自由组合数据已存在",
+
+        "tm_id_require" => "携程套餐商品ID不能为空",
+        "tm_name_require" => "套餐名称不能为空",
+        "status_require" => "状态不能为空",
+        "designated_hotel_require" => "指定酒店不能为空",
+        "designated_goods_require" => "指定商品不能为空",
+        "designated_machine_require" => "指定设备不能为空",
+        "machineList_require" => "请选择设备",
+
+        "tmm_id_require" => "指定设备ID不能为空",
         "m_id_require" => "设备ID不能为空",
         "machine_id_require" => "设备编号不能为空",
         "machine_name_require" => "设备名称不能为空",
-        "free_status_require" => "自由组合商品开关不能为空",
-        "designated_hotel_require" => "指定酒店不能为空",
-        "designated_goods_require" => "指定商品不能为空",
 
-        "mfh_id_require" => "指定酒店ID不能为空",
+        "tmh_id_require" => "携程套餐商品酒店ID不能为空",
         "tc_id_require" => "请选择携程城市",
-        "hotelId_require" => "请选择携程酒店",
-        "mfg_id_require" => "指定商品不能为空",
+        "cityId_require" => "携程城市ID不能为空",
+        "cityName_require" => "携程城市名称不能为空",
+        "hotelId_require" => "携程酒店ID不能为空",
+        "hotelName_require" => "携程酒店名称不能为空",
+
+
+        "tmg_id_require" => "套餐商品不能为空",
         "g_id_require" => "请选择指定商品",
+        "is_required_required" => "请确定是否必选",
+        "buy_lower_required" => "购买下限不能为空",
+        "buy_lower_min" => "购买下限不能小于1",
+        "buy_upper_required" => "购买上限不能为空",
         "sale_amount_require" => "请设置售卖价格",
+
         "hotelId_unique" => "该酒店信息已存在",
         "g_id_unique" => "该商品信息已存在",
+        "m_id_unique" => "该设备信息已存在",
     ],
 
     "VTemplate" => [
@@ -510,6 +530,8 @@ return [
 
         "payee_config_no_data" => "查无收款方配置信息",
         "payee_config_no_json" => "收款方配置信息不是JSON方式",
+
+        "free_can_not_refund" => "免支付方式不能退款",
     ],
 
     "VSaleOrdersUnclaimed" => [
@@ -530,6 +552,7 @@ return [
         "token_require" => "TOKEN不能为空",
         "aes_key_require" => "加密密钥不能为空",
         "wx_txt_require" => "域名设置文件不能为空",
+        "unbind_success" => "解除绑定成功",
     ],
 
     "VWxTemplate" => [

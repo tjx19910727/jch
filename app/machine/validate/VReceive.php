@@ -55,6 +55,9 @@ class VReceive extends VCommon
 
         "mvp_id" => "require",
         "download_progress" => "require",
+
+        "gm_id" => "require",
+        "gmg_id" => "require",
     ];
 
     protected $message = [
@@ -104,6 +107,9 @@ class VReceive extends VCommon
 
         "mvp_id.require" => "VReceive.mvp_id_require",
         "download_progress.require" => "VReceive.download_progress_require",
+
+        "gm_id.require" => "VSubGoodsMultipleOrder.gm_id_require",
+        "gmg_id.require" => "VSubGoodsMultipleOrder.gmg_id_require",
 
     ];
 
@@ -169,12 +175,18 @@ class VReceive extends VCommon
         "resetMachine" => ["msg_id","machine_id","timestamp","sign","manager_id"],
         "getGoodsMultiple" => ["msg_id","machine_id","timestamp","sign"],
 
+        "subGoodsMultiple" => ["msg_id","machine_id","timestamp","sign","pay_type","pay_method","mobile","gm_id","carList","hotel"],
+        "carList" => ["gmg_id","quantity"],
+        "hotel" => ["pay_amount","hotelId","roomId","num","adults","totalPrice","checkInDate","checkOutDate","nightly"],
+        "nightly" => ["effectiveDate","amount"],
+
+        "logoutH5" => ["msg_id","machine_id","timestamp"],
     ];
 
     public function checkTimestamp($item)
     {
-//        if (!$item) return "时间戳不能为空";
-//        if (time() - $item > 120) return "VReceive.timestamp_checkTimestamp_overdue";
+        if (!$item) return "时间戳不能为空";
+        if (time() - $item > 120) return "VReceive.timestamp_checkTimestamp_overdue";
         return true;
     }
 }

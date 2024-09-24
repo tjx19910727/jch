@@ -38,14 +38,15 @@ class WeChatClient extends NoticeBaseClient
                     if ($this->config['template']['url']) $data['url'] = $this->config['template']['url'];
                     if ($this->config['template']['miniprogram']) $data['miniprogram'] = json2arr($this->config['template']['miniprogram']);
                     $body = json2arr($this->config['template']['body']);
+                    dump($body);
                     foreach ($body as $bk => $bv) {
                         $data['data'][$bv['field']] = $bv['value'];
                     }
                     $result = $app->template_message->send($data);
                     actionLog($result,'发送微信通知结果');
                     $this->addTemplateLog($value,$data,$result);
-                    return $result;
                 }
+                return true;
             } catch (InvalidArgumentException $e) {
                 actionException($e,1);
                 return $e->getMessage();
@@ -57,6 +58,7 @@ class WeChatClient extends NoticeBaseClient
                 return $e->getMessage();
             }
         }
+        return true;
     }
 
     private function addTemplateLog($receiver,$data,$result)

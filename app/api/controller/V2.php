@@ -62,8 +62,8 @@ class V2 extends Common
 //            "pageNum" => 15,
 //            "machine_id" => "test0001",
 //        ];
-//        $data = '{"auth_name":"Lc_test","sign":"87ED5F99A692D8F32C758B5B5CA94055","api":"get_inventory_list","params":"{\"product_id\":\"\",\"machine_id\":\"test0003\",\"shelf_on\":1}","timestamp":"1723207274"}';
-//        $data = json2arr($data);
+        $data = '{"auth_name":"Lc_test","sign":"87ED5F99A692D8F32C758B5B5CA94055","api":"get_inventory_list","params":"{\"product_id\":\"\",\"machine_id\":\"test0003\",\"shelf_on\":1}","timestamp":"1723207274"}';
+        $data = json2arr($data);
 //        $params = json_decode($data['params'],true);
 //        $params['pageNum'] = 15;
 //        $params = '{
@@ -79,13 +79,20 @@ class V2 extends Common
 //        $details = json_decode($params['order_detail'],true);
 //        dump($details);
         $params = [
-            "order_no" => "136",
-            "pay_status" => 1,
+            "kiosk_id" => "test0003",
+            "pageNum" => 1,
+            "page" => 2,
         ];
+//        $data = [
+//            "auth_name" => "ctrip",
+//            "auth_password" => "Karrie&C2023",
+//            "timestamp" => time(),
+//            "params" => json_encode($params, 320),
+//        ];
         $data = [
             "auth_name" => "Lc_test",
             "auth_password" => "123456",
-            "timestamp" => "1724052083",
+            "timestamp" => time(),
             "params" => json_encode($params, 320),
         ];
         dump($data['params']);
@@ -99,7 +106,7 @@ class V2 extends Common
         $signStr = $string1 . implode(",", $signArr);
         dump($signStr);
         $data['sign'] = strtoupper(md5($signStr));
-        $data['api'] = "payNotify";
+        $data['api'] = "get_goods_multiple";
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));

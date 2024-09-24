@@ -28,7 +28,7 @@ class MachineGoods extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["g_name" => "like",'sku' => "like"]);
-        return $this->app->machineGoods->getList($where, $pageNum, $this->field);
+        return $this->app->machineGoods->getMgList($where, $pageNum, $this->field);
     }
 
     public function getFind()
@@ -123,5 +123,16 @@ class MachineGoods extends Common
             return returnValidate($e->getMessage());
         }
         return $this->app->machineGoods->delMg($postData);
+    }
+
+    /**
+     * 导出设备商品
+     * @return array|\think\response\Json
+     */
+    public function exportMg()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData, false, ["g_name" => "like",'sku' => "like"]);
+        return $this->app->machineGoods->exportMg($where);
     }
 }

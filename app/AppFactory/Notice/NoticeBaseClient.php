@@ -23,8 +23,8 @@ use app\AppFactory\Kernel\Traits\Wx\WxTemplateTrait;
 
 class NoticeBaseClient extends BaseClient
 {
-    use EmailConfigTrait,EmailTemplateTrait,EmailTemplateLogTrait;
-    use WxOfficialTrait,WxTemplateTrait,WxTemplateLogTrait;
+    use EmailConfigTrait, EmailTemplateTrait, EmailTemplateLogTrait;
+    use WxOfficialTrait, WxTemplateTrait, WxTemplateLogTrait;
     use AuthManagerMachineTrait;
 
     protected $template;
@@ -55,49 +55,48 @@ class NoticeBaseClient extends BaseClient
     {
         parent::__construct($app);
         $this->config = $app->getConfig();
-        actionLog($this->config,'接收数据');
+        actionLog($this->config, '接收数据');
         try {
             validate(VNotice::class)->scene("getConfig")->check($this->config);
         } catch (\Exception $e) {
-            actionLog($e->getMessage(),'数据检验结果');
+            actionLog($e->getMessage(), '数据检验结果');
 //            throw new NoticeException($e->getMessage());
         }
         $this->getConfig();
         if (!isset($this->config['config']) || !$this->config['config']) {
-            actionLog($this->config,'查无配置信息');
+            actionLog($this->config, '查无配置信息');
 //            throw new NoticeException($this->lang("VNotice.config_require"));
         }
         $this->getTemplate();
         if (!isset($this->config['template']) || !$this->config['template']) {
-            actionLog($this->config,'查无消息模板信息');
+            actionLog($this->config, '查无消息模板信息');
 //            throw new NoticeException($this->lang("VNotice.template_require"));
         }
         $this->replaceBodyParams();
         $this->getReceiver();
         if (!isset($this->config['receiver']) || !$this->config['receiver']) {
-            actionLog($this->config,'查无收件人信息');
+            actionLog($this->config, '查无收件人信息');
 //            throw new NoticeException($this->lang("VNotice.receiver_require"));
         }
     }
 
     /**
      * 检查发件方配置，微信公众号配置、邮件发件方配置
-     * @return int|mixed
      */
     protected function getConfig()
     {
         if (!isset($this->config['config']) || !$this->config['config']) {
             if ($this->config['sendType'] == 1) {
-                $this->config['config'] = $this->getWxOfficialFind(['ao_id' => $this->config['ao_id'],'status' => 1],
-                    'id,gh_id,wx_name,app_id,secret,token,aes_key,ao_id,creator','update_time desc');
+                $this->config['config'] = $this->getWxOfficialFind(['ao_id' => $this->config['ao_id'], 'status' => 1],
+                    'id,gh_id,wx_name,app_id,secret,token,aes_key,ao_id,creator', 'update_time desc');
                 if ($this->config['config']) $this->config['config'] = $this->config['config']->toArray();
-                return $this->config['config'];
+                $this->config['config'];
             }
             if ($this->config['sendType'] == 2) {
-                $this->config['config'] = $this->getEmailConfigFind(['ao_id' => $this->config['ao_id'],'status' => 1],
-                    'ec_id,host,username,authCode,sendEmail,nickname,replyMail,replyNickname,isHtml,ao_id,creator','update_time desc');
+                $this->config['config'] = $this->getEmailConfigFind(['ao_id' => $this->config['ao_id'], 'status' => 1],
+                    'ec_id,host,username,authCode,sendEmail,nickname,replyMail,replyNickname,isHtml,ao_id,creator', 'update_time desc');
                 if ($this->config['config']) $this->config['config'] = $this->config['config']->toArray();
-                return $this->config['config'];
+                $this->config['config'];
             }
 //            $this->r(100,$this->lang("VNotice.config_require"))->send();
 //            return 0;
@@ -107,19 +106,19 @@ class NoticeBaseClient extends BaseClient
 
     /**
      * 获取消息模板
-     * @return int|mixed
      */
     protected function getTemplate()
     {
         if ($this->config['config'] && (!isset($this->config['template']) || !$this->config['template'])) {
             if ($this->config['sendType'] == 1) {
-                return $this->config['template'] = $this->getWxTemplateFind(['wx_id' => $this->config['config']['id'], 'template_type' => $this->config['templateType'], 'status' => 1],
+                $this->config['template'] = $this->getWxTemplateFind(['wx_id' => $this->config['config']['id'], 'template_type' => $this->config['templateType'], 'status' => 1],
                     'wt_id,wx_id,template_name,template_type,template_id,url,miniprogram,body,ao_id', 'update_time desc');
             }
             if ($this->config['sendType'] == 2) {
-                return $this->config['template'] = $this->getEmailTemplateFind(['ec_id' => $this->config['config']['ec_id'], 'template_type' => $this->config['templateType'], 'status' => 1],
-                    'et_id,ec_id,CC,BCC,subject,body,altBody,attachment,template_type');
+                $this->config['template'] = $this->getEmailTemplateFind(['ec_id' => $this->config['config']['ec_id'], 'template_type' => $this->config['templateType'], 'status' => 1],
+                    'et_id,ec_id,CC,BCC,subject,body,altBody,attachment,template_type,ao_id','update_time desc');
             }
+            if (isset($this->config['template']) && $this->config['template']) $this->config['template'] = $this->config['template']->toArray();
 //            $this->r(100,$this->lang("VNotice.template_require"))->send();
 //            return 0;
         }
@@ -137,10 +136,19 @@ class NoticeBaseClient extends BaseClient
                 $where['am.status'] = 1;
                 if ($this->config['sendType'] == 1) {
                     $where[] = ['am.wx_notice', 'like', "%" . $this->config['templateType'] . "%"];
-                    $where[] = ['am.openid','=','not null'];
+                    $where[] = function ($query) {
+                        $query->where("am.openid is not null");
+                    };
                 }
-                if ($this->config['sendType'] == 2) $where[] = ['am.email_notice', 'like', "%" . $this->config['templateType'] . "%"];
-                $this->config['receiver'] = $this->getAmmJoinAmList($where,'am.manager_id,am.nickname,am.ao_id,am.email,am.openid');
+                if ($this->config['sendType'] == 2) {
+                    $where[] = ['am.email_notice', 'like', "%" . $this->config['templateType'] . "%"];
+                    $where[] = function ($query) {
+                        $query->where("am.email is not null");
+                    };
+                }
+                $this->config['receiver'] = $this->getAmmJoinAmList($where, 'am.manager_id,am.nickname,am.ao_id,am.email,am.openid');
+                if ($this->config['receiver']) $this->config['receiver'] = $this->config['receiver']->toArray();
+                actionLog($this->getLS(), '获取收件人SQL');
             }
         }
     }
@@ -153,21 +161,21 @@ class NoticeBaseClient extends BaseClient
         if (isset($this->config['template'])) {
             if (isset($this->config['replaceData'])) {
                 foreach ($this->config['replaceData'] as $key => $value) {
-                    if (strpos($this->config['template'], '{{' . $key . '}}') !== false) {
-                        $this->config['template'] = str_replace('{{' . $key . '}}', $value, $this->config['template']);
+                    if (strpos($this->config['template']['body'], '{{' . $key . '}}') !== false) {
+                        $this->config['template']['body'] = str_replace('{{' . $key . '}}', $value, $this->config['template']['body']);
                     }
                 }
             }
-            if (strpos($this->config['template'], '{{now}}') !== false) $this->config['template'] = str_replace('{{now}}', date("Y-m-d H:i:s"), $this->config['template']);
-            if (strpos($this->config['template'], '{{date}}') !== false) $this->config['template'] = str_replace('{{date}}', date("Y-m-d"), $this->config['template']);
-            if (strpos($this->config['template'], '{{time}}') !== false) $this->config['template'] = str_replace('{{time}}', date("H:i:s"), $this->config['template']);
-            if (strpos($this->config['template'], '{{Y}}') !== false) $this->config['template'] = str_replace('{{Y}}', date("Y"), $this->config['template']);
-            if (strpos($this->config['template'], '{{m}}') !== false) $this->config['template'] = str_replace('{{m}}', date("m"), $this->config['template']);
-            if (strpos($this->config['template'], '{{d}}') !== false) $this->config['template'] = str_replace('{{d}}', date("d"), $this->config['template']);
-            if (strpos($this->config['template'], '{{H}}') !== false) $this->config['template'] = str_replace('{{H}}', date("H"), $this->config['template']);
-            if (strpos($this->config['template'], '{{i}}') !== false) $this->config['template'] = str_replace('{{i}}', date("i"), $this->config['template']);
-            if (strpos($this->config['template'], '{{s}}') !== false) $this->config['template'] = str_replace('{{s}}', date("s"), $this->config['template']);
-            if (is_string($this->config['template'])) $this->config['template'] = json_decode($this->config['template'],true);
+            if (strpos($this->config['template']['body'], '{{now}}') !== false) $this->config['template']['body'] = str_replace('{{now}}', date("Y-m-d H:i:s"), $this->config['template']['body']);
+            if (strpos($this->config['template']['body'], '{{date}}') !== false) $this->config['template']['body'] = str_replace('{{date}}', date("Y-m-d"), $this->config['template']['body']);
+            if (strpos($this->config['template']['body'], '{{time}}') !== false) $this->config['template']['body'] = str_replace('{{time}}', date("H:i:s"), $this->config['template']['body']);
+            if (strpos($this->config['template']['body'], '{{Y}}') !== false) $this->config['template']['body'] = str_replace('{{Y}}', date("Y"), $this->config['template']['body']);
+            if (strpos($this->config['template']['body'], '{{m}}') !== false) $this->config['template']['body'] = str_replace('{{m}}', date("m"), $this->config['template']['body']);
+            if (strpos($this->config['template']['body'], '{{d}}') !== false) $this->config['template']['body'] = str_replace('{{d}}', date("d"), $this->config['template']['body']);
+            if (strpos($this->config['template']['body'], '{{H}}') !== false) $this->config['template']['body'] = str_replace('{{H}}', date("H"), $this->config['template']['body']);
+            if (strpos($this->config['template']['body'], '{{i}}') !== false) $this->config['template']['body'] = str_replace('{{i}}', date("i"), $this->config['template']['body']);
+            if (strpos($this->config['template']['body'], '{{s}}') !== false) $this->config['template']['body'] = str_replace('{{s}}', date("s"), $this->config['template']['body']);
+            if (is_string($this->config['template']['body']) && $this->config['sendType'] == 1) $this->config['template']['body'] = json_decode($this->config['template']['body'], true);
         }
     }
 }

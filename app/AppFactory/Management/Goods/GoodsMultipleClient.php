@@ -37,7 +37,8 @@ class GoodsMultipleClient extends ManagementClient
         if ($list) {
             if ($pageNum) {
                 $list->each(function ($value) {
-                    $value['gList'] = $this->getGoodsMultipleGoodsList(['gm_id' => $value['gm_id']],0,'gmg_id,gm_id,sku,g_id,selling_price,rise_fall_ratio');
+                    $value['gList'] = $this->getGoodsMultipleGoodsList(['gm_id' => $value['gm_id']],0,
+                        'gmg_id,gm_id,sku,g_id,selling_price,rise_fall_ratio, buy_lower,buy_upper,stock');
                     if ($value['gList']) {
                         $value['gList'] = $value['gList']->toArray();
                         $temp = [];

@@ -9,8 +9,6 @@
 namespace app\AppFactory\Management\Sale;
 
 
-use app\AppFactory\Kernel\Support\Excel;
-use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsHitTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
@@ -19,6 +17,7 @@ use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Payment\JdCashierTrait;
 use app\AppFactory\Kernel\Traits\Payment\WxPayTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelNightlyTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
@@ -34,7 +33,7 @@ use app\AppFactory\Management\ManagementClient;
 class SaleOrdersClient extends ManagementClient
 {
     use AuthManagerTrait;
-    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersDailyCountTrait, SaleHotelTrait;
+    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersDailyCountTrait,SaleHotelTrait,SaleHotelNightlyTrait;
     use BeforeOrderPaymentTrait;
     use StrategyMachineTrait;
     use StrategyIncomeTrait;
@@ -104,10 +103,11 @@ class SaleOrdersClient extends ManagementClient
         $this->order = $this->getSaleOrdersFind(['order_id' => $postData['order_id']]);
         if (!$this->order) return $this->rFail("查无订单数据");
         $this->order = $this->order->toArray();
+        if ($this->order['pay_type'] == 0) return $this->r(100,$this->lang("VSaleOrders.free_can_not_refund"));
         $check = $this->getSPayee();
-//        if ($check !== true) {
-//            return $check;
-//        }
+        if ($check !== true) {
+            return $check;
+        }
         $this->startTrans();
         try {
             $this->postData = $postData;// 生成退款记录
@@ -273,7 +273,7 @@ class SaleOrdersClient extends ManagementClient
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
         if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
         $list = $this->getSaleOrdersList($where, 0,
-            'order_id,machine_id,machine_name,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,
+            'order_id,machine_id,machine_name,trade_no,mch_no,total_quantity,(total_price - refund_amount) total_price,discount_price,retail_price,
                 (CASE order_type 
                     WHEN 1 THEN "普通订单"
                     WHEN 2 THEN "优惠券订单"
@@ -322,7 +322,8 @@ class SaleOrdersClient extends ManagementClient
     {
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
         if ($machineIds) $where[] = ['so.machine_id', 'in', $machineIds];
-        $field = "so.machine_id,so.machine_name,so.trade_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,sod.total_sod_price,
+        $field = "so.machine_id,so.machine_name,so.trade_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,
+        (sod.total_sod_price - sod.refund_amount) total_sod_price,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
             (CASE so.pay_method 
             WHEN 0 THEN '免支付' 
@@ -682,48 +683,5 @@ class SaleOrdersClient extends ManagementClient
             return $this->sendToExport("运营数据-销售数据", $filename, $title, $list);
         }
         return $this->r(100, $this->lang("query_fail"));
-    }
-
-    /**
-     * 查询门票
-     * @param $where
-     * @param string $field
-     * @return array|\think\response\Json
-     */
-    public function queryTicketOrder($where,$field = "*")
-    {
-        $data = $this->getSaleOrdersDetailsJoinOrderFind($where,$field);
-        return $this->r(200,$this->lang("query_success"),$data);
-    }
-
-    /**
-     * 核销门票，2：已核销，3：已作废
-     * @param $sod_id
-     * @param $status
-     * @return array|\think\response\Json
-     */
-    public function checkOffTicket($sod_id,$status)
-    {
-        $result = $this->updateSaleOrdersDetails([
-            "sod_id" => $sod_id,
-            "checkOff_status" => $status,
-            "canceller" => $this->manager['manager_id'],
-            "checkOff_time" => time(),
-        ]);
-        return $this->rAction($result);
-    }
-
-    /**
-     * 查询已核销订单列表
-     * @param $where
-     * @param int $pageNum
-     * @param string $field
-     * @param string $order
-     * @return array|\think\response\Json
-     */
-    public function queryCheckOffList($where,$pageNum = 0,$field = "*",$order = "")
-    {
-        $data = $this->getSaleOrdersDetailsJoinOrderList($where,$pageNum,$field,$order);
-        return $this->r(200,$this->lang("query_success"),$data);
     }
 }

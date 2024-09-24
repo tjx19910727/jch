@@ -9,9 +9,11 @@
 namespace app\wx\controller;
 
 
-use think\route\dispatch\Controller;
 
-class Official extends Controller
+use app\AppFactory\AppFactory;
+use app\BaseController;
+
+class Official extends BaseController
 {
 
     // 接收微信公众号通知
@@ -27,5 +29,7 @@ class Official extends Controller
         actionLog($xml, "xml");
         $message = FromXml($xml);
         $message = json_decode(json_encode($message), true);
+        actionLog($message,'XML转格式');
+        AppFactory::wx()->official->receiveHandle($message);
     }
 }

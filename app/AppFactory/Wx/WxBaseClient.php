@@ -13,5 +13,6 @@ use app\AppFactory\Kernel\BaseClient;
 
 class WxBaseClient extends BaseClient
 {
-
+    public $open_id;
+    public $wx;
 }

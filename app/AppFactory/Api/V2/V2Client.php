@@ -19,6 +19,7 @@ use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthStatesTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsMultipleTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
@@ -39,9 +40,10 @@ class V2Client extends V2BaseClient
     use EarthCountriesTrait, EarthCitiesTrait, EarthRegionsTrait, EarthAreaTrait, EarthStatesTrait;
     use SaleOrdersDailyCountTrait, SaleOrdersTrait, SaleHotelTrait, SaleOrdersRevenueTrait;
     use ActivityPickCodeTrait;
-    use ApiAdvanceTrait, ApiCallbackTrait, ApiLockStockTrait;
+    use ApiAdvanceTrait, ApiCallbackTrait;
     use AfterOrderPaymentTrait;
     use GoodsTrait;
+    use GoodsMultipleTrait;
 
     protected $machine;
     protected $order;
@@ -340,5 +342,19 @@ class V2Client extends V2BaseClient
             actionException($e,1);
             return $this->returnData(99,$this->lang("msg.99"));
         }
+    }
+
+    /**
+     * 获取组合商品数据
+     * @return array|\think\response\Json
+     * @throws DbException
+     */
+    public function get_goods_multiple()
+    {
+        $where['gmm.machine_id'] = $this->params['kiosk_id'];
+        $where['gm.status'] = 1;
+        $data = $this->getGoodsMultipleListByMachine($where,$this->params['pageNum'] ?? 0,
+            "gm.gm_id,gm.gm_name,gm.gm_pic,gm.gm_desc,gm.start_time,gm.end_time",'gm.create_time desc',$this->params['page'] ?? 1);
+        return $this->returnData(0,$this->lang("msg.0"),$data);
     }
 }

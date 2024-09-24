@@ -33,6 +33,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsHitTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
@@ -42,7 +43,7 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 class MqClient extends ReceiveBaseClient
 {
     use SaleOrdersTrait,OutGoodsTrait;
-    use MachineInfoTrait,MachineChannelTrait,MachineVersionPlanTrait;
+    use MachineInfoTrait,MachineChannelTrait,MachineVersionPlanTrait,MachineConfigTrait;
     use MachineErrorCodeTrait;
     use GoodsTrait,GoodsHitTrait,GoodsChangeTrait;
     use ApiAdvanceTrait,ApiCallbackTrait;

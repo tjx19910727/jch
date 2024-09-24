@@ -104,6 +104,11 @@ class MqClient extends SendBaseClient
      */
 
     /**
+     * 通知设备退出H5页面  logoutH5
+     * @return array|string
+     */
+
+    /**
      * 主动发送至MQ
      * @param $msgType
      * @param array $otherData

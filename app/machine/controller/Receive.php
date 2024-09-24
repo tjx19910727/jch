@@ -25,6 +25,9 @@ class Receive extends Common
      */
     protected $app;
 
+    protected $noCheckApi = [
+        "logoutH5",
+    ];
 
     /**
      * 初始化
@@ -36,6 +39,15 @@ class Receive extends Common
         $postData = json2arr($postData);
         actionLog($postData,'接收到的数据');
         $action = $this->request->action();
+        $reflection = new \ReflectionClass(__CLASS__);
+        $methods = $reflection->getMethods();
+        $methodNames = array_map(function ($method) {
+            return $method->getName();
+        },$methods);
+        if (!in_array($action,$methodNames)) {
+            returnState(300,lang("error_api"))->send();
+            die();
+        }
         try { $this->validate($postData,$this->validatePath . $action);}
         catch (\Exception $e) { die(json_encode(['state' => 300, 'msg' => Lang::get($e->getMessage())],320));}
         $frequency = checkFrequency($action);
@@ -49,7 +61,7 @@ class Receive extends Common
             "data" => $postData,
         ];
         $this->app = AppFactory::machine($this->config);
-        if ($this->app->api->checkSign($postData) !== true) {
+        if (!in_array($action,$this->noCheckApi) && $this->app->api->checkSign($postData) !== true) {
             @cache($postData['machine_id'] . ".signKey",null);
             die(json_encode(["state" => 100, "msg" => Lang::get("check_sign_fail")], 320));
         }
@@ -450,11 +462,13 @@ class Receive extends Common
     }
 
     /**
-     * 获取设备自由组合配置
-     * @return array|\think\response\Json
+     * 设备退出H5微商城
+     * @return array|bool|string
      */
-    public function getMachineFree()
+    public function logoutH5()
     {
-        return $this->app->api->getMachineFree();
+        return $this->app->api->logoutH5();
     }
+
+
 }

@@ -67,12 +67,13 @@ trait GoodsMultipleTrait
      * @param int $pageNum
      * @param string $field
      * @param string $order
+     * @param int $page
      * @return GoodsMultipleModel|array|\think\Paginator
      * @throws \think\db\exception\DbException
      */
-    public function getGoodsMultipleListByMachine($where,$pageNum = 0,$field = "*",$order = "")
+    public function getGoodsMultipleListByMachine($where,$pageNum = 0,$field = "*",$order = "",$page = 1)
     {
-        return GoodsMultipleModel::joinGmm($where,$pageNum,$field,$order);
+        return GoodsMultipleModel::joinGmm($where,$pageNum,$field,$order,$page);
     }
 
     /**

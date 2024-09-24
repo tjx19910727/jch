@@ -11,13 +11,16 @@ namespace app\AppFactory\Management\Machine;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class MachineChannelClient extends ManagementClient
 {
-    use MachineTrait,MachineChannelTrait;
+    use MachineTrait,MachineChannelTrait,MachineGoodsTrait;
+    use GoodsTrait;
     use AuthManagerMachineTrait;
 
     /**
@@ -149,6 +152,38 @@ class MachineChannelClient extends ManagementClient
             return $this->r(200,$this->lang("action_success"));
         }
         return $this->r(100,$this->lang('action_fail'));
+    }
+
+    public function lockPrice($postData)
+    {
+        if (!isset($postData['m_id']) || !$postData['m_id']) return $this->r(100,$this->lang("VMachineChannel.m_id_require"));
+        if (!isset($postData['update_price']) || !$postData['update_price'] || !in_array($postData['update_price'],[1,2]))
+            return $this->r(100,$this->lang("VMachineChannel.update_price_error"));
+        if ($postData['update_price'] == 2) {
+            $mc = $this->getMachineChannelList(['m_id' => $postData['m_id']],0,'update_price,cost_price,market_price,retail_price,mg_id,g_id,mc_id');
+            if ($mc) {
+                $mc = $mc->toArray();
+                foreach ($mc as $key => $value) {
+                    $mg = $this->getMachineGoodsFind(['mg_id' => $value['mg_id']],'cost_price,market_price,retail_price');
+                    if ($mg) {
+                        $mg = $mg->toArray();
+                        $update = $mg;
+                        $update['mc_id'] = $value['mc_id'];
+                        $update['update_price'] = $postData['update_price'];
+                    } else {
+                        $goods = $this->getGoodsFind(['g_id' => $value['g_id']],'cost_price,market_price,retail_price');
+                        $update = $goods;
+                        $update['mc_id'] = $value['mc_id'];
+                        $update['update_price'] = $postData['update_price'];
+                    }
+                    $this->updateMachineChannel($update);
+                }
+            }
+        }
+        if ($postData['update_price'] == 1) {
+            $this->updateMachineChannel(['update_price' => $postData['update_price']], ['m_id' => $postData['m_id']]);
+        }
+        return $this->r(200,$this->lang("action_success"));
     }
 
 

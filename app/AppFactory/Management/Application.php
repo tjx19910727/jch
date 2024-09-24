@@ -28,6 +28,7 @@ use app\AppFactory\Kernel\Providers\Management\SaleOrdersProvider;
 use app\AppFactory\Kernel\Providers\Management\StrategyProvider;
 use app\AppFactory\Kernel\Providers\Management\SuggestProvider;
 use app\AppFactory\Kernel\Providers\Management\TemplateProvider;
+use app\AppFactory\Kernel\Providers\Management\TripProvider;
 use app\AppFactory\Kernel\Providers\Management\UpdateLogProvider;
 use app\AppFactory\Kernel\Providers\Management\WxProvider;
 use app\AppFactory\Kernel\ServiceContainer;
@@ -111,9 +112,6 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineVersionClient           $machineVersion         设备软件版本
  * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
  * @property Machine\MachineSaleClient              $machineSale            设备销售数据
- * @property Machine\MachineFreeClient              $machineFree            自由组合
- * @property Machine\MachineFreeHotelClient         $machineFreeHotel       自由组合-指定酒店
- * @property Machine\MachineFreeGoodsClient         $machineFreeGoods       自由组合-指定商品
  *
  * @property MicroMall\MicroMallClient              $microMall              微商城
  * @property MicroMall\MicroMallMachineClient       $microMallMachine       微商城绑定设备
@@ -124,6 +122,11 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Template\TemplatePluginsClient         $templatePlugins        模板组件
  * @property Template\TemplateLayoutClient          $templateLayout         模板布局
  * @property Template\TemplateViewClient            $templateView           模板视图
+ *
+ * @property Trip\TripMultipleClient                $tripMultiple           携程套餐
+ * @property Trip\TripMultipleGoodsClient           $tripMultipleGoods      携程套餐商品
+ * @property Trip\TripMultipleMachineClient         $tripMultipleMachine    携程套餐设备
+ * @property Trip\TripMultipleHotelClient           $tripMultipleHotel      携程套餐酒店
  *
  * @property Sale\SaleOrdersClient                  $saleOrders             销售订单
  * @property Sale\SaleOrdersUnclaimedClient         $saleOrdersUnclaimed    销售订单未取商品
@@ -168,6 +171,7 @@ class Application extends ServiceContainer
         StrategyProvider::class,
         SuggestProvider::class,
         TemplateProvider::class,
+        TripProvider::class,
         UpdateLogProvider::class,
         WxProvider::class,
     ];
