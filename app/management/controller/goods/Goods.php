@@ -38,7 +38,6 @@ class Goods extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['g_name' => "like"]);
-//        $where['creator'] = $this->manager['manager_id'];
         $result = $this->app->goods->getList($where,$pageNum,$this->field,'g_id desc');
         return $result;
     }

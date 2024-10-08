@@ -51,7 +51,7 @@ class AuthManagerRoleClient extends ManagementClient
         // 不需要绝对校验
         if ($authNode['is_auth'] == 2) return $authNode;
 
-        $role = $this->getAuthManagerRoleColumn(['manager_id' => $this->manager['manager_id']],'role_id');
+        $role = $this->getAuthManagerRoleColumn(['manager_id' => $this->manager['manager_id'],'is_del' => 2],'role_id');
         // 查询组织绑定的权限角色
         $or = $this->getAuthOrganizationRoleColumn(['ao_id' => $this->manager['ao_id'],'is_del' => 2],'role_id');
         if (!$role) $role = [];

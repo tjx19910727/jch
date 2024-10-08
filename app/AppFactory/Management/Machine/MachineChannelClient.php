@@ -159,8 +159,9 @@ class MachineChannelClient extends ManagementClient
         if (!isset($postData['m_id']) || !$postData['m_id']) return $this->r(100,$this->lang("VMachineChannel.m_id_require"));
         if (!isset($postData['update_price']) || !$postData['update_price'] || !in_array($postData['update_price'],[1,2]))
             return $this->r(100,$this->lang("VMachineChannel.update_price_error"));
+        // 解锁，同步设备商品库或核心商品库价格
         if ($postData['update_price'] == 2) {
-            $mc = $this->getMachineChannelList(['m_id' => $postData['m_id']],0,'update_price,cost_price,market_price,retail_price,mg_id,g_id,mc_id');
+            $mc = $this->getMachineChannelList(['m_id' => $postData['m_id']],0,'update_price,cost_price,market_price,retail_price,mg_id,g_id,mc_id,machine_id');
             if ($mc) {
                 $mc = $mc->toArray();
                 foreach ($mc as $key => $value) {
@@ -177,9 +178,12 @@ class MachineChannelClient extends ManagementClient
                         $update['update_price'] = $postData['update_price'];
                     }
                     $this->updateMachineChannel($update);
+                    // 发送触发货道更新数据
+                    $this->sendToMachine(['machine_id' => $value['machine_id']],'updateMc',['mc_id' => $value['mc_id']]);
                 }
             }
         }
+        // 锁定货架价格
         if ($postData['update_price'] == 1) {
             $this->updateMachineChannel(['update_price' => $postData['update_price']], ['m_id' => $postData['m_id']]);
         }

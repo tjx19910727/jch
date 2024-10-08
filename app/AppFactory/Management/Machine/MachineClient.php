@@ -148,8 +148,10 @@ class MachineClient extends ManagementClient
 
     public function getMList($where,$pageNum = 0,$field = "",$order = "")
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+        if ($this->manager['pid'] > 0) {
+            $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
+            if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+        }
         return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) {
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
             if (isset($item['state_id']) && $item['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $item['state_id']],'code,name,cname');

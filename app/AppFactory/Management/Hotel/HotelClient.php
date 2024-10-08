@@ -51,7 +51,7 @@ class HotelClient extends ManagementClient
         if ($result && isset($result['code']) && $result['code'] == 0) {
             return $this->r(200,$this->lang('query_success'),['list' => $result['result'],'totalCount' => $result['totalCount']]);
         }
-        return $this->r(100,$this->lang('query_fail') . isset($result['message']) ? ":" . $result['message'] : "");
+        return $this->r(100,$this->lang('query_fail') . (isset($result['message']) ? ":" . $result['message'] : ""),$result);
     }
 
     /**

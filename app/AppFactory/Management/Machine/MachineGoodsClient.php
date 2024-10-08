@@ -12,6 +12,7 @@ namespace app\AppFactory\Management\Machine;
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Support\Tree;
 use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Management\ManagementClient;
@@ -20,7 +21,7 @@ class MachineGoodsClient extends ManagementClient
 {
     use MachineGoodsTrait;
     use MachineChannelTrait;
-    use GoodsCategoryTrait;
+    use GoodsCategoryTrait,GoodsTrait;
 
     public function getMgList($where, $pageNum = 0, $field = "*", $order = "")
     {
@@ -28,7 +29,7 @@ class MachineGoodsClient extends ManagementClient
         if ($pageNum) {
             $data = $data->each(function ($item) {
                 if ($item['is_shelf'] == 2) {
-                    $mc = $this->getMachineChannelFind(['mg_id' => $item['mg_id']], 'mc_id');
+                    $mc = $this->getMachineChannelFind(['mg_id' => $item['mg_id'],'m_id' => $item['m_id']], 'mc_id');
                     if ($mc) {
                         $item['is_shelf'] = 1;
                         $this->updateMachineGoods(['mg_id' => $item['mg_id'], 'is_shelf' => 1]);
@@ -144,5 +145,36 @@ class MachineGoodsClient extends ManagementClient
             return $this->sendToExport("设备列表-设备商品", $filename, $title, $list);
         }
         return $this->r(100, $this->lang("query_fail"));
+    }
+
+    /**
+     * 设备商品库同步商品库价格
+     * @param $postData
+     * @return array|\think\response\Json
+     */
+    public function synchronizationGoodsPrice($postData)
+    {
+        $where = [];
+        if (isset($postData['mg_id']) && $postData['mg_id']) $where['mg_id'] = $postData['mg_id'];
+        if (isset($postData['m_id']) && $postData['m_id'])  $where['m_id'] = $postData['m_id'];
+
+        $mg = $this->getMachineGoodsList($where,0,'mg_id,g_id,cost_price,market_price,retail_price');
+        if (!$mg) return $this->r(100,$this->lang("VMachineGoods.mg_id_require"));
+        $mg = $mg->toArray();
+        if ($mg) {
+            foreach ($mg as $key => $value) {
+                $goods = $this->getGoodsFind(['g_id' => $value['g_id']], 'cost_price,market_price,retail_price');
+                if (!$goods) continue;
+                $goods = $goods->toArray();
+                if ($value['cost_price'] != $goods['cost_price'] || $value['market_price'] != $goods['market_price'] || $value['retail_price'] != $goods['retail_price']) {
+                    $value = array_merge($value, $goods);
+                    $result = $this->updateMachineGoods($value);
+                    if ($result) {
+                        $this->afterMgUpdate($value['mg_id']);
+                    }
+                }
+            }
+        }
+        return $this->r(200, $this->lang("action_success"));
     }
 }

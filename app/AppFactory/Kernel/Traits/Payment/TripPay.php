@@ -33,7 +33,7 @@ trait TripPay
      */
     protected function tripUrlLink()
     {
-        $this->order['mobile'] = $this->data['mobile'] ?? "";
+        if (!$this->order['mobile']) $this->order['mobile'] = $this->data['mobile'] ?? "";
         $result = $this->createHotelOrder();
         if ($result && isset($result['code']) && $result['code'] == 0){
             $this->updateSaleOrders(['order_id' => $this->order['order_id'],'out_trade_no' => $result['result']['tradeNo']]);
@@ -79,22 +79,27 @@ trait TripPay
                     "productId" => $value['g_id'],
                     "productName" => $value['g_name'],
                     "num" => $value['quantity'],
-                    "originalPrice" => bcmul(bcmul($value['retail_price'], $value['quantity'], 3), 100),
-                    "salePrice" => bcmul($value['total_sod_price'], 100),
+                    "originalPrice" => intval(bcmul(bcmul($value['retail_price'], $value['quantity'], 3), 100)),
+                    "salePrice" => intval(bcmul($value['total_sod_price'], 100)),
                 ];
                 $mallOrderInfo[] = $productInfo;
             }
         }
         if ($mallOrderInfo) $params['mallOrderInfoList'] = $mallOrderInfo;
-        $hotel = $this->getSaleHotelFind(['order_id' => $this->order['order_id']],'hotelId,roomId,totalPrice,num,adults,checkInDate,checkOutDate,guestNames,expectCheckInTime,logId,tripData');
+        $hotel = $this->getSaleHotelFind(['order_id' => $this->order['order_id']],'sh_id,hotelId,roomId,totalPrice,num,adults,checkInDate,checkOutDate,guestNames,expectCheckInTime,logId,tripData');
         if ($hotel) {
             $hotel = $hotel->toArray();
             if ($hotel) {
-                $nightly = $this->getSaleHotelNightlyList(['hotelId' => $hotel['hotelId']],0,'effectiveDate stayDate,amount salePrice');
+                $hotel['guestNames'] = $this->order['mobile'] ?? "张三";
+                $hotel['expectCheckInTime'] = $hotel['checkInDate'] . " 18:00";
+                $nightly = $this->getSaleHotelNightlyList(['sh_id' => $hotel['sh_id']],0,'effectiveDate stayDate,amount salePrice');
+                unset($hotel['sh_id']);
+                actionLog($nightly,'每晚价格数据');
                 if ($nightly) {
                     $nightly = $nightly->toArray();
                     $hotel['nightlyPrice'] = $nightly;
                 }
+                actionLog($hotel,'下单酒店数据');
                 $params['roomOrderInfo'] = $hotel;
             }
         }

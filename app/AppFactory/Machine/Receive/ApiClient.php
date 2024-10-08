@@ -146,8 +146,9 @@ class ApiClient extends ReceiveBaseClient
         $pIds = $this->getAuthManagerMachineColumn(['m_id' => $this->machine['m_id']], 'manager_id');
         $pIds = array_merge($pIds, $this->getParentIdList($this->machine['creator']));
         $pIds[] = $this->machine['creator'];
+        $pIds[] = 1;
         $systemInfo = $this->getConfigContent([['creator', 'in', $pIds], "config_switch" => 1, 'config_name' => "systemInfo"]);
-        return $this->rQ($systemInfo);
+        return $this->r(200,$this->lang("query_success"),$systemInfo);
     }
 
     public function ip()

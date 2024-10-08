@@ -409,7 +409,7 @@ class HotelClient extends ReceiveBaseClient
                     "roomId" => $this->data['hotelList']['roomId'],
                     "num" => $this->data['hotelList']['num'],
                     "adults" => $this->data['hotelList']['adults'],
-                    "totalPrice" => $this->data['hotelList']['totalPrice'],
+                    "totalPrice" => bcmul($this->data['hotelList']['totalPrice'],100),
                     "mobile" => $this->order['mobile'],
                     "pay_amount" => $this->data['hotelList']['pay_amount'],
                     "checkInDate" => $this->data['hotelList']['checkInDate'],

@@ -17,13 +17,16 @@ class StrategyPayee extends Common
 
     protected function checkContent($postData)
     {
+        $checkName = "";
         $checkData = json2arr($postData['content']);
         switch ($postData['payee_type']) {
             case 1: $checkName = "addWx";  break;
             case 2: $checkName = "addAli";  break;
             case 3: $checkName = "addTl";  break;
             case 4: $checkName = "addJdCashier";  break;
+            case 5: $checkName = "addTrip";  break;
         }
+        if (!$checkName) return returnValidate("未定义收款策略名称");
         $check = $this->validate($checkData,$this->validatePath . $checkName);
         if ($check !== true) return returnValidate($check);
         return true;

@@ -9,7 +9,10 @@
 namespace app\AppFactory\Api\V2;
 
 
+use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiCallbackTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiLockStockTrait;
@@ -39,7 +42,7 @@ class V2Client extends V2BaseClient
     use ConfigSceneTrait;
     use EarthCountriesTrait, EarthCitiesTrait, EarthRegionsTrait, EarthAreaTrait, EarthStatesTrait;
     use SaleOrdersDailyCountTrait, SaleOrdersTrait, SaleHotelTrait, SaleOrdersRevenueTrait;
-    use ActivityPickCodeTrait;
+    use ActivityPickTrait,ActivityPickCodeTrait,ActivityCouponTrait,ActivityCouponUsedTrait;
     use ApiAdvanceTrait, ApiCallbackTrait;
     use AfterOrderPaymentTrait;
     use GoodsTrait;
@@ -58,14 +61,16 @@ class V2Client extends V2BaseClient
         try {
             $field = "mc_id,channel_code,
             (CASE `status` WHEN 3 THEN 0 ELSE stock END) quantity,retail_price sale_price,sku, 
-            (CASE `status` WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,g_name,
+            (CASE `status` WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,g_name,sku,
             market_price,frozen_stock reserver_quantity, capacity slot_max_count";
             $where['machine_id'] = $this->params['machine_id'];
             if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->config['product_id'];
             $where[] = ['status', '<>', 2];
             $data = $this->getMachineChannelList($where,$this->params['pageNum'], $field, 'stock desc');
             $data = $data->each(function ($item) {
-                $item['g_desc'] = $this->getGoodsValue(['g_id' => $item['product_id']],'desc');
+                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'sku2,`desc`');
+                $item['sku2'] = $goods['sku2'] ?? '';
+                $item['g_desc'] = $goods['desc'] ?? '';
                 return $item;
             });
             if ($data) {
@@ -356,5 +361,90 @@ class V2Client extends V2BaseClient
         $data = $this->getGoodsMultipleListByMachine($where,$this->params['pageNum'] ?? 0,
             "gm.gm_id,gm.gm_name,gm.gm_pic,gm.gm_desc,gm.start_time,gm.end_time",'gm.create_time desc',$this->params['page'] ?? 1);
         return $this->returnData(0,$this->lang("msg.0"),$data);
+    }
+
+    /**
+     * 获取营销活动码，包含优惠券和提货码
+     * @return array|\think\response\Json
+     */
+    public function get_activity_code()
+    {
+        try {
+            $code = "";// 优惠券
+            if ($this->params['aType'] == 2) {
+                $where['c_id'] = $this->params['aId'];
+                $coupon = $this->getActivityCouponFind($where);
+                if (!$coupon) return $this->returnData(27, $this->lang("msg.27"));
+                if ($coupon['status'] == 3) return $this->returnData(28, $this->lang("msg.28"));
+                if ($coupon['status'] == 4) return $this->returnData(29, $this->lang("msg.29"));
+                if ($coupon['start_date'] > time()) return $this->returnData(30, $this->lang("msg.30"));
+                if ($coupon['end_date'] < time()) {
+                    $this->updateActivityCoupon(['c_id' => $coupon['c_id'], 'status' => 3]);
+                    $this->updateActivityCouponUsed(['status' => 3], ['c_id' => $coupon['c_id']]);
+                    return $this->returnData(31, $this->lang("msg.31"));
+                }
+                // 固定码，不是随机码的，有使用次数上限的
+                if ($coupon['code']) {
+                    if ($coupon['used_limit'] > 0) {
+                        $whereCount['c_id'] = $coupon['c_id'];
+                        $whereCount['status'] = 2;
+                        $usedNum = $this->getActivityCouponUsedCount($whereCount);
+                        // 已使用次数等于或超过上限设置的
+                        if ($coupon['used_limit'] <= $usedNum) {
+                            return $this->returnData(32, $this->lang("msg.32"));
+                        }
+                    }
+                    $insertCu = [
+                        "c_id" => $coupon['c_id'],
+                        "receive_type" => 2,
+                        "code" => $coupon['code'],
+                        "code_type" => 2,
+                        "c_type" => $coupon['c_type'],
+                        "reduction" => $coupon['reduction'],
+                        "pay_limit" => $coupon['pay_limit'],
+                    ];
+                    $code = $coupon['code'];
+                    $result = $this->addActivityCouponUsed($insertCu);
+                    if (!$result) return $this->returnData(34, $this->lang("msg.34"));
+                } else {
+                    $whereCu['c_id'] = $coupon['c_id'];
+                    $whereCu['status'] = 1;
+                    $whereCu['receive_type'] = 1;
+                    $cu = $this->getActivityCouponUsedFind($whereCu, 'cu_id,code', 'cu_id desc');
+                    if (!$cu) return $this->returnData(33, $this->lang("msg.33"));
+                    $code = $cu['code'];
+                    $result = $this->updateActivityCouponUsed(['cu_id' => $cu['cu_id'], 'receive_type' => 2]);
+                    if (!$result) return $this->returnData(35, $this->lang("msg.35"));
+                }
+            }// 取货码
+            if ($this->params['aType'] == 3) {
+                $whereP['id'] = $this->params['aId'];
+                $pick = $this->getActivityPickFind($whereP);
+                if (!$pick) return $this->returnData(27, $this->lang("msg.27"));
+                if ($pick['status'] == 3) return $this->returnData(28, $this->lang("msg.28"));
+                if ($pick['status'] == 4) return $this->returnData(29, $this->lang("msg.29"));
+                if ($pick['start_time'] > time()) return $this->returnData(30, $this->lang("msg.30"));
+                if ($pick['end_time'] < time()) {
+                    $this->updateActivityPick(['status' => 3, 'id' => $pick['id']]);
+                    $this->updateActivityPickCode(['status' => 3], ['ap_id' => $pick['id']]);
+                    return $this->returnData(29, $this->lang("msg.29"));
+                }
+                if ($pick['status'] == 1 && $pick['start_time'] < time()) {
+                    $this->updateActivityPick(['status' => 2, 'id' => $pick['id']]);
+                }
+                $wherePc['ap_id'] = $pick['id'];
+                $wherePc['receive_type'] = 1;
+                $wherePc['status'] = 1;
+                $pc = $this->getActivityPickCodeFind($wherePc, 'apc_id,code', 'apc_id desc');
+                if (!$pc) return $this->returnData(33, $this->lang("msg.33"));
+                $result = $this->updateActivityPickCode(['apc_id' => $pc['apc_id'], 'receive_type' => 2]);
+                if (!$result) return $this->returnData(35, $this->lang("msg.35"));
+                $code = $pc['code'];
+            }
+            return $this->returnData(0, $this->lang("msg.0"), ['code' => $code]);
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->returnData(99,$this->lang("msg.99") . ":" . $e->getMessage());
+        }
     }
 }

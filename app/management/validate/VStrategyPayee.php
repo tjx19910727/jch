@@ -14,7 +14,7 @@ class VStrategyPayee extends VCommon
     protected $rule = [
         "sp_id" => "require",
         "sp_name" => 'require',
-        "payee_type" => 'require|between:1,4',
+        "payee_type" => 'require|in:1,4,5',
         "app_id" => 'require',
         "mch_id" => "require",
         "content" => 'require',
@@ -55,7 +55,7 @@ class VStrategyPayee extends VCommon
         "sp_id.require" => "策略ID不能为空",
         "sp_name.require" => "策略名称不能为空",
         "payee_type.require" => "收款方类型不能为空",
-        "payee_type.between" => "收款方类型不在限定范围内",
+        "payee_type.in" => "收款方类型不在限定范围内",
         "app_id.require" => "应用ID不能为空",
         "mch_id.require" => "商户ID不能为空",
         "content.require" => "配置内容不能为空",
@@ -99,6 +99,7 @@ class VStrategyPayee extends VCommon
         "addAli" => ["app_id","pid","private_key_path","ali_public_key_path","ali_root_cert_path","app_public_key_path","to_balance"],
         "addTl"  => ["app_id"],
         "addJdCashier" => ["agentNum","customerNum","shopNum","accessKey","secretKey"],
+        "addTrip" => ["appId","appSecret","baseUrl"],
         "updateSp" => ['sp_id'],
     ];
 }

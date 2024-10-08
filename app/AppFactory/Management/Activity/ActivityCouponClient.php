@@ -139,7 +139,7 @@ class ActivityCouponClient extends ManagementClient
         $this->startTrans();
 
         try {
-            $flag[] = $this->updateActivityCoupon($postData);
+            $this->updateActivityCoupon($postData);
             $insert = [
                 "a_id" => $postData['c_id'],
                 "a_type" => 1,
@@ -162,6 +162,9 @@ class ActivityCouponClient extends ManagementClient
                 $oldAgList = $this->getActivityGoodsColumn(['a_id' => $postData['c_id'], 'a_type' => 1], 'g_id');
                 $delAgList = array_diff($oldAgList, $goodsList);
                 $addAgList = array_diff($goodsList, $oldAgList);
+                if ($delAgList) {
+                    $flag[] = $this->delActivityGoods(['a_id' => $postData['c_id'], 'a_type' => 1, ['g_id', 'in', $delAgList]]);
+                }
                 if ($addAgList) {
                     $agResult = $this->addAg($insert, $goodsList);
                     if ($agResult !== true) {
@@ -170,8 +173,8 @@ class ActivityCouponClient extends ManagementClient
                     }
                     $flag[] = 1;
                 }
-                if ($delAgList) $flag[] = $this->delActivityGoods(['a_id' => $postData['c_id'], 'a_type' => 1, ['g_id', 'in', $delAgList]]);
             }
+            actionLog($flag,'修改结果集');
             $check = $this->checkFlag($flag);
             return $this->checkTrans($check);
         } catch (\Exception $e) {

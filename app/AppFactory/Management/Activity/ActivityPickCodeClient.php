@@ -41,7 +41,7 @@ class ActivityPickCodeClient extends ManagementClient
         if ($pick['status'] == 3) return $this->r(100, $this->lang("VActivityPickCode.status3"));
         if ($pick['status'] == 4) return $this->r(100, $this->lang("VActivityPickCode.status4"));
         $update = [];
-        if ($pick['start_time'] > time()) {
+        if ($pick['start_time'] < time()) {
             $update['status'] = 2;
         }
         if ($pick['end_time'] > 0 && $pick['end_time'] < time()) {

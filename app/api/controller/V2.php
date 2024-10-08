@@ -78,10 +78,14 @@ class V2 extends Common
 //        dump($params);
 //        $details = json_decode($params['order_detail'],true);
 //        dump($details);
+//        $params = [
+//            "kiosk_id" => "test0003",
+//            "pageNum" => 1,
+//            "page" => 2,
+//        ];
         $params = [
-            "kiosk_id" => "test0003",
-            "pageNum" => 1,
-            "page" => 2,
+            "aId" => "81",
+            "aType" => 2,
         ];
 //        $data = [
 //            "auth_name" => "ctrip",
@@ -95,6 +99,7 @@ class V2 extends Common
             "timestamp" => time(),
             "params" => json_encode($params, 320),
         ];
+        dump(json_encode($data));
         dump($data['params']);
         $string1 = strtoupper(md5($data['auth_password'] . $data['timestamp']));
         dump($string1);
@@ -106,7 +111,7 @@ class V2 extends Common
         $signStr = $string1 . implode(",", $signArr);
         dump($signStr);
         $data['sign'] = strtoupper(md5($signStr));
-        $data['api'] = "get_goods_multiple";
+        $data['api'] = "get_activity_code";
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));

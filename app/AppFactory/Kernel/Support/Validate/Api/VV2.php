@@ -34,6 +34,9 @@ class VV2 extends SupportValidate
 
             "pay_status" => "require",
             "reservation_status" => "require",
+
+            "aId" => "require",
+            "aType" => "require",
         ];
 
         protected $message = [
@@ -56,6 +59,9 @@ class VV2 extends SupportValidate
 
             "pay_status.require" => "payNotify.pay_status_require",
             "reservation_status.require" => "hotelNotify.reservation_status_require",
+
+            "aId.require" => "activity_code.aId_require",
+            "aType.require" => "activity_code.aType_require",
         ];
 
         protected $scene = [
@@ -68,5 +74,6 @@ class VV2 extends SupportValidate
             "payNotify" => ["order_no","pay_status"],
             "hotelNotify" => ["order_no","reservation_status"],
             "get_goods_multiple" => ["kiosk_id"],
+            "get_activity_code" => ["aId","aType"],
         ];
 }

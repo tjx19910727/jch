@@ -135,4 +135,14 @@ class MachineGoods extends Common
         $where = $this->getWhere($postData, false, ["g_name" => "like",'sku' => "like"]);
         return $this->app->machineGoods->exportMg($where);
     }
+
+    /**
+     * 设备商品库同步商品库价格
+     * @return array|\think\response\Json
+     */
+    public function synchronizationGoods()
+    {
+        $postData = input();
+        return $this->app->machineGoods->synchronizationGoodsPrice($postData);
+    }
 }
