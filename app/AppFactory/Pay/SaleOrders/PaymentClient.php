@@ -10,7 +10,9 @@ namespace app\AppFactory\Pay\SaleOrders;
 
 
 use app\AppFactory\Kernel\Support\AuthCode;
+use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\AliPayTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\JdCashierTrait;
@@ -33,9 +35,17 @@ class PaymentClient extends PayBaseClient
         BeforeOrderPaymentTrait,
         SaleHotelTrait,SaleHotelNightlyTrait,
         SaleOrdersRevenueTrait;
+    use AfterOrderPaymentTrait;
+    use MachineMqRecordTrait;
 
     public $machine;
     public $strategyPayee;
+    public $returnData = [
+        "paymentUrlLink" => "",
+        "qrCodeLink" => "",
+        "order" => [],
+        "result" => "",
+    ];
 
     /**
      * @var array 支付类型
@@ -168,8 +178,10 @@ class PaymentClient extends PayBaseClient
                 $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status']);
                 if ($uOrder && $this->order['pay_type'] != 5) {
                     $func_name = $this->cancelType[$this->strategyPayee['payee_type']];
-                    $result = $this->$func_name();
-                    return $result;
+                    if (method_exists($this,$func_name)) {
+                        $result = $this->$func_name();
+                        return $result;
+                    }
                 }
                 return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
             }

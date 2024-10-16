@@ -124,7 +124,8 @@ class AuthManager extends Common
     {
         $manager_id = input('manager_id');
         if (!$manager_id) return returnState(100,'账号ID不能为空');
-        $result = $this->app->authManager->getWxQr($manager_id);
+        $unbind = input("unbind");
+        $result = $this->app->authManager->getWxQr($manager_id,$unbind);
         return $result;
     }
 }

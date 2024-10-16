@@ -38,7 +38,9 @@ class V2BaseClient extends ApiBaseClient
      */
     public function getAuthConfig()
     {
-        $this->authConfig = $this->getConfigApiFind(['auth_name' => $this->config['auth_name']]);
+        if (isset($this->config['auth_name']) && $this->config['auth_name']) {
+            $this->authConfig = $this->getConfigApiFind(['auth_name' => $this->config['auth_name']]);
+        }
         actionLog($this->authConfig, 'API配置信息');
         if (!$this->authConfig) {
             $this->returnData(2, $this->lang("msg." . 2))->send();
@@ -56,7 +58,7 @@ class V2BaseClient extends ApiBaseClient
         $this->ip = request()->ip();
         actionLog($this->ip, '请求IP地址');
         if ($this->authConfig['white_list'] && !in_array($this->ip, $this->authConfig['white_list'])) {
-            $this->returnData(1, $this->lang("msg." . 1))->send();
+            $this->returnData(1, $this->lang("msg." . 1) . "：" . $this->ip)->send();
             die();
         }
     }

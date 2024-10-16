@@ -31,12 +31,13 @@ class AuthManagerClient extends ManagementClient
     /**
      * 获取微信公众号带参二维码
      * @param $manager_id
+     * @param $unbind
      * @return array|bool|string
      */
-    public function getWxQr($manager_id)
+    public function getWxQr($manager_id,$unbind = 0)
     {
         $manager = $this->getAuthManagerFind(['manager_id' => $manager_id]);
-        if ($manager['openid']) {
+        if ($manager['openid'] && $unbind) {
             $result = $this->updateAuthManager(['manager_id' => $manager_id,'wx_id' => 0,"openid" => ""]);
             if ($result) {
                 return $this->r(200,$this->lang("VWxOfficial.unbind_success"));

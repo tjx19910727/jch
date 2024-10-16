@@ -113,6 +113,7 @@ class HotelClient extends ReceiveBaseClient
     {
         $where = [];
         if (isset($this->data['cityName'])) $where[] = ['cityName', 'like', "%" . $this->data['cityName'] . "%"];
+        if (isset($this->data['initial'])) $where[] = ['initial',"like","%" . strtolower($this->data['initial']) . "%"];
         $city = $this->getTripCityList($where, $this->data['pageNum'] ?? 0, "cityId,cityName");
         return $this->r(200, $this->lang('query_success'), ['city' => $city]);
     }
@@ -411,7 +412,7 @@ class HotelClient extends ReceiveBaseClient
                     "adults" => $this->data['hotelList']['adults'],
                     "totalPrice" => bcmul($this->data['hotelList']['totalPrice'],100),
                     "mobile" => $this->order['mobile'],
-                    "pay_amount" => $this->data['hotelList']['pay_amount'],
+                    "pay_amount" => bcmul($this->data['hotelList']['pay_amount'],100),
                     "checkInDate" => $this->data['hotelList']['checkInDate'],
                     "checkOutDate" => $this->data['hotelList']['checkOutDate'],
                     "guestNames" => $this->data['hotelList']['guestNames'] ?? "",

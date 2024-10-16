@@ -423,41 +423,41 @@ class Test extends BaseController
 
     public function testUpload()
     {
-        $content = [
-            "msgType" => "outGoods",
-            "trade_no" => "202408231430523178472",
-            "main" => [
-                "1" => [
-                    [
-                        "channel_code" => "C03",
-                        "success_quantity" => 1,
-                        "fail_quantity" => 0,
-                        "deliver_pics" => "",
-                        "out_sequence" => 1,
-                    ]
-                ],
-            ],
-        ];
-        $content = json_encode($content);
-        $msg_id = uniqid();
-//        $signKey = "12da2ed86ebb06a199ac1d27ab062dcf";
-        $data = [
-            "timestamp" => time(),
-            "msg_id" => $msg_id,
-            "machine_id" => "test0003",
-//            "mac" => "192.168.6.1",
-            "data" => $content,
-//            "data" => [
-//                "msgType" => "updateComplete",
-//                "mvp_id" => 184,
-//                "status" => 2,
+//        $content = [
+//            "msgType" => "outGoods",
+//            "trade_no" => "202408231430523178472",
+//            "main" => [
+//                "1" => [
+//                    [
+//                        "channel_code" => "C03",
+//                        "success_quantity" => 1,
+//                        "fail_quantity" => 0,
+//                        "deliver_pics" => "",
+//                        "out_sequence" => 1,
+//                    ]
+//                ],
 //            ],
-        ];
-        $signKey = MachineModel::getFieldValue(['machine_id' => $data['machine_id']], 'signKey');
-        $data['sign'] = SignUtil::makeSign($data, $signKey);
-        dump(json_encode($data));
+//        ];
+//        $content = json_encode($content);
+//        $msg_id = uniqid();
+////        $signKey = "12da2ed86ebb06a199ac1d27ab062dcf";
+//        $data = [
+//            "timestamp" => time(),
+//            "msg_id" => $msg_id,
+//            "machine_id" => "test0003",
+////            "mac" => "192.168.6.1",
+//            "data" => $content,
+////            "data" => [
+////                "msgType" => "updateComplete",
+////                "mvp_id" => 184,
+////                "status" => 2,
+////            ],
+//        ];
+//        $signKey = MachineModel::getFieldValue(['machine_id' => $data['machine_id']], 'signKey');
+//        $data['sign'] = SignUtil::makeSign($data, $signKey);
+//        dump(json_encode($data));
 
-//        $data = '{"timestamp":"1722842359","msg_id":"034be881-8c50-4aba-b8f4-cb320a37e5b3","machine_id":"0004","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"2024080515164570798038\",\"main\":{\"1\":[{\"channel_code\":\"D01\",\"success_quantity\":2,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0004/20240805/9c71a4607b937e39344bc5b7603a1d9d.jpg,/uploads/machine_0004/20240805/ddc2bf4a4fb22a3250de7896515a54cb.jpg\",\"out_sequence\":1}]}}","sign":"69a744b05efdb01736123c64165d8150"}';
+//        $data = '{"timestamp":"1728453952","msg_id":"2dd8eded-877e-4b9d-b099-49217270bafc","machine_id":"0022","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"2024100914041046913817\",\"main\":{\"1\":[{\"channel_code\":\"A01\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0022/20241009/f20d4ba10817a9f059730bf3b2a0c6c1.jpg,/uploads/machine_0022/20241009/2da4f0068c74716ff5df0b830e488ffb.jpg\",\"out_sequence\":1}]}}","sign":"0b2062391c78023fcc81ed082e94b419"}';
 //        $data = json2arr($data);
         $result = MqProducer::dataUpload($data);
         dump($result);
@@ -481,7 +481,7 @@ class Test extends BaseController
 
     public function testReturn()
     {
-        $data = '{"timestamp":"1726220271","msg_id":"b783f642-e274-44cc-9cdf-b54f4ce727af","machine_id":"0019","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"2024091317362338277680\",\"main\":{\"1\":[{\"channel_code\":\"B02\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"\/uploads\/machine_0019\/20240913\/9f779e221cb43352bb3c4949e9323a04.jpg,\/uploads\/machine_0019\/20240913\/d3542789036fe2ddd8c885d194f5ad22.jpg\",\"out_sequence\":1}]}}","sign":"5b10fb703526a9a6d0d746e48c81b25e"}';
+        $data = input();
         $data = json2arr($data);
         dump($data);
         $config = [
@@ -491,7 +491,7 @@ class Test extends BaseController
         ];
 //        unset($data['sign']);
 //        $data['sign'] = SignUtil::makeSign($data,$config['key']);
-        dump($data);
+        dump($config);
         $app = AppFactory::machine($config);
         $result = $app->mq->onMessage();
         dump($result);

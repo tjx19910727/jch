@@ -50,9 +50,9 @@ trait WxPayTrait
             return $this->rFail("支付方式不在允许范围内");
         $this->initWpApp();
         $this->order['sp_id'] = $this->strategyPayee['sp_id'];
-        if ($this->order['pay_method'] != "14") {
-            return $this->rFail("当前模式下微信仅支持Native支付");
-        }
+//        if ($this->order['pay_method'] != "14") {
+//            return $this->rFail("当前模式下微信仅支持Native支付");
+//        }
         $func_name = $this->wxPaymentMethod[$this->order['pay_method']];
         return $this->$func_name();
     }
@@ -66,17 +66,17 @@ trait WxPayTrait
      */
     public function wxScanQr()
     {
-//        $params = [
-//            "body" => "支付订单",
-//            "out_trade_no" => $this->order['trade_no'],
-//            "total_fee" => round($this->order['total_price'] * 100, 0),
-//            "auth_code" => $this->order['payment_code'],
-//        ];
-//        actionLog($params,'付款码支付参数');
-//        $result = $this->wpApp->micropay->pay($params);
-//        actionLog($result,'付款码支付');
-//        $return = $this->r(100,"不明状态码",$result);
-//
+        $params = [
+            "body" => "支付订单",
+            "out_trade_no" => $this->order['trade_no'],
+            "total_fee" => round($this->order['total_price'] * 100, 0),
+            "auth_code" => $this->order['pay_code'],
+        ];
+        actionLog($params,'付款码支付参数');
+        $result = $this->wpApp->pay($params);
+        actionLog($result,'付款码支付');
+        $return = $this->r(100,"不明状态码",$result);
+
 //        if (isset($result['openid']) && $result['openid']) {
 //            $user = $this->getUserFind(['openid' => $result['openid']]);
 //            if ($user) {
@@ -88,33 +88,36 @@ trait WxPayTrait
 //                $this->order['user_id'] = $this->addUser($insert);
 //            }
 //        }
-//
-//        if ($result['return_code'] == "SUCCESS") {
-//            if ($result['result_code'] == "SUCCESS" && $result['trade_type'] == "MICROPAY") {
-//                // 成功
-//                $this->startTrans();
-//                // 结算分润收益
-//                $flag[] = $this->settlementRevenue();
-//                $flag[] = $this->paymentSuccessful();
-//                $result = flag_check($flag);
-//                $return = $this->checkTrans($result);
-//            }
-//            if ($result['err_code'] == "USERPAYING") {
-//                // 支付中
-//                $redis = new \Redis();
-//                $redis->connect("127.0.0.1", "6379");
-//                $redis->lPush("microPay", json_encode(['order_id' => $this->order['order_id'],'time' => time(),'pay_type' => "wx"], 256 + 64));
-//                $redis->expire("microPay",120);
-//                $redis->close();
-//                $return = $this->r(201,'等待用户支付');
-//            }
-//        }
-//        if ($result['result_code'] == "FAIL") {
-//            // 支付失败
-//            $this->paymentFailed();
-//            $return = $this->rFail("支付失败");
-//        }
-//        return $return;
+
+        if ($result['return_code'] == "SUCCESS") {
+            if ($result['result_code'] == "SUCCESS" && $result['trade_type'] == "MICROPAY") {
+                // 成功
+                $this->startTrans();
+                // 结算分润收益
+                $flag[] = $this->settlementRevenue();
+                $flag[] = $this->paymentSuccessful();
+                $result = flag_check($flag);
+                $return = $this->checkTrans($result);
+            }
+            if ($result['err_code'] == "USERPAYING") {
+                $redisExpire = (env("Payment.microPayOverTime") ?? 0) + 60;
+                // 支付中
+                $redis = new \Redis();
+                $config = config("redis");
+                $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
+                if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
+                $redis->lPush("microPay", json_encode(['order_id' => $this->order['order_id'],'time' => time(),'pay_type' => "wx"], 256 + 64));
+                $redis->expire("microPay",$redisExpire);
+                $redis->close();
+                $return = $this->r(201,'等待用户支付');
+            }
+        }
+        if ($result['result_code'] == "FAIL") {
+            // 支付失败
+            $this->paymentFailed();
+            $return = $this->rFail("支付失败");
+        }
+        return $return;
     }
 
     /**
@@ -171,7 +174,10 @@ trait WxPayTrait
         $result = $this->wpApp->order->unify($param);
         actionLog($result,'统一下单返回参数');
         if (isset($result['code_url'])) {
-            return $this->r(200,'SUCCESS',['paymentUrlLink' => $result['code_url'],'order' => $this->order,'result' => $result]);
+            $this->returnData['order'] = $this->order;
+            $this->returnData['paymentUrlLink'] = $result['code_url'];
+            $this->returnData['result'] = $result;
+            return $this->r(200,'SUCCESS',$this->returnData);
         }
         return $this->r(100, $result['err_code_des']);
     }
@@ -218,6 +224,27 @@ trait WxPayTrait
             actionException($e,1);
             return $this->rValidate($e->getMessage());
         }
+    }
+
+    /**
+     * 微信关闭订单
+     * @return mixed
+     * @throws \EasyWeChat\Kernel\Exceptions\InvalidArgumentException
+     * @throws \EasyWeChat\Kernel\Exceptions\InvalidConfigException
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function wxCancel()
+    {
+        $result = $this->wpApp->order->close($this->order['trade_no']);
+        actionLog($result, '微信支付关闭订单结果');
+        if (isset($result['return_code']) && $result['return_code'] == 'success') {
+            return $this->r(200, $this->lang("cancel_payment_success"));
+        }
+        $msg = '';
+        if (isset($result['return_msg'])) $msg .= $result['return_msg'] . "；";
+        if (isset($result['err_code'])) $msg .= $result['err_code'] . "；";
+        if (isset($result['err_code_des'])) $msg .= $result['err_code_des'] . "；";
+        return $this->r(100, $this->lang("cancel_payment_fail") . '：' . $msg, $result);
     }
 
 }

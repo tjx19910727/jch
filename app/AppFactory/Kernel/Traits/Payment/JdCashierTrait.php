@@ -153,7 +153,10 @@ trait JdCashierTrait
         $result = $this->jdApp->order->qrCodeUrl($params);
         actionLog($result, '京东收银生成支付二维码地址返回结果');
         if (isset($result['code']) && $result['code'] == 'success') {
-            return $this->r(200, $this->lang("init_payment_success"), ['paymentUrlLink' => $result['url'], 'order' => $this->order,'result' => $result]);
+            $this->returnData['paymentUrlLink'] = $result['url'];
+            $this->returnData['order'] = $this->order;
+            $this->returnData['result'] = $result;
+            return $this->r(200, $this->lang("init_payment_success"), $this->returnData);
         }
         $msg = '';
         if (isset($result['error']['errorMsg'])) $msg .= $result['error']['errorMsg'] . "；";

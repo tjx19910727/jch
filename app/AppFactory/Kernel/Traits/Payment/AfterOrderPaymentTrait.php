@@ -250,7 +250,7 @@ trait AfterOrderPaymentTrait
 //                    $result = TencentCloud::sendSms($smsParam,$phoneNumber);
 //                    actionLog($result,'预订酒店发送短信通知');
                 }
-                if ($sh['hotelFrom'] == 1) {
+                if ($sh['hotelFrom'] == 1 && $this->order['pay_type'] <> 5) {
                     $params = [
                         "tradeNo" => $this->order['out_trade_no'],
                         "payStatus" => $status,

@@ -40,9 +40,9 @@ class VV2 extends SupportValidate
         ];
 
         protected $message = [
-            "machine_id.require" => "machine_id_require",
-            "shelf_on.require" => "shelf_on_require",
-            "pageNum.require" => "pageNum_require",
+            "machine_id.require" => "VV2.machine_id_require",
+            "shelf_on.require" => "VV2.shelf_on_require",
+            "pageNum.require" => "VV2.pageNum_require",
 
             "kiosk_id.require" => "reserve_order.kiosk_id_require",
             "order_no.require" => "reserve_order.order_no_require",

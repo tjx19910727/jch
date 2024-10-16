@@ -15,7 +15,6 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiCallbackTrait;
-use app\AppFactory\Kernel\Traits\Api\ApiLockStockTrait;
 use app\AppFactory\Kernel\Traits\Config\ConfigSceneTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthAreaTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
@@ -218,6 +217,7 @@ class V2Client extends V2BaseClient
         $this->order = $this->getSaleOrdersFind(['trade_no' => $this->params['order_no']], 'order_id');
         if (!$this->order) return $this->returnData(10, $this->lang("msg." . 10), ['success' => true, "order_no" => $this->params['order_no']]);
         if ($this->order['pay_status'] == 5) return $this->returnData(0, $this->lang("msg." . 0));
+        if ($this->order['out_status'] > 2 ) return $this->returnData(99,$this->lang("msg.99"));
 
         // 查询预订商品记录
         $advance = $this->getApiAdvanceFind(['trade_no' => $this->params['order_no']]);
@@ -371,6 +371,9 @@ class V2Client extends V2BaseClient
     {
         try {
             $code = "";// 优惠券
+            if (!in_array($this->params['aType'],[2,3])) {
+                return $this->returnData(27,$this->lang("msg.27"));
+            }
             if ($this->params['aType'] == 2) {
                 $where['c_id'] = $this->params['aId'];
                 $coupon = $this->getActivityCouponFind($where);

@@ -34,7 +34,7 @@ class MachineConfigClient extends ManagementClient
 
     public function updateMoreMc($postData)
     {
-        $this->startTrans();
+//        $this->startTrans();
         try {
             foreach ($postData['mcList'] as $key => $value) {
                 validate(VMachineConfig::class)->scene("mcList")->check($value);
@@ -44,14 +44,14 @@ class MachineConfigClient extends ManagementClient
                     $mc = $mc->toArray();
                     $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMachineConfig');
                 } else {
-                    $this->rollbackTrans();
+//                    $this->rollbackTrans();
                     return $this->r(100, $this->lang("update_fail"), $value);
                 }
             }
-            $this->commitTrans();
+//            $this->commitTrans();
             return $this->r(200, $this->lang("update_success"));
         } catch (\Exception $e) {
-            $this->rollbackTrans();
+//            $this->rollbackTrans();
             actionException($e,1);
             return $this->r(100,$this->lang($e->getMessage()));
         }

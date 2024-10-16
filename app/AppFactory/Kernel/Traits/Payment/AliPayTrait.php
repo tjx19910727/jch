@@ -121,12 +121,13 @@ trait AliPayTrait
                 }
             } else if ($result['code'] == 10003) { // 队列轮询
                 $return = $this->r(201, '等待您的支付，超时时间30秒');
+                $redisExpire = (env("Payment.microPayOverTime") ?? 0) + 60;
                 $redis = new \Redis();
                 $config = config("redis");
                 $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
                 if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
-                $redis->lPush("microPay", $this->order['order_id']);
-                $redis->expire("microPay", 30);
+                $redis->lPush("microPay", json_encode(['order_id' => $this->order['order_id'],'time' => time(),'pay_type' => "wx"], 256 + 64));
+                $redis->expire("microPay", $redisExpire);
                 $redis->close();
             } else if ($result['code'] == 40004) {
                 $this->paymentFailed();
@@ -154,7 +155,10 @@ trait AliPayTrait
             $result = $this->aliApp->trade->preCreate($data);
             if ($result) {
                 if ($result['code'] == 10000) {
-                    return $this->r(200, $result['msg'], $result);
+                    $this->returnData['order'] = $this->order;
+                    $this->returnData['paymentUrlLink'] = $result['qr_code'];
+                    $this->returnData['result'] = $result;
+                    return $this->r(200, $result['msg'], $this->returnData);
                 } else {
                     $msg = $result['msg'] . "；";
                     if (isset($result['sub_msg'])) $msg .= $result['sub_msg'] . "；";
@@ -189,5 +193,23 @@ trait AliPayTrait
             return $this->r(200, "退款成功");
         }
         return $this->r(100, "退款失败，支付宝返回信息：" . $result['msg'] . $result['sub_msg']);
+    }
+
+    /**
+     * 支付宝撤销订单
+     * @return mixed
+     * @throws \Exception
+     */
+    public function aliCancel()
+    {
+        $config = $this->strategyPayee;
+        $config['isObject'] = false;
+        $app = Factory::trade($config);
+        $result = $app->trade->cancel($this->order['trade_no']);
+        actionLog($result,'关闭订单');
+        if ($result['code'] == "10000") {
+            return $this->r(200,$this->lang("cancel_payment_success"));
+        }
+        return $this->r(100,$this->lang("cancel_payment_fail") . ($result['msg'] ?? "") . ($result['sub_msg'] ?? ""));
     }
 }

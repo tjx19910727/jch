@@ -15,11 +15,11 @@ use app\management\validate\Machine\VMachineGoods;
 class MachineGoods extends Common
 {
 
-    protected $field = "mg_id,g_id,g_name,gc_id,gc_name,gc_sort,pic,sku,cost_price,market_price,retail_price,
+    protected $field = "mg_id,m_id,g_id,g_name,gc_id,gc_name,gc_sort,pic,sku,cost_price,market_price,retail_price,
     (SELECT sum(mc.stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.status = 1 AND mc.mg_id = a.mg_id) available_stock,
     (SELECT sum(mc.stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.status > 1 AND mc.mg_id = a.mg_id) disabled_stock,
     (SELECT sum(mc.frozen_stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.mg_id = a.mg_id) reserve_stock,
-    standby_stock,machine_id,
+    standby_stock,machine_id,is_shelf,
     (select machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name";
     protected $validatePath = VMachineGoods::class;
 

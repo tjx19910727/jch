@@ -5,7 +5,7 @@
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'reference' => 'dbbe9697df0eda9f463b1f8e25f73da8cfb1ff26',
+        'reference' => '22e0c7f57f65706897c44bdc95a16ac2ed38cf76',
         'name' => 'topthink/think',
         'dev' => true,
     ),
@@ -143,6 +143,15 @@
             'install_path' => __DIR__ . '/../nesbot/carbon',
             'aliases' => array(),
             'reference' => '3e7edc41b58d65509baeb0d4a14c8fa41d627130',
+            'dev_requirement' => false,
+        ),
+        'overtrue/pinyin' => array(
+            'pretty_version' => '4.1.0',
+            'version' => '4.1.0.0',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../overtrue/pinyin',
+            'aliases' => array(),
+            'reference' => '4d0fb4f27f0c79e81c9489e0c0ae4a4f8837eae7',
             'dev_requirement' => false,
         ),
         'overtrue/socialite' => array(
@@ -613,7 +622,7 @@
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
-            'reference' => 'dbbe9697df0eda9f463b1f8e25f73da8cfb1ff26',
+            'reference' => '22e0c7f57f65706897c44bdc95a16ac2ed38cf76',
             'dev_requirement' => false,
         ),
         'topthink/think-captcha' => array(

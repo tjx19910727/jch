@@ -201,7 +201,7 @@ class TripMultipleClient extends ManagementClient
         }
         $flag = [];
         $this->startTrans();
-        $this->updateTripMultiple($postData,[],['tm_name','status','designated_hotel','designated_goods','designated_machine','rise_fall_ratio']);
+        $this->updateTripMultiple($postData,[],['tm_name','status','designated_hotel','designated_goods','designated_machine','rise_fall_ratio','pic']);
         if ($delHotel) $flag[] = $this->delTripMultipleHotel([['tmh_id','in',$delHotel],'tm_id' => $postData['tm_id']]);
         if ($delGoods) $flag[] = $this->delTripMultipleGoods([["tmg_id","in",$delGoods],'tm_id' => $postData['tm_id']]);
         if ($delMachine) $flag[] = $this->delTripMultipleMachine([["tmm_id","in",$delMachine],'tm_id' => $postData['tm_id']]);

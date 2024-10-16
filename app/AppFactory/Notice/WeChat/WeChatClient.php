@@ -31,20 +31,24 @@ class WeChatClient extends NoticeBaseClient
             try {
                 $app = Factory::officialAccount($this->config['config']);
                 foreach ($this->config['receiver'] as $key => $value) {
-                    $data = [
-                        "touser" => $value['openid'],
-                        "template_id" => $this->config['template']['template_id'],
-                    ];
-                    if ($this->config['template']['url']) $data['url'] = $this->config['template']['url'];
-                    if ($this->config['template']['miniprogram']) $data['miniprogram'] = json2arr($this->config['template']['miniprogram']);
-                    $body = json2arr($this->config['template']['body']);
-                    dump($body);
-                    foreach ($body as $bk => $bv) {
-                        $data['data'][$bv['field']] = $bv['value'];
+                    if ($value['openid']) {
+                        $data = [
+                            "touser" => $value['openid'],
+                            "template_id" => $this->config['template']['template_id'],
+                        ];
+                        if ($this->config['template']['url']) $data['url'] = $this->config['template']['url'];
+                        if ($this->config['template']['miniprogram']) $data['miniprogram'] = json2arr($this->config['template']['miniprogram']);
+                        $body = json2arr($this->config['template']['body']);
+                        foreach ($body as $bk => $bv) {
+                            foreach ($bv as $bvk => $bvv) {
+                                $data['data'][$bvv['field']] = trim($bvv['value']);
+                            }
+                        }
+                        actionLog($data, '发送微信通知数据');
+                        $result = $app->template_message->send($data);
+                        actionLog($result, '发送微信通知结果');
+                        $this->addTemplateLog($value, $data, $result);
                     }
-                    $result = $app->template_message->send($data);
-                    actionLog($result,'发送微信通知结果');
-                    $this->addTemplateLog($value,$data,$result);
                 }
                 return true;
             } catch (InvalidArgumentException $e) {

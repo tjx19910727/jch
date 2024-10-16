@@ -58,7 +58,12 @@ class StrategyPayee extends Common
             $checkContent = $this->checkContent($postData);
             if ($checkContent !== true) return $checkContent;
         }
-        return $this->app->strategyPayee->update($postData);
+        try {
+            return $this->app->strategyPayee->update($postData);
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return returnTryCatch($e->getMessage());
+        }
     }
 
     /**

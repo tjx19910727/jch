@@ -10,5 +10,6 @@ return [
         'machineReceive' => 'app\command\MachineReceive',
         'time_task' => 'app\command\TimeTask',
         'api' => 'app\command\Api',
+        'payment' => 'app\command\Payment',
     ],
 ];

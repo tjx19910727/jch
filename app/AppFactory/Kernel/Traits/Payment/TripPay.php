@@ -45,7 +45,12 @@ trait TripPay
                     $this->order['hotelList']['nightList'] = $this->getSaleHotelNightlyList(['sh_id' => $this->order['hotelList']['sh_id']]);
                 }
             }
-            return $this->r(200, $this->lang("init_payment_success"), ['paymentUrlLink' => $result['result']['miniProgramCode'], 'order' => $this->order,'result' => $result]);
+            $this->returnData['order'] = $this->order;
+            $qrCodeLink = "";
+            if (isset($result['result']['miniProgramCode']) && $result['result']['miniProgramCode']) $qrCodeLink = $result['result']['miniProgramCode'];
+            $this->returnData['qrCodeLink'] = $qrCodeLink;
+            $this->returnData['result'] = $result;
+            return $this->r(200, $this->lang("init_payment_success"),$this->returnData);
         }
         return $this->r(100,$this->lang("init_payment_fail") . "：" . $result['message'] ?? "",$result);
     }
@@ -86,7 +91,9 @@ trait TripPay
             }
         }
         if ($mallOrderInfo) $params['mallOrderInfoList'] = $mallOrderInfo;
-        $hotel = $this->getSaleHotelFind(['order_id' => $this->order['order_id']],'sh_id,hotelId,roomId,totalPrice,num,adults,checkInDate,checkOutDate,guestNames,expectCheckInTime,logId,tripData');
+//        $field = "sh_id,hotelId,roomId,totalPrice originalPrice,pay_amount totalPrice,num,adults,checkInDate,checkOutDate,guestNames,expectCheckInTime,logId,tripData";
+        $field = "sh_id,hotelId,roomId,totalPrice,num,adults,checkInDate,checkOutDate,guestNames,expectCheckInTime,logId,tripData";
+        $hotel = $this->getSaleHotelFind(['order_id' => $this->order['order_id']],$field);
         if ($hotel) {
             $hotel = $hotel->toArray();
             if ($hotel) {

@@ -94,10 +94,11 @@ class MachineInfo extends Common
             if (!$send) {
                 // 下发获取首页截屏、设备内部照片、出货箱照片
                 $this->app->machine->sendToMachine(['machine_id' => $machine_id],"img",["field" => $field]);
+                $send = 1;
             }
             sleep(1);
             $n++;
-            if ($n >= 60) {
+            if ($n >= 50) {
                 return returnState(100,lang("action_machine_overtime"));
             }
         }

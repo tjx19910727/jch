@@ -264,9 +264,10 @@ function covering($str,$length = 2){
  */
 function actionException($e,$trace = 0)
 {
-    actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage');
+    actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',
+        request()->controller() . "_" .request()->action());
     if ($trace) {
-        actionLog($e->getTrace(), 'tryCatchTrace');
+        actionLog($e->getTrace(), 'tryCatchTrace',request()->controller() . "_" .request()->action());
     }
 }
 

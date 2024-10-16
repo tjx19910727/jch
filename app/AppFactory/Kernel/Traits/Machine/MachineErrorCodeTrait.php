@@ -49,7 +49,22 @@ trait MachineErrorCodeTrait
             "msg" => $this->message['msg'] ?? "",
             "ao_id" => $this->machine['ao_id'] ?? 0,
         ];
-        $this->addMachineErrorCode($insert);
+        $result = $this->addMachineErrorCode($insert);
+        if ($result) {
+            $machine = $this->machine;
+            if (!is_array($this->machine)) $machine = $this->machine->toArray();
+            $errorMsg = $this->lang("deviceErrorCode." . $this->message['errorCode']);
+            $machine['errorCode'] =  $errorMsg == "deviceErrorCode." . $this->message['errorCode'] ? $this->message['errorCode'] : $errorMsg;
+            $machine['date'] = date("Y年m月d日");
+            $this->noticeSendData = [
+                "ao_id" => $this->machine['ao_id'],
+                "m_id" => $this->machine['m_id'],
+                "templateType" => "mFault",
+                "replaceData" => $machine,
+            ];
+            actionLog($this->noticeSendData,'发送设备故障通知');
+            @$this->noticeSend();
+        }
         return 1;
     }
 

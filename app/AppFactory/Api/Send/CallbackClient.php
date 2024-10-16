@@ -32,6 +32,7 @@ class CallbackClient extends ApiBaseClient
         "5" => [0,60,300],
         "6" => [0,60,300],
         "7" => [0,60,300,900,900,1800,3600,7200],
+        "8" => [0,60,300,900,900,1800,3600,7200],
     ];
     public $frequency = 0;
 
@@ -60,6 +61,7 @@ class CallbackClient extends ApiBaseClient
     protected function initCallback()
     {
         $this->callbackData = cache("callback" . $this->frequency);
+        if ($this->callbackData) actionLog($this->callbackData,'推送数据',LOG_NAME);
         if (!$this->callbackData) {
             $callback = $this->getApiCallbackList(['callback_status' => "send",'callback_frequency' => $this->frequency],0,
                 'ac_id,aa_id,uuid,notify_url,callback_type,callback_time,callback_frequency,callback_status,message,create_time');
@@ -108,6 +110,7 @@ class CallbackClient extends ApiBaseClient
                         $value['callback_frequency']++;
                         $value['create_time'] = time();
                         $value['ac_id'] = $this->addApiCallback($value);
+                        actionLog($this->getLS(),'新增发送记录',LOG_NAME);
                         $nextCallbackData[] = $value;
                     }
                     if (!$noNext)

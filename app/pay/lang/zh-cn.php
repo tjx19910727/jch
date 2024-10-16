@@ -21,6 +21,10 @@ return  [
     ],
     "pay_type_not_in_scope" => "支付方式不在允许范围内",
 
+    "VWx" => [
+        "unKnow_code" =>  "",
+    ],
+
     "VOrderPay" => [
         "order_no_data" => "查无订单信息",
         "machine_no_data" => "查无设备信息",

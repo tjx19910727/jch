@@ -83,6 +83,27 @@ class SaleOrdersClient extends MachineBaseClient
                 ];
                 $flag[] = $this->addSaleOrdersUnclaimed($insert);
                 $flag[] = $this->setMachineIncField(['m_id' => $order['m_id']], 'recycle_bin_stock', $value['quantity']);
+
+                if ($value['is_claim'] == 2) {
+                    // 出货失败发送通知
+                    try {
+                        $this->noticeSendData = [
+                            "ao_id" => $this->machine['ao_id'],
+                            "m_id" => $this->machine['m_id'],
+                            "templateType" => "tException",
+                            "replaceData" => [
+                                "machine_id" => $this->machine['machine_id'],
+                                "exceptionDeclaration" => $order['order_id'] . "_" . $d['sod_id'] . $this->lang("tException.unclaimed")
+                            ]
+                        ];
+                        actionLog($this->noticeSendData, '发送通知');
+                        $result = @$this->noticeSend();
+                        actionLog($result, '发送结果');
+                    } catch (\Exception $e) {
+                        actionLog("发送交易异常抛出异常");
+                        actionException($e, 1);
+                    }
+                }
             }
             $result = $this->checkFlag($flag);
             return $this->checkTrans($result);

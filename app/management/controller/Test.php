@@ -17,15 +17,31 @@ use app\AppFactory\Kernel\Model\Earth\EarthRegionsModel;
 use app\AppFactory\Kernel\Model\Earth\EarthStatesModel;
 use app\AppFactory\Kernel\Model\Machine\MachineCheckStockCountView;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDailyCountView;
+use app\AppFactory\Kernel\Model\Trip\TripCityModel;
 use app\AppFactory\Kernel\Support\TDESUtil;
 use app\AppFactory\Management\Application;
 use app\BaseController;
+use Overtrue\Pinyin\Pinyin;
 use think\facade\Cache;
 use think\facade\Config;
 use think\facade\Db;
 
 class Test extends BaseController
 {
+    public function testPyTripCity()
+    {
+        $list = TripCityModel::getList([],0,'tc_id,cityName',"","","");
+        $list = $list->toArray();
+        $pinyin = new Pinyin();
+        foreach ($list as $key => $value) {
+            $py = $pinyin->abbr($value['cityName']);
+            $flag[] = TripCityModel::update(['tc_id' => $value['tc_id'],'initial' => $py]);
+        }
+        $result = flag_check($flag);
+        dump($result);
+
+    }
+
     public function dumpSession()
     {
         dump(session(""));

@@ -44,7 +44,10 @@ trait OutGoodsTrait
                 $this->handleFd();
             }
             $result = $this->checkFlag($flag);
-            if ($result) $this->commitTrans(); else $this->rollbackTrans();
+            if ($result) {
+                $this->commitTrans();
+                $this->handleTripPayCallback();
+            } else $this->rollbackTrans();
             return $this->rAction($result);
         } catch (\Exception $e) {
             $this->rollbackTrans();
@@ -110,6 +113,7 @@ trait OutGoodsTrait
                         $machineConfig = $this->getMachineConfigFind(['m_id' => $this->machine['m_id']],'stock_warning');
                         if ($machineConfig['stock_warning'] > 0 ) $mc['stock_warning'] = $machineConfig['stock_warning'];
                     }
+                    // 发送补货通知
                     if ($stock <= $mc['stock_warning']) {
                         try {
                             $this->noticeSendData = [
@@ -156,6 +160,25 @@ trait OutGoodsTrait
                 if ($fail > 0) {
                     $updateMc['status'] = 3;
                     $this->order['out_status'] = 5;
+
+                    // 出货失败发送通知
+                    try {
+                        $this->noticeSendData = [
+                            "ao_id" => $this->machine['ao_id'],
+                            "m_id" => $this->machine['m_id'],
+                            "templateType" => "tException",
+                            "replaceData" => [
+                                "machine_id" => $this->machine['machine_id'],
+                                "exceptionDeclaration" => $channel_code . $this->lang("tException.out_fail"),
+                            ]
+                        ];
+                        actionLog($this->noticeSendData,'发送通知');
+                        $result = @$this->noticeSend();
+                        actionLog($result, '发送结果');
+                    } catch (\Exception $e) {
+                        actionLog("发送交易异常抛出异常");
+                        actionException($e, 1);
+                    }
                 }
                 if ($updateMc) {
                     $updateMc['mc_id'] = $mc['mc_id'];
@@ -300,25 +323,25 @@ trait OutGoodsTrait
     protected function handleTripPayCallback()
     {
         if ($this->order['pay_type'] == 5) {
-            $sp = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id']]);
+            $sp = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1]);
             if ($sp) {
-                $sp = $sp->toArray();
                 // 出货成功才是使用成功
                 if ($this->order['out_status'] == 4) {
                     $adStatus = 1;
+                    $detail_status = "ALL PENDING";
                 } else {
                     $adStatus = 6;
+                    $detail_status = "ALL MISVEND";
                 }
                 $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'g_id product_id,success_quantity,fail_quantity');
                 $details = $details->toArray();
-                $detail_status = "ALL PENDING";
-                if ($this->order['total_quantity'] != array_sum(array_column($details,'success_quantity'))) $detail_status = "PARTIAL MISVEND";
-                if ($this->order['total_quantity'] == array_sum(array_column($details,'fail_quantity'))) $detail_status = "ALL MISVEND";
+//                if ($this->order['total_quantity'] != array_sum(array_column($details,'success_quantity'))) $detail_status = "PARTIAL MISVEND";
+//                if ($this->order['total_quantity'] == array_sum(array_column($details,'fail_quantity'))) $detail_status = "ALL MISVEND";
                 $message = [
                     "status" => $adStatus,
                     "machine_id" => $this->order['machine_id'],
                     "machine_name" => $this->order['machine_name'],
-                    "order_no" => $this->order['trade_no'],
+                    "order_no" => $this->order['out_trade_no'],
                     "pick_code" => "",
                     "payment_method" => "",
                     "quantity" => $this->order['total_quantity'],
@@ -332,7 +355,9 @@ trait OutGoodsTrait
                     "message" => json_encode($message,320),
                 ];
                 $ac_id = $this->addApiCallback($insertCallback);
+                actionLog($this->getLS(),'添加出货回调通知记录',"OutGoods");
                 $ac = $this->getApiCallbackFind(['ac_id' => $ac_id]);
+                actionLog($ac,'查询刚添加的出货回调通知记录',"OutGoods");
                 if ($ac) {
                     $cb = cache("callback0");
                     $cb[] = $ac->toArray();

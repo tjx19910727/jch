@@ -10,20 +10,18 @@ namespace app\http\controller\redis;
 
 
 use app\AppFactory\AppFactory;
-use app\BaseController;
 
-class MicroPay extends BaseController
+class MicroPay
 {
 
+    public $microSec;
     /**
      * 守护进程——主动查询微信、支付宝反扫支付结果
-     * @throws \EasyWeChat\Kernel\Exceptions\InvalidArgumentException
-     * @throws \EasyWeChat\Kernel\Exceptions\InvalidConfigException
      */
     public function queryMicroPay()
     {
         try {
-            $microSec = input("microSec", 1000);
+            $redisExpire = env("Payment.microPayOverTime");
             $app = AppFactory::timeTask();
             $redis = new \Redis();
             $redis->connect("127.0.0.1", "6379");
@@ -36,12 +34,12 @@ class MicroPay extends BaseController
                         $data = json2arr($data);
                         if (!isset($data['query'])) $data['query'] = 1;
                         actionLog($data, '需要处理的数据');
-                        if ($data && $data['time'] > time() - 120) {
+                        if ($data && $data['time'] > time() - $redisExpire) {
                             if ($data['pay_type'] == "wx") {
-                                $result = $app->wxPay->queryMicroPay($data['order_id']);
+                                $result = $app->wx->queryMicroPay($data['order_id']);
                             }
                             if ($data['pay_type'] == "ali") {
-                                $result = $app->aliPay->queryMicroPay($data['order_id']);
+                                $result = $app->ali->queryMicroPay($data['order_id']);
                             }
                             $result = obj2arr($result);
                             actionLog($result, '设备上报数据处理结果');
@@ -49,19 +47,18 @@ class MicroPay extends BaseController
                             if ($result['state'] == 201) {
                                 $data['query']++;
                                 $redis->lPush("microPay", json_encode($data, 256 + 64));
-                                $redis->expire("microPay", 120);
+                                $redis->expire("microPay", $redisExpire + 60);
                             }
                         }
                     }
                 }
-                usleep($microSec);
+                usleep($this->microSec);
             }
             $redis->close();
-        } catch (InvalidArgumentException $e) {
+            return "处理完成";
+        } catch (\Exception $e) {
             actionException($e, 1);
-        } catch (InvalidConfigException $e) {
-            actionException($e, 1);
+            return $e->getMessage();
         }
-
     }
 }

@@ -20,6 +20,7 @@ class AuthCode
     {
         $sub = substr($code,0,2);
         $len = strlen($code);
+        $paymentType = 0;
         if(intval($sub) >= 10 && intval($sub) <= 15 && $len == 18){
             // 微信
             $paymentType = 1;

@@ -77,10 +77,9 @@ class ReceiveBaseClient extends MachineBaseClient
                     $this->dataRecord(2, 2);
                     $result = MqProducer::dataSend($data, $this->machine['machine_id']);
                     actionLog($result, '发送结果');
+                    @cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 5);
+                    actionLog(@cache($this->machine['machine_id'] . ".signKey"), $this->machine['machine_id'] . '生成SignKey');
                 }
-
-                @cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 5);
-                actionLog(@cache($this->machine['machine_id'] . ".signKey"), $this->machine['machine_id'] . '生成SignKey');
                 return $this->r(200,'处理成功');
             } catch (\Exception $e) {
                 actionException($e,1);

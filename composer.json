@@ -35,7 +35,8 @@
         "php-amqplib/php-amqplib": "^3.6",
         "overtrue/wechat": "~5.0",
         "phpmailer/phpmailer": "*",
-        "tencentcloud/sms": "^3.0"
+        "tencentcloud/sms": "^3.0",
+        "overtrue/pinyin": "*"
     },
     "require-dev": {
         "symfony/var-dumper": "^4.2",

@@ -162,6 +162,21 @@ class TradeClient extends BaseClient
     }
 
     /**
+     * 统一收单交易关闭接口
+     * @param $out_trade_no  // 系统生成的订单号
+     * @return mixed
+     * @throws \Exception
+     */
+    public function close($out_trade_no)
+    {
+        $this->onceName = "AlipayTradeClose";
+        $this->bizContent = [
+            "out_trade_no" => $out_trade_no,
+        ];
+        return $this->execute();
+    }
+
+    /**
      * 统一收单交易退款接口
      * @param $data // out_trade_no    refund_amount
      * @return mixed

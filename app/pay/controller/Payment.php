@@ -51,7 +51,7 @@ class Payment extends Common
     public function sale_order()
     {
         $result = $this->app->payment->orderPay();
-        actionLog($result,'发起支付返回结果');
+        actionLog(@obj2arr($result) ?? "",'发起支付返回结果');
         return $result;
     }
 

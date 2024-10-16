@@ -29,10 +29,17 @@ class MachineGoodsClient extends ManagementClient
         if ($pageNum) {
             $data = $data->each(function ($item) {
                 if ($item['is_shelf'] == 2) {
-                    $mc = $this->getMachineChannelFind(['mg_id' => $item['mg_id'],'m_id' => $item['m_id']], 'mc_id');
+                    $mc = $this->getMachineChannelFind(['g_id' => $item['g_id'],'m_id' => $item['m_id']]);
                     if ($mc) {
                         $item['is_shelf'] = 1;
                         $this->updateMachineGoods(['mg_id' => $item['mg_id'], 'is_shelf' => 1]);
+                    }
+                }
+                if ($item['is_shelf'] == 1) {
+                    $mc = $this->getMachineChannelFind(['g_id' => $item['g_id'],'m_id' => $item['m_id']]);
+                    if (!$mc) {
+                        $item['is_shelf'] = 2;
+                        $this->updateMachineGoods(['mg_id' => $item['mg_id'], 'is_shelf' => 2]);
                     }
                 }
                 return $item;
