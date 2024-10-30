@@ -181,6 +181,8 @@ class VReceive extends VCommon
         "nightly" => ["effectiveDate","amount"],
 
         "logoutH5" => ["msg_id","machine_id","timestamp"],
+
+        "receipt" => ["msg_id","machine_id","timestamp","order_id"],
     ];
 
     public function checkTimestamp($item)

@@ -29,11 +29,12 @@ trait TripMultipleTrait
      * 获取单列
      * @param $where
      * @param $column
+     * @param $key
      * @return array
      */
-    public function getTripMultipleColumn($where, $column)
+    public function getTripMultipleColumn($where, $column,$key = "")
     {
-        return TripMultipleModel::getColumn($where, $column);
+        return TripMultipleModel::getColumn($where, $column,$key);
     }
 
     /**

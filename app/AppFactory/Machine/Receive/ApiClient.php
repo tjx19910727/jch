@@ -50,10 +50,13 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
+use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
+use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
 use app\machine\validate\VReceive;
 use think\db\exception\DbException;
+use think\facade\View;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -84,7 +87,10 @@ class ApiClient extends ReceiveBaseClient
         SaleOrdersRevenueTrait,
         SaleHotelTrait,SaleHotelNightlyTrait,
         StrategyIncomeTrait,
-        StrategyManagerTrait;
+        StrategyManagerTrait,
+        StrategyPayeeTrait,
+        StrategyMachineTrait
+        ;
 
     public function __construct(ServiceContainer $app)
     {
@@ -441,6 +447,16 @@ class ApiClient extends ReceiveBaseClient
 //        discount_pic,stock_warning,expire_notice";
         $configField = "*";
         $data = $this->getMachineConfigFind($where, $configField);
+        if (isset($data['pay_type']) && $data['pay_type']) {
+            $pay_type = explode(",",$data['pay_type']);
+            if ($pay_type) {
+                $sIds = $this->getStrategyMachineColumn(['m_id' => $this->machine['m_id'],'s_type' => 1],'s_id');
+                if ($sIds) {
+                    $payTypeList = $this->getStrategyPayeeList([['sp_id', 'in', $sIds], 'status' => 1], 0, 'sp_name,title,payee_type,ico');
+                    $data['payTypeList'] = $payTypeList;
+                }
+            }
+        }
         return $this->rQ($data);
     }
 
@@ -1114,5 +1130,52 @@ class ApiClient extends ReceiveBaseClient
     public function logoutH5()
     {
         return $this->sendToMachine($this->machine,'logoutH5');
+    }
+
+    /**
+     * 小票打印文本
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+    public function receipt()
+    {
+        $order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']],'order_id,m_id,machine_name,total_quantity,discount_price,total_price');
+        $order = $order->toArray();
+        $mConfig = $this->getMachineConfigFind(['m_id' => $order['m_id']],'receipt_code1,receipt_code2,receipt_code3,receipt_desc');
+        $pIds = $this->getAuthManagerMachineColumn(['m_id' => $this->machine['m_id']], 'manager_id');
+        $pIds = array_merge($pIds, $this->getParentIdList($this->machine['creator']));
+        $pIds[] = $this->machine['creator'];
+        $pIds[] = 1;
+        $systemInfo = $this->getConfigContent([['creator', 'in', $pIds], "config_switch" => 1, 'config_name' => "systemInfo"]);
+        if (strpos($this->machine['logo'],'http') === false) {
+            $this->machine['logo'] = $systemInfo['domain_name'] . $this->machine['logo'];
+        }
+        if ($mConfig['receipt_code1'] && strpos($mConfig['receipt_code1'],'http') === false) {
+            $mConfig['receipt_code1'] = $systemInfo['domain_name'] . $mConfig['receipt_code1'];
+        }
+        if ($mConfig['receipt_code2'] && strpos($mConfig['receipt_code2'],'http') === false) {
+            $mConfig['receipt_code2'] = $systemInfo['domain_name'] . $mConfig['receipt_code2'];
+        }
+        if ($mConfig['receipt_code3'] && strpos($mConfig['receipt_code3'],'http') === false) {
+            $mConfig['receipt_code3'] = $systemInfo['domain_name'] . $mConfig['receipt_code3'];
+        }
+        $data = [
+            "logo"           => $this->machine['logo'],
+            'machine_name'   => $order['machine_name'],
+            'print_time'     => date("Y-m-d H:i:s"),
+            'detailsList'    => $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0,'g_name,quantity,retail_price')->toArray(),
+            'total_quantity' => $order['total_quantity'],
+            'discount_price' => $order['discount_price'],
+            'total_price'    => $order['total_price'],
+            'service_tel'    => $this->machine['service_tel'],
+            'receipt_code1'  => $mConfig['receipt_code1'],
+            'receipt_code2'  => $mConfig['receipt_code2'],
+            'receipt_code3'  => $mConfig['receipt_code3'],
+            'receipt_desc'   => $mConfig['receipt_desc'],
+        ];
+        View::assign($data);
+        $result = View::fetch("receipt/print");
+        $this->updateSaleOrders(['order_id' => $this->data['order_id'],'receipt' => $result]);
+        return $this->r(200,'success',['receipt' => $result]);
     }
 }

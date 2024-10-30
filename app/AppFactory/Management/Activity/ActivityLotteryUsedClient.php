@@ -17,7 +17,7 @@ use app\AppFactory\Management\ManagementClient;
 
 class ActivityLotteryUsedClient extends ManagementClient
 {
-    use ActivityLotteryTrait,ActivityLotteryUsedTrait,ActivityLotteryUsedGoodsTrait;
+    use ActivityLotteryTrait, ActivityLotteryUsedTrait, ActivityLotteryUsedGoodsTrait;
 
     /**
      * @param $al_id
@@ -26,17 +26,18 @@ class ActivityLotteryUsedClient extends ManagementClient
     public function exportList($al_id)
     {
 
-            $whereAl['al_id'] = $al_id;
-            $lottery = $this->getActivityLotteryFind($whereAl);
-            $whereUsed['ug.al_id'] = $al_id;
-            $list = $this->getActivityLotteryUsedGoodsExportList($whereUsed,
-                "ug.g_name,ug.sku,ug.channel_code,ug.quantity,ug.probability,ug.out_success,ug.out_fail,
+        $whereAl['al_id'] = $al_id;
+        $lottery = $this->getActivityLotteryFind($whereAl);
+        $whereUsed['ug.al_id'] = $al_id;
+        $list = $this->getActivityLotteryUsedGoodsExportList($whereUsed,
+            "ug.g_name,ug.sku,ug.channel_code,ug.quantity,ug.probability,ug.out_success,ug.out_fail,
                 alu.trade_no,alu.machine_id,alu.machine_name,alu.price,alu.quantity total_quantity,alu.total_price,(CASE alu.active_type WHEN 1 THEN '单抽' ELSE '连抽' END) active_type,
                 FROM_UNIXTIME(used_date,'%Y-%m-%d') used_date,
                 (CASE alu.status WHEN 1 THEN '待抽奖' WHEN 2 THEN '已使用' WHEN 3 THEN '已过期' WHEN 4 THEN '已作废' END) status,
                 FROM_UNIXTIME(alu.create_time,'%Y-%m-%d %H:%i:%s') create_time");
+        if ($list) {
+            $list = $list->toArray();
             if ($list) {
-                $list = $list->toArray();
                 $title = [
                     "trade_no" => "订单编号",
                     "machine_name" => "设备名称",
@@ -51,6 +52,7 @@ class ActivityLotteryUsedClient extends ManagementClient
                 $filename = "【" . $lottery['lottery_name'] . "】使用报表-" . date("Ymd");
                 return $this->sendToExport("营销活动-付费抽奖", $filename, $title, $list);
             }
-            return $this->rFail($this->lang("VActivity.usedList_no_data"));
+        }
+        return $this->rFail($this->lang("VActivity.usedList_no_data"));
     }
 }

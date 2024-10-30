@@ -124,6 +124,32 @@ class HotelClient extends ReceiveBaseClient
      */
     public function getList()
     {
+        $includeHotelIdList = [];
+        $excludeHotelIdList = [];
+        if (isset($this->data['tm_id']) && $this->data['tm_id']) {
+            $tmIds[] = $this->data['tm_id'];
+        } else {
+            $tmIds = $this->getTripMultipleMachineColumn(['m_id' => $this->machine['m_id']], 'tm_id');
+            if (!$tmIds) return $this->r(100, $this->lang("query_fail"));
+        }
+        if ($tmIds) {
+            $designated_hotel = $this->getTripMultipleColumn([['tm_id', 'in', $tmIds], ['designated_hotel', '>', 1], 'status' => 1], 'designated_hotel', 'tm_id');
+            actionLog($this->getLS(),'查询指定酒店【SQL】');
+            actionLog($designated_hotel,'查询指定酒店');
+            if ($designated_hotel) {
+                foreach ($designated_hotel as $key => $value) {
+                    $hotelIds = $this->getTripMultipleHotelColumn(['tm_id' => $key], 'hotelId');
+                    actionLog($this->getLS(),'查询指定酒店ID【SQL】');
+                    actionLog($hotelIds,'查询指定酒店ID');
+                    if ($value == 2) {
+                        $includeHotelIdList = array_merge($includeHotelIdList, $hotelIds);
+                    }
+                    if ($value == 3) {
+                        $excludeHotelIdList = array_merge($excludeHotelIdList, $hotelIds);
+                    }
+                }
+            }
+        }
         $params = [
             "cityId" => $this->data['cityId'],
             "adults" => $this->data['adults'],
@@ -133,6 +159,12 @@ class HotelClient extends ReceiveBaseClient
             "pageNo" => $this->data['page'],
             "pageSize" => $this->data['pageNum'],
         ];
+        if ($includeHotelIdList) {
+            $params['includeHotelIdList'] = array_unique($includeHotelIdList);
+        }
+        if ($excludeHotelIdList) {
+            $params['excludeHotelIdList'] = array_unique($excludeHotelIdList);
+        }
         $result = Trip::hotel()->getList($params);
         $result = json2arr($result);
         if ($result && isset($result['code']) && $result['code'] == 0) {

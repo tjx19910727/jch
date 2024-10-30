@@ -84,7 +84,7 @@ class Excel
                     $filename = $drawing->getPath();
                     $imgData = file_get_contents($filename);
                     if (strlen($imgData) > env("fileSystem.maxImageSize")) {
-                        throw new Exception($xy . "," . Lang::get("fileSize") . "：" . strlen($imgData) . "/" . env("fileSystem.maxImageSize"));
+                        throw new Exception($xy . "," . Lang::get("fileSize") . "：" . round((strlen($imgData) / 1024 / 1024),3) . "MB" . "/" . round((env("fileSystem.maxImageSize") / 1024 / 1024),3) . "MB");
                     }
                     $imageFileName = $drawing->getIndexedFilename();
                     $type = explode(".", $imageFileName);
@@ -113,6 +113,7 @@ class Excel
             }
             return $data;
         } catch (\Exception $e) {
+            actionException($e,1);
             return $e->getMessage();
         }
     }

@@ -325,6 +325,21 @@ class SaleOrdersClient extends ManagementClient
         $field = "so.machine_id,so.machine_name,so.trade_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,
         (sod.total_sod_price - sod.refund_amount) total_sod_price,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
+            (CASE so.order_type 
+            WHEN 1 THEN '普通订单' 
+            WHEN 2 THEN '优惠券订单'
+            WHEN 3 THEN '取货码订单'
+            WHEN 4 THEN '付费抽奖订单'
+            WHEN 5 THEN '满减满送订单'
+            WHEN 6 THEN '叠加营销活动订单'
+            ELSE '' END) order_type,
+            (CASE so.pay_type 
+            WHEN 0 THEN '免支付' 
+            WHEN 1 THEN '微信' 
+            WHEN 2 THEN '支付宝'
+            WHEN 4 THEN '京东收银'
+            WHEN 5 THEN '会员支付'
+            ELSE '' END) pay_type,
             (CASE so.pay_method 
             WHEN 0 THEN '免支付' 
             WHEN 1 THEN '扫码支付' 
@@ -355,6 +370,8 @@ class SaleOrdersClient extends ManagementClient
                     "total_sod_price" => "支付金额",
                     "out_status" => "出货状态",
                     "order_status" => "订单状态",
+                    "order_type" => "订单类型",
+                    "pay_type" => "支付类型",
                     "pay_method" => "支付方式",
                     "pay_time" => "支付时间",
                     "out_time" => "出货时间",
@@ -607,19 +624,20 @@ class SaleOrdersClient extends ManagementClient
     {
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
-        IFNULL(sum(so.total_quantity - so.refund_quantity),0) totalQuantity,
-        IFNULL(sum(so.total_price - so.refund_amount),0) totalPrice,
-        IFNULL(sum(so.total_price),0) totalSalePrice,
-        IFNULL(sum(so.discount_price),0) totalDiscountPrice,
+        IFNULL(sum(sod.quantity - sod.refund_quantity),0) totalQuantity,
+        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) totalPrice,
+        IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
+        IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
-        IFNULL(sum(so.cost_price),0) totalCostPrice
+        IFNULL(sum(sod.cost_price * sod.quantity),0) totalCostPrice
         ";
-        $collectList = $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, 'totalPrice desc', 'm_id,g_id')->each(function ($collectData) {
+        $collectList = $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, 'totalPrice desc', 'm_id,g_id');
+        $collectList = $collectList->each(function ($collectData) {
             $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
             $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
             $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
             $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
-            $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
+            $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalSalePrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
             $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
             $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ? bcmul(bcdiv($collectData['profitAmount'], $collectData['totalSalePrice'], 4), 100, 2) . "%" : "0%";
 
@@ -638,13 +656,13 @@ class SaleOrdersClient extends ManagementClient
     {
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
-        IFNULL(sum(so.total_quantity - so.refund_quantity),0) totalQuantity,
-        IFNULL(sum(so.total_price - so.refund_amount),0) totalPrice,
-        IFNULL(sum(so.refund_amount),0) totalRefund,
-        IFNULL(sum(so.total_price),0) totalSalePrice,
-        IFNULL(sum(so.discount_price),0) totalDiscountPrice,
+        IFNULL(sum(sod.quantity - sod.refund_quantity),0) totalQuantity,
+        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) totalPrice,
+        IFNULL(sum(sod.refund_amount),0) totalRefund,
+        IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
+        IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
-        IFNULL(sum(so.cost_price),0) totalCostPrice
+        IFNULL(sum(sod.cost_price * sod.quantity),0) totalCostPrice
         ";
         $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field, 'totalPrice desc', 'm_id,g_id');
         if ($list) {
@@ -654,7 +672,7 @@ class SaleOrdersClient extends ManagementClient
                 $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
                 $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
                 $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
-                $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
+                $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalSalePrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
                 $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
                 $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ? bcmul(bcdiv($collectData['profitAmount'], $collectData['totalPrice'], 4), 100, 2) . "%" : "0%";
                 unset($collectData['totalQuantity'], $collectData['g_id']);
@@ -665,11 +683,11 @@ class SaleOrdersClient extends ManagementClient
                 "machine_name" => "设备名称",
                 "sku" => "商品SKU",
                 "g_name" => "商品名称",
+                "totalSaleQuantity" => "实际销售量",
                 "totalPrice" => "实际销售额",
                 "totalDiscountPrice" => "总优惠额",
                 "totalGift" => "赠品数量",
                 "totalCostPrice" => "总成本",
-                "totalSaleQuantity" => "实际销售量",
                 "totalClick" => "点击次数",
                 "clickConversionRate" => "点击转化率",
                 "profitAmount" => "利润额",

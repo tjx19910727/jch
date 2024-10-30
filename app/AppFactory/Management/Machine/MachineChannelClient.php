@@ -190,5 +190,76 @@ class MachineChannelClient extends ManagementClient
         return $this->r(200,$this->lang("action_success"));
     }
 
+    /**
+     * 按SKU导出货道数据
+     * @param $m_id
+     * @return mixed
+     */
+    public function exportMcSku($m_id)
+    {
+        $field = "machine_id,sku,g_name,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock";
+        $list = $this->getMachineChannelList(['m_id' => $m_id],0,$field,"","","sku");
+        if ($list) {
+            $list = $list->toArray();
+            if ($list) {
+                $sku = array_column($list,'sku');
+                $machine_name = "";
+                foreach ($list as $key => $value) {
+                    if (!$machine_name) $machine_name = $this->getMachineValue(['m_id' => $m_id],'machine_name');
+                    $value['machine_name'] = $machine_name;
+                    $value['channel_code'] = $this->getMachineChannelValue(['m_id' => $m_id,'sku' => $sku],'channel_code');
+                    $list[$key] = $value;
+                }
+                $title = [
+                    "machine_id" => "设备编号",
+                    "machine_name" => "设备名称",
+                    "sku" => "SKU",
+                    "g_name" => "商品名称",
+                    "channel_code" => "槽位",
+                    "channel_num" => "货道数量",
+                    "capacity" => "最大数量",
+                    "stock" => "当前数量",
+                    "frozen_stock" => "预定数量"
+                ];
+                $filename = "按SKU铺货计划-" . date("YmdHis");
+                return $this->sendToExport("设备管理-设备货架", $filename, $title, $list);
+            }
+        }
+        return $this->r(100,$this->lang("query_fail"));
+    }
 
+    /**
+     * 导出货架列表
+     * @param $m_id
+     * @return array|\think\response\Json
+     */
+    public function exportMc($m_id)
+    {
+        $field = "machine_id,channel_code,sku,g_name,capacity,stock,frozen_stock";
+        $list = $this->getMachineChannelList(['m_id' => $m_id],0,$field);
+        if ($list) {
+            $list = $list->toArray();
+            if ($list) {
+                $machine_name = "";
+                foreach ($list as $key => $value) {
+                    if (!$machine_name) $machine_name = $this->getMachineValue(['m_id' => $m_id],'machine_name');
+                    $value['machine_name'] = $machine_name;
+                    $list[$key] = $value;
+                }
+                $title = [
+                    "machine_id" => "设备编号",
+                    "machine_name" => "设备名称",
+                    "channel_code" => "槽位",
+                    "sku" => "SKU",
+                    "g_name" => "商品名称",
+                    "capacity" => "最大数量",
+                    "stock" => "当前数量",
+                    "frozen_stock" => "预定数量"
+                ];
+                $filename =  "货架铺货计划-" . date("YmdHis");
+                return $this->sendToExport("设备管理-设备货架", $filename, $title, $list);
+            }
+        }
+        return $this->r(100,$this->lang("query_fail"));
+    }
 }

@@ -104,6 +104,8 @@ return [
         "machineList_require" => "设备列表不能为空",
         "content_require" => "活动规则内容不能为空",
 
+        "g_id_require" => "商品ID不能为空",
+
         "condition_value_require" => "条件数值不能为空",
         "active_value_require" => "活动值不能为空",
         "sort_require" => "规则排序值不能为空",

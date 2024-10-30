@@ -110,9 +110,9 @@ class BaseModel extends Model
         return self::where($where)->count($field);
     }
 
-    public static function getColumn($where,$column)
+    public static function getColumn($where,$column,$key = "")
     {
-        return self::where($where)->column($column);
+        return self::where($where)->column($column,$key);
     }
 
     public static function getFieldValue($where,$value,$order = "")

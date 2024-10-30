@@ -85,7 +85,7 @@ class SaleOrdersClient extends MachineBaseClient
                 $flag[] = $this->setMachineIncField(['m_id' => $order['m_id']], 'recycle_bin_stock', $value['quantity']);
 
                 if ($value['is_claim'] == 2) {
-                    // 出货失败发送通知
+                    // 未取商品发送通知
                     try {
                         $this->noticeSendData = [
                             "ao_id" => $this->machine['ao_id'],

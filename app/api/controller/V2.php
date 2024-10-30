@@ -83,19 +83,23 @@ class V2 extends Common
 //            "pageNum" => 1,
 //            "page" => 2,
 //        ];
-        $params = [
-            "aId" => "81",
-            "aType" => 2,
-        ];
+//        $params = [
+//            "aId" => "81",
+//            "aType" => 2,
+//        ];
 //        $data = [
 //            "auth_name" => "ctrip",
 //            "auth_password" => "Karrie&C2023",
 //            "timestamp" => time(),
 //            "params" => json_encode($params, 320),
 //        ];
+        $params = [
+            "pageNum" => 15,
+            "page" => 1,
+        ];
         $data = [
-            "auth_name" => "Lc_test",
-            "auth_password" => "123456",
+            "auth_name" => "ctrip",
+            "auth_password" => "Karrie&C2023",
             "timestamp" => time(),
             "params" => json_encode($params, 320),
         ];
@@ -111,7 +115,7 @@ class V2 extends Common
         $signStr = $string1 . implode(",", $signArr);
         dump($signStr);
         $data['sign'] = strtoupper(md5($signStr));
-        $data['api'] = "get_activity_code";
+        $data['api'] = "get_machines";
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));

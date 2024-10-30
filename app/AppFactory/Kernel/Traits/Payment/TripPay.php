@@ -91,8 +91,8 @@ trait TripPay
             }
         }
         if ($mallOrderInfo) $params['mallOrderInfoList'] = $mallOrderInfo;
-//        $field = "sh_id,hotelId,roomId,totalPrice originalPrice,pay_amount totalPrice,num,adults,checkInDate,checkOutDate,guestNames,expectCheckInTime,logId,tripData";
-        $field = "sh_id,hotelId,roomId,totalPrice,num,adults,checkInDate,checkOutDate,guestNames,expectCheckInTime,logId,tripData";
+        $field = "sh_id,hotelId,roomId,totalPrice originalPrice,pay_amount totalPrice,num,adults,checkInDate,checkOutDate,guestNames,expectCheckInTime,logId,tripData";
+//        $field = "sh_id,hotelId,roomId,totalPrice,num,adults,checkInDate,checkOutDate,guestNames,expectCheckInTime,logId,tripData";
         $hotel = $this->getSaleHotelFind(['order_id' => $this->order['order_id']],$field);
         if ($hotel) {
             $hotel = $hotel->toArray();

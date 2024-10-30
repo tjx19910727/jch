@@ -22,8 +22,14 @@ class Machine extends Common
     public function getList()
     {
         $postData = input();
+        $machineIds = [];
+        if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
+            $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
+            unset($postData['machine_group_id']);
+        }
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
+        if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
         return $this->app->machine->getMList($where,$pageNum,$this->field,"machine_id desc");
     }
 

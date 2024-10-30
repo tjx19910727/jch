@@ -130,6 +130,7 @@ class AdvertisementPushClient extends ManagementClient
         if (isset($data['adv_id'])) $where = [['adv_id' ,"in", $data['adv_id']]];
         if (isset($data['m_id'])) $where = [['m_id',"in",$data['m_id']]];
         if (isset($data['batch_num'])) $where['batch_num'] = $data['batch_num'];
+        if (isset($data['push_type'])) $where[] = ["push_type",'in',$data['push_type']];
         if (!$where) return $this->r(100,$this->lang("VAdvertisement.upDown_where_empty"));
         $adv = $this->getAdvertisementPushList($where,0,'adv_id,adv_title,status');
         if ($adv) {

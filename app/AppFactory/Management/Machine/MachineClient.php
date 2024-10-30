@@ -150,7 +150,7 @@ class MachineClient extends ManagementClient
     {
         if ($this->manager['pid'] > 0) {
             $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-            if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+            $where[] = ['machine_id', 'in', $machineIds];
         }
         return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) {
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');

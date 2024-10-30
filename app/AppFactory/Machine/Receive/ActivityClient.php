@@ -320,12 +320,10 @@ class ActivityClient extends ReceiveBaseClient
         // 循环活动内容，
         foreach ($content as $k => $v) {
             // 判断货架正常，有这个商品
-            $mc = $this->getMachineChannelFind(['m_id' => $this->machine['m_id'], 'status' => 1, 'g_id' => $v['g_id']], 'channel_code,stock');
-            if (!$mc) return $this->rFail($this->lang("VActivityLottery.mc_no_data"));
-            $mc = $mc->toArray();
-            // 商品的库存值小于校对数量，或者小于校对数值加上保留数量，返回数量不足
-            if ($mc['stock'] < $checkStock || $mc['stock'] < $checkStock + $v['retain_num']) {
-                return $this->rFail($this->lang("VActivityLottery.under_stock"));
+            $mc = $this->getMachineChannelFind(['m_id' => $this->machine['m_id'], 'status' => 1, 'g_id' => $v['g_id'],['stock',">=",$checkStock + $v['retain_num'] ]], 'channel_code,stock','stock desc');
+            if (!$mc) {
+                actionLog($this->getLS(),'检查抽奖活动商品库存SQL');
+                return $this->rFail($this->lang("VActivityLottery.mc_no_data"));
             }
         }
 
@@ -396,6 +394,7 @@ class ActivityClient extends ReceiveBaseClient
             return $this->r(100, $this->lang("VActivityLottery.used_no_data"));
         }
         $used = $used->toArray();
+        actionLog($used,'执行抽奖查询已使用抽奖数据');
         // 已使用抽奖次数大于等于抽奖总次数，返回抽奖数量已用完
         if ($used['used_quantity'] >= $used['quantity']) {
             return $this->r(100, $this->lang("VActivityLottery.lucky_draw_ended"));
@@ -406,6 +405,7 @@ class ActivityClient extends ReceiveBaseClient
         $content = $this->getActivityLotteryContentList(['al_id' => $used['al_id']], 0, '*', "probability asc");
         if (!$content) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
         $content = $content->toArray();
+        actionLog($content,'抽奖活动内容');
 
         // 总中奖概率
         $totalProbability = array_sum(array_column($content, 'probability'));
@@ -423,10 +423,11 @@ class ActivityClient extends ReceiveBaseClient
 
             // 每次抽奖的随机数值
             $random = mt_rand(1, $totalProbability);
+            actionLog($random,"第" . $i . "次随机数值");
             $probabilitySum = 0;
             // 抽奖，循环活动内容，以中奖概率从小到大顺序排序，
             foreach ($content as $key => $value) {
-                // 中奖后触发赠送指定商品
+                // 赠送指定商品
                 if ($alc['designated_gif']) {
                     // 是赠送的商品，放入中奖列表队尾
                     if ($alc['designated_gift'] == $value['c_id']) {
@@ -438,12 +439,15 @@ class ActivityClient extends ReceiveBaseClient
                 // 当前一条抽奖活动内容中奖数值，叠加前面的活动内容中奖数值
                 $probabilitySum = bcadd($probabilitySum, $value['probability']);
                 // 中奖数值大于随机数值即为中奖，活动内容放入中奖数组中，退出当前抽奖循环，执行下轮抽奖
-                if ($probabilitySum > $random) {
+                actionLog($probabilitySum,"第" . $i . "次" . $value['c_id'] . "活动内容中奖数值");
+                if ($probabilitySum >= $random) {
+                    actionLog($value,"第" . $i . "次" . "中奖数据");
                     $list[$i] = $value;
                     break;
                 }
             }
         }
+        actionLog($list,'中奖列表');
 
         $this->startTrans();
 
@@ -500,10 +504,13 @@ class ActivityClient extends ReceiveBaseClient
                     $update['retail_price'] = bcdiv($averagePrice, $update['quantity'], 3);
                     $flag[] = $this->updateSaleOrdersDetails($update);
                 }
+                actionLog($this->getLS(),'订单详情处理SQL');
                 $ug['sod_id'] = $sod_id;
                 $ugAll[] = $ug;
             }
             $flag[] = $this->addActivityLotteryUsedGoodsMore($ugAll);
+            actionLog($this->getLS(),'生成中奖记录数据');
+            actionLog($flag,'事务执行结果');
             $check = $this->checkFlag($flag);
             if ($check) {
                 $this->commitTrans();
@@ -511,6 +518,7 @@ class ActivityClient extends ReceiveBaseClient
                 $totalQuantity = array_sum(array_column($order['details'], 'quantity'));
                 if ($totalQuantity == $used['quantity']) {
                     $this->updateActivityLotteryUsed(['alu_id' => $used['alu_id'], 'status' => 2, 'used_date' => strtotime(date("Y-m-d"))]);
+                    actionLog($this->getLS(),'订单商品总数量等于抽奖记录的数量，执行修改抽奖记录');
                 }
                 return $this->r(200, $this->lang("action_success"), ['lottery_list' => $list, "order" => $order]);
             }

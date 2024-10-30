@@ -104,6 +104,7 @@ class MachineAdvance extends Common
     {
         $postData = input();
         try { $this->validate($postData,$this->validatePath . 'upDown');} catch (\Exception $e) { return returnValidate($e->getMessage());}
+        if (!isset($postData['adv_id']) && isset($postData['m_id'])) $postData['push_type'] = [2,3];
         return $this->app->advertisementPush->upDown($postData);
     }
 

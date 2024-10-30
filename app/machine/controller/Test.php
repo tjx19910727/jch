@@ -178,6 +178,7 @@ class Test extends BaseController
         $effectiveDate2 = input("effectiveDate2");
         $gmg_id = input('gmg_id');
         $gm_id = input("gm_id");
+        $tm_id = input("tm_id");
 
 //        $carList[] = [
 //            "mc_id" => 30352,
@@ -205,6 +206,7 @@ class Test extends BaseController
         echo "获取酒店列表";
         $data = [
             "machine_id" => $machine_id,
+            "tm_id" => $tm_id,
             "cityId" => $cityId,
             "adults" => $adults,
             "quantity" => $quantity,
@@ -292,6 +294,15 @@ class Test extends BaseController
             "machine_id" => $machine_id,
             "order_id" => $order_id,
             "mobile" => $mobile,
+        ];
+        $data = $this->makeSign($data);
+        dump(json_encode($data));
+
+        // 获取小票文本
+        echo "获取小票文本";
+        $data = [
+            "machine_id" => $machine_id,
+            "order_id" => $order_id,
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data));

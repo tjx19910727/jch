@@ -28,9 +28,9 @@ trait MachineChannelTrait
         return MachineChannelModel::getFieldValue($where,$value);
     }
 
-    public function getMachineChannelColumn($where,$column)
+    public function getMachineChannelColumn($where,$column,$key = "")
     {
-        return MachineChannelModel::getColumn($where,$column);
+        return MachineChannelModel::getColumn($where,$column,$key);
     }
 
     public function getMachineChannelFind($where,$field = "*",$order = "")

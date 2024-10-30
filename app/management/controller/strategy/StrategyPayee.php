@@ -75,7 +75,7 @@ class StrategyPayee extends Common
         $postData = input();
         $where = $this->getWhere($postData,false,['app_id' => "like"]);
         $pageNum = $postData['pageNum'] ?? 0;
-        $field = "sp_id,sp_name,payee_type,app_id,mch_id,content,status,create_time,update_time";
+        $field = "sp_id,sp_name,title,payee_type,app_id,mch_id,content,ico,status,create_time,update_time";
         return $this->app->strategyPayee->getList($where,$pageNum,$field,"sp_id desc");
     }
 

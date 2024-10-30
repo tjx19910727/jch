@@ -19,10 +19,12 @@ class StrategyPayeeModel extends BaseModel
     protected $schema = [
         "sp_id" => "int",
         "sp_name" => "string",
+        "title" => "string",
         "payee_type" => "int",
         "app_id" => "string",
         "mch_id" => "string",
         "content" => "string",
+        "ico" => "string",
         "status" => "int",
         "creator" => "int",
         "create_time" => "int",

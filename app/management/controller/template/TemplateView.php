@@ -15,7 +15,7 @@ use app\management\validate\VTemplateView;
 class TemplateView extends Common
 {
 
-    protected $field = "*";
+    protected $field = "*,(SELECT `name` FROM template WHERE id = template_id) template_name";
     protected $validatePath = VTemplateView::class;
 
     public function getList()

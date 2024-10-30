@@ -78,6 +78,26 @@ class MachineChannel extends Common
     }
 
     /**
+     * 导出设备货架-SKU分组
+     * @return mixed
+     */
+    public function exportSku()
+    {
+        $m_id = input("m_id");
+        return $this->app->machineChannel->exportMcSku($m_id);
+    }
+
+    /**
+     * 导出设备货架
+     * @return array|\think\response\Json
+     */
+    public function export()
+    {
+        $m_id = input("m_id");
+        return $this->app->machineChannel->exportMc($m_id);
+    }
+
+    /**
      * 获取设备货道槽位实时图片
      * @return array|string
      */

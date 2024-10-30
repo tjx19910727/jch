@@ -20,14 +20,12 @@ class ExportClient extends TimeTaskBase
     /**
      * 生成Excel文件并且修改记录
      * @param $data
-     * @throws \PHPExcel_Exception
-     * @throws \PHPExcel_Writer_Exception
      */
     public function makeExcel($data)
     {
-        $data = json2arr($data);
-        if ($data) {
-            try {
+        try {
+            $data = json2arr($data);
+            if ($data) {
                 actionLog($data, '导出Excel的数据');
                 $data['filename'] = $data['filename'] . date('His');
                 $result = Excel::exportExcel($data['list'], $data['title'], $data['filename'], 0,
@@ -39,15 +37,15 @@ class ExportClient extends TimeTaskBase
                 $updateEL["export_time"] = time();
                 $updateEL["status"] = 2;
                 $this->updateExportLog($updateEL);
-            } catch (\PHPExcel_Writer_Exception $e) {
-                actionException($e, 1);
-                $this->updateExportLog(['export_id' => $data['export_id'], 'status' => 4]);
-            } catch (\PHPExcel_Exception $e) {
-                actionException($e, 1);
-                $this->updateExportLog(['export_id' => $data['export_id'], 'status' => 4]);
             }
-            @actionLog($this->getLS(), "【SQL】修改导出记录");
+        } catch (\PHPExcel_Writer_Exception $e) {
+            actionException($e, 1);
+            $this->updateExportLog(['export_id' => $data['export_id'], 'status' => 4]);
+        } catch (\PHPExcel_Exception $e) {
+            actionException($e, 1);
+            $this->updateExportLog(['export_id' => $data['export_id'], 'status' => 4]);
         }
+        @actionLog($this->getLS(), "【SQL】修改导出记录");
     }
 
     /**

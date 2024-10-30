@@ -11,6 +11,7 @@ namespace app\machine\controller;
 use app\AppFactory\AppFactory;
 use app\AppFactory\Machine\Application;
 use think\facade\Lang;
+use think\View;
 
 /**
  * 接收设备终端上报或请求
@@ -470,5 +471,14 @@ class Receive extends Common
         return $this->app->api->logoutH5();
     }
 
+    /**
+     * 获取订单小票
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+    public function receipt()
+    {
+        return $this->app->api->receipt();
+    }
 
 }
