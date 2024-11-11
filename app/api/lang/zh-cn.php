@@ -90,4 +90,16 @@ return [
         "aType_require" => "活动类型不能为空",
     ],
 
+    "use_pick_code" => [
+        "null_data" => "查无提货码信息",
+        "order_null_data" => "查无订单信息",
+        "order_details_null_data" => "查无订单详情信息",
+
+        "status2" => "该活动码已被使用",
+        "status3" => "该活动码已过期",
+        "status4" => "该活动码已作废",
+        "status5" => "该活动码使用中，请勿重复提交",
+
+        "trans_fail" => "事务执行失败",
+    ],
 ];

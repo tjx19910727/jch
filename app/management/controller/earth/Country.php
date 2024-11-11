@@ -85,5 +85,33 @@ class Country extends Common
         return returnData($this->app->earth->getEarthAreaList($where,$pageNum,"*"));
     }
 
+    /**
+     * 通过坐标系获取地址
+     * @return array|\think\response\Json
+     */
+    public function getAddressByLatLng()
+    {
+        $postData = input();
+        return $this->app->earth->getAddress($postData);
+    }
 
+    /**
+     * 坐标系转换为腾讯地图坐标系
+     * @return array|\think\response\Json
+     */
+    public function changeLatLngToTencentMap()
+    {
+        $postData = input();
+        return $this->app->earth->changeLatLngToTencentMap($postData);
+    }
+
+    /**
+     * 地址获取坐标系
+     * @return array|\think\response\Json
+     */
+    public function getLatLng()
+    {
+        $postData = input();
+        return $this->app->earth->getLatLng($postData);
+    }
 }

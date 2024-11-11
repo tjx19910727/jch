@@ -27,6 +27,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
@@ -46,6 +47,7 @@ class V2Client extends V2BaseClient
     use AfterOrderPaymentTrait;
     use GoodsTrait;
     use GoodsMultipleTrait;
+    use BeforeOrderPaymentTrait;
 
     protected $machine;
     protected $order;
@@ -449,5 +451,66 @@ class V2Client extends V2BaseClient
             actionException($e,1);
             return $this->returnData(99,$this->lang("msg.99") . ":" . $e->getMessage());
         }
+    }
+
+    /**
+     * 使用预订订单取货码
+     * string       pick_code      取货码
+     * string       machine_id      设备编号
+     * int          out_channel     出货口，1：第1出货口（正常出货），2：第2出货口（机器人取货），待定
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+    public function use_pick_code()
+    {
+        $where['code'] = $this->params['pick_code'];
+        $where['pick_type'] = 3;
+        $pickCode = $this->getActivityPickCodeFind($where);
+        actionLog($this->getLS(),'查询取货码SQL');
+        actionLog($pickCode,'查询结果');
+        if (!$pickCode) return $this->returnData(15,$this->lang("msg.15") . ": " . $this->lang("use_pick_code.null_data"));
+        if ($pickCode['status'] == 2) return $this->returnData(19,$this->lang("msg.19") . ": " . $this->lang("use_pick_code.status2"));
+        if ($pickCode['status'] == 3) return $this->returnData(19,$this->lang("msg.19") . ": " . $this->lang("use_pick_code.status3"));
+        if ($pickCode['status'] == 4) return $this->returnData(19,$this->lang("msg.19") . ": " . $this->lang("use_pick_code.status4"));
+        if ($pickCode['status'] == 5) return $this->returnData(19,$this->lang("msg.19") . ": " . $this->lang("use_pick_code.status5"));
+        $pickCode = $pickCode->toArray();
+        $this->order = $this->getSaleOrdersFind(['order_id' => $pickCode['order_id']]);
+        actionLog($this->getLS(),'查询取货码订单SQL');
+        if (!$this->order) return $this->returnData(15,$this->lang("msg.15") . ": " . $this->lang("use_pick_code.order_null_data"));
+        $this->order = $this->order->toArray();
+        $details = $this->getSaleOrdersDetailsList(['order_id' => $pickCode['order_id']]);
+        actionLog($this->getLS(),'查询取货码订单详情列表SQL');
+        if (!$details) return $this->returnData(15,$this->lang("msg.15") . ": " . $this->lang("use_pick_code.order_details_null_data"));
+        $this->order['details'] = $details->toArray();
+        actionLog($this->order,'订单数据');
+        $this->machine = $this->getMachineFind(['machine_id' => $this->params['machine_id']],'m_id,machine_id,machine_name');
+        $updatePc['status'] = 5;
+        $updatePc['m_id'] = $this->machine['m_id'];
+        $updatePc['machine_id'] = $this->machine['machine_id'];
+        $updatePc['machine_name'] = $this->machine['machine_name'];
+        $updatePc['apc_id'] = $pickCode['apc_id'];
+        $this->startTrans();
+        if ($this->order['total_price'] > 0) {
+            $flag[] = $this->countIncome();
+        }
+        $flag[] = $this->updateActivityPickCode($updatePc);
+        actionLog($this->getLS(),'修改提货码使用记录');
+        $result = $this->outGoods();
+        if ($result !== true) {
+            $this->rollbackTrans();
+            return $this->returnData(19,$this->lang("msg.19"));
+        }
+        if (isset($this->order['details'])) unset($this->order['details']);
+        $flag[] = $this->updateSaleOrders($this->order);
+        actionLog($this->getLS(),'修改订单记录');
+        $flag[] = $this->updateApiAdvance(['status' => "PROCESSING"], ['apc_id' => $pickCode['apc_id']]);
+        actionLog($this->getLS(),'修改预订商品记录');
+        $check = $this->checkFlag($flag);
+        if ($check) {
+            $this->commitTrans();
+            return $this->returnData(0,$this->lang("msg.0"));
+        }
+        $this->rollbackTrans();
+        return $this->returnData(19,$this->lang("msg.19") . ": " . $this->lang("use_pick_code.trans_fail"));
     }
 }

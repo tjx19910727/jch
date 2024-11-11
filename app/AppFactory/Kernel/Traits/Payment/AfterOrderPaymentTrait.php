@@ -95,14 +95,14 @@ trait AfterOrderPaymentTrait
                     // 获取核销码
                     $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
                     // 发送门票预订通知
-                    $smsParam = [
-                        $updateSod['checkOff_code'],
-                    ];
-                    $phoneNumber = [
-                        $this->order['mobile'],
-                    ];
-                    $result = TencentCloud::sendSms($smsParam,$phoneNumber);
-                    actionLog($result,'预订酒店发送短信通知');
+//                    $smsParam = [
+//                        $updateSod['checkOff_code'],
+//                    ];
+//                    $phoneNumber = [
+//                        $this->order['mobile'],
+//                    ];
+//                    $result = TencentCloud::sendSms($smsParam,$phoneNumber);
+//                    actionLog($result,'预订酒店发送短信通知');
                     $this->updateSaleOrdersDetails($updateSod);
                 }
             }

@@ -87,8 +87,8 @@ trait ActivityCouponTrait
      */
     public function getAcByMachine()
     {
-        $where = "(ac.designated_machine = 1 or (am.m_id = " . $this->machine['m_id'] . " AND am.a_type = 1)) AND start_date < " . strtotime(date("Y-m-d")) . " AND status < 3 AND (
-        end_date is null or end_date > " . strtotime(date("Y-m-d")) . ")";
+        $where = "(ac.designated_machine = 1 or (am.m_id = " . $this->machine['m_id'] . " AND am.a_type = 1)) AND start_date < " . strtotime(date("Y-m-d H:i:s")) . " AND status < 3 AND (
+        end_date is null or end_date > " . strtotime(date("Y-m-d H:i:s")) . ")";
         $field = "c_id,c_name,desc,start_date,end_date,c_type,reduction,used_limit,pay_limit,designated_goods,designated_machine,status";
         $ac = $this->getActivityCouponByMachine($where, $field);
         if ($ac) {

@@ -104,6 +104,7 @@ return [
 
     "VSubCar" => [
         "pay_type_no_range" => "系统暂不支持非京东收银支付方式",
+        "pay_type_empty" => "设备未设置支付方式，请绑定后重试",
         "channel_no_data" => "查无货道信息",
         "make_order_details_fail" => "生成订单详情失败",
         "make_order_success" => "生成订单成功",

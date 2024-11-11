@@ -762,9 +762,11 @@ class ApiClient extends ReceiveBaseClient
                 if ($result) {
                     // 免费的直接出货
                     if ($this->data['pay_type'] == 0) {
-                        $this->outGoods();
-                        $this->commitTrans();
-                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
+                        $this->rollbackTrans();
+                        return $this->r(100,$this->lang("VSubCar.pay_type_empty"));
+//                        $this->outGoods();
+//                        $this->commitTrans();
+//                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
                     } else {
                         $this->commitTrans();
                         return $this->r(200, $this->lang("VSubCar.make_order_success"), ['order' => $this->order]);
