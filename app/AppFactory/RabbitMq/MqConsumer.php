@@ -50,6 +50,7 @@ class MqConsumer
                 "machine_id" => $data['machine_id'],
 //                "key" => cache($data['machine_id'] . ".signKey"),
                 "data" => $data,
+                "mac" => $data['mac'] ?? "",
             ];
             $app = AppFactory::machine($config);
             $result = $app->mq->onMessage();

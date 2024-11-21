@@ -86,4 +86,15 @@ class AuthRole extends Common
             return $this->app->authRole->rValidate($e->getMessage());
         }
     }
+
+    /**
+     * 复制权限角色
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+    public function copy()
+    {
+        $postData = input();
+        return $this->app->authRole->copy($postData);
+    }
 }

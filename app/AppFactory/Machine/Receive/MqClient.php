@@ -56,7 +56,6 @@ class MqClient extends ReceiveBaseClient
     use ActivityLotteryTrait,ActivityLotteryConfigTrait,ActivityLotteryContentTrait,ActivityLotteryUsedTrait,ActivityLotteryUsedGoodsTrait;
     use EarthCitiesTrait,EarthRegionsTrait,EarthCountriesTrait,EarthStatesTrait;
 
-    protected $message;
     protected $order;
     public function __construct(ServiceContainer $app)
     {
@@ -65,9 +64,9 @@ class MqClient extends ReceiveBaseClient
             json(['state' => 100,"msg" => '缺少签名'])->send();
         if (isset($this->data['sign']) && $this->checkSign($this->data) !== true) {
             actionLog($this->data,'验签失败',"DataUpload");
-//            die(json_encode(["state" => 200, "msg" => "验签失败"],320));
+            die(json_encode(["state" => 200, "msg" => "验签失败"],320));
         }
-        $this->message = json2arr($this->data['data']);
+        $this->message = json2arr($this->data['data'] ?? "");
         actionLog($this->message, '消息数据', "DataUpload");
         if (!$this->message)
             json(['state' => 100,"msg" => 'message数据为空'])->send();
@@ -89,7 +88,7 @@ class MqClient extends ReceiveBaseClient
     {
         try {
             if ($this->message) {
-                $func_name = $this->message['msgType'];
+                $func_name = $this->message['msgType'] ?? "";
                 if (method_exists(self::class, $func_name)) {
                     try {
                         validate(VReport::class)->scene($this->message['msgType'])->check($this->message);
@@ -99,6 +98,7 @@ class MqClient extends ReceiveBaseClient
                     }
                     return $this->$func_name();
                 }
+                actionLog($this->message,'没有对应的消息类型');
             }
             return 1;
         } catch (\Exception $e) {

@@ -87,6 +87,7 @@ trait AfterOrderPaymentTrait
                     $dc = [
                         "channel_code" => $v['channel_code'],
                         "quantity" => $v['quantity'],
+                        "is_gift" => $v['is_gift'] ?? 2,
                     ];
                     $outArr[$v['channel_position']][] = $dc;
                 }

@@ -410,3 +410,20 @@ function crossDomain(){
     header("Access-Control-Allow-Headers: token,Origin, X-Requested-With, Content-Type, Accept");
     header('Access-Control-Allow-Methods: POST,GET');
 }
+
+
+/**
+ * 提示信息跳转报错页面
+ * @param string $msg            提示信息
+ * @param string $redirectUrl    跳转链接
+ * @param int $time              倒计时
+ */
+function showMsg($msg = "",$redirectUrl = "", $time = 120)
+{
+    $data['msg'] = $msg;
+    $data['redirectUrl'] = $redirectUrl;
+    $data['time'] = $time;
+    $url = env("MSG_PAGE_URL") . "?" . http_build_query($data);
+    header("Location: $url");
+    die();
+}

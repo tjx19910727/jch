@@ -38,6 +38,7 @@ class SignUtil
      */
     public static function checkSign($data,$key)
     {
+        actionLog($data,$key);
         $sign = $data['sign'];
         unset($data['sign']);
         $makeSign = self::makeSign($data,$key);

@@ -10,6 +10,7 @@ namespace app\management\controller;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Wx\WxOfficialModel;
 use app\BaseController;
 use think\captcha\facade\Captcha;
 use think\facade\Lang;
@@ -91,5 +92,25 @@ class Login extends BaseController
             return returnState(200,Lang::get("VLogin.logout_success"));
         }
         return returnState(100,Lang::get("VLogin.logout_fail"));
+    }
+
+    /**
+     * 获取微信登录链接
+     * @return array|\think\response\Json
+     */
+    public function getWxLoginUrl()
+    {
+        $postData = input();
+        return AppFactory::management()->login->getWxLoginUrl($postData);
+    }
+
+    /**
+     * 监听微信登录状态
+     * @return array|\think\response\Json
+     */
+    public function checkWxLoginStatus()
+    {
+        $postData = input();
+        return AppFactory::management()->login->checkWxLoginStatus($postData);
     }
 }

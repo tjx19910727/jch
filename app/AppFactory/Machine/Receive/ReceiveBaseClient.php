@@ -22,7 +22,7 @@ class ReceiveBaseClient extends MachineBaseClient
     use MachineOnlineDetailsTrait;
     use AuthManagerTrait;
 
-    protected $message = [];
+    public $message = [];
 
     public function __construct(ServiceContainer $app)
     {
@@ -31,6 +31,13 @@ class ReceiveBaseClient extends MachineBaseClient
         $this->machine['last_online_time'] = time();
         $this->machine['online'] = 1;
 
+        $checkMac = $this->checkMac($this->config['mac'] ?? "");
+        if ($checkMac !== true) {
+            actionLog($this->config,"上报的数据","mac_check");
+            actionLog($checkMac,"Mac验证失败","mac_check");
+            $checkMac->send();
+            die();
+        }
         $set = $this->setSignKey();
         if ($set !== true) {
             $set->send();
@@ -52,19 +59,18 @@ class ReceiveBaseClient extends MachineBaseClient
      */
     public function setSignKey()
     {
-        if (isset($this->data['mac'])) {
+        if (isset($this->data['mac']) && !isset($this->data['sign'])) {
             try {
-                actionLog(['mac_address' => $this->machine['mac_address'], "mac" => $this->data['mac']], "系统-终端Mac地址");
+                actionLog($this->data, "上报的数据","setSignKey");
+                actionLog(['mac_address' => $this->machine['mac_address'], "mac" => $this->data['mac']], "系统-终端Mac地址","setSignKey");
                 $signKey = $this->machine['signKey'];
-                // 上报的Mac地址与后台设置的Mac地址不一致时，不下发Key
-                if ($this->machine['mac_address'] != $this->data['mac']) $signKey = "";
-                // 后台配置Mac地址，并且Mac地址与上报的Mac地址一致，并且Key为空或上一个Key的时间大于3600秒，重新生成一个Key
-                if ($this->machine['mac_address'] && $this->machine['mac_address'] == $this->data['mac']) {
-                    if (!$signKey || ($this->machine['signKeyTime'] < time() - 3600)) {
-                        $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
-                        $this->updateMachine(['m_id' => $this->machine['m_id'], 'signKey' => $signKey, 'signKeyTime' => time()]);
-                    }
+                // SignKey为空或SignKeyTime超过3600秒，生成新的Key并下发
+                if (!$signKey) {
+                    $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
+                    $this->updateMachine(['m_id' => $this->machine['m_id'], 'signKey' => $signKey, 'signKeyTime' => time()]);
                 }
+                actionLog(['machine' => $this->machine], "设备","setSignKey");
+                actionLog(['signKey' => $signKey], "SignKey","setSignKey");
 
                 if ($signKey) {
                     $data = [
@@ -73,14 +79,16 @@ class ReceiveBaseClient extends MachineBaseClient
                         "machine_id" => $this->machine['machine_id'],
                         "signKey" => $signKey,
                     ];
-                    actionLog($data, '发送至MQ服务器的数据');
+                    actionLog($data, '发送至MQ服务器的数据',"setSignKey");
                     $this->dataRecord(2, 2);
-                    $result = MqProducer::dataSend($data, $this->machine['machine_id']);
-                    actionLog($result, '发送结果');
+
+                    actionLog($this->mqQueue,'下发队列名',"setSignKey");
+                    $result = MqProducer::dataSend($data, $this->mqQueue);
+                    actionLog($result, '发送结果',"setSignKey");
                     @cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 5);
-                    actionLog(@cache($this->machine['machine_id'] . ".signKey"), $this->machine['machine_id'] . '生成SignKey');
+                    actionLog(@cache($this->machine['machine_id'] . ".signKey"), $this->machine['machine_id'] . '生成SignKey',"setSignKey");
+                    return $this->r(200,'处理成功');
                 }
-                return $this->r(200,'处理成功');
             } catch (\Exception $e) {
                 actionException($e,1);
                 return $this->rTryCatch($e->getMessage());

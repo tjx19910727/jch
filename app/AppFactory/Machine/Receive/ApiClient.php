@@ -54,6 +54,8 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
+use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
+use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\machine\validate\VReceive;
 use think\db\exception\DbException;
 use think\facade\View;
@@ -89,7 +91,9 @@ class ApiClient extends ReceiveBaseClient
         StrategyIncomeTrait,
         StrategyManagerTrait,
         StrategyPayeeTrait,
-        StrategyMachineTrait
+        StrategyMachineTrait,
+        WxOfficialTrait,
+        WxOfficialLoginTrait
         ;
 
     public function __construct(ServiceContainer $app)
@@ -132,6 +136,33 @@ class ApiClient extends ReceiveBaseClient
         unset($manager['password'], $manager['status']);
 
         return $this->r(200, $this->lang("VLogin.login_success"), $manager);
+    }
+
+    /**
+     * 获取微信登录二维码
+     * @return array|\think\response\Json
+     */
+    public function wxLoginQrCode()
+    {
+        $where['ao_id'] = $this->machine['ao_id'];
+        $where['status'] = 1;
+        $config = $this->getWxOfficialFind($where,'*',"id desc");
+        if (!$config) return $this->r(100,$this->lang("VWxLogin.wx_no_data"));
+        $config = $config->toArray();
+        $insert = [
+            "wx_id" => $config['id'],
+            "app_id" => $config['app_id'],
+            "m_id" => $this->machine['m_id'],
+            "machine_id" => $this->machine['machine_id'],
+            "ip" => request()->ip(),
+            "login_type" => 2,
+            "ao_id" => $config['ao_id'],
+        ];
+        $id = $this->addWxOfficialLogin($insert);
+        if (!$id) return $this->r(100,$this->lang("action_fail"));
+        $loginUrl = $this->getUrl("/wx/scan_login/silentLogin/login_id/$id");
+        $this->updateWxOfficialLogin(['id' => $id,"login_url" => $loginUrl]);
+        return $this->r(200,$this->lang("action_success"),["id" => $id,"login_url" => $loginUrl]);
     }
 
     /**
@@ -222,6 +253,7 @@ class ApiClient extends ReceiveBaseClient
                     $updateCorner = [];
                     if ($corner['status'] == 1) {
                         $updateCorner['status'] = 2;
+                        $corner['status'] = 2;
                     }
                     if ($corner['end_time'] > 0 && $corner['end_time'] < time()) {
                         $updateCorner['status'] = 3;
@@ -763,7 +795,7 @@ class ApiClient extends ReceiveBaseClient
                     // 免费的直接出货
                     if ($this->data['pay_type'] == 0) {
                         $this->rollbackTrans();
-                        return $this->r(100,$this->lang("VSubCar.pay_type_empty"));
+                        return $this->r(300,$this->lang("VSubCar.pay_type_empty"));
 //                        $this->outGoods();
 //                        $this->commitTrans();
 //                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
@@ -774,7 +806,7 @@ class ApiClient extends ReceiveBaseClient
                 }
             }
             $this->rollbackTrans();
-            return $this->r(100, $this->lang("VSubCar.make_order_fail"));
+            return $this->r(300, $this->lang("VSubCar.make_order_fail"));
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);

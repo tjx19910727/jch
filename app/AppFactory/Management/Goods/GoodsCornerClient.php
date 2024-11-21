@@ -87,18 +87,22 @@ class GoodsCornerClient extends ManagementClient
                     "a_id" => $id,
                     "a_type" => 5,
                 ];
+                if ($goodsList) {
+                    $agResult = $this->addAg($insert, $goodsList);
+                    if ($agResult !== true) {
+                        $this->rollbackTrans();
+                        return $this->rFail($agResult);
+                    }
+                }
                 if ($machineList) {
                     $amResult = $this->addAm($insert, $machineList);
                     if ($amResult !== true) {
                         $this->rollbackTrans();
                         return $this->rFail($amResult);
                     }
-                }
-                if ($goodsList) {
-                    $agResult = $this->addAg($insert, $goodsList);
-                    if ($agResult !== true) {
-                        $this->rollbackTrans();
-                        return $this->rFail($agResult);
+                    foreach ($machineList as $mv) {
+                        // 发送触发角标更新数据
+                        $this->sendToMachine(['machine_id' => $mv],'changeCorner');
                     }
                 }
                 $this->commitTrans();
@@ -140,9 +144,19 @@ class GoodsCornerClient extends ManagementClient
 //                    $this->rollbackTrans();
                     return $this->rFail($amResult);
                 }
+                foreach ($addAmList as $mv) {
+                    // 发送触发角标更新数据
+                    $this->sendToMachine(['machine_id' => $mv],'changeCorner');
+                }
                 $flag[] = 1;
             }
-            if ($delAmList) $flag[] = $this->delActivityMachine(['a_id' => $postData['id'],'a_type' => 5, ['machine_id','in', $delAmList]]);
+            if ($delAmList) {
+                $flag[] = $this->delActivityMachine(['a_id' => $postData['id'],'a_type' => 5, ['machine_id','in', $delAmList]]);
+                foreach ($delAmList as $mdv) {
+                    // 发送触发角标更新数据
+                    $this->sendToMachine(['machine_id' => $mdv],'changeCorner');
+                }
+            }
         }
         if ($goodsList) {
             $oldAgList = $this->getActivityGoodsColumn(['a_id' => $postData['id'],'a_type' => 5],'g_id');
@@ -169,6 +183,11 @@ class GoodsCornerClient extends ManagementClient
      */
     public function delCorner($id)
     {
+        $machine_ids = $this->getActivityMachineColumn(['a_type' => 5,['a_id','in',$id]],'machine_id');
+        foreach ($machine_ids as $mdv) {
+            // 发送触发角标更新数据
+            $this->sendToMachine(['machine_id' => $mdv],'changeCorner');
+        }
         $this->delGoodsCorner([['id',"in",$id]]);
         $where[] = ['a_id','in',$id];
         $where['a_type'] = 5;
@@ -177,8 +196,22 @@ class GoodsCornerClient extends ManagementClient
         return $this->rSuccess();
     }
 
+    /**
+     * 下架角标
+     * @param $where
+     * @return array|\think\response\Json
+     */
     public function cornerTakeDown($where)
     {
-        return $this->rAction($this->updateGoodsCorner(["status" => 4],$where));
+        $a_id = $this->getGoodsCornerColumn($where,'id');
+        $result = $this->updateGoodsCorner(["status" => 4],$where);
+        if ($result) {
+            $machine_ids = $this->getActivityMachineColumn(['a_type' => 5,['a_id','in',$a_id]],'machine_id');
+            foreach ($machine_ids as $mdv) {
+                // 发送触发角标更新数据
+                $this->sendToMachine(['machine_id' => $mdv],'changeCorner');
+            }
+        }
+        return $this->rAction($result);
     }
 }

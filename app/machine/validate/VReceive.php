@@ -115,6 +115,7 @@ class VReceive extends VCommon
 
     protected $scene = [
         "login" => ["msg_id","machine_id","timestamp","sign","account","password"],
+        "wxLogin" => ["msg_id","machine_id","timestamp","sign"],
         "logout" => ["msg_id","machine_id","timestamp","sign"],
 
         "getIp" => ["msg_id","machine_id","timestamp","sign"],

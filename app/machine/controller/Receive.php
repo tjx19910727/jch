@@ -56,10 +56,11 @@ class Receive extends Common
             $frequency = obj2arr($frequency);
             die(json_encode($frequency,320));
         }
+        $mac = $this->request->header("mac");
         $this->config = [
             "machine_id" => $postData['machine_id'],
-//            "key" => $this->key,
             "data" => $postData,
+            "mac" => $mac
         ];
         $this->app = AppFactory::machine($this->config);
         if (!in_array($action,$this->noCheckApi) && $this->app->api->checkSign($postData) !== true) {
@@ -76,6 +77,15 @@ class Receive extends Common
     public function login()
     {
         return $this->app->api->login();
+    }
+
+    /**
+     * 微信登录
+     * @return array|string
+     */
+    public function wxLogin()
+    {
+        return $this->app->api->wxLoginQrCode();
     }
 
     /**

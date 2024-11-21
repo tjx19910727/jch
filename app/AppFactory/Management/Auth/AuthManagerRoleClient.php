@@ -27,6 +27,7 @@ class AuthManagerRoleClient extends ManagementClient
         "/management/common/getSelfRoleNode",
         "/management/common/getMineInfo",
         "/management/common/checkPwd",
+        "/management/config.config/getFind",
     ];
 
     /**

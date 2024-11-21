@@ -10,14 +10,49 @@ namespace app\management\controller;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Activity\ActivityMachineModel;
+use app\AppFactory\Kernel\Model\Activity\Coupon\ActivityCouponUsedModel;
+use app\AppFactory\Kernel\Model\Activity\Fd\ActivityFdUsedModel;
+use app\AppFactory\Kernel\Model\Activity\Lottery\ActivityLotteryUsedModel;
+use app\AppFactory\Kernel\Model\Activity\Pick\ActivityPickCodeModel;
+use app\AppFactory\Kernel\Model\Advertisement\AdvertisementPushModel;
+use app\AppFactory\Kernel\Model\Advertisement\AdvertisementRecordModel;
+use app\AppFactory\Kernel\Model\Api\ApiAdvanceModel;
 use app\AppFactory\Kernel\Model\Auth\AuthManagerLogModel;
+use app\AppFactory\Kernel\Model\Auth\AuthManagerMachineModel;
 use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
 use app\AppFactory\Kernel\Model\Earth\EarthCitiesModel;
 use app\AppFactory\Kernel\Model\Earth\EarthRegionsModel;
 use app\AppFactory\Kernel\Model\Earth\EarthStatesModel;
+use app\AppFactory\Kernel\Model\Goods\GoodsChangeModel;
+use app\AppFactory\Kernel\Model\Goods\GoodsHitModel;
+use app\AppFactory\Kernel\Model\Goods\GoodsMultipleMachineModel;
+use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
+use app\AppFactory\Kernel\Model\Machine\MachineChannelReplenishmentModel;
+use app\AppFactory\Kernel\Model\Machine\MachineChannelStockModel;
 use app\AppFactory\Kernel\Model\Machine\MachineCheckStockCountView;
+use app\AppFactory\Kernel\Model\Machine\MachineCheckStockModel;
+use app\AppFactory\Kernel\Model\Machine\MachineConfigModel;
+use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
+use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
+use app\AppFactory\Kernel\Model\Machine\MachineGroupMgModel;
+use app\AppFactory\Kernel\Model\Machine\MachineHelpModel;
+use app\AppFactory\Kernel\Model\Machine\MachineInfoModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\Machine\MachineMqRecordModel;
+use app\AppFactory\Kernel\Model\Machine\MachineOnlineDetailsModel;
+use app\AppFactory\Kernel\Model\Machine\MachineOnlineModel;
+use app\AppFactory\Kernel\Model\Machine\MachineOnOffModel;
+use app\AppFactory\Kernel\Model\Machine\MachineVersionPlanModel;
+use app\AppFactory\Kernel\Model\Machine\MachineViewModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDailyCountView;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersRefundModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersRevenueModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersUnclaimedModel;
 use app\AppFactory\Kernel\Model\Trip\TripCityModel;
+use app\AppFactory\Kernel\Model\Trip\TripMultipleMachineModel;
 use app\AppFactory\Kernel\Support\TDESUtil;
 use app\AppFactory\Management\Application;
 use app\BaseController;
@@ -275,4 +310,58 @@ class Test extends BaseController
 //        $int = "3665";
 //        dump(Int2HourMinuteSec($int,3));
 //    }
+
+    public function changeMachineId()
+    {
+        $machine_id = input("machine_id");
+        echo "开始处理", "<br>", "<br>";
+        $whereM = [];
+        if ($machine_id) $whereM['machine_id'] = $machine_id;
+        $machineList = MachineModel::getList($whereM,0,'m_id,machine_id,machine_name');
+        $machineList = $machineList->toArray();
+        $tables = Db::query("SHOW TABLES");
+        $tableList = array_column($tables,"Tables_in_kiosk");
+        $columns = [];
+        $fields = ["m_id","machine_id","machine_name"];
+        foreach ($tableList as $tableName) {
+            if ($tableName == "machine") continue;
+            $fieldsList = Db::query('SHOW FULL COLUMNS FROM `' . $tableName . '` ' );
+            // 获取Field字段名反转字段名为Key值
+            $tableField = array_flip(array_column($fieldsList, 'Field'));
+            // tableField和反转Key值的fields参数比较数据，返回交集，获取交集的Key值为需要处理的字段参数名
+            $handleFields = array_keys(array_intersect_key($tableField,array_flip($fields)));
+            if ($handleFields && in_array("machine_id",$handleFields)){
+                // 获取表备注信息，为VIEW视图的表则跳过
+                $comment = Db::query("SHOW TABLE STATUS WHERE `Name` = '$tableName'");
+                $tableComment = $comment[0]['Comment'];
+                if ($tableComment == "VIEW") continue;
+                // 以表名为Key值，整理Fields参数集和Comment表备注信息
+                $columns[$tableName] = ['fields' => $handleFields,'comment' => $tableComment];
+            }
+        }
+//        dump($columns);
+
+        foreach ($machineList as $key => $value) {
+            echo "【", $value['machine_id'],"】","ID：", $value['m_id'], "，设备名称：",$value['machine_name'],"<br>";
+            $where = [];
+            $where['m_id'] = $value['m_id'];
+            $where[] = ["machine_id","<>",$value['machine_id']];
+            foreach ($columns as $tableName => $cv) {
+                // 查询是否有存在设备编号不相等数据
+                $select = Db::name($tableName)->where($where)->field($cv["fields"][0])->select()->toArray();
+                if ($select) {
+                    $update = [];
+                    foreach ($cv['fields'] as $cvk => $field) {
+                        $update[$field] = $value[$field];
+                    }
+                    $result = Db::name($tableName)->where($where)->update($update);
+                    echo "修改", $cv['comment'], "：", Db::name("")->getLastSql(), "，结果：$result 行";
+                    if ($result) echo "，修改成功","<br>";
+                    else echo "，修改失败" , "<br>";
+                }
+            }
+            echo "【", $value['machine_id'],"】处理完成","<br>","<br>";
+        }
+        echo "全部处理完成";
+    }
 }

@@ -42,6 +42,9 @@ return [
     "export_success" => '导出成功',
     "export_fail" => '导出失败',
 
+    "mac_require" => "Mac地址不能为空",
+    "mac_not_match" => "Mac地址与后台配置不匹配",
+
     "tException" => [
         "out_fail" => '出货失败',
         "unclaimed" => '订单有商品未取',

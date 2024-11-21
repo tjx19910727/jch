@@ -24,6 +24,7 @@ use app\AppFactory\RabbitMq\MachineConsumer;
 use app\AppFactory\RabbitMq\MqProducer;
 use app\BaseController;
 use Mqtt\Mqtt;
+use think\Exception;
 use think\facade\Cache;
 use think\facade\Db;
 use think\facade\Queue;
@@ -33,18 +34,36 @@ class Test extends BaseController
 {
     use CurlTrait;
     protected $order;
+    public $machine;
+    public $mqQueue;
 
     public function testArr()
     {
+        dump("12+++" >= 12);
+        $this->machine['machine_id'] = "test0001";
+        $this->machine['version'] = "0.2.12+";
+        $this->machine['mac_address'] = "04:2B:58:12:15:00";
+        $this->mqQueue = $this->machine['machine_id'];
+        if (isset($this->machine['version']) && $this->machine['version']) {
+            $versionArr = explode(".", $this->machine['version']);
+            dump($versionArr);
+            // 版本号小于0.2.12时，采用旧的MQ队列，大于等于0.2.12时，MQ队列名称增加MAC地址标示
+            if (isset($versionArr[0]) && $versionArr[0] == 0 && isset($versionArr[1]) && $versionArr[1] >= 2 && isset($versionArr[2]) &&  $versionArr[2] >= 12) {
+                $this->mqQueue = $this->machine['machine_id'] . "_" . str_replace(":","_",$this->machine['mac_address']);
+            }
+        }
+        dump($this->mqQueue);
+        die();
         $data = [
             ["g_id" => 5],
             ["g_id" => 6],
             ["g_id" => 7],
             ["g_id" => 4],
         ];
-        $gIds = array_column($data,"g_id");
+        $gIds = array_column($data, "g_id");
         dump($gIds);
     }
+
     public function testBc()
     {
         $value = '{"sod_id":5246,"discount_price":"0.000","total_sod_price":1,"retail_price":1,"quantity":1,"g_id":156,"cost_price":0}';
@@ -53,9 +72,10 @@ class Test extends BaseController
         $this->order = json2arr($this->order);
         dump($this->order);
         dump($value);
-        $discount = bcmul($this->order['discount_price'],bcdiv($value['total_sod_price'],$this->order['total_price'],2),3);
+        $discount = bcmul($this->order['discount_price'], bcdiv($value['total_sod_price'], $this->order['total_price'], 2), 3);
         dump($discount);
     }
+
     public function testSendEmail()
     {
         $config = [
@@ -150,35 +170,37 @@ class Test extends BaseController
     {
         $order_id = input("order_id");
         $machine_id = input("machine_id");
-        $pay_type = input("pay_type",4);
-        $pay_method = input("pay_method",1);
-        $mc_id = input("mc_id",43217);
-        $g_id = input("g_id",596);
-        $mobile = input("mobile",15822483748);
-        $cityId = input("cityId",3);
-        $adults = input("adults",2);
-        $quantity = input("quantity",2);
-        $checkInDate = input("checkInDate",date("Y-m-d",strtotime("+1 days")));
-        $checkOutDate = input("checkOutDate",date("Y-m-d",strtotime("+2 days")));
-        $page = input('page',1);
-        $pageNum = input("pageNum",5);
-        $tm_id = input("tm_id",1);
-        $hotelId = input("hotelId","102903119");
-        $roomId = input("roomId","99769192");
+        $pay_type = input("pay_type", 4);
+        $pay_method = input("pay_method", 1);
+        $mc_id = input("mc_id", 43217);
+        $g_id = input("g_id", 596);
+        $mobile = input("mobile", 15822483748);
+        $cityId = input("cityId", 3);
+        $adults = input("adults", 2);
+        $quantity = input("quantity", 2);
+        $checkInDate = input("checkInDate", date("Y-m-d", strtotime("+1 days")));
+        $checkOutDate = input("checkOutDate", date("Y-m-d", strtotime("+2 days")));
+        $page = input('page', 1);
+        $pageNum = input("pageNum", 5);
+        $tm_id = input("tm_id", 1);
+        $hotelId = input("hotelId", "102903119");
+        $roomId = input("roomId", "99769192");
         $logId = input("logId");
         $tripData = input("tripData");
         $totalPrice = input("totalPrice");
         $pay_amount = input("pay_amount");
-        $hotelFrom = input("hotelFrom",1);
-        $guestNames = input("guestNames","张三,李四");
+        $hotelFrom = input("hotelFrom", 1);
+        $guestNames = input("guestNames", "张三,李四");
         $amount1 = input("amount1");
         $amount2 = input('amount2');
-        $count = input("count",2);
+        $count = input("count", 2);
         $effectiveDate1 = input("effectiveDate1");
         $effectiveDate2 = input("effectiveDate2");
         $gmg_id = input('gmg_id');
         $gm_id = input("gm_id");
         $tm_id = input("tm_id");
+        $authCode = input('authCode');
+
 
 //        $carList[] = [
 //            "mc_id" => 30352,
@@ -198,6 +220,24 @@ class Test extends BaseController
             "mobile" => $mobile,
 //            "coupon_code" => "980429",
             "carList" => json_encode($carList, 320),
+        ];
+        $data = $this->makeSign($data);
+        dump(json_encode($data, 320));
+
+        $machine = MachineModel::getFind(['machine_id' => $machine_id]);
+        echo "获取设备信息";
+        $data = [
+            "machine_id" => $machine_id,
+            "mac" => $machine['mac_address'],
+        ];
+        $data = $this->makeSign($data);
+        dump(json_encode($data, 320));
+
+        echo "反扫支付";
+        $data = [
+            "machine_id" => $machine_id,
+            "authCode" => $authCode,
+            "order_id" => $order_id,
         ];
         $data = $this->makeSign($data);
         dump(json_encode($data, 320));
@@ -260,7 +300,7 @@ class Test extends BaseController
             "tm_id" => $tm_id,
             "total_price" => 349.55,
             "mobile" => $mobile,
-            "carList" => json_encode($carList,320),
+            "carList" => json_encode($carList, 320),
             "hotelList" => [
                 "hotelId" => $hotelId,
                 "roomId" => $roomId,
@@ -450,7 +490,7 @@ class Test extends BaseController
 //            ],
 //        ];
 //        $content = json_encode($content);
-//        $msg_id = uniqid();
+        $msg_id = uniqid();
 ////        $signKey = "12da2ed86ebb06a199ac1d27ab062dcf";
 //        $data = [
 //            "timestamp" => time(),
@@ -468,8 +508,26 @@ class Test extends BaseController
 //        $data['sign'] = SignUtil::makeSign($data, $signKey);
 //        dump(json_encode($data));
 
-//        $data = '{"timestamp":"1728453952","msg_id":"2dd8eded-877e-4b9d-b099-49217270bafc","machine_id":"0022","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"2024100914041046913817\",\"main\":{\"1\":[{\"channel_code\":\"A01\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"/uploads/machine_0022/20241009/f20d4ba10817a9f059730bf3b2a0c6c1.jpg,/uploads/machine_0022/20241009/2da4f0068c74716ff5df0b830e488ffb.jpg\",\"out_sequence\":1}]}}","sign":"0b2062391c78023fcc81ed082e94b419"}';
+        $where['machine_id'] = input("machine_id");
+        $machine = MachineModel::getFind($where);
+        $content = input("content");
+        $data = [
+            "timestamp" => time(),
+            "msg_id" => $msg_id,
+            "machine_id" => $machine['machine_id'],
+            "data" => $content,
+            "mac" => $machine['mac'],
+        ];
+        $data['sign'] = SignUtil::makeSign($data,$machine['signKey']);
+//        $data = '{"timestamp":"1732006384","msg_id":"fd591f1c-7718-4069-a290-52d084930c82","machine_id":"JCHH2D-027","data":"{\"msgType\":\"light\",\"value\":100}","mac":"04:2B:58:12:16:3A","sign":"58457494a8e727d42be089f184c333f4"}';
 //        $data = json2arr($data);
+        dump($data);
+//        $data = [
+//            "timestamp" => time(),
+//            "msg_id" => $msg_id,
+//            "machine_id" => "test0003",
+//            "mac" => "00:0C:29:74:77:66",
+//        ];
         $result = MqProducer::dataUpload($data);
         dump($result);
     }
@@ -495,15 +553,29 @@ class Test extends BaseController
         $data = input();
         $data = json2arr($data);
         dump($data);
+        $machine = MachineModel::getFind(['machine_id' => $data['machine_id']]);
+        $msg_id = uniqid();
+        $data["timestamp"] = time();
+        $data["msg_id"] = $msg_id;
+        $data['mac'] = $machine['mac_address'];
+
+//        $data = '{"timestamp":"1732006384","msg_id":"fd591f1c-7718-4069-a290-52d084930c82","machine_id":"JCHH2D-027","data":"{\"msgType\":\"light\",\"value\":100}","mac":"04:2B:58:12:16:3A","sign":"58457494a8e727d42be089f184c333f4"}';
+//        $data = json2arr($data);
+
+//        $data['sign'] = SignUtil::makeSign($data,$machine['signKey']);
+        dump($data);
         $config = [
             "machine_id" => $data['machine_id'],
 //            "key" => env("api.md5Key"),
             "data" => $data,
+            "mac" => $data['mac'],
         ];
 //        unset($data['sign']);
 //        $data['sign'] = SignUtil::makeSign($data,$config['key']);
         dump($config);
         $app = AppFactory::machine($config);
+//        $result = $app->api->machine();
+//        dump($result);
         $result = $app->mq->onMessage();
         dump($result);
     }
@@ -652,7 +724,7 @@ class Test extends BaseController
     {
         $sale = "422.15";
         $refund = "20.1";
-        $total = $sale-$refund;
+        $total = $sale - $refund;
         dump($total);
 
     }
@@ -719,10 +791,80 @@ class Test extends BaseController
             "pay_method" => 1,
             "mobile" => "15822483748",
             "gm_id" => 17,
-            "carList" => json_encode($carList,320),
-            "hotel" => json_encode($hotel,320),
+            "carList" => json_encode($carList, 320),
+            "hotel" => json_encode($hotel, 320),
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data,320));
+        dump(json_encode($data, 320));
+    }
+
+    public function testScanDir()
+    {
+//        $dir = root_path("public");
+        $dir = "E:\project\project-70-cf.com\public";
+        dump($dir);
+        $match = "/\.php$/i";
+        $list = $this->scanDir($dir, $match);
+        dump($list);
+        $whiteList = [
+            "E:\project\project-70-cf.com\public/index.php",
+            "E:\project\project-70-cf.com\public/router.php",
+            "E:\project\project-70-cf.com\public/mqtt.php"
+        ];
+        foreach ($list as $key => $value) {
+            if (!in_array($value, $whiteList)) {
+                dump($value);
+                unlink($value);
+            }
+        }
+    }
+
+    /**
+     * Notes: 扫描目录，查询正则匹配名称的文件
+     * User: HappyWinter
+     * Date: 2024/11/13
+     * Time: 14:15
+     * @param string $dir 指定目录，结尾不带/或\
+     * @param string $match 正则表达式，默认值：匹配后缀名为.php的文件返回
+     * @return array               符合条件的文件列表返回
+     */
+    public function scanDir($dir, $match = "/\.php$/i"): array
+    {
+        $ff = scandir($dir);
+        $fileList = [];
+        foreach ($ff as $key => $value) {
+            if ($value == "." || $value == "..") continue;
+            if (is_dir($dir . "/" . $value)) {
+                $fileList = array_merge($fileList, $this->scanDir($dir . "/" . $value, $match));
+            } else {
+                if (preg_match($match, $value)) {
+                    $fileList[] = $dir . "/" . $value;
+                }
+            }
+        }
+        return $fileList;
+    }
+
+    public function testShowImg()
+    {
+        $name = "8d57499656f58704bfbcabd4cc39e90a";
+        echo "<img src='" . url("machine/test/showImg", ['name' => $name], '', true) . "' width=100 > ";
+        echo 123;
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function showImg()
+    {
+        $name = input("name");
+        $file = root_path("public") . "uploads/ico/20240321/" . $name;
+        if (!file_exists($file)) {
+            throw new Exception("查无文件");
+        }
+        $content = file_get_contents($file);
+        header("Content-Type:image");
+        echo $content;
+        die();
     }
 }

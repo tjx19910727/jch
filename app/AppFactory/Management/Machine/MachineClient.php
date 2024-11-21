@@ -207,7 +207,7 @@ class MachineClient extends ManagementClient
      * @param $where
      * @return array
      */
-    public function getData($where)
+    public function getData($where = [])
     {
         $total = 0;
         $normal = 0;

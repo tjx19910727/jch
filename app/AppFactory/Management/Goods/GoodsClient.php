@@ -116,12 +116,16 @@ class GoodsClient extends ManagementClient
     public function exportExcel($where)
     {
         $list = $this->getGoodsList($where, 0,
-            'g_id,g_name,model,sku,cost_price,market_price,retail_price');
+            'g_id,g_name,gc_name,
+            (case g_type when 1 THEN "普通商品" WHEN 2 THEN "酒店商品" WHEN 3 THEN "门票商品" ELSE "未定义类型" END) g_type,
+            model,sku,cost_price,market_price,retail_price');
         if ($list) {
             $list = $list->toArray();
             $title = [
                 'g_id' => "商品ID",
                 'g_name' => "商品名称",
+                'g_type' => "商品类型",
+                'gc_name' => "商品分类",
                 'model' => "商品型号",
                 'sku' => "SKU码",
                 'cost_price' => "成本价",

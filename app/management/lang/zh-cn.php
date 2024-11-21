@@ -39,6 +39,16 @@ return [
         "login_success" => "登录成功，正在跳转",
 
     ],
+    "VWxLogin" => [
+        "wx_no_data" => "查无公众号信息",
+        "wx_status2" => "公众号已禁用",
+    ],
+
+    "VActionVideo" => [
+        "id_require" => "操作视频ID不能为空",
+        "video_name_require" => "操作视频名称不能为空",
+        "path_require" => "请上传视频",
+    ],
 
     "VActivity" => [
         "usedList_no_data" => "查无使用报表信息",

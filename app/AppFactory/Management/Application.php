@@ -9,6 +9,7 @@
 namespace app\AppFactory\Management;
 
 
+use app\AppFactory\Kernel\Providers\Management\ActionProvider;
 use app\AppFactory\Kernel\Providers\Management\ActivityProvider;
 use app\AppFactory\Kernel\Providers\Management\AdvertisementProvider;
 use app\AppFactory\Kernel\Providers\Management\AuthProvider;
@@ -40,6 +41,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  *
  * @property Common\CityClient                      $city                   城市
  *
+ * @property Action\ActionVideoClient                $actionVideo           操作视频
  *
  * @property Activity\ActivityCouponClient           $activityCoupon        优惠券活动
  * @property Activity\ActivityCouponUsedClient       $activityCouponUsed    优惠券使用记录
@@ -152,6 +154,7 @@ class Application extends ServiceContainer
     use ConfigTrait;
 
     protected $providers = [
+        ActionProvider::class,
         ActivityProvider::class,
         AdvertisementProvider::class,
         AuthProvider::class,

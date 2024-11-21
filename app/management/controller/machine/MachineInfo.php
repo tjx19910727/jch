@@ -99,7 +99,7 @@ class MachineInfo extends Common
             sleep(1);
             $n++;
             if ($n >= 50) {
-                return returnState(100,lang("action_machine_overtime"));
+                return returnState(300,lang("action_machine_overtime"));
             }
         }
     }

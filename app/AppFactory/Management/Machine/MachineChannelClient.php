@@ -28,7 +28,7 @@ class MachineChannelClient extends ManagementClient
      * @param $where
      * @return array
      */
-    public function getData($where)
+    public function getData()
     {
         $empty = 0;
         $bad = 0;

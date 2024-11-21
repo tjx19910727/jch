@@ -40,7 +40,9 @@ class SendBaseClient extends MachineBaseClient
             $this->data['sign'] = $this->makeSign($this->data);
             actionLog($this->data, '发送至MQ服务器的数据');
             $this->dataRecord(2, 2);
-            $result = MqProducer::dataSend($this->data, $this->machine['machine_id']);
+
+            actionLog($this->mqQueue,'下发命令队列');
+            $result = MqProducer::dataSend($this->data, $this->mqQueue);
             actionLog($result,'发送结果');
             if ($result !== true) {
                 return $result;

@@ -28,8 +28,8 @@ class Index extends Common
      */
     public function getMachineData()
     {
-        $where = $this->getWhere([]);
-        $data = $this->app->machine->getData($where);
+//        $where = $this->getWhere([]);
+        $data = $this->app->machine->getData();
         return returnState(200,'查询成功',$data);
     }
 
@@ -39,8 +39,8 @@ class Index extends Common
      */
     public function getChannelData()
     {
-        $where = $this->getWhere([]);
-        $data = $this->app->machineChannel->getData($where);
+//        $where = $this->getWhere([]);
+        $data = $this->app->machineChannel->getData();
         return returnState(200,'查询成功',$data);
     }
 

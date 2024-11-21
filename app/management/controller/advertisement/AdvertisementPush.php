@@ -50,7 +50,7 @@ class AdvertisementPush extends Common
                 if ($machineIds) $where[] = ['machine_id','in',$machineIds];
             }
             $group = "m_id";
-            $field = "m_id,machine_id,machine_name,count(adv_id) adv_num";
+            $field = "m_id,machine_id,(SELECT machine_name FROM machine m WHERE m.m_id = a.m_id limit 1 ) machine_name,count(adv_id) adv_num";
         }
         if ($groupType == 2) {
             if ($adv_title) $where[] = ['adv_title',"like","%" . $adv_title . "%"];

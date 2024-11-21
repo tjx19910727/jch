@@ -84,9 +84,9 @@ trait AliPayTrait
         $data = [
             "out_trade_no" => $this->order['trade_no'],
             "total_amount" => round($this->order['total_price'], 2),
-            "subject" => $this->order['store_name'] . "反扫支付",
+            "subject" => $this->order['machine_id'] . "反扫支付",
             "scene" => "bar_code",
-            "auth_code" => $this->message['data']['authCode'],
+            "auth_code" => $this->order['pay_code'],
         ];
         actionLog($data, '请求支付宝反扫支付参数');
         if ($data['total_amount'] == 0) return $this->rFail('支付金额不能等于0');

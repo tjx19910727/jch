@@ -13,6 +13,10 @@ use app\AppFactory\Kernel\Model\Goods\GoodsCornerModel;
 
 trait GoodsCornerTrait
 {
+    public function getGoodsCornerColumn($where,$column,$key = "")
+    {
+        return GoodsCornerModel::getColumn($where,$column,$key);
+    }
     public function getGoodsCornerFind($where,$field = "*",$order = "id desc")
     {
         return GoodsCornerModel::getFind($where,$field,$order);

@@ -24,6 +24,7 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
+use app\AppFactory\Kernel\Traits\User\UserTrait;
 use app\AppFactory\Pay\PayBaseClient;
 
 class PaymentClient extends PayBaseClient
@@ -33,6 +34,7 @@ class PaymentClient extends PayBaseClient
         StrategyMachineTrait,
         WxPayTrait,AliPayTrait,JdCashierTrait,TripPay,
         BeforeOrderPaymentTrait,
+        UserTrait,
         SaleHotelTrait,SaleHotelNightlyTrait,
         SaleOrdersRevenueTrait;
     use AfterOrderPaymentTrait;

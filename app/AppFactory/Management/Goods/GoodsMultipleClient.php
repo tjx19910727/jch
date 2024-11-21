@@ -46,8 +46,8 @@ class GoodsMultipleClient extends ManagementClient
                             $goods = $this->getGoodsFind(['g_id' => $gv['g_id']],'g_name,g_type,sku,pic,cost_price,market_price,performance');
                             if ($goods) {
                                 $goods = $goods->toArray();
+                                $temp[] = array_merge($gv,$goods);
                             }
-                            $temp[] = array_merge($gv,$goods);
                         }
                         $value["gList"] = $temp;
                     }

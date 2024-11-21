@@ -19,6 +19,11 @@ return [
         "logout_success" => "退出登录成功",
     ],
 
+    "VWxLogin" => [
+        "wx_no_data" => "查无微信公众号信息",
+        "wx_status2" => "查无微信公众号信息",
+    ],
+
     "VReceive" => [
         "machine_id_require" => "设备编号不能为空",
         "msg_id_require" => "消息ID不能为空",

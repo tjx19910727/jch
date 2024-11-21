@@ -154,7 +154,7 @@ class MachineOnOffClient extends ManagementClient
      */
     public function exportOnOff($where)
     {
-        $list = $this->getMachineOnOffList($where, 0, 'machine_id,machine_name,status,on_off_ckc,on_off_machine');
+        $list = $this->getMachineOnOffList($where, 0, 'machine_id,(SELECT machine_name FROM machine WHERE `machine`.`m_id` = `a`.`m_id` GROUP BY machine.m_id LIMIT 1) machine_name,status,on_off_ckc,on_off_machine');
         if ($list) {
             $list = $list->toArray();
             foreach ($list as $key => $value) {
