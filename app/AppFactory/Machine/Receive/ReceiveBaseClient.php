@@ -16,6 +16,7 @@ use app\AppFactory\Machine\MachineBaseClient;
 use app\AppFactory\RabbitMq\MqProducer;
 use think\exception\ValidateException;
 use think\facade\Filesystem;
+use think\facade\Request;
 
 class ReceiveBaseClient extends MachineBaseClient
 {
@@ -23,6 +24,7 @@ class ReceiveBaseClient extends MachineBaseClient
     use AuthManagerTrait;
 
     public $message = [];
+    public $noCheckMac = ["logoutH5"];
 
     public function __construct(ServiceContainer $app)
     {
@@ -31,12 +33,15 @@ class ReceiveBaseClient extends MachineBaseClient
         $this->machine['last_online_time'] = time();
         $this->machine['online'] = 1;
 
-        $checkMac = $this->checkMac($this->config['mac'] ?? "");
-        if ($checkMac !== true) {
-            actionLog($this->config,"上报的数据","mac_check");
-            actionLog($checkMac,"Mac验证失败","mac_check");
-            $checkMac->send();
-            die();
+        $action = Request::action();
+        if (!in_array($action,$this->noCheckMac)) {
+            $checkMac = $this->checkMac($this->config['mac'] ?? "");
+            if ($checkMac !== true) {
+                actionLog($this->config, "上报的数据", "mac_check");
+                actionLog($checkMac, "Mac验证失败", "mac_check");
+                $checkMac->send();
+                die();
+            }
         }
         $set = $this->setSignKey();
         if ($set !== true) {

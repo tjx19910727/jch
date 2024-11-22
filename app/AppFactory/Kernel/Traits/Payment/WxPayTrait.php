@@ -112,10 +112,10 @@ trait WxPayTrait
                 $return = $this->r(201,'等待用户支付');
             }
         }
-        if ($result['result_code'] == "FAIL") {
+        if ($result['return_code'] == "FAIL") {
             // 支付失败
             $this->paymentFailed();
-            $return = $this->rFail("支付失败");
+            $return = $this->rFail("支付失败：" . $result['return_msg']);
         }
         return $return;
     }
