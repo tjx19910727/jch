@@ -212,6 +212,7 @@ trait AfterOrderPaymentTrait
         $this->order['pay_status'] = 4;
         $this->order['pay_time'] = time();
         $this->handleHotel(2);
+        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'payFail',['trade_no' => $this->order['trade_no']]);
         return $this->updateSaleOrders($this->order);
     }
 

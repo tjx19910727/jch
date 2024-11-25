@@ -24,7 +24,9 @@ class MicroPay
             $redisExpire = env("Payment.microPayOverTime");
             $app = AppFactory::timeTask();
             $redis = new \Redis();
-            $redis->connect("127.0.0.1", "6379");
+            $config = config("redis");
+            $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
+            if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
             while (true) {
                 $list = $redis->lRange("microPay", 0, -1);
                 $num = count($list);
@@ -33,7 +35,7 @@ class MicroPay
                     if ($data) {
                         $data = json2arr($data);
                         if (!isset($data['query'])) $data['query'] = 1;
-                        actionLog($data, '需要处理的数据');
+                        actionLog($data, '需要处理的数据','queryMicroPay');
                         if ($data && $data['time'] > time() - $redisExpire) {
                             if ($data['pay_type'] == "wx") {
                                 $result = $app->wx->queryMicroPay($data['order_id']);
@@ -42,7 +44,7 @@ class MicroPay
                                 $result = $app->ali->queryMicroPay($data['order_id']);
                             }
                             $result = obj2arr($result);
-                            actionLog($result, '设备上报数据处理结果');
+                            actionLog($result, '设备上报数据处理结果','queryMicroPay');
                             // 用户支付中，重新放入队列
                             if ($result['state'] == 201) {
                                 $data['query']++;
@@ -57,7 +59,7 @@ class MicroPay
             $redis->close();
             return "处理完成";
         } catch (\Exception $e) {
-            actionException($e, 1);
+            actionException($e, 1,'queryMicroPay');
             return $e->getMessage();
         }
     }

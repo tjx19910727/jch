@@ -96,8 +96,8 @@ trait WxPayTrait
                 // 结算分润收益
                 $flag[] = $this->settlementRevenue();
                 $flag[] = $this->paymentSuccessful();
-                $result = flag_check($flag);
-                $return = $this->checkTrans($result);
+                $checkFlag = flag_check($flag);
+                $return = $this->checkTrans($checkFlag);
             }
             if ($result['err_code'] == "USERPAYING") {
                 $redisExpire = (env("Payment.microPayOverTime") ?? 0) + 60;

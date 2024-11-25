@@ -30,7 +30,6 @@ trait UserTrait
     public function addUser($insert)
     {
         $user = UserModel::create($insert);
-        dump($this->getLS());
         $pk = $user->getPk();
         return $user->$pk;
     }

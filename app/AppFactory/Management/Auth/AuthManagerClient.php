@@ -45,13 +45,19 @@ class AuthManagerClient extends ManagementClient
         }
         try {
             $pid = $this->getAuthManagerValue(['manager_id' => $manager_id], 'pid');
+            if (!$pid) {
+                $pid = $this->getAuthManagerValue(['manager_id' => $manager_id],'creator');
+            }
             $pidList = $this->getParentIdList($pid);
             $pidList[] = $manager_id;
-
+            actionLog($pidList,'创建人树');
             $where[] = ['creator', 'in', $pidList];
             $where['status'] = 1;
             $config = $this->getWxOfficialFind($where,'*','update_time desc');
-            if (!$config) return $this->r(100, $this->lang("VWxOfficial.official_no_data"));
+            if (!$config) {
+                actionLog($this->getLS(),'查询配置SQL');
+                return $this->r(100, $this->lang("VWxOfficial.official_no_data"));
+            }
             $config = $config->toArray();
             $qrScene = $config['id'] . "_2_" . $manager_id;
             $this->getWxApp($config);

@@ -13,6 +13,9 @@ use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\User\UserTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Wx\WxBaseClient;
+use EasyWeChat\Kernel\Exceptions\BadRequestException;
+use EasyWeChat\Kernel\Exceptions\InvalidArgumentException;
+use EasyWeChat\Kernel\Exceptions\InvalidConfigException;
 
 class OfficialClient extends WxBaseClient
 {
@@ -23,37 +26,46 @@ class OfficialClient extends WxBaseClient
 
     /**
      * @param $message
-     * @throws \EasyWeChat\Kernel\Exceptions\BadRequestException
-     * @throws \EasyWeChat\Kernel\Exceptions\InvalidArgumentException
-     * @throws \EasyWeChat\Kernel\Exceptions\InvalidConfigException
-     * @throws \ReflectionException
      */
     public function receiveHandle($message)
     {
-        $this->wx = $this->getWxOfficialFind(['gh_id' => $message['ToUserName']]);
-        if ($this->wx) {
-            $this->wx = $this->wx->toArray();
-            if ($this->wx) {
-                $this->getWxApp($this->wx);
-                $this->wx_app->server->push(function ($message) {
-                    $this->open_id = $message['FromUserName'];
-                    switch ($message['MsgType']) {
-                        case "event":
-                            return $this->receive_event($message);
-                            break;
-                        case "text":
-                            return "哇喔，很幸运被小主翻牌了\n开心到飞起\n感谢小主的好眼光\n今天最美的瞬间就是遇到您🎉\nbiubiu~";
-                            break;
-                        case "image":
-                            return "哇喔，很幸运被小主翻牌了\n开心到飞起\n感谢小主的好眼光\n今天最美的瞬间就是遇到您🎉\nbiubiu~";
-                            break;
-                        default:
-                            return "哇喔，很幸运被小主翻牌了\n开心到飞起\n感谢小主的好眼光\n今天最美的瞬间就是遇到您🎉\nbiubiu~~";
-                            break;
-                    }
-                });
-                $this->wx_app->server->serve()->send();
+        try {
+            $this->wx = $this->getWxOfficialFind(['gh_id' => $message['ToUserName']]);
+            if (!$this->wx) {
+                actionLog($this->getLS(),'查无微信配置SQL');
             }
+            if ($this->wx) {
+                $this->wx = $this->wx->toArray();
+                if ($this->wx) {
+                    $this->getWxApp($this->wx);
+                    $this->wx_app->server->push(function ($message) {
+                        $this->open_id = $message['FromUserName'];
+                        switch ($message['MsgType']) {
+                            case "event":
+                                return $this->receive_event($message);
+                                break;
+                            case "text":
+                                return "哇喔，很幸运被小主翻牌了\n开心到飞起\n感谢小主的好眼光\n今天最美的瞬间就是遇到您🎉\nbiubiu~";
+                                break;
+                            case "image":
+                                return "哇喔，很幸运被小主翻牌了\n开心到飞起\n感谢小主的好眼光\n今天最美的瞬间就是遇到您🎉\nbiubiu~";
+                                break;
+                            default:
+                                return "哇喔，很幸运被小主翻牌了\n开心到飞起\n感谢小主的好眼光\n今天最美的瞬间就是遇到您🎉\nbiubiu~~";
+                                break;
+                        }
+                    });
+                    $this->wx_app->server->serve()->send();
+                }
+            }
+        } catch (BadRequestException $e) {
+            actionException($e,1);
+        } catch (InvalidArgumentException $e) {
+            actionException($e,1);
+        } catch (InvalidConfigException $e) {
+            actionException($e,1);
+        } catch (\ReflectionException $e) {
+            actionException($e,1);
         }
     }
 

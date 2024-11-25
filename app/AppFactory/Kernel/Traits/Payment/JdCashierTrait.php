@@ -61,6 +61,7 @@ trait JdCashierTrait
             'encrypt_rand_num' => substr($this->order['pay_code'], strlen($this->order['pay_code']) - 6, 6),
         ];
         $notify =  $this->getUrl("/pay/notify.jd_cashier/orderNotify");
+        $orderAmount = round($this->order['total_price'],2);
         $params = [
             //商户号
             "version" => 'V4.0',
@@ -68,7 +69,7 @@ trait JdCashierTrait
             "authCode" => $this->order['pay_code'],
             "bankType" => 'WX', // 微信：WX，小程序：WX_XCX，支付宝：ALIPAY，京东：JD，银联：UNIONPAY
             "requestNum" => $tradeNo, // 商户系统内部订单号(商户系统内唯一)
-            "orderAmount" => $this->order['total_price'],
+            "orderAmount" => "$orderAmount",
             "callbackUrl" => $notify,
             "subOrderType" => 'NORMAL', // 交易子类型普通交易NORMAL，分账交易：LEDGER，默认值：NORMAL
             "orderType" => 'SALES', // 消费：SALES，退款：REFUND

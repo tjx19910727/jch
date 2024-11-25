@@ -141,9 +141,14 @@ trait AuthManagerTrait
     {
         $where = [];
         $where['manager_id'] = $pid;
-        $parent = $this->getAuthManagerFind($where,'manager_id,pid');
+        $parent = $this->getAuthManagerFind($where,'manager_id,pid,creator');
         if ($parent) {
-            $ids[] = $parent['manager_id'];
+            if ($parent['manager_id']) {
+                $ids[] = $parent['manager_id'];
+            }
+            if (!$parent["manager_id"] && $parent['creator']) {
+                $ids[] = $parent['creator'];
+            }
             if ($parent['pid']) {
                 $ids = $this->getParentIdList($parent['pid'],$ids);
             }

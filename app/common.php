@@ -261,13 +261,20 @@ function covering($str,$length = 2){
  * 记录程序异常信息
  * @param Exception $e
  * @param int $trace
+ * @param string $logName
  */
-function actionException($e,$trace = 0)
+function actionException($e,$trace = 0,$logName = "")
 {
+    $controller = request()->controller();
+    $action = request()->action();
+    $name = "";
+    if ($controller) $name .= $controller;
+    if ($action) $name .= "_" . $action;
+    if ($logName) $name .=  "_" . $logName;
     actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',
-        request()->controller() . "_" .request()->action());
+        $name);
     if ($trace) {
-        actionLog($e->getTrace(), 'tryCatchTrace',request()->controller() . "_" .request()->action());
+        actionLog($e->getTrace(), 'tryCatchTrace',$name);
     }
 }
 

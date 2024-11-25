@@ -25,12 +25,16 @@ trait EmailConfigTrait
 
     public function addEmailConfig($insert)
     {
+        if (isset($this->manager['manager_id']) && (!isset($insert['creator']) || !$insert['creator'])) $insert['creator'] = $this->manager['manager_id'];
+        if (isset($this->manager['ao_id']) && (!isset($insert['ao_id']) || !$insert['ao_id'])) $insert['ao_id'] = $this->manager['ao_id'];
         $ec = EmailConfigModel::create($insert);
-        return $ec->ec_id;
+        $id = $ec->getPk();
+        return $ec->$id;
     }
 
     public function updateEmailConfig($update,$where = [], $field = [])
     {
+        if (isset($this->manager['manager_id']) && (!isset($update['update_id']) || !$update['update_id'])) $update['update_id'] = $this->manager['manager_id'];
         return EmailConfigModel::update($update,$where,$field);
     }
 

@@ -65,11 +65,13 @@ class NoticeBaseClient extends BaseClient
         $this->getConfig();
         if (!isset($this->config['config']) || !$this->config['config']) {
             actionLog($this->config, '查无配置信息');
+            actionLog($this->getLS(), '查无配置信息SQL');
 //            throw new NoticeException($this->lang("VNotice.config_require"));
         }
         $this->getTemplate();
         if (!isset($this->config['template']) || !$this->config['template']) {
             actionLog($this->config, '查无消息模板信息');
+            actionLog($this->getLS(), '查无消息模板信息SQL');
 //            throw new NoticeException($this->lang("VNotice.template_require"));
         }
         $this->replaceBodyParams();
@@ -137,13 +139,13 @@ class NoticeBaseClient extends BaseClient
                 if ($this->config['sendType'] == 1) {
                     $where[] = ['am.wx_notice', 'like', "%" . $this->config['templateType'] . "%"];
                     $where[] = function ($query) {
-                        $query->where("am.openid is not null");
+                        $query->where("am.openid is not null  AND am.openid <> ''");
                     };
                 }
                 if ($this->config['sendType'] == 2) {
                     $where[] = ['am.email_notice', 'like', "%" . $this->config['templateType'] . "%"];
                     $where[] = function ($query) {
-                        $query->where("am.email is not null");
+                        $query->where("am.email is not null AND am.email <> ''");
                     };
                 }
                 $this->config['receiver'] = $this->getAmmJoinAmList($where, 'am.manager_id,am.nickname,am.ao_id,am.email,am.openid');

@@ -112,8 +112,8 @@ trait AliPayTrait
                     $flag[] = $this->settlementRevenue();
                     $flag[] = $this->paymentSuccessful();
                     actionLog($flag, '操作结果');
-                    $result = flag_check($flag);
-                    $return = $this->checkTrans($result);
+                    $checkFlag = flag_check($flag);
+                    $return = $this->checkTrans($checkFlag);
                 } catch (\Exception $e) {
                     $this->rollbackTrans();
                     actionException($e,1);

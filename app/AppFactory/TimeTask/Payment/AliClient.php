@@ -10,9 +10,12 @@ namespace app\AppFactory\TimeTask\Payment;
 
 
 use AliPay\Factory;
+use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\User\UserTrait;
 use app\AppFactory\TimeTask\TimeTaskBase;
@@ -20,10 +23,10 @@ use app\AppFactory\TimeTask\TimeTaskBase;
 class AliClient extends TimeTaskBase
 {
 
-    use SaleOrdersTrait;
+    use SaleOrdersTrait,SaleOrdersRevenueTrait;
     use MachineTrait;
-    use StrategyPayeeTrait;
-    use AfterOrderPaymentTrait;
+    use StrategyPayeeTrait,StrategyMachineTrait;
+    use AfterOrderPaymentTrait,MachineMqRecordTrait;
     use UserTrait;
 
     protected $order;
@@ -42,7 +45,7 @@ class AliClient extends TimeTaskBase
         }
         if ($this->order['pay_status'] != 1) return $this->rFail("订单已处理");
         $this->order = $this->order->toArray();
-        $aliConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id']]);
+        $aliConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1]);
         if (!$aliConfig) return $this->rFail("查无收款配置信息");
         $app = Factory::trade($aliConfig);
         $result = $app->trade->query($this->order['trade_no']);
@@ -81,7 +84,6 @@ class AliClient extends TimeTaskBase
         $flag[] = $this->paymentSuccessful();
         $result = flag_check($flag);
         $return = $this->checkTrans($result);
-        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paymentSuccessful',$return);
         return $return;
     }
 
@@ -97,7 +99,6 @@ class AliClient extends TimeTaskBase
         $flag[] = $this->paymentSuccessful();
         $result = flag_check($flag);
         $return = $this->checkTrans($result);
-        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paymentSuccessful',$return);
         return $return;
     }
 
@@ -107,6 +108,7 @@ class AliClient extends TimeTaskBase
      */
     public function wait_buyer_pay()
     {
+        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paying',['trade_no' => $this->order['trade_no']]);
         return $this->r(100,'等待用户支付');
     }
 
@@ -117,7 +119,7 @@ class AliClient extends TimeTaskBase
     public function trade_closed()
     {
         $return = $this->r(100,'交易关闭','',false);
-        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paymentFail',$return);
+        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'payClose',['trade_no' => $this->order['trade_no']]);
         return json($return);
     }
 

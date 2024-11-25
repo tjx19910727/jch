@@ -325,7 +325,7 @@ trait ActivityFdTrait
         }
         if ($this->countContent['mc_id']) {
             $mc = $this->getMachineChannelFind(['mc_id' => $this->countContent['mc_id']],
-                'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,cost_price,market_price,(0) retail_price,batch_number,manufacture_time,sell_by_date,bar_code');
+                'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,cost_price,market_price,(0) retail_price,batch_number,manufacture_time,sell_by_date,bar_code,shelf_way');
             if ($mc) {
                 $mc = $mc->toArray();
                 $insertSod = $mc;

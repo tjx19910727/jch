@@ -21,6 +21,7 @@ class Receipt extends BaseController
     public function receipt(View $view)
     {
         $order_id = input("order_id");
+        actionLog($order_id,'订单ID');
         $order = SaleOrdersModel::getFind(['order_id' => $order_id]);
         $order = $order->toArray();
         $m = MachineModel::getFind(['m_id' => $order['m_id']],'logo,service_tel');
@@ -39,8 +40,10 @@ class Receipt extends BaseController
             'receipt_code3' => $mConfig['receipt_code3'],
             'receipt_desc' => $mConfig['receipt_desc'],
         ];
+        actionLog($data,'小票参数');
         $view->assign($data);
         $result = $view->fetch("print");
+        actionLog($result,'获取小票文本');
         return returnState(200,'success',$result);
     }
 }

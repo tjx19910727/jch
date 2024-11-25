@@ -9,9 +9,12 @@
 namespace app\AppFactory\TimeTask\Payment;
 
 
+use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\User\UserTrait;
 use app\AppFactory\TimeTask\TimeTaskBase;
@@ -19,10 +22,10 @@ use EasyWeChat\Factory;
 
 class WxClient extends TimeTaskBase
 {
-    use SaleOrdersTrait;
-    use StrategyPayeeTrait;
+    use SaleOrdersTrait,SaleOrdersRevenueTrait;
+    use StrategyPayeeTrait,StrategyMachineTrait;
     use AfterOrderPaymentTrait;
-    use MachineTrait;
+    use MachineTrait,MachineMqRecordTrait;
     use UserTrait;
 
     protected $order;
@@ -42,7 +45,7 @@ class WxClient extends TimeTaskBase
         }
         if ($this->order['pay_status'] != 1) return $this->rFail("订单已处理");
         $this->order = $this->order->toArray();
-        $wxConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id']]);
+        $wxConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1]);
         if (!$wxConfig) return $this->rFail("查无收款配置信息");
         $app = Factory::payment($wxConfig);
         $result = $app->order->queryByOutTradeNumber($this->order['trade_no']);
@@ -65,8 +68,13 @@ class WxClient extends TimeTaskBase
 
             // 需要用户输入密码
             if (isset($result['result_code']) && $result['result_code'] == 'FAIL') {
-                if ($result['err_code'] == 'USERPAYING') return $this->r(201,'等待用户支付',$result);
-                else return $this->r(100, '支付失败：' . $result['err_code_des'], $result);
+                if ($result['err_code'] == 'USERPAYING') {
+                    $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paying');
+                    return $this->r(201,'等待用户支付',$result);
+                } else {
+                    $this->paymentFailed();
+                    return $this->r(100, '支付失败：' . $result['err_code_des'], $result);
+                }
             }
             // 反扫MICROPAY，确认支付成功
             if (isset($result['result_code']) && $result['result_code'] == 'SUCCESS' && isset($result['trade_type']) && $result['trade_type'] == 'MICROPAY') {
@@ -76,7 +84,6 @@ class WxClient extends TimeTaskBase
                 $flag[] = $this->paymentSuccessful();
                 $result = flag_check($flag);
                 $return = $this->checkTrans($result);
-                $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paymentSuccessful',$return);
                 return $return;
             }
 
@@ -89,7 +96,6 @@ class WxClient extends TimeTaskBase
                         $flag[] = $this->paymentSuccessful();
                         $result = flag_check($flag);
                         $return = $this->checkTrans($result);
-                        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paymentSuccessful',$return);
                         return $return;
                         break;
 //                    case "REFUND":
@@ -112,7 +118,7 @@ class WxClient extends TimeTaskBase
 //                        break;
                     case "FAIL":
                         $return = $this->r(101, '支付失败：' . $result['err_code_des'], $result);
-                        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paymentFail',$return);
+                        $this->paymentFailed();
                         return $return;
                         break;
                     default:

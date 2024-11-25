@@ -1207,8 +1207,10 @@ class ApiClient extends ReceiveBaseClient
             'receipt_code3'  => $mConfig['receipt_code3'],
             'receipt_desc'   => $mConfig['receipt_desc'],
         ];
+        actionLog($data,'小票数据');
         View::assign($data);
         $result = View::fetch("receipt/print");
+        actionLog($result,'小票文本');
         $this->updateSaleOrders(['order_id' => $this->data['order_id'],'receipt' => $result]);
         return $this->r(200,'success',['receipt' => $result]);
     }
