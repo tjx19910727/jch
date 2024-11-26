@@ -160,7 +160,7 @@ class ApiClient extends ReceiveBaseClient
         ];
         $id = $this->addWxOfficialLogin($insert);
         if (!$id) return $this->r(100,$this->lang("action_fail"));
-        $loginUrl = $this->getUrl("/wx/scan_login/silentLogin/login_id/$id");
+        $loginUrl = $this->getUrl("/wx/scan_login/silentLogin/login_id/$id/time/" . time());
         $this->updateWxOfficialLogin(['id' => $id,"login_url" => $loginUrl]);
         return $this->r(200,$this->lang("action_success"),["id" => $id,"login_url" => $loginUrl]);
     }
@@ -1175,7 +1175,8 @@ class ApiClient extends ReceiveBaseClient
     {
         $order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']],'order_id,m_id,machine_name,total_quantity,discount_price,total_price');
         $order = $order->toArray();
-        $mConfig = $this->getMachineConfigFind(['m_id' => $order['m_id']],'receipt_code1,receipt_code2,receipt_code3,receipt_desc');
+        actionLog($order,'订单数据');
+        $mConfig = $this->getMachineConfigFind(['m_id' => $order['m_id']],'receipt_code1,receipt_code2,receipt_code3,receipt_desc,deal_service_phone');
         $pIds = $this->getAuthManagerMachineColumn(['m_id' => $this->machine['m_id']], 'manager_id');
         $pIds = array_merge($pIds, $this->getParentIdList($this->machine['creator']));
         $pIds[] = $this->machine['creator'];
@@ -1200,8 +1201,8 @@ class ApiClient extends ReceiveBaseClient
             'detailsList'    => $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0,'g_name,quantity,retail_price')->toArray(),
             'total_quantity' => $order['total_quantity'],
             'discount_price' => $order['discount_price'],
-            'total_price'    => $order['total_price'],
-            'service_tel'    => $this->machine['service_tel'],
+            'total_price'    => number_format($order['total_price'],2),
+            'service_tel'    => $mConfig['deal_service_phone'],
             'receipt_code1'  => $mConfig['receipt_code1'],
             'receipt_code2'  => $mConfig['receipt_code2'],
             'receipt_code3'  => $mConfig['receipt_code3'],

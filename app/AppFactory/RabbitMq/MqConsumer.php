@@ -45,7 +45,11 @@ class MqConsumer
         try {
             $data = $message->body;
             $data = json2arr($data);
-            actionLog($data, '消息处理', "DataUpload");
+            if (isset($data['data'])) {
+                $actionData = json2arr($data['data']);
+                if (isset($actionData['msgType']) && $actionData['msgType'] != "heartbeat")
+                    actionLog($data, '消息处理', "DataUpload");
+            }
             $config = [
                 "machine_id" => $data['machine_id'],
 //                "key" => cache($data['machine_id'] . ".signKey"),
@@ -54,7 +58,12 @@ class MqConsumer
             ];
             $app = AppFactory::machine($config);
             $result = $app->mq->onMessage();
-            actionLog($result, '处理结果','DataUpload');
+            if (isset($data['data'])) {
+                $actionData = json2arr($data['data']);
+                if (isset($actionData['msgType']) && $actionData['msgType'] != "heartbeat")
+                    actionLog($result, '处理结果','DataUpload');
+            }
+
             $updateResult = $this->updateMachineMqRecord(['status' => 2,'msg_id' => $data['msg_id']],['msg_id' => $data['msg_id']]);
             actionLog($updateResult,'修改MQ记录成功结果','DataUpload');
         } catch (\Exception $e) {

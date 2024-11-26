@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Kernel\Util\TDESUtil;
 use app\AppFactory\Wx\WxBaseClient;
+use app\wx\validate\VLogin;
 use think\facade\Config;
 use think\facade\Session;
 
@@ -30,6 +31,14 @@ class LoginClient extends WxBaseClient
      */
     public function scanLogin($postData)
     {
+        try {
+            validate(VLogin::class)->scene("scanLogin")->check($postData);
+        } catch (\Exception $e) {
+            showMsg($e->getMessage());
+        }
+        if ($postData['time'] + 120 <= time()) {
+            showMsg($this->lang("Login.time_over"));
+        }
         $login = $this->getWxOfficialLoginFind(['id' => $postData['login_id']], 'id,wx_id,m_id,machine_id,login_token,login_type,status,create_time');
         if (!$login) {
             showMsg($this->lang("Login.wxLogin_no_data"));

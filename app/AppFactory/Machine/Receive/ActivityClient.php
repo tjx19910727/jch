@@ -255,7 +255,7 @@ class ActivityClient extends ReceiveBaseClient
                 $this->updateActivityPickCode(['apc_id' => $apc['apc_id'], 'status' => 5]);
                 $this->updateApiAdvance(['status' => "PROCESSING"], ['apc_id' => $apc['apc_id']]);
                 $this->commitTrans();
-                return $this->rSuccess();
+                return $this->r(200,$this->lang("action_success"),$this->order);
             }
             $this->rollbackTrans();
             return $this->rFail();

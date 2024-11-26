@@ -8,6 +8,9 @@
 
 return [
     "Login" => [
+        "time_require" => "时间不能为空",
+        "login_id_require" => "微信ID不能为空",
+        "time_over" => "二维码超时，请重新扫码",
         "wxLogin_no_data" => "查无扫码登录信息",
         "wxOfficial_no_data" => "查无公众号配置信息",
         "status2" => "当前二维码已操作过，请重新扫码",
