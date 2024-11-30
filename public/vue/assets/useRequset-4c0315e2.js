@@ -1,1 +1,0 @@
-import{a5 as t}from"./index-c53da3e1.js";const l=s=>{const a=t({}),e=t(!1);return{data:a,getData:u=>{e.value||(e.value=!0,s(u).then(n=>{a.value=n.data}).finally(()=>{e.value=!1}))},loading:e}},f=l;export{f as u};

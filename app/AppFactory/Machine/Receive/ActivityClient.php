@@ -25,7 +25,6 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityMachineTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
-use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
@@ -276,7 +275,7 @@ class ActivityClient extends ReceiveBaseClient
     }
 
     /**
-     * 生产抽奖订单信息
+     * 生成抽奖订单信息
      * @return array|string
      */
     public function lotteryOrder()
@@ -317,16 +316,20 @@ class ActivityClient extends ReceiveBaseClient
         // 如果存在赠送商品，则校对数量再加1
         $checkStock = $alc['active_num'];
         if ($alc['designated_gift']) $checkStock = $alc['active_num'] + 1;
+        $mcList = [];
         // 循环活动内容，
         foreach ($content as $k => $v) {
             // 判断货架正常，有这个商品
             $mc = $this->getMachineChannelFind(['m_id' => $this->machine['m_id'], 'status' => 1, 'g_id' => $v['g_id'],['stock',">=",$checkStock + $v['retain_num'] ]], 'channel_code,stock','stock desc');
             if (!$mc) {
-                actionLog($this->getLS(),'检查抽奖活动商品库存SQL');
-                return $this->rFail($this->lang("VActivityLottery.mc_no_data") . "【" . $v['g_name'] . "】" . $this->lang("VActivityLottery.goods_not_data"));
+                actionLog($this->getLS(),'货道禁用或没库存');
+                continue;
+//                return $this->rFail($this->lang("VActivityLottery.mc_no_data") . "【" . $v['g_name'] . "】" . $this->lang("VActivityLottery.goods_not_data"));
             }
+            $mcList[] = $mc;
         }
-
+        // 所有商品都没库存或禁用，则返回无活动商品
+        if (!$mcList) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
         $order = [
             "trade_no" => $trade_no,
@@ -410,40 +413,64 @@ class ActivityClient extends ReceiveBaseClient
         // 总中奖概率
         $totalProbability = array_sum(array_column($content, 'probability'));
         if ($totalProbability != 100) return $this->rFail($this->lang("VActivityLottery.probability_no_100"));
-        $list = [];
         // 本次执行抽奖次数初始化，总数量减去已抽次数
         $quantity = bcsub($used['quantity'], $used['used_quantity']);
         // 单抽状态下，每次执行抽奖时抽奖次数重置为1
         if ($alc['active_type'] == 1) $quantity = 1;
-        $giftNum = 0;
-        // 多抽循环，每次抽奖结果放至中奖列表
-        for ($i = 0; $i < $quantity; $i++) {
-            // 已抽奖次数+1
-            $used['used_quantity']++;
 
-            // 每次抽奖的随机数值
-            $random = mt_rand(1, $totalProbability);
-            actionLog($random,"第" . $i . "次随机数值");
-            $probabilitySum = 0;
-            // 抽奖，循环活动内容，以中奖概率从小到大顺序排序，
-            foreach ($content as $key => $value) {
-                // 赠送指定商品
-                if ($alc['designated_gif']) {
-                    // 是赠送的商品，放入中奖列表队尾
-                    if ($alc['designated_gift'] == $value['c_id']) {
-                        $value['is_gift'] = 1;
-                        $giftNum++;
-                        $list[$i + $quantity] = $value;
-                    }
+        // 库存不足或禁用货架，不存在这个商品上架的情况下不参与抽奖
+        $contentGid = array_column($content,"g_id");
+        $whereNoGid = function ($query) use ($contentGid,$quantity)  {
+            $query->where("`m_id` = '" . $this->machine['m_id'] . "' AND (`status` <> 1 OR `stock` < $quantity) AND `g_id` in (" . implode(",",$contentGid) . ")");
+        };
+        $noGid = $this->getMachineChannelColumn($whereNoGid,'g_id');
+        if ($noGid) {
+            actionLog($noGid,"不存在的抽奖商品ID列表");
+            $temp = [];
+            // 去除掉不存在的商品，剩下的商品百分百抽中
+            foreach ($content as $cK => $cV) {
+                if (!in_array($cV['g_id'],$noGid)) {
+                    $temp[] = $cV;
                 }
-                // 当前一条抽奖活动内容中奖数值，叠加前面的活动内容中奖数值
-                $probabilitySum = bcadd($probabilitySum, $value['probability']);
-                // 中奖数值大于随机数值即为中奖，活动内容放入中奖数组中，退出当前抽奖循环，执行下轮抽奖
-                actionLog($probabilitySum,"第" . $i . "次" . $value['c_id'] . "活动内容中奖数值");
-                if ($probabilitySum >= $random) {
-                    actionLog($value,"第" . $i . "次" . "中奖数据");
-                    $list[$i] = $value;
-                    break;
+            }
+            $content = $temp;
+            $totalProbability = array_sum(array_column($content, 'probability'));
+            actionLog($totalProbability,'重新计算的总中奖率');
+        }
+
+        // 执行抽奖主程序
+        $giftNum = 0;
+        $list = [];
+        if ($content) {
+            // 多抽循环，每次抽奖结果放至中奖列表
+            for ($i = 0; $i < $quantity; $i++) {
+                // 已抽奖次数+1
+                $used['used_quantity']++;
+
+                // 每次抽奖的随机数值
+                $random = mt_rand(1, $totalProbability);
+                actionLog($random, "第" . $i . "次随机数值");
+                $probabilitySum = 0;
+                // 抽奖，循环活动内容，以中奖概率从小到大顺序排序，
+                foreach ($content as $key => $value) {
+                    // 赠送指定商品
+                    if ($alc['designated_gif']) {
+                        // 是赠送的商品，放入中奖列表队尾
+                        if ($alc['designated_gift'] == $value['c_id']) {
+                            $value['is_gift'] = 1;
+                            $giftNum++;
+                            $list[$i + $quantity] = $value;
+                        }
+                    }
+                    // 当前一条抽奖活动内容中奖数值，叠加前面的活动内容中奖数值
+                    $probabilitySum = bcadd($probabilitySum, $value['probability']);
+                    // 中奖数值大于随机数值即为中奖，活动内容放入中奖数组中，退出当前抽奖循环，执行下轮抽奖
+                    actionLog($probabilitySum, "第" . $i . "次" . $value['c_id'] . "活动内容中奖数值");
+                    if ($probabilitySum >= $random) {
+                        actionLog($value, "第" . $i . "次" . "中奖数据");
+                        $list[$i] = $value;
+                        break;
+                    }
                 }
             }
         }

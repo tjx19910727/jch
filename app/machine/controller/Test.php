@@ -37,6 +37,19 @@ class Test extends BaseController
     public $machine;
     public $mqQueue;
 
+    public function testWhere()
+    {
+        $contentGid = [156,158,607];
+        $quantity = 1;
+        $this->machine['machine_id'] = "JCHH2D-030";
+        $whereNoGid = function ($query) use ($contentGid,$quantity)  {
+            $query->where("machine_id = '" . $this->machine['machine_id'] . "' and (status <> 1 or stock < $quantity) AND g_id in (" . implode(",",$contentGid) . ")");
+        };
+        $result = MachineChannelModel::getColumn($whereNoGid,'g_id');
+        dump(MachineChannelModel::getLS());
+        dump($result);
+    }
+
     public function testArr()
     {
         dump("12+++" >= 12);

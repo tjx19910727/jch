@@ -1,1 +1,0 @@
-import{_ as o,o as c,b as s,p as t,l as r,j as a}from"./index-B2SpkE0E.js";const _={},d=e=>(t("data-v-9a3d3c0f"),e=e(),r(),e),p={id:"error"},n=d(()=>a("p",{class:"error_title"},"抱歉无法进入盘点页",-1)),i=[n];function f(e,l){return c(),s("div",p,i)}const m=o(_,[["render",f],["__scopeId","data-v-9a3d3c0f"]]);export{m as default};

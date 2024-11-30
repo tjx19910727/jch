@@ -2,30 +2,652 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0b425c8e-253d-4f3f-a4bc-dbf750314eff" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineErrorCodeTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineErrorCodeTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/MachineBaseClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/MachineBaseClient.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Login/LoginClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Login/LoginClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Strategy/StrategyPayeeClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Strategy/StrategyPayeeClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/AliClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/AliClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/WxClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/WxClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Wx/Official/LoginClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Wx/Official/LoginClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/http/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/http/controller/Test.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/http/controller/redis/MicroPay.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/http/controller/redis/MicroPay.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/machine/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/controller/Test.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/machine/lang/zh-cn.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/lang/zh-cn.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/controller/wx/WxTemplate.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/wx/WxTemplate.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/lang/zh-cn.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/lang/zh-cn.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/validate/Machine/VMachineVersion.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/validate/Machine/VMachineVersion.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/validate/VStrategyPayee.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/validate/VStrategyPayee.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-B10d7BJG.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-BeAhF_Lt.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-BhjzzP8c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-BzDvNDVn.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-CRPsCk9b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-CVmzvn_W.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-ChJp86G6.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-CngexAYw.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-D4BbfGGb.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-DIh8KnoA.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-DXkUjOo7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-DsRhK9Lr.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-SY3ZUpKp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/error-irMaY180.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/iconfont.1715830162633-D4HyIDhF.woff" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/iconfont.1715830162633-DDhY9P9i.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index--36O-g-N.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-B1aIHEH6.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-B2SpkE0E.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BBb0FeOo.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BCO6Co5E.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BDJa03Gb.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BFHIFv4b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BJvxbQ9E.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BRqBRr9X.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BVfG3Yao.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BXxLG1KZ.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BYHtJkmK.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BceWbst0.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BfDA-eQJ.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BlGRpZC8.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-Brazp8aI.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-BvKmpTKc.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-C009zIg4.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-C07VPTX5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-C8Mcc5ct.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-CCNRDwCp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-CCwoLsPU.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-CHiigL2N.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-ClqjT6yC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-CwE-83R0.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-CzpZs1kX.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-D96ZDpMC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-DEsFNHIx.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-DTbGTgsl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-DXniwr1s.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-D_gqLktg.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-Db_6Q2cL.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-DolSnr8L.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-DpeXsodI.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-DrX1fSnZ.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-Ds1YyuTj.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-DtFg564c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-Dvk_HoKz.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-DwI8wzOR.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-Gg1K-yh0.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-LuxJvvLl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-VMizyN73.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-XLEtVfW5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-XZdfAv4n.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-_KuFx1wY.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-_tSN0XII.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-cCgzniec.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-cazNXlUV.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-mfKT2olX.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-rMLlDI_f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/index-sH0KAXSH.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-2Enbq8sa.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-7I4cuKQg.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-8mhfZ7k6.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-AB4iJBs7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-BLMeRgUc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-BSffmb3o.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-BZkF-wGt.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-BaMMAJbz.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-BbNPkvEF.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-BhVJotpK.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-Bmx04EYO.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-BnZpgRKe.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-BsfG3-L0.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-BtfJB5U3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-C1xvuNhh.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-C9h-zLyN.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-CZpSkrog.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-Ca7xbLZJ.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-Cwg74J0W.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-D4ajUDVm.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-DD5vNFu1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-DF7KKDET.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-DMI6Ik3c.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-DczzxHQL.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-DxZw6wsW.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-Dz-PEJ75.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-MHA9SbeG.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-OcegkFPA.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-QgxoCe9A.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-SJPvn6gz.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-W6mupzvG.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-YXQqFhCD.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-a_rR444g.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-dhBEycgr.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-h4Xw7g1d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-hPQx3jPj.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-vKjqO1r5.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/list-x9BEt7VE.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-B48VxQWt.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-BDYtsai7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-BLAAoFeg.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-BXhE4vrE.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-Bhga6EuA.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-BmB0iUcT.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-BoQBJ78x.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-C3zRJ4l_.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-CkqGjzN3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-CpBV7LfV.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-CwqMiDhC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-D9vFHrkg.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-DCUc3xG5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-DNIttYhx.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-DRX30xws.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-DTibvV3I.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-DWOQwDi9.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-DZMd5eSO.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-DfE6UcXG.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-DrJA4rwp.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-PKQNWQB-.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-VJNcqdcT.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-YaqoXLAI.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-ancgcDoQ.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-dxud99Jg.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-fxLCTXUw.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/nav-s3_ydt_s.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-B-yrsnap.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-BIURmP5t.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-BTiwvGzC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-BVEY0kwk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-B_azjGRM.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-B_s23w0K.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-BbwNarUu.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-BvIePUPX.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-BvxtLurJ.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-C2Z4Wn6j.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-C43kAZJY.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-CQbTV2v8.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-CRChp9oi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-CRZ5G-De.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-CSkmCGHE.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-CtXfLWcb.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-CvOf0Y9a.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-Cxqogdhy.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-D1z29NJu.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-D21vmJ0J.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-D4GfzVuN.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-DD0q1kOc.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-DRPUyT_P.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-DhSAec6T.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-DkGbHvu4.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-ELIAp8xv.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-M0cavqF8.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-VJOBesHj.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-XB_NRjSt.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-XOeqtUkv.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-n2Lt_I6P.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-q1zTcC4j.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-r2phYzOs.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/spare-vgkdJ8pY.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-BSLyA-kk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-C0KnkpLY.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-C3HIwdTh.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-CGnDNRh-.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-CNkgT9gT.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-CTeeX_wy.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-Ch6oBORB.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-Ci2hvDM2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-CmNsVZtb.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-CtKsxwjS.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-D6k0oK8j.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-D7ePs0OC.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-DE5trU0T.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-DHoEwPhW.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-DQy1EWq2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-DV6yQ9rO.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-DZwPtwYS.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-DZzdkGKK.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-DfVhY3UW.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-DhY0g9GJ.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-DjkIpD44.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-DzuGhPPi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-KyhVYcxZ.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-MYvstxt8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-aYA6_fbU.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-eGMGar-X.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-o3kE_Hd5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-tp67aPvH.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/assets/successTip-z6CKFpya.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/mobile/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/mobile/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404-538aa4d7.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404-855f26ee.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404-a469b0f6.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404_cloud-13362335.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404_cloud-98e7ac66.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/account-3fbb52d8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/advment-bb20f5c0.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/assignDevices-87800e4b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/bofang-77783c65.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/bofang-7c74f27f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/corner_bg-99f2f094.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/earth-25a101df.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/edit-33ff01a8.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/edit-419ad0ac.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-cascader-panel-737e395b.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-checkbox-9d92dfac.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-col-e302774d.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-collapse-item-a55878fe.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-date-picker-2727a897.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-dialog-042a3985.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-form-b118bbed.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-form-item-4ed993c7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-icon-593dfdc2.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-image-viewer-71675928.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-input-4058b509.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-input-number-04aedb0f.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-link-1a8c6e48.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-message-box-9b1bd60e.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-overlay-f6b2674f.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-pagination-e9b16e23.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-progress-72ebe088.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-radio-button-24e8de87.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-radio-ee15435e.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-radio-group-cacb5b7d.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-select-69f05b93.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-switch-b454e5d4.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-tab-pane-b2a6bdee.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-table-column-6ced8ba0.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-tag-390f8905.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-time-picker-0cff6c83.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-transfer-91388641.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/el-tree-16ddf4ca.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/eventlog-73a8a552.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/excel-a77576f9.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/export.vue_vue_type_script_setup_true_lang-ef200cb5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/getupdateplan-4fe1a7e6.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/getupdateplan-f8dd293c.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/goods-f3979992.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/goods-groupM-412f4da3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/goods.vue_vue_type_script_setup_true_lang-63b28575.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/goods_ctrips-2f707d74.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/guessDetails-a2106c91.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/hierarchy-d297f743.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/images_Js-99a1a322.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-06ad3050.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0866f124.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-08e15a3e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0c4127ea.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0cfc7abe.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-137aba92.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-17add3b1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1dc611af.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1e4c6b83.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1f557dbc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-249edece.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2549f6e5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-26560811.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2672ffdd.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-279539de.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-29cf66a8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2a011e9a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2a086d2a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2fedad82.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-34edfd57.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-37160b54.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-391834b3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-39293bf1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3929c1bb.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-39cc2260.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3ac15f0a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3e928862.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3f12d7b4.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3fa50f3b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-404398c4.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4084da9d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-428fcdaa.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-44665261.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-44913921.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-48e24bce.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-49a42ff4.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-49d3ec16.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4aff6c49.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4b94d285.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4c448149.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5120a3fd.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-534a8661.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-584adb15.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5a1a71c5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5bfa1b91.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5d2d2d0f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5e19ee34.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-61307a8a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6723bbfc.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-67938164.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-68c439d5.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-69770f17.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6a393e6a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6c9ff410.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6cd39f7b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6d8b88f5.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6e5895bd.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6fce6c6c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7120da3a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-72ab4dc2.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-72bbcf3f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-739246e9.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-73b1c79c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-74aa366f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-769f36d9.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-77d344b3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-77e41ada.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7b9a520e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7d8ba67c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7e46b54c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-80794ad4.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-818846d4.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-86d7f50f.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-8a82b48b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-8e373517.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9360e647.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-96aa4b2f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-96fc27ed.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-97421abc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-97937af3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9829bd17.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-98795fd2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9a7a1c3a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9aa654df.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9b2783f2.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9bd6b80d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9d3882b5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9e1775a9.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9ea916c1.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a0f1c2cc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a2962ea0.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a34a33fd.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a85d5eee.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ab4a4752.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-abc817b2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ac275cad.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ad23b5f0.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-af57fffa.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b1f34959.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b3dca81f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b5bcf50e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b5c8bcc8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b877e464.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b88bb429.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b8ce6843.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-bb70b158.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-bd1457ad.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-be1d0bcf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c1c6ca47.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c3e725e4.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c53da3e1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c5e89050.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c6e9971c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ca0d3d57.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-cdb662ad.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-cec6fb9c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-cf751b25.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d0292685.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d064509f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d10b4766.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d29971bf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d29ae6bf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d40ae6ea.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d52c768c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d8c0301d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-dc5eb597.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-dd1b2e47.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ddac57cb.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-de6be596.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e1fa8ffa.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e4bcf7bf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e5b5e021.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ea5840d7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-eaa70d9e.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ecb3c760.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ee250a71.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f1f11702.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f497baef.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-fae15e88.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-fe570dd1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-1f527a08.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-60dba7cf.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-7ee6a958.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-ca35fcfe.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/lang-59e51d47.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/level-69c73c4a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/list_info.vue_vue_type_script_setup_true_lang-5b8f62f1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/log-5aced6e1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/login-bg-cc6fd711.webp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine-0bb2dc01.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine-bc605870.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine-d640d575.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_custom-74dd30b5.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_gmGoods-bef4c125.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_software-4d35ad59.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_top-9827b981.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_top.vue_vue_type_script_setup_true_lang-7809ac9c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_trade-81245ef6.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_type-7b5a9c9f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/manage-ebc245a8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/manager-da3b389a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/marketing-0971ff34.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/newsurprise1zh-32f825fd.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/newsurprise2zh-e962832e.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/order-2531f3cc.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/payee-87ae024f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/pickupCodeDetails-c4bdb435.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/preferentialDetails-e5ff24c3.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/presets-f850651b.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/preview-7db47130.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/product-4a8a8a31.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/reduce-7a832f83.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/reductionDetails-5edca3e7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/replace-d3acaac8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/report-92f6f3c8.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/sao-9e4f9943.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/shop-b3b4fb7f.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/sketch_map_zh-7b01daa4.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/sound-9662ae57.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/strategy-4a69b30a.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/system-api-b923cdfe.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/system-err-f8e8d07e.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/system-mail-d4f1a999.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/template-4752c387.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/template-63c0f673.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/title-3c66ca8d.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/unPic-e1bc9dbb.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/useRequset-4c0315e2.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/vuedraggable.umd-7f6b1798.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/langs/zh-Hans.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/accordion/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/advlist/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/anchor/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autolink/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autoresize/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/autosave/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/charmap/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/code/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/codesample/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/directionality/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojiimages.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojiimages.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojis.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/js/emojis.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/emoticons/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/fullscreen/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ar.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/bg_BG.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ca.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/cs.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/da.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/de.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/el.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/en.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/es.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/eu.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fa.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/fr_FR.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/he_IL.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hr.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/hu_HU.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/id.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/it.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ja.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/kk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ko_KR.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ms.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/nb_NO.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/nl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pl.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pt_BR.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/pt_PT.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ro.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/ru.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sl_SI.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/sv_SE.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/th_TH.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/tr.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/uk.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/vi.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh-Hans.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh_CN.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/js/i18n/keynav/zh_TW.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/help/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/image/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/importcss/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/insertdatetime/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/link/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/lists/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/media/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/nonbreaking/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/pagebreak/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/preview/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/quickbars/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/save/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/searchreplace/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/table/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/template/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualblocks/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/visualchars/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/index.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/plugin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/plugins/wordcount/plugin.min.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/dark/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/default/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/document/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5-dark/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/tinymce-5/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/content/writer/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.inline.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide-dark/skin.shadowdom.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.inline.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/oxide/skin.shadowdom.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.inline.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5-dark/skin.shadowdom.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.inline.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/content.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/skins/ui/tinymce-5/skin.shadowdom.min.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/tinymce/tinymce.min.js" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -53,59 +675,11 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="ApiClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="448">
-              <caret line="858" column="42" lean-forward="true" selection-start-line="858" selection-start-column="42" selection-end-line="858" selection-end-column="42" />
-              <folding>
-                <element signature="e#139#182#0#PHP" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
       <file leaf-file-name="AfterOrderPaymentTrait.php" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="333">
-              <caret line="156" column="5" lean-forward="true" selection-start-line="156" selection-start-column="5" selection-end-line="156" selection-end-column="5" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/.gitignore">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="22">
-              <caret line="1" column="5" lean-forward="true" selection-start-line="1" selection-start-column="5" selection-end-line="1" selection-end-column="5" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Application.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Application.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="443">
-              <caret line="40" column="31" selection-start-line="40" selection-start-column="26" selection-end-line="40" selection-end-column="31" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Test.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="568">
-              <caret line="246" selection-start-line="246" selection-end-line="246" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="AliClient.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/AliClient.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="616">
-              <caret line="72" column="46" selection-start-line="72" selection-start-column="46" selection-end-line="72" selection-end-column="46" />
+            <state relative-caret-position="374">
+              <caret line="94" column="53" selection-start-line="94" selection-start-column="53" selection-end-line="94" selection-end-column="53" />
             </state>
           </provider>
         </entry>
@@ -113,17 +687,38 @@
       <file leaf-file-name="Receive.php" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="526">
-              <caret line="370" column="41" selection-start-line="370" selection-start-column="41" selection-end-line="370" selection-end-column="41" />
+            <state relative-caret-position="482">
+              <caret line="380" column="42" lean-forward="true" selection-start-line="380" selection-start-column="42" selection-end-line="380" selection-end-column="42" />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="ActivityClient.php" pinned="false" current-in-tab="false">
+      <file leaf-file-name="ActivityClient.php" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="610">
-              <caret line="325" column="156" lean-forward="true" selection-start-line="325" selection-start-column="156" selection-end-line="325" selection-end-column="156" />
+            <state relative-caret-position="352">
+              <caret line="423" column="61" selection-start-line="423" selection-start-column="61" selection-end-line="423" selection-end-column="61" />
+              <folding>
+                <element signature="e#139#182#0#PHP" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="Test.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="396">
+              <caret line="42" column="22" lean-forward="true" selection-start-line="42" selection-start-column="22" selection-end-line="42" selection-end-column="22" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="SaleOrdersTrait.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="302">
+              <caret line="88" column="20" selection-start-line="88" selection-start-column="20" selection-end-line="88" selection-end-column="20" />
             </state>
           </provider>
         </entry>
@@ -131,17 +726,8 @@
       <file leaf-file-name="zh-cn.php" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/machine/lang/zh-cn.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="548">
-              <caret line="203" column="23" selection-start-line="203" selection-start-column="9" selection-end-line="203" selection-end-column="23" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="WxPayTrait.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="184">
-              <caret line="114" column="47" lean-forward="true" selection-start-line="114" selection-start-column="47" selection-end-line="114" selection-end-column="47" />
+            <state relative-caret-position="269">
+              <caret line="189" column="24" selection-start-line="189" selection-start-column="9" selection-end-line="189" selection-end-column="24" />
             </state>
           </provider>
         </entry>
@@ -157,9 +743,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>heartbeat</find>
-      <find>WxOfficialLoginTrait</find>
-      <find>getMachine</find>
       <find>JCHH1D-051</find>
       <find>usePickCode</find>
       <find>errorCode</find>
@@ -171,7 +754,6 @@
       <find>JCHH2D—007</find>
       <find>exceptionDec</find>
       <find>JCHH2D-007</find>
-      <find>接收数据2</find>
       <find>getMachineVersion</find>
       <find>0025</find>
       <find>025</find>
@@ -183,10 +765,14 @@
       <find>009</find>
       <find>-009</find>
       <find>qr</find>
+      <find>102</find>
       <find>testSign</find>
       <find>getLo</find>
-      <find>102</find>
       <find>VActivityLottery</find>
+      <find>JCHH1D-006</find>
+      <find>JCHH1D-050</find>
+      <find>接收数据2</find>
+      <find>function ($query</find>
     </findStrings>
     <replaceStrings>
       <replace>ActivityLotteryContent</replace>
@@ -268,7 +854,6 @@
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineErrorCodeTrait.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php" />
         <option value="$PROJECT_DIR$/app/management/validate/Machine/VMachineVersion.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php" />
         <option value="$PROJECT_DIR$/app/http/controller/redis/MicroPay.php" />
@@ -276,11 +861,12 @@
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/WxClient.php" />
         <option value="$PROJECT_DIR$/app/http/controller/Test.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/AliClient.php" />
-        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php" />
         <option value="$PROJECT_DIR$/app/machine/lang/zh-cn.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" />
         <option value="$PROJECT_DIR$/.gitignore" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php" />
+        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" />
       </list>
     </option>
   </component>
@@ -407,6 +993,26 @@
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
+              <item name="lang" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -535,12 +1141,12 @@
       <workItem from="1730856828680" duration="21786000" />
       <workItem from="1731379246226" duration="1762000" />
       <workItem from="1731384220540" duration="92621000" />
-      <workItem from="1732086477858" duration="100855000" />
+      <workItem from="1732086477858" duration="112614000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="3179592000" />
+    <option name="totallyTimeSpent" value="3191351000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -625,34 +1231,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/app/management/controller/wx/WxTemplate.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="440">
-          <caret line="46" column="5" lean-forward="true" selection-start-line="46" selection-start-column="5" selection-end-line="46" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Auth/AuthManagerTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="533">
-          <caret line="147" column="13" lean-forward="true" selection-start-line="147" selection-start-column="13" selection-end-line="147" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/config/Config.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="330">
-          <caret line="21" column="44" lean-forward="true" selection-start-line="21" selection-start-column="44" selection-end-line="21" selection-end-column="44" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/wx/controller/Login.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="374">
-          <caret line="22" column="5" lean-forward="true" selection-start-line="22" selection-start-column="5" selection-end-line="22" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Config/ConfigClient.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="154">
@@ -739,13 +1317,6 @@
     <entry file="file://$PROJECT_DIR$/app/ExceptionHandle.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="-371" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppService.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="220">
-          <caret line="10" column="28" lean-forward="true" selection-start-line="10" selection-start-column="28" selection-end-line="10" selection-end-column="28" />
-        </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/vendor/topthink/framework/src/think/Service.php">
@@ -895,24 +1466,24 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="22">
+          <caret line="1" column="5" lean-forward="true" selection-start-line="1" selection-start-column="5" selection-end-line="1" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppService.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="220">
+          <caret line="10" column="28" lean-forward="true" selection-start-line="10" selection-start-column="28" selection-end-line="10" selection-end-column="28" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Mobile/Application.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="443">
+        <state relative-caret-position="484">
           <caret line="40" column="31" selection-start-line="40" selection-start-column="26" selection-end-line="40" selection-end-column="31" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="568">
-          <caret line="246" selection-start-line="246" selection-end-line="246" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="526">
-          <caret line="370" column="41" selection-start-line="370" selection-start-column="41" selection-end-line="370" selection-end-column="41" />
         </state>
       </provider>
     </entry>
@@ -923,20 +1494,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="610">
-          <caret line="325" column="156" lean-forward="true" selection-start-line="325" selection-start-column="156" selection-end-line="325" selection-end-column="156" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/lang/zh-cn.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="548">
-          <caret line="203" column="23" selection-start-line="203" selection-start-column="9" selection-end-line="203" selection-end-column="23" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="184">
@@ -944,10 +1501,23 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/public/mobile/config.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="22">
+          <caret line="1" column="32" selection-start-line="1" selection-start-column="32" selection-end-line="1" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/public/vue/config.js">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/public/vue/index.html">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="448">
-          <caret line="858" column="42" lean-forward="true" selection-start-line="858" selection-start-column="42" selection-end-line="858" selection-end-column="42" />
+          <caret line="858" column="42" selection-start-line="858" selection-start-column="42" selection-end-line="858" selection-end-column="42" />
           <folding>
             <element signature="e#139#182#0#PHP" expanded="true" />
           </folding>
@@ -956,15 +1526,46 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="333">
-          <caret line="156" column="5" lean-forward="true" selection-start-line="156" selection-start-column="5" selection-end-line="156" selection-end-column="5" />
+        <state relative-caret-position="374">
+          <caret line="94" column="53" selection-start-line="94" selection-start-column="53" selection-end-line="94" selection-end-column="53" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/.gitignore">
+    <entry file="file://$PROJECT_DIR$/app/machine/lang/zh-cn.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="22">
-          <caret line="1" column="5" lean-forward="true" selection-start-line="1" selection-start-column="5" selection-end-line="1" selection-end-column="5" />
+        <state relative-caret-position="269">
+          <caret line="189" column="24" selection-start-line="189" selection-start-column="9" selection-end-line="189" selection-end-column="24" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="88" column="20" selection-start-line="88" selection-start-column="20" selection-end-line="88" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="482">
+          <caret line="380" column="42" lean-forward="true" selection-start-line="380" selection-start-column="42" selection-end-line="380" selection-end-column="42" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="396">
+          <caret line="42" column="22" lean-forward="true" selection-start-line="42" selection-start-column="22" selection-end-line="42" selection-end-column="22" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="352">
+          <caret line="423" column="61" selection-start-line="423" selection-start-column="61" selection-end-line="423" selection-end-column="61" />
+          <folding>
+            <element signature="e#139#182#0#PHP" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
