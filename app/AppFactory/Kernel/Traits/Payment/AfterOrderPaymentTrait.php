@@ -217,6 +217,19 @@ trait AfterOrderPaymentTrait
     }
 
     /**
+     * 支付失败
+     * @return mixed
+     */
+    public function paymentError()
+    {
+        $this->order['pay_status'] = 4;
+        $this->order['pay_time'] = time();
+        $this->handleHotel(2);
+        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'payError',['trade_no' => $this->order['trade_no']]);
+        return $this->updateSaleOrders($this->order);
+    }
+
+    /**
      * 处理订单酒店数据
      * @param int $status 1：支付成功，2：支付失败
      * @return mixed

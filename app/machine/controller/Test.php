@@ -200,6 +200,7 @@ class Test extends BaseController
         $gm_id = input("gm_id");
         $tm_id = input("tm_id");
         $authCode = input('authCode');
+        $manager_id = input('manager_id');
 
 
 //        $carList[] = [
@@ -224,10 +225,21 @@ class Test extends BaseController
         $data = $this->makeSign($data);
         dump(json_encode($data, 320));
 
+
         $machine = MachineModel::getFind(['machine_id' => $machine_id]);
         echo "获取设备信息";
         $data = [
             "machine_id" => $machine_id,
+            "mac" => $machine['mac_address'],
+        ];
+        $data = $this->makeSign($data);
+        dump(json_encode($data, 320));
+
+        // 获取库存盘点
+        echo "获取库存盘点";
+        $data = [
+            "machine_id" => $machine_id,
+            "manager_id" => $manager_id,
             "mac" => $machine['mac_address'],
         ];
         $data = $this->makeSign($data);

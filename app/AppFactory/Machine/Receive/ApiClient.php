@@ -160,7 +160,7 @@ class ApiClient extends ReceiveBaseClient
         ];
         $id = $this->addWxOfficialLogin($insert);
         if (!$id) return $this->r(100,$this->lang("action_fail"));
-        $loginUrl = $this->getUrl("/wx/scan_login/silentLogin/login_id/$id/time/" . time());
+        $loginUrl = $this->getUrl("/wx/login/scanLogin/login_id/$id/time/" . time());
         $this->updateWxOfficialLogin(['id' => $id,"login_url" => $loginUrl]);
         return $this->r(200,$this->lang("action_success"),["id" => $id,"login_url" => $loginUrl]);
     }

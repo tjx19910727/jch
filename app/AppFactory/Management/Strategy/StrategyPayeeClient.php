@@ -33,24 +33,27 @@ class StrategyPayeeClient extends ManagementClient
             $config = array_merge($config, json2arr($config['content']));//        if ($check !== true) return returnValidate($check);
             $config['cert_path'] = $this->getUrl($config['cert_path']);//        $config['cert_path'] = ROOT_PATH . "public" . $config['cert_path'];
             $config['key_path'] = $this->getUrl($config['key_path']);//        $config['key_path'] = ROOT_PATH . "public" . $config['key_path'];
-            $config = [
-                'mchid' => $config['mch_id'],
-                'serial' => $config['serial'],
-                'privateKey' => $config['key_path'],
-                'certs' => [$config['serial'] => file_get_contents($config['cert_path'])],
-                'cert_path' => $config['cert_path'],
-                'v3_key' => $config['v3_key'],
-            ];
-            $app = Factory::payment($config);//        $app = \WeChatPayV3\Factory::payment($config);
-            $cert = $app->transfer->getPlatformCertificate();
-            if (isset($cert['code']) && isset($cert['message'])) {
-                return $this->r(100, $cert['message'], $cert);
+            $data = [];
+            if (isset($config['serial']) && $config['serial']) {
+                $config = [
+                    'mchid' => $config['mch_id'],
+                    'serial' => $config['serial'],
+                    'privateKey' => $config['key_path'],
+                    'certs' => [$config['serial'] => file_get_contents($config['cert_path'])],
+                    'cert_path' => $config['cert_path'],
+                    'v3_key' => $config['v3_key'],
+                ];
+                $app = Factory::payment($config);//        $app = \WeChatPayV3\Factory::payment($config);
+                $cert = $app->transfer->getPlatformCertificate();
+                if (isset($cert['code']) && isset($cert['message'])) {
+                    return $this->r(100, $cert['message'], $cert);
+                }
+                $data = [
+                    'platform_serial' => $cert[0]['serial_no'],
+                    'platform_path' => $cert[0]['path'],
+                    'platform_update_time' => time(),
+                ];
             }
-            $data = [
-                'platform_serial' => $cert[0]['serial_no'],
-                'platform_path' => $cert[0]['path'],
-                'platform_update_time' => time(),
-            ];
             return $this->r(200, '获取成功', $data);
         } catch (\Exception $e) {
             actionException($e,1);

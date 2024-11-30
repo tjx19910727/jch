@@ -18,7 +18,7 @@ class VMachineVersion extends VCommon
         "version_no" => "require|max:100",
         "path" => "require|max:255",
         "size" => "require",
-        "desc" => "max:255",
+        "desc" => "max:10000",
     ];
 
     protected $message = [

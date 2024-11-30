@@ -307,7 +307,7 @@ class ActivityClient extends ReceiveBaseClient
         $alc['active_num'] += $alc['gifts_num'];
 
         // 检查活动商品
-        $content = $this->getActivityLotteryContentList(['al_id' => $al['al_id']], 0, 'c_id,retain_num,g_id,probability');
+        $content = $this->getActivityLotteryContentList(['al_id' => $al['al_id']], 0, 'c_id,retain_num,g_id,probability,g_name');
         if (!$content) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
         $content = $content->toArray();
         // 总中奖概率，必须要刚好100%
@@ -323,7 +323,7 @@ class ActivityClient extends ReceiveBaseClient
             $mc = $this->getMachineChannelFind(['m_id' => $this->machine['m_id'], 'status' => 1, 'g_id' => $v['g_id'],['stock',">=",$checkStock + $v['retain_num'] ]], 'channel_code,stock','stock desc');
             if (!$mc) {
                 actionLog($this->getLS(),'检查抽奖活动商品库存SQL');
-                return $this->rFail($this->lang("VActivityLottery.mc_no_data"));
+                return $this->rFail($this->lang("VActivityLottery.mc_no_data") . "【" . $v['g_name'] . "】" . $this->lang("VActivityLottery.goods_not_data"));
             }
         }
 

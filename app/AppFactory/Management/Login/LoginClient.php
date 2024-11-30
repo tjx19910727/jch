@@ -65,6 +65,9 @@ class LoginClient extends ManagementClient
      */
     public function getWxLoginUrl($postData)
     {
+        if (!isset($postData['official'])) {
+            return $this->r(100,$this->lang("VWxLogin.official_require"));
+        }
         $config = $this->getWxOfficialFind(['id' => $postData['official']]);
         if (!$config) {
             return $this->r(100,$this->lang("VWxLogin.wx_no_data"));
@@ -79,7 +82,7 @@ class LoginClient extends ManagementClient
         ];
         $id = $this->addWxOfficialLogin($insert);
         if (!$id) return $this->r(100,$this->lang("action_fail"));
-        $loginUrl = $this->getUrl("/wx/scan_login/silentLogin/login_id/$id/time/" . time());
+        $loginUrl = $this->getUrl("/wx/login/scanLogin/login_id/$id/time/" . time());
         $this->updateWxOfficialLogin(['id' => $id,"login_url" => $loginUrl]);
         return $this->r(200,$this->lang("action_success"),["id" => $id,'status' => 1,"login_url" => $loginUrl]);
     }

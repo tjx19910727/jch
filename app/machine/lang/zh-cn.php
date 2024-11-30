@@ -201,6 +201,7 @@ return [
         "status3" => "活动已结束",
         "status4" => "活动已下架",
 
+        "goods_not_data" => "商品未上架",
 
         "lottery_empty" => "无中奖商品，设置错误",
 

@@ -29,6 +29,7 @@ class WxClient extends TimeTaskBase
     use UserTrait;
 
     protected $order;
+    protected $payResult;
 
     /**
      * 查询微信反扫支付结果
@@ -48,86 +49,86 @@ class WxClient extends TimeTaskBase
         $wxConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1]);
         if (!$wxConfig) return $this->rFail("查无收款配置信息");
         $app = Factory::payment($wxConfig);
-        $result = $app->order->queryByOutTradeNumber($this->order['trade_no']);
-        if ($result) {
+        $this->payResult = $app->order->queryByOutTradeNumber($this->order['trade_no']);
 
-            $this->order['mch_no'] = $result['transaction_id'] ?? '';
+        actionLog($this->payResult,'查询结果');
+        if ($this->payResult) {
+            $this->order['mch_no'] = $this->payResult['transaction_id'] ?? '';
             $this->order['pay_type'] = 1;
             $this->order['pay_method'] = 2;
-
-            if (isset($result['openid']) && $result['openid']) {
-                $user = $this->getUserFind(['openid' => $result['openid']]);
+            if (isset($this->payResult['openid']) && $this->payResult['openid']) {
+                $user = $this->getUserFind(['openid' => $this->payResult['openid']]);
                 if ($user) {
                     $this->order['user_id'] = $user['user_id'];
                     $this->order['user_name'] = $user['name'];
                 } else {
-                    $insert['openid'] = $result['openid'];
+                    $insert['openid'] = $this->payResult['openid'];
                     $this->order['user_id'] = $this->addUser($insert);
                 }
             }
 
             // 需要用户输入密码
-            if (isset($result['result_code']) && $result['result_code'] == 'FAIL') {
-                if ($result['err_code'] == 'USERPAYING') {
-                    $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paying');
-                    return $this->r(201,'等待用户支付',$result);
+            if (isset($this->payResult['result_code']) && $this->payResult['result_code'] == 'FAIL') {
+                if ($this->payResult['err_code'] == 'USERPAYING') {
+                    return $this->USERPAYING();
                 } else {
-                    $this->paymentFailed();
-                    return $this->r(100, '支付失败：' . $result['err_code_des'], $result);
+                    return $this->FAIL();
                 }
-            }
-            // 反扫MICROPAY，确认支付成功
-            if (isset($result['result_code']) && $result['result_code'] == 'SUCCESS' && isset($result['trade_type']) && $result['trade_type'] == 'MICROPAY') {
-                $this->startTrans();
-                // 结算分润收益
-                $flag[] = $this->settlementRevenue();
-                $flag[] = $this->paymentSuccessful();
-                $result = flag_check($flag);
-                $return = $this->checkTrans($result);
-                return $return;
             }
 
-            if (isset($result['trade_state'])) {
-                switch ($result['trade_state']) {
-                    case "SUCCESS":
-                        $this->startTrans();
-                        // 结算分润收益
-                        $flag[] = $this->settlementRevenue();
-                        $flag[] = $this->paymentSuccessful();
-                        $result = flag_check($flag);
-                        $return = $this->checkTrans($result);
-                        return $return;
-                        break;
-//                    case "REFUND":
-//                        return $this->REFUND($result);
-//                        break;
-//                    case "NOTPAY":
-//                        return $this->NOTPAY($result);
-//                        break;
-//                    case "CLOSED":
-//                        return $this->CLOSED($result);
-//                        break;
-//                    case "REVOKED":
-//                        return $this->REVOKED($result);
-//                        break;
-//                    case "USERPAYING":
-//                        return $this->USERPAYING($result);
-//                        break;
-//                    case "PAYERROR":
-//                        return $this->PAYERROR($result);
-//                        break;
-                    case "FAIL":
-                        $return = $this->r(101, '支付失败：' . $result['err_code_des'], $result);
-                        $this->paymentFailed();
-                        return $return;
-                        break;
-                    default:
-                        actionLog($result, '未定义返回类型');
-                        return $this->r(100, '未定义返回类型：' . $result['result_code'], $result);
-                        break;
+            if (isset($this->payResult['trade_state'])) {
+                if (method_exists($this,$this->payResult['trade_state'])) {
+                    $method_name = $this->payResult['trade_state'];
+                    return $this->$method_name();
                 }
+                return $this->r(100, '未定义返回类型：' . $this->payResult['result_code'], $this->payResult);
             }
-            return $this->r(100,'未有符合判断支付结果的内容',$result);
         }
+        return $this->r(100,'未有符合判断支付结果的内容',$this->payResult);
+    }
+
+    /**
+     * 支付成功
+     * @return bool|string
+     */
+    private function SUCCESS()
+    {
+        $this->startTrans();
+        // 结算分润收益
+        $flag[] = $this->settlementRevenue();
+        $flag[] = $this->paymentSuccessful();
+        $result = flag_check($flag);
+        $return = $this->checkTrans($result);
+        return $return;
+    }
+
+    /**
+     * 支付失败
+     * @return array|\think\response\Json
+     */
+    private function FAIL()
+    {
+        $this->paymentFailed();
+        return $this->r(101, '支付失败：' . $this->payResult['err_code_des'], $this->payResult);
+    }
+
+    /**
+     * 等待用户支付
+     * @return array|\think\response\Json
+     */
+    private function USERPAYING()
+    {
+        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paying');
+        return $this->r(201,'等待用户支付',$this->payResult);
+    }
+
+    /**
+     * 支付错误
+     * @return array|\think\response\Json
+     */
+    private function PAYERROR()
+    {
+        $this->paymentError();
+        return $this->r(101, $this->payResult['trade_state_desc'], $this->payResult);
     }
 }

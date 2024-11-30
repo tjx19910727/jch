@@ -40,6 +40,7 @@ return [
 
     ],
     "VWxLogin" => [
+        "official_require" => "无公众号信息",
         "wx_no_data" => "查无公众号信息",
         "wx_status2" => "公众号已禁用",
     ],

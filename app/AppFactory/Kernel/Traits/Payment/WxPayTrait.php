@@ -99,7 +99,7 @@ trait WxPayTrait
                 $checkFlag = flag_check($flag);
                 $return = $this->checkTrans($checkFlag);
             }
-            if ($result['err_code'] == "USERPAYING") {
+            if (isset($result['err_code']) && $result['err_code'] == "USERPAYING") {
                 $redisExpire = (env("Payment.microPayOverTime") ?? 0) + 60;
                 // 支付中
                 $redis = new \Redis();

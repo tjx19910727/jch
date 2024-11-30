@@ -42,7 +42,7 @@ class WxTemplate extends Common
             return returnValidate($e->getMessage());
         }
         if (isset($postData['miniprogram'])) $postData['miniprogram'] = json_encode($postData['miniprogram'],320);
-        $postData['body'] = json_encode($postData['body'],320);
+        $postData['body'] = str_replace(" ","",json_encode($postData['body'],320));
         return $this->app->wxTemplate->add($postData);
     }
 
@@ -54,6 +54,8 @@ class WxTemplate extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
+        if (isset($postData['body']) && $postData['body'])
+            $postData['body'] = str_replace(" ","",json_encode($postData['body'],320));
         return $this->app->wxTemplate->update($postData);
     }
 

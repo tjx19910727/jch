@@ -14,7 +14,7 @@ class VStrategyPayee extends VCommon
     protected $rule = [
         "sp_id" => "require",
         "sp_name" => 'require',
-        "payee_type" => 'require|in:1,4,5',
+        "payee_type" => 'require|in:1,2,4,5',
         "app_id" => 'require',
         "mch_id" => "require",
         "content" => 'require',
@@ -95,7 +95,7 @@ class VStrategyPayee extends VCommon
     ];
     protected $scene = [
         "addSp" => ["sp_name","payee_type","app_id","content","status"],
-        "addWx" => ["app_id","mch_id","key","serial","cert_path","key_path","v3_key","platform_serial","platform_path","platform_update_time","to_balance","to_batches"],
+        "addWx" => ["app_id","mch_id","key","cert_path","key_path","v3_key","to_balance","to_batches"],
         "addAli" => ["app_id","pid","private_key_path","ali_public_key_path","ali_root_cert_path","app_public_key_path","to_balance"],
         "addTl"  => ["app_id"],
         "addJdCashier" => ["agentNum","customerNum","shopNum","accessKey","secretKey"],

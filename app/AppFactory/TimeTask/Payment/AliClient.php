@@ -67,7 +67,10 @@ class AliClient extends TimeTaskBase
             }
 
             $status = strtolower($result['trade_status']);
-            return $this->$status();
+            if (method_exists($this,$status)) {
+                return $this->$status();
+            }
+            return $this->rFail("没有对应处理方法类型");
         }
         return $this->rFail("查询错误");
     }

@@ -32,9 +32,9 @@ class MachineBaseClient extends BaseClient
         actionLog($this->config,'接收数据2');
         $this->machine = $this->getMachineFind(['machine_id' => $this->config['machine_id']]);
         if (!$this->machine) die(json_encode(['state' => 100, "msg" => $this->lang("query_machine_no_data")],320));
-        $this->getMqQueue();
+        @$this->getMqQueue();
         // 设备离线状态下收到数据，认为已上线，触发发送上线通知
-        $this->sendOnline();
+        @$this->sendOnline();
     }
 
     /**
@@ -112,8 +112,12 @@ class MachineBaseClient extends BaseClient
         if ($controller) $path = $controller;
         if ($action) $path = "/" . $action;
         if (!$path) {
+            $path = "dataUpload";
             if (isset($this->message['data']) && $this->message['data']) {
                 $path = json2arr($this->message['data'])['msgType'] ?? "";
+            }
+            if (isset($this->data['data']) && $this->data['data']) {
+                $path = json2arr($this->data['data'])['msgType'] ?? "";
             }
         }
         if ($path != "heartbeat") {

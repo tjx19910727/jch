@@ -70,6 +70,7 @@ class LoginClient extends WxBaseClient
             $callbackUrl = $this->getUrl("/wx/login/silentCallback/login_id/" . $postData['login_id']);
             $redirectUrl = $this->wx_app->oauth->scopes(['snsapi_base'])->redirect($callbackUrl);
             header("Location: $redirectUrl");
+            die();
         }
     }
 
@@ -111,6 +112,7 @@ class LoginClient extends WxBaseClient
                 $this->updateWxOfficialLogin(['id' => $postData['login_id'],'openid' => $response['openid']]);
                 $urlData = ['openid' => $response['openid'],'login_id' => $postData['login_id']];
                 $url = env("wx.SCAN_PAGE_URL") . "?" . http_build_query($urlData);
+                actionLog($url,'跳转确认登录页面');
                 // 跳转手机端选择账号登录
                 header("Location: $url");
                 die();

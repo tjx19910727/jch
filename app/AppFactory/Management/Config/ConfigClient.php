@@ -24,6 +24,7 @@ class ConfigClient extends ManagementClient
     {
         $ids = $this->getParentIdList($this->manager['pid']);
         $ids[] = $this->manager['manager_id'];
+        $ids[] = $this->manager['creator'];
         $where[] = ['creator',"in",$ids];
         return $this->rQ($this->getConfigFind($where,$field,$order));
     }

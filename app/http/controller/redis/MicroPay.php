@@ -14,7 +14,7 @@ use app\AppFactory\AppFactory;
 class MicroPay
 {
 
-    public $microSec;
+    public $microSec = 100;
     /**
      * 守护进程——主动查询微信、支付宝反扫支付结果
      */

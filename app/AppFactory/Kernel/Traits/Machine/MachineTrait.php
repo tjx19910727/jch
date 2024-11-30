@@ -206,18 +206,20 @@ trait MachineTrait
      */
     public function sendToMachine($machine,$msgType,$otherData = [])
     {
-        $m = $this->getMachineFind(['machine_id' => $machine['machine_id']],"mac_address,signKey")->toArray();
-        $key = $m['signKey'] ?? "";
-        if (!$key) $key = env("api.md5Key");
-        if ($key) {
-            $config = [
-                "machine_id" => $machine['machine_id'],
-                "key" => $key,
-                "mac" => $m['mac_address'] ?? "",
-            ];
-            actionLog($config,'下发命令配置');
-            $app = AppFactory::machine($config);
-            return $app->sendMq->sendMq($msgType,$otherData);
+        $m = $this->getMachineFind(['machine_id' => $machine['machine_id']],"mac_address,signKey,online")->toArray();
+        if ($m['online'] == 1) {
+            $key = $m['signKey'] ?? "";
+            if (!$key) $key = env("api.md5Key");
+            if ($key) {
+                $config = [
+                    "machine_id" => $machine['machine_id'],
+                    "key" => $key,
+                    "mac" => $m['mac_address'] ?? "",
+                ];
+                actionLog($config, '下发命令配置');
+                $app = AppFactory::machine($config);
+                return $app->sendMq->sendMq($msgType, $otherData);
+            }
         }
         return false;
     }
