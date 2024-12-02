@@ -9,7 +9,6 @@
 namespace app\AppFactory\Management\Activity;
 
 
-use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryContentTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryUsedGoodsTrait;
@@ -33,8 +32,7 @@ class ActivityLotteryUsedClient extends ManagementClient
         $list = $this->getActivityLotteryUsedList($where,$pageNum,$field,$order);
         if ($list) {
             $list = $list->each(function ($item) {
-                $content = $this->getActivityLotteryContentFind(['c_id' => $item['alc_id']], "content_name");
-                $usedGoods = $this->getActivityLotteryUsedGoodsList(['alu_id' => $item['alu_id']],0,'*,("' . $content['content_name'] . '") content_name');
+                $usedGoods = $this->getActivityLotteryUsedGoodsList(['alu_id' => $item['alu_id']], 0, '*,(SELECT content_name FROM activity_lottery_content WHERE c_id = alc_id limit 1) content_name');
                 $item['Children'] = $usedGoods;
                 return $item;
             });

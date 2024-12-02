@@ -500,6 +500,7 @@ class ActivityClient extends ReceiveBaseClient
                 $ug = [
                     "al_id" => $used['al_id'],
                     "alu_id" => $used['alu_id'],
+                    "alc_id" => $lv['c_id'],
                     "g_id" => $mc['g_id'],
                     "g_name" => $mc['g_name'],
                     "sku" => $mc['sku'],
