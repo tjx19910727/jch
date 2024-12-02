@@ -26,7 +26,7 @@ class ActivityLotteryUsed extends Common
         $pageNum = input('pageNum');
         $al_id = input('al_id');
         $where['al_id'] = $al_id;
-        return $this->app->activityLotteryUsed->getList($where,$pageNum,$this->field,'alu_id desc');
+        return $this->app->activityLotteryUsed->getUsedList($where,$pageNum,$this->field,'alu_id desc');
     }
 
     public function getFind()
@@ -45,7 +45,7 @@ class ActivityLotteryUsed extends Common
         $alu_id = input("alu_id");
         $pageNum = input('pageNum');
         $where['alu_id'] = $alu_id;
-        return returnData($this->app->activityLotteryUsed->getActivityLotteryUsedGoodsList($where,$pageNum,"*"));
+        return $this->app->activityLotteryUsed->getUsedGoodsList($where,$pageNum,"*");
     }
 
     /**

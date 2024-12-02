@@ -421,7 +421,7 @@ class ActivityClient extends ReceiveBaseClient
         // 库存不足或禁用货架，不存在这个商品上架的情况下不参与抽奖
         $contentGid = array_column($content,"g_id");
         $whereNoGid = function ($query) use ($contentGid,$quantity)  {
-            $query->where("`m_id` = '" . $this->machine['m_id'] . "' AND (`status` <> 1 OR `stock` < $quantity) AND `g_id` in (" . implode(",",$contentGid) . ")");
+            $query->where("`m_id` = " . $this->machine['m_id'] . " AND (`status` <> 1 OR `stock` < $quantity) AND `g_id` in (" . implode(",",$contentGid) . ")");
         };
         $noGid = $this->getMachineChannelColumn($whereNoGid,'g_id');
         if ($noGid) {
@@ -475,7 +475,7 @@ class ActivityClient extends ReceiveBaseClient
             }
         }
         actionLog($list,'中奖列表');
-
+        if (!$list) return $this->r(100,$this->lang("VActivityLottery.content_no_data"));
         $this->startTrans();
 
         try {// 修改已抽奖次数
@@ -484,7 +484,7 @@ class ActivityClient extends ReceiveBaseClient
             if (!$list) {
                 $this->commitTrans();
                 $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0)->toArray();
-                return $this->r(200, $this->lang("lottery_empty"), ['lottery_list' => $list, "order" => $order]);
+                return $this->r(200, $this->lang("VActivityLottery.lottery_empty"), ['lottery_list' => $list, "order" => $order]);
             }
             $averagePrice = bcdiv($order['total_price'], $used['quantity'], 3);
             $flag = [];
