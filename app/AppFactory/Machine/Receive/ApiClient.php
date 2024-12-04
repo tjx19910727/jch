@@ -147,7 +147,7 @@ class ApiClient extends ReceiveBaseClient
         $where['ao_id'] = $this->machine['ao_id'];
         $where['status'] = 1;
         $config = $this->getWxOfficialFind($where,'*',"id desc");
-        if (!$config) return $this->r(100,$this->lang("VWxLogin.wx_no_data"));
+        if (!$config) return $this->r(300,$this->lang("VWxLogin.wx_no_data"));
         $config = $config->toArray();
         $insert = [
             "wx_id" => $config['id'],
@@ -159,7 +159,7 @@ class ApiClient extends ReceiveBaseClient
             "ao_id" => $config['ao_id'],
         ];
         $id = $this->addWxOfficialLogin($insert);
-        if (!$id) return $this->r(100,$this->lang("action_fail"));
+        if (!$id) return $this->r(300,$this->lang("action_fail"));
         $loginUrl = $this->getUrl("/wx/login/scanLogin/login_id/$id/time/" . time());
         $this->updateWxOfficialLogin(['id' => $id,"login_url" => $loginUrl]);
         return $this->r(200,$this->lang("action_success"),["id" => $id,"login_url" => $loginUrl]);
@@ -249,8 +249,10 @@ class ApiClient extends ReceiveBaseClient
                 $where['am.m_id'] = $mc['m_id'];
                 $where[] = ['status', "<", 3];
                 $corner = $this->getGoodsCornerFindByAmAg($where, 'gc.id,gc.corner_name,gc.corner_type,gc.pic,gc.style,gc.position,gc.start_time,gc.end_time,gc.status');
+                if ($corner === null) $corner = [];
                 if ($corner) {
-                    $updateCorner = [];
+                    actionLog($corner,'角标数据');
+                    $updateCorner['id'] = $corner['id'];
                     if ($corner['status'] == 1) {
                         $updateCorner['status'] = 2;
                         $corner['status'] = 2;
@@ -260,7 +262,6 @@ class ApiClient extends ReceiveBaseClient
                         $corner = [];
                     }
                     if ($updateCorner) {
-                        $updateCorner['id'] = $corner['id'];
                         $this->updateGoodsCorner($updateCorner);
                     }
                 }
@@ -855,7 +856,7 @@ class ApiClient extends ReceiveBaseClient
         ];
         $this->config['machine_id'] = $this->machine['machine_id'];
         $params['sign'] = $this->makeSign($params);
-        $url = $this->getUrl("/mobile/#/index") . "?" . http_build_query($params);
+        $url = env("APP.host") . "/mobile/#/index?" . http_build_query($params);
         return $this->rQ(['url' => $url]);
     }
 

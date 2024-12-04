@@ -267,7 +267,8 @@ trait ActivityFdTrait
             $random = mt_rand(1,100);
             if ($value['active_value'] >= $random) {
                 $sod_quantity = $this->getSaleOrdersDetailsSum(['order_id' => $this->order['order_id'],'g_id' => $value['g_id']],'quantity');
-                $mc_id = $this->getMachineChannelValue(['m_id' => $this->order['m_id'],'status' => 1,['stock',">",($sod_quantity + 1)],'g_id' => $value['g_id']],'mc_id');
+                $mc_id = $this->getMachineChannelValue(['m_id' => $this->order['m_id'],'status' => 1,['stock',">=",($sod_quantity + 1)],'g_id' => $value['g_id']],'mc_id');
+                actionLog($this->getLS(),'【SQL】查询惊喜礼品货架');
                 if (!$mc_id) $mc_id = 0;
             }
         }
