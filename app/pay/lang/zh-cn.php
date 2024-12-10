@@ -31,6 +31,7 @@ return  [
         "unKnow_auth_code" => "无法识别付款码类型",
         "unKnow_pay_type" => "未定义的支付类型",
         "update_order_pay_info_fail" => "修改订单支付信息失败",
+        "pay_status3" => "订单已支付成功",
     ],
 
     "VJdCashier" => [

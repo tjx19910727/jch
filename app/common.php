@@ -68,7 +68,6 @@ function returnState($state, $msg = "", $data = [], $isJson = true)
 {
     $return = ["state" => $state, "msg" => $msg];
     if ($data) $return['data'] = $data;
-    actionLog($return,'返回数据');
     if ($isJson) {
         $return = json($return);
     }

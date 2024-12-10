@@ -249,7 +249,6 @@ class ApiClient extends ReceiveBaseClient
                 $where['am.m_id'] = $mc['m_id'];
                 $where[] = ['status', "<", 3];
                 $corner = $this->getGoodsCornerFindByAmAg($where, 'gc.id,gc.corner_name,gc.corner_type,gc.pic,gc.style,gc.position,gc.start_time,gc.end_time,gc.status');
-                if ($corner === null) $corner = [];
                 if ($corner) {
                     actionLog($corner,'角标数据');
                     $updateCorner['id'] = $corner['id'];
@@ -259,7 +258,7 @@ class ApiClient extends ReceiveBaseClient
                     }
                     if ($corner['end_time'] > 0 && $corner['end_time'] < time()) {
                         $updateCorner['status'] = 3;
-                        $corner = [];
+                        $corner = null;
                     }
                     if ($updateCorner) {
                         $this->updateGoodsCorner($updateCorner);

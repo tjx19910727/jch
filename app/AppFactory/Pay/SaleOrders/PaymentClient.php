@@ -161,6 +161,7 @@ class PaymentClient extends PayBaseClient
                 return $this->rFail($this->lang("VOrderPay.order_no_data"));
             }
             $this->order = $this->order->toArray();
+            if ($this->order['pay_status'] == 3) return $this->rFail($this->lang("VOrderPay.pay_status3"));
             actionLog($this->order, '发起支付订单数据');
             if ($this->order['sp_id']) {
                 if ($this->order['pay_type'] != 5) {

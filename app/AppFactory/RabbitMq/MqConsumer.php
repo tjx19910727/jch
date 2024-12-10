@@ -114,9 +114,9 @@ class MqConsumer
         $channel->queue_bind($amqpDetail['queue_name'], $amqpDetail['exchange_name'], $amqpDetail['route_key']);
         /**
          * queue: 从哪里获取消息的队列
-         * consumer tag: 消费者标识符，用于区分多个客户端
-         * no local: 不接收此使用者发布的消息
-         * no ack: 设置为true，则使用者将使用自动确认模式。详情请参见自动ACK:消息一旦被接收，消费者自动发送ACK
+         * consumer_tag: 消费者标识符，用于区分多个客户端
+         * no_local: 不接收此使用者发布的消息
+         * no_ack: 设置为true，则使用者将使用自动确认模式。详情请参见自动ACK:消息一旦被接收，消费者自动发送ACK
          * 手动ACK:消息接收后，不会发送ACK，需要手动调用
          * exclusive:是否排他，即这个队列只能由一个消费者消费。适用于任务不允许进行并发处理的情况下
          * nowait: 不返回执行结果，但是如果排他开启的话，则必须需要等待结果的，如果两个一起开就会报错
@@ -176,7 +176,7 @@ class MqConsumer
          * 手动ACK:消息接收后，不会发送ACK，需要手动调用
          * exclusive:是否排他，即这个队列只能由一个消费者消费。适用于任务不允许进行并发处理的情况下
          * nowait: 不返回执行结果，但是如果排他开启的话，则必须需要等待结果的，如果两个一起开就会报错
-         * callback: :回调逻辑处理函数,PHP回调 array($this，process message') 调用本对象的process message方法
+         * callback: :回调逻辑处理函数,PHP回调 array($this，export_message') 调用本对象的export_message方法
          */
         $channel->basic_consume($amqpDetail['queue_name'], $amqpDetail['consumer_tag'], false, false, false, false, array($this, 'export_message'));
         register_shutdown_function(array($this, 'shutdown'), $channel, $connection);

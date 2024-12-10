@@ -73,7 +73,10 @@ class GoodsModel extends BaseModel
                 ->field($field)
                 ->order($order);
             if ($pageNum) {
-                $data = $data->paginate($pageNum, false, ["query" => request()->param()]);
+                $data = $data->paginate($pageNum, false, ["query" => request()->param()])->each(function ($item) {
+                    $item['lang'] = GoodsLangModel::getList(['g_id' => $item['g_id']],0,'*','update_time desc');
+                    return $item;
+                });
                 return $data;
             }
             return $data->select();

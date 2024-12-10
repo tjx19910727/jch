@@ -56,10 +56,22 @@ class GoodsClient extends ManagementClient
     public function get10List($where)
     {
         $list = $this->getSaleOrdersGoodsCountList($where, 0,
-            'g_name,totalPrice,totalQuantity,retail_price,pic',
+            'g_id,g_name,totalPrice,totalQuantity,retail_price,pic',
             'totalPrice desc,totalQuantity desc, g_id desc', '', '', 10);
         if ($list) {
             $list = $list->toArray();
+            $lang = input("lang");
+            if ($lang) {
+                $whereGl['lang'] = $lang;
+                foreach ($list as $key => $value) {
+                    $whereGl['g_id'] = $value['g_id'];
+                    $gl = $this->getGoodsLangFind($whereGl, 0, 'g_name');
+                    if ($gl) {
+                        $value['g_name'] = $gl['g_name'];
+                    }
+                    $list[$key] = $value;
+                }
+            }
         }
         return $this->rQ($list);
     }
@@ -72,12 +84,12 @@ class GoodsClient extends ManagementClient
         if ($list) {
             $list = $list->toArray();
             $title = [
-                "g_name" => "商品名称",
-                "totalQuantity" => "销售量",
-                "retail_price" => "单价",
+                "g_name" => $this->lang("export.g_name"),
+                "totalQuantity" => $this->lang("export.totalQuantity"),
+                "retail_price" => $this->lang("export.retail_price"),
             ];
-            $filename = "人气商品排行榜（最近7天）-" . date("Ymd");
-            $result = $this->sendToExport("首页-人气商品排行榜（最近7天）", $filename, $title, $list);
+            $filename = $this->lang("export.goods10List") . date("Ymd");
+            $result = $this->sendToExport($this->lang("export.goodsRankingFileName"), $filename, $title, $list);
             return $result;
         }
         return $this->rQ($list);
@@ -117,23 +129,26 @@ class GoodsClient extends ManagementClient
     {
         $list = $this->getGoodsList($where, 0,
             'g_id,g_name,gc_name,
-            (case g_type when 1 THEN "普通商品" WHEN 2 THEN "酒店商品" WHEN 3 THEN "门票商品" ELSE "未定义类型" END) g_type,
+            (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
+            '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
+            '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
+            '" ELSE "' . $this->lang("export.g_type_unDefine") . '" END) g_type,
             model,sku,cost_price,market_price,retail_price');
         if ($list) {
             $list = $list->toArray();
             $title = [
-                'g_id' => "商品ID",
-                'g_name' => "商品名称",
-                'g_type' => "商品类型",
-                'gc_name' => "商品分类",
-                'model' => "商品型号",
-                'sku' => "SKU码",
-                'cost_price' => "成本价",
-                'market_price' => "市场价",
-                'retail_price' => "零售价",
+                'g_id' => $this->lang("export.g_id"),
+                'g_name' => $this->lang("export.g_name") ,
+                'g_type' => $this->lang("export.g_type"),
+                'gc_name' => $this->lang("export.gc_name"),
+                'model' => $this->lang("export.model"),
+                'sku' => $this->lang("export.sku"),
+                'cost_price' => $this->lang("export.cost_price"),
+                'market_price' => $this->lang("export.market_price"),
+                'retail_price' => $this->lang("export.retail_price"),
             ];
-            $filename = "商品列表-" . date("Ymd");
-            $result = $this->sendToExport("商品管理-商品列表", $filename, $title, $list);
+            $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
+            $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
             return $result;
         }
         return $this->r(100, $this->lang("action_fail"));

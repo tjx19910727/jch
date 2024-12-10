@@ -11,11 +11,35 @@ return [
         "code_error" => "验证码错误",
     ],
 
+    "menu" => [
+        "goods_management" => "商品管理",
+    ],
+
     "export" => [
         "export_aul" => "导出用户事件",
 
         "export_log_create_fail" => "导出日志记录生成失败",
         "exporting" => "数据导出中",
+        "g_id" => "商品ID",
+        "g_name" => "商品名称",
+        "g_type" => "商品类型",
+        "g_type1" => "普通商品",
+        "g_type2" => "酒店商品",
+        "g_type3" => "门票商品",
+        "g_type_unDefine" => "未定义商品类型",
+        "gc_name" => "商品分类",
+        "model" => "商品型号",
+        "sku" => "SKU码",
+        "cost_price" => "成本价",
+        "market_price" => "市场价",
+        "totalQuantity" => "销售量",
+        "retail_price" => "零售价",
+        "goods10List" => "人气商品排行榜（最近7天）-",
+
+        "goods_list" => "商品列表",
+
+        "goodsRankingFileName" => "首页-人气商品排行榜（最近7天）",
+
     ],
 
     "getSelfRoleNode" => [

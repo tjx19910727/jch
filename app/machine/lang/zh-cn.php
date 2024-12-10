@@ -208,6 +208,7 @@ return [
         "probability_no_100" => "中奖概率总和不是100%，无法启用该活动",
 
         "is_out_goods" => "订单已执行出货",
+        "used_quantity_is_null" => "抽奖次数已用完",
     ],
 
     "VActivityFd" => [

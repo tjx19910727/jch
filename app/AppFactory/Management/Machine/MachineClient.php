@@ -168,7 +168,7 @@ class MachineClient extends ManagementClient
      */
     public function delM($m_id)
     {
-        $where['m_id'] = ["in",$m_id];
+        $where[] = ['m_id',"in",$m_id];
         $this->delMachine($where);
         $this->delMachineChannel($where);
         $this->delMachineChannelReplenishment($where);

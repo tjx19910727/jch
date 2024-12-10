@@ -46,7 +46,7 @@ trait MachineChannelStockTrait
 
     public function delMachineChannelStock($where)
     {
-        return MachineChannelStockModel::destroy($where);
+        return MachineChannelStockModel::whereDel($where);
     }
 
 }

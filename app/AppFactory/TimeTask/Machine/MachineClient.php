@@ -172,7 +172,7 @@ class MachineClient extends TimeTaskBase
                         $flag[] = $this->updateMachineOnlineDetails($update);
                         actionLog($this->getLS(),'修改设备在线记录详情状态','checkOffline');
                     }
-                    $flag[] = $this->updateMachine(['m_id' => $value['m_id'], 'online' => 2]);
+                    $flag[] = $this->updateMachine(['m_id' => $value['m_id'], 'online' => 2,'sighKey' => ""]);
                     actionLog($this->getLS(),'修改设备在线状态','checkOffline');
 
                     /** 发送离线通知 开始 **/

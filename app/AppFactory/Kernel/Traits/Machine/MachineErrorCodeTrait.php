@@ -71,6 +71,6 @@ trait MachineErrorCodeTrait
 
     public function delMachineErrorCode($where)
     {
-        return MachineErrorCodeModel::destroy($where);
+        return MachineErrorCodeModel::whereDel($where);
     }
 }

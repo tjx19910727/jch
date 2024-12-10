@@ -309,6 +309,7 @@ class ActivityClient extends ReceiveBaseClient
         $content = $this->getActivityLotteryContentList(['al_id' => $al['al_id']], 0, 'c_id,retain_num,g_id,probability,g_name');
         if (!$content) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
         $content = $content->toArray();
+        actionLog($content,'活动商品内容');
         // 总中奖概率，必须要刚好100%
         $totalProbability = array_sum(array_column($content, "probability"));
         if ($totalProbability != 100) return $this->rFail($this->lang("probability_no_100"));
@@ -329,7 +330,7 @@ class ActivityClient extends ReceiveBaseClient
             $mcList[] = $mc;
         }
         // 所有商品都没库存或禁用，则返回无活动商品
-        if (!$mcList) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
+        if (!$mcList) return $this->r(300,$this->lang("VActivityLottery.content_no_data"));
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
         $order = [
             "trade_no" => $trade_no,
@@ -415,6 +416,7 @@ class ActivityClient extends ReceiveBaseClient
         if ($totalProbability != 100) return $this->rFail($this->lang("VActivityLottery.probability_no_100"));
         // 本次执行抽奖次数初始化，总数量减去已抽次数
         $quantity = bcsub($used['quantity'], $used['used_quantity']);
+        if ($quantity <= 0) return $this->r(300,$this->lang("VActivityLottery.used_quantity_is_null"));
         // 单抽状态下，每次执行抽奖时抽奖次数重置为1
         if ($alc['active_type'] == 1) $quantity = 1;
 
@@ -493,6 +495,7 @@ class ActivityClient extends ReceiveBaseClient
             foreach ($list as $lk => $lv) {
                 $mc = $this->getMachineChannelFind(['g_id' => $lv['g_id'], 'm_id' => $order['m_id']], $mcField, 'stock desc');
                 if (!$mc) {
+                    actionLog($this->getLS(),'中奖商品不在这台设备中');
                     $this->rollbackTrans();
                     return $this->rFail($this->lang("VActivityLottery.mc_no_data"));
                 }
