@@ -274,6 +274,7 @@ return [
         "g_name_max" => "商品名称长度超限制",
         "sku_require" => "SKU不能为空",
         "pic_max" => "图片路径长度超限制",
+        "banner_max" => "轮播图片长度超限制",
         "manufacturer_max" => "供应商名称长度超限制",
         "service_phone_max" => "联系电话长度超限制",
     ],

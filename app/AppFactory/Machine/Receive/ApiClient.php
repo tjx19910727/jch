@@ -10,6 +10,7 @@ namespace app\AppFactory\Machine\Receive;
 
 
 use app\AppFactory\Kernel\ServiceContainer;
+use app\AppFactory\Kernel\Support\Trip\Trip;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityGoodsTrait;
@@ -876,28 +877,39 @@ class ApiClient extends ReceiveBaseClient
 
     /**
      * 获取组合商品列表
+     * 20241214修改接口内容，直对丽呈小程序查询组合商品列表接口
      * @return array|\think\response\Json
      */
     public function getGoodsMultiple()
     {
-        try {
-            $where['m_id'] = $this->machine['m_id'];
-            $where['status'] = 1;
-            $where[] = ['start_time', '<=', time()];
-            $where[] = function ($query) {
-                $query->where(" end_time is null or ( end_time > 0 AND end_time > " . time() . ")");
-            };
-            $field = "gm.gm_id,gm_name,gm_pic,gm_desc,start_time,end_time,status,m_id,machine_id,machine_name";
-            $order = "gm_id desc";
-            $data = $this->getGoodsMultipleListByMachine($where, 0, $field, $order);
-            return $this->r(200, $this->lang("query_success"), $data);
-        } catch (DbException $e) {
-            actionException($e,1);
-            return $this->rTryCatch($e->getMessage());
-        }
+//        try {
+//            $where['m_id'] = $this->machine['m_id'];
+//            $where['status'] = 1;
+//            $where[] = ['start_time', '<=', time()];
+//            $where[] = function ($query) {
+//                $query->where(" end_time is null or ( end_time > 0 AND end_time > " . time() . ")");
+//            };
+//            $field = "gm.gm_id,gm_name,gm_pic,gm_desc,start_time,end_time,status,m_id,machine_id,machine_name";
+//            $order = "gm_id desc";
+//            $data = $this->getGoodsMultipleListByMachine($where, 0, $field, $order);
+//            return $this->r(200, $this->lang("query_success"), $data);
+//        } catch (DbException $e) {
+//            actionException($e,1);
+//            return $this->rTryCatch($e->getMessage());
+//        }
+        $params = [
+            "pageSize" => $this->data['pageNum'] ?? 15,
+            "pageNo" => $this->data['page'] ?? 1,
+        ];
+        if (isset($this->data['productSn']) && $this->data['productSn']) $params['productSn'] = $this->data['productSn'];
+        $result = Trip::order()->getMallProductList($params);
+        $result = json2arr($result);
+        $this->data['list'] = $result['result'];
+        return $this->r(200,$this->lang("query_success"),$this->data);
     }
 
     /**
+     * 20241214废除此接口
      * 提交固定组合商品订单
      * @return array|\think\response\Json
      */

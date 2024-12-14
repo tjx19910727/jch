@@ -15,4 +15,5 @@ class SuggestModel extends BaseModel
 {
     protected $pk = "s_id";
     protected $name = "suggest";
+    protected $updateTime = "";
 }

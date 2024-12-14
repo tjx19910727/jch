@@ -81,7 +81,7 @@ trait SuggestTrait
     public function addSuggest($insert)
     {
         if (!isset($insert['creator']) || !$insert['creator']) $insert['creator'] = $this->manager['manager_id'];
-        $data = SuggestModel::create($insert,'content,pic,email,creator,create_time');
+        $data = SuggestModel::create($insert,['content','pic','email','creator','create_time']);
         $pk = $data->getPk();
         return $data->$pk;
     }

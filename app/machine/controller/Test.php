@@ -267,6 +267,16 @@ class Test extends BaseController
         $data = $this->makeSign($data);
         dump(json_encode($data, 320));
 
+        echo "获取组合商品";
+        $data = [
+            "machine_id" => $machine_id,
+            "mac" => $machine['mac_address'],
+            "page" => $page,
+            "pageNum" => $pageNum,
+        ];
+        $data = $this->makeSign($data);
+        dump(json_encode($data, 320));
+
         // 获取酒店列表
         echo "获取酒店列表";
         $data = [

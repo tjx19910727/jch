@@ -52,6 +52,7 @@ class V2Client extends V2BaseClient
     protected $machine;
     protected $order;
     protected $returnData;
+    public $data;
 
     /**
      * 01 根据机器ID获取库存信息列表
@@ -69,7 +70,9 @@ class V2Client extends V2BaseClient
             $where[] = ['status', '<>', 2];
             $data = $this->getMachineChannelList($where,$this->params['pageNum'], $field, 'stock desc');
             $data = $data->each(function ($item) {
-                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'sku2,`desc`');
+                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,`desc`');
+                $item['pic'] = $goods['pic'] ?? '';
+                $item['banner'] = $goods['banner'] ?? '';
                 $item['sku2'] = $goods['sku2'] ?? '';
                 $item['g_desc'] = $goods['desc'] ?? '';
                 return $item;
@@ -93,7 +96,7 @@ class V2Client extends V2BaseClient
         try {
             $field = "machine_id,machine_name,machine_type,machine_serial_number extend1,version software_version,
             country_id,state_id,city_id,regions_id,zip_code zip,street,floor building,mac_address mac,lat,lng,scene_id,
-            logo logo_url, pic icon_url,status ai_status,last_online_time ai_time,online oo_status";
+            logo logo_url, pic icon_url,status ai_status,last_online_time ai_time,online oo_status,device_type";
             $where = [];
             if (isset($this->params['machine_id']) && $this->params['machine_id'])
                 $where[] = ["machine_id", 'in', $this->params['machine_id']];
@@ -149,12 +152,12 @@ class V2Client extends V2BaseClient
     {
         $this->startTrans();
         try {
-            $checkOrder = $this->getSaleOrdersFind(['trade_no' => $this->params['order_no']], 'order_id');
-            if ($checkOrder) return $this->returnData(0, $this->lang("msg." . 0), ['pick_code' => $this->params['pick_code'] ?? "", 'success' => true, "order_no" => $this->params['order_no']]);
+            $checkOrder = $this->getSaleOrdersFind(['trade_no' => $this->params['order_no']], 'order_id,pay_code');
+            if ($checkOrder) return $this->returnData(0, $this->lang("msg." . 0), ['pick_code' => $checkOrder['pay_code'] ?? ($this->params['pick_code'] ?? ""), 'success' => true, "order_no" => $this->params['order_no']]);
 
-            $this->machine = $this->getMachineFind(['machine_id' => $this->params['kiosk_id']], 'm_id,machine_id,machine_name,online,ao_id');
+            $this->machine = $this->getMachineFind(['machine_id' => $this->params['kiosk_id']], 'm_id,machine_id,machine_name,device_type,online,ao_id');
             if (!$this->machine) return $this->returnData(15, $this->lang("msg." . 15) . "：" . $this->lang("reserve_order.machine_no_data"));
-            if ($this->machine['online'] != 1) return $this->returnData(99, $this->lang("msg." . 99) . "：" . $this->lang("reserve_order.machine_offline"));
+            if ($this->machine['device_type'] == 1 && $this->machine['online'] != 1) return $this->returnData(99, $this->lang("msg." . 99) . "：" . $this->lang("reserve_order.machine_offline"));
 
             // 不存在则重新生成一个8位纯数字取货码
             if (!isset($this->params['pick_code']) || !$this->params['pick_code']) {
@@ -210,9 +213,9 @@ class V2Client extends V2BaseClient
     public function cancel_order()
     {
         // 查询设备在线
-        $this->machine = $this->getMachineFind(['machine_id' => $this->params['kiosk_id']], 'm_id,machine_id,machine_name,online,ao_id');
+        $this->machine = $this->getMachineFind(['machine_id' => $this->params['kiosk_id']], 'm_id,machine_id,machine_name,device_type,online,ao_id');
         if (!$this->machine) return $this->returnData(15, $this->lang("msg." . 15) . "：" . $this->lang("reserve_order.machine_no_data"));
-        if ($this->machine['online'] != 1) return $this->returnData(99, $this->lang("msg." . 99) . "：" . $this->lang("reserve_order.machine_offline"),
+        if ($this->machine['device_type'] == 1 && $this->machine['online'] != 1) return $this->returnData(99, $this->lang("msg." . 99) . "：" . $this->lang("reserve_order.machine_offline"),
             ['success' => false, "order_no" => $this->params['order_no']]);
 
         // 查询有生成过订单
@@ -463,6 +466,7 @@ class V2Client extends V2BaseClient
      */
     public function use_pick_code()
     {
+        // 查询取货码
         $where['code'] = $this->params['pick_code'];
         $where['pick_type'] = 3;
         $pickCode = $this->getActivityPickCodeFind($where);
@@ -474,37 +478,134 @@ class V2Client extends V2BaseClient
         if ($pickCode['status'] == 4) return $this->returnData(19,$this->lang("msg.19") . ": " . $this->lang("use_pick_code.status4"));
         if ($pickCode['status'] == 5) return $this->returnData(19,$this->lang("msg.19") . ": " . $this->lang("use_pick_code.status5"));
         $pickCode = $pickCode->toArray();
+
+        // 查询取货码关联订单
         $this->order = $this->getSaleOrdersFind(['order_id' => $pickCode['order_id']]);
         actionLog($this->getLS(),'查询取货码订单SQL');
         if (!$this->order) return $this->returnData(15,$this->lang("msg.15") . ": " . $this->lang("use_pick_code.order_null_data"));
         $this->order = $this->order->toArray();
+
+        // 查询订单详情
         $details = $this->getSaleOrdersDetailsList(['order_id' => $pickCode['order_id']]);
         actionLog($this->getLS(),'查询取货码订单详情列表SQL');
         if (!$details) return $this->returnData(15,$this->lang("msg.15") . ": " . $this->lang("use_pick_code.order_details_null_data"));
-        $this->order['details'] = $details->toArray();
+        $details = $details->toArray();
+        $this->order['details'] = $details;
         actionLog($this->order,'订单数据');
-        $this->machine = $this->getMachineFind(['machine_id' => $this->params['machine_id']],'m_id,machine_id,machine_name');
-        $updatePc['status'] = 5;
+
+        // 查询设备数据
+        $this->machine = $this->getMachineFind(['machine_id' => $this->params['machine_id']],'m_id,machine_id,machine_name,device_type,ao_id');
+        if (!$this->machine) return $this->returnData(40,$this->lang("msg.40") . " : " . $this->params['machine_id']);
+
+
+        $updateOrder = [];
+        $this->startTrans();
+//        if ($this->order['total_price'] > 0) {
+//            $flag[] = $this->countIncome();
+//        }
+        $updatePc['status'] = $this->machine['device_type'] == 1 ? 5 : 2;
         $updatePc['m_id'] = $this->machine['m_id'];
         $updatePc['machine_id'] = $this->machine['machine_id'];
         $updatePc['machine_name'] = $this->machine['machine_name'];
         $updatePc['apc_id'] = $pickCode['apc_id'];
-        $this->startTrans();
-        if ($this->order['total_price'] > 0) {
-            $flag[] = $this->countIncome();
+        // 设备为售卖机，下发出货数据，不允许另一台设备取货
+        if ($this->machine['device_type'] == 1) {
+            if ($this->machine['m_id'] != $this->order['m_id']) {
+                $this->rollbackTrans();
+                return $this->returnData(40,$this->lang("msg.40") . ":" . $this->params['machine_id']);
+            }
+            $result = $this->outGoods();
+            if ($result !== true) {
+                $this->rollbackTrans();
+                return $this->returnData(19, $this->lang("msg.19"));
+            }
+            $updateOrder['out_status'] = $this->order['out_status'];
+            $updateApiA['status'] = "PROCESSING";
         }
+        // 设备应用类型为门店
+        else if ($this->machine['device_type'] == 2) {
+            $updateOrder['out_status'] = 4;
+            $updateOrder['out_time'] = time();
+            $updateApiA['status'] = "PICKED";
+            $updateApiA['pick_time'] = date("Y-m-d H:i:s");
+            $updatePc['used_time'] = time();
+            // 核销的设备编号不是原订单设备编号
+            if ($this->machine['m_id'] != $this->order['m_id']) {
+                // 重置订单设备信息
+                $updateOrder['m_id'] = $this->machine['m_id'];
+                $updateOrder['machine_id'] = $this->machine['machine_id'];
+                $updateOrder['machine_name'] = $this->machine['machine_name'];
+                $updateOrder['ao_id'] = $this->machine['ao_id'];
+                // 循环重置新设备货道信息
+                $whereMc['m_id'] = $updateOrder['m_id'];
+                $whereMc['status'] = 1;
+                foreach ($details as $key => $value) {
+                    // 原货道冻结库存释放到正常库存
+                    $flag[] = $this->setMachineChannelInc(['mc_id' => $value['mc_id']], 'stock', $value['quantity']);
+                    actionLog($this->getLS(), '【SQL】增加旧货道库存值');
+                    $flag[] = $this->setMachineChannelDec(['mc_id' => $value['mc_id']], 'frozen_stock', $value['quantity']);
+                    actionLog($this->getLS(), '【SQL】减少旧货道冻结库存');
+
+                    // 查询新货道信息
+                    $whereMc['g_id'] = $value['g_id'];
+                    $mc = $this->getMachineChannelFind($whereMc, '
+                    mc_id,channel_code,stock,shelf_way,channel_position,manufacture_time,sell_by_date,
+                    mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
+                    cost_price,market_price');
+                    if (!$mc) {
+                        actionLog($this->getLS(), '【SQL】查无新货道信息');
+                        $this->rollbackTrans();
+                        return $this->returnData(38, $this->lang("msg.38") . " : " . $value['g_name']);
+                    }
+                    $mc = $mc->toArray();
+                    if ($mc['stock'] < $value['quantity']) {
+                        $this->rollbackTrans();
+                        return $this->returnData(39, $this->lang("msg.39") . " : " . $value['g_name']);
+                    }
+                    // 减新货道库存
+                    $flag[] = $this->setMachineChannelDec(['mc_id' => $mc['mc_id']], 'stock', $value['quantity']);
+                    actionLog($this->getLS(), '【SQL】减新货道冻结库存');
+
+                    // 修改订单详情数据
+                    unset($mc['stock']);
+                    $updateSod = $mc;
+                    $updateSod['sod_id'] = $value['sod_id'];
+                    $updateSod['success_quantity'] = $value['quantity'];
+                    $flag[] = $this->updateSaleOrdersDetails($updateSod);
+                    actionLog($this->getLS(), '【SQL】修改订单详情出货成功数量1');
+                }
+            }
+            // 核销的设备编号是原订单设备编号
+            else {
+                // 减货道冻结库存，修改订单详情数据
+                foreach ($details as $key => $value) {
+                    $flag[] = $this->setMachineChannelDec(['mc_id' => $value['mc_id']],'frozen_stock',$value['quantity']);
+                    actionLog($this->getLS(),'【SQL】减货道冻结库存');
+                    $updateSod['success_quantity'] = $value['quantity'];
+                    $updateSod['sod_id'] = $value['sod_id'];
+                    $flag[] = $this->updateSaleOrdersDetails($updateSod);
+                    actionLog($this->getLS(),'【SQL】修改订单详情出货成功数量2');
+                }
+            }
+        } else {
+            return $this->returnData(19,$this->lang("msg.19") . ":" .  $this->lang("use_pick_code.device_type_unDefine"));
+        }
+        // 修改取货码使用记录
+        $updatePc['receive_type'] = 2;
         $flag[] = $this->updateActivityPickCode($updatePc);
         actionLog($this->getLS(),'修改提货码使用记录');
-        $result = $this->outGoods();
-        if ($result !== true) {
-            $this->rollbackTrans();
-            return $this->returnData(19,$this->lang("msg.19"));
+        // 修改订单数据
+        if ($updateOrder) {
+            $updateOrder['order_id'] = $this->order['order_id'];
+            $flag[] = $this->updateSaleOrders($updateOrder);
+            actionLog($this->getLS(),'修改订单记录');
         }
-        if (isset($this->order['details'])) unset($this->order['details']);
-        $flag[] = $this->updateSaleOrders($this->order);
-        actionLog($this->getLS(),'修改订单记录');
-        $flag[] = $this->updateApiAdvance(['status' => "PROCESSING"], ['apc_id' => $pickCode['apc_id']]);
+        // 售卖机为取货中，门店为已取货
+        $this->machine['device_type'] == 1 ? $updateApiA['status'] = "PROCESSING" : $updateApiA['status'] = "PICKED";
+
+        $flag[] = $this->updateApiAdvance($updateApiA, ['apc_id' => $pickCode['apc_id']]);
         actionLog($this->getLS(),'修改预订商品记录');
+        actionLog($flag,'事务处理');
         $check = $this->checkFlag($flag);
         if ($check) {
             $this->commitTrans();

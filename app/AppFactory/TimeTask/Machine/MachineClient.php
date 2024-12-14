@@ -201,4 +201,12 @@ class MachineClient extends TimeTaskBase
         }
         return "处理成功";
     }
+
+//    public function machineUploadQueue()
+//    {
+//        $where[] = ['status',"in",[1,3]];
+//        $list = $this->getMachineList($where,0,'m_id,machine_id,mac_address,(' . time() . ") timeStamp " );
+//        if ($list) $list = $list->toArray();
+//        cache("machineUploadQueueList",$list);
+//    }
 }

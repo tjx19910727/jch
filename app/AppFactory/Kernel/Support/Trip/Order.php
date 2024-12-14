@@ -63,4 +63,18 @@ class Order extends Common
         $url = "/order/availableCheck";
         return $this->requestPost($url,$params);
     }
+
+    /**
+     * 获取组合商品信息列表
+     * @param $params
+     *      string    productSn    商品编号   非必传
+     *      int       pageSize     每页大小   必传
+     *      int       pageNo       页码       必传
+     * @return array|bool|string
+     */
+    public function getMallProductList($params)
+    {
+        $url = "/order/getMallProductList";
+        return $this->requestPost($url,$params);
+    }
 }

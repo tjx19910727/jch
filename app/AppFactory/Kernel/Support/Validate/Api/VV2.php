@@ -37,6 +37,8 @@ class VV2 extends SupportValidate
 
             "aId" => "require",
             "aType" => "require",
+
+            "pick_code" => "require",
         ];
 
         protected $message = [
@@ -62,6 +64,8 @@ class VV2 extends SupportValidate
 
             "aId.require" => "activity_code.aId_require",
             "aType.require" => "activity_code.aType_require",
+
+            "pick_code.require" => "use_pick_code.pick_code_require",
         ];
 
         protected $scene = [
@@ -75,5 +79,6 @@ class VV2 extends SupportValidate
             "hotelNotify" => ["order_no","reservation_status"],
             "get_goods_multiple" => ["kiosk_id"],
             "get_activity_code" => ["aId","aType"],
+            "use_pick_code" => ["machine_id","pick_code"],
         ];
 }

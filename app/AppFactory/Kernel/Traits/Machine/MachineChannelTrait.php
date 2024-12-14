@@ -14,6 +14,31 @@ use app\AppFactory\Kernel\Support\Validate\Machine\VChannel;
 
 trait MachineChannelTrait
 {
+
+    /**
+     * 增加指定字段数值
+     * @param $where
+     * @param $field
+     * @param int $inc
+     * @return mixed
+     */
+    public function setMachineChannelInc($where,$field,$inc = 1)
+    {
+        return MachineChannelModel::setInc($where,$field,$inc);
+    }
+
+    /**
+     * 减少指定字段数值
+     * @param $where
+     * @param $field
+     * @param int $dec
+     * @return mixed
+     */
+    public function setMachineChannelDec($where,$field,$dec = 1)
+    {
+        return MachineChannelModel::setDec($where,$field,$dec);
+    }
+
     public function getMachineChannelCount($where)
     {
         return MachineChannelModel::getCount($where);

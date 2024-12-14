@@ -93,13 +93,40 @@ class V2 extends Common
 //            "timestamp" => time(),
 //            "params" => json_encode($params, 320),
 //        ];
-        $params = [
-            "pageNum" => 15,
-            "page" => 1,
-        ];
+        $machine_id = input("machine_id","test0001");
+        $goods_id = input("goods_id");
+        $type = input("type");
+        if ($type == 1) {
+            // 预订商品
+            $params = [
+                "kiosk_id" => $machine_id,
+                "order_no" => "20241214101258" . random_int(000000, 999999),
+                "payment_method" => "wechat",
+                "expire_time" => date("Y-m-d H:i:s", strtotime("+1 days")),
+                "charge_time" => date("Y-m-d H:i:s"),
+                "order_detail" => json_encode([
+                    $goods_id => [
+                        "quantity" => 1,
+                        "item_price" => 3,
+                        "discount_amount" => 0,
+                        "charge_amount" => 3,
+                        "type" => "sale",
+                    ],
+                ], 320),
+            ];
+            $apiName = "reserve_order";
+        }
+        if ($type == 2) {
+            // 使用提货码
+            $params = [
+                "pick_code" => input("pick_code",000000),
+                "machine_id" => $machine_id,
+            ];
+            $apiName = "use_pick_code";
+        }
         $data = [
-            "auth_name" => "ctrip",
-            "auth_password" => "Karrie&C2023",
+            "auth_name" => "Lc_test",
+            "auth_password" => "123456",
             "timestamp" => time(),
             "params" => json_encode($params, 320),
         ];
@@ -115,7 +142,7 @@ class V2 extends Common
         $signStr = $string1 . implode(",", $signArr);
         dump($signStr);
         $data['sign'] = strtoupper(md5($signStr));
-        $data['api'] = "get_machines";
+        $data['api'] = $apiName;
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));

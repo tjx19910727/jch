@@ -253,6 +253,7 @@ trait SaleOrdersTrait
             "pay_status" => 3,
             "pay_time" => strtotime($this->config['params']['charge_time']) ?? "",
             "pay_code" => $this->params['pick_code'],
+            "goods_type" => $this->params['goods_type'] ?? 1,
             "cost_price" => 0,
             "market_price" => 0,
             "retail_price" => 0,
