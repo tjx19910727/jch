@@ -96,6 +96,44 @@ class GoodsClient extends ManagementClient
     }
 
     /**
+     * 删除商品
+     * @param $where
+     * @return array|\think\response\Json
+     */
+    public function delG($where)
+    {
+        $goods = $this->getGoodsList($where,0,'g_id,pic,banner,details_pic,`desc`');
+        if ($goods) {
+            $goods = $goods->toArray();
+            $delList = [];
+            foreach ($goods as $key => $value) {
+                if ($value['pic'] && file_exists($value['pic'])) {
+                    $delList = array_merge($delList,$value['pic']);
+                }
+                if ($value['banner']) {
+                    $delList = array_merge($delList,explode(";",$value['banner']));
+                }
+                if ($value['details_pic']) {
+                    $delList = array_merge($delList,explode(";",$value['details_pic']));
+                }
+                if ($value['desc']) {
+                    $delList = array_merge($delList,getImagesFromRichText($value['desc']));
+                }
+            }
+            $result = $this->delGoods($where);
+            if ($result) {
+                foreach ($delList as $v) {
+                    if (file_exists($v) && is_file($v)) {
+                        @unlink($v);
+                    }
+                }
+                return $this->r(200,$this->lang("del_success"));
+            }
+        }
+        return $this->r(100,$this->lang("del_fail"));
+    }
+
+    /**
      * 导入Excel
      * @param $data
      * @return array|string

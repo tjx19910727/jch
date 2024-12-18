@@ -124,6 +124,15 @@ class V2 extends Common
             ];
             $apiName = "use_pick_code";
         }
+        if ($type == 3) {
+            $apiName = "get_inventory_list";
+            $params = [
+                "machine_id" => $machine_id,
+                "shelf_on" => 1,
+                "pageNum" => 15,
+                "page" => 1,
+            ];
+        }
         $data = [
             "auth_name" => "Lc_test",
             "auth_password" => "123456",

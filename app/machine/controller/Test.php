@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Model\Activity\Coupon\ActivityCouponUsedModel;
 use app\AppFactory\Kernel\Model\Activity\Lottery\ActivityLotteryUsedModel;
 use app\AppFactory\Kernel\Model\Advertisement\AdvertisementPushModel;
 use app\AppFactory\Kernel\Model\Auth\AuthOrganizationModel;
+use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
@@ -37,6 +38,13 @@ class Test extends BaseController
     public $machine;
     public $mqQueue;
 
+    public function testAfterRead()
+    {
+        $goods = GoodsModel::getFind(["g_id" => 612]);
+        dump($goods);
+        $list = GoodsModel::getList([['g_id','between',[612,615]]]);
+        dump($list);
+    }
     public function testWhere()
     {
         $contentGid = [156,158,607];
@@ -236,7 +244,7 @@ class Test extends BaseController
             "carList" => json_encode($carList, 320),
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data, 320));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
 
         $machine = MachineModel::getFind(['machine_id' => $machine_id]);
@@ -246,7 +254,7 @@ class Test extends BaseController
             "mac" => $machine['mac_address'],
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data, 320));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
         // 获取库存盘点
         echo "获取库存盘点";
@@ -256,7 +264,7 @@ class Test extends BaseController
             "mac" => $machine['mac_address'],
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data, 320));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
         echo "反扫支付";
         $data = [
@@ -265,7 +273,7 @@ class Test extends BaseController
             "order_id" => $order_id,
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data, 320));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
         echo "获取组合商品";
         $data = [
@@ -275,7 +283,7 @@ class Test extends BaseController
             "pageNum" => $pageNum,
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data, 320));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
         // 获取酒店列表
         echo "获取酒店列表";
@@ -291,7 +299,7 @@ class Test extends BaseController
             "pageNum" => $pageNum,
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data, 320));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 //        // 获取酒店详情
         echo "获取酒店详情";
         $data = [
@@ -299,7 +307,7 @@ class Test extends BaseController
             "hotelId" => $hotelId,
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data, 320));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
         // 获取酒店可定售卖房型列表
         echo "获取酒店可定售卖房型列表";
         $data = [
@@ -311,7 +319,7 @@ class Test extends BaseController
             "checkOutDate" => $checkOutDate,
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data, 320));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
         // 订单增加酒店内容
         echo "提交携程套餐商品数据";
@@ -362,7 +370,7 @@ class Test extends BaseController
             ],
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data, 320));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
         // 发起支付
         echo "发起支付";
         $data = [
@@ -371,7 +379,7 @@ class Test extends BaseController
             "mobile" => $mobile,
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
         // 获取小票文本
         echo "获取小票文本";
@@ -380,7 +388,7 @@ class Test extends BaseController
             "order_id" => $order_id,
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
         // 验证房间可订
         echo "验证房间可订";
@@ -406,7 +414,7 @@ class Test extends BaseController
             ],
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
         echo "提交固定组合商品订单";
         $car[] = [
@@ -444,7 +452,7 @@ class Test extends BaseController
             "hotel" => $hotel,
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
         echo "上传文件";
         $data = [
@@ -452,14 +460,14 @@ class Test extends BaseController
             "machine_id" => $machine_id,
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
 
         echo "获取设备信息";
         $data = [
             "machine_id" => $machine_id,
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data));
+        echo '<br>',json_encode($data,320),'<br>','<br>';
     }
 
     public function testStock()
@@ -627,6 +635,31 @@ class Test extends BaseController
         dump($time1);
         dump($time2);
         dump($time2 - $time1);
+    }
+
+    public function testMoreSend()
+    {
+        $machine_id = input("machine_id");
+        $num = input("num");
+        $signKey = MachineModel::getFieldValue(['machine_id' => $machine_id], 'signKey');
+        $time1 = time();
+        for ($i=0; $i < $num;$i++) {
+            $data = [
+                "timestamp" => time(),
+                "msg_id" => uniqid(),
+                "machine_id" => $machine_id,
+                "data" => [
+                    "msgType" => "updateAD",
+                ]
+            ];
+            $data['sign'] = SignUtil::makeSign($data, $signKey);
+            $result = MqProducer::dataSend($data,$data['machine_id']);
+            $temp[] = ['data' => $data,'result' => $result];
+        }
+        $time2 = time();
+        dump($time2 - $time1);
+        dump($temp);
+
     }
 
     public function testMachineReceive()
@@ -830,7 +863,7 @@ class Test extends BaseController
             "hotel" => json_encode($hotel, 320),
         ];
         $data = $this->makeSign($data);
-        dump(json_encode($data, 320));
+        echo json_encode($data,320),'<br>';
     }
 
     public function testScanDir()

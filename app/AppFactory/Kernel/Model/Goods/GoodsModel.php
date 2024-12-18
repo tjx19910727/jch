@@ -157,4 +157,72 @@ class GoodsModel extends BaseModel
         $redis->close();
     }
 
+
+    /**
+     * 查询之后操作
+     * @param Model $model
+     */
+    public static function onAfterRead(Model $model)
+    {
+        if ($model->pic) {
+            $model->pic = checkStrDomain($model->pic);
+        }
+        if ($model->banner) {
+            $banner = explode(";",$model->banner);
+            $temp = [];
+            foreach ($banner as $v) {
+                $temp[] = checkStrDomain($v);
+            }
+            if ($temp) $model->banner = implode(";",$temp);
+        }
+        if ($model->details_pic) {
+            $details = explode(";",$model->details_pic);
+            $detailsTemp = [];
+            foreach ($details as $dV) {
+                $detailsTemp[] = checkStrDomain($dV);
+            }
+            if ($detailsTemp) $model->details_pic = implode(";", $detailsTemp);
+        }
+        if ($model->desc) {
+            $descList = getImagesFromRichText($model->desc);
+            foreach ($descList as $dV2) {
+                $new = checkStrDomain($dV2);
+                $model->desc = str_replace($dV2,$new,$model->desc);
+            }
+        }
+    }
+
+    /**
+     * 删除后清除上传的图片
+     * @param Model $model
+     */
+    public static function onAfterDelete(Model $model)
+    {
+        if ($model->pic) {
+            $unlink[] = checkStrDomain($model->pic);
+        }
+        if ($model->banner) {
+            $banner = explode(";",$model->banner);
+            foreach ($banner as $v) {
+                $unlink[] = checkStrDomain($v);
+            }
+        }
+        if ($model->details_pic) {
+            $details = explode(";",$model->details_pic);
+            foreach ($details as $dV) {
+                $unlink[] =  checkStrDomain($dV);
+            }
+        }
+        if ($model->desc) {
+            $descList = getImagesFromRichText($model->desc);
+            foreach ($descList as $dV2) {
+                $unlink[] =  checkStrDomain($dV2);
+            }
+        }
+        foreach ($unlink as $v) {
+            if (file_exists($v) && is_file($v)) {
+                @unlink($v);
+            }
+        }
+    }
 }

@@ -25,7 +25,7 @@ class Goods extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData);
-        $this->field .= ",`desc`";
+        $this->field .= ",`desc`,details_pic";
         return $this->app->goods->getFind($where,$this->field);
     }
 
@@ -75,7 +75,7 @@ class Goods extends Common
         $g_id = input("g_id");
         if (strpos($g_id,",")) $where[] = ['g_id',"in",$g_id];
         else $where['g_id'] = $g_id;
-        $result = $this->app->goods->del($where);
+        $result = $this->app->goods->delG($where);
         return $result;
     }
 

@@ -58,7 +58,6 @@ use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\machine\validate\VReceive;
-use think\db\exception\DbException;
 use think\facade\View;
 
 class ApiClient extends ReceiveBaseClient
@@ -623,7 +622,7 @@ class ApiClient extends ReceiveBaseClient
      */
     public function adv()
     {
-        $where['machine_id'] = $this->machine['machine_id'];
+        $where['m_id'] = $this->machine['m_id'];
         $where[] = ['status', "<", 3];
         $where[] = ['start_date', '<=', time()];
         $field = "adv_id,adv_title,res_id,res_title,file_path,type,duration_time,total_times,play_times,remain_times,start_date,end_date,start_time,end_time,push_type,position,screen,screen_full,status";
@@ -897,15 +896,20 @@ class ApiClient extends ReceiveBaseClient
 //            actionException($e,1);
 //            return $this->rTryCatch($e->getMessage());
 //        }
-        $params = [
-            "pageSize" => $this->data['pageNum'] ?? 15,
-            "pageNo" => $this->data['page'] ?? 1,
-        ];
-        if (isset($this->data['productSn']) && $this->data['productSn']) $params['productSn'] = $this->data['productSn'];
-        $result = Trip::order()->getMallProductList($params);
-        $result = json2arr($result);
-        $this->data['list'] = $result['result'];
-        return $this->r(200,$this->lang("query_success"),$this->data);
+        try {
+            $params = [
+                "pageSize" => $this->data['pageNum'] ?? 15,
+                "pageNo" => $this->data['page'] ?? 1,
+            ];
+            if (isset($this->data['productSn']) && $this->data['productSn']) $params['productSn'] = $this->data['productSn'];
+            $result = Trip::order()->getMallProductList($params);
+            $result = json2arr($result);
+            $this->data['list'] = $result['result'];
+            return $this->r(200, $this->lang("query_success"), $this->data);
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 
     /**
@@ -915,6 +919,7 @@ class ApiClient extends ReceiveBaseClient
      */
     public function subGoodsMultipleOrder()
     {
+        return $this->r(100,'此接口已废除');
         $gm = $this->getGoodsMultipleFind(["gm_id" => $this->data['gm_id']]);
         if (!$gm) return $this->r(100,$this->lang("gm_not_data"));
         $gmm = $this->getGoodsMultipleMachineFind(['gm_id' => $this->data['gm_id'],'m_id' => $this->machine['m_id']]);

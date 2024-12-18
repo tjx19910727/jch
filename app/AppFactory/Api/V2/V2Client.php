@@ -70,8 +70,9 @@ class V2Client extends V2BaseClient
             $where[] = ['status', '<>', 2];
             $data = $this->getMachineChannelList($where,$this->params['pageNum'], $field, 'stock desc');
             $data = $data->each(function ($item) {
-                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,`desc`');
+                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,`desc`,details_pic');
                 $item['pic'] = $goods['pic'] ?? '';
+                $item['details_pic'] = $goods['details_pic'] ?? '';
                 $item['banner'] = $goods['banner'] ?? '';
                 $item['sku2'] = $goods['sku2'] ?? '';
                 $item['g_desc'] = $goods['desc'] ?? '';
@@ -112,9 +113,8 @@ class V2Client extends V2BaseClient
                 $machine['oo_status'] = $machine['oo_status'] == 1 ? "online" : "offline";
                 $machine['ai_status'] = $machine['ai_status'] == 1 ? "active" : "maintain";
                 $machine['ai_time'] = date("Y-m-d H:i:s", $machine['ai_time']);
-                $domain = request()->domain();
-                if ($machine['logo_url']) $machine['logo_url'] = $domain . $machine['logo_url'];
-                if ($machine['icon_url']) $machine['icon_url'] = $domain . $machine['icon_url'];
+                if ($machine['logo_url']) $machine['logo_url'] = checkStrDomain($machine['logo_url']);
+                if ($machine['icon_url']) $machine['icon_url'] = checkStrDomain($machine['icon_url']);
                 $whereDailyCount = $whereSdc;
                 $whereDailyCount['machine_id'] = $machine['machine_id'];
                 $sdc = $this->getSaleOrdersDailyCountFind($whereDailyCount,

@@ -213,7 +213,7 @@ class Common extends AuthController
             $path = "";
             if (in_array($extension,['jpg','jpeg','gif','png'])) {
                 validate(VCommon::class)->rule(['image' => 'fileSize:' . env("fileSystem.maxImageSize")])->scene("uploadImage")->check(['image' => $file]);
-                $path = env("APP.host");
+//                $path = env("APP.host");
             }
             $diskName = env("fileSystem.diskName");// 上传本地
             //            $diskName = "aliyun";    // 上传OSS服务器

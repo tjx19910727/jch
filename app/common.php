@@ -434,3 +434,43 @@ function showMsg($msg = "",$redirectUrl = "", $time = 120)
     header("Location: $url");
     die();
 }
+
+/**
+ * 获取富文本中的图片路径
+ * @param $htmlContent
+ * @return array
+ */
+function getImagesFromRichText($htmlContent) {
+    // 正则表达式匹配所有img标签
+    preg_match_all('/<img[^>]+>/i', $htmlContent, $imgTags);
+
+    $temp = [];
+    // 提取src属性值
+    foreach ($imgTags[0] as $imgTag) {
+        // 使用正则表达式提取src属性
+        preg_match('/src="([^"]+)"/i', $imgTag, $match);
+        if (!empty($match[1])) {
+            $imagePath = $match[1];
+//            if (file_exists($imagePath) && is_file($imagePath)) {
+                $temp[] = $imagePath;
+//            }
+        }
+    }
+    return $temp;
+}
+
+/**
+ * 检查字符串中是否存在host域名，不存在则补充
+ * @param $str
+ * @return string
+ */
+function checkStrDomain($str)
+{
+    if ($str) {
+        $host = env("app.host");
+        if (strpos($str, $host) === false) {
+            $str = rtrim($host,'/') . "/" . ltrim($str,"/");
+        }
+    }
+    return $str;
+}

@@ -2,23 +2,214 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="0b425c8e-253d-4f3f-a4bc-dbf750314eff" name="Default" comment="">
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/AppFactory/RabbitMq/MachineUpload.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/command/MachineUpload.php" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/guessDetails-f498519a.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-0b86dad4.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-12b65aa9.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-28da6d41.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-37ef08dc.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-49996883.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-66e5e454.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-79cf1408.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-7fec02fc.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-88a0357d.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-96456f6a.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-a9e2ac9e.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-bad05ebe.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-c2a79d83.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-c5ca4792.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-ce5c8749.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-df694bff.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-ee27c429.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-f1f51c82.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-f38448ae.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-fb58a7c5.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/index-fd574668.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/public/vue/assets/machine_top.vue_vue_type_script_setup_true_lang-e688091c.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/AppFactory/Api/V2/V2Client.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Api/V2/V2Client.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Suggest/SuggestModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Suggest/SuggestModel.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Trip/Order.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Trip/Order.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Validate/Api/VV2.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Validate/Api/VV2.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineChannelTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineChannelTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Suggest/SuggestTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Suggest/SuggestTrait.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Goods/GoodsModel.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Goods/GoodsModel.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsClient.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsClient.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/api/controller/V2.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/controller/V2.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/lang/zh-cn.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/lang/zh-cn.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/common.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/common.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/machine/controller/Test.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/machine/controller/Test.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/management/controller/Common.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/Common.php" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/management/controller/goods/Goods.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/controller/goods/Goods.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/lang/zh-cn.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/lang/zh-cn.php" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/management/validate/VGoods.php" beforeDir="false" afterPath="$PROJECT_DIR$/app/management/validate/VGoods.php" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/404-f0b1a3f7.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/404-f1b27e22.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/account-8c2e99b2.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/account-9c950232.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/advment-31404220.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/advment-574816ab.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/assignDevices-b4e1493a.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/assignDevices-023526dc.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/earth-69c7e6ba.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/earth-599efdf8.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/edit-33dededf.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/edit-4c1a8a5e.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/eventlog-aeb43f97.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/eventlog-38c72840.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/excel-fe47e211.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/excel-f4dde170.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/export.vue_vue_type_script_setup_true_lang-553c6571.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/export.vue_vue_type_script_setup_true_lang-c15c9c97.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/getupdateplan-6532e761.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/getupdateplan-0bd806c7.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/goods-4f4af2b7.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/goods-26e9a74c.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/goods-groupM-b1a27818.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/goods-groupM-88554ff9.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/goods.vue_vue_type_script_setup_true_lang-1a716cb2.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/goods.vue_vue_type_script_setup_true_lang-b6424b93.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/goods_ctrips-722fb78e.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/goods_ctrips-ee08ab58.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/guessDetails-4602bdd6.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/hierarchy-e14d6492.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/hierarchy-068abe38.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/images_Js-180b286e.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/images_Js-1badd543.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-02a021b6.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-36a545db.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-03268044.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-c7421771.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-06f20ed7.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-c3cb4a9f.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-07014f7d.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-cacff577.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-09de4619.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-2860c93c.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0c7859f5.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-272c6b28.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0ec76e12.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0eea8a64.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-0fbf289e.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-93024f06.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-120d4f41.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-128f4c37.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-8e99a0d8.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-164889b0.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-07fda983.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-17d1ddc4.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-2515a980.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-190fa90e.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-1452cfac.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1a925a4f.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-95451fca.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-1e8feade.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-23567ca7.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-241df2db.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-54ac0907.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-258b0a91.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-688da108.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-274fa116.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-a23ea2fd.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2e361469.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-9fa284ee.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2e50f86c.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-14d5018e.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-2ed1cfc8.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-e45e31df.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-30440e3d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-307cb28f.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-edffefcc.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-343ba3de.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-3fd0075d.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-35ba0cd4.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-2056a64f.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3683c871.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3cc52b26.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-ff601073.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-3edd48f8.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-5a92df26.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-489d8100.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-9ca3d1ba.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4945b1af.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-475fc389.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4ab9d171.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-e9c03782.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4cc0953d.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-27649dee.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-4d9eae0d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-534529fa.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-da58ae14.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5378054a.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-35dd2fd4.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5659f1be.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-0c728f96.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5740f00b.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-c6b3d29d.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-58252ac9.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-c1c6378a.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5c703e16.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-eb08b645.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5dec8e87.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-a979357f.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-5f952054.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-edf50a9a.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-60fb4f8d.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6471392c.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-55d113c9.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-653a8eb4.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-1067707f.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6ce6190a.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-255e65f8.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6eafde17.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-0fd7b34c.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-6ec61168.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-32664157.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-71a6727c.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-f90ad535.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-71ce8c6b.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-16e31c05.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-72874cf3.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-a1be7a86.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-72b0c621.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7787801c.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-4841a5a4.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7aa1e756.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-9e2a7645.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7c56a961.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-6817c13d.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7dc7ef05.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-f7af1256.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7e5cd58b.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-8204c07f.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7f18618b.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-98ff25d0.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-7f59308d.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-e7405438.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-81b47826.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-dd3604a2.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-8222337f.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-9f492eb7.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-8393b2d3.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-5eb1f98f.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-854f659e.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-85bf8c65.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-887dc2e7.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-092c900d.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-88f33440.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-a7fed102.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-890a4879.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-705944f4.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-89b354ff.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-44074c0a.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-8bc8c0fc.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-513451f3.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-8f1faf62.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-90248a06.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-ff75d6ce.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9755a7ad.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-5802771c.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-9a6f79ae.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-b445f69b.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a01b6f6a.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-95bd3fe0.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a2cc80c4.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-bde0e938.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a34499a0.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a4e399aa.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-513d7b4d.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a539837b.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-729b49e5.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-a6a5c164.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-84824a0a.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-aac393f9.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-25df67a8.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ab4434b7.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-ba5b94a5.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ad276597.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-3d564b6a.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-af8e8a5c.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-a7629497.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b4cad0ff.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-c3e972a8.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b5b30bd1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b6629ba8.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-9a7aab51.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-b8a656e1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-bd71c6f8.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-2c68391e.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c19cd78b.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-948adfc8.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c35d8b2c.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-0032677a.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c59bca03.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c74b415c.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-c8e1c857.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-c969be22.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-cae9ecc1.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d125385a.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-ab023c10.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d2d1eda4.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-e6ea67a4.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d3130e39.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-922c6510.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-d58db5ec.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-d96c4fd8.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-dc834b8c.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-9b341ed1.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ddbe2fe3.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-767df400.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e18fe345.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-4b61bea2.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e3aa84c9.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-f1f0fbbd.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e3e0a647.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-f04e8e67.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e51f68ec.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e567cc1e.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-9bb63d10.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-e8e13362.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-d1c5460b.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ea16cdcd.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-855bf358.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-eb25c2b3.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-5bbeaa01.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ee7f7983.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-9863f971.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f0d03147.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-82bf200e.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f137907b.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-407894e0.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f19ee1bf.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-5a59baeb.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f26c1f27.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f62873d7.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-7adac07d.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f858a1eb.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-f460804b.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-f9437468.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-97169b1e.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-fae4b304.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-f4192c7f.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-fdc61ba8.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-b4f94bb7.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ff085e2a.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-81e63ae3.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ff1d344c.css" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-695a3c98.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index-ff50deeb.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index-b138df04.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-034bf6f7.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-66e1cdf1.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-27b32a22.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-e99e1a1e.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-39258b7c.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-36c7fd38.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-e0ebc2d7.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/index.vue_vue_type_script_setup_true_lang-db68b264.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/level-5ccfb298.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/level-3954fa9c.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/list_info.vue_vue_type_script_setup_true_lang-ba2615a1.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/list_info.vue_vue_type_script_setup_true_lang-b063c573.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/log-d426a54e.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/log-b53b01bd.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine-e05044bc.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/machine-b1112e19.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_custom-ace711e1.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/machine_custom-0d9a9a70.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_gmGoods-6acbf984.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/machine_gmGoods-1fcf6c95.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_software-4f480483.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/machine_software-ded56af5.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_top.vue_vue_type_script_setup_true_lang-cc2d8433.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_trade-528266e4.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/machine_trade-fb8e458f.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/machine_type-585c79a1.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/machine_type-372be4c3.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/manage-5fc86b26.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/manage-56d57419.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/manager-ece9cadd.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/manager-da24e477.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/marketing-0b77beb2.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/marketing-813d9220.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/order-f581172f.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/order-9cfa5b89.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/payee-279362b4.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/payee-7a2e958b.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/pickupCodeDetails-1cb582b5.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/pickupCodeDetails-62a43e6d.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/preferentialDetails-4f520111.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/preferentialDetails-8926f43c.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/presets-4a3b4ed1.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/presets-238d907c.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/preview-93fbf5cd.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/preview-3f5f4568.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/reductionDetails-d026f7a2.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/reductionDetails-e34f6e77.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/report-04d0af72.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/report-9d8b25dc.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/strategy-953c59ac.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/strategy-f39e1a5b.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/success-c1c0dabb.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/success-5b354df4.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/system-api-bb436b17.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/system-api-3d8544f6.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/system-err-383e695a.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/system-err-d61408b1.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/system-mail-6b22c7da.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/system-mail-850eb6cd.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/useRequset-665b2aff.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/useRequset-810303ed.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/assets/vuedraggable.umd-d2c22f44.js" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/assets/vuedraggable.umd-9da015d4.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/public/vue/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/public/vue/index.html" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
@@ -46,11 +237,33 @@
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file leaf-file-name="Receive.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
+      <file leaf-file-name="V2Client.php" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Api/V2/V2Client.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="350">
-              <caret line="679" column="36" selection-start-line="679" selection-start-column="20" selection-end-line="679" selection-end-column="36" />
+            <state relative-caret-position="220">
+              <caret line="118" column="72" lean-forward="true" selection-start-line="118" selection-start-column="72" selection-end-line="118" selection-end-column="72" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="V2.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/api/controller/V2.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="616">
+              <caret line="131" column="32" lean-forward="true" selection-start-line="131" selection-start-column="32" selection-end-line="131" selection-end-column="32" />
+              <folding>
+                <element signature="e#227#248#0#PHP" />
+                <element signature="e#2140#2194#0#PHP" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="common.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/common.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="448">
+              <caret line="449" column="25" lean-forward="true" selection-start-line="449" selection-start-column="25" selection-end-line="449" selection-end-column="25" />
             </state>
           </provider>
         </entry>
@@ -58,30 +271,61 @@
       <file leaf-file-name="Test.php" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="306">
-              <caret line="263" column="36" selection-start-line="263" selection-start-column="36" selection-end-line="263" selection-end-column="36" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ApiClient.php" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="422">
-              <caret line="911" column="18" selection-start-line="911" selection-start-column="18" selection-end-line="911" selection-end-column="18" />
+            <state relative-caret-position="396">
+              <caret line="43" column="21" selection-start-line="43" selection-start-column="21" selection-end-line="43" selection-end-column="21" />
               <folding>
-                <element signature="e#139#182#0#PHP" expanded="true" />
-                <element signature="e#39132#54082#0#PHP" />
+                <element signature="e#1127#1666#0#PHP" />
+                <element signature="e#1296#1522#1#PHP" />
+                <element signature="e#1672#2748#0#PHP" />
+                <element signature="e#1955#2494#0#PHP" />
+                <element signature="e#2199#2484#0#PHP" />
+                <element signature="e#2556#2675#0#PHP" />
+                <element signature="e#2754#3971#0#PHP" />
+                <element signature="e#3977#4760#0#PHP" />
+                <element signature="e#4033#4300#0#PHP" />
+                <element signature="e#4161#4260#1#PHP" />
+                <element signature="e#4440#4475#0#PHP" />
+                <element signature="e#4766#5878#0#PHP" />
+                <element signature="e#4819#5323#0#PHP" />
+                <element signature="e#4843#4943#1#PHP" />
+                <element signature="e#4967#5062#1#PHP" />
+                <element signature="e#5086#5191#1#PHP" />
+                <element signature="e#5215#5312#1#PHP" />
+                <element signature="e#5884#6761#0#PHP" />
+                <element signature="e#6855#6934#0#PHP" />
+                <element signature="e#8761#8785#0#PHP" />
+                <element signature="e#8922#9030#0#PHP" />
+                <element signature="e#9048#9305#0#PHP" />
+                <element signature="e#9519#9617#0#PHP" />
+                <element signature="e#9775#9914#0#PHP" />
+                <element signature="e#10052#10178#0#PHP" />
+                <element signature="e#10318#10480#0#PHP" />
+                <element signature="e#10638#10976#0#PHP" />
+                <element signature="e#11135#11222#0#PHP" />
+                <element signature="e#11391#11636#0#PHP" />
+                <element signature="e#11804#12153#0#PHP" />
+                <element signature="e#11818#11966#1#PHP" />
+                <element signature="e#11968#11983#0#PHP" />
+                <element signature="e#12171#13275#0#PHP" />
+                <element signature="e#12395#13264#1#PHP" />
+                <element signature="e#12931#13249#1#PHP" />
+                <element signature="e#12953#13081#1#PHP" />
+                <element signature="e#13103#13231#1#PHP" />
+                <element signature="e#13428#13550#0#PHP" />
+                <element signature="e#13708#13797#0#PHP" />
+                <element signature="e#13955#14607#0#PHP" />
+                <element signature="e#14320#14596#1#PHP" />
+                <element signature="e#14338#14450#1#PHP" />
+                <element signature="e#14468#14581#1#PHP" />
+                <element signature="e#14752#14823#0#PHP" />
+                <element signature="e#14842#15508#0#PHP" />
+                <element signature="e#15213#15497#1#PHP" />
+                <element signature="e#15231#15348#1#PHP" />
+                <element signature="e#15366#15483#1#PHP" />
+                <element signature="e#15526#15792#0#PHP" />
+                <element signature="e#15930#16019#0#PHP" />
+                <element signature="e#16159#16211#0#PHP" />
               </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="Common.php" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Trip/Common.php">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="176">
-              <caret line="14" column="19" selection-start-line="14" selection-start-column="11" selection-end-line="14" selection-end-column="19" />
             </state>
           </provider>
         </entry>
@@ -97,14 +341,6 @@
   </component>
   <component name="FindInProjectRecents">
     <findStrings>
-      <find>030</find>
-      <find>return</find>
-      <find>接收数据2</find>
-      <find>getMachineChannel</find>
-      <find>rec</find>
-      <find>2024120710475155441553</find>
-      <find>4694</find>
-      <find>2024120714252965395639</find>
       <find>JCHH2D-024</find>
       <find>JCHH1D-004</find>
       <find>lottery</find>
@@ -125,13 +361,18 @@
       <find>VSugge</find>
       <find>max</find>
       <find>use_pick</find>
-      <find>testSign</find>
       <find>getGoodsMultiple</find>
+      <find>testSign</find>
+      <find>echo json_encode($data,320),'&lt;br&gt;';</find>
+      <find>echo '&lt;br&gt;',json_encode($data,320),'&lt;br&gt;';</find>
+      <find>full</find>
+      <find>getAdv</find>
+      <find>onAfter</find>
+      <find>onAfterRead</find>
+      <find>onAfterUpdate</find>
+      <find>after</find>
     </findStrings>
     <replaceStrings>
-      <replace>ActivityLotteryUsed</replace>
-      <replace>ActivityFdContent</replace>
-      <replace>ActivityFdUsed</replace>
       <replace>MachineGroupMg</replace>
       <replace>GoodsCorner</replace>
       <replace>MachineChannelStockView</replace>
@@ -159,6 +400,9 @@
       <replace>VTripMultiple</replace>
       <replace>actionVideo</replace>
       <replace>length</replace>
+      <replace>echo json_encode($data,320),'&lt;br&gt;';</replace>
+      <replace>echo '&lt;br&gt;',json_encode($data,320),'&lt;br&gt;';</replace>
+      <replace>echo '&lt;br&gt;',json_encode($data,320),'&lt;br&gt;','&lt;br&gt;';</replace>
     </replaceStrings>
     <dirStrings>
       <dir>E:\project\project-70-cf.com\app</dir>
@@ -170,9 +414,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/app/http/controller/redis/MicroPay.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Machine/MachineBaseClient.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/WxClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Payment/AliClient.php" />
         <option value="$PROJECT_DIR$/.gitignore" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php" />
@@ -186,7 +427,6 @@
         <option value="$PROJECT_DIR$/app/http/controller/Test.php" />
         <option value="$PROJECT_DIR$/app/machine/controller/Receive.php" />
         <option value="$PROJECT_DIR$/app/machine/validate/VReceive.php" />
-        <option value="$PROJECT_DIR$/app/common.php" />
         <option value="$PROJECT_DIR$/app/machine/lang/zh-cn.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php" />
@@ -197,30 +437,34 @@
         <option value="$PROJECT_DIR$/app/AppFactory/Pay/SaleOrders/PaymentClient.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Goods/GoodsModel.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsClient.php" />
         <option value="$PROJECT_DIR$/app/management/controller/Index.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/RabbitMq/MachineUpload.php" />
         <option value="$PROJECT_DIR$/app/command/MachineUpload.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Trip/Order.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php" />
-        <option value="$PROJECT_DIR$/app/management/controller/goods/Goods.php" />
         <option value="$PROJECT_DIR$/app/management/lang/zh-cn.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineChannelTrait.php" />
         <option value="$PROJECT_DIR$/app/management/validate/VSuggest.php" />
-        <option value="$PROJECT_DIR$/app/management/controller/Common.php" />
         <option value="$PROJECT_DIR$/app/management/controller/suggest/Suggest.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Suggest/SuggestTrait.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Suggest/SuggestModel.php" />
         <option value="$PROJECT_DIR$/app/management/validate/VGoods.php" />
         <option value="$PROJECT_DIR$/app/api/lang/zh-cn.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Validate/Api/VV2.php" />
-        <option value="$PROJECT_DIR$/app/api/controller/V2.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php" />
-        <option value="$PROJECT_DIR$/app/AppFactory/Api/V2/V2Client.php" />
         <option value="$PROJECT_DIR$/.env" />
-        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
         <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/CommonTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php" />
+        <option value="$PROJECT_DIR$/app/common.php" />
+        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/Common.php" />
+        <option value="$PROJECT_DIR$/app/api/controller/V2.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Goods/GoodsModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsClient.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/goods/Goods.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Api/V2/V2Client.php" />
       </list>
     </option>
   </component>
@@ -348,6 +592,124 @@
               <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
               <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
               <item name="app" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="api" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="api" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Api" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Api" type="462c0819:PsiDirectoryNode" />
+              <item name="V2" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+              <item name="Support" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+              <item name="Support" type="462c0819:PsiDirectoryNode" />
+              <item name="Validate" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Kernel" type="462c0819:PsiDirectoryNode" />
+              <item name="Support" type="462c0819:PsiDirectoryNode" />
+              <item name="Validate" type="462c0819:PsiDirectoryNode" />
+              <item name="Api" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="machine" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="management" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+              <item name="goods" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="public" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="public" type="462c0819:PsiDirectoryNode" />
+              <item name="vue" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="vendor" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -479,12 +841,12 @@
       <workItem from="1733366594700" duration="10961000" />
       <workItem from="1733452671058" duration="48071000" />
       <workItem from="1733981875647" duration="24219000" />
-      <workItem from="1734137052796" duration="13079000" />
+      <workItem from="1734137052796" duration="37070000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="3339125000" />
+    <option name="totallyTimeSpent" value="3363116000" />
   </component>
   <component name="TodoView">
     <todo-panel id="selected-file">
@@ -506,10 +868,11 @@
       <window_info anchor="bottom" id="Version Control" order="8" weight="0.3290461" />
       <window_info anchor="bottom" id="Run" order="2" />
       <window_info anchor="bottom" id="Terminal" order="10" weight="0.32583067" />
-      <window_info anchor="right" id="Remote Host" order="5" weight="0.25266525" />
-      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.13326226" />
+      <window_info anchor="right" id="Remote Host" order="5" weight="0.22707888" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.13432837" />
       <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
       <window_info anchor="right" id="Database" order="3" weight="0.32995737" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.3290461" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
@@ -520,7 +883,6 @@
       <window_info anchor="right" x="0" y="0" width="434" height="896" id="Documentation" order="4" side_tool="true" visible="true" weight="0.32995737" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
-      <window_info anchor="bottom" id="Find" order="1" weight="0.3290461" />
     </layout>
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -545,218 +907,10 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Hotel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-283">
-          <caret line="71" column="45" selection-start-line="71" selection-start-column="45" selection-end-line="71" selection-end-column="45" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Trip/Hotel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1012">
-          <caret line="51" column="20" selection-start-line="51" selection-start-column="20" selection-end-line="51" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/goods/GoodsMultiple.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1119" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/command/ExportQueue.php">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Trip/Trip.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="176">
-          <caret line="13" column="3" selection-start-line="13" selection-start-column="3" selection-end-line="13" selection-end-column="3" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/AuthCode.php">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/index/controller/Test.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="286">
-          <caret line="18" column="34" selection-start-line="18" selection-start-column="34" selection-end-line="18" selection-end-column="34" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/FileDownload.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="132">
-          <caret line="11" column="13" selection-start-line="11" selection-start-column="13" selection-end-line="11" selection-end-column="13" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/command/Api.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-198" />
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/command/DataUpload.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="110">
-          <caret line="5" column="4" selection-start-line="5" selection-start-column="4" selection-end-line="5" selection-end-column="4" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Application.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="396">
-          <caret line="25" column="3" lean-forward="true" selection-start-line="25" selection-start-column="3" selection-end-line="25" selection-end-column="3" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/HotelClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="418">
-          <caret line="181" column="26" selection-start-line="181" selection-start-column="26" selection-end-line="181" selection-end-column="26" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="412">
-          <caret line="57" column="29" selection-start-line="57" selection-start-column="29" selection-end-line="57" selection-end-column="29" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Machine/MachineModel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="176">
-          <caret line="19" column="6" selection-start-line="19" selection-start-column="6" selection-end-line="19" selection-end-column="6" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="110">
-          <caret line="107" column="21" lean-forward="true" selection-start-line="107" selection-start-column="21" selection-end-line="107" selection-end-column="21" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/Machine.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="220">
-          <caret line="50" column="37" lean-forward="true" selection-start-line="50" selection-start-column="37" selection-end-line="50" selection-end-column="37" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/goods/Goods.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="352">
-          <caret line="21" column="27" lean-forward="true" selection-start-line="21" selection-start-column="27" selection-end-line="21" selection-end-column="27" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/TimeTask/Machine/MachineClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="462">
-          <caret line="203" lean-forward="true" selection-start-line="203" selection-end-line="203" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="482">
-          <caret line="123" column="41" lean-forward="true" selection-start-line="123" selection-start-column="41" selection-end-line="123" selection-end-column="41" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="607">
-          <caret line="282" column="106" selection-start-line="282" selection-start-column="106" selection-end-line="282" selection-end-column="106" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/lang/zh-cn.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="634">
-          <caret line="626" column="39" selection-start-line="626" selection-start-column="39" selection-end-line="626" selection-end-column="39" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/validate/VSuggest.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="264">
-          <caret line="17" column="35" lean-forward="true" selection-start-line="17" selection-start-column="35" selection-end-line="17" selection-end-column="35" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="176">
-          <caret line="18" column="6" selection-start-line="18" selection-start-column="6" selection-end-line="18" selection-end-column="6" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Suggest/SuggestModel.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="264">
-          <caret line="17" column="31" selection-start-line="17" selection-start-column="31" selection-end-line="17" selection-end-column="31" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Suggest/SuggestTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-484">
-          <caret line="31" column="20" lean-forward="true" selection-start-line="31" selection-start-column="20" selection-end-line="31" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/suggest/Suggest.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="792">
-          <caret line="42" column="9" selection-start-line="42" selection-start-column="9" selection-end-line="42" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/AuthController.php">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/controller/Common.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="220">
-          <caret line="198" column="5" lean-forward="true" selection-start-line="198" selection-start-column="5" selection-end-line="198" selection-end-column="5" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/management/validate/VGoods.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="355">
-          <caret line="28" column="46" lean-forward="true" selection-start-line="28" selection-start-column="46" selection-end-line="28" selection-end-column="46" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/BeforeOrderPaymentTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-754">
-          <caret line="28" column="20" selection-start-line="28" selection-start-column="20" selection-end-line="28" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-1018">
-          <caret line="63" column="23" selection-start-line="63" selection-start-column="23" selection-end-line="63" selection-end-column="23" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityPickCodeTrait.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="467">
           <caret line="54" column="20" selection-start-line="54" selection-start-column="20" selection-end-line="54" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Validate/Api/VV2.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="201">
-          <caret line="58" column="76" lean-forward="true" selection-start-line="58" selection-start-column="76" selection-end-line="58" selection-end-column="76" />
         </state>
       </provider>
     </entry>
@@ -807,50 +961,10 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/app/AppFactory/Api/V2/V2Client.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1521">
-          <caret line="532" column="65" lean-forward="true" selection-start-line="532" selection-start-column="65" selection-end-line="532" selection-end-column="65" />
-          <folding>
-            <element signature="e#17027#17096#0#PHP" />
-            <element signature="e#17101#18037#0#PHP" />
-            <element signature="e#18043#18139#0#PHP" />
-            <element signature="e#18144#18574#0#PHP" />
-            <element signature="e#18580#18658#0#PHP" />
-            <element signature="e#18663#23436#0#PHP" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/app/api/lang/zh-cn.php">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="223">
           <caret line="87" column="20" lean-forward="true" selection-start-line="87" selection-start-column="20" selection-end-line="87" selection-end-column="20" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/api/controller/V2.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="462">
-          <caret line="100" column="23" lean-forward="true" selection-start-line="100" selection-start-column="23" selection-end-line="100" selection-end-column="23" />
-          <folding>
-            <element signature="e#227#248#0#PHP" />
-            <element signature="e#2140#2194#0#PHP" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="350">
-          <caret line="679" column="36" selection-start-line="679" selection-start-column="20" selection-end-line="679" selection-end-column="36" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="306">
-          <caret line="263" column="36" selection-start-line="263" selection-start-column="36" selection-end-line="263" selection-end-column="36" />
         </state>
       </provider>
     </entry>
@@ -885,14 +999,807 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/MachineBaseClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="572">
+          <caret line="68" column="35" selection-start-line="68" selection-start-column="35" selection-end-line="68" selection-end-column="35" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/overtrue/wechat/src/Payment/Application.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1282">
+          <caret line="38" column="3" selection-start-line="38" selection-start-column="3" selection-end-line="38" selection-end-column="3" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="88">
+          <caret line="39" column="20" selection-start-line="39" selection-start-column="20" selection-end-line="39" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1012">
+          <caret line="97" column="44" selection-start-line="97" selection-start-column="44" selection-end-line="97" selection-end-column="44" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/JdCashierTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1342">
+          <caret line="15" column="6" selection-start-line="15" selection-start-column="6" selection-end-line="15" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="422">
-          <caret line="911" column="18" selection-start-line="911" selection-start-column="18" selection-end-line="911" selection-end-column="18" />
+        <state relative-caret-position="658">
+          <caret line="709" column="28" selection-start-line="709" selection-start-column="28" selection-end-line="709" selection-end-column="28" />
           <folding>
             <element signature="e#139#182#0#PHP" expanded="true" />
-            <element signature="e#39132#54082#0#PHP" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Pay/SaleOrders/PaymentClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1562">
+          <caret line="34" column="36" selection-start-line="34" selection-start-column="36" selection-end-line="34" selection-end-column="36" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/pay/controller/Payment.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="66">
+          <caret line="11" column="4" selection-start-line="11" selection-start-column="4" selection-end-line="11" selection-end-column="4" />
+          <folding>
+            <element signature="e#128#158#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/RabbitMq/MqProducer.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="38">
+          <caret line="24" column="27" selection-start-line="24" selection-start-column="27" selection-end-line="24" selection-end-column="27" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1893">
+          <caret line="205" column="36" selection-start-line="205" selection-start-column="36" selection-end-line="205" selection-end-column="36" />
+          <folding>
+            <element signature="e#3919#3972#0#PHP" />
+            <element signature="e#3977#7509#0#PHP" />
+            <element signature="e#7862#15036#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Receive.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="438">
+          <caret line="612" column="43" selection-start-line="612" selection-start-column="43" selection-end-line="612" selection-end-column="43" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="693">
+          <caret line="626" column="25" selection-start-line="626" selection-start-column="25" selection-end-line="626" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/public/updateImagePath.sql">
+      <provider selected="true" editor-type-id="LargeFileEditor">
+        <state relative-caret-position="747">
+          <caret line="7944" column="78" lean-forward="true" selection-start-line="7944" selection-start-column="78" selection-end-line="7944" selection-end-column="78" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/Test.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="572">
+          <caret line="99" column="57" selection-start-line="99" selection-start-column="57" selection-end-line="99" selection-end-column="57" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/BaseClient.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/CommonTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="707">
+          <caret line="90" column="48" selection-start-line="90" selection-start-column="48" selection-end-line="90" selection-end-column="48" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="769">
+          <caret line="186" column="7" selection-start-line="186" selection-start-column="7" selection-end-line="186" selection-end-column="7" />
+          <folding>
+            <element signature="e#5323#6324#0#PHP" />
+            <element signature="e#6604#7395#0#PHP" />
+            <element signature="e#7648#7673#0#PHP" />
+            <element signature="e#7678#8043#0#PHP" />
+            <element signature="e#8049#8078#0#PHP" />
+            <element signature="e#8083#8449#0#PHP" />
+            <element signature="e#8455#8483#0#PHP" />
+            <element signature="e#8488#8987#0#PHP" />
+            <element signature="e#8993#9023#0#PHP" />
+            <element signature="e#9028#9263#0#PHP" />
+            <element signature="e#11486#12842#0#PHP" />
+            <element signature="e#12855#13335#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/event.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-orm/src/model/concern/Attribute.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1144">
+          <caret line="22" column="6" selection-start-line="22" selection-start-column="6" selection-end-line="22" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-orm/src/model/concern/RelationShip.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-1144">
+          <caret line="36" column="6" selection-start-line="36" selection-start-column="6" selection-end-line="36" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-orm/src/Model.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-14">
+          <caret line="26" column="17" selection-start-line="26" selection-start-column="17" selection-end-line="26" selection-end-column="17" />
+          <folding>
+            <element signature="e#1860#1902#0#PHP" />
+            <element signature="e#1937#1983#0#PHP" />
+            <element signature="e#2017#2062#0#PHP" />
+            <element signature="e#2098#2141#0#PHP" />
+            <element signature="e#2170#2211#0#PHP" />
+            <element signature="e#2243#2286#0#PHP" />
+            <element signature="e#2319#2361#0#PHP" />
+            <element signature="e#2388#2429#0#PHP" />
+            <element signature="e#2455#2498#0#PHP" />
+            <element signature="e#2526#2571#0#PHP" />
+            <element signature="e#2617#2662#0#PHP" />
+            <element signature="e#2702#2745#0#PHP" />
+            <element signature="e#2784#2826#0#PHP" />
+            <element signature="e#2863#2908#0#PHP" />
+            <element signature="e#2940#2991#0#PHP" />
+            <element signature="e#3028#3073#0#PHP" />
+            <element signature="e#3113#3160#0#PHP" />
+            <element signature="e#3200#3296#0#PHP" />
+            <element signature="e#3301#3392#0#PHP" />
+            <element signature="e#3398#3525#0#PHP" />
+            <element signature="e#3530#3774#0#PHP" />
+            <element signature="e#3607#3709#0#PHP" />
+            <element signature="e#3780#3880#0#PHP" />
+            <element signature="e#3885#3965#0#PHP" />
+            <element signature="e#3971#4085#0#PHP" />
+            <element signature="e#4090#4197#0#PHP" />
+            <element signature="e#4203#4339#0#PHP" />
+            <element signature="e#4344#4696#0#PHP" />
+            <element signature="e#4408#4588#0#PHP" />
+            <element signature="e#4702#4776#0#PHP" />
+            <element signature="e#4781#5562#0#PHP" />
+            <element signature="e#4871#5118#0#PHP" />
+            <element signature="e#4930#5108#0#PHP" />
+            <element signature="e#4988#5094#0#PHP" />
+            <element signature="e#5184#5348#0#PHP" />
+            <element signature="e#5358#5507#0#PHP" />
+            <element signature="e#5400#5497#0#PHP" />
+            <element signature="e#5568#5639#0#PHP" />
+            <element signature="e#5644#5717#0#PHP" />
+            <element signature="e#5723#5900#0#PHP" />
+            <element signature="e#5905#6426#0#PHP" />
+            <element signature="e#6045#6133#0#PHP" />
+            <element signature="e#6143#6219#0#PHP" />
+            <element signature="e#6229#6285#0#PHP" />
+            <element signature="e#6432#6537#0#PHP" />
+            <element signature="e#6542#6638#0#PHP" />
+            <element signature="e#6644#6759#0#PHP" />
+            <element signature="e#6764#6888#0#PHP" />
+            <element signature="e#6894#6971#0#PHP" />
+            <element signature="e#6976#7067#0#PHP" />
+            <element signature="e#7073#7182#0#PHP" />
+            <element signature="e#7187#7295#0#PHP" />
+            <element signature="e#7301#7376#0#PHP" />
+            <element signature="e#7381#7464#0#PHP" />
+            <element signature="e#7470#7586#0#PHP" />
+            <element signature="e#7591#8425#0#PHP" />
+            <element signature="e#7686#7771#0#PHP" />
+            <element signature="e#7686#7799#0#PHP" />
+            <element signature="e#7810#7904#0#PHP" />
+            <element signature="e#7914#7984#0#PHP" />
+            <element signature="e#7914#8056#0#PHP" />
+            <element signature="e#8082#8201#0#PHP" />
+            <element signature="e#8228#8369#0#PHP" />
+            <element signature="e#8431#8499#0#PHP" />
+            <element signature="e#8504#8704#0#PHP" />
+            <element signature="e#8554#8698#0#PHP" />
+            <element signature="e#8710#8779#0#PHP" />
+            <element signature="e#8784#8828#0#PHP" />
+            <element signature="e#8834#8882#0#PHP" />
+            <element signature="e#8888#8945#0#PHP" />
+            <element signature="e#8951#9069#0#PHP" />
+            <element signature="e#9074#9180#0#PHP" />
+            <element signature="e#9186#9254#0#PHP" />
+            <element signature="e#9259#9331#0#PHP" />
+            <element signature="e#9337#9442#0#PHP" />
+            <element signature="e#9447#9561#0#PHP" />
+            <element signature="e#9567#9673#0#PHP" />
+            <element signature="e#9678#10029#0#PHP" />
+            <element signature="e#9740#10000#0#PHP" />
+            <element signature="e#9922#9990#0#PHP" />
+            <element signature="e#10035#10132#0#PHP" />
+            <element signature="e#10137#10247#0#PHP" />
+            <element signature="e#10253#10325#0#PHP" />
+            <element signature="e#10330#10404#0#PHP" />
+            <element signature="e#10410#10479#0#PHP" />
+            <element signature="e#10484#10562#0#PHP" />
+            <element signature="e#10568#10673#0#PHP" />
+            <element signature="e#10678#10953#0#PHP" />
+            <element signature="e#10735#10947#0#PHP" />
+            <element signature="e#10805#10947#0#PHP" />
+            <element signature="e#10824#10900#0#PHP" />
+            <element signature="e#10959#11099#0#PHP" />
+            <element signature="e#11104#11704#0#PHP" />
+            <element signature="e#11239#11341#0#PHP" />
+            <element signature="e#11438#11498#0#PHP" />
+            <element signature="e#11710#11785#0#PHP" />
+            <element signature="e#11790#12617#0#PHP" />
+            <element signature="e#11865#12309#0#PHP" />
+            <element signature="e#11904#12265#0#PHP" />
+            <element signature="e#12035#12265#0#PHP" />
+            <element signature="e#12351#12463#0#PHP" />
+            <element signature="e#12473#12587#0#PHP" />
+            <element signature="e#12623#12693#0#PHP" />
+            <element signature="e#12698#14417#0#PHP" />
+            <element signature="e#12766#12849#0#PHP" />
+            <element signature="e#12950#13132#0#PHP" />
+            <element signature="e#13002#13096#0#PHP" />
+            <element signature="e#13142#13374#0#PHP" />
+            <element signature="e#13453#13739#0#PHP" />
+            <element signature="e#13515#13577#0#PHP" />
+            <element signature="e#13591#13729#0#PHP" />
+            <element signature="e#13632#13715#0#PHP" />
+            <element signature="e#13793#14332#0#PHP" />
+            <element signature="e#13810#14331#2#PHP" />
+            <element signature="e#13953#14003#0#PHP" />
+            <element signature="e#13953#14033#0#PHP" />
+            <element signature="e#13953#14080#0#PHP" />
+            <element signature="e#13953#14118#0#PHP" />
+            <element signature="e#13953#14150#0#PHP" />
+            <element signature="e#14227#14321#0#PHP" />
+            <element signature="e#14423#14528#0#PHP" />
+            <element signature="e#14533#16299#0#PHP" />
+            <element signature="e#14608#14691#0#PHP" />
+            <element signature="e#14778#15301#0#PHP" />
+            <element signature="e#14823#15050#0#PHP" />
+            <element signature="e#15064#15291#0#PHP" />
+            <element signature="e#15408#16126#0#PHP" />
+            <element signature="e#15425#16125#2#PHP" />
+            <element signature="e#15503#15559#0#PHP" />
+            <element signature="e#15503#15601#0#PHP" />
+            <element signature="e#15503#15639#0#PHP" />
+            <element signature="e#15503#15677#0#PHP" />
+            <element signature="e#15716#15987#0#PHP" />
+            <element signature="e#15786#15973#0#PHP" />
+            <element signature="e#16021#16115#0#PHP" />
+            <element signature="e#16305#16376#0#PHP" />
+            <element signature="e#16381#16989#0#PHP" />
+            <element signature="e#16453#16843#0#PHP" />
+            <element signature="e#16618#16843#0#PHP" />
+            <element signature="e#16655#16833#0#PHP" />
+            <element signature="e#16697#16819#0#PHP" />
+            <element signature="e#16853#16959#0#PHP" />
+            <element signature="e#16995#17180#0#PHP" />
+            <element signature="e#17185#18186#0#PHP" />
+            <element signature="e#17314#18133#0#PHP" />
+            <element signature="e#17331#18132#2#PHP" />
+            <element signature="e#17487#18093#0#PHP" />
+            <element signature="e#17541#17810#0#PHP" />
+            <element signature="e#17613#17792#0#PHP" />
+            <element signature="e#17671#17770#0#PHP" />
+            <element signature="e#17828#18079#0#PHP" />
+            <element signature="e#17957#18079#0#PHP" />
+            <element signature="e#18192#18260#0#PHP" />
+            <element signature="e#18265#18913#0#PHP" />
+            <element signature="e#18310#18431#0#PHP" />
+            <element signature="e#18524#18777#0#PHP" />
+            <element signature="e#18541#18776#2#PHP" />
+            <element signature="e#18672#18766#0#PHP" />
+            <element signature="e#18919#19144#0#PHP" />
+            <element signature="e#19149#19555#0#PHP" />
+            <element signature="e#19313#19394#0#PHP" />
+            <element signature="e#19404#19476#0#PHP" />
+            <element signature="e#19561#19781#0#PHP" />
+            <element signature="e#19786#20255#0#PHP" />
+            <element signature="e#19933#20014#0#PHP" />
+            <element signature="e#20024#20099#0#PHP" />
+            <element signature="e#20109#20181#0#PHP" />
+            <element signature="e#20261#20401#0#PHP" />
+            <element signature="e#20406#21013#0#PHP" />
+            <element signature="e#20485#20555#0#PHP" />
+            <element signature="e#20629#20841#0#PHP" />
+            <element signature="e#20742#20841#0#PHP" />
+            <element signature="e#20896#20985#0#PHP" />
+            <element signature="e#21019#21045#0#PHP" />
+            <element signature="e#21050#21117#0#PHP" />
+            <element signature="e#21123#21257#0#PHP" />
+            <element signature="e#21262#21362#0#PHP" />
+            <element signature="e#21368#21472#0#PHP" />
+            <element signature="e#21477#21562#0#PHP" />
+            <element signature="e#21568#21667#0#PHP" />
+            <element signature="e#21672#21775#0#PHP" />
+            <element signature="e#21781#21880#0#PHP" />
+            <element signature="e#21885#22042#0#PHP" />
+            <element signature="e#22096#22187#0#PHP" />
+            <element signature="e#22222#22313#0#PHP" />
+            <element signature="e#22348#22425#0#PHP" />
+            <element signature="e#22460#22542#0#PHP" />
+            <element signature="e#22548#22660#0#PHP" />
+            <element signature="e#22665#22806#0#PHP" />
+            <element signature="e#22812#22918#0#PHP" />
+            <element signature="e#22923#23071#0#PHP" />
+            <element signature="e#23077#23191#0#PHP" />
+            <element signature="e#23196#23357#0#PHP" />
+            <element signature="e#23363#23671#0#PHP" />
+            <element signature="e#23416#23596#0#PHP" />
+            <element signature="e#23677#24030#0#PHP" />
+            <element signature="e#23743#23922#0#PHP" />
+            <element signature="e#24036#24081#0#PHP" />
+            <element signature="e#24086#24194#0#PHP" />
+            <element signature="e#24129#24188#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-orm/src/DbManager.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-696">
+          <caret line="96" column="34" selection-start-line="96" selection-start-column="29" selection-end-line="96" selection-end-column="34" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-orm/src/db/BaseQuery.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-3788">
+          <caret line="14" column="4" lean-forward="true" selection-start-line="14" selection-start-column="4" selection-end-line="14" selection-end-column="4" />
+          <folding>
+            <element signature="e#644#665#0#PHP" expanded="true" />
+            <element signature="e#869#887#0#PHP" />
+            <element signature="e#1144#1195#0#PHP" />
+            <element signature="e#1228#1279#0#PHP" />
+            <element signature="e#1311#1362#0#PHP" />
+            <element signature="e#1387#1434#0#PHP" />
+            <element signature="e#1464#1509#0#PHP" />
+            <element signature="e#1543#1586#0#PHP" />
+            <element signature="e#1621#1720#0#PHP" />
+            <element signature="e#1725#1903#0#PHP" />
+            <element signature="e#1909#2088#0#PHP" />
+            <element signature="e#2093#3437#0#PHP" />
+            <element signature="e#2159#3431#0#PHP" />
+            <element signature="e#2364#2590#0#PHP" />
+            <element signature="e#2591#2819#0#PHP" />
+            <element signature="e#2820#3044#0#PHP" />
+            <element signature="e#3045#3327#0#PHP" />
+            <element signature="e#3328#3431#0#PHP" />
+            <element signature="e#3443#3519#0#PHP" />
+            <element signature="e#3524#4153#0#PHP" />
+            <element signature="e#3625#3695#0#PHP" />
+            <element signature="e#3705#3860#0#PHP" />
+            <element signature="e#3805#3860#0#PHP" />
+            <element signature="e#3870#3997#0#PHP" />
+            <element signature="e#4007#4123#0#PHP" />
+            <element signature="e#4159#4255#0#PHP" />
+            <element signature="e#4260#4337#0#PHP" />
+            <element signature="e#4343#4457#0#PHP" />
+            <element signature="e#4462#4559#0#PHP" />
+            <element signature="e#4565#4638#0#PHP" />
+            <element signature="e#4643#4743#0#PHP" />
+            <element signature="e#4749#4853#0#PHP" />
+            <element signature="e#4858#4966#0#PHP" />
+            <element signature="e#4972#5086#0#PHP" />
+            <element signature="e#5091#5352#0#PHP" />
+            <element signature="e#5149#5256#0#PHP" />
+            <element signature="e#5358#5461#0#PHP" />
+            <element signature="e#5466#5587#0#PHP" />
+            <element signature="e#5593#5670#0#PHP" />
+            <element signature="e#5675#5771#0#PHP" />
+            <element signature="e#5777#5853#0#PHP" />
+            <element signature="e#5858#5951#0#PHP" />
+            <element signature="e#5957#6065#0#PHP" />
+            <element signature="e#6070#6201#0#PHP" />
+            <element signature="e#6207#6345#0#PHP" />
+            <element signature="e#6350#6582#0#PHP" />
+            <element signature="e#6588#6743#0#PHP" />
+            <element signature="e#6748#7014#0#PHP" />
+            <element signature="e#6885#6983#0#PHP" />
+            <element signature="e#7020#7173#0#PHP" />
+            <element signature="e#7178#7525#0#PHP" />
+            <element signature="e#7314#7496#0#PHP" />
+            <element signature="e#7432#7496#0#PHP" />
+            <element signature="e#7531#7645#0#PHP" />
+            <element signature="e#7650#7737#0#PHP" />
+            <element signature="e#7743#7843#0#PHP" />
+            <element signature="e#7848#8671#0#PHP" />
+            <element signature="e#7892#8065#0#PHP" />
+            <element signature="e#7949#8065#0#PHP" />
+            <element signature="e#8075#8288#0#PHP" />
+            <element signature="e#8112#8215#0#PHP" />
+            <element signature="e#8298#8439#0#PHP" />
+            <element signature="e#8449#8571#0#PHP" />
+            <element signature="e#8677#8790#0#PHP" />
+            <element signature="e#8795#9366#0#PHP" />
+            <element signature="e#8846#8902#0#PHP" />
+            <element signature="e#8912#9008#0#PHP" />
+            <element signature="e#9144#9266#0#PHP" />
+            <element signature="e#9372#9598#0#PHP" />
+            <element signature="e#9603#10628#0#PHP" />
+            <element signature="e#9712#9768#0#PHP" />
+            <element signature="e#9778#9874#0#PHP" />
+            <element signature="e#9884#10035#0#PHP" />
+            <element signature="e#10105#10396#0#PHP" />
+            <element signature="e#10153#10386#0#PHP" />
+            <element signature="e#10300#10386#0#PHP" />
+            <element signature="e#10406#10528#0#PHP" />
+            <element signature="e#10634#10729#0#PHP" />
+            <element signature="e#10734#10842#0#PHP" />
+            <element signature="e#10848#10958#0#PHP" />
+            <element signature="e#10963#11249#0#PHP" />
+            <element signature="e#11027#11220#0#PHP" />
+            <element signature="e#11125#11220#0#PHP" />
+            <element signature="e#11255#11385#0#PHP" />
+            <element signature="e#11390#11555#0#PHP" />
+            <element signature="e#11561#11691#0#PHP" />
+            <element signature="e#11696#11837#0#PHP" />
+            <element signature="e#11843#11945#0#PHP" />
+            <element signature="e#11950#13370#0#PHP" />
+            <element signature="e#11994#13298#0#PHP" />
+            <element signature="e#12031#12920#0#PHP" />
+            <element signature="e#12095#12409#0#PHP" />
+            <element signature="e#12152#12395#0#PHP" />
+            <element signature="e#12410#12920#0#PHP" />
+            <element signature="e#12512#12906#0#PHP" />
+            <element signature="e#12602#12888#0#PHP" />
+            <element signature="e#12818#12888#0#PHP" />
+            <element signature="e#12931#13298#0#PHP" />
+            <element signature="e#13028#13288#0#PHP" />
+            <element signature="e#13080#13274#0#PHP" />
+            <element signature="e#13159#13274#0#PHP" />
+            <element signature="e#13376#13592#0#PHP" />
+            <element signature="e#13597#14913#0#PHP" />
+            <element signature="e#13661#13834#0#PHP" />
+            <element signature="e#13718#13834#0#PHP" />
+            <element signature="e#13844#14592#0#PHP" />
+            <element signature="e#13881#13994#0#PHP" />
+            <element signature="e#14007#14204#0#PHP" />
+            <element signature="e#14114#14204#0#PHP" />
+            <element signature="e#14215#14592#0#PHP" />
+            <element signature="e#14268#14582#0#PHP" />
+            <element signature="e#14319#14568#0#PHP" />
+            <element signature="e#14432#14568#0#PHP" />
+            <element signature="e#14602#14692#0#PHP" />
+            <element signature="e#14702#14884#0#PHP" />
+            <element signature="e#14820#14884#0#PHP" />
+            <element signature="e#14919#15109#0#PHP" />
+            <element signature="e#15114#17089#0#PHP" />
+            <element signature="e#15199#15291#0#PHP" />
+            <element signature="e#15318#15489#0#PHP" />
+            <element signature="e#15500#15778#0#PHP" />
+            <element signature="e#15655#15778#0#PHP" />
+            <element signature="e#16017#16920#0#PHP" />
+            <element signature="e#16323#16684#0#PHP" />
+            <element signature="e#16455#16684#0#PHP" />
+            <element signature="e#16478#16670#0#PHP" />
+            <element signature="e#16588#16670#0#PHP" />
+            <element signature="e#16695#16839#0#PHP" />
+            <element signature="e#16840#16920#0#PHP" />
+            <element signature="e#17095#17339#0#PHP" />
+            <element signature="e#17344#19387#0#PHP" />
+            <element signature="e#17471#17642#0#PHP" />
+            <element signature="e#18152#18478#0#PHP" />
+            <element signature="e#18232#18412#0#PHP" />
+            <element signature="e#18316#18412#0#PHP" />
+            <element signature="e#18423#18478#0#PHP" />
+            <element signature="e#18584#18635#0#PHP" />
+            <element signature="e#18584#18661#0#PHP" />
+            <element signature="e#18584#18687#0#PHP" />
+            <element signature="e#18584#18720#0#PHP" />
+            <element signature="e#18812#19040#0#PHP" />
+            <element signature="e#18971#19040#0#PHP" />
+            <element signature="e#19061#19209#0#PHP" />
+            <element signature="e#19082#19208#1#PHP" />
+            <element signature="e#19061#19240#0#PHP" />
+            <element signature="e#19393#19666#0#PHP" />
+            <element signature="e#19671#20526#0#PHP" />
+            <element signature="e#19822#20151#0#PHP" />
+            <element signature="e#19905#20085#0#PHP" />
+            <element signature="e#19989#20085#0#PHP" />
+            <element signature="e#20096#20151#0#PHP" />
+            <element signature="e#20171#20319#0#PHP" />
+            <element signature="e#20192#20318#1#PHP" />
+            <element signature="e#20171#20334#0#PHP" />
+            <element signature="e#20423#20519#0#PHP" />
+            <element signature="e#20532#20743#0#PHP" />
+            <element signature="e#20748#21222#0#PHP" />
+            <element signature="e#20826#20922#0#PHP" />
+            <element signature="e#20932#21110#0#PHP" />
+            <element signature="e#21228#21439#0#PHP" />
+            <element signature="e#21444#21622#0#PHP" />
+            <element signature="e#21628#21813#0#PHP" />
+            <element signature="e#21818#21994#0#PHP" />
+            <element signature="e#22000#22109#0#PHP" />
+            <element signature="e#22114#22301#0#PHP" />
+            <element signature="e#22205#22272#0#PHP" />
+            <element signature="e#22307#22416#0#PHP" />
+            <element signature="e#22421#22685#0#PHP" />
+            <element signature="e#22465#22656#0#PHP" />
+            <element signature="e#22545#22656#0#PHP" />
+            <element signature="e#22691#22805#0#PHP" />
+            <element signature="e#22810#22939#0#PHP" />
+            <element signature="e#22945#23054#0#PHP" />
+            <element signature="e#23059#23180#0#PHP" />
+            <element signature="e#23186#23292#0#PHP" />
+            <element signature="e#23297#23428#0#PHP" />
+            <element signature="e#23434#23574#0#PHP" />
+            <element signature="e#23579#23766#0#PHP" />
+            <element signature="e#23772#23875#0#PHP" />
+            <element signature="e#23880#23962#0#PHP" />
+            <element signature="e#23968#24076#0#PHP" />
+            <element signature="e#24081#24192#0#PHP" />
+            <element signature="e#24198#24300#0#PHP" />
+            <element signature="e#24305#24482#0#PHP" />
+            <element signature="e#24365#24429#0#PHP" />
+            <element signature="e#24488#24625#0#PHP" />
+            <element signature="e#24630#24755#0#PHP" />
+            <element signature="e#24761#24867#0#PHP" />
+            <element signature="e#24872#24982#0#PHP" />
+            <element signature="e#24988#25155#0#PHP" />
+            <element signature="e#25160#25640#0#PHP" />
+            <element signature="e#25240#25310#0#PHP" />
+            <element signature="e#25404#25571#0#PHP" />
+            <element signature="e#25483#25571#0#PHP" />
+            <element signature="e#25646#25803#0#PHP" />
+            <element signature="e#25808#26036#0#PHP" />
+            <element signature="e#25891#25965#0#PHP" />
+            <element signature="e#26042#26153#0#PHP" />
+            <element signature="e#26158#26253#0#PHP" />
+            <element signature="e#26259#26404#0#PHP" />
+            <element signature="e#26409#26819#0#PHP" />
+            <element signature="e#26491#26576#0#PHP" />
+            <element signature="e#26586#26742#0#PHP" />
+            <element signature="e#26825#26999#0#PHP" />
+            <element signature="e#27004#27344#0#PHP" />
+            <element signature="e#27099#27255#0#PHP" />
+            <element signature="e#27350#27506#0#PHP" />
+            <element signature="e#27511#27658#0#PHP" />
+            <element signature="e#27664#27786#0#PHP" />
+            <element signature="e#27791#28411#0#PHP" />
+            <element signature="e#27851#27968#0#PHP" />
+            <element signature="e#27978#28085#0#PHP" />
+            <element signature="e#28095#28210#0#PHP" />
+            <element signature="e#28220#28355#0#PHP" />
+            <element signature="e#28417#28548#0#PHP" />
+            <element signature="e#28553#29496#0#PHP" />
+            <element signature="e#28609#28725#0#PHP" />
+            <element signature="e#28735#28850#0#PHP" />
+            <element signature="e#28860#29025#0#PHP" />
+            <element signature="e#29035#29399#0#PHP" />
+            <element signature="e#29181#29389#0#PHP" />
+            <element signature="e#29502#29717#0#PHP" />
+            <element signature="e#29722#30328#0#PHP" />
+            <element signature="e#29785#29879#0#PHP" />
+            <element signature="e#29963#30072#0#PHP" />
+            <element signature="e#30104#30294#0#PHP" />
+            <element signature="e#30236#30294#0#PHP" />
+            <element signature="e#30334#30557#0#PHP" />
+            <element signature="e#30562#31193#0#PHP" />
+            <element signature="e#30611#30709#0#PHP" />
+            <element signature="e#30719#30897#0#PHP" />
+            <element signature="e#30827#30897#0#PHP" />
+            <element signature="e#30923#30997#0#PHP" />
+            <element signature="e#31007#31162#0#PHP" />
+            <element signature="e#31110#31162#0#PHP" />
+            <element signature="e#31199#31279#0#PHP" />
+            <element signature="e#31284#32950#0#PHP" />
+            <element signature="e#31394#31486#0#PHP" />
+            <element signature="e#31496#31683#0#PHP" />
+            <element signature="e#31575#31683#0#PHP" />
+            <element signature="e#31693#31906#0#PHP" />
+            <element signature="e#31814#31896#0#PHP" />
+            <element signature="e#31916#32039#0#PHP" />
+            <element signature="e#32049#32257#0#PHP" />
+            <element signature="e#32162#32247#0#PHP" />
+            <element signature="e#32267#32476#0#PHP" />
+            <element signature="e#32384#32466#0#PHP" />
+            <element signature="e#32486#32882#0#PHP" />
+            <element signature="e#32956#33083#0#PHP" />
+            <element signature="e#33088#33903#0#PHP" />
+            <element signature="e#33241#33870#0#PHP" />
+            <element signature="e#33451#33870#0#PHP" />
+            <element signature="e#33488#33860#0#PHP" />
+            <element signature="e#33530#33808#0#PHP" />
+            <element signature="e#33676#33808#0#PHP" />
+            <element signature="e#33909#34051#0#PHP" />
+            <element signature="e#34056#34870#0#PHP" />
+            <element signature="e#34143#34864#0#PHP" />
+            <element signature="e#34198#34310#0#PHP" />
+            <element signature="e#34438#34556#0#PHP" />
+            <element signature="e#34653#34854#0#PHP" />
+            <element signature="e#34739#34854#0#PHP" />
+            <element signature="e#34876#34963#0#PHP" />
+            <element signature="e#34968#35087#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/vendor/topthink/think-orm/src/model/concern/ModelEvent.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1411">
+          <caret line="76" column="44" selection-start-line="76" selection-start-column="44" selection-end-line="76" selection-end-column="44" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="338">
+          <caret line="35" column="91" selection-start-line="35" selection-start-column="91" selection-end-line="35" selection-end-column="91" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="396">
+          <caret line="43" column="21" selection-start-line="43" selection-start-column="21" selection-end-line="43" selection-end-column="21" />
+          <folding>
+            <element signature="e#1127#1666#0#PHP" />
+            <element signature="e#1296#1522#1#PHP" />
+            <element signature="e#1672#2748#0#PHP" />
+            <element signature="e#1955#2494#0#PHP" />
+            <element signature="e#2199#2484#0#PHP" />
+            <element signature="e#2556#2675#0#PHP" />
+            <element signature="e#2754#3971#0#PHP" />
+            <element signature="e#3977#4760#0#PHP" />
+            <element signature="e#4033#4300#0#PHP" />
+            <element signature="e#4161#4260#1#PHP" />
+            <element signature="e#4440#4475#0#PHP" />
+            <element signature="e#4766#5878#0#PHP" />
+            <element signature="e#4819#5323#0#PHP" />
+            <element signature="e#4843#4943#1#PHP" />
+            <element signature="e#4967#5062#1#PHP" />
+            <element signature="e#5086#5191#1#PHP" />
+            <element signature="e#5215#5312#1#PHP" />
+            <element signature="e#5884#6761#0#PHP" />
+            <element signature="e#6855#6934#0#PHP" />
+            <element signature="e#8761#8785#0#PHP" />
+            <element signature="e#8922#9030#0#PHP" />
+            <element signature="e#9048#9305#0#PHP" />
+            <element signature="e#9519#9617#0#PHP" />
+            <element signature="e#9775#9914#0#PHP" />
+            <element signature="e#10052#10178#0#PHP" />
+            <element signature="e#10318#10480#0#PHP" />
+            <element signature="e#10638#10976#0#PHP" />
+            <element signature="e#11135#11222#0#PHP" />
+            <element signature="e#11391#11636#0#PHP" />
+            <element signature="e#11804#12153#0#PHP" />
+            <element signature="e#11818#11966#1#PHP" />
+            <element signature="e#11968#11983#0#PHP" />
+            <element signature="e#12171#13275#0#PHP" />
+            <element signature="e#12395#13264#1#PHP" />
+            <element signature="e#12931#13249#1#PHP" />
+            <element signature="e#12953#13081#1#PHP" />
+            <element signature="e#13103#13231#1#PHP" />
+            <element signature="e#13428#13550#0#PHP" />
+            <element signature="e#13708#13797#0#PHP" />
+            <element signature="e#13955#14607#0#PHP" />
+            <element signature="e#14320#14596#1#PHP" />
+            <element signature="e#14338#14450#1#PHP" />
+            <element signature="e#14468#14581#1#PHP" />
+            <element signature="e#14752#14823#0#PHP" />
+            <element signature="e#14842#15508#0#PHP" />
+            <element signature="e#15213#15497#1#PHP" />
+            <element signature="e#15231#15348#1#PHP" />
+            <element signature="e#15366#15483#1#PHP" />
+            <element signature="e#15526#15792#0#PHP" />
+            <element signature="e#15930#16019#0#PHP" />
+            <element signature="e#16159#16211#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/Common.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="616">
+          <caret line="216" column="13" lean-forward="true" selection-start-line="216" selection-start-column="13" selection-end-line="216" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="104">
+          <caret line="168" column="20" selection-start-line="168" selection-start-column="20" selection-end-line="168" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Goods/GoodsTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="685">
+          <caret line="86" column="5" lean-forward="true" selection-start-line="86" selection-start-column="5" selection-end-line="86" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/Machine.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="707">
+          <caret line="78" column="37" lean-forward="true" selection-start-line="78" selection-start-column="37" selection-end-line="78" selection-end-column="37" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Goods/GoodsClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="443">
+          <caret line="113" column="70" selection-start-line="113" selection-start-column="70" selection-end-line="113" selection-end-column="70" />
+          <folding>
+            <element signature="e#141#181#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/api/controller/V2.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="616">
+          <caret line="131" column="32" lean-forward="true" selection-start-line="131" selection-start-column="32" selection-end-line="131" selection-end-column="32" />
+          <folding>
+            <element signature="e#227#248#0#PHP" />
+            <element signature="e#2140#2194#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/goods/Goods.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="748">
+          <caret line="69" column="11" lean-forward="true" selection-start-line="69" selection-start-column="11" selection-end-line="69" selection-end-column="11" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Validate/Api/VV2.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="751">
+          <caret line="71" column="59" selection-start-line="71" selection-start-column="51" selection-end-line="71" selection-end-column="59" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Goods/GoodsModel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="597">
+          <caret line="220" column="9" lean-forward="true" selection-start-line="220" selection-start-column="9" selection-end-line="220" selection-end-column="9" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/common.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="448">
+          <caret line="449" column="25" lean-forward="true" selection-start-line="449" selection-start-column="25" selection-end-line="449" selection-end-column="25" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Api/V2/V2Client.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="220">
+          <caret line="118" column="72" lean-forward="true" selection-start-line="118" selection-start-column="72" selection-end-line="118" selection-end-column="72" />
         </state>
       </provider>
     </entry>

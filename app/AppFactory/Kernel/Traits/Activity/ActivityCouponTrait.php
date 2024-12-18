@@ -198,6 +198,9 @@ trait ActivityCouponTrait
      * 当适用商品为1.全部商品时，以订单总金额去计算优惠金额与打折扣
      * 当适用商品为2.指定商品时，以指定商品单价计算优惠，即：（单价 - 优惠值）* 购买数量 = 商品总金额。购物车内不在指定商品范围内的不享受优惠。
      * 当适用商品为3.部分商品除外时，指定商品列表内的商品不享受优惠，其他的商品以单价计算优惠。
+     * 优惠计算方式，全部商品时直接从订单总金额优惠
+     *      一、使用指定商品立减的优惠券，购买多个商品时，终端显示改为（价格-优惠额）*数量
+            二、使用指定商品折扣的优惠券，够买享受优惠的商品+不享受优惠的商品，后台改为优惠商品总价*折扣+不优惠商品总价
      * @return bool|string
      */
     public function orderUseCoupon()
@@ -234,7 +237,7 @@ trait ActivityCouponTrait
 
         if (!isset($this->order['details'])) {
             $sodField = "sod_id,discount_price,total_sod_price,retail_price,quantity,g_id";
-            $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,$sodField)->toArray();
+            $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,$sodField,'g_id asc')->toArray();
         }
 
         try {
