@@ -102,6 +102,7 @@ trait MachineGoodsTrait
                     $g = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price');
                     if ($g) {
                         $g = obj2arr($g);
+                        $g['pic'] = str_replace($this->host,'',$g['pic']);
                         $checkMg = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'], 'g_id' => $g['g_id']]);
                         if ($checkMg) {
                             $this->rollbackTrans();

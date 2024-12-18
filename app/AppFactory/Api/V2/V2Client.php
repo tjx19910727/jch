@@ -124,7 +124,8 @@ class V2Client extends V2BaseClient
                     'machine_id');
                 $machine['sale_income'] = ($sdc['totalPrice'] ?? 0) - ($sdc['totalRefundMoney'] ?? 0) - ($sdc['totalDiscountPrice'] ?? 0);
                 $machine['sale_count'] = ($sdc['totalQuantity'] ?? 0) - ($sdc['totalRefundQuantity'] ?? 0);
-                unset($machine['country_id'], $machine['state_id'], $machine['city_id'], $machine['regions_id'], $machine['scene_id']);
+                unset($machine['country_id'], $machine['state_id
+                '], $machine['city_id'], $machine['regions_id'], $machine['scene_id']);
                 return $machine;
             });
             if ($machineList) {
@@ -513,6 +514,10 @@ class V2Client extends V2BaseClient
             if ($this->machine['m_id'] != $this->order['m_id']) {
                 $this->rollbackTrans();
                 return $this->returnData(40,$this->lang("msg.40") . ":" . $this->params['machine_id']);
+            }
+            if (isset($this->params['out_port']) && $this->params["out_port"]) {
+                $this->order['out_port'] = $this->params['out_port'];
+                $updateOrder["out_port"] = $this->params['out_port'];
             }
             $result = $this->outGoods();
             if ($result !== true) {

@@ -20,11 +20,13 @@ class BaseClient
     use AuthManagerLogTrait;
     protected $app;
     protected $config;
+    protected $host;
 
     public function __construct(ServiceContainer $app)
     {
         $this->app = $app;
         $this->config = $app->getConfig();
+        $this->host = env("app.host");
     }
 
 

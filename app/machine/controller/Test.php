@@ -10,6 +10,7 @@ namespace app\machine\controller;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Action\ActionVideoModel;
 use app\AppFactory\Kernel\Model\Activity\ActivityGoodsModel;
 use app\AppFactory\Kernel\Model\Activity\Coupon\ActivityCouponUsedModel;
 use app\AppFactory\Kernel\Model\Activity\Lottery\ActivityLotteryUsedModel;
@@ -40,10 +41,12 @@ class Test extends BaseController
 
     public function testAfterRead()
     {
-        $goods = GoodsModel::getFind(["g_id" => 612]);
-        dump($goods);
-        $list = GoodsModel::getList([['g_id','between',[612,615]]]);
-        dump($list);
+        $path = rtrim(public_path("/uploads/adv/20241116/ed1f2992640d9e38ea98b2083593e26d.mp4"),'/');
+        dump($path);
+        dump(file_exists($path));
+        dump(is_file($path));
+        $video = ActionVideoModel::getList([],0,'*','id desc');
+        dump($video);
     }
     public function testWhere()
     {

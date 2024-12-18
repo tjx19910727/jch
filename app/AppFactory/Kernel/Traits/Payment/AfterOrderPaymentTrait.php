@@ -106,6 +106,7 @@ trait AfterOrderPaymentTrait
                 "main" => $contentArr,
                 "outGoods" => $outArr,
             ];
+            if (isset($this->order['out_port']) && $this->order['out_port']) $content['outPort'] = $this->order['out_port'];
             $content = json_encode($content);
             $data = [
                 "timestamp" => time(),

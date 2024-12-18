@@ -408,7 +408,7 @@ class ApiClient extends ReceiveBaseClient
                     $insertGChange["g_name"] = $mg['g_name'];
                     $insertGChange["gc_id"] = $mg['gc_id'];
                     $insertGChange["gc_name"] = $mg['gc_name'];
-                    $insertGChange["pic"] = $mg['pic'];
+                    $insertGChange["pic"] = str_replace($this->host,'',$mg['pic']);
                     $insertGChange["sku"] = $mg['sku'];
                     $insertGChange["bar_code"] = $mg['bar_code'];
                     $insertGChange["desc"] = "换货-设备商品库下货备用库存";
@@ -452,6 +452,7 @@ class ApiClient extends ReceiveBaseClient
                 $flag[] = $this->addMachineChannelReplenishment($repNewData);
                 $mc['stock'] += $this->data['quantity'];
             }
+            if (isset($mc['pic'])) $mc['pic'] = str_replace($this->host,'',$mc['pic']);
             $flag[] = $this->updateMachineChannel($mc);
             actionLog($this->getLS(), '【SQL】修改货道信息');
             $result = $this->checkFlag($flag);
@@ -855,7 +856,7 @@ class ApiClient extends ReceiveBaseClient
         ];
         $this->config['machine_id'] = $this->machine['machine_id'];
         $params['sign'] = $this->makeSign($params);
-        $url = env("APP.host") . "/mobile/#/index?" . http_build_query($params);
+        $url = $this->host . "/mobile/#/index?" . http_build_query($params);
         return $this->rQ(['url' => $url]);
     }
 

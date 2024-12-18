@@ -61,7 +61,7 @@ class AuthManagerRoleClient extends ManagementClient
         if (!$role) return $this->rFail("您暂未被授予权限角色，无法使用系统");
 
 
-        $roleNode = $this->getAuthRoleNodeFind([["role_id","in",$role],'node_id' => $authNode['node_id'],'is_del' => 2],'rn_id,d_type','d_type desc,rn_id desc');
+        $roleNode = $this->getAuthRoleNodeFind([["role_id","in",$role],'node_id' => $authNode['node_id'],'is_del' => 2],'rn_id,d_type','d_type asc,rn_id desc');
         if (!$roleNode) return $this->r(100,"您无权限操作【" . $authNode['name']. "】");
         $authNode['d_type'] = $roleNode['d_type'];
         return $authNode;

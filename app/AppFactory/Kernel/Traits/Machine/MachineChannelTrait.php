@@ -138,6 +138,7 @@ trait MachineChannelTrait
                             $g = $this->getGoodsFind(['g_id' => $value['g_id']], $gField);
                             if ($g) {
                                 $g = obj2arr($g);
+                                $g['pic'] = str_replace($this->host,'',$g['pic']);
                                 $g['mg_id'] = ($this->getMachineGoodsValue(['g_id' => $g['g_id'], 'm_id' => $this->machine['m_id']], 'mg_id') ?? 0);
                                 $mc = array_merge($mc, $g);
                             }

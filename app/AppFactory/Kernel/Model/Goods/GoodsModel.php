@@ -199,24 +199,24 @@ class GoodsModel extends BaseModel
     public static function onAfterDelete(Model $model)
     {
         if ($model->pic) {
-            $unlink[] = checkStrDomain($model->pic);
+            $unlink[] = rtrim(public_path($model->pic),'/');
         }
         if ($model->banner) {
             $banner = explode(";",$model->banner);
             foreach ($banner as $v) {
-                $unlink[] = checkStrDomain($v);
+                $unlink[] = rtrim(public_path($v),'/');
             }
         }
         if ($model->details_pic) {
             $details = explode(";",$model->details_pic);
             foreach ($details as $dV) {
-                $unlink[] =  checkStrDomain($dV);
+                $unlink[] = rtrim(public_path($dV),'/');
             }
         }
         if ($model->desc) {
             $descList = getImagesFromRichText($model->desc);
             foreach ($descList as $dV2) {
-                $unlink[] =  checkStrDomain($dV2);
+                $unlink[] = rtrim(public_path($dV2),'/');
             }
         }
         foreach ($unlink as $v) {

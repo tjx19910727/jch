@@ -106,6 +106,6 @@ trait ActionVideoTrait
      */
     public function delActionVideo($where)
     {
-        return ActionVideoModel::whereDel($where);
+        return ActionVideoModel::destroy($where);
     }
 }

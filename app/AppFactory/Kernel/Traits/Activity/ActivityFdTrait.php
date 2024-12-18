@@ -117,26 +117,26 @@ trait ActivityFdTrait
         if (!$this->content) return $this->rFail($this->lang("VActivityFd.content_no_data"));
         if (is_string($this->content)) return $this->rFail($this->content);
         $this->content = $this->content->toArray();
-        actionLog($this->content,'活动规则内容');
-        // 最低消费金额
-        if ($this->fd['condition_type'] == 1) {
-            $this->lowestPayMoney();
-        }
-        // 最少消费件数
-        if ($this->fd['condition_type'] == 2) {
-            $this->lowestBuyNum();
-        }
-        // 指定SKU
-        if ($this->fd['condition_type'] == 3) {
-            $this->designatedSku();
-        }
-        // 不限额
-        if ($this->fd['condition_type'] == 0) {
-            $this->unlimited();
-        }
 
         $this->startTrans();
         try {
+            actionLog($this->content,'活动规则内容');
+            // 最低消费金额
+            if ($this->fd['condition_type'] == 1) {
+                $this->lowestPayMoney();
+            }
+            // 最少消费件数
+            if ($this->fd['condition_type'] == 2) {
+                $this->lowestBuyNum();
+            }
+            // 指定SKU
+            if ($this->fd['condition_type'] == 3) {
+                $this->designatedSku();
+            }
+            // 不限额
+            if ($this->fd['condition_type'] == 0) {
+                $this->unlimited();
+            }
             $flag[] = $this->handleActivityFd();
             if ($this->lastContent) {
                 // 生成满减满赠活动使用记录
@@ -215,15 +215,21 @@ trait ActivityFdTrait
     }
 
     /**
+     * @var 指定SKU数据
+     */
+    protected $sku;
+
+    /**
      * 指定SKU条件循环
      */
     private function designatedSku()
     {
         foreach ($this->content as $key => $value) {
-            $sku = $this->getSaleOrdersDetailsFind(['order_id' => $this->order['order_id'],'sku' => $value['condition_value']],'sod_id');
+            $this->sku = $this->getSaleOrdersDetailsFind(['order_id' => $this->order['order_id'],'sku' => $value['condition_value']],
+                'sod_id,total_sod_price,discount_price,quantity');
             actionLog($this->getLS(),'查询指定SKU');
             // 满足条件，执行逻辑，不满足就跳出
-            if ($sku) {
+            if ($this->sku) {
                 $this->countContent($value);
                 $this->lastContent = $value;
                 continue;
@@ -260,7 +266,20 @@ trait ActivityFdTrait
         }
         // 立减
         if ($this->fd['fd_type'] == 2) {
-            $discount_price = $value['active_value'];
+            if ($this->fd['condition_type'] != 3) {
+                $discount_price = $value['active_value'];
+            } else {
+                $discount_price = $value['active_value'] * $this->sku['quantity'];
+                actionLog($discount_price,'指定SKU优惠立减金额');
+                if ($this->sku['total_sod_price'] >= $discount_price) {
+                    // 修改订单详情商品总价
+                    $this->updateSaleOrdersDetails([
+                        'sod_id' => $this->sku['sod_id'],
+                        'total_sod_price' => bcsub($this->sku['total_sod_price'], $discount_price, 3),
+                        'discount_price' => $discount_price]);
+                    actionLog($this->getLS(),'【SQL】指定SKU立减');
+                }
+            }
         }
         // 惊喜礼品
         if ($this->fd['fd_type'] == 3) {
@@ -274,9 +293,30 @@ trait ActivityFdTrait
         }
         // 折扣
         if ($this->fd['fd_type'] == 4) {
-            $discount_price = bcmul($this->order['total_price'],bcdiv(bcsub(100,$value['active_value']),100,2),3);
+            // 非指定SKU的直接用订单总额计算
+            if ($this->fd['condition_type'] != 3) {
+                $discount_price = bcmul($this->order['total_price'], bcdiv(bcsub(100, $value['active_value']), 100, 2), 3);
+            } else {
+                // 指定SKU，优惠金额以商品单价计算
+                $discount_price = bcmul(
+                    bcmul($this->sku['total_sod_price'],$this->sku['quantity'],3),
+                    bcdiv(
+                        bcsub(100, $value['active_value']),
+                        100,
+                        2),
+                    3);
+                actionLog($discount_price,'指定SKU优惠折扣金额');
+                if ($this->sku['total_sod_price'] >= $discount_price) {
+                    // 修改订单详情商品总价
+                    $this->updateSaleOrdersDetails([
+                        'sod_id' => $this->sku['sod_id'],
+                        'total_sod_price' => bcsub($this->sku['total_sod_price'], $discount_price, 3),
+                        'discount_price' => $discount_price]);
+                    actionLog($this->getLS(),'【SQL】指定SKU折扣');
+                }
+            }
         }
-        if ($discount_price) $this->countContent['discount_price'] = $discount_price;
+        if ($discount_price) $this->countContent['discount_price'] = bcadd($this->countContent['discount_price'],$discount_price,2);
         if ($mc_id) $this->countContent['mc_id'] = $mc_id;
     }
 
@@ -293,35 +333,25 @@ trait ActivityFdTrait
             if (!$this->order['retail_price']) $updateOrder['retail_price'] = $this->order['total_price'];
             $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
             $updateOrder['total_price'] = bcsub($this->order['total_price'],$this->countContent['discount_price'],3);
-            if ($this->order['has_hotel'] == 2) {
-                actionLog($this->order,'订单数据');
-                $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
-                if (!$details) return $this->lang("VActivityFd.sod_no_data");
-                $details = $details->toArray();
-                foreach ($details as $dk => $dv) {
-                    actionLog($dv, '商品数据');
-                    if ($dv['is_gift'] == 2) {
-                        // 商品优惠金额 = 订单优惠金额 * 商品金额占比 = 订单优惠金额 *  （商品总金额 / 订单总金额）
-                        $sodDiscountPrice = bcmul($updateOrder['discount_price'], bcdiv($dv['total_sod_price'], $this->order['total_price'], 2), 3);
-                        actionLog($sodDiscountPrice, '商品优惠金额');
-                        if ($sodDiscountPrice < 0.01) $sodDiscountPrice = 0;
+            actionLog($this->order,'订单数据');
+            $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
+            if (!$details) return $this->lang("VActivityFd.sod_no_data");
+            $details = $details->toArray();
+            foreach ($details as $dk => $dv) {
+                actionLog($dv, '商品数据');
+                if ($dv['is_gift'] == 2 && $this->fd['condition_type'] != 3) {
+                    // 商品优惠金额 = 订单优惠金额 * 商品金额占比 = 订单优惠金额 *  （商品总金额 / 订单总金额）
+                    $sodDiscountPrice = bcmul($updateOrder['discount_price'], bcdiv($dv['total_sod_price'], $this->order['total_price'], 2), 3);
+                    actionLog($sodDiscountPrice, '商品优惠金额');
+                    if ($sodDiscountPrice < 0.01) $sodDiscountPrice = 0;
 
-                        $updateSod['sod_id'] = $dv['sod_id'];
-                        $updateSod['discount_price'] = bcadd($dv['discount_price'], $sodDiscountPrice, 3);
-                        $updateSod['total_sod_price'] = bcsub($dv['total_sod_price'], $sodDiscountPrice, 3);
-                        actionLog($dv, '修改商品优惠数据');
-                        $flag[] = $this->updateSaleOrdersDetails($updateSod);
-                        actionLog($this->getLS(), '【SQL】处理订单详情信息');
-                    }
+                    $updateSod['sod_id'] = $dv['sod_id'];
+                    $updateSod['discount_price'] = bcadd($dv['discount_price'], $sodDiscountPrice, 3);
+                    $updateSod['total_sod_price'] = bcsub($dv['total_sod_price'], $sodDiscountPrice, 3);
+                    actionLog($dv, '修改商品优惠数据');
+                    $flag[] = $this->updateSaleOrdersDetails($updateSod);
+                    actionLog($this->getLS(), '【SQL】处理订单详情信息');
                 }
-            }
-            if ($this->order['has_hotel'] == 1) {
-                $hotel = $this->getSaleHotelFind(['order_id' => $this->order['order_id']]);
-                $hotel['discount_price'] = bcmul(
-                    bcmul($updateOrder['discount_price'],100),
-                    bcdiv($hotel['pay_amount'], bcmul($this->order['total_price'],100),2)
-                );
-                $this->updateSaleHotel(['sh_id' => $hotel['sh_id'],'discount_price' => $hotel['discount_price']]);
             }
         }
         if ($this->countContent['mc_id']) {

@@ -468,9 +468,19 @@ function checkStrDomain($str)
 {
     if ($str) {
         $host = env("app.host");
-        if (strpos($str, $host) === false) {
+        if (strpos($str,"http") === false && strpos($str, $host) === false) {
             $str = rtrim($host,'/') . "/" . ltrim($str,"/");
         }
     }
     return $str;
+}
+
+/**
+ * 重置路径为服务器绝对路径
+ * @param $path
+ * @return string
+ */
+function getAbsolutePath($path)
+{
+    return rtrim(public_path(str_replace(env("app.host") . "/",'',$path)),"\//");
 }
