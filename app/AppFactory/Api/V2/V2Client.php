@@ -126,6 +126,8 @@ class V2Client extends V2BaseClient
                 $machine['sale_count'] = ($sdc['totalQuantity'] ?? 0) - ($sdc['totalRefundQuantity'] ?? 0);
                 unset($machine['country_id'], $machine['state_id
                 '], $machine['city_id'], $machine['regions_id'], $machine['scene_id']);
+
+                if ($machine['device_type'] == 2) $machine['oo_status'] = 1;
                 return $machine;
             });
             if ($machineList) {
@@ -158,7 +160,8 @@ class V2Client extends V2BaseClient
 
             $this->machine = $this->getMachineFind(['machine_id' => $this->params['kiosk_id']], 'm_id,machine_id,machine_name,device_type,online,ao_id');
             if (!$this->machine) return $this->returnData(15, $this->lang("msg." . 15) . "：" . $this->lang("reserve_order.machine_no_data"));
-            if ($this->machine['device_type'] == 1 && $this->machine['online'] != 1) return $this->returnData(99, $this->lang("msg." . 99) . "：" . $this->lang("reserve_order.machine_offline"));
+            if ($this->machine['device_type'] == 1 && $this->machine['online'] != 1)
+                return $this->returnData(99, $this->lang("msg." . 99) . "：" . $this->lang("reserve_order.machine_offline"));
 
             // 不存在则重新生成一个8位纯数字取货码
             if (!isset($this->params['pick_code']) || !$this->params['pick_code']) {

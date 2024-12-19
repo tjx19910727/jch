@@ -157,71 +157,40 @@ class GoodsModel extends BaseModel
         $redis->close();
     }
 
-
     /**
-     * 查询之后操作
-     * @param Model $model
-     */
-    public static function onAfterRead(Model $model)
-    {
-        if ($model->pic) {
-            $model->pic = checkStrDomain($model->pic);
-        }
-        if ($model->banner) {
-            $banner = explode(";",$model->banner);
-            $temp = [];
-            foreach ($banner as $v) {
-                $temp[] = checkStrDomain($v);
-            }
-            if ($temp) $model->banner = implode(";",$temp);
-        }
-        if ($model->details_pic) {
-            $details = explode(";",$model->details_pic);
-            $detailsTemp = [];
-            foreach ($details as $dV) {
-                $detailsTemp[] = checkStrDomain($dV);
-            }
-            if ($detailsTemp) $model->details_pic = implode(";", $detailsTemp);
-        }
-        if ($model->desc) {
-            $descList = getImagesFromRichText($model->desc);
-            foreach ($descList as $dV2) {
-                $new = checkStrDomain($dV2);
-                $model->desc = str_replace($dV2,$new,$model->desc);
-            }
-        }
-    }
-
-    /**
+     * 删除成功后操作
      * 删除后清除上传的图片
      * @param Model $model
      */
-    public static function onAfterDelete(Model $model)
+    protected static function onAfterDelete(Model $model)
     {
-        if ($model->pic) {
-            $unlink[] = rtrim(public_path($model->pic),'/');
+        $unlink = [];
+        if (isset($model->pic)) {
+            $unlink[] = getAbsolutePath($model->pic);
         }
-        if ($model->banner) {
+        if (isset($model->banner)) {
             $banner = explode(";",$model->banner);
             foreach ($banner as $v) {
-                $unlink[] = rtrim(public_path($v),'/');
+                $unlink[] = getAbsolutePath($v);
             }
         }
-        if ($model->details_pic) {
+        if (isset($model->details_pic)) {
             $details = explode(";",$model->details_pic);
             foreach ($details as $dV) {
-                $unlink[] = rtrim(public_path($dV),'/');
+                $unlink[] = getAbsolutePath($dV);
             }
         }
-        if ($model->desc) {
+        if (isset($model->desc)) {
             $descList = getImagesFromRichText($model->desc);
             foreach ($descList as $dV2) {
-                $unlink[] = rtrim(public_path($dV2),'/');
+                $unlink[] = getAbsolutePath($dV2);
             }
         }
-        foreach ($unlink as $v) {
-            if (file_exists($v) && is_file($v)) {
-                @unlink($v);
+        if ($unlink) {
+            foreach ($unlink as $v) {
+                if (file_exists($v) && is_file($v)) {
+                    @unlink($v);
+                }
             }
         }
     }

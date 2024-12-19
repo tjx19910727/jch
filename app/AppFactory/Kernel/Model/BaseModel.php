@@ -10,9 +10,6 @@ namespace app\AppFactory\Kernel\Model;
 
 
 use app\AppFactory\Kernel\Traits\ModelTrait;
-use think\db\exception\DataNotFoundException;
-use think\db\exception\DbException;
-use think\db\exception\ModelNotFoundException;
 use think\facade\Db;
 use think\Model;
 
@@ -22,6 +19,88 @@ class BaseModel extends Model
 
     protected $createTime = "create_time";
     protected $updateTime = "update_time";
+
+    /**
+     * 修改操作前
+     * 带域名的数据全部清除域名
+     * @param Model $model
+     * @return mixed|void
+     */
+    public static function onBeforeWrite(Model $model)
+    {
+        $host = env("app.host");
+        if (isset($model->pic)) {
+            $model->pic = str_replace($host, '', $model->pic);
+        }
+        if (isset($model->path)) {
+            $model->path = str_replace($host, '', $model->path);
+        }
+        if (isset($model->banner)) {
+            $banner = explode(";",$model->banner);
+            $temp = [];
+            foreach ($banner as $v) {
+                $temp[] = str_replace($host, '', $v);
+            }
+            if ($temp) $model->banner = implode(";",$temp);
+        }
+        if (isset($model->details_pic)) {
+            $details = explode(";",$model->details_pic);
+            $detailsTemp = [];
+            foreach ($details as $dV) {
+                $detailsTemp[] = str_replace($host, '', $dV);
+            }
+            if ($detailsTemp) $model->details_pic = implode(";", $detailsTemp);
+        }
+        if (isset($model->desc)) {
+            $descList = getImagesFromRichText($model->desc);
+            if ($descList) {
+                foreach ($descList as $dV2) {
+                    $new = str_replace($host, '', $dV2);
+                    $model->desc = str_replace($dV2, $new, $model->desc);
+                }
+            }
+        }
+    }
+
+    /**
+     * 查询之后操作
+     * @param Model $model
+     */
+    public static function onAfterRead(Model $model)
+    {
+        if (isset($model->path)){
+            $model->path = checkStrDomain($model->path);
+        }
+        if (isset($model->pic)) {
+            $model->pic = checkStrDomain($model->pic);
+        }
+        if (isset($model->banner)) {
+            $banner = explode(";",$model->banner);
+            $temp = [];
+            foreach ($banner as $v) {
+                $temp[] = checkStrDomain($v);
+            }
+            if ($temp) $model->banner = implode(";",$temp);
+        }
+        if (isset($model->details_pic)) {
+            $details = explode(";",$model->details_pic);
+            $detailsTemp = [];
+            foreach ($details as $dV) {
+                $detailsTemp[] = checkStrDomain($dV);
+            }
+            if ($detailsTemp) $model->details_pic = implode(";", $detailsTemp);
+        }
+        if (isset($model->desc)) {
+            $descList = getImagesFromRichText($model->desc);
+            foreach ($descList as $dV2) {
+                $new = checkStrDomain($dV2);
+                $model->desc = str_replace($dV2,$new,$model->desc);
+            }
+        }
+    }
+
+
+
 
 
     /**

@@ -51,9 +51,11 @@ class Hotel extends Common
             returnState(300,lang($frequency))->send();
             die();
         }
+        $mac = $this->request->header("mac");
         $this->config = [
             "machine_id" => $postData['machine_id'],
             "data" => $postData,
+            "mac" => $mac,
         ];
         $this->app = AppFactory::machine($this->config);
         if ($this->app->hotel->checkSign($postData) !== true) {

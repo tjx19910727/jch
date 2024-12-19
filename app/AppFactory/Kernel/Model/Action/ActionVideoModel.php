@@ -17,13 +17,6 @@ class ActionVideoModel extends BaseModel
     protected $pk = "id";
     protected $name = "action_video";
 
-    public static function onAfterRead(Model $model)
-    {
-        if ($model->path){
-            $model->path = checkStrDomain($model->path);
-        }
-    }
-
     public static function onAfterDelete(Model $model)
     {
         if ($model->path) {

@@ -408,7 +408,7 @@ class ApiClient extends ReceiveBaseClient
                     $insertGChange["g_name"] = $mg['g_name'];
                     $insertGChange["gc_id"] = $mg['gc_id'];
                     $insertGChange["gc_name"] = $mg['gc_name'];
-                    $insertGChange["pic"] = str_replace($this->host,'',$mg['pic']);
+                    $insertGChange["pic"] = $mg['pic'];
                     $insertGChange["sku"] = $mg['sku'];
                     $insertGChange["bar_code"] = $mg['bar_code'];
                     $insertGChange["desc"] = "换货-设备商品库下货备用库存";
@@ -452,7 +452,6 @@ class ApiClient extends ReceiveBaseClient
                 $flag[] = $this->addMachineChannelReplenishment($repNewData);
                 $mc['stock'] += $this->data['quantity'];
             }
-            if (isset($mc['pic'])) $mc['pic'] = str_replace($this->host,'',$mc['pic']);
             $flag[] = $this->updateMachineChannel($mc);
             actionLog($this->getLS(), '【SQL】修改货道信息');
             $result = $this->checkFlag($flag);
@@ -904,8 +903,12 @@ class ApiClient extends ReceiveBaseClient
             ];
             if (isset($this->data['productSn']) && $this->data['productSn']) $params['productSn'] = $this->data['productSn'];
             $result = Trip::order()->getMallProductList($params);
+            actionLog($result,"返回数据");
             $result = json2arr($result);
-            $this->data['list'] = $result['result'];
+            $this->data['list'] = [];
+            if (isset($result['result'])) {
+                $this->data['list'] = $result['result'];
+            }
             return $this->r(200, $this->lang("query_success"), $this->data);
         } catch (\Exception $e) {
             actionException($e,1);

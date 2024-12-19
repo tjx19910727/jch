@@ -225,13 +225,17 @@ trait ActivityFdTrait
     private function designatedSku()
     {
         foreach ($this->content as $key => $value) {
-            $this->sku = $this->getSaleOrdersDetailsFind(['order_id' => $this->order['order_id'],'sku' => $value['condition_value']],
-                'sod_id,total_sod_price,discount_price,quantity');
+            $detailsList = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id'],'sku' => $value['condition_value']],
+                0,'sod_id,total_sod_price,discount_price,quantity');
             actionLog($this->getLS(),'查询指定SKU');
-            // 满足条件，执行逻辑，不满足就跳出
-            if ($this->sku) {
-                $this->countContent($value);
-                $this->lastContent = $value;
+            if ($detailsList) {
+                $detailsList = $detailsList->toArray();
+                foreach ($detailsList as $dk => $dv) {
+                    $this->sku = $dv;
+                    // 满足条件，执行逻辑，不满足就跳出
+                    $this->countContent($value);
+                    $this->lastContent = $value;
+                }
                 continue;
             }
             break;
