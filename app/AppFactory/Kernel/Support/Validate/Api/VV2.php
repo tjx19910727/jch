@@ -80,5 +80,6 @@ class VV2 extends SupportValidate
             "get_goods_multiple" => ["kiosk_id"],
             "get_activity_code" => ["aId","aType"],
             "use_pick_code" => ["machine_id","pick_code"],
+            "get_goods_category" => ["pageNum","page"],
         ];
 }

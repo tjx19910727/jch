@@ -133,6 +133,13 @@ class V2 extends Common
                 "page" => 1,
             ];
         }
+        if ($type == 11) {
+            $apiName = "get_goods_category";
+            $params = [
+                "pageNum" => 15,
+                "page" =>1 ,
+            ];
+        }
         $data = [
             "auth_name" => "Lc_test",
             "auth_password" => "123456",
@@ -177,7 +184,7 @@ class V2 extends Common
             return $app->v2->returnData(4, lang("msg." . 4));
         } catch (\Exception $e) {
             actionException($e,1);
-            return  json(["status_code" => 99, "msg" => lang("msg." . 99)]);
+            return  json(["status_code" => 99, "msg" => lang("msg." . 99) . $e->getMessage()]);
         }
     }
 }  

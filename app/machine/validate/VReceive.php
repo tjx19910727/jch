@@ -188,8 +188,8 @@ class VReceive extends VCommon
 
     public function checkTimestamp($item)
     {
-//        if (!$item) return "时间戳不能为空";
-//        if (time() - $item > 120) return "VReceive.timestamp_checkTimestamp_overdue";
+        if (!$item) return "时间戳不能为空";
+        if (time() - $item > 120) return "VReceive.timestamp_checkTimestamp_overdue";
         return true;
     }
 }

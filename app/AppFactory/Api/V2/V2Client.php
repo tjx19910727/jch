@@ -21,6 +21,7 @@ use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthStatesTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsMultipleTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
@@ -45,7 +46,7 @@ class V2Client extends V2BaseClient
     use ActivityPickTrait,ActivityPickCodeTrait,ActivityCouponTrait,ActivityCouponUsedTrait;
     use ApiAdvanceTrait, ApiCallbackTrait;
     use AfterOrderPaymentTrait;
-    use GoodsTrait;
+    use GoodsTrait,GoodsCategoryTrait;
     use GoodsMultipleTrait;
     use BeforeOrderPaymentTrait;
 
@@ -70,12 +71,14 @@ class V2Client extends V2BaseClient
             $where[] = ['status', '<>', 2];
             $data = $this->getMachineChannelList($where,$this->params['pageNum'], $field, 'stock desc');
             $data = $data->each(function ($item) {
-                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,`desc`,details_pic');
+                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,`desc`,details_pic,gc_id,gc_name');
                 $item['pic'] = $goods['pic'] ?? '';
                 $item['details_pic'] = $goods['details_pic'] ?? '';
                 $item['banner'] = $goods['banner'] ?? '';
                 $item['sku2'] = $goods['sku2'] ?? '';
                 $item['g_desc'] = $goods['desc'] ?? '';
+                $item['gc_id'] = $goods['gc_id'] ?? "";
+                $item['gc_name'] = $goods['gc_name'] ?? "";
                 return $item;
             });
             if ($data) {
@@ -137,13 +140,13 @@ class V2Client extends V2BaseClient
             return $this->returnData(10, $this->lang("msg." . 10));
         } catch (DataNotFoundException $e) {
             actionException($e, 1);
-            return $this->returnData(99, $this->lang("msg." . 99));
+            return $this->returnData(99, $this->lang("msg." . 99) . $e->getMessage());
         } catch (ModelNotFoundException $e) {
             actionException($e, 1);
-            return $this->returnData(99, $this->lang("msg." . 99));
+            return $this->returnData(99, $this->lang("msg." . 99 . $e->getMessage()));
         } catch (DbException $e) {
             actionException($e, 1);
-            return $this->returnData(99, $this->lang("msg." . 99));
+            return $this->returnData(99, $this->lang("msg." . 99 . $e->getMessage()));
         }
     }
 
@@ -461,7 +464,7 @@ class V2Client extends V2BaseClient
     }
 
     /**
-     * 使用预订订单取货码
+     * 10. 使用预订订单取货码
      * string       pick_code      取货码
      * string       machine_id      设备编号
      * int          out_channel     出货口，1：第1出货口（正常出货），2：第2出货口（机器人取货），待定
@@ -621,5 +624,15 @@ class V2Client extends V2BaseClient
         }
         $this->rollbackTrans();
         return $this->returnData(19,$this->lang("msg.19") . ": " . $this->lang("use_pick_code.trans_fail"));
+    }
+
+    /**
+     * 11. 获取商品分类
+     * @return array|\think\response\Json
+     */
+    public function get_goods_category()
+    {
+        $list = $this->getGoodsCategoryList(["status" => 1],$this->params['pageNum'] ?? 0,'gc_id,gc_pid,gc_name,`desc` gc_desc, ico, sort','sort asc');
+        return $this->returnData(0,$this->lang("msg.0"),$list);
     }
 }
