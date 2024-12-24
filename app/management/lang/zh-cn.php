@@ -378,6 +378,7 @@ return [
     "VMachine" => [
         "m_id_require" => "请选择设备",
         "machine_id_require" => "设备编号不能为空",
+        "machine_id_alphaDash" => "设备编号只能包含字母和数字，'-','_'也可以使用",
         "machine_no_data" => "查无设备信息",
         "status_in" => "设备状态不在范围内",
 

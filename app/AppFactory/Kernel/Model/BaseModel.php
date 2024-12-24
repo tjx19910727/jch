@@ -20,6 +20,17 @@ class BaseModel extends Model
     protected $createTime = "create_time";
     protected $updateTime = "update_time";
 
+    public static $singlePathFieldList = ["path","pic","button_pic","bg_pic","file_path","icon","ico","gm_pic","qr_code","receipt_code1","receipt_code2","receipt_code3"
+        ,"discount_pic","screen_img","camera_img","exchange_img","transaction_video"];
+    public static $morePathFieldList = [
+        ['field' => "banner","separator" => ";"],
+        ['field' => "details_pic","separator" => ";"],
+        ['field' => "deliver_pics","separator" => ","]
+    ];
+
+    public static $richTextPathFieldList = ["desc","gm_desc"];
+
+
     /**
      * 修改操作前
      * 带域名的数据全部清除域名
@@ -29,34 +40,33 @@ class BaseModel extends Model
     public static function onBeforeWrite(Model $model)
     {
         $host = env("app.host");
-        if (isset($model->pic)) {
-            $model->pic = str_replace($host, '', $model->pic);
-        }
-        if (isset($model->path)) {
-            $model->path = str_replace($host, '', $model->path);
-        }
-        if (isset($model->banner)) {
-            $banner = explode(";",$model->banner);
-            $temp = [];
-            foreach ($banner as $v) {
-                $temp[] = str_replace($host, '', $v);
+        // 清除单路径域名信息
+        foreach (self::$singlePathFieldList as $key => $value) {
+            if (isset($model->$value)) {
+                $model->$value = str_replace($host, '', $model->$value);
             }
-            if ($temp) $model->banner = implode(";",$temp);
         }
-        if (isset($model->details_pic)) {
-            $details = explode(";",$model->details_pic);
-            $detailsTemp = [];
-            foreach ($details as $dV) {
-                $detailsTemp[] = str_replace($host, '', $dV);
+        // 清除多路径域名信息
+        foreach (self::$morePathFieldList as $mK => $mV) {
+            $field = $mV['field'];
+            if (isset($model->$field)) {
+                $list = explode($mV['separator'], $model->$field);
+                $temp = [];
+                foreach ($list as $lV) {
+                    $temp[] = str_replace($host, '', $lV);
+                }
+                if ($temp) $model->$field = implode($mV['separator'], $temp);
             }
-            if ($detailsTemp) $model->details_pic = implode(";", $detailsTemp);
         }
-        if (isset($model->desc)) {
-            $descList = getImagesFromRichText($model->desc);
-            if ($descList) {
-                foreach ($descList as $dV2) {
-                    $new = str_replace($host, '', $dV2);
-                    $model->desc = str_replace($dV2, $new, $model->desc);
+        // 清除富文本路径域名信息
+        foreach (self::$richTextPathFieldList as $rK => $rV) {
+            if (isset($model->$rV)) {
+                $richList = getImagesFromRichText($model->$rV);
+                if ($richList) {
+                    foreach ($richList as $richV) {
+                        $new = str_replace($host,'',$richV);
+                        $model->$rV = str_replace($richV,$new,$model->$rV);
+                    }
                 }
             }
         }
@@ -68,33 +78,34 @@ class BaseModel extends Model
      */
     public static function onAfterRead(Model $model)
     {
-        if (isset($model->path)){
-            $model->path = checkStrDomain($model->path);
-        }
-        if (isset($model->pic)) {
-            $model->pic = checkStrDomain($model->pic);
-        }
-        if (isset($model->banner)) {
-            $banner = explode(";",$model->banner);
-            $temp = [];
-            foreach ($banner as $v) {
-                $temp[] = checkStrDomain($v);
+        // 增加单路径域名信息
+        foreach (self::$singlePathFieldList as $key => $value) {
+            if (isset($model->$value)) {
+                $model->$value = checkStrDomain($model->$value);
             }
-            if ($temp) $model->banner = implode(";",$temp);
         }
-        if (isset($model->details_pic)) {
-            $details = explode(";",$model->details_pic);
-            $detailsTemp = [];
-            foreach ($details as $dV) {
-                $detailsTemp[] = checkStrDomain($dV);
+        // 增加多路径域名信息
+        foreach (self::$morePathFieldList as $mK => $mV) {
+            $field = $mV['field'];
+            if (isset($model->$field)) {
+                $list = explode($mV['separator'], $model->$field);
+                $temp = [];
+                foreach ($list as $lV) {
+                    $temp[] = checkStrDomain($lV);
+                }
+                if ($temp) $model->$field = implode($mV['separator'], $temp);
             }
-            if ($detailsTemp) $model->details_pic = implode(";", $detailsTemp);
         }
-        if (isset($model->desc)) {
-            $descList = getImagesFromRichText($model->desc);
-            foreach ($descList as $dV2) {
-                $new = checkStrDomain($dV2);
-                $model->desc = str_replace($dV2,$new,$model->desc);
+        // 增加富文本路径域名信息
+        foreach (self::$richTextPathFieldList as $rK => $rV) {
+            if (isset($model->$rV)) {
+                $richList = getImagesFromRichText($model->$rV);
+                if ($richList) {
+                    foreach ($richList as $richV) {
+                        $new = checkStrDomain($richV);
+                        $model->$rV = str_replace($richV,$new,$model->$rV);
+                    }
+                }
             }
         }
     }

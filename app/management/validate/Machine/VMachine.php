@@ -15,13 +15,14 @@ class VMachine extends VCommon
 {
     protected $rule = [
         "m_id" => "require",
-        "machine_id" => "require",
+        "machine_id" => "require|alphaDash",
         "status" => "in:1,2,3",
     ];
 
     protected $message = [
         "m_id.require" => "VMachine.m_id_require",
         "machine_id.require" => "VMachine.machine_id_require",
+        "machine_id.alphaDash" => "VMachine.machine_id_alphaDash",
         "status.in" => "VMachine.status_in",
     ];
 

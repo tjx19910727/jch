@@ -106,10 +106,10 @@ class V2Client extends V2BaseClient
                 $where[] = ["machine_id", 'in', $this->params['machine_id']];
             $whereSdc[] = ['create_date', ">=", strtotime("-7 days")];
             $machineList = $this->getMachineList($where, $this->params['pageNum'], $field)->each(function ($machine) use ($whereSdc) {
-                if (isset($machine['country_id']) && $machine['country_id']) $machine['country'] = $this->getEarthCountriesValue(['id' => $machine['country_id']], 'name');
-                if (isset($machine['state_id']) && $machine['state_id']) $machine['state'] = $this->getEarthStatesValue(['id' => $machine['state_id']], 'name');
-                if (isset($machine['city_id']) && $machine['city_id']) $machine['city'] = $this->getEarthCitiesValue(['id' => $machine['city_id']], 'name');
-                if (isset($machine['regions_id']) && $machine['regions_id']) $machine['regions'] = $this->getEarthRegionsValue(['id' => $machine['regions_id']], 'name');
+                if (isset($machine['country_id']) && $machine['country_id']) $machine['country'] = $this->getEarthCountriesValue(['id' => $machine['country_id']], 'cname');
+                if (isset($machine['state_id']) && $machine['state_id']) $machine['state'] = $this->getEarthStatesValue(['id' => $machine['state_id']], 'cname');
+                if (isset($machine['city_id']) && $machine['city_id']) $machine['city'] = $this->getEarthCitiesValue(['id' => $machine['city_id']], 'cname');
+                if (isset($machine['regions_id']) && $machine['regions_id']) $machine['regions'] = $this->getEarthRegionsValue(['id' => $machine['regions_id']], 'cname');
                 $machine['inventory'] = $this->getMachineChannelSum(['machine_id' => $machine['machine_id']], 'stock');
                 $machine['location_type'] = $machine['scene_id'] ? $this->getConfigSceneValue(['id' => $machine['scene_id']], 'name') : "";
                 $machine['district'] = "";
@@ -130,7 +130,7 @@ class V2Client extends V2BaseClient
                 unset($machine['country_id'], $machine['state_id
                 '], $machine['city_id'], $machine['regions_id'], $machine['scene_id']);
 
-                if ($machine['device_type'] == 2) $machine['oo_status'] = 1;
+                if ($machine['device_type'] == 2) $machine['oo_status'] = "online";
                 return $machine;
             });
             if ($machineList) {
@@ -507,9 +507,9 @@ class V2Client extends V2BaseClient
 
         $updateOrder = [];
         $this->startTrans();
-//        if ($this->order['total_price'] > 0) {
-//            $flag[] = $this->countIncome();
-//        }
+        if ($this->order['total_price'] > 0) {
+            $flag[] = $this->countIncome();
+        }
         $updatePc['status'] = $this->machine['device_type'] == 1 ? 5 : 2;
         $updatePc['m_id'] = $this->machine['m_id'];
         $updatePc['machine_id'] = $this->machine['machine_id'];

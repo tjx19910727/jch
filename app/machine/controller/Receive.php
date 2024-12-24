@@ -352,7 +352,7 @@ class Receive extends Common
      * 上报广告素材下载百分比
      * @return array|\think\response\Json
      */
-    public function reportAdvDownLoad()
+    public function reportAdvDownload()
     {
         try {
             return $this->app->api->reportAdvDownLoad();

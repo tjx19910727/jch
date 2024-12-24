@@ -85,6 +85,6 @@ trait GoodsTrait
 
     public function delGoods($where)
     {
-        return GoodsModel::whereDel($where);
+        return GoodsModel::destroy($where);
     }
 }

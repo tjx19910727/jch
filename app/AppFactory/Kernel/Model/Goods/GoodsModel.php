@@ -165,31 +165,36 @@ class GoodsModel extends BaseModel
     protected static function onAfterDelete(Model $model)
     {
         $unlink = [];
-        if (isset($model->pic)) {
-            $unlink[] = getAbsolutePath($model->pic);
-        }
-        if (isset($model->banner)) {
-            $banner = explode(";",$model->banner);
-            foreach ($banner as $v) {
-                $unlink[] = getAbsolutePath($v);
+        foreach (self::$singlePathFieldList as $v1) {
+            if (isset($model->$v1)) {
+                $unlink[] = getAbsolutePath($model->$v1);
             }
         }
-        if (isset($model->details_pic)) {
-            $details = explode(";",$model->details_pic);
-            foreach ($details as $dV) {
-                $unlink[] = getAbsolutePath($dV);
+        foreach (self::$morePathFieldList as $mK => $mV) {
+            $field = $mV['field'];
+            if (isset($model->$field)) {
+                $list = explode($mV['separator'], $model->$field);
+                foreach ($list as $lV) {
+                    $unlink[] = getAbsolutePath($lV);
+                }
             }
         }
-        if (isset($model->desc)) {
-            $descList = getImagesFromRichText($model->desc);
-            foreach ($descList as $dV2) {
-                $unlink[] = getAbsolutePath($dV2);
+        foreach (self::$richTextPathFieldList as $rK => $rV) {
+            if (isset($model->$rV)) {
+                $richList = getImagesFromRichText($model->$rV);
+                if ($richList) {
+                    foreach ($richList as $richV) {
+                        $unlink[] = getAbsolutePath($richV);
+                    }
+                }
             }
         }
+        actionLog($unlink,'需要删除的图片路径','afterDelGoods');
         if ($unlink) {
             foreach ($unlink as $v) {
+                $v = str_replace("../","",$v);
                 if (file_exists($v) && is_file($v)) {
-                    @unlink($v);
+                    unlink($v);
                 }
             }
         }

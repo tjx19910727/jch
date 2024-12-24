@@ -16,7 +16,7 @@ class VGoods extends VCommon
         "g_name" => "require|length:0,100",
         "sku" => "require",
         "banner" => "length:0,1024",
-        "pic" => "length:0,100",
+        "pic" => "length:0,255",
         "manufacturer" => "length:0,100",
         "service_phone" => "length:0,100",
         "release_time" => "require",

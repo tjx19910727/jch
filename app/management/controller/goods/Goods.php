@@ -75,7 +75,7 @@ class Goods extends Common
         $g_id = input("g_id");
         if (strpos($g_id,",")) $where[] = ['g_id',"in",$g_id];
         else $where['g_id'] = $g_id;
-        $result = $this->app->goods->delG($where);
+        $result = $this->app->goods->del($where);
         return $result;
     }
 
