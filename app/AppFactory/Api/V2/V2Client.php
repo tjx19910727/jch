@@ -33,7 +33,6 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
-use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
@@ -45,7 +44,6 @@ class V2Client extends V2BaseClient
     use EarthCountriesTrait, EarthCitiesTrait, EarthRegionsTrait, EarthAreaTrait, EarthStatesTrait;
     use SaleOrdersDailyCountTrait, SaleOrdersTrait, SaleHotelTrait, SaleOrdersRevenueTrait;
     use ActivityPickTrait,ActivityPickCodeTrait,ActivityCouponTrait,ActivityCouponUsedTrait;
-    use StrategyIncomeTrait;
     use ApiAdvanceTrait, ApiCallbackTrait;
     use AfterOrderPaymentTrait;
     use GoodsTrait,GoodsCategoryTrait;
@@ -73,7 +71,7 @@ class V2Client extends V2BaseClient
             $where[] = ['status', '<>', 2];
             $data = $this->getMachineChannelList($where,$this->params['pageNum'], $field, 'stock desc');
             $data = $data->each(function ($item) {
-                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,`desc`,details_pic,gc_id,gc_name,length,width,height');
+                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,`desc`,details_pic,gc_id,gc_name');
                 $item['pic'] = $goods['pic'] ?? '';
                 $item['details_pic'] = $goods['details_pic'] ?? '';
                 $item['banner'] = $goods['banner'] ?? '';
@@ -81,9 +79,6 @@ class V2Client extends V2BaseClient
                 $item['g_desc'] = $goods['desc'] ?? '';
                 $item['gc_id'] = $goods['gc_id'] ?? "";
                 $item['gc_name'] = $goods['gc_name'] ?? "";
-                $item['length'] = $goods['length'] ?? "";
-                $item['width'] = $goods['width'] ?? "";
-                $item['height'] = $goods['height'] ?? "";
                 return $item;
             });
             if ($data) {
@@ -132,7 +127,8 @@ class V2Client extends V2BaseClient
                     'machine_id');
                 $machine['sale_income'] = ($sdc['totalPrice'] ?? 0) - ($sdc['totalRefundMoney'] ?? 0) - ($sdc['totalDiscountPrice'] ?? 0);
                 $machine['sale_count'] = ($sdc['totalQuantity'] ?? 0) - ($sdc['totalRefundQuantity'] ?? 0);
-                unset($machine['country_id'], $machine['state_id'], $machine['city_id'], $machine['regions_id'], $machine['scene_id']);
+                unset($machine['country_id'], $machine['state_id
+                '], $machine['city_id'], $machine['regions_id'], $machine['scene_id']);
 
                 if ($machine['device_type'] == 2) $machine['oo_status'] = "online";
                 return $machine;
