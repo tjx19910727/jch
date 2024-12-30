@@ -90,7 +90,7 @@ class Excel
                     $type = explode(".", $imageFileName);
                     $imageName = $imageFilePath . md5(time() . rand(00000000, 99999999)) . '.' . $type[1];
                     if (file_put_contents($imageName, $imgData)) {
-                        $data[$xy] = env("APP.host") . substr($imageName, 1);
+                        $data[$xy] = substr($imageName, 1);
                     }  //把文件保存到本地
                 } elseif ($drawing instanceof \PHPExcel_Worksheet_MemoryDrawing) {//支持excel2003后缀为（.xls）
                     $imageFileNames = $drawing->getIndexedFilename();
@@ -107,7 +107,7 @@ class Excel
                     $type = explode(".", $imageFileNames);
                     $imageName = $imageFilePath . md5(time() . rand(00000000, 99999999)) . '.' . $type[1];
                     if (file_put_contents($imageName, $imageContents)) {
-                        $data[$xy] =  env("APP.host") .substr($imageName, 1);
+                        $data[$xy] =  substr($imageName, 1);
                     }  //把文件保存到本地
                 }
             }

@@ -16,6 +16,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
+use app\management\validate\VGoods;
 
 class GoodsClient extends ManagementClient
 {
@@ -142,12 +143,19 @@ class GoodsClient extends ManagementClient
     {
         try {
             $path = root_path() . "public" . $data['file_path'];
-            $title = ["g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status"];
+            $title = ["g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status",'length','width','height'];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
             $goods = Excel::importExcel($path, $title, $other);
             if (is_object($goods)) return $goods;
             actionLog($goods, '导入的商品数据');
             if ($goods) {
+                foreach ($goods as $key => $value) {
+                    try {
+                        validate(VGoods::class)->scene("importExcel")->check($value);
+                    } catch (\Exception $e) {
+                        return $this->rFail($e->getMessage());
+                    }
+                }
                 $result = $this->addMoreGoods($goods);
                 return $this->rAction($result);
             }

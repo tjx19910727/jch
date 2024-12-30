@@ -277,6 +277,10 @@ return [
         "banner_max" => "轮播图片长度超限制",
         "manufacturer_max" => "供应商名称长度超限制",
         "service_phone_max" => "联系电话长度超限制",
+        "release_time_require" => "发售时间不能为空",
+        "length_require" => "商品长度不能为空",
+        "width_require" => "商品宽度不能为空",
+        "height_require" => "商品高度不能为空",
     ],
 
     "VGoodsCategory" => [

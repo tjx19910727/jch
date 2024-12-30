@@ -101,10 +101,14 @@ class ActivityLotteryClient extends ManagementClient
                         $this->rollbackTrans();
                         return $this->rValidate($e->getMessage());
                     }
-                    $insertAm = $this->getMachineFind(['m_id' => $mv['m_id']], 'm_id,machine_id,machine_name')->toArray();
-                    $insertAm['a_type'] = 3;
-                    $insertAm['a_id'] = $al_id;
-                    $flag[] = $this->addActivityMachine($insertAm);
+                    $machine = $this->getMachineFind(['m_id' => $mv['m_id']], 'm_id,machine_id,machine_name');
+                    if ($machine) {
+                        $machine = $machine->toArray();
+                        $insertAm = $machine;
+                        $insertAm['a_type'] = 3;
+                        $insertAm['a_id'] = $al_id;
+                        $flag[] = $this->addActivityMachine($insertAm);
+                    }
                 }
             }
             $check = $this->checkFlag($flag);
