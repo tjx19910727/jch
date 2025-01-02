@@ -735,7 +735,6 @@ class ApiClient extends ReceiveBaseClient
                         if ($this->data['pay_type'] == 0) {
                             $mc['retail_price'] = 0;
                         }
-                        $goods = $this->getGoodsFind(['g_id' => $mc['g_id']], 'g_id,g_name,g_type');
                         $details = [
                             "order_id" => $order_id,
                             "mc_id" => $mc['mc_id'],
@@ -745,7 +744,6 @@ class ApiClient extends ReceiveBaseClient
                             "mg_id" => $mc['mg_id'],
                             "g_id" => $mc['g_id'],
                             "g_name" => $mc['g_name'],
-                            "g_type" => $goods['g_type'],
                             "pic" => $mc['pic'],
                             "sku" => $mc['sku'],
                             "gc_id" => $mc['gc_id'],

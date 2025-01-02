@@ -113,9 +113,11 @@ trait ActivityFdTrait
                 }
             }
         }
-        $this->content = $this->getActivityFdContentList(['fd_id' => $this->fd['fd_id']],0,"*","fdc_sort ASC");
+        $fieldOrder = "fdc_sort ASC, fdc_id desc";
+        $this->content = $this->getActivityFdContentList(['fd_id' => $this->fd['fd_id']],0,"*",$fieldOrder);
         if (!$this->content) return $this->rFail($this->lang("VActivityFd.content_no_data"));
         if (is_string($this->content)) return $this->rFail($this->content);
+        actionLog($this->getLS(),'【SQL】查询活动规则');
         $this->content = $this->content->toArray();
 
         $this->startTrans();
@@ -168,7 +170,7 @@ trait ActivityFdTrait
                 $this->commitTrans();
                 $data['order'] = $this->getSaleOrdersFind(['order_id' => $this->order['order_id']], 'order_id,trade_no,order_type,total_price,discount_price,total_quantity');
                 $data['order']['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']], 0,
-                    'sod_id,mc_id,shelf_way,channel_position,channel_code,mg_id,g_name,pic,sku,gc_name,total_sod_price,quantity,is_gift');
+                    'sod_id,mc_id,shelf_way,channel_position,channel_code,mg_id,g_name,pic,sku,gc_name,total_sod_price,discount_price,quantity,is_gift');
                 $data['fdUsed'] = $this->getActivityFdUsedList(['order_id' => $this->order['order_id']], 0,
                     'fdu_id,fd_name,fd_type,condition_type,condition_value,active_value,g_id,g_name,pic');
                 return $this->r(200, $this->lang("action_success"), $data);
@@ -192,9 +194,8 @@ trait ActivityFdTrait
             if ($this->order['total_price'] >= $value['condition_value']) {
                 $this->countContent($value);
                 $this->lastContent = $value;
-                continue;
+                break;
             }
-            break;
         }
     }
 
@@ -208,9 +209,8 @@ trait ActivityFdTrait
             if ($this->order['total_quantity'] >= $value['condition_value']) {
                 $this->countContent($value);
                 $this->lastContent = $value;
-                continue;
+                break;
             }
-            break;
         }
     }
 
@@ -251,6 +251,7 @@ trait ActivityFdTrait
             if ($this->fd['fd_type'] != 3) break;
             $this->countContent($value);
             $this->lastContent = $value;
+            break;
         }
     }
 

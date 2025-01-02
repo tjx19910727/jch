@@ -281,6 +281,7 @@ return [
         "length_require" => "商品长度不能为空",
         "width_require" => "商品宽度不能为空",
         "height_require" => "商品高度不能为空",
+        "g_is_up" => "商品已上架",
     ],
 
     "VGoodsCategory" => [

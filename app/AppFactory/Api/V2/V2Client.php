@@ -127,8 +127,7 @@ class V2Client extends V2BaseClient
                     'machine_id');
                 $machine['sale_income'] = ($sdc['totalPrice'] ?? 0) - ($sdc['totalRefundMoney'] ?? 0) - ($sdc['totalDiscountPrice'] ?? 0);
                 $machine['sale_count'] = ($sdc['totalQuantity'] ?? 0) - ($sdc['totalRefundQuantity'] ?? 0);
-                unset($machine['country_id'], $machine['state_id
-                '], $machine['city_id'], $machine['regions_id'], $machine['scene_id']);
+                unset($machine['country_id'], $machine['state_id'], $machine['city_id'], $machine['regions_id'], $machine['scene_id']);
 
                 if ($machine['device_type'] == 2) $machine['oo_status'] = "online";
                 return $machine;
