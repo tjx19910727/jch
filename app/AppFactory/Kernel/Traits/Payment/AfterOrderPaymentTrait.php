@@ -237,6 +237,7 @@ trait AfterOrderPaymentTrait
                 $updateSh['sh_id'] = $sh['sh_id'];
                 $updateSh['pay_time'] = time();
                 $updateSh['pay_status'] = ($status == 1 ? 3 : 4);
+                $updateSh['pay_amount'] = 0;
                 $updateSh['create_status'] = 1;
                 // 自营酒店
                 if ($sh['hotelFrom'] == 2 && $status == 1) {

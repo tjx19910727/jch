@@ -48,4 +48,19 @@ class SaleOrdersRefundModel extends BaseModel
         }
         return $data;
     }
+
+    public static function getRefundListJoinSo($where,$pageNum = 0, $field = "*",$order = "")
+    {
+        $data = self::alias("sor")
+            ->join("sale_orders so","so.order_id = sor.order_id","left")
+            ->where($where)
+            ->field($field)
+            ->order($order);
+        if ($pageNum) {
+            $data = $data->paginate($pageNum,false,['query' => request()->param()]);
+        } else {
+            $data = $data->select();
+        }
+        return $data;
+    }
 }

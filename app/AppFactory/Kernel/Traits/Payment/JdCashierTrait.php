@@ -275,7 +275,7 @@ trait JdCashierTrait
         actionLog($params, '退款申请参数');
         $result = $this->jdApp->order->refundByTradeNo($params);
         actionLog($result, '退款申请结果');
-        if (isset($result['result']) && $result['result'] !== true) return returnState(100, '退款失败', $result);
+        if (isset($result['result']) && $result['result'] !== true) return returnState(100, '退款失败：' . ($result['message'] ?? ""), $result);
         if ($result['refundStatus'] == 'SUCCESS') {
             return $this->rSuccess( '退款成功');
         }

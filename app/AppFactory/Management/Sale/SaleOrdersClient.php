@@ -273,7 +273,7 @@ class SaleOrdersClient extends ManagementClient
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
         if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
         $list = $this->getSaleOrdersList($where, 0,
-            'order_id,machine_id,machine_name,trade_no,mch_no,total_quantity,(total_price - refund_amount) total_price,discount_price,retail_price,
+            'order_id,machine_id,machine_name,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,
                 (CASE order_type 
                     WHEN 1 THEN "普通订单"
                     WHEN 2 THEN "优惠券订单"
@@ -284,13 +284,62 @@ class SaleOrdersClient extends ManagementClient
                     END 
                 ) order_type,
                 (CASE refund_status WHEN 1 THEN "正常" WHEN 2 THEN "已退款" WHEN 3 THEN "退款失败" END) refund_status,
-                (CASE pay_type WHEN 1 THEN "微信支付" WHEN 2 THEN "支付宝支付" WHEN 3 THEN "" WHEN 4 THEN "京东收银" WHEN 5 THEN "会员支付" WHEN 0 THEN "免支付" END) pay_type,
+                (CASE pay_type 
+                WHEN 1 THEN "微信支付" 
+                WHEN 2 THEN "支付宝支付" 
+                WHEN 3 THEN "" 
+                WHEN 4 THEN "京东收银" 
+                WHEN 5 THEN "会员支付" 
+                WHEN 6 THEN "丽呈线上支付" 
+                WHEN 7 THEN "机器人线上支付" 
+                WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
                 FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time
                 '
         );
         if ($list) {
             $list = $list->toArray();
+            $postData = input();
+            $whereRefund['status'] = 2;
+            if ($machineIds) $whereRefund[] = ['sor.machine_id','in',$machineIds];
+            if (isset($postData['m_id']) && $postData['m_id']) {
+                $whereRefund['sor.m_id'] = $postData["m_id"];
+            }
+            if (isset($postData['mch_no']) && $postData['mch_no']) {
+                $whereRefund[] = ['so.mch_no',"like", "%" . $postData['mch_no'] . "%"];
+            }
+            if (isset($postData['trade_no']) && $postData['trade_no']) {
+                $whereRefund[] = ['sor.trade_no',"like", "%" . $postData['mch_no'] . "%"];
+            }
+            if (isset($postData['pay_time']) && $postData['pay_time']) {
+                $time = explode("~",$postData['pay_time']);
+                $whereRefund[] = ['sor.update_time','between',[strtotime($time[0]),strtotime($time[1])]];
+            }
+            if (isset($postData['machine_name']) && $postData['machine_name'])
+                $whereRefund[] = ['sor.machine_name','like',"%". $postData['machine_name'] . "%"];
+            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund,0,"sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,sor.refund_trade_no mch_no,
+            sor.refund_quantity total_quantity,
+             (0-sor.refund_amount) total_price,('-') discount_price,('-') retail_price,
+             ('已退款') refund_status,
+                (CASE order_type 
+                    WHEN 1 THEN \"普通订单\"
+                    WHEN 2 THEN \"优惠券订单\"
+                    WHEN 3 THEN \"取货码订单\"
+                    WHEN 4 THEN \"盲盒活动\"
+                    WHEN 5 THEN \"满减满送活动\"
+                    WHEN 6 THEN \"叠加营销活动\"
+                    END 
+                ) order_type,(CASE pay_type 
+                WHEN 1 THEN \"微信支付\" 
+                WHEN 2 THEN \"支付宝支付\" 
+                WHEN 3 THEN \"\" 
+                WHEN 4 THEN \"京东收银\" 
+                WHEN 5 THEN \"会员支付\" 
+                WHEN 6 THEN \"丽呈线上支付\" 
+                WHEN 7 THEN \"机器人线上支付\" 
+                WHEN 0 THEN \"免支付\" END) pay_type,FROM_UNIXTIME(sor.update_time,'%Y-%m-%d %H:%i:%s') pay_time,('-') out_time",'sor.update_time asc');
+            if ($refund) $list = array_merge($list,$refund->toArray());
+
             $title = [
                 "order_id" => "订单ID",
                 "machine_id" => "设备编号",
@@ -323,7 +372,7 @@ class SaleOrdersClient extends ManagementClient
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
         if ($machineIds) $where[] = ['so.machine_id', 'in', $machineIds];
         $field = "so.machine_id,so.machine_name,so.trade_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,
-        (sod.total_sod_price - sod.refund_amount) total_sod_price,
+        sod.total_sod_price,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
             (CASE so.order_type 
             WHEN 1 THEN '普通订单' 
@@ -339,6 +388,8 @@ class SaleOrdersClient extends ManagementClient
             WHEN 2 THEN '支付宝'
             WHEN 4 THEN '京东收银'
             WHEN 5 THEN '会员支付'
+            WHEN 6 THEN '丽呈线上支付'
+            WHEN 7 THEN '机器人线上支付'
             ELSE '' END) pay_type,
             (CASE so.pay_method 
             WHEN 0 THEN '免支付' 
@@ -358,6 +409,40 @@ class SaleOrdersClient extends ManagementClient
         if ($list) {
             $list = $list->toArray();
             if ($list) {
+                $where['sor.status'] = 2;
+                if (isset($where[0][0]) && $where[0][0] == "create_time") $where[0][0] = "sor.update_time";
+                $refund = $this->getSaleOrdersRefundListJoinSoSod($where,0,
+                    "sor.machine_id,sor.machine_name,sor.trade_no,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
+                            (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
+                        (CASE so.order_type 
+                        WHEN 1 THEN '普通订单' 
+                        WHEN 2 THEN '优惠券订单'
+                        WHEN 3 THEN '取货码订单'
+                        WHEN 4 THEN '付费抽奖订单'
+                        WHEN 5 THEN '满减满送订单'
+                        WHEN 6 THEN '叠加营销活动订单'
+                        ELSE '' END) order_type,
+                        (CASE so.pay_type 
+                        WHEN 0 THEN '免支付' 
+                        WHEN 1 THEN '微信' 
+                        WHEN 2 THEN '支付宝'
+                        WHEN 4 THEN '京东收银'
+                        WHEN 5 THEN '会员支付'
+                        WHEN 6 THEN '丽呈线上支付'
+                        WHEN 7 THEN '机器人线上支付'
+                        ELSE '' END) pay_type,
+                        (CASE so.pay_method 
+                        WHEN 0 THEN '免支付' 
+                        WHEN 1 THEN '扫码支付' 
+                        WHEN 41 THEN '扫码支付' 
+                        WHEN 2 THEN '被扫支付'
+                        ELSE '' END) pay_method,
+                        ('已退款') order_status,
+                        FROM_UNIXTIME(sor.update_time,'%Y-%m-%d %H:%i:%s') pay_time,
+                        FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
+                        (sor.refund_quantity) quantity,
+                        (sod.success_quantity) success_quantity");
+                if ($refund) $list = array_merge($list,$refund->toArray());
                 $title = [
                     "machine_id" => "设备编号",
                     "machine_name" => "设备名称",

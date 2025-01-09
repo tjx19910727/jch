@@ -28,6 +28,11 @@ trait SaleOrdersRefundTrait
         return SaleOrdersRefundModel::getRefundListJoinSoSod($where,$pageNum,$field,$order);
     }
 
+    public function getSaleOrdersRefundListJoinSo($where,$pageNum = 0,$field = "*",$order = "")
+    {
+        return SaleOrdersRefundModel::getRefundListJoinSo($where,$pageNum,$field,$order);
+    }
+
     public function addSaleOrdersRefund($insert)
     {
         !isset($this->manager['manager_id']) ? : $insert['creator'] = $this->manager['manager_id'];

@@ -75,6 +75,7 @@ trait SaleOrdersTrait
                 if ($item['has_hotel'] == 1) {
                     $item['hotel'] = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
                     $item['hotel']['nightly'] = $this->getSaleHotelNightlyList(['sh_id' => $item['hotel']['sh_id']]);
+                    $item['retail_price'] = bcadd($item['retail_price'],bcdiv($item['hotel']['pay_amount'],100,2),2);
                 }
                 return $item;
             });
@@ -238,7 +239,6 @@ trait SaleOrdersTrait
      */
     protected function createSo()
     {
-        $pay_type = 0;
         $pay_method = 1;
         $this->order = [
             "trade_no" => $this->config['params']['order_no'],
@@ -248,7 +248,7 @@ trait SaleOrdersTrait
             "machine_name" => $this->machine['machine_name'],
             "machine_id" => $this->machine['machine_id'],
             "ao_id" => $this->machine['ao_id'],
-            "pay_type" => $pay_type,
+            "pay_type" => $this->config['params']['pay_type'] ?? 0,
             "pay_method" => $pay_method,
             "pay_status" => 3,
             "pay_time" => strtotime($this->config['params']['charge_time']) ?? "",
@@ -324,15 +324,17 @@ trait SaleOrdersTrait
                 if ($dv['quantity'] <= $mcv['stock']) {
                     $insertDetails['quantity'] = $dv['quantity'];
                 }
+                $insertDetails['total_sod_price'] = 0;
+                $insertDetails['discount_price'] = 0;
                 // 销售
-                if ($dv['type'] == "sale") {
-                    $insertDetails['total_sod_price'] = bcmul($insertDetails['retail_price'], $insertDetails['quantity'], 3);
-                    $insertDetails['discount_price'] = bcmul($dvDiscountPrice, bcdiv($insertDetails['quantity'], $dvQuantity, 2), 3);
-                }
+//                if ($dv['type'] == "sale") {
+//                    $insertDetails['total_sod_price'] = bcmul($insertDetails['retail_price'], $insertDetails['quantity'], 3);
+//                    $insertDetails['discount_price'] = bcmul($dvDiscountPrice, bcdiv($insertDetails['quantity'], $dvQuantity, 2), 3);
+//                }
                 // 赠品
                 if ($dv['type'] == "gift") {
-                    $insertDetails['total_sod_price'] = 0;
-                    $insertDetails['discount_price'] = 0;
+//                    $insertDetails['total_sod_price'] = 0;
+//                    $insertDetails['discount_price'] = 0;
                     $insertDetails['is_gift'] = 1;
                 }
                 $dv['quantity'] = bcsub($dv['quantity'], $insertDetails['quantity']);
@@ -348,13 +350,13 @@ trait SaleOrdersTrait
                 $this->order['cost_price'] = bcadd($this->order['cost_price'], $insertDetails['cost_price'], 3);
                 $this->order['market_price'] = bcadd($this->order['market_price'], $insertDetails['market_price'], 3);
                 $this->order['retail_price'] = bcadd($this->order['retail_price'], $insertDetails['retail_price'], 3);
-                $this->order['total_quantity'] = bcadd($this->order['total_quantity'], $insertDetails['quantity'], 3);
+//                $this->order['total_quantity'] = bcadd($this->order['total_quantity'], $insertDetails['quantity'], 3);
                 $insertDetails = [];
                 if ($dv['quantity'] == 0)
                     break;
             }
-            $this->order['total_price'] = bcadd($this->order['total_price'], bcdiv($dv['charge_amount'], 100, 3), 3);
-            $this->order['discount_price'] = bcadd($this->order['discount_price'], bcdiv($dv['discount_amount'], 100, 3), 3);
+//            $this->order['total_price'] = bcadd($this->order['total_price'], bcdiv($dv['charge_amount'], 100, 3), 3);
+//            $this->order['discount_price'] = bcadd($this->order['discount_price'], bcdiv($dv['discount_amount'], 100, 3), 3);
         }
         actionLog($flag, '生成订单详情结果集');
         $result = flag_check($flag);
