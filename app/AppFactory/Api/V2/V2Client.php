@@ -65,7 +65,7 @@ class V2Client extends V2BaseClient
             $field = "mc_id,channel_code,
             (CASE `status` WHEN 3 THEN 0 ELSE stock END) quantity,retail_price sale_price,sku, 
             (CASE `status` WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,g_name,sku,
-            market_price,frozen_stock reserver_quantity, capacity slot_max_count";
+            market_price,frozen_stock reserver_quantity, capacity slot_max_count,status";
             $where['machine_id'] = $this->params['machine_id'];
             if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->config['product_id'];
             $where[] = ['status', '<>', 2];
@@ -176,17 +176,17 @@ class V2Client extends V2BaseClient
             $this->createSo();
             actionLog($this->getLS(), '生成订单');
             if ($this->order['order_id']) {
-                // 生成预订商品记录
-                $advanceResult = $this->createAdvance();
-                if ($advanceResult !== 1) {
-                    $this->rollbackTrans();
-                    return $advanceResult;
-                }
                 // 生成取货码记录
                 $apcResult = $this->createApc();
                 if ($apcResult !== 1) {
                     $this->rollbackTrans();
                     return $apcResult;
+                }
+                // 生成预订商品记录
+                $advanceResult = $this->createAdvance();
+                if ($advanceResult !== 1) {
+                    $this->rollbackTrans();
+                    return $advanceResult;
                 }
                 // 生成订单详情记录
                 $sodResult = $this->createSod();

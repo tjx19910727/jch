@@ -221,6 +221,7 @@ class Common extends AuthController
             $path .= Filesystem::getDiskConfig($diskName, 'url') . str_replace('\\', '/', $saveName);
             return returnState(200, '上传成功', $path);
         } catch (\Exception $e) {
+            actionException($e,1);
             return returnTryCatch($e->getMessage());
         }
     }
