@@ -104,16 +104,20 @@ trait MachineGoodsTrait
                         $g = obj2arr($g);
                         $g['pic'] = str_replace($this->host,'',$g['pic']);
                         $checkMg = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'], 'g_id' => $g['g_id']]);
-                        if ($checkMg) {
-                            $this->rollbackTrans();
-                            return $this->rFail($this->lang("VMachineGoods.machine_goods_exits"));
+                        if (!$checkMg) {
+//                            $this->rollbackTrans();
+//                            return $this->rFail($this->lang("VMachineGoods.machine_goods_exits"));
+//                        }
+                            $mg = [
+                                "m_id" => $this->machine['m_id'],
+                                "machine_id" => $this->machine['machine_id'],
+                            ];
+                            $mg = array_merge($mg, $value, $g);
+                            $mg_id = $this->addMachineGoods($mg);
+                        } else {
+                            $mgList[] = $checkMg;
+                            continue;
                         }
-                        $mg = [
-                            "m_id" => $this->machine['m_id'],
-                            "machine_id" => $this->machine['machine_id'],
-                        ];
-                        $mg = array_merge($mg, $value, $g);
-                        $mg_id = $this->addMachineGoods($mg);
                     } else {
                         $this->rollbackTrans();
                         return $this->rFail($this->lang("VMachineGoods.goods_no_data"));

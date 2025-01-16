@@ -521,10 +521,6 @@ class V2Client extends V2BaseClient
                 $this->rollbackTrans();
                 return $this->returnData(40,$this->lang("msg.40") . ":" . $this->params['machine_id']);
             }
-            if (isset($this->params['out_port']) && $this->params["out_port"]) {
-                $this->order['out_port'] = $this->params['out_port'];
-                $updateOrder["out_port"] = $this->params['out_port'];
-            }
             $result = $this->outGoods();
             if ($result !== true) {
                 $this->rollbackTrans();

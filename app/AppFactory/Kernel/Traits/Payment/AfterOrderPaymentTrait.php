@@ -88,6 +88,7 @@ trait AfterOrderPaymentTrait
                         "channel_code" => $v['channel_code'],
                         "quantity" => $v['quantity'],
                         "is_gift" => $v['is_gift'] ?? 2,
+                        "out_port" => $v['out_port'] ?? 1,
                     ];
                     $outArr[$v['channel_position']][] = $dc;
                 }
@@ -97,6 +98,7 @@ trait AfterOrderPaymentTrait
                     $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
                     $this->updateSaleOrdersDetails($updateSod);
                 }
+
             }
 
             $msg_id = uniqid();
@@ -106,7 +108,6 @@ trait AfterOrderPaymentTrait
                 "main" => $contentArr,
                 "outGoods" => $outArr,
             ];
-            if (isset($this->order['out_port']) && $this->order['out_port']) $content['outPort'] = $this->order['out_port'];
             $content = json_encode($content);
             $data = [
                 "timestamp" => time(),
@@ -132,7 +133,10 @@ trait AfterOrderPaymentTrait
             $this->addMachineMqRecord($insertMqRecord);
             actionLog($this->getLS(),'生成发送记录');
 
-            $result = MqProducer::dataSend($data,$data['machine_id']);
+            $machine = $this->getMachineFind(['machine_id' => $data['machine_id']],'machine_id,mac_address,signKey');
+            $mqQueue = $machine['machine_id'] . "_" . str_replace(":","_",$machine['mac_address']);
+            actionLog($mqQueue,"下发出货数据队列名");
+            $result = MqProducer::dataSend($data,$mqQueue);
             actionLog($result,'下发数据结果');
             $this->order['out_status'] = 2;
             return $result;

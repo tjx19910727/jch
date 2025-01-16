@@ -75,7 +75,7 @@ class Goods extends Common
         $g_id = input("g_id");
         if (strpos($g_id,",")) $where[] = ['g_id',"in",$g_id];
         else $where['g_id'] = $g_id;
-        $mc = $this->app->machineChannel->getFind($where);
+        $mc = $this->app->machineChannel->getMachineChannelFind($where,'mc_id','');
         if ($mc) {
             return returnState(100,lang("del_fail") . ":" . lang("VGoods.g_is_up"));
         }

@@ -318,11 +318,11 @@ trait OutGoodsTrait
     }
 
     /**
-     * 处理会员支付
+     * 触发会员支付、丽呈线上支付、机器人线上支付出货结果推送
      */
     protected function handleTripPayCallback()
     {
-        if ($this->order['pay_type'] == 5) {
+        if (in_array($this->order['pay_type'],[5,6,7])) {
             $sp = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1]);
             if ($sp) {
                 // 出货成功才是使用成功
@@ -333,7 +333,7 @@ trait OutGoodsTrait
                     $adStatus = 6;
                     $detail_status = "ALL MISVEND";
                 }
-                $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'g_id product_id,success_quantity,fail_quantity');
+                $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'g_id product_id,success_quantity,fail_quantity,out_port');
                 $details = $details->toArray();
 //                if ($this->order['total_quantity'] != array_sum(array_column($details,'success_quantity'))) $detail_status = "PARTIAL MISVEND";
 //                if ($this->order['total_quantity'] == array_sum(array_column($details,'fail_quantity'))) $detail_status = "ALL MISVEND";

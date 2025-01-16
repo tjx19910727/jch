@@ -283,17 +283,17 @@ class ActivityClient extends ReceiveBaseClient
         if ($this->data['pay_type'] != 4 && $this->data['pay_type'] != 0) return $this->rFail($this->lang("VSubCar.pay_type_no_range"));
         $updateAl = [];
         $alc = $this->getActivityLotteryConfigFind(['alc_id' => $this->data['alc_id']]);
-        if (!$alc) return $this->rFail($this->lang("alc_no_data"));
+        if (!$alc) return $this->r(300,$this->lang("alc_no_data"));
         $alc = $alc->toArray();
         // 检查活动内容
         $al = $this->getActivityLotteryFind(['al_id' => $alc['al_id']]);
-        if (!$al) return $this->rFail($this->lang("VActivityLottery.al_no_data"));
-        if ($al['status'] == 3) return $this->rFail($this->lang("VActivityLottery.status3"));
-        if ($al['status'] == 4) return $this->rFail($this->lang("VActivityLottery.status4"));
-        if ($al['start_time'] > time()) return $this->rFail($this->lang("VActivityLottery.al_not_begin"));
+        if (!$al) return $this->r(300,$this->lang("VActivityLottery.al_no_data"));
+        if ($al['status'] == 3) return $this->r(300,$this->lang("VActivityLottery.status3"));
+        if ($al['status'] == 4) return $this->r(300,$this->lang("VActivityLottery.status4"));
+        if ($al['start_time'] > time()) return $this->r(300,$this->lang("VActivityLottery.al_not_begin"));
         if ($al['end_time'] > 0 && $al['end_time'] < time()) {
             $updateAl['status'] = 3;
-            return $this->rFail($this->lang("VActivityLottery.status3"));
+            return $this->r(300,$this->lang("VActivityLottery.status3"));
         }
         if ($al['status'] == 1) {
             $updateAl['status'] = 2;
@@ -307,12 +307,12 @@ class ActivityClient extends ReceiveBaseClient
 
         // 检查活动商品
         $content = $this->getActivityLotteryContentList(['al_id' => $al['al_id']], 0, 'c_id,retain_num,g_id,probability,g_name');
-        if (!$content) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
+        if (!$content) return $this->r(300,$this->lang("VActivityLottery.content_no_data"));
         $content = $content->toArray();
         actionLog($content,'活动商品内容');
         // 总中奖概率，必须要刚好100%
         $totalProbability = array_sum(array_column($content, "probability"));
-        if ($totalProbability != 100) return $this->rFail($this->lang("probability_no_100"));
+        if ($totalProbability != 100) return $this->r(300,$this->lang("probability_no_100"));
 
         // 如果存在赠送商品，则校对数量再加1
         $checkStock = $alc['active_num'];
@@ -388,32 +388,32 @@ class ActivityClient extends ReceiveBaseClient
     {
         $order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
         if (!$order) {
-            return $this->r(100, $this->lang("VActivityLottery.order_no_data"));
+            return $this->r(300, $this->lang("VActivityLottery.order_no_data"));
         }
-        if ($order['order_type'] != 4) return $this->r(100, $this->lang("VActivityLottery.order_type_error"));
-        if ($order['pay_status'] != 3) return $this->r(100, $this->lang("VActivityLottery.order_no_pay"));
+        if ($order['order_type'] != 4) return $this->r(300, $this->lang("VActivityLottery.order_type_error"));
+        if ($order['pay_status'] != 3) return $this->r(300, $this->lang("VActivityLottery.order_no_pay"));
 
         $used = $this->getActivityLotteryUsedFind(['order_id' => $order['order_id']], 'alu_id,al_id,alc_id,quantity,used_quantity');
         if (!$used) {
-            return $this->r(100, $this->lang("VActivityLottery.used_no_data"));
+            return $this->r(300, $this->lang("VActivityLottery.used_no_data"));
         }
         $used = $used->toArray();
         actionLog($used,'执行抽奖查询已使用抽奖数据');
         // 已使用抽奖次数大于等于抽奖总次数，返回抽奖数量已用完
         if ($used['used_quantity'] >= $used['quantity']) {
-            return $this->r(100, $this->lang("VActivityLottery.lucky_draw_ended"));
+            return $this->r(300, $this->lang("VActivityLottery.lucky_draw_ended"));
         }
 
         $alc = $this->getActivityLotteryConfigFind(['alc_id' => $used['alc_id']]);
-        if (!$alc) return $this->r(100, $this->lang("VActivityLottery.alc_no_data"));
+        if (!$alc) return $this->r(300, $this->lang("VActivityLottery.alc_no_data"));
         $content = $this->getActivityLotteryContentList(['al_id' => $used['al_id']], 0, '*', "probability asc");
-        if (!$content) return $this->rFail($this->lang("VActivityLottery.content_no_data"));
+        if (!$content) return $this->r(300,$this->lang("VActivityLottery.content_no_data"));
         $content = $content->toArray();
         actionLog($content,'抽奖活动内容');
 
         // 总中奖概率
         $totalProbability = array_sum(array_column($content, 'probability'));
-        if ($totalProbability != 100) return $this->rFail($this->lang("VActivityLottery.probability_no_100"));
+        if ($totalProbability != 100) return $this->r(300,$this->lang("VActivityLottery.probability_no_100"));
         // 本次执行抽奖次数初始化，总数量减去已抽次数
         $quantity = bcsub($used['quantity'], $used['used_quantity']);
         if ($quantity <= 0) return $this->r(300,$this->lang("VActivityLottery.used_quantity_is_null"));
@@ -421,24 +421,24 @@ class ActivityClient extends ReceiveBaseClient
         if ($alc['active_type'] == 1) $quantity = 1;
 
         // 库存不足或禁用货架，不存在这个商品上架的情况下不参与抽奖
-        $contentGid = array_column($content,"g_id");
-        $whereNoGid = function ($query) use ($contentGid,$quantity)  {
-            $query->where("`m_id` = " . $this->machine['m_id'] . " AND (`status` <> 1 OR `stock` < $quantity) AND `g_id` in (" . implode(",",$contentGid) . ")");
+        $whereMcGid = function ($query) use ($quantity)  {
+            $query->where("`m_id` = " . $this->machine['m_id'] . " AND (`status` <> 1 OR `stock` > $quantity)");
         };
-        $noGid = $this->getMachineChannelColumn($whereNoGid,'g_id');
-        if ($noGid) {
-            actionLog($noGid,"不存在的抽奖商品ID列表");
-            $temp = [];
-            // 去除掉不存在的商品，剩下的商品百分百抽中
-            foreach ($content as $cK => $cV) {
-                if (!in_array($cV['g_id'],$noGid)) {
-                    $temp[] = $cV;
-                }
+        $channel = $this->getMachineChannelColumn($whereMcGid,'g_id');
+        actionLog($this->getLS(),'【SQL】获取设备货道商品ID');
+        actionLog($channel,'货道商品ID');
+        $temp = [];
+        // 有这个商品在设备货道上，正常且有库存的，重置抽奖列表
+        foreach ($content as $cK => $cV) {
+            if (in_array($cV['g_id'],$channel)) {
+                $temp[] = $cV;
             }
-            $content = $temp;
-            $totalProbability = array_sum(array_column($content, 'probability'));
-            actionLog($totalProbability,'重新计算的总中奖率');
         }
+        actionLog($temp,'重新整理的抽奖活动内容');
+        if (!$temp) return $this->r(300,$this->lang("VActivityLottery.content_no_data"));
+        $content = $temp;
+        $totalProbability = array_sum(array_column($content, 'probability'));
+        actionLog($totalProbability,'重新计算的总中奖率');
 
         // 执行抽奖主程序
         $giftNum = 0;
@@ -477,7 +477,6 @@ class ActivityClient extends ReceiveBaseClient
             }
         }
         actionLog($list,'中奖列表');
-        if (!$list) return $this->r(100,$this->lang("VActivityLottery.content_no_data"));
         $this->startTrans();
 
         try {// 修改已抽奖次数
@@ -497,7 +496,7 @@ class ActivityClient extends ReceiveBaseClient
                 if (!$mc) {
                     actionLog($this->getLS(),'中奖商品不在这台设备中');
                     $this->rollbackTrans();
-                    return $this->rFail($this->lang("VActivityLottery.mc_no_data"));
+                    return $this->r(300,$this->lang("VActivityLottery.mc_no_data"));
                 }
                 $mc = $mc->toArray();
                 $ug = [
@@ -554,7 +553,7 @@ class ActivityClient extends ReceiveBaseClient
                 return $this->r(200, $this->lang("action_success"), ['lottery_list' => $list, "order" => $order]);
             }
             $this->rollbackTrans();
-            return $this->r(100, $this->lang("action_fail"));
+            return $this->r(300, $this->lang("action_fail"));
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);
@@ -570,16 +569,16 @@ class ActivityClient extends ReceiveBaseClient
     public function lotteryOutGoods()
     {
         $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
-        if (!$this->order) return $this->rFail($this->lang("VActivityLottery.order_no_data"));
-        if ($this->order['pay_status'] != 3) return $this->rFail($this->lang("VActivityLottery.order_no_pay"));
-        if ($this->order['out_status'] > 1) return $this->rFail($this->lang("VActivityLottery.is_out_goods"));
+        if (!$this->order) return $this->r(300,$this->lang("VActivityLottery.order_no_data"));
+        if ($this->order['pay_status'] != 3) return $this->r(300,$this->lang("VActivityLottery.order_no_pay"));
+        if ($this->order['out_status'] > 1) return $this->r(300,$this->lang("VActivityLottery.is_out_goods"));
         $whereDetails['order_id'] = $this->order['order_id'];
         $used = $this->getActivityLotteryUsedFind(['order_id' => $this->order['order_id']]);
-        if (!$used) return $this->r(100, $this->lang("VActivityLottery.used_no_data"));
+        if (!$used) return $this->r(300, $this->lang("VActivityLottery.used_no_data"));
         $quantity = $this->getSaleOrdersDetailsSum($whereDetails, 'quantity');
-        if ($used['quantity'] != $quantity) return $this->r(100, $this->lang("VActivityLottery.quantity_not_match"));
+        if ($used['quantity'] != $quantity) return $this->r(300, $this->lang("VActivityLottery.quantity_not_match"));
         $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']], 0, '*');
-        if (!$this->order['details']) return $this->r(100, $this->lang("VActivityLottery.order_details_no_data"));
+        if (!$this->order['details']) return $this->r(300, $this->lang("VActivityLottery.order_details_no_data"));
         $this->startTrans();
         try {
             $flag = [];// 生成分润记录
@@ -601,7 +600,7 @@ class ActivityClient extends ReceiveBaseClient
                 return $this->r(200, $this->lang("action_success"));
             }
             $this->rollbackTrans();
-            return $this->r(100, $this->lang("action_fail"));
+            return $this->r(300, $this->lang("action_fail"));
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);

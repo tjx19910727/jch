@@ -326,6 +326,7 @@ trait SaleOrdersTrait
                 }
                 $insertDetails['total_sod_price'] = 0;
                 $insertDetails['discount_price'] = 0;
+                $insertDetails['out_port'] = $dv['out_port'] ?? 1;
                 // 销售
 //                if ($dv['type'] == "sale") {
 //                    $insertDetails['total_sod_price'] = bcmul($insertDetails['retail_price'], $insertDetails['quantity'], 3);

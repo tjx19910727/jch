@@ -14,7 +14,7 @@ class VGoods extends VCommon
     protected $rule = [
         "g_id" => "require",
         "g_name" => "require|length:0,100",
-        "sku" => "require",
+        "sku" => "require|unique:goods,sku",
         "banner" => "length:0,1024",
         "pic" => "length:0,255",
         "manufacturer" => "length:0,100",
@@ -30,6 +30,7 @@ class VGoods extends VCommon
         "g_name.require" => "VGoods.g_name_require",
         "g_name.length" => "VGoods.g_name_max",
         "sku.require" => "VGoods.sku_require",
+        "sku.unique" => "VGoods.sku_unique",
         "pic.length" => "VGoods.pic_max",
         "banner.length" => "VGoods.banner_max",
         "manufacturer.length" => "VGoods.manufacturer_max",

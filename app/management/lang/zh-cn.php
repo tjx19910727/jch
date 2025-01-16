@@ -273,6 +273,7 @@ return [
         "g_name_require" => "商品名称不能为空",
         "g_name_max" => "商品名称长度超限制",
         "sku_require" => "SKU不能为空",
+        "sku_unique" => "SKU已存在，请勿重复添加",
         "pic_max" => "图片路径长度超限制",
         "banner_max" => "轮播图片长度超限制",
         "manufacturer_max" => "供应商名称长度超限制",
