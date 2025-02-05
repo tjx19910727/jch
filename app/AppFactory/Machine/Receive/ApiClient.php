@@ -751,17 +751,17 @@ class ApiClient extends ReceiveBaseClient
                             "cost_price" => $mc['cost_price'],
                             "market_price" => $mc['market_price'],
                             "retail_price" => $mc['retail_price'],
-                            "total_sod_price" => bcmul($mc['retail_price'], $quantity, 2),
+                            "total_sod_price" => bcmul($mc['retail_price'], $quantity, 3),
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'],
                         ];
                         $sod_id = $this->addSaleOrdersDetails($details);
                         if ($sod_id) {
-                            $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $quantity, 2), 2);
-                            $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mc['market_price'], $quantity, 2), 2);
-                            $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mc['retail_price'], $quantity, 2), 2);
+                            $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $quantity, 2), 3);
+                            $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mc['market_price'], $quantity, 2), 3);
+                            $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mc['retail_price'], $quantity, 2), 3);
                             $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $quantity);
-                            $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 2);
+                            $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 3);
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
                         } else {
                             $this->rollbackTrans();

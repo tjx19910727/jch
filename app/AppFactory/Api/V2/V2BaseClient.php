@@ -74,16 +74,16 @@ class V2BaseClient extends ApiBaseClient
             $frequency[$this->config['api']]['time'] = time();
             $frequency[$this->config['api']]['params'] = $this->config['params'];
         } else {
-            // 同1个IP调用同1个接口超过1天总限制次数8640次
-            if ($frequency[$this->config['api']]['num'] >= 8640) {
-                $this->returnData(8, $this->lang("msg." . 8))->send();
-                die();
-            }
             // 10秒内，同IP同api同样params的数据
             if ($frequency[$this->config['api']]['params'] == $this->config['params'] && time() - $frequency[$this->config['api']]['time'] <= 10) {
                 $this->returnData(9, $this->lang("msg." . 9))->send();
                 die();
             }
+            // 同1个IP调用同1个接口超过1天总限制次数8640次
+//            if ($frequency[$this->config['api']]['num'] >= 8640) {
+//                $this->returnData(8, $this->lang("msg." . 8))->send();
+//                di
+//            }
             $frequency[$this->config['api']]['num']++;
             $frequency[$this->config['api']]['time'] = time();
         }

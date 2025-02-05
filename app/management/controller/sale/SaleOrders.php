@@ -68,8 +68,14 @@ class SaleOrders extends Common
     public function exportGoodsList()
     {
         $postData = input();
+        $m_id = 0;
+        if (isset($postData['m_id']) && $postData['m_id']) {
+            $m_id = $postData['m_id'];
+            unset($postData['m_id']);
+        }
         $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"machine_id" => 'like',"machine_name" => 'like']);
         $where['so.pay_status'] = 3;
+        if ($m_id) $where['so.m_id'] = $m_id;
         return $this->app->saleOrders->exportGoodsSo($where);
     }
 
@@ -277,8 +283,9 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_time'])) $postData['create_time'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
-        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
+        $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'m_id');
+        if ($mIds) $where[] = ['m_id','in',$mIds];
+        $where['pay_status'] = 3;
         return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20);
     }
 

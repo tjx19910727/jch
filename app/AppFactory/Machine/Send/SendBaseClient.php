@@ -15,11 +15,6 @@ use app\AppFactory\RabbitMq\MqProducer;
 
 class SendBaseClient extends MachineBaseClient
 {
-    public function __construct(ServiceContainer $app)
-    {
-        parent::__construct($app);
-    }
-
     /**
      * 发送设备数据至RabbitMQ服务器
      * @param array $data

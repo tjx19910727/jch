@@ -140,7 +140,6 @@ class ActivityClient extends ReceiveBaseClient
      */
     public function usePickCode()
     {
-
         try {
             $this->startTrans();
             $apc = $this->getActivityPickByCode();
@@ -153,10 +152,10 @@ class ActivityClient extends ReceiveBaseClient
             // 预订订单取货
             if ($apc['pick_type'] == 3) {
                 $this->order = $this->getSaleOrdersFind(['order_id' => $apc['order_id']]);
-                if (!$this->order) return $this->r(100, $this->lang("VActivityPickCode.order_no_data"));
+                if (!$this->order) return $this->r(300, $this->lang("VActivityPickCode.order_no_data"));
                 $this->order = $this->order->toArray();
-                if ($this->order['m_id'] != $this->machine['m_id']) return $this->r(100,$this->lang("VActivityPickCode.pick_code_can_not_use"));
-                if ($this->order['out_status'] != 1) return $this->r(100, $this->lang("VActivityPickCode.out_status1"));
+                if ($this->order['m_id'] != $this->machine['m_id']) return $this->r(300,$this->lang("VActivityPickCode.pick_code_can_not_use"));
+                if ($this->order['out_status'] != 1) return $this->r(300, $this->lang("VActivityPickCode.out_status1"));
             } else {
                 // 系统随机取货，随机获取货架商品信息生成取货商品，整理carList，如果pick_type==2，则carList由外部传入
                 if ($apc['pick_type'] == 1) {
@@ -171,7 +170,7 @@ class ActivityClient extends ReceiveBaseClient
                     $whereMc[] = ['stock', '>',0];
                     $mc = $this->getMachineChannelColumn($whereMc, 'mc_id');
                     if (!$mc) {
-                        return $this->r(100,$this->lang("VActivityPickCode.mc_id_empty"));
+                        return $this->r(300,$this->lang("VActivityPickCode.mc_id_empty"));
                     }
                     $mc_count = count($mc);
                     $num = random_int(1, $mc_count);
@@ -204,12 +203,12 @@ class ActivityClient extends ReceiveBaseClient
                         $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']], $mcField);
                         if (!$mc) {
                             $this->rollbackTrans();
-                            return $this->r(100, $this->lang("VSubCar.channel_no_data"));
+                            return $this->r(300, $this->lang("VSubCar.channel_no_data"));
                         }
                         $mc = $mc->toArray();
                         if ($mc['stock'] < $value['quantity']) {
                             $this->rollbackTrans();
-                            return $this->r(100, $this->lang("VSubCar.under_stock"));
+                            return $this->r(300, $this->lang("VSubCar.under_stock"));
                         }
                         $details = [
                             "order_id" => $order_id,
@@ -224,7 +223,7 @@ class ActivityClient extends ReceiveBaseClient
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $value['quantity']);
                         } else {
                             $this->rollbackTrans();
-                            return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                            return $this->r(300, $this->lang("VSubCar.make_order_details_fail"));
                         }
                     }
                     $flag[] = $this->updateSaleOrders($updateOrder);
@@ -234,7 +233,7 @@ class ActivityClient extends ReceiveBaseClient
                 }
                 if (!$order_id) {
                     $this->rollbackTrans();
-                    return $this->r(100, $this->lang("VActivityPickCode.add_order_fail"));
+                    return $this->r(300, $this->lang("VActivityPickCode.add_order_fail"));
                 }
                 $this->order = $this->getSaleOrdersFind(['order_id' => $order_id])->toArray();
             }

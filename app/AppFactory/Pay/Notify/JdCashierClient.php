@@ -51,18 +51,6 @@ class JdCashierClient extends PayBaseClient
         if (!is_array($this->jdConfig)) return $this->jdConfig;
 
         $result = $this->data;
-//        $header['token'] = request()->header('token');
-//        $header['timestamp'] = request()->header('timestamp');
-//        $message = [
-//            'header' => $header,
-//            'body' => $this->data,
-//        ];
-//        $app = Jd::callback($this->jdConfig);
-//        $result = $app->notify->callbackUrl($message);
-//        if (is_string($result)) {
-//            actionLog($this->data, '验签失败');
-//            return 200;
-//        }
 
         $this->order['mch_no'] = $result['orderNum'];
         if (isset($result['openId']) && $result['openId'] && $result['openId'] != "000000") {

@@ -64,11 +64,13 @@ class MachineBaseClient extends BaseClient
     public function getMqQueue()
     {
         $this->mqQueue = $this->machine['machine_id'];
+        actionLog($this->machine['version'],'设备版本号');
         if (isset($this->machine['version']) && $this->machine['version']) {
             $versionArr = explode(".", $this->machine['version']);
             // 版本号小于0.2.12时，采用旧的MQ队列，大于等于0.2.12时，MQ队列名称增加MAC地址标示
             if (isset($versionArr[0]) && $versionArr[0] == 0 && isset($versionArr[1]) && $versionArr[1] >= 2 && isset($versionArr[2]) &&  $versionArr[2] >= 12) {
                 $this->mqQueue = $this->machine['machine_id'] . "_" . str_replace(":","_",$this->machine['mac_address']);
+                actionLog($this->mqQueue,'增加了Mac地址的MQ队列名');
             }
         }
     }

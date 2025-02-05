@@ -280,7 +280,7 @@ trait ActivityFdTrait
                     // 修改订单详情商品总价
                     $this->updateSaleOrdersDetails([
                         'sod_id' => $this->sku['sod_id'],
-                        'total_sod_price' => bcsub($this->sku['total_sod_price'], $discount_price, 3),
+                        'total_sod_price' => bcsub($this->sku['total_sod_price'], $discount_price, 4),
                         'discount_price' => $discount_price]);
                     actionLog($this->getLS(),'【SQL】指定SKU立减');
                 }
@@ -304,11 +304,11 @@ trait ActivityFdTrait
             } else {
                 // 指定SKU，优惠金额以商品单价计算
                 $discount_price = bcmul(
-                    bcmul($this->sku['total_sod_price'],$this->sku['quantity'],3),
+                    bcmul($this->sku['total_sod_price'],$this->sku['quantity'],4),
                     bcdiv(
                         bcsub(100, $value['active_value']),
                         100,
-                        2),
+                        4),
                     4);
                 actionLog($discount_price,'指定SKU优惠折扣金额');
                 if ($this->sku['total_sod_price'] >= $discount_price) {
@@ -336,8 +336,8 @@ trait ActivityFdTrait
         actionLog($this->countContent,'过滤后的最终优惠');
         if ($this->countContent['discount_price']) {
             if (!$this->order['retail_price']) $updateOrder['retail_price'] = $this->order['total_price'];
-            $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
-            $updateOrder['total_price'] = bcsub($this->order['total_price'],$this->countContent['discount_price'],3);
+            $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],4);
+            $updateOrder['total_price'] = bcsub($this->order['total_price'],$this->countContent['discount_price'],4);
             actionLog($this->order,'订单数据');
             $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
             if (!$details) return $this->lang("VActivityFd.sod_no_data");
@@ -346,7 +346,7 @@ trait ActivityFdTrait
                 actionLog($dv, '商品数据');
                 if ($dv['is_gift'] == 2 && $this->fd['condition_type'] != 3) {
                     // 商品优惠金额 = 订单优惠金额 * 商品金额占比 = 订单优惠金额 *  （商品总金额 / 订单总金额）
-                    $sodDiscountPrice = bcmul($updateOrder['discount_price'], bcdiv($dv['total_sod_price'], $this->order['total_price'], 2), 4);
+                    $sodDiscountPrice = bcmul($updateOrder['discount_price'], bcdiv($dv['total_sod_price'], $this->order['total_price'], 4), 4);
                     actionLog($sodDiscountPrice, '商品优惠金额');
                     if ($sodDiscountPrice < 0.01) $sodDiscountPrice = 0;
 

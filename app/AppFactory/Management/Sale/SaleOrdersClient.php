@@ -717,6 +717,8 @@ class SaleOrdersClient extends ManagementClient
         IFNULL(sum(sod.cost_price * sod.quantity),0) totalCostPrice
         ";
         $collectList = $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, 'totalPrice desc', 'm_id,g_id');
+
+        actionLog($this->getLS(),'统计销售数据');
         $collectList = $collectList->each(function ($collectData) {
             $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
             $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;

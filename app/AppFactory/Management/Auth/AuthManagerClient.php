@@ -53,7 +53,7 @@ class AuthManagerClient extends ManagementClient
             actionLog($pidList,'创建人树');
             $where[] = ['creator', 'in', $pidList];
             $where['status'] = 1;
-            $config = $this->getWxOfficialFind($where,'*','update_time desc');
+            $config = $this->getWxOfficialFind($where,'*','id desc');
             if (!$config) {
                 actionLog($this->getLS(),'查询配置SQL');
                 return $this->r(100, $this->lang("VWxOfficial.official_no_data"));

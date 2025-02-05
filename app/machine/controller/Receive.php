@@ -54,7 +54,7 @@ class Receive extends Common
                 die();
             }
             $this->validate($postData,$this->validatePath . $action);
-            $frequency = checkFrequency($action);
+            $frequency = checkFrequency($action,1);
             if ($frequency !== true) {
                 $frequency = obj2arr($frequency);
                 die(json_encode($frequency, 320));
