@@ -96,7 +96,7 @@ trait ReturnTrait
      */
     public function rNoData()
     {
-        return returnState(300, Lang::get("query_fail"));
+        return returnState(100, Lang::get("query_fail"));
     }
 
     /**
@@ -118,7 +118,7 @@ trait ReturnTrait
     {
         $return = Lang::get("action_fail");
         if ($msg) $return = $return . ":" . arr2json($msg);
-        return returnState(300,$return);
+        return returnState(100,$return);
     }
 
     /**

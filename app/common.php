@@ -53,7 +53,7 @@ function returnValidate($check)
  */
 function returnTryCatch($msg)
 {
-    return returnState(300, $msg);
+    return returnState(3301, $msg);
 }
 
 /**

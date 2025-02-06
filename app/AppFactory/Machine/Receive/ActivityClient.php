@@ -146,7 +146,7 @@ class ActivityClient extends ReceiveBaseClient
             $apc = $this->getActivityPickByCode();
             if (!is_array($apc)) {
                 $this->rollbackTrans();
-                return $this->rFail($apc);
+                return $this->r(100,$apc);
             }
             actionLog($apc, "使用的取货码数据");
             $flag = [];
@@ -155,16 +155,16 @@ class ActivityClient extends ReceiveBaseClient
                 $this->order = $this->getSaleOrdersFind(['order_id' => $apc['order_id']]);
                 if (!$this->order) {
                     $this->rollbackTrans();
-                    return $this->r(300, $this->lang("VActivityPickCode.order_no_data"));
+                    return $this->r(100, $this->lang("VActivityPickCode.order_no_data"));
                 }
                 $this->order = $this->order->toArray();
                 if ($this->order['m_id'] != $this->machine['m_id']) {
                     $this->rollbackTrans();
-                    return $this->r(300,$this->lang("VActivityPickCode.pick_code_can_not_use"));
+                    return $this->r(100,$this->lang("VActivityPickCode.pick_code_can_not_use"));
                 }
                 if ($this->order['out_status'] != 1) {
                     $this->rollbackTrans();
-                    return $this->r(300, $this->lang("VActivityPickCode.out_status1"));
+                    return $this->r(100, $this->lang("VActivityPickCode.out_status1"));
                 }
             } else {
                 // 系统随机取货，随机获取货架商品信息生成取货商品，整理carList，如果pick_type==2，则carList由外部传入
@@ -172,7 +172,7 @@ class ActivityClient extends ReceiveBaseClient
                     $ap = $apc['ap'];
                     if (!$ap['ag']) {
                         $this->rollbackTrans();
-                        return $this->r(300,$this->lang("VActivityPick.ag_not_data"));
+                        return $this->r(100,$this->lang("VActivityPick.ag_not_data"));
                     }
                     $apg_id = array_column($ap['ag'], 'g_id');
                     $whereMc[] = ['g_id', 'in', $apg_id];
@@ -181,7 +181,8 @@ class ActivityClient extends ReceiveBaseClient
                     $whereMc[] = ['stock', '>',0];
                     $mc = $this->getMachineChannelColumn($whereMc, 'mc_id');
                     if (!$mc) {
-                        return $this->r(300,$this->lang("VActivityPickCode.mc_id_empty"));
+                        $this->rollbackTrans();
+                        return $this->r(100,$this->lang("VActivityPickCode.mc_id_empty"));
                     }
                     $mc_count = count($mc);
                     $num = random_int(1, $mc_count);
@@ -214,12 +215,12 @@ class ActivityClient extends ReceiveBaseClient
                         $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']], $mcField);
                         if (!$mc) {
                             $this->rollbackTrans();
-                            return $this->r(300, $this->lang("VSubCar.channel_no_data"));
+                            return $this->r(100, $this->lang("VSubCar.channel_no_data"));
                         }
                         $mc = $mc->toArray();
                         if ($mc['stock'] < $value['quantity']) {
                             $this->rollbackTrans();
-                            return $this->r(300, $this->lang("VSubCar.under_stock"));
+                            return $this->r(100, $this->lang("VSubCar.under_stock"));
                         }
                         while($value['quantity'] > 0) {
                             $details = [
@@ -247,7 +248,7 @@ class ActivityClient extends ReceiveBaseClient
                 }
                 if (!$order_id) {
                     $this->rollbackTrans();
-                    return $this->r(300, $this->lang("VActivityPickCode.add_order_fail"));
+                    return $this->r(100, $this->lang("VActivityPickCode.add_order_fail"));
                 }
                 $this->order = $this->getSaleOrdersFind(['order_id' => $order_id])->toArray();
             }
