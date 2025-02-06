@@ -20,8 +20,8 @@ class SaleOrdersUnclaimedClient extends ManagementClient
 
     public function getSouList($where,$pageNum = 0,$field = "*", $order = "")
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) $where[] = ['m_id', 'in', $mIds];
         return $this->r(200,$this->lang("query_success"),$this->getSaleOrdersUnclaimedList($where,$pageNum,$field,$order));
     }
 
@@ -60,8 +60,8 @@ class SaleOrdersUnclaimedClient extends ManagementClient
      */
     public function export($where)
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $field = "machine_id,machine_name,trade_no,
         FROM_UNIXTIME(transfer_time,'%Y-%d-%m %H:%i:%s') transfer_time,
         channel_code,sku,g_name,retail_price,

@@ -28,8 +28,8 @@ class MachineChannelStockReportClient extends ManagementClient
      */
     public function getMcsList($where,$pageNum = 0,$field = "*",$order = "",$group = "")
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $data = $this->getMachineChannelStockReportList($where,$pageNum,$field,$order,$group);
         return $this->rQ($data);
     }
@@ -57,8 +57,8 @@ class MachineChannelStockReportClient extends ManagementClient
             $group = "g_id";
         }
         if ($eType == 2) {
-            $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-            if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) $where[] = ['m_id', 'in', $mIds];
             $field = "machine_id,machine_name,sku,g_name,model,gc_name,retail_price,mc_stock,pre_stock,standby_stock,bad_stock,total_stock";
         }
         $list = $this->getMachineChannelStockReportList($where,0,$field,"total_stock desc",$group);

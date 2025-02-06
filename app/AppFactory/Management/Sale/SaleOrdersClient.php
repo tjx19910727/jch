@@ -33,7 +33,7 @@ use app\AppFactory\Management\ManagementClient;
 class SaleOrdersClient extends ManagementClient
 {
     use AuthManagerTrait;
-    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersDailyCountTrait,SaleHotelTrait,SaleHotelNightlyTrait;
+    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersDailyCountTrait, SaleHotelTrait, SaleHotelNightlyTrait;
     use BeforeOrderPaymentTrait;
     use StrategyMachineTrait;
     use StrategyIncomeTrait;
@@ -76,8 +76,8 @@ class SaleOrdersClient extends ManagementClient
     public function getSoList($where, $pageNum = 0, $field = "*", $order = "")
     {
         try {
-            $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-            if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) $where[] = ['m_id', 'in', $mIds];
             return $this->r(200, $this->lang("query_success"), $this->getSaleOrdersList($where, $pageNum, $field, $order));
         } catch (\Exception $e) {
             actionException($e, 1);
@@ -87,8 +87,8 @@ class SaleOrdersClient extends ManagementClient
 
     public function getDetailsList($where, $pageNum = 0, $field = "*", $order = "")
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) $where[] = ['so.machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) $where[] = ['m_id', 'in', $mIds];
         return $this->r(200, 'query_success', $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, $order));
 
     }
@@ -103,7 +103,7 @@ class SaleOrdersClient extends ManagementClient
         $this->order = $this->getSaleOrdersFind(['order_id' => $postData['order_id']]);
         if (!$this->order) return $this->rFail("查无订单数据");
         $this->order = $this->order->toArray();
-        if ($this->order['pay_type'] == 0) return $this->r(100,$this->lang("VSaleOrders.free_can_not_refund"));
+        if ($this->order['pay_type'] == 0) return $this->r(100, $this->lang("VSaleOrders.free_can_not_refund"));
         $check = $this->getSPayee();
         if ($check !== true) {
             return $check;
@@ -208,9 +208,9 @@ class SaleOrdersClient extends ManagementClient
             "today" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
             "yesterday" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
         ];
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) {
-            $where[] = ['machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) {
+            $where[] = ['m_id', 'in', $mIds];
             $whereToday = $where;
             $whereToday[] = ['create_date', '=', strtotime(date("Y-m-d"))];
             $today = $this->getSaleOrdersFind($whereToday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
@@ -239,9 +239,9 @@ class SaleOrdersClient extends ManagementClient
     public function getChartData($where, $type = 1)
     {
         $data = [];
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) {
-            $where[] = ['machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) {
+            $where[] = ['m_id', 'in', $mIds];
             if ($type == 1) {
                 $field = "totalPrice,totalQuantity,countDate";
                 $group = "";
@@ -270,8 +270,8 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportSo($where)
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $list = $this->getSaleOrdersList($where, 0,
             'order_id,machine_id,machine_name,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,
                 (CASE order_type 
@@ -301,23 +301,23 @@ class SaleOrdersClient extends ManagementClient
             $list = $list->toArray();
             $postData = input();
             $whereRefund['status'] = 2;
-            if ($machineIds) $whereRefund[] = ['sor.machine_id','in',$machineIds];
+            if ($mIds) $whereRefund[] = ['sor.m_id', 'in', $mIds];
             if (isset($postData['m_id']) && $postData['m_id']) {
                 $whereRefund['sor.m_id'] = $postData["m_id"];
             }
             if (isset($postData['mch_no']) && $postData['mch_no']) {
-                $whereRefund[] = ['so.mch_no',"like", "%" . $postData['mch_no'] . "%"];
+                $whereRefund[] = ['so.mch_no', "like", "%" . $postData['mch_no'] . "%"];
             }
             if (isset($postData['trade_no']) && $postData['trade_no']) {
-                $whereRefund[] = ['sor.trade_no',"like", "%" . $postData['mch_no'] . "%"];
+                $whereRefund[] = ['sor.trade_no', "like", "%" . $postData['mch_no'] . "%"];
             }
             if (isset($postData['pay_time']) && $postData['pay_time']) {
-                $time = explode("~",$postData['pay_time']);
-                $whereRefund[] = ['sor.update_time','between',[strtotime($time[0]),strtotime($time[1])]];
+                $time = explode("~", $postData['pay_time']);
+                $whereRefund[] = ['sor.update_time', 'between', [strtotime($time[0]), strtotime($time[1])]];
             }
             if (isset($postData['machine_name']) && $postData['machine_name'])
-                $whereRefund[] = ['sor.machine_name','like',"%". $postData['machine_name'] . "%"];
-            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund,0,"sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,sor.refund_trade_no mch_no,
+                $whereRefund[] = ['sor.machine_name', 'like', "%" . $postData['machine_name'] . "%"];
+            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, "sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,sor.refund_trade_no mch_no,
             sor.refund_quantity total_quantity,
              (0-sor.refund_amount) total_price,('-') discount_price,('-') retail_price,
              ('已退款') refund_status,
@@ -337,8 +337,8 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 5 THEN \"会员支付\" 
                 WHEN 6 THEN \"丽呈线上支付\" 
                 WHEN 7 THEN \"机器人线上支付\" 
-                WHEN 0 THEN \"免支付\" END) pay_type,FROM_UNIXTIME(sor.update_time,'%Y-%m-%d %H:%i:%s') pay_time,('-') out_time",'sor.update_time asc');
-            if ($refund) $list = array_merge($list,$refund->toArray());
+                WHEN 0 THEN \"免支付\" END) pay_type,FROM_UNIXTIME(sor.update_time,'%Y-%m-%d %H:%i:%s') pay_time,('-') out_time", 'sor.update_time asc');
+            if ($refund) $list = array_merge($list, $refund->toArray());
 
             $title = [
                 "order_id" => "订单ID",
@@ -369,8 +369,8 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportGoodsSo($where)
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) $where[] = ['so.machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
         $field = "so.machine_id,so.machine_name,so.trade_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,
         sod.total_sod_price,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
@@ -411,7 +411,7 @@ class SaleOrdersClient extends ManagementClient
             if ($list) {
                 $where['sor.status'] = 2;
                 if (isset($where[0][0]) && $where[0][0] == "create_time") $where[0][0] = "sor.update_time";
-                $refund = $this->getSaleOrdersRefundListJoinSoSod($where,0,
+                $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
                     "sor.machine_id,sor.machine_name,sor.trade_no,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
                             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
                         (CASE so.order_type 
@@ -442,7 +442,7 @@ class SaleOrdersClient extends ManagementClient
                         FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
                         (sor.refund_quantity) quantity,
                         (sod.success_quantity) success_quantity");
-                if ($refund) $list = array_merge($list,$refund->toArray());
+                if ($refund) $list = array_merge($list, $refund->toArray());
                 $title = [
                     "machine_id" => "设备编号",
                     "machine_name" => "设备名称",
@@ -477,8 +477,8 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportRefund($where)
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) $where[] = ['so.machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $field = "sor.machine_id,sor.machine_name,sor.trade_no,
                 sor.refund_trade_no,
                 (CASE sod.channel_position WHEN 1 THEN '主柜' WHEN 2 THEN '副柜') channel_position,
@@ -616,9 +616,9 @@ class SaleOrdersClient extends ManagementClient
     {
         $today = 0;
         $yesterday = 0;
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "machine_id");
-        if ($machineIds) {
-            $where[] = ['machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) {
+            $where[] = ['m_id', 'in', $mIds];
             $where['sod.is_gift'] = 1;
             $where['so.out_status'] = 4;
             $whereToday = $where;
@@ -659,14 +659,15 @@ class SaleOrdersClient extends ManagementClient
         $whereCollect = $where;
         $whereCollect['so.pay_status'] = 3;
         $field = "
-        IFNULL(sum(so.total_quantity - so.refund_quantity),0) totalQuantity,
-        IFNULL(sum(so.total_price - so.refund_amount),0) totalPrice,
-        IFNULL(sum(so.discount_price),0) totalDiscountPrice,
-        IFNULL(sum(so.total_price),0) totalSalePrice,
+        IFNULL(sum(sod.quantity - sod.refund_quantity),0) totalQuantity,
+        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) totalPrice,
+        IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
+        IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
-        IFNULL(sum(so.cost_price),0) totalCostPrice
+        IFNULL(sum(sod.cost_price * (sod.quantity - sod.refund_quantity)),0) totalCostPrice
         ";
         $collectData = $this->getSaleOrdersDetailsData($whereCollect, $field)->toArray();
+        actionLog($this->getLS(),'【SQL】统计概况');
         $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
         $whereGIds = $where;
         $whereGIds[] = ['g_id', ">", 0];
@@ -674,7 +675,7 @@ class SaleOrdersClient extends ManagementClient
         $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $gIds]) ?? 0;
         $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
         $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
-        $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
+        $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalSalePrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
         $collectData['averageCostPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalCostPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
         $collectData['grossProfitRate'] = $collectData['totalPrice'] > 0 ? bcmul(bcdiv($collectData['profitAmount'], $collectData['totalSalePrice'], 4), 100, 2) . "%" : "0%";
         unset($collectData['totalQuantity']);
@@ -714,11 +715,10 @@ class SaleOrdersClient extends ManagementClient
         IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
         IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
-        IFNULL(sum(sod.cost_price * sod.quantity),0) totalCostPrice
+        IFNULL(sum(sod.cost_price * (sod.quantity - sod.refund_quantity)),0) totalCostPrice
         ";
         $collectList = $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, 'totalPrice desc', 'm_id,g_id');
-
-        actionLog($this->getLS(),'统计销售数据');
+        actionLog($this->getLS(), '统计销售数据');
         $collectList = $collectList->each(function ($collectData) {
             $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
             $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;

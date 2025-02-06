@@ -40,9 +40,9 @@ class MachineErrorCodeClient extends ManagementClient
     public function getEcList($where, $pageNum = 0, $field = "*", $order = "", $group = "")
     {
         $data = [];
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) {
-            $where[] = ['machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) {
+            $where[] = ['m_id', 'in', $mIds];
             $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, '', $group);
         }
         return $this->rQ($data);
@@ -57,9 +57,9 @@ class MachineErrorCodeClient extends ManagementClient
      */
     public function exportEc($where, $field = "*", $order = "create_time desc")
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) {
-            $where[] = ['machine_id', 'in', $machineIds];
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        if ($mIds) {
+            $where[] = ['m_id', 'in', $mIds];
             $list = $this->getMachineErrorCodeList($where, 0, $field . ",msg", $order);
             if ($list) {
                 $list = $list->toArray();

@@ -96,6 +96,8 @@ class V2 extends Common
         $machine_id = input("machine_id","test0001");
         $goods_id = input("goods_id");
         $type = input("type");
+        $page = input("page",1);
+        $pageNum = input("pageNum",20);
         if ($type == 1) {
             // 预订商品
             $params = [
@@ -133,11 +135,18 @@ class V2 extends Common
                 "page" => 1,
             ];
         }
+        if ($type == 4) {
+            $apiName = "get_machines";
+            $params = [
+                "pageNum" => $pageNum,
+                "page" => $page
+            ];
+        }
         if ($type == 11) {
             $apiName = "get_goods_category";
             $params = [
-                "pageNum" => 15,
-                "page" =>1 ,
+                "pageNum" => $pageNum,
+                "page" => $page
             ];
         }
         $data = [
