@@ -138,7 +138,7 @@ trait AfterOrderPaymentTrait
 //            actionLog($mqQueue,"下发出货数据队列名");
 //            $result = MqProducer::dataSend($data,$mqQueue);
             $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
-            actionLog($result,'下发数据结果');
+            actionLog(@obj2arr($result),'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
             return $result;
         }

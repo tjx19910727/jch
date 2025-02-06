@@ -61,6 +61,7 @@ trait MachineChannelReplenishmentTrait
                     validate(VChannelReplenishment::class)->scene("repList")->check($value);
                 } catch (\Exception $e) {
                     $this->rollbackTrans();
+                    actionException($e,1);
                     return $this->rValidate($this->lang($e->getMessage()));
                 }
                 $insertGc = $insertGChange;
@@ -151,6 +152,7 @@ trait MachineChannelReplenishmentTrait
 
                 $flag[] = $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $mc['stock']]);
             }
+            actionLog($flag,'补货事务处理结果');
             $result = $this->checkFlag($flag);
             return $this->checkTrans($result);
         } catch (\Exception $e) {

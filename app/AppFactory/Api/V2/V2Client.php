@@ -69,7 +69,7 @@ class V2Client extends V2BaseClient
             $where['machine_id'] = $this->params['machine_id'];
             if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->config['product_id'];
             $where[] = ['status', '<>', 2];
-            $data = $this->getMachineChannelList($where,$this->params['pageNum'], $field, 'stock desc');
+            $data = $this->getMachineChannelList($where, ['list_rows' => $this->params['pageNum'],'page' => $this->params['page']], $field, 'stock desc');
             $data = $data->each(function ($item) {
                 $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,`desc`,details_pic,gc_id,gc_name');
                 $item['pic'] = $goods['pic'] ?? '';
@@ -105,7 +105,7 @@ class V2Client extends V2BaseClient
             if (isset($this->params['machine_id']) && $this->params['machine_id'])
                 $where[] = ["machine_id", 'in', $this->params['machine_id']];
             $whereSdc[] = ['create_date', ">=", strtotime("-7 days")];
-            $machineList = $this->getMachineList($where, $this->params['pageNum'], $field)->each(function ($machine) use ($whereSdc) {
+            $machineList = $this->getMachineList($where, ['list_rows' => $this->params['pageNum'],'page' => $this->params['page']], $field)->each(function ($machine) use ($whereSdc) {
                 if (isset($machine['country_id']) && $machine['country_id']) $machine['country'] = $this->getEarthCountriesValue(['id' => $machine['country_id']], 'cname');
                 if (isset($machine['state_id']) && $machine['state_id']) $machine['state'] = $this->getEarthStatesValue(['id' => $machine['state_id']], 'cname');
                 if (isset($machine['city_id']) && $machine['city_id']) $machine['city'] = $this->getEarthCitiesValue(['id' => $machine['city_id']], 'cname');
@@ -370,7 +370,7 @@ class V2Client extends V2BaseClient
     {
         $where['gmm.machine_id'] = $this->params['kiosk_id'];
         $where['gm.status'] = 1;
-        $data = $this->getGoodsMultipleListByMachine($where,$this->params['pageNum'] ?? 0,
+        $data = $this->getGoodsMultipleListByMachine($where, ['list_rows' => $this->params['pageNum'] ?? 0,'page' => $this->params['page'] ?? 1],
             "gm.gm_id,gm.gm_name,gm.gm_pic,gm.gm_desc,gm.start_time,gm.end_time",'gm.create_time desc',$this->params['page'] ?? 1);
         return $this->returnData(0,$this->lang("msg.0"),$data);
     }
@@ -628,7 +628,7 @@ class V2Client extends V2BaseClient
      */
     public function get_goods_category()
     {
-        $list = $this->getGoodsCategoryList(["status" => 1],$this->params['pageNum'] ?? 0,'gc_id,gc_pid,gc_name,`desc` gc_desc, ico, sort','sort asc');
+        $list = $this->getGoodsCategoryList(["status" => 1], ['list_rows' => $this->params['pageNum'] ?? 0,'page' => $this->params['page'] ?? 1],'gc_id,gc_pid,gc_name,`desc` gc_desc, ico, sort','sort asc');
         return $this->returnData(0,$this->lang("msg.0"),$list);
     }
 }

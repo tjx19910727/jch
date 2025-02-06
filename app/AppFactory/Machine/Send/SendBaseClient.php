@@ -37,8 +37,9 @@ class SendBaseClient extends MachineBaseClient
             $this->dataRecord(2, 2);
 
             actionLog($this->mqQueue,'下发命令队列');
+            actionLog($this->data,'下发的数据');
             $result = MqProducer::dataSend($this->data, $this->mqQueue);
-            actionLog($result,'发送结果');
+            actionLog($result,'dataSendRabbitMq发送结果');
             if ($result !== true) {
                 return $result;
             }

@@ -596,7 +596,9 @@ class Receive extends Common
     public function usePickCode()
     {
         try {
-            return $this->app->activity->usePickCode();
+            $result = $this->app->activity->usePickCode();
+            actionLog(@obj2arr($result),'使用提货码返回结果');
+            return $result;
         } catch (\Exception $e) {
             actionException($e,1);
             return returnTryCatch($e->getMessage());

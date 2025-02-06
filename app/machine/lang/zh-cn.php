@@ -9,6 +9,7 @@
 return [
     "check_sign_fail" => "验签失败",
     "query_mv_no_data" => "查无设备视图数据",
+    "machine_offline" => "设备离线",
 
     "VLogin" => [
         "not_manager" => "当前设备未设置管理员",
@@ -29,6 +30,7 @@ return [
         "msg_id_require" => "消息ID不能为空",
         "msg_id_unique" => "消息ID已存在，请重新上报",
         "timestamp_require" => "时间戳不能为空",
+        "signKey_require" => "加签密钥不存在",
         "sign_require" => "签名不能为空",
         "timestamp_checkTimestamp_overdue" => "时间戳超时，请更新时间",
 

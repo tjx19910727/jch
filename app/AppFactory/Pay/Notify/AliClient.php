@@ -33,6 +33,10 @@ class AliClient extends PayBaseClient
         if ($message['trade_status'] === 'TRADE_SUCCESS' || $message['trade_status'] === 'TRADE_FINISHED') {
             $this->order = $this->getSaleOrdersFind(['trade_no' => $outTradeNo]);
             if ($this->order) {
+                if ($this->order['pay_status'] == 3) {
+                    echo  "ok";
+                    return "ok";
+                }
                 $this->order = $this->order->toArray();
                 if ($this->order['pay_status'] < 3) {
                     if (isset($message['buyer_id'])) {

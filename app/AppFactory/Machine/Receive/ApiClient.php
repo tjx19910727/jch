@@ -726,11 +726,15 @@ class ApiClient extends ReceiveBaseClient
                         $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
                         if (!$mc) {
                             $this->rollbackTrans();
-                            return $this->r(100, $this->lang("VSubCar.channel_no_data"));
+                            return $this->r(300, $this->lang("VSubCar.channel_no_data"));
                         }
                         if (!$mc['mg_id']) {
                             $this->rollbackTrans();
-                            return $this->r(100, $this->lang("VSubCar.mg_id_require"));
+                            return $this->r(300, $this->lang("VSubCar.mg_id_require"));
+                        }
+                        if ($mc['status'] != 1) {
+                            $this->rollbackTrans();
+                            return $this->r(300,$this->lang("VSubCar.channel_status_no_3"));
                         }
                         if ($this->data['pay_type'] == 0) {
                             $mc['retail_price'] = 0;
@@ -765,14 +769,14 @@ class ApiClient extends ReceiveBaseClient
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
                         } else {
                             $this->rollbackTrans();
-                            return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                            return $this->r(300, $this->lang("VSubCar.make_order_details_fail"));
                         }
                     }
                 }
                 $this->commitTrans();
             } else {
                 $this->rollbackTrans();
-                return $this->r(100, $this->lang("VSubCar.make_order_fail"));
+                return $this->r(300, $this->lang("VSubCar.make_order_fail"));
             }
         } catch (\Exception $e) {
             $this->rollbackTrans();
@@ -821,6 +825,8 @@ class ApiClient extends ReceiveBaseClient
         $where['m_id'] = $this->machine['m_id'];
         $where[] = ['publish_time', "<", time()];
         $result = $this->getMachineVersionPlanFind($where, 'mvp_id,mv_id,version_no,path,`desc`,size,update_time,status', 'mvp_id desc');
+        actionLog($result,'查询设备版本更新计划');
+        actionLog($this->getLS(),'【SQL】查询设备版本更新计划');
         if (!$result) {
             return $this->rNoData();
         }

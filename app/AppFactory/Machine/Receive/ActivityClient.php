@@ -140,6 +140,7 @@ class ActivityClient extends ReceiveBaseClient
      */
     public function usePickCode()
     {
+
         try {
             $this->startTrans();
             $apc = $this->getActivityPickByCode();
@@ -147,21 +148,31 @@ class ActivityClient extends ReceiveBaseClient
                 $this->rollbackTrans();
                 return $this->rFail($apc);
             }
-            actionLog($apc, "使用的取货码");
+            actionLog($apc, "使用的取货码数据");
             $flag = [];
             // 预订订单取货
             if ($apc['pick_type'] == 3) {
                 $this->order = $this->getSaleOrdersFind(['order_id' => $apc['order_id']]);
-                if (!$this->order) return $this->r(300, $this->lang("VActivityPickCode.order_no_data"));
+                if (!$this->order) {
+                    $this->rollbackTrans();
+                    return $this->r(300, $this->lang("VActivityPickCode.order_no_data"));
+                }
                 $this->order = $this->order->toArray();
-                if ($this->order['m_id'] != $this->machine['m_id']) return $this->r(300,$this->lang("VActivityPickCode.pick_code_can_not_use"));
-                if ($this->order['out_status'] != 1) return $this->r(300, $this->lang("VActivityPickCode.out_status1"));
+                if ($this->order['m_id'] != $this->machine['m_id']) {
+                    $this->rollbackTrans();
+                    return $this->r(300,$this->lang("VActivityPickCode.pick_code_can_not_use"));
+                }
+                if ($this->order['out_status'] != 1) {
+                    $this->rollbackTrans();
+                    return $this->r(300, $this->lang("VActivityPickCode.out_status1"));
+                }
             } else {
                 // 系统随机取货，随机获取货架商品信息生成取货商品，整理carList，如果pick_type==2，则carList由外部传入
                 if ($apc['pick_type'] == 1) {
                     $ap = $apc['ap'];
                     if (!$ap['ag']) {
-                        return $this->lang("VActivityPick.ag_not_data");
+                        $this->rollbackTrans();
+                        return $this->r(300,$this->lang("VActivityPick.ag_not_data"));
                     }
                     $apg_id = array_column($ap['ag'], 'g_id');
                     $whereMc[] = ['g_id', 'in', $apg_id];
@@ -185,7 +196,7 @@ class ActivityClient extends ReceiveBaseClient
                     "machine_name" => $this->machine['machine_name'],
                     "machine_id" => $this->machine['machine_id'],
                     "order_type" => 3,
-                    "pay_status" => 2,
+                    "pay_status" => 3,
                     "pay_time" => time(),
                     "pay_code" => $this->data['pick_code'],
                     "apc_id" => $apc['apc_id'],
@@ -210,26 +221,29 @@ class ActivityClient extends ReceiveBaseClient
                             $this->rollbackTrans();
                             return $this->r(300, $this->lang("VSubCar.under_stock"));
                         }
-                        $details = [
-                            "order_id" => $order_id,
-                            "retail_price" => 0,
-                            "total_sod_price" => 0,
-                            "quantity" => $value['quantity'],
-                        ];
-                        $details = array_merge($details, $mc);
-                        $sod_id = $this->addSaleOrdersDetails($details);
-                        actionLog($this->getLS(), '生成订单详情数据');
-                        if ($sod_id) {
-                            $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $value['quantity']);
-                        } else {
-                            $this->rollbackTrans();
-                            return $this->r(300, $this->lang("VSubCar.make_order_details_fail"));
+                        while($value['quantity'] > 0) {
+                            $details = [
+                                "order_id" => $order_id,
+                                "retail_price" => 0,
+                                "total_sod_price" => 0,
+                                "quantity" => 1,
+                            ];
+                            $details = array_merge($details, $mc);
+                            $sod_id = $this->addSaleOrdersDetails($details);
+                            actionLog($this->getLS(), '生成订单详情数据');
+                            if ($sod_id) {
+                                $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], 1);
+                                $value['quantity']--;
+                            } else {
+                                $this->rollbackTrans();
+                                return $this->r(300, $this->lang("VSubCar.make_order_details_fail"));
+                            }
                         }
                     }
                     $flag[] = $this->updateSaleOrders($updateOrder);
-                    actionLog($this->getLS(), '修改订单数据');
+                    actionLog($this->getLS(), '【SQL】修改订单数据');
                     $flag[] = $this->updateActivityPickCode(['apc_id' => $apc['apc_id'], 'order_id' => $order_id, 'trade_no' => $trade_no]);
-                    actionLog($this->getLS(), '修改取货码数据');
+                    actionLog($this->getLS(), '【SQL】修改取货码数据');
                 }
                 if (!$order_id) {
                     $this->rollbackTrans();
@@ -241,17 +255,31 @@ class ActivityClient extends ReceiveBaseClient
             if ($this->order['total_price'] > 0) {
                 $flag[] = $this->countIncome();
             }
+            actionLog($flag,'处理事务结果');
             $result = flag_check($flag);
             if ($result) {
                 $result = $this->outGoods();
-                if ($result !== true) {
+                actionLog($result);
+                if (is_object($result)) {
+                    $result = obj2arr($result);
+                    if (isset($result['state']) && $result['state'] != 200) {
+                        $this->rollbackTrans();
+                        return $result;
+                    }
+                }
+                if ($result === false) {
                     $this->rollbackTrans();
                     return $result;
                 }
                 if (isset($this->order['details'])) unset($this->order['details']);
                 $this->updateSaleOrders($this->order);
+                actionLog($this->getLS(),'使用取货码完成修改订单');
                 $this->updateActivityPickCode(['apc_id' => $apc['apc_id'], 'status' => 5]);
-                $this->updateApiAdvance(['status' => "PROCESSING"], ['apc_id' => $apc['apc_id']]);
+                actionLog($this->getLS(),'使用取货码成功修改取货码状态');
+                if ($apc['pick_type'] == 3) {
+                    $this->updateApiAdvance(['status' => "PROCESSING"], ['apc_id' => $apc['apc_id']]);
+                    actionLog($this->getLS(), '修改预订商品记录表');
+                }
                 $this->commitTrans();
                 return $this->r(200,$this->lang("action_success"),$this->order);
             }

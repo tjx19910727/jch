@@ -80,7 +80,7 @@ trait MachineTrait
     /**
      * 获取设备列表
      * @param $where
-     * @param int $pageNum
+     * @param int|array $pageNum
      * @param string $field
      * @param string $order
      * @param string $eachFun
@@ -91,7 +91,7 @@ trait MachineTrait
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function getMachineList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = '', $limit = '')
+    public function getMachineList($where,$pageNum = null,$field = "*", $order = "",$eachFun = "",$group = '', $limit = '')
     {
         return MachineModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
     }
@@ -220,8 +220,13 @@ trait MachineTrait
                     ];
                     actionLog($config, '下发命令配置');
                     $app = AppFactory::machine($config);
-                    return $app->sendMq->sendMq($msgType, $otherData);
+                    $result =  $app->sendMq->sendMq($msgType, $otherData);
+                    actionLog(@obj2arr($result),'sendToMachine结果');
+                    return $result;
                 }
+                return $this->lang("VReceive.signKey_require");
+            } else {
+                return $this->lang("machine_offline");
             }
         }
         return false;

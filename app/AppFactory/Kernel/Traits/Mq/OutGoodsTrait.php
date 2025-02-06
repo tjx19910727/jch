@@ -237,6 +237,9 @@ trait OutGoodsTrait
             $update['apc_id'] = $pickCode['apc_id'];
             $update['order_id'] = $this->order['order_id'];
             $update['used_time'] = time();
+            $update['m_id'] = $this->order['m_id'];
+            $update['machine_id'] = $this->order['machine_id'];
+            $update['machine_name'] = $this->order['machine_name'];
             // 出货成功才是使用成功
             if ($this->order['out_status'] == 4) {
                 $adStatus = 1;
