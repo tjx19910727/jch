@@ -65,6 +65,7 @@ return [
 
         "mvp_id_require" => "版本更新记录ID不能为空",
         "download_progress_require" => "下载进度不能为空",
+
     ],
 
     "VChannel" => [
@@ -128,6 +129,7 @@ return [
 
     "VOutGoods" => [
         "details_no_data" => "查无出货数据",
+        "send_out_goods_fail" => "下发出货命令失败",
     ],
 
     "VChangeChannelGoods" => [

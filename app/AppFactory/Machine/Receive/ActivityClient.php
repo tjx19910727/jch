@@ -270,7 +270,7 @@ class ActivityClient extends ReceiveBaseClient
                 }
                 if ($result === false) {
                     $this->rollbackTrans();
-                    return $result;
+                    return $this->r(100,$this->lang("VOutGoods.send_out_goods_fail"));
                 }
                 if (isset($this->order['details'])) unset($this->order['details']);
                 $this->updateSaleOrders($this->order);
