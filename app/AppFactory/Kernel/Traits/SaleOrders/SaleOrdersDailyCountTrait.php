@@ -15,7 +15,8 @@ trait SaleOrdersDailyCountTrait
 {
     public function getSaleOrdersDailyCountFind($where,$field = "*",$order = "",$group = "")
     {
-        return SaleOrdersDailyCountView::getFind($where,$field,$order,$group);
+        $data = SaleOrdersDailyCountView::getFind($where,$field,$order,$group);
+        return $data;
     }
 
     public function getSaleOrdersDailyCountList($where,$pageNum = 0, $field = "*", $order = "",$group = "")

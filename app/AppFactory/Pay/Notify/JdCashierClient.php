@@ -46,9 +46,11 @@ class JdCashierClient extends PayBaseClient
             actionLog($this->getLS(), '查无订单');
             return 200;
         }
-        $this->order = obj2arr($this->order);
+        $this->order = $this->order->toArray();
+        actionLog($this->order,'订单数据');
         $this->jdConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1 , 'payee_type' => 4]);
         if (!is_array($this->jdConfig)) return $this->jdConfig;
+        actionLog($this->jdConfig,'京东配置信息');
 
         $result = $this->data;
 
@@ -63,6 +65,7 @@ class JdCashierClient extends PayBaseClient
                 $insert['type'] = 2;
                 if (substr($result['openId'],0,4) == 2088) $insert['type'] = 3;
                 $this->order['user_id'] = $this->addUser($insert);
+                actionLog($this->getLS(),'增加会员信息');
             }
         }
         $ledger = 0;

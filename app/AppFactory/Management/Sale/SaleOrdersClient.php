@@ -561,10 +561,6 @@ class SaleOrdersClient extends ManagementClient
         SUM(order_num) order_num,
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
-//        $sql = "SELECT " . $field . " FROM sale_orders_daily_count WHERE " . $where ;
-//        if ($order) $sql .= " order by " . $order;
-//        if ($group) $sql .= " group by " . $group;
-//        $data = $this->query($sql);
         $data = $this->getSaleOrdersDailyCountList($where, $pageNum, $field, $order, $group);
         return $this->rQ($data);
     }

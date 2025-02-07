@@ -43,21 +43,16 @@ trait JdCashierTrait
 
     /**
      * 京东反扫支付
-     * @param array $order
-     * @param string $authCode
-     * @param string $paySource
-     * @param string $locationE
-     * @param string $locationN
-     * @return bool|string
+     * @return mixed
      */
-    protected function jdScanQr($paySource = 'WX', $locationE = '22.5639220000', $locationN = '113.3978830000')
+    protected function jdScanQr()
     {
         $extraMap = ['o_id' => $this->order['order_id']];
         $tradeNo = $this->order['trade_no'];
 
         $terminalInfo = [
-            'locationE' => $locationE,
-            'locationN' => $locationN,
+            'locationE' => $this->machine['lat'] ?? "22.5639220000",
+            'locationN' => $this->machine['lng'] ?? "113.3978830000",
             'encrypt_rand_num' => substr($this->order['pay_code'], strlen($this->order['pay_code']) - 6, 6),
         ];
         $notify =  $this->getUrl("/pay/notify.jd_cashier/orderNotify");
@@ -67,7 +62,7 @@ trait JdCashierTrait
             "version" => 'V4.0',
             "customerNum" => $this->strategyPayee['customerNum'],
             "authCode" => $this->order['pay_code'],
-            "bankType" => 'WX', // 微信：WX，小程序：WX_XCX，支付宝：ALIPAY，京东：JD，银联：UNIONPAY
+            "bankType" => $this->payType, // 微信：WX，小程序：WX_XCX，支付宝：ALIPAY，京东：JD，银联：UNIONPAY
             "requestNum" => $tradeNo, // 商户系统内部订单号(商户系统内唯一)
             "orderAmount" => "$orderAmount",
             "callbackUrl" => $notify,
@@ -77,7 +72,7 @@ trait JdCashierTrait
             "bussinessType" => 'QRCODE_TRAD', // 固定值：QRCODE_TRAD
             "payModel" => 'ONCE',  // 一单一付：ONCE，一单多付：MORE
             "source" => 'API',
-            "paySource" => $paySource,
+            "paySource" => $this->payType, // 微信：WX，小程序：WX_XCX，支付宝：ALIPAY，京东：JD，银联：UNIONPAY
             "extraInfo" => json_encode($extraMap),
             "terminalInfo" => json_decode(json_encode($terminalInfo)),
         ];
@@ -108,7 +103,10 @@ trait JdCashierTrait
                 $this->order['user_id'] = $this->addUser($insert);
             }
         }
-        return $this->rAction($result);
+        if ($result['success'] === false){
+            return $this->rFail($result['errorMsg']);
+        }
+        return $this->r(200,$result['msg'] ?? $this->lang("action_success"),$result);
     }
 
     /**

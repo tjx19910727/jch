@@ -113,12 +113,9 @@ class PaymentClient extends PayBaseClient
 
         // 反扫支付二维码
         if (isset($this->data['authCode']) && $this->order['pay_method'] == 2) {
+            $this->data['authCode'] = str_replace("Num Lock",'',$this->data['authCode']);
             $paymentType = AuthCode::getCodePayee($this->data['authCode']);
             if (!$paymentType) return $this->rFail($this->lang("VOrderPay.unKnow_auth_code"));
-            if ($paymentType == 1)
-                $where[] = ['payee_type', 'in', [1, 3, 4]];
-            if ($paymentType == 2)
-                $where[] = ['payee_type', 'between', [2, 4]];
             $this->order['pay_code'] = $this->data['authCode'];
         }
 
@@ -132,6 +129,7 @@ class PaymentClient extends PayBaseClient
             return $this->rFail($this->lang("VOrderPay.unKnow_pay_type"));
         }
         if ($this->strategyPayee['payee_type'] == 3) $this->payType = $this->tlPayType[$paymentType];
+        if ($this->strategyPayee['payee_type'] == 4) $this->payType = $this->jdPayType[$paymentType];
         actionLog($this->strategyPayee,'收款配置数据');
 
 

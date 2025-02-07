@@ -18,14 +18,12 @@ class AuthCode
      */
     public static function getCodePayee($code)
     {
-        $sub = substr($code,0,2);
-        $len = strlen($code);
         $paymentType = 0;
-        if(intval($sub) >= 10 && intval($sub) <= 15 && $len == 18){
+        if(preg_match("/^(10|11|12|13|14|15)\d{16}$/",$code)){
             // 微信
             $paymentType = 1;
         }
-        if(intval($sub) >= 25 && intval($sub) <= 30 && $len >= 16 && $len <= 24){
+        if(preg_match("/^(25|26|27|28|29|30)\d{14,22}$/",$code)){
             // 支付宝
             $paymentType = 2;
         }

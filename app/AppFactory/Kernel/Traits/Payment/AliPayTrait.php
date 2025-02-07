@@ -107,18 +107,19 @@ trait AliPayTrait
             }
 
             if ($result['code'] == 10000) {
-                $this->startTrans();
-                try {// 结算分润收益
-                    $flag[] = $this->settlementRevenue();
-                    $flag[] = $this->paymentSuccessful();
-                    actionLog($flag, '操作结果');
-                    $checkFlag = flag_check($flag);
-                    $return = $this->checkTrans($checkFlag);
-                } catch (\Exception $e) {
-                    $this->rollbackTrans();
-                    actionException($e,1);
-                    $return = $this->rTryCatch($e->getMessage());
-                }
+                return $this->r(200,$this->lang("init_payment_success"));
+//                $this->startTrans();
+//                try {// 结算分润收益
+//                    $flag[] = $this->settlementRevenue();
+//                    $flag[] = $this->paymentSuccessful();
+//                    actionLog($flag, '操作结果');
+//                    $checkFlag = flag_check($flag);
+//                    $return = $this->checkTrans($checkFlag);
+//                } catch (\Exception $e) {
+//                    $this->rollbackTrans();
+//                    actionException($e,1);
+//                    $return = $this->rTryCatch($e->getMessage());
+//                }
             } else if ($result['code'] == 10003) { // 队列轮询
                 $return = $this->r(201, '等待您的支付，超时时间30秒');
                 $redisExpire = (env("Payment.microPayOverTime") ?? 0) + 60;

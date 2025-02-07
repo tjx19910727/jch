@@ -32,11 +32,9 @@ class AliClient extends PayBaseClient
         $outTradeNo = $message['out_trade_no'];
         if ($message['trade_status'] === 'TRADE_SUCCESS' || $message['trade_status'] === 'TRADE_FINISHED') {
             $this->order = $this->getSaleOrdersFind(['trade_no' => $outTradeNo]);
-            if ($this->order) {
-                if ($this->order['pay_status'] == 3) {
-                    echo  "ok";
-                    return "ok";
-                }
+            actionLog($this->getLS(),'【SQL】查询订单');
+            actionLog($this->order,'订单数据');
+            if ($this->order && $this->order['pay_status'] == 1) {
                 $this->order = $this->order->toArray();
                 if ($this->order['pay_status'] < 3) {
                     if (isset($message['buyer_id'])) {
@@ -48,6 +46,7 @@ class AliClient extends PayBaseClient
                             $insert['openid'] = $message['buyer_id'];
                             $insert['type'] = 3;
                             $this->order['user_id'] = $this->addUser($insert);
+                            actionLog($this->getLS(),'增加支付宝会员信息');
                             $this->order['user_name'] = $message['buyer_logon_id'];
                         }
                     }
@@ -57,6 +56,7 @@ class AliClient extends PayBaseClient
                     try {
                         $flag[] = $this->settlementRevenue();
                         $flag[] = $this->paymentSuccessful();
+                        actionLog($flag,'flag');
                         $result = flag_check($flag);
 //                    $this->rollbackTrans();
                         $result = $this->checkTrans($result);

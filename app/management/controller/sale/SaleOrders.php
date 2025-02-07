@@ -232,13 +232,12 @@ class SaleOrders extends Common
             unset($postData['order']);
         }
         $where = $this->getWhere($postData,true,["machine_id" => "like"]);
-        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
-        if ($machineIds) {
-            foreach ($machineIds as $k => $v) {
-                $machineIds[$k] = "'" . $v . "'";
+        if (!isset($postData['m_id'])) {
+            $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+            if ($mIds) {
+                if ($where) $where .= " AND ";
+                $where .= 'm_id in (' . implode(",", $mIds) . ')';
             }
-            if ($where) $where .= " AND ";
-            $where .= 'machine_id in (' . implode(",",$machineIds) . ')';
         }
         return $this->app->saleOrders->getReportList($where,$pageNum,$order,$group);
     }

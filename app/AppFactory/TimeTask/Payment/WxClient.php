@@ -118,7 +118,7 @@ class WxClient extends TimeTaskBase
      */
     private function USERPAYING()
     {
-        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paying');
+//        $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paying');
         return $this->r(201,'等待用户支付',$this->payResult);
     }
 
