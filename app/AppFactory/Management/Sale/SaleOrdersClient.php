@@ -317,27 +317,29 @@ class SaleOrdersClient extends ManagementClient
             }
             if (isset($postData['machine_name']) && $postData['machine_name'])
                 $whereRefund[] = ['sor.machine_name', 'like', "%" . $postData['machine_name'] . "%"];
-            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, "sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,sor.refund_trade_no mch_no,
+            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, 'sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,sor.refund_trade_no mch_no,
             sor.refund_quantity total_quantity,
-             (0-sor.refund_amount) total_price,('-') discount_price,('-') retail_price,
-             ('已退款') refund_status,
+             (0-sor.refund_amount) total_price,("-") discount_price,("-") retail_price,
+             ("已退款") refund_status,
                 (CASE order_type 
-                    WHEN 1 THEN \"普通订单\"
-                    WHEN 2 THEN \"优惠券订单\"
-                    WHEN 3 THEN \"取货码订单\"
-                    WHEN 4 THEN \"盲盒活动\"
-                    WHEN 5 THEN \"满减满送活动\"
-                    WHEN 6 THEN \"叠加营销活动\"
+                    WHEN 1 THEN "普通订单"
+                    WHEN 2 THEN "优惠券订单"
+                    WHEN 3 THEN "取货码订单"
+                    WHEN 4 THEN "盲盒活动"
+                    WHEN 5 THEN "满减满送活动"
+                    WHEN 6 THEN "叠加营销活动"
                     END 
-                ) order_type,(CASE pay_type 
-                WHEN 1 THEN \"微信支付\" 
-                WHEN 2 THEN \"支付宝支付\" 
-                WHEN 3 THEN \"\" 
-                WHEN 4 THEN \"京东收银\" 
-                WHEN 5 THEN \"会员支付\" 
-                WHEN 6 THEN \"丽呈线上支付\" 
-                WHEN 7 THEN \"机器人线上支付\" 
-                WHEN 0 THEN \"免支付\" END) pay_type,FROM_UNIXTIME(sor.update_time,'%Y-%m-%d %H:%i:%s') pay_time,('-') out_time", 'sor.update_time asc');
+                ) order_type,
+                (CASE pay_type 
+                WHEN 1 THEN "微信支付" 
+                WHEN 2 THEN "支付宝支付" 
+                WHEN 3 THEN "" 
+                WHEN 4 THEN "京东收银" 
+                WHEN 5 THEN "会员支付" 
+                WHEN 6 THEN "丽呈线上支付" 
+                WHEN 7 THEN "机器人线上支付" 
+                WHEN 0 THEN "免支付" END) pay_type,
+                FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time', 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
 
             $title = [
@@ -486,7 +488,8 @@ class SaleOrdersClient extends ManagementClient
                 sod.g_name,
                 sor.refund_amount,
                 sor.refund_quantity,
-                (CASE sor.status WHEN 1 THEN '已提交退款申请' WHEN 2 THEN '退款成功' WHEN 3 THEN '退款失败' END) status
+                (CASE sor.status WHEN 1 THEN '已提交退款申请' WHEN 2 THEN '退款成功' WHEN 3 THEN '退款失败' END) status,
+                sor.remark
                 ";
         $list = $this->getSaleOrdersRefundListJoinSoSod($where, 0, $field, "sor_id desc");
         if ($list) {
@@ -502,6 +505,7 @@ class SaleOrdersClient extends ManagementClient
                 "refund_amount" => "退款金额",
                 "refund_quantity" => "退款数量",
                 "status" => "退款状态",
+                "remark" => "备注",
             ];
             $filename = "退款交易列表-" . date("Ymd");
             return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);

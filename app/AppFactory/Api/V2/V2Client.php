@@ -522,7 +522,15 @@ class V2Client extends V2BaseClient
                 return $this->returnData(40,$this->lang("msg.40") . ":" . $this->params['machine_id']);
             }
             $result = $this->outGoods();
-            if ($result !== true) {
+            actionLog($result);
+            if (is_object($result)) {
+                $result = obj2arr($result);
+                if (isset($result['state']) && $result['state'] != 200) {
+                    $this->rollbackTrans();
+                    return $result;
+                }
+            }
+            if ($result === false) {
                 $this->rollbackTrans();
                 return $this->returnData(19, $this->lang("msg.19"));
             }

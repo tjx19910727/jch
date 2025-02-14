@@ -34,13 +34,17 @@ class MachineViewClient extends ManagementClient
                 $machine_id = $this->getMachineValue(['m_id' => $value], 'machine_id');
                 if (!$machine_id) return $this->rFail($this->lang("VMachineView.machine_id_query_no_data"));
                 $check = $this->getMachineViewFind(['m_id' => $value, 'view_id' => $postData['view_id']]);
+                actionLog($this->getLS(),'查询设备视图');
+                actionLog($check ,'设备视图');
                 if (!$check) {
                     $postData['m_id'] = $value;
                     $postData['machine_id'] = $machine_id;
                     $flag[] = $this->addMachineView($postData);
+                    actionLog($this->getLS(),'分配视图');
                     $this->sendToMachine(['machine_id' => $machine_id],'updateMachineView');
                 }
             }
+            actionLog($flag);
             return $this->checkTrans($flag);
         } catch (\Exception $e) {
             $this->rollbackTrans();

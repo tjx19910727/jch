@@ -88,6 +88,7 @@ class ActivityLotteryUsedClient extends ManagementClient
                     "machine_name" => "设备名称",
                     "machine_id" => "设备编号",
                     "g_name" => "商品名称",
+                    "sku" => "SKU",
                     "content_name" => "奖项",
                     "price" => "抽奖单价",
                     "total_quantity" => "抽奖次数",

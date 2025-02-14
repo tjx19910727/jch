@@ -19,7 +19,7 @@ class CallbackClient extends ApiBaseClient
 {
     use ApiCallbackTrait,ApiAdvanceTrait;
 
-    public $callbackData;
+       public $callbackData;
 
     /**
      * @var array 各类型数据推送时间间隔，最多8次，最大7560秒

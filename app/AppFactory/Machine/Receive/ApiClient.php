@@ -269,6 +269,7 @@ class ApiClient extends ReceiveBaseClient
                 $mcList[$key] = $mc;
             }
         }
+        actionLog($mcList,'返回的货道数据');
         return $this->r(200, "SUCCESS", $mcList);
     }
 

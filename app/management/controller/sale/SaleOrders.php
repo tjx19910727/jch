@@ -140,8 +140,8 @@ class SaleOrders extends Common
         if (isset($postData['refund_no']) && $postData['refund_no']) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
         if (isset($postData['pay_type']) && $postData['pay_type']) $where['pay_type'] = $postData['pay_type'];
 //        $where = $this->getWhere($postData,false,['refund_trade_no' => "like",'machine_id' => "like",'trade_no' => "like","refund_no" => "like"]);
-        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
-        if ($machineIds) $where[] = ['sor.machine_id','in',$machineIds];
+        $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'m_id');
+        if ($mIds) $where[] = ['sor.m_id','in',$mIds];
         $field = "sor.*,so.pay_type";
         return returnData($this->app->saleOrders->getSaleOrdersRefundListJoinSoSod($where,$pageNum,$field,'sor.sor_id desc'));
     }
@@ -160,6 +160,8 @@ class SaleOrders extends Common
         if (isset($postData['refund_no'])) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
         if (isset($postData['pay_type'])) $where['pay_type'] = $postData['pay_type'];
 //        $where = $this->getWhere($postData,false,['refund_trade_no' => "like",'machine_id' => "like",'trade_no' => "like","refund_no" => "like"]);
+        $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'m_id');
+        if ($mIds) $where[] = ['sor.m_id','in',$mIds];
         return $this->app->saleOrders->exportRefund($where);
     }
 

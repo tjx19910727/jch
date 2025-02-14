@@ -83,7 +83,7 @@ class JdCashierClient extends PayBaseClient
             if ($ledger == 1) $flag[] = $this->settlementRevenue();
             // 分润失败
             if ($ledger == 2) $flag[] = $this->settlementRevenue(3);
-            if ($this->order['pay_status'] == 1) {
+            if ($this->order['pay_status'] == 1 && !$ledger) {
                 $flag[] = $this->paymentSuccessful();
             }
             $result = flag_check($flag);
