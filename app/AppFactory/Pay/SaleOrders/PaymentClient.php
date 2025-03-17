@@ -116,6 +116,8 @@ class PaymentClient extends PayBaseClient
             $this->data['authCode'] = str_replace("Num Lock",'',$this->data['authCode']);
             $paymentType = AuthCode::getCodePayee($this->data['authCode']);
             if (!$paymentType) return $this->rFail($this->lang("VOrderPay.unKnow_auth_code"));
+            if (in_array($this->order['pay_type'],[1,2]) && $paymentType != $this->order['pay_type'])
+                return $this->rFail($this->lang("VOrderPay.auth_code_not_match_pay_type"));
             $this->order['pay_code'] = $this->data['authCode'];
         }
 

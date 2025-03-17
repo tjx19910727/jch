@@ -93,11 +93,12 @@ class V2 extends Common
 //            "timestamp" => time(),
 //            "params" => json_encode($params, 320),
 //        ];
-        $machine_id = input("machine_id","test0001");
+        $machine_id = input("machine_id", "test0001");
         $goods_id = input("goods_id");
         $type = input("type");
-        $page = input("page",1);
-        $pageNum = input("pageNum",20);
+        $page = input("page", 1);
+        $pageNum = input("pageNum", 20);
+        $apiName = input("apiName");
         if ($type == 1) {
             // 预订商品
             $params = [
@@ -116,18 +117,18 @@ class V2 extends Common
                     ],
                 ], 320),
             ];
-            $apiName = "reserve_order";
+            $apiName ?: $apiName = "reserve_order";
         }
         if ($type == 2) {
             // 使用提货码
             $params = [
-                "pick_code" => input("pick_code",000000),
+                "pick_code" => input("pick_code", 000000),
                 "machine_id" => $machine_id,
             ];
-            $apiName = "use_pick_code";
+            $apiName ?: $apiName = "use_pick_code";
         }
         if ($type == 3) {
-            $apiName = "get_inventory_list";
+            $apiName ?: $apiName = "get_inventory_list";
             $params = [
                 "machine_id" => $machine_id,
                 "shelf_on" => 1,
@@ -136,14 +137,14 @@ class V2 extends Common
             ];
         }
         if ($type == 4) {
-            $apiName = "get_machines";
+            $apiName ?: $apiName = "get_machines";
             $params = [
                 "pageNum" => $pageNum,
                 "page" => $page
             ];
         }
         if ($type == 11) {
-            $apiName = "get_goods_category";
+            $apiName ?: $apiName = "get_goods_category";
             $params = [
                 "pageNum" => $pageNum,
                 "page" => $page
@@ -173,13 +174,17 @@ class V2 extends Common
         dump(json_encode($data));
     }
 
+    /**
+     * 通用接口
+     * @return array|\think\response\Json
+     */
     public function index()
     {
         if (!request()->isPost()) {
-            return json(["status_code" => 98,"msg" => lang("msg." . 98)]);
+            return json(["status_code" => 98, "msg" => lang("msg." . 98)]);
         }
-        if (strpos(request()->header("content-type"),'multipart/form-data') === false ) {
-            return json(["status_code" => 97,"msg" => lang("msg." . 97)]);
+        if (strpos(request()->header("content-type"), 'multipart/form-data') === false) {
+            return json(["status_code" => 97, "msg" => lang("msg." . 97)]);
         }
         try {
             $postData = input();
@@ -192,8 +197,36 @@ class V2 extends Common
             }
             return $app->v2->returnData(4, lang("msg." . 4));
         } catch (\Exception $e) {
-            actionException($e,1);
-            return  json(["status_code" => 99, "msg" => lang("msg." . 99) . $e->getMessage()]);
+            actionException($e, 1);
+            return json(["status_code" => 99, "msg" => lang("msg." . 99) . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * 机器人平台接口
+     * @return array|\think\response\Json
+     */
+    public function robot()
+    {
+        if (!request()->isPost()) {
+            return json(["status_code" => 98, "msg" => lang("msg." . 98)]);
+        }
+        if (strpos(request()->header("content-type"), 'multipart/form-data') === false) {
+            return json(["status_code" => 97, "msg" => lang("msg." . 97)]);
+        }
+        try {
+            $postData = input();
+            $postData = json2arr($postData);
+            actionLog($postData, '接收到的数据');
+            $funcName = $postData['api'];
+            $app = AppFactory::api($postData);
+            if (method_exists($app->robot, $funcName)) {
+                return $app->robot->$funcName();
+            }
+            return $app->robot->returnData(4, lang("msg." . 4));
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return json(["status_code" => 99, "msg" => lang("msg." . 99) . $e->getMessage()]);
         }
     }
 }  

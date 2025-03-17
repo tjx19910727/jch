@@ -106,7 +106,11 @@ trait ActivityCouponTrait
                 }
                 if ($update) $this->updateActivityCoupon($update,['c_id' => $value['c_id']]);
                 $ac[$key] = $value;
-                $ac[$key]['ag'] = $this->getActivityGoodsList(['a_id' => $value['c_id'], 'a_type' => 1], 0, $agField);
+                $gIds = $this->getMachineChannelColumn(['m_id' => $this->machine['m_id'],'status' => 1],'g_id');
+                $whereAg['a_id'] = $value['c_id'];
+                $whereAg['a_type'] = 1;
+                if ($gIds) $whereAg[] = ['g_id','in',$gIds];
+                $ac[$key]['ag'] = $this->getActivityGoodsList($whereAg, 0, $agField);
             }
         }
         return $ac;
@@ -179,6 +183,11 @@ trait ActivityCouponTrait
             }
             // 有指定商品且不是全部商品，查询指定商品列表
             if ($ac['designated_goods'] > 1) {
+
+                $gIds = $this->getMachineChannelColumn(['m_id' => $this->machine['m_id'],'status' => 1],'g_id');
+                $whereAg['a_id'] = $ac['c_id'];
+                $whereAg['a_type'] = 1;
+                if ($gIds) $whereAg[] = ['g_id','in',$gIds];
                 $ag = $this->getActivityGoodsList(['a_id' => $ac['c_id'], 'a_type' => 1], 0,
                     'g_id,g_name,pic,sku,market_price,retail_price,gc_id,gc_name'
                 );
@@ -219,7 +228,7 @@ trait ActivityCouponTrait
         }
 
         // 互斥活动
-        if ($this->order['order_type'] > 1 && $this->order['order_type'] != 2) {
+        if ($this->order['order_type'] > 2) {
             if ($ac['exclusion'] == 1)
                 return $this->rFail($this->lang("VActivityCoupon.exclusion"));
             else {

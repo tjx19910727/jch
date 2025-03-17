@@ -22,6 +22,7 @@ class GoodsHitClient extends ManagementClient
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $return = $this->rQ($this->getGoodsHitList($where,$pageNum,$field,$order,function ($item) {
+            $item['hits'] = $this->getGoodsHitCount(['g_id' => $item['g_id']]);
             $item['saleNum'] = $this->getSaleOrdersGoodsCountSum(['g_id' => $item['g_id']],'totalQuantity');
             $item['conversion_rate'] = ($item['saleNum'] > 0 ? bcmul(bcdiv($item['saleNum'],$item['hits'],3),100,1) : 0) . "%";
             return $item;

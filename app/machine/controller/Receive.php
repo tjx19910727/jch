@@ -57,7 +57,8 @@ class Receive extends Common
             $frequency = checkFrequency($action,1);
             if ($frequency !== true) {
                 $frequency = obj2arr($frequency);
-                die(json_encode($frequency, 320));
+                returnState(300, $frequency)->send();
+                die();
             }
             $mac = $this->request->header("mac");
             $this->config = [
@@ -68,10 +69,12 @@ class Receive extends Common
             $this->app = AppFactory::machine($this->config);
             if (!in_array($action, $this->noCheckApi) && $this->app->api->checkSign($postData) !== true) {
                 @cache($postData['machine_id'] . ".signKey", null);
-                die(json_encode(["state" => 100, "msg" => Lang::get("check_sign_fail")], 320));
+                returnState(100, Lang::get("check_sign_fail"))->send();
+                die();
             }
         } catch (\Exception $e) {
-            die(json_encode(['state' => 300, 'msg' => Lang::get($e->getMessage())],320));
+            returnState(300, Lang::get($e->getMessage()))->send();
+            die();
         }
 
     }

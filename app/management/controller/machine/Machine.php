@@ -85,13 +85,19 @@ class Machine extends Common
      */
     public function sendMainControl()
     {
-        $postData = input();
-        $otherData  = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
-        if (isset($postData['msgType'])  && is_int($postData['msgType'])) {
-            $typeList = [1 => "sleep",2 => "wakeUp",3 => "reboot", 4 => "shutdown", 5 => "update"];
-            $postData['msgType'] = $typeList[$postData['msgType']];
+        try {
+            $postData = input();
+            $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
+            if (isset($postData['msgType']) && is_int($postData['msgType'])) {
+                $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update"];
+                $postData['msgType'] = $typeList[$postData['msgType']];
+            }
+            $result = $this->app->machine->sendToMachine($postData, $postData['msgType'], $otherData);
+            return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->app->machine->rTryCatch($e->getMessage());
         }
-        return $this->app->machine->sendToMachine($postData,$postData['msgType'],$otherData);
     }
 
     /**
@@ -106,7 +112,8 @@ class Machine extends Common
         if (!$light) return returnValidate(lang("VMachine.light_require"));
         if ($light%10 != 0) return returnValidate(lang("VMachine.light_multiple"));
         $otherData  = ["value" => $light];
-        return $this->app->machine->sendToMachine(['machine_id' => $machine_id],"light",$otherData);
+        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id],"light",$otherData);
+        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
     }
 
     /**
@@ -121,6 +128,7 @@ class Machine extends Common
         if (!$volume) return returnValidate(lang("VMachine.volume_require"));
         if ($volume%10 != 0) return returnValidate(lang("VMachine.volume_multiple"));
         $otherData  = ["value" => $volume];
-        return $this->app->machine->sendToMachine(['machine_id' => $machine_id],"volume",$otherData);
+        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id],"volume",$otherData);
+        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
     }
 }

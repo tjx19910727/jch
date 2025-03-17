@@ -8,7 +8,10 @@
 
 namespace app\AppFactory\Kernel\Traits\Payment;
 use EasyWeChat\Factory;
+use EasyWeChat\Kernel\Exceptions\InvalidArgumentException;
+use EasyWeChat\Kernel\Exceptions\InvalidConfigException;
 use EasyWeChat\Payment\Application;
+use GuzzleHttp\Exception\GuzzleException;
 
 
 /**
@@ -91,6 +94,7 @@ trait WxPayTrait
 
         if ($result['return_code'] == "SUCCESS") {
             if ($result['result_code'] == "SUCCESS" && $result['trade_type'] == "MICROPAY") {
+                $this->order['mch_no'] = $result['transaction_id'] ?? "";
                 // 成功
                 $this->startTrans();
                 // 结算分润收益
@@ -161,25 +165,36 @@ trait WxPayTrait
      */
     public function wxNative()
     {
-        $param = [
-            'body' => "购买支付",
-            'out_trade_no' => $this->order['trade_no'],
-            'time_expire' => date("YmdHis",(time()+300)),
-            'total_fee' => round($this->order['total_price'] * 100),
-            'notify_url' => $this->getUrl('/pay/notify.wx/pay_notify'), // 支付结果通知网址，如果不设置则会使用配置里的默认地址
-            'trade_type' => "NATIVE",
-            "attach" => $this->order['order_id'] . "|" . $this->strategyPayee['sp_id'],
-        ];
-        actionLog($param,'统一下单请求参数');
-        $result = $this->wpApp->order->unify($param);
-        actionLog($result,'统一下单返回参数');
-        if (isset($result['code_url'])) {
-            $this->returnData['order'] = $this->order;
-            $this->returnData['paymentUrlLink'] = $result['code_url'];
-            $this->returnData['result'] = $result;
-            return $this->r(200,'SUCCESS',$this->returnData);
+        try {
+            $param = [
+                'body' => "购买支付",
+                'out_trade_no' => $this->order['trade_no'],
+                'time_expire' => date("YmdHis", (time() + 300)),
+                'total_fee' => round($this->order['total_price'] * 100),
+                'notify_url' => $this->getUrl('/pay/notify.wx/pay_notify'), // 支付结果通知网址，如果不设置则会使用配置里的默认地址
+                'trade_type' => "NATIVE",
+                "attach" => $this->order['order_id'] . "|" . $this->strategyPayee['sp_id'],
+            ];
+            actionLog($param, '微信统一下单请求参数');
+            $result = $this->wpApp->order->unify($param);
+            actionLog($result, '微信统一下单返回参数');
+            if (isset($result['code_url'])) {
+                $this->returnData['order'] = $this->order;
+                $this->returnData['paymentUrlLink'] = $result['code_url'];
+                $this->returnData['result'] = $result;
+                return $this->r(200, 'SUCCESS', $this->returnData);
+            }
+            return $this->r(100, $result['err_code_des']);
+        } catch (InvalidArgumentException $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        } catch (InvalidConfigException $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        } catch (GuzzleException $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        return $this->r(100, $result['err_code_des']);
     }
 
     /**

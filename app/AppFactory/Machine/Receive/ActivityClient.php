@@ -144,11 +144,11 @@ class ActivityClient extends ReceiveBaseClient
         try {
             $this->startTrans();
             $apc = $this->getActivityPickByCode();
+            actionLog($apc, "使用的取货码数据");
             if (!is_array($apc)) {
                 $this->rollbackTrans();
                 return $this->r(100,$apc);
             }
-            actionLog($apc, "使用的取货码数据");
             $flag = [];
             // 预订订单取货
             if ($apc['pick_type'] == 3) {
@@ -260,7 +260,7 @@ class ActivityClient extends ReceiveBaseClient
             $result = flag_check($flag);
             if ($result) {
                 $result = $this->outGoods();
-                actionLog($result);
+                actionLog(@obj2arr($result),'出货结果');
                 if (is_object($result)) {
                     $result = obj2arr($result);
                     if (isset($result['state']) && $result['state'] != 200) {

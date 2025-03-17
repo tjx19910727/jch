@@ -51,7 +51,7 @@ trait OutGoodsTrait
             return $this->rAction($result);
         } catch (\Exception $e) {
             $this->rollbackTrans();
-            actionException($e,1);
+            actionException($e,1,'OutGoods');
             return $this->rTryCatch($e->getMessage());
         }
     }
@@ -81,22 +81,34 @@ trait OutGoodsTrait
                 $deliver_pics = $vv["deliver_pics"] ?? "";
                 $out_sequence = $vv["out_sequence"] ?? 1;
 
+                $where = [];
                 // 修改订单副表
+//                if (isset($vv['sod_id']) && $vv['sod_id']) {
+//                    $where['sod_id'] = $vv['sod_id'];
+//                } else {
                 $where['order_id'] = $this->order['order_id'];
                 $where['channel_position'] = $position;
                 $where['channel_code'] = $channel_code;
+                $where['success_quantity'] = 0;
+                $where['fail_quantity'] = 0;
+                $sod = $this->getSaleOrdersDetailsFind($where,'sod_id','sod_id asc');
+                unset($where);
+//                }
+                $update = [];
+                $where['sod_id'] = $sod['sod_id'];
                 $update['success_quantity'] = $success;
                 $update['fail_quantity'] = $fail;
                 $update['deliver_pics'] = $deliver_pics;
                 $update['out_sequence'] = $out_sequence;
-                $flag[] = $this->updateSaleOrdersDetails($update,$where);
+                actionLog($update,'修改订单副表参数','OutGoods');
+                $flag[] = $this->updateSaleOrdersDetails($update,$where,['success_quantity',"fail_quantity",'deliver_pics','out_sequence']);
                 actionLog($this->getLS(),'【SQL】修改订单副表','OutGoods');
                 // 修改货道
                 $updateMc = [];
                 $whereMc['channel_code'] = $channel_code;
                 $whereMc['m_id'] = $this->machine['m_id'];
                 $whereMc['channel_position'] = $position;
-                $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,stock_warning');
+                $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,frozen_stock,stock,stock_warning');
                 if ($success > 0) {
                     // 外部预订提货码订单，减冻结库存
                     if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
@@ -107,8 +119,8 @@ trait OutGoodsTrait
                         $stock = $updateMc['stock'];
                     }
                     // 库存达到货道库存预警值
-                    actionLog($mc,"货道数据");
-                    actionLog($stock,'库存值');
+                    actionLog($mc,"货道数据",'OutGoods');
+                    actionLog(['stock' => $stock,'frozen_stock' => $updateMc['frozen_stock'] ?? $mc['frozen_stock']],'库存值','OutGoods');
                     if (!$mc['stock_warning']) {
                         $machineConfig = $this->getMachineConfigFind(['m_id' => $this->machine['m_id']],'stock_warning');
                         if ($machineConfig['stock_warning'] > 0 ) $mc['stock_warning'] = $machineConfig['stock_warning'];
@@ -128,11 +140,11 @@ trait OutGoodsTrait
                                     "stock_warning" => $mc['stock_warning'] ?? 0,
                                 ]
                             ];
-                            actionLog($this->noticeSendData,'发送通知');
+                            actionLog($this->noticeSendData,'发送补货通知','OutGoods');
                             $result = $this->noticeSend();
-                            actionLog($result, '发送结果');
+                            actionLog($result, '发送补货通知结果','OutGoods');
                         } catch (\Exception $e) {
-                            actionLog("发送库存预警抛出异常");
+                            actionLog("发送补货通知抛出异常","",'OutGoods');
                             actionException($e, 1);
                         }
                     }
@@ -155,7 +167,7 @@ trait OutGoodsTrait
                     $insertGc['position'] = 1;
                     $insertGc['type'] = 2;
                     $this->addGoodsChange($insertGc);
-
+                    actionLog($this->getLS(),'【SQL】添加商品变化数据','OutGoods');
                 }
                 if ($fail > 0) {
                     $updateMc['status'] = 3;
@@ -172,11 +184,11 @@ trait OutGoodsTrait
                                 "exceptionDeclaration" => $channel_code . $this->lang("tException.out_fail"),
                             ]
                         ];
-                        actionLog($this->noticeSendData,'发送通知');
+                        actionLog($this->noticeSendData,'发送出货失败通知');
                         $result = @$this->noticeSend();
-                        actionLog($result, '发送结果');
+                        actionLog($result, '发送出货失败通知结果');
                     } catch (\Exception $e) {
-                        actionLog("发送交易异常抛出异常");
+                        actionLog("发送出货失败抛出异常");
                         actionException($e, 1);
                     }
                 }
@@ -331,12 +343,10 @@ trait OutGoodsTrait
                 // 出货成功才是使用成功
                 if ($this->order['out_status'] == 4) {
                     $adStatus = 1;
-                    $detail_status = "ALL PENDING";
                 } else {
                     $adStatus = 6;
-                    $detail_status = "ALL MISVEND";
                 }
-                $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'g_id product_id,success_quantity,fail_quantity,out_port');
+                $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'g_id product_id,quantity, success_quantity,fail_quantity,out_port');
                 $details = $details->toArray();
 //                if ($this->order['total_quantity'] != array_sum(array_column($details,'success_quantity'))) $detail_status = "PARTIAL MISVEND";
 //                if ($this->order['total_quantity'] == array_sum(array_column($details,'fail_quantity'))) $detail_status = "ALL MISVEND";
@@ -347,8 +357,8 @@ trait OutGoodsTrait
                     "order_no" => $this->order['out_trade_no'],
                     "pick_code" => "",
                     "payment_method" => "",
-                    "quantity" => $this->order['total_quantity'],
-                    "detail_status" => $detail_status,
+                    "quantity" => array_sum(array_column($details,'quantity')) ?? 0,
+                    "detail_status" => $adStatus == 1 ? "ALL PENDING" : "ALL MISVEND",
                     "products_list" => json_encode($details,320),
                 ];
                 $insertCallback = [

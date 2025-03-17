@@ -45,7 +45,7 @@ class WeChatClient extends NoticeBaseClient
                             }
                         }
                         actionLog($data, '发送微信通知数据');
-                        $result = $app->template_message->send($data);
+                        $result = @$app->template_message->send($data);
                         actionLog($result, '发送微信通知结果');
                         $this->addTemplateLog($value, $data, $result);
                     }

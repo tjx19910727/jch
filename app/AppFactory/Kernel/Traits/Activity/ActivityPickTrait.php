@@ -71,7 +71,12 @@ trait ActivityPickTrait
                 }
                 if ($update) $this->updateActivityPick($update,['id' => $value['id']]);
                 $ap[$key] = $value;
-                $ap[$key]['ag'] = $this->getActivityGoodsList(['a_id' => $value['id'], 'a_type' => 4], 0, $agField);
+                $gIds = $this->getMachineChannelColumn(['m_id' => $this->machine['m_id'],'status' => 1],'g_id');
+                $whereAg = [];
+                $whereAg['a_id'] = $value['id'];
+                $whereAg['a_type'] = 4;
+                if ($gIds) $whereAg[] = ['g_id','in',$gIds];
+                $ap[$key]['ag'] = $this->getActivityGoodsList($whereAg, 0, $agField);
             }
         }
         return $ap;
@@ -118,7 +123,12 @@ trait ActivityPickTrait
                     // 取货码状态由1.未开始修改为2.进行中
                     if ($ap['status'] == 1) $this->updateActivityPick(['status' => 2], ['id' => $ap['id']]);
                     // 有指定商品且不是全部商品，查询指定商品列表
-                    $ag = $this->getActivityGoodsList(['a_id' => $ap['id'], 'a_type' => 4], 0,
+                    $gIds = $this->getMachineChannelColumn(['m_id' => $this->machine['m_id'],'status' => 1],'g_id');
+                    $whereAg = [];
+                    $whereAg['a_id'] = $ap['id'];
+                    $whereAg['a_type'] = 4;
+                    if ($gIds) $whereAg[] = ['g_id','in',$gIds];
+                    $ag = $this->getActivityGoodsList($whereAg, 0,
                         'g_id,g_name,pic,sku,market_price,retail_price,gc_id,gc_name'
                     );
                     $ap['ag'] = $ag->toArray();

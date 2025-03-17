@@ -60,9 +60,16 @@ class ActivityFdClient extends ManagementClient
                     }
                     $value['fd_id'] = $fd_id;
                     $value['fd_name'] = $postData['fd_name'];
-                    if ($postData["condition_type"] == 3 && (!isset($value['g_id']) || !$value['g_id'])) {
-                        $this->rollbackTrans();
-                        return $this->rValidate($this->lang("VActivityFd.g_id_require"));
+                    if ($postData["condition_type"] == 3) {
+                        $goods = $this->getGoodsFind(['sku' => $value['condition_value']]);
+                        if (!$goods) {
+                            $this->rollbackTrans();
+                            return $this->rValidate($this->lang("VActivityFd.g_id_require"));
+                        }
+                        $value['g_id'] = $goods['g_id'];
+                        $value['g_name'] = $goods['g_name'];
+                        $value['pic'] = $goods['pic'];
+                        $value['sku'] = $goods['sku'];
                     }
                     if (isset($value['g_id'])) {
                         $g = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_name,sku,pic,gc_id,gc_name');
@@ -131,6 +138,18 @@ class ActivityFdClient extends ManagementClient
                     } else {
                         $value['fd_id'] = $postData['fd_id'];
                         $value['fd_name'] = ($postData['fd_name'] ? $postData['fd_name'] : $this->getActivityFdValue(['fd_id' => $postData['fd_id']], 'fd_name'));
+
+                        if ($postData["condition_type"] == 3) {
+                            $goods = $this->getGoodsFind(['sku' => $value['condition_value']]);
+                            if (!$goods) {
+                                $this->rollbackTrans();
+                                return $this->rValidate($this->lang("VActivityFd.g_id_require"));
+                            }
+                            $value['g_id'] = $goods['g_id'];
+                            $value['g_name'] = $goods['g_name'];
+                            $value['pic'] = $goods['pic'];
+                            $value['sku'] = $goods['sku'];
+                        }
                         if (isset($value['g_id'])) {
                             $g = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_name,sku,pic,gc_id,gc_name');
                             if (!$g) {

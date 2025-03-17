@@ -104,7 +104,13 @@ class ActivityPickCodeClient extends ManagementClient
         $list = $this->getActivityPickCodeList(['ap_id' => $postData['id']], 0,
             '("' . $ap['pick_name'] . '") pick_name,("' . $ap['desc'] . '") `desc`,machine_id,machine_name,
                 code,trade_no,
-                (CASE pick_type WHEN 1 THEN "未使用" WHEN 2 THEN "已使用" WHEN 3 THEN "已过期" WHEN 4 THEN "已作废" WHEN 5 THEN "使用中" END ) status, used_time');
+                (CASE pick_type 
+                WHEN 1 THEN "未使用" 
+                WHEN 2 THEN "已使用"
+                WHEN 3 THEN "已过期" 
+                WHEN 4 THEN "已作废" 
+                WHEN 5 THEN "使用中" END ) `status`,
+                 used_time');
         if ($list) {
             $list = $list->toArray();
             $title = [

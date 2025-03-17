@@ -10,10 +10,7 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 
 
-use app\AppFactory\AppFactory;
-use app\AppFactory\Kernel\Support\TencentCloud;
 use app\AppFactory\Kernel\Support\Trip\Trip;
-use app\AppFactory\RabbitMq\MqProducer;
 
 trait AfterOrderPaymentTrait
 {

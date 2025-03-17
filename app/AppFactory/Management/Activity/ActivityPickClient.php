@@ -30,6 +30,15 @@ class ActivityPickClient extends ManagementClient
             $whereA = ['a_type' => 4, "a_id" => $ap['id']];
             $ap['goodsList'] = $this->getActivityGoodsList($whereA,0,'ag_id,g_id,g_name,sku,market_price,retail_price');
             $ap['machineList'] = $this->getActivityMachineList($whereA,0,'am_id,m_id,machine_id,machine_name');
+
+            // 有设置结束时间，并且结束时间小于当前时间，活动已结束
+            if ($ap["end_time"] > 0 && $ap['end_time'] < time()) {
+                // 修改取货码活动为3.已过期
+                $this->updateActivityPick(['id' => $ap['id'], 'status' => 3]);
+                // 修改取货码使用记录为3.已过期
+                $this->updateActivityPickCode(['status' => 3], ['ap_id' => $ap['id'], 'status' => 1]);
+                $ap['status'] = 3;
+            }
             return $ap;
         });
         return $this->rQ($apList);

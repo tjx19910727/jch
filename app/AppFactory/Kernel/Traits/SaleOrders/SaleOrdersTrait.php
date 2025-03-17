@@ -75,7 +75,7 @@ trait SaleOrdersTrait
                 if ($item['has_hotel'] == 1) {
                     $item['hotel'] = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
                     $item['hotel']['nightly'] = $this->getSaleHotelNightlyList(['sh_id' => $item['hotel']['sh_id']]);
-                    $item['retail_price'] = bcadd($item['retail_price'],bcdiv($item['hotel']['pay_amount'],100,2),2);
+                    $item['retail_price'] = bcadd($item['retail_price'],$item['hotel']['pay_amount'],2);
                 }
                 return $item;
             });
@@ -282,9 +282,11 @@ trait SaleOrdersTrait
                 actionException($e, 1);
                 return $this->returnData(6, $this->lang("msg." . 6) . "：" . $e->getMessage());
             }
+            $g_id = $this->config['params']['pay_type'] == 7 ? ($dv['product_id'] ?? 0): $dk;
+            if (!$g_id) return $this->returnData(6,$this->lang("msg" . 6) . "：product_id");
             $whereMc = [];
             $whereMc['m_id'] = $this->machine['m_id'];
-            $whereMc['g_id'] = $dk;
+            $whereMc['g_id'] = $g_id;
             $whereMc['status'] = 1;
             $mc = $this->getMachineChannelList($whereMc, 0,
                 'mc_id,channel_code,frozen_stock,stock,shelf_way,channel_position,manufacture_time,sell_by_date,
@@ -295,12 +297,12 @@ trait SaleOrdersTrait
             if (!$mc) return $this->returnData(10, $this->lang("msg." . 10));
             if (is_string($mc)) return $this->returnData(10, $this->lang("msg." . 10) . "：" . $mc);
             $mc = $mc->toArray();
-            if (!$mc) return $this->returnData(10, $dk . $this->lang("msg." . 10));
+            if (!$mc) return $this->returnData(10, $g_id . $this->lang("msg." . 10));
             actionLog($mc, "该设备下货架列表数据");
             // 总库存不足
             $totalStock = array_sum(array_column($mc, "stock"));
             if ($totalStock < $dv['quantity']) {
-                $this->returnData = ["success" => false, "order_no" => $this->config['params']['order_no'], "error_msg" => [$dk => $dv['quantity']]];
+                $this->returnData = ["success" => false, "order_no" => $this->config['params']['order_no'], "error_msg" => [$g_id => $dv['quantity']]];
                 return $this->returnData(14, $this->lang("msg." . 14) . "：" . $this->lang("reserve_order.under_stock"), $this->returnData);
             }
 

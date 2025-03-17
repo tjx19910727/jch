@@ -140,7 +140,11 @@ trait MachineTrait
      */
     public function heartbeat()
     {
-        $result = $this->updateMachine(['m_id' => $this->machine['m_id'],'last_online_time' => time(),'online' => 1]);
+        $update['m_id'] = $this->machine['m_id'];
+        $update['last_online_time'] = time();
+        $update['online'] = 1;
+        if (isset($this->data["version"]) && $this->data['version']) $update['version'] = $this->data['version'];
+        $result = $this->updateMachine($update);
         return $result;
     }
 

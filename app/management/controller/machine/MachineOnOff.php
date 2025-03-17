@@ -16,7 +16,8 @@ class MachineOnOff extends Common
 {
 
     protected $field = "moo_id,m_id,machine_id,
-    (SELECT machine_name FROM machine WHERE `machine`.`m_id` = `a`.`m_id` GROUP BY machine.m_id LIMIT 1) machine_name,on_off_ckc,on_off_machine,status,creator,create_time,update_time";
+    (SELECT machine_name FROM machine WHERE `machine`.`m_id` = `a`.`m_id` GROUP BY machine.m_id LIMIT 1) machine_name,
+    on_off_ckc,on_off_machine,status,creator,create_time,update_time";
     protected $validatePath = VMachineOnOff::class;
 
     public function getList()
@@ -24,8 +25,10 @@ class MachineOnOff extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["machine_id" => "like","machine_name" => "like"]);
-        $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
-        if ($machineIds) $where[] = ['machine_id','in',$machineIds];
+        if (!isset($postData['m_id'])) {
+            $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'machine_id');
+            if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+        }
         return $this->app->machineOnOff->getList($where,$pageNum,$this->field,'update_time desc');
     }
 

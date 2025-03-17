@@ -309,7 +309,7 @@ class SaleOrdersClient extends ManagementClient
                 $whereRefund[] = ['so.mch_no', "like", "%" . $postData['mch_no'] . "%"];
             }
             if (isset($postData['trade_no']) && $postData['trade_no']) {
-                $whereRefund[] = ['sor.trade_no', "like", "%" . $postData['mch_no'] . "%"];
+                $whereRefund[] = ['sor.trade_no', "like", "%" . $postData['trade_no'] . "%"];
             }
             if (isset($postData['pay_time']) && $postData['pay_time']) {
                 $time = explode("~", $postData['pay_time']);
@@ -341,7 +341,6 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time', 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
-
             $title = [
                 "order_id" => "订单ID",
                 "machine_id" => "设备编号",
@@ -373,7 +372,7 @@ class SaleOrdersClient extends ManagementClient
     {
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
-        $field = "so.machine_id,so.machine_name,so.trade_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,
+        $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,
         sod.total_sod_price,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
             (CASE so.order_type 
@@ -414,7 +413,7 @@ class SaleOrdersClient extends ManagementClient
                 $where['sor.status'] = 2;
                 if (isset($where[0][0]) && $where[0][0] == "create_time") $where[0][0] = "sor.update_time";
                 $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
-                    "sor.machine_id,sor.machine_name,sor.trade_no,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
+                    "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
                             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
                         (CASE so.order_type 
                         WHEN 1 THEN '普通订单' 
@@ -449,6 +448,7 @@ class SaleOrdersClient extends ManagementClient
                     "machine_id" => "设备编号",
                     "machine_name" => "设备名称",
                     "trade_no" => "交易号",
+                    "mch_no" => "支付编号",
                     "sku" => "SKU",
                     "g_name" => "商品名称",
                     "channel_code" => "槽位",
@@ -480,10 +480,10 @@ class SaleOrdersClient extends ManagementClient
     public function exportRefund($where)
     {
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-        if ($mIds) $where[] = ['m_id', 'in', $mIds];
-        $field = "sor.machine_id,sor.machine_name,sor.trade_no,
+        if ($mIds) $where[] = ['sor.m_id', 'in', $mIds];
+        $field = "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,
                 sor.refund_trade_no,
-                (CASE sod.channel_position WHEN 1 THEN '主柜' WHEN 2 THEN '副柜') channel_position,
+                (CASE sod.channel_position WHEN 1 THEN '主柜' WHEN 2 THEN '副柜' END ) channel_position,
                 sod.channel_code,
                 sod.g_name,
                 sor.refund_amount,
@@ -498,6 +498,7 @@ class SaleOrdersClient extends ManagementClient
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
                 "trade_no" => "订单编号",
+                "mch_no" => "支付编号",
                 "refund_trade_no" => "退款编号",
                 "channel_position" => "货道位置",
                 "channel_code" => "槽位",
@@ -752,8 +753,10 @@ class SaleOrdersClient extends ManagementClient
         IFNULL(sum(sod.cost_price * sod.quantity),0) totalCostPrice
         ";
         $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field, 'totalPrice desc', 'm_id,g_id');
+        actionLog($this->getLS(),'【SQL】获取导出数据');
         if ($list) {
             $list = $list->toArray();
+            actionLog($list,'导出数据');
             foreach ($list as $k => $collectData) {
                 $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
                 $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
