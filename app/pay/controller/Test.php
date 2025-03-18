@@ -14,6 +14,15 @@ use Jd\Jd;
 
 class Test
 {
+    public function testWxAuthCode()
+    {
+        $code = "130544078095172051";
+        $result = preg_match("/^(10|11|12|13|14|15)\d{16}$/",$code);
+        dump($result);
+        $code = "301088551128119456";
+        $result = preg_match("/^(25|26|27|28|29|30)\d{14,22}$/",$code);
+        dump($result);
+    }
 
     public function testCurl()
     {

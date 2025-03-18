@@ -178,7 +178,7 @@ class SaleOrders extends Common
         }
         $where = $this->getWhere($postData,false,["machine_id" => "like"]);
 
-        if (!isset($postData['m_id'])) {
+        if (!isset($postData['m_id']) || !$postData['m_id']) {
             $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
@@ -232,7 +232,7 @@ class SaleOrders extends Common
             unset($postData['order']);
         }
         $where = $this->getWhere($postData,true,["machine_id" => "like"]);
-        if (!isset($postData['m_id'])) {
+        if (!isset($postData['m_id']) || !$postData['m_id']) {
             $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
             if ($mIds) {
                 if ($where) $where .= " AND ";
@@ -269,7 +269,7 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
-        if (!isset($postData['m_id'])) {
+        if (!isset($postData['m_id']) || !$postData['m_id']) {
             $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
@@ -286,7 +286,7 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
-        if (!isset($postData['m_id'])) {
+        if (!isset($postData['m_id']) || !$postData['m_id']) {
             $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }

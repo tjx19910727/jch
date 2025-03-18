@@ -10,6 +10,7 @@ namespace app\management\controller;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Action\ActionVideoModel;
 use app\AppFactory\Kernel\Model\Activity\ActivityMachineModel;
 use app\AppFactory\Kernel\Model\Activity\Coupon\ActivityCouponUsedModel;
 use app\AppFactory\Kernel\Model\Activity\Fd\ActivityFdUsedModel;
@@ -26,6 +27,7 @@ use app\AppFactory\Kernel\Model\Earth\EarthRegionsModel;
 use app\AppFactory\Kernel\Model\Earth\EarthStatesModel;
 use app\AppFactory\Kernel\Model\Goods\GoodsChangeModel;
 use app\AppFactory\Kernel\Model\Goods\GoodsHitModel;
+use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Goods\GoodsMultipleMachineModel;
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
 use app\AppFactory\Kernel\Model\Machine\MachineChannelReplenishmentModel;
@@ -63,6 +65,22 @@ use think\facade\Db;
 
 class Test extends BaseController
 {
+
+    public function updateMc()
+    {
+        $g = ActionVideoModel::getFind([["id",'>', 1]]);
+        dump($g);
+//        dump($g->getName());
+        $g = GoodsModel::getFind(["status" => 1]);
+        dump($g);
+//        dump($g->getName());
+
+        $mc['mc_id'] = "405";
+//        $mc['pic'] = "http://70cf.com/uploads/goods/20240418/123.jpg";
+//        $result = $this->app->machineChannel->updateMc($mc);
+//        dump($result);
+    }
+
     public function testPyTripCity()
     {
         $list = TripCityModel::getList([],0,'tc_id,cityName',"","","");

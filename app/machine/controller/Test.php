@@ -39,6 +39,39 @@ class Test extends BaseController
     public $machine;
     public $mqQueue;
 
+    public function testOutPort()
+    {
+        dump(\request()->action());
+        die();
+        $postData = input();
+//        $dc = [
+//            "channel_code" => $v['channel_code'],
+//            "quantity" => $v['quantity'],
+//            "is_gift" => $is_gift ?? 2,
+//            "out_port" => $out_port ?? 1,
+//        ];
+        $outArr[$postData['channel_position'] ?? 1] = $postData["dc"];
+        $content = [
+            "msgType" => "outGoods",
+            "trade_no" => "test" . date("YmdHis") . random_int(100000,999999),
+            "outGoods" => $outArr,
+        ];
+        $content = json_encode($content);
+        $data = [
+            "timestamp" => time(),
+            "msg_id" => uniqid(),
+            "machine_id" => $postData['machine_id'],
+            "data" => $content,
+        ];
+        $machine = MachineModel::getFind(['machine_id' => $postData['machine_id']],'machine_id,mac_address,signKey');
+        $data['sign'] = SignUtil::makeSign($data, $machine['signKey']);
+        dump($data);
+        $mqQueue = $machine['machine_id'] . "_" . str_replace(":","_",$machine['mac_address']);
+        dump($mqQueue);
+        $result = MqProducer::dataSend($data,$mqQueue);
+        dump($result);
+    }
+
     public function testAfterRead()
     {
         $path = rtrim(public_path("/uploads/adv/20241116/ed1f2992640d9e38ea98b2083593e26d.mp4"),'/');
@@ -231,6 +264,20 @@ class Test extends BaseController
 //            "mc_id" => 30352,
 //            "quantity" => 2,
 //        ];
+        // 生成取货码
+        echo "生成取货码";
+        $carList[] = [
+            "mc_id" => $mc_id,
+            "quantity" => $quantity,
+        ];
+        $data = [
+            "machine_id" => $machine_id,
+            "carList" => $carList,
+            "pick_code" => 20751050
+        ];
+        $data = $this->makeSign($data);
+        echo '<br>',json_encode($data,320),'<br>','<br>';
+
         // 提交购物车
         echo "提交购物车";
         $carList[] = [
@@ -520,6 +567,8 @@ class Test extends BaseController
 
     public function testUpload()
     {
+        $data = input();
+        $data = json2arr($data);
 //        $content = [
 //            "msgType" => "outGoods",
 //            "trade_no" => "202408231430523178472",
@@ -554,19 +603,21 @@ class Test extends BaseController
 //        $data['sign'] = SignUtil::makeSign($data, $signKey);
 //        dump(json_encode($data));
 
-        $where['machine_id'] = input("machine_id");
-        $machine = MachineModel::getFind($where);
-        $content = input("content");
-        $data = [
-            "timestamp" => time(),
-            "msg_id" => $msg_id,
-            "machine_id" => $machine['machine_id'],
-            "data" => $content,
-            "mac" => $machine['mac'],
-        ];
-        $data['sign'] = SignUtil::makeSign($data,$machine['signKey']);
+        if (!$data) {
+            $where['machine_id'] = input("machine_id");
+            $machine = MachineModel::getFind($where);
+            $content = input("content");
+            $data = [
+                "timestamp" => time(),
+                "msg_id" => $msg_id,
+                "machine_id" => $machine['machine_id'],
+                "data" => $content,
+                "mac" => $machine['mac'],
+            ];
+            $data['sign'] = SignUtil::makeSign($data, $machine['signKey']);
 //        $data = '{"timestamp":"1732006384","msg_id":"fd591f1c-7718-4069-a290-52d084930c82","machine_id":"JCHH2D-027","data":"{\"msgType\":\"light\",\"value\":100}","mac":"04:2B:58:12:16:3A","sign":"58457494a8e727d42be089f184c333f4"}';
 //        $data = json2arr($data);
+        }
         dump($data);
 //        $data = [
 //            "timestamp" => time(),
@@ -596,20 +647,19 @@ class Test extends BaseController
 
     public function testReturn()
     {
-        $data = input();
-        $data = json2arr($data);
-        dump($data);
-        $machine = MachineModel::getFind(['machine_id' => $data['machine_id']]);
-        $msg_id = uniqid();
-        $data["timestamp"] = time();
-        $data["msg_id"] = $msg_id;
-        $data['mac'] = $machine['mac_address'];
-
-//        $data = '{"timestamp":"1732006384","msg_id":"fd591f1c-7718-4069-a290-52d084930c82","machine_id":"JCHH2D-027","data":"{\"msgType\":\"light\",\"value\":100}","mac":"04:2B:58:12:16:3A","sign":"58457494a8e727d42be089f184c333f4"}';
+//        $data = input();
 //        $data = json2arr($data);
+//        dump($data);
+//        $machine = MachineModel::getFind(['machine_id' => $data['machine_id']]);
+//        $msg_id = uniqid();
+//        $data["timestamp"] = time();
+//        $data["msg_id"] = $msg_id;
+//        $data['mac'] = $machine['mac_address'];
 
+        $data = '{"timestamp":"1741245051","msg_id":"ae95024e-719a-42f0-8849-a2b21ef33889","machine_id":"test0004","data":"{\"msgType\":\"outGoods\",\"trade_no\":\"202503061509255335907\",\"main\":{\"1\":[{\"channel_code\":\"B02\",\"success_quantity\":1,\"fail_quantity\":0,\"deliver_pics\":\"\",\"out_sequence\":1}]}}","mac":"00:0C:29:74:77:6D","sign":"449b24e03b256f553baec5fee58de8fa"}';
+        $data = json2arr($data);
 //        $data['sign'] = SignUtil::makeSign($data,$machine['signKey']);
-        dump($data);
+//        dump($data);
         $config = [
             "machine_id" => $data['machine_id'],
 //            "key" => env("api.md5Key"),
