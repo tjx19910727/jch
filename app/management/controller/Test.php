@@ -66,6 +66,25 @@ use think\facade\Db;
 class Test extends BaseController
 {
 
+    public function clearApi()
+    {
+        $goods = GoodsModel::getList([['desc','like','%api%']],0,'`desc`,g_id');
+        foreach ($goods as $key => $value) {
+            $richList = getImagesFromRichText($value['desc']);
+            if ($richList) {
+                foreach ($richList as $richV) {
+                    if (strpos($richV,'/api') === 0 || strpos($richV,'api') === 0) {
+                        $richV = str_replace("/api",'',$richV);
+                        $richV = str_replace("api",'',$richV);
+                    }
+                    $new = checkStrDomain($richV);
+                    $value['desc'] = str_replace($richV,$new,$value['desc']);
+                }
+                GoodsModel::update(['g_id' => $value['g_id'],'desc' => $value['desc']]);
+                dump(GoodsModel::getLS());
+            }
+        }
+    }
     public function updateMc()
     {
         $g = ActionVideoModel::getFind([["id",'>', 1]]);

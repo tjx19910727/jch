@@ -65,6 +65,10 @@ class BaseModel extends Model
                 if ($richList) {
                     foreach ($richList as $richV) {
                         $new = str_replace($host,'',$richV);
+                        if (strpos($new,'/api') === 0 || strpos($new,'api') === 0) {
+                            $new = str_replace("/api",'',$new);
+                            $new = str_replace("api",'',$new);
+                        }
                         $model->$rV = str_replace($richV,$new,$model->$rV);
                     }
                 }
@@ -102,6 +106,10 @@ class BaseModel extends Model
                 $richList = getImagesFromRichText($model->$rV);
                 if ($richList) {
                     foreach ($richList as $richV) {
+                        if (strpos($richV,'/api') === 0 || strpos($richV,'api') === 0) {
+                            $richV = str_replace("/api",'',$richV);
+                            $richV = str_replace("api",'',$richV);
+                        }
                         $new = checkStrDomain($richV);
                         $model->$rV = str_replace($richV,$new,$model->$rV);
                     }

@@ -33,6 +33,7 @@ class CallbackClient extends ApiBaseClient
         "6" => [0,60,300],
         "7" => [0,60,300,900,900,1800,3600,7200],
         "8" => [0,60,300,900,900,1800,3600,7200],
+        "9" => [0,60],
     ];
     public $frequency = 0;
 
@@ -80,6 +81,8 @@ class CallbackClient extends ApiBaseClient
             $nextCallbackData = cache("callback" . ($this->frequency+1));
             $noNext = 0;
             foreach ($this->callbackData as $key => $value) {
+                // 没有这个类型的时间设定，初始化默认值
+                if (!isset($this->intervalTime[$value['callback_type']])) $this->intervalTime[$value['callback_type']] = [0,60,300,900,900,1800,3600,7200];
                 if (!isset($this->intervalTime[$value['callback_type']][($value['callback_frequency']+ 1)])) $noNext = 1;
                 $time = $this->intervalTime[$value['callback_type']][$value['callback_frequency']];
                 if (TEST == 1) $time = 0;

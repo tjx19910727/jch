@@ -15,6 +15,7 @@ use app\AppFactory\Machine\Receive\ActivityClient;
 use app\AppFactory\Machine\Receive\ApiClient;
 use app\AppFactory\Machine\Receive\HotelClient;
 use app\AppFactory\Machine\Receive\MqClient;
+use app\AppFactory\Machine\Receive\RobotClient;
 use app\AppFactory\Machine\Receive\SaleOrdersClient;
 
 class ReceiveProvider implements ServiceProviderInterface
@@ -36,6 +37,9 @@ class ReceiveProvider implements ServiceProviderInterface
         };
         $app['hotel'] = function ($app) {
             return new HotelClient($app);
+        };
+        $app['robot'] = function ($app) {
+            return new RobotClient($app);
         };
     }
 }

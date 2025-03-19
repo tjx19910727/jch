@@ -68,6 +68,10 @@ return [
 
     ],
 
+    "VRobot" => [
+        "position_require" => "位置信息不能为空",
+    ],
+
     "VChannel" => [
         "channel_code_require" => "货道编号不能为空",
         "channel_position_require" => "货道位置不能为空",
