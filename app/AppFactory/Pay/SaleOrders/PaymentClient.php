@@ -10,6 +10,7 @@ namespace app\AppFactory\Pay\SaleOrders;
 
 
 use app\AppFactory\Kernel\Support\AuthCode;
+use app\AppFactory\Kernel\Traits\Activity\ActivityFdUsedTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
@@ -39,6 +40,7 @@ class PaymentClient extends PayBaseClient
         SaleOrdersRevenueTrait;
     use AfterOrderPaymentTrait;
     use MachineMqRecordTrait;
+    use ActivityFdUsedTrait;
 
     public $machine;
     public $strategyPayee;
@@ -178,6 +180,10 @@ class PaymentClient extends PayBaseClient
                 }
                 actionLog($this->strategyPayee, '收款配置数据');
                 $this->order['pay_status'] = 5;
+                // 清除绑定满减数据
+                if ($this->order['fd_id'] > 0) {
+                    $this->delActivityFdUsed(['order_id' => $this->order['order_id']]);
+                }
                 $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status']);
                 if ($uOrder && $this->order['pay_type'] != 5) {
                     $func_name = $this->cancelType[$this->strategyPayee['payee_type']];

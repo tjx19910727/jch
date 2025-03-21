@@ -283,7 +283,21 @@ class SaleOrdersClient extends ManagementClient
                     WHEN 6 THEN "叠加营销活动"
                     END 
                 ) order_type,
-                (CASE refund_status WHEN 1 THEN "正常" WHEN 2 THEN "已退款" WHEN 3 THEN "退款失败" END) refund_status,
+                (CASE out_status 
+                    WHEN 1 THEN 
+                        "正常"
+                    WHEN 2 THEN 
+                        "已发出货命令"
+                    WHEN 3 THEN 
+                        "等待出货结果"
+                    WHEN 4 THEN 
+                        (CASE refund_status WHEN 1 THEN "正常" WHEN 2 THEN "已退款" WHEN 3 THEN "退款失败" END)
+                    WHEN 5 THEN
+                        "出货失败"
+                    WHEN 6 THEN 
+                        "未取商品"
+                    END 
+                ) refund_status,
                 (CASE pay_type 
                 WHEN 1 THEN "微信支付" 
                 WHEN 2 THEN "支付宝支付" 
@@ -398,10 +412,22 @@ class SaleOrdersClient extends ManagementClient
             WHEN 41 THEN '扫码支付' 
             WHEN 2 THEN '被扫支付'
             ELSE '' END) pay_method,
-            (CASE 
-            WHEN so.refund_amount > 0 THEN so.refund_amount
-             ELSE
-             '未退款' END) order_status,
+            
+            (CASE out_status 
+                WHEN 1 THEN 
+                    \"正常\"
+                WHEN 2 THEN 
+                    \"已发出货命令\"
+                WHEN 3 THEN 
+                    \"等待出货结果\"
+                WHEN 4 THEN 
+                   (CASE WHEN so.refund_amount > 0 THEN so.refund_amount ELSE '正常' END)
+                WHEN 5 THEN
+                    \"出货失败\"
+                WHEN 6 THEN 
+                    \"未取商品\"
+                END 
+            ) order_status,
             FROM_UNIXTIME(so.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
             FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
             (sod.quantity) quantity,

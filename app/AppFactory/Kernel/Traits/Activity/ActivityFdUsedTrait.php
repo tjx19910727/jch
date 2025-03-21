@@ -35,4 +35,9 @@ trait ActivityFdUsedTrait
         return ActivityFdUsedModel::update($update,$where,$field);
     }
 
+    public function delActivityFdUsed($where)
+    {
+        return ActivityFdUsedModel::whereDel($where);
+    }
+
 }

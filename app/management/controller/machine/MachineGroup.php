@@ -15,7 +15,7 @@ use app\management\validate\Machine\VMachineGroup;
 class MachineGroup extends Common
 {
 
-    protected $field = "mg_id,mg_name,`desc`,`sort`,status,create_time";
+    protected $field = "mg_id,mg_name,pid,`desc`,`sort`,status,create_time";
     protected $validatePath = VMachineGroup::class;
 
     public function getList()
@@ -23,7 +23,10 @@ class MachineGroup extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
-        $this->field .= ",(SELECT count(m_id) FROM machine_group_mg mgg where mgg.mg_id = a.mg_id ) machineNum";
+        if (!isset($postData['pid']) || !$postData['pid']) {
+            $where['pid'] = 0;
+        }
+        $this->field .= ",(SELECT count(m_id) FROM machine_group_mg mgg where mgg.mg_id = a.mg_id ) machineNum,(select mg_name from machine_group mg where mg.mg_id = a.pid) parent_name";
         return $this->app->machineGroup->getList($where,$pageNum,$this->field,'mg_id desc');
     }
 

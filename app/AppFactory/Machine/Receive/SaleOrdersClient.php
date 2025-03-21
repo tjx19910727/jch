@@ -105,6 +105,7 @@ class SaleOrdersClient extends MachineBaseClient
                     }
                 }
             }
+            $flag[] = $this->updateSaleOrders(['order_id' => $this->data['order_id'],'out_status' => 6]);
             $result = $this->checkFlag($flag);
             return $this->checkTrans($result);
         } catch (\Exception $e) {

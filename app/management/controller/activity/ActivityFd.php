@@ -14,7 +14,7 @@ use app\management\controller\Common;
 class ActivityFd extends Common
 {
 
-    protected $field = "fd_id,fd_name,start_date,end_date,fd_type,condition_type,`desc`,status,creator,create_time";
+    protected $field = "fd_id,fd_name,start_date,end_date,fd_type,condition_type,`desc`,exclusion,status,creator,create_time";
     protected $validatePath = 'app\management\validate\Activity\VActivityFd.';
 
     public function getList()

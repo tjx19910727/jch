@@ -70,7 +70,7 @@ class V2Client extends V2BaseClient
             if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->config['product_id'];
             $where[] = ['status', '<>', 2];
             $data = $this->getMachineChannelList($where, ['list_rows' => $this->params['pageNum'],'page' => $this->params['page']], $field, 'stock desc');
-            actionLog($this->getLS(),'【SQL】查询货道');
+//            actionLog($this->getLS(),'【SQL】查询货道');
             $data = $data->each(function ($item) {
                 $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,`desc`,retail_price,details_pic,gc_id,gc_name');
                 $item['g_retail_price'] = $goods['retail_price'] ?? 0;
@@ -109,7 +109,7 @@ class V2Client extends V2BaseClient
                 $where[] = ["machine_id", 'in', $this->params['machine_id']];
             $whereSdc[] = ['create_date', ">=", strtotime("-7 days")];
             $machineList = $this->getMachineList($where, ['list_rows' => $this->params['pageNum'],'page' => $this->params['page']], $field);
-            actionLog($this->getLS(),'【SQL】查询设备');
+//            actionLog($this->getLS(),'【SQL】查询设备');
             $machineList = $machineList->each(function ($machine) use ($whereSdc) {
                 if (isset($machine['country_id']) && $machine['country_id']) $machine['country'] = $this->getEarthCountriesValue(['id' => $machine['country_id']], 'cname');
                 if (isset($machine['state_id']) && $machine['state_id']) $machine['state'] = $this->getEarthStatesValue(['id' => $machine['state_id']], 'cname');

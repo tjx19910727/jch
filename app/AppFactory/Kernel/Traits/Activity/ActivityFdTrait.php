@@ -65,7 +65,11 @@ trait ActivityFdTrait
             $fdList = $fdList->toArray();
             foreach ($fdList as $key => $fdl){
                 $update = [];
-                $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id']],0,'condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value');
+                $fieldOrder = "fdc_sort ASC, fdc_id desc";
+                if (in_array($fdl['condition_type'],[1,2])) {
+                    $fieldOrder = "fdc_sort ASC, condition_value desc, fdc_id desc";
+                }
+                $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id']],0,'condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value',$fieldOrder);
                 if ($fdl['status'] == 1) $update['status'] = 2;
                 if ($fdl['end_date'] > 0 && $fdl['end_date'] < strtotime(date("Y-m-d")) && $fdl['status'] != 3) {
                     $update['status'] = 3;
@@ -114,6 +118,9 @@ trait ActivityFdTrait
             }
         }
         $fieldOrder = "fdc_sort ASC, fdc_id desc";
+        if (in_array($this->fd['condition_type'],[1,2])) {
+            $fieldOrder = "fdc_sort ASC, condition_value desc, fdc_id desc";
+        }
         $this->content = $this->getActivityFdContentList(['fd_id' => $this->fd['fd_id']],0,"*",$fieldOrder);
         if (!$this->content) return $this->rFail($this->lang("VActivityFd.content_no_data"));
         if (is_string($this->content)) return $this->rFail($this->content);

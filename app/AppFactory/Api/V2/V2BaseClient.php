@@ -55,12 +55,37 @@ class V2BaseClient extends ApiBaseClient
     public function checkIp()
     {
         $this->authConfig['white_list'] = explode(",", $this->authConfig['white_list']);
-        $this->ip = request()->ip();
+//        $this->ip = request()->ip();
+        $this->ip = $this->getClientIp();
         actionLog($this->ip, '请求IP地址');
         if ($this->authConfig['white_list'] && !in_array($this->ip, $this->authConfig['white_list'])) {
             $this->returnData(1, $this->lang("msg." . 1) . "：" . $this->ip)->send();
             die();
         }
+    }
+
+    /**
+     * 获取客户端真实 IP 地址
+     */
+    protected function getClientIp()
+    {
+        $request = request();
+
+        // 优先从 X-Forwarded-For 头中获取 IP
+        $ip = $request->header('x-forwarded-for');
+        if ($ip) {
+            $ips = explode(',', $ip);
+            $ip = trim($ips[0]); // 取第一个 IP
+        } else {
+            $ip = $request->ip(); // 默认获取 IP
+        }
+
+        // 验证 IP 地址是否合法
+        if (filter_var($ip, FILTER_VALIDATE_IP)) {
+            return $ip;
+        }
+
+        return '0.0.0.0'; // 如果 IP 不合法，返回默认值
     }
 
     /**
