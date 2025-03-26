@@ -16,15 +16,16 @@ class MachineGroupModel extends BaseModel
     protected $pk = "mg_id";
     protected $name = "machine_group";
 
-    protected $schema = [
-        "mg_id" => "int",
-        "mg_name" => "string",
-        "desc" => "string",
-        "sort" => "int",
-        "status" => "int",
-        "creator" => "int",
-        "create_time" => "int",
-        "update_id" => "int",
-        "update_time" => "int",
-    ];
+//    protected $schema = [
+//        "mg_id" => "int",
+//        "mg_name" => "string",
+//        "pid" => "int",
+//        "desc" => "string",
+//        "sort" => "int",
+//        "status" => "int",
+//        "creator" => "int",
+//        "create_time" => "int",
+//        "update_id" => "int",
+//        "update_time" => "int",
+//    ];
 }

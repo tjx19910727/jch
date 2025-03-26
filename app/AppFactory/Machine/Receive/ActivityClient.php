@@ -272,7 +272,10 @@ class ActivityClient extends ReceiveBaseClient
                     $this->rollbackTrans();
                     return $this->r(100,$this->lang("VOutGoods.send_out_goods_fail"));
                 }
-                if (isset($this->order['details'])) unset($this->order['details']);
+                $details = $this->order['details'] ?? null;
+                if (isset($this->order['details'])) {
+                    unset($this->order['details']);
+                }
                 $this->updateSaleOrders($this->order);
                 actionLog($this->getLS(),'使用取货码完成修改订单');
                 $this->updateActivityPickCode(['apc_id' => $apc['apc_id'], 'status' => 5]);
@@ -282,6 +285,7 @@ class ActivityClient extends ReceiveBaseClient
                     actionLog($this->getLS(), '修改预订商品记录表');
                 }
                 $this->commitTrans();
+                $this->order['details'] = $details;
                 return $this->r(200,$this->lang("action_success"),$this->order);
             }
             $this->rollbackTrans();

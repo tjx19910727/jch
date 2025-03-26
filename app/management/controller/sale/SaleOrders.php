@@ -25,7 +25,7 @@ class SaleOrders extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['trade_no' => "like","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in"]);
         $where['pay_status'] = 3;
-        $field = "*,(total_price - refund_amount) total_price";
+        $field = "*,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
         return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc");
     }
 
