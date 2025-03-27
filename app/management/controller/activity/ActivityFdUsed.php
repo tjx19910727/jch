@@ -22,6 +22,7 @@ class ActivityFdUsed extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
+        $where[] = ['used_time','>',0];
         return $this->app->activityFdUsed->getList($where,$pageNum,$this->field);
     }
 

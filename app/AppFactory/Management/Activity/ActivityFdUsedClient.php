@@ -28,6 +28,7 @@ class ActivityFdUsedClient extends ManagementClient
         $whereFd['fd_id'] = $fd_id;
         $fd = $this->getActivityFdFind($whereFd,'fd_name');
         $whereUsed['fd_id'] = $fd_id;
+        $whereUsed[] = ['used_time','>',0];
         $list = $this->getActivityFdUsedList($whereUsed,0,
             'machine_id,machine_name,trade_no,("' . $fd['fd_name'] . '") fd_name,
             (CASE fd_type WHEN 1 THEN "赠品" WHEN 2 THEN "立减金额" WHEN 3 THEN "惊喜礼品" WHEN 4 THEN "折扣" END ) fd_type,
