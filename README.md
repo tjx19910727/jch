@@ -1,6 +1,4 @@
-1234
-abc
-# Backend
+# backend
 
 
 
@@ -17,14 +15,14 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 ```
 cd existing_repo
-git remote add origin http://172.19.0.196:30080/kiosk/backend.git
+git remote add origin http://gitlab-ce/kiosk/backend.git
 git branch -M main
 git push -uf origin main
 ```
 
 ## Integrate with your tools
 
-- [ ] [Set up project integrations](http://172.19.0.196:30080/kiosk/backend/-/settings/integrations)
+- [ ] [Set up project integrations](http://gitlab-ce/kiosk/backend/-/settings/integrations)
 
 ## Collaborate with your team
 
