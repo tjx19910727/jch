@@ -207,8 +207,15 @@ trait WxPayTrait
             $notifyUrl = $this->getUrl('/pay/notify.wx/refundOrderNotify/sp_id/' . $this->strategyPayee['sp_id'] . "/order_id/" . $this->order['order_id']);
             $this->initWpApp();
 
-            $totalFee = bcmul($this->order['total_price'], 100);
-            $refundFee = bcmul($this->refundData['refund_amount'], 100);
+            $totalFee = intval(bcmul(round($this->order['total_price'],2), 100));
+            $refundFee = intval(bcmul(round($this->refundData['refund_amount'],2), 100));
+            actionLog([
+                "trade_no" => $this->refundData['order_trade_no'],
+                'refund_trade_no' => $this->refundData['refund_trade_no'],
+                'totalFee' => $totalFee,
+                'refundFee' => $refundFee,
+                'refund_desc' => $this->refundData['remark'],
+                'notify_url' => $notifyUrl],'发起退款请求参数');
             $result = $this->wpApp->refund->byOutTradeNumber($this->refundData['order_trade_no'],$this->refundData['refund_trade_no'],$totalFee,$refundFee,[
                 "refund_desc" => $this->refundData['remark'],
                 "notify_url" => $notifyUrl,

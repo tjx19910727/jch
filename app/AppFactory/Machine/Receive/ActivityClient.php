@@ -512,7 +512,13 @@ class ActivityClient extends ReceiveBaseClient
         $this->startTrans();
 
         try {// 修改已抽奖次数
-            $this->updateActivityFdUsed(['used_quantity' => $used['used_quantity']], ['alu_id' => $used['alu_id']]);
+            $updateUsed['used_quantity'] = $used['used_quantity'];
+            if ($used['used_quantity'] == $used['quantity']) {
+                $updateUsed['status'] = 2;
+                $updateUsed['used_date'] = strtotime(date("Y-m-d"));
+            }
+            $this->updateActivityLotteryUsed($updateUsed, ['alu_id' => $used['alu_id']]);
+            actionLog($this->getLS(),'执行修改抽奖记录');
             // 没抽中，返回谢谢惠顾
             if (!$list) {
                 $this->commitTrans();
@@ -544,8 +550,8 @@ class ActivityClient extends ReceiveBaseClient
                     "quantity" => 1,
                 ];
                 // 不存在商品记录则生成，存在商品则数量+1
-                $sod = $this->getSaleOrdersDetailsFind(['order_id' => $order['order_id'], 'mc_id' => $mc['mc_id']]);
-                if (!$sod || ($sod && isset($lv['is_gift']))) {
+//                $sod = $this->getSaleOrdersDetailsFind(['order_id' => $order['order_id'], 'mc_id' => $mc['mc_id']]);
+//                if (!$sod || ($sod && isset($lv['is_gift']))) {
                     unset($mc['stock']);
                     $insertSod = $mc;
                     $insertSod['order_id'] = $order['order_id'];
@@ -558,14 +564,14 @@ class ActivityClient extends ReceiveBaseClient
                     }
                     $sod_id = $this->addSaleOrdersDetails($insertSod);
                     $flag[] = $sod_id;
-                } else {
-                    $sod = $sod->toArray();
-                    $sod_id = $sod['sod_id'];
-                    $update['sod_id'] = $sod_id;
-                    $update['quantity'] = $sod['quantity'] + 1;
-                    $update['retail_price'] = bcdiv($averagePrice, $update['quantity'], 3);
-                    $flag[] = $this->updateSaleOrdersDetails($update);
-                }
+//                } else {
+//                    $sod = $sod->toArray();
+//                    $sod_id = $sod['sod_id'];
+//                    $update['sod_id'] = $sod_id;
+//                    $update['quantity'] = $sod['quantity'] + 1;
+//                    $update['retail_price'] = bcdiv($averagePrice, $update['quantity'], 3);
+//                    $flag[] = $this->updateSaleOrdersDetails($update);
+//                }
                 actionLog($this->getLS(),'订单详情处理SQL');
                 $ug['sod_id'] = $sod_id;
                 $ugAll[] = $ug;
@@ -577,11 +583,6 @@ class ActivityClient extends ReceiveBaseClient
             if ($check) {
                 $this->commitTrans();
                 $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0)->toArray();
-                $totalQuantity = array_sum(array_column($order['details'], 'quantity'));
-                if ($totalQuantity == $used['quantity']) {
-                    $this->updateActivityLotteryUsed(['alu_id' => $used['alu_id'], 'status' => 2, 'used_date' => strtotime(date("Y-m-d"))]);
-                    actionLog($this->getLS(),'订单商品总数量等于抽奖记录的数量，执行修改抽奖记录');
-                }
                 return $this->r(200, $this->lang("action_success"), ['lottery_list' => $list, "order" => $order]);
             }
             $this->rollbackTrans();

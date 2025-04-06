@@ -97,4 +97,25 @@ trait MachineInfoTrait
         actionLog($this->getLS(),'【SQL】写入图片路径');
         return $result;
     }
+
+    /**
+     * 终端上报machine_info的数据
+     * @return MachineInfoModel|bool
+     */
+    public function uploadInfo()
+    {
+        $fieldList = $this->getFieldComment("machine_info");
+        $fields = array_column($fieldList,'Field');
+        $update = [];
+        $messageKey = array_keys($this->message);
+        foreach ($messageKey as $value) {
+            if (in_array($value,$fields)) {
+                $update[$value] = $this->message[$value];
+            }
+        }
+        if ($update) {
+            return $this->updateMachineInfo($update,['machine_id' => $this->machine['machine_id']]);
+        }
+        return false;
+    }
 }

@@ -40,8 +40,10 @@ class V2BaseClient extends ApiBaseClient
     {
         if (isset($this->config['auth_name']) && $this->config['auth_name']) {
             $this->authConfig = $this->getConfigApiFind(['auth_name' => $this->config['auth_name']]);
+            $authConfig = $this->authConfig->toArray();
+            if (isset($authConfig['auth_password'])) unset($authConfig['auth_password']);
+            actionLog($authConfig, 'API配置信息');
         }
-        actionLog($this->authConfig, 'API配置信息');
         if (!$this->authConfig) {
             $this->returnData(2, $this->lang("msg." . 2))->send();
             die();

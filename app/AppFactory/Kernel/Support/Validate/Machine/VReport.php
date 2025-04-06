@@ -80,5 +80,7 @@ class VReport extends SupportValidate
 
         "errorCode" => ["msgType","errorCode"],
 
+        "uploadInfo" => ["msgType"],
+
     ];
 }

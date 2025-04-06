@@ -302,7 +302,7 @@ trait ActivityCouponTrait
                 $updateOrder = [
                     'order_id' => $this->order['order_id'],
                     'discount_price' => $this->order['discount_price'],
-                    'order_type' => 2,
+                    'order_type' => $this->order['order_type'] == 1 ? 2:6,
                     'coupon_id' => $ac['c_id'],
                     'total_price' => $this->order['total_price']
                 ];

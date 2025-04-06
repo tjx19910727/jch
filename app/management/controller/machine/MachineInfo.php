@@ -104,4 +104,19 @@ class MachineInfo extends Common
         }
     }
 
+    /**
+     * 刷新物联网卡流量
+     * @return array|\think\response\Json
+     */
+    public function refreshSim()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.refreshSim');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineInfo->refreshSim($postData);
+    }
+
 }

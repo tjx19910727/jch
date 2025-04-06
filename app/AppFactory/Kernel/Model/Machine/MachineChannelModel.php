@@ -85,4 +85,22 @@ class MachineChannelModel extends BaseModel
             }
         }
     }
+
+    /**
+     * 修改后下发设备终端更新
+     * @param Model $model
+     */
+    protected static function onAfterUpdate(Model $model)
+    {
+        try {
+            $mc = self::getFind(['mc_id' => $model->mc_id], 'machine_id');
+            $config = [
+                "machine_id" => $mc['machine_id'],
+            ];
+            $app = AppFactory::machine($config);
+            @$app->sendMq->sendMq("updateMc", ['mc_id' => $model->mc_id]);
+        } catch (\Exception $e) {
+            actionException($e,1,'mcAfterUpdate');
+        }
+    }
 }

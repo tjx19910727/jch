@@ -14,7 +14,10 @@ class VGoods extends VCommon
     protected $rule = [
         "g_id" => "require",
         "g_name" => "require|length:0,100",
-        "sku" => "require|unique:goods,sku",
+        "sku" => "require|unique:goods,sku|alphaDash",
+        "sku2" => "alphaDash",
+        "bar_code" => "alphaDash",
+        "model" => "alphaDash",
         "banner" => "length:0,1024",
         "pic" => "length:0,255",
         "manufacturer" => "length:0,100",
@@ -42,14 +45,14 @@ class VGoods extends VCommon
     ];
 
     protected $scene = [
-        "add" => ["g_name","sku","banner","pic","manufacturer", "service_phone","release_time","length","width","height"],
-        "importExcel" => ["g_name","sku","banner","pic","manufacturer", "service_phone","length","width","height"],
+        "add" => ["g_name","sku","sku2","model","bar_code","banner","pic","manufacturer", "service_phone","release_time","length","width","height"],
+        "importExcel" => ["g_name","banner","pic","manufacturer", "service_phone","length","width","height"],
         "del" => ['g_id'],
     ];
 
     public function sceneUpdate()
     {
-        return self::only(["g_id","g_name","pic","manufacturer", "service_phone","length","width","height"])
+        return self::only(["g_id","g_name","sku","sku2","model","bar_code","pic","manufacturer", "service_phone","length","width","height"])
             ->remove("g_name","require");
     }
 }

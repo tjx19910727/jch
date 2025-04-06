@@ -386,7 +386,7 @@ trait ActivityFdTrait
         }
         if ($updateOrder) {
             $updateOrder['order_id'] = $this->order['order_id'];
-            $updateOrder['order_type'] = 5;
+            $updateOrder['order_type'] = $this->order['order_type'] == 1 ? 5 : 6;
             $updateOrder['fd_id'] = $this->fd['fd_id'] ?? 0;
             $flag[] = $this->updateSaleOrders($updateOrder);
             actionLog($this->getLS(),'【SQL】处理订单信息');

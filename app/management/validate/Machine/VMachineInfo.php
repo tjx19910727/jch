@@ -17,6 +17,7 @@ class VMachineInfo extends VCommon
         "mi_id" => "require",
         "m_id" => "require|unique:machine_info",
         "machine_id" => "require",
+        "iccid" => "require",
     ];
 
     protected $message = [
@@ -31,5 +32,6 @@ class VMachineInfo extends VCommon
         "update" => ["mi_id"],
         "updateMore" => ["m_id"],
         "del" => ["mi_id"],
+        "refreshSim" => ["mi_id",'iccid'],
     ];
 }
