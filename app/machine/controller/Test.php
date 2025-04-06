@@ -228,7 +228,7 @@ class Test extends BaseController
         $data = input();
         $data = json2arr($data);
         $data = $this->makeSign($data);
-        echo '<br>',json_encode($data,320),'<br>','<br>';
+        echo '<br>123123',json_encode($data,320),'<br>','<br>';
     }
 
     public function testStock()
