@@ -1,0 +1,45 @@
+<div style="display: flex;align-items: center;padding: 2mm 0;">
+  <img style="width: 20mm;height: 8mm;margin-right: 4mm;" src="{$logo}" alt="">
+  <p style="font-weight: bold;">嘉潮汇智能售货机</p>
+</div>
+<div class="liner"></div>
+<div style="display: flex;justify-content: space-between;">
+  <span>{$machine_name}</span>
+  <span>{$print_time}</span>
+</div>
+<div class="liner"></div>
+<table style="width: 100%;">
+  <tr>
+    <th style="width: 60%;text-align: left;">商品</th>
+    <th style="width: 20%;text-align: center;">数量</th>
+    <th style="width: 20%;text-align: right;">总价</th>
+  </tr>
+  {volist name="detailsList" id="details" }
+  <tr>
+    <td style="text-align: left;">{$details.g_name}</td>
+    <td style="text-align: center;">{$details.quantity}</td>
+    <td style="text-align: right;">{$details.retail_price}</td>
+  </tr>
+  {/volist}
+</table>
+<div class="liner"></div>
+<div style="display: flex;justify-content: space-between;">
+  <div>总数量：{$total_quantity}</div>
+  <div>优惠：{$discount_price}</div>
+  <div>实收：{$total_price}</div>
+</div>
+<div class="liner"></div>
+<div style="text-align: center;">
+  <p>欢迎光临，谢谢惠顾</p>
+  {if condition="$receipt_code1 || $receipt_code2"}
+  <div style="display: flex;justify-content: space-between;padding: 0 20mm;">
+    {notempty name="receipt_code1"}
+    <img style="width: 30mm;height: 30mm;" src="{$receipt_code1}" alt="">
+    {/notempty}
+    {notempty name="receipt_code2"}
+    <img style="width: 30mm;height: 30mm;" src="{$receipt_code2}" alt="">
+    {/notempty}
+  </div>
+  {/if}
+  <p>客服电话：{$service_tel}</p>
+</div>

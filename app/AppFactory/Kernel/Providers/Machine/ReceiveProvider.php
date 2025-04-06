@@ -1,0 +1,45 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Administrator
+ * Date: 2024/1/23
+ * Time: 9:42
+ */
+
+namespace app\AppFactory\Kernel\Providers\Machine;
+
+
+use app\AppFactory\Kernel\Container;
+use app\AppFactory\Kernel\ServiceProviderInterface;
+use app\AppFactory\Machine\Receive\ActivityClient;
+use app\AppFactory\Machine\Receive\ApiClient;
+use app\AppFactory\Machine\Receive\HotelClient;
+use app\AppFactory\Machine\Receive\MqClient;
+use app\AppFactory\Machine\Receive\RobotClient;
+use app\AppFactory\Machine\Receive\SaleOrdersClient;
+
+class ReceiveProvider implements ServiceProviderInterface
+{
+    public function register(Container $app)
+    {
+        // TODO: Implement register() method.
+        $app['activity'] = function ($app) {
+            return new ActivityClient($app);
+        };
+        $app['api'] = function ($app) {
+            return new ApiClient($app);
+        };
+        $app['mq'] = function ($app) {
+            return new MqClient($app);
+        };
+        $app['saleOrders'] = function ($app) {
+            return new SaleOrdersClient($app);
+        };
+        $app['hotel'] = function ($app) {
+            return new HotelClient($app);
+        };
+        $app['robot'] = function ($app) {
+            return new RobotClient($app);
+        };
+    }
+}

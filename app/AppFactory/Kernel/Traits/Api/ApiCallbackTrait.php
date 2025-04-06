@@ -1,0 +1,107 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Administrator
+ * Date: 2024/6/19
+ * Time: 17:32
+ */
+
+namespace app\AppFactory\Kernel\Traits\Api;
+
+
+use app\AppFactory\Kernel\Model\Api\ApiCallbackModel;
+
+trait ApiCallbackTrait
+{
+    /**
+     * 获取字段值
+     * @param $where
+     * @param $value
+     * @return mixed
+     */
+    public function getApiCallbackValue($where, $value)
+    {
+        return ApiCallbackModel::getFieldValue($where, $value);
+    }
+
+    /**
+     * 获取单列
+     * @param $where
+     * @param $column
+     * @return array
+     */
+    public function getApiCallbackColumn($where, $column)
+    {
+        return ApiCallbackModel::getColumn($where, $column);
+    }
+
+    /**
+     * 统计数量
+     * @param $where
+     * @return int
+     * @throws \think\db\exception\DbException
+     */
+    public function getApiCallbackCount($where)
+    {
+        return ApiCallbackModel::getCount($where);
+    }
+
+    /**
+     * 获取列表
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @return \app\AppFactory\Kernel\Model\BaseModel|\app\AppFactory\Kernel\Model\BaseModel[]|array|string|\think\Collection|\think\Paginator
+     */
+    public function getApiCallbackList($where, $pageNum = 0, $field = "*", $order = "")
+    {
+        return ApiCallbackModel::getList($where, $pageNum, $field, $order);
+    }
+
+    /**
+     * 获取一条数据
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return mixed
+     */
+    public function getApiCallbackFind($where, $field = "*", $order = "")
+    {
+        return ApiCallbackModel::getFind($where, $field, $order);
+    }
+
+    /**
+     * 添加
+     * @param $insert
+     * @return mixed
+     */
+    public function addApiCallback($insert)
+    {
+        $data = ApiCallbackModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    /**
+     * 修改
+     * @param $update
+     * @param array $where
+     * @param array $field
+     * @return ApiCallbackModel
+     */
+    public function updateApiCallback($update,$where = [],$field = [])
+    {
+        return ApiCallbackModel::update($update,$where,$field);
+    }
+
+    /**
+     * 删除
+     * @param $where
+     * @return mixed
+     */
+    public function delApiCallback($where)
+    {
+        return ApiCallbackModel::whereDel($where);
+    }
+}

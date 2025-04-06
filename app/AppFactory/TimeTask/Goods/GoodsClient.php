@@ -1,0 +1,249 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Administrator
+ * Date: 2024/3/2
+ * Time: 16:26
+ */
+
+namespace app\AppFactory\TimeTask\Goods;
+
+
+use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Traits\Goods\GoodsCategoryTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\TimeTask\TimeTaskBase;
+
+class GoodsClient extends TimeTaskBase
+{
+    use GoodsTrait,GoodsCategoryTrait;
+    use SaleOrdersTrait;
+    use MachineTrait,MachineChannelTrait,MachineGoodsTrait;
+
+    /**
+     * 修改商品库后，同步修改设备商品库、设备货道，这两个位置修改后会自动触发下发通知设备更新数据
+     */
+    public function updateGoodsSynchronization()
+    {
+        try {
+            $redis = new \Redis();
+            $config = config("redis");
+            $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
+            if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
+            while (true) {
+                $list = $redis->lRange("updateGoods", 0, -1);
+                $num = $list ? count($list) : 0;
+                if ($num > 0) {
+                    $data = $redis->rPop("updateGoods");
+                    if ($data) {
+                        actionLog($data,'修改商品信息后','updateGoodsSynchronization');
+                        $this->synchronizationGoods($data);
+                        $this->synchronizationMgMc($data);
+                    }
+                }
+                sleep(1);
+            }
+            $redis->close();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+        }
+        return "处理完成";
+    }
+
+    /**
+     * 修改设备商品库，同步设备货道，修改后会自动触发下发通知设备更新数据
+     */
+    public function updateMgSynchronization()
+    {
+        try {
+            $redis = new \Redis();
+            $config = config("redis");
+            $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
+            if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
+            while (true) {
+                $list = $redis->lRange("updateMg", 0, -1);
+                $num = $list ? count($list) : 0;
+                if ($num > 0) {
+                    $data = $redis->rPop("updateMg");
+                    actionLog($data,'修改商品信息后','updateMgSynchronization');
+                    if ($data) {
+                        $this->synchronizationMc($data);
+                    }
+                }
+                sleep(1);
+            }
+            $redis->close();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+        }
+        return "处理完成";
+    }
+
+    public function testUpdateMg()
+    {
+        $data = "444";
+        $this->synchronizationMc($data);
+    }
+
+    /**
+     * 修改商品库，通知设备更新该商品
+     * @param $g_id
+     */
+    protected function synchronizationGoods($g_id)
+    {
+        $ao_id = $this->getGoodsValue(['g_id' => $g_id],"ao_id");
+        actionLog($ao_id,'商品组织架构ID','synchronizationGoods');
+        if ($ao_id) {
+            $machine_ids = $this->getMachineColumn(['ao_id' => $ao_id,'status' => 1, 'online' => 1], 'machine_id');
+            actionLog($this->getLS(),'查询设备编号SQL','synchronizationGoods');
+            actionLog($machine_ids,'可下发设备编号','synchronizationGoods');
+            if ($machine_ids) {
+                foreach ($machine_ids as $machine_id) {
+                    $this->sendToMachine(['machine_id' => $machine_id], 'updateGoods', ['g_id' => $g_id]);
+                }
+            }
+        }
+    }
+
+    /**
+     * 修改商品库时，同步到设备商品库跟设备货道
+     * @param $g_id
+     * @return array|\think\response\Json
+     */
+    protected function synchronizationMgMc($g_id)
+    {
+        $goods = $this->getGoodsFind(['g_id' => $g_id],'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,is_recommend,is_gift,recoverable,heat');
+        if ($goods) {
+            $goods = $goods->toArray();
+            actionLog($goods, '需要同步的商品数据','synchronizationMgMc');
+//            $updateChannel = [
+//                "g_name" => $goods['g_name'],
+//                "gc_id" => $goods['gc_id'],
+//                "gc_name" => $goods['gc_name'],
+//                "pic" => $goods['pic'],
+//                "sku" => $goods['sku'],
+//                "bar_code" => $goods['bar_code'],
+//                "cost_price" => $goods['cost_price'],
+//                "market_price" => $goods['market_price'],
+//                "retail_price" => $goods['retail_price'],
+//                "is_recommend" => $goods['is_recommend'],
+//                "is_gift" => $goods['is_gift'],
+//                "recoverable" => $goods['recoverable'],
+//                "heat" => $goods['heat'],
+//            ];
+//            $this->updateMachineChannel($updateChannel, ['g_id' => $g_id]);
+//            $updateMg = [
+//                "g_name" => $goods['g_name'],
+//                "gc_id" => $goods['gc_id'],
+//                "gc_name" => $goods['gc_name'],
+//                "pic" => $goods['pic'],
+//                "sku" => $goods['sku'],
+//                "bar_code" => $goods['bar_code'],
+//                "cost_price" => $goods['cost_price'],
+//                "market_price" => $goods['market_price'],
+//                "retail_price" => $goods['retail_price'],
+//            ];
+//            $this->updateMachineGoods($updateMg, ['g_id' => $g_id]);
+//        }
+            $this->startTrans();
+            try {
+                $whereMg['g_id'] = $goods['g_id'];
+                $this->synchronizationMachineGoods($whereMg, $goods);
+                $whereMc['g_id'] = $goods['g_id'];
+                $this->synchronizationMachineChannel($whereMc, $goods);
+                $this->commitTrans();
+                return $this->rSuccess();
+            } catch (\Exception $e) {
+                $this->rollbackTrans();
+                actionException($e,1);
+                return $this->rTryCatch($e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * 修改设备商品库后，同步到设备货道
+     * @param $mg_id
+     */
+    public function synchronizationMc($mg_id)
+    {
+        $mg = $this->getMachineGoodsFind(['mg_id' => $mg_id],'mg_id,machine_id,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price');
+        if ($mg) {
+            $mg = $mg->toArray();
+            $whereMc['g_id'] = $mg['g_id'];
+            $whereMc['machine_id'] = $mg['machine_id'];
+            $result = $this->sendToMachine(['machine_id' => $mg['machine_id']],'updateMg',['mg_id' => $mg['mg_id']]);
+            actionLog($result,'推送设备商品库','synchronizationMc');
+
+            unset($mg['machine_id'],$mg['mg_id']);
+            $this->startTrans();
+            try {
+                $this->synchronizationMachineChannel($whereMc, $mg);
+                $this->commitTrans();
+            } catch (\Exception $e) {
+                $this->rollbackTrans();
+                actionException($e,1);
+            }
+        }
+    }
+
+    /**
+     * 同步设备商品库数据
+     * @param $whereMg
+     * @param $goods
+     * @return array|\think\response\Json
+     */
+    protected function synchronizationMachineGoods($whereMg,$goods)
+    {
+        $machineGoods = $this->getMachineGoodsList($whereMg,0,'mg_id, machine_id');
+        actionLog($this->getLS(),'查询设备商品数据SQL','synchronizationMachineGoods');
+        if ($machineGoods) {
+            $machineGoods = $machineGoods->toArray();
+            actionLog($machineGoods,'绑定该商品的所有设备商品','synchronizationMachineGoods');
+            foreach ($machineGoods as $mgk => $mgv) {
+                // 同步设备商品库
+                $updateMgResult = $this->updateMachineGoods($goods, ['mg_id' => $mgv['mg_id']],
+                    ["g_id", "g_name", "gc_id", "gc_name", "pic", "sku", "bar_code", "cost_price", "market_price", "retail_price"]);
+                actionLog($this->getLS(),'修改设备商品库SQL','synchronizationMachineGoods');
+                if (!$updateMgResult) {
+                    return $this->rFail($this->lang("VMachineGoods.synchronization_fail"));
+                }
+                $result = $this->sendToMachine(['machine_id' => $mgv['machine_id']],'updateMg',['mg_id' => $mgv['mg_id']]);
+                actionLog($result,$mgv['machine_id'] . "设备商品【" . $mgv['mg_id'] . '】更新发送数据结果','synchronizationMachineGoods');
+            }
+        }
+    }
+
+    /**
+     * 同步货架商品信息
+     * @param $whereMc
+     * @param array $goods  需要同步的商品信息
+     * @return array|\think\response\Json
+     */
+    protected function synchronizationMachineChannel($whereMc,$goods)
+    {
+        $mcList = $this->getMachineChannelList($whereMc, 0, 'mc_id,machine_id,update_price');
+        if ($mcList) {
+            $mcList = $mcList->toArray();
+            foreach ($mcList as $key => $value) {
+                $update = $goods;
+                // 有手动修改过货道价格的不同步商品价格
+                if ($value['update_price'] == 1) {
+                    unset($update['cost_price'], $update['market_price'], $update['retail_price']);
+                }
+                $update['mc_id'] = $value['mc_id'];
+                $updateMcResult = $this->updateMachineChannel($update);
+                actionLog($this->getLS(),'修改设备货架商品信息SQL','synchronizationMachineChannel');
+                if (!$updateMcResult) {
+                    return $this->rFail($this->lang("VMachineChannel.synchronization_fail"));
+                }
+                $result = $this->sendToMachine(['machine_id' => $value['machine_id']],'updateMc',['mc_id' => $value['mc_id']]);
+                actionLog($result,$value['machine_id'] . "货架【" . $value['mc_id'] . '】更新发送数据结果','synchronizationMachineChannel');
+            }
+        }
+    }
+}
