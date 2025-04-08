@@ -22,9 +22,9 @@ trait MachineChannelTrait
      * @param int $inc
      * @return mixed
      */
-    public function setMachineChannelInc($where,$field,$inc = 1)
+    public function setMachineChannelInc($where, $field, $inc = 1)
     {
-        return MachineChannelModel::setInc($where,$field,$inc);
+        return MachineChannelModel::setInc($where, $field, $inc);
     }
 
     /**
@@ -34,9 +34,9 @@ trait MachineChannelTrait
      * @param int $dec
      * @return mixed
      */
-    public function setMachineChannelDec($where,$field,$dec = 1)
+    public function setMachineChannelDec($where, $field, $dec = 1)
     {
-        return MachineChannelModel::setDec($where,$field,$dec);
+        return MachineChannelModel::setDec($where, $field, $dec);
     }
 
     public function getMachineChannelCount($where)
@@ -44,28 +44,29 @@ trait MachineChannelTrait
         return MachineChannelModel::getCount($where);
     }
 
-    public function getMachineChannelSum($where,$sum)
+    public function getMachineChannelSum($where, $sum)
     {
-        return MachineChannelModel::getSum($where,$sum);
-    }
-    public function getMachineChannelValue($where,$value)
-    {
-        return MachineChannelModel::getFieldValue($where,$value);
+        return MachineChannelModel::getSum($where, $sum);
     }
 
-    public function getMachineChannelColumn($where,$column,$key = "")
+    public function getMachineChannelValue($where, $value)
     {
-        return MachineChannelModel::getColumn($where,$column,$key);
+        return MachineChannelModel::getFieldValue($where, $value);
     }
 
-    public function getMachineChannelFind($where,$field = "*",$order = "")
+    public function getMachineChannelColumn($where, $column, $key = "")
     {
-        return MachineChannelModel::getFind($where,$field,$order);
+        return MachineChannelModel::getColumn($where, $column, $key);
     }
 
-    public function getMachineChannelList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = '')
+    public function getMachineChannelFind($where, $field = "*", $order = "")
     {
-        return MachineChannelModel::getList($where,$pageNum,$field,$order,$eachFun,$group);
+        return MachineChannelModel::getFind($where, $field, $order);
+    }
+
+    public function getMachineChannelList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = '')
+    {
+        return MachineChannelModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
     }
 
     /**
@@ -78,14 +79,14 @@ trait MachineChannelTrait
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public function getMachineChannelJoinMfgList($where,$field = "*", $order = "")
+    public function getMachineChannelJoinMfgList($where, $field = "*", $order = "")
     {
-        return MachineChannelModel::joinMfgList($where,$field,$order);
+        return MachineChannelModel::joinMfgList($where, $field, $order);
     }
 
-    public function getMachineChannelJoinGoodsList($where,$field = "*",$order = "",$group = "")
+    public function getMachineChannelJoinGoodsList($where, $field = "*", $order = "", $group = "")
     {
-        return MachineChannelModel::joinGoodsList($where,$field,$order,$group);
+        return MachineChannelModel::joinGoodsList($where, $field, $order, $group);
     }
 
     public function addMachineChannel($insert)
@@ -94,9 +95,9 @@ trait MachineChannelTrait
         return $data->mc_id;
     }
 
-    public function updateMachineChannel($update,$where = [],$field = [])
+    public function updateMachineChannel($update, $where = [], $field = [])
     {
-        return MachineChannelModel::update($update,$where,$field);
+        return MachineChannelModel::update($update, $where, $field);
     }
 
     public function delMachineChannel($where)
@@ -130,7 +131,15 @@ trait MachineChannelTrait
                     }
                     $value['m_id'] = $this->machine['m_id'];
                     $value['machine_id'] = $this->machine['machine_id'];
-                    $mc = $this->getMachineChannelFind(['channel_code' => $value['channel_code'], 'm_id' => $this->machine['m_id'], 'channel_position' => $value['channel_position']]);
+                    if (isset($value['mc_id']) && $value['mc_id']) {
+                        $whereMc['mc_id'] = $value['mc_id'];
+                    } else {
+                        $whereMc['m_id'] = $this->machine['m_id'];
+                        $whereMc['channel_code'] = $value['channel_code'];
+                        $whereMc['channel_position'] = $value['channel_position'];
+                    }
+
+                    $mc = $this->getMachineChannelFind($whereMc);
                     if (!$mc) {
                         $mc = $value;
                         if (isset($value['g_id'])) {
@@ -138,7 +147,7 @@ trait MachineChannelTrait
                             $g = $this->getGoodsFind(['g_id' => $value['g_id']], $gField);
                             if ($g) {
                                 $g = obj2arr($g);
-                                $g['pic'] = str_replace($this->host,'',$g['pic']);
+                                $g['pic'] = str_replace($this->host, '', $g['pic']);
                                 $g['mg_id'] = ($this->getMachineGoodsValue(['g_id' => $g['g_id'], 'm_id' => $this->machine['m_id']], 'mg_id') ?? 0);
                                 $mc = array_merge($mc, $g);
                             }
@@ -163,7 +172,7 @@ trait MachineChannelTrait
             return $this->checkTrans($this->checkFlag($flag));
         } catch (\Exception $e) {
             $this->rollbackTrans();
-            actionException($e,1);
+            actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
     }
@@ -174,8 +183,8 @@ trait MachineChannelTrait
      */
     public function channelImg()
     {
-        $result = $this->updateMachineChannel(['channel_img' => $this->message['path']],['m_id' => $this->machine['m_id'],'channel_code' => $this->message['channel_code']]);
-        actionLog($this->getLS(),'【SQL】保存货道槽位照片','DataUpload');
+        $result = $this->updateMachineChannel(['channel_img' => $this->message['path']], ['m_id' => $this->machine['m_id'], 'channel_code' => $this->message['channel_code']]);
+        actionLog($this->getLS(), '【SQL】保存货道槽位照片', 'DataUpload');
         return $result;
     }
 }
