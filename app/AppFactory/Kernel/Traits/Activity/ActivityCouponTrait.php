@@ -87,10 +87,13 @@ trait ActivityCouponTrait
      */
     public function getAcByMachine()
     {
+        $managerIds = implode(",",$this->getAuthManagerMachineColumn(['m_id' => $this->machine['m_id']],'manager_id'));
         $where = "(ac.designated_machine = 1 or (am.m_id = " . $this->machine['m_id'] . " AND am.a_type = 1)) AND start_date < " . strtotime(date("Y-m-d H:i:s")) . " AND status < 3 AND (
         end_date is null or end_date > " . strtotime(date("Y-m-d H:i:s")) . ")";
+        if ($managerIds) $where .= " and creator in ($managerIds)";
         $field = "c_id,c_name,desc,start_date,end_date,c_type,reduction,used_limit,pay_limit,designated_goods,designated_machine,status";
         $ac = $this->getActivityCouponByMachine($where, $field);
+        actionLog($this->getLS(),'【SQL】查询优惠券');
         if ($ac) {
             $ac = $ac->toArray();
             $agField = "g_id,g_name,pic,sku,market_price,retail_price,gc_id,gc_name";
