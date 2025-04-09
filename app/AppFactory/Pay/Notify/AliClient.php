@@ -34,9 +34,9 @@ class AliClient extends PayBaseClient
             $this->order = $this->getSaleOrdersFind(['trade_no' => $outTradeNo]);
             actionLog($this->getLS(),'【SQL】查询订单');
             actionLog($this->order,'订单数据');
-            if ($this->order && $this->order['pay_status'] == 1) {
+            if ($this->order) {
                 $this->order = $this->order->toArray();
-                if ($this->order['pay_status'] < 3) {
+                if ($this->order['pay_status'] != 3) {
                     if (isset($message['buyer_id'])) {
                         $user = $this->getUserFind(['openid' => $message['buyer_id']], 'user_id,name');
                         if ($user) {

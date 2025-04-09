@@ -58,20 +58,22 @@ class WxClient extends PayBaseClient
                 $this->order = $this->order->toArray();
                 // 用户是否支付成功
                 if ($message['result_code'] === 'SUCCESS') {
-                    // 使用通知里的 "微信支付订单号" 或者 "商户订单号" 去自己的数据库找到订单
-                    $this->order['pay_type'] = 1;
-                    $this->order['mch_no'] = $mch_no;
+                    if ($this->order['pay_status'] != 3) {
+                        // 使用通知里的 "微信支付订单号" 或者 "商户订单号" 去自己的数据库找到订单
+                        $this->order['pay_type'] = 1;
+                        $this->order['mch_no'] = $mch_no;
 
-                    $this->startTrans();
-                    try {// 结算分润收益
-                        $flag[] = $this->settlementRevenue();
-                        $flag[] = $this->paymentSuccessful();
-                        $result = flag_check($flag);
-                        $return = $this->checkTrans($result);
-                        actionLog($return, '处理支付成功事务');
-                    } catch (\Exception $e) {
-                        $this->rollbackTrans();
-                        actionException($e, 1);
+                        $this->startTrans();
+                        try {// 结算分润收益
+                            $flag[] = $this->settlementRevenue();
+                            $flag[] = $this->paymentSuccessful();
+                            $result = flag_check($flag);
+                            $return = $this->checkTrans($result);
+                            actionLog($return, '处理支付成功事务');
+                        } catch (\Exception $e) {
+                            $this->rollbackTrans();
+                            actionException($e, 1);
+                        }
                     }
                 } elseif ($message['result_code'] === 'FAIL') {
                     $this->paymentFailed();
