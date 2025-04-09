@@ -124,7 +124,7 @@ trait ActivityCouponTrait
     {
         $acUsed = [];
         $where['code'] = $this->data['coupon_code'];
-        $fieldAc = "c_id,code,c_type,pay_limit,reduction,status,start_date,end_date,used_limit,pay_limit,designated_machine,designated_goods,exclusion";
+        $fieldAc = "c_id,code,c_type,pay_limit,reduction,status,start_date,end_date,used_limit,pay_limit,designated_machine,designated_goods,exclusion,creator";
         $ac = $this->getActivityCouponFind(['code' => $this->data['coupon_code']], $fieldAc);
         // 查无固定码优惠券活动
         if (!$ac) {
@@ -141,6 +141,11 @@ trait ActivityCouponTrait
         }
         if ($ac) {
             $ac = $ac->toArray();
+            // 查询优惠券活动创建人绑定的设备ID列表，检查当前设备是否在绑定列表中，不是的话不允许使用
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $ac['creator']],'m_id');
+            if (!in_array($this->machine['m_id'],$mIds))
+                return $this->lang("VActivityCoupon.no_am_data");
+
             $ac['coupon_code'] = $this->data['coupon_code'];
             // 随机码的优惠券，检查使用状态
             if ($acUsed) {

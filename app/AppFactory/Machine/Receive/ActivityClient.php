@@ -25,6 +25,7 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityMachineTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickCodeTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
 use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
@@ -46,6 +47,7 @@ class ActivityClient extends ReceiveBaseClient
     use BeforeOrderPaymentTrait, AfterOrderPaymentTrait;
     use StrategyMachineTrait, StrategyManagerTrait, StrategyIncomeTrait;
     use ApiAdvanceTrait;
+    use AuthManagerMachineTrait;
 
     protected $order;
 
