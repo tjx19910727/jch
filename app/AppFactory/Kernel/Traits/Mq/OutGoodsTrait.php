@@ -343,9 +343,12 @@ trait OutGoodsTrait
                 // 出货成功才是使用成功
                 if ($this->order['out_status'] == 4) {
                     $adStatus = 1;
+                    $details_status = "ALL PENDING";
                 } else {
                     $adStatus = 6;
+                    $details_status = "ALL MISVEND";
                 }
+                actionLog(['details_status' => $details_status,'adStatus' => $adStatus],'adStatus');
                 $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'g_id product_id,quantity, success_quantity,fail_quantity,out_port');
                 $details = $details->toArray();
 //                if ($this->order['total_quantity'] != array_sum(array_column($details,'success_quantity'))) $detail_status = "PARTIAL MISVEND";
@@ -358,15 +361,18 @@ trait OutGoodsTrait
                     "pick_code" => "",
                     "payment_method" => "",
                     "quantity" => array_sum(array_column($details,'quantity')) ?? 0,
-                    "detail_status" => $adStatus == 1 ? "ALL PENDING" : "ALL MISVEND",
+                    "detail_status" => $details_status,
                     "products_list" => json_encode($details,320),
                 ];
+
+                actionLog($message,'需要推送的数据');
                 $insertCallback = [
                     "aa_id" => 0,
                     "notify_url" => $sp['callbackUrl'],
                     "callback_type" => 8,
                     "message" => json_encode($message,320),
                 ];
+                actionLog($insertCallback,'插入推送数据');
                 $ac_id = $this->addApiCallback($insertCallback);
                 actionLog($this->getLS(),'添加出货回调通知记录',"OutGoods");
                 $ac = $this->getApiCallbackFind(['ac_id' => $ac_id]);
