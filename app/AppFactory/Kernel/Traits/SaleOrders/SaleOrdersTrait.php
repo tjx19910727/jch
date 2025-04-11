@@ -77,6 +77,12 @@ trait SaleOrdersTrait
                     $item['hotel']['nightly'] = $this->getSaleHotelNightlyList(['sh_id' => $item['hotel']['sh_id']]);
                     $item['retail_price'] = bcadd($item['retail_price'],$item['hotel']['pay_amount'],2);
                 }
+                if ($item['out_status'] == 6) {
+                    $unclaimed = $this->getSaleOrdersUnclaimedList(['order_id' => $item['order_id']],0,'sod_id,g_name,channel_code,is_match,is_claim,is_out,is_close');
+                    if ($unclaimed) {
+                        $item['unclaimed_status'] = $unclaimed->toArray();
+                    }
+                }
                 return $item;
             });
         return $data;

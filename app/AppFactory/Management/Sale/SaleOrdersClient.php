@@ -23,6 +23,7 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersUnclaimedTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
@@ -33,7 +34,7 @@ use app\AppFactory\Management\ManagementClient;
 class SaleOrdersClient extends ManagementClient
 {
     use AuthManagerTrait;
-    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersDailyCountTrait, SaleHotelTrait, SaleHotelNightlyTrait;
+    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait,SaleOrdersUnclaimedTrait, SaleOrdersDailyCountTrait, SaleHotelTrait, SaleHotelNightlyTrait;
     use BeforeOrderPaymentTrait;
     use StrategyMachineTrait;
     use StrategyIncomeTrait;
