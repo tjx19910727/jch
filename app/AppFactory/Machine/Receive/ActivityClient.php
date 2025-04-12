@@ -341,9 +341,9 @@ class ActivityClient extends ReceiveBaseClient
 
         // 检查活动商品
         $content = $this->getActivityLotteryContentList(['al_id' => $al['al_id']], 0, 'c_id,retain_num,g_id,probability,g_name');
+        actionLog($content,'活动商品内容');
         if (!$content) return $this->r(300,$this->lang("VActivityLottery.content_no_data"));
         $content = $content->toArray();
-        actionLog($content,'活动商品内容');
         // 总中奖概率，必须要刚好100%
         $totalProbability = array_sum(array_column($content, "probability"));
         if ($totalProbability != 100) return $this->r(300,$this->lang("probability_no_100"));

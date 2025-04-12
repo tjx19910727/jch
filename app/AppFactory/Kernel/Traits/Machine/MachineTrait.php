@@ -171,6 +171,20 @@ trait MachineTrait
     }
 
     /**
+     * 设备当前状态值上报
+     * @return MachineModel|bool
+     */
+    public function currentStatus()
+    {
+        if ($this->message['current_status'] != $this->machine['current_status']) {
+            $result = $this->updateMachine(['m_id' => $this->machine['m_id'],'current_status' => $this->message['current_status']]);
+            actionLog($this->getLS(),'【SQL】修改设备当前状态值');
+            return $result;
+        }
+        return true;
+    }
+
+    /**
      * 整理设备国家、州/省、城市、区域、街道、楼层等位置信息
      */
     public function getMachineAddress()

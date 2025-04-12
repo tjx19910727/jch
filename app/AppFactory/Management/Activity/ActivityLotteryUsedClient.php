@@ -13,11 +13,13 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryContentTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryUsedGoodsTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityLotteryUsedTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class ActivityLotteryUsedClient extends ManagementClient
 {
     use ActivityLotteryTrait, ActivityLotteryContentTrait, ActivityLotteryUsedTrait, ActivityLotteryUsedGoodsTrait;
+    use SaleOrdersTrait;
 
     /**
      * 获取付费抽奖使用列表
@@ -34,6 +36,7 @@ class ActivityLotteryUsedClient extends ManagementClient
             $list = $list->each(function ($item) {
                 $usedGoods = $this->getActivityLotteryUsedGoodsList(['alu_id' => $item['alu_id']], 0, '*,(SELECT content_name FROM activity_lottery_content WHERE c_id = alc_id limit 1) content_name');
                 $item['Children'] = $usedGoods;
+                $item['pay_status'] = $this->getSaleOrdersValue(['order_id' => $item['order_id']],'pay_status');
                 return $item;
             });
         }
