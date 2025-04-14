@@ -121,7 +121,7 @@ trait ActivityFdTrait
         $fieldOrder = "fdc_sort ASC, fdc_id desc";
         // 20250320，与朱工、陈工、聂工讨论确认最低消费金额、最低消费件数排序规则，优先排序值顺序排序，排序值一致时，以条件数值倒序排序
         if (in_array($this->fd['condition_type'],[1,2])) {
-            $fieldOrder = "fdc_sort ASC, condition_value desc, fdc_id desc";
+            $fieldOrder = "fdc_sort ASC, CAST(condition_value AS UNSIGNED)desc, fdc_id desc";
         }
         $this->content = $this->getActivityFdContentList(['fd_id' => $this->fd['fd_id']],0,"*",$fieldOrder);
         if (!$this->content) return $this->rFail($this->lang("VActivityFd.content_no_data"));
