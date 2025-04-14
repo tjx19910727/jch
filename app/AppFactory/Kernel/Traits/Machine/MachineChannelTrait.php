@@ -123,6 +123,7 @@ trait MachineChannelTrait
             if (isset($this->data['mcList'])) {
                 $mcList = json2arr($this->data['mcList']);
                 foreach ($mcList as $key => $value) {
+                    $whereMc = [];
                     try {
                         validate(VChannel::class)->scene("subChannel")->check($value);
                     } catch (\Exception $e) {
@@ -140,6 +141,7 @@ trait MachineChannelTrait
                     }
 
                     $mc = $this->getMachineChannelFind($whereMc);
+                    actionLog($this->getLS(),'查询货道');
                     if (!$mc) {
                         $mc = $value;
                         if (isset($value['g_id'])) {
