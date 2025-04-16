@@ -54,8 +54,13 @@ class MachineInfoClient extends ManagementClient
                 $update['iccid'] = $result['cardmsg']['iccid'];
                 $update['operator'] = $result['cardmsg']['operatortype'];
                 $update['valid_time'] = strtotime($result['cardmsg']['validdate']);
-                $update['total_flow'] = $result['packagemsg']['total'];
-                $update['remain_flow'] = $result['packagemsg']['allowance'];
+                foreach ($result['packagemsg'] as $key => $value) {
+                    if ($value["ptype"] == "流量套餐") {
+                        $update['total_flow'] = $value['total'];
+                        $update['remain_flow'] = $value['allowance'];
+                        break;
+                    }
+                }
                 $uResult = $this->updateMachineInfo($update,['mi_id' => $postData['mi_id']]);
                 if (!$uResult) return $this->rFail($this->lang("update_fail"));
                 return $this->r(200,$this->lang("query_success"),$update);
