@@ -70,8 +70,8 @@ trait ActivityFdTrait
                 // 20250320，与朱工、陈工、聂工讨论确认最低消费金额、最低消费件数排序规则，优先排序值顺序排序，排序值一致时，以条件数值倒序排序
                 if (in_array($fdl['condition_type'],[1,2])) {
                     // 20250414，终端是以最后一条满足条件覆盖前一满足条件，所以排序得反向排序
-                    $fieldOrder = "fdc_sort DESC, condition_value asc, fdc_id asc";
-                    $field = "CAST(condition_value AS UNSIGNED) condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value";
+                    $fieldOrder = "fdc_sort DESC, condition_value1 asc, fdc_id asc";
+                    $field = "fdc_id,CAST(condition_value AS UNSIGNED) condition_value1, condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
                 }
                 $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id']],0,$field,$fieldOrder);
                 if ($fdl['status'] == 1) $update['status'] = 2;
@@ -125,8 +125,8 @@ trait ActivityFdTrait
         $field = "fdc_id,fd_id,fd_name,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
         // 20250320，与朱工、陈工、聂工讨论确认最低消费金额、最低消费件数排序规则，优先排序值顺序排序，排序值一致时，以条件数值倒序排序
         if (in_array($this->fd['condition_type'],[1,2])) {
-            $fieldOrder = "fdc_sort ASC, CAST(condition_value AS UNSIGNED) desc, fdc_id desc";
-            $field = "fdc_id,fd_id,fd_name,CAST(condition_value AS UNSIGNED) condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
+            $fieldOrder = "fdc_sort ASC,condition_value1 desc, fdc_id desc";
+            $field = "fdc_id,fd_id,fd_name, CAST(condition_value AS UNSIGNED) condition_value1,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
         }
         $this->content = $this->getActivityFdContentList(['fd_id' => $this->fd['fd_id']],0,$field,$fieldOrder);
         if (!$this->content) return $this->rFail($this->lang("VActivityFd.content_no_data"));
