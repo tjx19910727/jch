@@ -21,5 +21,6 @@ return [
         "openid_can_not_empty" => "openid不能为空",
         "login_id_can_not_empty" => "登录ID不能为空",
         "manager_id_can_not_empty" => "账号ID不能为空",
+        "auth_not_match" => "当前账号无权限登录该设备",
     ],
 ];

@@ -9,6 +9,7 @@
 namespace app\AppFactory\Wx\Official;
 
 
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
@@ -22,7 +23,7 @@ use think\facade\Session;
 class LoginClient extends WxBaseClient
 {
     use WxOfficialTrait, WxOfficialLoginTrait;
-    use AuthManagerTrait;
+    use AuthManagerTrait, AuthManagerMachineTrait;
     use MachineTrait;
 
     /**
@@ -155,6 +156,13 @@ class LoginClient extends WxBaseClient
         $login = $login->toArray();
         if ($login['status'] == 3) {
             return $this->r(300, $this->lang("Login.status3"));
+        }
+        if ($login['m_id'] > 0) {
+            $authManager = $this->getAuthManagerMachineFind(['manager_id' => $postData['manager_id'], 'm_id' => $login['m_id']], 'id');
+            if (!$authManager) {
+                actionLog($this->getLS(), '【SQL】账号未绑定设备');
+                return $this->r(300, $this->lang("Login.auth_not_match"));
+            }
         }
 
         $manager = $this->getAuthManagerFind(['manager_id' => $postData['manager_id'], 'status' => 1]);
