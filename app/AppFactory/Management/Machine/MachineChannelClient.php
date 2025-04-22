@@ -144,6 +144,13 @@ class MachineChannelClient extends ManagementClient
      */
     public function updateMc($postData)
     {
+        if (isset($postData['g_id']) && $postData['g_id'] > 0) {
+            $old = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']]);
+            if ($old['g_id'] != $postData['g_id']) {
+                $goods = $this->getGoodsFind(['g_id' => $postData['g_id']],"g_name,gc_id,gc_name,pic,sku,bar_code");
+                $postData = array_merge($postData,$goods->toArray() ?? []);
+            }
+        }
         $result = $this->updateMachineChannel($postData);
         if ($result) {
             $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'machine_id,mc_id');

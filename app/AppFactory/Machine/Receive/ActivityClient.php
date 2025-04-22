@@ -456,7 +456,7 @@ class ActivityClient extends ReceiveBaseClient
 
         // 库存不足或禁用货架，不存在这个商品上架的情况下不参与抽奖
         $whereMcGid = function ($query) use ($quantity)  {
-            $query->where("`m_id` = " . $this->machine['m_id'] . " AND (`status` <> 1 OR `stock` > $quantity)");
+            $query->where("`m_id` = " . $this->machine['m_id'] . " AND (`status` <> 1 OR `stock` >= $quantity)");
         };
         $channel = $this->getMachineChannelColumn($whereMcGid,'g_id');
         actionLog($this->getLS(),'【SQL】获取设备货道商品ID');
