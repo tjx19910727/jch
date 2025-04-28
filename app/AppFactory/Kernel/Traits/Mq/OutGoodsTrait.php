@@ -170,7 +170,7 @@ trait OutGoodsTrait
                     actionLog($this->getLS(),'【SQL】添加商品变化数据','OutGoods');
                 }
                 if ($fail > 0) {
-                    $updateMc['status'] = 3;
+//                    $updateMc['status'] = 3;
                     $this->order['out_status'] = 5;
 
                     // 出货失败发送通知
