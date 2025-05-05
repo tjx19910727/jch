@@ -24,7 +24,7 @@ trait OutGoodsTrait
             return $this->rFail("查无订单数据");
         }
         $this->order = $this->order->toArray();
-        if ($this->order['out_status'] >= 4) {
+        if ($this->order['out_status'] >= 4 && $this->order['out_status'] != 6) {
             actionLog($this->order,'订单已处理过了','OutGoods');
             return $this->rFail("订单已处理过了");
         }
@@ -62,7 +62,7 @@ trait OutGoodsTrait
      */
     protected function handleData()
     {
-        $this->order['out_status'] = 4;
+        $this->order['out_status'] == 6 ? : $this->order['out_status'] = 4;
         $this->order['out_time'] = time();
         $this->order['remark'] = "接收到出货结果";
 
@@ -171,7 +171,7 @@ trait OutGoodsTrait
                 }
                 if ($fail > 0) {
 //                    $updateMc['status'] = 3;
-                    $this->order['out_status'] = 5;
+                    $this->order['out_status'] == 6 ? : $this->order['out_status'] = 5;
 
                     // 出货失败发送通知
                     try {
