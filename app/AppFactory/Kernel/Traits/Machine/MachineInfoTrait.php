@@ -114,7 +114,11 @@ trait MachineInfoTrait
             }
         }
         if ($update) {
-            return $this->updateMachineInfo($update,['machine_id' => $this->machine['machine_id']]);
+            actionLog($update,'修改数据');
+            $result = $this->updateMachineInfo($update,['machine_id' => $this->machine['machine_id']]);
+            actionLog($this->getLS(),'【SQL】修改设备信息');
+            actionLog($result,'修改设备信息结果');
+            return $result;
         }
         return false;
     }
