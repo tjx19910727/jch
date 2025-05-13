@@ -281,7 +281,7 @@ trait ActivityCouponTrait
                         $totalSodPrice = bcmul($value['retail_price'],$value['quantity'],2);
                         if ($ac['ac_type'] == 1) {
                             $reduction = bcdiv(bcsub(100,$ac['reduction']),100,2);
-                            $sodDiscountPrice = bcmul($totalSodPrice,$reduction,4)
+                            $sodDiscountPrice = bcmul($totalSodPrice,$reduction,4);
                         }
                         // 商品优惠金额 = 商品售价 * 数量  - 立减金额 / 总数量 * 商品数量
                         if ($ac['ac_type'] == 2 ) {
