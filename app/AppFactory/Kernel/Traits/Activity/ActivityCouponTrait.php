@@ -10,7 +10,6 @@ namespace app\AppFactory\Kernel\Traits\Activity;
 
 
 use app\AppFactory\Kernel\Model\Activity\Coupon\ActivityCouponModel;
-use function React\Promise\reduce;
 use think\response\Json;
 
 trait ActivityCouponTrait
