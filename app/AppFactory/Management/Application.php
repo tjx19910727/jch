@@ -99,6 +99,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineCheckStockCountClient   $machineCheckStockCount      库存盘点汇总
  * @property Machine\MachineClient                  $machine                设备基础信息
  * @property Machine\MachineConfigClient            $machineConfig          设备配置信息
+ * @property Machine\MachineConfigLangClient        $machineConfigLang      设备配置语言信息
  * @property Machine\MachineErrorCodeClient         $machineErrorCode       设备错误码信息
  * @property Machine\MachineErrorCodeSolutionClient $machineErrorCodeSolution    设备错误码解决方案
  * @property Machine\MachineGoodsClient             $machineGoods           设备商品信息
@@ -107,6 +108,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineGroupMgClient           $machineGroupMg         设备与分组关联
  * @property Machine\MachineHelpClient              $machineHelp            设备帮助
  * @property Machine\MachineInfoClient              $machineInfo            设备信息
+ * @property Machine\MachineLangClient              $machineLang            设备主体多语言数据
  * @property Machine\MachineViewClient              $machineView            设备视图
  * @property Machine\MachineOnlineClient            $machineOnline          设备每天在线时长统计
  * @property Machine\MachineOnlineDetailsClient     $machineOnlineDetails   设备在线时长详情

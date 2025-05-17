@@ -19,6 +19,7 @@ use app\AppFactory\Management\Machine\MachineCheckStockClient;
 use app\AppFactory\Management\Machine\MachineCheckStockCountClient;
 use app\AppFactory\Management\Machine\MachineClient;
 use app\AppFactory\Management\Machine\MachineConfigClient;
+use app\AppFactory\Management\Machine\MachineConfigLangClient;
 use app\AppFactory\Management\Machine\MachineErrorCodeClient;
 use app\AppFactory\Management\Machine\MachineErrorCodeSolutionClient;
 use app\AppFactory\Management\Machine\MachineGoodsClient;
@@ -27,6 +28,7 @@ use app\AppFactory\Management\Machine\MachineGroupLangClient;
 use app\AppFactory\Management\Machine\MachineGroupMgClient;
 use app\AppFactory\Management\Machine\MachineHelpClient;
 use app\AppFactory\Management\Machine\MachineInfoClient;
+use app\AppFactory\Management\Machine\MachineLangClient;
 use app\AppFactory\Management\Machine\MachineOnlineClient;
 use app\AppFactory\Management\Machine\MachineOnlineDetailsClient;
 use app\AppFactory\Management\Machine\MachineOnOffClient;
@@ -64,6 +66,9 @@ class MachineProvider implements ServiceProviderInterface
         $app['machineConfig'] = function ($app) {
             return new MachineConfigClient($app);
         };
+        $app['machineConfigLang'] = function ($app) {
+            return new MachineConfigLangClient($app);
+        };
         $app['machineErrorCode'] = function ($app) {
             return new MachineErrorCodeClient($app);
         };
@@ -87,6 +92,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineInfo'] = function ($app) {
             return new MachineInfoClient($app);
+        };
+        $app['machineLang'] = function ($app) {
+            return new MachineLangClient($app);
         };
         $app['machineView'] = function ($app) {
             return new MachineViewClient($app);

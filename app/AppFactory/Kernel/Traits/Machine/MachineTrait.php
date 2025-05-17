@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Machine\MachineLangModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 
 trait MachineTrait
@@ -93,7 +94,22 @@ trait MachineTrait
      */
     public function getMachineList($where,$pageNum = null,$field = "*", $order = "",$eachFun = "",$group = '', $limit = '')
     {
-        return MachineModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
+        $result = MachineModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
+
+        if ($result) {
+            if ($pageNum) {
+                $result = $result->each(function ($item) {
+                    $item['lang'] = MachineLangModel::getList(['m_id' => $item['m_id']]);
+                    return $item;
+                });
+            } else {
+                $result = $result->toArray();
+                foreach ($result as $key => $value) {
+                    $result[$key]['lang'] = MachineLangModel::getList(['m_id' => $value['m_id']]);
+                }
+            }
+        }
+        return $result;
     }
 
     /**

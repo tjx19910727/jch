@@ -285,6 +285,14 @@ return [
         "g_is_up" => "商品已在货道上架",
     ],
 
+    "VGoodsLang" => [
+        "gl_id_require" => "请选择商品",
+        "g_id_require" => "商品ID不能为空",
+        "g_name_require" => "商品名称不能为空",
+        "g_name_max" => "商品名称长度超限制",
+        "manufacturer_max" => "供应商名称长度超限制",
+    ],
+
     "VGoodsCategory" => [
         "gc_id_require" => "请选择商品分类",
         "gc_name_require" => "分类名称不能为空",
@@ -347,14 +355,6 @@ return [
         "synchronization_fail" => "同步设备商品库失败",
     ],
 
-    "VGoodsLang" => [
-        "gl_id_require" => "请选择商品",
-        "g_id_require" => "商品ID不能为空",
-        "g_name_require" => "商品名称不能为空",
-        "g_name_max" => "商品名称长度超限制",
-        "manufacturer_max" => "供应商名称长度超限制",
-    ],
-
     "VMachineGroup" => [
         "mg_id_require" => "请选择设备分组",
         "mg_name_require" => "分组名称不能为空",
@@ -396,6 +396,14 @@ return [
         "machine_offline" => "设备离线",
     ],
 
+    "VMachineLang" => [
+        "ml_id_require" => "请选择设备多语言数据",
+        "m_id_require" => "请选择设备",
+        "machine_id_require" => "设备编号不能为空",
+        "machine_no_data" => "查无设备多语言信息",
+        "is_exist" => "当前语言数据已存在，请勿重新添加",
+    ],
+
 
     "VMachineChannel" => [
         "mc_id_require" => "货道ID不能为空",
@@ -417,6 +425,13 @@ return [
         "machine_id_require" => "设备编号不能为空",
         "mcList_require" => "批量配置列表参数不能为空",
     ],
+    "VMachineConfigLang" => [
+        "mcl_id_require" => "设备配置多语言ID不能为空",
+        "mc_id_require" => "设备配置ID不能为空",
+        "m_id_require" => "设备ID不能为空",
+        "machine_id_require" => "设备编号不能为空",
+        "mcList_require" => "批量配置列表参数不能为空",
+    ],
 
     "VMachineOnOff" => [
         "moo_id_require" => "配置ID不能为空",
@@ -435,6 +450,7 @@ return [
         "title_require" => "标题不能为空",
         "content_require" => "内容不能为空",
         "lang_require" => "语言类型不能为空",
+        "get_computer_overtime" => "获取中控电脑数据超时",
     ],
 
     "VMachineHelp" => [
