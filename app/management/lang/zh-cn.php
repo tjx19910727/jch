@@ -291,6 +291,8 @@ return [
         "g_name_require" => "商品名称不能为空",
         "g_name_max" => "商品名称长度超限制",
         "manufacturer_max" => "供应商名称长度超限制",
+        "lang_require" => "语言编码不能为空",
+        "is_exist" => "当前语言数据已存在，请勿重复添加",
     ],
 
     "VGoodsCategory" => [
@@ -427,10 +429,12 @@ return [
     ],
     "VMachineConfigLang" => [
         "mcl_id_require" => "设备配置多语言ID不能为空",
+        "lang_require" => "语言编码不能为空",
         "mc_id_require" => "设备配置ID不能为空",
         "m_id_require" => "设备ID不能为空",
         "machine_id_require" => "设备编号不能为空",
         "mcList_require" => "批量配置列表参数不能为空",
+        "is_exist" => "当前语言配置信息已存在，请勿重复添加",
     ],
 
     "VMachineOnOff" => [

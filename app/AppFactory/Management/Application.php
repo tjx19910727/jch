@@ -115,7 +115,6 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineOnOffClient             $machineOnOff           设备营业配置
  * @property Machine\MachineVersionClient           $machineVersion         设备软件版本
  * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
- * @property Machine\MachineSaleClient              $machineSale            设备销售数据
  *
  * @property MicroMall\MicroMallClient              $microMall              微商城
  * @property MicroMall\MicroMallMachineClient       $microMallMachine       微商城绑定设备

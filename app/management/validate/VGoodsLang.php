@@ -30,6 +30,7 @@ class VGoodsLang extends VCommon
 
     protected $scene = [
         "add" => ["g_id","g_name","manufacturer"],
+        "getList" => ["g_id","lang"],
         "del" => ['gl_id'],
     ];
 

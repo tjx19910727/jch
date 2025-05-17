@@ -94,6 +94,8 @@ trait MachineConfigLangTrait
      */
     public function updateMachineConfigLang($update,$where = [],$field = [])
     {
+        if (isset($update['mc_id'],$update['m_id'],$update['machine_id'],$update['lang']))
+            unset($update['mc_id'],$update['m_id'],$update['machine_id'],$update['lang']);
         return MachineConfigLangModel::update($update,$where,$field);
     }
 

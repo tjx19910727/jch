@@ -24,6 +24,8 @@ class VMachineConfigLang extends VCommon
     ];
 
     protected $message = [
+        "mcl_id.require" => "VMachineConfigLang.mcl_id_require",
+        "lang.require" => "VMachineConfigLang.lang_require",
         "mc_id.require" => "VMachineConfigLang.mc_id_require",
         "m_id.require" => "VMachineConfigLang.m_id_require",
         "m_id.unique" => "VMachineConfigLang.m_id_unique",
@@ -32,10 +34,11 @@ class VMachineConfigLang extends VCommon
     ];
 
     protected $scene = [
-        "add" => ["mc_id","m_id", "machine_id"],
+        "add" => ["mc_id","m_id", "machine_id","lang"],
+        "getList" => ["mc_id", "lang"],
         "update" => ["mcl_id"],
         "del" => ["mcl_id"],
         "updateMoreMcl" => ["mcList"],
-        "mcList" => ["mc_id"],
+        "mcList" => ["m_id","lang"],
     ];
 }
