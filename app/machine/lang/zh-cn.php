@@ -18,7 +18,7 @@ return [
         "account_disabled" => "该账号已被禁用",
         "login_success" => "登录成功",
         "logout_success" => "退出登录成功",
-        "permission_denied" => "您的登录终端权限未开启",
+        "permission_denied" => "您无权限登录终端",
 
     ],
 

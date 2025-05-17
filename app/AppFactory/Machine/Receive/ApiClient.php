@@ -20,7 +20,9 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityPickTrait;
 use app\AppFactory\Kernel\Traits\Advertisement\AdvertisementPushTrait;
 use app\AppFactory\Kernel\Traits\Advertisement\AdvertisementRecordTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
@@ -37,10 +39,12 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineConfigLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineHelpTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
@@ -68,13 +72,15 @@ class ApiClient extends ReceiveBaseClient
         AdvertisementPushTrait,
         AdvertisementRecordTrait,
         AuthOrganizationTrait,
-        AuthManagerMachineTrait,
+        AuthManagerMachineTrait,AuthManagerRoleTrait,AuthRoleNodeTrait,
         ConfigTrait,
         GoodsTrait, GoodsLangTrait, GoodsCategoryLangTrait, GoodsCategoryTrait, GoodsChangeTrait, GoodsCornerTrait,
         GoodsMultipleTrait,GoodsMultipleGoodsTrait,GoodsMultipleMachineTrait,
         MachineViewTrait,
         MachineConfigTrait,
+        MachineConfigLangTrait,
         MachineInfoTrait,
+        MachineLangTrait,
         MachineChannelTrait, MachineChannelReplenishmentTrait,
         MachineVersionPlanTrait,
         MachineGoodsTrait,
@@ -127,11 +133,15 @@ class ApiClient extends ReceiveBaseClient
         if (!$manager_id) {
             return $this->rFail($this->lang("VLogin.not_manager"));
         }
-        $manager = $this->getAuthManagerFind(['manager_id' => $manager_id], 'manager_id,nickname,account,pic,password,status');
+        $manager = $this->getAuthManagerFind(['manager_id' => $manager_id], 'manager_id,nickname,account,pic,password,status,ao_id');
         if (!$manager) return $this->rFail($this->lang("VLogin.account_pwd_error"));
         $manager = $manager->toArray();
         if ($manager['password'] != md5($this->data['password'] . config("app.salt")))
             return $this->rFail($this->lang("VLogin.account_pwd_error"));
+        $roleIds = $this->getAuthManagerRoleColumn(['manager_id' => $manager_id],'role_id');
+        $nodeList = $this->getAuthRoleNodeList([['role_id', 'in',$roleIds],'rn.url' => "/machine_receive/login"],0,'rn.url');
+        if (!$nodeList)
+            return $this->rFail($this->lang("VLogin.permission_denied"));
         if ($manager['status'] == 2) return $this->rFail($this->lang("VLogin.account_disabled"));
         unset($manager['password'], $manager['status']);
 
@@ -205,6 +215,17 @@ class ApiClient extends ReceiveBaseClient
         if (isset($this->machine['city_id']) && $this->machine['city_id']) $this->machine['city'] = $this->getEarthCitiesFind(['id' => $this->machine['city_id']], 'code,name,cname');
         if (isset($this->machine['regions_id']) && $this->machine['regions_id']) $this->machine['regions'] = $this->getEarthRegionsFind(['id' => $this->machine['regions_id']], 'code,name,cname');
         return $this->r(200, 'SUCCESS', $this->machine);
+    }
+
+    /**
+     * 设备主体多语言
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+    public function machineLang()
+    {
+        $result = $this->getMachineLangList(['m_id' => $this->machine['m_id']]);
+        return $this->rQ($result);
     }
 
     /**
@@ -472,12 +493,6 @@ class ApiClient extends ReceiveBaseClient
     public function machineConfig()
     {
         $where["m_id"] = $this->machine['m_id'];
-//        $configField = "mc_id,mc_title,buy_flow,qr_code,qr_desc, tax_switch,tax_name,tax_rate,limit_quantity,limit_amount,
-//        pay_type,unionpay_terminal_number,scan_pick_up,email_lang,buy_channel,preclaim,random_pickup,more_out,member_login,door_video,
-//        face_identification,pre_loading,printer_disable,note_model,receipt,receipt_code1,receipt_code2,receipt_code3,receipt_desc,result_receipt,
-//        deal_success_title,deal_success_sub_title,deal_abnormal_pic,deal_fail_title,deal_fail_sub_title,deal_service_phone,terminal_timeout,adv_timeout,volume,
-//        show_goods,show_goods_view,goods_sort,cabinet_tray_rotation,cabinet_light,light_effect,claim_goods_title,out_goods_title,discount_show,
-//        discount_pic,stock_warning,expire_notice";
         $configField = "*";
         $data = $this->getMachineConfigFind($where, $configField);
         if (isset($data['pay_type']) && $data['pay_type']) {
@@ -491,6 +506,17 @@ class ApiClient extends ReceiveBaseClient
             }
         }
         return $this->rQ($data);
+    }
+
+    /**
+     * 设备配置多语言数据列表
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+    public function machineConfigLang()
+    {
+        $result = $this->getMachineConfigLangList(['m_id' => $this->machine['m_id']]);
+        return $this->rQ($result);
     }
 
     /**
