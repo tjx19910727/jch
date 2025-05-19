@@ -139,7 +139,7 @@ class ApiClient extends ReceiveBaseClient
         if ($manager['password'] != md5($this->data['password'] . config("app.salt")))
             return $this->rFail($this->lang("VLogin.account_pwd_error"));
         $roleIds = $this->getAuthManagerRoleColumn(['manager_id' => $manager_id],'role_id');
-        $nodeList = $this->getAuthRoleNodeList([['role_id', 'in',$roleIds],'rn.url' => "/machine_receive/login"],0,'rn.url');
+        $nodeList = $this->getAuthRoleNodeList([['role_id', 'in',$roleIds],'an.url' => "/machine_receive/login"],0,'an.url');
         if (!$nodeList)
             return $this->rFail($this->lang("VLogin.permission_denied"));
         if ($manager['status'] == 2) return $this->rFail($this->lang("VLogin.account_disabled"));
