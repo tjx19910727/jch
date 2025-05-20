@@ -138,7 +138,7 @@ class MachineInfo extends Common
         $overtime = 50;
         while(1){
             // 终端在50秒内没有上报
-            if (!$this->app->machine->getMachineMqRecordFind(['machine_id' => $machine_id,'msgType' => "uploadInfo","type" => 1, "from" => 2,["create_time","between",[$now,$now + $overtime]]],'mr_id')) {
+            if (!$this->app->machine->getMachineMqRecordFind(['machine_id' => $machine_id,'path' => "uploadInfo","type" => 1, "from" => 2,["create_time","between",[$now,$now + $overtime]]],'mr_id')) {
                 if (!$send) {
                     $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], 'getComputerInfo');
                     actionLog($result, '下发获取中控电脑数据命令结果');
