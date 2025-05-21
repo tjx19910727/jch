@@ -1,70 +1,104 @@
 <?php
-/**
- * Created by PhpStorm.
- * User: Administrator
- * Date: 2024/6/18
- * Time: 19:32
- */
 
 return [
-    "VV2" => [
-        "machine_id_require" => "机器编号不能为空",
-        "shelf_on_require" => "是否上架不能为空",
-
-
-    ],
-    "msg" => [
-        0 => "Success",
-        1 => "Invalid IP Address",
-        2 => "Invalid User",
-        3 => "Wrong Password",
-        4 => "No Such API",
-        5 => "JSON Syntax Error",
-        6 => "Missing Fields",
-        7 => "Invalid Fields",
-        8 => "Requests Count Limited",
-        9 => "Requests Interval Limited",
-        10 => "Data not Found",
-        11 => "Can not Contact the Kiosk",
-        12 => "License Expired",
-        13 => "Exceed Date Range(30 days)",
-        14 => "Product is unavailable",
-        15 => "table is nonexistent.",
-        16 => "Invalid Timestamp",
-        17 => "Sign Error",
-        18 => "Failed to generate the fetch code record",
-        19 => "Action fail",
-        20 => "Pickup code in use",
-        21 => "This order number has been submitted to lock stock, please do not repeat submission",
-        22 => "Under stock",
-        23 => "Invalid trade_no",
-        24 => "Order processed",
-        25 => "The order payment type does not match",
-        26 => "No hotel information found",
-        99 => "Service Unavailable",
-    ],
-
-    "reserve_order" => [
-        "machine_no_data" => "查无设备信息",
-        "machine_offline" => "设备离线",
-        "under_stock" => "库存不足",
-
-        "apc_id_add_fail" => "生成取货码记录失败",
-        "apc_already_exist" => "取货码已存在",
-
-        "kiosk_id_require" => "机器编号不能为空",
-        "order_no_require" => "订单编号不能为空",
-        "payment_method_require" => "支付方式不能为空",
-        "expire_time_require" => "订单有效期不能为空",
-        "charge_time_require" => "支付时间不能为空",
-        "order_detail_require" => "订单详情不能为空",
-    ],
-    "order_detail" => [
-        "quantity_require" => "预定数量不能为空",
-        "item_price_require" => "销售价格不能为空",
-        "discount_amount_require" => "优惠价格不能为空",
-        "charge_amount_require" => "实际支付总价格不能为空",
-        "type_require" => "类型不能为空",
-    ],
-
+    'VV2' =>
+        [
+            'machine_id_require' => 'The machine number cannot be empty',
+            'shelf_on_require' => 'Whether to list cannot be empty',
+            'pageNum_require' => 'The number of page data entries cannot be empty',
+        ],
+    'msg' =>
+        [
+            0 => 'success',
+            1 => 'invalid IP address',
+            2 => 'Invalid user',
+            3 => 'Password error',
+            4 => 'No API exists',
+            5 => 'JSON format error',
+            6 => 'missing parameter',
+            7 => 'invalid parameter',
+            8 => 'The number of visits exceeds the daily limit',
+            9 => 'Frequent visits',
+            10 => 'Unable to find the required data',
+            11 => 'Unable to connect to the machine',
+            12 => 'License cannot be used',
+            13 => 'Time span greater than 30 days',
+            14 => 'The reserved product ID is incorrect or there are not enough products available',
+            15 => 'Data does not exist',
+            16 => 'Invalid timestamp',
+            17 => 'signature error',
+            18 => 'Failed to generate pickup code record',
+            19 => 'operation failed',
+            20 => 'The pickup code is in use',
+            21 => 'This order has already been processed, please do not resubmit',
+            22 => 'Insufficient inventory',
+            23 => '无效订单编号 ',
+            24 => 'Order processing in progress',
+            25 => 'Order payment type mismatch',
+            26 => 'No hotel information found',
+            27 => 'No information on this activity found',
+            28 => 'The event has ended',
+            29 => 'This activity has been taken down',
+            30 => 'The event has not yet started',
+            31 => 'This activity has expired',
+            32 => 'This coupon has no remaining usage times',
+            33 => 'There are no remaining coupons available for this activity to claim',
+            34 => 'Failed to generate collection record',
+            35 => 'Failed to modify the collection record',
+            36 => 'Check for no order data',
+            37 => 'Check for no order details data',
+            38 => 'No product information found',
+            39 => 'Insufficient inventory of goods',
+            40 => 'No device information found',
+            41 => 'Check for no pickup code information',
+            97 => '请使用multipart/form-data',
+            98 => 'Please use the Post request method',
+            99 => 'The service is unavailable',
+        ],
+    'reserve_order' =>
+        [
+            'machine_no_data' => 'No device information found',
+            'machine_offline' => 'device offline',
+            'under_stock' => 'Insufficient inventory',
+            'apc_id_add_fail' => 'Failed to generate pickup code record',
+            'apc_already_exist' => 'The pickup code already exists',
+            'kiosk_id_require' => 'The machine number cannot be empty',
+            'order_no_require' => 'Order number cannot be empty',
+            'payment_method_require' => 'The payment method cannot be empty',
+            'expire_time_require' => 'The validity period of the order cannot be empty',
+            'charge_time_require' => 'Payment time cannot be empty',
+            'order_detail_require' => 'Order details cannot be empty',
+        ],
+    'order_detail' =>
+        [
+            'quantity_require' => 'The reserved quantity cannot be empty',
+            'item_price_require' => 'The selling price cannot be empty',
+            'discount_amount_require' => 'The discounted price cannot be empty',
+            'charge_amount_require' => 'The actual total payment price cannot be empty',
+            'type_require' => 'Type cannot be empty',
+        ],
+    'payNotify' =>
+        [
+            'order_no_require' => 'Order number cannot be empty',
+            'pay_status' => 'The payment result cannot be empty',
+            'shelf_on_require' => 'The product listing status cannot be empty',
+        ],
+    'activity_code' =>
+        [
+            'aId_require' => 'Activity ID cannot be empty',
+            'aType_require' => 'Activity type cannot be empty',
+        ],
+    'use_pick_code' =>
+        [
+            'pick_code_require' => 'The pickup code cannot be empty',
+            'null_data' => 'Check for no delivery code information',
+            'order_null_data' => 'No order information found',
+            'order_details_null_data' => 'No order details found',
+            'status2' => 'This activity code has already been used',
+            'status3' => 'The activity code has expired',
+            'status4' => 'This activity code has been invalidated',
+            'status5' => 'This activity code is in use, please do not submit it again',
+            'trans_fail' => 'Transaction execution failed',
+            'device_type_unDefine' => 'Undefined application type',
+        ],
 ];

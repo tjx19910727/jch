@@ -58,6 +58,14 @@ class MachineClient extends ManagementClient
             $m = $this->addMachine($postData);
             if ($m) {
                 $machine = $this->getMachineFind(['m_id' => $m]);
+                $updateMc = [];
+                $whereMc = [
+                    'm_id' => $machine['m_id'],
+                ];
+                if (isset($postData['recycle_bin_capacity']) && $postData['recycle_bin_capacity']) {
+                    $updateMc['recycle_bin_capacity'] = $postData['recycle_bin_capacity'];
+                }
+                if ($updateMc) $this->updateMachineConfig($updateMc,$whereMc);
                 if ($machine_group_id) {
                     foreach ($machine_group_id as $mk => $mv) {
                         $mg = $this->getMachineGroupFind(['mg_id' => $mv], 'mg_id,mg_name');

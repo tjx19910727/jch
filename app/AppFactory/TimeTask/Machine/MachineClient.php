@@ -83,11 +83,12 @@ class MachineClient extends TimeTaskBase
                         $manager_id = $this->getAuthManagerMachineValue(['m_id' => $value['m_id']], 'manager_id', 'manager_id desc');
                         $onlineDetails['manager_id'] = $manager_id;
                         // 获取运营设定，计算原定运营时长，校对判断运营状态，统计上线离线次数
+                        // 20250521，原运营时长修改为定时开关机时长
                         $ckcDuration = 86399;
-                        $ckc = $this->getMachineOnOffFind(['m_id' => $value['m_id'],'status' => 1],'on_off_ckc');
+                        $ckc = $this->getMachineOnOffFind(['m_id' => $value['m_id'],'status' => 1],'on_off_machine');
                         if ($ckc) {
                             $ckc = $ckc->toArray();
-                            $ckcList = json_decode($ckc['on_off_ckc'],true);
+                            $ckcList = json_decode($ckc['on_off_machine'],true);
                             if ($ckcList) {
                                 $thisWeek = date("w",strtotime(date("Y-m-d", $yesterday) . " -1 days")); // 昨天本周几，0~6，周日至周六
                                 $thisWeek--;                    // 减1，-1~5，0~5为周一至周六，-1为周日
