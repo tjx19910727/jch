@@ -15,6 +15,7 @@ return [
     "action_success" => '操作成功',
     "action_fail" => '操作失败',
     "action_machine_overtime" => "操作超时，请确认设备是否在线",
+    "machine_offline" => "设备离线",
 
     "add_success" => '添加成功',
     "add_fail" => '添加失败',
@@ -44,6 +45,8 @@ return [
 
     "mac_require" => "Mac地址不能为空",
     "mac_not_match" => "Mac地址与后台配置不匹配",
+
+    "current_status_not_normal" => "当前设备不是空闲状态",
 
     "tException" => [
         "out_fail" => '出货失败',

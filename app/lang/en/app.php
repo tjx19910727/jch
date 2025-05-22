@@ -8,6 +8,7 @@ return [
     'action_success' => 'Operation successful',
     'action_fail' => 'operation failed',
     'action_machine_overtime' => 'Operation timeout, please confirm if the device is online',
+    "machine_offline" => "Device offline",
     'add_success' => 'Added successfully',
     'add_fail' => 'Add failed',
     'update_success' => 'Modified successfully',
@@ -27,6 +28,7 @@ return [
     'export_fail' => 'Export failed',
     'mac_require' => 'Mac address cannot be empty',
     'mac_not_match' => 'Mac address does not match backend configuration',
+    "current_status_not_normal" => "The current device is not in an idle state",
     'tException' =>
         [
             'out_fail' => 'Shipment failed',
