@@ -633,7 +633,7 @@ class ApiClient extends ReceiveBaseClient
         if (is_string($goods)) return $this->rFail($goods);
         if ($goods) {
             $goods = $goods->toArray();
-            $goods['lang'] = $this->getGoodsLangList(['g_id' => $this->data['g_id']], 0, 'g_name,gc_name,manufacturer,desc,performance,lang');
+            $goods['lang'] = $this->getGoodsLangList(['g_id' => $this->data['g_id']], 0, 'g_name,gc_name,pic,banner,details_pic,manufacturer,`desc`,performance,lang');
             $mg = $this->getMachineGoodsFind(['m_id' => $this->machine['m_id'],'g_id' => $goods['g_id']],'mg_id,available_stock,disabled_stock,cost_price,market_price,retail_price,reserve_stock,standby_stock,pre_loading_stock,is_shelf');
             if ($mg) $goods = array_merge($goods,$mg->toArray());
         }
