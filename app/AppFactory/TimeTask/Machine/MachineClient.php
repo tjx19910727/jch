@@ -38,10 +38,12 @@ class MachineClient extends TimeTaskBase
     {
         try {
             $yesterday = input("date");
+            $machine_id = input('machine_id');
+            $whereM = [];
+            if ($machine_id) $whereM["machine_id"] = $machine_id;
             $yesterday = $yesterday ? strtotime($yesterday) : strtotime(date("Y-m-d", strtotime("-1 days")));
-            $machine = $this->getMachineList([], 0, 'm_id,machine_id,machine_name');
+            $machine = $this->getMachineList($whereM, 0, 'm_id,machine_id,machine_name');
             if ($machine) {
-                $machine = $machine->toArray();
                 $flag = [];
                 foreach ($machine as $key => $value) {
                     $whereDetails['m_id'] = $value['m_id'];
@@ -89,21 +91,28 @@ class MachineClient extends TimeTaskBase
                         if ($ckc) {
                             $ckc = $ckc->toArray();
                             $ckcList = json_decode($ckc['on_off_machine'],true);
+                            actionLog($ckcList,'定时开关机设置','countOnline');
                             if ($ckcList) {
                                 $thisWeek = date("w",strtotime(date("Y-m-d", $yesterday) . " -1 days")); // 昨天本周几，0~6，周日至周六
-                                $thisWeek--;                    // 减1，-1~5，0~5为周一至周六，-1为周日
-                                if ($thisWeek < 0) $thisWeek = 6;    // -1重置为6，周日
+                                actionLog($thisWeek,'系统周几值',"countOnline");
                                 if (isset($ckcList[$thisWeek])) {
                                     // 获取本周几（昨天）设置的营业时间
                                     $ckcTime = explode(",",$ckcList[$thisWeek]);
                                     if ($ckcTime) {
                                         $endTime = HourMinuteSec2int($ckcTime[0]);
                                         $startTime = HourMinuteSec2int($ckcTime[1]);
+                                        if ($startTime > $endTime) {
+                                            actionLog([$startTime,$endTime],"开机时间，关机时间，关机时间比开机时间早","countOnline");
+                                            $temp = $startTime;
+                                            $startTime = $endTime;
+                                            $endTime = $temp;
+                                        }
                                         $ckcDuration = $endTime - $startTime;
                                     }
                                 }
                             }
                         }
+                        actionLog($ckcDuration,'记录的设定营业时长',"countOnline");
                         $onlineDetails['ckc_duration'] = $ckcDuration;
                         // 增加统计全天的记录，并绑定ID至详情
                         $online_id = $this->addMachineOnline($onlineDetails);
@@ -120,11 +129,11 @@ class MachineClient extends TimeTaskBase
                 $this->delMachineMqRecord([['create_time','<',strtotime("-7 days")]]);
             }
         } catch (DataNotFoundException $e) {
-            actionException($e,1);
+            actionException($e,1,'countOnline');
         } catch (ModelNotFoundException $e) {
-            actionException($e,1);
+            actionException($e,1,'countOnline');
         } catch (DbException $e) {
-            actionException($e,1);
+            actionException($e,1,'countOnline');
         }
         return "处理成功";
     }

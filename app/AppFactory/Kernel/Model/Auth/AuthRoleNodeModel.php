@@ -37,21 +37,20 @@ class AuthRoleNodeModel extends BaseModel
     /**
      * 获取关联权限节点列表
      * @param $where
-     * @param $pageNum
+     * @param int $pageNum
      * @param string $field
      * @param string $order
-     * @return AuthRoleNodeModel|AuthRoleNodeModel[]|array|\think\Collection|\think\Paginator
-     * @throws \think\db\exception\DataNotFoundException
-     * @throws \think\db\exception\DbException
-     * @throws \think\db\exception\ModelNotFoundException
+     * @param string $group
+     * @return mixed
      */
-    public static function getJoinNodeList($where,$pageNum = 0,$field = "*",$order = "")
+    public static function getJoinNodeList($where,$pageNum = 0,$field = "*",$order = "",$group = "")
     {
         $data = self::alias("rn")
             ->join("auth_node an","rn.node_id = an.node_id",'left')
             ->where($where)
             ->field($field)
-            ->order($order);
+            ->order($order)
+            ->group($group);
         if ($pageNum) {
             $data = $data->paginate($pageNum);
         } else {

@@ -21,6 +21,7 @@ use app\AppFactory\Kernel\Traits\Advertisement\AdvertisementPushTrait;
 use app\AppFactory\Kernel\Traits\Advertisement\AdvertisementRecordTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerRoleTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthNodeTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
@@ -72,7 +73,7 @@ class ApiClient extends ReceiveBaseClient
         AdvertisementPushTrait,
         AdvertisementRecordTrait,
         AuthOrganizationTrait,
-        AuthManagerMachineTrait,AuthManagerRoleTrait,AuthRoleNodeTrait,
+        AuthManagerMachineTrait,AuthManagerRoleTrait,AuthRoleNodeTrait,AuthNodeTrait,
         ConfigTrait,
         GoodsTrait, GoodsLangTrait, GoodsCategoryLangTrait, GoodsCategoryTrait, GoodsChangeTrait, GoodsCornerTrait,
         GoodsMultipleTrait,GoodsMultipleGoodsTrait,GoodsMultipleMachineTrait,
@@ -133,18 +134,22 @@ class ApiClient extends ReceiveBaseClient
         if (!$manager_id) {
             return $this->rFail($this->lang("VLogin.not_manager"));
         }
-        $manager = $this->getAuthManagerFind(['manager_id' => $manager_id], 'manager_id,nickname,account,pic,password,status,ao_id');
+        $manager = $this->getAuthManagerFind(['manager_id' => $manager_id], 'manager_id,pid,nickname,account,pic,password,status,ao_id');
         if (!$manager) return $this->rFail($this->lang("VLogin.account_pwd_error"));
         $manager = $manager->toArray();
         if ($manager['password'] != md5($this->data['password'] . config("app.salt")))
             return $this->rFail($this->lang("VLogin.account_pwd_error"));
-        $roleIds = $this->getAuthManagerRoleColumn(['manager_id' => $manager_id],'role_id');
-        $nodeList = $this->getAuthRoleNodeList([['role_id', 'in',$roleIds],'an.url' => "/machine_receive/login"],0,'an.url');
+        $nodeList = $this->getManagerNodeList($manager);
         if (!$nodeList)
             return $this->rFail($this->lang("VLogin.permission_denied"));
+        $loginNode = array_column($nodeList->toArray(),'url');
+        if (!in_array("/machine/receive/login",$loginNode)) {
+            return $this->rFail($this->lang("VLogin.permission_denied"));
+        }
         if ($manager['status'] == 2) return $this->rFail($this->lang("VLogin.account_disabled"));
         unset($manager['password'], $manager['status']);
-
+        $manager['nodeList'] = $nodeList;
+        actionLog($manager,'返回的账号数据');
         return $this->r(200, $this->lang("VLogin.login_success"), $manager);
     }
 
