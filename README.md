@@ -1,4 +1,62 @@
-# backend
+<<<<<<< HEAD
+ThinkPHP 6.0
+===============
+
+> 运行环境要求PHP7.1+，兼容PHP8.0。
+
+[官方应用服务市场](https://market.topthink.com) | [`ThinkAPI`——官方统一API服务](https://docs.topthink.com/think-api)
+
+ThinkPHPV6.0版本由[亿速云](https://www.yisu.com/)独家赞助发布。
+
+## 主要新特性
+
+* 采用`PHP7`强类型（严格模式）
+* 支持更多的`PSR`规范
+* 原生多应用支持
+* 更强大和易用的查询
+* 全新的事件系统
+* 模型事件和数据库事件统一纳入事件系统
+* 模板引擎分离出核心
+* 内部功能中间件化
+* SESSION/Cookie机制改进
+* 对Swoole以及协程支持改进
+* 对IDE更加友好
+* 统一和精简大量用法
+
+## 安装
+
+~~~
+composer create-project topthink/think tp 6.0.*
+~~~
+
+如果需要更新框架使用
+~~~
+composer update topthink/framework
+~~~
+
+## 文档
+
+[完全开发手册](https://www.kancloud.cn/manual/thinkphp6_0/content)
+
+## 参与开发
+
+请参阅 [ThinkPHP 核心框架包](https://github.com/top-think/framework)。
+
+## 版权信息
+
+ThinkPHP遵循Apache2开源协议发布，并提供免费使用。
+
+本项目包含的第三方源码和二进制文件之版权信息另行标注。
+
+版权所有Copyright © 2006-2020 by ThinkPHP (http://thinkphp.cn)
+
+All rights reserved。
+
+ThinkPHP® 商标和著作权所有者为上海顶想信息科技有限公司。
+
+更多细节参阅 [LICENSE.txt](LICENSE.txt)
+=======
+# project-70-cf.com
 
 
 
@@ -11,18 +69,18 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 ## Add your files
 
 - [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
 
 ```
 cd existing_repo
-git remote add origin http://gitlab.karrie.local:6100/kiosk/backend.git
+git remote add origin http://gl.dakemakeji.com/backend/project-70-cf.com.git
 git branch -M main
 git push -uf origin main
 ```
 
 ## Integrate with your tools
 
-- [ ] [Set up project integrations](http://gitlab.karrie.local:6100/kiosk/backend/-/settings/integrations)
+- [ ] [Set up project integrations](http://gl.dakemakeji.com/backend/project-70-cf.com/-/settings/integrations)
 
 ## Collaborate with your team
 
@@ -30,13 +88,13 @@ git push -uf origin main
 - [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
 - [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
 - [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
 
 ## Test and Deploy
 
 Use the built-in continuous integration in GitLab.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
+- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
 - [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
 - [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
 - [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
@@ -91,3 +149,4 @@ For open source projects, say how it is licensed.
 
 ## Project status
 If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+>>>>>>> origin/main

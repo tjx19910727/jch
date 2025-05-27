@@ -1,0 +1,1173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="0b425c8e-253d-4f3f-a4bc-dbf750314eff" name="Default" comment="" />
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="TRACKING_ENABLED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ComposerSettings" doNotAsk="true" synchronizationState="DONT_SYNCHRONIZE">
+    <pharConfigPath>$PROJECT_DIR$/composer.json</pharConfigPath>
+  </component>
+  <component name="DatabaseView">
+    <option name="SHOW_INTERMEDIATE" value="true" />
+    <option name="GROUP_DATA_SOURCES" value="true" />
+    <option name="GROUP_SCHEMA" value="true" />
+    <option name="GROUP_CONTENTS" value="false" />
+    <option name="SORT_POSITIONED" value="false" />
+    <option name="SHOW_EMPTY_GROUPS" value="false" />
+    <option name="AUTO_SCROLL_FROM_SOURCE" value="false" />
+    <option name="HIDDEN_KINDS">
+      <set />
+    </option>
+    <expand />
+    <select />
+  </component>
+  <component name="FavoritesManager">
+    <favorites_list name="project-70-cf.com" />
+  </component>
+  <component name="FileEditorManager">
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
+      <file leaf-file-name="V2Client.php" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Api/V2/V2Client.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="311">
+              <caret line="426" column="16" selection-start-line="426" selection-start-column="16" selection-end-line="426" selection-end-column="16" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="V2BaseClient.php" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/app/AppFactory/Api/V2/V2BaseClient.php">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-3755" />
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="HTML File" />
+      </list>
+    </option>
+  </component>
+  <component name="FindInProjectRecents">
+    <findStrings>
+      <find>JCHM-H2D-0068</find>
+      <find>getMachineChannel</find>
+      <find>test0006</find>
+      <find>取货</find>
+      <find>202503261755</find>
+      <find>20250326</find>
+      <find>20250326175548501923940</find>
+      <find>1</find>
+      <find>2025032708382850</find>
+      <find>sku</find>
+      <find>导出商品</find>
+      <find>VGoods</find>
+      <find>auth_password</find>
+      <find>reser</find>
+      <find>test002</find>
+      <find>2025032916105274434938#92225</find>
+      <find>pick</find>
+      <find>get_in</find>
+      <find>JCHM-H3D-0002</find>
+      <find>clientID</find>
+      <find>self::$clientId</find>
+      <find>self::$</find>
+      <find>self::</find>
+      <find>usePick</find>
+      <find>20250331151752467624913</find>
+      <find>836771984976117760</find>
+      <find>获取字段</find>
+      <find>testSign</find>
+      <find>20250402163122127625938</find>
+      <find>$this-&gt;totalRefundMoney</find>
+    </findStrings>
+    <replaceStrings>
+      <replace>付费抽奖</replace>
+      <replace>SaleOrdersUnclaimed</replace>
+      <replace>$this-&gt;machine</replace>
+      <replace>WxTemplateLog</replace>
+      <replace>EmailTemplate</replace>
+      <replace>EmailTemplateLog</replace>
+      <replace>$config</replace>
+      <replace>MachineOnOff</replace>
+      <replace>triggerUpdateMachineOnOff</replace>
+      <replace>MachineChannelChange</replace>
+      <replace>MachineChannelChangeModel</replace>
+      <replace>GoodsChange</replace>
+      <replace>$FunctionName$</replace>
+      <replace>$apc</replace>
+      <replace>$machine</replace>
+      <replace>rSuccess</replace>
+      <replace>5</replace>
+      <replace>$this-&gt;params</replace>
+      <replace />
+      <replace>$this-&gt;lang(&quot;msg.&quot;.</replace>
+      <replace>hotel</replace>
+      <replace>VTripMultiple</replace>
+      <replace>actionVideo</replace>
+      <replace>length</replace>
+      <replace>$this-&gt;r(300,</replace>
+      <replace>300</replace>
+      <replace>lang</replace>
+      <replace>self::$clientId</replace>
+      <replace>$this-&gt;clientId</replace>
+      <replace>$this-&gt;</replace>
+    </replaceStrings>
+    <dirStrings>
+      <dir>E:\project\project-70-cf.com\app</dir>
+    </dirStrings>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/app/AppFactory/RabbitMq/MqConsumer.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Mq/OutGoodsTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/SaleOrders/SaleOrdersTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Api/Application.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Providers/Api/V2Provider.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Validate/Api/VV2.php" />
+        <option value="$PROJECT_DIR$/app/http/controller/Test.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Robot/RobotPositionModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Robot/RobotPositionTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Providers/Machine/ReceiveProvider.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Application.php" />
+        <option value="$PROJECT_DIR$/app/machine/controller/Robot.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Api/Send/CallbackClient.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/Test.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Goods/GoodsModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/RobotClient.php" />
+        <option value="$PROJECT_DIR$/app/machine/lang/zh-cn.php" />
+        <option value="$PROJECT_DIR$/app/machine/validate/VRobot.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/activity/ActivityFd.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/machine/MachineGroup.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/SaleOrdersClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdUsedTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Pay/SaleOrders/PaymentClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Machine/MachineGroupModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityFdUsedClient.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/activity/ActivityFdUsed.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/BaseModel.php" />
+        <option value="$PROJECT_DIR$/app/management/validate/VGoods.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/goods/Goods.php" />
+        <option value="$PROJECT_DIR$/app/management/lang/zh-cn.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Api/V2/V2BaseClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Machine/MachineChannelModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityFdClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Model/Activity/Fd/ActivityFdModel.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Api/V2/V2Client.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/ZdSimService/Zdsms.php" />
+        <option value="$PROJECT_DIR$/.env" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Validate/Machine/VReport.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineInfoTrait.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Machine/Receive/MqClient.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/ZdSimService/ZdSim.php" />
+        <option value="$PROJECT_DIR$/app/management/validate/Machine/VMachineInfo.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineInfoClient.php" />
+        <option value="$PROJECT_DIR$/app/management/controller/machine/MachineInfo.php" />
+        <option value="$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php" />
+        <option value="$PROJECT_DIR$/app/machine/controller/Test.php" />
+      </list>
+    </option>
+  </component>
+  <component name="JsBuildToolGruntFileManager" detection-done="true" sorting="DEFINITION_ORDER" />
+  <component name="JsBuildToolPackageJson" detection-done="true" sorting="DEFINITION_ORDER" />
+  <component name="JsGulpfileManager">
+    <detection-done>true</detection-done>
+    <sorting>DEFINITION_ORDER</sorting>
+  </component>
+  <component name="NodePackageJsonFileManager">
+    <packageJsonPaths />
+  </component>
+  <component name="PhpServers">
+    <servers />
+  </component>
+  <component name="PhpWorkspaceProjectConfiguration" interpreter_name="PHP7.4">
+    <include_path>
+      <path value="$PROJECT_DIR$/vendor/psr/container" />
+      <path value="$PROJECT_DIR$/vendor/bacon/bacon-qr-code" />
+      <path value="$PROJECT_DIR$/vendor/bunny/bunny" />
+      <path value="$PROJECT_DIR$/vendor/react/promise" />
+      <path value="$PROJECT_DIR$/vendor/react/event-loop" />
+      <path value="$PROJECT_DIR$/vendor/psr/cache" />
+      <path value="$PROJECT_DIR$/vendor/psr/log" />
+      <path value="$PROJECT_DIR$/vendor/psr/simple-cache" />
+      <path value="$PROJECT_DIR$/vendor/psr/clock" />
+      <path value="$PROJECT_DIR$/vendor/symfony/polyfill-ctype" />
+      <path value="$PROJECT_DIR$/vendor/symfony/property-access" />
+      <path value="$PROJECT_DIR$/vendor/symfony/options-resolver" />
+      <path value="$PROJECT_DIR$/vendor/symfony/translation" />
+      <path value="$PROJECT_DIR$/vendor/nesbot/carbon" />
+      <path value="$PROJECT_DIR$/vendor/endroid/qr-code" />
+      <path value="$PROJECT_DIR$/vendor/myclabs/php-enum" />
+      <path value="$PROJECT_DIR$/vendor/symfony/process" />
+      <path value="$PROJECT_DIR$/vendor/symfony/translation-contracts" />
+      <path value="$PROJECT_DIR$/vendor/symfony/polyfill-php80" />
+      <path value="$PROJECT_DIR$/vendor/topthink/framework" />
+      <path value="$PROJECT_DIR$/vendor/topthink/think-template" />
+      <path value="$PROJECT_DIR$/vendor/symfony/var-dumper" />
+      <path value="$PROJECT_DIR$/vendor/symfony/inflector" />
+      <path value="$PROJECT_DIR$/vendor/symfony/polyfill-mbstring" />
+      <path value="$PROJECT_DIR$/vendor/symfony/polyfill-php72" />
+      <path value="$PROJECT_DIR$/vendor/topthink/think-captcha" />
+      <path value="$PROJECT_DIR$/vendor/topthink/think-queue" />
+      <path value="$PROJECT_DIR$/vendor/topthink/think-trace" />
+      <path value="$PROJECT_DIR$/vendor/topthink/think-worker" />
+      <path value="$PROJECT_DIR$/vendor/topthink/think-view" />
+      <path value="$PROJECT_DIR$/vendor/topthink/think-orm" />
+      <path value="$PROJECT_DIR$/vendor/topthink/think-helper" />
+      <path value="$PROJECT_DIR$/vendor/topthink/think-multi-app" />
+      <path value="$PROJECT_DIR$/vendor/phpseclib/phpseclib" />
+      <path value="$PROJECT_DIR$/vendor/khanamiryan/qrcode-detector-decoder" />
+      <path value="$PROJECT_DIR$/vendor/paragonie/constant_time_encoding" />
+      <path value="$PROJECT_DIR$/vendor/league/flysystem" />
+      <path value="$PROJECT_DIR$/vendor/league/flysystem-cached-adapter" />
+      <path value="$PROJECT_DIR$/vendor/workerman/gateway-worker" />
+      <path value="$PROJECT_DIR$/vendor/workerman/mqtt" />
+      <path value="$PROJECT_DIR$/vendor/workerman/rabbitmq" />
+      <path value="$PROJECT_DIR$/vendor/workerman/workerman" />
+      <path value="$PROJECT_DIR$/vendor/dasprid/enum" />
+      <path value="$PROJECT_DIR$/vendor/composer" />
+      <path value="$PROJECT_DIR$/vendor/paragonie/random_compat" />
+      <path value="$PROJECT_DIR$/vendor/carbonphp/carbon-doctrine-types" />
+      <path value="$PROJECT_DIR$/vendor/php-amqplib/php-amqplib" />
+      <path value="$PROJECT_DIR$/vendor/psr/http-message" />
+      <path value="$PROJECT_DIR$/vendor/league/uri-interfaces" />
+      <path value="$PROJECT_DIR$/vendor/league/uri" />
+      <path value="$PROJECT_DIR$/vendor/league/oauth2-server" />
+      <path value="$PROJECT_DIR$/vendor/league/event" />
+      <path value="$PROJECT_DIR$/vendor/lcobucci/clock" />
+      <path value="$PROJECT_DIR$/vendor/defuse/php-encryption" />
+      <path value="$PROJECT_DIR$/vendor/lcobucci/jwt" />
+      <path value="$PROJECT_DIR$/vendor/symfony/deprecation-contracts" />
+      <path value="$PROJECT_DIR$/vendor/symfony/service-contracts" />
+      <path value="$PROJECT_DIR$/vendor/symfony/cache" />
+      <path value="$PROJECT_DIR$/vendor/symfony/event-dispatcher-contracts" />
+      <path value="$PROJECT_DIR$/vendor/symfony/psr-http-message-bridge" />
+      <path value="$PROJECT_DIR$/vendor/symfony/polyfill-php73" />
+      <path value="$PROJECT_DIR$/vendor/symfony/http-foundation" />
+      <path value="$PROJECT_DIR$/vendor/symfony/cache-contracts" />
+      <path value="$PROJECT_DIR$/vendor/psr/http-client" />
+      <path value="$PROJECT_DIR$/vendor/psr/event-dispatcher" />
+      <path value="$PROJECT_DIR$/vendor/symfony/var-exporter" />
+      <path value="$PROJECT_DIR$/vendor/symfony/event-dispatcher" />
+      <path value="$PROJECT_DIR$/vendor/psr/http-factory" />
+      <path value="$PROJECT_DIR$/vendor/pimple/pimple" />
+      <path value="$PROJECT_DIR$/vendor/monolog/monolog" />
+      <path value="$PROJECT_DIR$/vendor/overtrue/socialite" />
+      <path value="$PROJECT_DIR$/vendor/overtrue/wechat" />
+      <path value="$PROJECT_DIR$/vendor/easywechat-composer/easywechat-composer" />
+      <path value="$PROJECT_DIR$/vendor/ralouphie/getallheaders" />
+      <path value="$PROJECT_DIR$/vendor/guzzlehttp/guzzle" />
+      <path value="$PROJECT_DIR$/vendor/guzzlehttp/psr7" />
+      <path value="$PROJECT_DIR$/vendor/guzzlehttp/promises" />
+      <path value="$PROJECT_DIR$/vendor/phpmailer/phpmailer" />
+      <path value="$PROJECT_DIR$/vendor/tencentcloud/common" />
+      <path value="$PROJECT_DIR$/vendor/tencentcloud/sms" />
+      <path value="$PROJECT_DIR$/vendor/overtrue/pinyin" />
+    </include_path>
+  </component>
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="1912" />
+    <option name="y" value="-8" />
+    <option name="width" value="1936" />
+    <option name="height" value="1096" />
+  </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <autoscrollFromSource ProjectPane="false" />
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="api" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="api" type="462c0819:PsiDirectoryNode" />
+              <item name="controller" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Api" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Api" type="462c0819:PsiDirectoryNode" />
+              <item name="V2" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Machine" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="app" type="462c0819:PsiDirectoryNode" />
+              <item name="AppFactory" type="462c0819:PsiDirectoryNode" />
+              <item name="Machine" type="462c0819:PsiDirectoryNode" />
+              <item name="Receive" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="public" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="public" type="462c0819:PsiDirectoryNode" />
+              <item name="static" type="462c0819:PsiDirectoryNode" />
+            </path>
+            <path>
+              <item name="project-70-cf.com" type="b2602c69:ProjectViewProjectNode" />
+              <item name="project-70-cf.com" type="462c0819:PsiDirectoryNode" />
+              <item name="public" type="462c0819:PsiDirectoryNode" />
+              <item name="uploads" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+      <pane id="Scope" />
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="DefaultHtmlFileTemplate" value="HTML File" />
+    <property name="SearchEverywhereHistoryKey" value="&#9;FILE&#9;file://E:/project/project-70-cf.com/app/AppFactory/Management/Goods/GoodsClient.php" />
+    <property name="WebServerToolWindowFactoryState" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.highlight.mappings" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.highlight.symlinks" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.date" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.size" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../project-62-kykeji" />
+    <property name="node.js.detected.package.tslint" value="true" />
+    <property name="node.js.path.for.package.tslint" value="project" />
+    <property name="node.js.selected.package.tslint" value="" />
+    <property name="nodejs_interpreter_path.stuck_in_default_project" value="undefined stuck path" />
+    <property name="nodejs_npm_path_reset_for_default_project" value="true" />
+    <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
+    <property name="settings.editor.selected.configurable" value="reference.webide.settings.project.settings.php" />
+    <property name="two.files.diff.last.used.folder" value="$PROJECT_DIR$/app/AppFactory/Kernel/Support/Trip" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="E:\project\project-70-cf.com\app\machine\view\receipt" />
+      <recent name="E:\project\project-70-cf.com\app\AppFactory\Wx\Official" />
+      <recent name="E:\project\project-70-cf.com\app\AppFactory\Api\V2" />
+      <recent name="E:\project\project-70-cf.com\app\management\validate\Config" />
+      <recent name="E:\project\project-70-cf.com\app\AppFactory\Kernel\Model\Goods" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="E:\project\project-70-cf.com\app\AppFactory\Kernel\Support\ZdSimService" />
+      <recent name="E:\project\project-70-cf.com\app\machine\controller" />
+      <recent name="E:\project\project-70-cf.com\public\static" />
+      <recent name="E:\project\project-70-cf.com\public\uploads\ico\20240321" />
+      <recent name="E:\project\project-70-cf.com\app\machine\view\receipt" />
+    </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration>C:\Users\Administrator\AppData\Roaming\Subversion</configuration>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="0b425c8e-253d-4f3f-a4bc-dbf750314eff" name="Default" comment="" />
+      <created>1704424146251</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1704424146251</updated>
+      <workItem from="1704424147347" duration="3023000" />
+      <workItem from="1704442187396" duration="556000" />
+      <workItem from="1704442792387" duration="55255000" />
+      <workItem from="1704896986835" duration="85853000" />
+      <workItem from="1705989491907" duration="109000" />
+      <workItem from="1705989735294" duration="145498000" />
+      <workItem from="1706699856606" duration="912000" />
+      <workItem from="1706704065903" duration="106856000" />
+      <workItem from="1708562890229" duration="160050000" />
+      <workItem from="1709539541932" duration="147247000" />
+      <workItem from="1710310175924" duration="121249000" />
+      <workItem from="1710927030782" duration="232061000" />
+      <workItem from="1712059294548" duration="2040000" />
+      <workItem from="1712104731547" duration="11433000" />
+      <workItem from="1712137959904" duration="6092000" />
+      <workItem from="1712451447194" duration="2448000" />
+      <workItem from="1712462970279" duration="15595000" />
+      <workItem from="1712561405421" duration="20394000" />
+      <workItem from="1712660556050" duration="54873000" />
+      <workItem from="1714182145664" duration="20921000" />
+      <workItem from="1714611573063" duration="1278000" />
+      <workItem from="1714612964438" duration="27196000" />
+      <workItem from="1714783045558" duration="56538000" />
+      <workItem from="1715149802880" duration="57297000" />
+      <workItem from="1715646784377" duration="956000" />
+      <workItem from="1715647840869" duration="123416000" />
+      <workItem from="1716599820671" duration="1847000" />
+      <workItem from="1716615726467" duration="43853000" />
+      <workItem from="1717140083446" duration="24865000" />
+      <workItem from="1717374900700" duration="73543000" />
+      <workItem from="1718420923289" duration="2197000" />
+      <workItem from="1718611885150" duration="103415000" />
+      <workItem from="1719035279464" duration="595000" />
+      <workItem from="1719036103322" duration="672000" />
+      <workItem from="1719037768860" duration="97440000" />
+      <workItem from="1719811900884" duration="5676000" />
+      <workItem from="1719988985157" duration="157329000" />
+      <workItem from="1721962927714" duration="3034000" />
+      <workItem from="1722058578930" duration="130071000" />
+      <workItem from="1722670811857" duration="49316000" />
+      <workItem from="1723016679067" duration="14000" />
+      <workItem from="1723016701588" duration="74930000" />
+      <workItem from="1723599194359" duration="29631000" />
+      <workItem from="1723788188293" duration="144000" />
+      <workItem from="1723788368144" duration="68382000" />
+      <workItem from="1724234785195" duration="67231000" />
+      <workItem from="1724823255672" duration="134893000" />
+      <workItem from="1725687303837" duration="12540000" />
+      <workItem from="1725853220763" duration="51685000" />
+      <workItem from="1726112064228" duration="64872000" />
+      <workItem from="1726646275613" duration="1703000" />
+      <workItem from="1726735610721" duration="44440000" />
+      <workItem from="1727318391382" duration="15896000" />
+      <workItem from="1728014487237" duration="77733000" />
+      <workItem from="1728698089768" duration="551000" />
+      <workItem from="1728700008097" duration="12112000" />
+      <workItem from="1728891220552" duration="124287000" />
+      <workItem from="1730358256393" duration="15190000" />
+      <workItem from="1730855651911" duration="627000" />
+      <workItem from="1730856292412" duration="525000" />
+      <workItem from="1730856828680" duration="21786000" />
+      <workItem from="1731379246226" duration="1762000" />
+      <workItem from="1731384220540" duration="92621000" />
+      <workItem from="1732086477858" duration="164058000" />
+      <workItem from="1733366594700" duration="10961000" />
+      <workItem from="1733452671058" duration="48071000" />
+      <workItem from="1733981875647" duration="24219000" />
+      <workItem from="1734137052796" duration="52586000" />
+      <workItem from="1734490414748" duration="82688000" />
+      <workItem from="1734938051237" duration="4575000" />
+      <workItem from="1735008766801" duration="85910000" />
+      <workItem from="1736235121969" duration="51268000" />
+      <workItem from="1736913417636" duration="230000" />
+      <workItem from="1736913656474" duration="135894000" />
+      <workItem from="1739786553182" duration="595000" />
+      <workItem from="1739927802492" duration="2980000" />
+      <workItem from="1739943933577" duration="7822000" />
+      <workItem from="1740214525708" duration="20343000" />
+      <workItem from="1740560459697" duration="54967000" />
+      <workItem from="1741677279780" duration="75763000" />
+      <workItem from="1742960884597" duration="30297000" />
+      <workItem from="1743232538280" duration="14565000" />
+      <workItem from="1743468039310" duration="27265000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TimeTrackingManager">
+    <option name="totallyTimeSpent" value="3975011000" />
+  </component>
+  <component name="TodoView">
+    <todo-panel id="selected-file">
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+    <todo-panel id="all">
+      <are-packages-shown value="true" />
+      <is-autoscroll-to-source value="true" />
+    </todo-panel>
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="1912" y="-8" width="1936" height="1096" extended-state="6" />
+    <editor active="true" />
+    <layout>
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.3290461" />
+      <window_info anchor="bottom" id="Event Log" order="12" side_tool="true" />
+      <window_info anchor="bottom" id="Database Changes" order="9" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Version Control" order="8" weight="0.3290461" />
+      <window_info anchor="bottom" id="Terminal" order="10" weight="0.32583067" />
+      <window_info anchor="right" id="Remote Host" order="5" weight="0.23720682" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4994641" visible="true" weight="0.17430703" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="right" id="Database" order="3" weight="0.32995737" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info id="Favorites" order="2" sideWeight="0.5005359" side_tool="true" weight="0.23400854" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="right" id="Remote Host" order="5" visible="true" weight="0.23720682" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4994641" visible="true" weight="0.15245202" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.3290461" />
+      <window_info anchor="bottom" id="Version Control" order="8" weight="0.3290461" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Database Changes" order="9" show_stripe_button="false" />
+      <window_info anchor="right" x="0" y="0" width="434" height="896" id="Documentation" order="4" side_tool="true" visible="true" weight="0.32995737" />
+      <window_info anchor="right" id="Database" order="3" weight="0.32995737" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Event Log" order="12" side_tool="true" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="File Transfer" order="11" weight="0.3279743" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.3290461" />
+      <window_info anchor="bottom" id="Terminal" order="10" weight="0.32583067" />
+      <window_info id="Favorites" order="2" sideWeight="0.5005359" side_tool="true" weight="0.23400854" />
+    </layout>
+    <layout-to-restore>
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+      <window_info anchor="bottom" id="Docker" order="7" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="right" id="Remote Host" order="5" weight="0.3651386" />
+      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.4994641" visible="true" weight="0.16151386" />
+      <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="bottom" id="TODO" order="6" weight="0.3290461" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Find" order="1" weight="0.3290461" />
+      <window_info anchor="right" x="0" y="0" width="434" height="896" id="Documentation" order="4" side_tool="true" visible="true" weight="0.32995737" />
+      <window_info anchor="right" id="Database" order="3" weight="0.32995737" />
+      <window_info anchor="bottom" id="Terminal" order="10" weight="0.32583067" />
+      <window_info anchor="bottom" id="Event Log" order="12" side_tool="true" />
+      <window_info anchor="bottom" id="Database Changes" order="9" show_stripe_button="false" />
+      <window_info anchor="bottom" id="Version Control" order="8" weight="0.3290461" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="File Transfer" order="11" weight="0.3279743" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info id="Favorites" order="2" sideWeight="0.5005359" side_tool="true" weight="0.23400854" />
+    </layout-to-restore>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="Vcs.Log.History.Properties">
+    <option name="COLUMN_ORDER">
+      <list>
+        <option value="0" />
+        <option value="2" />
+        <option value="3" />
+        <option value="1" />
+      </list>
+    </option>
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <option name="time" value="18" />
+    </breakpoint-manager>
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineChannelStock.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineGroup.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="396">
+          <caret line="26" column="30" selection-start-line="26" selection-start-column="30" selection-end-line="26" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Send/MqClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="577">
+          <caret line="116" column="20" selection-start-line="116" selection-start-column="20" selection-end-line="116" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="4532">
+          <caret line="212" column="72" selection-start-line="212" selection-start-column="62" selection-end-line="212" selection-end-column="72" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/runtime/log/20250329/management/machine.MachineChannel_machine.MachineChannel_update_mcAfterUpdate.log" />
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Mq/OutGoodsTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="7810">
+          <caret line="360" column="86" selection-start-line="360" selection-start-column="86" selection-end-line="360" selection-end-column="86" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineChannel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1562">
+          <caret line="78" selection-start-line="78" selection-end-line="78" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineChannelTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="533">
+          <caret line="145" column="55" selection-start-line="145" selection-start-column="55" selection-end-line="145" selection-end-column="55" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Machine/MachineChannelModel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="1914">
+          <caret line="94" column="13" selection-start-line="94" selection-start-column="13" selection-end-line="94" selection-end-column="13" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityLotteryTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="30" column="20" selection-start-line="30" selection-start-column="20" selection-end-line="30" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityFdClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="220">
+          <caret line="21" column="14" lean-forward="true" selection-start-line="21" selection-start-column="14" selection-end-line="21" selection-end-column="14" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/activity/ActivityCoupon.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="484">
+          <caret line="30" column="49" lean-forward="true" selection-start-line="30" selection-start-column="49" selection-end-line="30" selection-end-column="49" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityCouponClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="294">
+          <caret line="25" column="20" selection-start-line="25" selection-start-column="20" selection-end-line="25" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/activity/ActivityLottery.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/activity/ActivityLotteryUsed.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/activity/ActivityPick.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="550">
+          <caret line="30" column="49" lean-forward="true" selection-start-line="30" selection-start-column="49" selection-end-line="30" selection-end-column="49" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Activity/Fd/ActivityFdModel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="707">
+          <caret line="46" column="38" lean-forward="true" selection-start-line="46" selection-start-column="38" selection-end-line="46" selection-end-column="38" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="264">
+          <caret line="17" column="26" selection-start-line="17" selection-start-column="26" selection-end-line="17" selection-end-column="26" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/activity/ActivityFd.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="24" column="35" lean-forward="true" selection-start-line="24" selection-start-column="35" selection-end-line="24" selection-end-column="35" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Activity/ActivityPickClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="26" column="20" selection-start-line="26" selection-start-column="20" selection-end-line="26" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ApiClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="641">
+          <caret line="281" column="34" selection-start-line="281" selection-start-column="34" selection-end-line="281" selection-end-column="34" />
+          <folding>
+            <element signature="e#4384#4510#0#PHP" />
+            <element signature="e#4517#4543#0#PHP" />
+            <element signature="e#4548#4818#0#PHP" />
+            <element signature="e#4848#4899#0#PHP" />
+            <element signature="e#4904#5885#0#PHP" />
+            <element signature="e#5135#5232#0#PHP" />
+            <element signature="e#5891#5961#0#PHP" />
+            <element signature="e#5966#6978#0#PHP" />
+            <element signature="e#6286#6591#0#PHP" />
+            <element signature="e#6984#7035#0#PHP" />
+            <element signature="e#7040#7144#0#PHP" />
+            <element signature="e#7150#7205#0#PHP" />
+            <element signature="e#7210#7704#0#PHP" />
+            <element signature="e#7710#7804#0#PHP" />
+            <element signature="e#7810#7863#0#PHP" />
+            <element signature="e#7868#8726#0#PHP" />
+            <element signature="e#8732#8785#0#PHP" />
+            <element signature="e#8790#9222#0#PHP" />
+            <element signature="e#9228#9285#0#PHP" />
+            <element signature="e#9290#9384#0#PHP" />
+            <element signature="e#9390#9443#0#PHP" />
+            <element signature="e#9448#11534#0#PHP" />
+            <element signature="e#10080#11440#0#PHP" />
+            <element signature="e#10149#11430#0#PHP" />
+            <element signature="e#10604#11238#0#PHP" />
+            <element signature="e#10743#10894#0#PHP" />
+            <element signature="e#10915#11092#0#PHP" />
+            <element signature="e#11113#11220#0#PHP" />
+            <element signature="e#11540#11601#0#PHP" />
+            <element signature="e#11696#11740#0#PHP" />
+            <element signature="e#11745#11842#0#PHP" />
+            <element signature="e#11848#11901#0#PHP" />
+            <element signature="e#11906#19662#0#PHP" />
+            <element signature="e#12031#19656#0#PHP" />
+            <element signature="e#12198#12971#0#PHP" />
+            <element signature="e#12997#13944#0#PHP" />
+            <element signature="e#13322#13743#0#PHP" />
+            <element signature="e#13974#14111#0#PHP" />
+            <element signature="e#14275#14460#0#PHP" />
+            <element signature="e#14510#15020#0#PHP" />
+            <element signature="e#15034#16005#0#PHP" />
+            <element signature="e#15107#15313#0#PHP" />
+            <element signature="e#15331#15494#0#PHP" />
+            <element signature="e#15772#15991#0#PHP" />
+            <element signature="e#16123#18164#0#PHP" />
+            <element signature="e#16225#16418#0#PHP" />
+            <element signature="e#16436#16597#0#PHP" />
+            <element signature="e#16684#18061#0#PHP" />
+            <element signature="e#18177#18430#0#PHP" />
+            <element signature="e#18528#19215#0#PHP" />
+            <element signature="e#19496#19656#0#PHP" />
+            <element signature="e#19668#19721#0#PHP" />
+            <element signature="e#19726#21245#0#PHP" />
+            <element signature="e#19813#19937#0#PHP" />
+            <element signature="e#20687#21206#0#PHP" />
+            <element signature="e#20808#21196#0#PHP" />
+            <element signature="e#20955#21182#0#PHP" />
+            <element signature="e#21251#21318#0#PHP" />
+            <element signature="e#21323#21590#0#PHP" />
+            <element signature="e#21596#21649#0#PHP" />
+            <element signature="e#21654#22020#0#PHP" />
+            <element signature="e#22026#22079#0#PHP" />
+            <element signature="e#22084#22374#0#PHP" />
+            <element signature="e#22380#22435#0#PHP" />
+            <element signature="e#22440#22989#0#PHP" />
+            <element signature="e#22704#22920#0#PHP" />
+            <element signature="e#22744#22859#0#PHP" />
+            <element signature="e#22995#23050#0#PHP" />
+            <element signature="e#23055#23863#0#PHP" />
+            <element signature="e#23193#23306#1#PHP" />
+            <element signature="e#23477#23794#0#PHP" />
+            <element signature="e#23546#23730#0#PHP" />
+            <element signature="e#24379#24440#0#PHP" />
+            <element signature="e#24445#24959#0#PHP" />
+            <element signature="e#24572#24915#0#PHP" />
+            <element signature="e#24611#24832#0#PHP" />
+            <element signature="e#24965#25020#0#PHP" />
+            <element signature="e#25025#26079#0#PHP" />
+            <element signature="e#25076#25459#0#PHP" />
+            <element signature="e#25529#26039#0#PHP" />
+            <element signature="e#25744#25962#0#PHP" />
+            <element signature="e#26085#26302#0#PHP" />
+            <element signature="e#26307#26814#0#PHP" />
+            <element signature="e#26820#26891#0#PHP" />
+            <element signature="e#26896#28422#0#PHP" />
+            <element signature="e#27301#28342#0#PHP" />
+            <element signature="e#27503#27585#0#PHP" />
+            <element signature="e#27631#28332#0#PHP" />
+            <element signature="e#27955#28076#0#PHP" />
+            <element signature="e#28156#28332#0#PHP" />
+            <element signature="e#28428#28503#0#PHP" />
+            <element signature="e#28508#28773#0#PHP" />
+            <element signature="e#28779#28851#0#PHP" />
+            <element signature="e#28856#35908#0#PHP" />
+            <element signature="e#29372#29908#0#PHP" />
+            <element signature="e#29974#34394#0#PHP" />
+            <element signature="e#30046#34223#0#PHP" />
+            <element signature="e#30428#30606#0#PHP" />
+            <element signature="e#30698#34032#0#PHP" />
+            <element signature="e#30771#34014#0#PHP" />
+            <element signature="e#31028#31207#0#PHP" />
+            <element signature="e#31232#31418#0#PHP" />
+            <element signature="e#31443#31639#0#PHP" />
+            <element signature="e#31664#31778#0#PHP" />
+            <element signature="e#31814#32917#0#PHP" />
+            <element signature="e#33016#33992#0#PHP" />
+            <element signature="e#33810#33992#0#PHP" />
+            <element signature="e#34085#34223#0#PHP" />
+            <element signature="e#34234#34394#0#PHP" />
+            <element signature="e#34432#35902#0#PHP" />
+            <element signature="e#34450#35621#0#PHP" />
+            <element signature="e#34965#35607#0#PHP" />
+            <element signature="e#35031#35589#0#PHP" />
+            <element signature="e#35399#35589#0#PHP" />
+            <element signature="e#35742#35902#0#PHP" />
+            <element signature="e#35914#35975#0#PHP" />
+            <element signature="e#35980#36524#0#PHP" />
+            <element signature="e#36362#36424#0#PHP" />
+            <element signature="e#36530#36603#0#PHP" />
+            <element signature="e#36608#36879#0#PHP" />
+            <element signature="e#36885#36941#0#PHP" />
+            <element signature="e#36946#37411#0#PHP" />
+            <element signature="e#37005#37164#0#PHP" />
+            <element signature="e#37417#37501#0#PHP" />
+            <element signature="e#37506#37817#0#PHP" />
+            <element signature="e#37823#37932#0#PHP" />
+            <element signature="e#37937#39567#0#PHP" />
+            <element signature="e#37978#37993#0#PHP" />
+            <element signature="e#38767#39561#0#PHP" />
+            <element signature="e#38795#38924#0#PHP" />
+            <element signature="e#39248#39350#0#PHP" />
+            <element signature="e#39438#39561#0#PHP" />
+            <element signature="e#39573#39665#0#PHP" />
+            <element signature="e#39670#54659#0#PHP" />
+            <element signature="e#40435#41047#0#PHP" />
+            <element signature="e#41113#51653#0#PHP" />
+            <element signature="e#41185#51482#0#PHP" />
+            <element signature="e#41651#41865#0#PHP" />
+            <element signature="e#41958#47599#0#PHP" />
+            <element signature="e#42031#42299#0#PHP" />
+            <element signature="e#42143#42299#0#PHP" />
+            <element signature="e#42320#42541#0#PHP" />
+            <element signature="e#42690#42870#0#PHP" />
+            <element signature="e#43221#43420#0#PHP" />
+            <element signature="e#43652#44759#0#PHP" />
+            <element signature="e#43795#43974#0#PHP" />
+            <element signature="e#43999#44191#0#PHP" />
+            <element signature="e#44216#44419#0#PHP" />
+            <element signature="e#44444#44558#0#PHP" />
+            <element signature="e#44816#47349#0#PHP" />
+            <element signature="e#44936#46180#0#PHP" />
+            <element signature="e#46279#47327#0#PHP" />
+            <element signature="e#47145#47327#0#PHP" />
+            <element signature="e#47370#47581#0#PHP" />
+            <element signature="e#47689#51291#0#PHP" />
+            <element signature="e#47737#48017#0#PHP" />
+            <element signature="e#47861#48017#0#PHP" />
+            <element signature="e#48360#49587#0#PHP" />
+            <element signature="e#49673#49847#0#PHP" />
+            <element signature="e#49868#50175#0#PHP" />
+            <element signature="e#50196#51273#0#PHP" />
+            <element signature="e#50284#50569#0#PHP" />
+            <element signature="e#50401#50569#0#PHP" />
+            <element signature="e#50605#50965#0#PHP" />
+            <element signature="e#51062#51251#0#PHP" />
+            <element signature="e#51344#51482#0#PHP" />
+            <element signature="e#51493#51653#0#PHP" />
+            <element signature="e#51691#54653#0#PHP" />
+            <element signature="e#51709#54372#0#PHP" />
+            <element signature="e#51745#52065#0#PHP" />
+            <element signature="e#52372#54358#0#PHP" />
+            <element signature="e#53155#53900#0#PHP" />
+            <element signature="e#53584#53878#0#PHP" />
+            <element signature="e#53686#53851#0#PHP" />
+            <element signature="e#53921#53931#0#PHP" />
+            <element signature="e#54493#54653#0#PHP" />
+            <element signature="e#54665#54725#0#PHP" />
+            <element signature="e#54730#54832#0#PHP" />
+            <element signature="e#54838#54931#0#PHP" />
+            <element signature="e#54936#57628#0#PHP" />
+            <element signature="e#55736#55890#0#PHP" />
+            <element signature="e#55899#56091#0#PHP" />
+            <element signature="e#56100#56292#0#PHP" />
+            <element signature="e#56301#56493#0#PHP" />
+            <element signature="e#56510#57318#0#PHP" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/api/controller/V2.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/AfterOrderPaymentTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="374">
+          <caret line="127" column="16" lean-forward="true" selection-start-line="127" selection-start-column="16" selection-end-line="127" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/ActivityClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="357">
+          <caret line="155" column="36" lean-forward="true" selection-start-line="155" selection-start-column="36" selection-end-line="155" selection-end-column="36" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.env">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="493">
+          <caret line="61" selection-start-line="61" selection-end-line="61" selection-end-column="10" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Activity/ActivityPickTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="38">
+          <caret line="88" column="20" selection-start-line="88" selection-start-column="20" selection-end-line="88" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Validate/SupportValidate.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="66">
+          <caret line="8" selection-start-line="8" selection-end-line="8" selection-end-column="49" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/AuthCode.php">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/CommonTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="55" column="20" selection-start-line="55" selection-start-column="20" selection-end-line="55" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineErrorCodeTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="176">
+          <caret line="13" column="6" selection-start-line="13" selection-start-column="6" selection-end-line="13" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Model/Machine/MachineInfoModel.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="176">
+          <caret line="13" column="6" selection-start-line="13" selection-start-column="6" selection-end-line="13" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/DbTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="597">
+          <caret line="88" column="50" lean-forward="true" selection-start-line="88" selection-start-column="50" selection-end-line="88" selection-end-column="50" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Receive/MqClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="580">
+          <caret line="93" column="35" selection-start-line="93" selection-start-column="35" selection-end-line="93" selection-end-column="35" />
+          <folding>
+            <element signature="e#139#182#0#PHP" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/Validate/Machine/VReport.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="24" column="30" lean-forward="true" selection-start-line="24" selection-start-column="30" selection-end-line="24" selection-end-column="30" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Machine/MachineInfoTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-36">
+          <caret line="73" column="20" selection-start-line="73" selection-start-column="20" selection-end-line="73" selection-end-column="20" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Application.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="302">
+          <caret line="108" column="26" selection-start-line="108" selection-start-column="26" selection-end-line="108" selection-end-column="26" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Machine/Application.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="440">
+          <caret line="27" column="6" selection-start-line="27" selection-start-column="6" selection-end-line="27" selection-end-column="6" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/AppFactory.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="726">
+          <caret line="39" column="19" lean-forward="true" selection-start-line="39" selection-start-column="19" selection-end-line="39" selection-end-column="19" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Support/ZdSimService/ZdSim.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="316">
+          <caret line="23" column="1" selection-start-line="23" selection-start-column="1" selection-end-line="23" selection-end-column="1" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/lang/zh-cn.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="193">
+          <caret line="284" selection-start-line="284" selection-end-line="284" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/lang/zh-cn/app.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="154">
+          <caret line="10" column="18" selection-start-line="10" selection-start-column="5" selection-end-line="10" selection-end-column="18" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/validate/Machine/VMachineInfo.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="616">
+          <caret line="33" column="27" selection-start-line="33" selection-start-column="27" selection-end-line="33" selection-end-column="27" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/machine/MachineInfo.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="685">
+          <caret line="118" column="46" selection-start-line="118" selection-start-column="46" selection-end-line="118" selection-end-column="46" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Machine/MachineInfoClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="157">
+          <caret line="40" column="5" selection-start-line="40" selection-start-column="5" selection-end-line="40" selection-end-column="5" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/management/controller/sale/SaleOrders.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="440">
+          <caret line="94" column="46" selection-start-line="94" selection-start-column="46" selection-end-line="94" selection-end-column="46" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/BeforeOrderRefundTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="462">
+          <caret line="26" column="31" selection-start-line="26" selection-start-column="15" selection-end-line="26" selection-end-column="31" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Management/Sale/SaleOrdersClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="43" column="12" selection-start-line="43" selection-start-column="12" selection-end-line="43" selection-end-column="12" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Kernel/Traits/Payment/WxPayTrait.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="457">
+          <caret line="156" column="4" selection-start-line="156" selection-start-column="4" selection-end-line="156" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/machine/controller/Test.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="293">
+          <caret line="230" column="24" selection-start-line="230" selection-start-column="24" selection-end-line="230" selection-end-column="24" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Api/V2/V2BaseClient.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-3755" />
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/app/AppFactory/Api/V2/V2Client.php">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="311">
+          <caret line="426" column="16" selection-start-line="426" selection-start-column="16" selection-end-line="426" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+  </component>
+  <component name="masterDetails">
+    <states>
+      <state key="Copyright.UI">
+        <settings>
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.2" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+      <state key="ScopeChooserConfigurable.UI">
+        <settings>
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.20316623" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+    </states>
+  </component>
+</project>

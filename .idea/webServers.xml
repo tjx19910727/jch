@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="44c2b501-5e13-4cad-b0eb-9184c79ffcc1" name="翠峰测试服" url="http://kiosk-uat.kalos-blocks.com">
+        <fileTransfer host="kiosk-uat.kalos-blocks.com" port="7022" rootFolder="/home/wwwroot/kiosk" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="7022" />
+        </fileTransfer>
+      </webServer>
+      <webServer id="8644bd57-a96c-4039-ba43-8f4eedc1b48c" name="翠峰正式服" url="http://39.108.238.161">
+        <fileTransfer host="39.108.238.161" port="22" rootFolder="/app/kiosk/backend" accessType="SFTP">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" />
+          </advancedOptions>
+          <option name="port" value="22" />
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
