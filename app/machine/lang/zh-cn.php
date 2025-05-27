@@ -18,6 +18,8 @@ return [
         "account_disabled" => "该账号已被禁用",
         "login_success" => "登录成功",
         "logout_success" => "退出登录成功",
+        "permission_denied" => "您无权限登录终端",
+
     ],
 
     "VWxLogin" => [
@@ -129,6 +131,7 @@ return [
         "mg_id_require" => "货道未绑定设备商品信息",
         "under_stock" => "货道库存不足",
         "mc_status_error" => "货道状态异常",
+        "channel_status_no_3" => "货道状态为Bad，不允许购买",
     ],
 
     "VOutGoods" => [

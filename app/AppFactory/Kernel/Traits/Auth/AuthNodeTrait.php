@@ -14,17 +14,45 @@ use app\AppFactory\Kernel\Model\Auth\AuthNodeModel;
 trait AuthNodeTrait
 {
 
+    public function getAuthNodeValue($where,$value)
+    {
+        return AuthNodeModel::getFieldValue($where,$value);
+    }
+
+    public function getAuthNodeColumn($where,$column)
+    {
+        return AuthNodeModel::getColumn($where,$column);
+    }
+
 
     public function getAuthNodeFind($where, $field = "*", $order = "")
     {
         return AuthNodeModel::getFind($where, $field, $order);
     }
 
-    public function getAuthNodeList($where, $pageNum = 0, $field = "*", $order = "")
+    public function getAuthNodeList($where, $pageNum = 0, $field = "*", $order = "",$group = "")
     {
-        return AuthNodeModel::getList($where, $pageNum, $field, $order);
+        return AuthNodeModel::getList($where, $pageNum, $field, $order,'',$group);
     }
 
+    /**
+     * 递归获取所有子节点列表
+     * @param int $pid
+     * @return array
+     */
+    public function getAuthNodeChildIdList($pid)
+    {
+        $id = $this->getAuthNodeColumn(['pid' => $pid],'node_id');
+        if ($id) {
+            foreach ($id as $i) {
+                $child = $this->getAuthNodeChildIdList($i);
+                if ($child) {
+                    $id = array_merge($id,$child);
+                }
+            }
+        }
+        return $id ? $id : [];
+    }
     public function addAuthNode($insert)
     {
         $data = AuthNodeModel::create($insert);

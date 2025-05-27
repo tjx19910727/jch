@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Machine\MachineLangModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 
 trait MachineTrait
@@ -93,7 +94,22 @@ trait MachineTrait
      */
     public function getMachineList($where,$pageNum = null,$field = "*", $order = "",$eachFun = "",$group = '', $limit = '')
     {
-        return MachineModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
+        $result = MachineModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
+
+        if ($result) {
+            if ($pageNum) {
+                $result = $result->each(function ($item) {
+                    $item['lang'] = MachineLangModel::getList(['m_id' => $item['m_id']]);
+                    return $item;
+                });
+            } else {
+                $result = $result->toArray();
+                foreach ($result as $key => $value) {
+                    $result[$key]['lang'] = MachineLangModel::getList(['m_id' => $value['m_id']]);
+                }
+            }
+        }
+        return $result;
     }
 
     /**
@@ -216,6 +232,26 @@ trait MachineTrait
     }
 
     /**
+     * @var array
+     * 休眠：sleep, 唤醒：wakeUp, 重启：reboot, 关机：shutdown, 软件升级：update，取货头回初始位：pickUpHeadInit，取货箱传送带开：conveyorBeltOpen，取货箱传送带关：conveyorBeltClose，取货箱开门：boxDoorOpen，取货箱关门：boxDoorClose，回收箱伸出：recycleOut，回收箱缩进：recycleIntro
+     * 当前命令下发前需要检查一下current_status
+     */
+    protected $checkCurrentStatus = [
+        "sleep",
+        "wakeUp",
+        "reboot",
+        "shutdown",
+        "update",
+        "pickUpHeadInit",
+        "conveyorBeltOpen",
+        "conveyorBeltClose",
+        "boxDoorOpen",
+        "boxDoorClose",
+        "recycleOut",
+        "recycleIntro",
+    ];
+
+    /**
      * 发送触发数据
      * @param $machine
      * @param $msgType
@@ -224,9 +260,11 @@ trait MachineTrait
      */
     public function sendToMachine($machine,$msgType,$otherData = [])
     {
-        $m = $this->getMachineFind(['machine_id' => $machine['machine_id']],"mac_address,signKey,online");
+        $m = $this->getMachineFind(['machine_id' => $machine['machine_id']],"mac_address,signKey,online,current_status");
         if ($m) {
             $m = $m->toArray();
+            if (in_array($msgType,$this->checkCurrentStatus) && $m['current_status'] != "normal")
+                return $this->lang("current_status_not_normal");
             if ($m['online'] == 1) {
                 $key = $m['signKey'] ?? "";
                 if (!$key) $key = env("api.md5Key");

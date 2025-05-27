@@ -30,12 +30,14 @@ class VGoodsLang extends VCommon
 
     protected $scene = [
         "add" => ["g_id","g_name","manufacturer"],
+        "update" => ["gl_id"],
+        "getList" => ["g_id"],
         "del" => ['gl_id'],
     ];
 
-    public function sceneUpdate()
-    {
-        return self::only(["gl_id","g_id","g_name","manufacturer"])
-            ->remove("g_name","require");
-    }
+//    public function sceneUpdate()
+//    {
+//        return self::only(["gl_id","g_id","g_name","manufacturer"])
+//            ->remove("g_name","require");
+//    }
 }

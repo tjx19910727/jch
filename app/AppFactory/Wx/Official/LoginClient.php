@@ -10,7 +10,10 @@ namespace app\AppFactory\Wx\Official;
 
 
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthNodeTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
@@ -23,7 +26,8 @@ use think\facade\Session;
 class LoginClient extends WxBaseClient
 {
     use WxOfficialTrait, WxOfficialLoginTrait;
-    use AuthManagerTrait, AuthManagerMachineTrait;
+    use AuthManagerTrait,AuthManagerRoleTrait,AuthManagerMachineTrait;
+    use AuthNodeTrait,AuthRoleNodeTrait;
     use MachineTrait;
 
     /**
@@ -146,57 +150,70 @@ class LoginClient extends WxBaseClient
      */
     public function managerLogin($postData)
     {
-        if (!isset($postData['login_id']) || !$postData['login_id']) return $this->r(100,$this->lang("Login.login_id_can_not_empty"));
-        if (!isset($postData['manager_id']) || !$postData['manager_id']) return $this->r(100,$this->lang("Login.manager_id_can_not_empty"));
 
-        $login = $this->getWxOfficialLoginFind(['id' => $postData['login_id']]);
-        if (!$login) {
-            return $this->r(300, $this->lang("Login.wxLogin_no_data"));
-        }
-        $login = $login->toArray();
-        if ($login['status'] == 3) {
-            return $this->r(300, $this->lang("Login.status3"));
-        }
-        if ($login['m_id'] > 0) {
-            $authManager = $this->getAuthManagerMachineFind(['manager_id' => $postData['manager_id'], 'm_id' => $login['m_id']], 'id');
-            if (!$authManager) {
-                actionLog($this->getLS(), '【SQL】账号未绑定设备');
-                return $this->r(300, $this->lang("Login.auth_not_match"));
+        try {
+            if (!isset($postData['login_id']) || !$postData['login_id']) return $this->r(100, $this->lang("Login.login_id_can_not_empty"));
+            if (!isset($postData['manager_id']) || !$postData['manager_id']) return $this->r(100, $this->lang("Login.manager_id_can_not_empty"));
+            $login = $this->getWxOfficialLoginFind(['id' => $postData['login_id']]);
+            if (!$login) {
+                return $this->r(300, $this->lang("Login.wxLogin_no_data"));
             }
-        }
+            $login = $login->toArray();
+            if ($login['status'] == 3) {
+                return $this->r(300, $this->lang("Login.status3"));
+            }
+            if ($login['m_id'] > 0) {
+                $authManager = $this->getAuthManagerMachineFind(['manager_id' => $postData['manager_id'], 'm_id' => $login['m_id']], 'id');
+                if (!$authManager) {
+                    actionLog($this->getLS(), '【SQL】账号未绑定设备');
+                    return $this->r(300, $this->lang("Login.auth_not_match"));
+                }
+            }
+            $manager = $this->getAuthManagerFind(['manager_id' => $postData['manager_id'], 'status' => 1]);
+            unset($manager['password']);
+            $update['id'] = $postData['login_id'];
+            $update['manager_id'] = $manager['manager_id'];
+            $update['account'] = $manager['account'];// 总后台登录，生成Token
+            if ($login['login_type'] == 1) {
+                $salt = Config::get('app.salt');
+                Session::set("manager", $manager);
+                $token_arr = [
+                    "session_id" => Session::getId(),
+                    "manager_id" => $manager['manager_id'],
+                    "timeout" => time(),
+                ];
+                $token = TDESUtil::encrypt(json_encode($token_arr), $salt);
+                $update['status'] = 3;
+                $update['login_token'] = $token;
+            }// 终端登录，下发登录账号信息
+            if ($login['login_type'] == 2) {
+                $update['status'] = 3;
 
-        $manager = $this->getAuthManagerFind(['manager_id' => $postData['manager_id'], 'status' => 1]);
-        unset($manager['password']);
-        $update['id'] = $postData['login_id'];
-        $update['manager_id'] = $manager['manager_id'];
-        $update['account'] = $manager['account'];
-        // 总后台登录，生成Token
-        if ($login['login_type'] == 1) {
-            $salt = Config::get('app.salt');
-            Session::set("manager", $manager);
-            $token_arr = [
-                "session_id" => Session::getId(),
-                "manager_id" => $manager['manager_id'],
-                "timeout" => time(),
-            ];
-            $token = TDESUtil::encrypt(json_encode($token_arr), $salt);
-            $update['status'] = 3;
-            $update['login_token'] = $token;
+                $nodeList = $this->getManagerNodeList($manager);
+                if (!$nodeList)
+                    return $this->rFail($this->lang("VLogin.permission_denied"));
+                $nodeList = $nodeList->toArray();
+                $loginNode = array_column($nodeList, 'url');
+                if (!in_array("/machine/receive/login", $loginNode)) {
+                    return $this->rFail($this->lang("VLogin.permission_denied"));
+                }
+                $sendData = [
+                    "status" => 3,
+                    "manager_id" => $manager['manager_id'],
+                    "nickname" => $manager['nickname'],
+                    "account" => $manager['account'],
+                    "pic" => $manager['pic'],
+                    "ao_id" => $manager['ao_id'],
+                    "nodeList" => $nodeList,
+                ];
+                $this->sendToMachine(['machine_id' => $login['machine_id']], 'wxScanLogin', $sendData);
+            }
+            $this->updateWxOfficialLogin($update);
+            cache("wxLogin" . $login['login_type'] . $login['id'], null);
+            return $this->r(200, $this->lang("Login.login_success"));
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
         }
-        // 终端登录，下发登录账号信息
-        if ($login['login_type'] == 2) {
-            $update['status'] = 3;
-            $sendData = [
-                "status" => 3,
-                "manager_id" => $manager['manager_id'],
-                "nickname" => $manager['nickname'],
-                "account" => $manager['account'],
-                "pic" => $manager['pic']
-            ];
-            $this->sendToMachine(['machine_id' => $login['machine_id']],'wxScanLogin',$sendData);
-        }
-        $this->updateWxOfficialLogin($update);
-        cache("wxLogin" . $login['login_type'] . $login['id'], null);
-        return $this->r(200,$this->lang("Login.login_success"));
     }
 }

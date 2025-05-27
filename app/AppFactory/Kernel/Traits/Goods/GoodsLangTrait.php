@@ -32,6 +32,7 @@ trait GoodsLangTrait
 
     public function updateGoodsLang($update,$where = [],$field = [])
     {
+        if (isset($update['lang'],$update['g_id'],$update['g_name'])) unset($update['lang'],$update['g_id'],$update['g_name']);
         if (isset($this->manager['manager_id'])) $update['update_id'] = $this->manager['manager_id'] ?? 0;
         return GoodsLangModel::update($update,$where,$field);
     }

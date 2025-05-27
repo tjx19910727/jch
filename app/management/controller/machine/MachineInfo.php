@@ -119,4 +119,40 @@ class MachineInfo extends Common
         return $this->app->machineInfo->refreshSim($postData);
     }
 
+    /**
+     * 下发获取中控电脑数据
+     * @return array|string
+     */
+    public function refreshComputer()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.refreshComputer');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        $n = 0;
+        $send = 0;
+        $machine_id = $postData['machine_id'];
+        $now = time();
+        $overtime = 50;
+        while(1){
+            // 终端在50秒内没有上报
+            if (!$this->app->machine->getMachineMqRecordFind(['machine_id' => $machine_id,'path' => "uploadInfo","type" => 1, "from" => 2,["create_time","between",[$now,$now + $overtime]]],'mr_id')) {
+                if (!$send) {
+                    $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], 'getComputerInfo');
+                    actionLog($result, '下发获取中控电脑数据命令结果');
+                    $send = 1;
+                }
+                sleep(1);
+                $n++;
+                if ($n >= $overtime) {
+                    return returnState(100, lang("VMachineInfo.get_computer_overtime"));
+                }
+            } else {
+                return $this->app->machineInfo->getFind(['mi_id' => $postData['mi_id']], 'mi_id,cpu_utility,cpu_temperature,memory_usage,disk_occupancy');
+            }
+        }
+        return returnState(100,lang("query_fail"));
+    }
 }

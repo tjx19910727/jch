@@ -150,6 +150,20 @@ class Receive extends Common
     }
 
     /**
+     * 获取设备主体信息多语言数据
+     * @return array|\think\response\Json
+     */
+    public function getMachineLangList()
+    {
+        try {
+            return $this->app->api->machineLang();
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 获取设备货道信息
      * @return array|string
      */
@@ -213,6 +227,20 @@ class Receive extends Common
     {
         try {
             return $this->app->api->machineConfig();
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取设备配置多语言数据
+     * @return array|\think\response\Json
+     */
+    public function getMachineConfigLangList()
+    {
+        try {
+            return $this->app->api->machineConfigLang();
         } catch (\Exception $e) {
             actionException($e,1);
             return returnTryCatch($e->getMessage());

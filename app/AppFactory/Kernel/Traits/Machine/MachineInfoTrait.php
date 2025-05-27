@@ -104,18 +104,30 @@ trait MachineInfoTrait
      */
     public function uploadInfo()
     {
-        $fieldList = $this->getFieldComment("machine_info");
-        $fields = array_column($fieldList,'Field');
-        $update = [];
-        $messageKey = array_keys($this->message);
-        foreach ($messageKey as $value) {
-            if (in_array($value,$fields)) {
-                $update[$value] = $this->message[$value];
+        try {
+            $fieldList = $this->getFieldComment("machine_info");
+            $fields = array_column($fieldList, 'Field');
+            actionLog($fieldList, '字段及备注', "uploadInfo");
+            actionLog($fields, '字段名', "uploadInfo");
+            $update = [];
+            $messageKey = array_keys($this->message);
+            actionLog($messageKey, '接收数据参数名', "uploadInfo");
+            foreach ($messageKey as $value) {
+                if (in_array($value, $fields)) {
+                    $update[$value] = $this->message[$value];
+                }
             }
+            actionLog($update, '修改数据', "uploadInfo");
+            if ($update) {
+                $result = $this->updateMachineInfo($update, ['m_id' => $this->machine['m_id']]);
+                actionLog($this->getLS(), '【SQL】修改设备信息', "uploadInfo");
+                actionLog($result, '修改设备信息结果', "uploadInfo");
+                return $result;
+            }
+            return false;
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return false;
         }
-        if ($update) {
-            return $this->updateMachineInfo($update,['machine_id' => $this->machine['machine_id']]);
-        }
-        return false;
     }
 }

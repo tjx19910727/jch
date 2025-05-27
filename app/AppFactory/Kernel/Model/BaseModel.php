@@ -174,7 +174,7 @@ class BaseModel extends Model
             if (in_array('ao_id', $fields) && ($field == "*" || strpos($field, "ao_id") !== false)) {
                 $field .= ", (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name";
             }
-            if (!is_numeric($pageNum) && !is_array($pageNum)) throw new \Exception("页面数据条数必须为数字或数组");
+            if (isset($pageNum) && $pageNum && !is_numeric($pageNum) && !is_array($pageNum)) throw new \Exception("页面数据条数必须为数字或数组");
             $model = self::alias("a")->where($where)->field($field)->order($order);
             if ($group) $model = $model->group($group);
             if ($limit) $model = $model->limit($limit);

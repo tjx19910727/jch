@@ -48,11 +48,13 @@ class MachineModel extends BaseModel
         MachineChannelStockModel::whereDel($where);
         MachineCheckStockModel::whereDel($where);
         MachineConfigModel::whereDel($where);
+        MachineConfigLangModel::whereDel($where);
         MachineErrorCodeModel::whereDel($where);
         MachineGoodsModel::whereDel($where);
         MachineGroupMgModel::whereDel($where);
         MachineHelpModel::whereDel($where);
         MachineInfoModel::whereDel($where);
+        MachineLangModel::whereDel($where);
         MachineMqRecordModel::whereDel($where);
         MachineOnOffModel::whereDel($where);
         MachineOnlineModel::whereDel($where);

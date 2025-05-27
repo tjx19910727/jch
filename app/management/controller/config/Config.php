@@ -18,14 +18,14 @@ class Config extends Common
     public function getFind()
     {
         $postData = input();
-        $where = $this->getWhere($postData);
+        $where = $this->getWhere($postData,false,['config_name' => 'like']);
         return $this->app->config->getParentConfigFind($where,"*",'config_id desc');
     }
 
     public function getList()
     {
         $postData = input();
-        $where = $this->getWhere($postData,false,['config_name' => 'like']);
+        $where = $this->getWhere($postData,false,['config_name' => 'like','creator' => "in"]);
         return $this->app->config->getList($where,$postData['pageNum'] ?? 0);
     }
 

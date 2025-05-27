@@ -1,0 +1,2330 @@
+<html xmlns:v="urn:schemas-microsoft-com:vml"
+    xmlns:o="urn:schemas-microsoft-com:office:office"
+    xmlns:w="urn:schemas-microsoft-com:office:word"
+    xmlns="http://www.w3.org/TR/REC-html40">
+    <head><meta http-equiv=Content-Type content="text/html; charset=utf-8">
+    <style type="text/css">
+        table  
+        {  
+            border-collapse: collapse;
+            border: none;  
+            width: 100%;  
+        }  
+        td,tr  
+        {  
+            border: solid #CCC 1px;
+            padding:3px;
+            font-size:9pt;
+        } 
+        .codestyle{
+            word-break: break-all;
+            mso-highlight:rgb(252, 252, 252);
+            padding-left: 5px; background-color: rgb(252, 252, 252); border: 1px solid rgb(225, 225, 232);
+        }
+        img {
+            width:100;
+        }
+    </style>
+    <meta name=ProgId content=Word.Document>
+    <meta name=Generator content="Microsoft Word 11">
+    <meta name=Originator content="Microsoft Word 11">
+    <xml><w:WordDocument><w:View>Print</w:View></xml></head>
+    <body><h1>1、1. 说明</h1><div style="margin-left:20px;"><h2>1. 文档说明</h2>
+<p>本文档主要阅读对象为API开发者，描述用于平台预订、预售商品，自定义活动、远程出货等功能。
+该服务采用HTTPS协议实现,服务端将结果以json格式返回。</p>
+<h3>1.1 接口地址</h3>
+<ul>
+<li>正式地址：<a href="https://kiosk.jchtechnologies.com/api/api/v2">https://kiosk.jchtechnologies.com/api/api/v2</a></li>
+<li>测试服地址：<a href="https://api.kiosk-uat.kalos-blocks.com/api/v2">https://api.kiosk-uat.kalos-blocks.com/api/v2</a></li>
+<li>注：不同环境的host可能不同，但是API接口路径是一致的。</li>
+</ul>
+<h2>2. 数据接口说明</h2>
+<h3>2.1 公共约定</h3>
+<ul>
+<li>返回JSON格式;</li>
+<li>请求数据项如设置为必填项，则请求串中必须包含该项；请求数据项如设置为非必填项，则请求串中可以不包含该项；另外空字符串、空对象和空数组还可以分别用空串（双引号””）、大括号（{}）和中括号（[]）表示;</li>
+<li>请求数据项和返回数据项编码格式均为UTF-8;</li>
+<li>每个接口每天有调用次数限制，默认为1000次(按utc时间更新)，如果发现不够用可向业务部门申请;</li>
+<li>每个接口都有调用频率限制，默认每个接口（相同参数）调用间隔不低于10s，10s内不能调用同一接口同一参数多次，如有这样需求，建议使用缓存，如果实在难以满足可向业务部门申请;</li>
+</ul>
+<h3>2.2 接口请求和响应通用格式</h3>
+<h5>请求参数描述：form-data格式，所有参数放body里面传参</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">auth_name</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">用户名</td>
+</tr>
+<tr>
+<td style="text-align: left;">timestamp</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">时间戳</td>
+</tr>
+<tr>
+<td style="text-align: left;">sign</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">签名</td>
+</tr>
+<tr>
+<td style="text-align: left;">api</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">具体接口名称</td>
+</tr>
+<tr>
+<td style="text-align: left;">params</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">接口的参数</td>
+</tr>
+<tr>
+<td style="text-align: left;">lang</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">多语言参数，非必传，默认：汉语，汉语：zh-cn，英语：en</td>
+</tr>
+</tbody>
+</table>
+<h5>响应结果形式：</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    &quot;status_code&quot;: int,
+    &quot;msg&quot;: string,
+    &quot;data&quot;: array
+}</code></pre></table>
+<h5>响应结果说明：</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">status_code</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">返回结果的状态编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">msg</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">返回结果的描述</td>
+</tr>
+<tr>
+<td style="text-align: left;">data</td>
+<td style="text-align: left;">array</td>
+<td style="text-align: left;">接口返回的数据</td>
+</tr>
+</tbody>
+</table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述。</li>
+</ul></div><h1>2、2. IP白名单</h1><div style="margin-left:20px;"><h2>1. 白名单说明</h2>
+<ul>
+<li>API 白名单需要登录管理后台在API页面中进行设定(包括: IP、用户名、密码);</li>
+<li>IP白名单需用逗号进行分隔;</li>
+<li>用户名密码请勿采用特殊字符；</li>
+<li>接口示例中 YOUR AUTH NAME 需替换为对应设置的用户名;</li>
+<li>后台设置具体如下图所示：</li>
+</ul></div><h1>3、3. 签名规则说明</h1><div style="margin-left:20px;"><h2>1. 签名规则说明</h2>
+<h3>1.1 参与签名的有效字段</h3>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">params</td>
+<td style="text-align: left;">json</td>
+<td style="text-align: left;">有效的 params 接口的参数（参数值value符合 str， int， float， bool数据类型，参数值value值如果为空，也计入签名。）</td>
+</tr>
+<tr>
+<td style="text-align: left;">auth_password</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">后台API设置界面设置的用户密码</td>
+</tr>
+<tr>
+<td style="text-align: left;">timestamp</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">由开发者生成的当前UTC时间戳，单位：秒，误差范围需在Cereson 服务接收 ±5分钟内</td>
+</tr>
+</tbody>
+</table>
+<h3>1.2 签名规则</h3>
+<ul>
+<li>将<code>auth_password</code>与<code>timestamp</code>组合成字符串进行MD5加密（MD5大写）， 生成字符串string1。</li>
+<li>对<code>params</code>所有待签名参数按照字段名的 ASCII 码从小到大排序（字典序）后，使用字符 , 相连（即key1=value1,key2=value2,…如涵盖空格等，也一并计入签名）</li>
+<li>将连接好的字符串置于 string1 后与其拼接成字符串 string2。</li>
+<li>对 string2 作 MD5 加密（MD5大写）。</li>
+</ul>
+<h3>1.3 示例</h3>
+<h5>示例url：</h5>
+<table width='100%' class='codestyle'><pre><code>https://api.kiosk-uat.kalos-blocks.com/api/v2
+form-data:
+auth_name:""
+timestamp:""
+params:""
+sign:""
+api:""
+lang:""</code></pre></table>
+<h5>加签流程示例：</h5>
+<ul>
+<li>
+<p>原始参数</p>
+<table width='100%' class='codestyle'><pre><code>{
+"auth_name": "Lc_test",
+"auth_password": "123456",
+"timestamp": 1728374116,
+"params": "{\"aId\":\"81\",\"aType\":2}"
+}</code></pre></table>
+</li>
+<li>
+<p>加签流程</p>
+<table width='100%' class='codestyle'><pre><code>$string1 = strtoupper(md5(1234561728374116))
+string1：D4ACCDCA10594B57359F780912136C24</code></pre></table>
+<table width='100%' class='codestyle'><pre><code>string2：D4ACCDCA10594B57359F780912136C24aId=81,aType=2
+sign = strtoupper(md5(string2))
+sign：A38ECD743D9A70BCE4AC1FC29D8DCCAA</code></pre></table>
+</li>
+<li>加签后请求参数
+<table width='100%' class='codestyle'><pre><code>{
+"auth_name": "Lc_test",
+"timestamp": 1728374116,
+"params": "{\"aId\":\"81\",\"aType\":2}",
+"sign": "A38ECD743D9A70BCE4AC1FC29D8DCCAA",
+"api": "get_activity_code"
+}</code></pre></table></li>
+</ul></div><h1>4、4. 状态码</h1><div style="margin-left:20px;"><h2>1. 状态码说明</h2>
+<h5>普通列表项目数字列表项目普通列表项目返回结果中的状态码为0时，说明请求处理成功响应，非0说明响应异常。</h5>
+<h3>1.1 状态码列表：</h3>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">状态码</th>
+<th style="text-align: left;">msg</th>
+<th style="text-align: left;">说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">0</td>
+<td style="text-align: left;">Success</td>
+<td style="text-align: left;">操作成功</td>
+</tr>
+<tr>
+<td style="text-align: left;">1</td>
+<td style="text-align: left;">Invalid IP Address</td>
+<td style="text-align: left;">访问IP地址无效</td>
+</tr>
+<tr>
+<td style="text-align: left;">2</td>
+<td style="text-align: left;">Invalid User</td>
+<td style="text-align: left;">验证用户名失效</td>
+</tr>
+<tr>
+<td style="text-align: left;">3</td>
+<td style="text-align: left;">Wrong Password</td>
+<td style="text-align: left;">验证密码错误</td>
+</tr>
+<tr>
+<td style="text-align: left;">4</td>
+<td style="text-align: left;">No Such API</td>
+<td style="text-align: left;">没有这个接口</td>
+</tr>
+<tr>
+<td style="text-align: left;">5</td>
+<td style="text-align: left;">JSON Syntax Error</td>
+<td style="text-align: left;">JSON语法错误</td>
+</tr>
+<tr>
+<td style="text-align: left;">6</td>
+<td style="text-align: left;">Missing Fields</td>
+<td style="text-align: left;">缺少参数</td>
+</tr>
+<tr>
+<td style="text-align: left;">7</td>
+<td style="text-align: left;">Invalid Fields</td>
+<td style="text-align: left;">无效参数</td>
+</tr>
+<tr>
+<td style="text-align: left;">8</td>
+<td style="text-align: left;">Requests Count Limited</td>
+<td style="text-align: left;">访问次数超过每天次数限定</td>
+</tr>
+<tr>
+<td style="text-align: left;">9</td>
+<td style="text-align: left;">Requests Interval Limited</td>
+<td style="text-align: left;">访问过于频繁</td>
+</tr>
+<tr>
+<td style="text-align: left;">10</td>
+<td style="text-align: left;">Data not Found</td>
+<td style="text-align: left;">找不到需要的数据</td>
+</tr>
+<tr>
+<td style="text-align: left;">11</td>
+<td style="text-align: left;">Can not Contact the Kiosk</td>
+<td style="text-align: left;">连不上机器</td>
+</tr>
+<tr>
+<td style="text-align: left;">12</td>
+<td style="text-align: left;">License Expired</td>
+<td style="text-align: left;">许可证不能用</td>
+</tr>
+<tr>
+<td style="text-align: left;">13</td>
+<td style="text-align: left;">Exceed Date Range(30 days)</td>
+<td style="text-align: left;">时间跨度大于30天</td>
+</tr>
+<tr>
+<td style="text-align: left;">14</td>
+<td style="text-align: left;">Product is unavailable</td>
+<td style="text-align: left;">预订商品ID不正确或没有足够的商品</td>
+</tr>
+<tr>
+<td style="text-align: left;">15</td>
+<td style="text-align: left;">table is nonexistent.</td>
+<td style="text-align: left;">数据不存在</td>
+</tr>
+<tr>
+<td style="text-align: left;">16</td>
+<td style="text-align: left;">Invalid Timestamp</td>
+<td style="text-align: left;">无效时间戳</td>
+</tr>
+<tr>
+<td style="text-align: left;">17</td>
+<td style="text-align: left;">Sign Error</td>
+<td style="text-align: left;">签名错误</td>
+</tr>
+<tr>
+<td style="text-align: left;">18</td>
+<td style="text-align: left;">Failed to generate the fetch code record</td>
+<td style="text-align: left;">生成取货码记录失败</td>
+</tr>
+<tr>
+<td style="text-align: left;">19</td>
+<td style="text-align: left;">Action fail</td>
+<td style="text-align: left;">操作失败</td>
+</tr>
+<tr>
+<td style="text-align: left;">20</td>
+<td style="text-align: left;">Pickup code in use</td>
+<td style="text-align: left;">取货码使用中</td>
+</tr>
+<tr>
+<td style="text-align: left;">21</td>
+<td style="text-align: left;">This order number has been submitted to lock stock, please do not repeat submission</td>
+<td style="text-align: left;">该订单已执行操作，请勿重复提交</td>
+</tr>
+<tr>
+<td style="text-align: left;">22</td>
+<td style="text-align: left;">Under stock</td>
+<td style="text-align: left;">库存不足</td>
+</tr>
+<tr>
+<td style="text-align: left;">23</td>
+<td style="text-align: left;">Invalid trade_no</td>
+<td style="text-align: left;">无效订单编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">24</td>
+<td style="text-align: left;">Order processed</td>
+<td style="text-align: left;">订单处理中</td>
+</tr>
+<tr>
+<td style="text-align: left;">25</td>
+<td style="text-align: left;">The order payment type does not match</td>
+<td style="text-align: left;">订单支付类型不匹配</td>
+</tr>
+<tr>
+<td style="text-align: left;">26</td>
+<td style="text-align: left;">No hotel information found</td>
+<td style="text-align: left;">查无酒店信息</td>
+</tr>
+<tr>
+<td style="text-align: left;">27</td>
+<td style="text-align: left;">No information about the event</td>
+<td style="text-align: left;">查无该活动信息</td>
+</tr>
+<tr>
+<td style="text-align: left;">28</td>
+<td style="text-align: left;">The event has ended</td>
+<td style="text-align: left;">该活动已结束</td>
+</tr>
+<tr>
+<td style="text-align: left;">29</td>
+<td style="text-align: left;">The event has been taken down</td>
+<td style="text-align: left;">该活动已下架</td>
+</tr>
+<tr>
+<td style="text-align: left;">30</td>
+<td style="text-align: left;">The event has not yet begun</td>
+<td style="text-align: left;">该活动尚未开始</td>
+</tr>
+<tr>
+<td style="text-align: left;">31</td>
+<td style="text-align: left;">This activity has expired</td>
+<td style="text-align: left;">该活动已过期</td>
+</tr>
+<tr>
+<td style="text-align: left;">32</td>
+<td style="text-align: left;">This coupon has no remaining use times</td>
+<td style="text-align: left;">此优惠券无剩余使用次数</td>
+</tr>
+<tr>
+<td style="text-align: left;">33</td>
+<td style="text-align: left;">There are no coupons left for this event</td>
+<td style="text-align: left;">该活动无剩余券可领取</td>
+</tr>
+<tr>
+<td style="text-align: left;">34</td>
+<td style="text-align: left;">Failed to generate fetch record</td>
+<td style="text-align: left;">生成领取记录失败</td>
+</tr>
+<tr>
+<td style="text-align: left;">35</td>
+<td style="text-align: left;">Failed to modify the fetch record. Procedure</td>
+<td style="text-align: left;">修改领取记录失败</td>
+</tr>
+<tr>
+<td style="text-align: left;">97</td>
+<td style="text-align: left;">Use multipart/form-data</td>
+<td style="text-align: left;">请使用multipart/form-data</td>
+</tr>
+<tr>
+<td style="text-align: left;">98</td>
+<td style="text-align: left;">Please use Post request mode</td>
+<td style="text-align: left;">请使用Post请求方式</td>
+</tr>
+<tr>
+<td style="text-align: left;">99</td>
+<td style="text-align: left;">Service Unavailable</td>
+<td style="text-align: left;">服务暂时不可用</td>
+</tr>
+</tbody>
+</table></div><h1>5、通用相关接口</h1><div style="margin-left:0px;"><h2>5.1、1. 根据机器ID获取货架库存信息列表</h2><div style="margin-left:0px;"><h5>简要描述</h5>
+<ul>
+<li>根据机器ID获取货架库存信息列表</li>
+</ul>
+<h5>接口API名称</h5>
+<ul>
+<li><code>get_inventory_list</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST </li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">machine_id</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>机器编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">product_id</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">string</td>
+<td>商品id(选填)</td>
+</tr>
+<tr>
+<td style="text-align: left;">shelf_on</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>是否上架 1(目前机器上已上架，不包含备用库存)； 0(目前机器上已上架 + 以前在本机器上上架过的), 默认0</td>
+</tr>
+<tr>
+<td style="text-align: left;">pageNum</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>页面数据条数</td>
+</tr>
+<tr>
+<td style="text-align: left;">page</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>页码，默认1</td>
+</tr>
+</tbody>
+</table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    &quot;status_code&quot;: 0,
+    &quot;msg&quot;: &quot;成功&quot;,
+    &quot;data&quot;: {
+        &quot;total&quot;: 30,
+        &quot;per_page&quot;: 15,
+        &quot;current_page&quot;: 1,
+        &quot;last_page&quot;: 2,
+        &quot;data&quot;: [
+            {
+                &quot;mc_id&quot;: 43208,
+                &quot;channel_code&quot;: &quot;E04&quot;,
+                &quot;quantity&quot;: 0,
+                &quot;sale_price&quot;: &quot;0.01&quot;,
+                &quot;g_retail_price&quot;: &quot;29.9&quot;,
+                &quot;sku&quot;: &quot;000KB-KB30006-01&quot;,
+                &quot;mismatch_quantity&quot;: 10,
+                &quot;product_id&quot;: 120,
+                &quot;g_name&quot;: &quot;丝丝的游戏派对宝盒&quot;,
+                &quot;market_price&quot;: &quot;23.00&quot;,
+                &quot;reserver_quantity&quot;: 0,
+                &quot;slot_max_count&quot;: 10,
+                &quot;pic&quot;: &quot;https://api.kiosk-uat.kalos-blocks.com/uploads/excel_img/20240719/5218e42a760d61826ac125c9c5fef7d8.jpeg&quot;,
+                &quot;details_pic&quot;: &quot;&quot;,
+                &quot;banner&quot;: &quot;&quot;,
+                &quot;sku2&quot;: &quot;&quot;,
+                &quot;g_desc&quot;: &quot;&lt;p&gt;&lt;img src=\&quot;https://api.kiosk-uat.kalos-blocks.com/uploads/goods/20240719/1da9e49a9361c7a13d6d3df53882fc82.jpg\&quot;&gt;&lt;/p&gt;&quot;
+            },
+            {
+                &quot;mc_id&quot;: 43194,
+                &quot;channel_code&quot;: &quot;C03&quot;,
+                &quot;quantity&quot;: 7,
+                &quot;sale_price&quot;: &quot;0.01&quot;,
+                &quot;g_retail_price&quot;: &quot;29.9&quot;,
+                &quot;sku&quot;: &quot;0N0KB-KB33005-04&quot;,
+                &quot;mismatch_quantity&quot;: 0,
+                &quot;product_id&quot;: 596,
+                &quot;g_name&quot;: &quot;阿尼亚·福杰蓝牙音箱&quot;,
+                &quot;market_price&quot;: &quot;99.00&quot;,
+                &quot;reserver_quantity&quot;: 1,
+                &quot;slot_max_count&quot;: 7,
+                &quot;pic&quot;: &quot;https://api.kiosk-uat.kalos-blocks.com/uploads/excel_img/20240722/3172accb87f9b96fd9c59fa4731afbf6.jpeg&quot;,
+                &quot;details_pic&quot;: &quot;&quot;,
+                &quot;banner&quot;: &quot;&quot;,
+                &quot;sku2&quot;: &quot;&quot;,
+                &quot;g_desc&quot;: &quot;&lt;p&gt;&lt;img src=\&quot;https://api.kiosk-uat.kalos-blocks.com/uploads/goods/20240722/3b34ff368863a4d50537e251f434e6f3.jpg\&quot;&gt;&lt;/p&gt;\n&lt;p&gt;&lt;img src=\&quot;https://api.kiosk-uat.kalos-blocks.com/uploads/goods/20240722/5ca51d1445f36971cbdbb40f283948de.jpg\&quot;&gt;&lt;/p&gt;\n&lt;p&gt;&lt;img src=\&quot;https://api.kiosk-uat.kalos-blocks.com/uploads/goods/20240722/a284eca1f10025d1054e21caae5a112d.jpg\&quot;&gt;&lt;/p&gt;\n&lt;p&gt;&lt;img src=\&quot;https://api.kiosk-uat.kalos-blocks.com/uploads/goods/20240722/b6d46e0142a79243b4ef780cda9b76f1.jpg\&quot;&gt;&lt;/p&gt;\n&lt;p&gt;&lt;img src=\&quot;https://api.kiosk-uat.kalos-blocks.com/uploads/goods/20240722/28b2277f9be9252f0281860b6eb7d017.jpg\&quot;&gt;&lt;/p&gt;\n&lt;p&gt;&lt;img src=\&quot;https://api.kiosk-uat.kalos-blocks.com/uploads/goods/20240722/39693516ede51689c928d759f17e9f55.jpg\&quot;&gt;&lt;/p&gt;\n&lt;p&gt;&lt;img src=\&quot;https://api.kiosk-uat.kalos-blocks.com/uploads/goods/20240722/fb50f2e424b172caa31b99b966bc0c92.jpg\&quot;&gt;&lt;/p&gt;&quot;
+            }
+        ]
+    }
+}</code></pre></table>
+<h5>返回参数说明-data</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">total</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">总数据量</td>
+</tr>
+<tr>
+<td style="text-align: left;">per_page</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">页面数据条数</td>
+</tr>
+<tr>
+<td style="text-align: left;">current_page</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">当前页</td>
+</tr>
+<tr>
+<td style="text-align: left;">last_page</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">最后一页</td>
+</tr>
+<tr>
+<td style="text-align: left;">data</td>
+<td style="text-align: left;">array</td>
+<td style="text-align: left;">返回数据</td>
+</tr>
+</tbody>
+</table>
+<h5>返回参数说明-data-data</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">mc_id</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">货架ID</td>
+</tr>
+<tr>
+<td style="text-align: left;">channel_code</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">货架编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">quantity</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">商品可售数量</td>
+</tr>
+<tr>
+<td style="text-align: left;">sale_price</td>
+<td style="text-align: left;">decimal(10,2)</td>
+<td style="text-align: left;">货道商品售价</td>
+</tr>
+<tr>
+<td style="text-align: left;">g_retail_price</td>
+<td style="text-align: left;">decimal(10,2)</td>
+<td style="text-align: left;">核心商品库售价</td>
+</tr>
+<tr>
+<td style="text-align: left;">sku</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">SKU</td>
+</tr>
+<tr>
+<td style="text-align: left;">sku2</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">关联SKU</td>
+</tr>
+<tr>
+<td style="text-align: left;">mismatch_quantity</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">BAD数量</td>
+</tr>
+<tr>
+<td style="text-align: left;">product_id</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">商品ID</td>
+</tr>
+<tr>
+<td style="text-align: left;">g_name</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">商品名称</td>
+</tr>
+<tr>
+<td style="text-align: left;">pic</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">商品图片</td>
+</tr>
+<tr>
+<td style="text-align: left;">banner</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">轮播图片，用;隔开，包含多张图片</td>
+</tr>
+<tr>
+<td style="text-align: left;">details_pic</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">详情图片，用;隔开，包含多张图片</td>
+</tr>
+<tr>
+<td style="text-align: left;">g_desc</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">商品描述，包含商品详情图片与文字说明</td>
+</tr>
+<tr>
+<td style="text-align: left;">market_price</td>
+<td style="text-align: left;">decimal(10,2)</td>
+<td style="text-align: left;">市场售价</td>
+</tr>
+<tr>
+<td style="text-align: left;">reserver_quantity</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">预留数量</td>
+</tr>
+<tr>
+<td style="text-align: left;">slot_max_count</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">设备最大容量</td>
+</tr>
+<tr>
+<td style="text-align: left;">gc_id</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">分类ID</td>
+</tr>
+<tr>
+<td style="text-align: left;">gc_name</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">分类名称</td>
+</tr>
+<tr>
+<td style="text-align: left;">length</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">长，单位：毫米</td>
+</tr>
+<tr>
+<td style="text-align: left;">width</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">宽，单位：毫米</td>
+</tr>
+<tr>
+<td style="text-align: left;">height</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">高，单位：毫米</td>
+</tr>
+<tr>
+<td style="text-align: left;">status</td>
+<td style="text-align: left;">int</td>
+<td style="text-align: left;">货道状态，1：正常，3：BAD</td>
+</tr>
+</tbody>
+</table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div><h2>5.2、2. 获取机器信息</h2><div style="margin-left:0px;"><h5>简要描述</h5>
+<ul>
+<li>获取机器信息</li>
+</ul>
+<h5>接口API名称</h5>
+<ul>
+<li><code>get_machines</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST </li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">machine_id</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">string</td>
+<td>机器编号，为空时查全部</td>
+</tr>
+<tr>
+<td style="text-align: left;">pageNum</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>页面数据条数</td>
+</tr>
+<tr>
+<td style="text-align: left;">page</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>页码，不传时默认1</td>
+</tr>
+</tbody>
+</table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    &quot;status_code&quot;: 0,
+    &quot;msg&quot;: &quot;成功&quot;,
+    &quot;data&quot;: {
+        &quot;total&quot;: 28,
+        &quot;per_page&quot;: 15,
+        &quot;current_page&quot;: 1,
+        &quot;last_page&quot;: 2,
+        &quot;data&quot;: [
+            {
+                &quot;machine_id&quot;: &quot;test0001&quot;,
+                &quot;machine_name&quot;: &quot;翠辉中庭（使用中勿改）&quot;,
+                &quot;machine_type&quot;: null,
+                &quot;extend1&quot;: &quot;&quot;,
+                &quot;software_version&quot;: &quot;lottery&quot;,
+                &quot;zip&quot;: &quot;&quot;,
+                &quot;street&quot;: &quot;&quot;,
+                &quot;building&quot;: &quot;&quot;,
+                &quot;mac&quot;: null,
+                &quot;lat&quot;: &quot;0.0000000&quot;,
+                &quot;lng&quot;: &quot;0.0000000&quot;,
+                &quot;logo_url&quot;: &quot;&quot;,
+                &quot;icon_url&quot;: &quot;&quot;,
+                &quot;ai_status&quot;: &quot;active&quot;,
+                &quot;ai_time&quot;: &quot;2024-08-07 16:36:30&quot;,
+                &quot;oo_status&quot;: &quot;online&quot;,
+                &quot;country&quot;: &quot;China&quot;,
+                &quot;state&quot;: &quot;Guangdong&quot;,
+                &quot;city&quot;: &quot;Dongguan&quot;,
+                &quot;regions&quot;: null,
+                &quot;inventory&quot;: 12,
+                &quot;location_type&quot;: &quot;&quot;,
+                &quot;district&quot;: &quot;&quot;,
+                &quot;sale_income&quot;: 0,
+                &quot;sale_count&quot;: 0
+            },
+            {
+                &quot;machine_id&quot;: &quot;test0002&quot;,
+                &quot;machine_name&quot;: &quot;中庭测试设备-白&quot;,
+                &quot;machine_type&quot;: null,
+                &quot;extend1&quot;: &quot;847153&quot;,
+                &quot;software_version&quot;: null,
+                &quot;zip&quot;: &quot;485123&quot;,
+                &quot;street&quot;: &quot;46513&quot;,
+                &quot;building&quot;: &quot;78456132&quot;,
+                &quot;mac&quot;: null,
+                &quot;lat&quot;: &quot;0.0000000&quot;,
+                &quot;lng&quot;: &quot;0.0000000&quot;,
+                &quot;logo_url&quot;: &quot;http://70cf.com/uploads/adv/20240221/64a677f02d44da923924a9e000991d3e.jpg&quot;,
+                &quot;icon_url&quot;: &quot;http://70cf.com/uploads/adv/20240221/64a677f02d44da923924a9e000991d3e.jpg&quot;,
+                &quot;ai_status&quot;: &quot;active&quot;,
+                &quot;ai_time&quot;: &quot;2024-07-19 15:38:38&quot;,
+                &quot;oo_status&quot;: &quot;offline&quot;,
+                &quot;country&quot;: &quot;China&quot;,
+                &quot;state&quot;: &quot;Hebei&quot;,
+                &quot;city&quot;: &quot;Xingtai&quot;,
+                &quot;regions&quot;: null,
+                &quot;inventory&quot;: 3,
+                &quot;location_type&quot;: &quot;场景2&quot;,
+                &quot;district&quot;: &quot;&quot;,
+                &quot;sale_income&quot;: 0,
+                &quot;sale_count&quot;: 0
+            }
+        ]
+    }
+}</code></pre></table>
+<h5>返回参数说明-data</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">total</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">总数据量</td>
+</tr>
+<tr>
+<td style="text-align: left;">per_page</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">页面数据条数</td>
+</tr>
+<tr>
+<td style="text-align: left;">current_page</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">当前页</td>
+</tr>
+<tr>
+<td style="text-align: left;">last_page</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">最后一页</td>
+</tr>
+<tr>
+<td style="text-align: left;">data</td>
+<td style="text-align: left;">array</td>
+<td style="text-align: left;">返回数据</td>
+</tr>
+</tbody>
+</table>
+<h5>返回参数说明-data</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">machine_id</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">设备编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">machine_name</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">设备名称</td>
+</tr>
+<tr>
+<td style="text-align: left;">machine_type</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">设备型号</td>
+</tr>
+<tr>
+<td style="text-align: left;">device_type</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">机器应用类型，1：售卖机，2：门店，默认1</td>
+</tr>
+<tr>
+<td style="text-align: left;">extend1</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">序号号</td>
+</tr>
+<tr>
+<td style="text-align: left;">software_version</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">版本号</td>
+</tr>
+<tr>
+<td style="text-align: left;">zip</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">邮件编码</td>
+</tr>
+<tr>
+<td style="text-align: left;">street</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">街道</td>
+</tr>
+<tr>
+<td style="text-align: left;">building</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">楼</td>
+</tr>
+<tr>
+<td style="text-align: left;">mac</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">网卡Mac地址</td>
+</tr>
+<tr>
+<td style="text-align: left;">lat</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">纬度</td>
+</tr>
+<tr>
+<td style="text-align: left;">lng</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">经度</td>
+</tr>
+<tr>
+<td style="text-align: left;">logo_url</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">logo URL</td>
+</tr>
+<tr>
+<td style="text-align: left;">icon_url</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">图标URL</td>
+</tr>
+<tr>
+<td style="text-align: left;">ai_status</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">正常/维护状态，active：正常，maintain：维护</td>
+</tr>
+<tr>
+<td style="text-align: left;">ai_time</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">状态改变时间</td>
+</tr>
+<tr>
+<td style="text-align: left;">oo_status</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">在线/离线状态，online：在线，offline：离线</td>
+</tr>
+<tr>
+<td style="text-align: left;">current_status</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">设备当前状态值，由终端自定义上报，user：用户操作中，如停留在 商品列表，购物车等页面；admin：管理员操作中，如停留在 货道管理，货道扫描等页面；ship：出货中；launch：启动中，初始化页面；update：更新中；maintenance：维护中，如设备进入 报错维护，营业停止状态；normal：正常空闲，设备停留在 广告 或 首页</td>
+</tr>
+<tr>
+<td style="text-align: left;">country</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">国家</td>
+</tr>
+<tr>
+<td style="text-align: left;">state</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">地区/直辖市/省</td>
+</tr>
+<tr>
+<td style="text-align: left;">city</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">城市</td>
+</tr>
+<tr>
+<td style="text-align: left;">regions</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">区域</td>
+</tr>
+<tr>
+<td style="text-align: left;">inventory</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">总库存</td>
+</tr>
+<tr>
+<td style="text-align: left;">location_type</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">位置类型</td>
+</tr>
+<tr>
+<td style="text-align: left;">district</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">行政区</td>
+</tr>
+<tr>
+<td style="text-align: left;">sale_income</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">7天销售额</td>
+</tr>
+<tr>
+<td style="text-align: left;">sale_count</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">7天销量</td>
+</tr>
+</tbody>
+</table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div><h2>5.3、3. 预订商品（需机器在线）</h2><div style="margin-left:0px;"><p>[TOC]</p>
+<h5>简要描述</h5>
+<ul>
+<li>预订商品，需要设备在线才可以预订</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>reserve_order</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST/form-data</li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">kiosk_id</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>机器编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">order_no</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>商户的订单编号，如果同一个订单编号30分钟内重复请求的话会过滤的，以防产生重复订单。过滤原则：30分钟内同一订单号有成功过的直接返回上次成功的结果，如果没成功过，就去机器端请求一次预订操作。</td>
+</tr>
+<tr>
+<td style="text-align: left;">pick_code</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">string</td>
+<td>建议小写字母和数字共8位,同一账号下提货码不得相同。（可选，不填写随机生成8位数提货码）</td>
+</tr>
+<tr>
+<td style="text-align: left;">payment_method</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>支付方式（以下三种之一） unionpay => 银联 alipay => 支付宝 wechat => 微信支付</td>
+</tr>
+<tr>
+<td style="text-align: left;">customer_name</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">string</td>
+<td>客户名称（可选）</td>
+</tr>
+<tr>
+<td style="text-align: left;">goods_type</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>商品类型，1：普通商品，2：组合商品，默认1</td>
+</tr>
+<tr>
+<td style="text-align: left;">expire_time</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>订单过期时间(utc)，采用时间格式 eg: 2017-04-19 14:55:59，如只传日期格式则采用23:59:59，eg:2017-04-19 23:59:59</td>
+</tr>
+<tr>
+<td style="text-align: left;">charge_time</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>支付时间(utc)，采用时间格式 eg:2017-04-19 14:55:59（不得大于当前时间），如只传日期格式则采用00:00:00 eg:2017-04-19 00:00:00</td>
+</tr>
+<tr>
+<td style="text-align: left;">notify_url</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">string</td>
+<td>异步通知url (可选,推送间隔定义如下：第一次实时，第二次是5m内，后面是每5m, 15m, 15m, 30m, 1h, 2h推送，共计8次。) 预定商品取货通知</td>
+</tr>
+<tr>
+<td style="text-align: left;">order_detail</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">json</td>
+<td>商品ID为key，详情内容请查看下方order_details详情列表</td>
+</tr>
+<tr>
+<td style="text-align: left;">pay_type</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>支付类型，6：丽呈线上支付，7：机器人线上支付</td>
+</tr>
+</tbody>
+</table>
+<h5>参数——order_details.values</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">product_id</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>商品ID，pay_type=7时必传</td>
+</tr>
+<tr>
+<td style="text-align: left;">quantity</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>预定数量</td>
+</tr>
+<tr>
+<td style="text-align: left;">item_price</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>商品出售价格(单价)*100（以分为单位）</td>
+</tr>
+<tr>
+<td style="text-align: left;">discount_amount</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>该商品一共优惠的价格（总优惠额）*100（以分为单位）</td>
+</tr>
+<tr>
+<td style="text-align: left;">charge_amount</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>实际支付的总价格（支付金额）*100（以分为单位）；item_price X quantity-discount_amount=charge_amount;</td>
+</tr>
+<tr>
+<td style="text-align: left;">type</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>商品类型（赠品:gift,出售品:sale）</td>
+</tr>
+<tr>
+<td style="text-align: left;">out_port</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>出货口，默认1，1. 普通出货口，2. 第二货道口上层出货口，3. 第二货道口下层出货口，【新增-20250115】</td>
+</tr>
+</tbody>
+</table>
+<h5>请求示例-params</h5>
+<ul>
+<li>
+<p>新数据格式</p>
+<table width='100%' class='codestyle'><pre><code>{
+    &quot;order_no&quot;: &quot;2025031416122656717891#93044&quot;,
+    &quot;expire_time&quot;: &quot;2025-03-14 16:42:33&quot;,
+    &quot;pay_type&quot;: 7,
+    &quot;notify_url&quot;: &quot;https://api.uat.robot.jchtechnologies.com/questInfo/noticeOfDelivery/2025031416122656717891/93044&quot;,
+    &quot;order_detail&quot;: &quot;[{&quot;product_id&quot;:116,&quot;quantity&quot;:1,&quot;item_price&quot;:1,&quot;discount_amount&quot;:0,&quot;charge_amount&quot;:1,&quot;type&quot;:&quot;sale&quot;,&quot;out_port&quot;:2},{&quot;product_id&quot;:116,&quot;quantity&quot;:1,&quot;item_price&quot;:1,&quot;discount_amount&quot;:0,&quot;charge_amount&quot;:1,&quot;type&quot;:&quot;sale&quot;,&quot;out_port&quot;:3}]&quot;,
+    &quot;kiosk_id&quot;: &quot;8888&quot;,
+    &quot;payment_method&quot;: &quot;wechat&quot;,
+    &quot;charge_time&quot;: &quot;2025-03-14 16:12:33&quot;
+}</code></pre></table>
+</li>
+<li>旧数据格式</li>
+</ul>
+<table width='100%' class='codestyle'><pre><code>{
+    &quot;kiosk_id&quot;: &quot;test0001&quot;,
+    &quot;order_no&quot;: &quot;2235236256&quot;,
+    &quot;payment_method&quot;: &quot;wechat&quot;,
+    &quot;customer_name&quot;: &quot;test&quot;,
+    &quot;expire_time&quot;: &quot;2024-08-14 17:34:26&quot;,
+    &quot;charge_time&quot;: &quot;2024-08-14 17:34:26&quot;,
+    &quot;notify_url&quot;: &quot;http://www.baidu.com&quot;,
+    &quot;order_detail&quot;: &quot;{\&quot;63\&quot;:{\&quot;quantity\&quot;:1,\&quot;item_price\&quot;:100,\&quot;discount_amount\&quot;:1,\&quot;charge_amount\&quot;:99,\&quot;type\&quot;:\&quot;sale\&quot;,\&quot;out_port\&quot;:1},\&quot;87\&quot;:{\&quot;quantity\&quot;:2,\&quot;item_price\&quot;:50,\&quot;discount_amount\&quot;:3,\&quot;charge_amount\&quot;:97,\&quot;type\&quot;:\&quot;sale\&quot;,\&quot;out_port\&quot;:2}}&quot;
+}</code></pre></table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    &quot;status_code&quot;: 0,
+    &quot;msg&quot;: &quot;Success&quot;,
+    &quot;data&quot;: {
+        &quot;pick_code&quot;: &quot;08880228&quot;,
+        &quot;success&quot;: true,
+        &quot;order_no&quot;: &quot;2235236256&quot;
+    }
+}</code></pre></table>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">status_code</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">状态码</td>
+</tr>
+<tr>
+<td style="text-align: left;">msg</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">描述信息</td>
+</tr>
+<tr>
+<td style="text-align: left;">data</td>
+<td style="text-align: left;">object</td>
+<td style="text-align: left;">数据</td>
+</tr>
+<tr>
+<td style="text-align: left;">pick_code</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">提货码</td>
+</tr>
+<tr>
+<td style="text-align: left;">success</td>
+<td style="text-align: left;">boolean</td>
+<td style="text-align: left;">true:成功,false:失败</td>
+</tr>
+<tr>
+<td style="text-align: left;">order_no</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">订单编号</td>
+</tr>
+</tbody>
+</table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div><h2>5.4、4 取消预订（需机器在线）</h2><div style="margin-left:0px;"><h5>简要描述</h5>
+<ul>
+<li>取消预订（需机器在线）</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>cancel_order</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST </li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">kiosk_id</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>设备编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">order_no</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>订单编号</td>
+</tr>
+</tbody>
+</table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    "status_code": 0,
+    "msg": "Success",
+    "data": {
+        "success": true,
+        "order_no": "111111111",
+    }
+}</code></pre></table>
+<h5>返回参数说明</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">status_code</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">成功：0，非0为失败</td>
+</tr>
+<tr>
+<td style="text-align: left;">msg</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">状态码描述</td>
+</tr>
+<tr>
+<td style="text-align: left;">data</td>
+<td style="text-align: left;">object</td>
+<td style="text-align: left;">返回数据集</td>
+</tr>
+</tbody>
+</table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div><h2>5.5、5.获取预定提货状态</h2><div style="margin-left:0px;"><h5>简要描述</h5>
+<ul>
+<li>获取预定提货状态</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>get_order_info</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST </li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">kiosk_id</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>设备编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">order_no</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>订单编号</td>
+</tr>
+</tbody>
+</table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    "status_code": 0,
+    "msg": "Success",
+    "data": {
+        "status": "CANCELED",
+        "machine_id": "test0001",
+        "machine_name": "翠辉中庭",
+        "machine_transaction_no": "11111111",
+        "charge_amount": "1.96",
+        "item_total_amount": "2.00",
+        "quantity": 4,
+        "pick_code": "123456",
+        "payment_method": "wechat",
+        "total_amount": "2.00",
+        "discount_amount": "0.04",
+        "pick_time": null
+    }
+}</code></pre></table>
+<h5>返回参数说明</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">status_code</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">成功：0，非0为失败</td>
+</tr>
+<tr>
+<td style="text-align: left;">msg</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">状态码描述</td>
+</tr>
+<tr>
+<td style="text-align: left;">data</td>
+<td style="text-align: left;">object</td>
+<td style="text-align: left;">返回数据集</td>
+</tr>
+</tbody>
+</table>
+<h5>返回参数说明-data</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">status</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">提取状态，OPEN：待提货；EXPIRED：已过期；CANCELED：已取消；PROCESSING：取货中；UNPAID：未付款；PICKED：已取；</td>
+</tr>
+<tr>
+<td style="text-align: left;">machine_id</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">设备编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">machine_name</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">设备名称</td>
+</tr>
+<tr>
+<td style="text-align: left;">machine_transaction_no</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">交易号</td>
+</tr>
+<tr>
+<td style="text-align: left;">charge_amount</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">实际支付金额</td>
+</tr>
+<tr>
+<td style="text-align: left;">item_total_amount</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">商品总价</td>
+</tr>
+<tr>
+<td style="text-align: left;">quantity</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">商品数量</td>
+</tr>
+<tr>
+<td style="text-align: left;">pick_code</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">提货码</td>
+</tr>
+<tr>
+<td style="text-align: left;">payment_method</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">支付方式</td>
+</tr>
+<tr>
+<td style="text-align: left;">total_amount</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">订单总价</td>
+</tr>
+<tr>
+<td style="text-align: left;">discount_amount</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">优惠金额</td>
+</tr>
+<tr>
+<td style="text-align: left;">pick_time</td>
+<td style="text-align: left;">datetime</td>
+<td style="text-align: left;">取货时间</td>
+</tr>
+</tbody>
+</table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div><h2>5.6、6. 第三方支付结果回调通知</h2><div style="margin-left:0px;"><h5>简要描述</h5>
+<ul>
+<li>第三方支付结果回调通知</li>
+<li>触发系统修改订单支付状态为已支付或支付失败，支付成功结算分润收益、下发出货命令</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>payNotify</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST</li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">order_no</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>内部订单编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">mch_no</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">string</td>
+<td>外部订单编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">pay_status</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>支付结果，1：成功，2：失败</td>
+</tr>
+</tbody>
+</table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div><h2>5.7、7. 携程酒店预订结果通知</h2><div style="margin-left:0px;"><h5>简要描述</h5>
+<ul>
+<li>携程酒店预订结果通知</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>hotelNotify</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST </li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">order_no</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>丽呈小程序订单号</td>
+</tr>
+<tr>
+<td style="text-align: left;">reservation_status</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>预订结果，2：预订成功，3：预订失败</td>
+</tr>
+</tbody>
+</table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    "status_code":0,
+    "msg":"操作成功"
+}</code></pre></table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div><h2>5.8、8. 获取设备组合商品列表</h2><div style="margin-left:0px;"><h5>简要描述</h5>
+<ul>
+<li>获取设备组合商品列表</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>get_goods_multiple</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST</li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">kiosk_id</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>设备编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">pageNum</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>页面数据条数</td>
+</tr>
+<tr>
+<td style="text-align: left;">page</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>页码</td>
+</tr>
+</tbody>
+</table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    "status_code": 0,
+    "msg": "成功",
+    "data": {
+        "total": 2,
+        "per_page": 15,
+        "current_page": 1,
+        "last_page": 1,
+        "data": [
+            {
+                "gm_id": 16,
+                "gm_name": "0",
+                "gm_pic": "https://api.kiosk-uat.kalos-blocks.com/uploads/goods/20240821/75481c86fe5928fca58135ef1f0098a3.png",
+                "gm_desc": "0",
+                "start_time": 1722556800,
+                "end_time": 1724371200,
+                "gList": [
+                    {
+                        "gmg_id": 16,
+                        "g_id": 976,
+                        "selling_price": "0.00",
+                        "rise_fall_ratio": 0,
+                        "stock": 0,
+                        "g_name": "测试-LUKA太空-钥匙扣",
+                        "pic": "",
+                        "sku": "000KB-KB35029-01",
+                        "g_type": 1,
+                        "performance": null
+                    }
+                ]
+            },
+            {
+                "gm_id": 15,
+                "gm_name": "2",
+                "gm_pic": "https://api.kiosk-uat.kalos-blocks.com/uploads/goods/20240821/844efa407a579fc7af1ec2e2cf1024f6.png",
+                "gm_desc": "2",
+                "start_time": 1723161600,
+                "end_time": 1723680000,
+                "gList": [
+                    {
+                        "gmg_id": 15,
+                        "g_id": 953,
+                        "selling_price": "4.00",
+                        "rise_fall_ratio": 14,
+                        "stock": 0,
+                        "g_name": "1",
+                        "pic": "/uploads/goods/20240810/70f77996269978765f0fc063d66d840c.png",
+                        "sku": "111",
+                        "g_type": 1,
+                        "performance": "[]"
+                    }
+                ]
+            }
+        ]
+    }
+}</code></pre></table>
+<h5>返回参数说明</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">status_code</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">返回状态码</td>
+</tr>
+<tr>
+<td style="text-align: left;">msg</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">返回状态说明信息</td>
+</tr>
+<tr>
+<td style="text-align: left;">- data</td>
+<td style="text-align: left;">object</td>
+<td style="text-align: left;">返回数据</td>
+</tr>
+<tr>
+<td style="text-align: left;">total</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">总数据条数</td>
+</tr>
+<tr>
+<td style="text-align: left;">per_page</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">页面数据条数</td>
+</tr>
+<tr>
+<td style="text-align: left;">current_page</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">当前页码</td>
+</tr>
+<tr>
+<td style="text-align: left;">last_page</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">上一页</td>
+</tr>
+<tr>
+<td style="text-align: left;">- - data</td>
+<td style="text-align: left;">object</td>
+<td style="text-align: left;">翻页数据，有可能为空</td>
+</tr>
+<tr>
+<td style="text-align: left;">gm_id</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">组合商品ID</td>
+</tr>
+<tr>
+<td style="text-align: left;">gm_name</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">组合商品名称</td>
+</tr>
+<tr>
+<td style="text-align: left;">gm_pic</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">组合商品图片</td>
+</tr>
+<tr>
+<td style="text-align: left;">gm_desc</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">组合商品说明</td>
+</tr>
+<tr>
+<td style="text-align: left;">start_time</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">开始时间</td>
+</tr>
+<tr>
+<td style="text-align: left;">end_time</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">结束时间</td>
+</tr>
+<tr>
+<td style="text-align: left;">- - - gList</td>
+<td style="text-align: left;">object</td>
+<td style="text-align: left;">商品列表</td>
+</tr>
+<tr>
+<td style="text-align: left;">gmg_id</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">组合商品详情ID</td>
+</tr>
+<tr>
+<td style="text-align: left;">g_id</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">商品ID</td>
+</tr>
+<tr>
+<td style="text-align: left;">selling_price</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">售卖价格</td>
+</tr>
+<tr>
+<td style="text-align: left;">rise_fall_ratio</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">涨跌比例</td>
+</tr>
+<tr>
+<td style="text-align: left;">stock</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">库存值</td>
+</tr>
+<tr>
+<td style="text-align: left;">g_name</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">商品名称</td>
+</tr>
+<tr>
+<td style="text-align: left;">pic</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">商品图片</td>
+</tr>
+<tr>
+<td style="text-align: left;">sku</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">SKU</td>
+</tr>
+<tr>
+<td style="text-align: left;">g_type</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">商品类型，1：普通商品，2：酒店商品，3：门票商品</td>
+</tr>
+<tr>
+<td style="text-align: left;">- - - - performance</td>
+<td style="text-align: left;">object</td>
+<td style="text-align: left;">性能参数，name,key,value</td>
+</tr>
+</tbody>
+</table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div><h2>5.9、9. 领取活动券</h2><div style="margin-left:0px;"><h5>简要描述</h5>
+<ul>
+<li>外部平台调用API领取活动券</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>get_activity_code</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST </li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">aId</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>活动ID，请联系平台工作人员获取</td>
+</tr>
+<tr>
+<td style="text-align: left;">aType</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>营销活动类型，2：优惠券，3：提货码</td>
+</tr>
+</tbody>
+</table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    "status_code": 0,
+    "msg": "成功",
+    "data": {
+        "code": "824667"
+    }
+}
+
+{
+    "status_code": 33,
+    "msg": "该活动无剩余券可领取",
+    "data": ""
+}</code></pre></table>
+<h5>返回参数说明</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">code</td>
+<td style="text-align: left;">string</td>
+<td>优惠券或提货码</td>
+</tr>
+</tbody>
+</table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div><h2>5.10、10. 使用预订订单取货码取货（机器人出货）</h2><div style="margin-left:0px;"><h5>简要描述</h5>
+<ul>
+<li>外部平台调用API使用预订订单的取货码，执行出货</li>
+<li>仅上线测试服，未正式开通</li>
+<li>供虚拟门店核销调用</li>
+<li>供智能取货机器人调用</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>use_pick_code</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST </li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">pick_code</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>取货码</td>
+</tr>
+<tr>
+<td style="text-align: left;">machine_id</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>设备编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">out_port【作废-20250115】</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>出货口，1：第1出货口（正常出货），2：第2出货口1（机器人取货），3：第2出货口2（机器人取货），待定</td>
+</tr>
+</tbody>
+</table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    &quot;status_code&quot;: 0,
+    &quot;msg&quot;: &quot;成功&quot;,
+}</code></pre></table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div><h2>5.11、11. 查询商品分类列表</h2><div style="margin-left:0px;"><p>[TOC]</p>
+<h5>简要描述</h5>
+<ul>
+<li>查询商品分类列表</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>get_goods_category</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST </li>
+</ul>
+<h5>参数</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">pageNum</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>页面数据条数</td>
+</tr>
+<tr>
+<td style="text-align: left;">page</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>页码，不传默认1</td>
+</tr>
+</tbody>
+</table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    &quot;status_code&quot;: 0,
+    &quot;msg&quot;: &quot;成功&quot;,
+    &quot;data&quot;: {
+        &quot;total&quot;: 10,
+        &quot;per_page&quot;: 15,
+        &quot;current_page&quot;: 1,
+        &quot;last_page&quot;: 1,
+        &quot;data&quot;: [
+            {
+                &quot;gc_id&quot;: 49,
+                &quot;gc_pid&quot;: 0,
+                &quot;gc_name&quot;: &quot;KB积木&quot;,
+                &quot;gc_desc&quot;: &quot;&quot;,
+                &quot;ico&quot;: &quot;&quot;,
+                &quot;sort&quot;: 1
+            },
+            {
+                &quot;gc_id&quot;: 50,
+                &quot;gc_pid&quot;: 0,
+                &quot;gc_name&quot;: &quot;KB衍生品&quot;,
+                &quot;gc_desc&quot;: &quot;&quot;,
+                &quot;ico&quot;: &quot;&quot;,
+                &quot;sort&quot;: 2
+            },
+            {
+                &quot;gc_id&quot;: 51,
+                &quot;gc_pid&quot;: 0,
+                &quot;gc_name&quot;: &quot;满利&quot;,
+                &quot;gc_desc&quot;: &quot;&quot;,
+                &quot;ico&quot;: &quot;&quot;,
+                &quot;sort&quot;: 3
+            },
+            {
+                &quot;gc_id&quot;: 52,
+                &quot;gc_pid&quot;: 0,
+                &quot;gc_name&quot;: &quot;FH&quot;,
+                &quot;gc_desc&quot;: &quot;&quot;,
+                &quot;ico&quot;: &quot;&quot;,
+                &quot;sort&quot;: 4
+            },
+            {
+                &quot;gc_id&quot;: 53,
+                &quot;gc_pid&quot;: 0,
+                &quot;gc_name&quot;: &quot;嘉恒&quot;,
+                &quot;gc_desc&quot;: &quot;&quot;,
+                &quot;ico&quot;: &quot;&quot;,
+                &quot;sort&quot;: 5
+            },
+            {
+                &quot;gc_id&quot;: 54,
+                &quot;gc_pid&quot;: 0,
+                &quot;gc_name&quot;: &quot;外采&quot;,
+                &quot;gc_desc&quot;: &quot;&quot;,
+                &quot;ico&quot;: &quot;&quot;,
+                &quot;sort&quot;: 6
+            },
+            {
+                &quot;gc_id&quot;: 58,
+                &quot;gc_pid&quot;: 57,
+                &quot;gc_name&quot;: &quot;ss&quot;,
+                &quot;gc_desc&quot;: &quot;&quot;,
+                &quot;ico&quot;: &quot;&quot;,
+                &quot;sort&quot;: 22
+            },
+            {
+                &quot;gc_id&quot;: 55,
+                &quot;gc_pid&quot;: 0,
+                &quot;gc_name&quot;: &quot;酒店&quot;,
+                &quot;gc_desc&quot;: &quot;&quot;,
+                &quot;ico&quot;: &quot;&quot;,
+                &quot;sort&quot;: 55
+            },
+            {
+                &quot;gc_id&quot;: 56,
+                &quot;gc_pid&quot;: 0,
+                &quot;gc_name&quot;: &quot;合家欢&quot;,
+                &quot;gc_desc&quot;: &quot;&quot;,
+                &quot;ico&quot;: &quot;&quot;,
+                &quot;sort&quot;: 56
+            },
+            {
+                &quot;gc_id&quot;: 57,
+                &quot;gc_pid&quot;: 0,
+                &quot;gc_name&quot;: &quot;情趣&quot;,
+                &quot;gc_desc&quot;: &quot;&quot;,
+                &quot;ico&quot;: &quot;&quot;,
+                &quot;sort&quot;: 57
+            }
+        ]
+    }
+}</code></pre></table>
+<h5>返回参数说明</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">status_code</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">返回状态码</td>
+</tr>
+<tr>
+<td style="text-align: left;">msg</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">状态码描述信息</td>
+</tr>
+<tr>
+<td style="text-align: left;">data</td>
+<td style="text-align: left;">object</td>
+<td style="text-align: left;">返回数据集</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.total</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">总数据条数</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.per_page</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">页面数据条数</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.current_page</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">当前页</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.last_page</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">最后一页</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.data</td>
+<td style="text-align: left;">array</td>
+<td style="text-align: left;">数据集</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.data.gc_id</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">分类ID</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.data.gc_pid</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">分类父级ID</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.data.gc_name</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">分类名称</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.data.gc_desc</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">分类说明</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.data.ico</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">分类ICO图标</td>
+</tr>
+<tr>
+<td style="text-align: left;">data.data.sort</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">分类排序</td>
+</tr>
+</tbody>
+</table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div></div><h1>6、消息推送</h1><div style="margin-left:0px;"><h2>6.1、1. API预定商品取货通知</h2><div style="margin-left:0px;"><ul>
+<li>根据notify_url发送HTTP POST请求，如果接收到success字符的返回则停止推送</li>
+<li>推送间隔定义如下：第一次实时，后面是每1m，5m, 15m, 15m, 30m, 1h, 2h推送，共计8次。</li>
+</ul>
+<h5>消息示例</h5>
+<table width='100%' class='codestyle'><pre><code> {
+  "status": 1,
+  "machine_id": "test0001",
+  "machine_name": "翠辉中庭",
+  "order_no": "1234554654",
+  "pick_code": "123456",
+  "payment_method": "wechat",
+  "quantity": 4,
+  "detail_status": "ALL PENDING",
+  "products_list": "{\"0\":{\"success_quantity\":1,\"fail_quantity\":0,\"product_id\":1},\"1\":{\"success_quantity\":2,\"fail_quantity\":0,\"product_id\":2}"
+}</code></pre></table>
+<h5>推送信息</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数</th>
+<th style="text-align: left;">类型</th>
+<th style="text-align: left;">描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">status</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">1：已提货，6: 异常，全部出货成功才会传1，失败1个或全失败都会返回6</td>
+</tr>
+<tr>
+<td style="text-align: left;">machine_id</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">机器ID</td>
+</tr>
+<tr>
+<td style="text-align: left;">machine_name</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">机器名称</td>
+</tr>
+<tr>
+<td style="text-align: left;">order_no</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">订单号</td>
+</tr>
+<tr>
+<td style="text-align: left;">pick_code</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">取货码</td>
+</tr>
+<tr>
+<td style="text-align: left;">payment_method</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">支付方式（以下三种之一） unionpay => 银联 alipay => 支付宝 wechat => 微信支付</td>
+</tr>
+<tr>
+<td style="text-align: left;">quantity</td>
+<td style="text-align: left;">number</td>
+<td style="text-align: left;">商品数量</td>
+</tr>
+<tr>
+<td style="text-align: left;">detail_status</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">商品出货状态：ALL PENDING: 全部成功，ALL MISVEND: 全部异常，PARTIAL MISVEND: 部分异常</td>
+</tr>
+<tr>
+<td style="text-align: left;">products_list</td>
+<td style="text-align: left;">string</td>
+<td style="text-align: left;">商品信息列表，product_id：商品ID，success_quantity：成功数量，fail_quantity：失败数量</td>
+</tr>
+</tbody>
+</table></div></div><h1>7、机器人平台接口</h1><div style="margin-left:0px;"><h2>7.1、调用接口说明</h2><div style="margin-left:0px;"><h5>说明</h5>
+<ul>
+<li>加签及相关规则按照1. 说明和3. 签名规则说明，这两个文档的内容执行</li>
+<li>API地址为下方请求URL，实现对应业务的参数名为api，与其他参数同时提交</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>/api/v2/robot</code></li>
+</ul></div><h2>7.2、1. 直接出货</h2><div style="margin-left:0px;"><p>[TOC]</p>
+<h5>简要描述</h5>
+<ul>
+<li>外部平台支付完成直接触发系统下发出货数据</li>
+<li>生成预订订单，生成取货码，使用取货码，下发出货命令</li>
+</ul>
+<h5>请求URL</h5>
+<ul>
+<li><code>dispense_product</code></li>
+</ul>
+<h5>请求方式</h5>
+<ul>
+<li>POST/form-data</li>
+</ul>
+<h5>参数-params</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">kiosk_id</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>机器编号</td>
+</tr>
+<tr>
+<td style="text-align: left;">order_no</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>商户的订单编号，如果同一个订单编号30分钟内重复请求的话会过滤的，以防产生重复订单。过滤原则：30分钟内同一订单号有成功过的直接返回上次成功的结果，如果没成功过，就去机器端请求一次预订操作。</td>
+</tr>
+<tr>
+<td style="text-align: left;">pick_code</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">string</td>
+<td>建议小写字母和数字共8位,同一账号下提货码不得相同。（可选，不填写随机生成8位数提货码）</td>
+</tr>
+<tr>
+<td style="text-align: left;">payment_method</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>支付方式（以下三种之一） unionpay => 银联 alipay => 支付宝 wechat => 微信支付</td>
+</tr>
+<tr>
+<td style="text-align: left;">customer_name</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">string</td>
+<td>客户名称（可选）</td>
+</tr>
+<tr>
+<td style="text-align: left;">goods_type</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>商品类型，1：普通商品，2：组合商品，默认1</td>
+</tr>
+<tr>
+<td style="text-align: left;">expire_time</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>订单过期时间(utc)，采用时间格式 eg: 2017-04-19 14:55:59，如只传日期格式则采用23:59:59，eg:2017-04-19 23:59:59</td>
+</tr>
+<tr>
+<td style="text-align: left;">charge_time</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>支付时间(utc)，采用时间格式 eg:2017-04-19 14:55:59（不得大于当前时间），如只传日期格式则采用00:00:00 eg:2017-04-19 00:00:00</td>
+</tr>
+<tr>
+<td style="text-align: left;">notify_url</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">string</td>
+<td>异步通知url (可选,推送间隔定义如下：第一次实时，第二次是5m内，后面是每5m, 15m, 15m, 30m, 1h, 2h推送，共计8次。) 预定商品取货通知</td>
+</tr>
+<tr>
+<td style="text-align: left;">order_detail</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">json</td>
+<td>商品ID为key，详情内容请查看下方order_details详情列表</td>
+</tr>
+<tr>
+<td style="text-align: left;">pay_type</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>支付类型，7：机器人线上支付</td>
+</tr>
+</tbody>
+</table>
+<h5>参数——order_details.values</h5>
+<table>
+<thead><tr style='background-color: rgb(0, 136, 204); color: rgb(255, 255, 255);'>
+<th style="text-align: left;">参数名</th>
+<th style="text-align: left;">必选</th>
+<th style="text-align: left;">类型</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;">quantity</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>预定数量</td>
+</tr>
+<tr>
+<td style="text-align: left;">item_price</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>商品出售价格(单价)*100（以分为单位）</td>
+</tr>
+<tr>
+<td style="text-align: left;">discount_amount</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>该商品一共优惠的价格（总优惠额）*100（以分为单位）</td>
+</tr>
+<tr>
+<td style="text-align: left;">charge_amount</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">int</td>
+<td>实际支付的总价格（支付金额）*100（以分为单位）；item_price X quantity-discount_amount=charge_amount;</td>
+</tr>
+<tr>
+<td style="text-align: left;">type</td>
+<td style="text-align: left;">是</td>
+<td style="text-align: left;">string</td>
+<td>商品类型（赠品:gift,出售品:sale）</td>
+</tr>
+<tr>
+<td style="text-align: left;">out_port</td>
+<td style="text-align: left;">否</td>
+<td style="text-align: left;">int</td>
+<td>出货口，默认1，1. 普通出货口，2. 第二货道口上层出货口，3. 第二货道口下层出货口，【新增-20250115】</td>
+</tr>
+</tbody>
+</table>
+<h5>请求示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    &quot;auth_name&quot;: &quot;Lc_test&quot;,
+    &quot;timestamp&quot;: 1740704377,
+    &quot;params&quot;: &quot;{\&quot;kiosk_id\&quot;:\&quot;test0003\&quot;,\&quot;order_no\&quot;:\&quot;20241214101258898357\&quot;,\&quot;payment_method\&quot;:\&quot;wechat\&quot;,\&quot;expire_time\&quot;:\&quot;2025-03-01 08:59:37\&quot;,\&quot;charge_time\&quot;:\&quot;2025-02-28 08:59:37\&quot;,\&quot;order_detail\&quot;:\&quot;{\\\&quot;114\\\&quot;:{\\\&quot;quantity\\\&quot;:1,\\\&quot;item_price\\\&quot;:3,\\\&quot;discount_amount\\\&quot;:0,\\\&quot;charge_amount\\\&quot;:3,\\\&quot;type\\\&quot;:\\\&quot;sale\\\&quot;}}\&quot;}&quot;,
+    &quot;sign&quot;: &quot;0BD46CED405A14D41D225BC645BB5B3E&quot;,
+    &quot;api&quot;: &quot;dispense_product&quot;
+}</code></pre></table>
+<h5>返回示例</h5>
+<table width='100%' class='codestyle'><pre><code>{
+    &quot;status_code&quot;: 0,
+    &quot;msg&quot;: &quot;成功&quot;,
+    &quot;data&quot;: &quot;&quot;
+}</code></pre></table>
+<h5>备注</h5>
+<ul>
+<li>更多返回错误代码请看首页的错误代码描述</li>
+</ul></div></div></body></html>

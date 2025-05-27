@@ -10,21 +10,35 @@ namespace app\management\controller\goods;
 
 
 use app\management\controller\Common;
+use app\management\validate\VGoodsLang;
 
 class GoodsLang extends Common
 {
 
     protected $field = "*";
-    protected $validatePath = 'app\management\validate\VGoodsLang.';
+    protected $validatePath = VGoodsLang::class . '.';
 
+    /**
+     * 查询商品多语言列表
+     * @return array|mixed|\think\response\Json
+     */
     public function getList()
     {
         $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'getList');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
         return $this->app->goodsLang->getList($where,$pageNum,$this->field,'gl_id desc');
     }
 
+    /**
+     * 查询一条商品多语言数据
+     * @return array|string
+     */
     public function getFind()
     {
         $postData = input();
@@ -32,6 +46,10 @@ class GoodsLang extends Common
         return $this->app->goodsLang->getFind($where,$this->field);
     }
 
+    /**
+     * 添加商品多语言数据
+     * @return array|\think\response\Json
+     */
     public function add()
     {
         $postData = input();
@@ -40,9 +58,13 @@ class GoodsLang extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->goodsLang->add($postData);
+        return $this->app->goodsLang->addGl($postData);
     }
 
+    /**
+     * 修改商品多语言数据
+     * @return array|mixed|\think\response\Json
+     */
     public function update()
     {
         $postData = input();
@@ -54,6 +76,10 @@ class GoodsLang extends Common
         return $this->app->goodsLang->update($postData);
     }
 
+    /**
+     * 删除商品多语言数据
+     * @return array|mixed|\think\response\Json
+     */
     public function del()
     {
         $postData = input();

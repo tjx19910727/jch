@@ -266,14 +266,27 @@ trait ActivityCouponTrait
                 if ($ac['c_type'] == 1) $discount_price = $ac['reduction'];
                 if ($ac['c_type'] == 2) $discount_price = bcmul($this->order['total_price'], bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
                 if ($discount_price < $this->order['total_price']) {
-                    $totalPrice = $this->order['total_price'];
+//                    $totalPrice = $this->order['total_price'];
                     // 优惠金额作用至订单总金额
                     $this->order['discount_price'] = bcadd($this->order['discount_price'], $discount_price, 2);
                     $this->order['total_price'] = bcsub($this->order['total_price'], $discount_price, 3);
                     actionLog($this->order,'优惠券订单数据');
                     foreach ($this->order['details'] as $key => $value) {
                         // 商品优惠金额 = 订单优惠金额 * 商品金额占比 = 订单优惠金额 *  （商品总金额 / 订单总金额）
-                        $sodDiscountPrice = bcmul($this->order['discount_price'],bcdiv($value['total_sod_price'],$totalPrice,2),4);
+//                        $sodDiscountPrice = bcmul($this->order['discount_price'],bcdiv($value['total_sod_price'],$totalPrice,2),4);
+
+                        $sodDiscountPrice = 0;
+                        // 商品优惠金额 = 商品售价 * 数量 * （1 - 打折
+                        $totalSodPrice = bcmul($value['retail_price'],$value['quantity'],2);
+                        if ($ac['ac_type'] == 1) {
+                            $reduction = bcdiv(bcsub(100,$ac['reduction']),100,2);
+                            $sodDiscountPrice = bcmul($totalSodPrice,$reduction,4);
+                        }
+                        // 商品优惠金额 = 商品售价 * 数量  - 立减金额 / 总数量 * 商品数量
+                        if ($ac['ac_type'] == 2 ) {
+                            $decPrice = bcmul(bcdiv($ac['reduction'],$this->order['total_quantity'],4),$value['quantity'],4);
+                            $sodDiscountPrice = bcsub($totalSodPrice,$decPrice);
+                        }
                         actionLog($value,'优惠计算前商品数据');
                         actionLog($sodDiscountPrice,'商品优惠金额');
                         if ($sodDiscountPrice < 0.01 && $key > 0) break;

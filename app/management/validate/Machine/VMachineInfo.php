@@ -33,5 +33,6 @@ class VMachineInfo extends VCommon
         "updateMore" => ["m_id"],
         "del" => ["mi_id"],
         "refreshSim" => ["mi_id",'iccid'],
+        "refreshComputer" => ["mi_id","machine_id"],
     ];
 }

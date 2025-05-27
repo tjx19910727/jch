@@ -25,10 +25,10 @@ trait AuthRoleNodeTrait
         return AuthRoleNodeModel::getFind($where,$field,$order);
     }
 
-    public function getAuthRoleNodeList($where,$pageNum = 0,$field = "*",$order = "")
+    public function getAuthRoleNodeList($where,$pageNum = 0,$field = "*",$order = "",$group = "")
     {
         $where['is_del'] = 2;
-        $data = AuthRoleNodeModel::getJoinNodeList($where,$pageNum,$field,$order);
+        $data = AuthRoleNodeModel::getJoinNodeList($where,$pageNum,$field,$order,$group);
         return $data;
     }
 

@@ -198,5 +198,6 @@ class GoodsModel extends BaseModel
                 }
             }
         }
+        @GoodsLangModel::whereDel(['goods_id' => $model->goods_id]);
     }
 }
