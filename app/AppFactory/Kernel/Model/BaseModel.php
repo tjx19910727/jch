@@ -168,10 +168,10 @@ class BaseModel extends Model
     {
 //        try {
             $fields = array_column(Db::query("SHOW COLUMNS FROM " . self::getTable()), 'Field');
-            if (in_array('creator', $fields) && ($field == "*" || strpos($field, "creator") !== false)) {
+            if (in_array('creator', $fields) && (strpos($field,"*") !== false || strpos($field, "creator") !== false)) {
                 $field .= ", (SELECT nickname FROM auth_manager au WHERE au.manager_id = a.creator) creator_nickname";
             }
-            if (in_array('ao_id', $fields) && ($field == "*" || strpos($field, "ao_id") !== false)) {
+            if (in_array('ao_id', $fields) && (strpos($field,"*") !== false || strpos($field, "ao_id") !== false)) {
                 $field .= ", (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name";
             }
             if (isset($pageNum) && $pageNum && !is_numeric($pageNum) && !is_array($pageNum)) throw new \Exception("页面数据条数必须为数字或数组");
