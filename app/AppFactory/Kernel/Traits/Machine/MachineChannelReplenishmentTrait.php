@@ -43,8 +43,12 @@ trait MachineChannelReplenishmentTrait
     public function terminalReplenishment()
     {
         $amm = $this->getAuthManagerMachineColumn(['m_id' => $this->machine['m_id']],'manager_id');
-        if (!in_array($this->data['operator'],$amm))
+        actionLog($this->getLS(),'补货前查询补货员');
+        actionLog($amm,'设备绑定的账号ID');
+        if (!in_array($this->data['operator'],$amm)) {
+            actionLog($this->data,'当前的数据operator没有在设备绑定的账号里面');
             return $this->rFail($this->lang("VChannelReplenishment.non-administrators"));
+        }
         $this->data['repList'] = json2arr($this->data['repList']);
         $flag = [];
         $this->startTrans();
