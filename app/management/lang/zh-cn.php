@@ -444,7 +444,9 @@ return [
         "machine_name_require" => "设备名称不能为空",
         "on_off_ckc_require" => "营业配置不能为空",
         "on_off_machine_require" => "定时开关机不能为空",
+        "is_exists" => "该设备营业配置已存在，请勿重复添加",
     ],
+
 
     "VMachineInfo" => [
         "mi_id_require" => "设备信息ID不能为空",
