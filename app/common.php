@@ -71,7 +71,7 @@ function returnState($state, $msg = "", $data = [], $isJson = true)
     if ($isJson) {
         $return = json($return);
     }
-    actionLog($return,'接口最终返回结果');
+    actionLog($return,'returnState');
     return $return;
 }
 

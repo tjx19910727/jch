@@ -88,6 +88,10 @@ return [
             'g_id_require' => 'Product ID cannot be empty',
             'machine_goods_exits' => 'This product already exists in the device, please do not add it again',
         ],
+
+    "VMachineOnOff" => [
+        "is_exists" => "The business configuration of this device already exists. Please do not add it repeatedly.",
+    ],
     'QueryMachineInfo' =>
         [
             'get_machine_no_data' => 'No device subject information found',

@@ -20,6 +20,8 @@ class MachineOnOffClient extends ManagementClient
 
     public function addOf($postData)
     {
+        $check = $this->getMachineOnOffFind(['m_id' => $postData['m_id']]);
+        if ($check) return $this->rFail($this->lang("VMachineOnOff.is_exists"));
         $result = $this->addMachineOnOff($postData);
         if ($result) {
             $this->sendToMachine(['machine_id' => $postData['machine_id']],'updateMachineOnOff');
