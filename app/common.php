@@ -33,7 +33,7 @@ function returnData($data, $text = "")
     }
     $data = obj2arr($data);
     if ($data) return returnState(200, $success, $data);
-    return returnState(100, $fail);
+    return returnState(300, $fail);
 }
 
 /**
@@ -71,6 +71,7 @@ function returnState($state, $msg = "", $data = [], $isJson = true)
     if ($isJson) {
         $return = json($return);
     }
+    actionLog($return,'接口最终返回结果');
     return $return;
 }
 
