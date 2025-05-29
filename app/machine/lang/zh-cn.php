@@ -111,11 +111,6 @@ return [
         "g_id_require" => "商品ID不能为空",
         "machine_goods_exits" => "该商品已存在于设备中，请勿重复添加",
     ],
-
-    "VMachineOnOff" => [
-        "is_exists" => "该设备营业配置已存在，请勿重复添加",
-    ],
-
     "QueryMachineInfo" => [
         "get_machine_no_data" => "查无设备主体信息",
     ],

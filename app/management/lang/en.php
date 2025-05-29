@@ -444,6 +444,7 @@ return [
         "machine_name_require" => "Device name cannot be empty",
         "on_off_ckc_require" => "Business configuration cannot be empty",
         "on_off_machine_require" => "Scheduled power on/off cannot be empty",
+        "is_exists" => "The business configuration of this device already exists. Please do not add it repeatedly.",
     ],
 
     "VMachineInfo" => [
