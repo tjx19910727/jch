@@ -934,7 +934,8 @@ class ApiClient extends ReceiveBaseClient
 //        }
         try {
             $params = [
-                "pageSize" => $this->data['pageNum'] ?? 15,
+//                "pageSize" => $this->data['pageNum'] ?? 15,
+                "pageSize" => 100,
                 "pageNo" => $this->data['page'] ?? 1,
             ];
             if (isset($this->data['productSn']) && $this->data['productSn']) $params['productSn'] = $this->data['productSn'];
