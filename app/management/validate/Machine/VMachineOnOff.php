@@ -32,7 +32,7 @@ class VMachineOnOff extends VCommon
         ];
 
         protected $scene = [
-            "add" => ["m_id","machine_id"],
+            "add" => ["m_id"],
             "update" => ["moo_id"],
             "del" => ["moo_id"],
         ];
