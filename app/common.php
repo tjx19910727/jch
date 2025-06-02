@@ -71,7 +71,6 @@ function returnState($state, $msg = "", $data = [], $isJson = true)
     if ($isJson) {
         $return = json($return);
     }
-    actionLog($return,'returnState');
     return $return;
 }
 
