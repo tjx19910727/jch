@@ -21,10 +21,12 @@ class MachineOnOffClient extends ManagementClient
     public function addOf($postData)
     {
         $flag = [];
-        $mIds = explode($postData['m_id'],",");
+        $mIds = explode(",",$postData['m_id']);
         unset($postData['m_id']);
         if ($mIds) {
             foreach ($mIds as $m_id) {
+                $m_id = trim($m_id);
+                if (!$m_id) continue;
                 $check = $this->getMachineOnOffFind(['m_id' => $m_id]);
                 if ($check) {
                     return $this->rFail($check['machine_id'] . ": " . $this->lang("VMachineOnOff.is_exists"));
