@@ -317,48 +317,41 @@ trait SaleOrdersTrait
             $insertSod['quantity'] = 0;
             $insertSod['discount_price'] = 0;
             $insertSod['retail_price'] = bcdiv($dv['item_price'], 100, 3);
-            $insertDetails = [];
-            $dvDiscountPrice = bcdiv($dv['discount_amount'], 100, 3);
-            $dvQuantity = $dv['quantity'];
             foreach ($mc as $mck => $mcv) {
-                if (!$insertDetails) {
-                    $insertDetails = array_merge($mcv, $insertSod);
-                    unset($insertDetails['frozen_stock'], $insertDetails['stock']);
-                }
+                $insertDetails = array_merge($mcv, $insertSod);
+                unset($insertDetails['frozen_stock'], $insertDetails['stock']);
+                $totalQuantity = 0;
                 // 一条货道库存不够
                 if ($dv['quantity'] > $mcv['stock']) {
-                    $insertDetails['quantity'] = $mcv['stock'];
+                    $totalQuantity = $mcv['stock'];
                 }
                 if ($dv['quantity'] <= $mcv['stock']) {
-                    $insertDetails['quantity'] = $dv['quantity'];
+                    $totalQuantity = $dv['quantity'];
                 }
-                $insertDetails['total_sod_price'] = 0;
-                $insertDetails['discount_price'] = 0;
-                $insertDetails['out_port'] = $dv['out_port'] ?? 1;
-                // 销售
-//                if ($dv['type'] == "sale") {
-//                    $insertDetails['total_sod_price'] = bcmul($insertDetails['retail_price'], $insertDetails['quantity'], 3);
-//                    $insertDetails['discount_price'] = bcmul($dvDiscountPrice, bcdiv($insertDetails['quantity'], $dvQuantity, 2), 3);
-//                }
-                // 赠品
-                if ($dv['type'] == "gift") {
-//                    $insertDetails['total_sod_price'] = 0;
-//                    $insertDetails['discount_price'] = 0;
-                    $insertDetails['is_gift'] = 1;
+                // 循环生成一个商品一条数据的订单详情
+                for ($i = 1; $i <= $totalQuantity;$i++) {
+                    $insertDetails['quantity'] = 1;
+                    $insertDetails['total_sod_price'] = 0;
+                    $insertDetails['discount_price'] = 0;
+                    $insertDetails['out_port'] = $dv['out_port'] ?? 1;
+                    // 赠品
+                    if ($dv['type'] == "gift") {
+                        $insertDetails['is_gift'] = 1;
+                    }
+                    $dv['quantity'] = bcsub($dv['quantity'], $insertDetails['quantity']);
+                    $updateMc = [
+                        'frozen_stock' => bcadd($mcv['frozen_stock'], $insertDetails['quantity']),
+                        'stock' => bcsub($mcv['stock'], $insertDetails['quantity']),
+                        "mc_id" => $mcv['mc_id'],
+                    ];
+                    $flag[] = $this->addSaleOrdersDetails($insertDetails);
+                    actionLog($this->getLS(), '生成订单详情');
+                    $flag[] = $this->updateMachineChannel($updateMc);
+                    actionLog($this->getLS(), '修改货架库存');
+                    $this->order['cost_price'] = bcadd($this->order['cost_price'], $insertDetails['cost_price'], 3);
+                    $this->order['market_price'] = bcadd($this->order['market_price'], $insertDetails['market_price'], 3);
+                    $this->order['retail_price'] = bcadd($this->order['retail_price'], $insertDetails['retail_price'], 3);
                 }
-                $dv['quantity'] = bcsub($dv['quantity'], $insertDetails['quantity']);
-                $updateMc = [
-                    'frozen_stock' => bcadd($mcv['frozen_stock'], $insertDetails['quantity']),
-                    'stock' => bcsub($mcv['stock'], $insertDetails['quantity']),
-                    "mc_id" => $mcv['mc_id'],
-                ];
-                $flag[] = $this->addSaleOrdersDetails($insertDetails);
-                actionLog($this->getLS(), '生成订单详情');
-                $flag[] = $this->updateMachineChannel($updateMc);
-                actionLog($this->getLS(), '修改货架库存');
-                $this->order['cost_price'] = bcadd($this->order['cost_price'], $insertDetails['cost_price'], 3);
-                $this->order['market_price'] = bcadd($this->order['market_price'], $insertDetails['market_price'], 3);
-                $this->order['retail_price'] = bcadd($this->order['retail_price'], $insertDetails['retail_price'], 3);
 //                $this->order['total_quantity'] = bcadd($this->order['total_quantity'], $insertDetails['quantity'], 3);
                 $insertDetails = [];
                 if ($dv['quantity'] == 0)

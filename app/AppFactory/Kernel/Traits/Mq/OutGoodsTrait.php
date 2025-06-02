@@ -83,26 +83,24 @@ trait OutGoodsTrait
 
                 $where = [];
                 // 修改订单副表
-//                if (isset($vv['sod_id']) && $vv['sod_id']) {
-//                    $where['sod_id'] = $vv['sod_id'];
-//                } else {
                 $where['order_id'] = $this->order['order_id'];
                 $where['channel_position'] = $position;
                 $where['channel_code'] = $channel_code;
                 $where['success_quantity'] = 0;
                 $where['fail_quantity'] = 0;
                 $sod = $this->getSaleOrdersDetailsFind($where,'sod_id','sod_id asc');
-                unset($where);
-//                }
-                $update = [];
-                $where['sod_id'] = $sod['sod_id'];
-                $update['success_quantity'] = $success;
-                $update['fail_quantity'] = $fail;
-                $update['deliver_pics'] = $deliver_pics;
-                $update['out_sequence'] = $out_sequence;
-                actionLog($update,'修改订单副表参数','OutGoods');
-                $flag[] = $this->updateSaleOrdersDetails($update,$where,['success_quantity',"fail_quantity",'deliver_pics','out_sequence']);
-                actionLog($this->getLS(),'【SQL】修改订单副表','OutGoods');
+                if ($sod) {
+                    unset($where);
+                    $update = [];
+                    $where['sod_id'] = $sod['sod_id'];
+                    $update['success_quantity'] = $success;
+                    $update['fail_quantity'] = $fail;
+                    $update['deliver_pics'] = $deliver_pics;
+                    $update['out_sequence'] = $out_sequence;
+                    actionLog($update, '修改订单副表参数', 'OutGoods');
+                    $flag[] = $this->updateSaleOrdersDetails($update, $where, ['success_quantity', "fail_quantity", 'deliver_pics', 'out_sequence']);
+                    actionLog($this->getLS(), '【SQL】修改订单副表', 'OutGoods');
+                }
                 // 修改货道
                 $updateMc = [];
                 $whereMc['channel_code'] = $channel_code;
