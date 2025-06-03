@@ -36,6 +36,28 @@ trait AuthNodeTrait
     }
 
     /**
+     * 获取指定节点上级树
+     * @param $id
+     * @param string $field
+     * @return array
+     */
+    public function getAuthNodeFatherList($id,$field = "*")
+    {
+        $data = [];
+        if ($id > 0) {
+            $father = $this->getAuthNodeFind(['node_id' => $id], $field);
+            if ($father) {
+                $father = $father->toArray();
+                $data[] = $father;
+                if (isset($father['pid']) && $father['pid'] > 0) {
+                    $data = array_merge($data,$this->getAuthNodeFatherList($father['pid'],$field));
+                }
+            }
+        }
+        return $data;
+    }
+
+    /**
      * 递归获取所有子节点列表
      * @param int $pid
      * @return array
