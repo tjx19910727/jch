@@ -85,7 +85,12 @@ class BaseModel extends Model
         // 增加单路径域名信息
         foreach (self::$singlePathFieldList as $key => $value) {
             if (isset($model->$value)) {
-                $model->$value = checkStrDomain($model->$value);
+                if (preg_match('/\.([a-zA-Z0-9]+)$/',$model->$value,$matches)) {
+                    $extension = $matches[1];
+                    if (in_array($extension,["jpg","jpeg","png","gif","mp4","mp3","JPG","JPEG","PNG","GIF","MP4","MP3"])) {
+                        $model->$value = checkStrDomain($model->$value);
+                    }
+                }
             }
         }
         // 增加多路径域名信息

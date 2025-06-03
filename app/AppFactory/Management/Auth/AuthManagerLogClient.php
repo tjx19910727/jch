@@ -24,7 +24,7 @@ class AuthManagerLogClient extends ManagementClient
         $otherComment = config("auth_manager_log_list.otherComment");
         $otherPath = config("auth_manager_log_list.otherPath");
 
-        $pathList = $this->getAuthNodeList([], 0, 'url,name');
+        $pathList = $this->getAuthNodeList([], 0, 'pid,url,name');
         if ($pathList) $pathList = $pathList->toArray();
         $pathList = array_merge($pathList, $otherPath);
         $fieldComment = $this->getFieldComment();
@@ -32,11 +32,24 @@ class AuthManagerLogClient extends ManagementClient
         $data = $this->getAuthManagerLogList($where, $pageNum, $field, $order, function ($item) use ($fieldComment, $pathList) {
             if ($item['path']) {
                 if ($pathList) {
-                    foreach ($pathList as $pk => $pv) {
-                        if ($item['path'] == $pv['url']) {
-                            $item['path'] = $pv['name'];
-                            break;
+                    $nodeUrl = array_column($pathList,'url');
+                    if (in_array($item['path'],$nodeUrl)) {
+                        foreach ($pathList as $pk => $pv) {
+                            if ($item['path'] == $pv['url']) {
+                                if (isset($pv['pid'])) {
+                                    $father = $this->getAuthNodeFatherList($pv['pid'], 'node_id,pid,name,url');
+                                    if ($father) {
+                                        sort($father);
+                                        $fatherNameList = array_column($father, 'name');
+                                    }
+                                }
+                                $fatherNameList[] = $pv['name'];
+                                $item['path'] = implode("-", $fatherNameList);
+                                break;
+                            }
                         }
+                    } else {
+                        $item['path'] = "未定义事件：" . $item['path'];
                     }
                 }
             }
