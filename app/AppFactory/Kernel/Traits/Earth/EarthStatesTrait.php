@@ -12,10 +12,16 @@ use app\AppFactory\Kernel\Model\Earth\EarthStatesModel;
 
 trait EarthStatesTrait
 {
+    public function getEarthStatesColumn($where,$column,$key)
+    {
+        return EarthStatesModel::getColumn($where,$column,$key);
+    }
+
     public function getEarthStatesValue($where,$value)
     {
         return EarthStatesModel::getFieldValue($where,$value);
     }
+
     public function getEarthStatesFind($where,$field = "*")
     {
         return EarthStatesModel::getFind($where,$field);

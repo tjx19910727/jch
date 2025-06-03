@@ -29,7 +29,7 @@ class Machine extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
         if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
         return $this->app->machine->getMList($where,$pageNum,$this->field,"machine_id desc");
     }
@@ -78,6 +78,31 @@ class Machine extends Common
             return returnValidate($e->getMessage());
         }
         return $this->app->machine->delM($postData['m_id']);
+    }
+
+    /**
+     * 导出设备
+     * @return array|\think\response\Json
+     */
+    public function exportMachine()
+    {
+        $postData = input();
+        if (isset($postData['lang'])) unset($postData['lang']);
+        $machineIds = [];
+        if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
+            $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
+            unset($postData['machine_group_id']);
+            if (!$machineIds) return $this->app->machine->rNoData();
+        }
+        $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
+        if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
+        $field = "m_id,machine_id,machine_name,country_id,state_id,city_id,regions_id,street,floor,version,
+        (case online when 1 then '" . lang("online") . "' else '" . lang("offline"). "' END) online,
+        FROM_UNIXTIME(last_online_time) last_online_time,
+        (case device_type when 1 then '" . lang("vending_machine") . "' else '" . lang("store") . "' end) device_type,
+        (case machine_level when 1 then '" . lang("simplified_version") . "' else '" . lang("luxury_edition") . "' END) machine_level,
+        (case status when 1 then '" . lang("normal") . "' when 2 then '" . lang("disable") . "' when 3 then '" . lang("maintenance") . "' end) status";
+        return $this->app->machine->exportM($where,$field,"machine_id desc");
     }
 
     /**
