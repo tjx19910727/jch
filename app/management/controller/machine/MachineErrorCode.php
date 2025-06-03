@@ -22,7 +22,7 @@ class MachineErrorCode extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
         $where['status'] = 1;
-        return $this->app->machineErrorCode->getEcList($where,$pageNum,$this->field,'create_time desc','errorCode');
+        return $this->app->machineErrorCode->getEcList($where,$pageNum,$this->field,'create_time desc');
     }
 
     public function getFind()
