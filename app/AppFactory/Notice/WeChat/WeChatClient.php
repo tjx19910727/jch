@@ -23,6 +23,7 @@ class WeChatClient extends NoticeBaseClient
      */
     public function send()
     {
+        actionLog($this->config,'发送微信消息模板总数据');
         // 发送类型为微信
         if ($this->config['sendType'] == 1 &&
             isset($this->config['config']) && $this->config['config'] &&
