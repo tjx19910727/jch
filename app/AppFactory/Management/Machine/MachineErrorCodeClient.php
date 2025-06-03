@@ -45,6 +45,7 @@ class MachineErrorCodeClient extends ManagementClient
             $where[] = ['m_id', 'in', $mIds];
             $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, '', $group);
         }
+        actionLog($this->getLS(),'【SQL】查询错误码列表');
         return $this->rQ($data);
     }
 
