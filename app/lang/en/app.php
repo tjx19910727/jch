@@ -34,6 +34,16 @@ return [
             'out_fail' => 'Shipment failed',
             'unclaimed' => 'There are items in the order that have not been picked up',
         ],
+
+    "online" => "online",
+    "offline" => "offline",
+    "vending_machine" => "vending_machine",
+    "store" => "store",
+    "simplified_version" => "Simplified version",
+    "luxury_edition" => "Luxury edition",
+    "normal" => "Normal",
+    "disable" => "Disable",
+    "maintenance" => "Maintenance",
     'deviceErrorCode' =>
         [
             1000001 => 'Communication error of main cabinet equipment',

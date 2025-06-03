@@ -53,6 +53,16 @@ return [
         "unclaimed" => '订单有商品未取',
     ],
 
+    "online" => "在线",
+    "offline" => "离线",
+    "vending_machine" => "售卖机",
+    "store" => "门店",
+    "simplified_version" => "简易版",
+    "luxury_edition" => "豪华版",
+    "normal" => "正常",
+    "disable" => "禁用",
+    "maintenance" => "维护",
+
     "deviceErrorCode" => [
         "1000001" => "主柜设备通信错误",
         "1000002" => "副柜设备通信错误",

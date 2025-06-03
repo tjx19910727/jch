@@ -170,6 +170,54 @@ class MachineClient extends ManagementClient
     }
 
     /**
+     * 导出设备列表
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return array|\think\response\Json
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function exportM($where,$field = "*",$order = "")
+    {
+        $list = $this->getMachineList($where,0,$field,$order);
+        if ($list) {
+            $lang = input("lang");
+            $fieldName = "name";
+            if (!$lang || $lang == "zh-cn") $fieldName = "cname";
+            $countries = $this->getEarthCountriesColumn([], 'cname,name', "id");
+            $states = $this->getEarthStatesColumn([], 'cname,name', "id");
+            $cities = $this->getEarthCitiesColumn([], 'cname,name', 'id');
+            $regions = $this->getEarthRegionsColumn([], 'cname,name', 'id');
+            foreach ($list as $key => $item) {
+                $address = [];
+                if (isset($item['country_id']) && $item['country_id']) $address[] = $countries[$item['country_id']][$fieldName];
+                if (isset($item['state_id']) && $item['state_id'])  $address[] = $states[$item['state_id']][$fieldName];
+                if (isset($item['city_id']) && $item['city_id'])  $address[] = $cities[$item['city_id']][$fieldName];
+                if (isset($item['regions_id']) && $item['regions_id'])  $address[] = $regions[$item['regions_id']][$fieldName];
+                $item['address'] = implode("",$address) . $item['street'] . $item['floor'];
+                unset($item['country_id'],$item['state_id'],$item['city_id'],$item['regions_id'],$item['street'],$item['floor']);
+                $list[$key] = $item;
+            }
+            $filename = "导出设备信息-" . date("Ymd");
+            $title = [
+                "machine_id" => "设备编号",
+                "machine_name" => "设备名称",
+                "address" => "详细地址",
+                "device_type" => "应用类型",
+                "machine_level" => "设备等级",
+                "status" => "设备状态",
+                "online" => "设备在离线",
+                "last_online_time" => "最后上线时间",
+                "version" => "软件版本",
+            ];
+            return $this->sendToExport("设备管理-营业配置", $filename, $title, $list);
+        }
+        return $this->rFail($this->lang("query_fail"));
+    }
+
+    /**
      * 删除设备信息
      * @param $m_id
      * @return array|\think\response\Json
