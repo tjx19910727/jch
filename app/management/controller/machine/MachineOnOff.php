@@ -15,8 +15,13 @@ use app\management\validate\Machine\VMachineOnOff;
 class MachineOnOff extends Common
 {
 
-    protected $field = "moo_id,m_id,machine_id,
-    (SELECT machine_name FROM machine WHERE `machine`.`m_id` = `a`.`m_id` GROUP BY machine.m_id LIMIT 1) machine_name,
+    protected $field = "moo_id,m_id,
+    (CASE  
+    WHEN (machine_id is null or machine_id = '') THEN (select machine_id from machine m1 where `m1`.`m_id` = a.m_id limit 1) 
+    ELSE machine_id
+     END) 
+    machine_id,
+        (SELECT machine_name FROM machine WHERE `machine`.`m_id` = `a`.`m_id` GROUP BY machine.m_id LIMIT 1) machine_name,
     on_off_ckc,on_off_machine,status,creator,create_time,update_time";
     protected $validatePath = VMachineOnOff::class;
 

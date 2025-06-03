@@ -39,12 +39,11 @@ class MachineErrorCodeClient extends ManagementClient
 
     public function getEcList($where, $pageNum = 0, $field = "*", $order = "", $group = "")
     {
-        $data = [];
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) {
             $where[] = ['m_id', 'in', $mIds];
-            $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, '', $group);
         }
+        $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, '', $group);
         actionLog($this->getLS(),'【SQL】查询错误码列表');
         return $this->rQ($data);
     }
