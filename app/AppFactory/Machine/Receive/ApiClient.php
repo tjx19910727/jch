@@ -346,11 +346,12 @@ class ApiClient extends ReceiveBaseClient
                 "change_value" => $mc['stock'],
                 "ao_id" => $this->machine['ao_id'],
                 "creator" => $this->data['operator'],
-            ];// 生成原商品退货记录
+            ];
+            // 生成原商品退货记录
             if ($mc['stock'] > 0) {
 
-                // 记录商品变化事件（货架下货旧商品）
-                $insertGChange["desc"] = "换货-货架下货旧商品";
+                // 记录商品变化事件（换货-货架下货旧商品）
+                $insertGChange["desc"] = $this->lang("goodsChange.terminal_exchange_mc_under_old");
                 $insertGChange['position'] = 1;
                 $insertGChange['type'] = 3;
                 $this->addGoodsChange($insertGChange);
@@ -358,8 +359,8 @@ class ApiClient extends ReceiveBaseClient
                 // 原货架商品是设备商品库的，退回设备商品库备用库存
                 if ($mc['mg_id'] > 0) {
 
-                    // 记录商品变化事件（备用商品库上货）
-                    $insertGChange['desc'] = "换货-设备商品库上货备用库存";
+                    // 记录商品变化事件（换货-设备商品库上货备用库存）
+                    $insertGChange['desc'] = $this->lang("goodsChange.terminal_exchange_mg_inc_reserve_stock");
                     $insertGChange['position'] = 2;
                     $insertGChange['type'] = 2;
                     $this->addGoodsChange($insertGChange);
@@ -429,7 +430,7 @@ class ApiClient extends ReceiveBaseClient
                 // 换货提交的备用库存大于0
                 if (isset($this->data['standby_quantity']) && $mg['standby_stock'] > 0 && $this->data['standby_quantity'] > 0) {
 
-                    // 记录商品变化事件（备用商品库下货）
+                    // 记录商品变化事件（换货-设备商品库下货备用库存）
                     $insertGChange["mg_id"] = $mg['mg_id'];
                     $insertGChange["g_id"] = $mg['g_id'];
                     $insertGChange["g_name"] = $mg['g_name'];
@@ -438,7 +439,7 @@ class ApiClient extends ReceiveBaseClient
                     $insertGChange["pic"] = $mg['pic'];
                     $insertGChange["sku"] = $mg['sku'];
                     $insertGChange["bar_code"] = $mg['bar_code'];
-                    $insertGChange["desc"] = "换货-设备商品库下货备用库存";
+                    $insertGChange["desc"] = $this->lang("goodsChange.terminal_exchange_mg_dec_reserve_stock");
                     $insertGChange["change_value"] = $this->data['standby_quantity'];
                     $insertGChange["position"] = 2;
                     $insertGChange["type"] = 3;
@@ -466,9 +467,9 @@ class ApiClient extends ReceiveBaseClient
             actionLog($mc, '要修改的货架数据');
             if (isset($this->data['quantity']) && $this->data['quantity'] > 0) {
 
-                // 记录商品变化事件（备用商品库下货）
+                // 记录商品变化事件（换货-货架上货新商品）
                 $insertGChange["mg_id"] = $mc['mg_id'];
-                $insertGChange["desc"] = "换货-货架上货新商品";
+                $insertGChange["desc"] = $this->lang("goodsChange.terminal_exchange_mc_display_new");
                 $insertGChange["change_value"] = $mc['stock'];
                 $insertGChange["position"] = 1;
                 $insertGChange["type"] = 2;

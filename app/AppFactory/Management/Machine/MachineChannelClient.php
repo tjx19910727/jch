@@ -11,6 +11,7 @@ namespace app\AppFactory\Management\Machine;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
@@ -20,7 +21,7 @@ use app\AppFactory\Management\ManagementClient;
 class MachineChannelClient extends ManagementClient
 {
     use MachineTrait,MachineChannelTrait,MachineGoodsTrait;
-    use GoodsTrait;
+    use GoodsTrait,GoodsChangeTrait;
     use AuthManagerMachineTrait;
 
     /**
@@ -144,16 +145,84 @@ class MachineChannelClient extends ManagementClient
      */
     public function updateMc($postData)
     {
+        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock');
+        $machine = $this->getMachineFind(['m_id' => $mc['m_id']],'m_id,machine_id,machine_name,ao_id');
+        // 商品变化基础数据
+        $insertGChange = [
+            "m_id" => $machine['m_id'],
+            "machine_id" => $machine['machine_id'],
+            "machine_name" => $machine['machine_name'],
+            "mc_id" => $mc['mc_id'],
+            "channel_code" => $mc['channel_code'],
+            "mg_id" => $mc['mg_id'],
+            "g_id" => $mc['g_id'],
+            "g_name" => $mc['g_name'],
+            "gc_id" => $mc['gc_id'],
+            "gc_name" => $mc['gc_name'],
+            "pic" => $mc['pic'],
+            "sku" => $mc['sku'],
+            "bar_code" => $mc['bar_code'],
+            "ao_id" => $machine['ao_id'],
+        ];
+
+        // 更换货道商品处理
         if (isset($postData['g_id']) && $postData['g_id'] > 0) {
             $old = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']]);
             if ($old['g_id'] != $postData['g_id']) {
-                $goods = $this->getGoodsFind(['g_id' => $postData['g_id']],"g_name,gc_id,gc_name,pic,sku,bar_code");
+                $goods = $this->getGoodsFind(['g_id' => $postData['g_id']],"g_id,g_name,gc_id,gc_name,pic,sku,bar_code");
                 $postData = array_merge($postData,$goods->toArray() ?? []);
+
+                // 20250604 更换货道商品，后台换货-货架下货旧商品，下货数量为当前库存
+                $insertGc = array_merge($insertGChange,[
+                    "change_value" => $mc['stock'],  // 变化数量为当前货道库存
+                    "type" => 7,
+                    "desc" => $this->lang("goodsChange.backstage_exchange_mc_under_old"),
+                    "position" => 1,
+                ]);
+                $this->addGoodsChange($insertGc);
+
+                // 20250604 更换货道商品，后台换货-货架上货新商品，新商品数据替换原货道数据，上货数量为postData的stock参数
+                $insertGc = array_merge($insertGChange,[
+                    "mg_id" => $postData['mg_id'] ?? 0,
+                    "g_id" => $goods['g_id'],
+                    "g_name" => $goods['g_name'],
+                    "gc_id" => $goods['gc_id'],
+                    "gc_name" => $goods['gc_name'],
+                    "pic" => $goods['pic'],
+                    "sku" => $goods['sku'],
+                    "bar_code" => $goods['bar_code'],
+                    "change_value" => $postData['stock'],  // 变化数量为postData的stock参数
+                    "type" => 6,
+                    "desc" => $this->lang("goodsChange.backstage_exchange_mc_display_new"),
+                    "position" => 1,
+                ]);
+                $this->addGoodsChange($insertGc);
+            }
+        } else {
+            // 20250604 非更新货道商品，检查库存变化（后台上货6、后台下货7），库存值相等时不记录变化
+            if (isset($postData['stock']) && $postData['stock'] > 0 && $mc['stock'] != $postData['stock']) {
+                $changeValue = bcsub($postData['stock'] ,$mc['stock']); // 变化数量为：postData的stock - 当前货道库存
+                $insertGc = array_merge($insertGChange, [
+                    "change_value" => $changeValue,
+                    "type" => $changeValue > 0 ? 6 : 7 ,   // >0：后台上货，<0 后台下货
+                    "desc" => $changeValue > 0 ? $this->lang("goodsChange.backstage_rep_mc_inc_stock"): $this->lang("goodsChange.backstage_rep_mc_dec_stock"),
+                    "position" => 1,
+                ]);
+                $this->addGoodsChange($insertGc);
+            }
+            // 20250604 bad状态变化（后台BAD 8，后台恢复BAD 9），变化数量为当前货架库存值
+            if (isset($postData['status']) && $postData['status'] != $mc['status'] && in_array($postData['status'],[1,3])) {
+                $insertGc = array_merge($insertGChange, [
+                    "change_value" => $mc['stock'],
+                    "type" => $postData['status'] == 3 ? 8 : 9 ,   // 3：后台BAD，1：后台恢复BAD
+                    "desc" => $postData['status'] == 3 ? $this->lang("goodsChange.backstage_mc_bad") : $this->lang("goodsChange.backstage_mc_not_bad"),
+                    "position" => 1,
+                ]);
+                $this->addGoodsChange($insertGc);
             }
         }
         $result = $this->updateMachineChannel($postData);
         if ($result) {
-            $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'machine_id,mc_id');
             // 发送触发货道更新数据
             $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMc',['mc_id' => $mc['mc_id']]);
             return $this->r(200,$this->lang("action_success"));

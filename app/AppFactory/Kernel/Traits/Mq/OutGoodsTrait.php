@@ -161,7 +161,7 @@ trait OutGoodsTrait
                         "bar_code" => $mc['bar_code'],
                         "change_value" => $success,
                     ]);
-                    $insertGc['desc'] = "终端销售-货架减库存";
+                    $insertGc['desc'] = $this->lang("goodsChange.terminal_sale_dec_stock");
                     $insertGc['position'] = 1;
                     $insertGc['type'] = 2;
                     $this->addGoodsChange($insertGc);

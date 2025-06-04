@@ -172,4 +172,45 @@ return [
         "template_require" => "查无消息模板信息",
         "receiver_require" => "查无收件人信息",
     ],
+
+    // 商品变化
+    "goodsChange" => [
+        "unknown" => "未知",
+        // OutGoodsTrait.php
+        "terminal_sale_dec_stock" => "终端销售-货架减库存",
+
+        // MachineChannelTrait.php
+        "terminal_create_inc_stock" => "终端货架-创建上货",
+        "terminal_mc_bad" => "终端BAD",
+        "terminal_mc_not_bad" => "终端恢复BAD",
+
+        // MachineChannelReplenishmentTrait.php
+        "terminal_rep_inc_mg_reserve_stock" => "终端补货-设备商品上货备用库存",
+        "terminal_rep_dec_mg_reserve_stock" => "终端补货-设备商品下货备用库存",
+        "terminal_rep_inc_mc_reserve_stock" => "终端补货-货架上货备用库存",
+        "terminal_rep_dec_mc_reserve_stock" => "终端补货-货架下货备用库存",
+        "terminal_rep_inc_mc_stock" => "终端补货-上架补货",
+        "terminal_rep_dec_mc_stock" => "终端补货-下架退货",
+
+        // ApiClient.php
+        "terminal_exchange_mc_under_old" => "终端换货-货架下货旧商品",
+        "terminal_exchange_mc_display_new" => "终端换货-货架上货新商品",
+        "terminal_exchange_mg_inc_reserve_stock" => "终端换货-设备商品库上货备用库存",
+        "terminal_exchange_mg_dec_reserve_stock" => "终端换货-设备商品库下货备用库存",
+
+        // CheckClient.php
+        "check_stock_shortage" => "库存盘点-库存盘亏",
+        "check_stock_surplus" => "库存盘点-库存盘盈",
+
+
+
+        // MachineChannelClient.php
+        "backstage_exchange_mc_under_old" => "后台换货-货架下货旧商品",
+        "backstage_exchange_mc_display_new" => "后台换货-货架上货新商品",
+        "backstage_rep_mc_inc_stock" => "后台补货-上架补货",
+        "backstage_rep_mc_dec_stock" => "后台补货-下架退货",
+        "backstage_mc_bad" => "后台BAD",
+        "backstage_mc_not_bad" => "后台恢复BAD",
+
+    ],
 ];
