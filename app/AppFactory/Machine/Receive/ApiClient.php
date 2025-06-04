@@ -683,8 +683,11 @@ class ApiClient extends ReceiveBaseClient
             $this->startTrans();
             try {
                 $flag[] = $this->updateAdvertisementPush($adv);
+                actionLog($this->getLS(),'【SQL】修改广告播放计划');
                 $insert['play_time'] = $this->data['play_time'];
                 $flag[] = $this->addAdvertisementRecord($insert);
+                actionLog($this->getLS(),'【SQL】添加广告播放记录');
+                actionLog($flag,'记录结果集');
                 $result = $this->checkFlag($flag);
                 $check = $this->checkTrans($result, 0);
                 if ($check) {

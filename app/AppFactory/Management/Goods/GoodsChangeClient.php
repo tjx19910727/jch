@@ -48,6 +48,8 @@ class GoodsChangeClient extends ManagementClient
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
                 "channel_code" => "货架编号",
+                "sku" => "SKU",
+                "g_name" => "商品名称",
                 "change_value" => "变化数量",
                 "type" => "变化类型",
                 "position" => "位置",
