@@ -212,7 +212,7 @@ class MachineClient extends ManagementClient
                 "last_online_time" => "最后上线时间",
                 "version" => "软件版本",
             ];
-            return $this->sendToExport("设备管理-营业配置", $filename, $title, $list);
+            return $this->sendToExport("设备管理-设备列表", $filename, $title, $list);
         }
         return $this->rFail($this->lang("query_fail"));
     }
@@ -265,27 +265,23 @@ class MachineClient extends ManagementClient
      */
     public function getData($where = [])
     {
-        $total = 0;
-        $normal = 0;
-        $disable = 0;
-        $maintain = 0;
-        $online = 0;
-        $offline = 0;
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) {
-            $where[] = ['machine_id', 'in', $machineIds];
-            $total = $this->getMachineCount($where);
-            $where['status'] = 2;
-            $disable = $this->getMachineCount($where);
-            $where['status'] = 3;
-            $maintain = $this->getMachineCount($where);
-            $where['status'] = 1;
-            $normal = $this->getMachineCount($where);
-            $where['online'] = 1;
-            $online = $this->getMachineCount($where);
-            $where['online'] = 2;
-            $offline = $this->getMachineCount($where);
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            }
         }
+        $total = $this->getMachineCount($where);
+        $where['status'] = 2;
+        $disable = $this->getMachineCount($where);
+        $where['status'] = 3;
+        $maintain = $this->getMachineCount($where);
+        $where['status'] = 1;
+        $normal = $this->getMachineCount($where);
+        $where['online'] = 1;
+        $online = $this->getMachineCount($where);
+        $where['online'] = 2;
+        $offline = $this->getMachineCount($where);
         $data = [
             "total" => $total,
             "normal" => $normal,
@@ -302,27 +298,28 @@ class MachineClient extends ManagementClient
      * @param $where
      * @return array|string
      */
-    public function get10List($where)
+    public function get10List($where = [])
     {
-        $list = [];
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) {
-            $where[] = ['machine_id', 'in', $machineIds];
-            $list = $this->getSaleOrdersMachineCountList($where, 0,
-                'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
-                'totalPrice desc,totalQuantity desc, m_id desc', '', 'm_id', 10);
-            if ($list) {
-                $list = $list->toArray();
-                foreach ($list as $key => $item) {
-                    $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
-                    if ($m) {
-                        if ($m['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $m['country_id']], 'code,name,cname');
-                        if ($m['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $m['state_id']], 'code,name,cname');
-                        if ($m['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $m['city_id']], 'code,name,cname');
-                        if ($m['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $m['regions_id']], 'code,name,cname');
-                    }
-                    $list[$key] = $item;
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            }
+        }
+        $list = $this->getSaleOrdersMachineCountList($where, 0,
+            'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
+            'totalPrice desc,totalQuantity desc, m_id desc', '', 'm_id', 10);
+        if ($list) {
+            $list = $list->toArray();
+            foreach ($list as $key => $item) {
+                $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                if ($m) {
+                    if ($m['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $m['country_id']], 'code,name,cname');
+                    if ($m['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $m['state_id']], 'code,name,cname');
+                    if ($m['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $m['city_id']], 'code,name,cname');
+                    if ($m['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $m['regions_id']], 'code,name,cname');
                 }
+                $list[$key] = $item;
             }
         }
         return $this->rQ($list);
@@ -333,36 +330,36 @@ class MachineClient extends ManagementClient
      * @param $where
      * @return array|\think\response\Json
      */
-    public function exportRankingList($where)
+    public function exportRankingList($where = [])
     {
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) {
-            $where[] = ['machine_id', 'in', $machineIds];
-            $list = $this->getSaleOrdersMachineCountList($where, 0,
-                'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
-                'totalPrice desc,totalQuantity desc, m_id desc', '', 'm_id');
-            if ($list) {
-                $list = $list->toArray();
-                foreach ($list as $key => $item) {
-                    $item['address'] = "";
-                    $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
-                    if ($m['country_id']) $item['address'] = $this->getEarthCountriesValue(['id' => $m['country_id']], 'name');
-                    if ($m['state_id']) $item['address'] .= "-" . $this->getEarthStatesValue(['id' => $m['state_id']], 'name');
-                    if ($m['city_id']) $item['address'] .= "-" . $this->getEarthCitiesValue(['id' => $m['city_id']], 'name');
-                    if ($m['regions_id']) $item['address'] .= "-" . $this->getEarthRegionsValue(['id' => $m['regions_id']], 'name');
-                    $list[$key] = $item;
-                }
-                $title = [
-                    "machine_id" => "机器ID",
-                    "machine_name" => "机器名称",
-                    "address" => "机器位置",
-                    "totalPrice" => "销售额",
-                    "coupon_used" => "优惠券",
-                ];
-                $filename = "设备排行榜（最近7天）-" . date("YmdHis");
-                $result = $this->sendToExport("首页-设备排行榜（最近7天）", $filename, $title, $list);
-                return $result;
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"m_id");
+        if ($mIds) {
+            $where[] = ['m_id', 'in', $mIds];
+        }
+        $list = $this->getSaleOrdersMachineCountList($where, 0,
+            'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
+            'totalPrice desc,totalQuantity desc, m_id desc', '', 'm_id');
+        if ($list) {
+            $list = $list->toArray();
+            foreach ($list as $key => $item) {
+                $item['address'] = "";
+                $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                if ($m['country_id']) $item['address'] = $this->getEarthCountriesValue(['id' => $m['country_id']], 'name');
+                if ($m['state_id']) $item['address'] .= "-" . $this->getEarthStatesValue(['id' => $m['state_id']], 'name');
+                if ($m['city_id']) $item['address'] .= "-" . $this->getEarthCitiesValue(['id' => $m['city_id']], 'name');
+                if ($m['regions_id']) $item['address'] .= "-" . $this->getEarthRegionsValue(['id' => $m['regions_id']], 'name');
+                $list[$key] = $item;
             }
+            $title = [
+                "machine_id" => "机器ID",
+                "machine_name" => "机器名称",
+                "address" => "机器位置",
+                "totalPrice" => "销售额",
+                "coupon_used" => "优惠券",
+            ];
+            $filename = "设备排行榜（最近7天）-" . date("YmdHis");
+            $result = $this->sendToExport("首页-设备排行榜（最近7天）", $filename, $title, $list);
+            return $result;
         }
         return $this->r(100,$this->lang("query_fail"));
     }
