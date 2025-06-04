@@ -83,6 +83,9 @@ class Machine extends Common
     /**
      * 导出设备
      * @return array|\think\response\Json
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
      */
     public function exportMachine()
     {
