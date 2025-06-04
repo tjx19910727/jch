@@ -104,12 +104,12 @@ trait MachineChannelReplenishmentTrait
                         $this->rollbackTrans();
                         return $this->rFail($this->lang("VChannelReplenishment.exceed_standby_stock_limit"));
                     }
-                    $desc = "终端补货-设备商品上货备用库存";
-                    $channelDesc = "终端补货-货架下货备用库存";
+                    $desc = $this->lang("goodsChange.terminal_rep_inc_mg_reserve_stock");
+                    $channelDesc = $this->lang("goodsChange.terminal_rep_dec_mc_reserve_stock");
                     $type = 3;
                     if ($value['standby_quantity'] > 0) {
-                        $desc = "终端补货-设备商品下货备用库存";
-                        $channelDesc = "终端补货-货架上货备用库存";
+                        $desc = $this->lang("goodsChange.terminal_rep_dec_mg_reserve_stock");
+                        $channelDesc = $this->lang("goodsChange.terminal_rep_inc_mc_reserve_stock");
                         $type = 2;
                     }
 
@@ -140,8 +140,8 @@ trait MachineChannelReplenishmentTrait
 
                 if ($value['quantity'] != 0) {
                     // 记录商品变化事件（货架上架补货）
-                    $channelDesc = "终端补货-上架补货";
-                    if ($value['quantity'] < 0) $channelDesc = "终端补货-下架退货";
+                    $channelDesc = $this->lang("goodsChange.terminal_rep_inc_mc_stock");
+                    if ($value['quantity'] < 0) $channelDesc = $this->lang("goodsChange.terminal_rep_dec_mc_stock");
                     $insertGc['desc'] = $channelDesc;
                     $insertGc['position'] = 1;
                     $insertGc["change_value"] = abs($value['quantity']);

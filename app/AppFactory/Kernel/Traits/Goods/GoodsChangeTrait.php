@@ -39,22 +39,21 @@ trait GoodsChangeTrait
         return GoodsChangeModel::getList($where,$pageNum,$field,$order,$eachFun,$group);
     }
 
-    private $desc = [
-        "1" => [
-            "1" => "未知",
-            "2" => "货架上货新商品",
-            "3" => "货架下货旧商品",
-        ],
-        "2" => [
-            "1" => "未知",
-            "2" => "设备商品库上货备用库存",
-            "3" => "设备商品库下货备用库存",
-        ],
-    ];
+    /**
+     * 获取商品变化说明多语言数据
+     * @param $position
+     * @param $type
+     * @return mixed
+     */
+//    protected function getDesc($position,$type)
+//    {
+//        $desc = $this->lang("goodsChange." . $position . "_" . $type);
+//        return $desc;
+//    }
 
     public function addGoodsChange($insert)
     {
-        if (!isset($insert['desc'])) $insert['desc'] = $this->desc[$insert['position']][$insert['type']];
+//        if (!isset($insert['desc'])) $insert['desc'] = $this->getDesc($insert['position'],$insert['type']);
         $data = GoodsChangeModel::create($insert);
         return $data->change_id;
     }

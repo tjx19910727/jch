@@ -141,4 +141,43 @@ return [
             'template_require' => 'Check for no message template information',
             'receiver_require' => 'No recipient information found',
         ],
+
+
+    // 商品变化
+    "goodsChange" => [
+        // OutGoodsTrait.php
+        "terminal_sale_dec_stock" => "Terminal Sales - Reduce Inventory on Shelves",
+
+        // MachineChannelTrait.php
+        "terminal_create_inc_stock" => "Terminal shelf - Create loading operation",
+        "terminal_mc_bad" => "Terminal BAD",
+        "terminal_mc_not_bad" => "Terminal recovery of BAD.",
+
+        // MachineChannelReplenishmentTrait.php
+        "terminal_rep_inc_mg_reserve_stock" => "Terminal Replenishment - Equipment Goods Inventory for Backup Stock",
+        "terminal_rep_dec_mg_reserve_stock" => "Terminal Replenishment - Equipment Goods - Reserve Inventory for Delivery",
+        "terminal_rep_inc_mc_reserve_stock" => "Terminal replenishment - Stocking shelves for backup inventory",
+        "terminal_rep_dec_mc_reserve_stock" => "Terminal replenishment - Shelf storage for backup inventory",
+        "terminal_rep_inc_mc_stock" => "Terminal Replenishment - Shelf Replenishment",
+        "terminal_rep_dec_mc_stock" => "Terminal Replenishment - Out-of-stock Returns",
+
+        // ApiClient.php
+        "terminal_exchange_mc_under_old" => "Terminal exchange - Goods from the shelves for old items",
+        "terminal_exchange_mc_display_new" => "Terminal exchange - New products placed on the shelves",
+        "terminal_exchange_mg_inc_reserve_stock" => "Terminal exchange - Goods inventory for equipment - Reserve inventory for replenishment",
+        "terminal_exchange_mg_dec_reserve_stock" => "Terminal exchange - Reserve inventory of equipment goods in the warehouse",
+
+        // CheckClient.php
+        "check_stock_shortage" => "Inventory count - Inventory shortage",
+        "check_stock_surplus" => "Inventory Count - Inventory Surplus",
+
+        // MachineChannelClient.php
+        "backstage_exchange_mc_under_old" => "Backstage exchange - Store old goods under the shelves",
+        "backstage_exchange_mc_display_new" => "Backstage exchange - Put new products on the shelves",
+        "backstage_rep_mc_inc_stock" => "Back-end replenishment - Shelf replenishment",
+        "backstage_rep_mc_dec_stock" => "Back-end replenishment - Product removal and return",
+        "backstage_mc_bad" => "Backstage BAD",
+        "backstage_mc_not_bad" => "Background recovery of BAD",
+
+    ],
 ];

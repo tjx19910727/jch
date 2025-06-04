@@ -59,6 +59,13 @@ trait MachineChannelTrait
         return MachineChannelModel::getColumn($where, $column, $key);
     }
 
+    /**
+     * 查询一条货道
+     * @param $where
+     * @param string $field
+     * @param string $order
+     * @return mixed
+     */
     public function getMachineChannelFind($where, $field = "*", $order = "")
     {
         return MachineChannelModel::getFind($where, $field, $order);
@@ -159,8 +166,69 @@ trait MachineChannelTrait
                             $this->rollbackTrans();
                             return $this->rFail($this->lang("VChannel.add_channel_fail") . ":" . $mc['channel_code']);
                         }
+                        // 20250604 新增货道，增加“上货”商品变化记录
+                        $insertGChange = [
+                            "m_id" => $this->machine['m_id'],
+                            "machine_id" => $this->machine['machine_id'],
+                            "machine_name" => $this->machine['machine_name'],
+                            "mc_id" => $mc['mc_id'],
+                            "channel_code" => $mc['channel_code'],
+                            "mg_id" => $mc['mg_id'] ?? 0,
+                            "g_id" => $mc['g_id'] ?? 0,
+                            "g_name" => $mc['g_name'] ?? "",
+                            "gc_id" => $mc['gc_id'] ?? 0,
+                            "gc_name" => $mc['gc_name'] ?? "",
+                            "pic" => $mc['pic'] ?? "",
+                            "sku" => $mc['sku'] ?? "",
+                            "bar_code" => $mc['bar_code'] ?? "",
+                            "ao_id" => $this->machine['ao_id'],
+                            "change_value" => $value['stock'] ?? 0,
+                            "type" => 2 ,   // 2：创建上货
+//                            "desc" => $this->lang("goodsChange.terminal_create_inc_stock"),
+                            "position" => 1,
+                        ];
+                        $this->addGoodsChange($insertGChange);
                     } else {
-                        $mc = obj2arr($mc);
+                        $mc = $mc->toArray() ?? obj2arr($mc);
+
+                        $insertGChange = [
+                            "m_id" => $this->machine['m_id'],
+                            "machine_id" => $this->machine['machine_id'],
+                            "machine_name" => $this->machine['machine_name'],
+                            "mc_id" => $mc['mc_id'],
+                            "channel_code" => $mc['channel_code'],
+                            "mg_id" => $mc['mg_id'] ?? 0,
+                            "g_id" => $mc['g_id'] ?? 0,
+                            "g_name" => $mc['g_name'] ?? "",
+                            "gc_id" => $mc['gc_id'] ?? 0,
+                            "gc_name" => $mc['gc_name'] ?? "",
+                            "pic" => $mc['pic'] ?? "",
+                            "sku" => $mc['sku'] ?? "",
+                            "bar_code" => $mc['bar_code'] ?? "",
+                            "ao_id" => $this->machine['ao_id'],
+                            "change_value" => $value['stock'] ?? 0,
+                            "position" => 1,
+                        ];
+                        // 20250604 检查货道库存上货或下货，变化数量 = 上报stock - 当前货道stock
+                        if (isset($value['stock']) && $value['stock'] != $mc['stock']) {
+                            $changeValue = bcsub($value['stock'],$mc['stock']);
+                            $insertGc = array_merge($insertGChange, [
+                                "change_value" => $changeValue,
+                                "type" => $changeValue > 0 ? 2 : 3 ,    // >0：上货，<0 下货
+                                "desc" => $value['status'] == 3 ? $this->lang("goodsChange.terminal_mc_bad") : $this->lang("goodsChange.terminal_mc_not_bad"),
+                            ]);
+                            $this->addGoodsChange($insertGc);
+                        }
+                        // 20250604 检查Bad状态，终端BAD 10 或终端恢复BAD 11
+                        if (isset($value['status']) && $value['status'] != $mc['status'] && in_array($value['status'],[1,3])) {
+                            $insertGc = array_merge($insertGChange, [
+                                "change_value" => $mc['stock'],
+                                "type" => $value['status'] == 3 ? 10 : 11 ,   // 3：终端BAD，1：终端恢复BAD
+                                "desc" => $value['status'] == 3 ? $this->lang("goodsChange.terminal_mc_bad") : $this->lang("goodsChange.terminal_mc_not_bad"),
+                            ]);
+                            $this->addGoodsChange($insertGc);
+                        }
+
                         $mc = array_merge($mc, $value);
                         $mc = $this->updateMachineChannel($mc);
                         if (!$mc) {
