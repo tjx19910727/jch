@@ -673,35 +673,35 @@ class ApiClient extends ReceiveBaseClient
         $field = "adv_id,adv_title,res_id,res_title,type,type,duration_time,total_times,play_times,remain_times,m_id,machine_id,push_type,position,screen,screen_full";
         $adv = $this->getAdvertisementPushFind($where, $field);
         if (!$adv) return $this->rFail($this->lang("VAdvertisement.adv_no_data"));
-        if ($adv['remain_times'] > 0) {
-            $adv = $adv->toArray();
-            $adv['remain_times']--;  // 剩余次数减1
-            $adv['play_times']++;    // 播放次数加1
-            $insert = $adv;
+        $adv = $adv->toArray();
+        if ($adv['total_times'] > 0) {
+            if ($adv['remain_times'] > 0)
+                $adv['remain_times']--;  // 剩余次数减1
             if ($adv['remain_times'] <= 0) {
                 $adv['status'] = 3;
             }
-            $this->startTrans();
-            try {
-                $flag[] = $this->updateAdvertisementPush($adv);
-                actionLog($this->getLS(),'【SQL】修改广告播放计划');
-                $insert['play_time'] = $this->data['play_time'];
-                $flag[] = $this->addAdvertisementRecord($insert);
-                actionLog($this->getLS(),'【SQL】添加广告播放记录');
-                actionLog($flag,'记录结果集');
-                $result = $this->checkFlag($flag);
-                $check = $this->checkTrans($result, 0);
-                if ($check) {
-                    return $this->r(200, $this->lang("action_success"), ['adv' => $adv]);
-                }
-                return $this->rFail($this->lang("action_fail"));
-            } catch (\Exception $e) {
-                $this->rollbackTrans();
-                actionException($e, 1);
-                return $this->rTryCatch($e->getMessage());
-            }
         }
-        return $this->r(200, $this->lang("VAdvertisement.adv_complete"));
+        $adv['play_times']++;    // 播放次数加1
+        $insert = $adv;
+        $this->startTrans();
+        try {
+            $flag[] = $this->updateAdvertisementPush($adv);
+            actionLog($this->getLS(),'【SQL】修改广告播放计划');
+            $insert['play_time'] = $this->data['play_time'];
+            $flag[] = $this->addAdvertisementRecord($insert);
+            actionLog($this->getLS(),'【SQL】添加广告播放记录');
+            actionLog($flag,'记录结果集');
+            $result = $this->checkFlag($flag);
+            $check = $this->checkTrans($result, 0);
+            if ($check) {
+                return $this->r(200, $this->lang("VAdvertisement.adv_complete"), ['adv' => $adv]);
+            }
+            return $this->rFail($this->lang("action_fail"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 
     /**
