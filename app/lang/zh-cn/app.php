@@ -63,6 +63,15 @@ return [
     "disable" => "禁用",
     "maintenance" => "维护",
 
+    // 错误码分类
+    "deviceErrorCodeType" => [
+        "maintain" => "维护",
+        "operation_want_of_goods" => "运维-商品不足",
+        "operation_pickup_failed" => "运维-取货失败",
+        "operation_print_failed" => "运维-打印失败",
+        "operation_open_door" => "运维-开门",
+    ],
+    // 错误码列表
     "deviceErrorCode" => [
         "1000001" => "主柜设备通信错误",
         "1000002" => "副柜设备通信错误",

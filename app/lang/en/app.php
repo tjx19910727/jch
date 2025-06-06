@@ -44,6 +44,16 @@ return [
     "normal" => "Normal",
     "disable" => "Disable",
     "maintenance" => "Maintenance",
+
+    // 错误码分类
+    "deviceErrorCodeType" => [
+        "maintain" => "maintain",
+        "operation_want_of_goods" => "Operation and Maintenance - Insufficient Inventory of Goods",
+        "operation_pickup_failed" => "Operation - Delivery Failure",
+        "operation_print_failed" => "Operation and Maintenance - Print Failure",
+        "operation_open_door" => "Operation - Open Door",
+    ],
+    // 错误码列表
     'deviceErrorCode' =>
         [
             "1000001" => 'Communication error of main cabinet equipment',

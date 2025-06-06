@@ -19,10 +19,34 @@ class MachineErrorCode extends Common
     public function getList()
     {
         $postData = input();
+        $codeList = [];
+        if (isset($postData['errorCodeType']) && $postData['errorCodeType']) {
+            $errorCodeType = config("error_code_list");
+            $codeList = $errorCodeType[$postData['errorCodeType']]['codeList'];
+            unset($postData['errorCodeType']);
+        }
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
         $where['status'] = 1;
+        if ($codeList) $where[] = ['errorCode','in',$codeList];
         return $this->app->machineErrorCode->getEcList($where,$pageNum,$this->field,'create_time desc');
+    }
+
+    /**
+     * 获取错误码类别列表
+     * @return array|\think\response\Json
+     */
+    public function getTypeList()
+    {
+        $errCodeType = config("error_code_list");
+        $list = [];
+        foreach ($errCodeType as $key => $value) {
+            $list[] = [
+                "type" => $key,
+                "name" => lang("deviceErrorCodeType." . $value['name']),
+            ];
+        }
+        return returnState(200,lang("query_success"),$list);
     }
 
     public function getFind()
