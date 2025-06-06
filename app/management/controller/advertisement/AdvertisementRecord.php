@@ -24,7 +24,7 @@ class AdvertisementRecord extends Common
         $where = $this->getWhere($postData, false, ["adv_title" => "like","machine_id" => "like","res_title" => "like"]);
         $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
         if ($machineIds) $where[] = ['machine_id','in',$machineIds];
-        return $this->app->advertisementRecord->getList($where,$pageNum,$this->field,'play_time desc');
+        return $this->app->advertisementRecord->getArList($where,$pageNum,$this->field,'play_time desc');
     }
 
 }
