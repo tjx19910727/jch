@@ -19,16 +19,9 @@ class MachineErrorCode extends Common
     public function getList()
     {
         $postData = input();
-        $codeList = [];
-        if (isset($postData['errorCodeType']) && $postData['errorCodeType']) {
-            $errorCodeType = config("error_code_list");
-            $codeList = $errorCodeType[$postData['errorCodeType']]['codeList'];
-            unset($postData['errorCodeType']);
-        }
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
         $where['status'] = 1;
-        if ($codeList) $where[] = ['errorCode','in',$codeList];
         return $this->app->machineErrorCode->getEcList($where,$pageNum,$this->field,'create_time desc');
     }
 
@@ -75,7 +68,14 @@ class MachineErrorCode extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
+        $codeList = [];
+        if (isset($postData['errorCodeType']) && $postData['errorCodeType']) {
+            $errorCodeType = config("error_code_list");
+            $codeList = $errorCodeType[$postData['errorCodeType']]['codeList'];
+            unset($postData['errorCodeType']);
+        }
         $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
+        if ($codeList) $where[] = ['errorCode','in',$codeList];
         return $this->app->machineErrorCode->getEcList($where,$pageNum,$this->field,'create_time desc');
     }
 
