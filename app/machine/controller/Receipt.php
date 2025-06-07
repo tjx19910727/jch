@@ -28,6 +28,7 @@ class Receipt extends BaseController
         $mConfig = MachineConfigModel::getFind(['m_id' => $order['m_id']],"receipt_code1,receipt_code2,receipt_code3,receipt_desc");
         $data = [
             "logo" => $m['logo'],
+            'machine_id' => $order['machine_id'],
             'machine_name' => $order['machine_name'],
             'print_time' => date("Y-m-d H:i:s"),
             'detailsList' => SaleOrdersDetailsModel::getList(['order_id' => $order['order_id']],0,'g_name,quantity,retail_price')->toArray(),
