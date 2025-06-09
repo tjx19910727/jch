@@ -52,4 +52,23 @@ return [
             'appSecret_require' => 'AppSecret cannot be empty',
             'baseUrl_require' => 'Request address cannot be empty',
         ],
+
+    "VPos" => [
+        "check_sign_fail" => "Signature verification failed.",
+        "order_no_data" => "No order information found.",
+
+
+        "machine_id_require" => "The equipment number cannot be empty.",
+        "msg_id_require" => "The message ID cannot be empty.",
+        "msg_id_unique" => "The message ID already exists. Please re-report.",
+        "timestamp_require" => "The timestamp cannot be left blank.",
+        "signKey_require" => "The signature key does not exist.",
+        "sign_require" => "The add-on signature key does not exist. Signature cannot be empty.",
+        "timestamp_checkTimestamp_overdue" => "Time stamp has expired. Please update the time.",
+
+        "payment_type_require" => "The payment type cannot be left blank.",
+        "payment_status_require" => "The payment result cannot be left blank.",
+        "trade_no_require" => "Payment result cannot be empty. Order number cannot be empty.",
+        "mch_no_require" => "Payment result cannot be empty. Order number cannot be empty. Transaction order number cannot be empty.",
+    ],
 ];

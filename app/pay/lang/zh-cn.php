@@ -63,4 +63,23 @@ return  [
         "appSecret_require" => "appSecret不能为空",
         "baseUrl_require" => "请求地址不能为空",
     ],
+
+    "VPos" => [
+        "check_sign_fail" => "验签失败",
+        "order_no_data" => "查无订单信息",
+
+
+        "machine_id_require" => "设备编号不能为空",
+        "msg_id_require" => "消息ID不能为空",
+        "msg_id_unique" => "消息ID已存在，请重新上报",
+        "timestamp_require" => "时间戳不能为空",
+        "signKey_require" => "加签密钥不存在",
+        "sign_require" => "签名不能为空",
+        "timestamp_checkTimestamp_overdue" => "时间戳超时，请更新时间",
+
+        "payment_type_require" => "支付类型不能为空",
+        "payment_status_require" => "支付结果不能为空",
+        "trade_no_require" => "订单编号不能为空",
+        "mch_no_require" => "交易订单号不能为空",
+    ],
 ];
