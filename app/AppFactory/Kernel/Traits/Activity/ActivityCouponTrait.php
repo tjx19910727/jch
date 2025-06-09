@@ -128,7 +128,7 @@ trait ActivityCouponTrait
         $acUsed = [];
         $where['code'] = $this->data['coupon_code'];
         $fieldAc = "c_id,code,c_type,pay_limit,reduction,status,start_date,end_date,used_limit,pay_limit,designated_machine,designated_goods,exclusion,creator";
-        $ac = $this->getActivityCouponFind(['code' => $this->data['coupon_code']], $fieldAc);
+        $ac = $this->getActivityCouponFind(['code' => $this->data['coupon_code']], $fieldAc,'c_id desc');
         // 查无固定码优惠券活动
         if (!$ac) {
             $where['code_type'] = 1;
