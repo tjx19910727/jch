@@ -133,7 +133,7 @@ trait ActivityCouponTrait
         if (!$ac) {
             $where['code_type'] = 1;
             $field = "cu_id,c_id,code,c_type,pay_limit,reduction,status";
-            $acUsed = $this->getActivityCouponUsedFind($where, $field);
+            $acUsed = $this->getActivityCouponUsedFind($where, $field,'cu_id desc');
             // 查无随机码生成记录
             if (!$acUsed) {
                 return $this->lang("VActivityCoupon.check_no_code");
