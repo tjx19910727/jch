@@ -64,21 +64,23 @@ class MachineChannelClient extends ManagementClient
      */
     public function getEmptyList($where)
     {
-        $list = [];
-        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
-        if ($machineIds) {
-            $where[] = ['machine_id', 'in', $machineIds];
-            $where['g_id'] = 0;
-            $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            }
+        }
+        $where[] = ['status','<>',2];
+        $where['g_id'] = 0;
+        $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
         count(mc_id) empty_num', '', '', 'm_id');
-            if ($list) {
-                foreach ($list as $key => $value) {
-                    $value['total_channel'] = $this->getMachineChannelCount(['machine_id' => $value['machine_id']]);
-                    $emptyList = $this->getMachineChannelColumn(['machine_id' => $value['machine_id'], 'g_id' => 0], 'channel_code');
-                    $value['empty_channel'] = implode(",", $emptyList ?? []);
-                    $value['empty_ratio'] = bcmul(bcdiv($value['empty_num'], $value['total_channel'], 3), 100, 1) . "%";
-                }
+        if ($list) {
+            foreach ($list as $key => $value) {
+                $value['total_channel'] = $this->getMachineChannelCount(['machine_id' => $value['machine_id'],['status','<>',2]]);
+                $emptyList = $this->getMachineChannelColumn(['machine_id' => $value['machine_id'], 'g_id' => 0,['status','<>',2]], 'channel_code');
+                $value['empty_channel'] = implode(",", $emptyList ?? []);
+                $value['empty_ratio'] = bcmul(bcdiv($value['empty_num'], $value['total_channel'], 3), 100, 1) . "%";
             }
         }
         return $this->rQ($list);
