@@ -1235,7 +1235,7 @@ class ApiClient extends ReceiveBaseClient
      */
     public function receipt()
     {
-        $order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']],'order_id,m_id,machine_name,total_quantity,discount_price,total_price');
+        $order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']],'order_id,m_id,machine_id,machine_name,total_quantity,discount_price,total_price');
         $order = $order->toArray();
         actionLog($order,'订单数据');
         $mConfig = $this->getMachineConfigFind(['m_id' => $order['m_id']],'receipt_code1,receipt_code2,receipt_code3,receipt_desc,deal_service_phone');
@@ -1258,6 +1258,7 @@ class ApiClient extends ReceiveBaseClient
         }
         $data = [
             "logo"           => $this->machine['logo'],
+            'machine_id'   => $order['machine_id'],
             'machine_name'   => $order['machine_name'],
             'print_time'     => date("Y-m-d H:i:s"),
             'detailsList'    => $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0,'g_name,quantity,retail_price')->toArray(),
