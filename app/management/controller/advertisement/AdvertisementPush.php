@@ -44,10 +44,12 @@ class AdvertisementPush extends Common
         $where['push_type'] = 1;
         // 机器分组
         if ($groupType == 1) {
-            if ($machine) $where[] = ['machine_id|machine_name','like',"%".$machine."%"];
-            else {
-                $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'machine_id');
-                if ($machineIds) $where[] = ['machine_id','in',$machineIds];
+            if (!$m_id) {
+                if ($machine) $where[] = ['machine_id|machine_name', 'like', "%" . $machine . "%"];
+                else {
+                    $machineIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'machine_id');
+                    if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
+                }
             }
             $group = "m_id";
             $field = "m_id,machine_id,(SELECT machine_name FROM machine m WHERE m.m_id = a.m_id limit 1 ) machine_name,count(adv_id) adv_num";
