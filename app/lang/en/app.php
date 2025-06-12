@@ -114,6 +114,8 @@ return [
             "109624100" => 'Reset fault of feeding box - return command - analysis',
             "109624200" => 'Feeding box query status fault - return command - parsing',
             "109624300" => 'Feeding box grating fault - Return Instruction - Analysis',
+
+            "200124200" => "Pickup door status query failure - Return command - Parsing",
             "204801800" => 'z1 Axis Movement Fault - Return Instruction - Analysis',
             "204801801" => 'Z2 axis movement fault - return command - analysis',
             "204813600" => 'Z1 axis initialization fault - return command - analysis',
