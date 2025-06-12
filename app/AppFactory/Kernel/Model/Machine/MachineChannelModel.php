@@ -93,12 +93,18 @@ class MachineChannelModel extends BaseModel
     protected static function onAfterUpdate(Model $model)
     {
         try {
-            $mc = self::getFind(['mc_id' => $model->mc_id], 'machine_id');
-            $config = [
-                "machine_id" => $mc['machine_id'],
-            ];
-            $app = AppFactory::machine($config);
-            @$app->sendMq->sendMq("updateMc", ['mc_id' => $model->mc_id]);
+            $pk = $model->getPk();
+            $mc = self::getFind(['mc_id' => $model->$pk], 'machine_id');
+            actionLog(self::getLastSql(),'mcAfterUpdate');
+            if ($mc) {
+                $mc = $mc->toArray();
+                actionLog($mc,'mcAfterUpdate');
+                $config = [
+                    "machine_id" => $mc['machine_id'],
+                ];
+                $app = AppFactory::machine($config);
+                @$app->sendMq->sendMq("updateMc", ['mc_id' => $model->mc_id]);
+            }
         } catch (\Exception $e) {
             actionException($e,1,'mcAfterUpdate');
         }
