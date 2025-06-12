@@ -32,6 +32,12 @@ class MachineBaseClient extends BaseClient
         actionLog($this->config,'接收数据2');
         $this->machine = $this->getMachineFind(['machine_id' => $this->config['machine_id']]);
         if (!$this->machine) die(json_encode(['state' => 100, "msg" => $this->lang("query_machine_no_data")],320));
+        // 20250612 设备离线状态，修改为在线状态前，将启动时间重置为当前的时间
+        if ($this->machine['online'] != 1) {
+            if (function_exists("updateMachineInfo") || method_exists($this,"updateMachineInfo")) {
+                $this->updateMachineInfo(["last_restart_time" => time()],['m_id' => $this->machine['m_id']]);
+            }
+        }
         @$this->getMqQueue();
         // 设备离线状态下收到数据，认为已上线，触发发送上线通知
         @$this->sendOnline();
