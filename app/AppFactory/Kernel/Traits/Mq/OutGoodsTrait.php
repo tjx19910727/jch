@@ -163,7 +163,7 @@ trait OutGoodsTrait
                     ]);
                     $insertGc['desc'] = $this->lang("goodsChange.terminal_sale_dec_stock");
                     $insertGc['position'] = 1;
-                    $insertGc['type'] = 2;
+                    $insertGc['type'] = 3;
                     $this->addGoodsChange($insertGc);
                     actionLog($this->getLS(),'【SQL】添加商品变化数据','OutGoods');
                 }
