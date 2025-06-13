@@ -34,7 +34,7 @@ use app\AppFactory\Management\ManagementClient;
 class SaleOrdersClient extends ManagementClient
 {
     use AuthManagerTrait;
-    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait,SaleOrdersUnclaimedTrait, SaleOrdersDailyCountTrait, SaleHotelTrait, SaleHotelNightlyTrait;
+    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersUnclaimedTrait, SaleOrdersDailyCountTrait, SaleHotelTrait, SaleHotelNightlyTrait;
     use BeforeOrderPaymentTrait;
     use StrategyMachineTrait;
     use StrategyIncomeTrait;
@@ -77,9 +77,12 @@ class SaleOrdersClient extends ManagementClient
     public function getSoList($where, $pageNum = 0, $field = "*", $order = "")
     {
         try {
-            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-            if ($mIds) $where[] = ['m_id', 'in', $mIds];
-            return $this->r(200, $this->lang("query_success"), $this->getSaleOrdersList($where, $pageNum, $field, $order));
+            if ($this->manager['pid'] > 0) {
+                $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+                if ($mIds) $where[] = ['m_id', 'in', $mIds];
+            }
+            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order);
+            return $this->r(200, $this->lang("query_success"), $data);
         } catch (\Exception $e) {
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
@@ -642,20 +645,21 @@ class SaleOrdersClient extends ManagementClient
      */
     public function getGift($where)
     {
-        $today = 0;
-        $yesterday = 0;
-        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-        if ($mIds) {
-            $where[] = ['m_id', 'in', $mIds];
-            $where['sod.is_gift'] = 1;
-            $where['so.out_status'] = 4;
-            $whereToday = $where;
-            $whereToday[] = ['so.create_time', 'between', [strtotime(date("Y-m-d 00:00:00")), strtotime(date("Y-m-d 23:59:59"))]];
-            $today = $this->joinSaleOrdersSum($whereToday, 'sod.quantity');
-            $whereYesterday = $where;
-            $whereYesterday[] = ['so.create_time', 'between', [strtotime(date("Y-m-d 00:00:00", strtotime("-1 days"))), strtotime(date("Y-m-d 23:59:59", strtotime("-1 days")))]];
-            $yesterday = $this->joinSaleOrdersSum($whereYesterday, 'sod.quantity');
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            }
         }
+        $where['sod.is_gift'] = 1;
+        $where['so.out_status'] = 4;
+        $whereToday = $where;
+        $whereToday[] = ['so.create_time', 'between', [strtotime(date("Y-m-d 00:00:00")), strtotime(date("Y-m-d 23:59:59"))]];
+        $today = $this->joinSaleOrdersSum($whereToday, 'sod.quantity');
+        $whereYesterday = $where;
+        $whereYesterday[] = ['so.create_time', 'between', [strtotime(date("Y-m-d 00:00:00", strtotime("-1 days"))), strtotime(date("Y-m-d 23:59:59", strtotime("-1 days")))]];
+        $yesterday = $this->joinSaleOrdersSum($whereYesterday, 'sod.quantity');
+
         $data = [
             "today" => $today,
             "yesterday" => $yesterday,
@@ -695,7 +699,7 @@ class SaleOrdersClient extends ManagementClient
         IFNULL(sum(sod.cost_price * (sod.quantity - sod.refund_quantity)),0) totalCostPrice
         ";
         $collectData = $this->getSaleOrdersDetailsData($whereCollect, $field)->toArray();
-        actionLog($this->getLS(),'【SQL】统计概况');
+        actionLog($this->getLS(), '【SQL】统计概况');
         $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
         $whereGIds = $where;
         $whereGIds[] = ['g_id', ">", 0];
@@ -780,10 +784,10 @@ class SaleOrdersClient extends ManagementClient
         IFNULL(sum(sod.cost_price * sod.quantity),0) totalCostPrice
         ";
         $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field, 'totalPrice desc', 'm_id,g_id');
-        actionLog($this->getLS(),'【SQL】获取导出数据');
+        actionLog($this->getLS(), '【SQL】获取导出数据');
         if ($list) {
             $list = $list->toArray();
-            actionLog($list,'导出数据');
+            actionLog($list, '导出数据');
             foreach ($list as $k => $collectData) {
                 $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
                 $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
