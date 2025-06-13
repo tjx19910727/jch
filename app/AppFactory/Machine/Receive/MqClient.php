@@ -35,6 +35,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Mq\OutGoodsTrait;
@@ -45,7 +46,7 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 class MqClient extends ReceiveBaseClient
 {
     use SaleOrdersTrait,OutGoodsTrait;
-    use MachineInfoTrait,MachineChannelTrait,MachineVersionPlanTrait,MachineConfigTrait;
+    use MachineInfoTrait,MachineGoodsTrait,MachineChannelTrait,MachineVersionPlanTrait,MachineConfigTrait;
     use MachineErrorCodeTrait;
     use GoodsTrait,GoodsHitTrait,GoodsChangeTrait;
     use StrategyPayeeTrait,StrategyMachineTrait;
@@ -74,7 +75,6 @@ class MqClient extends ReceiveBaseClient
             validate(VReport::class)->scene('onMessage')->check($this->data);
         } catch (\Exception $e) {
             actionLog($e->getMessage(), '数据格式错误', 'DataUpload');
-//                die(json_encode(["state" => 200, "msg" => $e->getMessage(), $this->data], 320));
         }
         $this->dataRecord(2);
     }

@@ -119,6 +119,10 @@ trait MachineInfoTrait
             }
             actionLog($update, '修改数据', "uploadInfo");
             if ($update) {
+                // 20250613 有副柜状态，并且副柜不可用，检查副柜货道库存，并将库存退回到设备商品库，如果设备商品库没有相关联的商品，只生成新的设备商品库信息
+                if (isset($update['sub_cabinet']) && $update['sub_cabinet'] == 2) {
+                    $this->subCabinetReturnInventory();
+                }
                 $result = $this->updateMachineInfo($update, ['m_id' => $this->machine['m_id']]);
                 actionLog($this->getLS(), '【SQL】修改设备信息', "uploadInfo");
                 actionLog($result, '修改设备信息结果', "uploadInfo");
@@ -128,6 +132,36 @@ trait MachineInfoTrait
         } catch (\Exception $e) {
             actionException($e,1);
             return false;
+        }
+    }
+
+    /**
+     * 20250613
+     * 副柜退回设备商品库备用库存
+     * 1. 查询库存大于0，有绑定设备商品库商品，副柜货道
+     * 2. 循环货道列表，修改货道库存为0，增加对应设备商品库库存值。
+     */
+    public function subCabinetReturnInventory()
+    {
+        $whereSubMc['m_id'] = $this->machine['m_id'];
+        $whereSubMc['channel_position'] = 2;
+        $whereSubMc[] = ['stock','>',0];
+        $whereSubMc[] = ['mg_id','>',0];
+        $mc = $this->getMachineChannelList($whereSubMc,0,'mc_id,mg_id,g_id,stock');
+        actionLog($this->getLS(),'【SQL】查询副柜货道');
+        actionLog($mc,'查询到的副柜货道数据');
+        if ($mc) {
+            $flag = [];
+            foreach ($mc as $key => $value) {
+                $updateMc['stock'] = 0;
+                $updateMc['mc_id'] = $value['mc_id'];
+                $updateMc['status'] = 2;
+                $flag[] = $this->updateMachineChannel($updateMc);
+                actionLog($this->getLS(),'退副柜货道库存');
+                $flag[] = $this->setMachineGoodsInc(['mg_id' => $value['mg_id']],'standby_stock',$value['stock']);
+                actionLog($this->getLS(),'增加设备商品库库存');
+            }
+            actionLog($flag,'副柜退库存结果集');
         }
     }
 }
