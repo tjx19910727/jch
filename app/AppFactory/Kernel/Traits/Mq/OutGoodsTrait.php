@@ -28,7 +28,7 @@ trait OutGoodsTrait
             actionLog($this->order,'订单已处理过了','OutGoods');
             return $this->rFail("订单已处理过了");
         }
-        $this->startTrans();
+//        $this->startTrans();
         try {// 处理修改订单及货道数据
             $flag = $this->handleData();
             if ($this->order['coupon_id']) {
@@ -45,12 +45,14 @@ trait OutGoodsTrait
             }
             $result = $this->checkFlag($flag);
             if ($result) {
-                $this->commitTrans();
+//                $this->commitTrans();
                 $this->handleTripPayCallback();
-            } else $this->rollbackTrans();
+            }
+//            else
+//                $this->rollbackTrans();
             return $this->rAction($result);
         } catch (\Exception $e) {
-            $this->rollbackTrans();
+//            $this->rollbackTrans();
             actionException($e,1,'OutGoods');
             return $this->rTryCatch($e->getMessage());
         }
