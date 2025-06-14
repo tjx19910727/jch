@@ -1235,7 +1235,8 @@ class ApiClient extends ReceiveBaseClient
      */
     public function receipt()
     {
-        $order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']],'order_id,m_id,machine_id,machine_name,total_quantity,discount_price,total_price');
+        $order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']],
+            'order_id,trade_no,mch_no,fd_id,coupon_id,m_id,machine_id,machine_name,total_quantity,discount_price,retail_price,total_price,pay_type,pay_method');
         $order = $order->toArray();
         actionLog($order,'订单数据');
         $mConfig = $this->getMachineConfigFind(['m_id' => $order['m_id']],'receipt_code1,receipt_code2,receipt_code3,receipt_desc,deal_service_phone');
@@ -1256,15 +1257,27 @@ class ApiClient extends ReceiveBaseClient
         if ($mConfig['receipt_code3'] && strpos($mConfig['receipt_code3'],'http') === false) {
             $mConfig['receipt_code3'] = $systemInfo['domain_name'] . $mConfig['receipt_code3'];
         }
+        $ac_name = [];
+        if ($order['fd_id'] > 0) $ac_name[] = "满减";
+        if ($order['coupon_id'] > 0) $ac_name[] = "优惠券";
+        $pay_type_list = [1 => "微信",2 => "支付宝",3 => "未定义",4 => "京东收银", 5 => "会员", 6 => "丽呈线上", 7 => "机器人线上", 8 => "COGOLINK"];
+        $pay_method_list = [1 => "扫码支付", 2 => "付款码支付", 3 => "POS机支付"];
+        $mch_no = substr($order['mch_no'],0,10) . "****" . substr($order['mch_no'],-4);
         $data = [
             "logo"           => $this->machine['logo'],
             'machine_id'   => $order['machine_id'],
             'machine_name'   => $order['machine_name'],
-            'print_time'     => date("Y-m-d H:i:s"),
-            'detailsList'    => $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0,'g_name,quantity,retail_price')->toArray(),
+            'print_date'     => date("Y-m-d"),
+            'print_time'     => date("H:i:s"),
+            'trade_no'     => $order['trade_no'],
+            'mch_no'     => $mch_no,
+            'detailsList'    => $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0,'g_name,quantity,retail_price,total_sod_price')->toArray(),
             'total_quantity' => $order['total_quantity'],
             'discount_price' => $order['discount_price'],
+            'retail_price' => number_format($order['retail_price'],2),
             'total_price'    => number_format($order['total_price'],2),
+            'ac_name' => implode("/",$ac_name) ,
+            'pay_type' => $pay_type_list[$order['pay_type']] . ($order['pay_method'] > 0 ? "-" . $pay_method_list[$order['pay_method']] : ""),
             'service_tel'    => $mConfig['deal_service_phone'],
             'receipt_code1'  => $mConfig['receipt_code1'],
             'receipt_code2'  => $mConfig['receipt_code2'],
@@ -1273,7 +1286,7 @@ class ApiClient extends ReceiveBaseClient
         ];
         actionLog($data,'小票数据');
         View::assign($data);
-        $result = View::fetch("receipt/print");
+        $result = View::fetch("receipt/print2");
         actionLog($result,'小票文本');
         $this->updateSaleOrders(['order_id' => $this->data['order_id'],'receipt' => $result]);
         return $this->r(200,'success',['receipt' => $result]);

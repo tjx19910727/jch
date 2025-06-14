@@ -1,0 +1,102 @@
+<!-- 20250614 新模板 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RECEIPT</title>
+</head>
+<style>
+* { margin: 0;padding: 0; }
+.box {
+  width: 120mm;
+  padding: 5mm;
+  box-sizing: border-box;
+  overflow: hidden;
+  line-height: 35px;
+}
+.liner {
+  border-top: 1px dashed #333;
+}
+.flex-between {
+  display: flex;
+  justify-content: space-between;
+}
+.text-center {
+  text-align: center;
+}
+</style>
+<body>
+  <div class="box">
+    <div style="display: flex;align-items: center;padding: 2mm 0;">
+<img style="width: 20mm;height: 8mm;margin-right: 4mm;" src="{$logo}" alt="">
+<p style="font-weight: bold;">嘉潮汇智能售货机</p>
+</div>
+<p>自助售卖机服务小票</p>
+<div class="liner"></div>
+<p>机器编号： {$machine_id} ({$machine_name})</p>
+<p>机器地址：东莞市凤岗镇官井头嘉乐汇商场专厅（以后台发机地址更新为准）</p>
+<p>日期： {$print_date}</p>
+<p>时间： {$print_time}</p>
+<p>交易号： {$trade_no}</p>
+<div class="liner"></div>
+<p>商品明细：</p>
+<table style="width: 100%;">
+  <tr>
+    <th style="width: 50%;text-align: left;"></th>
+    <th style="width: 15%;text-align: center;"></th>
+    <th style="width: 10%;text-align: center;"></th>
+    <th style="width: 5%;text-align: center;"></th>
+    <th style="width: 20%;text-align: right;"></th>
+  </tr>
+
+  {volist name="detailsList" id="details" key="num" }
+  <tr>
+    <td style="text-align: left;">{$num+1}. {$details.g_name}</td>
+    <td style="text-align: center;">{$details.retail_price}</td>
+    <td style="text-align: center;">{$details.quantity}</td>
+    <td style="text-align: center;">=</td>
+    <td style="text-align: right;">{$details.retail_price * $details.quantity}</td>
+  </tr>
+  {/volist}
+<!--  <tr>
+    <td style="text-align: left;">2. 巧克力饼干</td>
+    <td style="text-align: center;">8.50</td>
+    <td style="text-align: center;">x1</td>
+    <td style="text-align: center;">=</td>
+    <td style="text-align: right;">8.50</td>
+  </tr>
+  <tr>
+    <td style="text-align: left;">3. 冰美式咖啡 (中杯)</td>
+    <td style="text-align: center;">1112.00</td>
+    <td style="text-align: center;">x1</td>
+    <td style="text-align: center;">=</td>
+    <td style="text-align: right;">12.00</td>
+  </tr>-->
+</table>
+<div class="liner"></div>
+<p><span style="width: 35%;display: inline-block;">商品总额：</span><span>{$retail_price}</span></p>
+<p><span style="width: 35%;display: inline-block;">折扣优惠：</span><span>{$discount_price} ({$ac_name})</span></p>
+<p><span style="width: 35%;display: inline-block;">应付金额：</span><span>{$total_price}</span></p>
+<div class="liner"></div>
+<p><span style="width: 35%;display: inline-block;">实付金额：</span><span>{$total_price}</span></p>
+<p><span style="width: 35%;display: inline-block;">支付方式：</span><span> {$pay_type} (成功)</span></p>
+<p><span style="width: 35%;display: inline-block;">付款订单号：</span><span>{$mch_no}</span></p>
+<div class="liner"></div>
+<p>* 如有质量问题，请于24小时内联系客服。</p>
+<p>* 客服电话： {$service_tel} (服务时间 9:00-18:00)</p>
+<p>* 扫码关注在线商城，了解更多</p>
+<div style="display: flex;justify-content: space-evenly;text-align: center;">
+  <div style="width: 50mm;">
+    <img style="width: 100%;height: 50mm;" src="{$receipt_code1}" alt="">
+    <p>客服微信</p>
+  </div>
+  <div style="width: 50mm;">
+    <img style="width: 100%;height: 50mm;" src="{receipt_code2}" alt="">
+    <p>在线商城</p>
+  </div>
+</div>
+<div class="liner"></div>
+<p>感谢您的光临！祝您生活愉快！</p>
+</body>
+</html>
