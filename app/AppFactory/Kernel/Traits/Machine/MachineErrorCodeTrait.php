@@ -46,6 +46,11 @@ trait MachineErrorCodeTrait
             if ($len == 9) $position = 2;
             if ($len == 7) $position = 3;
         }
+        $lastEc = $this->getMachineErrorCodeFind([
+            'm_id' => $this->machine['m_id'],
+            'errorCode' => $this->message['errorCode'],
+            ['create_time','>=',time() - env('errorCode.noticeTime') ?? 1800 ]
+        ],'me_id','me_id desc');
         $insert = [
             "m_id" => $this->machine['m_id'],
             "machine_id" => $this->machine['machine_id'],
@@ -59,20 +64,22 @@ trait MachineErrorCodeTrait
         ];
         $result = $this->addMachineErrorCode($insert);
         if ($result) {
-            $machine = $this->machine;
-            if (!is_array($this->machine)) $machine = $this->machine->toArray();
-            $errorMsg = $this->lang("deviceErrorCode." . $this->message['errorCode']);
-            $machine['errorCode'] =  $errorMsg == "deviceErrorCode." . $this->message['errorCode'] ? $this->message['errorCode'] : $errorMsg;
-            $machine['date'] = date("Y年m月d日");
-            $machine['exceptionDeclaration'] = $errorMsg;
-            $this->noticeSendData = [
-                "ao_id" => $this->machine['ao_id'],
-                "m_id" => $this->machine['m_id'],
-                "templateType" => "mFault",
-                "replaceData" => $machine,
-            ];
-            actionLog($this->noticeSendData,'发送设备故障通知');
-            @$this->noticeSend();
+            if (!$lastEc) {
+                $machine = $this->machine;
+                if (!is_array($this->machine)) $machine = $this->machine->toArray();
+                $errorMsg = $this->lang("deviceErrorCode." . $this->message['errorCode']);
+                $machine['errorCode'] = $errorMsg == "deviceErrorCode." . $this->message['errorCode'] ? $this->message['errorCode'] : $errorMsg;
+                $machine['date'] = date("Y年m月d日");
+                $machine['exceptionDeclaration'] = $errorMsg;
+                $this->noticeSendData = [
+                    "ao_id" => $this->machine['ao_id'],
+                    "m_id" => $this->machine['m_id'],
+                    "templateType" => "mFault",
+                    "replaceData" => $machine,
+                ];
+                actionLog($this->noticeSendData, '发送设备故障通知');
+                @$this->noticeSend();
+            }
         }
         return 1;
     }
