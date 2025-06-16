@@ -188,10 +188,19 @@ class VReceive extends VCommon
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
     ];
 
+    /**
+     * 验证时间戳
+     * @param $item
+     * @return bool|string
+     */
     public function checkTimestamp($item)
     {
-        if (!$item) return "时间戳不能为空";
-        if (time() - $item > 120) return "VReceive.timestamp_checkTimestamp_overdue";
+        $scene = $this->currentScene;
+        // 非uploadMedia的场景才需要验证时间戳
+        if ($scene != "uploadMedia") {
+            if (!$item) return "时间戳不能为空";
+            if (time() - $item > 120) return "VReceive.timestamp_checkTimestamp_overdue";
+        }
         return true;
     }
 }
