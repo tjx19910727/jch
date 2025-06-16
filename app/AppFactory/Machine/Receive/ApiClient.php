@@ -772,6 +772,10 @@ class ApiClient extends ReceiveBaseClient
                             $this->rollbackTrans();
                             return $this->r(300,$this->lang("VSubCar.channel_status_no_3"));
                         }
+                        if ($mc['stock'] < $value['quantity']) {
+                            $this->rollbackTrans();
+                            return $this->r(300,$this->lang("VSubCar.under_stock"));
+                        }
                         if ($this->data['pay_type'] == 0) {
                             $mc['retail_price'] = 0;
                         }
