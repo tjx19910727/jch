@@ -1267,10 +1267,12 @@ class ApiClient extends ReceiveBaseClient
         $pay_type_list = [1 => "微信",2 => "支付宝",3 => "未定义",4 => "京东收银", 5 => "会员", 6 => "丽呈线上", 7 => "机器人线上", 8 => "COGOLINK"];
         $pay_method_list = [1 => "扫码支付", 2 => "付款码支付", 3 => "POS机支付"];
         $mch_no = substr($order['mch_no'],0,10) . "****" . substr($order['mch_no'],-4);
+        $this->getMachineAddress();
         $data = [
             "logo"           => $this->machine['logo'],
             'machine_id'   => $order['machine_id'],
             'machine_name'   => $order['machine_name'],
+            'address' => $this->machine['address'],
             'print_date'     => date("Y-m-d"),
             'print_time'     => date("H:i:s"),
             'trade_no'     => $order['trade_no'],
