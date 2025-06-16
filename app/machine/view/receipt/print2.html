@@ -59,24 +59,10 @@
     <td style="text-align: right;">{$details.retail_price * $details.quantity}</td>
   </tr>
   {/volist}
-<!--  <tr>
-    <td style="text-align: left;">2. 巧克力饼干</td>
-    <td style="text-align: center;">8.50</td>
-    <td style="text-align: center;">x1</td>
-    <td style="text-align: center;">=</td>
-    <td style="text-align: right;">8.50</td>
-  </tr>
-  <tr>
-    <td style="text-align: left;">3. 冰美式咖啡 (中杯)</td>
-    <td style="text-align: center;">1112.00</td>
-    <td style="text-align: center;">x1</td>
-    <td style="text-align: center;">=</td>
-    <td style="text-align: right;">12.00</td>
-  </tr>-->
 </table>
 <div class="liner"></div>
 <p><span style="width: 35%;display: inline-block;">商品总额：</span><span>{$retail_price}</span></p>
-<p><span style="width: 35%;display: inline-block;">折扣优惠：</span><span>{$discount_price} ({$ac_name})</span></p>
+<p><span style="width: 35%;display: inline-block;">折扣优惠：</span><span>{$discount_price} {notempty name='ac_name'}({$ac_name}){/notempty}</span></p>
 <p><span style="width: 35%;display: inline-block;">应付金额：</span><span>{$total_price}</span></p>
 <div class="liner"></div>
 <p><span style="width: 35%;display: inline-block;">实付金额：</span><span>{$total_price}</span></p>
@@ -92,7 +78,7 @@
     <p>客服微信</p>
   </div>
   <div style="width: 50mm;">
-    <img style="width: 100%;height: 50mm;" src="{receipt_code2}" alt="">
+    <img style="width: 100%;height: 50mm;" src="{$receipt_code2}" alt="">
     <p>在线商城</p>
   </div>
 </div>
