@@ -756,29 +756,29 @@ class ApiClient extends ReceiveBaseClient
                 }
                 $this->data['carList'] = json2arr($this->data['carList']);
                 foreach ($this->data['carList'] as $key => $value) {
+                    $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
+                    if (!$mc) {
+                        $this->rollbackTrans();
+                        return $this->r(300, $this->lang("VSubCar.channel_no_data"));
+                    }
+                    if (!$mc['mg_id']) {
+                        $this->rollbackTrans();
+                        return $this->r(300, $this->lang("VSubCar.mg_id_require"));
+                    }
+                    if ($mc['status'] != 1) {
+                        $this->rollbackTrans();
+                        return $this->r(300,$this->lang("VSubCar.channel_status_no_3"));
+                    }
+                    if ($mc['stock'] < $value['quantity']) {
+                        $this->rollbackTrans();
+                        return $this->r(300,$this->lang("VSubCar.under_stock"));
+                    }
+                    if ($this->data['pay_type'] == 0) {
+                        $mc['retail_price'] = 0;
+                    }
                     for ($i = 0; $i < $value['quantity']; $i++) {
                         $quantity = 1;
 //                        $quantity = $value['quantity'];
-                        $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
-                        if (!$mc) {
-                            $this->rollbackTrans();
-                            return $this->r(300, $this->lang("VSubCar.channel_no_data"));
-                        }
-                        if (!$mc['mg_id']) {
-                            $this->rollbackTrans();
-                            return $this->r(300, $this->lang("VSubCar.mg_id_require"));
-                        }
-                        if ($mc['status'] != 1) {
-                            $this->rollbackTrans();
-                            return $this->r(300,$this->lang("VSubCar.channel_status_no_3"));
-                        }
-                        if ($mc['stock'] < $value['quantity']) {
-                            $this->rollbackTrans();
-                            return $this->r(300,$this->lang("VSubCar.under_stock"));
-                        }
-                        if ($this->data['pay_type'] == 0) {
-                            $mc['retail_price'] = 0;
-                        }
                         $details = [
                             "order_id" => $order_id,
                             "mc_id" => $mc['mc_id'],
