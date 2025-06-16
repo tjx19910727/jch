@@ -1268,11 +1268,22 @@ class ApiClient extends ReceiveBaseClient
         $pay_method_list = [1 => "扫码支付", 2 => "付款码支付", 3 => "POS机支付"];
         $mch_no = substr($order['mch_no'],0,10) . "****" . substr($order['mch_no'],-4);
         $this->getMachineAddress();
+        $name = "cname";
+        if ($this->machine['lang'] != "zh-cn")  {
+            $name = "name";
+        }
+        $address = [];
+        if (isset($this->machine['country'][$name]) && $this->machine['country'][$name]) $address[] = $this->machine['country'][$name];
+        if (isset($this->machine['state'][$name]) && $this->machine['state'][$name]) $address[] = $this->machine['state'][$name];
+        if (isset($this->machine['city'][$name]) && $this->machine['city'][$name]) $address[] = $this->machine['city'][$name];
+        if (isset($this->machine['regions'][$name]) && $this->machine['regions'][$name]) $address[] = $this->machine['regions'][$name];
+        if (isset($this->machine['street']) && $this->machine['street']) $address[] = $this->machine['street'];
+        if (isset($this->machine['floor']) && $this->machine['floor']) $address[] = $this->machine['floor'];
         $data = [
             "logo"           => $this->machine['logo'],
             'machine_id'   => $order['machine_id'],
             'machine_name'   => $order['machine_name'],
-            'address' => $this->machine['address'],
+            'address' => implode("",$address),
             'print_date'     => date("Y-m-d"),
             'print_time'     => date("H:i:s"),
             'trade_no'     => $order['trade_no'],
