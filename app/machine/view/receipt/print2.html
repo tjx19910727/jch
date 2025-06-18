@@ -38,7 +38,7 @@
 <p>机器地址：{$address}</p>
 <p>日期： {$print_date}</p>
 <p>时间： {$print_time}</p>
-<p>交易号： {$trade_no}</p>
+<p>订单编号： {$trade_no}</p>
 <div class="liner"></div>
 <p>商品明细：</p>
 <table style="width: 100%;">
@@ -52,7 +52,7 @@
 
   {volist name="detailsList" id="details" key="num" }
   <tr>
-    <td style="text-align: left;">{$num+1}. {$details.g_name}</td>
+    <td style="text-align: left;">{$num}. {$details.g_name}</td>
     <td style="text-align: center;">{$details.retail_price}</td>
     <td style="text-align: center;">{$details.quantity}</td>
     <td style="text-align: center;">=</td>
@@ -63,11 +63,8 @@
 <div class="liner"></div>
 <p><span style="width: 35%;display: inline-block;">商品总额：</span><span>{$retail_price}</span></p>
 <p><span style="width: 35%;display: inline-block;">折扣优惠：</span><span>{$discount_price} {notempty name='ac_name'}({$ac_name}){/notempty}</span></p>
-<p><span style="width: 35%;display: inline-block;">应付金额：</span><span>{$total_price}</span></p>
-<div class="liner"></div>
-<p><span style="width: 35%;display: inline-block;">实付金额：</span><span>{$total_price}</span></p>
+<p><span style="width: 35%;display: inline-block;">付款金额：</span><span>{$total_price}</span></p>
 <p><span style="width: 35%;display: inline-block;">支付方式：</span><span> {$pay_type} (成功)</span></p>
-<p><span style="width: 35%;display: inline-block;">付款订单号：</span><span>{$mch_no}</span></p>
 <div class="liner"></div>
 <p>* 如有质量问题，请于24小时内联系客服。</p>
 <p>* 客服电话： {$service_tel} (服务时间 9:00-18:00)</p>
