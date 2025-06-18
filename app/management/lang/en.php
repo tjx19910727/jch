@@ -598,6 +598,11 @@ return [
         "free_can_not_refund" => "Free payment method cannot be refunded",
     ],
 
+    "VSaleOrdersRefund" => [
+        "order_no_data" => "No order data found",
+        "refunding" => "There is a record of a submitted refund application for the current order. Please wait for the refund result before submitting again.",
+    ],
+
     "VSaleOrdersUnclaimed" => [
         "su_id_require" => "Event ID cannot be empty",
         "status_require" => "Operation value cannot be empty",

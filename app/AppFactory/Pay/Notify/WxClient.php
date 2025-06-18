@@ -95,6 +95,9 @@ class WxClient extends PayBaseClient
             }
             $this->initWpApp();
             $response = $this->wpApp->handleRefundedNotify(function ($result, $msg, $alert) {
+                actionLog($result,'微信退款数据result');
+                actionLog($msg,'微信退款数据msg');
+                actionLog($alert,'微信退款数据alert');
                 if ($result['return_code'] === 'SUCCESS') {
                     $this->refundTradeNo = $msg['out_refund_no'];
                     // 用户是否支付退款成功

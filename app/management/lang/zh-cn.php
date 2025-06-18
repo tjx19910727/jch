@@ -601,6 +601,11 @@ return [
         "free_can_not_refund" => "免支付方式不能退款",
     ],
 
+    "VSaleOrdersRefund" => [
+        "order_no_data" => "查无订单信息",
+        "refunding" => "当前订单有已提交退款申请的记录，请等待退款出结果后再提交",
+    ],
+
     "VSaleOrdersUnclaimed" => [
         "su_id_require" => "事件ID不能为空",
         "status_require" => "操作值不能为空",
