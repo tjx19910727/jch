@@ -297,7 +297,7 @@ class MachineChannelClient extends ManagementClient
      */
     public function exportMcSku($m_id)
     {
-        $field = "machine_id,sku,g_name,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock";
+        $field = "machine_id,sku,g_name,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock,cost_price,retail_price";
         $list = $this->getMachineChannelList(['m_id' => $m_id],0,$field,"","","sku");
         if ($list) {
             $list = $list->toArray();
@@ -319,7 +319,9 @@ class MachineChannelClient extends ManagementClient
                     "channel_num" => "货道数量",
                     "capacity" => "最大数量",
                     "stock" => "当前数量",
-                    "frozen_stock" => "预定数量"
+                    "frozen_stock" => "预定数量",
+                    "retail_price" => "售价",
+                    "cost_price" => "成本价",
                 ];
                 $filename = "按SKU铺货计划-" . date("YmdHis");
                 return $this->sendToExport("设备管理-设备货架", $filename, $title, $list);
@@ -335,7 +337,7 @@ class MachineChannelClient extends ManagementClient
      */
     public function exportMc($m_id)
     {
-        $field = "machine_id,channel_code,sku,g_name,capacity,stock,frozen_stock";
+        $field = "machine_id,channel_code,sku,g_name,capacity,stock,frozen_stock,cost_price,retail_price";
         $list = $this->getMachineChannelList(['m_id' => $m_id],0,$field);
         if ($list) {
             $list = $list->toArray();
@@ -354,7 +356,9 @@ class MachineChannelClient extends ManagementClient
                     "g_name" => "商品名称",
                     "capacity" => "最大数量",
                     "stock" => "当前数量",
-                    "frozen_stock" => "预定数量"
+                    "frozen_stock" => "预定数量",
+                    "retail_price" => "售价",
+                    "cost_price" => "成本价",
                 ];
                 $filename =  "货架铺货计划-" . date("YmdHis");
                 return $this->sendToExport("设备管理-设备货架", $filename, $title, $list);
