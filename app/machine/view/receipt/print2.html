@@ -30,9 +30,9 @@
   <div class="box">
     <div style="display: flex;align-items: center;padding: 2mm 0;">
 <img style="width: 20mm;height: 8mm;margin-right: 4mm;" src="{$logo}" alt="">
-<p style="font-weight: bold;">嘉潮汇智能售货机</p>
+<p style="font-weight: bold;text-align: center;">嘉潮汇智能售货机</p>
 </div>
-<p>自助售卖机服务小票</p>
+<p style="text-align: center">自助售卖机服务小票</p>
 <div class="liner"></div>
 <p>机器编号： {$machine_id} ({$machine_name})</p>
 <p>机器地址：{$address}</p>
@@ -53,21 +53,21 @@
   {volist name="detailsList" id="details" key="num" }
   <tr>
     <td style="text-align: left;">{$num}. {$details.g_name}</td>
-    <td style="text-align: center;">{$details.retail_price}</td>
+    <td style="text-align: center;">{$currency}{$details.retail_price}</td>
     <td style="text-align: center;">{$details.quantity}</td>
     <td style="text-align: center;">=</td>
-    <td style="text-align: right;">{$details.retail_price * $details.quantity}</td>
+    <td style="text-align: left;">{$currency}{$details.retail_price * $details.quantity}</td>
   </tr>
   {/volist}
 </table>
 <div class="liner"></div>
-<p><span style="width: 35%;display: inline-block;">商品总额：</span><span>{$retail_price}</span></p>
-<p><span style="width: 35%;display: inline-block;">折扣优惠：</span><span>{$discount_price} {notempty name='ac_name'}({$ac_name}){/notempty}</span></p>
-<p><span style="width: 35%;display: inline-block;">付款金额：</span><span>{$total_price}</span></p>
-<p><span style="width: 35%;display: inline-block;">支付方式：</span><span> {$pay_type} (成功)</span></p>
+<p><span style="width: 35%;display: inline-block;">商品总额：</span><span>{$currency}{$retail_price}</span></p>
+<p><span style="width: 35%;display: inline-block;">折扣优惠：</span><span>{$currency}{$discount_price} {notempty name='ac_name'}({$ac_name}){/notempty}</span></p>
+<p><span style="width: 35%;display: inline-block;">付款金额：</span><span>{$currency}{$total_price}</span></p>
+<p><span style="width: 35%;display: inline-block;">支付方式：</span><span>{$pay_type} (成功)</span></p>
 <div class="liner"></div>
 <p>* 如有质量问题，请于24小时内联系客服。</p>
-<p>* 客服电话： {$service_tel} (服务时间 9:00-18:00)</p>
+<p>* 客服电话： {$service_tel|default='无'} (服务时间 9:00-18:00)</p>
 <p>* 扫码关注在线商城，了解更多</p>
 <div style="display: flex;justify-content: space-evenly;text-align: center;">
   <div style="width: 50mm;">

@@ -62,6 +62,7 @@ return [
     "normal" => "正常",
     "disable" => "禁用",
     "maintenance" => "维护",
+    "gift" => "赠品",
 
     // 错误码分类
     "deviceErrorCodeType" => [
@@ -222,5 +223,9 @@ return [
         "backstage_mc_bad" => "后台BAD",
         "backstage_mc_not_bad" => "后台恢复BAD",
 
+    ],
+
+    "VLogin" => [
+        'permission_denied' => '您无登录权限，请与相关人员确认授权内容',
     ],
 ];

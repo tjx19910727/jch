@@ -1291,7 +1291,10 @@ class ApiClient extends ReceiveBaseClient
             'print_time'     => date("H:i:s"),
             'trade_no'     => $order['trade_no'],
             'mch_no'     => $mch_no,
-            'detailsList'    => $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0,'g_name,quantity,retail_price,total_sod_price')->toArray(),
+            'currency' => $this->machine['currency'],
+            'detailsList'    => $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0,
+                'g_name,quantity,retail_price,is_gift,discount_price,total_sod_price'
+            )->toArray(),
             'total_quantity' => $order['total_quantity'],
             'discount_price' => $order['discount_price'],
             'retail_price' => number_format($order['retail_price'],2),
@@ -1304,6 +1307,8 @@ class ApiClient extends ReceiveBaseClient
             'receipt_code3'  => $mConfig['receipt_code3'],
             'receipt_desc'   => $mConfig['receipt_desc'],
         ];
+        if (in_array(1,array_column($data['detailsList'],'is_gift')))
+            $data['ac_name'] = $this->lang("gift");
         actionLog($data,'小票数据');
         View::assign($data);
         $result = View::fetch("receipt/print2");

@@ -44,6 +44,7 @@ return [
     "normal" => "Normal",
     "disable" => "Disable",
     "maintenance" => "Maintenance",
+    "gift" => "gift",
 
     // 错误码分类
     "deviceErrorCodeType" => [
@@ -192,5 +193,10 @@ return [
         "backstage_mc_bad" => "Backstage BAD",
         "backstage_mc_not_bad" => "Background recovery of BAD",
 
+    ],
+
+
+    "VLogin" => [
+        'permission_denied' => 'You do not have permission to log in to the terminal',
     ],
 ];
