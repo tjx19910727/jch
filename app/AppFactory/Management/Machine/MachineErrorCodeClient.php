@@ -39,9 +39,11 @@ class MachineErrorCodeClient extends ManagementClient
 
     public function getEcList($where, $pageNum = 0, $field = "*", $order = "", $group = "")
     {
-        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-        if ($mIds) {
-            $where[] = ['m_id', 'in', $mIds];
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            }
         }
         $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, function ($item) {
             $errTypeName = "";
