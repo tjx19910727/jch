@@ -117,6 +117,7 @@ return [
             "109624300" => 'Feeding box grating fault - Return Instruction - Analysis',
 
             "200124200" => "Pickup door status query failure - Return command - Parsing",
+            "200124300" => "Abnormal communication between the single-chip microcomputer and the photoelectric sensor of the discharge box - Return command - Parsing",
             "204801800" => 'z1 Axis Movement Fault - Return Instruction - Analysis',
             "204801801" => 'Z2 axis movement fault - return command - analysis',
             "204813600" => 'Z1 axis initialization fault - return command - analysis',
