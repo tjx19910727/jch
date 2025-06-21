@@ -218,21 +218,23 @@ class SaleOrdersClient extends ManagementClient
             "today" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
             "yesterday" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
         ];
-        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-        if ($mIds) {
-            $where[] = ['m_id', 'in', $mIds];
-            $whereToday = $where;
-            $whereToday[] = ['create_date', '=', strtotime(date("Y-m-d"))];
-            $today = $this->getSaleOrdersFind($whereToday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
-            if ($today) $today = $today->toArray();
-
-            $whereYesterday = $where;
-            $whereYesterday[] = ['create_date', '=', strtotime(date("Y-m-d 00:00:00", strtotime("-1 days")))];
-            $yesterday = $this->getSaleOrdersFind($whereYesterday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
-            if ($yesterday) $yesterday = $yesterday->toArray();
-            if ($today) $data['today'] = $today;
-            if ($yesterday) $data['yesterday'] = $yesterday;
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            }
         }
+        $whereToday = $where;
+        $whereToday[] = ['create_date', '=', strtotime(date("Y-m-d"))];
+        $today = $this->getSaleOrdersFind($whereToday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
+        if ($today) $today = $today->toArray();
+
+        $whereYesterday = $where;
+        $whereYesterday[] = ['create_date', '=', strtotime(date("Y-m-d 00:00:00", strtotime("-1 days")))];
+        $yesterday = $this->getSaleOrdersFind($whereYesterday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
+        if ($yesterday) $yesterday = $yesterday->toArray();
+        if ($today) $data['today'] = $today;
+        if ($yesterday) $data['yesterday'] = $yesterday;
         return $data;
     }
 
@@ -248,27 +250,30 @@ class SaleOrdersClient extends ManagementClient
      */
     public function getChartData($where, $type = 1)
     {
-        $data = [];
-        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-        if ($mIds) {
-            $where[] = ['m_id', 'in', $mIds];
-            if ($type == 1) {
-                $field = "totalPrice,totalQuantity,countDate";
-                $group = "";
-                $where[] = ['create_date', '>=', strtotime("-1 months")];
+        $field = "";
+        $group = "";
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
             }
-            if ($type == 2) {
-                $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'Week %v,%x') week";
-                $group = "week";
-                $where[] = ['create_date', '>=', strtotime("-15 week")];
-            }
-            if ($type == 3) {
-                $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'%x-%m') month";
-                $group = "month";
-                $where[] = ['create_date', '>=', strtotime("-12 month")];
-            }
-            $data = $this->getSaleOrdersDailyCountList($where, 0, $field, '', $group);
         }
+        if ($type == 1) {
+            $field = "totalPrice,totalQuantity,countDate";
+            $group = "";
+            $where[] = ['create_date', '>=', strtotime("-1 months")];
+        }
+        if ($type == 2) {
+            $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'Week %v,%x') week";
+            $group = "week";
+            $where[] = ['create_date', '>=', strtotime("-15 week")];
+        }
+        if ($type == 3) {
+            $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'%x-%m') month";
+            $group = "month";
+            $where[] = ['create_date', '>=', strtotime("-12 month")];
+        }
+        $data = $this->getSaleOrdersDailyCountList($where, 0, $field, '', $group);
         return $this->rQ($data);
     }
 
@@ -280,8 +285,11 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportSo($where)
     {
-        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-        if ($mIds) $where[] = ['m_id', 'in', $mIds];
+        $mIds = [];
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) $where[] = ['m_id', 'in', $mIds];
+        }
         $list = $this->getSaleOrdersList($where, 0,
             'order_id,machine_id,machine_name,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,
                 (CASE order_type 
@@ -517,8 +525,10 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportRefund($where)
     {
-        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-        if ($mIds) $where[] = ['sor.m_id', 'in', $mIds];
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) $where[] = ['sor.m_id', 'in', $mIds];
+        }
         $field = "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,
                 sor.refund_trade_no,
                 (CASE sod.channel_position WHEN 1 THEN '主柜' WHEN 2 THEN '副柜' END ) channel_position,
