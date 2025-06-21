@@ -375,17 +375,21 @@ trait ActivityFdTrait
         }
         if ($this->countContent['mc_id']) {
             $mc = $this->getMachineChannelFind(['mc_id' => $this->countContent['mc_id']],
-                'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,cost_price,market_price,(0) retail_price,batch_number,manufacture_time,sell_by_date,bar_code,shelf_way');
+                'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,cost_price,market_price, retail_price,batch_number,manufacture_time,sell_by_date,bar_code,shelf_way');
             if ($mc) {
                 $mc = $mc->toArray();
                 $insertSod = $mc;
                 $insertSod['is_gift'] = 1;
                 $insertSod['quantity'] = 1;
                 $insertSod['total_sod_price'] = 0;
+                $insertSod['retail_price'] = $mc['retail_price'];
+                $insertSod['discount_price'] = $mc['retail_price'];
                 $insertSod['order_id'] = $this->order['order_id'];
                 $flag[] = $this->addSaleOrdersDetails($insertSod);
                 actionLog($this->getLS(),'【SQL】添加赠品订单详情信息');
                 $updateOrder['total_quantity'] = $this->order['total_quantity']++;
+                $updateOrder['discount_price'] =  $this->order['discount_price'] + $insertSod['discount_price'];
+                $updateOrder['retail_price'] = $this->order['retail_price'] + $insertSod['discount_price'];
                 actionLog($this->getLS(),'【SQL】处理订单信息');
             }
         }
