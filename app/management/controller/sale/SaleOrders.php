@@ -141,8 +141,10 @@ class SaleOrders extends Common
         if (isset($postData['refund_no']) && $postData['refund_no']) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
         if (isset($postData['pay_type']) && $postData['pay_type']) $where['pay_type'] = $postData['pay_type'];
 //        $where = $this->getWhere($postData,false,['refund_trade_no' => "like",'machine_id' => "like",'trade_no' => "like","refund_no" => "like"]);
-        $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'m_id');
-        if ($mIds) $where[] = ['sor.m_id','in',$mIds];
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+            if ($mIds) $where[] = ['sor.m_id', 'in', $mIds];
+        }
         $field = "sor.*,so.pay_type";
         return returnData($this->app->saleOrders->getSaleOrdersRefundListJoinSoSod($where,$pageNum,$field,'sor.sor_id desc'));
     }
@@ -179,8 +181,10 @@ class SaleOrders extends Common
         $where = $this->getWhere($postData,false,["machine_id" => "like"]);
 
         if (!isset($postData['m_id']) || !$postData['m_id']) {
-            $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
-            if ($mIds) $where[] = ['m_id', 'in', $mIds];
+            if ($this->manager['pid'] > 0) {
+                $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+                if ($mIds) $where[] = ['m_id', 'in', $mIds];
+            }
         }
         if ($group) {
             // 日
@@ -233,10 +237,12 @@ class SaleOrders extends Common
         }
         $where = $this->getWhere($postData,true,["machine_id" => "like"]);
         if (!isset($postData['m_id']) || !$postData['m_id']) {
-            $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
-            if ($mIds) {
-                if ($where) $where .= " AND ";
-                $where .= 'm_id in (' . implode(",", $mIds) . ')';
+            if ($this->manager['pid'] > 0) {
+                $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+                if ($mIds) {
+                    if ($where) $where .= " AND ";
+                    $where .= 'm_id in (' . implode(",", $mIds) . ')';
+                }
             }
         }
         return $this->app->saleOrders->getReportList($where,$pageNum,$order,$group);
@@ -255,8 +261,10 @@ class SaleOrders extends Common
             unset($postData['order']);
         }
         $where = $this->getWhere($postData,false,["machine_id" => "like"]);
-        $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'m_id');
-        if ($mIds) $where[] = ['m_id','in',$mIds];
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+            if ($mIds) $where[] = ['m_id', 'in', $mIds];
+        }
         return $this->app->saleOrders->exportReport($where,$order);
     }
 
@@ -270,8 +278,10 @@ class SaleOrders extends Common
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
         if (!isset($postData['m_id']) || !$postData['m_id']) {
-            $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
-            if ($mIds) $where[] = ['m_id', 'in', $mIds];
+            if ($this->manager['pid'] > 0) {
+                $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+                if ($mIds) $where[] = ['m_id', 'in', $mIds];
+            }
         }
         return $this->app->saleOrders->saleDataCollect($where);
 
@@ -287,8 +297,10 @@ class SaleOrders extends Common
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
         if (!isset($postData['m_id']) || !$postData['m_id']) {
-            $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
-            if ($mIds) $where[] = ['m_id', 'in', $mIds];
+            if ($this->manager['pid'] > 0) {
+                $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+                if ($mIds) $where[] = ['m_id', 'in', $mIds];
+            }
         }
         $where['so.pay_status'] = 3;
         actionLog($where,'查询条件');
@@ -304,8 +316,10 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
-        $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],'m_id');
-        if ($mIds) $where[] = ['m_id','in',$mIds];
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+            if ($mIds) $where[] = ['m_id', 'in', $mIds];
+        }
         $where['so.pay_status'] = 3;
         return $this->app->saleOrders->exportSaleDataCollect($where);
     }
@@ -314,28 +328,28 @@ class SaleOrders extends Common
      * 查询门票商品
      * @return array|\think\response\Json
      */
-    public function queryTicket()
-    {
-        $postData = input();
-        $where = $this->getWhere($postData,false,['trade_no' => "like","mobile" => "like","checkOff_code"]);
-        $field = "sod.sod_id,so.trade_no,so.machine_id,so.machine_name,so.mobile,sod.checkOff_code,sod.g_name,sod.checkOff_status,sod.checkOff_time,so.pay_time";
-        $pageNum = $postData['pageNum'] ?? 0;
-        $order = "sod.checkOff_time desc";
-        return $this->app->saleOrders->queryCheckOffList($where,$pageNum,$field,$order);
-    }
+//    public function queryTicket()
+//    {
+//        $postData = input();
+//        $where = $this->getWhere($postData,false,['trade_no' => "like","mobile" => "like","checkOff_code"]);
+//        $field = "sod.sod_id,so.trade_no,so.machine_id,so.machine_name,so.mobile,sod.checkOff_code,sod.g_name,sod.checkOff_status,sod.checkOff_time,so.pay_time";
+//        $pageNum = $postData['pageNum'] ?? 0;
+//        $order = "sod.checkOff_time desc";
+//        return $this->app->saleOrders->queryCheckOffList($where,$pageNum,$field,$order);
+//    }
 
     /**
      * 核销门票商品
      * @return array|\think\response\Json
      */
-    public function checkOffTicket()
-    {
-        $postData = input();
-        if (!isset($postData['sod_id']) || !$postData['sod_id']) return returnState(100,lang("VSaleOrders.sod_id_require"));
-        if (!isset($postData['checkOff_status']) || !$postData['checkOff_status'] || in_array($postData['checkOff_status'],[2,3]))
-            return returnState(100,lang("VSaleOrders.checkOff_status_error"));
-        return $this->app->saleOrders->checkOffTicket($postData['sod_id'],$postData['checkOff_status']);
-    }
+//    public function checkOffTicket()
+//    {
+//        $postData = input();
+//        if (!isset($postData['sod_id']) || !$postData['sod_id']) return returnState(100,lang("VSaleOrders.sod_id_require"));
+//        if (!isset($postData['checkOff_status']) || !$postData['checkOff_status'] || in_array($postData['checkOff_status'],[2,3]))
+//            return returnState(100,lang("VSaleOrders.checkOff_status_error"));
+//        return $this->app->saleOrders->checkOffTicket($postData['sod_id'],$postData['checkOff_status']);
+//    }
 
     /**
      * 查询酒店
@@ -351,15 +365,14 @@ class SaleOrders extends Common
     }
 
     /**
-     *
      * @return \app\AppFactory\Management\Sale\SaleOrdersClient|\app\AppFactory\Management\Sale\SaleOrdersClient[]|array|\think\Collection|\think\Paginator|\think\response\Json
      */
-    public function checkOffHotel()
-    {
-        $postData = input();
-        if (!isset($postData['sh_id']) || !$postData['sh_id']) return returnState(100,lang("VSaleOrders.sh_id_require"));
-        if (!isset($postData['checkOff_status']) || !$postData['checkOff_status'] || in_array($postData['checkOff_status'],[2,3]))
-            return returnState(100,lang("VSaleOrders.checkOff_status_error"));
-        return $this->app->saleOrders->checkOffHotel($postData['sh_id'],$postData['checkOff_status']);
-    }
+//    public function checkOffHotel()
+//    {
+//        $postData = input();
+//        if (!isset($postData['sh_id']) || !$postData['sh_id']) return returnState(100,lang("VSaleOrders.sh_id_require"));
+//        if (!isset($postData['checkOff_status']) || !$postData['checkOff_status'] || in_array($postData['checkOff_status'],[2,3]))
+//            return returnState(100,lang("VSaleOrders.checkOff_status_error"));
+//        return $this->app->saleOrders->checkOffHotel($postData['sh_id'],$postData['checkOff_status']);
+//    }
 }
