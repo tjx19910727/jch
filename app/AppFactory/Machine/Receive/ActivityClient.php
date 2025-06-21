@@ -227,14 +227,21 @@ class ActivityClient extends ReceiveBaseClient
                         while($value['quantity'] > 0) {
                             $details = [
                                 "order_id" => $order_id,
-                                "retail_price" => 0,
+                                // 20250620 林琼虹与财务确认，一切的活动价，优惠价，折扣价，赠品成本等都是在优惠额体现，而原订单金额就是按商品原本的售价*数量得出。实际销售额 = 设备销售额 - 退款金额（如有）-优惠额
+//                                "retail_price" => 0,
                                 "total_sod_price" => 0,
+                                "retail_price" => $mc['retail_price'],
+                                "discount_price" => $mc['retail_price'],
                                 "quantity" => 1,
                             ];
                             $details = array_merge($details, $mc);
                             $sod_id = $this->addSaleOrdersDetails($details);
                             actionLog($this->getLS(), '生成订单详情数据');
                             if ($sod_id) {
+                                // 20250620 林琼虹与财务确认，一切的活动价，优惠价，折扣价，赠品成本等都是在优惠额体现，而原订单金额就是按商品原本的售价*数量得出。实际销售额 = 设备销售额 - 退款金额（如有）-优惠额
+                                $updateOrder['discount_price'] =  ($updateOrder['discount_price'] ?? 0) + $details['discount_price'];
+                                $updateOrder['retail_price'] = ($updateOrder['retail_price'] ?? 0) + $details['discount_price'];
+
                                 $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], 1);
                                 $value['quantity']--;
                             } else {
@@ -531,6 +538,8 @@ class ActivityClient extends ReceiveBaseClient
             $flag = [];
             $ugAll = [];
             $mcField = "mc_id,shelf_way,channel_position,channel_code,mg_id,g_id,g_name,pic,sku,gc_id,gc_name,cost_price,market_price,stock";
+            $updateOrder['discount_price'] = $order['discount_price'];
+            $updateOrder['retail_price'] = $order['retail_price'];
             foreach ($list as $lk => $lv) {
                 $mc = $this->getMachineChannelFind(['g_id' => $lv['g_id'], 'm_id' => $order['m_id']], $mcField, 'stock desc');
                 if (!$mc) {
@@ -562,7 +571,11 @@ class ActivityClient extends ReceiveBaseClient
                     $insertSod['retail_price'] = $averagePrice;
                     if (isset($lv['is_gift'])) {
                         $insertSod['total_sod_price'] = 0;
-                        $insertSod['retail_price'] = 0;
+//                        $insertSod['retail_price'] = 0;
+                        // 20250620 林琼虹与财务确认，一切的活动价，优惠价，折扣价，赠品成本等都是在优惠额体现，而原订单金额就是按商品原本的售价*数量得出。实际销售额 = 设备销售额 - 退款金额（如有）-优惠额
+                        $insertSod['discount_price'] = $insertSod['total_sod_price'];
+                        $updateOrder['discount_price'] += $insertSod['discount_price'];
+                        $updateOrder['retail_price'] += $insertSod['discount_price'];
                     }
                     $sod_id = $this->addSaleOrdersDetails($insertSod);
                     $flag[] = $sod_id;
@@ -578,6 +591,10 @@ class ActivityClient extends ReceiveBaseClient
                 $ug['sod_id'] = $sod_id;
                 $ugAll[] = $ug;
             }
+            // 20250620 林琼虹与财务确认，一切的活动价，优惠价，折扣价，赠品成本等都是在优惠额体现，而原订单金额就是按商品原本的售价*数量得出。实际销售额 = 设备销售额 - 退款金额（如有）-优惠额
+            $updateOrder['order_id'] = $this->order['order_id'];
+            $this->updateSaleOrders($updateOrder);
+            actionLog($this->getLS(),'【SQL】抽奖赠品增加订单总优惠金额，原订单总金额');
             $flag[] = $this->addActivityLotteryUsedGoodsMore($ugAll);
             actionLog($this->getLS(),'生成中奖记录数据');
             actionLog($flag,'事务执行结果');
