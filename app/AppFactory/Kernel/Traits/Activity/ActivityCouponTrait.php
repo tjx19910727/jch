@@ -284,7 +284,7 @@ trait ActivityCouponTrait
                         }
                         // 商品优惠金额 = 商品数量 / 总数量 * 立减金额
                         if ($ac['c_type'] == 1 ) {
-                            $sodDiscountPrice = bcmul(bcdiv($value['quantity'],$this->order['total_quantity'],4),$ac['reduction'],4);
+                            $sodDiscountPrice = bcmul(bcdiv($value['total_sod_price'],$this->order['total_price'],4),$ac['reduction'],4);
 //                            $sodDiscountPrice = bcsub($totalSodPrice,$decPrice);
                         }
                         actionLog($value,'优惠计算前商品数据');
