@@ -265,12 +265,13 @@ trait ActivityCouponTrait
                 // 区分优惠券类型，1：立减金额，2：优惠折扣，计算优惠值
                 if ($ac['c_type'] == 1) $discount_price = $ac['reduction'];
                 if ($ac['c_type'] == 2) $discount_price = bcmul($this->order['total_price'], bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
-                if ($discount_price < $this->order['total_price']) {
+                if ($discount_price <= $this->order['total_price']) {
 //                    $totalPrice = $this->order['total_price'];
                     // 优惠金额作用至订单总金额
                     $this->order['discount_price'] = bcadd($this->order['discount_price'], $discount_price, 2);
                     $this->order['total_price'] = bcsub($this->order['total_price'], $discount_price, 3);
                     actionLog($this->order,'优惠券订单数据');
+
                     foreach ($this->order['details'] as $key => $value) {
                         // 商品优惠金额 = 订单优惠金额 * 商品金额占比 = 订单优惠金额 *  （商品总金额 / 订单总金额）
 //                        $sodDiscountPrice = bcmul($this->order['discount_price'],bcdiv($value['total_sod_price'],$totalPrice,2),4);
@@ -287,9 +288,13 @@ trait ActivityCouponTrait
                             $sodDiscountPrice = bcmul(bcdiv($value['total_sod_price'],$this->order['total_price'],4),$ac['reduction'],4);
 //                            $sodDiscountPrice = bcsub($totalSodPrice,$decPrice);
                         }
+                        // 最后一个优惠金额，并且优惠金额大于计算后的商品详情优惠金额，则将剩下的优惠金额都给这个商品
+                        if (!isset($this->order['details'][$key + 1]) && $discount_price > $sodDiscountPrice)
+                            $sodDiscountPrice = $discount_price;
                         actionLog($value,'优惠计算前商品数据');
                         actionLog($sodDiscountPrice,'商品优惠金额');
-                        if ($sodDiscountPrice < 0.01 && $key > 0) break;
+                        if ($sodDiscountPrice < 0.01 && $key > 0) continue;
+                        $discount_price = bcsub($discount_price,$sodDiscountPrice,4);
                         $value['discount_price'] = $sodDiscountPrice;
                         $value['total_sod_price'] = bcsub($value['total_sod_price'], $sodDiscountPrice, 4);
                         actionLog($value,'优惠后商品数据');
