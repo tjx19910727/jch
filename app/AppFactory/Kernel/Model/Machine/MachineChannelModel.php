@@ -93,6 +93,7 @@ class MachineChannelModel extends BaseModel
     protected static function onAfterUpdate(Model $model)
     {
         try {
+            actionLog(self::getLastSql(),'【SQL】修改货道');
             $pk = $model->getPk();
             $mc = self::getFind(['mc_id' => $model->$pk], 'machine_id');
             actionLog(self::getLastSql(),'mcAfterUpdate');

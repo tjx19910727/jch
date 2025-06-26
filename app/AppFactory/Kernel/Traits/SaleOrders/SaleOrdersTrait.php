@@ -347,7 +347,6 @@ trait SaleOrdersTrait
                     $flag[] = $this->addSaleOrdersDetails($insertDetails);
                     actionLog($this->getLS(), '生成订单详情');
                     $flag[] = $this->updateMachineChannel($updateMc);
-                    actionLog($this->getLS(), '修改货架库存');
                     $this->order['cost_price'] = bcadd($this->order['cost_price'], $insertDetails['cost_price'], 3);
                     $this->order['market_price'] = bcadd($this->order['market_price'], $insertDetails['market_price'], 3);
                     $this->order['retail_price'] = bcadd($this->order['retail_price'], $insertDetails['retail_price'], 3);
