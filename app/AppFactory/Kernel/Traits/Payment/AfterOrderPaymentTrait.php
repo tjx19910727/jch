@@ -51,6 +51,7 @@ trait AfterOrderPaymentTrait
         $flag[] = $this->updateSaleOrders($this->order);
         actionLog($this->getLS(),'订单修改数据');
         $result = flag_check($flag);
+        $this->sendNotice();
         return $result;
     }
 
@@ -171,6 +172,9 @@ trait AfterOrderPaymentTrait
         return flag_check($flag);
     }
 
+    /**
+     * 发送销售通知
+     */
     private function sendNotice()
     {
         try {
@@ -186,9 +190,9 @@ trait AfterOrderPaymentTrait
                 ]
             ];
             $result = $this->noticeSend();
-            actionLog($result, '发送结果');
+            actionLog($result, '发送销售通知结果');
         } catch (\Exception $e) {
-            actionLog("发送库存预警抛出异常");
+            actionLog("发送销售通知异常");
             actionException($e, 1);
         }
     }
