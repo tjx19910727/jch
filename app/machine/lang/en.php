@@ -115,6 +115,7 @@ return [
         ],
     'VChangeChannelGoods' =>
         [
+            "frozen_stock_gt_zero" => "There is frozen inventory in the current aisle, and it is not allowed to replace the goods.",
             'goods_no_data' => 'No product information found',
             'mg_no_data' => 'No device product information found',
             'mg_stock_out' => 'Insufficient available inventory of equipment products',

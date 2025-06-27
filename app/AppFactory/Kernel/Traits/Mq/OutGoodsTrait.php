@@ -91,6 +91,7 @@ trait OutGoodsTrait
                 $where['success_quantity'] = 0;
                 $where['fail_quantity'] = 0;
                 $sod = $this->getSaleOrdersDetailsFind($where,'sod_id','sod_id asc');
+                if (!$sod) continue;
                 if ($sod) {
                     unset($where);
                     $update = [];
