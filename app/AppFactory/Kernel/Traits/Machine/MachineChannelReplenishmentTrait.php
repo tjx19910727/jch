@@ -74,7 +74,8 @@ trait MachineChannelReplenishmentTrait
                     $this->rollbackTrans();
                     return $this->rFail($this->lang("VChannelReplenishment.channel_no_data"));
                 }
-                $quantity = $mc['stock'] + $value['quantity'];
+                // 货道库存+补货数量+冻结库存 不能超过货道容量
+                $quantity = $mc['stock'] + $value['quantity'] + $mc['frozen_stock'];
                 if (isset($value['standby_quantity'])) $quantity += $value['standby_quantity'];
                 if ($quantity > $mc['capacity']) {
                     $this->rollbackTrans();

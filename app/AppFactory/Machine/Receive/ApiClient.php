@@ -329,6 +329,9 @@ class ApiClient extends ReceiveBaseClient
         try {// 清空旧商品库存，生成退货记录
             $mc = $this->getMachineChannelFind(['mc_id' => $this->data['mc_id']]);
             $mc = obj2arr($mc);
+            if ($mc['frozen_stock'] > 0) {
+                return $this->rFail($this->lang("VChangeChannelGoods.mg_no_data"));
+            }
             $insertGChange = [
                 "m_id" => $this->machine['m_id'],
                 "machine_id" => $this->machine['machine_id'],

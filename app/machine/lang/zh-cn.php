@@ -139,6 +139,7 @@ return [
     ],
 
     "VChangeChannelGoods" => [
+        "frozen_stock_gt_zero" => "当前货道有冻结库存，不允许更换商品",
         "goods_no_data" => "查无商品信息",
         "mg_no_data" => "查无设备商品信息",
 
