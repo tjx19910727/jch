@@ -457,7 +457,7 @@ class SaleOrdersClient extends ManagementClient
             $list = $list->toArray();
             if ($list) {
                 $where['sor.status'] = 2;
-                if (isset($where[0][0]) && $where[0][0] == "create_time") $where[0][0] = "sor.update_time";
+                if (isset($where[0][0]) && strpos($where[0][0],"create_time") !== false) $where[0][0] = "sor.update_time";
                 $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
                     "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
                             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
