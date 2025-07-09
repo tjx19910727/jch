@@ -75,6 +75,7 @@ class MachineErrorCodeClient extends ManagementClient
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) {
             $where[] = ['m_id', 'in', $mIds];
+            $field = str_replace("create_time","FROM_UNIXTIME(create_time) create_time",$field);
             $list = $this->getMachineErrorCodeList($where, 0, $field . ",msg", $order);
             if ($list) {
                 $list = $list->toArray();
