@@ -22,6 +22,7 @@ use app\AppFactory\Kernel\Traits\Payment\WxPayTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelNightlyTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
+use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
@@ -41,6 +42,7 @@ class PaymentClient extends PayBaseClient
     use AfterOrderPaymentTrait;
     use MachineMqRecordTrait;
     use ActivityFdUsedTrait;
+    use ToManagerTrait;
 
     public $machine;
     public $strategyPayee;
