@@ -250,6 +250,7 @@ trait ActivityCouponTrait
         if ($ac['pay_limit'] > 0 && $this->order['total_price'] < $ac['pay_limit']) {
             return $this->rFail($this->lang("VActivityCoupon.pay_limit"));
         }
+        // 原始订单支付金额
         $original_price = $this->order['total_price'];
 
         if (!isset($this->order['details'])) {
@@ -277,16 +278,14 @@ trait ActivityCouponTrait
 //                        $sodDiscountPrice = bcmul($this->order['discount_price'],bcdiv($value['total_sod_price'],$totalPrice,2),4);
 
                         $sodDiscountPrice = 0;
-                        // 商品优惠金额 = 商品售价 * 数量 * （100 - 打折）
-                        $totalSodPrice = bcmul($value['retail_price'],$value['quantity'],2);
                         if ($ac['c_type'] == 2) {
+                            // 商品优惠金额 = 商品售价 * 数量 * （100 - 打折）
                             $reduction = bcdiv(bcsub(100,$ac['reduction']),100,2);
-                            $sodDiscountPrice = bcmul($totalSodPrice,$reduction,4);
+                            $sodDiscountPrice = bcmul($value['total_sod_price'],$reduction,4);
                         }
-                        // 商品优惠金额 = 商品数量 / 总数量 * 立减金额
+                        // 商品优惠金额 = 商品总额 / 订单总额 * 立减金额
                         if ($ac['c_type'] == 1 ) {
-                            $sodDiscountPrice = bcmul(bcdiv($value['total_sod_price'],$this->order['total_price'],4),$ac['reduction'],4);
-//                            $sodDiscountPrice = bcsub($totalSodPrice,$decPrice);
+                            $sodDiscountPrice = bcmul(bcdiv($value['total_sod_price'],$original_price,4),$ac['reduction'],4);
                         }
                         // 最后一个优惠金额，并且优惠金额大于计算后的商品详情优惠金额，则将剩下的优惠金额都给这个商品
                         if (!isset($this->order['details'][$key + 1]) && $discount_price > $sodDiscountPrice)
