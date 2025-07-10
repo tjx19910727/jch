@@ -159,9 +159,10 @@ class MachineClient extends ManagementClient
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             $where[] = ['m_id', 'in', $mIds];
-            $where[] = function ($query) {
-                $query->whereOr("creator",$this->manager['manager_id']);
-            };
+//            if (!$where)
+//                $where[] = " or `creator` = " . $this->manager['manager_id'];
+//            else
+//                $where[] = " `creator` = " . $this->manager['manager_id'];
         }
         return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) {
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
