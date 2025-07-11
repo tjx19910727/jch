@@ -17,6 +17,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsMultipleTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
 
 class PayBaseClient extends BaseClient
 {
@@ -24,6 +25,7 @@ class PayBaseClient extends BaseClient
     use GoodsMultipleGoodsTrait,GoodsMultipleTrait;
     use MachineTrait;
     use CommonTrait;
+    use ToManagerTrait;
 
     public $data;
     public $order;
