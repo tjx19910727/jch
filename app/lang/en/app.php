@@ -200,4 +200,11 @@ return [
     "VLogin" => [
         'permission_denied' => 'You do not have permission to log in to the terminal',
     ],
+
+
+    "WxPay" => [
+        "key_path_not_exists" => "The WeChat key certificate does not exist.",
+        "cert_path_not_exists" => "The WeChat Cert certificate does not exist.",
+        "privateKey_not_exists" => "The private key for WeChat does not exist.",
+    ],
 ];

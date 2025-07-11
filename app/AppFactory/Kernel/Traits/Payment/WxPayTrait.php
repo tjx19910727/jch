@@ -39,9 +39,19 @@ trait WxPayTrait
     {
         $this->strategyPayee['mchid'] = $this->strategyPayee['mch_id'];
         $this->strategyPayee['key_path'] = root_path() . "public" . $this->strategyPayee['key_path'];
+        if (!file_exists($this->strategyPayee['key_path'])) {
+            return $this->r(100,$this->lang("WxPay.key_path_not_exists"));
+        }
         $this->strategyPayee['cert_path'] = root_path() . "public" . $this->strategyPayee['cert_path'];
+        if (!file_exists($this->strategyPayee['cert_path'])) {
+            return $this->r(100,$this->lang("WxPay.cert_path_not_exists"));
+        }
         $this->strategyPayee['privateKey'] = $this->strategyPayee['key_path'];
+        if (!$this->strategyPayee['privateKey']) {
+            return $this->r(100,$this->lang("WxPay.privateKey_not_exists"));
+        }
         $this->wpApp = Factory::payment($this->strategyPayee);
+        return true;
     }
 
     // 微信支付入口
@@ -51,7 +61,8 @@ trait WxPayTrait
     {
         if (!in_array($this->order['pay_method'],array_keys($this->wxPaymentMethod)))
             return $this->rFail("支付方式不在允许范围内");
-        $this->initWpApp();
+        $init = $this->initWpApp();
+        if ($init !== true) return $init;
         $this->order['sp_id'] = $this->strategyPayee['sp_id'];
 //        if ($this->order['pay_method'] != "14") {
 //            return $this->rFail("当前模式下微信仅支持Native支付");
@@ -205,7 +216,8 @@ trait WxPayTrait
     {
         try {
             $notifyUrl = $this->getUrl('/pay/notify.wx/refundOrderNotify/sp_id/' . $this->strategyPayee['sp_id'] . "/order_id/" . $this->order['order_id']);
-            $this->initWpApp();
+            $init = $this->initWpApp();
+            if ($init !== true) return $init;
 
             $totalFee = intval(bcmul(round($this->order['total_price'],2), 100));
             $refundFee = intval(bcmul(round($this->refundData['refund_amount'],2), 100));
@@ -250,14 +262,15 @@ trait WxPayTrait
 
     /**
      * 微信关闭订单
-     * @return mixed
-     * @throws \EasyWeChat\Kernel\Exceptions\InvalidArgumentException
-     * @throws \EasyWeChat\Kernel\Exceptions\InvalidConfigException
-     * @throws \GuzzleHttp\Exception\GuzzleException
+     * @return bool
+     * @throws GuzzleException
+     * @throws InvalidArgumentException
+     * @throws InvalidConfigException
      */
     public function wxCancel()
     {
-        $this->initWpApp();
+        $init = $this->initWpApp();
+        if ($init !== true) return $init;
         $result = $this->wpApp->order->close($this->order['trade_no']);
         actionLog($result, '微信支付关闭订单结果');
         if (isset($result['return_code']) && $result['return_code'] == 'success') {

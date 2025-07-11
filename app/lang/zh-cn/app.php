@@ -229,4 +229,10 @@ return [
     "VLogin" => [
         'permission_denied' => '您无登录权限，请与相关人员确认授权内容',
     ],
+
+    "WxPay" => [
+        "key_path_not_exists" => "微信Key证书不存在",
+        "cert_path_not_exists" => "微信Cert证书不存在",
+        "privateKey_not_exists" => "微信私钥不存在",
+    ],
 ];
