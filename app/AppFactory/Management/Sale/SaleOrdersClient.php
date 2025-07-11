@@ -111,10 +111,11 @@ class SaleOrdersClient extends ManagementClient
         $this->order = $this->order->toArray();
         if ($this->order['pay_type'] == 0) return $this->r(100, $this->lang("VSaleOrders.free_can_not_refund"));
         $checkRefund = $this->getSaleOrdersRefundList(['order_id' => $postData['order_id'],'status' => 1]);
-        if ($checkRefund) {
+        if ($checkRefund->toArray()) {
             return $this->rFail($this->lang("VSaleOrdersRefund.refunding"));
         }
         $check = $this->getSPayee();
+        actionLog($this->strategyPayee,'收款策略数据');
         if ($check !== true) {
             return $check;
         }

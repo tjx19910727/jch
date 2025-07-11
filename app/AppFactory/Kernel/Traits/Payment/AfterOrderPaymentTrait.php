@@ -51,6 +51,10 @@ trait AfterOrderPaymentTrait
         $flag[] = $this->updateSaleOrders($this->order);
         actionLog($this->getLS(),'订单修改数据');
         $result = flag_check($flag);
+        $this->machine['machine_id'] = $this->order['machine_id'];
+        $this->machine['machine_name'] = $this->order['machine_name'];
+        $this->machine['m_id'] = $this->order['m_id'];
+        $this->machine['ao_id'] = $this->order['ao_id'];
         $this->sendNotice();
         return $result;
     }

@@ -255,7 +255,7 @@ trait ActivityCouponTrait
 
         if (!isset($this->order['details'])) {
             $sodField = "sod_id,discount_price,total_sod_price,retail_price,quantity,g_id";
-            $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,$sodField,'g_id asc')->toArray();
+            $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,$sodField,'total_sod_price asc')->toArray();
         }
 
         try {

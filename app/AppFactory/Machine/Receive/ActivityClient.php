@@ -208,7 +208,7 @@ class ActivityClient extends ReceiveBaseClient
                 ];
                 $order_id = $this->addSaleOrders($order);
                 if ($order_id) {
-                    $mcField = "mc_id,channel_code,frozen_stock,stock,shelf_way,channel_position,manufacture_time,sell_by_date,
+                    $mcField = "mc_id,channel_code,frozen_stock,stock,shelf_way,channel_position,manufacture_time,sell_by_date,retail_price,
                             mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
                             cost_price,market_price";
                     $updateOrder['order_id'] = $order_id;
