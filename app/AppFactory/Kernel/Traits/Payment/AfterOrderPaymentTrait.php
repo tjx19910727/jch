@@ -193,7 +193,7 @@ trait AfterOrderPaymentTrait
                     "money" => number_format($this->order['total_price'],2,'.',','),
                 ]
             ];
-            $result = $this->noticeSend();
+            $result = @$this->noticeSend();
             actionLog($result, '发送销售通知结果');
         } catch (\Exception $e) {
             actionLog("发送销售通知异常");
