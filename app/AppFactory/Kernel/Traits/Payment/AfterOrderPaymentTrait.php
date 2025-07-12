@@ -109,35 +109,6 @@ trait AfterOrderPaymentTrait
                 "main" => $contentArr,
                 "outGoods" => $outArr,
             ];
-//            $content = json_encode($content);
-//            $msg_id = uniqid();
-//            $data = [
-//                "timestamp" => time(),
-//                "msg_id" => $msg_id,
-//                "machine_id" => $this->order['machine_id'],
-//                "data" => $content,
-//            ];
-//            $this->config['machine_id'] = $this->order['machine_id'];
-//            $data['sign'] = $this->makeSign($data);
-//            actionLog($content,'下发数据');
-            // 生成发送记录
-//            $insertMqRecord = [
-//                "m_id" => $this->order['m_id'],
-//                "machine_id" => $this->order['machine_id'],
-//                "machine_name" => $this->order['machine_name'],
-//                "msg_id" => $msg_id,
-//                "path" => "outGoods",
-//                "content" => json_encode($content),
-//                "from" => 2,
-//                "type" => 2,
-//            ];
-//            $this->addMachineMqRecord($insertMqRecord);
-//            actionLog($this->getLS(),'生成发送记录');
-//            $machine = $this->getMachineFind(['machine_id' => $data['machine_id']],'machine_id,mac_address,signKey');
-//            $mqQueue = $machine['machine_id'] . "_" . str_replace(":","_",$machine['mac_address']);
-//            actionLog($mqQueue,"下发出货数据队列名");
-//            $result = MqProducer::dataSend($data,$mqQueue);
-
             $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
             actionLog(@obj2arr($result),'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
