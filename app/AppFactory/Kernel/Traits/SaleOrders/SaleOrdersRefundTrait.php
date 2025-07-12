@@ -46,6 +46,16 @@ trait SaleOrdersRefundTrait
         return SaleOrdersRefundModel::update($update,$where,$field);
     }
 
+    /**
+     * 删除退款记录
+     * @param $where
+     * @return bool
+     */
+    public function delSaleOrdersRefund($where)
+    {
+        return SaleOrdersRefundModel::whereDel($where);
+    }
+
 
     public function getRefundNo($msg = "")
     {

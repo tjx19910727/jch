@@ -109,10 +109,14 @@ class SaleOrdersClient extends ManagementClient
         $this->order = $this->getSaleOrdersFind(['order_id' => $postData['order_id']]);
         if (!$this->order) return $this->rFail($this->lang("VSaleOrdersRefund.order_no_data"));
         $this->order = $this->order->toArray();
-        if ($this->order['pay_type'] == 0) return $this->r(100, $this->lang("VSaleOrders.free_can_not_refund"));
+        if (in_array($this->order['pay_type'],  [0,5,6,7,8])) return $this->r(100, $this->lang("VSaleOrders.free_can_not_refund"));
         $checkRefund = $this->getSaleOrdersRefundList(['order_id' => $postData['order_id'],'status' => 1]);
-        if ($checkRefund->toArray()) {
-            return $this->rFail($this->lang("VSaleOrdersRefund.refunding"));
+        $checkRefund = !$checkRefund ? : $checkRefund->toArray();
+        if ($checkRefund) {
+            if ($checkRefund['create_time'] >= time() - 3600) {
+                return $this->rFail($this->lang("VSaleOrdersRefund.refunding") . ": " . $checkRefund['remark']);
+            }
+            $this->delSaleOrdersRefund(['sor_id' => $checkRefund['sor_id']]);
         }
         $check = $this->getSPayee();
         actionLog($this->strategyPayee,'收款策略数据');
@@ -200,10 +204,9 @@ class SaleOrdersClient extends ManagementClient
             }
             return $result;
         } else {
-            $flag[] = $this->refundFail();
-        }
-        if ($this->order['pay_type'] == 2 || $this->order['pay_type'] == 3) {
-            $flag[] = $this->refundFail();
+            $this->updateSaleOrders(['order_id' => $this->order['order_id'],'refund_status' => 3]);
+            $end = $this->refundFail();
+            if ($end !== true) return $end;
         }
         return $result;
     }

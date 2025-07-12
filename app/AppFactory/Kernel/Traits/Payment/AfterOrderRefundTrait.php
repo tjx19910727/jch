@@ -149,6 +149,7 @@ trait AfterOrderRefundTrait
     public function refundFail()
     {
         $result = $this->updateSaleOrdersRefund(['status' => 3],['refund_no' => $this->refundTradeNo]);
+        actionLog($this->getLS(),'修改退款记录退款失败');
         if (!$result) return $this->r(100,'修改退款记录失败');
         return true;
     }
