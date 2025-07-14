@@ -110,8 +110,7 @@ class SaleOrdersClient extends ManagementClient
         if (!$this->order) return $this->rFail($this->lang("VSaleOrdersRefund.order_no_data"));
         $this->order = $this->order->toArray();
         if (in_array($this->order['pay_type'],  [0,5,6,7,8])) return $this->r(100, $this->lang("VSaleOrders.free_can_not_refund"));
-        $checkRefund = $this->getSaleOrdersRefundList(['order_id' => $postData['order_id'],'status' => 1]);
-        $checkRefund = !$checkRefund ? : $checkRefund->toArray();
+        $checkRefund = $this->getSaleOrdersRefundFind(['order_id' => $postData['order_id'],'status' => 1]);
         if ($checkRefund) {
             if ($checkRefund['create_time'] >= time() - 3600) {
                 return $this->rFail($this->lang("VSaleOrdersRefund.refunding") . ": " . $checkRefund['remark']);

@@ -18,6 +18,11 @@ trait SaleOrdersRefundTrait
         return SaleOrdersRefundModel::getSum($where,$sum);
     }
 
+    public function getSaleOrdersRefundFind($where,$field = "*")
+    {
+        return SaleOrdersRefundModel::getFind($where,$field);
+    }
+
     public function getSaleOrdersRefundList($where,$pageNum = 0, $field = "*", $order = "sor_id desc")
     {
         return SaleOrdersRefundModel::getList($where,$pageNum,$field,$order);
