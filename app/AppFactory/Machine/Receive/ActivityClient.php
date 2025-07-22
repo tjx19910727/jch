@@ -592,7 +592,7 @@ class ActivityClient extends ReceiveBaseClient
                 $ugAll[] = $ug;
             }
             // 20250620 林琼虹与财务确认，一切的活动价，优惠价，折扣价，赠品成本等都是在优惠额体现，而原订单金额就是按商品原本的售价*数量得出。实际销售额 = 设备销售额 - 退款金额（如有）-优惠额
-            $updateOrder['order_id'] = $this->order['order_id'];
+            $updateOrder['order_id'] = $order['order_id'];
             $this->updateSaleOrders($updateOrder);
             actionLog($this->getLS(),'【SQL】抽奖赠品增加订单总优惠金额，原订单总金额');
             $flag[] = $this->addActivityLotteryUsedGoodsMore($ugAll);
