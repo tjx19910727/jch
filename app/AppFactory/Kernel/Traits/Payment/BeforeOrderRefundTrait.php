@@ -113,7 +113,7 @@ trait BeforeOrderRefundTrait
     {
         if ($this->totalRefundMoney < $this->sodRefundAmount) {
             $insertSor = $this->insertSor;
-            $insertSor['refund_amount'] = bcsub($this->sodRefundAmount,$this->totalRefundMoney,2);
+            $insertSor['refund_amount'] = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
             $insertSor['manager_id'] = 0;
             $insertSor['nickname'] = "收款方";
             $this->totalRefundMoney = $this->sodRefundAmount;

@@ -53,6 +53,8 @@ class VGoods extends VCommon
     public function sceneUpdate()
     {
         return self::only(["g_id","g_name","sku","sku2","model","bar_code","pic","manufacturer", "service_phone","length","width","height"])
-            ->remove("g_name","require");
+            ->remove("g_name","require")
+            ->remove("sku","unique")
+            ;
     }
 }

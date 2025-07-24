@@ -158,6 +158,8 @@ class MachineClient extends ManagementClient
     {
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            $createMIds = $this->getMachineColumn(['creator' => $this->manager['manager_id']],'m_id');
+            if ($createMIds && $mIds) $mIds = array_unique(array_merge($mIds,$createMIds));
             $where[] = ['m_id', 'in', $mIds];
         }
         return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) {
