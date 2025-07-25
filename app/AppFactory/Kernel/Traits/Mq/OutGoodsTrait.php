@@ -84,6 +84,8 @@ trait OutGoodsTrait
                 $out_sequence = $vv["out_sequence"] ?? 1;
 
                 $where = [];
+                $whereMc = [];
+                $whereUpdateSod = [];
                 // 修改订单副表
                 $where['order_id'] = $this->order['order_id'];
                 $where['channel_position'] = $position;
@@ -95,13 +97,13 @@ trait OutGoodsTrait
                 if ($sod) {
                     unset($where);
                     $update = [];
-                    $where['sod_id'] = $sod['sod_id'];
+                    $whereUpdateSod['sod_id'] = $sod['sod_id'];
                     $update['success_quantity'] = $success;
                     $update['fail_quantity'] = $fail;
                     $update['deliver_pics'] = $deliver_pics;
                     $update['out_sequence'] = $out_sequence;
                     actionLog($update, '修改订单副表参数', 'OutGoods');
-                    $flag[] = $this->updateSaleOrdersDetails($update, $where, ['success_quantity', "fail_quantity", 'deliver_pics', 'out_sequence']);
+                    $flag[] = $this->updateSaleOrdersDetails($update, $whereUpdateSod, ['success_quantity', "fail_quantity", 'deliver_pics', 'out_sequence']);
                     actionLog($this->getLS(), '【SQL】修改订单副表', 'OutGoods');
                 }
                 // 修改货道
