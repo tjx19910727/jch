@@ -19,6 +19,8 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\User\UserTrait;
 use app\AppFactory\TimeTask\TimeTaskBase;
 use EasyWeChat\Factory;
+use EasyWeChat\Kernel\Exceptions\InvalidArgumentException;
+use EasyWeChat\Kernel\Exceptions\InvalidConfigException;
 
 class WxClient extends TimeTaskBase
 {
@@ -35,56 +37,62 @@ class WxClient extends TimeTaskBase
      * 查询微信反扫支付结果
      * @param $order_id
      * @return array|mixed|string
-     * @throws \EasyWeChat\Kernel\Exceptions\InvalidArgumentException
-     * @throws \EasyWeChat\Kernel\Exceptions\InvalidConfigException
      */
     public function queryMicroPay($order_id)
     {
-        $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
-        if (!$this->order) {
-            return $this->rFail("查无订单数据");
+
+        try {
+            $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
+            if (!$this->order) {
+                return $this->rFail("查无订单数据");
+            }
+            if ($this->order['pay_status'] != 1) return $this->rFail("订单已处理");
+            $this->order = $this->order->toArray();
+            $wxConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'], 'sm.s_type' => 1]);
+            if (!$wxConfig) return $this->rFail("查无收款配置信息");
+            $app = Factory::payment($wxConfig);
+            $this->payResult = $app->order->queryByOutTradeNumber($this->order['trade_no']);
+            actionLog($this->payResult, '查询结果');
+            if ($this->payResult) {
+                $this->order['mch_no'] = $this->payResult['transaction_id'] ?? '';
+                $this->order['pay_type'] = 1;
+                $this->order['pay_method'] = 2;
+                if (isset($this->payResult['openid']) && $this->payResult['openid']) {
+                    $user = $this->getUserFind(['openid' => $this->payResult['openid']]);
+                    if ($user) {
+                        $this->order['user_id'] = $user['user_id'];
+                        $this->order['user_name'] = $user['name'];
+                    } else {
+                        $insert['openid'] = $this->payResult['openid'];
+                        $this->order['user_id'] = $this->addUser($insert);
+                    }
+                }
+
+                // 需要用户输入密码
+                if (isset($this->payResult['result_code']) && $this->payResult['result_code'] == 'FAIL') {
+                    if ($this->payResult['err_code'] == 'USERPAYING') {
+                        return $this->USERPAYING();
+                    } else {
+                        return $this->FAIL();
+                    }
+                }
+
+                if (isset($this->payResult['trade_state'])) {
+                    if (method_exists($this, $this->payResult['trade_state'])) {
+                        $method_name = $this->payResult['trade_state'];
+                        return $this->$method_name();
+                    }
+                    return $this->r(100, '未定义返回类型：' . $this->payResult['result_code'], $this->payResult);
+                }
+            }
+            return $this->r(100, '未有符合判断支付结果的内容', $this->payResult);
+        } catch (InvalidArgumentException $e) {
+            actionException($e,1,'queryMicroPay');
+            return $this->rTryCatch($e->getMessage());
+        } catch (InvalidConfigException $e) {
+            actionException($e,1,'queryMicroPay');
+            return $this->rTryCatch($e->getMessage());
         }
-        if ($this->order['pay_status'] != 1) return $this->rFail("订单已处理");
-        $this->order = $this->order->toArray();
-        $wxConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1]);
-        if (!$wxConfig) return $this->rFail("查无收款配置信息");
-        $app = Factory::payment($wxConfig);
-        $this->payResult = $app->order->queryByOutTradeNumber($this->order['trade_no']);
-
-        actionLog($this->payResult,'查询结果');
-        if ($this->payResult) {
-            $this->order['mch_no'] = $this->payResult['transaction_id'] ?? '';
-            $this->order['pay_type'] = 1;
-            $this->order['pay_method'] = 2;
-            if (isset($this->payResult['openid']) && $this->payResult['openid']) {
-                $user = $this->getUserFind(['openid' => $this->payResult['openid']]);
-                if ($user) {
-                    $this->order['user_id'] = $user['user_id'];
-                    $this->order['user_name'] = $user['name'];
-                } else {
-                    $insert['openid'] = $this->payResult['openid'];
-                    $this->order['user_id'] = $this->addUser($insert);
-                }
-            }
-
-            // 需要用户输入密码
-            if (isset($this->payResult['result_code']) && $this->payResult['result_code'] == 'FAIL') {
-                if ($this->payResult['err_code'] == 'USERPAYING') {
-                    return $this->USERPAYING();
-                } else {
-                    return $this->FAIL();
-                }
-            }
-
-            if (isset($this->payResult['trade_state'])) {
-                if (method_exists($this,$this->payResult['trade_state'])) {
-                    $method_name = $this->payResult['trade_state'];
-                    return $this->$method_name();
-                }
-                return $this->r(100, '未定义返回类型：' . $this->payResult['result_code'], $this->payResult);
-            }
-        }
-        return $this->r(100,'未有符合判断支付结果的内容',$this->payResult);
     }
 
     /**
