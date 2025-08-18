@@ -342,6 +342,10 @@ trait OutGoodsTrait
     {
         if (in_array($this->order['pay_type'],[5,6,7])) {
             $sp = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1]);
+            if (!is_array($sp)) {
+                actionLog($sp,'查询收款策略结果返回');
+                return $sp;
+            }
             if ($sp) {
                 // 出货成功才是使用成功
                 if ($this->order['out_status'] == 4) {
