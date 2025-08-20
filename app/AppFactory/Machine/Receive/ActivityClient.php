@@ -152,6 +152,8 @@ class ActivityClient extends ReceiveBaseClient
                 return $this->r(100,$apc);
             }
             $flag = [];
+
+            dd($apc['pick_type']);
             // 预订订单取货
             if ($apc['pick_type'] == 3) {
                 $this->order = $this->getSaleOrdersFind(['order_id' => $apc['order_id']]);
