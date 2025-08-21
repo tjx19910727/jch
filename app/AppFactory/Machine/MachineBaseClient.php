@@ -11,13 +11,14 @@ namespace app\AppFactory\Machine;
 
 use app\AppFactory\Kernel\BaseClient;
 use app\AppFactory\Kernel\ServiceContainer;
+use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
 
 class MachineBaseClient extends BaseClient
 {
-    use MachineTrait,MachineMqRecordTrait;
+    use MachineTrait,MachineMqRecordTrait,MachineInfoTrait;
     use ToManagerTrait;
 
     public $machine;
