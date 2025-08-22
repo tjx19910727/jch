@@ -673,7 +673,7 @@ class ApiClient extends ReceiveBaseClient
     public function playAdv()
     {
         $where['adv_id'] = $this->data['adv_id'];
-        $field = "adv_id,adv_title,res_id,res_title,type,type,duration_time,total_times,play_times,remain_times,m_id,machine_id,push_type,position,screen,screen_full";
+        $field = "adv_id,adv_title,res_id,res_title,type,type,duration_time,total_times,play_times,remain_times,m_id,machine_id,push_type,position,screen,screen_full,ao_id";
         $adv = $this->getAdvertisementPushFind($where, $field);
         if (!$adv) return $this->rFail($this->lang("VAdvertisement.adv_no_data"));
         $adv = $adv->toArray();

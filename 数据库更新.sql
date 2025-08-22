@@ -1,3 +1,88 @@
+
+# 20250822
+# 增加商品分类组织架构ID
+ALTER TABLE `goods_category`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织架构ID' AFTER `status`;
+UPDATE `goods_category` set ao_id = 17;
+
+# 设备分组增加组织架构ID
+ALTER TABLE `machine_group`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织架构ID' AFTER `status`;
+UPDATE `machine_group` set ao_id = 17;
+
+# 商品角标增加组织架构ID
+ALTER TABLE `goods_corner`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织架构ID' AFTER `status`;
+UPDATE `goods_corner` set ao_id = 17;
+
+# 模板增加组织架构ID
+ALTER TABLE `template`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织架构ID' AFTER `resolution`;
+UPDATE `template` set ao_id = 17;
+
+# 视图增加组织架构ID
+ALTER TABLE `template_view`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `plugin_data`;
+UPDATE `template_view` set ao_id = 17;
+
+# 设备视图增加组织架构ID
+ALTER TABLE `machine_view`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
+UPDATE `machine_view` set ao_id = 17;
+
+# 性能参数增加组织ID
+ALTER TABLE `config_performance`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `lang`;
+UPDATE `config_performance` set ao_id = 17;
+
+# 尺寸管理增加组织ID
+ALTER TABLE `config_size`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `type`;
+UPDATE `config_size` set ao_id = 17;
+
+# 场景增加组织ID
+ALTER TABLE `config_scene`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
+UPDATE `config_scene` set ao_id = 17;
+
+# 调整库存盘点记录统计统计视图
+DROP VIEW machine_check_stock_count;
+CREATE ALGORITHM=UNDEFINED DEFINER=`cf`@`%` SQL SECURITY DEFINER VIEW `machine_check_stock_count` AS select `mcs`.`m_id` AS `m_id`,`mcs`.`machine_id` AS `machine_id`,`mcs`.`machine_name` AS `machine_name`,sum(`mcs`.`check_stock`) AS `check_stock`,sum(`mcs`.`system_stock`) AS `system_stock`,sum((case `mcs`.`mc_id` when 0 then `mcs`.`check_stock` else 0 end)) AS `stock_reserve`,max(`mcs`.`create_time`) AS `create_time`,(select `au`.`nickname` from `auth_manager` `au` where (`au`.`manager_id` = `mcs`.`creator`)) AS `creator_nickname`,(select `m`.`ao_id` from `machine` `m` where (`m`.`m_id` = `mcs`.`m_id`) limit 1) AS `ao_id` from `machine_check_stock` `mcs` group by `mcs`.`m_id`,`mcs`.`create_date`
+
+# 设备库存盘点记录表增加组织ID
+ALTER TABLE `machine_check_stock`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `type`;
+UPDATE `machine_check_stock` set ao_id = 17;
+
+# 设备在线记录增加组织ID
+ALTER TABLE `machine_online`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `duration`;
+UPDATE `machine_online` mo set ao_id = (SELECT ao_id FROM machine m WHERE m.m_id = mo.m_id LIMIT 1);
+
+# 设备在线记录详情增加组织ID
+ALTER TABLE `machine_online_details`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `d_date`;
+UPDATE `machine_online_details` d set ao_id = (SELECT ao_id FROM machine m WHERE m.m_id = d.m_id LIMIT 1);
+
+# 货道补货记录增加组织ID
+ALTER TABLE `machine_channel_replenishment`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `after`;
+UPDATE `machine_channel_replenishment` mcr set ao_id = (SELECT ao_id FROM machine m WHERE m.m_id = mcr.m_id LIMIT 1);
+
+# 导出日志增加组织ID
+ALTER TABLE `export_log`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
+UPDATE `export_log` el set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = el.creator LIMIT 1);
+
+# 广告播放记录增加组织ID
+ALTER TABLE `advertisement_record`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `play_time`;
+UPDATE `advertisement_record` ar set ao_id = (SELECT ao_id FROM machine m WHERE m.m_id = ar.m_id LIMIT 1);
+
+
+
+
+
 # 20250621 2
 # sale_orders_daily_count视图调整
 CREATE ALGORITHM=UNDEFINED DEFINER=`cf`@`%` SQL SECURITY DEFINER VIEW `sale_orders_daily_count` AS select (select `ao`.`organization_name` from `auth_organization` `ao` where (`ao`.`ao_id` = `so`.`ao_id`)) AS `ao_name`,`so`.`m_id` AS `m_id`,`so`.`machine_id` AS `machine_id`,`so`.`machine_name` AS `machine_name`,sum((select sum(`sor`.`refund_amount`) from `sale_orders_refund` `sor` where ((`sor`.`order_id` = `so`.`order_id`) and (`sor`.`status` = 2) and (`sor`.`create_time` between `so`.`create_date` and (`so`.`create_date` + 86400))) limit 1)) AS `totalRefundAmount`,sum((select sum(`sor2`.`refund_quantity`) from `sale_orders_refund` `sor2` where ((`sor2`.`order_id` = `so`.`order_id`) and (`sor2`.`status` = 2) and (`sor2`.`create_time` between `so`.`create_date` and (`so`.`create_date` + 86400))) limit 1)) AS `totalRefundQuantity`,sum(`so`.`total_price`) AS `totalPrice`,sum(`so`.`discount_price`) AS `totalDiscountPrice`,sum(`so`.`total_quantity`) AS `totalQuantity`,ifnull((select sum(`sod`.`success_quantity`) from `sale_orders_details` `sod` where ((`sod`.`order_id` = `so`.`order_id`) and (`sod`.`is_gift` = 1))),0) AS `giftQuantity`,`so`.`ao_id` AS `ao_id`,sum((case when (`so`.`coupon_id` > 0) then 1 else 0 end)) AS `coupon_used`,sum((case when (`so`.`lottery_id` > 0) then 1 else 0 end)) AS `lottery_used`,sum((case when (`so`.`lottery_id` > 0) then (`so`.`total_price` - `so`.`refund_amount`) else 0 end)) AS `lotteryAmount`,sum((case when (`so`.`lottery_id` > 0) then (`so`.`total_quantity` - `so`.`refund_quantity`) else 0 end)) AS `lotteryQuantity`,count(`so`.`order_id`) AS `order_num`,date_format(from_unixtime(`so`.`create_date`),'%Y-%m-%d') AS `countDate`,`so`.`create_date` AS `create_date`,date_format(now(),'%Y-%m-%d %H:%i:%s') AS `last_update_time` from `sale_orders` `so` where (`so`.`pay_status` = 3) group by `so`.`machine_id`,`so`.`m_id`,`so`.`create_date`
