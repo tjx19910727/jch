@@ -40,6 +40,7 @@ class Template extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
+        if (!isset($postData['ao_id'])) $postData['ao_id'] = $this->manager['ao_id'];
         return $this->app->template->add($postData);
     }
 

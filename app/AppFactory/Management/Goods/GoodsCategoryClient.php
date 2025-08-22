@@ -26,6 +26,7 @@ class GoodsCategoryClient extends ManagementClient
                 "desc" => $postData['desc'] ?? "",
                 "lang" => "zh-cn",
                 "gc_id" => $gc_id,
+                "ao_id" => $this->manager['ao_id'],
             ];
             $this->addGoodsCategoryLang($insertGl);
         }
