@@ -33,6 +33,8 @@ class Common extends AuthController
         "/management/earth.country/getLatLng",
         "/management/earth.timezone/getList",
         "/management/template.template_plugins/getList",
+        "/management/machine.machine_config/getList",
+        "/management/auth.auth_node/getList",
     ];
 
     protected function initialize()
