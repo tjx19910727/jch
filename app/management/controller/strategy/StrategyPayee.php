@@ -43,6 +43,7 @@ class StrategyPayee extends Common
         try { $this->validate($postData,$this->validatePath .'addSp');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $checkContent = $this->checkContent($postData);
         if ($checkContent !== true) return $checkContent;
+        if (!isset($postData['ao_id'])) $postData['ao_id'] = $this->manager['ao_id'];
         return $this->app->strategyPayee->add($postData);
     }
 
