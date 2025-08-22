@@ -78,6 +78,7 @@ trait ActivityPickCodeTrait
             "machine_id" => $this->order['machine_id'],
             "machine_name" => $this->order['machine_name'],
             "pick_type" => 3,
+            "ao_id" => $this->order['ao_id'] ,
             "status" => 1,
         ];
         $apc_id = $this->addActivityPickCode($insert);

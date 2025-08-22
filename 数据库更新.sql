@@ -3,37 +3,37 @@
 # 增加商品分类组织架构ID
 ALTER TABLE `goods_category`
   ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织架构ID' AFTER `status`;
-UPDATE `goods_category` set ao_id = 17;
+UPDATE `goods_category` gc set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = gc.creator LIMIT 1);
 
 # 设备分组增加组织架构ID
 ALTER TABLE `machine_group`
   ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织架构ID' AFTER `status`;
-UPDATE `machine_group` set ao_id = 17;
+UPDATE `machine_group` mg set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = mg.creator LIMIT 1);
 
 # 商品角标增加组织架构ID
 ALTER TABLE `goods_corner`
   ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织架构ID' AFTER `status`;
-UPDATE `goods_corner` set ao_id = 17;
+UPDATE `goods_corner` gc set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = gc.creator LIMIT 1);
 
 # 模板增加组织架构ID
 ALTER TABLE `template`
   ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织架构ID' AFTER `resolution`;
-UPDATE `template` set ao_id = 17;
+UPDATE `template` t set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = t.creator LIMIT 1);
 
 # 视图增加组织架构ID
 ALTER TABLE `template_view`
   ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `plugin_data`;
-UPDATE `template_view` set ao_id = 17;
+UPDATE `template_view` tv set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = tv.creator LIMIT 1);
 
 # 设备视图增加组织架构ID
 ALTER TABLE `machine_view`
   ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
-UPDATE `machine_view` set ao_id = 17;
+UPDATE `machine_view` mv set ao_id = (SELECT ao_id FROM machine m WHERE m.m_id = mv.m_id LIMIT 1);
 
 # 性能参数增加组织ID
 ALTER TABLE `config_performance`
   ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `lang`;
-UPDATE `config_performance` set ao_id = 17;
+UPDATE `config_performance` cp set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = cp.creator LIMIT 1);
 
 # 尺寸管理增加组织ID
 ALTER TABLE `config_size`
@@ -43,7 +43,7 @@ UPDATE `config_size` set ao_id = 17;
 # 场景增加组织ID
 ALTER TABLE `config_scene`
   ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
-UPDATE `config_scene` set ao_id = 17;
+UPDATE `config_scene` cs set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = cs.creator LIMIT 1);
 
 # 调整库存盘点记录统计统计视图
 DROP VIEW machine_check_stock_count;
@@ -52,7 +52,7 @@ CREATE ALGORITHM=UNDEFINED DEFINER=`cf`@`%` SQL SECURITY DEFINER VIEW `machine_c
 # 设备库存盘点记录表增加组织ID
 ALTER TABLE `machine_check_stock`
   ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `type`;
-UPDATE `machine_check_stock` set ao_id = 17;
+UPDATE `machine_check_stock` mcs set ao_id = (SELECT ao_id FROM machine m WHERE m.m_id = mcs.m_id LIMIT 1);
 
 # 设备在线记录增加组织ID
 ALTER TABLE `machine_online`
@@ -78,6 +78,63 @@ UPDATE `export_log` el set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.man
 ALTER TABLE `advertisement_record`
   ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `play_time`;
 UPDATE `advertisement_record` ar set ao_id = (SELECT ao_id FROM machine m WHERE m.m_id = ar.m_id LIMIT 1);
+
+# 优惠券活动增加组织ID
+ALTER TABLE `activity_coupon`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
+UPDATE `activity_coupon` ac set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = ac.creator LIMIT 1);
+
+# 满减活动增加组织ID
+ALTER TABLE `activity_fd`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
+UPDATE `activity_fd` fd set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = fd.creator LIMIT 1);
+
+# 抽奖活动增加组织ID
+ALTER TABLE `activity_lottery`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
+UPDATE `activity_lottery` al set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = al.creator LIMIT 1);
+
+# 提货码增加组织ID
+ALTER TABLE `activity_pick`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
+UPDATE `activity_pick` ap set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = ap.creator LIMIT 1);
+
+# 收款策略增加组织ID
+ALTER TABLE `strategy_payee`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
+UPDATE `strategy_payee` sp set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = sp.creator LIMIT 1);
+
+# 收款策略绑定设备增加组织ID
+ALTER TABLE `strategy_machine`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `sort`;
+UPDATE `strategy_machine` sm set ao_id = (SELECT ao_id FROM machine m WHERE m.m_id = sm.m_id LIMIT 1);
+
+# 分润策略增加组织ID
+ALTER TABLE `strategy_income`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
+UPDATE `strategy_income` si set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = si.creator LIMIT 1);
+
+# 策略绑定账号增加组织ID
+ALTER TABLE `strategy_manager`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `sort`;
+UPDATE `strategy_manager` sm set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = sm.manager_id LIMIT 1);
+
+# 权限角色增加组织ID
+ALTER TABLE `auth_role`
+  ADD COLUMN `ao_id`  int NULL DEFAULT 0 COMMENT '组织ID' AFTER `status`;
+UPDATE `auth_role` ar set ao_id = (SELECT ao_id FROM auth_manager m WHERE m.manager_id = ar.creator LIMIT 1);
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -81,6 +81,7 @@ class ActivityCouponClient extends ManagementClient
             $check = $this->getActivityCouponFind(['code' => $postData['code'],'status' => 2],'c_id');
             if ($check) return $this->r(100,'当前优惠码已存在，不能重复使用');
         }
+        if (!isset($postData['ao_id'])) $postData['ao_id'] = $this->manager['ao_id'];
         $this->startTrans();
         try {
             $a_id = $this->addActivityCoupon($postData);

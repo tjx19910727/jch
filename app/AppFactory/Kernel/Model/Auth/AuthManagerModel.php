@@ -66,7 +66,7 @@ class AuthManagerModel extends BaseModel
             $data = $data->paginate($pageNum)->each(function ($item) {
                 $item['organization_role_name'] = "";
                 if (isset($item['ao_id'])) {
-                    $organization = AuthOrganizationRoleModel::getJoinRoleFind(['ao_id' => $item['ao_id'], 'is_del' => 2], 'ar.name', 'or.or_id desc');
+                    $organization = AuthOrganizationRoleModel::getJoinRoleFind(['or.ao_id' => $item['ao_id'], 'is_del' => 2], 'ar.name', 'or.or_id desc');
                     if ($organization) $item['organization_role_name'] = $organization['name'];
                 }
                 $roleNames = AuthManagerRoleModel::getJoinRoleList(['mr.manager_id' => $item['manager_id'],'is_del' => 2],0,'ar.name');

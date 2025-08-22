@@ -44,12 +44,13 @@ class MachineModel extends BaseModel
     /**
      * 添加设备后，自动生成设备配置信息、设备信息、设备营业配置信息
      * @param Model $machine
+     * @throws \think\db\exception\DbException
      */
     protected static function onAfterInsert(Model $machine)
     {
-        MachineConfigModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
-        MachineInfoModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
-        MachineOnOffModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id'],"machine_name" => $machine['machine_name']]);
+        MachineConfigModel::getCount(['m_id' => $machine['m_id']]) ? : MachineConfigModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
+        MachineInfoModel::getCount(['m_id' => $machine['m_id']]) ? : MachineInfoModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
+        MachineOnOffModel::getCount(['m_id' => $machine['m_id']]) ? : MachineOnOffModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id'],"machine_name" => $machine['machine_name']]);
 
         $config = [
             "machine_id" => $machine['machine_id'],

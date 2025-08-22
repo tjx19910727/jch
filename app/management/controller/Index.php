@@ -28,8 +28,8 @@ class Index extends Common
      */
     public function getMachineData()
     {
-//        $where = $this->getWhere([]);
-        $data = $this->app->machine->getData();
+        $where = $this->getWhere([]);
+        $data = $this->app->machine->getData($where);
         return returnState(200,'查询成功',$data);
     }
 
