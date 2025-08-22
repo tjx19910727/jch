@@ -22,7 +22,6 @@ class Template extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
-        dd($where);
         return $this->app->template->getList($where,$pageNum,$this->field, 'id desc');
     }
 
