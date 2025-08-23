@@ -27,8 +27,10 @@ trait TemplateViewTrait
     public function addTemplateView($insert)
     {
         !isset($this->manager['manager_id']) ? :$insert['creator'] = $this->manager['manager_id'];
+        if (!isset($insert['ao_id']) || !$insert['ao_id']) $insert['ao_id'] = $this->manager['ao_id'];
         $data = TemplateViewModel::create($insert);
-        return $data->id;
+        $pk = $data->getPk();
+        return $data->$pk;
     }
 
     public function updateTemplateView($update,$where = [],$field = [])
