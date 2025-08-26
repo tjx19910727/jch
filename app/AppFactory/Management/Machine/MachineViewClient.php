@@ -39,6 +39,7 @@ class MachineViewClient extends ManagementClient
                 if (!$check) {
                     $postData['m_id'] = $value;
                     $postData['machine_id'] = $machine_id;
+                    if (!isset($postData['ao_id']) || !$postData['ao_id']) $postData['ao_id'] = $this->manager['ao_id'];
                     $flag[] = $this->addMachineView($postData);
                     actionLog($this->getLS(),'分配视图');
                     $this->sendToMachine(['machine_id' => $machine_id],'updateMachineView');
