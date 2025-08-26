@@ -22,6 +22,7 @@ class TemplatePlugins extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
+        dd($where);
         return $this->app->templatePlugins->getList($where,$pageNum,$this->field);
     }
 
