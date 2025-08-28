@@ -74,6 +74,10 @@ class SaleOrders extends Common
             unset($postData['m_id']);
         }
         $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"machine_id" => 'like',"machine_name" => 'like'],'so.');
+        if (isset($where['ao_id'])) {
+            $where['so.ao_id'] = $where['ao_id'];
+            unset($where['ao_id']);
+        }
         $where['so.pay_status'] = 3;
         if ($m_id) $where['so.m_id'] = $m_id;
         return $this->app->saleOrders->exportGoodsSo($where);
