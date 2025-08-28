@@ -65,6 +65,17 @@ class ActivityPickCode extends Common
     }
 
     /**
+     * 导入提货码列表
+     * @return array|string
+     * @throws \Exception
+     */
+    public function importAdd()
+    {
+        $postData = input();
+        return $this->app->activityPickCode->importAdd($postData);
+    }
+
+    /**
      * 修改提货码使用记录
      * @return array|mixed|string
      */
