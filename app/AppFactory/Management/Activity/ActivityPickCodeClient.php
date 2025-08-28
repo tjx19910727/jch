@@ -74,6 +74,24 @@ class ActivityPickCodeClient extends ManagementClient
     }
 
     /**
+     * 根据excle批量添加核销码
+     * @param $postData
+     * @return array|string
+     * @throws \Exception
+     */
+    public function importAdd($postData){
+        $this->startTrans();
+        try{
+            $path = root_path().'public'.$postData['file_path'];
+            dd($path);
+        }catch(\Exception $e){
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 导出未使用提货码
      * @param $postData
      * @return array|string

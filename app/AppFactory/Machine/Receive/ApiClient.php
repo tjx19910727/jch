@@ -49,6 +49,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelNightlyTrait;
@@ -87,6 +88,7 @@ class ApiClient extends ReceiveBaseClient
         MachineGoodsTrait,
         MachineHelpTrait,
         MachineOnOffTrait,
+        MachineTrait,
         TemplateViewTrait,
 
         EarthCountriesTrait, EarthStatesTrait, EarthCitiesTrait, EarthRegionsTrait,
@@ -776,6 +778,12 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->r(300,$this->lang("VSubCar.under_stock"));
                     }
+                    $m_sel = [
+                        'm_id' => $mc['m_id'],
+                        'machine_id' => $mc['machine_id']
+                    ];
+
+                    $m = $this->getMachineFind($m_sel,'factory,inventory_location');
                     if ($this->data['pay_type'] == 0) {
                         $mc['retail_price'] = 0;
                     }
@@ -801,6 +809,8 @@ class ApiClient extends ReceiveBaseClient
                             "total_sod_price" => bcmul($mc['retail_price'], $quantity, 3),
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'],
+                            "factory" => $m['factory']?$m['factory']:'',
+                            "inventory_location" => $m['inventory_location']?$m['inventory_location']:''
                         ];
                         $sod_id = $this->addSaleOrdersDetails($details);
                         if ($sod_id) {
