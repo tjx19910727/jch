@@ -13,20 +13,4 @@ class Index extends BaseController
 
         return View::fetch();
     }
-
-
-    public function hello($name = 'ThinkPHP6')
-    {
-        return 'hello,' . $name;
-    }
-
-    public function send()
-    {
-        $data = [
-            'time'=>time(),
-            'title'=> 'fanout->'.rand(1,100),
-        ];
-        dump($data);
-
-    }
 }
