@@ -15,7 +15,6 @@ use app\BaseController;
 use think\captcha\facade\Captcha;
 use think\facade\Lang;
 use think\facade\Session;
-use think\facade\db;
 
 class Login extends BaseController
 {
