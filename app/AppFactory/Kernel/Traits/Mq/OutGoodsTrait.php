@@ -84,6 +84,8 @@ trait OutGoodsTrait
                 $out_sequence = $vv["out_sequence"] ?? 1;
 
                 $where = [];
+                $whereMc = [];
+                $whereUpdateSod = [];
                 // 修改订单副表
                 $where['order_id'] = $this->order['order_id'];
                 $where['channel_position'] = $position;
@@ -95,13 +97,13 @@ trait OutGoodsTrait
                 if ($sod) {
                     unset($where);
                     $update = [];
-                    $where['sod_id'] = $sod['sod_id'];
+                    $whereUpdateSod['sod_id'] = $sod['sod_id'];
                     $update['success_quantity'] = $success;
                     $update['fail_quantity'] = $fail;
                     $update['deliver_pics'] = $deliver_pics;
                     $update['out_sequence'] = $out_sequence;
                     actionLog($update, '修改订单副表参数', 'OutGoods');
-                    $flag[] = $this->updateSaleOrdersDetails($update, $where, ['success_quantity', "fail_quantity", 'deliver_pics', 'out_sequence']);
+                    $flag[] = $this->updateSaleOrdersDetails($update, $whereUpdateSod, ['success_quantity', "fail_quantity", 'deliver_pics', 'out_sequence']);
                     actionLog($this->getLS(), '【SQL】修改订单副表', 'OutGoods');
                 }
                 // 修改货道
@@ -340,6 +342,10 @@ trait OutGoodsTrait
     {
         if (in_array($this->order['pay_type'],[5,6,7])) {
             $sp = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1]);
+            if (!is_array($sp)) {
+                actionLog($sp,'查询收款策略结果返回');
+                return $sp;
+            }
             if ($sp) {
                 // 出货成功才是使用成功
                 if ($this->order['out_status'] == 4) {

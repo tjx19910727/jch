@@ -57,6 +57,7 @@ class CheckClient extends MobileBase
                 "machine_id" => $machine['machine_id'],
                 "machine_name" => $machine['machine_name'],
                 "type" => $postData['type'],
+                "ao_id" => $machine['ao_id'],
                 "create_date" => strtotime(date("Y-m-d")),
                 "creator" => $this->tokenArr['manager_id'],
             ];

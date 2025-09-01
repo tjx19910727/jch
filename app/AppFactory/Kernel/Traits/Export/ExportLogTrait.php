@@ -114,6 +114,7 @@ trait ExportLogTrait
             "export_position" => $position,
             "file_name" => $filename,
             "status" => 1,
+            "ao_id" => $this->manager['ao_id'],
             "creator" => $this->manager['manager_id'],
             "create_time" => time(),
         ];

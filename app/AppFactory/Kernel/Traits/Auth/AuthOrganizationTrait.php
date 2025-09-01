@@ -60,7 +60,7 @@ trait AuthOrganizationTrait
     public function getAuthOrganizationList($where,$pageNum = 0,$field = "*",$order = "")
     {
         $result = AuthOrganizationModel::getList($where,$pageNum,$field,$order,function($item){
-            $arList = $this->getAuthOrganizationRoleList(['ao_id' => $item['ao_id']],0,'ar.name');
+            $arList = $this->getAuthOrganizationRoleList(['or.ao_id' => $item['ao_id']],0,'ar.name');
             $item['roleName'] = '';
             if ($arList) {
                 $arList = $arList->toArray();

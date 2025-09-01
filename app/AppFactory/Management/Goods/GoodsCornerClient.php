@@ -86,6 +86,7 @@ class GoodsCornerClient extends ManagementClient
                 $insert = [
                     "a_id" => $id,
                     "a_type" => 5,
+                    "ao_id" => $this->manager['ao_id'],
                 ];
                 if ($goodsList) {
                     $agResult = $this->addAg($insert, $goodsList);

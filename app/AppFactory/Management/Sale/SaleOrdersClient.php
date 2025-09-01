@@ -61,6 +61,7 @@ class SaleOrdersClient extends ManagementClient
         "2" => "aliRefund",
         "3" => "tlRefund",
         "4" => "jdRefund",
+//        "8" => "CoGoRefund",
     ];
 
     protected $postData;
@@ -117,10 +118,13 @@ class SaleOrdersClient extends ManagementClient
             }
             $this->delSaleOrdersRefund(['sor_id' => $checkRefund['sor_id']]);
         }
-        $check = $this->getSPayee();
-        actionLog($this->strategyPayee,'收款策略数据');
-        if ($check !== true) {
-            return $check;
+        // 不在数组内的需要查询支付配置
+        if (!in_array($this->order['pay_type'],  [8])) {
+            $check = $this->getSPayee();
+            actionLog($this->strategyPayee, '收款策略数据');
+            if ($check !== true) {
+                return $check;
+            }
         }
         $this->startTrans();
         try {
@@ -262,17 +266,17 @@ class SaleOrdersClient extends ManagementClient
             }
         }
         if ($type == 1) {
-            $field = "totalPrice,totalQuantity,countDate";
-            $group = "";
+            $field = "SUM(totalPrice - totalRefundAmount) totalPrice,SUM(totalQuantity - totalRefundQuantity) totalQuantity,countDate";
+            $group = "create_date";
             $where[] = ['create_date', '>=', strtotime("-1 months")];
         }
         if ($type == 2) {
-            $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'Week %v,%x') week";
+            $field = "sum(totalPrice - totalRefundAmount) totalPrice, sum(totalQuantity - totalRefundQuantity) totalQuantity, DATE_FORMAT(countDate,'Week %v,%x') week";
             $group = "week";
             $where[] = ['create_date', '>=', strtotime("-15 week")];
         }
         if ($type == 3) {
-            $field = "sum(totalPrice) totalPrice, sum(totalQuantity) totalQuantity, DATE_FORMAT(countDate,'%x-%m') month";
+            $field = "sum(totalPrice - totalRefundAmount) totalPrice, sum(totalQuantity - totalRefundQuantity) totalQuantity, DATE_FORMAT(countDate,'%x-%m') month";
             $group = "month";
             $where[] = ['create_date', '>=', strtotime("-12 month")];
         }

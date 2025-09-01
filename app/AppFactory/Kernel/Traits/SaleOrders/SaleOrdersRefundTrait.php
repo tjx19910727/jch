@@ -65,7 +65,7 @@ trait SaleOrdersRefundTrait
     public function getRefundNo($msg = "")
     {
         while(1) {
-            $trade_no = date("YmdHis") . ($msg ? $msg : $this->get_rand_string(6));
+            $trade_no = "refund" . date("YmdHis") . ($msg ? $msg : $this->get_rand_string(6));
             if (!SaleOrdersRefundModel::be(['refund_trade_no' => $trade_no])) {
                 return $trade_no;
             }

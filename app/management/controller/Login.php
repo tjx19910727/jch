@@ -63,7 +63,7 @@ class Login extends BaseController
             try {
                 $this->validate($data, $this->validatePath . 'login');
             } catch (\Exception $e) {
-                return returnValidate($e->getMessage());
+                return returnValidate(Lang::get($e->getMessage()));
             }
             $key = cache("management_" . $data['uniqid']);
             if ($key && password_verify(mb_strtolower($data['code'], 'UTF-8'), $key)) {
@@ -76,7 +76,7 @@ class Login extends BaseController
             }
         } catch (\Exception $e) {
             actionException($e,1);
-            return returnTryCatch($e->getMessage());
+            return returnTryCatch(Lang::get($e->getMessage()));
         }
     }
 

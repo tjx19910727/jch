@@ -47,6 +47,7 @@ class ActivityFdClient extends ManagementClient
         if ($postData['start_date'] && $postData['start_date'] <= strtotime(date("Y-m-d"))) {
             $postData['status'] = 2;
         }
+        if (!isset($postData['ao_id'])) $postData['ao_id'] = $this->manager['ao_id'];
         $this->startTrans();
         try {
             $fd_id = $this->addActivityFd($postData);

@@ -15,12 +15,11 @@ trait CurlTrait
      * 请求
      * @param $url
      * @param string $method
-     * @param array $data
+     * @param string $data
      * @param bool $header
-     * @param int $timeout
      * @return bool|string
      */
-    public function curl_request($url, $method = 'get', $data = array(), $header = false)
+    public function curl_request($url, $method = 'get', $data = null, $header = false)
     {
         $curl = curl_init($url);
         $method = strtoupper($method);

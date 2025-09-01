@@ -75,6 +75,7 @@ class ActivityPickClient extends ManagementClient
         if ($postData['start_time'] && $postData['start_time'] <= time()) {
             $postData['status'] = 2;
         }
+        if (!isset($postData['ao_id'])) $postData['ao_id'] = $this->manager['ao_id'];
         $this->startTrans();
         try {
             $a_id = $this->addActivityPick($postData);

@@ -23,14 +23,34 @@ class MachineModel extends BaseModel
     protected $name = "machine";
 
     /**
+     * 查询设备信息后检查有没有以下三张表数据，没有则新增
+     * @param Model $machine
+     * @throws \think\db\exception\DbException
+     */
+    public static function onAfterRead(Model $machine)
+    {
+        $where['m_id'] = $machine['m_id'];
+        $mc = MachineConfigModel::getCount($where);
+        if (!$mc)
+            MachineConfigModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
+        $mi = MachineInfoModel::getCount($where);
+        if (!$mi)
+            MachineInfoModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
+        $mof = MachineOnOffModel::getCount($where);
+        if (!$mof)
+            MachineOnOffModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id'],"machine_name" => $machine['machine_name']]);
+    }
+
+    /**
      * 添加设备后，自动生成设备配置信息、设备信息、设备营业配置信息
      * @param Model $machine
+     * @throws \think\db\exception\DbException
      */
     protected static function onAfterInsert(Model $machine)
     {
-        MachineConfigModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
-        MachineInfoModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
-        MachineOnOffModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id'],"machine_name" => $machine['machine_name']]);
+        MachineConfigModel::getCount(['m_id' => $machine['m_id']]) ? : MachineConfigModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
+        MachineInfoModel::getCount(['m_id' => $machine['m_id']]) ? : MachineInfoModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id']]);
+        MachineOnOffModel::getCount(['m_id' => $machine['m_id']]) ? : MachineOnOffModel::create(['m_id' => $machine['m_id'],"machine_id" => $machine['machine_id'],"machine_name" => $machine['machine_name']]);
 
         $config = [
             "machine_id" => $machine['machine_id'],

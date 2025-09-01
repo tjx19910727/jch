@@ -19,7 +19,7 @@ class StrategyMachine extends Common
     {
         $postData = input();
         try { $this->validate($postData,$this->validatePath . 'bind');} catch (\Exception $e) { return returnValidate($e->getMessage());}
-        return $this->app->strategyMachine->addStrategyMachine($postData,0);
+        return $this->app->strategyMachine->addStrategyMachine($postData);
     }
 
     public function unbind()

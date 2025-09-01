@@ -19,6 +19,7 @@ class GoodsCategoryClient extends ManagementClient
 
     public function addGc($postData)
     {
+        if (!isset($postData['ao_id'])) $postData['ao_id'] = $this->manager['ao_id'];
         $gc_id = $this->addGoodsCategory($postData);
         if ($gc_id) {
             $insertGl = [

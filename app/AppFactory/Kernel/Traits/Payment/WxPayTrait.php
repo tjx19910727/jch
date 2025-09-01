@@ -64,9 +64,6 @@ trait WxPayTrait
         $init = $this->initWpApp();
         if ($init !== true) return $init;
         $this->order['sp_id'] = $this->strategyPayee['sp_id'];
-//        if ($this->order['pay_method'] != "14") {
-//            return $this->rFail("当前模式下微信仅支持Native支付");
-//        }
         $func_name = $this->wxPaymentMethod[$this->order['pay_method']];
         return $this->$func_name();
     }
@@ -91,18 +88,6 @@ trait WxPayTrait
         actionLog($result,'付款码支付');
         $return = $this->r(100,"不明状态码",$result);
 
-//        if (isset($result['openid']) && $result['openid']) {
-//            $user = $this->getUserFind(['openid' => $result['openid']]);
-//            if ($user) {
-//                $this->order['user_id'] = $user['user_id'];
-//                $this->order['user_name'] = $user['name'];
-//            } else {
-//                $insert['openid'] = $result['openid'];
-//                $insert['wx_id'] = $this->getOpenPlatformWxValue(['authorizer_appid' => $result['appid']],'wx_id');
-//                $this->order['user_id'] = $this->addUser($insert);
-//            }
-//        }
-
         if ($result['return_code'] == "SUCCESS") {
             if ($result['result_code'] == "SUCCESS" && $result['trade_type'] == "MICROPAY") {
                 $this->order['mch_no'] = $result['transaction_id'] ?? "";
@@ -112,6 +97,7 @@ trait WxPayTrait
                 $flag[] = $this->settlementRevenue();
                 $flag[] = $this->paymentSuccessful();
                 $checkFlag = flag_check($flag);
+                actionLog($checkFlag,'微信付款码支付成功事务处理结果');
                 $return = $this->checkTrans($checkFlag);
             }
             if (isset($result['err_code']) && $result['err_code'] == "USERPAYING") {
@@ -121,9 +107,11 @@ trait WxPayTrait
                 $config = config("redis");
                 $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
                 if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
-                $redis->lPush("microPay", json_encode(['order_id' => $this->order['order_id'],'time' => time(),'pay_type' => "wx"], 256 + 64));
+                $data = json_encode(['order_id' => $this->order['order_id'],'time' => time(),'pay_type' => "wx"], 256 + 64);
+                $redis->lPush("microPay", $data);
                 $redis->expire("microPay",$redisExpire);
                 $redis->close();
+                actionLog(['data' => $data,'redisExpire' => $redisExpire],'待支付数据放入Redis队列');
                 $return = $this->r(201,'等待用户支付');
             }
         }

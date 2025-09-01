@@ -74,6 +74,10 @@ class SaleOrders extends Common
             unset($postData['m_id']);
         }
         $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"machine_id" => 'like',"machine_name" => 'like'],'so.');
+        if (isset($where['ao_id'])) {
+            $where['so.ao_id'] = $where['ao_id'];
+            unset($where['ao_id']);
+        }
         $where['so.pay_status'] = 3;
         if ($m_id) $where['so.m_id'] = $m_id;
         return $this->app->saleOrders->exportGoodsSo($where);
@@ -135,6 +139,10 @@ class SaleOrders extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->authNodeWhere();
+        if (isset($where['ao_id'])) {
+            $where['sor.ao_id'] = $where['ao_id'];
+            unset($where['ao_id']);
+        }
         if (isset($postData['m_id']) && $postData['m_id']) $where['sor.m_id'] = $postData['m_id'];
         if (isset($postData['trade_no']) && $postData['trade_no']) $where[] = ['sor.trade_no','like',"%" .$postData['trade_no']. "%"];
         if (isset($postData['machine_id']) && $postData['machine_id']) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];

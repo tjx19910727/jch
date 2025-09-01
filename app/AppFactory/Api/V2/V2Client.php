@@ -108,7 +108,7 @@ class V2Client extends V2BaseClient
             if (isset($this->params['machine_id']) && $this->params['machine_id'])
                 $where[] = ["machine_id", 'in', $this->params['machine_id']];
             $whereSdc[] = ['create_date', ">=", strtotime("-7 days")];
-            $machineList = $this->getMachineList($where, ['list_rows' => $this->params['pageNum'],'page' => $this->params['page']], $field);
+            $machineList = $this->getMachineList($where, ['list_rows' => $this->params['pageNum'],'page' => $this->params['page'] ?? 1], $field);
 //            actionLog($this->getLS(),'【SQL】查询设备');
             $machineList = $machineList->each(function ($machine) use ($whereSdc) {
                 if (isset($machine['country_id']) && $machine['country_id']) $machine['country'] = $this->getEarthCountriesValue(['id' => $machine['country_id']], 'cname');
