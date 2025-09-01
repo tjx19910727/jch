@@ -92,8 +92,8 @@ trait BeforeOrderRefundTrait
             foreach ($revenue as $key  => $value) {
                 $insertSor = $this->insertSor;
                 $refund_amount = bcmul(bcdiv($this->insertSor['refund_quantity'],$value['sod_quantity'],2),$value['income_amount'],3);
-                // 向下取整并保留两位小数
-                $refund_amount = number_format(floor($refund_amount *100) / 100, 2);
+                // 四舍五入取整并保留两位小数
+                $refund_amount = round($refund_amount, 2);
                 $this->totalRefundMoney = bcadd($this->totalRefundMoney,$refund_amount,2);
                 $insertSor['refund_amount'] = $refund_amount;
                 $insertSor['manager_id'] = $value['manager_id'];
