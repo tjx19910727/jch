@@ -731,6 +731,12 @@ class ApiClient extends ReceiveBaseClient
         if ($this->data['pay_method'] == "41") $this->data['pay_method'] = 1;
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
         if ($this->data['pay_type'] == 5 && (!isset($this->data['mobile']) || !$this->data['mobile'])) return $this->r(100,$this->lang("mobile_require"));
+        $m_sel = [
+            'm_id' => $this->machine['m_id']
+        ];
+
+        $m = $this->getMachineFind($m_sel,'factory,inventory_location');
+
         $order = [
             "trade_no" => $trade_no,
             "m_id" => $this->machine['m_id'],
@@ -742,6 +748,9 @@ class ApiClient extends ReceiveBaseClient
             "pay_method" => $this->data['pay_method'],
             "mobile" => $this->data['mobile'] ?? "",
             "create_date" => strtotime(date("Y-m-d")),
+            "factory" => $m['factory']?$m['factory']:'',
+            "inventory_location" => $m['inventory_location']?$m['inventory_location']:''
+
         ];
         $updateOrder = [];
         $this->startTrans();
@@ -778,12 +787,6 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->r(300,$this->lang("VSubCar.under_stock"));
                     }
-                    $m_sel = [
-                        'm_id' => $mc['m_id'],
-                        'machine_id' => $mc['machine_id']
-                    ];
-
-                    $m = $this->getMachineFind($m_sel,'factory,inventory_location');
                     if ($this->data['pay_type'] == 0) {
                         $mc['retail_price'] = 0;
                     }
@@ -809,8 +812,6 @@ class ApiClient extends ReceiveBaseClient
                             "total_sod_price" => bcmul($mc['retail_price'], $quantity, 3),
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'],
-                            "factory" => $m['factory']?$m['factory']:'',
-                            "inventory_location" => $m['inventory_location']?$m['inventory_location']:''
                         ];
                         $sod_id = $this->addSaleOrdersDetails($details);
                         if ($sod_id) {
