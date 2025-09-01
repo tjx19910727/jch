@@ -55,7 +55,7 @@ class SaleOrders extends Common
         $postData = input();
         $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"trade_no" => "like","machine_id" => 'like',"machine_name" => 'like','factory'=>'in','inventory_location'=>'in']);
         $where['so.pay_status'] = 3;
-        $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,so.refund_status,
+        $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,so.refund_status,so.factory,so.inventory_location,
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
         return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc"));
