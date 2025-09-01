@@ -1,15 +1,15 @@
 # 20250901
-ALTER TABLE kiosk.machine 
-  ADD factory varchar(100) NULL COMMENT '所属工厂';
+ALTER TABLE `machine` 
+  ADD COLUMN `factory` varchar(100) NULL COMMENT '所属工厂';
 
-ALTER TABLE kiosk.machine 
-  ADD inventory_location varchar(100) NULL COMMENT '库存地点';
+ALTER TABLE `machine` 
+  ADD COLUMN `inventory_location` varchar(100) NULL COMMENT '库存地点';
 
-ALTER TABLE kiosk.sale_orders 
-  ADD factory varchar(100) NULL COMMENT '所属工厂';
+ALTER TABLE `sale_orders` 
+  ADD COLUMN `factory` varchar(100) NULL COMMENT '所属工厂';
 
-ALTER TABLE kiosk.sale_orders 
-  ADD inventory_location varchar(100) NULL COMMENT '库存地点';
+ALTER TABLE `sale_orders` 
+  ADD COLUMN `inventory_location` varchar(100) NULL COMMENT '库存地点';
 
 
 
