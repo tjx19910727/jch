@@ -65,6 +65,32 @@ class ActivityPickCode extends Common
     }
 
     /**
+     * 生成批量取货excel
+     * @return boolen
+     * @throws \Exception
+     */
+    public function addExcel()
+    {
+        return $this->app->activityPickCode->addExcel();
+    }
+
+    /**
+     * 导入提货码列表
+     * @return array|string
+     * @throws \Exception
+     */
+    public function importAdd()
+    {
+        $postData = input();
+        try {
+            // $this->validate($postData, $this->validatePath . 'update');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->activityPickCode->importAdd($postData);
+    }
+
+    /**
      * 修改提货码使用记录
      * @return array|mixed|string
      */

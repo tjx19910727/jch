@@ -8,7 +8,6 @@
 
 namespace app\AppFactory\Management\Activity;
 
-
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Activity\ActivityGoodsTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityMachineTrait;
@@ -18,6 +17,8 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Management\ManagementClient;
+use Exception;
+use phpseclib3\Common\Functions\Strings;
 
 class ActivityPickCodeClient extends ManagementClient
 {
@@ -71,6 +72,114 @@ class ActivityPickCodeClient extends ManagementClient
         }
         $result = $this->addActivityPickCodeMore($insertAll);
         return $this->rAction($result);
+    }
+
+    /**
+     * 生成批量导入核销码excel
+     * @param $postData
+     * @return string|boolen
+     * @throws \Exception
+     */
+    public function addExcel(){
+        // 没有核销码excel需要重新生成
+        require_once root_path() . '/extend/PHPExcel/PHPExcel.php';
+        require_once root_path() . '/extend/PHPExcel/PHPExcel/Writer/CSV.php';
+        $objPHPExcel = new \PHPExcel();
+        $objWriter = new \PHPExcel_Writer_Excel2007($objPHPExcel);
+        $sheet = $objPHPExcel->getActiveSheet();
+        $sheet->setTitle('Sheet1');
+        $sheet->setCellValue('A1','员工工号');
+        $sheet->setCellValue('B1','员工姓名');
+        $sheet->setCellValue('C1','所属部门');
+        $sheet->setCellValue('D1','员工职级');
+        $sheet->getStyle('A1:B1:C1:D1')->getFont()->setBold(true); // 加粗表头 [8](@ref)
+
+        $data = [
+            ['18160689','niechengheng','工程部','2A'],
+        ];
+        $rowIndex = 2;
+        foreach ($data as $item){
+            $sheet->setCellValue('A'.$rowIndex, $item[0]);
+            $sheet->setCellValue('B'.$rowIndex, $item[1]);
+            $sheet->setCellValue('C'.$rowIndex, $item[2]);
+            $sheet->setCellValue('D'.$rowIndex, $item[3]);
+            $rowIndex++;
+        }
+
+        // 设置响应头直接下载
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="users.xlsx"');
+
+        try {
+            // 创建文件夹并写入模板
+            if (!is_dir($path)) {
+                @mkdir($path);
+                @chmod($path,0777);
+            }
+            $objWriter->setUseDiskCaching(true);
+            $objWriter->save('php://output');
+                            
+        } catch (Exception $e) {
+            return $this->rFail("生成文件系统报错：".$e);
+        }
+    }
+
+
+    /**
+     * 根据excle批量添加核销码
+     * @param $postData
+     * @return array|string
+     * @throws \Exception
+     */
+    public function importAdd($postData){
+        $this->startTrans();
+        try{
+            $field = "id,start_time,end_time,pick_type,status";
+            $pick = $this->getActivityPickFind(['id' => $postData['id']], $field);
+            if (!$pick) return $this->r(100, $this->lang("VActivityPickCode.pick_code_no_data"));
+            $pick = $pick->toArray();
+            if ($pick['status'] == 3) return $this->r(100, $this->lang("VActivityPickCode.status3"));
+            if ($pick['status'] == 4) return $this->r(100, $this->lang("VActivityPickCode.status4"));
+            $update = [];
+            if ($pick['start_time'] < time()) {
+                $update['status'] = 2;
+            }
+            if ($pick['end_time'] > 0 && $pick['end_time'] < time()) {
+                $update['status'] = 3;
+                $this->updateActivityPick($update);
+                return $this->r(100, $this->lang("VActivityPickCode.status3"));
+            }
+            if ($update) {
+                $update['id'] = $pick['id'];
+                $this->updateActivityPick($update);
+            }
+
+
+            $path = root_path().'public'.$postData['file_path'];
+            
+            $title = ["code", "name", "department", "posts"];
+            $moo = Excel::importExcel($path, $title, [], 2);
+            actionLog($moo, '批量导入核销码');
+            $insertAll = [];
+            if($moo){
+                foreach($moo as $key=>$item){
+                    $arr = [
+                        'ap_id' => $postData['id'],
+                        'pick_type' => $postData['pick_type'],
+                        'code' => (string)$item['code']
+                    ];
+                    array_push($insertAll,$arr);
+                }
+                $result = $this->addActivityPickCodeMore($insertAll);
+                return $this->rAction($result);
+            }
+            $this->rollbackTrans();
+            return $this->rFail("批量导入excel有误，请重试");
+        }catch(\Exception $e){
+            $this->rollbackTrans();
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 
     /**

@@ -26,6 +26,7 @@ class StrategyPayeeModel extends BaseModel
         "content" => "string",
         "ico" => "string",
         "status" => "int",
+        "ao_id" => "int",
         "creator" => "int",
         "create_time" => "int",
         "update_id" => "int",

@@ -1,3 +1,11 @@
+# 20250830
+ALTER TABLE `machine_help`
+  ADD COLUMN `pid`  int NULL DEFAULT 0 COMMENT '主帮助信息ID' AFTER `mh_id`;
+
+
+
+
+
 
 # 20250822
 # 增加商品分类组织架构ID
