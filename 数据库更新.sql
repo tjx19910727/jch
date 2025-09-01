@@ -1,3 +1,19 @@
+# 20250901
+ALTER TABLE kiosk.machine 
+  ADD factory varchar(100) NULL COMMENT '所属工厂';
+
+ALTER TABLE kiosk.machine 
+  ADD inventory_location varchar(100) NULL COMMENT '库存地点';
+
+ALTER TABLE kiosk.sale_orders 
+  ADD factory varchar(100) NULL COMMENT '所属工厂';
+
+ALTER TABLE kiosk.sale_orders 
+  ADD inventory_location varchar(100) NULL COMMENT '库存地点';
+
+
+
+
 # 20250830
 ALTER TABLE `machine_help`
   ADD COLUMN `pid`  int NULL DEFAULT 0 COMMENT '主帮助信息ID' AFTER `mh_id`;
