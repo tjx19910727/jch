@@ -62,6 +62,12 @@ trait ActivityPickCodeTrait
         return ActivityPickCodeModel::whereDel($where);
     }
 
+    public function checkActivityPickCode($ap_id,$code){
+        $sel = ActivityPickCodeModel::getList(['ap_id'=>$ap_id],null,'code');
+        $sel = $sel->toArray();
+        return in_array(['code'=>$code],$sel);
+    }
+
     /**
      * 生成取货码记录，对外API预订商品提货码
      * @return int|\think\response\Json

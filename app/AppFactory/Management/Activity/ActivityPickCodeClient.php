@@ -154,6 +154,7 @@ class ActivityPickCodeClient extends ManagementClient
                 $this->updateActivityPick($update);
             }
 
+            $res = $this->checkActivityPickCode($postData['id'],'123');
 
             $path = root_path().'public'.$postData['file_path'];
             
@@ -168,9 +169,12 @@ class ActivityPickCodeClient extends ManagementClient
                         'pick_type' => $postData['pick_type'],
                         'code' => (string)$item['code']
                     ];
+                    $res = $this->checkActivityPickCode($postData["id"],(string)$item['code']);
+                    if($res) return $this->rFail('当前同活动下有相同核销码，请确认核销码是否唯一');
                     array_push($insertAll,$arr);
                 }
                 $result = $this->addActivityPickCodeMore($insertAll);
+                $this->commitTrans();
                 return $this->rAction($result);
             }
             $this->rollbackTrans();
