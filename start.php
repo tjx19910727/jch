@@ -5,8 +5,6 @@
  * php start.php start
  */
 
-1
-
 ini_set('display_errors', 'on');
 use Workerman\Worker;
 
