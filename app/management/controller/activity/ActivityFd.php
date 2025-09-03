@@ -35,6 +35,12 @@ class ActivityFd extends Common
     public function add()
     {
         $postData = input();
+        if(!empty($postData['content'])){
+            foreach($postData['content'] as $key => $item){
+                $num = 100-$item['active_value'];
+                $postData['content'][$key]['active_value'] = (string)$num;
+            }
+        }
         try {
             $this->validate($postData, $this->validatePath . 'add');
         } catch (\Exception $e) {
@@ -46,6 +52,11 @@ class ActivityFd extends Common
     public function update()
     {
         $postData = input();
+        if(!empty($postData['content'])){
+            foreach($postData['content'] as $key => $item){
+                $postData['content'][$key]['active_value'] = 100-$item['active_value'];
+            }
+        }
         try {
             $this->validate($postData, $this->validatePath . 'update');
         } catch (\Exception $e) {
