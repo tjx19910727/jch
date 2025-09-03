@@ -27,14 +27,14 @@ class ActivityFdClient extends ManagementClient
         $fd = $this->getActivityFdFind($where,$field);
         if ($fd) {
             $fd = $fd->toArray();
-            $content = $this->getActivityFdContentList($where)->toArray();
-            foreach($content as $key=>$item){
-                if(!empty($item['active_value'])){
-                    $num = 100-$item['active_value'];
-                    $content[$key]['active_value'] = (string)$num;
-                }
-            }
-            $fd['content'] = $content;
+            // $content = ;
+            // foreach($content as $key=>$item){
+            //     if(!empty($item['active_value'])){
+            //         $num = 100-$item['active_value'];
+            //         $content[$key]['active_value'] = (string)$num;
+            //     }
+            // }
+            $fd['content'] = $this->getActivityFdContentList($where)->toArray();
 
             $fd['machineList'] = $this->getActivityMachineList(['a_id' => $fd['fd_id'], 'a_type' => 2],0,'am_id,m_id,machine_id,machine_name');
         }
