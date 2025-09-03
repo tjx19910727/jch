@@ -1,15 +1,15 @@
 # 20250901
 ALTER TABLE `machine` 
-  ADD COLUMN `factory` varchar(100) NULL COMMENT '所属工厂';
+  ADD COLUMN `factory` varchar(100) NULL COMMENT '所属工厂' AFTER `current_status`;
 
 ALTER TABLE `machine` 
-  ADD COLUMN `inventory_location` varchar(100) NULL COMMENT '库存地点';
+  ADD COLUMN `inventory_location` varchar(100) NULL COMMENT '库存地点' AFTER `factory`;
 
 ALTER TABLE `sale_orders` 
-  ADD COLUMN `factory` varchar(100) NULL COMMENT '所属工厂';
+  ADD COLUMN `factory` varchar(100) NULL COMMENT '所属工厂' AFTER `manager_id`;
 
 ALTER TABLE `sale_orders` 
-  ADD COLUMN `inventory_location` varchar(100) NULL COMMENT '库存地点';
+  ADD COLUMN `inventory_location` varchar(100) NULL COMMENT '库存地点' AFTER `factory`;
 
 
 
