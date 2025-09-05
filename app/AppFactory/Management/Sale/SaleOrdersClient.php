@@ -298,7 +298,7 @@ class SaleOrdersClient extends ManagementClient
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
         $list = $this->getSaleOrdersList($where, 0,
-            'order_id,machine_id,machine_name,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,
+            'order_id,machine_id,machine_name,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,factory,inventory_location,
                 (CASE order_type 
                     WHEN 1 THEN "普通订单"
                     WHEN 2 THEN "优惠券订单"
@@ -390,6 +390,8 @@ class SaleOrdersClient extends ManagementClient
                 "total_price" => "支付金额",
                 "discount_price" => "优惠金额",
                 "retail_price" => "原订单总额",
+                'factory' => "所属工厂",
+                'inventory_location' => "库存地点",
                 "refund_status" => "订单状态",
                 "order_type" => "订单类型",
                 "pay_type" => "支付类型",
@@ -414,7 +416,7 @@ class SaleOrdersClient extends ManagementClient
             if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
         }
         $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,
-        sod.total_sod_price,
+        sod.total_sod_price,so.factory,so.inventory_location,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
             (CASE so.order_type 
             WHEN 1 THEN '普通订单' 
@@ -508,6 +510,8 @@ class SaleOrdersClient extends ManagementClient
                     "retail_price" => "单价",
                     "discount_price" => "优惠价",
                     "total_sod_price" => "支付金额",
+                    'factory' => "所属工厂",
+                    'inventory_location' => "库存地点",
                     "out_status" => "出货状态",
                     "order_status" => "订单状态",
                     "order_type" => "订单类型",
