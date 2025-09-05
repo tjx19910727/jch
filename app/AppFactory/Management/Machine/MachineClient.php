@@ -213,6 +213,8 @@ class MachineClient extends ManagementClient
                 "online" => "设备在离线",
                 "last_online_time" => "最后上线时间",
                 "version" => "软件版本",
+                'factory' => "所属工厂",
+                'inventory_location' => "库存地点"
             ];
             return $this->sendToExport("设备管理-设备列表", $filename, $title, $list);
         }
