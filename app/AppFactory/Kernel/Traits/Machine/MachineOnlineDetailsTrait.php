@@ -64,6 +64,7 @@ trait MachineOnlineDetailsTrait
                     "online_time" => strtotime(date("Y-m-d 00:00:00")),
                     "heart_time" => time(),
                     "d_date" => strtotime(date("Y-m-d")),
+                    "ao_id" => $this->machine['ao_id'],
                 ];
                 $this->addMachineOnlineDetails($insert);
             } else {
@@ -76,6 +77,7 @@ trait MachineOnlineDetailsTrait
                 "machine_id" => $this->machine['machine_id'],
                 "heart_time" => time(),
                 "d_date" => strtotime(date("Y-m-d")),
+                "ao_id" => $this->machine['ao_id'],
             ];
             $this->addMachineOnlineDetails($insert);
         }

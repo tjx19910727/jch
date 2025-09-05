@@ -42,7 +42,7 @@ class MachineClient extends TimeTaskBase
             $whereM = [];
             if ($machine_id) $whereM["machine_id"] = $machine_id;
             $yesterday = $yesterday ? strtotime($yesterday) : strtotime(date("Y-m-d", strtotime("-1 days")));
-            $machine = $this->getMachineList($whereM, 0, 'm_id,machine_id,machine_name');
+            $machine = $this->getMachineList($whereM, 0, 'm_id,machine_id,machine_name,ao_id');
             if ($machine) {
                 $flag = [];
                 foreach ($machine as $key => $value) {
@@ -64,6 +64,7 @@ class MachineClient extends TimeTaskBase
                                     "online_time" => $onlineTime,
                                     "heart_time" => $onlineTime,
                                     "d_date" => strtotime(date("Y-m-d")),
+                                    "ao_id" => $machine['ao_id'],
                                 ];
                                 $flag[] = $this->addMachineOnlineDetails($insert);
                                 actionLog($this->getLS(), '【SQL】生成以当天0点为上线时间的记录', 'countOnline');
@@ -78,7 +79,7 @@ class MachineClient extends TimeTaskBase
                     // 统计昨天的在线时长
                     $where['m_id'] = $value['m_id'];
                     $where["d_date"] = $yesterday;
-                    $field = "m_id,machine_name,machine_id,sum(duration) duration ,count(mod_id) online_frequency,d_date online_date";
+                    $field = "m_id,machine_name,machine_id,sum(duration) duration ,count(mod_id) online_frequency,d_date online_date,ao_id";
                     $onlineDetails = $this->getMachineOnlineDetailsFind($where, $field, 'mod_id desc', "m_id");
                     if ($onlineDetails) {
                         $onlineDetails = $onlineDetails->toArray();
@@ -114,6 +115,7 @@ class MachineClient extends TimeTaskBase
                         }
                         actionLog($ckcDuration,'记录的设定营业时长',"countOnline");
                         $onlineDetails['ckc_duration'] = $ckcDuration;
+                        $onlineDetails['ao_id'] = $value['ao_id'];
                         // 增加统计全天的记录，并绑定ID至详情
                         $online_id = $this->addMachineOnline($onlineDetails);
                         actionLog($this->getLS(), '【SQL】统计全天在线时长', 'countOnline');
