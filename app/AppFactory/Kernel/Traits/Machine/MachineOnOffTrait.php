@@ -32,7 +32,6 @@ trait MachineOnOffTrait
     public function addMachineOnOff($insert)
     {
         if (isset($this->manager['manager_id'])) $insert['creator'] = $this->manager['manager_id'];
-        if (isset($this->manager['ao_id'])) $insert['ao_id'] = $this->manager['ao_id'];
         $data = MachineOnOffModel::create($insert);
         return $data->moo_id;
     }
