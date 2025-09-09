@@ -123,7 +123,7 @@ class Common extends AuthController
     public function authNodeWhere($where = [])
     {
         // 数据权限
-        if (isset($this->currentMenu['d_type']) && $this->currentMenu['d_type'] > 0) {
+        if (isset($this->currentMenu['data_auth']) && $this->currentMenu['data_auth'] == 1 && isset($this->currentMenu['d_type']) && $this->currentMenu['d_type'] > 0) {
             $api = request()->baseUrl();
             // 数据权限，1：查所有，2：查部门，3：查本人，4：查所有下属，5：查直接下属，默认0，0为不开启数据权限验证
             // 优先级高的覆盖低的，优先级：1. 查所有 > 2. 查部门 > 3. 查本人 > 4. 查所有下属 > 5. 查直接下属

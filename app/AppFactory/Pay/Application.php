@@ -10,6 +10,7 @@ namespace app\AppFactory\Pay;
 
 
 use app\AppFactory\Kernel\Providers\Pay\AliProvider;
+use app\AppFactory\Kernel\Providers\Pay\CoGoLinkProvider;
 use app\AppFactory\Kernel\Providers\Pay\PosProvider;
 use app\AppFactory\Kernel\Providers\Pay\JdCashierProvider;
 use app\AppFactory\Kernel\Providers\Pay\SaleOrdersProvider;
@@ -23,6 +24,7 @@ use app\AppFactory\Kernel\ServiceContainer;
  * @property Notify\AliClient                                             $aliNotify       支付宝回调处理
  * @property Notify\PosClient                                             $posNotify       POS机刷卡支付回调处理
  * @property Notify\WxClient                                              $wxNotify        微信回调处理
+ * @property Notify\CoGoLinkClient                                        $CoGoLink        CoGoLink回调处理
  * @package app\AppFactory\Pay
  */
 class Application extends ServiceContainer
@@ -32,6 +34,7 @@ class Application extends ServiceContainer
         AliProvider::class,
         PosProvider::class,
         WxProvider::class,
+        CoGoLinkProvider::class,
         SaleOrdersProvider::class,
     ];
 }
