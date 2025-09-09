@@ -40,7 +40,7 @@ class AuthManagerRoleClient extends ManagementClient
         $url = request()->baseUrl();
         // 查节点数据
         $where['url'] = $url;
-        $field = "node_id,pid,name,icon,url,desc,sort,type,is_auth,status";
+        $field = "node_id,pid,name,icon,url,desc,sort,type,is_auth,data_auth,status";
         $authNode = $this->getAuthNodeFind($where,$field);
         $authNode = obj2arr($authNode);
         if (in_array($url,$this->commonNode)) return $authNode ?? [];
