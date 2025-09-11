@@ -642,7 +642,9 @@ class V2Client extends V2BaseClient
      */
     public function get_goods_category()
     {
-        $list = $this->getGoodsCategoryList(["status" => 1], ['list_rows' => $this->params['pageNum'] ?? 0,'page' => $this->params['page'] ?? 1],'gc_id,gc_pid,gc_name,`desc` gc_desc, ico, sort','sort asc');
+        $where['status'] = 1;
+        $where['ao_id'] = $this->authConfig['ao_id'];
+        $list = $this->getGoodsCategoryList($where, ['list_rows' => $this->params['pageNum'] ?? 0,'page' => $this->params['page'] ?? 1],'gc_id,gc_pid,gc_name,`desc` gc_desc, ico, sort','sort asc');
         return $this->returnData(0,$this->lang("msg.0"),$list);
     }
 }
