@@ -356,7 +356,7 @@ class SaleOrdersClient extends ManagementClient
             }
             if (isset($postData['machine_name']) && $postData['machine_name'])
                 $whereRefund[] = ['sor.machine_name', 'like', "%" . $postData['machine_name'] . "%"];
-            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, 'sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,sor.refund_trade_no,so.mch_no,so.factory,so.inventory_location,
+            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, 'sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
             sor.refund_quantity total_quantity,
              (0-sor.refund_amount) total_price,("-") discount_price,("-") retail_price,
              ("已退款") refund_status,
@@ -379,7 +379,6 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 7 THEN "机器人线上支付" 
                 WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time', 'sor.update_time asc');
-            dd($refund,$list);
             if ($refund) $list = array_merge($list, $refund->toArray());
             $title = [
                 "order_id" => "订单ID",
@@ -400,7 +399,6 @@ class SaleOrdersClient extends ManagementClient
                 "out_time" => "出货时间",
             ];
             $filename = "订单交易-" . date("Ymd");
-            dd($filename,$title,$list);
             return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
         }
         return $this->rFail($this->lang("action_fail"));
@@ -525,7 +523,6 @@ class SaleOrdersClient extends ManagementClient
                     "success_quantity" => "出货成功数量",
                 ];
                 $filename = "商品交易列表-" . date("YmdHis");
-                dd($filename,$title,$list);
                 return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
             }
         }
