@@ -399,6 +399,7 @@ class SaleOrdersClient extends ManagementClient
                 "out_time" => "出货时间",
             ];
             $filename = "订单交易-" . date("Ymd");
+            dd($filename,$title,$list);
             return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
         }
         return $this->rFail($this->lang("action_fail"));
@@ -523,6 +524,7 @@ class SaleOrdersClient extends ManagementClient
                     "success_quantity" => "出货成功数量",
                 ];
                 $filename = "商品交易列表-" . date("YmdHis");
+                dd($filename,$title,$list);
                 return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
             }
         }
