@@ -379,6 +379,7 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 7 THEN "机器人线上支付" 
                 WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time', 'sor.update_time asc');
+            dd($refund,$list);
             if ($refund) $list = array_merge($list, $refund->toArray());
             $title = [
                 "order_id" => "订单ID",
