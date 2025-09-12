@@ -356,6 +356,22 @@ class SaleOrdersClient extends ManagementClient
             }
             if (isset($postData['machine_name']) && $postData['machine_name'])
                 $whereRefund[] = ['sor.machine_name', 'like', "%" . $postData['machine_name'] . "%"];
+
+            // 添加时间链表查询条件
+            if (isset($postData['out_time']) && $postData['out_time']){
+                $out_time = explode('~',$postData['out_time']);
+                $out_time1 = strtotime($out_time[0]);
+                $out_time2 = strtotime($out_time[1]);
+                $whereRefund[] = ['so.out_time','between',[$out_time1,$out_time2]];
+            }
+
+            if (isset($postData['pay_time']) && $postData['pay_time']){
+                $pay_time = explode('~',$postData['pay_time']);
+                $pay_time1 = strtotime($pay_time[0]);
+                $pay_time2 = strtotime($pay_time[1]);
+                $whereRefund[] = ['so.pay_time','between',[$pay_time1,$pay_time2]];
+            }
+
             $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, 'sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
             sor.refund_quantity total_quantity,
              (0-sor.refund_amount) total_price,("-") discount_price,("-") retail_price,
