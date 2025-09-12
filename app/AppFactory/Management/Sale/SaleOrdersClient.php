@@ -356,7 +356,7 @@ class SaleOrdersClient extends ManagementClient
             }
             if (isset($postData['machine_name']) && $postData['machine_name'])
                 $whereRefund[] = ['sor.machine_name', 'like', "%" . $postData['machine_name'] . "%"];
-            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, 'sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,sor.refund_trade_no mch_no,
+            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, 'sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,sor.refund_trade_no,so.mch_no,so.factory,so.inventory_location,
             sor.refund_quantity total_quantity,
              (0-sor.refund_amount) total_price,("-") discount_price,("-") retail_price,
              ("已退款") refund_status,
@@ -469,7 +469,7 @@ class SaleOrdersClient extends ManagementClient
                 $where['sor.status'] = 2;
                 if (isset($where[0][0]) && strpos($where[0][0],"create_time") !== false) $where[0][0] = "sor.update_time";
                 $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
-                    "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
+                    "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
                             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
                         (CASE so.order_type 
                         WHEN 1 THEN '普通订单' 
