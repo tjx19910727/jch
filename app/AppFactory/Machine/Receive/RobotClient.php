@@ -17,16 +17,20 @@ class RobotClient extends ReceiveBaseClient
     use RobotPositionTrait;
     use ApiCallbackTrait;
 
+    /**
+     * 出货口传感器返馈信号
+     * @return array|\think\response\Json
+     */
     public function position()
     {
-        $robot = env("robot");
+        $robot['notify_url'] = env("robot.notify_url");
         if (isset($robot['notify_url']) && $robot['notify_url']) {
             $this->getMachineAddress();
             $message = [
                 "machine_id" => $this->machine['machine_id'],
                 "machine_name" => $this->machine['machine_name'],
                 "address" => $this->machine['address'],
-                "position" => $this->config['position']
+                "position" => $this->data['position']
             ];
             $insertCallback = [
                 "aa_id" => 0,

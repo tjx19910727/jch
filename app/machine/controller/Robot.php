@@ -28,16 +28,7 @@ class Robot extends Common
             $postData = json2arr($postData);
             actionLog($postData,'接收到的数据');
             $action = $this->request->action();
-            $reflection = new \ReflectionClass(__CLASS__);
-            $methods = $reflection->getMethods();
-            $methodNames = array_map(function ($method) {
-                return $method->getName();
-            },$methods);
-            if (!in_array($action,$methodNames)) {
-                returnState(300,lang("error_api"))->send();
-                die();
-            }
-            $this->validate($postData,$this->validatePath . $action);
+            $this->validate($postData,$this->validatePath . "." .  $action);
             $frequency = checkFrequency($action,1);
             if ($frequency !== true) {
                 $frequency = obj2arr($frequency);
@@ -51,16 +42,32 @@ class Robot extends Common
                 "mac" => $mac
             ];
             $this->app = AppFactory::machine($this->config);
+            $robot = $this->app->robot;
+            $reflection = new \ReflectionClass($robot);
+            $methods = $reflection->getMethods();
+            $methodNames = array_map(function ($method) {
+                return $method->getName();
+            },$methods);
+            if (!in_array($action,$methodNames)) {
+                returnState(300,lang("error_api"))->send();
+                die();
+            }
             if (!in_array($action, $this->noCheckApi) && $this->app->api->checkSign($postData) !== true) {
                 @cache($postData['machine_id'] . ".signKey", null);
                 returnState(100, lang("check_sign_fail"))->send();
                 die();
             }
-            $result = $this->app->robot->$action();
+            $result = $robot->$action();
             $result->send();
         } catch (\Exception $e) {
             returnState(300, lang($e->getMessage()))->send();
             die();
         }
+    }
+
+    // 自动生成不存在或不可访问的接口，实际业务在init方法中已经实现，使用这个方法是避免TP框架报错
+    public function __call($name, $arguments)
+    {
+        // TODO: Implement __call() method.
     }
 }
