@@ -285,6 +285,8 @@ class ActivityClient extends ReceiveBaseClient
                 if (isset($this->order['details'])) {
                     unset($this->order['details']);
                 }
+                $this->order["factory"] = empty($this->machine['factory'])?$this->machine['factory']:'';
+                $this->order["inventory_location"] = empty($this->machine['inventory_location'])?$this->machine['inventory_location']:'';
                 $this->updateSaleOrders($this->order);
                 actionLog($this->getLS(),'使用取货码完成修改订单');
                 $this->updateActivityPickCode(['apc_id' => $apc['apc_id'], 'status' => 5]);

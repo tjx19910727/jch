@@ -10,6 +10,7 @@ namespace app\AppFactory\Machine;
 
 
 use app\AppFactory\Kernel\Providers\Machine\ReceiveProvider;
+use app\AppFactory\Kernel\Providers\Machine\RobotProvider;
 use app\AppFactory\Kernel\Providers\Machine\SendProvider;
 use app\AppFactory\Kernel\ServiceContainer;
 
@@ -30,5 +31,6 @@ class Application extends ServiceContainer
     protected $providers = [
         ReceiveProvider::class,
         SendProvider::class,
+        RobotProvider::class,
     ];
 }
