@@ -233,7 +233,19 @@ trait MachineTrait
 
     /**
      * @var array
-     * 休眠：sleep, 唤醒：wakeUp, 重启：reboot, 关机：shutdown, 软件升级：update，取货头回初始位：pickUpHeadInit，取货箱传送带开：conveyorBeltOpen，取货箱传送带关：conveyorBeltClose，取货箱开门：boxDoorOpen，取货箱关门：boxDoorClose，回收箱伸出：recycleOut，回收箱缩进：recycleIntro
+     * 休眠：sleep,
+     * 唤醒：wakeUp,
+     * 重启：reboot,
+     * 关机：shutdown,
+     * 软件升级：update，
+     * 取货头回初始位：pickUpHeadInit，
+     * 取货箱传送带开：conveyorBeltOpen，
+     * 取货箱传送带关：conveyorBeltClose，
+     * 取货箱开门：boxDoorOpen，
+     * 取货箱关门：boxDoorClose，
+     * 回收箱伸出：recycleOut，
+     * 回收箱缩进：recycleIntro，
+     * 重推第二货道出货口：reOutPort
      * 当前命令下发前需要检查一下current_status
      */
     protected $checkCurrentStatus = [
@@ -249,6 +261,7 @@ trait MachineTrait
         "boxDoorClose",
         "recycleOut",
         "recycleIntro",
+        "reOutPort",
     ];
 
     /**

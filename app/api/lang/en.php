@@ -101,4 +101,8 @@ return [
             'trans_fail' => 'Transaction execution failed',
             'device_type_unDefine' => 'Undefined application type',
         ],
+
+    "robot" => [
+        'machine_no_data' => 'No device information found',
+    ],
 ];
