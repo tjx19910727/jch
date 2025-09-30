@@ -287,4 +287,57 @@ trait MachineTrait
         }
         return false;
     }
+
+    /**
+     * 发送多设备触发数据
+     * @param $machine
+     * @param $msgType
+     * @param array $otherData
+     * @return array|bool|string
+     */
+    public function sendToArrMachine($machine,$msgType,$otherData = [])
+    {
+
+        $m = MachineModel::whereIn('machine_id',$machine['machine_id'])->field("machine_id,mac_address,signKey,online,current_status")->select();
+
+        if ($m) {
+            $m = $m->toArray();
+            // 判断不在线且不处于空闲状态的设备并下发通知
+            $unqualified = array_filter($m,function($v , $k){
+                return $v['online']==2||$v['current_status']=!'normal';
+            },ARRAY_FILTER_USE_BOTH);
+            if(!empty($unqualified)){
+                $unmachine = '';
+                foreach($unqualified as $key=>$item){
+                    if (count($unqualified) == $key+1)
+                        $unmachine = $unmachine.$item['machine_id'];
+                    $unmachine = $unmachine.$item['machine_id'].',';
+                }
+                return $this->rFail("设备 $unmachine 不处于空闲或在线状态，请确认设备状态后重新下发");
+            }
+            try {
+                $result = '';
+                foreach($m as $item){
+                    $key = $item['signKey'] ?? "";
+                    if (!$key) $key = env("api.md5Key");
+                    if ($key) {
+                        $config = [
+                            "machine_id" => $item['machine_id'],
+                            "key" => $key,
+                            "mac" => $item['mac_address'] ?? "",
+                        ];
+                        actionLog($config, '下发命令配置');
+                        $app = AppFactory::machine($config);
+                        $result =  $app->sendMq->sendMq($msgType, $otherData);
+                        actionLog(@obj2arr($result),'sendToMachine结果');
+                    }
+                }
+                return $result;
+            } catch (\Throwable $e) {
+                return $this->lang("VReceive.signKey_require");
+            }
+        }
+        return false;
+    }
+
 }

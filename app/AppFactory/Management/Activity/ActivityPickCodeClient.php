@@ -218,16 +218,16 @@ class ActivityPickCodeClient extends ManagementClient
         if (!$apc) return $this->r(100, '查无提货码使用记录');
         $ap = $this->getActivityPickFind(['id' => $apc['ap_id']], "pick_name,`desc`");
         if (!$ap) return $this->r(100, '查无提货码信息');
-        $list = $this->getActivityPickCodeList(['ap_id' => $postData['id']], 0,
+        $list = $this->getActivityPickCodeList(['ap_id' => $apc['ap_id']], 0,
             '("' . $ap['pick_name'] . '") pick_name,("' . $ap['desc'] . '") `desc`,machine_id,machine_name,
                 code,trade_no,
-                (CASE pick_type 
+                (CASE status 
                 WHEN 1 THEN "未使用" 
                 WHEN 2 THEN "已使用"
                 WHEN 3 THEN "已过期" 
                 WHEN 4 THEN "已作废" 
                 WHEN 5 THEN "使用中" END ) `status`,
-                 used_time');
+                DATE_FORMAT(FROM_UNIXTIME(used_time), "%Y-%m-%d %H:%i:%s") AS used_time');
         if ($list) {
             $list = $list->toArray();
             $title = [

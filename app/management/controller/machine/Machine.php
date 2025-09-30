@@ -160,4 +160,36 @@ class Machine extends Common
         $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id],"volume",$otherData);
         return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
     }
+
+    /**
+     * 批量发送主体控制指令
+     * @return array|string
+     */
+    public function sendAllControl()
+    {
+        try {
+            $postData = input();
+            $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
+            if (isset($postData['msgType']) && is_int($postData['msgType'])) {
+                $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update"];
+                $postData['msgType'] = $typeList[$postData['msgType']];
+            }
+            $postData['machine_id'] = explode(',',$postData['machine_id']);
+            $result = $this->app->machine->sendToArrMachine($postData, $postData['msgType'], $otherData);
+            if(!$result) $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+            $result = $this->app->machine->sendToArrMachine($postData,"light",$otherData);
+            return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->app->machine->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取设备开锁密码
+     * @return string
+     */
+    public function getOpenPass(){
+
+    }
 }
