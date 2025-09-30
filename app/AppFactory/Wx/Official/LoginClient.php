@@ -8,7 +8,7 @@
 
 namespace app\AppFactory\Wx\Official;
 
-
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerLogTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
@@ -26,7 +26,7 @@ use think\facade\Session;
 class LoginClient extends WxBaseClient
 {
     use WxOfficialTrait, WxOfficialLoginTrait;
-    use AuthManagerTrait,AuthManagerRoleTrait,AuthManagerMachineTrait;
+    use AuthManagerTrait,AuthManagerRoleTrait,AuthManagerMachineTrait,AuthManagerLogTrait;
     use AuthNodeTrait,AuthRoleNodeTrait;
     use MachineTrait;
 
@@ -185,6 +185,7 @@ class LoginClient extends WxBaseClient
                 $token = TDESUtil::encrypt(json_encode($token_arr), $salt);
                 $update['status'] = 3;
                 $update['login_token'] = $token;
+                $this->recordManagerLog($manager,1);
             }// 终端登录，下发登录账号信息
             if ($login['login_type'] == 2) {
                 $update['status'] = 3;
@@ -207,6 +208,7 @@ class LoginClient extends WxBaseClient
                     "nodeList" => $nodeList,
                 ];
                 $this->sendToMachine(['machine_id' => $login['machine_id']], 'wxScanLogin', $sendData);
+                $this->recordManagerLog($manager,2);
             }
             $this->updateWxOfficialLogin($update);
             cache("wxLogin" . $login['login_type'] . $login['id'], null);
