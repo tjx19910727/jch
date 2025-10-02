@@ -280,7 +280,8 @@ trait ActivityCouponTrait
                         $sodDiscountPrice = 0;
                         if ($ac['c_type'] == 2) {
                             // 商品优惠金额 = 商品售价 * 数量 * （100 - 打折）
-                            $reduction = bcdiv(bcsub(100,$ac['reduction']),100,2);
+                            // $reduction = bcdiv(bcsub(100,$ac['reduction']),100,2);
+                            $reduction = bcdiv($ac['reduction'],100,2);
                             $sodDiscountPrice = bcmul($value['total_sod_price'],$reduction,4);
                         }
                         // 商品优惠金额 = 商品总额 / 订单总额 * 立减金额
