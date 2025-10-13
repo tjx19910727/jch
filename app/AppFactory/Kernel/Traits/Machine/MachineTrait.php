@@ -12,7 +12,9 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Machine\MachineLangModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
-
+use app\AppFactory\Kernel\Model\Auth\AuthManagerLogModel;
+use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
+use app\AppFactory\Kernel\Model\Wx\WxOfficialLoginModel;
 trait MachineTrait
 {
     /**
@@ -233,7 +235,7 @@ trait MachineTrait
 
     /**
      * @var array
-     * 休眠：sleep, 唤醒：wakeUp, 重启：reboot, 关机：shutdown, 软件升级：update，取货头回初始位：pickUpHeadInit，取货箱传送带开：conveyorBeltOpen，取货箱传送带关：conveyorBeltClose，取货箱开门：boxDoorOpen，取货箱关门：boxDoorClose，回收箱伸出：recycleOut，回收箱缩进：recycleIntro
+     * 休眠：sleep, 唤醒：wakeUp, 重启：reboot, 关机：shutdown, 软件升级：update，取货头回初始位：pickUpHeadInit，取货箱传送带开：conveyorBeltOpen，取货箱传送带关：conveyorBeltClose，取货箱开门：boxDoorOpen，取货箱关门：boxDoorClose，回收箱伸出：recycleOut，回收箱缩进：recycleIntro，断电重启：powerWakeUp，远程初始化：initialization
      * 当前命令下发前需要检查一下current_status
      */
     protected $checkCurrentStatus = [
@@ -249,6 +251,8 @@ trait MachineTrait
         "boxDoorClose",
         "recycleOut",
         "recycleIntro",
+        "powerWakeUp",
+        "initialization"
     ];
 
     /**
@@ -340,4 +344,34 @@ trait MachineTrait
         return false;
     }
 
+
+    /**
+     * 获取设备开锁密码
+     * @param $machine
+     * @return string|bool
+     */
+    public function getPass($machine){
+        try {
+            $login = AuthManagerLogModel::where(['path'=>'/machine/receive/login'])->where('params','like','{"machine_id":"'.$machine.'%')->order(['create_time'=>'desc'])->field('manager_id,create_time')->find();
+            $wxLogin = WxOfficialLoginModel::where(['machine_id'=>$machine])->order(['create_time'=>'desc'])->field('manager_id,create_time')->find();
+            $login = $login->toArray();
+            $wxLogin = $wxLogin->toArray();
+            switch (empty($wxLogin)||is_null($wxLogin['manager_id'])){
+                case false:
+                        if($login['create_time']>$wxLogin['create_time']){
+                            $manager_id = $login['manager_id'];
+                        }else{
+                            $manager_id = $wxLogin['manager_id'];
+                        }
+                    break;
+                
+                default:
+                    $manager_id = $login['manager_id'];
+                    break;
+            }
+            return AuthManagerModel::getFind(['manager_id'=>$manager_id],'account');
+        } catch (\Throwable $th) {
+            return false;
+        }
+    }
 }

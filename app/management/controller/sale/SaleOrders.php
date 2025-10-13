@@ -25,7 +25,25 @@ class SaleOrders extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in']);
         $where['pay_status'] = 3;
-        $field = "*,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
+
+        // 查看成本价查询账号是否包含当前权限
+        if ($this->manager['pid'] > 0) {
+            $whereArn[] = ['role_id', 'in', $this->app->authManagerRole->getAuthManagerRoleColumn(['manager_id' => $this->manager['manager_id'], 'is_del' => 2], 'role_id')];
+            $whereArn['is_del'] = 2;
+            $node = $this->app->authNode->getAuthNodeColumn(['url'=>'/management/sale.sale_orders/getList?get_cost_price'],'node_id');
+            $authRole = $this->app->authRoleNode->getAuthRoleNodeColumn($whereArn,'node_id');
+            $inter = array_intersect($node,$authRole);
+            
+            $whereAuth[] = ['node_id', 'in',$inter];
+        }
+        $whereAuth['status'] = 1;
+        $data = $this->app->authNode->getAuthNodeList($whereAuth,0,'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status','sort asc');
+        $data = obj2arr($data);
+        if (empty($data)){
+            $field = "order_id,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_time,out_time,machine_name,machine_id,discount_price,factory,has_hotel,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
+        }else{
+            $field = "order_id,trade_no,mch_no,cost_price,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_time,out_time,machine_name,machine_id,discount_price,factory,has_hotel,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
+        }
         return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc");
     }
 
