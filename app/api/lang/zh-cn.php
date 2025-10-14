@@ -110,4 +110,7 @@ return [
         "trans_fail" => "事务执行失败",
         "device_type_unDefine" => "未定义的应用类型",
     ],
+    "robot" => [
+        "machine_no_data" => "查无设备信息",
+    ],
 ];

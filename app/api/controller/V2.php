@@ -15,84 +15,8 @@ class V2 extends Common
 {
     public function testMakeSign()
     {
-//        $params = [
-////            "machine_id" => "test0007,0010",
-////            "shelf_on" => 1,
-//            "kiosk_id" => "test0001",
-//            "order_no" => "2235236256",
-////            "pick_code" => "",
-//            "payment_method" => "wechat",
-//            "customer_name" => "test",
-//            "expire_time" => date("Y-m-d H:i:s"),
-//            "charge_time" => date("Y-m-d H:i:s"),
-//            "notify_url" => "http://www.baidu.com",
-//            "order_detail" => json_encode([
-//                "63" => [
-//                    "quantity" => 1,
-//                    "item_price" => 100,
-//                    "discount_amount" => 1,
-//                    "charge_amount" => 99,
-//                    "type" => "sale",
-//                ],
-//                "87" => [
-//                    "quantity" => 2,
-//                    "item_price" => 50,
-//                    "discount_amount" => 3,
-//                    "charge_amount" => 97,
-//                    "type" => "sale",
-//                ],
-//                "69" => [
-//                    "quantity" => 1,
-//                    "item_price" => 0,
-//                    "discount_amount" => 0,
-//                    "charge_amount" => 0,
-//                    "type" => "gift",
-//                ],
-//            ]),
-//        ];
-//        $params = [
-//            "kiosk_id" => "test0001",
-//            "order_no" => "11111111",
-//        ];
-//        $params = [
-//            "trade_no" => "202407291443503775978",
-//            "pay_status" => 1,
-//        ];
-//        $params = [
-//            "pageNum" => 15,
-//            "machine_id" => "test0001",
-//        ];
         $data = '{"auth_name":"Lc_test","sign":"87ED5F99A692D8F32C758B5B5CA94055","api":"get_inventory_list","params":"{\"product_id\":\"\",\"machine_id\":\"test0003\",\"shelf_on\":1}","timestamp":"1723207274"}';
         $data = json2arr($data);
-//        $params = json_decode($data['params'],true);
-//        $params['pageNum'] = 15;
-//        $params = '{
-//    "order_no": "22",
-//    "expire_time": "2024-08-14 18:53:57",
-//    "order_detail": "[{\"152\":{\"quantity\":1,\"type\":\"sale\",\"item_price\":8,\"discount_amount\":0,\"charge_amount\":8}},{\"168\":{\"quantity\":1,\"type\":\"sale\",\"item_price\":8,\"discount_amount\":0,\"charge_amount\":8}}]",
-//    "kiosk_id": "test0001",
-//    "payment_method": "wechat",
-//    "charge_time": "2024-08-14 10:53:57"
-//}';
-//        $params = json_decode($params,true);
-//        dump($params);
-//        $details = json_decode($params['order_detail'],true);
-//        dump($details);
-//        $params = [
-//            "kiosk_id" => "test0003",
-//            "pageNum" => 1,
-//            "page" => 2,
-//        ];
-//        $params = [
-//            "aId" => "81",
-//            "aType" => 2,
-//        ];
-//        $data = [
-//            "auth_name" => "ctrip",
-//            "auth_password" => "Karrie&C2023",
-//            "timestamp" => time(),
-//            "params" => json_encode($params, 320),
-//        ];
         $machine_id = input("machine_id", "test0001");
         $goods_id = input("goods_id");
         $type = input("type");
@@ -150,9 +74,14 @@ class V2 extends Common
                 "page" => $page
             ];
         }
+        if ($type == 12) {
+            $params = [
+                "machine_id" => $machine_id,
+            ];
+        }
         $data = [
-            "auth_name" => "Lc_test",
-            "auth_password" => "123456",
+            "auth_name" => "ctrip",
+            "auth_password" => "Karrie&C2023",
             "timestamp" => time(),
             "params" => json_encode($params, 320),
         ];
@@ -172,6 +101,7 @@ class V2 extends Common
         unset($data['auth_password']);
         dump($data);
         dump(json_encode($data));
+        die();
     }
 
     /**
@@ -219,11 +149,11 @@ class V2 extends Common
             $postData = json2arr($postData);
             actionLog($postData, '接收到的数据');
             $funcName = $postData['api'];
-            $app = AppFactory::api($postData);
-            if (method_exists($app->robot, $funcName)) {
-                return $app->robot->$funcName();
+            $robot = AppFactory::api($postData)->robot;
+            if (method_exists($robot, $funcName)) {
+                return $robot->$funcName();
             }
-            return $app->robot->returnData(4, lang("msg." . 4));
+            return $robot->r(4, lang("msg." . 4));
         } catch (\Exception $e) {
             actionException($e, 1);
             return json(["status_code" => 99, "msg" => lang("msg." . 99) . $e->getMessage()]);
