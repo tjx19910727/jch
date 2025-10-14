@@ -161,7 +161,6 @@ class Excel
         foreach ($list as $row) {
             foreach ($indexKey as $key => $value){
                 //这里是设置单元格的内容
-//                $objActSheet->getStyle($header_arr[$key].$startRow)->applyFromArray($styleArray);
                 $objActSheet->setCellValueExplicit($header_arr[$key].$startRow,$row[$value],\PHPExcel_Cell_DataType::TYPE_STRING);
             }
             $startRow++;

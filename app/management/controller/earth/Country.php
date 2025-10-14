@@ -69,7 +69,7 @@ class Country extends Common
         $postData = input();
         $where = $this->getWhere($postData,false,["name" => "like","cname" => "like"]);
         $pageNum = $postData['pageNum'] ?? 0;
-        return returnData($this->app->earth->getEarthRegionsList($where,$pageNum,"*"));
+        return returnState(200,"success",$this->app->earth->getEarthRegionsList($where,$pageNum,"*"));
 
     }
 

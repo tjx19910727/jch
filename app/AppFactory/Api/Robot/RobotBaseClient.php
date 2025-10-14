@@ -2,20 +2,21 @@
 /**
  * Created by PhpStorm.
  * User: Administrator
- * Date: 2024/6/18
- * Time: 15:25
+ * Date: 2025/9/23
+ * Time: 10:33
  */
 
-namespace app\AppFactory\Api\V2;
+namespace app\AppFactory\Api\Robot;
 
 
 use app\AppFactory\Api\ApiBaseClient;
 use app\AppFactory\Kernel\ServiceContainer;
-use app\AppFactory\Kernel\Support\Validate\Api\VV2;
+use app\AppFactory\Kernel\Support\Validate\Api\VRobot;
 use app\AppFactory\Kernel\Traits\Config\ConfigApiTrait;
 
-class V2BaseClient extends ApiBaseClient
+class RobotBaseClient extends ApiBaseClient
 {
+
     use ConfigApiTrait;
     public $authConfig;
     public $ip;
@@ -105,18 +106,6 @@ class V2BaseClient extends ApiBaseClient
             $frequency[$this->config['api']]['time'] = time();
             $frequency[$this->config['api']]['params'] = $this->config['params'];
         } else {
-            // 4秒内，同IP同api同样params的数据
-//            if ($frequency[$this->config['api']]['params'] == $this->config['params'] && time() - $frequency[$this->config['api']]['time'] <= 4) {
-//                actionLog($this->config,"访问限流新数据");
-//                actionLog($frequency[$this->config['api']],"访问限流旧数据");
-//                $this->returnData(9, $this->lang("msg." . 9))->send();
-//                die();
-//            }
-            // 同1个IP调用同1个接口超过1天总限制次数8640次
-//            if ($frequency[$this->config['api']]['num'] >= 8640) {
-//                $this->returnData(8, $this->lang("msg." . 8))->send();
-//                di
-//            }
             $frequency[$this->config['api']]['num']++;
             $frequency[$this->config['api']]['time'] = time();
         }
@@ -160,7 +149,7 @@ class V2BaseClient extends ApiBaseClient
     {
         try {
             if ($this->config['api'] != "get_machines") {
-                validate(VV2::class)->scene($this->config['api'])->check($this->config['params']);
+                validate(VRobot::class)->scene($this->config['api'])->check($this->config['params']);
             }
             $this->params = $this->config['params'];
         } catch (\Exception $e) {

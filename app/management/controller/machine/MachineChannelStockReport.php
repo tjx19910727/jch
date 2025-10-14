@@ -22,7 +22,7 @@ class MachineChannelStockReport extends Common
         sum(pre_stock) pre_stock,
         sum(standby_stock) standby_stock,
         sum(bad_stock) bad_stock,
-        sum(total_stock) total_stock,
+        sum(total_stock + standby_stock) total_stock,
         retail_price
         ";
         $order = "total_stock desc";
