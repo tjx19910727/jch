@@ -25,6 +25,11 @@ class SaleOrders extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in']);
         $where['pay_status'] = 3;
+        if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
+            $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
+            unset($postData['machine_group_id']);
+            if (!$machineIds) return $this->app->machine->rNoData();
+        }
 
         // 查看成本价查询账号是否包含当前权限
         if ($this->manager['pid'] > 0) {
@@ -44,6 +49,8 @@ class SaleOrders extends Common
         }else{
             $field = "order_id,trade_no,mch_no,cost_price,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_time,out_time,machine_name,machine_id,discount_price,factory,has_hotel,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
         }
+        if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
+
         return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc");
     }
 
@@ -161,6 +168,11 @@ class SaleOrders extends Common
             $where['sor.ao_id'] = $where['ao_id'];
             unset($where['ao_id']);
         }
+        if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
+            $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
+            unset($postData['machine_group_id']);
+            if (!$machineIds) return $this->app->machine->rNoData();
+        }
         if (isset($postData['m_id']) && $postData['m_id']) $where['sor.m_id'] = $postData['m_id'];
         if (isset($postData['trade_no']) && $postData['trade_no']) $where[] = ['sor.trade_no','like',"%" .$postData['trade_no']. "%"];
         if (isset($postData['machine_id']) && $postData['machine_id']) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
@@ -172,6 +184,8 @@ class SaleOrders extends Common
             if ($mIds) $where[] = ['sor.m_id', 'in', $mIds];
         }
         $field = "sor.*,so.pay_type";
+        if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
+
         return returnData($this->app->saleOrders->getSaleOrdersRefundListJoinSoSod($where,$pageNum,$field,'sor.sor_id desc'));
     }
 

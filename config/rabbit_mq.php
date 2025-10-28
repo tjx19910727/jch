@@ -25,8 +25,8 @@ return [
 
     // 服务器连接配置
     'AMQP_online' => [
-        'host' => '172.19.0.195',//  连接rabbitmq,   此为安装rabbitmq服务器port'=>'5672'
-        'port' => 5672,
+        'host' => '39.108.118.174',//  连接rabbitmq,   此为安装rabbitmq服务器port'=>'5672'
+        'port' => 15671,
         'login' => 'kiosk',
         'password' => 'Kiosk&2019',
         'vhost' => 'kiosk',

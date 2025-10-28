@@ -19,11 +19,13 @@ use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
 use app\AppFactory\TimeTask\TimeTaskBase;
+use think\cache\driver\Redis;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
 use think\facade\Db;
 use think\facade\Cache;
+use think\facade\Env as FacadeEnv;
 
 class MachineClient extends TimeTaskBase
 {
@@ -220,9 +222,11 @@ class MachineClient extends TimeTaskBase
      * 定时任务-10min执行一次，将当天需要执行定时开关机的设备轮询检查
      */
     public function checkOnOff(){
+        $redis = new Redis();
+        $redis->connect(FacadeEnv::get('REDIS_host'),FacadeEnv::get('REDIS_port'));
         $dayWeek = intval(date('w'));
         $time = strtotime(date('H:i'));
-        // 当日首次执行
+
         $sql = Db::name('machine_on_off')->where('on_off_machine','<>','')->whereNotNull('on_off_machine')->json(['on_off_machine'])->field('machine_id,on_off_machine')->order('machine_id desc')->select();
         // 查询执行当天有包含定时开关机任务的设备
         $deviceMch = [];
@@ -230,29 +234,37 @@ class MachineClient extends TimeTaskBase
             if(array_key_exists($dayWeek,$item['on_off_machine'])){
                 $Mchtime = explode(',',$item['on_off_machine'][$dayWeek]);
                 if(isset($Mchtime[0])&&isset($Mchtime[1])&&$Mchtime[0]!='null'&&$Mchtime[1]!='null'){
-                    $Mchtime[0] = $Mchtime[0]?strtotime($Mchtime[0]):null;
-                    $Mchtime[1] = $Mchtime[1]?strtotime($Mchtime[1]):null;
+                    $Mchtime[0] = !empty($Mchtime[0])?strtotime($Mchtime[0]):0;
+                    $Mchtime[1] = !empty($Mchtime[1])?strtotime($Mchtime[1]):0;
                     $deviceMch[$item['machine_id']] = $Mchtime;
                 }
                 continue;
             }
         }
-        // 记录redis
-        $resRds = Cache::store('redis')->set('deviceMachine',$deviceMch);
-        if(!$resRds){
-            actionLog($resRds,"记录redis缓存失败",'checkOnOff');
-            return "记录redis缓存失败";
-        }
+        // 记录设备
+        actionLog(json_encode($deviceMch),"需要执行定时开关机的设备",'checkOnOff');
 
-        // 对当日需要定时开关机的设备做处理
+        // 对±1hour需要定时开关机的设备做处理
+        $device = [];
         foreach($deviceMch as $machine_id=>$machine_time){
-            if($machine_time[0] > $time-7200 && $machine_time[0] <= $time+7200){
-                $mTime = $machine_time[1]-600-$machine_time[0];
-                // 添加查询设备是否在线任务，若正常离线则
-                $this->sendToMachine(['machine_id'=>$machine_id],'powerTime',['powerTime'=>$mTime]);
+            if($machine_time[0]<$machine_time[1] && time()>$machine_time[1]) continue;
+            if($machine_time[0] > $time-1800 && $machine_time[0] <= $time+1800){
+                // redis添加设备直接执行定时任务记录
+                $device[$machine_id] = $machine_time;
+                if($machine_time[0] <= $time){
+                    $otherData['time_point'] = time();
+                    $otherData['power_time'] = abs(time()-$machine_time[1]);
+                } else {
+                    $otherData['time_point'] = abs($machine_time[0]-time());
+                    $otherData['power_time'] = abs($machine_time[0]-$machine_time[1]);
+                }
+                // $otherData['time_point'] = date('H:i',$otherData['time_point']);
+                // $otherData['power_time'] = date('H:i',$otherData['power_time']) ;
+                // var_dump([$machine_id=>$otherData]);
+                $res = $this->sendToMachine(['machine_id'=>$machine_id],'powerWakeUp',$otherData);
+                actionLog('执行结果'.$res,'设备'.$machine_id,'checkOnOff');
             }
         }
-        dd(1111111111111);
     }
 
 //    public function machineUploadQueue()
