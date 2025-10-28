@@ -10,6 +10,7 @@ namespace app\api\controller;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Config\ConfigApiModel;
 
 class V2 extends Common
 {
@@ -23,6 +24,7 @@ class V2 extends Common
         $page = input("page", 1);
         $pageNum = input("pageNum", 20);
         $apiName = input("apiName");
+        $auth_name = input("auth_name");
         if ($type == 1) {
             // 预订商品
             $params = [
@@ -79,9 +81,10 @@ class V2 extends Common
                 "machine_id" => $machine_id,
             ];
         }
+        $auth_password = ConfigApiModel::getFieldValue(['auth_name' => $auth_name],'auth_password');
         $data = [
-            "auth_name" => "ctrip",
-            "auth_password" => "Karrie&C2023",
+            "auth_name" => $auth_name,
+            "auth_password" => $auth_password,
             "timestamp" => time(),
             "params" => json_encode($params, 320),
         ];
