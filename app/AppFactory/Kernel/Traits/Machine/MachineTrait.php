@@ -267,7 +267,6 @@ trait MachineTrait
         "recycleIntro",
         "powerWakeUp",
         "initialization",
-        "reOutPort",
     ];
 
     /**
