@@ -261,7 +261,6 @@ trait MachineTrait
         "boxDoorClose",
         "recycleOut",
         "recycleIntro",
-        "reOutPort",
     ];
 
     /**
