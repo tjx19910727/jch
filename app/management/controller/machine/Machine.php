@@ -118,7 +118,7 @@ class Machine extends Common
             $postData = input();
             $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             if (isset($postData['msgType']) && is_int($postData['msgType'])) {
-                $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update"];
+                $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update", 6=> "powerWakeUp", 7=>"initialization"];
                 $postData['msgType'] = $typeList[$postData['msgType']];
             }
             $result = $this->app->machine->sendToMachine($postData, $postData['msgType'], $otherData);
@@ -170,6 +170,7 @@ class Machine extends Common
         try {
             $postData = input();
             $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
+            $lightArr = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             if (isset($postData['msgType']) && is_int($postData['msgType'])) {
                 $typeList = [1 => "sleep", 2 => "wakeUp"];
                 $postData['msgType'] = $typeList[$postData['msgType']];
@@ -177,7 +178,9 @@ class Machine extends Common
             $postData['machine_id'] = explode(',',$postData['machine_id']);
             $result = $this->app->machine->sendToArrMachine($postData, $postData['msgType'], $otherData);
             if(!$result) $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
-            $result = $this->app->machine->sendToArrMachine($postData,"light",$otherData);
+            if($postData['msgType'] == 'sleep') $lightArr = ['value' => 0];
+            else $lightArr = ['value' => 100];
+            $result = $this->app->machine->sendToArrMachine($postData,"light",$lightArr);
             return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
         } catch (\Exception $e) {
             actionException($e,1);

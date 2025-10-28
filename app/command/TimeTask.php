@@ -30,6 +30,7 @@ class TimeTask extends Command
      * php /home/wwwroot/kiosk/think time_task authManagerLog clearLog          删除180天前的用户事件记录，每月或每周或每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task machine countOnline              结算昨天在线数据，每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task machine checkOffline             检查设备最后心跳时间判断在线离线，每隔1分钟执行一次定时任务，判断30秒内未更新心跳的为离线
+     * php /home/wwwroot/kiosk/think time_task machine checkOnOff               检查当天设置定时开关机设备是否正常执行，若不正常则重发临时断电开关机任务做执行
      * php /home/wwwroot/kiosk/think time_task export clearExcel                清除超过3天的Excel，每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task coupon clearCouponUsed           清除已过期或已作废未使用的优惠券码，每天定时任务运行一次
      *
@@ -42,6 +43,7 @@ class TimeTask extends Command
      *      machine：
      *          countOnline                 结算设备昨天在线数据
      *          checkOffline                检查设备最后心跳时间判断在线离线
+     *          checkOnOff                  检查设备定时开关机是否正常
      *      machineChannelStock
      *          countMcStock                统计库存报表，已废弃，使用实时获取
      *      goods：

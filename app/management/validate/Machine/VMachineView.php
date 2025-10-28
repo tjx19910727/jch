@@ -15,10 +15,10 @@ class VMachineView extends VCommon
 {
 
         protected $rule = [
-            "mv_id" => "require",
+            "mv_id" => "requireWith:m_id",
             "template_id" => "require",
             "view_id" => "require",
-            "m_id" => "require",
+            "m_id" => "requireWith:mv_id",
             "name" => "require",
             "publish_time" => "require",
         ];

@@ -70,6 +70,43 @@ class OfficialClient extends WxBaseClient
     }
 
     /**
+     * 获取微信公众号菜单栏
+     * @return json
+     */
+    public function menuList($message){
+        try {
+            $this->wx = $this->getWxOfficialFind(['gh_id' => $message['gh_id']]);
+            if (!$this->wx) {
+                actionLog($this->getLS(),'查无微信配置SQL');
+            } else {
+                $this->wx = $this->wx->toArray();
+                if(is_array($this->wx)||count($this->wx)!=0){
+                    $this->getWxApp($this->wx);
+                    $list = $this->wx_app->menu->list();
+                    $current = $this->wx_app->menu->current();
+                    dd($list);
+
+                    $menu = json_encode([
+                        'list' => $list,
+                        'current' => $current
+                    ]);
+                    dd($menu);
+                }
+            }
+
+
+        } catch (BadRequestException $e) {
+            actionException($e,1);
+        } catch (InvalidArgumentException $e) {
+            actionException($e,1);
+        } catch (InvalidConfigException $e) {
+            actionException($e,1);
+        } catch (\ReflectionException $e) {
+            actionException($e,1);
+        }
+    }
+
+    /**
      * 处理事件
      * @param $message
      * @return string
