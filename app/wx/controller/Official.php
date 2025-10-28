@@ -32,4 +32,10 @@ class Official extends BaseController
         actionLog($message,'XML转格式');
         AppFactory::wx()->official->receiveHandle($message);
     }
+
+    // 公众号菜单栏获取
+    public function getMenu(){
+        $data = input(); 
+        AppFactory::wx()->official->menuList($data);
+    }
 }
