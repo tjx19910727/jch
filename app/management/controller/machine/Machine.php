@@ -121,6 +121,12 @@ class Machine extends Common
                 $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update", 6=> "powerWakeUp", 7=>"initialization"];
                 $postData['msgType'] = $typeList[$postData['msgType']];
             }
+            if(!empty($postData['powerTime'])) {
+                $Mchtime = explode(',',$postData['powerTime']);
+                $Mchtime[0] = !empty($Mchtime[0])?strtotime($Mchtime[0]):0;
+                $Mchtime[1] = !empty($Mchtime[1])?strtotime($Mchtime[1]):0;
+                $otherData['powerTime'] = $Mchtime[0]+$Mchtime[1];
+            }
             $result = $this->app->machine->sendToMachine($postData, $postData['msgType'], $otherData);
             return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
         } catch (\Exception $e) {
