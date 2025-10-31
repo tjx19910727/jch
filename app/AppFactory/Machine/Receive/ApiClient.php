@@ -243,7 +243,7 @@ class ApiClient extends ReceiveBaseClient
     {
         $where['m_id'] = $this->machine['m_id'];
         $goodsField = "mg_id,m_id,machine_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,available_stock,
-        disabled_stock,reserve_stock,standby_stock,pre_loading_stock,is_shelf";
+        disabled_stock,reserve_stock,standby_stock,pre_loading_stock,is_shelf,sell_channel,exter_url";
         return $this->r(200, "SUCCESS", $this->getMachineGoodsList($where, $this->data['pageNum'] ?? 0, $goodsField));
     }
 

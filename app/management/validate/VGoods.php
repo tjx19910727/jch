@@ -26,6 +26,7 @@ class VGoods extends VCommon
         "length" => "require",
         "width" => "require",
         "height" => "require",
+        "exter_url" => "requireIf:sell_channel,2"
     ];
 
     protected $message = [
