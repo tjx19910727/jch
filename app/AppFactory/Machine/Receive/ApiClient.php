@@ -851,7 +851,7 @@ class ApiClient extends ReceiveBaseClient
                     // 免费的直接出货
                     if ($this->data['pay_type'] == 0) {
                         $this->rollbackTrans();
-                        return $this->r(300,$this->lang("VSubCar.pay_type_empty"));
+                        return $this->r(200,$this->lang("VSubCar.pay_type_empty"));
 //                        $this->outGoods();
 //                        $this->commitTrans();
 //                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
