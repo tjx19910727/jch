@@ -639,7 +639,7 @@ class ApiClient extends ReceiveBaseClient
     {
         $goods = $this->getGoodsFind(["g_id" => $this->data['g_id']],
             "g_id,g_name,gc_id,gc_name,model,pic,sku,bar_code,sku2,manufacturer,service_phone,performance,g_type,
-            sell_channel,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,
+            sell_channel,exter_url,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,
             `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price", 'update_time desc');
         if (is_string($goods)) return $this->rFail($goods);
         if ($goods) {
