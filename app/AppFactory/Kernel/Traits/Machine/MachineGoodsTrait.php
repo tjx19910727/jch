@@ -71,6 +71,11 @@ trait MachineGoodsTrait
         return $result;
     }
 
+    public function getMachineGoodsListJoinGoods($where,$pageNum = 0,$field = "*",$order = "")
+    {
+        return MachineGoodsModel::getMGoodsListJoinGoods($where,$pageNum,$field,$order);
+    }
+
     // mg_id g_id  available_stock  disabled_stock  reserve_stock  standby_stock  pre_loading_stock is_shelf
 
     /**

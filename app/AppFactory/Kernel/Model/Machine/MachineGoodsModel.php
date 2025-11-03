@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Model\Machine;
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\BaseModel;
 use think\Model;
+use think\cache\driver\Redis;
 
 class MachineGoodsModel extends BaseModel
 {
@@ -40,7 +41,7 @@ class MachineGoodsModel extends BaseModel
      */
     public static function AfterUpdate($mg_id)
     {
-        $redis = new \Redis();
+        $redis = new Redis();
         $config = config("redis");
         $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
         if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
@@ -76,4 +77,20 @@ class MachineGoodsModel extends BaseModel
             }
         }
     }
+
+    public static function getMGoodsListJoinGoods($where,$pageNum = 0, $field = "*",$order = "")
+    {
+        $data = self::alias("mg")
+            ->join("goods g","mg.g_id = g.g_id","left")
+            ->where($where)
+            ->field($field)
+            ->order($order);
+        if ($pageNum) {
+            $data = $data->paginate($pageNum,false,['query' => request()->param()]);
+        } else {
+            $data = $data->select();
+        }
+        return $data;
+    }
+
 }
