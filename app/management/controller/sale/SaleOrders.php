@@ -66,8 +66,7 @@ class SaleOrders extends Common
         }
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         if ($postData['supplier']) unset($where['ao_id']);
-        // dd(json_encode($where));
-        return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc");
+        return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc",$postData['supplier']);
     }
 
     /**
@@ -115,7 +114,7 @@ class SaleOrders extends Common
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
         if ($postData['supplier']) unset($where['ao_id']);
 
-        return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc"));
+        return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",$postData['supplier']));
     }
 
     /**
