@@ -30,7 +30,7 @@ class Machine extends Common
         }
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
-        if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
+        if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
         return $this->app->machine->getMList($where,$pageNum,$this->field,"machine_id desc");
     }
 

@@ -10,6 +10,7 @@ namespace app\management\controller\sale;
 
 
 use app\management\controller\Common;
+use think\Facade\Db;
 
 class SaleOrders extends Common
 {
@@ -30,6 +31,19 @@ class SaleOrders extends Common
             unset($postData['machine_group_id']);
             if (!$machineIds) return $this->app->machine->rNoData();
         }
+        
+        if($this->authMchCannel()['status'] != 0){
+            $orderIds = Db::name('sale_orders_details')
+            ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
+            ->field('order_id')
+            ->select();
+
+            $order_id = [];
+            foreach($orderIds as $item){
+                array_push($order_id,$item['order_id']);
+            }
+            $where[] = ['order_id','in',$order_id];
+        }
 
         // 查看成本价查询账号是否包含当前权限
         if ($this->manager['pid'] > 0) {
@@ -49,8 +63,7 @@ class SaleOrders extends Common
         }else{
             $field = "order_id,trade_no,mch_no,cost_price,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_time,out_time,machine_name,machine_id,discount_price,factory,has_hotel,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
         }
-        if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
-
+        if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc");
     }
 
@@ -80,6 +93,19 @@ class SaleOrders extends Common
         $postData = input();
         $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"trade_no" => "like","machine_id" => 'like',"machine_name" => 'like','factory'=>'in','inventory_location'=>'in']);
         $where['so.pay_status'] = 3;
+        if($this->authMchCannel()['status'] != 0){
+            $sodIds = Db::name('sale_orders_details')
+            ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
+            ->field('sod_id')
+            ->select();
+
+            $sod_id = [];
+            foreach($sodIds as $item){
+                array_push($sod_id,$item['sod_id']);
+            }
+            $where[] = ['sod.sod_id','in',$sod_id];
+        }
+
         $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,so.refund_status,so.factory,so.inventory_location,
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
@@ -185,7 +211,19 @@ class SaleOrders extends Common
         }
         $field = "sor.*,so.pay_type";
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
+        
+        if($this->authMchCannel()['status'] != 0){
+            $orderIds = Db::name('sale_orders_details')
+            ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
+            ->field('order_id')
+            ->select();
 
+            $order_id = [];
+            foreach($orderIds as $item){
+                array_push($order_id,$item['order_id']);
+            }
+            $where[] = ['order_id','in',$order_id];
+        }
         return returnData($this->app->saleOrders->getSaleOrdersRefundListJoinSoSod($where,$pageNum,$field,'sor.sor_id desc'));
     }
 
