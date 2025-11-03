@@ -73,14 +73,17 @@ class SaleOrdersClient extends ManagementClient
      * @param int $pageNum
      * @param string $field
      * @param string $order
+     * @param bool $supplier
      * @return array|\think\response\Json
      */
-    public function getSoList($where, $pageNum = 0, $field = "*", $order = "")
+    public function getSoList($where, $pageNum = 0, $field = "*", $order = "", $supplier = false)
     {
         try {
-            if ($this->manager['pid'] > 0) {
-                $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-                if ($mIds) $where[] = ['m_id', 'in', $mIds];
+            if(!$supplier){
+                if ($this->manager['pid'] > 0) {
+                    $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+                    if ($mIds) $where[] = ['m_id', 'in', $mIds];
+                }
             }
             $data = $this->getSaleOrdersList($where, $pageNum, $field, $order);
             return $this->r(200, $this->lang("query_success"), $data);
@@ -90,11 +93,13 @@ class SaleOrdersClient extends ManagementClient
         }
     }
 
-    public function getDetailsList($where, $pageNum = 0, $field = "*", $order = "")
+    public function getDetailsList($where, $pageNum = 0, $field = "*", $order = "", $supplier = false)
     {
-        if ($this->manager['pid'] > 0) {
-            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-            if ($mIds) $where[] = ['m_id', 'in', $mIds];
+        if(!$supplier){
+            if ($this->manager['pid'] > 0) {
+                $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+                if ($mIds) $where[] = ['m_id', 'in', $mIds];
+            }
         }
         return $this->r(200, 'query_success', $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, $order));
 
