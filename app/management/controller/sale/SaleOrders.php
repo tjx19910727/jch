@@ -49,7 +49,7 @@ class SaleOrders extends Common
         }else{
             $field = "order_id,trade_no,mch_no,cost_price,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_time,out_time,machine_name,machine_id,discount_price,factory,has_hotel,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
         }
-        if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
+        if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
 
         return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc");
     }
@@ -184,7 +184,7 @@ class SaleOrders extends Common
             if ($mIds) $where[] = ['sor.m_id', 'in', $mIds];
         }
         $field = "sor.*,so.pay_type";
-        if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
+        if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
 
         return returnData($this->app->saleOrders->getSaleOrdersRefundListJoinSoSod($where,$pageNum,$field,'sor.sor_id desc'));
     }

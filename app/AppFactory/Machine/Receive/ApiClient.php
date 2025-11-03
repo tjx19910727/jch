@@ -243,7 +243,7 @@ class ApiClient extends ReceiveBaseClient
     {
         $where['m_id'] = $this->machine['m_id'];
         $goodsField = "mg_id,m_id,machine_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,available_stock,
-        disabled_stock,reserve_stock,standby_stock,pre_loading_stock,is_shelf";
+        disabled_stock,reserve_stock,standby_stock,pre_loading_stock,is_shelf,sell_channel,exter_url";
         return $this->r(200, "SUCCESS", $this->getMachineGoodsList($where, $this->data['pageNum'] ?? 0, $goodsField));
     }
 
@@ -639,7 +639,7 @@ class ApiClient extends ReceiveBaseClient
     {
         $goods = $this->getGoodsFind(["g_id" => $this->data['g_id']],
             "g_id,g_name,gc_id,gc_name,model,pic,sku,bar_code,sku2,manufacturer,service_phone,performance,g_type,
-            sell_channel,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,
+            sell_channel,exter_url,is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,
             `status`,ao_id,update_time,`desc`,cost_price,market_price,retail_price", 'update_time desc');
         if (is_string($goods)) return $this->rFail($goods);
         if ($goods) {
@@ -851,7 +851,7 @@ class ApiClient extends ReceiveBaseClient
                     // 免费的直接出货
                     if ($this->data['pay_type'] == 0) {
                         $this->rollbackTrans();
-                        return $this->r(300,$this->lang("VSubCar.pay_type_empty"));
+                        return $this->r(200,$this->lang("VSubCar.pay_type_empty"));
 //                        $this->outGoods();
 //                        $this->commitTrans();
 //                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
