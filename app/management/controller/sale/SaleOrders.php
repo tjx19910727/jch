@@ -18,6 +18,7 @@ class SaleOrders extends Common
 
     /**
      * 查询订单列表
+     * @param bool supplier 供应商账号是否跳过组织选择查看所属商品订单
      * @return mixed
      */
     public function getList()
@@ -64,6 +65,8 @@ class SaleOrders extends Common
             $field = "order_id,trade_no,mch_no,cost_price,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_time,out_time,machine_name,machine_id,discount_price,factory,has_hotel,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
         }
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
+        if ($postData['supplier']) unset($where['ao_id']);
+        // dd(json_encode($where));
         return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc");
     }
 
@@ -86,6 +89,7 @@ class SaleOrders extends Common
 
     /**
      * 商品交易列表
+     * @param bool supplier 供应商账号是否跳过组织选择查看所属子商品订单
      * @return array|string
      */
     public function getDetailsList()
@@ -109,6 +113,8 @@ class SaleOrders extends Common
         $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,so.refund_status,so.factory,so.inventory_location,
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
+        if ($postData['supplier']) unset($where['ao_id']);
+
         return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc"));
     }
 
@@ -183,6 +189,7 @@ class SaleOrders extends Common
 
     /**
      * 获取订单退款列表
+     * @param bool supplier 供应商账号是否跳过组织选择查看所属商品订单
      * @return array|string
      */
     public function getRefundList()
@@ -224,6 +231,8 @@ class SaleOrders extends Common
             }
             $where[] = ['order_id','in',$order_id];
         }
+        if ($postData['supplier']) unset($where['ao_id']);
+
         return returnData($this->app->saleOrders->getSaleOrdersRefundListJoinSoSod($where,$pageNum,$field,'sor.sor_id desc'));
     }
 

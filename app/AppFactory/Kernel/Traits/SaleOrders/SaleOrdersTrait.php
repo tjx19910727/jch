@@ -68,6 +68,7 @@ trait SaleOrdersTrait
      */
     public function getSaleOrdersList($where, $pageNum = 0, $field = "*", $order = "", $eachFn = '', $group = '', $limit = 0)
     {
+        dd($where);
         $data = SaleOrdersModel::getList($where, $pageNum, $field, $order, $eachFn, $group, $limit);
         if ($pageNum)
             $data = $data->each(function ($item) {
