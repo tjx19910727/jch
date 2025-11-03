@@ -113,7 +113,6 @@ class SaleOrders extends Common
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
         if ($postData['supplier']) unset($where['ao_id']);
-
         return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",$postData['supplier']));
     }
 
@@ -219,19 +218,18 @@ class SaleOrders extends Common
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
         
         if($this->authMchCannel()['status'] != 0){
-            $orderIds = Db::name('sale_orders_details')
+            $sodIds = Db::name('sale_orders_details')
             ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
-            ->field('order_id')
+            ->field('sod_id')
             ->select();
 
-            $order_id = [];
-            foreach($orderIds as $item){
-                array_push($order_id,$item['order_id']);
+            $sod_id = [];
+            foreach($sodIds as $item){
+                array_push($sod_id,$item['sod_id']);
             }
-            $where[] = ['order_id','in',$order_id];
+            $where[] = ['sod.sod_id','in',$sod_id];
         }
-        if ($postData['supplier']) unset($where['ao_id']);
-
+        if ($postData['supplier']) unset($where['sor.ao_id']);
         return returnData($this->app->saleOrders->getSaleOrdersRefundListJoinSoSod($where,$pageNum,$field,'sor.sor_id desc'));
     }
 
