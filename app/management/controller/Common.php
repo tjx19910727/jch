@@ -13,6 +13,7 @@ use app\AppFactory\Management\Application;
 use app\management\validate\VCommon;
 use think\exception\ValidateException;
 use think\facade\Filesystem;
+use think\facade\Db;
 
 class Common extends AuthController
 {
@@ -277,5 +278,32 @@ class Common extends AuthController
         if (md5($pwd.config("app.salt")) !=  $this->manager['password'])
             return returnState(100,lang("VLogin.pwd_incorrect"));
         return returnState(200,lang("pass_the_verification"));
+    }
+
+    /**
+     * 除嘉潮汇架构下限制账号查看货道信息权限
+     * @return array
+     */
+    public function authMchCannel(){
+        if($this->manager['ao_id'] != 1&&$this->manager['ao_id'] != 17){
+            $ao = Db::name('auth_organization')->where(['ao_id'=>$this->manager['ao_id']])->field('organization_name')->find();
+
+            $mc = Db::name('machine_channel')
+            ->alias('mc')
+            ->join('goods g','mc.g_id=g.g_id')
+            ->where('g.manufacturer','like','%'.$ao['organization_name'].'%')
+            ->field('mc_id')
+            ->select();
+
+            if(empty($mc)) return ['status'=>0,'data'=>true];
+
+            $mcIds['mc_id'] = [];
+            foreach($mc as $item){
+                array_push($mcIds['mc_id'],$item['mc_id']);
+            }
+
+            return ['status'=>1,'data'=>$mcIds];
+        }
+        return ['status'=>0,'data'=>true];
     }
 }
