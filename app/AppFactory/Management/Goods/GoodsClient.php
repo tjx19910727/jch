@@ -56,6 +56,9 @@ class GoodsClient extends ManagementClient
      */
     public function get10List($where)
     {
+        if($this->manager['account']=='meichitu'){
+            $where[] = ['gc_name','like','%美驰图%'];
+        }
         $list = $this->getSaleOrdersGoodsCountList($where, 0,
             'g_id,g_name,totalPrice,totalQuantity,retail_price,pic',
             'totalPrice desc,totalQuantity desc, g_id desc', '', '', 10);
