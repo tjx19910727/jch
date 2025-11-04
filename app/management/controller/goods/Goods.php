@@ -40,7 +40,7 @@ class Goods extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['g_name' => "like",'sku' => "like"]);
-        if(!empty($postData['machine_id'])||$postData['sale_check']){
+        if(!empty($postData['machine_id'])||!empty($postData['sale_check'])){
             $result = $this->app->goods->getAuthList($where,$pageNum,$this->field,'g_id desc',$postData);
             return $result;
         }
