@@ -14,6 +14,8 @@ use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
 use app\management\validate\VGoods;
@@ -23,6 +25,7 @@ class GoodsClient extends ManagementClient
     use GoodsTrait, GoodsLangTrait;
     use AuthManagerTrait;
     use SaleOrdersGoodsCountTrait;
+    use MachineTrait,MachineChannelTrait;
 
     public function addG($postData)
     {
@@ -78,6 +81,27 @@ class GoodsClient extends ManagementClient
             }
         }
         return $this->rQ($list);
+    }
+
+    public function getAuthList($where,$pageNum,$field,$order,$input){
+        $whereG = [];
+        if(!empty($input['machine_id'])) $whereG[] = ['machine_id','in',$input['machine_id']];
+        if($input['sale_check']){
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            $createMIds = $this->getMachineColumn(['creator' => $this->manager['manager_id']],'m_id');
+            if ($createMIds && $mIds) $mIds = array_unique(array_merge($mIds,$createMIds));
+            $whereG[] = ['m_id', 'in', $mIds];
+        }
+        $gIds = $this->getMachineChannelList($whereG,0,'g_id');
+        $gIds = $gIds->toArray();
+        $g_id = [];
+        foreach($gIds as $item){
+            array_push($g_id,$item['g_id']);
+        }
+        
+        $where[] = ['g_id','in',$g_id];
+        $result = $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
+        return $result;
     }
 
     public function exportRankingList($where)
