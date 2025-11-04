@@ -646,6 +646,7 @@ class SaleOrdersClient extends ManagementClient
         SUM(order_num) order_num,
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
+        $order = 'create_date desc';
         $data = $this->getSaleOrdersDailyCountList($where, $pageNum, $field, $order, $group);
         return $this->rQ($data);
     }
