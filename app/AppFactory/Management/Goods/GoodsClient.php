@@ -64,7 +64,8 @@ class GoodsClient extends ManagementClient
         }
         $list = $this->getSaleOrdersGoodsCountList($where, 0,
             'g_id,g_name,totalPrice,totalQuantity,retail_price,pic',
-            'totalPrice desc,totalQuantity desc, g_id desc', '', '', 10);
+            // 'totalPrice desc,totalQuantity desc, g_id desc', '', '', 10);
+            'totalPrice desc', '', '', 10);
         if ($list) {
             $list = $list->toArray();
             $lang = input("lang");
