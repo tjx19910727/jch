@@ -161,9 +161,11 @@ class SaleOrders extends Common
     public function getTransactionVideo()
     {
         $trade_no = input('trade_no');
-        $order = $this->app->saleOrders->getFind(['trade_no' => $trade_no],'transaction_video,machine_id','',0);
-        if (!$order) return returnState(100,lang("VSaleOrders.order_no_data"));
-        if (!$order['transaction_video']) {
+        if(empty(input('status'))){
+            $order = $this->app->saleOrders->getFind(['trade_no' => $trade_no],'transaction_video,machine_id','',0);
+            if (!$order) return returnState(100,lang("VSaleOrders.order_no_data"));
+        }
+        if (!$order['transaction_video']||input('status')=='getOpenDoor') {
             $otherData = ['trade_no' => $trade_no];
             $result = $this->app->machine->sendToMachine(['machine_id' => $order['machine_id']],'transactionVideo',$otherData);
             return is_object($result) ? returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result) :
