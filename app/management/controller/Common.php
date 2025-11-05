@@ -285,13 +285,12 @@ class Common extends AuthController
      * @return array
      */
     public function authMchCannel(){
-        if($this->manager['ao_id'] != 1&&$this->manager['ao_id'] != 17){
-            $ao = Db::name('auth_organization')->where(['ao_id'=>$this->manager['ao_id']])->field('organization_name')->find();
-
+        if($this->manager['account'] == 'meichitu'){
+            // $ao = Db::name('auth_organization')->where(['ao_id'=>$this->manager['ao_id']])->field('organization_name')->find();
             $mc = Db::name('machine_channel')
             ->alias('mc')
             ->join('goods g','mc.g_id=g.g_id')
-            ->where('g.manufacturer','like','%'.$ao['organization_name'].'%')
+            ->where('g.gc_name','like','%'.$this->manager['account'].'%')
             ->field('mc_id')
             ->select();
 
