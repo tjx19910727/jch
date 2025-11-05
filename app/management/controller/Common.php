@@ -290,7 +290,7 @@ class Common extends AuthController
             $mc = Db::name('machine_channel')
             ->alias('mc')
             ->join('goods g','mc.g_id=g.g_id')
-            ->where('g.gc_name','like','%'.$this->manager['account'].'%')
+            ->where('g.gc_name','like','%美驰图%')
             ->field('mc_id')
             ->select();
 
@@ -300,7 +300,6 @@ class Common extends AuthController
             foreach($mc as $item){
                 array_push($mcIds['mc_id'],$item['mc_id']);
             }
-
             return ['status'=>1,'data'=>$mcIds];
         }
         return ['status'=>0,'data'=>true];
