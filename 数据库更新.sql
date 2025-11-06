@@ -1,3 +1,7 @@
+# 20251105
+ALTER TABLE kiosk.machine_error_code
+  ADD COLUMN `transaction_video` varchar(255) NULL COMMENT '视频文件路径' AFTER `msg`;
+  
 # 20250901
 ALTER TABLE `machine` 
   ADD COLUMN `factory` varchar(100) NULL COMMENT '所属工厂' AFTER `current_status`;

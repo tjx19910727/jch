@@ -164,16 +164,28 @@ class SaleOrders extends Common
         if(empty(input('status'))){
             $order = $this->app->saleOrders->getFind(['trade_no' => $trade_no],'transaction_video,machine_id','',0);
             if (!$order) return returnState(100,lang("VSaleOrders.order_no_data"));
-        }
-        if (!$order['transaction_video']||input('status')=='getOpenDoor') {
-            $otherData = ['trade_no' => $trade_no];
-            $result = $this->app->machine->sendToMachine(['machine_id' => $order['machine_id']],'transactionVideo',$otherData);
-            return is_object($result) ? returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result) :
+            if (!$order['transaction_video']) {
+                $otherData = ['trade_no' => $trade_no];
+                $result = $this->app->machine->sendToMachine(['machine_id' => $order['machine_id']],'transactionVideo',$otherData);
+                return is_object($result) ? returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result) :
                 $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+            }
+            return returnState(200,'查询成功',$order);
         }
-        return returnState(200,'查询成功',$order);
+        else{
+            if(input('status')=='getOpenDoor'){
+                $mec = $this->app->MachineErrorCode->getFind(['me_id' => input('me_id')],'transaction_video,machine_id','',0);
+                if (!$mec) return returnState(100,lang("VSaleOrders.order_no_data"));
+                if (!$mec['transaction_video']) {
+                    $otherData = ['trade_no' => $trade_no];
+                    $result = $this->app->machine->sendToMachine(['machine_id' => $mec['machine_id']],'transactionVideo',$otherData);
+                    return is_object($result) ? returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result) :
+                    $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+                }
+                return returnState(200,'查询成功',$mec);
+            }
+        }
     }
-
     /**
      * 导出订单列表信息
      * @return array|string
@@ -388,6 +400,19 @@ class SaleOrders extends Common
                 if ($mIds) $where[] = ['m_id', 'in', $mIds];
             }
         }
+        if($this->authMchCannel()['status'] != 0){
+            $sodIds = Db::name('sale_orders_details')
+            ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
+            ->field('sod_id')
+            ->select();
+
+            $sod_id = [];
+            foreach($sodIds as $item){
+                array_push($sod_id,$item['sod_id']);
+            }
+            $where[] = ['sod.sod_id','in',$sod_id];
+        }
+
         $where['so.pay_status'] = 3;
         actionLog($where,'查询条件');
         return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20);
