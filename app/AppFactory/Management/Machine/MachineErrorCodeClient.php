@@ -37,6 +37,27 @@ class MachineErrorCodeClient extends ManagementClient
         "3" => "工控电脑",
     ];
 
+        public function getEcFind($where, $pageNum = 0, $field = "*", $order = "", $group = "")
+    {
+        $data = $this->getMachineErrorCodeFind($where, $pageNum, $field, $order, function ($item) {
+            $errTypeName = "";
+            if (isset($item['errorCode']) && $item['errorCode']) {
+                $errTypeList = config("error_code_list");
+                foreach ($errTypeList as $value) {
+                    if (in_array($item['errorCode'], $value['codeList'])) {
+                        $errTypeName = $this->lang("deviceErrorCodeType." . $value['name']);
+                        break;
+                    }
+                }
+            }
+            $item['errorCodeType'] = $errTypeName;
+            return $item;
+        }, $group);
+        actionLog($this->getLS(),'【SQL】查询错误码列表');
+        return $this->rQ($data);
+    }
+
+
     public function getEcList($where, $pageNum = 0, $field = "*", $order = "", $group = "")
     {
         if ($this->manager['pid'] > 0) {
