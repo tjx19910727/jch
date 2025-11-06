@@ -174,7 +174,7 @@ class SaleOrders extends Common
         }
         else{
             if(input('status')=='getOpenDoor'){
-                $mec = $this->app->MachineErrorCode->getFind(['me_id' => input('me_id')],'transaction_video,machine_id','',0);
+                $mec = $this->app->machineErrorCode->getMachineErrorCodeFind(['me_id' => input('me_id')],'transaction_video,machine_id','',0);
                 if (!$mec) return returnState(100,lang("VSaleOrders.order_no_data"));
                 if (!$mec['transaction_video']) {
                     $otherData = ['trade_no' => $trade_no];
@@ -394,10 +394,13 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
-        if (!isset($postData['m_id']) || !$postData['m_id']) {
-            if ($this->manager['pid'] > 0) {
-                $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
-                if ($mIds) $where[] = ['m_id', 'in', $mIds];
+        // 添加美驰图账号判断
+        if ($this->manager['account'] != 'meichitu'){
+            if (!isset($postData['m_id']) || !$postData['m_id']) {
+                if ($this->manager['pid'] > 0) {
+                    $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+                    if ($mIds) $where[] = ['m_id', 'in', $mIds];
+                }
             }
         }
         if($this->authMchCannel()['status'] != 0){
