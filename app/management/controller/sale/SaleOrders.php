@@ -25,13 +25,14 @@ class SaleOrders extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in']);
-        $where['pay_status'] = 3;
-        if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
+        if (!empty($postData['machine_group_id'])) {
             $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
             unset($postData['machine_group_id']);
             if (!$machineIds) return $this->app->machine->rNoData();
         }
+
+        $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in']);
+        $where['pay_status'] = 3;
         
         if($this->authMchCannel()['status'] != 0){
             $orderIds = Db::name('sale_orders_details')
@@ -45,7 +46,6 @@ class SaleOrders extends Common
             }
             $where[] = ['order_id','in',$order_id];
         }
-
         // 查看成本价查询账号是否包含当前权限
         if ($this->manager['pid'] > 0) {
             $whereArn[] = ['role_id', 'in', $this->app->authManagerRole->getAuthManagerRoleColumn(['manager_id' => $this->manager['manager_id'], 'is_del' => 2], 'role_id')];
@@ -229,7 +229,7 @@ class SaleOrders extends Common
             if ($mIds) $where[] = ['sor.m_id', 'in', $mIds];
         }
         $field = "sor.*,so.pay_type";
-        if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
+        if (!empty($machineIds)) $where[] = ['sor.machine_id', 'in',$machineIds];
         
         if($this->authMchCannel()['status'] != 0){
             $sodIds = Db::name('sale_orders_details')
