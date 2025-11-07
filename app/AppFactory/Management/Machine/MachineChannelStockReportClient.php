@@ -59,7 +59,7 @@ class MachineChannelStockReportClient extends ManagementClient
         if ($eType == 2) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
-            $field = "machine_id,machine_name,sku,g_name,model,gc_name,retail_price,mc_stock,pre_stock,standby_stock,bad_stock,total_stock";
+            $field = "machine_id,machine_name,sku,g_name,model,gc_name,retail_price,mc_stock,pre_stock,standby_stock,bad_stock,total_stock,factory,inventory_location";
         }
         $list = $this->getMachineChannelStockReportList($where,0,$field,"total_stock desc",$group);
         if ($list) {
@@ -93,6 +93,8 @@ class MachineChannelStockReportClient extends ManagementClient
                     "standby_stock" => "备用库存",
                     "bad_stock" => "Bad库存",
                     "total_stock" => "总库存",
+                    "factory" => '所属工厂',
+                    "inventory_location" => '库存地点'
                 ];
                 $filename = "库存报表(按设备)-" . date("Ymd");
             }
