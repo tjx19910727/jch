@@ -40,7 +40,7 @@ class Official extends BaseController
         $data = input(); 
         if ($data)
             actionLog($data, '接收到的数据');
-        if (isset($data['gh_id'])) {
+        if (empty($data['gh_id'])) {
             return $this->rFail('未传入公众号原始ID');
         }
         AppFactory::wx()->official->menuList($data);

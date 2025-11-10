@@ -60,6 +60,8 @@ class MachineChannelStockReportClient extends ManagementClient
         if ($eType == 2) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['mcs.m_id', 'in', $mIds];
+            $where['mcs.ao_id'] = $where['ao_id'];
+            unset($where['ao_id']);
             $field = "mcs.machine_id,mcs.machine_name,mcs.sku,mcs.g_name,mcs.model,mcs.gc_name,mcs.retail_price,mcs.mc_stock,mcs.pre_stock,mcs.standby_stock,mcs.bad_stock,mcs.total_stock,m.factory,m.inventory_location";
             $list = $this->getMachineChannelStockReportJoinMchList($where,0,$field,"total_stock desc",$group);
         }
