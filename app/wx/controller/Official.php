@@ -38,11 +38,20 @@ class Official extends BaseController
     // 公众号菜单栏获取
     public function getMenu(){
         $data = input(); 
-        if ($data)
-            actionLog($data, '接收到的数据');
         if (empty($data['gh_id'])) {
             return $this->rFail('未传入公众号原始ID');
         }
         AppFactory::wx()->official->menuList($data);
+    }
+
+    // 公众号菜单栏修改
+    public function editMenu(){
+        $data = input();
+        if ($data)
+            actionLog($data, '修改菜单数据');
+        if (empty($data['list'])) {
+            return $this->rFail('未正确传入菜单数据');
+        }
+        AppFactory::wx()->official->editMenu($data);
     }
 }
