@@ -84,17 +84,44 @@ class OfficialClient extends WxBaseClient
                     $this->getWxApp($this->wx);
                     $list = $this->wx_app->menu->list();
                     $current = $this->wx_app->menu->current();
-                    dd($list);
-
                     $menu = json_encode([
                         'list' => $list,
                         'current' => $current
                     ]);
-                    dd($menu);
+                    return returnData($menu,'获取成功');
                 }
             }
+        } catch (BadRequestException $e) {
+            actionException($e,1);
+        } catch (InvalidArgumentException $e) {
+            actionException($e,1);
+        } catch (InvalidConfigException $e) {
+            actionException($e,1);
+        } catch (\ReflectionException $e) {
+            actionException($e,1);
+        }
+    }
 
+    /**
+     * 修改微信公众号菜单
+     * @return json
+     */
+    public function editMenu($message){
+        try{
+            // 先删除旧菜单
+            $this->app->menu->delete();
+            
+            // 创建新菜单
+            $result = $this->app->menu->create($message['list']);
 
+            if ($result['errcode'] == 0) {
+                sleep(2);
+                $current = $this->app->menu->current();
+
+                if (!empty($current['menu']['button'])){
+                    return returnData(null,'创建成功');
+                }
+            }
         } catch (BadRequestException $e) {
             actionException($e,1);
         } catch (InvalidArgumentException $e) {
