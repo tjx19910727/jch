@@ -12,9 +12,11 @@ namespace app\wx\controller;
 
 use app\AppFactory\AppFactory;
 use app\BaseController;
+use app\AppFactory\Kernel\Traits\ReturnTrait;
 
 class Official extends BaseController
 {
+    use ReturnTrait;
 
     // 接收微信公众号通知
     public function receive()
@@ -36,6 +38,11 @@ class Official extends BaseController
     // 公众号菜单栏获取
     public function getMenu(){
         $data = input(); 
+        if ($data)
+            actionLog($data, '接收到的数据');
+        if (isset($data['gh_id'])) {
+            return $this->rFail('未传入公众号原始ID');
+        }
         AppFactory::wx()->official->menuList($data);
     }
 }
