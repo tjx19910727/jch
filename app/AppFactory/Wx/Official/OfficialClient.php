@@ -88,6 +88,7 @@ class OfficialClient extends WxBaseClient
                         'list' => $list,
                         'current' => $current
                     ]);
+                    dd($menu);
                     return returnData($menu,'获取成功');
                 }
             }
