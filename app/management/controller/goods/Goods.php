@@ -112,4 +112,15 @@ class Goods extends Common
         return $this->app->goods->exportExcel($where);
     }
 
+    /**
+     * 导出所有商品Excel
+     * @return array|string
+     */
+    public function exportAllGoodsToExcel()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
+        return $this->app->goods->exportAllGoodsToExcel($where);
+    }
+
 }
