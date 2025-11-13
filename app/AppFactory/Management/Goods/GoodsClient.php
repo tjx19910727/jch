@@ -227,4 +227,50 @@ class GoodsClient extends ManagementClient
         }
         return $this->r(100, $this->lang("action_fail"));
     }
+
+    /**
+     * 导出所有商品
+     * @param $where
+     * @return array|string
+     */
+    public function exportAllGoodsToExcel($where)
+    {
+        $list = $this->getGoodsList([], 0,
+            'g_id,g_name,gc_name,
+            (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
+            '" WHEN 2 THEN "' . $this->lang("export.g_type2") .                                                                                                             
+            '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
+            '" ELSE "' . $this->lang("export.g_type_unDefine") . '" END) g_type,
+            (case status when 1 THEN "' . $this->lang("export.status1") .
+            '" WHEN 2 THEN "' . $this->lang("export.status2") .                                                                                                             
+            '" END) status,
+            model,bar_code,sku,pic,cost_price,market_price,retail_price,manufacturer,service_phone,length,width,height');
+        if ($list) {
+            $list = $list->toArray();
+            $title = [
+                'g_id' => $this->lang("export.g_id"),
+                'g_name' => $this->lang("export.g_name") ,
+                'g_type' => $this->lang("export.g_type"),
+                'gc_name' => $this->lang("export.gc_name"),
+                'model' => $this->lang("export.model"),
+                'bar_code' => $this->lang("export.bar_code"),
+                'sku' => $this->lang("export.sku"),
+                'pic' => $this->lang("export.pic"),
+                'cost_price' => $this->lang("export.cost_price"),
+                'market_price' => $this->lang("export.market_price"),
+                'retail_price' => $this->lang("export.retail_price"),
+                'status' => $this->lang("export.status"),
+                'manufacturer' => $this->lang("export.manufacturer"),
+                'service_phone' => $this->lang("export.service_phone"),
+                'length' => $this->lang("export.length"),
+                'width' => $this->lang("export.width"),
+                'height' => $this->lang("export.height"),
+            ];
+            $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
+            $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
+            return $result;
+        }
+        return $this->r(100, $this->lang("action_fail"));
+    }
+    
 }
