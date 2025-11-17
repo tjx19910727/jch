@@ -350,19 +350,29 @@ trait ActivityFdTrait
         actionLog($this->countContent,'过滤后的最终优惠');
         if ($this->countContent['discount_price']) {
             if (!$this->order['retail_price']) $updateOrder['retail_price'] = $this->order['total_price'];
-            $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
+            $updateOrder['dizscount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
             $updateOrder['total_price'] = bcsub($this->order['total_price'],$this->countContent['discount_price'],2);
             actionLog($this->order,'订单数据');
             $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
             if (!$details) return $this->lang("VActivityFd.sod_no_data");
             $details = $details->toArray();
+            $remainDiscount = $updateOrder['discount_price'];
+            $num = count($details);
             foreach ($details as $dk => $dv) {
                 actionLog($dv, '商品数据');
                 if ($dv['is_gift'] == 2 && $this->fd['condition_type'] != 3) {
                     // 商品优惠金额 = 订单优惠金额 * 商品金额占比 = 订单优惠金额 *  （商品总金额 / 订单总金额）
-                    $sodDiscountPrice = round(bcmul($updateOrder['discount_price'], bcdiv($dv['total_sod_price'], $this->order['total_price'], 2), 3),2);
+                    $sodDiscountPrice = round(bcmul($updateOrder['discount_price'], bcdiv($dv['total_sod_price'], $this->order['total_price'], 5), 3),2);
                     actionLog($sodDiscountPrice, '商品优惠金额');
                     if ($sodDiscountPrice < 0.01) $sodDiscountPrice = 0;
+                    if ($num - 1 == $dk && $sodDiscountPrice < $remainDiscount) {
+                        $sodDiscountPrice = $remainDiscount;
+                        actionLog($sodDiscountPrice,'当前商品为最后一个商品，并且计算的优惠金额小于剩余优惠金额，重置为剩下的优惠金额');
+                    }
+                    if ($sodDiscountPrice < $remainDiscount) {
+                        $remainDiscount -= $sodDiscountPrice;
+                        actionLog($remainDiscount,"剩下的优惠金额，减去 {$dk} 的优惠金额 {$sodDiscountPrice}");
+                    }
 
                     $updateSod['sod_id'] = $dv['sod_id'];
                     $updateSod['discount_price'] = bcadd($dv['discount_price'], $sodDiscountPrice, 2);
