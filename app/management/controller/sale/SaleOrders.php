@@ -94,8 +94,15 @@ class SaleOrders extends Common
     public function getDetailsList()
     {
         $postData = input();
+        $sku = '';
+        if(!empty($postData['sku'])) {
+            $sku = $postData['sku'];
+            unset($postData['sku']);
+        }
         $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"trade_no" => "like","machine_id" => 'like',"machine_name" => 'like','factory'=>'in','inventory_location'=>'in']);
+        if ($sku) $where[] = ['sod.sku', 'like', '%'.$sku.'%'];
         $where['so.pay_status'] = 3;
+
         if($this->authMchCannel()['status'] != 0){
             $sodIds = Db::name('sale_orders_details')
             ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
@@ -113,7 +120,7 @@ class SaleOrders extends Common
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
         // if ($postData['supplier']) unset($where['ao_id']);
-        return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",$postData['supplier']));
+        return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",$postData['supplier'] ?? ''));
     }
 
     /**
@@ -124,17 +131,23 @@ class SaleOrders extends Common
     {
         $postData = input();
         $m_id = 0;
+        $sku = '';
         if (isset($postData['m_id']) && $postData['m_id']) {
             $m_id = $postData['m_id'];
             unset($postData['m_id']);
         }
-        $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"machine_id" => 'like',"machine_name" => 'like'],'so.');
+        if(!empty($postData['sku'])) {
+            $sku = $postData['sku'];
+            unset($postData['sku']);
+        }
+        $where = $this->getWhere($postData,false,["g_name" => "like","machine_id" => 'like',"machine_name" => 'like'],'so.');
         if (isset($where['ao_id'])) {
             $where['so.ao_id'] = $where['ao_id'];
             unset($where['ao_id']);
         }
         $where['so.pay_status'] = 3;
         if ($m_id) $where['so.m_id'] = $m_id;
+        if ($sku) $where[] = ['sod.sku', 'like', '%'.$sku.'%'];
         return $this->app->saleOrders->exportGoodsSo($where);
     }
 
