@@ -62,10 +62,10 @@ trait ActivityFdTrait
     {
         //todo  匹配售卖机当前商品，仅展示匹配成功的活动机及商品
         // $this->machine['m_id'] = '127';
-        $where2['mg.machine_id'] = $this->machine['m_id'];
-        $goodsField = "mg.g_id as g_id";
-        $machineGoods = MachineGoodsModel::getMGoodsListJoinGoods($where2, 0, $goodsField)->toArray();
-        $machineGoodsIds = array_column($machineGoods,'g_id');
+        // $where2['mg.machine_id'] = $this->machine['m_id'];
+        // $goodsField = "mg.g_id as g_id";
+        // $machineGoods = MachineGoodsModel::getMGoodsListJoinGoods($where2, 0, $goodsField)->toArray();
+        // $machineGoodsIds = array_column($machineGoods,'g_id');
 
         $where = 'am.m_id = ' . $this->machine['m_id'] . " AND status < 3 AND start_date < " . time();
         $fdList = $this->getActivityFdListByMachine($where,'fd_id,fd_name,start_date,end_date,fd_type,condition_type,desc,status');
@@ -81,7 +81,7 @@ trait ActivityFdTrait
                     $fieldOrder = "fdc_sort DESC, condition_value1 asc, fdc_id asc";
                     $field = "fdc_id,CAST(condition_value AS UNSIGNED) condition_value1, condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
                 }
-                $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id'],['g_id', 'in', $machineGoodsIds]],0,$field,$fieldOrder);
+                $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id']],0,$field,$fieldOrder);
                 if ($fdl['status'] == 1) $update['status'] = 2;
                 if ($fdl['end_date'] > 0 && $fdl['end_date'] < strtotime(date("Y-m-d")) && $fdl['status'] != 3) {
                     $update['status'] = 3;
