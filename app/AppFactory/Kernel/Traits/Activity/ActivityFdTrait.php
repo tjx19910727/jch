@@ -61,6 +61,7 @@ trait ActivityFdTrait
     public function getActivityFdByMachine()
     {
         // 匹配售卖机当前商品，仅展示匹配成功的活动机及商品
+        actionLog($this->machine,'machine数据');
         $where2['mg.m_id'] = $this->machine['m_id'];
         $goodsField = "mg.g_id as g_id";
         $machineGoods = MachineGoodsModel::getMGoodsListJoinGoods($where2, 0, $goodsField)->toArray();
