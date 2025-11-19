@@ -61,11 +61,12 @@ trait ActivityFdTrait
     public function getActivityFdByMachine()
     {
         // 匹配售卖机当前商品，仅展示匹配成功的活动机及商品
+        actionLog($this->machine,'machine数据');
         $where2['mg.m_id'] = $this->machine['m_id'];
         $goodsField = "mg.g_id as g_id";
         $machineGoods = MachineGoodsModel::getMGoodsListJoinGoods($where2, 0, $goodsField)->toArray();
         $machineGoodsIds = array_column($machineGoods,'g_id');
-
+        actionLog($machineGoodsIds,'在售商品id');
 
         $where = 'am.m_id = ' . $this->machine['m_id'] . " AND status < 3 AND start_date < " . time();
         $fdList = $this->getActivityFdListByMachine($where,'fd_id,fd_name,start_date,end_date,fd_type,condition_type,desc,status');
