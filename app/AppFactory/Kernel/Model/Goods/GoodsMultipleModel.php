@@ -46,7 +46,7 @@ class GoodsMultipleModel extends BaseModel
         if ($data) {
             foreach ($data as $key => $value) {
                 $value['gList'] = GoodsMultipleGoodsModel::getJoinGoodsList(['gm_id' => $value['gm_id']],
-                    'gmg_id,gmg.g_id,selling_price,rise_fall_ratio,g_name,g.pic,g.sku,g.sku2,,g.bar_code,g.cost_price,g.g_type,g.performance');
+                    'gmg_id,gmg.g_id,selling_price,rise_fall_ratio,g_name,g.pic,g.sku,g.sku2,g.bar_code,g.cost_price,g.g_type,g.performance');
                 $data[$key] = $value;
             }
         }
@@ -80,7 +80,7 @@ class GoodsMultipleModel extends BaseModel
         $data = $data->select()->toArray();
         if ($data) {
             foreach ($data as $key => $value) {
-                $value['mList'] = GoodsMultipleMachineModel::getList(['gm_id' => $item['gm_id']],0,'gmm_id,m_id,machine_id,machine_name');
+                $value['mList'] = GoodsMultipleMachineModel::getList(['gm_id' => $value['gm_id']],0,'gmm_id,m_id,machine_id,machine_name');
                 $data[$key] = $value;
             }
         }
