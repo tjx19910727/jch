@@ -83,6 +83,7 @@ trait ActivityFdTrait
                     $field = "fdc_id,CAST(condition_value AS UNSIGNED) condition_value1, condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
                 }
                 $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id']],0,$field,$fieldOrder);
+                // $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id'],['g_id', 'in', $machineGoodsIds]],0,$field,$fieldOrder);
                 actionLog($this->getLS(),'执行sql:');
                 actionLog($fdl['content'],'content信息');
                 if ($fdl['status'] == 1) $update['status'] = 2;
@@ -94,7 +95,8 @@ trait ActivityFdTrait
                 $fdList[$key] = $fdl;
             }
         }
-        actionLog($fdList,'本次显示原始查询结果');
+        actionLog($fdList,'历史数据');
+        // actionLog($fdList,'更新后数据');
         return $fdList;
     }
 
