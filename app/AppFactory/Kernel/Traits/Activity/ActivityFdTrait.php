@@ -7,14 +7,12 @@
  */
 
 namespace app\AppFactory\Kernel\Traits\Activity;
-// use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
-// use app\AppFactory\Kernel\Model\Activity\Fd\ActivityFdContentModel;
+
 
 use app\AppFactory\Kernel\Model\Activity\Fd\ActivityFdModel;
 
 trait ActivityFdTrait
 {
-    // use ActivityFdContentTrait;
     public function getActivityFdValue($where,$value)
     {
         return ActivityFdModel::getFieldValue($where,$value);
@@ -61,13 +59,6 @@ trait ActivityFdTrait
 
     public function getActivityFdByMachine()
     {
-        //todo  匹配售卖机当前商品，仅展示匹配成功的活动机及商品
-        // $this->machine['m_id'] = '127';
-        // $where2['mg.m_id'] = $this->machine['m_id'];
-        // $goodsField = "mg.g_id as g_id";
-        // $machineGoods = MachineGoodsModel::getMGoodsListJoinGoods($where2, 0, $goodsField)->toArray();
-        // $machineGoodsIds = array_column($machineGoods,'g_id');
-        $machineGoodsIds = ['883','119','114','789','1234'];
         $where = 'am.m_id = ' . $this->machine['m_id'] . " AND status < 3 AND start_date < " . time();
         $fdList = $this->getActivityFdListByMachine($where,'fd_id,fd_name,start_date,end_date,fd_type,condition_type,desc,status');
         if ($fdList) {
@@ -83,15 +74,6 @@ trait ActivityFdTrait
                     $field = "fdc_id,CAST(condition_value AS UNSIGNED) condition_value1, condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
                 }
                 $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id']],0,$field,$fieldOrder);
-                // $fdl['content'] = ActivityFdContentModel::getList(['fd_id' => $fdl['fd_id'], ['g_id', 'in', $machineGoodsIds]],0,$field,$fieldOrder)->toArray();
-                // $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id'], ['g_id', 'in', $machineGoodsIds]],0,$field,$fieldOrder);
-                // $fdl['content'] = ActivityFdContentModel::getList(['fd_id' => $fdl['fd_id'], ['g_id', 'in', $machineGoodsIds]],0,$field,$fieldOrder)->toArray();
-                // 查询异常，这里对查询后的数据做处理
-                // if(!empty($content)){
-                //     foreach($content as $v){
-                //         if(in_array($v['g_id'], $machineGoodsIds)) $fdl['content'][] = $v;
-                //     }
-                // }
                 if ($fdl['status'] == 1) $update['status'] = 2;
                 if ($fdl['end_date'] > 0 && $fdl['end_date'] < strtotime(date("Y-m-d")) && $fdl['status'] != 3) {
                     $update['status'] = 3;
