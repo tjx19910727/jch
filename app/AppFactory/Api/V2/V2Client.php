@@ -64,7 +64,7 @@ class V2Client extends V2BaseClient
         try {
             $field = "mc_id,channel_code,
             (CASE `status` WHEN 3 THEN 0 ELSE stock END) quantity,retail_price sale_price,sku, 
-            (CASE `status` WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,g_name,sku2,bar_code,cost_price,
+            (CASE `status` WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,g_name,bar_code,cost_price,
             market_price,frozen_stock reserver_quantity, capacity slot_max_count,status";
             $where['machine_id'] = $this->params['machine_id'];
             if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->config['product_id'];
