@@ -37,7 +37,7 @@ class GoodsMultipleModel extends BaseModel
             $data = $data->paginate(['list_rows' => $pageNum,'page' => $page,"query" => request()->param()], false)
                 ->each(function ($item) {
                 $item['gList'] = GoodsMultipleGoodsModel::getJoinGoodsList(['gm_id' => $item['gm_id']],
-                    'gmg_id,gmg.g_id,selling_price,rise_fall_ratio,gmg.stock,g_name,g.pic,g.sku,g.g_type,g.performance');
+                    'gmg_id,gmg.g_id,selling_price,rise_fall_ratio,gmg.stock,g_name,g.pic,g.sku,g.sku2,g.bar_code,g.cost_price,g.g_type,g.performance');
                 return $item;
             });
             return $data;
@@ -46,7 +46,7 @@ class GoodsMultipleModel extends BaseModel
         if ($data) {
             foreach ($data as $key => $value) {
                 $value['gList'] = GoodsMultipleGoodsModel::getJoinGoodsList(['gm_id' => $value['gm_id']],
-                    'gmg_id,gmg.g_id,selling_price,rise_fall_ratio,g_name,g.pic,g.sku,g.g_type,g.performance');
+                    'gmg_id,gmg.g_id,selling_price,rise_fall_ratio,g_name,g.pic,g.sku,g.sku2,,g.bar_code,g.cost_price,g.g_type,g.performance');
                 $data[$key] = $value;
             }
         }
