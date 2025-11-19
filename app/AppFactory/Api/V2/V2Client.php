@@ -64,7 +64,7 @@ class V2Client extends V2BaseClient
         try {
             $field = "mc_id,channel_code,
             (CASE `status` WHEN 3 THEN 0 ELSE stock END) quantity,retail_price sale_price,sku, 
-            (CASE `status` WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,g_name,sku,
+            (CASE `status` WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,g_name,sku2,bar_code,cost_price,
             market_price,frozen_stock reserver_quantity, capacity slot_max_count,status";
             $where['machine_id'] = $this->params['machine_id'];
             if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->config['product_id'];
@@ -72,12 +72,15 @@ class V2Client extends V2BaseClient
             $data = $this->getMachineChannelList($where, ['list_rows' => $this->params['pageNum'],'page' => $this->params['page']], $field, 'stock desc');
 //            actionLog($this->getLS(),'【SQL】查询货道');
             $data = $data->each(function ($item) {
-                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,`desc`,retail_price,details_pic,gc_id,gc_name');
+                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,sku,bar_code,cost_price,`desc`,retail_price,details_pic,gc_id,gc_name');
                 $item['g_retail_price'] = $goods['retail_price'] ?? 0;
                 $item['pic'] = $goods['pic'] ?? '';
                 $item['details_pic'] = $goods['details_pic'] ?? '';
                 $item['banner'] = $goods['banner'] ?? '';
+                $item['sku'] = $goods['sku'] ?? '';
                 $item['sku2'] = $goods['sku2'] ?? '';
+                $item['bar_code'] = $goods['bar_code'] ?? '';
+                $item['cost_price'] = $goods['cost_price'] ?? '';
                 $item['g_desc'] = $goods['desc'] ?? '';
                 $item['gc_id'] = $goods['gc_id'] ?? "";
                 $item['gc_name'] = $goods['gc_name'] ?? "";
