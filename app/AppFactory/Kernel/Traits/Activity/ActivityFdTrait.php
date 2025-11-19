@@ -74,6 +74,7 @@ trait ActivityFdTrait
                     $field = "fdc_id,CAST(condition_value AS UNSIGNED) condition_value1, condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
                 }
                 $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id']],0,$field,$fieldOrder);
+                actionLog($fdl['content'],'content信息');
                 if ($fdl['status'] == 1) $update['status'] = 2;
                 if ($fdl['end_date'] > 0 && $fdl['end_date'] < strtotime(date("Y-m-d")) && $fdl['status'] != 3) {
                     $update['status'] = 3;
