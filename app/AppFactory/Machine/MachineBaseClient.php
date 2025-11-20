@@ -130,7 +130,6 @@ class MachineBaseClient extends BaseClient
                 $path = json2arr($this->data['data'])['msgType'] ?? "";
             }
         }
-        dd($this->data);
         actionLog(json_encode($this->data),"dataRecord记录每次data");
         $data = json_decode(json_encode($this->data), true);
         $data['data'] = json_decode($data['data'],true);
