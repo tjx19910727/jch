@@ -178,6 +178,7 @@ class SaleOrders extends Common
                 if (!$mec) return returnState(100,lang("VSaleOrders.order_no_data"));
                 if (!$mec['transaction_video']) {
                     $otherData = ['trade_no' => $trade_no];
+                    $otherData['me_id'] = input('me_id');
                     $result = $this->app->machine->sendToMachine(['machine_id' => $mec['machine_id']],'transactionVideo',$otherData);
                     return is_object($result) ? returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result) :
                     $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
