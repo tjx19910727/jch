@@ -106,7 +106,7 @@ class V2Client extends V2BaseClient
         try {
             $field = "machine_id,machine_name,machine_type,machine_serial_number extend1,version software_version,
             country_id,state_id,city_id,regions_id,zip_code zip,street,floor building,mac_address mac,lat,lng,scene_id,
-            logo logo_url, pic icon_url,status ai_status,last_online_time ai_time,online oo_status,current_status,device_type,factory,";
+            logo logo_url, pic icon_url,status ai_status,last_online_time ai_time,online oo_status,current_status,device_type,factory,inventory_location";
             $where = [];
             if (isset($this->params['machine_id']) && $this->params['machine_id'])
                 $where[] = ["machine_id", 'in', $this->params['machine_id']];
