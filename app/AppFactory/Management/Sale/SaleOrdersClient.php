@@ -85,7 +85,7 @@ class SaleOrdersClient extends ManagementClient
                     if ($mIds) $where[] = ['m_id', 'in', $mIds];
                 }
             }
-            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order);
+            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, $supplier);
             return $this->r(200, $this->lang("query_success"), $data);
         } catch (\Exception $e) {
             actionException($e, 1);

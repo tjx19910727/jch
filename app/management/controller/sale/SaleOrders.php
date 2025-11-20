@@ -31,7 +31,7 @@ class SaleOrders extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
 
-        $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in']);
+        $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
         $where['pay_status'] = 3;
         
         if($this->authMchCannel()['status'] != 0){
@@ -66,7 +66,7 @@ class SaleOrders extends Common
         }
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         // if ($postData['supplier']) unset($where['ao_id']);
-        return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc",$postData['supplier']);
+        return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc",$postData['supplier'] ?? false);
     }
 
     /**
