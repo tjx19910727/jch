@@ -16,7 +16,7 @@ class MachineChannelStockReport extends Common
     public function getList()
     {
         $postData = input();
-        $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like"]);
+        $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like","g_name" => "like"]);
         $field = "sku,g_name,bar_code,model,
         sum(mc_stock) mc_stock,
         sum(pre_stock) pre_stock,
