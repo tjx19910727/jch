@@ -130,14 +130,6 @@ class MachineBaseClient extends BaseClient
                 $path = json2arr($this->data['data'])['msgType'] ?? "";
             }
         }
-        actionLog(json_encode($this->data),"dataRecord记录每次data");
-        $data = json_decode(json_encode($this->data), true);
-        $data['data'] = json_decode($data['data'],true);
-        actionLog($data,"开门视频保存地址记录执行sql");
-        if ($from == 1 && $data['data']['msgType'] == "transactionVideo" && strstr($data['data']['trade_no'], "door_open") && !empty($data['data']['transaction_video'])) {
-            $this->updateMachineErrorCode(['transaction_video' => $data['data']['transaction_video']],['me_id' => $data['data']['me_id']]);
-            actionLog($this->getLS(),"开门视频保存地址记录执行sql");
-        }
         if ($path != "heartbeat") {
             $msg = $this->getMachineMqRecordFind(['msg_id' => $this->data['msg_id']]);
             if (!$msg) {
