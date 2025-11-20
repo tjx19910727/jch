@@ -72,7 +72,7 @@ class V2Client extends V2BaseClient
             $data = $this->getMachineChannelList($where, ['list_rows' => $this->params['pageNum'],'page' => $this->params['page']], $field, 'stock desc');
 //            actionLog($this->getLS(),'【SQL】查询货道');
             $data = $data->each(function ($item) {
-                $goods = $this->getGoodsFind(['g_id' => $item['product_id']],'pic,banner,sku2,sku,bar_code,cost_price,`desc`,retail_price,details_pic,gc_id,gc_name');
+                $goods = $this->getGoodsFind(['g_id' => $item['product_id'], ['sell_channel', 'in', ['1','3']]],'pic,banner,sku2,sku,bar_code,cost_price,`desc`,retail_price,details_pic,gc_id,gc_name');
                 $item['g_retail_price'] = $goods['retail_price'] ?? 0;
                 $item['pic'] = $goods['pic'] ?? '';
                 $item['details_pic'] = $goods['details_pic'] ?? '';
@@ -106,7 +106,7 @@ class V2Client extends V2BaseClient
         try {
             $field = "machine_id,machine_name,machine_type,machine_serial_number extend1,version software_version,
             country_id,state_id,city_id,regions_id,zip_code zip,street,floor building,mac_address mac,lat,lng,scene_id,
-            logo logo_url, pic icon_url,status ai_status,last_online_time ai_time,online oo_status,current_status,device_type";
+            logo logo_url, pic icon_url,status ai_status,last_online_time ai_time,online oo_status,current_status,device_type,factory,";
             $where = [];
             if (isset($this->params['machine_id']) && $this->params['machine_id'])
                 $where[] = ["machine_id", 'in', $this->params['machine_id']];
