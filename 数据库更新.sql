@@ -1,3 +1,8 @@
+# 20251121
+ALTER TABLE kiosk.machine_error_code
+  ADD COLUMN `trade_no` varchar(50) NULL COMMENT '开门视频单号' AFTER `msg` ;
+ALTER TABLE kiosk.machine_error_code ADD INDEX idx_trade_no (trade_no);
+
 # 20251105
 ALTER TABLE kiosk.machine_error_code
   ADD COLUMN `transaction_video` varchar(255) NULL COMMENT '视频文件路径' AFTER `msg`;
