@@ -32,7 +32,7 @@ class MachineBaseClient extends BaseClient
         parent::__construct($app);
 
         actionLog($this->config,'接收数据2--');
-        if(is_object($this->config['data'])){
+        if(isset($this->config['data']) && is_object($this->config['data'])){
             $data = json_decode(json_encode($this->config['data']),true);
             actionLog($this->config,'接收数据2--:转化为array后的data');
             if(isset($data['msgType']) && $data['msgType'] == 'transactionVideo' && strstr($data['trade_no'], "door_open") && !empty($data['transaction_video'])){
