@@ -41,7 +41,6 @@ class MachineConsumer
             //sleep(2) ;
             $data = $message->body;
             $data = json2arr($data);
-            dump($data);
             //手动发送ack
             $message->ack($message->getDeliveryTag());
 
