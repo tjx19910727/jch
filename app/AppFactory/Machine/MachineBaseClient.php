@@ -32,16 +32,23 @@ class MachineBaseClient extends BaseClient
         parent::__construct($app);
 
         actionLog($this->config,'接收数据2--');
-        if(isset($this->config['data']) && is_object($this->config['data'])){
-            $data = json_decode(json_encode($this->config['data']),true);
-            if(isset($data['data']) && is_object($data['data'])){
-                $data_data = json_decode(json_encode($data['data']),true);
-                actionLog($this->config,'接收数据2--:转化为array后的data');
-                if(isset($data_data['msgType']) && $data_data['msgType'] == 'transactionVideo' 
-                && isset($data_data['trade_no']) && strstr($data_data['trade_no'], "door_open") 
-                && isset($data_data['transaction_video']) && !empty($data_data['transaction_video'])){
-                    $this->updateMachineErrorCode(['transaction_video' => $data_data['transaction_video']],['trade_no' => $data_data['trade_no']]);
-                    actionLog($this->getLS(),"开门视频保存地址记录执行sql");
+        actionLog($this->config,'接收数据3--');
+        if(is_object($this->config)){
+            $config_json = json_encode($this->config);
+            $config = json_decode($config_json, true);
+            if(isset($config['data']) && is_object($config['data'])){
+                $data_json = json_encode($config);
+                $data = json_decode($data_json, true);
+                if(isset($data['data']) && is_object($data['data'])){
+                    $data_data_json = json_encode($data['data']);
+                    $data_data = json_decode($data_data_json, true);
+                    actionLog($data_data,'接收数据2--:转化为array后的data');
+                    if(isset($data_data['msgType']) && $data_data['msgType'] == 'transactionVideo' 
+                    && isset($data_data['trade_no']) && strstr($data_data['trade_no'], "door_open") 
+                    && isset($data_data['transaction_video']) && !empty($data_data['transaction_video'])){
+                        $this->updateMachineErrorCode(['transaction_video' => $data_data['transaction_video']],['trade_no' => $data_data['trade_no']]);
+                        actionLog($this->getLS(),"开门视频保存地址记录执行sql");
+                    }
                 }
             }
         }
