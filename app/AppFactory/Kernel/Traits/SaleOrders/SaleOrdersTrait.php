@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Traits\SaleOrders;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
 use app\AppFactory\Kernel\Support\Validate\Api\VV2;
+use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 
 trait SaleOrdersTrait
 {
@@ -426,6 +427,10 @@ trait SaleOrdersTrait
      */
     public function transactionVideo()
     {
+        if(strstr($this->message['trade_no'], "door_open") ){
+            actionLog($this->message,"开门视频保存地址记录执行");
+            return MachineErrorCodeModel::update(['transaction_video' => $this->message['transaction_video']],['trade_no' => $this->message['trade_no']]);
+        }
         return $this->updateSaleOrders(['transaction_video' => $this->message['transaction_video']], ['trade_no' => $this->message['trade_no']]);
     }
 

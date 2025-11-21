@@ -32,24 +32,6 @@ class MachineBaseClient extends BaseClient
         parent::__construct($app);
 
         actionLog($this->config,'接收数据2--');
-        $config_json = json_encode($this->config);
-        $config = json_decode($config_json, true);
-        actionLog($config,'fonfig数据array--');
-        if(isset($config['data']) && is_object($config['data'])){
-            $data_json = json_encode($config);
-            $data = json_decode($data_json, true);
-            if(isset($data['data']) && is_object($data['data'])){
-                $data_data_json = json_encode($data['data']);
-                $data_data = json_decode($data_data_json, true);
-                actionLog($data_data,'接收数据2--:转化为array后的data');
-                if(isset($data_data['msgType']) && $data_data['msgType'] == 'transactionVideo' 
-                && isset($data_data['trade_no']) && strstr($data_data['trade_no'], "door_open") 
-                && isset($data_data['transaction_video']) && !empty($data_data['transaction_video'])){
-                    $this->updateMachineErrorCode(['transaction_video' => $data_data['transaction_video']],['trade_no' => $data_data['trade_no']]);
-                    actionLog($this->getLS(),"开门视频保存地址记录执行sql");
-                }
-            }
-        }
         $this->machine = $this->getMachineFind(['machine_id' => $this->config['machine_id']]);
         if (!$this->machine) die(json_encode(['state' => 100, "msg" => $this->lang("query_machine_no_data")],320));
         // 20250612 设备离线状态，修改为在线状态前，将启动时间重置为当前的时间
