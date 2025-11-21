@@ -34,10 +34,15 @@ class MachineBaseClient extends BaseClient
         actionLog($this->config,'接收数据2--');
         if(isset($this->config['data']) && is_object($this->config['data'])){
             $data = json_decode(json_encode($this->config['data']),true);
-            actionLog($this->config,'接收数据2--:转化为array后的data');
-            if(isset($data['msgType']) && $data['msgType'] == 'transactionVideo' && strstr($data['trade_no'], "door_open") && !empty($data['transaction_video'])){
-                $this->updateMachineErrorCode(['transaction_video' => $data['transaction_video']],['trade_no' => $data['trade_no']]);
-                actionLog($this->getLS(),"开门视频保存地址记录执行sql");
+            if(isset($data['data']) && is_object($data['data'])){
+                $data_data = json_decode(json_encode($data['data']),true);
+                actionLog($this->config,'接收数据2--:转化为array后的data');
+                if(isset($data_data['msgType']) && $data_data['msgType'] == 'transactionVideo' 
+                && isset($data_data['trade_no']) && strstr($data_data['trade_no'], "door_open") 
+                && isset($data_data['transaction_video']) && !empty($data_data['transaction_video'])){
+                    $this->updateMachineErrorCode(['transaction_video' => $data_data['transaction_video']],['trade_no' => $data_data['trade_no']]);
+                    actionLog($this->getLS(),"开门视频保存地址记录执行sql");
+                }
             }
         }
         $this->machine = $this->getMachineFind(['machine_id' => $this->config['machine_id']]);
