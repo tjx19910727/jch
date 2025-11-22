@@ -350,7 +350,7 @@ trait ActivityFdTrait
         actionLog($this->countContent,'过滤后的最终优惠');
         if ($this->countContent['discount_price']) {
             if (!$this->order['retail_price']) $updateOrder['retail_price'] = $this->order['total_price'];
-            $updateOrder['dizscount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
+            $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
             $updateOrder['total_price'] = bcsub($this->order['total_price'],$this->countContent['discount_price'],2);
             actionLog($this->order,'订单数据');
             $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
