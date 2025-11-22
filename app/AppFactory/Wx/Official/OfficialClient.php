@@ -80,12 +80,9 @@ class OfficialClient extends WxBaseClient
                 actionLog($this->getLS(),'查无微信配置SQL');
             } else {
                 $this->wx = $this->wx->toArray();
-
                 if($this->wx){
                     $this->wx_app = $this->getWxApp($this->wx);
                     $list = $this->wx_app->menu->list();
-        dd($list);
-
                     $current = $this->wx_app->menu->current();
                     $menu = json_encode([
                         'list' => $list,
