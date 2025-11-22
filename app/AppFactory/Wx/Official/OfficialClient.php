@@ -95,12 +95,16 @@ class OfficialClient extends WxBaseClient
                 }
             }
         } catch (BadRequestException $e) {
+            actionLog($e,'BadRequestException');
             actionException($e,1);
         } catch (InvalidArgumentException $e) {
+            actionLog($e,'InvalidArgumentException');
             actionException($e,1);
         } catch (InvalidConfigException $e) {
+            actionLog($e,'InvalidConfigException');
             actionException($e,1);
         } catch (\ReflectionException $e) {
+            actionLog($e,'ReflectionException');
             actionException($e,1);
         }
     }
