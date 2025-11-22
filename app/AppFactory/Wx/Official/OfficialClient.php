@@ -82,7 +82,7 @@ class OfficialClient extends WxBaseClient
                 $this->wx = $this->wx->toArray();
                 if($this->wx){
                     $this->wx_app = $this->getWxApp($this->wx);
-                    actionLog($$this->wx_app->menu,'wx_app_menu');
+                    actionLog($this->wx_app->menu,'wx_app_menu');
                     $list = $this->wx_app->menu->list();
                     actionLog($list,'wx_app_menu_list');
                     $current = $this->wx_app->menu->current();
