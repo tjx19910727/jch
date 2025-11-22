@@ -80,5 +80,6 @@ trait WxOfficialTrait
     public function getWxApp($wx)
     {
         $this->wx_app = Factory::officialAccount($wx);
+        return $this->wx_app;
     }
 }
