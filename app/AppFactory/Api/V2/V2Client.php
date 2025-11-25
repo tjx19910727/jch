@@ -169,7 +169,7 @@ class V2Client extends V2BaseClient
             $checkOrder = $this->getSaleOrdersFind(['trade_no' => $this->params['order_no']], 'order_id,pay_code');
             if ($checkOrder) return $this->returnData(0, $this->lang("msg." . 0), ['pick_code' => $checkOrder['pay_code'] ?? ($this->params['pick_code'] ?? ""), 'success' => true, "order_no" => $this->params['order_no']]);
 
-            $this->machine = $this->getMachineFind(['machine_id' => $this->params['kiosk_id']], 'm_id,machine_id,machine_name,device_type,online,ao_id');
+            $this->machine = $this->getMachineFind(['machine_id' => $this->params['kiosk_id']], 'm_id,machine_id,machine_name,device_type,online,ao_id,factory,inventory_location');
             if (!$this->machine) return $this->returnData(15, $this->lang("msg." . 15) . "：" . $this->lang("reserve_order.machine_no_data"));
             if ($this->machine['device_type'] == 1 && $this->machine['online'] != 1)
                 return $this->returnData(99, $this->lang("msg." . 99) . "：" . $this->lang("reserve_order.machine_offline"));
