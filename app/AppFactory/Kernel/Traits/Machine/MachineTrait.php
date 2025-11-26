@@ -368,8 +368,8 @@ trait MachineTrait
         try {
             $login = AuthManagerLogModel::where(['path'=>'/machine/receive/login'])->where('params','like','{"machine_id":"'.$machine.'%')->order(['create_time'=>'desc'])->field('manager_id,create_time')->find();
             $wxLogin = WxOfficialLoginModel::where(['machine_id'=>$machine])->order(['create_time'=>'desc'])->field('manager_id,create_time')->find();
-            $login = $login->toArray();
-            $wxLogin = $wxLogin->toArray();
+            $login = $login ? $login->toArray() : [];
+            $wxLogin = $wxLogin ? $wxLogin->toArray() : [];
             switch (empty($wxLogin)||is_null($wxLogin['manager_id'])){
                 case false:
                         if($login['create_time']>$wxLogin['create_time']){
@@ -383,8 +383,7 @@ trait MachineTrait
                     $manager_id = $login['manager_id'];
                     break;
             }
-            $rtn =  AuthManagerModel::getFind(['manager_id'=>$manager_id],'account')->toArrray();
-            if(empty($rtn)) return false;
+            $rtn =  AuthManagerModel::getFind(['manager_id'=>$manager_id],'account');
             if( $rtn && isset($rtn['account']) && !empty($rtn['account']))
             return "开机密码为：".$rtn['account'];
         } catch (\Throwable $th) {; 
