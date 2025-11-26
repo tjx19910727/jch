@@ -22,7 +22,7 @@ class MachineOnOff extends Common
      END) 
     machine_id,
         (SELECT machine_name FROM machine WHERE `machine`.`m_id` = `a`.`m_id` GROUP BY machine.m_id LIMIT 1) machine_name,
-    on_off_ckc,on_off_machine,status,creator,create_time,update_time";
+    on_off_ckc,on_off_machine,status,create_time,update_time";
     protected $validatePath = VMachineOnOff::class;
 
     public function getList()
