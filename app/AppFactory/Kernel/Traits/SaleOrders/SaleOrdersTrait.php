@@ -247,6 +247,7 @@ trait SaleOrdersTrait
     protected function createSo()
     {
         $pay_method = 1;
+        actionLog($this->machine, '对外接口预下订单，添加工厂、仓库信息');
         $this->order = [
             "trade_no" => $this->config['params']['order_no'],
             "mch_no" => $this->config['params']['order_no'],
@@ -267,6 +268,8 @@ trait SaleOrdersTrait
             "total_quantity" => 0,
             "total_price" => 0,
             "discount_price" => 0,
+            "factory" => $this->machine['factory'] ?? '',
+            "inventory_location" => $this->machine['inventory_location'] ?? '',
             "create_date" => strtotime(date("Y-m-d")),
         ];
         $this->order['order_id'] = $this->addSaleOrders($this->order);
