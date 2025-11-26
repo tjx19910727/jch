@@ -25,6 +25,7 @@ class SaleOrders extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
+        $machineIds = [];
         if (!empty($postData['machine_group_id'])) {
             $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
             unset($postData['machine_group_id']);
@@ -59,14 +60,12 @@ class SaleOrders extends Common
         $whereAuth['status'] = 1;
         $data = $this->app->authNode->getAuthNodeList($whereAuth,0,'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status','sort asc');
         $data = obj2arr($data);
-        if (empty($data)){
-            $field = "order_id,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_time,out_time,machine_name,machine_id,discount_price,factory,inventory_location,has_hotel,refund_status,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
-        }else{
-            $field = "order_id,trade_no,mch_no,cost_price,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_time,out_time,machine_name,machine_id,discount_price,factory,inventory_location,has_hotel,refund_status,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
-        }
+
+        $field = "order_id,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_time,out_time,machine_name,machine_id,discount_price,factory,inventory_location,has_hotel,refund_status,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
+        if (!empty($data))$field .= ",cost_price";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         // if ($postData['supplier']) unset($where['ao_id']);
-        return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc",$postData['supplier'] ?? false);
+        return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc",$postData['supplier'] ?? true);
     }
 
     /**
@@ -120,7 +119,7 @@ class SaleOrders extends Common
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
         // if ($postData['supplier']) unset($where['ao_id']);
-        return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",$postData['supplier'] ?? ''));
+        return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",$postData['supplier'] ?? 'true'));
     }
 
     /**
