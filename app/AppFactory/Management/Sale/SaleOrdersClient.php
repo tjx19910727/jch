@@ -79,7 +79,7 @@ class SaleOrdersClient extends ManagementClient
     public function getSoList($where, $pageNum = 0, $field = "*", $order = "", $supplier = false)
     {
         try {
-            if(!$supplier){
+            if($supplier){
                 if ($this->manager['pid'] > 0) {
                     $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
                     if ($mIds) $where[] = ['m_id', 'in', $mIds];
@@ -95,7 +95,7 @@ class SaleOrdersClient extends ManagementClient
 
     public function getDetailsList($where, $pageNum = 0, $field = "*", $order = "", $supplier = false)
     {
-        if(!$supplier){
+        if($supplier){
             if ($this->manager['pid'] > 0) {
                 $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
                 if ($mIds) $where[] = ['m_id', 'in', $mIds];
