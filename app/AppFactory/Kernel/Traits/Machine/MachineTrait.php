@@ -383,8 +383,11 @@ trait MachineTrait
                     $manager_id = $login['manager_id'];
                     break;
             }
-            return AuthManagerModel::getFind(['manager_id'=>$manager_id],'account');
-        } catch (\Throwable $th) {
+            $rtn =  AuthManagerModel::getFind(['manager_id'=>$manager_id],'account')->toArrray();
+            if(empty($rtn)) return false;
+            if( $rtn && isset($rtn['account']) && !empty($rtn['account']))
+            return "开机密码为：".$rtn['account'];
+        } catch (\Throwable $th) {; 
             return false;
         }
     }
