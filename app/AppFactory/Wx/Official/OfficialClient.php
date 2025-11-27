@@ -128,6 +128,7 @@ class OfficialClient extends WxBaseClient
                     // 先删除旧菜单 再创建新菜单
                     $del_rtn = $this->wx_app->menu->delete();
                     actionLog($del_rtn,'del_rtn');
+                    actionLog($menu,'待执行的menu');
                     $result = $this->wx_app->menu->create($menu);
                     actionLog($result,'创建菜单查询结果');
                     if ($result['errcode'] == 0) {
@@ -137,6 +138,8 @@ class OfficialClient extends WxBaseClient
                         if (!empty($current['menu']['button'])){
                             return returnData(null,'创建成功');
                         }
+                    }else{
+                        return returnData($result,'创建失败');
                     }
                 }
             }
