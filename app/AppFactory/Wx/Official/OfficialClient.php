@@ -114,13 +114,13 @@ class OfficialClient extends WxBaseClient
      * 修改微信公众号菜单
      * @return json
      */
-    public function editMenu($message){
+    public function editMenu($menu){
         try{
             // 先删除旧菜单
             $this->app->menu->delete();
             
             // 创建新菜单
-            $message['list'] = '{
+            $menu = json_encode('{
   "button": [
     {
       "type": "click",
@@ -216,8 +216,8 @@ class OfficialClient extends WxBaseClient
     },
     "新值"
   ]
-}';
-            $result = $this->app->menu->create($message['list']);
+}', JSON_UNESCAPED_UNICODE);
+            $result = $this->app->menu->create($menu);
             actionLog($result,'创建菜单查询结果');
             if ($result['errcode'] == 0) {
                 sleep(2);
