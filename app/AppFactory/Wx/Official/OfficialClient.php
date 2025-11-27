@@ -114,11 +114,8 @@ class OfficialClient extends WxBaseClient
      * 修改微信公众号菜单
      * @return json
      */
-    public function editMenu($menu){
+    public function editMenu($data){
         try{
-            // 先删除旧菜单
-            $this->app->menu->delete();
-            
             // 创建新菜单
             $menu = json_encode('{
   "button": [
@@ -217,23 +214,41 @@ class OfficialClient extends WxBaseClient
     "新值"
   ]
 }', JSON_UNESCAPED_UNICODE);
-            $result = $this->app->menu->create($menu);
-            actionLog($result,'创建菜单查询结果');
-            if ($result['errcode'] == 0) {
-                sleep(2);
-                $current = $this->app->menu->current();
-                actionLog($current,'current');
-                if (!empty($current['menu']['button'])){
-                    return returnData(null,'创建成功');
+            $menu = $data['menu'];
+            $this->wx = $this->getWxOfficialFind(['gh_id' => $data['gh_id']]);
+            if (!$this->wx) {
+                actionLog($this->getLS(),'查无微信配置SQL');
+            } else {
+                $this->wx = $this->wx->toArray();
+                if($this->wx){
+                    $this->wx_app = $this->getWxApp($this->wx);
+                    actionLog($this->wx_app,'wx_app');
+                    actionLog($this->wx_app->menu,'wx_app_menu');
+                    // 先删除旧菜单
+                    $this->wx_app->menu->delete();
+                    $result = $this->wx_app->menu->create($menu);
+                    actionLog($result,'创建菜单查询结果');
+                    if ($result['errcode'] == 0) {
+                        sleep(2);
+                        $current = $this->app->menu->current();
+                        actionLog($current,'current');
+                        if (!empty($current['menu']['button'])){
+                            return returnData(null,'创建成功');
+                        }
+                    }
                 }
             }
         } catch (BadRequestException $e) {
+            actionLog($e,'BadRequestException');
             actionException($e,1);
         } catch (InvalidArgumentException $e) {
+            actionLog($e,'InvalidArgumentException');
             actionException($e,1);
         } catch (InvalidConfigException $e) {
+            actionLog($e,'InvalidConfigException');
             actionException($e,1);
         } catch (\ReflectionException $e) {
+            actionLog($e,'ReflectionException');
             actionException($e,1);
         }
     }

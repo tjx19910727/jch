@@ -49,6 +49,8 @@ class Official extends BaseController
         $data = input();
         if ($data)
             actionLog($data, '修改菜单数据');
+        if (empty($data['gh_id'])) return $this->rFail('未传入原始id');
+        if (empty($data['menu']))  return $this->rFail('未正确传入菜单数据');
         AppFactory::wx()->official->editMenu($data);
     }
 }
