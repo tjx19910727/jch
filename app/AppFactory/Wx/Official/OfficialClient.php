@@ -117,7 +117,7 @@ class OfficialClient extends WxBaseClient
     public function editMenu($data){
         try{
             // 创建新菜单
-            $menu = json_encode('{
+            $menu = json_decode('{
   "button": [
     {
       "type": "click",
@@ -213,8 +213,8 @@ class OfficialClient extends WxBaseClient
     },
     "新值"
   ]
-}', JSON_UNESCAPED_UNICODE);
-            $menu = $data['menu'];
+}', true);
+            // $menu = $data['menu'];
             $this->wx = $this->getWxOfficialFind(['gh_id' => $data['gh_id']]);
             if (!$this->wx) {
                 actionLog($this->getLS(),'查无微信配置SQL');
