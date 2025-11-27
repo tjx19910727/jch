@@ -117,6 +117,12 @@ class OfficialClient extends WxBaseClient
     public function editMenu($data){
         try{
             $menu = $data['menu'];
+            $validationErrors = $this->validateMenuData($menu);
+
+            if (!empty($validationErrors)) {
+                return $this->r(100,'菜单数据验证失败: ' . implode('; ', $validationErrors));
+            }
+
             $this->wx = $this->getWxOfficialFind(['gh_id' => $data['gh_id']]);
             if (!$this->wx) {
                 actionLog($this->getLS(),'查无微信配置SQL');
@@ -261,5 +267,101 @@ class OfficialClient extends WxBaseClient
         return $setData;
     }
 
+    /**
+     * 验证菜单数据结构
+     */
+    public function validateMenuData($menuData) {
+        $errors = [];
+        
+        // 检查根结构
+        if (!isset($menuData['button']) || !is_array($menuData['button'])) {
+            $errors[] = "菜单数据必须包含button数组";
+        }
+        
+        $buttons = $menuData['button'];
+        
+        // 检查一级菜单数量
+        if (count($buttons) > 3) {
+            $errors[] = "一级菜单最多3个，当前" . count($buttons) . "个";
+        }
+        
+        foreach ($buttons as $index => $button) {
+            $buttonNum = $index + 1;
+            
+            // 检查菜单名称
+            if (!isset($button['name']) || empty(trim($button['name']))) {
+                $errors[] = "第{$buttonNum}个菜单缺少name或name为空";
+            } elseif (mb_strlen($button['name'], 'UTF-8') > 16) {
+                $errors[] = "第{$buttonNum}个菜单名称过长（最多16个字符）";
+            }
+            
+            // 检查是否有子菜单
+            if (isset($button['sub_button'])) {
+                if (!is_array($button['sub_button'])) {
+                    $errors[] = "第{$buttonNum}个菜单的sub_button必须是数组";
+                } else {
+                    // 验证子菜单
+                    $subButtons = $button['sub_button'];
+                    if (count($subButtons) > 5) {
+                        $errors[] = "第{$buttonNum}个菜单的子菜单最多5个，当前" . count($subButtons) . "个";
+                    }
+                    foreach ($subButtons as $subIndex => $subButton) {
+                        $subErrors = $this->validateButton($subButton, "第{$buttonNum}个菜单的第" . ($subIndex + 1) . "个子菜单");
+                        if ($subErrors) {
+                            $errors = array_merge($errors, $subErrors);
+                        }
+                    }
+                }
+            } else {
+                // 验证普通按钮
+                $buttonErrors = $this->validateButton($button, "第{$buttonNum}个菜单");
+                if ($buttonErrors) {
+                    $errors = array_merge($errors, $buttonErrors);
+                }
+            }
+        }
+        
+        return $errors;
+    }
+    
+    /**
+     * 验证单个按钮
+     */
+    private function validateButton($button, $location) {
+        $errors = [];
+        
+        // 检查type
+        if (!isset($button['type'])) {
+            $errors[] = "{$location}缺少type字段";
+        } else {
+            $validTypes = ['click', 'view', 'scancode_push', 'scancode_waitmsg', 'pic_sysphoto', 'pic_photo_or_album', 'pic_weixin', 'location_select', 'media_id', 'view_limited'];
+            if (!in_array($button['type'], $validTypes)) {
+                $errors[] = "{$location}的type无效，必须是: " . implode(', ', $validTypes).",当前是：".$button['type'];
+            }
+        }
+        
+        // 根据type验证必要字段
+        if (isset($button['type'])) {
+            switch ($button['type']) {
+                case 'click':
+                    if (!isset($button['key'])) {
+                        $errors[] = "{$location}的click类型必须包含key字段";
+                    }
+                    break;
+                case 'view':
+                    if (!isset($button['url'])) {
+                        $errors[] = "{$location}的view类型必须包含url字段";
+                    }
+                    break;
+                case 'miniprogram':
+                    if (!isset($button['url']) || !isset($button['appid']) || !isset($button['pagepath'])) {
+                        $errors[] = "{$location}的miniprogram类型必须包含url、appid、pagepath字段";
+                    }
+                    break;
+            }
+        }
+        
+        return $errors;
+    }
 
 }
