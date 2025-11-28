@@ -216,7 +216,7 @@ class OfficialClient extends WxBaseClient
             case "ABOUT_US":
                 return "我们是一家专注于技术创新的公司，致力于为用户提供优质的产品和服务。了解更多请访问我们的官网。";
                 break;
-            case "ABOUT_US":
+            case "USE_HELP":
                 return "使用帮助：\n• 输入关键词获取信息\n• 联系客服请回复人工\n• 业务咨询请拨打电话";
                 break;
             default:
