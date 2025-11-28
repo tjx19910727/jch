@@ -84,15 +84,19 @@ class OfficialClient extends WxBaseClient
                     $this->wx_app = $this->getWxApp($this->wx);
                     actionLog($this->wx_app,'wx_app');
                     actionLog($this->wx_app->menu,'wx_app_menu');
-                    $list = $this->wx_app->menu->list();
-                    actionLog($list,'wx_app_menu_list');
                     $current = $this->wx_app->menu->current();
                     actionLog($current,'current');
-                    $menu = json_encode([
-                        'list' => $list,
-                        'current' => $current
-                    ]);
-                    return returnData($menu,'获取成功');
+                    $list = $this->wx_app->menu->list();
+                    actionLog($list,'wx_app_menu_list');
+                    if ($list['errcode'] !== 0) {
+                        return $this->rFail($list['errmsg'],'查询失败');
+                    }else{
+                        $menu = json_encode([
+                            'list' => $list,
+                            'current' => $current
+                        ]);
+                        return returnData($menu,'获取成功');
+                    }
                 }
             }
         } catch (BadRequestException $e) {
@@ -135,7 +139,7 @@ class OfficialClient extends WxBaseClient
                     $del_rtn = $this->wx_app->menu->delete();
                     actionLog($del_rtn,'del_rtn');
                     actionLog($menu,'待执行的menu');
-                    $result = $this->wx_app->menu->create($menu);
+                    $result = $this->wx_app->menu->create($menu['button']);
                     actionLog($result,'创建菜单查询结果');
                     if ($result['errcode'] == 0) {
                         sleep(2);
@@ -145,7 +149,7 @@ class OfficialClient extends WxBaseClient
                             return returnData(null,'创建成功');
                         }
                     }else{
-                        return returnData($result,'创建失败');
+                        return $this->rFail($result,'创建失败');
                     }
                 }
             }
