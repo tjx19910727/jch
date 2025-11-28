@@ -90,10 +90,10 @@ class OfficialClient extends WxBaseClient
                     if (isset($list['errcode']) && $list['errcode'] !== 0) {
                         return $this->rFail($list['errmsg'],'查询失败');
                     }elseif(isset($list['menu'])){
-                        $menu = json_encode([
+                        $menu = [
                             'list' => $list,
                             'current' => $current
-                        ]);
+                        ];
                         return returnData($menu,'获取成功');
                     }
                 }
@@ -138,7 +138,8 @@ class OfficialClient extends WxBaseClient
                     $del_rtn = $this->wx_app->menu->delete();
                     actionLog($del_rtn,'del_rtn');
                     actionLog($menu,'待执行的menu');
-                    $result = $this->wx_app->menu->create($menu['button']);
+                    $result_json = $this->wx_app->menu->create($menu['button']);
+                    $result = json_decode($result_json,true);
                     actionLog($result,'创建菜单查询结果');
                     if ($result['errcode'] == 0) {
                         sleep(2);
