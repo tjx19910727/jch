@@ -76,6 +76,7 @@ class OfficialClient extends WxBaseClient
     public function menuList($message){
         try {
             $this->wx = $this->getWxOfficialFind(['gh_id' => $message['gh_id']]);
+            dd($this->wx);
             if (!$this->wx) {
                 actionLog($this->getLS(),'查无微信配置SQL');
             } else {
@@ -186,13 +187,46 @@ class OfficialClient extends WxBaseClient
             case "unsubscribe":
                 return $this->receive_unsubscribe();
                 break;
+            case "CLICK":
+                return $this->receive_handle_event_key($message);
+                break;
             default:
-                return '未知事件';
+                return '用户事件未定义';
                 break;
         }
     }
 
     /**
+     * 根据EventKey处理CLICK事件
+     * @param $message
+     */
+    private function receive_handle_event_key($message){
+        $eventKey = $message['EventKey'];
+        switch ($eventKey) {
+            // 默认回复
+            case "CUSTOMER_SERVICE":
+                return "您好！客服小助手为您服务。请描述您的问题，我们将尽快为您解答";
+                break;
+            // 呼叫技术客服
+            case "TECH_SUPPORT":
+                return "技术客服已就位，请详细描述您遇到的技术问题，我们将安排专业工程师为您解决。";
+                break;
+            case "PRODUCT_INFO":
+                return "感谢您对我们产品的关注！请告诉我们您想了解哪款产品，我们将为您提供详细介绍。";
+                break;
+            case "ABOUT_US":
+                return "我们是一家专注于技术创新的公司，致力于为用户提供优质的产品和服务。了解更多请访问我们的官网。";
+                break;
+            case "ABOUT_US":
+                return "使用帮助：\n• 输入关键词获取信息\n• 联系客服请回复人工\n• 业务咨询请拨打电话";
+                break;
+            default:
+                return '用户事件未定义';
+                break;
+        }
+    }
+
+    /*;
      * 处理关注事件
      * @param $event
      * @return string
