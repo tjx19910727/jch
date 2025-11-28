@@ -83,14 +83,13 @@ class OfficialClient extends WxBaseClient
                 if($this->wx){
                     $this->wx_app = $this->getWxApp($this->wx);
                     actionLog($this->wx_app,'wx_app');
-                    actionLog($this->wx_app->menu,'wx_app_menu');
                     $current = $this->wx_app->menu->current();
                     actionLog($current,'current');
                     $list = $this->wx_app->menu->list();
                     actionLog($list,'wx_app_menu_list');
-                    if ($list['errcode'] !== 0) {
+                    if (isset($list['errcode']) && $list['errcode'] !== 0) {
                         return $this->rFail($list['errmsg'],'查询失败');
-                    }else{
+                    }elseif(isset($list['menu'])){
                         $menu = json_encode([
                             'list' => $list,
                             'current' => $current

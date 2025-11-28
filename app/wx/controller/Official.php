@@ -41,7 +41,7 @@ class Official extends BaseController
         if (empty($data['gh_id'])) {
             return $this->rFail('未传入公众号原始ID');
         }
-        AppFactory::wx()->official->menuList($data);
+        return AppFactory::wx()->official->menuList($data);
     }
 
     // 公众号菜单栏修改
