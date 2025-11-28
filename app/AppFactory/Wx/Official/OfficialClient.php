@@ -138,15 +138,14 @@ class OfficialClient extends WxBaseClient
                     $del_rtn = $this->wx_app->menu->delete();
                     actionLog($del_rtn,'del_rtn');
                     actionLog($menu,'待执行的menu');
-                    $result_json = $this->wx_app->menu->create($menu['button']);
-                    $result = json_decode($result_json,true);
+                    $result = $this->wx_app->menu->create($menu['button']);
                     actionLog($result,'创建菜单查询结果');
                     if ($result['errcode'] == 0) {
                         sleep(2);
                         $current = $this->wx_app->menu->current();
                         actionLog($current,'current');
-                        if (!empty($current['menu']['button'])){
-                            return returnData(null,'创建成功');
+                        if ($current['is_menu_open'] == 1 && !empty($current['selfmenu_info']['button'])){
+                            return returnData($current,'创建成功');
                         }
                     }else{
                         return $this->rFail($result,'创建失败');
