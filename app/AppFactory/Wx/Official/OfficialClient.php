@@ -76,7 +76,6 @@ class OfficialClient extends WxBaseClient
     public function menuList($message){
         try {
             $this->wx = $this->getWxOfficialFind(['gh_id' => $message['gh_id']]);
-            dd($this->wx);
             if (!$this->wx) {
                 actionLog($this->getLS(),'查无微信配置SQL');
             } else {
