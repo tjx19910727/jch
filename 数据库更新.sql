@@ -1,3 +1,14 @@
+#20251201
+CREATE TABLE `wechat_menu` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `old_content` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '修改前，公众号菜单内容',
+  `new_content` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '修改后，公众号菜单内容',
+  `update_manager` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '操作人',
+  `update_time` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='公众号自定义菜单记录表';
+
+
 # 20251121
 ALTER TABLE kiosk.machine_error_code
   ADD COLUMN `trade_no` varchar(50) NULL COMMENT '开门视频单号' AFTER `msg` ;
