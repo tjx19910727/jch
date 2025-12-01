@@ -16,6 +16,7 @@ use app\AppFactory\Wx\WxBaseClient;
 use EasyWeChat\Kernel\Exceptions\BadRequestException;
 use EasyWeChat\Kernel\Exceptions\InvalidArgumentException;
 use EasyWeChat\Kernel\Exceptions\InvalidConfigException;
+use think\facade\Db;
 
 class OfficialClient extends WxBaseClient
 {
@@ -127,6 +128,17 @@ class OfficialClient extends WxBaseClient
             }
 
             $this->wx = $this->getWxOfficialFind(['gh_id' => $data['gh_id']]);
+            $menu_info = DB::name("wechat_menu")->order('id','desc')->find();
+            //先查询一下，如果没有记录，做个初始化
+            if(!$menu_info) {
+                $menu_info = [
+                    'old_content' => json_encode([]),
+                    'new_content' => '[{"type":"click","name":"呼叫客服","key":"PRODUCT_INFO","sub_button":[]},{"name":"菜单","sub_button":[{"type":"view","name":"搜索","url":"http://www.soso.com/","sub_button":[]},{"type":"click","name":"赞一下我们","key":"PRODUCT_INFO","sub_button":[]}]}]',
+                    'update_manager' => $data['manager_id'],
+                    'update_time' => time()
+                ];
+                DB::name("wechat_menu")->save($menu_info);
+            }
             if (!$this->wx) {
                 actionLog($this->getLS(),'查无微信配置SQL');
             } else {
@@ -140,15 +152,26 @@ class OfficialClient extends WxBaseClient
                     actionLog($menu,'待执行的menu');
                     $result = $this->wx_app->menu->create($menu['button']);
                     actionLog($result,'创建菜单查询结果');
+                    // $result['errcode'] = 1;
+                    // $current['is_menu_open'] = 1;
+                    // $current['selfmenu_info']['button'] = json_decode('[{"type":"click","name":"呼叫客服","key":"PRODUCT_INFO"},{"name":"菜单","sub_button":[{"type":"view","name":"搜索","url":"http://www.soso.com/"},{"type":"click","name":"赞一下我们","key":"PRODUCT_INFO"}]}]',true);
+                    
                     if ($result['errcode'] == 0) {
-                        sleep(2);
+                        sleep(1);
                         $current = $this->wx_app->menu->current();
                         actionLog($current,'current');
                         if ($current['is_menu_open'] == 1 && !empty($current['selfmenu_info']['button'])){
+                            $menu_info['old_content'] = $menu_info['new_content'];
+                            $menu_info['new_content'] = json_encode($current['selfmenu_info']['button']);
+                            $menu_info['update_manager'] = $data['manager_id'];
+                            $menu_info['update_time'] = time();
+                            DB::name('wechat_menu')->save($menu_info);
                             return returnData($current,'创建成功');
                         }
                     }else{
-                        return $this->rFail($result,'创建失败');
+                        $old_content = json_decode($menu_info['old_content']);
+                        $this->wx_app->menu->create($old_content);
+                        return $this->rFail($result['errmsg'],'创建失败');
                     }
                 }
             }
