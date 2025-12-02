@@ -201,7 +201,7 @@ class Machine extends Common
     public function getOpenPass(){
         $getData = input();
         try{
-            return $this->app->machine->rSuccess($this->app->machine->getPass($getData['machine_id']));
+            return returnData($this->app->machine->getPass($getData['machine_id']));
         } catch (\Exception $e){
             return $this->app->machine->rFail('获取失败');
         }
