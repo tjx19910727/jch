@@ -1,8 +1,8 @@
 #20251201
 CREATE TABLE `wechat_menu` (
   `id` int NOT NULL AUTO_INCREMENT,
-  `old_content` json CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '编辑前，公众号菜单内容',
-  `new_content` json CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '编辑前，公众号菜单内容',
+  `old_content` json CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '编辑成功前，公众号菜单内容',
+  `new_content` json CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '编辑成功后，公众号菜单内容',
   `update_manager` int CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '操作人',
   `update_time` int NULL DEFAULT NULL,
   PRIMARY KEY (`id`)
