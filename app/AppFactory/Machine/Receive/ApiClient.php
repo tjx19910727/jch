@@ -1336,9 +1336,8 @@ class ApiClient extends ReceiveBaseClient
 
     public function retryOutGoods()
     {
-
         $this->order = $this->getSaleOrdersFind(['order_id' => $this->config['data']['order_id']]);
-        if($this->order['out_status'] == 2) $this->order['out_status'] = 1;
+        if($this->order['out_status'] == 2 && !empty($this->order['mch_no'])) $this->order['out_status'] = 1;
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
         if ($details) {
             $contentArr = [];
@@ -1371,10 +1370,9 @@ class ApiClient extends ReceiveBaseClient
                 "outGoods" => $outArr,
             ];
             $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
-            dd($result);
             actionLog(@obj2arr($result),'设备主动要求下发发货数据结果');
             $this->order['out_status'] = 2;
-            // $this->order->save();
+            $this->order->save();
             return $result;
         }
         return $this->r(100,$this->lang("VOutGoods.details_no_data"));
