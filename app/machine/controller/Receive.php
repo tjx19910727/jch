@@ -762,4 +762,18 @@ class Receive extends Common
         }
     }
 
+    /**
+     * 接收出货指令,此接口只有在设备接收了两条到pay_notify发送的MQ消息后出现未出货情况方可调用
+     * @return array|string
+     */
+    public function retryOutGoods()
+    {
+        try {
+            return $this->app->api->retryOutGoods();
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
 }

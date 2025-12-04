@@ -65,6 +65,7 @@ use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\machine\validate\VReceive;
 use think\facade\View;
+use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -102,7 +103,8 @@ class ApiClient extends ReceiveBaseClient
         StrategyPayeeTrait,
         StrategyMachineTrait,
         WxOfficialTrait,
-        WxOfficialLoginTrait
+        WxOfficialLoginTrait,
+        afterOrderRefundTrait
         ;
 
     public function __construct(ServiceContainer $app)
@@ -1329,5 +1331,52 @@ class ApiClient extends ReceiveBaseClient
         actionLog($result,'小票文本');
         $this->updateSaleOrders(['order_id' => $this->data['order_id'],'receipt' => $result]);
         return $this->r(200,'success',['receipt' => $result]);
+    }
+
+
+    public function retryOutGoods()
+    {
+
+        $this->order = $this->getSaleOrdersFind(['order_id' => $this->config['data']['order_id']]);
+        if($this->order['out_status'] == 2) $this->order['out_status'] = 1;
+        $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
+        if ($details) {
+            $contentArr = [];
+            $outArr = [];
+            foreach ($details as $k => $v) {
+                if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
+                    $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
+                    actionLog($this->getLS(),'减固定组合商品酒店库存');
+                }
+                if ($v['g_type'] == 1) {
+                    $dc = [
+                        "channel_code" => $v['channel_code'],
+                        "quantity" => $v['quantity'],
+                        "is_gift" => $v['is_gift'] ?? 2,
+                        "out_port" => $v['out_port'] ?? 1,
+                    ];
+                    $outArr[$v['channel_position']][] = $dc;
+                }
+                if ($v['g_type'] == 3) {
+                    $updateSod['sod_id'] = $v['sod_id'];
+                    $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
+                    $this->updateSaleOrdersDetails($updateSod);
+                }
+
+            }
+
+            $content = [
+                "trade_no" => $this->order['trade_no'],
+                "main" => $contentArr,
+                "outGoods" => $outArr,
+            ];
+            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
+            dd($result);
+            actionLog(@obj2arr($result),'设备主动要求下发发货数据结果');
+            $this->order['out_status'] = 2;
+            // $this->order->save();
+            return $result;
+        }
+        return $this->r(100,$this->lang("VOutGoods.details_no_data"));
     }
 }
