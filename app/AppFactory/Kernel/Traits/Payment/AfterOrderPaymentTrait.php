@@ -43,7 +43,6 @@ trait AfterOrderPaymentTrait
         }
         $this->order['pay_status'] = 3;
         $this->order['pay_time'] = time();
-        actionLog($this->order,'出货前订单数据');
         if ($this->order['order_type'] != 4 && $this->order['out_status'] == 1) {
             $this->outGoods();
         }
@@ -116,7 +115,14 @@ trait AfterOrderPaymentTrait
                 "main" => $contentArr,
                 "outGoods" => $outArr,
             ];
-            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
+            //循环三次，每次间隔5秒执行
+            for ($i = 0; $i < 3; $i++) {
+                $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
+                if (isset($result->status) && $result->status == 'success') {
+                    break;
+                }
+                sleep(5);
+            } // end
             actionLog(@obj2arr($result),'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
             return $result;
