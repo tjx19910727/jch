@@ -769,7 +769,7 @@ class Receive extends Common
     public function retryOutGoods()
     {
         try {
-            while($this->config['data']['status'] == 'finish'){
+            while(!(isset($this->config['data']['status']) && $this->config['data']['status'] == 'finish')){
                 return $this->app->api->retryOutGoods();
                 sleep(5);
             }
