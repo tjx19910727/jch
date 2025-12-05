@@ -1337,7 +1337,7 @@ class ApiClient extends ReceiveBaseClient
     public function retryOutGoods()
     {
         $this->order = $this->getSaleOrdersFind(['order_id' => $this->config['data']['order_id']]);
-        if($this->order['out_status'] == 2 && !empty($this->order['mch_no'])) $this->order['out_status'] = 1;
+        if($this->order['out_status'] == 2 && $this->order['pay_status'] == 3) $this->order['out_status'] = 1;
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
         if ($details) {
             $contentArr = [];
