@@ -33,7 +33,7 @@ class SaleOrders extends Common
         }
 
         $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
-        $where['pay_status'] = 3;
+        // $where['pay_status'] = 3;
         
         if($this->authMchCannel()['status'] != 0){
             $orderIds = Db::name('sale_orders_details')
@@ -61,7 +61,7 @@ class SaleOrders extends Common
         $data = $this->app->authNode->getAuthNodeList($whereAuth,0,'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status','sort asc');
         $data = obj2arr($data);
 
-        $field = "order_id,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_time,out_time,machine_name,machine_id,discount_price,factory,inventory_location,has_hotel,refund_status,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
+        $field = "order_id,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,machine_id,discount_price,factory,inventory_location,has_hotel,refund_status,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
         if (!empty($data))$field .= ",cost_price";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         // if ($postData['supplier']) unset($where['ao_id']);
@@ -208,7 +208,7 @@ class SaleOrders extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","mch_no" => "like","machine_name" => "like","machine_id" => "like"]);
-        $where['pay_status'] = 3;
+        // $where['pay_status'] = 3;
         return $this->app->saleOrders->exportSo($where);
     }
 
