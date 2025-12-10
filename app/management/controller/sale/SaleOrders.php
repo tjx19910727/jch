@@ -502,4 +502,15 @@ class SaleOrders extends Common
 //            return returnState(100,lang("VSaleOrders.checkOff_status_error"));
 //        return $this->app->saleOrders->checkOffHotel($postData['sh_id'],$postData['checkOff_status']);
 //    }
+
+
+    /**
+     * 针对11月份出现的已支付订单，但是订单信息未记录完整的问题进行补录
+     * @return array|string
+     */
+    public function fixOrdersInfo(){
+        $postData = input();
+        $postData['manager_id'] = $this->manager['manager_id'];
+        return $this->app->saleOrders->fixOrdersInfo($postData);
+    }
 }
