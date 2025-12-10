@@ -35,6 +35,14 @@ class AuthOrganizationRole  extends Common
     public function getList()
     {
         $postData = input();
+        if($postData['ao_id'] ?? false){
+            $postData['or.ao_id'] = $postData['ao_id'];
+            unset($postData['ao_id']);
+        }
+        if($postData['role_id'] ?? false){
+            $postData['or.role_id'] = $postData['role_id'];
+            unset($postData['role_id']);
+        }
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false);
         $where['or.is_del'] = 2;
