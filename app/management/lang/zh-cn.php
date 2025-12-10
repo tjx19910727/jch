@@ -673,4 +673,17 @@ return [
         "pic_length" => "图片附件超过限制",
         "email_require" => "电子邮箱不能为空",
     ],
-];
+
+    "VMall" => [
+        "mall_id_require" => "商城ID不能为空",
+        "mall_name_require" => "商城名称不能为空",
+        "type_in" => "无效的支付类型",
+        "status_in" => "无效的状态类型",
+    ],
+
+    "VMallMachine" => [
+        "mall_id_require" => "商城ID不能为空",
+        "machine_id_require" => "设备ID不能为空",
+        "status_in" => "无效的关联状态类型",
+    ],
+]; 

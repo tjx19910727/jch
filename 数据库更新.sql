@@ -1,3 +1,73 @@
+#20251208
+ALTER TABLE kiosk.machine
+  ADD COLUMN `use_points` int(1) default 0 COMMENT '是否允许积分扣费：0-不允许，1-允许' AFTER `current_status`;
+
+ALTER TABLE kiosk.sale_orders
+  ADD COLUMN `total_points` decimal(10,3) default 0 COMMENT '消耗总积分 ' AFTER `total_price`;
+
+ALTER TABLE kiosk.sale_orders
+  ADD COLUMN `refund_points` decimal(10,3) default 0 COMMENT '退款总积分 ' AFTER `total_points`;
+
+ALTER TABLE kiosk.sale_orders MODIFY COLUMN order_type tinyint(1) DEFAULT 1 NULL COMMENT '订单类型，1：普通订单，2：优惠券订单，3：取货码订单，4：盲盒活动，5：满减满送活动，6：叠加营销活动，7商场积分扣费订单';
+ALTER TABLE kiosk.sale_orders MODIFY COLUMN pay_type tinyint(1) DEFAULT 0 NULL COMMENT '支付类型，0：免支付，1：微信支付，2：支付宝支付，3：，4：京东收银，5：会员支付，6：丽呈线上支付，7：机器人线上支付，8：COGOLINK，9：商场积分支付';
+ALTER TABLE kiosk.sale_orders MODIFY COLUMN pay_method tinyint DEFAULT 0 NULL COMMENT '支付方式，0：免支付，1：扫码支付，2：反扫支付，3：POS机支付，4：商场积分支付';
+
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `total_sod_points` decimal(10,3) default 0 COMMENT '副表消耗总积分 ' AFTER `total_sod_price`;
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `refund_points` decimal(10,3) default 0 COMMENT '副表消耗总积分 ' AFTER `refund_amount`;
+
+CREATE TABLE `mall` (
+  `mall_id` int NOT NULL AUTO_INCREMENT,
+  `mall_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `account` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `mobile` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `province` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `city` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `district` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `address` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `full_address` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `intergral_rate` decimal(10,2) NOT NULL DEFAULT '10.00' COMMENT '积分-现金兑换比例（1元=10积分）',
+  `type` tinyint(1) DEFAULT '1' COMMENT '支付类型：1-不使用积分，2-只使用积分，3-积分+现金',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态：1-有效，2-失效',
+  `start_time` datetime DEFAULT NULL,
+  `expire_time` datetime DEFAULT NULL,
+  `creator` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `updator` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `mall_id` (`mall_id`),
+  UNIQUE KEY `account` (`account`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商场信息表';
+
+CREATE TABLE `mall_machine` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `mall_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `machine_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '关联状态：1-正常关联，2-暂停关联，3-其他状态',
+  `creator` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '创建人',
+  `updator` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '更新人',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商场设备关联表';
+
+
+CREATE TABLE `request_logs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `request_url` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `request_headers` text COLLATE utf8mb4_unicode_ci,
+  `request_body` text COLLATE utf8mb4_unicode_ci,
+  `request_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `response_status` int DEFAULT NULL,
+  `response_body` text COLLATE utf8mb4_unicode_ci,
+  `type` tinyint NOT NULL DEFAULT '1' COMMENT '请求类型：1-请求外部接口，2-外部接口回调',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='接口调用记录表';
+
+
 #20251201
 CREATE TABLE `wechat_menu` (
   `id` int NOT NULL AUTO_INCREMENT,

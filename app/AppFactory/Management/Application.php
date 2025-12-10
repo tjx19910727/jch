@@ -32,6 +32,8 @@ use app\AppFactory\Kernel\Providers\Management\TemplateProvider;
 use app\AppFactory\Kernel\Providers\Management\TripProvider;
 use app\AppFactory\Kernel\Providers\Management\UpdateLogProvider;
 use app\AppFactory\Kernel\Providers\Management\WxProvider;
+use app\AppFactory\Kernel\Providers\Management\MallProvider;
+
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
 
@@ -115,6 +117,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineOnOffClient             $machineOnOff           设备营业配置
  * @property Machine\MachineVersionClient           $machineVersion         设备软件版本
  * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
+ * @property Mall\MallClient                        $mall                   商场管理
  *
  * @property MicroMall\MicroMallClient              $microMall              微商城
  * @property MicroMall\MicroMallMachineClient       $microMallMachine       微商城绑定设备
@@ -178,6 +181,7 @@ class Application extends ServiceContainer
         TripProvider::class,
         UpdateLogProvider::class,
         WxProvider::class,
+        MallProvider::class,
     ];
 
 }

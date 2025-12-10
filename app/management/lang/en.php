@@ -670,4 +670,17 @@ return [
         "pic_length" => "Image attachment exceeds limit",
         "email_require" => "Email cannot be empty",
     ],
+
+    "VMall" => [
+        "mall_id_require" => "Mall ID cannot be empty",
+        "mall_name_require" => "Mall name cannot be empty",
+        "type_in" => "Invalid mall type",
+        "status_in" => "Invalid mall status",
+    ],
+
+    "VMallMachine" => [
+        "mall_id_require" => "Mall ID cannot be empty",
+        "machine_id_require" => "Machine ID cannot be empty",
+        "status_in" => "Invalid status",
+    ],
 ];
