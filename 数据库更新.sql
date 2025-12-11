@@ -1,3 +1,8 @@
+#20251211
+ALTER TABLE kiosk.machine
+  ADD COLUMN `ckc_status` tinyint(1) DEFAULT 1 COMMENT '营业状态：1：正常营业，2-暂停营业'  AFTER `current_status` ;
+
+
 #20251201
 CREATE TABLE `wechat_menu` (
   `id` int NOT NULL AUTO_INCREMENT,

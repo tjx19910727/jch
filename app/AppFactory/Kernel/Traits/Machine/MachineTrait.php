@@ -395,8 +395,8 @@ trait MachineTrait
      */
     public function machineCkcOnOff()
     {
-        if($this->message['ckc_status'] == 'On') actionLog('成功设置设备营业状态为：正常营业'.date(' Y-m-d H:i:s',time()));
-        if($this->message['ckc_status'] == 'Off') actionLog('成功设置设备营业状态为：暂停营业'.date(' Y-m-d H:i:s',time()));
-        return true;
+        $result = $this->updateMachine(['m_id' => $this->machine['m_id'],'ckc_status' => $this->message['ckc_status']]);
+        actionLog($this->getLS(),'【SQL】修改设备营业状态','DataUpload');
+        return $result;
     }
 }
