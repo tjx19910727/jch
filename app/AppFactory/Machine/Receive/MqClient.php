@@ -81,7 +81,8 @@ class MqClient extends ReceiveBaseClient
 
     /**
      * 处理设备上报
-     * msgType: outGoods、heartbeat、updateComplete、goodsHit、transactionVideo、img、channelImg、light、volume、errorCode、uploadInfo
+     * msgType: outGoods、heartbeat、updateComplete、goodsHit、transactionVideo、img、channelImg、
+     *          light、volume、errorCode、uploadInfo、machineCkcOnOff
      * @return int
      */
     public function onMessage()
