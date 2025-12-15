@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Support\Validate\Pay\VJdCashierPay;
 use app\AppFactory\Kernel\Support\Validate\Pay\VTlPay;
 use app\AppFactory\Kernel\Support\Validate\Pay\VTrip;
 use app\AppFactory\Kernel\Support\Validate\Pay\VWxPay;
+use app\AppFactory\Kernel\Support\Validate\Pay\VMallPointsPay;
 use think\exception\ValidateException;
 
 trait StrategyPayeeTrait
@@ -62,6 +63,7 @@ trait StrategyPayeeTrait
         3 => VTlPay::class,
         4 => VJdCashierPay::class,
         5 => VTrip::class,
+        9 => VMallPointsPay::class,
     ];
     protected $scene = [
         1 => "wx",
@@ -69,6 +71,7 @@ trait StrategyPayeeTrait
         3 => "tl",
         4 => "jdPay",
         5 => "tripPay",
+        9 => "mallPointsPay",
     ];
 
     /**

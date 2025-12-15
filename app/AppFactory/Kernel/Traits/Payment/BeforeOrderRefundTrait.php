@@ -122,6 +122,9 @@ trait BeforeOrderRefundTrait
             $insertSor['refund_amount'] = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
             $insertSor['manager_id'] = 0;
             $insertSor['nickname'] = "收款方";
+            if($this->order['pay_type'] == 9){
+                $insertSor['refund_points'] = bcmul(bcdiv($this->order['total_points'], $this->order['total_price']), $insertSor['refund_amount']);
+            }
             $this->totalRefundMoney = $this->sodRefundAmount;
             // 京东收银系统退款退分润
             if ($this->order['pay_type'] == 4 && $this->billList) {

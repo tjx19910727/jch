@@ -25,6 +25,11 @@ return [
             'update_order_pay_info_fail' => 'Failed to modify order payment information',
             'pay_status3' => 'The order has been successfully paid',
             'auth_code_not_match_pay_type' => 'The payment code does not match the payment type of the order',
+            'mall_no_data' => 'No valid mall information found',
+            'mall_machine_no_data' => 'No mall and device relationship information found',
+            'mall_disable_points_payment' => 'The mall has disabled points payment',
+            'machine_disable_points_payment' => 'The device has disabled points payment',
+
         ],
     'VJdCashier' =>
         [

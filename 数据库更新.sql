@@ -1,7 +1,4 @@
 #20251208
-ALTER TABLE kiosk.machine
-  ADD COLUMN `use_points` int(1) default 0 COMMENT '是否允许积分扣费：0-不允许，1-允许' AFTER `current_status`;
-
 ALTER TABLE kiosk.sale_orders
   ADD COLUMN `total_points` decimal(10,3) default 0 COMMENT '消耗总积分 ' AFTER `total_price`;
 
@@ -16,9 +13,12 @@ ALTER TABLE kiosk.sale_orders_details
   ADD COLUMN `total_sod_points` decimal(10,3) default 0 COMMENT '副表消耗总积分 ' AFTER `total_sod_price`;
 ALTER TABLE kiosk.sale_orders_details
   ADD COLUMN `refund_points` decimal(10,3) default 0 COMMENT '副表消耗总积分 ' AFTER `refund_amount`;
+ALTER TABLE kiosk.sale_orders_refund
+  ADD COLUMN `refund_points` decimal(10,3) default 0 COMMENT '退还积分 ' AFTER `refund_amount`;
 
 CREATE TABLE `mall` (
   `mall_id` int NOT NULL AUTO_INCREMENT,
+  `mall_code` int NOT NULL COMMENT '商场编码',
   `mall_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `account` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -28,7 +28,7 @@ CREATE TABLE `mall` (
   `district` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `address` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `full_address` varchar(500) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
-  `intergral_rate` decimal(10,2) NOT NULL DEFAULT '10.00' COMMENT '积分-现金兑换比例（1元=10积分）',
+  `intergral_rate` decimal(10,2) NOT NULL DEFAULT '1.00' COMMENT '积分-现金兑换比例（1元=10积分）',
   `type` tinyint(1) DEFAULT '1' COMMENT '支付类型：1-不使用积分，2-只使用积分，3-积分+现金',
   `status` tinyint(1) DEFAULT '1' COMMENT '状态：1-有效，2-失效',
   `start_time` datetime DEFAULT NULL,
@@ -39,6 +39,7 @@ CREATE TABLE `mall` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `mall_id` (`mall_id`),
+  UNIQUE KEY `mall_name` (`mall_name`),
   UNIQUE KEY `account` (`account`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='商场信息表';
 
@@ -57,13 +58,15 @@ CREATE TABLE `mall_machine` (
 
 CREATE TABLE `request_logs` (
   `id` int NOT NULL AUTO_INCREMENT,
+  `mall_id` int NOT NULL,
+  `order_id` int NOT NULL,
   `request_url` varchar(1024) COLLATE utf8mb4_unicode_ci NOT NULL,
   `request_headers` text COLLATE utf8mb4_unicode_ci,
   `request_body` text COLLATE utf8mb4_unicode_ci,
-  `request_time` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `response_status` int DEFAULT NULL,
   `response_body` text COLLATE utf8mb4_unicode_ci,
   `type` tinyint NOT NULL DEFAULT '1' COMMENT '请求类型：1-请求外部接口，2-外部接口回调',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='接口调用记录表';
 

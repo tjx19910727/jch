@@ -19,6 +19,11 @@ use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\JdCashierTrait;
 use app\AppFactory\Kernel\Traits\Payment\TripPay;
 use app\AppFactory\Kernel\Traits\Payment\WxPayTrait;
+use app\AppFactory\Kernel\Traits\Payment\MallPointsPayTrait;
+use app\AppFactory\Kernel\Traits\Mall\MallMachineTrait;
+use app\AppFactory\Kernel\Traits\Mall\MallTrait;
+use app\AppFactory\Kernel\Traits\Mall\MallRequestLogsTrait;
+
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelNightlyTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
@@ -34,6 +39,7 @@ class PaymentClient extends PayBaseClient
         StrategyPayeeTrait,StrategyIncomeTrait,
         StrategyMachineTrait,
         WxPayTrait,AliPayTrait,JdCashierTrait,TripPay,
+        MallPointsPayTrait,MallMachineTrait,MallTrait,MallRequestLogsTrait,
         BeforeOrderPaymentTrait,
         UserTrait,
         SaleHotelTrait,SaleHotelNightlyTrait,
@@ -60,6 +66,7 @@ class PaymentClient extends PayBaseClient
         "3" => "tlPay",
         "4" => "jdPay",
         "5" => "tripPay",
+        "9" => "mallPointsPay",
     ];
 
     protected $cancelType = [

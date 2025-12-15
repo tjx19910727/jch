@@ -27,6 +27,11 @@ trait MallMachineTrait
         return MallMachineModel::getSum($where,$sum);
     }
 
+    public function getMallMachineFind($where, $field = "*", $order = "")
+    {
+        return MallMachineModel::getFind($where, $field, $order);
+    }
+    
     public function addMallMachine($insert)
     {
         !isset($this->manager['manager_id']) ? :$insert['creator'] = $this->manager['manager_id'];

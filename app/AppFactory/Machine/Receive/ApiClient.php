@@ -1280,8 +1280,8 @@ class ApiClient extends ReceiveBaseClient
         $ac_name = [];
         if ($order['fd_id'] > 0) $ac_name[] = "满减";
         if ($order['coupon_id'] > 0) $ac_name[] = "优惠券";
-        $pay_type_list = [0 => "免支付", 1 => "微信",2 => "支付宝",3 => "未定义",4 => "京东收银", 5 => "会员", 6 => "丽呈线上", 7 => "机器人线上", 8 => "COGOLINK"];
-        $pay_method_list = [0 => "免支付",1 => "扫码支付", 2 => "付款码支付", 3 => "POS机支付"];
+        $pay_type_list = [0 => "免支付", 1 => "微信",2 => "支付宝",3 => "未定义",4 => "京东收银", 5 => "会员", 6 => "丽呈线上", 7 => "机器人线上", 8 => "COGOLINK", 9 => "商场积分支付"];
+        $pay_method_list = [0 => "免支付",1 => "扫码支付", 2 => "付款码支付", 3 => "POS机支付", 4 => "商场积分支付"];
         $mch_no = "";
         if (isset($order['mch_no']) && $order['mch_no']) {
             $mch_no = substr($order['mch_no'], 0, 10) . "****" . substr($order['mch_no'], -4);

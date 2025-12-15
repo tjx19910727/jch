@@ -62,6 +62,7 @@ class SaleOrdersClient extends ManagementClient
         "3" => "tlRefund",
         "4" => "jdRefund",
 //        "8" => "CoGoRefund",
+        "9" => "mallPointsRefund",
     ];
 
     protected $postData;

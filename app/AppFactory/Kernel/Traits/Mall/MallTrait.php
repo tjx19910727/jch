@@ -23,6 +23,11 @@ trait MallTrait
         return MallModel::getJoinMallMachineList($where, $pageNum, $field, $order, $eachFun, $group);
     }
 
+    public function getMallFind($where,$field = "*",$order = "")
+    {
+        return MallModel::getFind($where, $field, $order);
+    }
+
     public function getMallSum($where, $sum)
     {
         return MallModel::getSum($where, $sum);
