@@ -143,6 +143,12 @@ class Common extends AuthController
                 $field = $this->app->authNode->getAuthDataFieldByUrl(request()->baseUrl());
                 if ($field) $where[] = [$field,'in', $ids];
             }
+            if ( $this->manager['ao_id'] == 19 && $this->currentMenu['url'] == "/management/auth.auth_organization/getList") {
+                if (isset($where['creator'])) unset($where['creator']);
+                if (!in_array($api,$this->commonApi)) {
+                    $where["raw"] = 'ao_id = '.$this->manager['ao_id'] .' or pid = '.$this->manager['ao_id'];
+                }
+            }
         }
         return $where;
     }
