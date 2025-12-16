@@ -30,12 +30,18 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\User\UserTrait;
 use app\AppFactory\Management\ManagementClient;
+use app\AppFactory\Kernel\Traits\Payment\MallPointsPayTrait;
+use app\AppFactory\Kernel\Traits\Mall\MallMachineTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\Mall\MallTrait;
+use app\AppFactory\Kernel\Traits\Mall\MallRequestLogsTrait;
 
 class SaleOrdersClient extends ManagementClient
 {
     use AuthManagerTrait;
     use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersUnclaimedTrait, SaleOrdersDailyCountTrait, SaleHotelTrait, SaleHotelNightlyTrait;
     use BeforeOrderPaymentTrait;
+    use MallPointsPayTrait,MallMachineTrait,MachineTrait,MallTrait,MallRequestLogsTrait;
     use StrategyMachineTrait;
     use StrategyIncomeTrait;
     use StrategyManagerTrait;
