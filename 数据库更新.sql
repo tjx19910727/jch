@@ -1,6 +1,8 @@
 #20251208
 ALTER TABLE kiosk.sale_orders
-  ADD COLUMN `total_points` decimal(10,3) default 0 COMMENT '消耗总积分 ' AFTER `total_price`;
+  ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '当前订单积分-现金兑换比例（1元=10积分） ' AFTER `total_price`;
+ALTER TABLE kiosk.sale_orders
+  ADD COLUMN `total_points` decimal(10,3) default 0 COMMENT '消耗总积分 ' AFTER `intergral_rate`;
 
 ALTER TABLE kiosk.sale_orders
   ADD COLUMN `refund_points` decimal(10,3) default 0 COMMENT '退款总积分 ' AFTER `total_points`;
