@@ -1,6 +1,7 @@
 #20251216
 UPDATE kiosk.auth_role SET ao_id=19 WHERE role_id=35;
 UPDATE kiosk.auth_role SET ao_id=19 WHERE role_id=39;
+UPDATE kiosk.auth_role SET ao_id=19 WHERE role_id=40;
 
 #20251211
 ALTER TABLE kiosk.machine
