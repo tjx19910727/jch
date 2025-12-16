@@ -1,3 +1,6 @@
+#20251216
+UPDATE kiosk.auth_role SET ao_id=19 WHERE role_id=39;
+
 #20251211
 ALTER TABLE kiosk.machine
   ADD COLUMN `ckc_status` tinyint(1) DEFAULT 1 COMMENT '营业状态：1：正常营业，2-暂停营业'  AFTER `current_status` ;
