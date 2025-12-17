@@ -38,7 +38,11 @@ class WxClient extends PayBaseClient
      */
     public function handle($message)
     {
+        $this->order = $this->order->toArray();
         $this->wxConfig = $this->getStrategyPayeeContent(['sp_id' => $message['sp_id'], 'sm.s_type' => 1]);
+        if($this->order['ao_id'] == 19){
+            $this->wxConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1 , 'payee_type' => 4, 'sm.ao_id'  => $this->order['ao_id']]);
+        }
         if (!$this->wxConfig) {
             actionLog($this->getLS(), '查无微信支付配置信息');
             echo "success";
@@ -55,7 +59,6 @@ class WxClient extends PayBaseClient
                     actionLog($this->getLS(), '查无订单信息');
                     return true;
                 }
-                $this->order = $this->order->toArray();
                 // 用户是否支付成功
                 if ($message['result_code'] === 'SUCCESS') {
                     if ($this->order['pay_status'] != 3) {

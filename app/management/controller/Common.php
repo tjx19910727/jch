@@ -174,6 +174,11 @@ class Common extends AuthController
         return array_column($childs, 'ao_id');
     }
 
+    //获取当前登录账号的顶级组织
+    // public function getOriginAoId($ao_id){
+    //     $originAoIds = ['0','17','19']
+    // }
+
     /**
      * Between
      * @param $key

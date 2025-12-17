@@ -170,6 +170,9 @@ class SaleOrdersClient extends ManagementClient
     {
         $where['sm.s_type'] = 1;
         $where['sp.sp_id'] = $this->order['sp_id'];
+        if($this->order['ao_id'] == 19){
+            $where['sm.ao_id'] = $this->order['ao_id'];
+        }
         $strategyPayee = $this->getStrategyPayeeContent($where, 'sp.*');
         if (!is_array($strategyPayee)) return $strategyPayee;
         if (!$strategyPayee) return $this->rFail("查无收款方配置信息");
