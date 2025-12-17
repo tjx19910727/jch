@@ -50,8 +50,9 @@ class WxClient extends PayBaseClient
         }
         $app = Factory::payment($this->wxConfig);
         $response = $app->handlePaidNotify(function ($message, $fail) {
-            actionLog($message, "message");
-            if ($message['return_code'] === 'SUCCESS') { // return_code 表示通信状态，不代表支付状态
+            actionLog($message, "message-------");
+
+            if ($message['return_code'] == 'SUCCESS' || $message['result_code'] == 'SUCCESS') { // return_code 表示通信状态，不代表支付状态
                 $mch_no = $message['transaction_id'];
                 $outTradeNo = $message['out_trade_no'];
                 $this->order = $this->getSaleOrdersFind(['trade_no' => $outTradeNo]);
