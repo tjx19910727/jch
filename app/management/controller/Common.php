@@ -149,6 +149,7 @@ class Common extends AuthController
                 if (isset($where['creator'])) unset($where['creator']);
                 if (!in_array($api,$this->commonApi)) {
                     $childsAoIds = $this->getChildsAoIds($this->manager['ao_id']);
+                    $childsAoIds[] = $this->manager['ao_id'];
                     if($where['ao_id']) unset($where['ao_id']);
                     $where[] =  ['ao_id', 'in', $childsAoIds];
                 }
