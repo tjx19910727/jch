@@ -1,3 +1,7 @@
+#20251217
+UPDATE kiosk.strategy_machine SET ao_id=19 WHERE sm_id=2372;
+UPDATE kiosk.strategy_machine SET ao_id=19 WHERE sm_id=2373;
+
 #20251216
 UPDATE kiosk.auth_role SET ao_id=19 WHERE role_id=35;
 UPDATE kiosk.auth_role SET ao_id=19 WHERE role_id=39;
