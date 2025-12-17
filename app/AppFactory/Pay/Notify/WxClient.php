@@ -55,6 +55,7 @@ class WxClient extends PayBaseClient
                 $mch_no = $message['transaction_id'];
                 $outTradeNo = $message['out_trade_no'];
                 $this->order = $this->getSaleOrdersFind(['trade_no' => $outTradeNo]);
+                actionLog($this->order, "开始执行订单更新");
                 if (!$this->order) {
                     actionLog($this->getLS(), '查无订单信息');
                     return true;
@@ -65,10 +66,13 @@ class WxClient extends PayBaseClient
                         // 使用通知里的 "微信支付订单号" 或者 "商户订单号" 去自己的数据库找到订单
                         $this->order['pay_type'] = 1;
                         $this->order['mch_no'] = $mch_no;
+                        $this->order->save();
+                        actionLog($this->order, "更新mch_no");
 
                         // $this->startTrans();
                         try {// 结算分润收益
                             $flag[] = $this->settlementRevenue();
+                            actionLog($flag, "分润处理结束");
                             $flag[] = $this->paymentSuccessful();
                             $result = flag_check($flag);
                             actionLog($result, '处理支付成功事务');

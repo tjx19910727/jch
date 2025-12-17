@@ -39,10 +39,13 @@ trait AfterOrderPaymentTrait
         $flag = [];
         if ($this->order['machine_id']) {
             // 发送给设备终端支付成功状态
+            actionLog($this->order,'准备发送支付成功MQ');
             $this->sendToMachine(['machine_id' => $this->order['machine_id']],'paySuccess',['trade_no' => $this->order['trade_no']]);
         }
         $this->order['pay_status'] = 3;
         $this->order['pay_time'] = time();
+        $this->order->save();
+        actionLog($this->order,'更新支付时间成功');
         if ($this->order['order_type'] != 4 && $this->order['out_status'] == 1) {
             $this->outGoods();
         }
