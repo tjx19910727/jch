@@ -43,7 +43,7 @@ class WxClient extends PayBaseClient
         if($this->order['ao_id'] == 19){
             $this->wxConfig = $this->getStrategyPayeeContent(['sp_id'  => $message['sp_id'], 'sm.s_type' => 1,  'sm.ao_id'  => $this->order['ao_id']]);
         }
-        actionLog($this->wxConfig, "message");
+        actionLog($this->wxConfig, "wxConfig");
         if (!$this->wxConfig) {
             actionLog($this->getLS(), '查无微信支付配置信息');
             echo "success";
