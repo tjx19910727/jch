@@ -25,6 +25,7 @@ class StrategyMachineModel extends BaseModel
         "m_id" => "int",
         "s_type" => "int",
         "sort" => "int",
+        'ao_id' => 'int'
     ];
 
     protected static $join = [
