@@ -190,6 +190,8 @@ class BaseModel extends Model
             }
             if ($group) $model = $model->group($group);
             if ($limit) $model = $model->limit($limit);
+            // $model->select();
+            // dd($model->getLastSql());
             if (!$pageNum) return $model->select();
             $model = $model->paginate($pageNum, false, ["query" => request()->param()]);
             if ($eachFn && is_callable($eachFn)) {

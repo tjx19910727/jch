@@ -146,7 +146,7 @@ class Common extends AuthController
                 $field = $this->app->authNode->getAuthDataFieldByUrl(request()->baseUrl());
                 if ($field) $where[] = [$field,'in', $ids];
             }
-            if ( $this->manager['ao_id'] == 19 && $this->currentMenu['url'] == "/management/auth.auth_organization/getList") {
+            if ( ($this->manager['ao_id'] == 19 || $this->manager['pid'] == 19) && $this->currentMenu['url'] == "/management/auth.auth_organization/getList") {
                 if (isset($where['creator'])) unset($where['creator']);
                 if (!in_array($api,$this->commonApi)) {
                     $childsAoIds = $this->getChildsAoIds($this->manager['ao_id']);
@@ -154,6 +154,14 @@ class Common extends AuthController
                     if($where['ao_id']) unset($where['ao_id']);
                     $where[] =  ['ao_id', 'in', $childsAoIds];
                 }
+            }
+            $originAoId = $this->getOriginAoId($this->manager['ao_id']);
+            if($originAoId == 19 && $this->currentMenu['url'] == "/management/auth.auth_node/getList"){
+                $systemAuthNode = Db::name('auth_node')
+                    ->where(["url" => '/management/system'])
+                    ->field('node_id')
+                    ->find();
+                $where['raw'] = 'node_id <> '.$systemAuthNode['node_id'] .' and pid <> '.$systemAuthNode['node_id'].' and node_id <> 131 and pid <> 131';
             }
         }
         return $where;
