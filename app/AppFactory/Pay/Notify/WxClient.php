@@ -41,7 +41,7 @@ class WxClient extends PayBaseClient
         $this->order = $this->order->toArray();
         $this->wxConfig = $this->getStrategyPayeeContent(['sp_id' => $message['sp_id'], 'sm.s_type' => 1]);
         if($this->order['ao_id'] == 19){
-            $this->wxConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1 , 'payee_type' => 4, 'sm.ao_id'  => $this->order['ao_id']]);
+            $this->wxConfig = $this->getStrategyPayeeContent(['sp_id'  => $message['sp_id'], 'sm.s_type' => 1,  'sm.ao_id'  => $this->order['ao_id']]);
         }
         if (!$this->wxConfig) {
             actionLog($this->getLS(), '查无微信支付配置信息');
@@ -66,15 +66,17 @@ class WxClient extends PayBaseClient
                         $this->order['pay_type'] = 1;
                         $this->order['mch_no'] = $mch_no;
 
-                        $this->startTrans();
+                        // $this->startTrans();
                         try {// 结算分润收益
                             $flag[] = $this->settlementRevenue();
                             $flag[] = $this->paymentSuccessful();
                             $result = flag_check($flag);
-                            $return = $this->checkTrans($result);
-                            actionLog($return, '处理支付成功事务');
+                            actionLog($result, '处理支付成功事务');
+                            return true;
+                            // $return = $this->checkTrans($result);
+                            // actionLog($return, '处理支付成功事务');
                         } catch (\Exception $e) {
-                            $this->rollbackTrans();
+                            // $this->rollbackTrans();
                             actionException($e, 1);
                         }
                     }
