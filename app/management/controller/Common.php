@@ -38,7 +38,8 @@ class Common extends AuthController
         "/management/auth.auth_node/getList",
     ];
 
-    public $organizaitonIds = ['19'];
+    public $originAoIds = ['0','17','19'];
+
 
     protected function initialize()
     {
@@ -174,10 +175,17 @@ class Common extends AuthController
         return array_column($childs, 'ao_id');
     }
 
+
     //获取当前登录账号的顶级组织
-    // public function getOriginAoId($ao_id){
-    //     $originAoIds = ['0','17','19']
-    // }
+    public function getOriginAoId($ao_id){
+        while(!in_array($ao_id, $this->originAoIds)) {
+            $pidArr = Db::name('auth_organization')
+                ->where(['ao_id' => $ao_id])
+                ->field('pid')->select()->toArray();
+            $ao_id = array_column($pidArr, 'pid');
+        };
+        return $ao_id;
+    }
 
     /**
      * Between
