@@ -38,12 +38,16 @@ class WxClient extends PayBaseClient
      */
     public function handle($message)
     {
-        $this->order = $this->order->toArray();
         $this->wxConfig = $this->getStrategyPayeeContent(['sp_id' => $message['sp_id'], 'sm.s_type' => 1]);
+        if(isset($message['out_trade_no']) && !empty($message['out_trade_no']))
+        $this->order = $this->getSaleOrdersFind(['trade_no' => $message['out_trade_no']])->toArray();
+        if (!$this->order) {
+            actionLog($this->getLS(), '查无订单信息');
+            return true;
+        }
         if($this->order['ao_id'] == 19){
             $this->wxConfig = $this->getStrategyPayeeContent(['sp_id'  => $message['sp_id'], 'sm.s_type' => 1,  'sm.ao_id'  => $this->order['ao_id']]);
         }
-        actionLog($this->wxConfig, "wxConfig");
         if (!$this->wxConfig) {
             actionLog($this->getLS(), '查无微信支付配置信息');
             echo "success";
@@ -51,38 +55,25 @@ class WxClient extends PayBaseClient
         }
         $app = Factory::payment($this->wxConfig);
         $response = $app->handlePaidNotify(function ($message, $fail) {
-            actionLog($message, "message-------");
-
-            if ($message['return_code'] == 'SUCCESS' || $message['result_code'] == 'SUCCESS') { // return_code 表示通信状态，不代表支付状态
+            actionLog($message, "message--");
+            if ($message['return_code'] === 'SUCCESS') { // return_code 表示通信状态，不代表支付状态
                 $mch_no = $message['transaction_id'];
                 $outTradeNo = $message['out_trade_no'];
-                $this->order = $this->getSaleOrdersFind(['trade_no' => $outTradeNo]);
-                actionLog($this->order, "开始执行订单更新");
-                if (!$this->order) {
-                    actionLog($this->getLS(), '查无订单信息');
-                    return true;
-                }
                 // 用户是否支付成功
                 if ($message['result_code'] === 'SUCCESS') {
                     if ($this->order['pay_status'] != 3) {
                         // 使用通知里的 "微信支付订单号" 或者 "商户订单号" 去自己的数据库找到订单
                         $this->order['pay_type'] = 1;
                         $this->order['mch_no'] = $mch_no;
-                        $this->order->save();
-                        actionLog($this->order, "更新mch_no");
-
-                        // $this->startTrans();
+                        $this->startTrans();
                         try {// 结算分润收益
                             $flag[] = $this->settlementRevenue();
-                            actionLog($flag, "分润处理结束");
                             $flag[] = $this->paymentSuccessful();
                             $result = flag_check($flag);
-                            actionLog($result, '处理支付成功事务');
-                            return true;
-                            // $return = $this->checkTrans($result);
-                            // actionLog($return, '处理支付成功事务');
+                            $return = $this->checkTrans($result);
+                            actionLog($return, '处理支付成功事务');
                         } catch (\Exception $e) {
-                            // $this->rollbackTrans();
+                            $this->rollbackTrans();
                             actionException($e, 1);
                         }
                     }
