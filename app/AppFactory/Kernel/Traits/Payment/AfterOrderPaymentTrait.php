@@ -44,7 +44,7 @@ trait AfterOrderPaymentTrait
         }
         $this->order['pay_status'] = 3;
         $this->order['pay_time'] = time();
-        $this->order->save();
+
         actionLog($this->order,'更新支付时间成功');
         if ($this->order['order_type'] != 4 && $this->order['out_status'] == 1) {
             $this->outGoods();
