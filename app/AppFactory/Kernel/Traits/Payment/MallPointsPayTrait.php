@@ -7,9 +7,12 @@
  */
 
 namespace app\AppFactory\Kernel\Traits\Payment;
+use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 
 trait MallPointsPayTrait
 {
+    use AfterOrderPaymentTrait;
+
     public $m_AppID = '';
     public $m_PublicKey = '';
     public $m_PrivateKey = '';
@@ -99,6 +102,8 @@ trait MallPointsPayTrait
             'PublicKey: '.$this->m_PublicKey,
             'Sign: '.$sSign,
         );
+        $sR = $this->curl_post($sUrl, $aHeader, $sPostData);
+        $rtn = json_decode(html_entity_decode($sR), true);
         //请求之前， 记录一下请求日志
         $this->addMallRequestLogs([
             'mall_id' => $this->mall['mall_id'],
@@ -106,9 +111,10 @@ trait MallPointsPayTrait
             'request_url' => $sUrl,
             'request_headers' => json_encode($aHeader),
             'request_body' => json_encode($sPostData),
-        ]);                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
-        $sR = $this->curl_post($sUrl, $aHeader, $sPostData);
-        return json_decode(html_entity_decode($sR), true);
+            'response_status' => $rtn['Code'],
+            'response_body' => $rtn['Message'],
+        ]);      
+        return $rtn;
     }
 
 
@@ -119,28 +125,23 @@ trait MallPointsPayTrait
     public function mallPointsPay()
     {
         $this->initMallPointsPay();
+        $total_price = $this->order['total_price'];
+        $score = $total_price * $this->mall['intergral_rate'];
         $rtn = $this->mallcooPost($this->reduce_points_url, [
             'CardNo' => $this->order['pay_code'],
             'ScoreEvent' => 'BonusSum',
-            'Score' => $this->order['total_price'] * $this->mall['intergral_rate'],
+            'Score' => $score,
             'Reason' => $this->order['trade_no'].'订单消费扣减积分',
             'TransID' => $this->generateRandomString(16),
         ]);
-        echo json_encode([
-            'openUserId' => $this->order['pay_code'],
-            'ScoreEvent' => 'BonusSum',
-            'Score' => $this->order['total_price'] * $this->mall['intergral_rate'],
-            'Reason' => $this->order['trade_no'].'订单消费扣减积分',
-            'TransID' => $this->generateRandomString(16),
-        ]);
-
+                                 
         if($rtn['Code'] == 1){
             //扣减积分成功，更新订单状态为已支付
             $this->order['pay_status'] = 3;
             $this->order['pay_time'] = time();
-            $this->order['total_price'] = $this->order['total_price'];
+            $this->order['total_price'] = 0;
             $this->order['intergral_rate'] = $this->mall['intergral_rate'];
-            $this->order['total_points'] = $this->order['total_price'] * $this->mall['intergral_rate'];
+            $this->order['total_points'] = $score;
             $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status']);
             if ($uOrder) {
                 actionLog($this->getLS(), '修改订单支付状态信息');
@@ -165,6 +166,7 @@ trait MallPointsPayTrait
             'Reason' => $this->order['trade_no'].'订单退款返回积分',
             'TransID' => $this->generateRandomString(16),
         ]);
+        
         actionLog($result, '退款申请结果');
         if($result['Code'] == 1){
             return $this->r(200, "退款申请成功");

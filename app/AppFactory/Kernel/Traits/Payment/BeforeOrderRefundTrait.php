@@ -47,7 +47,7 @@ trait BeforeOrderRefundTrait
         if (!$this->sodRefundAmount)
             $this->sodRefundAmount = bcmul(bcdiv($this->sod['total_sod_price'],$this->sod['quantity'],2) , $this->postData['refund']['quantity'],3);
         actionLog($this->sodRefundAmount,'本次退款总金额');
-        // 当前退款金额大于可退金额时，重置为剩余可退金额
+        // 当前退款金额大于可退金额时，重置为剩余可退金额bcdiv($this->sod['total_sod_price'],$this->sod['quantity'],2)
         $refundAmount = bcsub($this->order['total_price'], $this->order['refund_amount'], 3);
         if ($this->sodRefundAmount > $refundAmount) {
             $this->sodRefundAmount = $refundAmount;
@@ -122,8 +122,11 @@ trait BeforeOrderRefundTrait
             $insertSor['refund_amount'] = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
             $insertSor['manager_id'] = 0;
             $insertSor['nickname'] = "收款方";
-            if($this->order['pay_type'] == 9){
-                $insertSor['refund_points'] = bcmul(bcdiv($this->order['total_points'], $this->order['total_price']), $insertSor['refund_amount']);
+            if($this->order['pay_type'] == 9 || $this->order['order_type'] == 7){
+                $refund_amount = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
+                $refund_points = $refund_amount * $this->order['intergral_rate'];
+                $insertSor['refund_amount'] = 0;
+                $insertSor['refund_points'] = $refund_points;
             }
             $this->totalRefundMoney = $this->sodRefundAmount;
             // 京东收银系统退款退分润
