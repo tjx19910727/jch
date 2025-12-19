@@ -82,6 +82,10 @@ class MqClient extends SendBaseClient
      * @return array|string
      */
     /**
+     * 下发设备营业状态 machineCkcOnOff
+     * @return array|string
+     */
+    /**
      * 触发设备营业配置更新  updateMachineOnOff
      * @return array|string
      */

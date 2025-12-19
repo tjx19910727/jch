@@ -67,6 +67,7 @@ trait AuthManagerTrait
         $insert['creator'] = $this->manager['manager_id'];
         $insert['pid'] = $this->manager['manager_id'];
         $insert['level'] = $this->manager['level'] + 1;
+        $insert['ao_id'] = $this->manager['ao_id'];
         $data = AuthManagerModel::create($insert);
         return $data->manager_id;
     }

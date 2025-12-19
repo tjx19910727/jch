@@ -407,6 +407,7 @@ return [
         "volume_multiple" => "音量值必须为10的倍数",
 
         "machine_offline" => "设备离线",
+        "ckc_status_require" => "营业状态不能为空",
     ],
 
     "VMachineLang" => [

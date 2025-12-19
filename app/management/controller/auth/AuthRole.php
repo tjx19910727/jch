@@ -51,6 +51,7 @@ class AuthRole extends Common
     {
         $postData = input();
         try { $this->validate($postData,'app\management\validate\VAuth.AuthRoleAdd');} catch (\Exception $e) { return returnValidate($e->getMessage());}
+        $postData['ao_id'] = $this->manager['ao_id'];
         $result = $this->app->authRole->add($postData);
         return $result;
     }

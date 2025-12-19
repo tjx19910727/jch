@@ -43,7 +43,8 @@ class StrategyPayee extends Common
         try { $this->validate($postData,$this->validatePath .'addSp');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $checkContent = $this->checkContent($postData);
         if ($checkContent !== true) return $checkContent;
-        if (!isset($postData['ao_id'])) $postData['ao_id'] = $this->manager['ao_id'];
+        //这里不知道是谁添加的策略，但是存到数据库中的ao_id一定得是这个人的顶级组织id
+        if (!isset($postData['ao_id'])) $postData['ao_id'] = $this->getOriginAoId($this->manager['ao_id']);
         return $this->app->strategyPayee->add($postData);
     }
 

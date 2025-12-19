@@ -437,4 +437,13 @@ trait SaleOrdersTrait
         return $this->updateSaleOrders(['transaction_video' => $this->message['transaction_video']], ['trade_no' => $this->message['trade_no']]);
     }
 
+
+    /**
+     * 修复11月份已支付订单，但订单信息不完整的问题
+     * @param $postData
+     */
+    public function fixOrdersInfo($postData){
+        return SaleOrdersModel::fixOrdersInfo($postData);
+    }
+
 }

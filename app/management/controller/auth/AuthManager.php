@@ -52,6 +52,7 @@ class AuthManager extends Common
     public function add()
     {
         $postData = input();
+        $postData['ao_id'] = $this->getOriginAoId($this->manager['ao_id']);
         try { $this->validate($postData,'app\management\validate\VAuth.AuthManagerAdd');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->authManager->add($postData);
         return $result;

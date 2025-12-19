@@ -49,6 +49,9 @@ class JdCashierClient extends PayBaseClient
         $this->order = $this->order->toArray();
         actionLog($this->order,'订单数据');
         $this->jdConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1 , 'payee_type' => 4]);
+        if($this->order['ao_id'] == 19){
+            $this->jdConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1 , 'payee_type' => 4, 'sm.ao_id'  => $this->order['ao_id']]);
+        }
         if (!is_array($this->jdConfig)) return $this->jdConfig;
         actionLog($this->jdConfig,'京东配置信息');
 

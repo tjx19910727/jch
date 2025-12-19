@@ -152,6 +152,22 @@ class Machine extends Common
     }
 
     /**
+     * 设置设备暂停营业 setMachineCkcOnOff
+     * @return array|string
+     */
+    public function setMachineCkcOnOff()
+    {
+        //这里严谨一点需要验证是否在开机时间范围内、营业时间范围内、逻辑复杂，暂时不这么搞，后续有需求再改
+        $machine_id = input("machine_id");
+        $ckc_status = input("ckc_status");
+        if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
+        if (!$ckc_status) return returnValidate(lang("VMachine.ckc_status_require"));
+        $otherData  = ["ckc_status" => $ckc_status];
+        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "machineCkcOnOff", $otherData);
+        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+    }
+
+    /**
      * 设置音量
      * @return array|string
      */

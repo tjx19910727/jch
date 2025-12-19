@@ -47,7 +47,7 @@ class PosClient extends PayBaseClient
         if (!$this->order) return $this->rFail($this->lang("VPos.order_no_data"));
         $this->order = $this->order->toArray();
         // pay_status，支付状态，3：已支付，5：取消支付
-        if ($message['payment_status'] === 'TRADE_SUCCESS') {
+        if ($message['payment_status'] === 'TRADE_SUCCESS' || strstr($message['payment_status'], 'ERR_STATUS=21') ) {
             if ($this->order['pay_status'] != 3) {
                 $this->order['mch_no'] = $message['mch_no'];
                 $this->startTrans();

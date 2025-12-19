@@ -27,6 +27,7 @@ trait AuthRoleTrait
     public function addAuthRole($insert)
     {
         $insert['creator'] = $this->manager['manager_id'];
+        $insert['ao_id'] = $this->manager['ao_id'];    
         $data = AuthRoleModel::create($insert);
         return $data->role_id;
     }

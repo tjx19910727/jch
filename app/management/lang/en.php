@@ -407,6 +407,7 @@ return [
         "volume_multiple" => "Volume value must be a multiple of 10",
 
         "machine_offline" => "Device offline",
+        "ckc_status_require" => "Business status cannot be empty",
     ],
 
     "VMachineLang" => [
@@ -654,7 +655,7 @@ return [
         "et_id_require"   => "Message template ID cannot be empty",
         "subject_require" => "Title cannot be empty",
         "body_require"    => "Body information cannot be empty",
-        "attachment_max"    => "Attachment information exceeds length limit",
+        "attachment_max"    => "Attachment information exceeds length limit",  
         "template_type_require" => "Template type cannot be empty",
     ],
 

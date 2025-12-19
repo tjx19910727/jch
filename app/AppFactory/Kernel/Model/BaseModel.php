@@ -180,9 +180,18 @@ class BaseModel extends Model
                 $field .= ", (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name";
             }
             if (isset($pageNum) && $pageNum && !is_numeric($pageNum) && !is_array($pageNum)) throw new \Exception("页面数据条数必须为数字或数组");
-            $model = self::alias("a")->where($where)->field($field)->order($order);
+            if(isset($where['raw'])){
+                $whereRaw = $where['raw'];
+                unset($where['raw']);
+                unset($where['ao_id']);
+                $model = self::alias("a")->where($where)->whereRaw($whereRaw)->field($field)->order($order);
+            }else{
+                $model = self::alias("a")->where($where)->field($field)->order($order);
+            }
             if ($group) $model = $model->group($group);
             if ($limit) $model = $model->limit($limit);
+            // $model->select();
+            // dd($model->getLastSql());
             if (!$pageNum) return $model->select();
             $model = $model->paginate($pageNum, false, ["query" => request()->param()]);
             if ($eachFn && is_callable($eachFn)) {

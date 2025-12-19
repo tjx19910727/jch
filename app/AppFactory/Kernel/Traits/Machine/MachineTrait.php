@@ -388,4 +388,15 @@ trait MachineTrait
             return false;
         }
     }
+
+    /**
+     * 设备正常、暂停营业状态记录日志
+     * @return MachineModel
+     */
+    public function machineCkcOnOff()
+    {
+        $result = $this->updateMachine(['m_id' => $this->machine['m_id'],'ckc_status' => $this->message['ckc_status']]);
+        actionLog($this->getLS(),'【SQL】修改设备营业状态','DataUpload');
+        return $result;
+    }
 }

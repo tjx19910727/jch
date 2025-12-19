@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Model\SaleOrders;
 
 
 use app\AppFactory\Kernel\Model\BaseModel;
+use app\AppFactory\Kernel\Model\Machine\MachineMqRecordModel;
 
 class SaleOrdersModel extends BaseModel
 {
@@ -70,5 +71,22 @@ class SaleOrdersModel extends BaseModel
         return $data;
     }
 
+    /**
+     * 修复11月份已支付订单，但订单信息不完整的问题
+     * @param $postData
+     */
+
+    public static function fixOrdersInfo($postData){
+        $trade_nos = explode(",", $postData['trade_no']);
+        $where[] = ['trade_no','in', $trade_nos];
+        $orders = self::where($where)->select();
+        foreach ($orders as $order) {
+            $order->pay_time = $order->create_time + 15;
+            $order->pay_status = 3;
+            $order->manager_id = $postData['manager_id'];
+            $order->save();
+        }
+        return "修复完成";
+    }
 
 }

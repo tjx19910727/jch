@@ -63,10 +63,11 @@ trait StrategyMachineTrait
             $flag = [];
             $m_id = explode(",", $insert['m_id']);
             foreach ($m_id as $key => $value) {
-                $sm = $this->getStrategyMachineFind(['s_id' => $insert['s_id'], 'm_id' => $value, 's_type' => $insert['s_type']], 'sm_id');
+                $ao_id = $this->getMachineValue(['m_id' => $value],'ao_id');
+                $sm = $this->getStrategyMachineFind(['s_id' => $insert['s_id'], 'm_id' => $value, 's_type' => $insert['s_type'], 'ao_id' => $ao_id ], 'sm_id');
                 if (!$sm) {
                     $insert['m_id'] = $value;
-                    $insert['ao_id'] = $this->getMachineValue(['m_id' => $value],'ao_id');
+                    $insert['ao_id'] = $ao_id;
                     $data = StrategyMachineModel::create($insert);
                     $flag[] = $data->sm_id;
                     continue;
