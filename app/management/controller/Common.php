@@ -155,13 +155,16 @@ class Common extends AuthController
                     $where[] =  ['ao_id', 'in', $childsAoIds];
                 }
             }
-            $originAoId = $this->getOriginAoId($this->manager['ao_id']);
-            if($originAoId == 19 && $this->currentMenu['url'] == "/management/auth.auth_node/getList"){
+            if($this->manager['ao_id'] == 19 && $this->currentMenu['url'] == "/management/auth.auth_node/getList"){
                 $systemAuthNode = Db::name('auth_node')
                     ->where(["url" => '/management/system'])
                     ->field('node_id')
                     ->find();
                 $where['raw'] = 'node_id <> '.$systemAuthNode['node_id'] .' and pid <> '.$systemAuthNode['node_id'].' and node_id <> 131 and pid <> 131';
+            }
+            //对超管来说，不需要区分组织
+            if($this->manager['ao_id'] == 0 || $this->manager['ao_id'] == 1){
+                if(isset($where['ao_id'])) unset($where['ao_id']);
             }
         }
         return $where;
