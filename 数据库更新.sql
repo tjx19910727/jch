@@ -72,6 +72,21 @@ CREATE TABLE `request_logs` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='接口调用记录表';
 
 
+#20251217
+UPDATE kiosk.strategy_machine SET ao_id=19 WHERE sm_id=2372;
+UPDATE kiosk.strategy_machine SET ao_id=19 WHERE sm_id=2373;
+
+#20251216
+UPDATE kiosk.auth_role SET ao_id=19 WHERE role_id=35;
+UPDATE kiosk.auth_role SET ao_id=19 WHERE role_id=39;
+UPDATE kiosk.auth_role SET ao_id=19 WHERE role_id=40;
+
+#20251211
+ALTER TABLE kiosk.machine
+  ADD COLUMN `ckc_status` tinyint(1) DEFAULT 1 COMMENT '营业状态：1：正常营业，2-暂停营业'  AFTER `current_status` ;
+
+
+
 #20251201
 CREATE TABLE `wechat_menu` (
   `id` int NOT NULL AUTO_INCREMENT,
