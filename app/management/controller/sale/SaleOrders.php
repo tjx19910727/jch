@@ -33,8 +33,7 @@ class SaleOrders extends Common
         }
 
         $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
-        // $where['pay_status'] = 3;
-        
+        $where['raw'] = "pay_status in ('3', '7')";
         if($this->authMchCannel()['status'] != 0){
             $orderIds = Db::name('sale_orders_details')
             ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
@@ -208,7 +207,6 @@ class SaleOrders extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","mch_no" => "like","machine_name" => "like","machine_id" => "like"]);
-        // $where['pay_status'] = 3;
         return $this->app->saleOrders->exportSo($where);
     }
 

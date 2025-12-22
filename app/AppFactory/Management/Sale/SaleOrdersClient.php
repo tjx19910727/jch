@@ -86,14 +86,6 @@ class SaleOrdersClient extends ManagementClient
                 }
             }
             $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, $supplier)->toArray();
-            //因为小车退款订单无法查询，这里对查询结果处理一下
-            $new_data = [];
-            foreach($data['data'] as $v){
-                if($v['pay_status'] == 3 || $v['pay_type'] == 7){
-                    $new_data[] = $v;
-                }
-            }
-            $data['data'] = $new_data;
             return $this->r(200, $this->lang("query_success"), $data);
         } catch (\Exception $e) {
             actionException($e, 1);
@@ -313,6 +305,7 @@ class SaleOrdersClient extends ManagementClient
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
+        $where['raw'] = "pay_status in ('3', '7')";
         $list = $this->getSaleOrdersList($where, 0,
             'order_id,machine_id,machine_name,pay_status,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,factory,inventory_location,
                 (CASE order_type 
@@ -414,12 +407,6 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time', 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
-            $new_list = [];
-            foreach($list as $v) {
-                if($v['pay_status'] == 3 || $v['pay_type'] == 7){
-                    $new_list[] = $v;
-                }
-            }
             $title = [
                 "order_id" => "订单ID",
                 "machine_id" => "设备编号",
@@ -439,7 +426,7 @@ class SaleOrdersClient extends ManagementClient
                 "out_time" => "出货时间",
             ];
             $filename = "订单交易-" . date("Ymd");
-            return $this->sendToExport("订单管理-销售订单", $filename, $title, $new_list);
+            return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
         }
         return $this->rFail($this->lang("action_fail"));
     }
