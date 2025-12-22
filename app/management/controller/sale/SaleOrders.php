@@ -295,21 +295,21 @@ class SaleOrders extends Common
                 if ($mIds) $where[] = ['m_id', 'in', $mIds];
             }
         }
-        if ($group) {
-            // 日
-            if ($group == "day") {
-                $field = "countDate,";
-            }
-            // 月
-            if ($group == "month") {
-                $field = "DATE_FORMAT(countDate ,'%Y-%m') countDate,";
-            }
-            // 年
-            if ($group == "year") {
-                $field = "DATE_FORMAT(countDate ,'%Y') countDate,";
-            }
-            $group = "countDate";
-        }
+        // if ($group) {
+        //     // 日
+        //     if ($group == "day") {
+        //         $field = "countDate,";
+        //     }
+        //     // 月
+        //     if ($group == "month") {
+        //         $field = "DATE_FORMAT(countDate ,'%Y-%m') countDate,";
+        //     }
+        //     // 年
+        //     if ($group == "year") {
+        //         $field = "DATE_FORMAT(countDate ,'%Y') countDate,";
+        //     }
+        //     $group = "countDate";
+        // }
         $field .= "ao_name,
         SUM(order_num) order_num,
         sum(totalRefundAmount) totalRefundAmount,
@@ -323,7 +323,7 @@ class SaleOrders extends Common
         SUM(lotteryAmount) lotteryAmount,
         SUM(lotteryQuantity) lotteryQuantity";
         if (isset($postData['machine_id'])) $field = "machine_id,machine_name," . $field;
-        return $this->app->saleOrders->getTotalReport($where,$field,'countDate desc',$group);
+        return $this->app->saleOrders->getTotalReport($where,$field,'countDate desc');
     }
 
     /**
