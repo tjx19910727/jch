@@ -29,5 +29,6 @@ class VMallMachine extends VCommon
         "add" => ["mall_id",'machine_id','status'],
         "update" => ["mall_id"],
         "del" => ["mall_id"],
+        "bind" => ["mall_id","m_ids"],
     ];
 }

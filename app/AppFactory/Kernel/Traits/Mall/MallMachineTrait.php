@@ -12,6 +12,12 @@ use app\AppFactory\Kernel\Model\Mall\MallMachineModel;
 
 trait MallMachineTrait
 {
+    public function getMallMachineColumn($where, $column)
+    {
+        return MallMachineModel::getColumn($where, $column);
+    }
+
+    
     public function getMallMachineCount($where,$field = '*',$order = '')
     {
         return MallMachineModel::getFind($where,$field,$order);
@@ -41,9 +47,9 @@ trait MallMachineTrait
 
     }
 
-    public function updateMallMachine($update,$where = [],$field = [])
+    public function updateMallMachine($update, $where = [], $field = [])
     {
-        return MallMachineModel::update($update,$where,$field);
+        return MallMachineModel::update($update, $where, $field);
     }
 
     public function delMallMachine($where)
@@ -51,4 +57,15 @@ trait MallMachineTrait
         return MallMachineModel::whereDel($where);
     }
 
+    /**
+     * 批量添加商场关联设备信息
+     * @param $insert
+     * @return \think\Collection
+     * @throws \Exception
+     */
+    public function addMallMachineMore($insert)
+    {
+        $model = new MallMachineModel();
+        return $model->saveAll($insert);
+    }
 }

@@ -47,6 +47,7 @@ CREATE TABLE `mall` (
 CREATE TABLE `mall_machine` (
   `id` int NOT NULL AUTO_INCREMENT,
   `mall_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `m_id` int(10) COLLATE utf8mb4_unicode_ci NOT NULL,
   `machine_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '关联状态：1-正常关联，2-暂停关联，3-其他状态',
   `creator` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '创建人',
