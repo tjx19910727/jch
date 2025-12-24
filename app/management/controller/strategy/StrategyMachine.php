@@ -19,6 +19,7 @@ class StrategyMachine extends Common
     {
         $postData = input();
         try { $this->validate($postData,$this->validatePath . 'bind');} catch (\Exception $e) { return returnValidate($e->getMessage());}
+        $postData['ao_id'] = $this->manager['ao_id'];
         return $this->app->strategyMachine->addStrategyMachine($postData);
     }
 

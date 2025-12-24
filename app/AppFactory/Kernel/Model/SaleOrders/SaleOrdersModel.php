@@ -81,6 +81,7 @@ class SaleOrdersModel extends BaseModel
         $where[] = ['trade_no','in', $trade_nos];
         $orders = self::where($where)->select();
         foreach ($orders as $order) {
+            $order->out_status = 4; //修改这个是为了退款后前端能正常展示为已退款
             $order->pay_time = $order->create_time + 15;
             $order->pay_status = 3;
             $order->manager_id = $postData['manager_id'];
