@@ -1342,13 +1342,4 @@ class ApiClient extends ReceiveBaseClient
     }
 
 
-    /**
-     * 设备反扫商场会员二维码获取数据提交                                
-     * @return array|\think\response\Json
-     * @throws \Exception
-     */
-    public function scanMallQrCode()
-    {
-
-    }
 }

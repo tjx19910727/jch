@@ -142,11 +142,12 @@ trait MallPointsPayTrait
             $this->order['total_price'] = 0;
             $this->order['intergral_rate'] = $this->mall['intergral_rate'];
             $this->order['total_points'] = $score;
-            $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status']);
+            // dd($this->order);
+            $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status','pay_time','total_price','intergral_rate','total_points']);
             if ($uOrder) {
                 actionLog($this->getLS(), '修改订单支付状态信息');
                 $this->outGoods();
-                return $this->rSuccess($this->lang("pay_status3"));
+                return $this->rSuccess($this->lang("VOrderPay.pay_status3"));
             }
         }
         return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail").$rtn['Message']);
@@ -169,7 +170,9 @@ trait MallPointsPayTrait
         
         actionLog($result, '退款申请结果');
         if($result['Code'] == 1){
+             $result = $this->jdApp->order->refundByTradeNo($params);
             return $this->r(200, "退款申请成功");
+
         }
         return $this->rFail( '退款失败：' . $result['Message']);
     }

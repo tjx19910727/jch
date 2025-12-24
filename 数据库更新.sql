@@ -8,7 +8,6 @@ ALTER TABLE kiosk.sale_orders
 
 ALTER TABLE kiosk.sale_orders MODIFY COLUMN order_type tinyint(1) DEFAULT 1 NULL COMMENT '订单类型，1：普通订单，2：优惠券订单，3：取货码订单，4：盲盒活动，5：满减满送活动，6：叠加营销活动，7商场积分扣费订单';
 ALTER TABLE kiosk.sale_orders MODIFY COLUMN pay_type tinyint(1) DEFAULT 0 NULL COMMENT '支付类型，0：免支付，1：微信支付，2：支付宝支付，3：，4：京东收银，5：会员支付，6：丽呈线上支付，7：机器人线上支付，8：COGOLINK，9：商场积分支付';
-ALTER TABLE kiosk.sale_orders MODIFY COLUMN pay_method tinyint DEFAULT 0 NULL COMMENT '支付方式，0：免支付，1：扫码支付，2：反扫支付，3：POS机支付，4：商场积分支付';
 
 ALTER TABLE kiosk.sale_orders_details
   ADD COLUMN `total_sod_points` decimal(10,3) default 0 COMMENT '副表消耗总积分 ' AFTER `total_sod_price`;
