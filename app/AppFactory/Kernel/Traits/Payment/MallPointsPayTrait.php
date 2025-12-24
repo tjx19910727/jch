@@ -7,11 +7,13 @@
  */
 
 namespace app\AppFactory\Kernel\Traits\Payment;
+
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 
 trait MallPointsPayTrait
 {
-    use AfterOrderPaymentTrait;
+    use AfterOrderPaymentTrait,SaleOrdersTrait;
 
     public $m_AppID = '';
     public $m_PublicKey = '';
@@ -139,11 +141,10 @@ trait MallPointsPayTrait
             //扣减积分成功，更新订单状态为已支付
             $this->order['pay_status'] = 3;
             $this->order['pay_time'] = time();
-            $this->order['total_price'] = 0;
             $this->order['intergral_rate'] = $this->mall['intergral_rate'];
             $this->order['total_points'] = $score;
-            // dd($this->order);
-            $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status','pay_time','total_price','intergral_rate','total_points']);
+            $this->order['order_type'] = 7;
+            $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status','pay_time','total_price','intergral_rate','total_points','order_type']);
             if ($uOrder) {
                 actionLog($this->getLS(), '修改订单支付状态信息');
                 $this->outGoods();

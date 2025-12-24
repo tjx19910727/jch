@@ -113,8 +113,8 @@ trait AfterOrderRefundTrait
     protected function refundSuccessUpdateSod()
     {
         if($this->order['pay_type'] == 9){
-            $refund_points = bcmul(bcdiv($this->order['total_points'], $this->order['total_price']), $this->refund['refund_amount']);
-            $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']],'refund_amount', $refund_points);
+            $refund_points = bcmul($this->order['intergral_rate'], $this->refund['refund_amount']);
+            $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']], 'refund_points', $refund_points);
             actionLog($this->getLS(),'修改订单副表退款金额SQL');
         }
         $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']],'refund_quantity',$this->refund['refund_quantity']);
@@ -134,7 +134,7 @@ trait AfterOrderRefundTrait
     {
         if($this->order['pay_type'] == 9){
             $total_refund_amount = $this->order['refund_amount'] + $this->data['refundAmount'];
-            $refund_points = bcmul(bcdiv($this->order['total_points'], $this->order['total_price']),  $total_refund_amount);
+            $refund_points = bcmul($this->order['intergral_rate'],  $total_refund_amount);
         }
         $updateOrder = [
             "order_id" => $this->order['order_id'],
@@ -146,6 +146,7 @@ trait AfterOrderRefundTrait
         actionLog($updateOrder,'修改订单数据');
         $result = $this->updateSaleOrders($updateOrder);
         actionLog($this->getLS(),'修改订单退款状态SQL');
+        $result = $this->checkFlag($flag);
         return $result;
     }
 

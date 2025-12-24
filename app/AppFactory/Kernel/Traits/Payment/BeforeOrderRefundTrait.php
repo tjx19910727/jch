@@ -74,7 +74,9 @@ trait BeforeOrderRefundTrait
         $systemRefund = $this->systemRefund();
         if (is_object($systemRefund) || is_string($systemRefund)) return $systemRefund;
         $flag[] = $systemRefund;
-        if ($this->sodRefundAmount <= 0) return $this->rFail("退款金额小于0，退款失败");
+        if ($this->sodRefundAmount <= 0) {
+            if($this->order['pay_type'] != 9) return $this->rFail("退款金额小于0，退款失败");
+        }
         actionLog($flag,'退款记录生成结果');
         return $flag;
     }
@@ -125,7 +127,6 @@ trait BeforeOrderRefundTrait
             if($this->order['pay_type'] == 9 || $this->order['order_type'] == 7){
                 $refund_amount = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
                 $refund_points = $refund_amount * $this->order['intergral_rate'];
-                $insertSor['refund_amount'] = 0;
                 $insertSor['refund_points'] = $refund_points;
             }
             $this->totalRefundMoney = $this->sodRefundAmount;
@@ -140,6 +141,7 @@ trait BeforeOrderRefundTrait
                     "amount" => $insertSor['refund_amount'],
                 ];
             }
+            actionLog($insertSor,'生成退款订单');
             return $this->addSaleOrdersRefund($insertSor);
         }
         return 1;
