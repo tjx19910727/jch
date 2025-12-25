@@ -22,7 +22,7 @@ return [
             'machine_no_data' => 'No device information found',
             'unKnow_auth_code' => 'Unable to identify payment code type',
             'unKnow_pay_type' => 'Undefined payment type',
-            'update_order_pay_info_fail' => 'Failed to modify order payment information',
+            'update_order_pay_info_fail' => 'Failed to Order',
             'pay_status3' => 'The order has been successfully paid',
             'auth_code_not_match_pay_type' => 'The payment code does not match the payment type of the order',
             'mall_no_data' => 'No valid mall information found',
