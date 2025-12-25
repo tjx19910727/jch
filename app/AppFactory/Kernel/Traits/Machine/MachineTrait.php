@@ -253,8 +253,8 @@ trait MachineTrait
      * 当前命令下发前需要检查一下current_status
      */
     protected $checkCurrentStatus = [
-        "sleep",
-        "wakeUp",
+        // "sleep",
+        // "wakeUp",
         "reboot",
         "shutdown",
         "update",
