@@ -26,6 +26,7 @@ class ActivityCoupon extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["c_name" => "like"]);
+        $where['ao_id'] = $this->manager['ao_id'];
         $this->field .= ",
         (CASE WHEN code > 0 THEN 0 ELSE (SELECT count(cu_id) FROM activity_coupon_used cu WHERE  cu.c_id = a.`c_id` ) END) codeNum";
         return $this->app->activityCoupon->getAcAgAmList($where,$pageNum,$this->field,'c_id desc');

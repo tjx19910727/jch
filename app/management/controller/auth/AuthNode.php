@@ -10,6 +10,7 @@ namespace app\management\controller\auth;
 
 
 use app\management\controller\Common;
+use think\facade\Db;
 
 class AuthNode extends Common
 {
@@ -36,7 +37,14 @@ class AuthNode extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['name' => "like",'url' => 'like']);
-        
+        $top_org_ids = $this->getTopOrgIds();
+        if(in_array($this->manager['ao_id'], $top_org_ids)){
+            $nodeWhereRaw = " name like '%系统管理%' or name like '%更新日志%'";
+            $nodeWhere['pid'] = 0;
+            $unShowNodes = Db::name('auth_node')->where($nodeWhere)->whereRaw($nodeWhereRaw)->column('node_id');
+            $children = $this->getChildAuthNode($unShowNodes);
+            $where[] = ['node_id', 'not in', $children];
+        }
         $field = "node_id,pid,name,icon,url,desc,sort,type,data_auth,is_auth,is_button,status";
         $result = $this->app->authNode->getList($where,$pageNum,$field);
         return $result;

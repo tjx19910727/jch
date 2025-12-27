@@ -26,6 +26,7 @@ class MachineAdvance extends Common
         $postData = input();
         $where = $this->getWhere($postData,false,['adv_title' => "like"]);
         if (!isset($where['push_type'])) $where[] = ['push_type','between',[2,3]];
+        $where['ao_id'] = $this->manager['ao_id'];
         return returnData($this->app->advertisementPush->getAdvertisementPushList($where,($postData['pageNum'] ?? 0),'*',"create_time desc"));
     }
 

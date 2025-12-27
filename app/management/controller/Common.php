@@ -146,7 +146,8 @@ class Common extends AuthController
                 $field = $this->app->authNode->getAuthDataFieldByUrl(request()->baseUrl());
                 if ($field) $where[] = [$field,'in', $ids];
             }
-            if ( ($this->manager['ao_id'] == 19 || $this->manager['pid'] == 19) && $this->currentMenu['url'] == "/management/auth.auth_organization/getList") {
+            $top_org_ids = $this->getTopOrgIds();
+            if ( (in_array($this->manager['ao_id'], $top_org_ids) || in_array($this->manager['pid'], $top_org_ids)) && $this->currentMenu['url'] == "/management/auth.auth_organization/getList") {
                 if (isset($where['creator'])) unset($where['creator']);
                 if (!in_array($api,$this->commonApi)) {
                     $childsAoIds = $this->getChildsAoIds($this->manager['ao_id']);
@@ -154,13 +155,6 @@ class Common extends AuthController
                     if($where['ao_id']) unset($where['ao_id']);
                     $where[] =  ['ao_id', 'in', $childsAoIds];
                 }
-            }
-            if($this->manager['ao_id'] == 19 && $this->currentMenu['url'] == "/management/auth.auth_node/getList"){
-                $systemAuthNode = Db::name('auth_node')
-                    ->where(["url" => '/management/system'])
-                    ->field('node_id')
-                    ->find();
-                $where['raw'] = 'node_id <> '.$systemAuthNode['node_id'] .' and pid <> '.$systemAuthNode['node_id'].' and node_id <> 131 and pid <> 131';
             }
             //对超管来说，不需要区分组织
             if($this->manager['ao_id'] == 0 || $this->manager['ao_id'] == 1){
@@ -196,6 +190,26 @@ class Common extends AuthController
             $ao_id = array_column($pidArr, 'pid');
         };
         return $ao_id;
+    }
+
+    public function getTopOrgIds(){
+        $top_org_ids_arr = Db::name('auth_organization')
+                ->where(['pid' => 1])
+                ->field('ao_id')->select()->toArray();
+        return array_column($top_org_ids_arr, 'ao_id');
+    }
+
+    //获得某一个节点的所有下级节点
+    public function getChildAuthNode($node_ids){
+        $count = count(array_unique($node_ids));
+        $children = []; 
+        $childs = Db::name('auth_node')->where([['pid','in', $node_ids]])->field('node_id')->select()->toArray();
+        $children = array_column($childs, 'node_id');
+        $new_count = count(array_unique($children));
+        while($count == $new_count){
+            $children = array_merge($children, $this->getChildAuthNode($children));
+        }
+        return $children;
     }
 
     /**
