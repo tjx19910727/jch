@@ -127,7 +127,7 @@ class PaymentClient extends PayBaseClient
         $where['sp.status'] = 1;
         $where['sp.payee_type'] = $this->order['pay_type'];
         $where['sm.m_id'] = $this->order['m_id'];
-        if($this->machine['ao_id'] == 19){
+        if($this->machine['ao_id'] > 18){
             $where['sm.ao_id'] = $this->machine['ao_id'];
         }
         $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');

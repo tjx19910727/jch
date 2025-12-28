@@ -49,7 +49,7 @@ class WxClient extends TimeTaskBase
             if ($this->order['pay_status'] != 1) return $this->rFail("订单已处理");
             $this->order = $this->order->toArray();
             $wxConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'], 'sm.s_type' => 1]);
-            if($this->order['ao_id'] == 19){
+            if($this->order['ao_id'] > 18){
                 $wxConfig = $this->getStrategyPayeeContent(['sp_id' => $this->order['sp_id'],'sm.s_type' => 1,'sm.ao_id' => $this->order['ao_id']]);
             }
             if (!$wxConfig) return $this->rFail("查无收款配置信息");
