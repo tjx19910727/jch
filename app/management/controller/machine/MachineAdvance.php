@@ -56,6 +56,7 @@ class MachineAdvance extends Common
             $group = "batch_num";
             $field = "batch_num,adv_title,file_path,type,start_date,end_date,start_time,end_time,position,screen,screen_full,count(m_id) machine_num,status";
         }
+        $where['ao_id'] = $this->manager['ao_id'];
         return $this->app->advertisementPush->getGroupList($where,$pageNum,$field,$group);
     }
 
