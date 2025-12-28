@@ -184,6 +184,10 @@ trait OutGoodsTrait
                             "templateType" => "tException",
                             "replaceData" => [
                                 "machine_id" => $this->machine['machine_id'],
+                                "machine_name" => $this->machine['machine_name'],
+                                "now" => date('Y-m-d H:i:s'),
+                                "error_info" => $this->lang("tException.out_fail"),
+                                "error_code" => $channel_code,
                                 "exceptionDeclaration" => $channel_code . $this->lang("tException.out_fail"),
                             ]
                         ];
