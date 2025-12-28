@@ -22,7 +22,6 @@ class TemplatePlugins extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
-        $where['ao_id'] = $this->manager['ao_id'];
         return $this->app->templatePlugins->getList($where,$pageNum,$this->field);
     }
 
