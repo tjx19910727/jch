@@ -45,7 +45,7 @@ class WxClient extends PayBaseClient
             actionLog($this->getLS(), '查无订单信息');
             return true;
         }
-        if($this->order['ao_id'] == 19){
+        if($this->order['ao_id'] > 18){
             $this->wxConfig = $this->getStrategyPayeeContent(['sp_id'  => $message['sp_id'], 'sm.s_type' => 1,  'sm.ao_id'  => $this->order['ao_id']]);
         }
         if (!$this->wxConfig) {

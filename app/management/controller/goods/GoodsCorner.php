@@ -22,6 +22,7 @@ class GoodsCorner extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["corner_name" => "like"]);
+        $where['ao_id'] = $this->manager['ao_id'];
         return $this->app->goodsCorner->getCornerAgAmList($where,$pageNum,$this->field,'id desc');
     }
 

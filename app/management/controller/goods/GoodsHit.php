@@ -25,6 +25,7 @@ class GoodsHit extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["sku" => "like","machine_id" => "like"]);
+        $where['ao_id'] = $this->manager['ao_id'];
         return $this->app->goodsHit->getTotalList($where,$pageNum,$this->field,'g_id desc');
     }
 

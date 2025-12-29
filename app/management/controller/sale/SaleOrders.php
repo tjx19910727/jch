@@ -207,6 +207,7 @@ class SaleOrders extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","mch_no" => "like","machine_name" => "like","machine_id" => "like"]);
+        $where['ao_id'] = $this->manager['ao_id'];
         return $this->app->saleOrders->exportSo($where);
     }
 

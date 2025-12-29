@@ -28,6 +28,7 @@ class GoodsMultiple extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
+        $where['ao_id'] = $this->manager['ao_id'];
         return $this->app->goodsMultiple->getGmList($where,$pageNum,$this->field,'gm_id desc');
     }
 
