@@ -23,7 +23,7 @@ class MallMachine extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
-        $where['status'] = 2;
+        $where['status'] = 1;
         return $this->app->mallMachine->getMallMachineInfoList($where, $pageNum, $this->field, 'id desc');
     }
 
