@@ -28,7 +28,7 @@ class MallMachineClient extends ManagementClient
         $this->startTrans();
         try {
             $m_ids = explode(",", $m_ids);
-            $flag[] = $this->updateMallMachine(['status' => 1],[[ 'm_id' ,'>', '0']]);//全部置为有效
+            $flag[] = $this->updateMallMachine(['status' => 1],[[ 'mall_id' ,'=', $mall_id]]);//全部置为有效
             $old_M_ids = $this->getMallMachineColumn(['mall_id' => $mall_id], 'm_id');
             $delList = array_diff($old_M_ids, $m_ids);
             $addList = array_diff($m_ids, $old_M_ids);
@@ -36,6 +36,7 @@ class MallMachineClient extends ManagementClient
                 $updateData['status'] = 2;
                 $updateData['updator'] = $this->manager['manager_id'];
                 $where = [['m_id', 'in', $delList]];
+                $where['mall_id'] = $mall_id;
                 $flag[] = $this->updateMallMachine($updateData, $where);
             }
             if ($addList) {
