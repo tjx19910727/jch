@@ -206,8 +206,16 @@ class SaleOrders extends Common
     public function export()
     {
         $postData = input();
+        if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
+            $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
+            unset($postData['machine_group_id']);
+            if (!$machineIds) return $this->app->machine->rNoData();
+        }
         $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","mch_no" => "like","machine_name" => "like","machine_id" => "like"]);
+        if (!empty($machineIds)) $where[] = ['machine_id', 'in', $machineIds];
         $where['ao_id'] = $this->manager['ao_id'];
+        $machineIds = [];
+        
         return $this->app->saleOrders->exportSo($where);
     }
 
