@@ -28,18 +28,17 @@ class MallModel extends BaseModel
     public static function getJoinMallMachineList($where, $pageNum = 0, $field = "*", $order = "mall_id desc")
     {
         $data = self::alias("m")
-            ->join("mall_machine mm", "mm.mall_id = m.mall_id", "left")
             ->where($where)
             ->field($field)
             ->order($order);
         if ($pageNum) {
-            $data = $data->paginate($pageNum)->each(function ($item) {
-                $item['mall_machine_num'] = MallMachineModel::getCount(['mall_id' => $item['mall_id']]) ?? 0;
-                return $item;
-            });
+            $data = $data->paginate($pageNum);
         } else {
             $data = $data->select();
         }
-        return $data;
+        return $data->each(function ($item) {
+                $item['mall_machine_num'] = MallMachineModel::getCount(['mall_id' => $item['mall_id'], 'status' => 1]) ?? 0;
+                return $item;
+            });;
     }
 }
