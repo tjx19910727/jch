@@ -244,9 +244,9 @@ class Machine extends Common
      * 远程出货
      * @return array|string
      */
-    public function remoteOutGoods(){
+    public function setRemoteOutGoods(){
         $postData = input();
-        $result = $this->app->machine->remoteOutGoods($postData);
+        $result = $this->app->machine->setRemoteOutGoods($postData);
         return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
     }
 }

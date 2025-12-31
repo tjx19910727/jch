@@ -16,6 +16,7 @@ use app\AppFactory\Kernel\Model\Auth\AuthManagerLogModel;
 use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
 use app\AppFactory\Kernel\Model\Wx\WxOfficialLoginModel;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\Kernel\Model\RemoteActionLog\RemoteActionLogModel;
 use app\AppFactory\Kernel\Traits\RemoteActionLog\RemoteActionLogTrait;
 trait MachineTrait
 {
@@ -407,58 +408,74 @@ trait MachineTrait
      * 设备远程出货
      * @return array|bool|string
      */
-    public function remoteOutGoods()
+    public function setRemoteOutGoods()
     {
         $sod_id = input('sod_id');
+        $machine_id = input('machine_id');
+        $channel_code = input('channel_code') ?? '';
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         if (!$detail) $this->r(100,$this->lang("VOutGoods.details_no_data"));
         $order = $this->getSaleOrdersFind(['order_id' => $detail['order_id']]);
-
         if ($detail['fail_quantity'] == 0) return "出货失败商品数量为0，无需操作";
-        $contentArr = [];
-        $outArr = [];
-        if ($detail['g_type'] != 1 && isset($detail['gmg_id']) && $detail['gmg_id']) {
-            $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $detail['gmg_id']],'stock');
-            actionLog($this->getLS(),'减固定组合商品酒店库存');
-        }
-        if ($detail['g_type'] == 1) {
-            $outArr[$detail['channel_position']][] = [
-                "channel_code" => $detail['channel_code'],
-                "quantity" => $detail['quantity'],
-                "is_gift" => $detail['is_gift'] ?? 2,
-                "out_port" => $detail['out_port'] ?? 1,
+        try{
+            $this->startTrans();
+            $contentArr = [];
+            $outArr = [];
+            if ($detail['g_type'] != 1 && isset($detail['gmg_id']) && $detail['gmg_id']) {
+                $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $detail['gmg_id']],'stock');
+                actionLog($this->getLS(),'减固定组合商品酒店库存');
+            }
+            if ($detail['g_type'] == 1) {
+                $outArr[$detail['channel_position']][] = [
+                    "channel_code" => $channel_code ?: $detail['channel_code'],
+                    "quantity" => 1,
+                    "is_gift" => $detail['is_gift'] ?? 2,
+                    "out_port" => $detail['out_port'] ?? 1,
+                ];
+            }
+            if ($detail['g_type'] == 3) {
+                $updateSod['sod_id'] = $detail['sod_id'];
+                // 获取核销码
+                $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
+                $this->updateSaleOrdersDetails($updateSod);
+            }
+            $logData['machine_id'] = $order['machine_id'];
+            $logData['type'] = "remoteOutGoods";
+            $logData['order_id'] = $detail["order_id"];
+            $logData['sod_id'] = $detail["sod_id"];
+            $logData['order_id'] = $detail["order_id"];
+            $logData['goods_id'] = $detail["g_id"];
+            $logData['channel_code'] = $detail["channel_code"];
+            $logData['status'] = 1;
+            $logData['manager_id'] = $this->manager['manager_id'];
+            $logData['operator_at'] = date('Y-m-d H:i:s');
+            $log_id = $this->addRALog($logData);
+            $content = [
+                "trade_no" => $order['trade_no'],
+                "main" => $contentArr,
+                "outGoods" => $outArr,
+                "log_id" => $log_id,
             ];
+            $result = $this->sendToMachine(['machine_id' => $machine_id], 'remoteOutGoods', $content);
+            //修改订单子表出货成功+1  出货失败-1   remote_out_goods_status = 1  订单状态
+            $updateData['sod_id'] = $detail['sod_id'];
+            $updateData['success_quantity'] = $detail['success_quantity'] + 1;
+            $updateData['fail_quantity'] = $detail['fail_quantity'] - 1;
+            $updateData['remote_out_goods_status'] = 1;
+            $this->updateSaleOrdersDetails($updateData);
+            $this->commitTrans();
+        }catch(\Exception $e){
+            $this->rollBackTrans();
+            actionLog($e,'远程出货异常：');
+            return $e->getMessage();
         }
-        if ($detail['g_type'] == 3) {
-            $updateSod['sod_id'] = $detail['sod_id'];
-            // 获取核销码
-            $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
-            $this->updateSaleOrdersDetails($updateSod);
-        }
-        $content = [
-            "trade_no" => $order['trade_no'],
-            "main" => $contentArr,
-            "outGoods" => $outArr,
-        ];
-        $result = $this->sendToMachine(['machine_id' => $order['machine_id']], 'remoteOutGoods', $content);
-        //修改订单子表出货成功+1  出货失败-1   remote_out_goods_status = 1  订单状态
-        $updateData['sod_id'] = $detail['sod_id'];
-        $updateData['success_quantity'] = $detail['success_quantity'] + 1;
-        $updateData['fail_quantity'] = $detail['fail_quantity'] - 1;
-        $updateData['remote_out_goods_status'] = 1;
-        $this->updateSaleOrdersDetails($updateData);
-        $logData['machine_id'] = $order['machine_id'];
-        $logData['type'] = "remoteOutGoods";
-        $logData['order_id'] = $detail["order_id"];
-        $logData['sod_id'] = $detail["sod_id"];
-        $logData['order_id'] = $detail["order_id"];
-        $logData['goods_id'] = $detail["goods_id"];
-        $logData['channel_code'] = $detail["channel_code"];
-        $logData['status'] = 1;
-        $logData['manager_id'] = $this->manager['manager_id'];
-        $logData['operator_at'] = date('Y-m-d H:i:s');
-        $this->addRALog($logData);
+        
         return $result;
     }
 
+
+    public function remoteOutGoods(){
+        actionLog($this->message, "远程出货接收mq");
+        return RemoteActionLogModel::update(['status' => $this->message['status']], ['log_id' => $this->message['log_id']]);
+    }
 }
