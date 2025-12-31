@@ -222,4 +222,31 @@ class Machine extends Common
             return $this->app->machine->rFail('获取失败');
         }
     }
+
+    /**
+     * 远程动作 doorOpen powerWakeUp initialization axisOffset
+     * @return array|string
+     */
+    public function remoteAction()
+    {
+        $machine_id = input("machine_id");
+        $type = input('type');
+        $otherData = input("otherData") ?? [];
+        if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
+        if($type == 'axisOffset'){
+            if(!$otherData['x_axis'] && !$otherData['y_axis']) return returnValidate(lang("VMachine.x_y_axis_require"));
+        }
+        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], $type, $otherData);
+        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+    }
+
+    /**
+     * 远程出货
+     * @return array|string
+     */
+    public function remoteOutGoods(){
+        $postData = input();
+        $result = $this->app->machine->remoteOutGoods($postData);
+        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+    }
 }

@@ -408,6 +408,7 @@ return [
 
         "machine_offline" => "Device offline",
         "ckc_status_require" => "Business status cannot be empty",
+        "x_y_axis_require" => "x，y axis cannot be all empty",
     ],
 
     "VMachineLang" => [

@@ -1333,13 +1333,4 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200,'success',['receipt' => $result]);
     }
 
-
-    public function retryOutGoods()
-    {
-        //这里暂时预留出货动作，后续补充完整，具体方案为:服务器在拿到支付回调之后，回调信息同步存入数据库
-        //当设备主动触发出货请求时，查询回调信息，获取订单支付状态，修改对应参数，完成出货
-        return $this->r(100,$this->lang("VOutGoods.details_no_data"));
-    }
-
-
 }

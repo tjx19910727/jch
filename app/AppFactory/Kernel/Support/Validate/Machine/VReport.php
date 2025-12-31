@@ -84,6 +84,11 @@ class VReport extends SupportValidate
         "currentStatus" => ["msgType","current_status"],
         
         "machineCkcOnOff" => ["msgType","ckc_status"],
+       
+        "doorOpen" => ["msgType"],//远程开门
+        "powerWakeUp" => ["msgType"],//远程断电重启
+        "initialization" => ["msgType"],//远程初始化
+        "axisOffset" => ["msgType","x_axis","y_axis"],//主轴偏移
 
     ];
 }

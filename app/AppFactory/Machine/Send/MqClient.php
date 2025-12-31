@@ -113,6 +113,23 @@ class MqClient extends SendBaseClient
      */
 
     /**
+     * 通知设备远程开门 doorOpen
+     * @return array|string
+     */
+    /**
+     * 通知设备远程断电重启  powerWakeUp
+     * @return array|string
+     */
+    /**
+     * 通知设备远程初始化  initialization
+     * @return array|string
+     */
+    /**
+     * 通知设备主轴偏移  axisOffset
+     * @return array|string
+     */
+
+    /**
      * 主动发送至MQ
      * @param $msgType
      * @param array $otherData
