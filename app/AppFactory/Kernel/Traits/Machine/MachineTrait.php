@@ -437,8 +437,8 @@ trait MachineTrait
         }
         $content = [
             "trade_no" => $order['trade_no'],
-            "main" => [$contentArr],
-            "outGoods" => [$outArr],
+            "main" => $contentArr,
+            "outGoods" => $outArr,
         ];
         $result = $this->sendToMachine(['machine_id' => $order['machine_id']], 'remoteOutGoods', $content);
         //修改订单子表出货成功+1  出货失败-1   remote_out_goods_status = 1  订单状态
