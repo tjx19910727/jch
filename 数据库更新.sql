@@ -17,6 +17,10 @@ CREATE TABLE `remote_action_log` (
 ALTER TABLE kiosk.sale_orders_details
   ADD COLUMN `remote_out_goods_status` int default 0 COMMENT '远程出货状态：1-已发出货指令 2-出货成功 3-出货失败 ' AFTER `fall_quantity`;
 
+UPDATE kiosk.wx_template
+SET  template_id='frqumju8oA7N8msUrhIiHkY6Gu1wgiGNq_Oo5TxjYsY', body='[{"设备编号":{"value":"{{machine_id}}","field":"character_string47"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"异常时间":{"value":"{{error_time}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"异常类型":{"value":"{{error_code}}","field":"phrase13"}}]', 
+WHERE template_type='understock';
+
 #20251208
 ALTER TABLE kiosk.sale_orders
   ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '当前订单积分-现金兑换比例（1元=10积分） ' AFTER `total_price`;
