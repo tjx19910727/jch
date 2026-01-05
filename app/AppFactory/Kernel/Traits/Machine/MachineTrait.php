@@ -484,14 +484,14 @@ trait MachineTrait
         return $this->updateSaleOrdersDetails(['sod_id' => $this->message['sod_id'], 'remote_out_goods_status' => $this->message['status']]);
     }
 
-    public function checkRecycleBox(){
-        $machine_id = input("machine_id");
-        return $this->updateMachine([
-            'machine_id' => $machine_id,
-            'recycle_box_total_capacity' => $this->message['recycle_box_total_capacity'],
-            'recycle_box_remain_capacity' => $this->message['recycle_box_remain_capacity'],
-        ]);
-    }
+    // public function checkRecycleBox(){
+    //     $machine_id = input("machine_id");
+    //     return $this->updateMachine([
+    //         'machine_id' => $machine_id,
+    //         'recycle_box_total_capacity' => $this->message['recycle_box_total_capacity'],
+    //         'recycle_box_remain_capacity' => $this->message['recycle_box_remain_capacity'],
+    //     ]);
+    // }
 
     // public function takePhotos(){
     //     return $this->updateSaleOrdersDetails([

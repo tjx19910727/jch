@@ -1333,4 +1333,16 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200,'success',['receipt' => $result]);
     }
 
+    /**
+     * 设备上报回收箱信息
+     */
+    public function recycleBoxReport(){
+        $this->updateMachine([
+            "recycle_box_total_capacity" => $this->machine['recycle_box_total_capacity'] ?? 0,
+            "recycle_box_remain_capacity" => $this->machine['recycle_box_remain_capacity'] ?? 0
+        ],[
+            'machine_id' => $this->machine['machine_id'] ?? 0
+        ]);
+        return $this->r(200,'success');
+    }
 }
