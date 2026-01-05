@@ -10,7 +10,7 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 
 use app\AppFactory\Kernel\Model\Machine\MachineInfoModel;
-
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 trait MachineInfoTrait
 {
     /**
@@ -93,6 +93,11 @@ trait MachineInfoTrait
      */
     public function img()
     {
+        if (isset($this->message['sod_id'])) {
+            actionLog($this->message, "远程退货照片保存地址记录执行");
+            $result = SaleOrdersDetailsModel::update(['refund_photo' => $this->message['path']], ['sod_id' => $this->message['sod_id']]);
+            return $result;
+        }
         $result = $this->updateMachineInfo([$this->message['field'] => $this->message['path']],['machine_id' => $this->machine['machine_id']]);
         actionLog($this->getLS(),'【SQL】写入图片路径');
         return $result;
