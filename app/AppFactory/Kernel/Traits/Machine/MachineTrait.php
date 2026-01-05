@@ -416,7 +416,10 @@ trait MachineTrait
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         if (!$detail) $this->r(100,$this->lang("VOutGoods.details_no_data"));
         $order = $this->getSaleOrdersFind(['order_id' => $detail['order_id']]);
-        if ($detail['fail_quantity'] == 0) return "出货失败商品数量为0，无需操作";
+        // 先不做判断
+        // if (!$channel_code){
+        //     if ($detail['fail_quantity'] == 0) return "出货失败商品数量为0，无需操作";
+        // }
         try{
             $this->startTrans();
             $contentArr = [];
@@ -452,6 +455,7 @@ trait MachineTrait
             $log_id = $this->addRALog($logData);
             $content = [
                 "trade_no" => $order['trade_no'],
+                'sod_id' => $detail['sod_id'],
                 "main" => $contentArr,
                 "outGoods" => $outArr,
                 "log_id" => $log_id,
@@ -459,8 +463,8 @@ trait MachineTrait
             $result = $this->sendToMachine(['machine_id' => $machine_id], 'remoteOutGoods', $content);
             //修改订单子表出货成功+1  出货失败-1   remote_out_goods_status = 1  订单状态
             $updateData['sod_id'] = $detail['sod_id'];
-            $updateData['success_quantity'] = $detail['success_quantity'] + 1;
-            $updateData['fail_quantity'] = $detail['fail_quantity'] - 1;
+            // $updateData['success_quantity'] = $detail['success_quantity'] + 1;
+            // $updateData['fail_quantity'] = $detail['fail_quantity'] - 1;
             $updateData['remote_out_goods_status'] = 1;
             $this->updateSaleOrdersDetails($updateData);
             $this->commitTrans();
@@ -476,6 +480,25 @@ trait MachineTrait
 
     public function remoteOutGoods(){
         actionLog($this->message, "远程出货接收mq");
-        return RemoteActionLogModel::update(['status' => $this->message['status']], ['log_id' => $this->message['log_id']]);
+        RemoteActionLogModel::update(['status' => $this->message['status']], ['log_id' => $this->message['log_id']]);
+        return $this->updateSaleOrdersDetails(['sod_id' => $this->message['sod_id'], 'remote_out_goods_status' => $this->message['status']]);
     }
+
+    public function checkRecycleBox(){
+        $machine_id = input("machine_id");
+        return $this->updateMachine([
+            'machine_id' => $machine_id,
+            'recycle_box_total_capacity' => $this->message['recycle_box_total_capacity'],
+            'recycle_box_remain_capacity' => $this->message['recycle_box_remain_capacity'],
+        ]);
+    }
+
+    // public function takePhotos(){
+    //     return $this->updateSaleOrdersDetails([
+    //         'sod_id' => input("sod_id"),
+    //         'refund_photo' => $this->message['refund_photo'],
+    //     ]);
+    // }
+
+    
 }

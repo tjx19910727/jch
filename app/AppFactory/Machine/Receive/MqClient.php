@@ -84,6 +84,7 @@ class MqClient extends ReceiveBaseClient
      * msgType: outGoods、heartbeat、updateComplete、goodsHit、transactionVideo、img、channelImg、
      *          light、volume、errorCode、uploadInfo、machineCkcOnOff
      *          doorOpen、powerWakeUp、initialization、axisOffset
+     * 远程退货动作组：checkRecycleBox、pickUpDoorOpen、pickUpDoorClose、takePhotos、recycGoods
      * @return int
      */
     public function onMessage()
