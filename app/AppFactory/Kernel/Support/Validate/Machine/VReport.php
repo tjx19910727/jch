@@ -89,6 +89,7 @@ class VReport extends SupportValidate
         "powerWakeUp" => ["msgType"],//远程断电重启
         "initialization" => ["msgType"],//远程初始化
         "axisOffset" => ["msgType","x_axis","y_axis"],//主轴偏移
+        "remoteOutGoods" => ["msgType", 'status'],//远程出货
 
     ];
 }
