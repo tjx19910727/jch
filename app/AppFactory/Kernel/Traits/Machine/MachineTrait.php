@@ -448,7 +448,7 @@ trait MachineTrait
             $logData['sod_id'] = $detail["sod_id"];
             $logData['order_id'] = $detail["order_id"];
             $logData['goods_id'] = $detail["g_id"];
-            $logData['channel_code'] = $detail["channel_code"];
+            $logData['channel_code'] = $channel_code ?: $detail['channel_code'];
             $logData['status'] = 1;
             $logData['manager_id'] = $this->manager['manager_id'];
             $logData['operator_at'] = date('Y-m-d H:i:s');
