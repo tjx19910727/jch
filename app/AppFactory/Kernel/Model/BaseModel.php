@@ -172,6 +172,9 @@ class BaseModel extends Model
     public static function getList($where,$pageNum = null,$field = "*",$order = "",$eachFn = "",$group = "",$limit = 0)
     {
 //        try {
+            if(isset($where['ao_id']) && $where['ao_id'] < 2){
+                unset($where['ao_id']);
+            }
             $fields = array_column(Db::query("SHOW COLUMNS FROM " . self::getTable()), 'Field');
             if (in_array('creator', $fields) && (strpos($field,"*") !== false || strpos($field, "creator") !== false)) {
                 $field .= ", (SELECT nickname FROM auth_manager au WHERE au.manager_id = a.creator) creator_nickname";
