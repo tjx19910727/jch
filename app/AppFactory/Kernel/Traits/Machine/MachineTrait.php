@@ -480,7 +480,7 @@ trait MachineTrait
 
     public function remoteOutGoods(){
         actionLog($this->message, "远程出货接收mq");
-        RemoteActionLogModel::update(['status' => $this->message['status']], ['log_id' => $this->message['log_id']]);
+        RemoteActionLogModel::update(['status' => $this->message['status']], ['id' => $this->message['log_id']]);
         return $this->updateSaleOrdersDetails(['sod_id' => $this->message['sod_id'], 'remote_out_goods_status' => $this->message['status']]);
     }
 
