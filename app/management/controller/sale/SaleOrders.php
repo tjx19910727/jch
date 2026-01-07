@@ -199,7 +199,9 @@ class SaleOrders extends Common
             if(input('status')=='remoteOutGoods'){
                 $sod_id = input('sod_id');
                 $machine_id = input('machine_id');
-                $sod = $this->app->saleOrders->getSaleOrdersDetailsFind(['sod_id' => $sod_id], 'remote_out_goods_video');
+                $tmp = explode('_',$sod_id);
+                $real_sod_id = $tmp[count($tmp)-1];
+                $sod = $this->app->saleOrders->getSaleOrdersDetailsFind(['sod_id' => $real_sod_id], 'remote_out_goods_video');
                 if (!$sod) return returnState(100,lang("VSaleOrders.order_no_data"));
                 if (!$sod['remote_out_goods_video']) {
                     $otherData = ['sod_id' => $sod_id];
