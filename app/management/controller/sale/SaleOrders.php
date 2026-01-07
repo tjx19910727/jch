@@ -197,14 +197,13 @@ class SaleOrders extends Common
                 return returnState(200,'查询成功',$mec);
             }
             if(input('status')=='remoteOutGoods'){
-                $sod_id = input('sod_id');
                 $machine_id = input('machine_id');
-                $tmp = explode('_',$sod_id);
+                $tmp = explode('_',$trade_no);
                 $real_sod_id = $tmp[count($tmp)-1];
                 $sod = $this->app->saleOrders->getSaleOrdersDetailsFind(['sod_id' => $real_sod_id], 'remote_out_goods_video');
                 if (!$sod) return returnState(100,lang("VSaleOrders.order_no_data"));
                 if (!$sod['remote_out_goods_video']) {
-                    $otherData = ['sod_id' => $sod_id];
+                    $otherData = ['sod_id' => $real_sod_id];
                     $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], 'transactionVideo',$otherData);
                     return is_object($result) ? returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result) :
                     $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));

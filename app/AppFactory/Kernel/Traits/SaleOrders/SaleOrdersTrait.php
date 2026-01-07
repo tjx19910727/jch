@@ -434,9 +434,9 @@ trait SaleOrdersTrait
      */
     public function transactionVideo()
     {
-        if (strstr($this->message['sod_id'], "remote_out_goods")) {
+        if (strstr($this->message['trade_no'], "remote_out_goods")) {
             actionLog($this->message, "远程出货视频保存地址记录执行");
-            return SaleOrdersDetailsModel::update(['reote_out_goods_video' => $this->message['transaction_video']], ['sod_id' => $this->message['sod_id']]);
+            return SaleOrdersDetailsModel::update(['reote_out_goods_video' => $this->message['transaction_video']], ['trade_no' => $this->message['trade_no']]);
         }
         if (strstr($this->message['trade_no'], "door_open")) {
             actionLog($this->message, "开门视频保存地址记录执行");
