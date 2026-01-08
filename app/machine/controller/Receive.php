@@ -776,4 +776,17 @@ class Receive extends Common
         }
     }
 
+    /**
+     * 获取卡   上传订单号、上传卡号
+     * @return array|\think\response\Json
+     */
+    public function orderBindCard()
+    {
+        try {
+            return $this->app->api->orderBindCard();
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
 }

@@ -1309,7 +1309,7 @@ class ApiClient extends ReceiveBaseClient
             'mch_no'     => $mch_no,
             'currency' => $this->machine['currency'],
             'detailsList'    => $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']],0,
-                'g_name,quantity,retail_price,is_gift,discount_price,total_sod_price'
+                'g_name,quantity,retail_price,is_gift,discount_price,total_sod_price,total_sod_points'
             )->toArray(),
             'total_quantity' => $order['total_quantity'],
             'discount_price' => $order['discount_price'],
@@ -1333,6 +1333,20 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200,'success',['receipt' => $result]);
     }
 
+    public function orderBindCard()
+    {
+        try {
+            validate(VReceive::class)->scene("carList")->check($this->data);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            return $this->rFail($e->getMessage());
+        }
+        $order_id = $this->data['order_id'];
+        $card_no = $this->data['card_no'] ?? '';
+        // todo 绑定会员卡逻辑待补充   card表业务逻辑
+
+        return $this->r(200, $this->lang("action_success"));
+    }
 
     public function retryOutGoods()
     {

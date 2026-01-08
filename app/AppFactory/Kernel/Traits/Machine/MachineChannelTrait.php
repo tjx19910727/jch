@@ -10,6 +10,10 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\Mall\MallMachineModel;
+use app\AppFactory\Kernel\Model\Mall\MallModel;
+use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Support\Validate\Machine\VChannel;
 
 trait MachineChannelTrait
@@ -256,5 +260,27 @@ trait MachineChannelTrait
         $result = $this->updateMachineChannel(['channel_img' => $this->message['path']], ['m_id' => $this->machine['m_id'], 'channel_code' => $this->message['channel_code']]);
         actionLog($this->getLS(), '【SQL】保存货道槽位照片', 'DataUpload');
         return $result;
+    }
+
+
+    public function getFinalIntergralRate($mc)
+    {
+        //如果设备货道存在配置，则使用设备货道配置的积分比例(对应设备，对应货道，对应商品)
+        //如果设备货道未配置，取商品本身积分兑换比例
+        //如果设备未配置，则使用设备基础配置的积分比例
+        //如果设备为配置积分比例，则取组织积分比例，最后取系统默认积分比例
+        if(!$mc['intergral_rate']) return $mc['intergral_rate'];
+        $goodsInfo = GoodsModel::getFind(['g_id' => $mc['g_id']], 'intergral_rate');
+        if($goodsInfo && $goodsInfo['intergral_rate'] > 0)
+            return $goodsInfo['intergral_rate'];
+        $machineInfo = MachineModel::getFind(['m_id' => $mc['m_id']], 'intergral_rate');
+        if($machineInfo && $machineInfo['intergral_rate'] > 0)
+            return $machineInfo['intergral_rate'];
+        $mallMachine = MallMachineModel::getMallMachineFind(['m_id' => $mc['m_id']], 'intergral_rate');
+        if($mallMachine && $mallMachine['m_id']){
+            $mall = MallModel::getFind(['mall_id' => $mallMachine['m_id']], 'intergral_rate');
+            if($mall && $mall['intergral_rate'])
+                return $mall['intergral_rate'];
+        }
     }
 }

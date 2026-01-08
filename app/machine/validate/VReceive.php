@@ -186,6 +186,8 @@ class VReceive extends VCommon
         "logoutH5" => ["msg_id","machine_id","timestamp"],
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
+
+        "orderBindCard" => ["msg_id","machine_id","timestamp","sign","order_id","card_number"],
     ];
 
     /**

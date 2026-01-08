@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 
 use app\AppFactory\Kernel\Support\Trip\Trip;
+use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 
 trait AfterOrderPaymentTrait
 {
@@ -70,6 +71,8 @@ trait AfterOrderPaymentTrait
 
     /**
      * 出货
+     * 支付成功后，将积分信息写入父子订单表中
+     * 
      * @return string
      */
     protected function outGoods()
@@ -89,7 +92,15 @@ trait AfterOrderPaymentTrait
                 }
             }
             // 新数据格式
+            $final_intergral_rate = 0;
+            $total_points = 0;
             foreach ($details as $k => $v) {
+                $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
+                $final_intergral_rate = $this->getFinalIntergralRate($mc);
+                $updateSod['sod_id'] = $v['sod_id'];
+                $updateSod['total_sod_points'] = bcmul($v['totaL_sod_price'], $final_intergral_rate, 3); 
+                $total_points += $updateSod['total_sod_points'];
+
                 if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
                     $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
                     actionLog($this->getLS(),'减固定组合商品酒店库存');
@@ -104,14 +115,14 @@ trait AfterOrderPaymentTrait
                     $outArr[$v['channel_position']][] = $dc;
                 }
                 if ($v['g_type'] == 3) {
-                    $updateSod['sod_id'] = $v['sod_id'];
                     // 获取核销码
                     $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
-                    $this->updateSaleOrdersDetails($updateSod);
                 }
-
+                $this->updateSaleOrdersDetails($updateSod);
             }
-
+            
+            $this->order['total_points'] = $total_points;
+            
             $content = [
 //                "msgType" => "outGoods",
                 "trade_no" => $this->order['trade_no'],
@@ -274,5 +285,5 @@ trait AfterOrderPaymentTrait
                 return $updateResult;
             }
         }
-    }
+    }   
 }
