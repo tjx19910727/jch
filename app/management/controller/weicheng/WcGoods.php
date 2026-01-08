@@ -1,0 +1,23 @@
+<?php
+/**
+ * Created by VSCode.
+ * User: Alex-jixiang
+ * Date: 2026/1/5
+ * Time: 08:50
+ */
+
+namespace app\management\controller\weicheng;
+
+use app\AppFactory\AppFactory;
+use app\management\controller\Common;
+
+class WcGoods extends Common
+{
+    public function synchronizeGoods()
+    {
+        $goods_no = input('goods_no');
+        $res = $this->app->WcGoods->synchronizeGoods($goods_no);
+        return $this->rS($res);
+    }
+   
+}
