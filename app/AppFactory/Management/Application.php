@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Providers\Management\ActionProvider;
 use app\AppFactory\Kernel\Providers\Management\ActivityProvider;
 use app\AppFactory\Kernel\Providers\Management\AdvertisementProvider;
 use app\AppFactory\Kernel\Providers\Management\AuthProvider;
+use app\AppFactory\Kernel\Providers\Management\CardProvider;
 use app\AppFactory\Kernel\Providers\Management\CommonProvider;
 use app\AppFactory\Kernel\Providers\Management\ConfigProvider;
 use app\AppFactory\Kernel\Providers\Management\EarthProvider;
@@ -118,7 +119,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineVersionClient           $machineVersion         设备软件版本
  * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
  * @property Mall\MallClient                        $mall                   商场管理
- *
+ * @property Card\CardClient                        $card                   商场管理会员卡
  * @property MicroMall\MicroMallClient              $microMall              微商城
  * @property MicroMall\MicroMallMachineClient       $microMallMachine       微商城绑定设备
  *
@@ -182,6 +183,7 @@ class Application extends ServiceContainer
         UpdateLogProvider::class,
         WxProvider::class,
         MallProvider::class,
+        CardProvider::class,
     ];
 
 }

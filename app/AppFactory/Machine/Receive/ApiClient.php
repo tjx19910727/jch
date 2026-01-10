@@ -66,6 +66,7 @@ use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\machine\validate\VReceive;
 use think\facade\View;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
+use app\AppFactory\Kernel\Traits\Card\CardTrait;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -104,8 +105,9 @@ class ApiClient extends ReceiveBaseClient
         StrategyMachineTrait,
         WxOfficialTrait,
         WxOfficialLoginTrait,
-        afterOrderRefundTrait
-        ;
+        afterOrderRefundTrait,
+        CardTrait
+		;
 
     public function __construct(ServiceContainer $app)
     {
@@ -1256,7 +1258,7 @@ class ApiClient extends ReceiveBaseClient
     public function receipt()
     {
         $order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']],
-            'order_id,trade_no,mch_no,fd_id,coupon_id,m_id,machine_id,machine_name,total_quantity,discount_price,retail_price,total_price,pay_type,pay_method');
+            'order_id,trade_no,mch_no,fd_id,coupon_id,m_id,machine_id,machine_name,total_quantity,discount_price,retail_price,total_price,total_points,pay_type,pay_method');
         $order = $order->toArray();
         actionLog($order,'订单数据');
         $mConfig = $this->getMachineConfigFind(['m_id' => $order['m_id']],'receipt_code1,receipt_code2,receipt_code3,receipt_desc,deal_service_phone');
@@ -1315,6 +1317,7 @@ class ApiClient extends ReceiveBaseClient
             'discount_price' => $order['discount_price'],
             'retail_price' => number_format($order['retail_price'],2),
             'total_price'    => number_format($order['total_price'],2),
+            'total_points' => $order['total_points'],
             'ac_name' => implode("/",$ac_name) ,
             'pay_type' => $pay_type_list[$order['pay_type']] . ($order['pay_method'] > 0 ? "-" . $pay_method_list[$order['pay_method']] : ""),
             'service_tel'    => $mConfig['deal_service_phone'],
@@ -1333,21 +1336,25 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200,'success',['receipt' => $result]);
     }
 
-    public function orderBindCard()
-    {
+
+    /**
+     * 取卡  卡添加积分
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+
+    public function cardAddPoints(){
         try {
-            validate(VReceive::class)->scene("carList")->check($this->data);
+            $order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']], 'total_points');
+            $order = $order->toArray();
+            $this->changePoints($this->data['card_no'], $order['total_points'], 1, $this->data['order_id'], "购买商品增加积分");
+            return $this->r(200, 'success');
         } catch (\Exception $e) {
             $this->rollbackTrans();
             return $this->rFail($e->getMessage());
         }
-        $order_id = $this->data['order_id'];
-        $card_no = $this->data['card_no'] ?? '';
-        // todo 绑定会员卡逻辑待补充   card表业务逻辑
 
-        return $this->r(200, $this->lang("action_success"));
     }
-
     public function retryOutGoods()
     {
         //这里暂时预留出货动作，后续补充完整，具体方案为:服务器在拿到支付回调之后，回调信息同步存入数据库

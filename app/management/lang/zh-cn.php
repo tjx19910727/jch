@@ -687,4 +687,10 @@ return [
         "machine_id_require" => "设备ID不能为空",
         "status_in" => "无效的关联状态类型",
     ],
+
+    "VCard" => [
+        "card_no_require" => "卡号不能为空",
+        "points_changed_require" => "积分变动值不能为空",
+        "change_type_in" => "无效的积分变动类型",
+    ],
 ]; 

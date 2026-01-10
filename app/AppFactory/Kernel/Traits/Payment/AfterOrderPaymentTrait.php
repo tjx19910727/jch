@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 
 trait AfterOrderPaymentTrait
 {
+    use MachineChannelTrait;
 
     /**
      * 处理支付成功
@@ -45,7 +46,7 @@ trait AfterOrderPaymentTrait
         }
         $this->order['pay_status'] = 3;
         $this->order['pay_time'] = time();
-
+        
         actionLog($this->order,'更新支付时间成功');
         if ($this->order['order_type'] != 4 && $this->order['out_status'] == 1) {
             $this->outGoods();
@@ -98,9 +99,10 @@ trait AfterOrderPaymentTrait
                 $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
                 $final_intergral_rate = $this->getFinalIntergralRate($mc);
                 $updateSod['sod_id'] = $v['sod_id'];
-                $updateSod['total_sod_points'] = bcmul($v['totaL_sod_price'], $final_intergral_rate, 3); 
-                $total_points += $updateSod['total_sod_points'];
-
+                if ($final_intergral_rate) {
+                    $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $final_intergral_rate, 3);
+                    $total_points += $updateSod['total_sod_points'];
+                }
                 if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
                     $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
                     actionLog($this->getLS(),'减固定组合商品酒店库存');
@@ -121,8 +123,8 @@ trait AfterOrderPaymentTrait
                 $this->updateSaleOrdersDetails($updateSod);
             }
             
-            $this->order['total_points'] = $total_points;
-            
+            if($total_points) $this->order['total_points'] = $total_points;
+
             $content = [
 //                "msgType" => "outGoods",
                 "trade_no" => $this->order['trade_no'],

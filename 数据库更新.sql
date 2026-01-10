@@ -1,8 +1,8 @@
 #20260108
 ALTER TABLE kiosk.machine_channel
   ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '积分-现金兑换比例（1元=10积分） ' AFTER `retail_price`;
-ALTER TABLE kiosk.machine_channel
-  ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '积分-现金兑换比例（1元=10积分） ' AFTER `use_points`;
+ALTER TABLE kiosk.machine_goods
+  ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '积分-现金兑换比例（1元=10积分） ' AFTER `retail_price`;
 ALTER TABLE kiosk.goods
   ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '积分-现金兑换比例（1元=10积分） ' AFTER `retail_price`;
 

@@ -187,7 +187,7 @@ class VReceive extends VCommon
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
 
-        "orderBindCard" => ["msg_id","machine_id","timestamp","sign","order_id","card_number"],
+        "cardAddPoints" => ["msg_id","machine_id","timestamp","order_id","card_no"],
     ];
 
     /**
