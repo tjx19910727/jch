@@ -108,7 +108,7 @@ trait WcBaseTrait
             $updateData['created_at'] = date('Y-m-d H:i:s');
             $this->addWcGoods($updateData);
         } else {
-            $updateData['updated_at'] = time('Y-m-d H:i:s');
+            $updateData['updated_at'] = date('Y-m-d H:i:s');
             $this->updateWcGoods($updateData,['no' => $updateData['no']]);
         }
         return true;

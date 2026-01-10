@@ -41,10 +41,10 @@ class WcGoodsClient extends ManagementClient
        $result = $this->goodsSync($goods_no);
        if ($result['status'] == 200) {
            $res = $this->synchronizeGoods2Db($result['response']); 
-           return $this->rS('Synchronization successful', $res);
+           return $this->rA('Synchronization successful', $res);
            return                                                                                                                                                                                                                $res;
        } else {
-           return $this->rE('Synchronization failed: '.$result['response']);
+           return $this->rA('Synchronization failed: '.$result['response']);
        }
     }
 }
