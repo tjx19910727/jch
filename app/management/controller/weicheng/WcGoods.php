@@ -11,7 +11,7 @@ namespace app\management\controller\weicheng;
 use app\AppFactory\AppFactory;
 use app\management\controller\Common;
 
-class WcGoods extends Common
+class WcGoods extends Common 
 {
     public function synchronizeGoods()
     {
@@ -20,4 +20,10 @@ class WcGoods extends Common
         return $this->rS($res);
     }
    
+    public function getList(){
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, ['type' => 'like','name' => 'like','no' => 'like']);
+        return $this->app->WcGoods->getWcGoodsInfoList($where, $pageNum, "*", 'id desc');
+    }
 }
