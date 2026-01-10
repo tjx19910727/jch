@@ -101,6 +101,7 @@ trait AfterOrderPaymentTrait
                 $updateSod['sod_id'] = $v['sod_id'];
                 if ($final_intergral_rate) {
                     $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $final_intergral_rate, 3);
+                    $updateSod['intergral_rate'] = $final_intergral_rate;
                     $total_points += $updateSod['total_sod_points'];
                 }
                 if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
@@ -123,7 +124,11 @@ trait AfterOrderPaymentTrait
                 $this->updateSaleOrdersDetails($updateSod);
             }
             
-            if($total_points) $this->order['total_points'] = $total_points;
+            if($total_points) {
+                $this->order['total_points'] = $total_points;
+                // 因为存在不同子订单   不同积分兑换比例情况，order表不做intergral_rate的记录，只记录到自订单表
+                // $this->order['intergral_rate'] = $final_intergral_rate;  
+            }
 
             $content = [
 //                "msgType" => "outGoods",
