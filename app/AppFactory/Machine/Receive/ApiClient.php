@@ -67,6 +67,7 @@ use app\machine\validate\VReceive;
 use think\facade\View;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
+use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -106,7 +107,8 @@ class ApiClient extends ReceiveBaseClient
         WxOfficialTrait,
         WxOfficialLoginTrait,
         afterOrderRefundTrait,
-        CardTrait
+        CardTrait,
+        WcBaseTrait
 		;
 
     public function __construct(ServiceContainer $app)
@@ -1354,7 +1356,6 @@ class ApiClient extends ReceiveBaseClient
         }
     }
 
-
     /**
      * 获取积分变化类型
      * @return array|\think\response\Json
@@ -1364,6 +1365,54 @@ class ApiClient extends ReceiveBaseClient
         try {
             $pageNum = $this->data['pageNum'] ?? 15;
             return $this->r(200, $this->getCardPointsChangeLogsList(['card_no' => $this->data['card_no']], $pageNum, "*", 'id desc'));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            return $this->rFail($e->getMessage());
+        }
+    }
+
+    /**
+     * 设备商获取短信验证码
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+    public function getWcSmSCode(){
+        $res = $this->getSmsCode($this->data['phone'], $this->data['machine_id']);
+        $response = json_decode($res['response'], true);
+        if($res['status'] == 200){
+            return $this->r(200, $response);
+        }else{
+            return $this->rFail($response);
+        }
+    }
+
+    /**
+     * 微程会员登录
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+    public function getWcLoginUser(){
+        // todo   将token存入数据库，以便下次直接登录
+        $res = $this->wcLoginUser($this->data['phone'], $this->data['machine_id'], $this->data['code']);
+        $response = json_decode($res['response'], true);
+        if($res['status'] == 200 || $response['success'] == true){
+            return $this->r(200, $response);
+        }else{
+            return $this->rFail($response);
+        }
+    }
+
+    /**
+     * 卡积分绑定到微程会员账号，同时将卡积分清0
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+
+    public function cardBindWcuser(){
+        try {
+            // $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']], 'total_points')->toArray();
+            // $res = $this->changePoints($this->data['card_no'], $order['total_points'], 1, $this->data['trade_no'], "购买商品增加积分");
+            return $this->r(200, $res);
         } catch (\Exception $e) {
             $this->rollbackTrans();
             return $this->rFail($e->getMessage());

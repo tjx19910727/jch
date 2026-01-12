@@ -34,6 +34,7 @@ use app\AppFactory\Kernel\Providers\Management\TripProvider;
 use app\AppFactory\Kernel\Providers\Management\UpdateLogProvider;
 use app\AppFactory\Kernel\Providers\Management\WxProvider;
 use app\AppFactory\Kernel\Providers\Management\MallProvider;
+use app\AppFactory\Kernel\Providers\Management\WeiChengProvider;
 
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
@@ -184,6 +185,7 @@ class Application extends ServiceContainer
         WxProvider::class,
         MallProvider::class,
         CardProvider::class,
+        WeiChengProvider::class,
     ];
 
 }

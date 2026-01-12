@@ -189,6 +189,10 @@ class VReceive extends VCommon
 
         "cardAddPoints" => ["msg_id","machine_id","timestamp","trade_no","card_no"],
         "getCardPointLog" => ["msg_id","machine_id","timestamp","card_no"],
+
+        "getWcSmSCode" => ["msg_id","machine_id","timestamp","phone"],
+        "wcLoginUser" => ["msg_id","machine_id","timestamp","phone","code"],
+        
     ];
 
     /**

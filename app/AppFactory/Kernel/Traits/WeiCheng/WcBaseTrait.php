@@ -29,6 +29,8 @@ trait WcBaseTrait
         $this->order_refund_url = $this->config['apiDomain']."/api/order/refund";
         $this->order_detail_url = $this->config['apiDomain']."/api/order/detail";
         $this->order_refundPart_url = $this->config['apiDomain']."/api/order/refundPart";
+        $this->get_sms_code_url = "https://api.weicheng.jchtechnologies.com/msvc-shop/v1/mp/user/phone/send/code";
+        $this->phone_login_url = "https://api.weicheng.jchtechnologies.com/msvc-shop/v1/mp/user/phoneLogin";
     }
 
     public function getDecptData($data)
@@ -50,14 +52,18 @@ trait WcBaseTrait
     }
 
     
-    public function weicheng_curl($url, $postFields)
+    public function weicheng_curl($url, $postFields, $header = [])
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, $postFields);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded'));
+        if($header){
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $header);
+        }else{
+            curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: application/x-www-form-urlencoded'));
+        }
         //todo   上线后需删除   方便本地调用https接口
         if(strstr(php_uname('s'), 'Windows')){
             curl_setopt($ch,CURLOPT_CAINFO, "D:\phpstudy_pro\wwwroot\backend\public\static\cacert.pem");
@@ -68,9 +74,10 @@ trait WcBaseTrait
         }
 
         $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        
         $this->addWcRequestLogs([
             'request_url' => $url,
-            'request_header' => json_encode(['Content-Type: application/x-www-form-urlencoded'], JSON_UNESCAPED_UNICODE),
+            'request_header' => $header ? json_encode($header) : json_encode(['Content-Type: application/x-www-form-urlencoded'], JSON_UNESCAPED_UNICODE),
             'request_body' => json_encode($postFields, JSON_UNESCAPED_UNICODE),
             'response_body' => $response,
             'response_status' => $status,
@@ -96,12 +103,6 @@ trait WcBaseTrait
     {
         $updateData = json2arr($response);
         $updateData = $updateData['product'];
-        // unset($updateData['show_citys']);
-        // unset($updateData['description']);
-        // unset($updateData['notice']);
-        // unset($updateData['custom_item_config']);
-        // unset($updateData['resourcesArray']);
-        // dd($updateData);
         $updateData['resourcesArray'] = json_encode($updateData['resourcesArray'], JSON_UNESCAPED_UNICODE);
         $wc_goods = $this->getWcGoodsFind(['no' => $updateData['no']]);
         if(!$wc_goods){
@@ -112,5 +113,18 @@ trait WcBaseTrait
             $this->updateWcGoods($updateData,['no' => $updateData['no']]);
         }
         return true;
+    }
+
+    public function getSmsCode($phone, $machine_id){
+        $this->initWcBase();
+        $postUrl = $this->get_sms_code_url."?phone=".$phone."&machine_code=".$machine_id;
+        return $this->weicheng_curl($postUrl, []);
+    }
+
+
+    public function wcLoginUser($phone, $machine_id, $code){
+        $this->initWcBase();
+        $postUrl = $this->phone_login_url."?phone=".$phone."&machine_code=".$machine_id."&code=".$code;
+        return $this->weicheng_curl($postUrl, []);
     }
 }

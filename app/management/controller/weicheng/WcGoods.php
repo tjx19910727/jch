@@ -16,7 +16,7 @@ class WcGoods extends Common
     public function synchronizeGoods()
     {
         $goods_no = input('goods_no');
-        $res = $this->app->WcGoods->synchronizeGoods($goods_no);
+        $res = $this->app->weicheng->synchronizeGoods($goods_no);
         return $this->rS($res);
     }
    
