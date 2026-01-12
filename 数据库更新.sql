@@ -7,6 +7,13 @@ ALTER TABLE kiosk.goods
   ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '积分-现金兑换比例（1元=10积分） ' AFTER `retail_price`;
 
 
+ALTER TABLE kiosk.machine_channel
+  ADD COLUMN `gift_points` decimal(10,3) default 0 COMMENT '赠送积分' AFTER `intergral_rate`;
+ALTER TABLE kiosk.machine_goods
+  ADD COLUMN `gift_points` decimal(10,3) default 0 COMMENT '赠送积分' AFTER `intergral_rate`;
+ALTER TABLE kiosk.goods
+  ADD COLUMN `gift_points` decimal(10,3) default 0 COMMENT '赠送积分' AFTER `intergral_rate`;
+
 CREATE TABLE `card` (
   `card_no` varchar(20) NOT NULL COMMENT '卡号，主键',
   `points` decimal(10,2) DEFAULT NULL COMMENT '积分',

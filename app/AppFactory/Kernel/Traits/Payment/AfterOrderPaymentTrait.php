@@ -96,14 +96,20 @@ trait AfterOrderPaymentTrait
             $final_intergral_rate = 0;
             $total_points = 0;
             foreach ($details as $k => $v) {
-                $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
-                $final_intergral_rate = $this->getFinalIntergralRate($mc);
                 $updateSod['sod_id'] = $v['sod_id'];
-                if ($final_intergral_rate) {
-                    $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $final_intergral_rate, 3);
-                    $updateSod['intergral_rate'] = $final_intergral_rate;
-                    $total_points += $updateSod['total_sod_points'];
+
+                $mc = $this->getRateOrGiftPoints(['mc_id' => $v['mc_id']]);
+                $rate_points = $this->getRateOrGiftPoints($mc);
+
+                if($rate_points['gift_points'] > 0 ){
+                    $updateSod['intergral_rate'] = 0;
+                    $updateSod['total_sod_points'] = $rate_points['gift_points'];
                 }
+                if($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0){
+                    $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
+                    $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $final_intergral_rate, 3);
+                }
+                $total_points += $updateSod['total_sod_points'];
                 if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
                     $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
                     actionLog($this->getLS(),'减固定组合商品酒店库存');
