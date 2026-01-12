@@ -792,6 +792,6 @@ class Receive extends Common
 
     public function test(){
 
-        $this->app->api->testOutGoods();
+        $this->app->api->cardAddPoints();
     }
 }

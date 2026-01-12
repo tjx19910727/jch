@@ -87,7 +87,7 @@ trait CardTrait
     }
 
     //积分变化接口  band_id 预留字段，后续可能绑定微程会员id，或者平台id，绑定账户不尽相同
-    public function changePoints($card_no, $points_changed, $change_type, $trade_no = '', $reasons = '', $band_id = '')
+    public function changePoints($card_no, $points_changed, $change_type, $trade_no = '', $reasons = '', $bind_id = '')
     {
         try{
             $this->startTrans();
@@ -106,14 +106,14 @@ trait CardTrait
                 'change_type' => $change_type,
                 'reasons' => $reasons,
                 'trade_no' => $trade_no,
-                'bind_id' => $band_id,
+                'bind_id' => $bind_id,
                 'created_at' => date('Y-m-d H:i:s'),
             ];
 
             $log_id =  $this->addCardPointsChangeLogs($insert);
-            $res = $this->updateCard(['points' => $points], ['card_no' => $card_no]);
+            $this->updateCard(['points' => $points], ['card_no' => $card_no]);
             $this->commitTrans();
-            return $res;
+            return $log_id;
         } catch (\Exception $e) {
             return false;
             $this->rollbackTrans();
