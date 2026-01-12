@@ -84,7 +84,8 @@ class WeiChengClient extends ManagementClient
     {
        
     }
-    
+
+
     public function synchronizeGoods($goods_no)
     {
        $result = $this->goodsSync($goods_no);
@@ -95,5 +96,13 @@ class WeiChengClient extends ManagementClient
        } else {
            return $this->rA('Synchronization failed: '.$result['response']);
        }
+    }
+
+    public function synchronizeOrder($order){
+        $this->syncOrder($order);
+    }
+
+    public function synchronizeOrderRefund($order){
+        $this->syncOrderRefund($order);
     }
 }
