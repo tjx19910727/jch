@@ -790,6 +790,21 @@ class Receive extends Common
         }
     }
 
+     /**
+     * 取卡积分变化记录
+     * @return array|\think\response\Json
+     */
+    public function getCardChangeLogs()
+    {
+        try {
+            return $this->app->api->getCardChangeLogs();
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+
     public function test(){
 
         $this->app->api->cardAddPoints();
