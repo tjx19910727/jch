@@ -31,11 +31,10 @@ class Card extends Common
     {
         try {
             $this->validate(input(), $this->validatePath . '.add');
-
+            return returnData($this->app->card->changeCardPoints(input('card_no'), input('points_changed'), input('change_type'), input('trade_no') ?? '', input('reasons') ?? '', input('bind_id') ?? ''));
         } catch (\Exception $e) {
-            return returnValidate($e->getMessage());
+            return $this->app->card->rFail('积分变动失败');
         }
-        return $this->app->card->changeCardPoints(input('card_no'), input('points_changed'), input('change_type'), input('oredr_id') ?? '', input('reason') ?? '', input('bind_id') ?? '');
     }
 
 }

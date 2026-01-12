@@ -87,11 +87,13 @@ trait CardTrait
     }
 
     //积分变化接口  band_id 预留字段，后续可能绑定微程会员id，或者平台id，绑定账户不尽相同
-    public function changePoints($card_no, $points_changed, $change_type, $oredr_id = '', $reasons = '', $band_id = '')
+    public function changePoints($card_no, $points_changed, $change_type, $trade_no = '', $reasons = '', $band_id = '')
     {
         try{
             $this->startTrans();
             $card = $this->getCardFind(['card_no' => $card_no], 'card_no,points');
+            if(!$card)  $this->addCard(['card_no' => $card_no, 'points' => $points_changed]);
+
             $points_before_change = $card['points'] ?? 0;
             $points = 0;
             if($change_type == 1) $points = $points_before_change + $points_changed;
@@ -103,14 +105,17 @@ trait CardTrait
                 'points' => $points,
                 'change_type' => $change_type,
                 'reasons' => $reasons,
-                'order_id' => $oredr_id,
+                'trade_no' => $trade_no,
                 'bind_id' => $band_id,
                 'created_at' => date('Y-m-d H:i:s'),
             ];
+
             $log_id =  $this->addCardPointsChangeLogs($insert);
-            $this->updateCard(['points' => $points], ['card_no' => $card_no]);
+            $res = $this->updateCard(['points' => $points], ['card_no' => $card_no]);
             $this->commitTrans();
+            return $res;
         } catch (\Exception $e) {
+            return false;
             $this->rollbackTrans();
             actionLog("修改卡积分失败");
             actionException($e, 1);

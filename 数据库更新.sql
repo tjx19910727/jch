@@ -27,7 +27,7 @@ CREATE TABLE `card_points_change_logs` (
   `points_changed` decimal(10,2) DEFAULT NULL COMMENT '积分变化量',
   `points` decimal(10,2) DEFAULT NULL COMMENT '变化后积分',
   `change_type` int(11) DEFAULT NULL COMMENT '变化类型1：增加 2：减少',
-  `order_id` int(11) DEFAULT NULL COMMENT '积分变化关联id',
+  `trade_no` int(11) DEFAULT NULL COMMENT '积分变化关联订单编号',
   `reasons` varchar(200) COMMENT '原因',
   `created_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
