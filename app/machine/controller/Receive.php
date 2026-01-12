@@ -53,7 +53,8 @@ class Receive extends Common
                 returnState(300,lang("error_api"))->send();
                 die();
             }
-            if(!env('APP_DEBUG')){
+
+            if(!env('CglPay.is_test')){
                 $this->validate($postData,$this->validatePath . $action);
             }
             $frequency = checkFrequency($action,1);
@@ -69,7 +70,7 @@ class Receive extends Common
                 "mac" => $mac
             ];
             $this->app = AppFactory::machine($this->config);
-            if(!env('APP_DEBUG')){
+            if(!env('CglPay.is_test')){
                 if (!in_array($action, $this->noCheckApi) && $this->app->api->checkSign($postData) !== true) {
                     @cache($postData['machine_id'] . ".signKey", null);
                     returnState(100, Lang::get("check_sign_fail"))->send();
