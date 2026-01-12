@@ -273,14 +273,14 @@ trait MachineChannelTrait
         //如果设备商品未配置，则取商品本身积分兑换比例
         //如果商品本身未配置，则取商场积分兑换比例
         //如果设备为配置积分比例，则取组织积分比例，这里涉及太广了，可能引起bug，暂时  不返回到这一层 
-        if($mc && ($mc['intergral_rate'] || $mc['gift_points'])){
+        if($mc){
             return [
                 'intergral_rate' => $mc['intergral_rate'],
                 'gift_points' => $mc['gift_points']
             ];
         }
         $machineGoodsInfo = MachineGoodsModel::getFind(['g_id' => $mc['g_id'], 'machine_id' => $mc['machine_id']], 'intergral_rate,gift_points');
-        if ($machineGoodsInfo && ($machineGoodsInfo['intergral_rate'] || $machineGoodsInfo['gift_points'])) {
+        if ($machineGoodsInfo) {
             return [
                 'intergral_rate' => $machineGoodsInfo['intergral_rate'],
                 'gift_points' => $machineGoodsInfo['gift_points'],
@@ -288,7 +288,7 @@ trait MachineChannelTrait
         }
 
         $goodsInfo = GoodsModel::getFind(['g_id' => $mc['g_id']], 'intergral_rate,gift_points');
-        if ($goodsInfo && ($goodsInfo['intergral_rate'] || $goodsInfo['gift_points'])) {
+        if ($goodsInfo) {
             return [
                 'intergral_rate' => $goodsInfo['intergral_rate'],
                 'gift_points' => $goodsInfo['gift_points'],

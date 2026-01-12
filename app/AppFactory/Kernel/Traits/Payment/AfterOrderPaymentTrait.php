@@ -98,7 +98,7 @@ trait AfterOrderPaymentTrait
             foreach ($details as $k => $v) {
                 $updateSod['sod_id'] = $v['sod_id'];
 
-                $mc = $this->getRateOrGiftPoints(['mc_id' => $v['mc_id']]);
+                $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
                 $rate_points = $this->getRateOrGiftPoints($mc);
 
                 if($rate_points['gift_points'] > 0 ){

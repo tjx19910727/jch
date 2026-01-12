@@ -30,7 +30,7 @@ class Receive extends Common
     protected $app;
 
     protected $noCheckApi = [
-        "logoutH5",
+        "logoutH5",'test'
     ];
 
     /**
@@ -788,5 +788,10 @@ class Receive extends Common
             actionException($e,1);
             return returnTryCatch($e->getMessage());
         }
+    }
+
+    public function test(){
+
+        $this->app->api->testOutGoods();
     }
 }
