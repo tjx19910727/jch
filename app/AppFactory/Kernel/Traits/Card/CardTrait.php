@@ -113,7 +113,7 @@ trait CardTrait
             $log_id =  $this->addCardPointsChangeLogs($insert);
             $this->updateCard(['points' => $points], ['card_no' => $card_no]);
             $this->commitTrans();
-            return $log_id;
+            return ['card_no' => $card_no, 'points_changed' => $points_changed, 'points' => $points, 'trade_no' => $trade_no];
         } catch (\Exception $e) {
             return false;
             $this->rollbackTrans();

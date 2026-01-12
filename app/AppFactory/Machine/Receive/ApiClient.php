@@ -1346,8 +1346,7 @@ class ApiClient extends ReceiveBaseClient
     public function cardAddPoints(){
         try {
             $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']], 'total_points')->toArray();
-            $res = $this->changePoints($this->data['card_no'], $order['total_points'], 1, $this->data['trade_no'], "购买商品增加积分");
-            return $this->r(200, 'success:'.$res);
+            return $this->r(200, $$this->changePoints($this->data['card_no'], $order['total_points'], 1, $this->data['trade_no'], "购买商品增加积分"));
         } catch (\Exception $e) {
             $this->rollbackTrans();
             return $this->rFail($e->getMessage());
