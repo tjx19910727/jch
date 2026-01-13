@@ -14,7 +14,7 @@ class VStrategyPayee extends VCommon
     protected $rule = [
         "sp_id" => "require",
         "sp_name" => 'require',
-        "payee_type" => 'require|in:1,2,4,5',
+        "payee_type" => 'require|in:1,2,4,5,9',
         "app_id" => 'require',
         "mch_id" => "require",
         "content" => 'require',
