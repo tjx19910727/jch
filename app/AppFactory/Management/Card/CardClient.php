@@ -10,6 +10,7 @@ namespace app\AppFactory\Management\Card;
 
 
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
+use app\AppFactory\Kernel\Support\Excel;
 
 use app\AppFactory\Management\ManagementClient;
 class CardClient extends ManagementClient 
@@ -58,5 +59,23 @@ class CardClient extends ManagementClient
 
     public function changeCardPoints($card_no, $change_points, $change_type, $oredr_id = '', $reason = '', $bind_id = ''){
         return $this->changePoints($card_no, $change_points, $change_type, $oredr_id, $reason, $bind_id);
+    }
+
+    public function importCards($data){
+        try {
+            $path = root_path() . "public" . $data['file_path'];
+            $title = ["card_no", "card_show_no"];
+            $cards = Excel::importExcel($path, $title);
+            if (is_object($cards)) return $cards;
+            actionLog($cards, '导入的卡数据');
+            if ($cards) {
+                $result = $this->addCardLists($cards);
+                return $this->rAction($result);
+            }
+            return $this->r(100, '获取不到Excel文档中的数据');
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rValidate($e->getMessage());
+        }
     }
 }

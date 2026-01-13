@@ -37,4 +37,9 @@ class Card extends Common
         }
     }
 
+    //导入卡信息
+    public function import(){
+        return $this->app->card->importCards(input());
+    }
+
 }
