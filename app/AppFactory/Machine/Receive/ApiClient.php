@@ -1379,10 +1379,11 @@ class ApiClient extends ReceiveBaseClient
     public function getWcSmSCode(){
         $res = $this->getSmsCode($this->data['phone'], $this->data['machine_id']);
         $response = json_decode($res['response'], true);
-        if($res['status'] == 200){
-            return $this->r(200, $response);
-        }else{
-            return $this->rFail($response);
+        if(isset($response['data'])){
+            return $this->r(200, $response['data']);
+        }
+        if(isset($response['message'])){
+            return $this->r(200, $response['message']);
         }
     }
 
@@ -1392,14 +1393,25 @@ class ApiClient extends ReceiveBaseClient
      * @throws \Exception
      */
     public function getWcLoginUser(){
-        // todo   将token存入数据库，以便下次直接登录
         $res = $this->wcLoginUser($this->data['phone'], $this->data['machine_id'], $this->data['code']);
         $response = json_decode($res['response'], true);
-        if($res['status'] == 200 || $response['success'] == true){
-            return $this->r(200, $response);
-        }else{
-            return $this->rFail($response);
-        }
+        return $this->r(200, $response);
+    }
+
+    /**
+     * 微程会员同步积分
+     * 微程会员在售卖机登录后，
+     * @return array|\think\response\Json
+     * @throws \Exception
+     */
+    public function setWcUserAddPoints(){
+        $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']], 'total_points');
+        if(!$order) return $this->r(100, "查无此订单");
+        $order = $order->toArray();
+        $res = $this->wcUserSyncPoints($this->data['token'], $order['total_points'], 1);
+        if($res['status'] !== 200) return $this->r(100, $res['response']);
+        $response = json_decode($res['response'], true);
+        return $this->r(200, $response);
     }
 
     /**

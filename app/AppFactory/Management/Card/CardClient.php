@@ -57,10 +57,6 @@ class CardClient extends ManagementClient
     } 
 
     public function changeCardPoints($card_no, $change_points, $change_type, $oredr_id = '', $reason = '', $bind_id = ''){
-        $res = $this->changePoints($card_no, $change_points, $change_type, $oredr_id, $reason, $bind_id);
-        if($bind_id){
-            $this->app->api
-        }
-        return $this->rA();
+        return $this->changePoints($card_no, $change_points, $change_type, $oredr_id, $reason, $bind_id);
     }
 }

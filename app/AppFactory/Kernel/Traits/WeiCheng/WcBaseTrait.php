@@ -31,6 +31,7 @@ trait WcBaseTrait
         $this->order_refundPart_url = $this->config['apiDomain']."/api/order/refundPart";
         $this->get_sms_code_url = "https://api.weicheng.jchtechnologies.com/msvc-shop/v1/mp/user/phone/send/code";
         $this->phone_login_url = "https://api.weicheng.jchtechnologies.com/msvc-shop/v1/mp/user/phoneLogin";
+        $this->user_sync_points = "https://api.weicheng.jchtechnologies.com/msvc-shop/v1/mp/user/syncIntegral";
     }
 
     public function getDecptData($data)
@@ -126,5 +127,12 @@ trait WcBaseTrait
         $this->initWcBase();
         $postUrl = $this->phone_login_url."?phone=".$phone."&machine_code=".$machine_id."&code=".$code;
         return $this->weicheng_curl($postUrl, []);
+    }
+
+    public function wcUserSyncPoints($token, $integral, $op_type){
+        $this->initWcBase();
+        $postUrl = $this->user_sync_points."?op_type=".$op_type."&integral=".(int)$integral;
+        $header = array('token: '.$token);
+        return $this->weicheng_curl($postUrl, [], $header);
     }
 }

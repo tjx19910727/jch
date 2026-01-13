@@ -22,4 +22,4 @@ class WeiChengProvider implements ServiceProviderInterface
             return new WeiChengClient($app);
         };
     }
-                                                                                                                                                                                                                                                                                        }
+}

@@ -92,17 +92,17 @@ class WeiChengClient extends ManagementClient
        if ($result['status'] == 200) {
            $res = $this->synchronizeGoods2Db($result['response']); 
            return $this->rA('Synchronization successful', $res);
-           return                                                                                                                                                                                                                $res;
+           return $res;
        } else {
            return $this->rA('Synchronization failed: '.$result['response']);
        }
     }
 
     public function synchronizeOrder($order){
-        $this->syncOrder($order);
+        // $this->syncOrder($order);
     }
 
     public function synchronizeOrderRefund($order){
-        $this->syncOrderRefund($order);
+        // $this->syncOrderRefund($order);
     }
 }

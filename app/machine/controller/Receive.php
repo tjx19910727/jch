@@ -844,6 +844,22 @@ class Receive extends Common
         }
     }
 
+    /**
+    * 会员同步积分
+    * @return array|\think\response\Json
+    */
+    public function wcUserAddPoints()
+    {
+        try {
+            return $this->app->api->setWcUserAddPoints();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+
+
     public function test()
     {
         $this->app->api->cardAddPoints();
