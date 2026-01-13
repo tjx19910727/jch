@@ -858,6 +858,19 @@ class Receive extends Common
         }
     }
 
+    /**
+    * 生成积分二维码
+    * @return array|\think\response\Json
+    */
+    public function wcPointsQrcode()
+    {
+        try {
+            return $this->app->api->getWcPointsQrcode();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
 
 
     public function test()
