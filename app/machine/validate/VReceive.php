@@ -193,6 +193,7 @@ class VReceive extends VCommon
         "getWcSmSCode" => ["msg_id","machine_id","timestamp","phone"],
         "wcLoginUser" => ["msg_id","machine_id","timestamp","phone","code"],
         "wcUserAddPoints" => ["msg_id","machine_id","timestamp","token","trade_no"],
+        "wcPointsQrcode" => ["msg_id","machine_id","timestamp","token","trade_no"],
 
     ];
 
