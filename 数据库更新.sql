@@ -15,7 +15,8 @@ ALTER TABLE kiosk.goods
   ADD COLUMN `gift_points` decimal(10,3) default 0 COMMENT '赠送积分' AFTER `intergral_rate`;
 
 CREATE TABLE `card` (
-  `card_no` varchar(20) NOT NULL COMMENT '卡号，主键',
+  `card_no` varchar(20) NOT NULL COMMENT '芯片卡号，主键',
+  `card_show_no` varchar(20) DEFAULT NULL COMMENT '卡面卡号',
   `points` decimal(10,2) DEFAULT NULL COMMENT '积分',
   PRIMARY KEY (`card_no`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

@@ -654,7 +654,8 @@ class V2Client extends V2BaseClient
     }
 
     public function get_card_points(){
-        $data = $this->getCardFind(['card_no' => $this->params['card_no']])->toArray();
-        return $this->returnData(0,$this->lang("msg.0"), $data);
+        $data = $this->getCardFind(['card_show_no' => $this->params['card_no']], 'card_show_no as card_no, points');
+        if(!$data) return $this->returnData(10, $this->lang("card.can_not_find_card"));
+        return $this->returnData(0,$this->lang("msg.0"), $data->toArray());
     }
 }
