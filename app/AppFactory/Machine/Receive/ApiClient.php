@@ -1387,14 +1387,12 @@ class ApiClient extends ReceiveBaseClient
             if($this->data['trade_no']){
                 $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']], 'total_points')->toArray();
                 $res = $this->changePoints($this->data['card_no'], $order['total_points'], 1, $this->data['trade_no'], "购买商品增加积分");
-                return $this->r(200,'success', $res);
             }
             if($this->data['bind_id']){
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']],'points')->toArray();
                 $res = $this->changePoints($this->data['card_no'], $card['points'], 2, $this->data['trade_no'], "会员绑定积分卡", $this->data['bind_id'], $this->data['token']);
-                return $this->r(200,'success', $res);
             }
-            
+            return $this->r(200,'success', $res);
         } catch (\Exception $e) {
             $this->rollbackTrans();
             return $this->rFail($e->getMessage());
