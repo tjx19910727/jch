@@ -1,3 +1,42 @@
+#20260108
+ALTER TABLE kiosk.machine_channel
+  ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '积分-现金兑换比例（1元=10积分） ' AFTER `retail_price`;
+ALTER TABLE kiosk.machine_goods
+  ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '积分-现金兑换比例（1元=10积分） ' AFTER `retail_price`;
+ALTER TABLE kiosk.goods
+  ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '积分-现金兑换比例（1元=10积分） ' AFTER `retail_price`;
+
+
+ALTER TABLE kiosk.machine_channel
+  ADD COLUMN `gift_points` decimal(10,3) default 0 COMMENT '赠送积分' AFTER `intergral_rate`;
+ALTER TABLE kiosk.machine_goods
+  ADD COLUMN `gift_points` decimal(10,3) default 0 COMMENT '赠送积分' AFTER `intergral_rate`;
+ALTER TABLE kiosk.goods
+  ADD COLUMN `gift_points` decimal(10,3) default 0 COMMENT '赠送积分' AFTER `intergral_rate`;
+
+CREATE TABLE `card` (
+  `card_no` varchar(20) NOT NULL COMMENT '芯片卡号，主键',
+  `card_show_no` varchar(20) DEFAULT NULL COMMENT '卡面卡号',
+  `points` decimal(10,2) DEFAULT NULL COMMENT '积分',
+  PRIMARY KEY (`card_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `card_points_change_logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `card_no` varchar(20) DEFAULT NULL COMMENT '卡号',
+  `points_before_change` decimal(10,2) DEFAULT NULL COMMENT '变化前积分',
+  `points_changed` decimal(10,2) DEFAULT NULL COMMENT '积分变化量',
+  `points` decimal(10,2) DEFAULT NULL COMMENT '变化后积分',
+  `change_type` int(1) DEFAULT NULL COMMENT '变化类型1：增加 2：减少',
+  `trade_no` varchar(50) DEFAULT NULL COMMENT '积分变化关联订单编号',
+  `reasons` varchar(200) COMMENT '原因',
+  `created_at` timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `card_points_change_logs_card_no_IDX` (`card_no`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='卡积分变化表';
+
+
+
 #20251208
 ALTER TABLE kiosk.sale_orders
   ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '当前订单积分-现金兑换比例（1元=10积分） ' AFTER `total_price`;
@@ -16,7 +55,7 @@ ALTER TABLE kiosk.sale_orders_details
 ALTER TABLE kiosk.sale_orders_refund
   ADD COLUMN `refund_points` decimal(10,3) default 0 COMMENT '退还积分 ' AFTER `refund_amount`;
 
-CREATE TABLE `mall` (
+CREATE TABLE `mall` (                     
   `mall_id` int NOT NULL AUTO_INCREMENT,
   `mall_code` int NOT NULL COMMENT '商场编码',
   `mall_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,

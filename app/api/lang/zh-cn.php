@@ -113,4 +113,8 @@ return [
     "robot" => [
         "machine_no_data" => "查无设备信息",
     ],
+
+    "card" => [
+        'can_not_find_card' => '找不到此卡',
+    ]
 ];

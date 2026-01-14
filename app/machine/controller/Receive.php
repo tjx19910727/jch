@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by PhpStorm.
  * User: Administrator
@@ -31,6 +32,7 @@ class Receive extends Common
 
     protected $noCheckApi = [
         "logoutH5",
+        'test'
     ];
 
     /**
@@ -42,19 +44,22 @@ class Receive extends Common
         try {
             $postData = input();
             $postData = json2arr($postData);
-            actionLog($postData,'接收到的数据');
+            actionLog($postData, '接收到的数据');
             $action = $this->request->action();
             $reflection = new \ReflectionClass(__CLASS__);
             $methods = $reflection->getMethods();
             $methodNames = array_map(function ($method) {
                 return $method->getName();
-            },$methods);
-            if (!in_array($action,$methodNames)) {
-                returnState(300,lang("error_api"))->send();
+            }, $methods);
+            if (!in_array($action, $methodNames)) {
+                returnState(300, lang("error_api"))->send();
                 die();
             }
-            $this->validate($postData,$this->validatePath . $action);
-            $frequency = checkFrequency($action,1);
+
+            if (!env('CglPay.is_test')) {
+                $this->validate($postData, $this->validatePath . $action);
+            }
+            $frequency = checkFrequency($action, 1);
             if ($frequency !== true) {
                 $frequency = obj2arr($frequency);
                 returnState(300, $frequency)->send();
@@ -67,16 +72,17 @@ class Receive extends Common
                 "mac" => $mac
             ];
             $this->app = AppFactory::machine($this->config);
-            if (!in_array($action, $this->noCheckApi) && $this->app->api->checkSign($postData) !== true) {
-                @cache($postData['machine_id'] . ".signKey", null);
-                returnState(100, Lang::get("check_sign_fail"))->send();
-                die();
+            if (!env('CglPay.is_test')) {
+                if (!in_array($action, $this->noCheckApi) && $this->app->api->checkSign($postData) !== true) {
+                    @cache($postData['machine_id'] . ".signKey", null);
+                    returnState(100, Lang::get("check_sign_fail"))->send();
+                    die();
+                }
             }
         } catch (\Exception $e) {
             returnState(300, Lang::get($e->getMessage()))->send();
             die();
         }
-
     }
 
     /**
@@ -88,7 +94,7 @@ class Receive extends Common
         try {
             return $this->app->api->login();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -102,7 +108,7 @@ class Receive extends Common
         try {
             return $this->app->api->wxLoginQrCode();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -116,7 +122,7 @@ class Receive extends Common
         try {
             return $this->app->api->logout();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -130,7 +136,7 @@ class Receive extends Common
         try {
             return $this->app->api->systemInfo();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -144,7 +150,7 @@ class Receive extends Common
         try {
             return $this->app->api->machine();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -158,7 +164,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineLang();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -172,7 +178,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineChannel();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -186,7 +192,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineGoods();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -200,7 +206,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineInfo();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -214,7 +220,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineOnOff();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -228,7 +234,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineConfig();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -242,7 +248,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineConfigLang();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -256,7 +262,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineHelp();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -270,7 +276,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineView();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -284,7 +290,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineViewList();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -298,7 +304,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineVersionPlan();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -312,7 +318,7 @@ class Receive extends Common
         try {
             return $this->app->api->machineVersionDownload();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -326,7 +332,7 @@ class Receive extends Common
         try {
             return $this->app->api->goods();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -340,7 +346,7 @@ class Receive extends Common
         try {
             return $this->app->api->goodsFind();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -354,13 +360,13 @@ class Receive extends Common
         try {
             return $this->app->api->adv();
         } catch (DataNotFoundException $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         } catch (ModelNotFoundException $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         } catch (DbException $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -374,7 +380,7 @@ class Receive extends Common
         try {
             return $this->app->api->playAdv();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -388,7 +394,7 @@ class Receive extends Common
         try {
             return $this->app->api->reportAdvDownLoad();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -403,7 +409,7 @@ class Receive extends Common
         try {
             return $this->app->api->subCar();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -417,7 +423,7 @@ class Receive extends Common
         try {
             return $this->app->api->subChannel();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -431,7 +437,7 @@ class Receive extends Common
         try {
             return $this->app->api->subMachineGoods();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -445,7 +451,7 @@ class Receive extends Common
         try {
             return $this->app->api->channelReplenishment();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -459,7 +465,7 @@ class Receive extends Common
         try {
             return $this->app->api->changeChannelGoods();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -473,7 +479,7 @@ class Receive extends Common
         try {
             return $this->app->api->uploadFiles();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -487,7 +493,7 @@ class Receive extends Common
         try {
             return $this->app->api->checkStockQrCode();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -501,7 +507,7 @@ class Receive extends Common
         try {
             return $this->app->activity->getByMachine();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -515,7 +521,7 @@ class Receive extends Common
         try {
             return $this->app->activity->getByCode();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -529,7 +535,7 @@ class Receive extends Common
         try {
             return $this->app->activity->getApByMachine();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -543,7 +549,7 @@ class Receive extends Common
         try {
             return $this->app->activity->getApByCode();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -557,7 +563,7 @@ class Receive extends Common
         try {
             return $this->app->activity->getAlByMachine();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -571,7 +577,7 @@ class Receive extends Common
         try {
             return $this->app->activity->lotteryOrder();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -586,7 +592,7 @@ class Receive extends Common
         try {
             return $this->app->activity->luckyDrawResult();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -601,7 +607,7 @@ class Receive extends Common
         try {
             return $this->app->activity->lotteryOutGoods();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -615,7 +621,7 @@ class Receive extends Common
         try {
             return $this->app->activity->getFdByMachine();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -628,10 +634,10 @@ class Receive extends Common
     {
         try {
             $result = $this->app->activity->usePickCode();
-            actionLog(@obj2arr($result),'使用提货码返回结果');
+            actionLog(@obj2arr($result), '使用提货码返回结果');
             return $result;
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -645,7 +651,7 @@ class Receive extends Common
         try {
             return $this->app->activity->useFd();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -659,7 +665,7 @@ class Receive extends Common
         try {
             return $this->app->activity->useCoupon();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -673,7 +679,7 @@ class Receive extends Common
         try {
             return $this->app->api->ip();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -687,7 +693,7 @@ class Receive extends Common
         try {
             return $this->app->saleOrders->subUnclaimed();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -701,7 +707,7 @@ class Receive extends Common
         try {
             return $this->app->api->reset();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -715,7 +721,7 @@ class Receive extends Common
         try {
             return $this->app->api->getGoodsMultiple();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -729,7 +735,7 @@ class Receive extends Common
         try {
             return $this->app->api->subGoodsMultipleOrder();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -743,7 +749,7 @@ class Receive extends Common
         try {
             return $this->app->api->logoutH5();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -757,7 +763,7 @@ class Receive extends Common
         try {
             return $this->app->api->receipt();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -771,9 +777,104 @@ class Receive extends Common
         try {
             return $this->app->api->retryOutGoods();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
 
+    /**
+     * 取卡  卡添加积分   上传订单号、上传卡号
+     * @return array|\think\response\Json
+     */
+    public function cardAddPoints()
+    {
+        try {
+            $res = $this->app->api->cardAddPoints();
+             if (isset($this->data['bind_id']) && !empty($this->data['bind_id'])) {
+                $res = $this->app->api->cardBindWcuser();
+            }
+            return $res;
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+   
+
+    /**
+     * 取卡积分变化记录
+     * @return array|\think\response\Json
+     */
+    public function getCardChangeLogs()
+    {
+        try {
+            return $this->app->api->getCardChangeLogs();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+     /**
+     * 获取微程短信验证码
+     * @return array|\think\response\Json
+     */
+    public function getWcSmSCode()
+    {
+        try {
+            return $this->app->api->getWcSmSCode();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+    * 会员账号登录
+    * @return array|\think\response\Json
+    */
+    public function wcLoginUser()
+    {
+        try {
+            return $this->app->api->getWcLoginUser();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+    * 会员同步积分
+    * @return array|\think\response\Json
+    */
+    public function wcUserAddPoints()
+    {
+        try {
+            return $this->app->api->setWcUserAddPoints();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+    * 生成积分二维码
+    * @return array|\think\response\Json
+    */
+    public function wcPointsQrcode()
+    {
+        try {
+            return $this->app->api->getWcPointsQrcode();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+
+    public function test()
+    {
+        $this->app->api->cardAddPoints();
+    }
 }

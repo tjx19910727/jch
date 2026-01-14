@@ -33,6 +33,7 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
@@ -49,6 +50,7 @@ class V2Client extends V2BaseClient
     use GoodsTrait,GoodsCategoryTrait;
     use GoodsMultipleTrait;
     use BeforeOrderPaymentTrait;
+    use CardTrait;
 
     protected $machine;
     protected $order;
@@ -649,5 +651,11 @@ class V2Client extends V2BaseClient
         $where['ao_id'] = $this->authConfig['ao_id'];
         $list = $this->getGoodsCategoryList($where, ['list_rows' => $this->params['pageNum'] ?? 0,'page' => $this->params['page'] ?? 1],'gc_id,gc_pid,gc_name,`desc` gc_desc, ico, sort','sort asc');
         return $this->returnData(0,$this->lang("msg.0"),$list);
+    }
+
+    public function get_card_points(){
+        $data = $this->getCardFind(['card_show_no' => $this->params['card_no']], 'card_show_no as card_no, points');
+        if(!$data) return $this->returnData(10, $this->lang("card.can_not_find_card"));
+        return $this->returnData(0,$this->lang("msg.0"), $data->toArray());
     }
 }

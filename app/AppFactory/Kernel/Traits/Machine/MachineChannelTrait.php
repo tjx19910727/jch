@@ -10,10 +10,17 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
+use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\Mall\MallMachineModel;
+use app\AppFactory\Kernel\Model\Mall\MallModel;
+use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Support\Validate\Machine\VChannel;
+use app\AppFactory\Kernel\Traits\Mall\MallMachineTrait;
 
 trait MachineChannelTrait
 {
+    use MallMachineTrait;
 
     /**
      * 增加指定字段数值
@@ -148,7 +155,7 @@ trait MachineChannelTrait
                     }
 
                     $mc = $this->getMachineChannelFind($whereMc);
-                    actionLog($this->getLS(),'查询货道');
+                    actionLog($this->getLS(), '查询货道');
                     if (!$mc) {
                         $mc = $value;
                         if (isset($value['g_id'])) {
@@ -220,7 +227,7 @@ trait MachineChannelTrait
                             $this->addGoodsChange($insertGc);
                         }
                         // 20250604 检查Bad状态，终端BAD 10 或终端恢复BAD 11
-                        if (isset($value['status']) && $value['status'] != $mc['status'] && in_array($value['status'],[1,3])) {
+                        if (isset($value['status']) && $value['status'] != $mc['status'] && in_array($value['status'], [1, 3])) {
                             $insertGc = array_merge($insertGChange, [
                                 "change_value" => $mc['stock'],
                                 "type" => $value['status'] == 3 ? 10 : 11 ,   // 3：终端BAD，1：终端恢复BAD
@@ -256,5 +263,47 @@ trait MachineChannelTrait
         $result = $this->updateMachineChannel(['channel_img' => $this->message['path']], ['m_id' => $this->machine['m_id'], 'channel_code' => $this->message['channel_code']]);
         actionLog($this->getLS(), '【SQL】保存货道槽位照片', 'DataUpload');
         return $result;
+    }
+
+
+    public function getRateOrGiftPoints($mc)
+    {
+        //如果设备货道存在配置，则使用设备货道配置的积分比例(对应设备，对应货道，对应商品)
+        //如果设备货道未配置，取设备商品积分兑换比例
+        //如果设备商品未配置，则取商品本身积分兑换比例
+        //如果商品本身未配置，则取商场积分兑换比例
+        //如果设备为配置积分比例，则取组织积分比例，这里涉及太广了，可能引起bug，暂时  不返回到这一层 
+        if($mc){
+            return [
+                'intergral_rate' => $mc['intergral_rate'],
+                'gift_points' => $mc['gift_points']
+            ];
+        }
+        $machineGoodsInfo = MachineGoodsModel::getFind(['g_id' => $mc['g_id'], 'machine_id' => $mc['machine_id']], 'intergral_rate,gift_points');
+        if ($machineGoodsInfo) {
+            return [
+                'intergral_rate' => $machineGoodsInfo['intergral_rate'],
+                'gift_points' => $machineGoodsInfo['gift_points'],
+            ];
+        }
+
+        $goodsInfo = GoodsModel::getFind(['g_id' => $mc['g_id']], 'intergral_rate,gift_points');
+        if ($goodsInfo) {
+            return [
+                'intergral_rate' => $goodsInfo['intergral_rate'],
+                'gift_points' => $goodsInfo['gift_points'],
+            ];
+        }
+        $machineInfo = MachineModel::getFind(['machine_id' => $mc['machine_id']]);
+        if ($machineInfo) {
+            $mallMachine = $this->getMallMachineFind(['machine_id' => $mc['machine_id']]);
+            if ($mallMachine && $mallMachine['machine_id']) {
+                $mall = MallModel::getFind(['mall_id' => $mallMachine['m_id']], 'intergral_rate');
+                if ($mall && $mall['intergral_rate']) {
+                    return ['intergral_rate' =>  $mall['intergral_rate'], 'gift_points' => 0];
+                }
+            }
+        }
+        return ['intergral_rate' => 0, 'gift_points' => 0];
     }
 }

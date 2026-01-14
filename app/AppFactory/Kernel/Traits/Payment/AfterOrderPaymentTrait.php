@@ -11,9 +11,11 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 
 use app\AppFactory\Kernel\Support\Trip\Trip;
+use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 
 trait AfterOrderPaymentTrait
 {
+    use MachineChannelTrait;
 
     /**
      * 处理支付成功
@@ -44,7 +46,7 @@ trait AfterOrderPaymentTrait
         }
         $this->order['pay_status'] = 3;
         $this->order['pay_time'] = time();
-
+        
         actionLog($this->order,'更新支付时间成功');
         if ($this->order['order_type'] != 4 && $this->order['out_status'] == 1) {
             $this->outGoods();
@@ -70,6 +72,8 @@ trait AfterOrderPaymentTrait
 
     /**
      * 出货
+     * 支付成功后，将积分信息写入父子订单表中
+     * 
      * @return string
      */
     protected function outGoods()
@@ -89,7 +93,23 @@ trait AfterOrderPaymentTrait
                 }
             }
             // 新数据格式
+            $final_intergral_rate = 0;
+            $total_points = 0;
             foreach ($details as $k => $v) {
+                $updateSod['sod_id'] = $v['sod_id'];
+
+                $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
+                $rate_points = $this->getRateOrGiftPoints($mc);
+
+                if($rate_points['gift_points'] > 0 ){
+                    $updateSod['intergral_rate'] = 0;
+                    $updateSod['total_sod_points'] = $rate_points['gift_points'];
+                }
+                if($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0){
+                    $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
+                    $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $final_intergral_rate, 3);
+                }
+                $total_points += $updateSod['total_sod_points'];
                 if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
                     $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
                     actionLog($this->getLS(),'减固定组合商品酒店库存');
@@ -104,12 +124,16 @@ trait AfterOrderPaymentTrait
                     $outArr[$v['channel_position']][] = $dc;
                 }
                 if ($v['g_type'] == 3) {
-                    $updateSod['sod_id'] = $v['sod_id'];
                     // 获取核销码
                     $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
-                    $this->updateSaleOrdersDetails($updateSod);
                 }
-
+                $this->updateSaleOrdersDetails($updateSod);
+            }
+            
+            if($total_points) {
+                $this->order['total_points'] = $total_points;
+                // 因为存在不同子订单   不同积分兑换比例情况，order表不做intergral_rate的记录，只记录到自订单表
+                // $this->order['intergral_rate'] = $final_intergral_rate;  
             }
 
             $content = [
@@ -274,5 +298,5 @@ trait AfterOrderPaymentTrait
                 return $updateResult;
             }
         }
-    }
+    }   
 }

@@ -105,4 +105,8 @@ return [
     "robot" => [
         'machine_no_data' => 'No device information found',
     ],
+
+    "card" => [
+        'can_not_find_card' => 'Can not find this card',
+    ]
 ];

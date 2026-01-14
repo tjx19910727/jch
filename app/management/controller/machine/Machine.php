@@ -12,9 +12,11 @@ namespace app\management\controller\machine;
 use app\AppFactory\AppFactory;
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachine;
-
+use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 class Machine extends Common
 {
+    use AfterOrderPaymentTrait,SaleOrdersTrait;
 
     protected $field = "*";
     protected $validatePath = VMachine::class;
