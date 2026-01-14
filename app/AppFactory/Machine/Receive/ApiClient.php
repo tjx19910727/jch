@@ -1408,7 +1408,7 @@ class ApiClient extends ReceiveBaseClient
     {
         try {
             $pageNum = $this->data['pageNum'] ?? 15;
-            return $this->r(200, $this->getCardPointsChangeLogsList(['card_no' => $this->data['card_no']], $pageNum, "*", 'id desc'));
+            return $this->r(200,'success', $this->getCardPointsChangeLogsList(['card_no' => $this->data['card_no']], $pageNum, "*", 'id desc'));
         } catch (\Exception $e) {
             $this->rollbackTrans();
             return $this->rFail($e->getMessage());
