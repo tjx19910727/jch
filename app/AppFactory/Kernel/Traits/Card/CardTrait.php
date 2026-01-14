@@ -123,10 +123,9 @@ trait CardTrait
                 //调用微程接口同步积分
                 $res = $this->wcUserSyncPoints($token, $points_changed, 1);
                 $response = json_decode($res['response'], true);
-                if (isset($response['data']['current_integral']))
-                    return ['card_no' => $card_no, 'points_changed' => $points_changed, 'points' => $response['data']['current_integral'], 'trade_no' => '', 'bind_id' => $bind_id];
             }
-            return ['card_no' => $card_no, 'points_changed' => $points_changed, 'points' => $points, 'trade_no' => $trade_no];
+            $rtn_points = $bind_id ? $response['data']['current_integral'] : $points;
+            return ['card_no' => $card_no, 'points_changed' => $points_changed, 'points' => $rtn_points , 'trade_no' => $trade_no, 'bind_id' => $bind_id];
         } catch (\Exception $e) {
             return false;
             $this->rollbackTrans();
