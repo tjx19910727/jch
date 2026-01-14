@@ -101,5 +101,6 @@ class VStrategyPayee extends VCommon
         "addJdCashier" => ["agentNum","customerNum","shopNum","accessKey","secretKey"],
         "addTrip" => ["appId","appSecret","baseUrl"],
         "updateSp" => ['sp_id'],
+        "addShopPoints" => ["sp_name","payee_type","app_id","content","status"]
     ];
 }
