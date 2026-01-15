@@ -63,7 +63,10 @@ class SaleOrders extends Common
         $field = "order_id,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,machine_id,discount_price,factory,inventory_location,has_hotel,refund_status,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
         if (!empty($data))$field .= ",cost_price";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
-        // if ($postData['supplier']) unset($where['ao_id']);
+        if (isset($postData['supplier']) && $postData['supplier']) unset($where['ao_id']);
+        if($this->manager['level'] > 3){
+           $where['ao_id'] = $this->manager['ao_id'];
+        }
         return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc",$postData['supplier'] ?? true);
     }
 
