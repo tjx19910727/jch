@@ -141,6 +141,7 @@ trait AfterOrderPaymentTrait
                 "trade_no" => $this->order['trade_no'],
                 "main" => $contentArr,
                 "outGoods" => $outArr,
+                "order_points" => $this->order['total_points']
             ];
             //循环三次，每次间隔5秒执行
             for ($i = 0; $i < 3; $i++) {
