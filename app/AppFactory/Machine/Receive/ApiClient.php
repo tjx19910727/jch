@@ -1452,6 +1452,7 @@ class ApiClient extends ReceiveBaseClient
             $card_points_lists = [];
             $new_data = [];
             $total_card_points = 0;
+            $bind_id = "";
             if($card['bind_id']){
                 $card_no_list = $this->getCardColumn(['bind_id' => $card['bind_id']], 'card_no');
                 $log_list = $this->getCardPointsChangeLogsList([['card_no', 'in', $card_no_list]], 0, "*", 'id desc','')->toArray();
@@ -1472,6 +1473,7 @@ class ApiClient extends ReceiveBaseClient
             $res['data'] = $new_data;
             $res['card_info'] = $card_points_lists;
             $res['total_card_points'] = $total_card_points;
+            $res['bind_id'] = $card_points_lists[0]['bind_id'] ?? "";
             $res['bind_id_points'] = $card_points_lists[0]['bind_id_points'] ?? 0;
             $res['total_points'] = $res['total_card_points'] + $res['bind_id_points'];
             return $this->r(200, 'success', $res);
