@@ -44,12 +44,10 @@ class ReceiveBaseClient extends MachineBaseClient
             }
         }
 
-        if (!env('CglPay.is_test')) {
-            $set = $this->setSignKey();
-            if ($set !== true) {
-                $set->send();
-                die();
-            }
+        $set = $this->setSignKey();
+        if ($set !== true) {
+            $set->send();
+            die();
         }
 
         if (!isset($this->data['msgType']) || (isset($this->data['msgType']) && $this->data['msgType'] != "heartbeat")) {
