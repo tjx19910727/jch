@@ -1396,7 +1396,8 @@ class ApiClient extends ReceiveBaseClient
                     if ($this->data['bind_id']) {
                         //如果登录了，判断当前刷的卡是否是当前会员的卡，如果不是，不允许串卡积分
                         $bind_card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id')->toArray();
-                        if ($bind_card['bind_id'] != $this->data['bind_id']) {
+                        //如果感应卡bind_id有值切不等于传入的bind_id,报错，否则卡绑定bind_id
+                        if (!empty($bind_card['bind_id']) && $bind_card['bind_id'] != $this->data['bind_id']) {
                             return $this->r(200, 'failed', '感应卡不在您的会员账户名下！积分已同步至您的会员账户名下。');
                         }
                         //卡是会员的卡，卡内积分同步至微程
