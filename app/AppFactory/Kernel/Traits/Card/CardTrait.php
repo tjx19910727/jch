@@ -18,6 +18,12 @@ trait CardTrait
 {
     use WcBaseTrait;
 
+
+    public function getCardColumn($where, $column, $key = "")
+    {
+        return CardModel::getColumn($where, $column, $key = "");
+    }
+
     public function getCardCount($where, $field = '*', $order = '')
     {
         return CardModel::getFind($where, $field, $order);
@@ -60,7 +66,7 @@ trait CardTrait
         return CardModel::whereDel($where);
     }
 
-    public function getCardPointsChangeLogsCount($where, $field = '*', $order = '')
+    public function getCardPointsChangeLogs($where, $field = '*', $order = '')
     {
         return CardPointsChangeLogsModel::getFind($where, $field, $order);
     }
@@ -93,7 +99,7 @@ trait CardTrait
     }
 
     //积分变化接口  band_id 预留字段，后续可能绑定微程会员id，或者平台id，绑定账户不尽相同
-    public function changePoints($card_no, $points_changed, $change_type, $trade_no = '', $reasons = '', $bind_id = '', $token = '')
+    public function changePoints($card_no, $points_changed, $change_type, $trade_no = '', $reasons = '', $bind_id = '')
     {
         try {
             $this->startTrans();
@@ -119,13 +125,7 @@ trait CardTrait
             $log_id =  $this->addCardPointsChangeLogs($insert);
             $this->updateCard(['points' => $points], ['card_no' => $card_no]);
             $this->commitTrans();
-            if ($bind_id) {
-                //调用微程接口同步积分
-                $res = $this->wcUserSyncPoints($token, $points_changed, 1);
-                $response = json_decode($res['response'], true);
-            }
-            $rtn_points = $bind_id ? $response['data']['current_integral'] : $points;
-            return ['card_no' => $card_no, 'points_changed' => $points_changed, 'points' => $rtn_points , 'trade_no' => $trade_no, 'bind_id' => $bind_id];
+            return ['card_no' => $card_no, 'points_changed' => $points_changed,  'trade_no' => $trade_no, 'bind_id' => $bind_id];
         } catch (\Exception $e) {
             return false;
             $this->rollbackTrans();
