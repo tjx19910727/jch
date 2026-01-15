@@ -1388,7 +1388,7 @@ class ApiClient extends ReceiveBaseClient
             if ($this->data['trade_no']) {
                 //先校验订单积分是否已经被划走
                 $check_data = $this->getCardPointsChangeLogs(['trade_no' => $this->data['trade_no']]);
-                if ($check_data) return $this->rFail('当前订单积分已划拨至卡或会员账户，请勿重复操作');
+                if ($check_data) return $this->r(200, 'failed', '当前订单积分已划拨至卡或会员账户，请勿重复操作');
                 $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']], 'total_points')->toArray();
                 //如果携带卡信息，判断有没有登录，如果没有登录，积分直接写入卡
                 if($this->data['card_no']){
@@ -1397,12 +1397,12 @@ class ApiClient extends ReceiveBaseClient
                         //如果登录了，判断当前刷的卡是否是当前会员的卡，如果不是，不允许串卡积分
                         $bind_card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id')->toArray();
                         if ($bind_card['bind_id'] != $this->data['bind_id']) {
-                            return $this->rFail('感应卡不在您的会员账户名下！积分已同步至您的会员账户名下。');
+                            return $this->r(200, 'failed', '感应卡不在您的会员账户名下！积分已同步至您的会员账户名下。');
                         }
                         //卡是会员的卡，卡内积分同步至微程
                         $card_res = $this->changePoints($this->data['card_no'], $bind_card['points'], 2, $this->data['trade_no'], "会员绑定积分卡", $this->data['bind_id']);
                         $res = $this->wcUserSyncPoints($this->data['token'], $order['total_points'], 1);
-                        if(is_array($res['response']))  return $this->rFail($res['response']);
+                        if(is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
                         $response = json_decode($res['response'], true);
                         $user_points = $response['data']['current_integral'];
                         $this->updateCard(['bind_id' => $this->data['bind_id'], 'bind_id_points' => $user_points], ['card_no' => $this->data['card_no']]);
@@ -1412,7 +1412,7 @@ class ApiClient extends ReceiveBaseClient
                     //无卡时，判断有没有会员登录，如果有登录，订单积分直接同步到微程会员，如果没登录，积分不做操作
                     if(!empty($this->data['bind_id'])){
                         $res = $this->wcUserSyncPoints($this->data['token'], $order['total_points'], 1);
-                        if(is_array($res['response']))  return $this->rFail($res['response']);
+                        if(is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
                         $response = json_decode($res['response'], true);
                         $user_points = $response['data']['current_integral'];
                         $card_res = $this->changePoints('', $order['total_points'], 1, $this->data['trade_no'], "购买商品增加积分", $this->data['bind_id']);
@@ -1422,11 +1422,11 @@ class ApiClient extends ReceiveBaseClient
             } else {
                 //机台登录会员后，无订单刷卡场景，直接把卡积分同步到微程会员
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id,bind_id_points');
-                if (!$card) return $this->r(100, 'failed', '找不到此卡');
+                if (!$card) return $this->r(200, 'failed', '找不到此卡');
                 $card = $card->toArray();
                 $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "会员绑定积分卡", $this->data['bind_id']);
                 $res = $this->wcUserSyncPoints($this->data['token'], $card['points'], 1);
-                if(is_array($res['response']))  return $this->rFail($res['response']);
+                if(is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
                 $response = json_decode($res['response'], true);
                 $user_points = $response['data']['current_integral'];
                 $card_res['current_integral'] = $user_points;
