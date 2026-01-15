@@ -1449,10 +1449,12 @@ class ApiClient extends ReceiveBaseClient
             $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
             if(!$card) return $this->rFail('找不到此卡');
             //查询此卡关联的会员id
+            $card_points_lists = [];
+            $new_data = [];
+            $total_card_points = 0;
             if($card['bind_id']){
                 $card_no_list = $this->getCardColumn(['bind_id' => $card['bind_id']], 'card_no');
                 $log_list = $this->getCardPointsChangeLogsList([['card_no', 'in', $card_no_list]], 0, "*", 'id desc','')->toArray();
-                $new_data = [];
                 $keys = array_column($log_list, 'card_no');
                 foreach($log_list as $v){
                     foreach($keys as $key){
@@ -1463,8 +1465,6 @@ class ApiClient extends ReceiveBaseClient
                     }
                 }
                 $card_points_lists = $this->getCardColumn([['card_no', 'in', $card_no_list]], 'card_no,points, bind_id_points');
-                $total_card_points = 0;
-                $total_bind_id_points = 0;
                 foreach($card_points_lists as $v){
                     $total_card_points += $v['points'];
                 }
@@ -1472,7 +1472,7 @@ class ApiClient extends ReceiveBaseClient
             $res['data'] = $new_data;
             $res['card_info'] = $card_points_lists;
             $res['total_card_points'] = $total_card_points;
-            $res['bind_id_points'] = $card_points_lists[0]['bind_id_points'];
+            $res['bind_id_points'] = $card_points_lists[0]['bind_id_points'] ?? 0;
             $res['total_points'] = $res['total_card_points'] + $res['bind_id_points'];
             return $this->r(200, 'success', $res);
         } catch (\Exception $e) {
