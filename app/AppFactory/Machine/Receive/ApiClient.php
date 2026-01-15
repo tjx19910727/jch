@@ -1412,6 +1412,7 @@ class ApiClient extends ReceiveBaseClient
                     //无卡时，判断有没有会员登录，如果有登录，订单积分直接同步到微程会员，如果没登录，积分不做操作
                     if(!empty($this->data['bind_id'])){
                         $res = $this->wcUserSyncPoints($this->data['token'], $order['total_points'], 1);
+                        if(is_array($res['response']))  return $this->rFail($res['response']);
                         $response = json_decode($res['response'], true);
                         $user_points = $response['data']['current_integral'];
                         $card_res = $this->changePoints('', $order['total_points'], 1, $this->data['trade_no'], "购买商品增加积分", $this->data['bind_id']);
@@ -1425,6 +1426,7 @@ class ApiClient extends ReceiveBaseClient
                 $card = $card->toArray();
                 $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "会员绑定积分卡", $this->data['bind_id']);
                 $res = $this->wcUserSyncPoints($this->data['token'], $card['points'], 1);
+                if(is_array($res['response']))  return $this->rFail($res['response']);
                 $response = json_decode($res['response'], true);
                 $user_points = $response['data']['current_integral'];
                 $card_res['current_integral'] = $user_points;
