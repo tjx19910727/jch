@@ -1475,8 +1475,8 @@ class ApiClient extends ReceiveBaseClient
                 }
                 $card_info = $card_points_lists;
             }else{
-                $card_info = $card; 
-                $new_data = $this->getCardPointsChangeLogs(['card_no' => $this->data['card_no']]);
+                $card_info = [$card]; 
+                $new_data[$card['card_no']] = $this->getCardPointsChangeLogsList(['card_no' => $this->data['card_no']]);
                 $total_card_points = $card['points'];
                 $bind_id = $card['bind_id'];
                 $bind_id_points = $card['bind_id_points'];
