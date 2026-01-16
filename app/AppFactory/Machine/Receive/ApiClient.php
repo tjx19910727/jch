@@ -1393,6 +1393,8 @@ class ApiClient extends ReceiveBaseClient
                 //如果携带卡信息，判断有没有登录，如果没有登录，积分直接写入卡
                 if($this->data['card_no']){
                     $card_res = $this->changePoints($this->data['card_no'], $order['total_points'], 1, $this->data['trade_no'], "购买商品增加积分");
+                    $new_card_info = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id')->toArray();
+                    $card_res['current_integral'] = $new_card_info['points'];
                     if ($this->data['bind_id']) {
                         //如果登录了，判断当前刷的卡是否是当前会员的卡，如果不是，不允许串卡积分
                         $bind_card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id')->toArray();
