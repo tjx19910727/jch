@@ -64,8 +64,8 @@ class SaleOrders extends Common
         if (!empty($data))$field .= ",cost_price";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         if (isset($postData['supplier']) && $postData['supplier']) unset($where['ao_id']);
-        if($this->manager['level'] > 3){
-           $where['ao_id'] = $this->manager['ao_id'];
+        if($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0,1] )){
+            $where['ao_id'] = $this->manager['ao_id'];
         }
         return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc",$postData['supplier'] ?? true);
     }
