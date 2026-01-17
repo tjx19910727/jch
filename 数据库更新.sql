@@ -32,6 +32,7 @@ CREATE TABLE `card_points_change_logs` (
   `change_type` int(1) DEFAULT NULL COMMENT '变化类型1：增加 2：减少',
   `trade_no` varchar(50) DEFAULT NULL COMMENT '积分变化关联订单编号',
   `reasons` varchar(200) COMMENT '原因',
+  `bind_id` varchar(20) DEFAULT NULL COMMENT '绑定id',
   `created_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `card_points_change_logs_card_no_IDX` (`card_no`) USING BTREE
