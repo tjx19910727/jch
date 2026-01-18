@@ -1,3 +1,21 @@
+#20260117   补充更新，已执行，无需操作
+ALTER TABLE kiosk.card_points_change_logs
+  ADD COLUMN  `bind_id` varchar(50) DEFAULT NULL COMMENT '绑定id'  AFTER `reasons`;
+
+update  card_points_change_logs set bind_id = '1922369655' where id=40;
+update  card_points_change_logs set bind_id = '13829235560' where id=35;
+update  card_points_change_logs set bind_id = '18575673257' where id=30;
+update  card_points_change_logs set bind_id = '13268508868' where id=27;
+update  card_points_change_logs set bind_id = '13829235560' where id=25;
+update  card_points_change_logs set bind_id = '13302310001' where id=23;
+update  card_points_change_logs set bind_id = '13726659948' where id=21;
+update  card_points_change_logs set bind_id = '13612696146' where id=16;
+update  card_points_change_logs set bind_id = '13714759235' where id=10;
+update  card_points_change_logs set bind_id = '13714759235' where id=8;
+update  card_points_change_logs set bind_id = '13714759235' where id=5;
+
+
+
 #20260108
 ALTER TABLE kiosk.machine_channel
   ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '积分-现金兑换比例（1元=10积分） ' AFTER `retail_price`;
@@ -32,11 +50,96 @@ CREATE TABLE `card_points_change_logs` (
   `change_type` int(1) DEFAULT NULL COMMENT '变化类型1：增加 2：减少',
   `trade_no` varchar(50) DEFAULT NULL COMMENT '积分变化关联订单编号',
   `reasons` varchar(200) COMMENT '原因',
+  `bind_id` varchar(20) DEFAULT NULL COMMENT '绑定id',
   `created_at` timestamp NULL DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `card_points_change_logs_card_no_IDX` (`card_no`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='卡积分变化表';
 
+
+CREATE TABLE `wc_goods` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `sellerPrice` decimal(10,5) DEFAULT NULL COMMENT '分销价格',
+  `effectiveBegin` date DEFAULT NULL COMMENT '有效开始时间',
+  `type` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '商品类型(1抢购、2景点门票、3酒店住宿、4旅游线路、5普通商品)',
+  `maxBuy` int DEFAULT NULL COMMENT '最大购买数量',
+  `area_id` int DEFAULT NULL COMMENT '区域id',
+  `effectiveEnd` date DEFAULT NULL COMMENT '有效结束时间',
+  `is_post` int DEFAULT NULL COMMENT '海报是否可以绑定分销商',
+  `show_citys` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '展示城市',
+  `goods_labels` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '商品标签',
+  `price` decimal(10,5) DEFAULT NULL COMMENT '销售价',
+  `supplierPrice` decimal(10,5) DEFAULT NULL COMMENT '采购价',
+  `good_cancel_order_time` int DEFAULT NULL COMMENT '商品订单支付有效期（分钟）',
+  `poster_background` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '商品图片(注: 图片完整地址 resourceDomain + poster_background)',
+  `resourceDomain` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '资源服务器域名',
+  `poster_type` int DEFAULT NULL COMMENT '海报类型',
+  `is_show_customer_service` int DEFAULT NULL COMMENT '是否展示客服按钮',
+  `auto_refund` int DEFAULT NULL COMMENT '是否自动退款',
+  `is_show_mark` int DEFAULT NULL COMMENT '下单是否展示备注',
+  `custom_item_config` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '自定义填写项配置',
+  `sellbegin` date DEFAULT NULL COMMENT '开售日期',
+  `detail_type` int DEFAULT NULL COMMENT '详情页类型',
+  `valid_date_limit_end` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '指定可用日期',
+  `open_meal` int DEFAULT NULL COMMENT '开启套餐',
+  `order_limit_config` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL,
+  `is_allow_refund` int DEFAULT NULL COMMENT '是否允许退款',
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '商品名称',
+  `valid_date_type` int DEFAULT NULL COMMENT '可用日期类型',
+  `order_limit` int DEFAULT NULL COMMENT '是否做下单限制',
+  `slogan` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '广告语',
+  `selfMentionArray` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '自提点信息',
+  `city_id` int DEFAULT NULL COMMENT '城市id',
+  `bookingDayEnd` int DEFAULT NULL COMMENT '提前预定天数',
+  `no` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '商品编号/货号',
+  `marketPrice` decimal(10,5) DEFAULT NULL COMMENT '市场价',
+  `site_audit_status` int DEFAULT NULL COMMENT '商家审核状态',
+  `verification_limit` int DEFAULT NULL COMMENT '核验时间限制',
+  `sellEnd` date DEFAULT NULL COMMENT '开售日期结束',
+  `is_custom_item` int DEFAULT NULL COMMENT '是否自定义项，0是单游客，2是多游客',
+  `freight` decimal(10,5) DEFAULT NULL COMMENT '运费',
+  `description` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '商品简介',
+  `is_good_order_finish` int DEFAULT NULL COMMENT '是否下单直接完成',
+  `isRequireBuyerName` int DEFAULT NULL COMMENT '姓名是否必填（默认）',
+  `total_stock` int DEFAULT NULL COMMENT '总库存',
+  `valid_date_days` int DEFAULT NULL COMMENT '几天内可使用',
+  `is_self_mention` int DEFAULT NULL COMMENT '是否自提',
+  `resourcesArray` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '图片',
+  `isRequireBuyerIdcard` int DEFAULT NULL COMMENT '身份证号码是否必填',
+  `notice` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '支付通知备注',
+  `surplus_stock` int DEFAULT NULL COMMENT '剩余库存',
+  `address` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '邮寄地址',
+  `link_phone` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '联系电话',
+  `ticket_check_style` int DEFAULT NULL COMMENT '核验类型',
+  `store` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '库存',
+  `bookingTimeEnd` varchar(80) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '几点之前可预定',
+  `buy_limit` int DEFAULT NULL COMMENT '购买限制',
+  `mp3` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '语音信息',
+  `isRequireBuyerPhone` int DEFAULT NULL COMMENT '手机号是否必填',
+  `img_customize` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '自定义海报配置',
+  `province_id` int DEFAULT NULL COMMENT '省id',
+  `isRequireBuyerAddress` int DEFAULT NULL COMMENT '邮寄地址',
+  `qianggou_related_key` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '抢购关联产品key',
+  `isNeedReserve` int DEFAULT NULL COMMENT '是否需要预定',
+  `category` int DEFAULT NULL COMMENT '商品类别id',
+  `qq_video_id` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '腾讯视频id',
+  `daysInfo` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '日历库存列表',
+  `combination_goods` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '组合产品子产品列表',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='微程商品信息表';
+
+
+CREATE TABLE `wc_request_logs` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `request_url` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+  `request_headers` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `request_body` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `response_status` int DEFAULT NULL,
+  `response_body` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci,
+  `type` tinyint NOT NULL DEFAULT '1' COMMENT '请求类型：1-请求外部接口，2-外部接口回调',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=216 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='微程接口调用记录表';
 
 
 #20251208

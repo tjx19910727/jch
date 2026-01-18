@@ -46,7 +46,6 @@ trait CardTrait
 
     public function addCard($insert)
     {
-        !isset($this->manager['manager_id']) ?: $insert['creator'] = $this->manager['manager_id'];
         $data = CardModel::create($insert);
         $pk = $data->getPk();
         return $data->$pk;
@@ -57,7 +56,6 @@ trait CardTrait
     }
     public function updateCard($update, $where = [], $field = [])
     {
-        !isset($this->manager['manager_id']) ?: $update['updator'] = $this->manager['manager_id'];
         return CardModel::update($update, $where, $field);
     }
 

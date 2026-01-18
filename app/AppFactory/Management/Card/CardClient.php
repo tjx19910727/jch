@@ -64,8 +64,14 @@ class CardClient extends ManagementClient
     public function importCards($data){
         try {
             $path = root_path() . "public" . $data['file_path'];
-            $title = ["card_no", "card_show_no"];
+            $title = ["card_show_no", "card_no"];
             $cards = Excel::importExcel($path, $title);
+            foreach($cards as &$v){
+                $v['card_show_no'] = intval($v['card_show_no']); 
+                if(strlen($v['card_show_no']) < 10)
+                    $v['card_show_no'] =  str_pad($v['card_show_no'], 10, "0", STR_PAD_LEFT);
+                $v['card_no'] = intval($v['card_no']); 
+            }
             if (is_object($cards)) return $cards;
             actionLog($cards, '导入的卡数据');
             if ($cards) {

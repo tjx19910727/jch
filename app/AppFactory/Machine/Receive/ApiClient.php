@@ -1404,7 +1404,8 @@ class ApiClient extends ReceiveBaseClient
                         }
                         //卡是会员的卡，卡内积分同步至微程
                         $card_res = $this->changePoints($this->data['card_no'], $bind_card['points'], 2, $this->data['trade_no'], "会员绑定积分卡", $this->data['bind_id']);
-                        $res = $this->wcUserSyncPoints($this->data['token'], $order['total_points'], 1);
+                        //订单积分进卡里了，此时需要把卡内总积分同步到微程
+                        $res = $this->wcUserSyncPoints($this->data['token'], $bind_card['points'], 1);
                         if(is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
                         $response = json_decode($res['response'], true);
                         $user_points = $response['data']['current_integral'];
