@@ -1,3 +1,21 @@
+#20260117   补充更新，已执行，无需操作
+ALTER TABLE kiosk.card_points_change_logs
+  ADD COLUMN  `bind_id` varchar(50) DEFAULT NULL COMMENT '绑定id'  AFTER `reasons`;
+
+update  card_points_change_logs set bind_id = '1922369655' where id=40;
+update  card_points_change_logs set bind_id = '13829235560' where id=35;
+update  card_points_change_logs set bind_id = '18575673257' where id=30;
+update  card_points_change_logs set bind_id = '13268508868' where id=27;
+update  card_points_change_logs set bind_id = '13829235560' where id=25;
+update  card_points_change_logs set bind_id = '13302310001' where id=23;
+update  card_points_change_logs set bind_id = '13726659948' where id=21;
+update  card_points_change_logs set bind_id = '13612696146' where id=16;
+update  card_points_change_logs set bind_id = '13714759235' where id=10;
+update  card_points_change_logs set bind_id = '13714759235' where id=8;
+update  card_points_change_logs set bind_id = '13714759235' where id=5;
+
+
+
 #20260108
 ALTER TABLE kiosk.machine_channel
   ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '积分-现金兑换比例（1元=10积分） ' AFTER `retail_price`;
