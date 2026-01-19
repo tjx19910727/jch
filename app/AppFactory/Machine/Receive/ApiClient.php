@@ -1559,23 +1559,25 @@ class ApiClient extends ReceiveBaseClient
     public function getWcLoginUser()
     {
         $res = $this->wcLoginUser($this->data['phone'], $this->data['machine_id'], $this->data['code']);
+        // $res['response'] = '{"success":true,"message":"登录成功","token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ7XCJ1c2VySWRcIjo4Mjk3NzkzfSIsImV4cCI6MTc2ODgyNjU4MiwiaWF0IjoxNzY4ODI1OTgyfQ.vN3GRcJdqny7cAY4vY8U1NaGdsE7wB0hscr6awTj47M"}';
         $response = json_decode($res['response'], true);
-        $token = $response['data']['token'];
+        $token = $response['token'];
         $card_lists = $this->getCardList(['bind_id' => $this->data['phone']]);
         if (!$card_lists) return $this->r(200, "success", $response);
+        $card_lists = $card_lists->toArray();
         //用户在机台登录时，就同步积分到微程
         foreach ($card_lists as $card) {
             if (!$card['points']) continue;
-            $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "卡内积分同步至会员积分账户", $this->data['phone']);
-            $card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id,bind_id_points');
+            $card_res = $this->changePoints($card['card_no'], $card['points'], 2, '', "卡内积分同步至会员积分账户", $this->data['phone']);
+            $card = $this->getCardFind(['card_no' => $card['card_no']], 'points,bind_id,bind_id_points');
             if ($card['points'] > 0) {
-                $res = $this->wcUserSyncPoints($token, $card['points'], 1);
+                $card_res = $this->wcUserSyncPoints($token, $card['points'], 1);
             } else {
                 $card_points_abs = abs($card['points']);
-                $res = $this->wcUserSyncPoints($token, $card_points_abs, 0);
+                $card_res = $this->wcUserSyncPoints($token, $card_points_abs, 0);
             }
-            $this->updateCard(['bind_id_points' => $res['response']['data']['current_integral']], ['card_no' => $card['card_no']]);
-            $response = json_decode($res['response'], true);
+            $response = json_decode($card_res['response'], true);
+            $this->updateCard(['bind_id_points' => $response['data']['current_integral']], ['card_no' => $card['card_no']]);
         }
 
         return $this->r(200, "success", $response);
