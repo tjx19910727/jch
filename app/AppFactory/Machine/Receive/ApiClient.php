@@ -1426,8 +1426,10 @@ class ApiClient extends ReceiveBaseClient
             } else {
                 //机台登录会员后，无订单刷卡场景，直接把卡积分同步到微程会员
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id,bind_id_points');
-                if (!$card) return $this->r(200, 'failed', '找不到此卡');
+                if (!$card) return $this->r(200, 'failed', ['error_code' => 10001, 'msg' => '找不到感应卡信息'], true);
                 $card = $card->toArray();
+                if($card['bind_id'] != $this->data['bind_id']) 
+                    return $this->r(200, 'failed', ['error_code' => 10003, 'msg' => '感应卡已绑定其他会员！！！'], true);
                 $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "会员绑定积分卡", $this->data['bind_id']);
                 $res = $this->wcUserSyncPoints($this->data['token'], $card['points'], 1);
                 if (is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
@@ -1487,6 +1489,18 @@ class ApiClient extends ReceiveBaseClient
                     $bind_id_points = $card['bind_id_points'];
                 }
             } elseif (isset($this->data['bind_id']) && !empty($this->data['bind_id'])) {
+                //先判断当前登录账号登录信息是否绑定了当前传入的卡号，如果为绑定，提示用户绑卡
+                if(isset($this->data['card_no']) && !empty($this->data['card_no'])){
+                    $card_info = $this->getCardFind(['card_no' => $this->data['card_no']]);
+                    if(!$card_info) 
+                        return $this->r(200, 'failed', ['error_code' => 10001, 'msg' => '找不到感应卡信息'], true);
+                    $card_info = $card_info->toArray();
+                    if(!$card_info['bind_id']) 
+                        return $this->r(200, 'failed', ['error_code' => 10002, 'msg' => '应卡不在您的会员账户名下！是否绑定'], true);
+                        
+                    if($card_info['bind_id'] != $this->data['card_no']) 
+                        return $this->r(200, 'failed', ['error_code' => 10003, 'msg' => '感应卡已绑定其他会员！！！'], true);
+                }
                 $bind_id = $this->data['bind_id'];
                 $card_no_list = $this->getCardColumn(['bind_id' => $bind_id], 'card_no');
                 $log_list = $this->getCardPointsChangeLogsList([['card_no', 'in', $card_no_list]], 0, "*", 'id desc', '')->toArray();
