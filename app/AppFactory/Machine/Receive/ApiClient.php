@@ -1426,10 +1426,10 @@ class ApiClient extends ReceiveBaseClient
             } else {
                 //机台登录会员后，无订单刷卡场景，直接把卡积分同步到微程会员
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id,bind_id_points');
-                if (!$card) return $this->r(200, 'failed', ['error_code' => 10001, 'msg' => '找不到感应卡信息'], true);
+                if (!$card) return $this->r(200, 'failed', ['error_code' => 10001, 'message' => '找不到感应卡信息'], true);
                 $card = $card->toArray();
                 if($card['bind_id'] != $this->data['bind_id']) 
-                    return $this->r(200, 'failed', ['error_code' => 10003, 'msg' => '感应卡已绑定其他会员！！！'], true);
+                    return $this->r(200, 'failed', ['error_code' => 10003, 'message' => '感应卡已绑定其他会员！！！'], true);
                 $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "会员绑定积分卡", $this->data['bind_id']);
                 $res = $this->wcUserSyncPoints($this->data['token'], $card['points'], 1);
                 if (is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
@@ -1493,13 +1493,13 @@ class ApiClient extends ReceiveBaseClient
                 if(isset($this->data['card_no']) && !empty($this->data['card_no'])){
                     $card_info = $this->getCardFind(['card_no' => $this->data['card_no']]);
                     if(!$card_info) 
-                        return $this->r(200, 'failed', ['error_code' => 10001, 'msg' => '找不到感应卡信息'], true);
+                        return $this->r(200, 'failed', ['error_code' => 10001, 'message' => '找不到感应卡信息'], true);
                     $card_info = $card_info->toArray();
                     if(!$card_info['bind_id']) 
-                        return $this->r(200, 'failed', ['error_code' => 10002, 'msg' => '应卡不在您的会员账户名下！是否绑定'], true);
+                        return $this->r(200, 'failed', ['error_code' => 10002, 'message' => '应卡不在您的会员账户名下！是否绑定'], true);
                         
                     if($card_info['bind_id'] != $this->data['card_no']) 
-                        return $this->r(200, 'failed', ['error_code' => 10003, 'msg' => '感应卡已绑定其他会员！！！'], true);
+                        return $this->r(200, 'failed', ['error_code' => 10003, 'message' => '感应卡已绑定其他会员！！！'], true);
                 }
                 $bind_id = $this->data['bind_id'];
                 $card_no_list = $this->getCardColumn(['bind_id' => $bind_id], 'card_no');
@@ -1566,7 +1566,7 @@ class ApiClient extends ReceiveBaseClient
         //用户在机台登录时，就同步积分到微程
         foreach ($card_lists as $card) {
             if (!$card['points']) continue;
-            $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "卡内积分同步至会员积分账户", $this->data['bind_id']);
+            $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "卡内积分同步至会员积分账户", $this->data['phone']);
             $card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id,bind_id_points');
             if ($card['points'] > 0) {
                 $res = $this->wcUserSyncPoints($token, $card['points'], 1);
@@ -1574,7 +1574,7 @@ class ApiClient extends ReceiveBaseClient
                 $card_points_abs = abs($card['points']);
                 $res = $this->wcUserSyncPoints($token, $card_points_abs, 0);
             }
-            if (is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
+            $this->updateCard(['bind_id_points' => $res['response']['data']['current_integral']], ['card_no' => $card['card_no']]);
             $response = json_decode($res['response'], true);
         }
 
@@ -1605,7 +1605,7 @@ class ApiClient extends ReceiveBaseClient
     public function getWcPointsQrcode()
     {
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']], 'total_points');
-        if (!$order) return $this->r(100, "查无此订单");
+        if (!$order) return $this->r(100,'failed', "查无此订单");
         $order = $order->toArray();
         $res = $this->wcPointsQrCode($order['total_points']);
         if ($res['status'] !== 200) return $this->r(100, 'failed', $res['response']);
