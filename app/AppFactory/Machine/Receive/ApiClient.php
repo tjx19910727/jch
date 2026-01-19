@@ -1576,8 +1576,8 @@ class ApiClient extends ReceiveBaseClient
                 $card_points_abs = abs($card['points']);
                 $card_res = $this->wcUserSyncPoints($token, $card_points_abs, 0);
             }
-            $response = json_decode($card_res['response'], true);
-            $this->updateCard(['bind_id_points' => $response['data']['current_integral']], ['card_no' => $card['card_no']]);
+            $res_response = json_decode($card_res['response'], true);
+            $this->updateCard(['bind_id_points' => $res_response['data']['current_integral']], ['card_no' => $card['card_no']]);
         }
 
         return $this->r(200, "success", $response);
