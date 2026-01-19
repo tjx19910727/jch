@@ -188,7 +188,7 @@ class VReceive extends VCommon
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
 
         "cardAddPoints" => ["msg_id","machine_id","timestamp","card_no"],
-        "getCardChangeLogs" => ["msg_id","machine_id","timestamp","card_no"],
+        "getCardChangeLogs" => ["msg_id","machine_id","timestamp"],
 
         "getWcSmSCode" => ["msg_id","machine_id","timestamp","phone"],
         "wcLoginUser" => ["msg_id","machine_id","timestamp","phone","code"],
