@@ -1560,7 +1560,7 @@ class ApiClient extends ReceiveBaseClient
     {
         $res = $this->wcLoginUser($this->data['phone'], $this->data['machine_id'], $this->data['code']);
         $response = json_decode($res['response'], true);
-        $token = $response['msg']['token'];
+        $token = $response['data']['token'];
         $card_lists = $this->getCardList(['bind_id' => $this->data['phone']]);
         if (!$card_lists) return $this->r(200, "success", $response);
         //用户在机台登录时，就同步积分到微程
