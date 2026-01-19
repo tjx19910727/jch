@@ -1391,7 +1391,7 @@ class ApiClient extends ReceiveBaseClient
                 if ($check_data) return $this->r(200, 'failed', '当前订单积分已划拨至卡或会员账户，请勿重复操作');
                 $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']], 'total_points')->toArray();
                 //如果携带卡信息，判断有没有登录，如果没有登录，积分直接写入卡
-                if($this->data['card_no']){
+                if ($this->data['card_no']) {
                     $card_res = $this->changePoints($this->data['card_no'], $order['total_points'], 1, $this->data['trade_no'], "购买商品增加积分");
                     $new_card_info = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id')->toArray();
                     $card_res['current_integral'] = $new_card_info['points'];
@@ -1406,17 +1406,17 @@ class ApiClient extends ReceiveBaseClient
                         $card_res = $this->changePoints($this->data['card_no'], $bind_card['points'], 2, $this->data['trade_no'], "会员绑定积分卡", $this->data['bind_id']);
                         //订单积分进卡里了，此时需要把卡内总积分同步到微程
                         $res = $this->wcUserSyncPoints($this->data['token'], $bind_card['points'], 1);
-                        if(is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
+                        if (is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
                         $response = json_decode($res['response'], true);
                         $user_points = $response['data']['current_integral'];
                         $this->updateCard(['bind_id' => $this->data['bind_id'], 'bind_id_points' => $user_points], ['card_no' => $this->data['card_no']]);
                         $card_res['current_integral'] = $user_points;
                     }
-                }else{
+                } else {
                     //无卡时，判断有没有会员登录，如果有登录，订单积分直接同步到微程会员，如果没登录，积分不做操作
-                    if(!empty($this->data['bind_id'])){
+                    if (!empty($this->data['bind_id'])) {
                         $res = $this->wcUserSyncPoints($this->data['token'], $order['total_points'], 1);
-                        if(is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
+                        if (is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
                         $response = json_decode($res['response'], true);
                         $user_points = $response['data']['current_integral'];
                         $card_res = $this->changePoints('', $order['total_points'], 1, $this->data['trade_no'], "购买商品增加积分", $this->data['bind_id']);
@@ -1430,7 +1430,7 @@ class ApiClient extends ReceiveBaseClient
                 $card = $card->toArray();
                 $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "会员绑定积分卡", $this->data['bind_id']);
                 $res = $this->wcUserSyncPoints($this->data['token'], $card['points'], 1);
-                if(is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
+                if (is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
                 $response = json_decode($res['response'], true);
                 $user_points = $response['data']['current_integral'];
                 $card_res['current_integral'] = $user_points;
@@ -1449,23 +1449,51 @@ class ApiClient extends ReceiveBaseClient
      */
     public function getCardChangeLogs()
     {
+        $card_points_lists = [];
+        $new_data = [];
+        $total_card_points = 0;
+        $card_info = [];
+        $bind_id = '';
         try {
-            $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
-            if(!$card) return $this->rFail('找不到此卡');
-            //查询此卡关联的会员id
-            $card = $card->toArray();
-            $bind_id = !empty($card['bind_id']) ? $card['bind_id'] : $card['card_no'];
-            $card_points_lists = [];
-            $new_data = [];
-            $total_card_points = 0;
-            $card_info = [];
-            if($card['bind_id']){
-                $card_no_list = $this->getCardColumn(['bind_id' => $card['bind_id']], 'card_no');
-                $log_list = $this->getCardPointsChangeLogsList([['card_no', 'in', $card_no_list]], 0, "*", 'id desc','')->toArray();
+            if (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
+                $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
+                if (!$card) return $this->rFail('找不到此卡');
+                //查询此卡关联的会员id
+                $card = $card->toArray();
+                $bind_id = !empty($card['bind_id']) ? $card['bind_id'] : $card['card_no'];
+
+                if ($card['bind_id']) {
+                    $card_no_list = $this->getCardColumn(['bind_id' => $card['bind_id']], 'card_no');
+                    $log_list = $this->getCardPointsChangeLogsList([['card_no', 'in', $card_no_list]], 0, "*", 'id desc', '')->toArray();
+                    $keys = array_column($log_list, 'card_no');
+                    foreach ($log_list as $v) {
+                        foreach ($keys as $key) {
+                            if ($v['card_no'] === $key) {
+                                $new_data[$key][] = $v;
+                                break;
+                            }
+                        }
+                    }
+                    $card_points_lists = $this->getCardColumn([['card_no', 'in', $card_no_list]], 'card_no,points, bind_id_points');
+                    $bind_id_points = $card_points_lists[0]['bind_id_points'] ?? 0;
+                    foreach ($card_points_lists as $v) {
+                        $total_card_points += $v['points'];
+                    }
+                    $card_info = $card_points_lists;
+                } else {
+                    $card_info = [$card];
+                    $new_data[$card['card_no']] = $this->getCardPointsChangeLogsList(['card_no' => $this->data['card_no']]);
+                    $total_card_points = $card['points'];
+                    $bind_id_points = $card['bind_id_points'];
+                }
+            } elseif (isset($this->data['bind_id']) && !empty($this->data['bind_id'])) {
+                $bind_id = $this->data['bind_id'];
+                $card_no_list = $this->getCardColumn(['bind_id' => $bind_id], 'card_no');
+                $log_list = $this->getCardPointsChangeLogsList([['card_no', 'in', $card_no_list]], 0, "*", 'id desc', '')->toArray();
                 $keys = array_column($log_list, 'card_no');
-                foreach($log_list as $v){
-                    foreach($keys as $key){
-                        if($v['card_no'] === $key){
+                foreach ($log_list as $v) {
+                    foreach ($keys as $key) {
+                        if ($v['card_no'] === $key) {
                             $new_data[$key][] = $v;
                             break;
                         }
@@ -1473,16 +1501,12 @@ class ApiClient extends ReceiveBaseClient
                 }
                 $card_points_lists = $this->getCardColumn([['card_no', 'in', $card_no_list]], 'card_no,points, bind_id_points');
                 $bind_id_points = $card_points_lists[0]['bind_id_points'] ?? 0;
-                foreach($card_points_lists as $v){
+                foreach ($card_points_lists as $v) {
                     $total_card_points += $v['points'];
                 }
                 $card_info = $card_points_lists;
-            }else{
-                $card_info = [$card]; 
-                $new_data[$card['card_no']] = $this->getCardPointsChangeLogsList(['card_no' => $this->data['card_no']]);
-                $total_card_points = $card['points'];
-                $bind_id_points = $card['bind_id_points'];
             }
+
             $res['data'] = $new_data;
             $res['card_info'] = $card_info;
             $res['total_card_points'] = $total_card_points;
@@ -1522,6 +1546,24 @@ class ApiClient extends ReceiveBaseClient
     {
         $res = $this->wcLoginUser($this->data['phone'], $this->data['machine_id'], $this->data['code']);
         $response = json_decode($res['response'], true);
+        $token = $response['msg']['token'];
+        $card_lists = $this->getCardList(['bind_id' => $this->data['phone']]);
+        if (!$card_lists) return $this->r(200, "success", $response);
+        //用户在机台登录时，就同步积分到微程
+        foreach ($card_lists as $card) {
+            if (!$card['points']) continue;
+            $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "卡内积分同步至会员积分账户", $this->data['bind_id']);
+            $card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id,bind_id_points');
+            if ($card['points'] > 0) {
+                $res = $this->wcUserSyncPoints($token, $card['points'], 1);
+            } else {
+                $card_points_abs = abs($card['points']);
+                $res = $this->wcUserSyncPoints($token, $card_points_abs, 0);
+            }
+            if (is_array($res['response']))  return $this->r(200, 'failed', $res['response']);
+            $response = json_decode($res['response'], true);
+        }
+
         return $this->r(200, "success", $response);
     }
 
@@ -1560,7 +1602,7 @@ class ApiClient extends ReceiveBaseClient
 
     /**
      * 卡积分绑定到微程会员账号，同时将卡积分清0
-     * @return array|\think\response\Json
+     * @return array|\think\response\Jsonz
      * @throws \Exception
      */
 

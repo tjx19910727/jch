@@ -106,8 +106,16 @@ trait CardTrait
 
             $points_before_change = $card['points'] ?? 0;
             $points = 0;
-            if ($change_type == 1) $points = $points_before_change + $points_changed;
-            if ($change_type == 2) $points = $points_before_change - $points_changed;
+
+            if ($points_changed >= 0) {
+                if ($change_type == 1) $points = $points_before_change + $points_changed;
+                if ($change_type == 2) $points = $points_before_change - $points_changed;
+            } else {
+                $points_changed_abs = abs($points_changed);
+                if ($change_type == 1) $points = $points_before_change - $points_changed_abs;
+                if ($change_type == 2) $points = $points_before_change + $points_changed_abs;
+            }
+
             $insert = [
                 'card_no' => $card_no,
                 'points_before_change' => $points_before_change,
