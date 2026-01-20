@@ -8,9 +8,11 @@
 
 namespace app\AppFactory\Kernel\Traits\Payment;
 
+use app\AppFactory\Kernel\Traits\Card\CardTrait;
 
 trait AfterOrderRefundTrait
 {
+    use CardTrait;
     protected $refund;
 
     /**
@@ -38,6 +40,9 @@ trait AfterOrderRefundTrait
 
             // 退款成功修改订单副表
             $flag[] = $this->refundSuccessUpdateSod();
+            
+            //修改卡积分 
+            $flag[] = $this->addCardChangeLog();
         }
         $this->order['refund_quantity'] += $quantity;
         // 修改订单退款状态
@@ -112,16 +117,18 @@ trait AfterOrderRefundTrait
      */
     protected function refundSuccessUpdateSod()
     {
-        
+        if($this->order['pay_type'] == 9){
+            $refund_points = bcmul($this->order['intergral_rate'], $this->refund['refund_amount']);
+        }elseif($this->refund['total_sod_points']){
+            $refund_points = bcmul(bcdiv($this->postData['refund']['quantity'], $this->sod['quantity'], 0),$this->sod['total_sod_points'],2);
+        }
+        $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']], 'refund_points', $refund_points);
+        actionLog($this->getLS(),'修改订单副表退款积分SQL');
+
         $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']],'refund_quantity',$this->refund['refund_quantity']);
         actionLog($this->getLS(),'修改订单副表退款数量SQL');
         $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']],'refund_amount',$this->refund['refund_amount']);
         actionLog($this->getLS(),'修改订单副表退款金额SQL');
-        if($this->order['pay_type'] == 9){
-            $refund_points = bcmul($this->order['intergral_rate'], $this->refund['refund_amount']);
-            $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']], 'refund_points', $refund_points);
-            actionLog($this->getLS(),'修改订单副表退款金额SQL');
-        }
         $result = $this->checkFlag($flag);
         return $result;
     }
@@ -133,16 +140,13 @@ trait AfterOrderRefundTrait
      */
     protected function refundSuccessUpdateOrder()
     {
-        if($this->order['pay_type'] == 9){
-            $total_refund_amount = $this->order['refund_amount'] + $this->data['refundAmount'];
-            $refund_points = bcmul($this->order['intergral_rate'],  $total_refund_amount);
-        }
+        $refund_points = $this->refund['refund_points'];
         $updateOrder = [
             "order_id" => $this->order['order_id'],
             "refund_status" => 2,
             "refund_amount" => $this->order['refund_amount'] + $this->data['refundAmount'],
             "refund_quantity" => $this->order['refund_quantity'],
-            'refund_points' => $refund_points ?? 0
+            'refund_points' => $this->order['refund_points'] + $refund_points ?? 0
         ];
         actionLog($updateOrder,'修改订单数据');
         $result = $this->updateSaleOrders($updateOrder);
@@ -151,6 +155,20 @@ trait AfterOrderRefundTrait
     }
 
 
+    public function addCardChangeLog(){
+        //查询日志，根据订单号找card_no，找不到card_no时，看有没有绑bind_id
+        $log_lists = $this->getCardPointsChangeLogsList(['trade_no' => $this->order['trade_no']]);
+        if(!$log_lists) return true;
+        $card_no_column = array_column($log_lists,'card_no');
+        $bind_id_column = array_column($log_lists,'bind_id');
+        $card_no_arr = array_filter($card_no_column);
+        $bind_id_arr = array_filter($bind_id_column);
+        $card_no = $card_no_arr[0] ?? '';
+        $bind_id = $bind_id_arr[0] ?? '';
+        if(!$card_no && !$bind_id) return true;
+        $res = $this->changePoints($card_no, $this->refund['refund_points'], 2, $this->order['trade_no'], '订单退款扣减积分', $bind_id);
+        return $res;
+    }
 
 
     /**
