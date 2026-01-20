@@ -1492,7 +1492,7 @@ class ApiClient extends ReceiveBaseClient
                     if(!$card_info['bind_id']) 
                         return $this->r(200, 'failed', ['error_code' => 10002, 'message' => '应卡不在您的会员账户名下！是否绑定'], true);
                         
-                    if(!empty($card_info['bind_id']) && $card_info['bind_id'] != $this->data['card_no']) 
+                    if(!empty($card_info['bind_id']) && $card_info['bind_id'] != $this->data['bind_id']) 
                         return $this->r(200, 'failed', ['error_code' => 10003, 'message' => '感应卡已绑定其他会员！！！'], true);
                 }
                 $bind_id = $this->data['bind_id'];
