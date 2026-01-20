@@ -1395,13 +1395,9 @@ class ApiClient extends ReceiveBaseClient
                 //如果携带卡信息，判断有没有登录，如果没有登录，积分直接写入卡
                 if ($this->data['card_no']) {
                     $card_res = $this->changePoints($this->data['card_no'], $order['total_points'], 1, $this->data['trade_no'], "购买商品增加积分");
-                    $new_card_info = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id');
-                    if(!$new_card_info) return $this->r(200, 'failed', '找不到卡信息！');
-                    $new_card_info = $new_card_info->toArray();
-                    $card_res['current_integral'] = $new_card_info['points'];
+                    $bind_card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id')->toArray();
+                    $card_res['current_integral'] = $bind_card['points'];
                     if ($this->data['bind_id']) {
-                        //如果登录了，判断当前刷的卡是否是当前会员的卡，如果不是，不允许串卡积分
-                        $bind_card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id')->toArray();
                         //如果感应卡bind_id有值切不等于传入的bind_id,报错，否则卡绑定bind_id
                         if (!empty($bind_card['bind_id']) && $bind_card['bind_id'] != $this->data['bind_id']) {
                             return $this->r(200, 'failed', '感应卡不在您的会员账户名下！积分已同步至您的会员账户名下。');
@@ -1443,9 +1439,11 @@ class ApiClient extends ReceiveBaseClient
                 }
             } else {
                 //机台登录会员后，无订单刷卡场景，直接把卡积分同步到微程会员
-                $card = $this->getCardFind(['card_no' => $this->data['card_no']], 'points,bind_id,bind_id_points');
-                if (!$card) return $this->r(200, 'failed', '找不到感应卡信息');
-                $card = $card->toArray();
+                $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
+                if (!$card) {
+                    $this->addCard(['card_no' => $this->data['card_no']]);
+                    $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
+                }
                 if(!empty($card['bind_id']) && ($card['bind_id'] != $this->data['bind_id']))  return $this->r(200, 'failed', '感应卡已绑定其他会员！！！');
                 $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "会员绑定积分卡", $this->data['bind_id']);
                 $this->updateCard(['bind_id' => $this->data['bind_id']], ['card_no' => $this->data['card_no']]);
@@ -1486,9 +1484,10 @@ class ApiClient extends ReceiveBaseClient
                 //先判断当前登录账号登录信息是否绑定了当前传入的卡号，如果为绑定，提示用户绑卡
                 if(isset($this->data['card_no']) && !empty($this->data['card_no'])){
                     $card_info = $this->getCardFind(['card_no' => $this->data['card_no']]);
-                    if(!$card_info) 
-                        return $this->r(200, 'failed', ['error_code' => 10001, 'message' => '找不到感应卡信息'], true);
-                    $card_info = $card_info->toArray();
+                    if(!$card_info) {
+                        $this->addCard(['card_no' => $this->data['card_no']]);
+                        $card_info = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
+                    }
                     if(!$card_info['bind_id']) 
                         return $this->r(200, 'failed', ['error_code' => 10002, 'message' => '应卡不在您的会员账户名下！是否绑定'], true);
                         
@@ -1516,9 +1515,11 @@ class ApiClient extends ReceiveBaseClient
                 $card_info = $card_points_lists;
             }elseif (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
-                if (!$card) return $this->r(200, 'failed', ['error_code' => 10001, 'message' => '找不到感应卡信息'], true);
+                if(!$card) {
+                    $this->addCard(['card_no' => $this->data['card_no']]);
+                    $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
+                }
                 //查询此卡关联的会员id
-                $card = $card->toArray();
                 $bind_id = $card['bind_id'] ?? '';
 
                 if ($card['bind_id']) {
