@@ -128,6 +128,8 @@ trait BeforeOrderRefundTrait
                 $refund_amount = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
                 $refund_points = $refund_amount * $this->order['intergral_rate'];
                 $insertSor['refund_points'] = $refund_points;
+            }else{
+                $$insertSor['refund_points'] = bcmul(bcdiv($this->sod['refund_quantity'], $this->sod['quantity'], 0),$this->sod['total_sod_points'],2);
             }
             $this->totalRefundMoney = $this->sodRefundAmount;
             // 京东收银系统退款退分润
