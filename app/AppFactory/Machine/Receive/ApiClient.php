@@ -1508,7 +1508,8 @@ class ApiClient extends ReceiveBaseClient
                     }
                 }
                 $card_points_lists = $this->getCardColumn([['card_no', 'in', $card_no_list]], 'card_no,points, bind_id_points');
-                $bind_id_points = $card_points_lists[0]['bind_id_points'] ?? 0;
+                $bind_id_column = array_column($card_points_lists,'bind_id_points');
+                $bind_id_points = max($bind_id_column) ?? 0;
                 foreach ($card_points_lists as $v) {
                     $total_card_points += $v['points'];
                 }
@@ -1544,38 +1545,7 @@ class ApiClient extends ReceiveBaseClient
                     $total_card_points = $card['points'];
                     $bind_id_points = $card['bind_id_points'];
                 }
-            } elseif (isset($this->data['bind_id']) && !empty($this->data['bind_id'])) {
-                //先判断当前登录账号登录信息是否绑定了当前传入的卡号，如果为绑定，提示用户绑卡
-                if(isset($this->data['card_no']) && !empty($this->data['card_no'])){
-                    $card_info = $this->getCardFind(['card_no' => $this->data['card_no']]);
-                    if(!$card_info) 
-                        return $this->r(200, 'failed', ['error_code' => 10001, 'message' => '找不到感应卡信息'], true);
-                    $card_info = $card_info->toArray();
-                    if(!$card_info['bind_id']) 
-                        return $this->r(200, 'failed', ['error_code' => 10002, 'message' => '应卡不在您的会员账户名下！是否绑定'], true);
-                        
-                    if(!empty($card_info['bind_id']) &&  $card_info['bind_id'] != $this->data['bind_id']) 
-                        return $this->r(200, 'failed', ['error_code' => 10003, 'message' => '感应卡已绑定其他会员！！！'], true);
-                }
-                $bind_id = $this->data['bind_id'];
-                $card_no_list = $this->getCardColumn(['bind_id' => $bind_id], 'card_no');
-                $log_list = $this->getCardPointsChangeLogsList([['card_no', 'in', $card_no_list]], 0, "*", 'id desc', '')->toArray();
-                $keys = array_column($log_list, 'card_no');
-                foreach ($log_list as $v) {
-                    foreach ($keys as $key) {
-                        if ($v['card_no'] === $key) {
-                            $new_data[$key][] = $v;
-                            break;
-                        }
-                    }
-                }
-                $card_points_lists = $this->getCardColumn([['card_no', 'in', $card_no_list]], 'card_no,points, bind_id_points');
-                $bind_id_points = $card_points_lists[0]['bind_id_points'] ?? 0;
-                foreach ($card_points_lists as $v) {
-                    $total_card_points += $v['points'];
-                }
-                $card_info = $card_points_lists;
-            }
+            } 
 
             $res['data'] = $new_data;
             $res['card_info'] = $card_info;
