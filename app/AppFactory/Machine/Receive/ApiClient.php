@@ -1534,7 +1534,8 @@ class ApiClient extends ReceiveBaseClient
                         }
                     }
                     $card_points_lists = $this->getCardColumn([['card_no', 'in', $card_no_list]], 'card_no,points, bind_id_points');
-                    $bind_id_points = $card_points_lists[0]['bind_id_points'] ?? 0;
+                    $bind_id_column = array_column($card_points_lists,'bind_id_points');
+                    $bind_id_points = max($bind_id_column) ?? 0;
                     foreach ($card_points_lists as $v) {
                         $total_card_points += $v['points'];
                     }
