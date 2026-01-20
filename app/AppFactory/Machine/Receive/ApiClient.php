@@ -1448,6 +1448,7 @@ class ApiClient extends ReceiveBaseClient
                 $card = $card->toArray();
                 if(!empty($card['bind_id']) && ($card['bind_id'] != $this->data['bind_id']))  return $this->r(200, 'failed', '感应卡已绑定其他会员！！！');
                 $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "会员绑定积分卡", $this->data['bind_id']);
+                $this->updateCard(['bind_id' => $this->data['bind_id']], ['card_no' => $this->data['card_no']]);
                 $res = $this->wcUserSyncPoints($this->data['token'], $card['points'], 1);
                 if($res['status'] != 200) {
                     if (strpos($res['response'], "message") !== false) {
