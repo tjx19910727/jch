@@ -93,7 +93,6 @@ trait AfterOrderPaymentTrait
                 }
             }
             // 新数据格式
-            $final_intergral_rate = 0;
             $total_points = 0;
             foreach ($details as $k => $v) {
                 $updateSod['sod_id'] = $v['sod_id'];
@@ -103,11 +102,11 @@ trait AfterOrderPaymentTrait
 
                 if($rate_points['gift_points'] > 0 ){
                     $updateSod['intergral_rate'] = 0;
-                    $updateSod['total_sod_points'] = $rate_points['gift_points'];
+                    $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
                 }
                 if($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0){
                     $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
-                    $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $final_intergral_rate, 3);
+                    $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $rate_points['intergral_rate'], 3);
                 }
                 $total_points += $updateSod['total_sod_points'];
                 if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
