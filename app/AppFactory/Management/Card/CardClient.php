@@ -63,21 +63,37 @@ class CardClient extends ManagementClient
 
     public function importCards($data){
         try {
+            $now_cards_lists = $this->getCardList([['card_no', '>', '0']])->toArray();
+            $card_no_arr = array_column($now_cards_lists,'card_no');
+            $update_card_lists = $this->getCardList(['card_show_no' => null])->toArray();
+            $update_card_no_arr = array_column($update_card_lists,'card_no');
+
             $path = root_path() . "public" . $data['file_path'];
             $title = ["card_show_no", "card_no"];
             $cards = Excel::importExcel($path, $title);
-            foreach($cards as &$v){
-                $v['card_show_no'] = intval($v['card_show_no']); 
-                if(strlen($v['card_show_no']) < 10)
-                    $v['card_show_no'] =  str_pad($v['card_show_no'], 10, "0", STR_PAD_LEFT);
-                $v['card_no'] = intval($v['card_no']); 
+            $import_cards = [];
+            $result = true;
+            foreach($cards as $v){
+                if(in_array($v['card_no'], $update_card_no_arr)) {
+                    $update_card['card_show_no'] = intval($v['card_show_no']); 
+                    $update_card['card_show_no'] = str_pad($update_card['card_show_no'], 10, "0", STR_PAD_LEFT);
+                    $result = $this->updateCard(['card_show_no' => $update_card['card_show_no']], ['card_no' => intval($v['card_no'])] );
+                }elseif(!in_array($v['card_no'], $card_no_arr)){
+                    $import_card['card_no'] = intval($v['card_no']); 
+                    $import_card['card_show_no'] = intval($v['card_show_no']); 
+                    $import_card['card_show_no'] = str_pad($import_card['card_show_no'], 10, "0", STR_PAD_LEFT);
+                    $import_cards[] = $import_card;
+                }
             }
-            if (is_object($cards)) return $cards;
-            actionLog($cards, '导入的卡数据');
-            if ($cards) {
-                $result = $this->addCardLists($cards);
-                return $this->rAction($result);
+
+            if (is_object($import_cards)) return $import_cards;
+            actionLog($import_cards, '导入的卡数据');
+            // dd($import_cards);
+            if ($import_cards) {
+                $result = $this->addCardLists($import_cards);
             }
+            return $this->rAction($result);
+
             return $this->r(100, '获取不到Excel文档中的数据');
         } catch (\Exception $e) {
             actionException($e, 1);
