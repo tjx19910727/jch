@@ -1600,7 +1600,10 @@ class ApiClient extends ReceiveBaseClient
         $response = json_decode($res['response'], true);
         $token = $response['token'];
         $card_lists = $this->getCardList(['bind_id' => $this->data['phone']]);
-        if (!$card_lists) return $this->r(200, "success", $response);
+        if (!$card_lists) {
+            $response['card_lists'] = [];
+            return $this->r(200, "success", $response);
+        }
         $card_lists = $card_lists->toArray();
         //用户在机台登录时，就同步积分到微程
         foreach ($card_lists as $card) {
@@ -1615,9 +1618,14 @@ class ApiClient extends ReceiveBaseClient
 
             $card_change_res = $this->changePoints($card['card_no'], $card['points'], 2, '', "卡内积分同步至会员积分账户", $this->data['phone']);
             $res_response = json_decode($card_res['response'], true);
-            $this->updateCard(['bind_id_points' => $res_response['data']['current_integral']], ['card_no' => $card['card_no']]);
+            actionLog($res_response, '同步卡积分微程返回内容');
+            if(isset($res_response) && isset($res_response['data']) && isset($res_response['data']['current_integral'])){
+                $this->updateCard(['bind_id_points' => $res_response['data']['current_integral']], ['card_no' => $card['card_no']]);
+                actionLog($card['card_no'].'--'.$res_response['data']['current_integral'], '同步卡积分微程返回内容');
+            }
         }
-
+        $card_lists = $this->getCardList(['bind_id' => $this->data['phone']])->toArray();
+        $response['card_lists'] = $card_lists;
         return $this->r(200, "success", $response);
     }
 

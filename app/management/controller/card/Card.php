@@ -23,6 +23,7 @@ class Card extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['card_no' => 'like']);
+        if(isset($where['ao_id'])) unset($where['ao_id']);
         return $this->app->card->getCardInfoList($where, $pageNum, "*", 'card_no desc');
     }
 
