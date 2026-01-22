@@ -10,6 +10,7 @@
 namespace app\AppFactory\Kernel\Traits\WeiCheng;
 
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsTypesModel;
 
 trait WcGoodsTrait
 {
@@ -23,7 +24,7 @@ trait WcGoodsTrait
         return WcGoodsModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
     }
 
-    public function getWcGoodsFind($where,$field = "*",$order = "")
+    public function getWcGoodsFind($where, $field = "*", $order = "")
     {
         return WcGoodsModel::getFind($where, $field, $order);
     }
@@ -50,8 +51,40 @@ trait WcGoodsTrait
         return WcGoodsModel::whereDel($where);
     }
 
-    
-    public function synchronizeGoods(){
+    public function getWcGoodsTypesCount($where, $field = '*', $order = '')
+    {
+        return WcGoodsTypesModel::getFind($where, $field, $order);
+    }
 
-    } 
+    public function getWcGoodsTypesList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return WcGoodsTypesModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
+    }
+
+    public function getWcGoodsTypesFind($where, $field = "*", $order = "")
+    {
+        return WcGoodsTypesModel::getFind($where, $field, $order);
+    }
+
+    public function getWcGoodsTypesSum($where, $sum)
+    {
+        return WcGoodsTypesModel::getSum($where, $sum);
+    }
+
+    public function addWcGoodsTypes($insert)
+    {
+        $data = WcGoodsTypesModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    public function updateWcGoodsTypes($update, $where = [], $field = [])
+    {
+        return WcGoodsTypesModel::update($update, $where, $field);
+    }
+
+    public function delWcGoodsTypes($where)
+    {
+        return WcGoodsTypesModel::whereDel($where);
+    }
 }

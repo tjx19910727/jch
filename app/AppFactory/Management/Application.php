@@ -121,6 +121,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
  * @property Mall\MallClient                        $mall                   商场管理
  * @property Card\CardClient                        $card                   商场管理会员卡
+ * @property WeiCheng\WeiChengClient                $weicheng               微程接口管理
+ * 
  * @property MicroMall\MicroMallClient              $microMall              微商城
  * @property MicroMall\MicroMallMachineClient       $microMallMachine       微商城绑定设备
  *
