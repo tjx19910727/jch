@@ -1,3 +1,40 @@
+#20260121
+
+ALTER TABLE kiosk.wc_goods MODIFY COLUMN show_citys text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '展示城市';
+
+
+ALTER TABLE kiosk.wc_goods ADD is_pub TINYINT NULL COMMENT '是否上架：1是0否';
+ALTER TABLE kiosk.wc_goods ADD tempcolumn varchar(100) NULL;
+ALTER TABLE kiosk.wc_goods ADD temprownumber varchar(100) NULL;
+
+
+CREATE TABLE `wc_goods_types` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) DEFAULT NULL COMMENT '分类名称',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='微程商品分类表';
+
+INSERT INTO wc_goods_types
+(id, name, created_at, updated_at)
+VALUES(1, '抢购', '2026-01-21 10:21:14', '2026-01-21 10:21:14');
+INSERT INTO wc_goods_types
+(id, name, created_at, updated_at)
+VALUES(2, '‌景点门票', '2026-01-21 10:21:14', '2026-01-21 10:21:14');
+INSERT INTO wc_goods_types
+(id, name, created_at, updated_at)
+VALUES(3, '酒店住宿', '2026-01-21 10:21:14', '2026-01-21 10:21:14');
+INSERT INTO wc_goods_types
+(id, name, created_at, updated_at)
+VALUES(4, '旅游线路', '2026-01-21 10:21:14', '2026-01-21 10:21:14');
+INSERT INTO wc_goods_types
+(id, name, created_at, updated_at)
+VALUES(5, '普通商品', '2026-01-21 10:21:14', '2026-01-21 10:21:14');
+INSERT INTO wc_goods_types
+(id, name, created_at, updated_at)
+VALUES(11, '组合产品', '2026-01-21 10:21:14', '2026-01-21 10:21:14');
+
 #20260117   补充更新，已执行，无需操作
 ALTER TABLE kiosk.card_points_change_logs
   ADD COLUMN  `bind_id` varchar(50) DEFAULT NULL COMMENT '绑定id'  AFTER `reasons`;
