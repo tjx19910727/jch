@@ -12,7 +12,7 @@ use app\AppFactory\Kernel\Model\BaseModel;
 class WcGoodsTypesModel extends BaseModel
 {
     /**
-     * Primary key for the mall table
+     * Primary key for the wc_goods_types table
      *
      * @var string
      */

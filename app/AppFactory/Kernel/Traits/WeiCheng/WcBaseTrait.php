@@ -10,12 +10,11 @@
 namespace app\AppFactory\Kernel\Traits\WeiCheng;
 
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
-use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTypesTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcRequestLogsTrait;
 
 trait WcBaseTrait
 {
-    use WcGoodsTrait, WcGoodsTypesTrait, WcRequestLogsTrait;
+    use WcGoodsTrait,  WcRequestLogsTrait;
 
     public function initWcBase()
     {
@@ -40,6 +39,7 @@ trait WcBaseTrait
             ];
         }
 
+        $this->goods_type_sync_url = $this->config['apiDomain'] . "/api/goods/typeSync";
         $this->goods_sync_url = $this->config['apiDomain'] . "/api/goods/sync";
         $this->order_add_url = $this->config['apiDomain'] . "/api/order/add";
         $this->order_refund_url = $this->config['apiDomain'] . "/api/order/refund";
@@ -91,20 +91,46 @@ trait WcBaseTrait
         if (curl_errno($ch)) {
             echo 'Curl error: ' . curl_error($ch);
         }
-
         $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
         $this->addWcRequestLogs([
             'request_url' => $url,
-            'request_header' => $header ? json_encode($header) : json_encode(['Content-Type: application/x-www-form-urlencoded'], JSON_UNESCAPED_UNICODE),
+            'request_headers' => $header ? json_encode($header) : json_encode(['Content-Type: application/x-www-form-urlencoded'], JSON_UNESCAPED_UNICODE),
             'request_body' => json_encode($postFields, JSON_UNESCAPED_UNICODE),
             'response_body' => $response,
             'response_status' => $status,
-            'create_time' => time(),
             'type' => 1,
             'created_at' => date('Y-m-d H:i:s'),
         ]);
         return ['response' => $response, 'status' => $status];
+    }
+
+    public function goodsTypesSync($goods_type, $nowPage = 1, $pageSize = 100)
+    {
+        $this->initWcBase();
+        $data = [
+            'distributor_id' => $this->config['distributor_id'],
+            'type' => $goods_type,
+            'pageSize' => $pageSize,
+            'nowPage' => $nowPage,
+        ];
+        $postUrl = $this->goods_type_sync_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
+        return $this->weicheng_curl($postUrl, []);
+    }
+
+    public function synchronizeGoodsLists2Db($goods_lists)
+    {
+        foreach ($goods_lists as $goods) {
+            $wc_goods = $this->getWcGoodsFind(['no' => $goods['no']]);
+            if (!$wc_goods) {
+                $goods['created_at'] = date('Y-m-d H:i:s');
+                $this->addWcGoods($goods);
+            } else {
+                $goods['updated_at'] = date('Y-m-d H:i:s');
+                $this->updateWcGoods($goods, ['no' => $goods['no']]);
+            }
+        }
+        return true;
     }
 
     public function goodsSync($goods_no)
@@ -115,15 +141,11 @@ trait WcBaseTrait
             'goods_no' => $goods_no,
         ];
         $postUrl = $this->goods_sync_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-        $response = $this->weicheng_curl($postUrl, []);
-        return $response;
+        return $this->weicheng_curl($postUrl, []);
     }
 
-    public function synchronizeGoods2Db($response)
+    public function synchronizeGoods2Db($updateData)
     {
-        $updateData = json2arr($response);
-        $updateData = $updateData['product'];
-        $updateData['resourcesArray'] = json_encode($updateData['resourcesArray'], JSON_UNESCAPED_UNICODE);
         $wc_goods = $this->getWcGoodsFind(['no' => $updateData['no']]);
         if (!$wc_goods) {
             $updateData['created_at'] = date('Y-m-d H:i:s');

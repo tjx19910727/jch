@@ -13,17 +13,25 @@ use app\management\controller\Common;
 
 class WcGoods extends Common 
 {
-    public function synchronizeGoods()
+
+    public function syncAll()
+    {
+        return $this->app->weicheng->synchronizeGoodsAll();
+    }
+
+    public function sync()
     {
         $goods_no = input('goods_no');
         $res = $this->app->weicheng->synchronizeGoods($goods_no);
-        return $this->rS($res);
+        if($res['status']) return returnState(200,'success','同步成功');
+        return returnState(100,'fail',$res['msg']);
     }
+    
    
     public function getList(){
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['type' => 'like','name' => 'like','no' => 'like']);
-        return $this->app->WcGoods->getWcGoodsInfoList($where, $pageNum, "*", 'id desc');
+        return $this->app->weicheng->getWcGoodsInfoList($where, $pageNum, "*", 'id desc');
     }
 }
