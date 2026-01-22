@@ -57,6 +57,32 @@ class V2Client extends V2BaseClient
     protected $returnData;
     public $data;
 
+
+    /**
+     *  获取主体库商品信息列表                                                                                           
+     *  @return array|\think\response\Json
+     */
+    public function get_goods_lists(){
+        // try {
+            $field = "g_id product_id,g_name,quantity,gc_id,gc_anme,desc g_desc,cost_price,sku,sku2,bar_code,banner,pic,details_pic,retail_price,sale_price,market_price,status";
+            if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->params['product_id'];
+            $where['status'] = 1;
+            $data = $this->getGoodsList($where, $this->params['pageNum'] ?? 1,  $field, 'stock desc');
+            dd($data);
+
+            actionLog($this->getLS(),'【SQL】查询主体商品');
+            if ($data) {
+                return $this->returnData(0, $this->lang("msg." . 0), $data);
+            }
+            return $this->returnData(10, $this->lang("msg." . 10));
+        // } catch (\Exception $e) {
+        //     actionException($e, 1);
+        //     return $this->returnData(99, $this->lang("msg." . 99));
+        // }
+    }
+
+
+
     /**
      * 01 根据机器ID获取库存信息列表
      * @return array|\think\response\Json
