@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits\WeiCheng;
 
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsTypesModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
 
 trait WcGoodsTrait
 {
@@ -86,5 +87,42 @@ trait WcGoodsTrait
     public function delWcGoodsTypes($where)
     {
         return WcGoodsTypesModel::whereDel($where);
+    }
+
+    public function getWcGoodsLocalCount($where, $field = '*', $order = '')
+    {
+        return WcGoodsLocalModel::getFind($where, $field, $order);
+    }
+
+    public function getWcGoodsLocalList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return WcGoodsLocalModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
+    }
+
+    public function getWcGoodsLocalFind($where, $field = "*", $order = "")
+    {
+        return WcGoodsLocalModel::getFind($where, $field, $order);
+    }
+
+    public function getWcGoodsLocalSum($where, $sum)
+    {
+        return WcGoodsLocalModel::getSum($where, $sum);
+    }
+
+    public function addWcGoodsLocal($insert)
+    {
+        $data = WcGoodsLocalModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    public function updateWcGoodsLocal($update, $where = [], $field = [])
+    {
+        return WcGoodsLocalModel::update($update, $where, $field);
+    }
+
+    public function delWcGoodsLocal($where)
+    {
+        return WcGoodsLocalModel::whereDel($where);
     }
 }

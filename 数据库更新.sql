@@ -1,7 +1,10 @@
+#20260123
+ALTER TABLE kiosk.wc_goods MODIFY COLUMN order_limit_config text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '';
+
+
 #20260121
 
 ALTER TABLE kiosk.wc_goods MODIFY COLUMN show_citys text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '展示城市';
-
 
 ALTER TABLE kiosk.wc_goods ADD is_pub TINYINT NULL COMMENT '是否上架：1是0否';
 ALTER TABLE kiosk.wc_goods ADD tempcolumn varchar(100) NULL;
