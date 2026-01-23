@@ -84,7 +84,13 @@ trait AfterOrderPaymentTrait
             $outArr = [];
             // 旧版本数据，待软件更新后删除
             foreach ($details as $k => $v) {
-                if ($v['g_type'] == 1) {
+                if(!$v['mc_id']) {
+                    $v['g_type'] = 1;
+                    $contentArr[$v['channel_position']][] = [
+                        $v['channel_code'],
+                        $v['quantity'],
+                    ];
+                }elseif ($v['g_type'] == 1) {
                     $dc = [
                         $v['channel_code'],
                         $v['quantity'],
@@ -95,38 +101,48 @@ trait AfterOrderPaymentTrait
             // 新数据格式
             $total_points = 0;
             foreach ($details as $k => $v) {
-                $updateSod['sod_id'] = $v['sod_id'];
-
-                $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
-                $rate_points = $this->getRateOrGiftPoints($mc);
-
-                if($rate_points['gift_points'] > 0 ){
-                    $updateSod['intergral_rate'] = 0;
-                    $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
-                }
-                if($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0){
-                    $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
-                    $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $rate_points['intergral_rate'], 3);
-                }
-                $total_points += $updateSod['total_sod_points'];
-                if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
-                    $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
-                    actionLog($this->getLS(),'减固定组合商品酒店库存');
-                }
-                if ($v['g_type'] == 1) {
-                    $dc = [
-                        "channel_code" => $v['channel_code'],
-                        "quantity" => $v['quantity'],
+                if(!$v['mc_id']) {
+                    $outArr[$v['channel_position']][] = [
+                        "channel_code" => 'Z10',
+                        "quantity" => 1,
                         "is_gift" => $v['is_gift'] ?? 2,
                         "out_port" => $v['out_port'] ?? 1,
                     ];
-                    $outArr[$v['channel_position']][] = $dc;
+                    continue;
+                }else{
+                    $updateSod['sod_id'] = $v['sod_id'];
+                
+                    $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
+                    $rate_points = $this->getRateOrGiftPoints($mc);
+
+                    if($rate_points['gift_points'] > 0 ){
+                        $updateSod['intergral_rate'] = 0;
+                        $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
+                    }
+                    if($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0){
+                        $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
+                        $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $rate_points['intergral_rate'], 3);
+                    }
+                    $total_points += $updateSod['total_sod_points'];
+                    if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
+                        $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
+                        actionLog($this->getLS(),'减固定组合商品酒店库存');
+                    }
+                    if ($v['g_type'] == 1) {
+                        $dc = [
+                            "channel_code" => $v['channel_code'],
+                            "quantity" => $v['quantity'],
+                            "is_gift" => $v['is_gift'] ?? 2,
+                            "out_port" => $v['out_port'] ?? 1,
+                        ];
+                        $outArr[$v['channel_position']][] = $dc;
+                    }
+                    if ($v['g_type'] == 3) {
+                        // 获取核销码
+                        $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
+                    }
+                    $this->updateSaleOrdersDetails($updateSod);
                 }
-                if ($v['g_type'] == 3) {
-                    // 获取核销码
-                    $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
-                }
-                $this->updateSaleOrdersDetails($updateSod);
             }
             
             if($total_points) {
