@@ -67,6 +67,7 @@ class V2Client extends V2BaseClient
             $field = "g_id product_id,g_name,gc_id,gc_name,desc,cost_price,sku,sku2,bar_code,banner,pic,details_pic,retail_price,market_price,status";
             if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->params['product_id'];
             $where['status'] = 1;
+            $where['ao_id'] = 17;
             $data = $this->getGoodsList($where, $this->params['pageNum'] ?? 1,  $field, 'product_id desc');
 
             actionLog($this->getLS(),'【SQL】查询主体商品');
@@ -88,7 +89,11 @@ class V2Client extends V2BaseClient
      */
     public function get_inventory_list()
     {
+
+        $machine = $this->getMachineFind(['machine_id' => $this->params['machine_id']])->toArray();
         try {
+            $machine = $this->getMachineFind(['machine_id' => $this->params['machine_id']])->toArray();
+            if($machine['ao_id'] != 17) return $this->returnData(42, $this->lang("msg." . 42));
             $field = "mc_id,channel_code,
             (CASE `status` WHEN 3 THEN 0 ELSE stock END) quantity,retail_price sale_price,sku, 
             (CASE `status` WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,g_name,bar_code,cost_price,
