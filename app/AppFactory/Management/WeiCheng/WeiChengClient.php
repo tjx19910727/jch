@@ -151,6 +151,12 @@ class WeiChengClient extends ManagementClient
         return ['status' => false, 'msg' => $result['response']];;
     }
 
+    //微程拉取的商品本地化存储
+    public function wcGoods2LocalByGoodsNo($goods_no){
+        $wc_goods = $this->getWcGoodsFind(['no' => $goods_no]);
+        if(!$wc_goods) return  ['status' => false, 'msg' => '找不到商品信息'];
+    }
+
     public function synchronizeOrder($order)
     {
         // $this->syncOrder($order);
