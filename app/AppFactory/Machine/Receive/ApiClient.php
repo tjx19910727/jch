@@ -132,7 +132,7 @@ class ApiClient extends ReceiveBaseClient
         WcBaseTrait;
 
 
-    public $card_retail_price = 5;
+    public $card_retail_price = 0.01;
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
@@ -1692,6 +1692,7 @@ class ApiClient extends ReceiveBaseClient
 
     //创建卡购买订单
     public function addCardSaleOrdersAndDetails(){
+        $card_retail_price = $this->data['price'] ?: $this->card_retail_price;
         if ($this->data['pay_method'] == "41") $this->data['pay_method'] = 1;
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
         
@@ -1721,9 +1722,9 @@ class ApiClient extends ReceiveBaseClient
                 $updateOrder['order_id'] = $order_id;
                 $updateOrder['cost_price'] = 0;
                 $updateOrder['market_price'] = 0;
-                $updateOrder['retail_price'] = $this->card_retail_price;
+                $updateOrder['retail_price'] = $card_retail_price;
                 $updateOrder['quantity'] = 1;
-                $updateOrder['total_price'] = $this->card_retail_price;
+                $updateOrder['total_price'] = $card_retail_price;
                 $updateOrder['total_quantity'] = 1;
                 
                 $details = [
@@ -1741,8 +1742,8 @@ class ApiClient extends ReceiveBaseClient
                     "gc_name" => '会员积分卡',
                     "cost_price" => 0,
                     "market_price" => 0,
-                    "retail_price" => $this->card_retail_price,
-                    "total_sod_price" => $this->card_retail_price,
+                    "retail_price" => $card_retail_price,
+                    "total_sod_price" => $card_retail_price,
                     "quantity" => 1,
                     "bar_code" => 1000000000001,
                 ];
