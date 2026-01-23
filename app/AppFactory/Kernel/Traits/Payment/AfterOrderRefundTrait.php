@@ -119,8 +119,8 @@ trait AfterOrderRefundTrait
     {
         if($this->order['pay_type'] == 9){
             $refund_points = bcmul($this->order['intergral_rate'], $this->refund['refund_amount']);
-        }elseif($this->sod['total_sod_points']){
-            $refund_points = bcmul(bcdiv($this->refund['refund_quantity'], $this->sod['quantity'], 0),$this->sod['total_sod_points'],2);
+        // }elseif($this->sod['total_sod_points']){
+        //     $refund_points = bcmul(bcdiv($this->refund['refund_quantity'], $this->sod['quantity'], 0),$this->sod['total_sod_points'],2);
         }
         $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']], 'refund_points', $refund_points);
         actionLog($this->getLS(),'修改订单副表退款积分SQL');
