@@ -131,6 +131,8 @@ class ApiClient extends ReceiveBaseClient
         CardTrait,
         WcBaseTrait;
 
+
+    public $card_retail_price = 5;
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
@@ -1685,5 +1687,84 @@ class ApiClient extends ReceiveBaseClient
         //这里暂时预留出货动作，后续补充完整，具体方案为:服务器在拿到支付回调之后，回调信息同步存入数据库
         //当设备主动触发出货请求时，查询回调信息，获取订单支付状态，修改对应参数，完成出货
         return $this->r(100, $this->lang("VOutGoods.details_no_data"));
+    }
+
+
+    //创建卡购买订单
+    public function addCardSaleOrdersAndDetails(){
+        if ($this->data['pay_method'] == "41") $this->data['pay_method'] = 1;
+        $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
+        
+
+        $m = $this->getMachineFind(['m_id' => $this->machine['m_id']], 'factory,inventory_location');
+
+        $order = [
+            "trade_no" => $trade_no,
+            "m_id" => $this->machine['m_id'],
+            "machine_name" => $this->machine['machine_name'],
+            "machine_id" => $this->machine['machine_id'],
+            //            "manager_id" => $this->machine['manager_id'],
+            "ao_id" => $this->machine['ao_id'],
+            "pay_type" => $this->data['pay_type'],
+            "pay_method" => $this->data['pay_method'],
+            // "mobile" => $this->data['mobile'] ?? "",
+            "create_date" => strtotime(date("Y-m-d")),
+            "factory" => $m['factory'] ? $m['factory'] : '',
+            "inventory_location" => $m['inventory_location'] ? $m['inventory_location'] : ''
+
+        ];
+        $updateOrder = [];
+        $this->startTrans();
+        try {
+            $order_id = $this->addSaleOrders($order);
+            if ($order_id) {
+                $updateOrder['order_id'] = $order_id;
+                $updateOrder['cost_price'] = 0;
+                $updateOrder['market_price'] = 0;
+                $updateOrder['retail_price'] = $this->card_retail_price;
+                $updateOrder['quantity'] = 1;
+                $updateOrder['total_price'] = $this->card_retail_price;
+                $updateOrder['total_quantity'] = 1;
+                
+                $details = [
+                    "order_id" => $order_id,
+                    "mc_id" => 0,
+                    "shelf_way" => 1,
+                    "channel_position" => 1,
+                    "channel_code" => 'Z10',
+                    "mg_id" => 999999,
+                    "g_id" => 999999,
+                    "g_name" => '会员积分卡',
+                    "pic" => '',
+                    "sku" => 1000000000001,
+                    "gc_id" => 999999,
+                    "gc_name" => '会员积分卡',
+                    "cost_price" => 0,
+                    "market_price" => 0,
+                    "retail_price" => $this->card_retail_price,
+                    "total_sod_price" => $this->card_retail_price,
+                    "quantity" => 1,
+                    "bar_code" => 1000000000001,
+                ];
+                $sod_id = $this->addSaleOrdersDetails($details);
+                $updateOrder['retail_price'] = $updateOrder['total_price'];
+                $flag[] = $this->updateSaleOrders($updateOrder);
+                $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
+                $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
+                actionLog($this->getLS(), '修改订单SQL');
+                $result = $this->checkFlag($flag);
+                actionLog($result, '事务结果');
+                $this->commitTrans();
+                return $this->r(200, $this->lang("VSubCar.make_order_success"), ['order' => $this->order]);
+            } else {
+                $this->rollbackTrans();
+                return $this->r(300, $this->lang("VSubCar.make_order_fail"));
+            }
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+        
     }
 }

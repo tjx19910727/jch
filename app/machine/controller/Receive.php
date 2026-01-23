@@ -872,6 +872,20 @@ class Receive extends Common
         }
     }
 
+     /**
+     * 创建会员卡支付订单
+     * @return array|string
+     * @throws \Exception
+     */
+    public function createdCardSaleOrder()
+    {
+        try {
+            return $this->app->api->addCardSaleOrdersAndDetails();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
 
     public function test()
     {
