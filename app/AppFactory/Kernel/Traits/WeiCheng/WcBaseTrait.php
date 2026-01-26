@@ -118,27 +118,27 @@ trait WcBaseTrait
         return $this->weicheng_curl($postUrl, []);
     }
 
-    public function synchronizeGoodsLists2Db($goods_lists)
+    public function synchronizeGoodsLists2Db($goods_lists, $type)
     {
         foreach ($goods_lists as $goods) {
             $wc_goods = $this->getWcGoodsFind(['no' => $goods['no']]);
+            $goods['type'] = $type;
             if (!$wc_goods) {
-                $goods['created_at'] = date('Y-m-d H:i:s');
                 $this->addWcGoods($goods);
             } else {
-                $goods['updated_at'] = date('Y-m-d H:i:s');
                 $this->updateWcGoods($goods, ['no' => $goods['no']]);
             }
         }
         return true;
     }
 
-    public function goodsSync($goods_no)
+    public function goodsSync($goods_no, $type)
     {
         $this->initWcBase();
         $data = [
             'distributor_id' => $this->config['distributor_id'],
             'goods_no' => $goods_no,
+            'type' => $type,
         ];
         $postUrl = $this->goods_sync_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
         return $this->weicheng_curl($postUrl, []);
@@ -148,10 +148,8 @@ trait WcBaseTrait
     {
         $wc_goods = $this->getWcGoodsFind(['no' => $updateData['no']]);
         if (!$wc_goods) {
-            $updateData['created_at'] = date('Y-m-d H:i:s');
             $this->addWcGoods($updateData);
         } else {
-            $updateData['updated_at'] = date('Y-m-d H:i:s');
             $this->updateWcGoods($updateData, ['no' => $updateData['no']]);
         }
         return true;
