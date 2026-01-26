@@ -22,7 +22,8 @@ class WcGoods extends Common
     public function sync()
     {
         $goods_no = input('goods_no');
-        $res = $this->app->weicheng->synchronizeGoods($goods_no);
+        $type = input('type');
+        $res = $this->app->weicheng->synchronizeGoods($goods_no, $type);
         if($res['status']) return returnState(200,'success','同步成功');
         return returnState(100,'fail',$res['msg']);
     }

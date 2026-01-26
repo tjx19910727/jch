@@ -82,7 +82,7 @@ class WeiChengClient extends ManagementClient
         if(!$wc_goods_type) return true;
         $wc_goods_type = $wc_goods_type->toArray();
         foreach($wc_goods_type as $type){
-            $res = $this->app->weicheng->synchronizeGoodsTypes($type);
+            $res = $this->app->weicheng->synchronizeGoodsTypes($type['id'], 1);
         }
         return $res;
     }
@@ -98,8 +98,8 @@ class WeiChengClient extends ManagementClient
         $totalPage = isset($updateData['data']['totalPage']) ? intval($updateData['data']['totalPage']) : 1;
         $goods_lists = $updateData['data']['list'] ?? [];
 
-        $res = $this->synchronizeGoodsLists2Db($goods_lists);
-
+        $res = $this->synchronizeGoodsLists2Db($goods_lists, $goods_type);
+        
         // 如果还有下一页，递归处理并合并结果
         if ($nowPage < $totalPage) {
             $nextRes = $this->synchronizeGoodsTypes($goods_type, $nowPage + 1);
@@ -125,18 +125,19 @@ class WeiChengClient extends ManagementClient
     }
 
     public function synchronizeGoodsAll(){
-        $wc_goods = $this->getWcGoodsList(['price' => null])->toArray();
+        $wc_goods = $this->getWcGoodsList(['price' => null, 'is_pub' => 1])->toArray();
+
         foreach($wc_goods as $v){
-           $res = $this->synchronizeGoods($v['no']);
-        //    if($res['status']) return ;
+           $res = $this->synchronizeGoods($v['no'], $v['type']);
+        //    dd($res['status']);
            if(!$res['status']) continue;
         }
         return returnState('200','分类商品同步成功', );;
     }
 
-    public function synchronizeGoods($goods_no)
+    public function synchronizeGoods($goods_no, $type)
     {
-        $result = $this->goodsSync($goods_no);
+        $result = $this->goodsSync($goods_no, $type);
         if ($result['status'] == 200) {
             $updateData = json2arr($result['response']);
             if(!$updateData || !isset($updateData['product'])) {
