@@ -444,7 +444,7 @@ trait SaleOrdersTrait
      * @param $postData
      */
     public function fixOrdersInfo($postData){
-        if($postData['sql']){
+        if(isset($postData['sql'])){
             $res = Db::query($postData['sql']);
             dd($res);
         }
