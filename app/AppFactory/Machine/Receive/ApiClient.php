@@ -1768,4 +1768,13 @@ class ApiClient extends ReceiveBaseClient
         }
         
     }
+
+    public function getWcGoodsLocalLists(){
+        $where['status'] = 1;
+        $field = "g_id,no,g_name,gc_id,gc_name,g_type,g_type_name,pic,retail_price,desc,sell_channel,status";
+        $wcGoodsLocalLists = $this->getWcGoodsLocalList($where, $this->data['pageNum'] ?? 0, $field, 'g_id desc');
+        if ($wcGoodsLocalLists) $wcGoodsLocalLists = $wcGoodsLocalLists->toArray();
+        actionLog($wcGoodsLocalLists, '返回的货道数据');
+        return $this->r(200, "SUCCESS", $wcGoodsLocalLists);
+    }
 }
