@@ -82,5 +82,6 @@ class VV2 extends SupportValidate
             "use_pick_code" => ["machine_id","pick_code"],
             "get_goods_category" => ["pageNum","page"],
             "get_card_points" => ['card_no'],
+            "get_goods_lists" => ["machine_id","shelf_on","pageNum"],
         ];
 }
