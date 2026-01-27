@@ -82,7 +82,7 @@ class WeiChengClient extends ManagementClient
         if(!$wc_goods_type) return true;
         $wc_goods_type = $wc_goods_type->toArray();
         foreach($wc_goods_type as $type){
-            $res = $this->app->weicheng->synchronizeGoodsTypes($type);
+            $res = $this->app->weicheng->synchronizeGoodsTypes($type['id'], 1);
         }
         return $res;
     }
@@ -98,8 +98,8 @@ class WeiChengClient extends ManagementClient
         $totalPage = isset($updateData['data']['totalPage']) ? intval($updateData['data']['totalPage']) : 1;
         $goods_lists = $updateData['data']['list'] ?? [];
 
-        $res = $this->synchronizeGoodsLists2Db($goods_lists);
-
+        $res = $this->synchronizeGoodsLists2Db($goods_lists, $goods_type);
+        
         // 如果还有下一页，递归处理并合并结果
         if ($nowPage < $totalPage) {
             $nextRes = $this->synchronizeGoodsTypes($goods_type, $nowPage + 1);
@@ -125,30 +125,51 @@ class WeiChengClient extends ManagementClient
     }
 
     public function synchronizeGoodsAll(){
-        $wc_goods = $this->getWcGoodsList(['price' => null])->toArray();
+        $wc_goods = $this->getWcGoodsList(['get_data' => NUll])->toArray();
         foreach($wc_goods as $v){
-           $res = $this->synchronizeGoods($v['no']);
-        //    if($res['status']) return ;
+           $res = $this->synchronizeGoods($v['no'], $v['type']);
+        //    dd($res['status']);
            if(!$res['status']) continue;
         }
         return returnState('200','分类商品同步成功', );;
     }
 
-    public function synchronizeGoods($goods_no)
+    public function synchronizeGoods($goods_no, $type)
     {
-        $result = $this->goodsSync($goods_no);
+        $result = $this->goodsSync($goods_no, $type);
+
         if ($result['status'] == 200) {
-            $updateData = json2arr($result['response']);
-            if(!$updateData || !isset($updateData['product'])) {
+            $res = json2arr($result['response']);
+            if(!$res || !isset($res['product'])) {
                 // actionLog('同步失败', $goods_no);
                 return ['status' => false, 'msg' => $result['response']];
             }
-            $updateData = $updateData['product'];
-            $updateData['resourcesArray'] = json_encode($updateData['resourcesArray'], JSON_UNESCAPED_UNICODE);
+
+            $updateData = $res['product'];
+            $updateData['get_data'] = $result['response'];
+            if(isset($updateData['goods'])) 
+                $updateData['goods'] = json_encode($updateData['goods']);
+            if(isset($updateData['combination_goods']))  
+                $updateData['combination_goods'] = json_encode($updateData['combination_goods'], JSON_UNESCAPED_UNICODE);
+            if(isset($updateData['resourcesArray'])) 
+                $updateData['resourcesArray'] = json_encode($updateData['resourcesArray'], JSON_UNESCAPED_UNICODE);
+            if(isset($updateData['daysInfo'])) 
+                $updateData['daysInfo'] = json_encode($updateData['daysInfo']);
+            
+            //type值是从goods_type带过来的，这里不要修改商品的type，否则查询不到数据
+            if(isset($updateData['type'])) unset($updateData['type']);
             $res = $this->synchronizeGoods2Db($updateData);
             return ['status' => $res];
         } 
         return ['status' => false, 'msg' => $result['response']];;
+    }
+
+     public function wcGoodsWriteLocal(){
+        $wc_goods = $this->getWcGoodsList([['id', '>', '0']])->toArray();
+        foreach($wc_goods as $wc_good){
+            $res = $this->setWcGoodsLocal($wc_good['no']);
+        }
+        return $this->rA('微程商品本地化写入完成');
     }
 
     public function synchronizeOrder($order)

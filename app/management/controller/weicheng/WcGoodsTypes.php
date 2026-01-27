@@ -17,7 +17,7 @@ class WcGoodsTypes extends Common
     public function sync()
     {
         $goods_type = input('goods_type');
-        if ($goods_type == 0) {
+        if (!$goods_type) {
             return $this->app->weicheng->synchronizeGoodsTypesAll();
         }
         return $this->app->weicheng->synchronizeGoodsTypes($goods_type);

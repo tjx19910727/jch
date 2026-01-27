@@ -22,7 +22,8 @@ class WcGoods extends Common
     public function sync()
     {
         $goods_no = input('goods_no');
-        $res = $this->app->weicheng->synchronizeGoods($goods_no);
+        $type = input('type');
+        $res = $this->app->weicheng->synchronizeGoods($goods_no, $type);
         if($res['status']) return returnState(200,'success','同步成功');
         return returnState(100,'fail',$res['msg']);
     }
@@ -33,5 +34,9 @@ class WcGoods extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['type' => 'like','name' => 'like','no' => 'like']);
         return $this->app->weicheng->getWcGoodsInfoList($where, $pageNum, "*", 'id desc');
+    }
+
+    public function setWcGoodsLocal(){
+         return $this->app->weicheng->wcGoodsWriteLocal();
     }
 }

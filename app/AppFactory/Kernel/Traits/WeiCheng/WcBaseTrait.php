@@ -118,27 +118,27 @@ trait WcBaseTrait
         return $this->weicheng_curl($postUrl, []);
     }
 
-    public function synchronizeGoodsLists2Db($goods_lists)
+    public function synchronizeGoodsLists2Db($goods_lists, $type)
     {
         foreach ($goods_lists as $goods) {
             $wc_goods = $this->getWcGoodsFind(['no' => $goods['no']]);
+            $goods['type'] = $type;
             if (!$wc_goods) {
-                $goods['created_at'] = date('Y-m-d H:i:s');
                 $this->addWcGoods($goods);
             } else {
-                $goods['updated_at'] = date('Y-m-d H:i:s');
                 $this->updateWcGoods($goods, ['no' => $goods['no']]);
             }
         }
         return true;
     }
 
-    public function goodsSync($goods_no)
+    public function goodsSync($goods_no, $type)
     {
         $this->initWcBase();
         $data = [
             'distributor_id' => $this->config['distributor_id'],
             'goods_no' => $goods_no,
+            'type' => $type,
         ];
         $postUrl = $this->goods_sync_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
         return $this->weicheng_curl($postUrl, []);
@@ -148,12 +148,75 @@ trait WcBaseTrait
     {
         $wc_goods = $this->getWcGoodsFind(['no' => $updateData['no']]);
         if (!$wc_goods) {
-            $updateData['created_at'] = date('Y-m-d H:i:s');
             $this->addWcGoods($updateData);
         } else {
-            $updateData['updated_at'] = date('Y-m-d H:i:s');
             $this->updateWcGoods($updateData, ['no' => $updateData['no']]);
         }
+        return true;
+    }
+
+    //微程拉取的商品本地化存储
+    //$no为wc_goods表的no,wc_goods_local表分外部no和子商品no
+    public function setWcGoodsLocal($no){
+        $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
+        $wc_goods_type_arr = [];
+        foreach($wc_goods_type as $v){
+            $wc_goods_type_arr[$v['id']] = $v['name'];
+        }
+
+        $wc_goods = $this->getWcGoodsFind(['no' => $no])->toArray();
+        $resourceDomain = $wc_goods['resourceDomain'];
+
+        if(!empty($wc_goods['goods'])){
+            //子商品信息
+            $goods = json_decode($wc_goods['goods'], true);
+            foreach($goods as $good){
+                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no']]);
+                $setData =[
+                        'out_no' => $no ?? '' ,
+                        'no' => $good['no'] ?? '' ,
+                        'g_name' => $good['name'] ?? '',
+                        'g_type' => $good['type'] ?? 0 ,
+                        'g_type_name' => $wc_goods_type_arr[$good['type']] ?? '' ,
+                        'retail_price' => $good['price'] ?? '',
+                        'pic' => $good['main_img'] ? $resourceDomain.$good['main_img'] : '',
+                        'sell_channel' => 3,
+                        'desc' => $good['notice'] ?? '',
+                        'status' => 1,
+                        'channel_code' => 'Z10',
+                    ];
+                if(!$wc_goods_local){
+                    $this->addWcGoodsLocal($setData);
+                } else {
+                    $this->updateWcGoodsLocal($setData, ['no' => $no]);
+                }
+            }
+        }
+        if(!empty($wc_goods['combination_goods'])){
+            $combination_goods = json_decode($wc_goods['combination_goods'], true) ?? [];
+            foreach($combination_goods as $combind_good){
+                $combindSetData =[
+                        'out_no' => $no ?? '' ,
+                        'no' => $combind_good['no'] ?? '' ,
+                        'g_name' => $combind_good['name'] ?? '',
+                        'g_type' => $combind_good['type'] ?? 0 ,
+                        'g_type_name' => $wc_goods_type_arr[$combind_good['type']] ?? '' ,
+                        'retail_price' => $combind_good['price'] ?? '',
+                        'pic' => $combind_good['main_img'] ? $resourceDomain.$combind_good['main_img'] : '',
+                        'sell_channel' => 3,
+                        'desc' => $combind_good['notice'] ?? '',
+                        'status' => 1,
+                        'channel_code' => 'Z10',
+                    ];
+                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no']]);
+                if(!$wc_goods_local){
+                    $this->addWcGoodsLocal($combindSetData);
+                } else {
+                    $this->updateWcGoodsLocal($combindSetData, ['no' => $no]);
+                }
+            }
+        }
+        
         return true;
     }
 
@@ -178,7 +241,7 @@ trait WcBaseTrait
         $postUrl = $this->user_sync_points . "?op_type=" . $op_type . "&integral=" . (int)$integral;
         $header = array('token: ' . $token);
         return $this->weicheng_curl($postUrl, [], $header);
-    }
+    } 
 
 
     public function wcPointsQrCode($integral)

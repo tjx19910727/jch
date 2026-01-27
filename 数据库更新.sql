@@ -1,7 +1,65 @@
+#20260123
+ALTER TABLE kiosk.wc_goods 
+  ADD get_data TEXT NULL COMMENT '接口返回内容';
+
+ALTER TABLE kiosk.wc_goods 
+  ADD COLUMN goods text CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '实物商品信息';
+
+ALTER TABLE kiosk.wc_goods MODIFY COLUMN order_limit_config text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '';
+ALTER TABLE kiosk.wc_goods MODIFY COLUMN description text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '商品简介';
+ALTER TABLE kiosk.wc_goods MODIFY COLUMN daysInfo text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '日历库存列表';
+
+CREATE TABLE `wc_goods_local` (
+  `g_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '商品ID',
+  `out_no` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '外层商品编码',
+  `no` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '商品编码',
+  `g_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商品名称',
+  `gc_id` int(11) DEFAULT '0' COMMENT '分类ID',
+  `gc_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '分类名称',
+  `g_type` tinyint(1) DEFAULT '1' COMMENT '商品类型，1抢购、2景点门票、3酒店住宿、4旅游线路、5普通商品',
+  `g_type_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商品类型描述',
+  `model` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '型号',
+  `bar_code` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '条形码',
+  `sku` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'SKU码',
+  `sku2` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '关联SKU，关联不同包装形式的同种商品SKU，用于库存盘点中计算同种商品总库存',
+  `pic` varchar(200) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商品图片',
+  `banner` varchar(2500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '轮播图片，;隔开文件地址',
+  `cost_price` decimal(10,2) DEFAULT '0.00' COMMENT '成本价',
+  `market_price` decimal(10,2) DEFAULT '0.00' COMMENT '市场价',
+  `retail_price` decimal(10,2) DEFAULT '0.00' COMMENT '零售价',
+  `intergral_rate` decimal(10,3) DEFAULT '0.000' COMMENT '积分-现金兑换比例（1元=10积分） ',
+  `gift_points` decimal(10,3) DEFAULT '0.000' COMMENT '赠送积分',
+  `manufacturer` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '生产商',
+  `service_phone` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商家电话',
+  `details_pic` varchar(2500) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '详情图片，【;】隔开',
+  `desc` longtext COLLATE utf8mb4_unicode_ci COMMENT '简介',
+  `performance` text COLLATE utf8mb4_unicode_ci COMMENT '性能参数',
+  `sell_channel` tinyint(1) DEFAULT '1' COMMENT '销售渠道，1：机器 ，2：微商城，3：机器+商城',
+  `exter_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '购买外部链接',
+  `expire_notice` tinyint(1) DEFAULT '0' COMMENT '商品有效期提醒，0：否，大于0为提前X天提醒，单位：天',
+  `is_gift` tinyint(1) DEFAULT '2' COMMENT '赠品，1：是，2：否',
+  `is_recommend` tinyint(1) DEFAULT '2' COMMENT '是否推荐商品，1：是，2：否',
+  `recoverable` tinyint(1) DEFAULT '2' COMMENT '可回收，1：是，2：否',
+  `heat` tinyint(4) DEFAULT '0' COMMENT '加热，0：不加热，大于0为档位，1~7档',
+  `release_time` int(11) DEFAULT NULL COMMENT '发售时间',
+  `length` int(11) DEFAULT '0' COMMENT '长度，单位：毫米',
+  `width` int(11) DEFAULT '0' COMMENT '宽度，单位：毫米',
+  `height` int(11) DEFAULT '0' COMMENT '高度，单位：毫米',
+  `group_quantity` int(11) DEFAULT '0' COMMENT '单组数量',
+  `sale_amount` decimal(10,3) DEFAULT '0.000' COMMENT '销售额',
+  `sale_num` int(11) DEFAULT '0' COMMENT '销量',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态，1：启用，2：禁用',
+  PRIMARY KEY (`g_id`) USING BTREE,
+  KEY `c_id` (`gc_id`) USING BTREE,
+  KEY `g_name` (`g_name`) USING BTREE,
+  KEY `bar_code` (`bar_code`) USING BTREE,
+  KEY `sku` (`sku`) USING BTREE,
+  KEY `sku2` (`sku2`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='微程商品表本地化';
+
 #20260121
 
 ALTER TABLE kiosk.wc_goods MODIFY COLUMN show_citys text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '展示城市';
-
 
 ALTER TABLE kiosk.wc_goods ADD is_pub TINYINT NULL COMMENT '是否上架：1是0否';
 ALTER TABLE kiosk.wc_goods ADD tempcolumn varchar(100) NULL;

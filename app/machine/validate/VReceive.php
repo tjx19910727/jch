@@ -196,6 +196,7 @@ class VReceive extends VCommon
         "wcPointsQrcode" => ["msg_id","machine_id","timestamp","token","trade_no"],
 
         "createdCardSaleOrder" => ["msg_id","machine_id","timestamp","sign","pay_type","pay_method"],
+        "getWcGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
 
     ];
 
