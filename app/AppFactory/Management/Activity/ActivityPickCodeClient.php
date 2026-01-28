@@ -212,13 +212,8 @@ class ActivityPickCodeClient extends ManagementClient
      */
     public function exportUsedList($postData)
     {
-        $where['apc_id'] = array('in',$postData['id']);
-        $apc = $this->getActivityPickCodeList($where,0,'ap_id');
-        $apc = $apc->toArray()[0];
-        if (!$apc) return $this->r(100, '查无提货码使用记录');
-        $ap = $this->getActivityPickFind(['id' => $apc['ap_id']], "pick_name,`desc`");
-        if (!$ap) return $this->r(100, '查无提货码信息');
-        $list = $this->getActivityPickCodeList(['ap_id' => $apc['ap_id']], 0,
+        $ap = $this->getActivityPickFind(['id' => $postData['id']], "pick_name,`desc`");
+        $list = $this->getActivityPickCodeList(['ap_id' => $postData['id']], 0,
             '("' . $ap['pick_name'] . '") pick_name,("' . $ap['desc'] . '") `desc`,machine_id,machine_name,
                 code,trade_no,
                 (CASE status 
