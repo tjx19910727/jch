@@ -104,7 +104,7 @@ trait AfterOrderPaymentTrait
                 if(!$v['mc_id']) {
                     $outArr[$v['channel_position']][] = [
                         "channel_code" => 'Z10',
-                        "quantity" => 1,
+                        "quantity" => $v['quantity'],
                         "is_gift" => $v['is_gift'] ?? 2,
                         "out_port" => $v['out_port'] ?? 1,
                     ];
