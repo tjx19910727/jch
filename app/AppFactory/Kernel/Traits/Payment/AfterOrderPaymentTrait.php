@@ -103,7 +103,7 @@ trait AfterOrderPaymentTrait
             foreach ($details as $k => $v) {
                 if(!$v['mc_id']) {
                     $outArr[$v['channel_position']][] = [
-                        "channel_code" => 'Z10',
+                        "channel_code" => $v['channel_code'],
                         "quantity" => $v['quantity'],
                         "is_gift" => $v['is_gift'] ?? 2,
                         "out_port" => $v['out_port'] ?? 1,
@@ -111,8 +111,12 @@ trait AfterOrderPaymentTrait
                     continue;
                 }else{
                     $updateSod['sod_id'] = $v['sod_id'];
-                
-                    $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
+                    if($v['channel_code'] == 'Z10'){
+                        $mc = $this->getWcMachineChannelFind(['mc_id' => $v['mc_id']]);
+                    }else{
+                        $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
+                    }
+                    
                     $rate_points = $this->getRateOrGiftPoints($mc);
 
                     if($rate_points['gift_points'] > 0 ){

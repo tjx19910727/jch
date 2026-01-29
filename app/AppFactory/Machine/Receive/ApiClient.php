@@ -1738,7 +1738,7 @@ class ApiClient extends ReceiveBaseClient
                     "mc_id" => 0,
                     "shelf_way" => 1,
                     "channel_position" => 1,
-                    "channel_code" => 'Z10',
+                    "channel_code" => 'Z20',
                     "mg_id" => 999999,
                     "g_id" => 999999,
                     "g_name" => '会员积分卡',
