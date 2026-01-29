@@ -808,20 +808,25 @@ class ApiClient extends ReceiveBaseClient
                 }
                 $this->data['carList'] = json2arr($this->data['carList']);
                 foreach ($this->data['carList'] as $key => $value) {
-                    $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
+                    if(isset($value['channel_code']) && $value['channel_code'] == 'Z10'){
+                        $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
+                        $mc['status'] = 1;
+                    }else{
+                        $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
+                    }
                     if (!$mc) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.channel_no_data"));
                     }
-                    if (!$mc['mg_id']) {
+                    if (!isset($value['channel_code']) && !$mc['mg_id']) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.mg_id_require"));
                     }
-                    if ($mc['status'] != 1) {
+                    if ($value['channel_code'] != 'Z10' && $mc['status'] != 1) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.channel_status_no_3"));
                     }
-                    if ($mc['stock'] < $value['quantity']) {
+                    if ($value['channel_code'] != 'Z10' &&  ($mc['stock'] < $value['quantity'])) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.under_stock"));
                     }
@@ -834,22 +839,22 @@ class ApiClient extends ReceiveBaseClient
                         $details = [
                             "order_id" => $order_id,
                             "mc_id" => $mc['mc_id'],
-                            "shelf_way" => $mc['shelf_way'],
-                            "channel_position" => $mc['channel_position'],
+                            "shelf_way" => $mc['shelf_way'] ?? 4,//4为虚拟货道
+                            "channel_position" => $mc['channel_position'] ?? 3,//3为虚拟货道
                             "channel_code" => $mc['channel_code'],
-                            "mg_id" => $mc['mg_id'],
+                            "mg_id" => $mc['mg_id'] ?? 0,
                             "g_id" => $mc['g_id'],
                             "g_name" => $mc['g_name'],
                             "pic" => $mc['pic'],
                             "sku" => $mc['sku'],
                             "gc_id" => $mc['gc_id'],
                             "gc_name" => $mc['gc_name'],
-                            "cost_price" => $mc['cost_price'],
-                            "market_price" => $mc['market_price'],
+                            "cost_price" => $mc['cost_price'] ?? 0,
+                            "market_price" => $mc['market_price'] ?? 0,
                             "retail_price" => $mc['retail_price'],
                             "total_sod_price" => bcmul($mc['retail_price'], $quantity, 3),
                             "quantity" => $quantity,
-                            "bar_code" => $mc['bar_code'],
+                            "bar_code" => $mc['bar_code'] ?? '',
                         ];
                         $sod_id = $this->addSaleOrdersDetails($details);
                         if ($sod_id) {
