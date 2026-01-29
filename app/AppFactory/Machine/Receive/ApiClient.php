@@ -69,6 +69,7 @@ use think\facade\View;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
+use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -129,7 +130,7 @@ class ApiClient extends ReceiveBaseClient
         WxOfficialLoginTrait,
         afterOrderRefundTrait,
         CardTrait,
-        WcBaseTrait;
+        WcBaseTrait,WcGoodsTrait;
 
 
     public $card_retail_price = 0.01;
@@ -1770,11 +1771,20 @@ class ApiClient extends ReceiveBaseClient
     }
 
     public function getWcGoodsLocalLists(){
+        $pageNum = $this->data['pageNum'] ?? 15;
         $where['status'] = 1;
         $field = "g_id,no,g_name,gc_id,gc_name,g_type,g_type_name,pic,retail_price,desc,sell_channel,status";
-        $wcGoodsLocalLists = $this->getWcGoodsLocalList($where, $this->data['pageNum'] ?? 0, $field, 'g_id desc');
+        $wcGoodsLocalLists = $this->getWcGoodsLocalList($where, $pageNum, $field, 'g_id desc');
         if ($wcGoodsLocalLists) $wcGoodsLocalLists = $wcGoodsLocalLists->toArray();
-        actionLog($wcGoodsLocalLists, '返回的货道数据');
         return $this->r(200, "SUCCESS", $wcGoodsLocalLists);
+    }
+
+    public function getWcMCLists(){
+        $pageNum = $this->data['pageNum'] ?? 15;
+        if(isset($this->data['m_id'])) $where['m_id'] = $this->data['m_id'];
+        $where['machine_id'] = $this->data['machine_id'];
+        $wcMachineChannelLists = $this->getWcMachineChannelList($where, $pageNum, "*", 'sort asc');
+        if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
+        return $this->r(200, "SUCCESS", $wcMachineChannelLists);
     }
 }

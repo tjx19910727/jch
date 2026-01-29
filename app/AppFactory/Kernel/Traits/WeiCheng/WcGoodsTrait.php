@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Traits\WeiCheng;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsTypesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcMachineChannelModel;
 
 trait WcGoodsTrait
 {
@@ -125,4 +126,43 @@ trait WcGoodsTrait
     {
         return WcGoodsLocalModel::whereDel($where);
     }
+
+    public function getWcMachineChannelList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return WcMachineChannelModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
+    }
+
+    public function getWcMachineChannelFind($where, $field = "*", $order = "")
+    {
+        return WcMachineChannelModel::getFind($where, $field, $order);
+    }
+
+    public function getWcMachineChannelSum($where, $sum)
+    {
+        return WcMachineChannelModel::getSum($where, $sum);
+    }
+
+    public function addWcMachineChannel($insert)
+    {
+        $data = WcMachineChannelModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    public function addWcMachineChannelMore($insertAll)
+    {
+        $model = new WcMachineChannelModel();
+        return $model->saveAll($insertAll);
+    }
+
+    public function updateWcMachineChannel($update, $where = [], $field = [])
+    {
+        return WcMachineChannelModel::update($update, $where, $field);
+    }
+
+    public function delWcMachineChannel($where)
+    {
+        return WcMachineChannelModel::whereDel($where);
+    }
+    
 }

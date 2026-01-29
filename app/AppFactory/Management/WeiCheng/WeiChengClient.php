@@ -11,11 +11,12 @@ namespace app\AppFactory\Management\WeiCheng;
 
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class WeiChengClient extends ManagementClient
 {
-    use WcBaseTrait,WcGoodsTrait;
+    use WcBaseTrait,WcGoodsTrait,MachineTrait;
 
     public function getWcGoodsInfoList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
     {
@@ -77,6 +78,47 @@ class WeiChengClient extends ManagementClient
         return $this->rD($this->delWcRequestLogs($where));
     }
 
+    public function getWcGoodsLocalInfoList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return $this->rQ($this->getWcGoodsLocalList($where, $pageNum, $field, $order, $eachFun, $group));
+    }
+
+    public function addWcGoodsLocalInfo($postData)
+    {
+        return $this->rA($this->addWcGoodsLocal($postData));
+    }
+
+    public function updateWcGoodsLocalInfo($update, $where = [], $field = [])
+    {
+        return $this->rU($this->updateWcGoodsLocal($update, $where, $field));
+    }
+
+    public function delWcGoodsLocalInfo($where)
+    {
+        return $this->rD($this->delWcGoodsLocal($where));
+    }
+
+    public function getWcMachineChannelInfoList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return $this->rQ($this->getWcMachineChannelList($where, $pageNum, $field, $order, $eachFun, $group));
+    }
+
+    public function addWcMachineChannelInfo($postData)
+    {
+        return $this->rA($this->addWcMachineChannel($postData));
+    }
+
+    public function updateWcMachineChannelInfo($update, $where = [], $field = [])
+    {
+        return $this->rU($this->updateWcMachineChannel($update, $where, $field));
+    }
+
+    public function delWcMachineChannelInfo($where)
+    {
+        return $this->rD($this->delWcMachineChannel($where));
+    }
+
+
     public function synchronizeGoodsTypesAll(){
         $wc_goods_type = $this->getWcGoodsTypesList([['id','>','0']]);
         if(!$wc_goods_type) return true;
@@ -125,10 +167,9 @@ class WeiChengClient extends ManagementClient
     }
 
     public function synchronizeGoodsAll(){
-        $wc_goods = $this->getWcGoodsList(['get_data' => NUll])->toArray();
+        $wc_goods = $this->getWcGoodsList([['id', '>', '0']])->toArray();
         foreach($wc_goods as $v){
            $res = $this->synchronizeGoods($v['no'], $v['type']);
-        //    dd($res['status']);
            if(!$res['status']) continue;
         }
         return returnState('200','分类商品同步成功', );;
@@ -170,6 +211,38 @@ class WeiChengClient extends ManagementClient
             $res = $this->setWcGoodsLocal($wc_good['no']);
         }
         return $this->rA('微程商品本地化写入完成');
+    }
+
+
+    //设置虚拟货道商品排序
+    public function setWcMachineChannelLists($m_id, $wc_goods_local_ids_arr){
+        $machine = $this->getMachineFind(['m_id' => $m_id])->toArray();
+        //删除历史记录，重新新增当前排序记录
+        $res = $this->delWcMachineChannelInfo(['m_id' => $m_id]);
+        $wc_goods_local_lists = $this->getWcGoodsLocalList([['id', 'in', $wc_goods_local_ids_arr]]);
+        if(!$wc_goods_local_lists) return $this->rA('上架失败，找不到微程商品信息');
+        $inserData = [];
+        $flag = [];
+        foreach($wc_goods_local_lists as $wc_goods_local){
+            $inserData = [
+                'm_id' => $m_id,
+                'machine_id' => $machine['machine_id'],
+                'channel_code' => 'Z10',
+                'g_id' => $wc_goods_local['g_id'],
+                'out_no' => $wc_goods_local['out_no'],
+                'g_name' => $wc_goods_local['g_name'],
+                'gc_id' => $wc_goods_local['g_type'],
+                'gc_name' => $wc_goods_local['g_type_name'],
+                'pic' => $wc_goods_local['pic'],
+                'sku' => $wc_goods_local['sku'],
+                'bar_code' => $wc_goods_local['sku'],
+                'retail_price' => $wc_goods_local['retail_price'],
+                'sort' => array_search($wc_goods_local['id'], $wc_goods_local_ids_arr) + 1,
+            ];
+            $flag[] = $this->addWcMachineChannel($inserData);
+        }
+        if($this->checkFlag($flag)); return $this->rA('虚拟货道微程商品上架完成');
+        return $this->rA('上架失败');
     }
 
     public function synchronizeOrder($order)

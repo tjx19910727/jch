@@ -36,7 +36,10 @@ class WcGoods extends Common
         return $this->app->weicheng->getWcGoodsInfoList($where, $pageNum, "*", 'id desc');
     }
 
-    public function setWcGoodsLocal(){
-         return $this->app->weicheng->wcGoodsWriteLocal();
+    public function getLocalLists(){
+        $postData = input();
+        $pageNum = input('pageNum') ?? 15;
+        $where = $this->getWhere($postData, false, ['g_name' => 'like']);
+        return $this->app->weicheng->getWcGoodsLocalInfoList($where, $pageNum, "*", 'id desc');
     }
 }

@@ -901,6 +901,20 @@ class Receive extends Common
         }
     }
 
+    /**
+     * 新版获取微程商品信息
+     * @return array|string
+     * @throws \Exception
+     */
+    public function getWcMCLists(){
+        try {
+            return $this->app->api->getWcMCLists();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     public function test()
     {
         $this->app->api->cardAddPoints();

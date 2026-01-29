@@ -157,66 +157,69 @@ trait WcBaseTrait
 
     //微程拉取的商品本地化存储
     //$no为wc_goods表的no,wc_goods_local表分外部no和子商品no
-    public function setWcGoodsLocal($no){
+    public function setWcGoodsLocal($no)
+    {
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
         $wc_goods_type_arr = [];
-        foreach($wc_goods_type as $v){
+        foreach ($wc_goods_type as $v) {
             $wc_goods_type_arr[$v['id']] = $v['name'];
         }
 
         $wc_goods = $this->getWcGoodsFind(['no' => $no])->toArray();
         $resourceDomain = $wc_goods['resourceDomain'];
 
-        if(!empty($wc_goods['goods'])){
+        if (!empty($wc_goods['goods'])) {
             //子商品信息
             $goods = json_decode($wc_goods['goods'], true);
-            foreach($goods as $good){
+            foreach ($goods as $good) {
                 $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no']]);
-                $setData =[
-                        'out_no' => $no ?? '' ,
-                        'no' => $good['no'] ?? '' ,
-                        'g_name' => $good['name'] ?? '',
-                        'g_type' => $good['type'] ?? 0 ,
-                        'g_type_name' => $wc_goods_type_arr[$good['type']] ?? '' ,
-                        'retail_price' => $good['price'] ?? '',
-                        'pic' => $good['main_img'] ? $resourceDomain.$good['main_img'] : '',
-                        'sell_channel' => 3,
-                        'desc' => $good['notice'] ?? '',
-                        'status' => 1,
-                        'channel_code' => 'Z10',
-                    ];
-                if(!$wc_goods_local){
+                $setData = [
+                    'g_id' => $good['g_id'],
+                    'out_no' => $no ?? '',
+                    'no' => $good['no'] ?? '',
+                    'g_name' => $good['name'] ?? '',
+                    'g_type' => $good['type'] ?? 0,
+                    'g_type_name' => $wc_goods_type_arr[$good['type']] ?? '',
+                    'retail_price' => $good['price'] ?? '',
+                    'pic' => $good['main_img'] ? $resourceDomain . $good['main_img'] : '',
+                    'sell_channel' => 3,
+                    'desc' => $good['notice'] ?? '',
+                    'status' => 1,
+                    'channel_code' => 'Z10',
+                ];
+                if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($setData);
                 } else {
                     $this->updateWcGoodsLocal($setData, ['no' => $no]);
                 }
             }
         }
-        if(!empty($wc_goods['combination_goods'])){
+        if (!empty($wc_goods['combination_goods'])) {
             $combination_goods = json_decode($wc_goods['combination_goods'], true) ?? [];
-            foreach($combination_goods as $combind_good){
-                $combindSetData =[
-                        'out_no' => $no ?? '' ,
-                        'no' => $combind_good['no'] ?? '' ,
-                        'g_name' => $combind_good['name'] ?? '',
-                        'g_type' => $combind_good['type'] ?? 0 ,
-                        'g_type_name' => $wc_goods_type_arr[$combind_good['type']] ?? '' ,
-                        'retail_price' => $combind_good['price'] ?? '',
-                        'pic' => $combind_good['main_img'] ? $resourceDomain.$combind_good['main_img'] : '',
-                        'sell_channel' => 3,
-                        'desc' => $combind_good['notice'] ?? '',
-                        'status' => 1,
-                        'channel_code' => 'Z10',
-                    ];
+            foreach ($combination_goods as $combind_good) {
+                $combindSetData = [
+                    'g_id' => $good['g_id'],
+                    'out_no' => $no ?? '',
+                    'no' => $combind_good['no'] ?? '',
+                    'g_name' => $combind_good['name'] ?? '',
+                    'g_type' => $combind_good['type'] ?? 0,
+                    'g_type_name' => $wc_goods_type_arr[$combind_good['type']] ?? '',
+                    'retail_price' => $combind_good['price'] ?? '',
+                    'pic' => $combind_good['main_img'] ? $resourceDomain . $combind_good['main_img'] : '',
+                    'sell_channel' => 3,
+                    'desc' => $combind_good['notice'] ?? '',
+                    'status' => 1,
+                    'channel_code' => 'Z10',
+                ];
                 $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no']]);
-                if(!$wc_goods_local){
+                if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($combindSetData);
                 } else {
                     $this->updateWcGoodsLocal($combindSetData, ['no' => $no]);
                 }
             }
         }
-        
+
         return true;
     }
 
@@ -241,7 +244,7 @@ trait WcBaseTrait
         $postUrl = $this->user_sync_points . "?op_type=" . $op_type . "&integral=" . (int)$integral;
         $header = array('token: ' . $token);
         return $this->weicheng_curl($postUrl, [], $header);
-    } 
+    }
 
 
     public function wcPointsQrCode($integral)

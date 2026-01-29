@@ -128,4 +128,12 @@ class MachineChannel extends Common
             }
         }
     }
+
+    //设置微程商品在虚拟货道排序
+    public function setWcGoods2Mc(){
+        $m_id = input("m_id");
+        $wc_goods_local_ids = input('wc_goods_local_ids');
+        $wc_goods_local_ids_arr = explode(',', $wc_goods_local_ids);
+        return $this->app->weicheng->setWcMachineChannelLists($m_id, $wc_goods_local_ids_arr);
+    }
 }

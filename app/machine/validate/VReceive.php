@@ -197,6 +197,7 @@ class VReceive extends VCommon
 
         "createdCardSaleOrder" => ["msg_id","machine_id","timestamp","sign","pay_type","pay_method"],
         "getWcGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
+        "getWcMachineChannelLists" => ["msg_id","machine_id","timestamp","sign"],
 
     ];
 
