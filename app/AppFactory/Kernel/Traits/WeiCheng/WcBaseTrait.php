@@ -11,10 +11,11 @@ namespace app\AppFactory\Kernel\Traits\WeiCheng;
 
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcRequestLogsTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 
 trait WcBaseTrait
 {
-    use WcGoodsTrait,  WcRequestLogsTrait;
+    use WcGoodsTrait,  WcRequestLogsTrait, SaleOrdersTrait;
 
     public function initWcBase()
     {
@@ -157,7 +158,7 @@ trait WcBaseTrait
 
     //微程拉取的商品本地化存储
     //$no为wc_goods表的no,wc_goods_local表分外部no和子商品no
-    public function setWcGoodsLocal($no)
+    public function setWcGoodsLocal($no, $type = 0)
     {
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
         $wc_goods_type_arr = [];
@@ -167,16 +168,16 @@ trait WcBaseTrait
 
         $wc_goods = $this->getWcGoodsFind(['no' => $no])->toArray();
         $resourceDomain = $wc_goods['resourceDomain'];
-
-        if (!empty($wc_goods['goods'])) {
+        if (!is_null($wc_goods['goods'])) {
             //子商品信息
             $goods = json_decode($wc_goods['goods'], true);
             foreach ($goods as $good) {
-                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no']]);
+                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no'],'out_no' => $wc_goods['no']]);
                 $setData = [
-                    'g_id' => $good['g_id'],
+                    'g_id' => $good['g_id'] ?? '',
                     'out_no' => $no ?? '',
                     'no' => $good['no'] ?? '',
+                    'type' => $type,
                     'g_name' => $good['name'] ?? '',
                     'g_type' => $good['type'] ?? 0,
                     'g_type_name' => $wc_goods_type_arr[$good['type']] ?? '',
@@ -190,17 +191,18 @@ trait WcBaseTrait
                 if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($setData);
                 } else {
-                    $this->updateWcGoodsLocal($setData, ['no' => $no]);
+                    $this->updateWcGoodsLocal($setData, ['out_no' => $no]);
                 }
             }
         }
-        if (!empty($wc_goods['combination_goods'])) {
+        if (!is_null($wc_goods['combination_goods'])) {
             $combination_goods = json_decode($wc_goods['combination_goods'], true) ?? [];
             foreach ($combination_goods as $combind_good) {
                 $combindSetData = [
-                    'g_id' => $good['g_id'],
+                    'g_id' => $good['g_id'] ?? '',
                     'out_no' => $no ?? '',
                     'no' => $combind_good['no'] ?? '',
+                    'type' => $type,
                     'g_name' => $combind_good['name'] ?? '',
                     'g_type' => $combind_good['type'] ?? 0,
                     'g_type_name' => $wc_goods_type_arr[$combind_good['type']] ?? '',
@@ -211,11 +213,11 @@ trait WcBaseTrait
                     'status' => 1,
                     'channel_code' => 'Z10',
                 ];
-                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no']]);
+                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no'],'out_no' => $wc_goods['no']]);
                 if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($combindSetData);
                 } else {
-                    $this->updateWcGoodsLocal($combindSetData, ['no' => $no]);
+                    $this->updateWcGoodsLocal($combindSetData, ['out_no' => $no]);
                 }
             }
         }
@@ -252,5 +254,84 @@ trait WcBaseTrait
         $this->initWcBase();
         $postUrl = $this->get_points_qrcode . "?integral=" . (int)$integral;
         return $this->weicheng_curl($postUrl);
+    }
+
+    public function orderSync2Wc($order)
+    {
+        $details = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']]);
+        if (!$details) return true;
+        $details = $details->toArray();
+        foreach ($details as $detail) {
+            $wc_order_no = $this->orderDetailSync2Wc($order, $detail);
+            $wc_order_no_json = json_encode($wc_order_no);
+            $this->updateSaleOrdersDetails(['wc_order_no' => $wc_order_no_json], ['sod_id' => $detail['sod_id']]);
+        }
+        //返回true是为了不影响正常出货流程
+        return true;
+    }
+
+    public function orderDetailSync2Wc($order, $detail)
+    {
+        $this->initWcBase();
+        $wc_machine_channel = $this->getWcMachineChannelFind(['mc_id' => $detail['mc_id']]);
+        if (!$wc_machine_channel) return true;
+        $wc_machine_channel = $wc_machine_channel->toArray();
+
+        $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $wc_machine_channel['out_no']]);
+        if (!$wc_goods_locals) return true;
+        $wc_goods_locals = $wc_goods_locals->toArray();
+        $wc_order_no = [];
+        foreach ($wc_goods_locals as $wc_goods_local) {
+            $data = [
+                'out_order_no' => $order['trade_no'] . '#' . $detail['sod_id'],
+                'goods_no' => $wc_goods_local['no'],
+                'goods_quantity' => $detail['quantity'],
+                'link_man' => '会员',
+                'link_phone' => $order['mobile'] ?: '',
+                'identity_card' => '',
+                'link_address' => '',
+                'link_remark' => '',
+                'trip_date' => date('Y-m-d'),
+                'distributor_id' => $this->config['distributor_id'],
+            ];
+            $postUrl = $this->order_add_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
+            $res = $this->weicheng_curl($postUrl, []);
+            // $res['response'] = '{"order_no":"O745770017646077","orderNo":"O745770017646077","tickets":[],"ticket_check_style":0,"tip":"出库成功","status":"success"}';
+            $res_arr = json_decode($res['response'], true);
+            if ($res_arr['status'] == "fail") actionLog($detail, "子订单同步失败" . $res_arr['tip']);
+            $wc_order_no[$wc_goods_local['no']] = $res_arr['order_no'];
+        }
+        return $wc_order_no;
+    }
+
+    public function orderRefundSync2Wc($order_no, $out_out_no)
+    {
+        $this->initWcBase();
+        $data = [
+            'distributor_id' => $this->config['distributor_id'],
+            'order_no' => $order_no,
+            'out_out_no' => $out_out_no,
+        ];
+        $postUrl = $this->order_refund_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
+        return $this->weicheng_curl($postUrl, []);
+    }
+
+
+    public function orderRefundPartSync2Wc($refund_no, $order_no, $out_order_no, $result)
+    {
+        $this->initWcBase();
+        $data = [
+            'method' => 'refundPart',
+            'data' => [
+                'distributor_id' => $this->config['distributor_id'],
+                'refund_no' => $refund_no,
+                'order_no' => $order_no,
+                'out_order_no' => $out_order_no,
+                'result' => $result, //通知结果，0失败 1成功 2拒绝
+            ]
+
+        ];
+        $postUrl = $this->order_refundPart_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
+        return $this->weicheng_curl($postUrl, []);
     }
 }

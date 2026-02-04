@@ -1792,4 +1792,9 @@ class ApiClient extends ReceiveBaseClient
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
         return $this->r(200, "SUCCESS", $wcMachineChannelLists);
     }
+
+    public function test(){
+        $order = $this->getSaleOrdersFind(['order_id' => '29790']);
+        $this->orderSync2Wc($order);
+    }
 }

@@ -36,11 +36,22 @@ class WcGoods extends Common
         return $this->app->weicheng->getWcGoodsInfoList($where, $pageNum, "*", 'id desc');
     }
 
+    public function setWcGoodsLocal(){
+        return $this->app->weicheng->wcGoodsWriteLocal();
+    }
    
-    public function getLocalLists(){
+    public function getWcPhysicalGoodsLists(){
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 15;
+        $where = $this->getWhere($postData, false, ['type' => 'like','name' => 'like','no' => 'like']);
+        return $this->app->weicheng->getMachineWcGoodsLists($where, $pageNum);
+    }
+
+    public function getWcCombinGoodsLists(){
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['type' => 'like','name' => 'like','no' => 'like']);
-        return $this->app->weicheng->getWcGLLists($where, $pageNum, "*", 'id desc');
+        $where['type'] = 11; //组合商品
+        return $this->app->weicheng->getMachineWcCombinGoodsLists($where, $pageNum, "*", 'id desc');
     }
 }

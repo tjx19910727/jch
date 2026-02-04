@@ -12,11 +12,12 @@ namespace app\AppFactory\Management\WeiCheng;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class WeiChengClient extends ManagementClient
 {
-    use WcBaseTrait,WcGoodsTrait,MachineTrait;
+    use WcBaseTrait,WcGoodsTrait,MachineTrait,MachineGoodsTrait;
 
     public function getWcGoodsInfoList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
     {
@@ -171,7 +172,8 @@ class WeiChengClient extends ManagementClient
         foreach($wc_goods as $v){
            $res = $this->synchronizeGoods($v['no'], $v['type']);
            if(!$res['status']) continue;
-        }
+        }   
+        $this->wcGoodsWriteLocal();    
         return returnState('200','分类商品同步成功', );;
     }
 
@@ -213,6 +215,22 @@ class WeiChengClient extends ManagementClient
         return $this->rA('微程商品本地化写入完成');
     }
 
+    //获取设备可排序的微程商品列表
+    public function getMachineWcGoodsLists($machine_id, $pageNum){
+        $where['machine_id'] = $machine_id;
+        $machine_goods_ids = $this->getMachineGoodsColumn($where, 'g_id');
+        $wc_goods_local = $this->getWcGoodsLocalList([['g_id','not in', $machine_goods_ids],['type','in', '1,2,3,4,5']], $pageNum,'*', 'id desc')->toArray();
+        return  $this->rQ($wc_goods_local);
+    }
+
+    //获取设备可排序的微程商品列表
+    public function getMachineWcCombinGoodsLists($where, $pageNum){
+        $list  = $this->getWcGoodsList($where, $pageNum, '*', 'id desc');
+        foreach($list as &$v){
+            $v['goods_list'] = $this->getWcGoodsLocalList(['out_no'=> $v['no']])->toArray();
+        }
+        return  $this->rQ($list);
+    }
 
     //设置虚拟货道商品排序
     public function setWcMachineChannelLists($m_id, $wc_goods_local_ids_arr){
@@ -220,10 +238,17 @@ class WeiChengClient extends ManagementClient
         //删除历史记录，重新新增当前排序记录
         $res = $this->delWcMachineChannelInfo(['m_id' => $m_id]);
         $wc_goods_local_lists = $this->getWcGoodsLocalList([['id', 'in', $wc_goods_local_ids_arr]]);
+        $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
+        $wc_goods_type_arr = [];
+        foreach ($wc_goods_type as $v) {
+            $wc_goods_type_arr[$v['id']] = $v['name'];
+        }
         if(!$wc_goods_local_lists) return $this->rA('上架失败，找不到微程商品信息');
         $inserData = [];
         $flag = [];
         foreach($wc_goods_local_lists as $wc_goods_local){
+            $wc_goods = $this->getWcGoodsFind(['no' => $wc_goods_local['out_no']])->toArray();
+
             $inserData = [
                 'm_id' => $m_id,
                 'machine_id' => $machine['machine_id'],
@@ -231,8 +256,8 @@ class WeiChengClient extends ManagementClient
                 'g_id' => $wc_goods_local['g_id'],
                 'out_no' => $wc_goods_local['out_no'],
                 'g_name' => $wc_goods_local['g_name'],
-                'gc_id' => $wc_goods_local['g_type'],
-                'gc_name' => $wc_goods_local['g_type_name'],
+                'gc_id' => $wc_goods_local['g_type'], //  这里传的type应该不是外层type  所以type_name未知
+                'gc_name' => '',
                 'pic' => $wc_goods_local['pic'],
                 'sku' => $wc_goods_local['sku'],
                 'bar_code' => $wc_goods_local['sku'],

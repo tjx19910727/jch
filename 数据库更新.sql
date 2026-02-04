@@ -1,6 +1,9 @@
 #20260128
 ALTER TABLE kiosk.wc_goods_local CHANGE g_id id int(11) NOT NULL AUTO_INCREMENT COMMENT '主键';
 ALTER TABLE kiosk.wc_goods_local   ADD g_id int(11) NULL COMMENT '核心商品库商品id' after  `no`;
+ALTER TABLE kiosk.wc_goods_local   ADD type int(11) NULL COMMENT '商品类型' after  `no`;
+
+ALTER TABLE kiosk.sale_orders_details  ADD wc_order_no text NULL COMMENT '对应微程单号' after  `order_id`;
 
 CREATE TABLE `wc_machine_channel` (
   `mc_id` int NOT NULL AUTO_INCREMENT COMMENT '货道ID',

@@ -90,6 +90,11 @@ trait WcGoodsTrait
         return WcGoodsTypesModel::whereDel($where);
     }
 
+    public function getWcGoodsLocalColumn($where, $column)
+    {
+        return WcGoodsLocalModel::getColumn($where, $column);
+    }
+
     public function getWcGoodsLocalCount($where, $field = '*', $order = '')
     {
         return WcGoodsLocalModel::getFind($where, $field, $order);
