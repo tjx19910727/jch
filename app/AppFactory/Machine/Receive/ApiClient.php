@@ -1794,7 +1794,8 @@ class ApiClient extends ReceiveBaseClient
     }
 
     public function test(){
-        $order = $this->getSaleOrdersFind(['order_id' => '29813']);
-        $this->orderSync2Wc($order);
+        // $this->order = $this->getSaleOrdersFind(['order_id' => '29785']);
+        // $order = $this->outGoods();
+        // $this->orderSync2Wc($order);
     }
 }

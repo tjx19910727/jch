@@ -27,7 +27,8 @@ trait WcBaseTrait
                 "apikey" => "ab50e9d1038e4905b1d5f1f263e69e18_n",
                 "apisecret" => "d1e79b35bc6f491993f873c56b163f47",
                 "secretkey" => "8f8d4818c49f44e6bb53d04b",
-                "apiDomain" => "https://test-admin.weicheng.jchtechnologies.com",
+                "domain" => "https://test-admin-weicheng.jchtechnologies.com",
+                "apiDomain" => "https://test-api-weicheng.jchtechnologies.com",
             ];
         } else {
             $this->configType = "weicheng";
@@ -36,20 +37,21 @@ trait WcBaseTrait
                 "apikey" => "ab50e9d1038e4905b1d5f1f263e69e18_n",
                 "apisecret" => "d1e79b35bc6f491993f873c56b163f47",
                 "secretkey" => "8f8d4818c49f44e6bb53d04b",
-                "apiDomain" => "https://test-admin.weicheng.jchtechnologies.com",
+                "domain" => "https://admin-weicheng.jchtechnologies.com",
+                "apiDomain" => "https://api-weicheng.jchtechnologies.com",
             ];
         }
 
-        $this->goods_type_sync_url = $this->config['apiDomain'] . "/api/goods/typeSync";
-        $this->goods_sync_url = $this->config['apiDomain'] . "/api/goods/sync";
-        $this->order_add_url = $this->config['apiDomain'] . "/api/order/add";
-        $this->order_refund_url = $this->config['apiDomain'] . "/api/order/refund";
-        $this->order_detail_url = $this->config['apiDomain'] . "/api/order/detail";
-        $this->order_refundPart_url = $this->config['apiDomain'] . "/api/order/refundPart";
-        $this->get_sms_code_url = "https://api.weicheng.jchtechnologies.com/msvc-shop/v1/mp/user/phone/send/code";
-        $this->phone_login_url = "https://api.weicheng.jchtechnologies.com/msvc-shop/v1/mp/user/phoneLogin";
-        $this->user_sync_points = "https://api.weicheng.jchtechnologies.com/msvc-shop/v1/mp/user/syncIntegral";
-        $this->get_points_qrcode = "https://api.weicheng.jchtechnologies.com/msvc-shop/v1/mp/user/getIntegralQrcode";
+        $this->goods_type_sync_url = $this->config['domain'] . "/api/goods/typeSync";
+        $this->goods_sync_url = $this->config['domain'] . "/api/goods/sync";
+        $this->order_add_url = $this->config['domain'] . "/api/order/add";
+        $this->order_refund_url = $this->config['domain'] . "/api/order/refund";
+        $this->order_detail_url = $this->config['domain'] . "/api/order/detail";
+        $this->order_refundPart_url = $this->config['domain'] . "/api/order/refundPart";
+        $this->get_sms_code_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/phone/send/code";
+        $this->phone_login_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/phoneLogin";
+        $this->user_sync_points = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/syncIntegral";
+        $this->get_points_qrcode = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/getIntegralQrcode";
     }
 
     public function getDecptData($data)
