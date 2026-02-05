@@ -126,7 +126,7 @@ trait AfterOrderPaymentTrait
                     $rate_points = $this->getRateOrGiftPoints($mc);
 
                     if($rate_points['gift_points'] > 0 ){
-                        $updateSod['intergral_rate'] = 0;f
+                        $updateSod['intergral_rate'] = 0;
                         $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
                     }
                     if($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0){
