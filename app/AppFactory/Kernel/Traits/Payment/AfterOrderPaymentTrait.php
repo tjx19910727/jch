@@ -51,6 +51,7 @@ trait AfterOrderPaymentTrait
         actionLog($this->order,'更新支付时间成功');
         if ($this->order['order_type'] != 4 && $this->order['out_status'] == 1) {
             $this->outGoods();
+            //这里要新增一步处理。即判断当前订单是否为虚拟货道组合商品，如果是，则需要将所有子商品进行出货处理
         }
         $this->handleHotel(1);
         actionLog($this->order,'订单数据');
@@ -116,6 +117,8 @@ trait AfterOrderPaymentTrait
                     $updateSod['sod_id'] = $v['sod_id'];
                     if($v['channel_code'] == 'Z10'){
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $v['mc_id']]);
+                        //判断此微程商品是否为组合商品
+                        $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
                     }else{
                         $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
                     }
@@ -123,7 +126,7 @@ trait AfterOrderPaymentTrait
                     $rate_points = $this->getRateOrGiftPoints($mc);
 
                     if($rate_points['gift_points'] > 0 ){
-                        $updateSod['intergral_rate'] = 0;
+                        $updateSod['intergral_rate'] = 0;f
                         $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
                     }
                     if($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0){

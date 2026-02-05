@@ -172,7 +172,7 @@ trait WcBaseTrait
             //子商品信息
             $goods = json_decode($wc_goods['goods'], true);
             foreach ($goods as $good) {
-                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no'],'out_no' => $wc_goods['no']]);
+                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no'],'out_no' => $no]);
                 $setData = [
                     'g_id' => $good['g_id'] ?? '',
                     'out_no' => $no ?? '',
@@ -191,12 +191,13 @@ trait WcBaseTrait
                 if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($setData);
                 } else {
-                    $this->updateWcGoodsLocal($setData, ['out_no' => $no]);
+                    $this->updateWcGoodsLocal($setData, ['no' => $good['no'],'out_no' => $no]);
                 }
             }
         }
         if (!is_null($wc_goods['combination_goods'])) {
             $combination_goods = json_decode($wc_goods['combination_goods'], true) ?? [];
+
             foreach ($combination_goods as $combind_good) {
                 $combindSetData = [
                     'g_id' => $good['g_id'] ?? '',
@@ -213,12 +214,13 @@ trait WcBaseTrait
                     'status' => 1,
                     'channel_code' => 'Z10',
                 ];
-                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no'],'out_no' => $wc_goods['no']]);
+                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no'],'out_no' => $no]);
                 if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($combindSetData);
                 } else {
-                    $this->updateWcGoodsLocal($combindSetData, ['out_no' => $no]);
+                    $this->updateWcGoodsLocal($combindSetData, ['no' => $combindSetData['no'],'out_no' => $no]);
                 }
+
             }
         }
 
@@ -276,7 +278,6 @@ trait WcBaseTrait
         $wc_machine_channel = $this->getWcMachineChannelFind(['mc_id' => $detail['mc_id']]);
         if (!$wc_machine_channel) return true;
         $wc_machine_channel = $wc_machine_channel->toArray();
-
         $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $wc_machine_channel['out_no']]);
         if (!$wc_goods_locals) return true;
         $wc_goods_locals = $wc_goods_locals->toArray();

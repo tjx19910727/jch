@@ -32,6 +32,39 @@ CREATE TABLE `wc_machine_channel` (
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='微程虚拟商品设备货道表';
 
 
+CREATE TABLE `wc_machine_goods` (
+  `id` NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `m_id` int DEFAULT NULL COMMENT '设备ID',
+  `machine_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '设备编号',
+  `out_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '微程商品外部编码',
+  `g_id` int DEFAULT NULL COMMENT '商品ID',
+  `g_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商品名称',
+  `type` int DEFAULT NULL COMMENT '商品分类ID',
+  `type_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商品分类',
+  `pic` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商品图片',
+  `sku` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'SKU码',
+  `bar_code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `cost_price` decimal(10,2) DEFAULT '0.00' COMMENT '成本价',
+  `market_price` decimal(10,2) DEFAULT '0.00' COMMENT '市场价',
+  `retail_price` decimal(10,2) DEFAULT '0.00' COMMENT '零售价',
+  `intergral_rate` decimal(10,3) DEFAULT '0.000' COMMENT '积分-现金兑换比例（1元=10积分） ',
+  `gift_points` decimal(10,3) DEFAULT '0.000' COMMENT '赠送积分',
+  `available_stock` int DEFAULT '0' COMMENT '可用库存',
+  `disabled_stock` int DEFAULT '0' COMMENT '不可用库存',
+  `reserve_stock` int DEFAULT '0' COMMENT '预订量',
+  `standby_stock` int DEFAULT '0' COMMENT '备用库存',
+  `pre_loading_stock` int DEFAULT '0' COMMENT '预上货库存',
+  `is_shelf` tinyint(1) DEFAULT '2' COMMENT '已上架，1：是，2：否',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `g_id` (`g_id`) USING BTREE,
+  KEY `machine` (`m_id`,`machine_id`) USING BTREE,
+  KEY `type` (`type`) USING BTREE,
+  KEY `sku` (`sku`) USING BTREE,
+  KEY `bar_code` (`bar_code`) USING BTREE,
+  KEY `is_shelf` (`is_shelf`) USING BTREE,
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='微程设备商品表';
+
+
 #20260123
 ALTER TABLE kiosk.wc_goods 
   ADD get_data TEXT NULL COMMENT '接口返回内容';

@@ -13,7 +13,7 @@ use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsTypesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineChannelModel;
-
+use app\AppFactory\Kernel\Model\WeiCheng\WcMachineGoodsModel;
 trait WcGoodsTrait
 {
     public function getWcGoodsCount($where, $field = '*', $order = '')
@@ -168,6 +168,44 @@ trait WcGoodsTrait
     public function delWcMachineChannel($where)
     {
         return WcMachineChannelModel::whereDel($where);
+    }
+
+    public function getWcMachineGoodsList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return WcMachineGoodsModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
+    }
+
+    public function getWcMachineGoodsFind($where, $field = "*", $order = "")
+    {
+        return WcMachineGoodsModel::getFind($where, $field, $order);
+    }
+
+    public function getWcMachineGoodsSum($where, $sum)
+    {
+        return WcMachineGoodsModel::getSum($where, $sum);
+    }
+
+    public function addWcMachineGoods($insert)
+    {
+        $data = WcMachineGoodsModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    public function addWcMachineGoodsMore($insertAll)
+    {
+        $model = new WcMachineGoodsModel();
+        return $model->saveAll($insertAll);
+    }
+
+    public function updateWcMachineGoods($update, $where = [], $field = [])
+    {
+        return WcMachineGoodsModel::update($update, $where, $field);
+    }
+
+    public function delWcMachineGoods($where)
+    {
+        return WcMachineGoodsModel::whereDel($where);
     }
     
 }

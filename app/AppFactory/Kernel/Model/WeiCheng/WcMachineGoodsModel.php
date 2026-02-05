@@ -9,19 +9,19 @@ namespace app\AppFactory\Kernel\Model\WeiCheng;
 
 use app\AppFactory\Kernel\Model\BaseModel;
 
-class WcMachineChannelModel extends BaseModel
+class WcMachineGoodsModel extends BaseModel
 {
     /**
-     * Primary key for the wc_machine_channel table
+     * Primary key for the wc_machine_goods table
      *
      * @var string
      */
-    protected $pk = "mc_id";
+    protected $pk = "id";
 
     /**
      * Table name
      * @var string
      */
-    protected $name = "wc_machine_channel";
+    protected $name = "wc_machine_goods";
 
 }

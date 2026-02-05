@@ -44,7 +44,7 @@ class WcGoods extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 15;
         $where = $this->getWhere($postData, false, ['type' => 'like','name' => 'like','no' => 'like']);
-        return $this->app->weicheng->getMachineWcGoodsLists($where, $pageNum);
+        return $this->app->weicheng->getWcPhysicalGoodsLists($where, $pageNum);
     }
 
     public function getWcCombinGoodsLists(){
@@ -52,6 +52,23 @@ class WcGoods extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['type' => 'like','name' => 'like','no' => 'like']);
         $where['type'] = 11; //组合商品
-        return $this->app->weicheng->getMachineWcCombinGoodsLists($where, $pageNum, "*", 'id desc');
+        return $this->app->weicheng->getWcCombinGoodsLists($where, $pageNum, "*", 'id desc');
+    }
+
+    //多对多微程商品与设备绑定
+    public function setWcMachineGoodsLists(){
+        $postData = input();
+        $m_ids = $postData['m_ids'] ?? 0;
+        $out_nos = $postData['out_nos'] ?? [];
+        $m_ids = is_array($m_ids) ? $m_ids : explode(',', $m_ids);
+        $out_nos = is_array($out_nos) ? $out_nos : explode(',', $out_nos);
+        return $this->app->weicheng->setWcMachineGoodsBatchLists($m_ids, $out_nos);
+    }
+
+    public function getWcMachineGoodsLists(){
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, ['machine_id' => 'like']);
+        return $this->app->weicheng->getWcMachineGoodsLists($where, $pageNum, "*", 'id desc');
     }
 }

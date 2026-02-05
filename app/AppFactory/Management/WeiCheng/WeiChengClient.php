@@ -17,7 +17,7 @@ use app\AppFactory\Management\ManagementClient;
 
 class WeiChengClient extends ManagementClient
 {
-    use WcBaseTrait,WcGoodsTrait,MachineTrait,MachineGoodsTrait;
+    use WcBaseTrait, WcGoodsTrait, MachineTrait, MachineGoodsTrait;
 
     public function getWcGoodsInfoList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
     {
@@ -120,11 +120,12 @@ class WeiChengClient extends ManagementClient
     }
 
 
-    public function synchronizeGoodsTypesAll(){
-        $wc_goods_type = $this->getWcGoodsTypesList([['id','>','0']]);
-        if(!$wc_goods_type) return true;
+    public function synchronizeGoodsTypesAll()
+    {
+        $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']]);
+        if (!$wc_goods_type) return true;
         $wc_goods_type = $wc_goods_type->toArray();
-        foreach($wc_goods_type as $type){
+        foreach ($wc_goods_type as $type) {
             $res = $this->app->weicheng->synchronizeGoodsTypes($type['id'], 1);
         }
         return $res;
@@ -142,7 +143,7 @@ class WeiChengClient extends ManagementClient
         $goods_lists = $updateData['data']['list'] ?? [];
 
         $res = $this->synchronizeGoodsLists2Db($goods_lists, $goods_type);
-        
+
         // 如果还有下一页，递归处理并合并结果
         if ($nowPage < $totalPage) {
             $nextRes = $this->synchronizeGoodsTypes($goods_type, $nowPage + 1);
@@ -167,14 +168,15 @@ class WeiChengClient extends ManagementClient
         return $combined;
     }
 
-    public function synchronizeGoodsAll(){
+    public function synchronizeGoodsAll()
+    {
         $wc_goods = $this->getWcGoodsList([['id', '>', '0']])->toArray();
-        foreach($wc_goods as $v){
-           $res = $this->synchronizeGoods($v['no'], $v['type']);
-           if(!$res['status']) continue;
-        }   
-        $this->wcGoodsWriteLocal();    
-        return returnState('200','分类商品同步成功', );;
+        foreach ($wc_goods as $v) {
+            $res = $this->synchronizeGoods($v['no'], $v['type']);
+            if (!$res['status']) continue;
+        }
+        $this->wcGoodsWriteLocal();
+        return returnState('200', '分类商品同步成功',);;
     }
 
     public function synchronizeGoods($goods_no, $type)
@@ -183,57 +185,122 @@ class WeiChengClient extends ManagementClient
 
         if ($result['status'] == 200) {
             $res = json2arr($result['response']);
-            if(!$res || !isset($res['product'])) {
+            if (!$res || !isset($res['product'])) {
                 // actionLog('同步失败', $goods_no);
                 return ['status' => false, 'msg' => $result['response']];
             }
 
             $updateData = $res['product'];
             $updateData['get_data'] = $result['response'];
-            if(isset($updateData['goods'])) 
+            if (isset($updateData['goods']))
                 $updateData['goods'] = json_encode($updateData['goods']);
-            if(isset($updateData['combination_goods']))  
+            if (isset($updateData['combination_goods']))
                 $updateData['combination_goods'] = json_encode($updateData['combination_goods'], JSON_UNESCAPED_UNICODE);
-            if(isset($updateData['resourcesArray'])) 
+            if (isset($updateData['resourcesArray']))
                 $updateData['resourcesArray'] = json_encode($updateData['resourcesArray'], JSON_UNESCAPED_UNICODE);
-            if(isset($updateData['daysInfo'])) 
+            if (isset($updateData['daysInfo']))
                 $updateData['daysInfo'] = json_encode($updateData['daysInfo']);
-            
+
             //type值是从goods_type带过来的，这里不要修改商品的type，否则查询不到数据
-            if(isset($updateData['type'])) unset($updateData['type']);
+            if (isset($updateData['type'])) unset($updateData['type']);
             $res = $this->synchronizeGoods2Db($updateData);
             return ['status' => $res];
-        } 
+        }
         return ['status' => false, 'msg' => $result['response']];;
     }
 
-     public function wcGoodsWriteLocal(){
+    public function wcGoodsWriteLocal()
+    {
         $wc_goods = $this->getWcGoodsList([['id', '>', '0']])->toArray();
-        foreach($wc_goods as $wc_good){
-            $res = $this->setWcGoodsLocal($wc_good['no']);
+        // $wc_goods = $this->getWcGoodsList(['no'=>'VC2601071001'])->toArray();
+        foreach ($wc_goods as $wc_good) {
+            $res = $this->setWcGoodsLocal($wc_good['no'], $wc_good['type']);
         }
         return $this->rA('微程商品本地化写入完成');
     }
 
     //获取设备可排序的微程商品列表
-    public function getMachineWcGoodsLists($machine_id, $pageNum){
-        $where['machine_id'] = $machine_id;
-        $machine_goods_ids = $this->getMachineGoodsColumn($where, 'g_id');
-        $wc_goods_local = $this->getWcGoodsLocalList([['g_id','not in', $machine_goods_ids],['type','in', '1,2,3,4,5']], $pageNum,'*', 'id desc')->toArray();
+    public function getWcPhysicalGoodsLists($pageNum)
+    {
+        $wc_goods_local = $this->getWcGoodsLocalList([['type', 'in', '1,2,3,4,5']], $pageNum, '*', 'id desc')->toArray();
         return  $this->rQ($wc_goods_local);
     }
 
     //获取设备可排序的微程商品列表
-    public function getMachineWcCombinGoodsLists($where, $pageNum){
+    public function getWcCombinGoodsLists($where, $pageNum)
+    {
         $list  = $this->getWcGoodsList($where, $pageNum, '*', 'id desc');
-        foreach($list as &$v){
-            $v['goods_list'] = $this->getWcGoodsLocalList(['out_no'=> $v['no']])->toArray();
+        foreach ($list as &$v) {
+            $v['goods_list'] = $this->getWcGoodsLocalList(['out_no' => $v['no']])->toArray();
+        }
+        return  $this->rQ($list);
+    }
+
+    public function setWcMachineGoodsBatchLists($m_ids, $out_nos)
+    {
+        $flag = [];
+        foreach ($m_ids as $m_id) {
+            $machine = $this->getMachineFind(['m_id' => $m_id]);
+            if (!$machine) continue;
+            $machine = $machine->toArray();
+            $res = $this->setWcMachineGoodsLists($m_id, $machine['machine_id'], $out_nos);
+            $flag[] = $res;
+        }
+
+        if ($this->checkFlag($flag));
+        return $this->rA('微程商品与设备绑定完成');
+        return $this->rA('绑定失败');
+    }
+
+
+    public function setWcMachineGoodsLists($m_id, $machine_id, $out_nos)
+    {
+        $this->delWcMachineGoods(['machine_id' => $machine_id]);
+        $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
+        $wc_goods_type_arr = [];
+        foreach ($wc_goods_type as $v) {
+            $wc_goods_type_arr[$v['id']] = $v['name'];
+        }
+
+        foreach ($out_nos as $v) {
+            $wc_goods = $this->getWcGoodsFind(['no' => $v]);
+            if (!$wc_goods) continue;
+            $wc_goods = $wc_goods->toArray();
+            $resourcesArray = $wc_goods['resourcesArray'] ? json_decode($wc_goods['resourcesArray'], true) : [];
+            $pic = '';
+            if (isset($resourcesArray['url'])) $pic = $wc_goods['resourceDomain'] . $resourcesArray['url'];
+            $inserData = [
+                'm_id' => $m_id,
+                'machine_id' => $machine_id,
+                'out_no' => $wc_goods['no'],
+                'g_id' => $wc_goods['g_id'] ?? '',
+                'g_name' => $wc_goods['name'],
+                'type' => $wc_goods['type'], //  这里传的type应该不是外层type  所以type_name未知
+                'type_name' => $wc_goods_type_arr[$wc_goods['type']] ?? '',
+                'pic' => $pic,
+                'sku' => $wc_goods['sku'] ?? '',
+                'bar_code' => $wc_goods['sku'] ?? '',
+                'retail_price' => $wc_goods['price'] ?? 0,
+                'sort' => array_search($wc_goods['no'], $out_nos) + 1,
+            ];
+            $flag[] = $this->addWcMachineGoods($inserData);
+        }
+        return true;
+    }
+
+
+    public function getWcMachineGoodsLists($where, $pageNum = 0)
+    {
+        $list  = $this->getWcMachineGoodsList($where, $pageNum, '*', 'sort asc');
+        foreach ($list as &$v) {
+            $v['goods_list'] = $this->getWcGoodsLocalList(['out_no' => $v['no']])->toArray();
         }
         return  $this->rQ($list);
     }
 
     //设置虚拟货道商品排序
-    public function setWcMachineChannelLists($m_id, $wc_goods_local_ids_arr){
+    public function setWcMachineChannelLists($m_id, $wc_goods_local_ids_arr)
+    {
         $machine = $this->getMachineFind(['m_id' => $m_id])->toArray();
         //删除历史记录，重新新增当前排序记录
         $res = $this->delWcMachineChannelInfo(['m_id' => $m_id]);
@@ -243,10 +310,10 @@ class WeiChengClient extends ManagementClient
         foreach ($wc_goods_type as $v) {
             $wc_goods_type_arr[$v['id']] = $v['name'];
         }
-        if(!$wc_goods_local_lists) return $this->rA('上架失败，找不到微程商品信息');
+        if (!$wc_goods_local_lists) return $this->rA('上架失败，找不到微程商品信息');
         $inserData = [];
         $flag = [];
-        foreach($wc_goods_local_lists as $wc_goods_local){
+        foreach ($wc_goods_local_lists as $wc_goods_local) {
             $wc_goods = $this->getWcGoodsFind(['no' => $wc_goods_local['out_no']])->toArray();
 
             $inserData = [
@@ -266,7 +333,8 @@ class WeiChengClient extends ManagementClient
             ];
             $flag[] = $this->addWcMachineChannel($inserData);
         }
-        if($this->checkFlag($flag)); return $this->rA('虚拟货道微程商品上架完成');
+        if ($this->checkFlag($flag));
+        return $this->rA('虚拟货道微程商品上架完成');
         return $this->rA('上架失败');
     }
 
