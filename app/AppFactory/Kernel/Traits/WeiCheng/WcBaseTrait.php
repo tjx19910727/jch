@@ -170,11 +170,14 @@ trait WcBaseTrait
 
         $wc_goods = $this->getWcGoodsFind(['no' => $no])->toArray();
         $resourceDomain = $wc_goods['resourceDomain'];
+        $resourcesArray = json_decode($wc_goods['resourcesArray'], true) ?? [];
+        
         if (!is_null($wc_goods['goods'])) {
             //子商品信息
             $goods = json_decode($wc_goods['goods'], true);
-            foreach ($goods as $good) {
+            foreach ($goods as $k => $good) {
                 $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no'],'out_no' => $no]);
+                $pic = isset($resourcesArray[$k]['url']) ? $resourceDomain . $resourcesArray[$k]['url'] : '';
                 $setData = [
                     'g_id' => $good['g_id'] ?? '',
                     'out_no' => $no ?? '',
@@ -184,7 +187,7 @@ trait WcBaseTrait
                     'g_type' => $good['type'] ?? 0,
                     'g_type_name' => $wc_goods_type_arr[$good['type']] ?? '',
                     'retail_price' => $good['price'] ?? '',
-                    'pic' => $good['main_img'] ? $resourceDomain . $good['main_img'] : '',
+                    'pic' => $pic,
                     'sell_channel' => 3,
                     'desc' => $good['notice'] ?? '',
                     'status' => 1,
@@ -199,8 +202,8 @@ trait WcBaseTrait
         }
         if (!is_null($wc_goods['combination_goods'])) {
             $combination_goods = json_decode($wc_goods['combination_goods'], true) ?? [];
-
-            foreach ($combination_goods as $combind_good) {
+            foreach ($combination_goods as $kk => $combind_good) {
+                $pic = isset($resourcesArray[$kk]['url']) ? $resourceDomain . $resourcesArray[$kk]['url'] : '';
                 $combindSetData = [
                     'g_id' => $good['g_id'] ?? '',
                     'out_no' => $no ?? '',

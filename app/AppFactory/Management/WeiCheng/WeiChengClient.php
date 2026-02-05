@@ -247,15 +247,14 @@ class WeiChengClient extends ManagementClient
             $flag[] = $res;
         }
 
-        if ($this->checkFlag($flag));
-        return $this->rA('微程商品与设备绑定完成');
+        if ($this->checkFlag($flag)) return $this->rA('微程商品与设备绑定完成');
         return $this->rA('绑定失败');
     }
 
 
     public function setWcMachineGoodsLists($m_id, $machine_id, $out_nos)
     {
-        $this->delWcMachineGoods(['machine_id' => $machine_id]);
+        // $this->delWcMachineGoods(['machine_id' => $machine_id]);
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
         $wc_goods_type_arr = [];
         foreach ($wc_goods_type as $v) {
@@ -268,7 +267,7 @@ class WeiChengClient extends ManagementClient
             $wc_goods = $wc_goods->toArray();
             $resourcesArray = $wc_goods['resourcesArray'] ? json_decode($wc_goods['resourcesArray'], true) : [];
             $pic = '';
-            if (isset($resourcesArray['url'])) $pic = $wc_goods['resourceDomain'] . $resourcesArray['url'];
+            if (isset($resourcesArray[0]['url'])) $pic = $wc_goods['resourceDomain'] . $resourcesArray[0]['url'];
             $inserData = [
                 'm_id' => $m_id,
                 'machine_id' => $machine_id,
@@ -283,7 +282,9 @@ class WeiChengClient extends ManagementClient
                 'retail_price' => $wc_goods['price'] ?? 0,
                 'sort' => array_search($wc_goods['no'], $out_nos) + 1,
             ];
-            $flag[] = $this->addWcMachineGoods($inserData);
+            $wc_machine_goods = $this->getWcMachineGoodsFind(['m_id' => $m_id, 'machine_id' => $machine_id, 'out_no' => $wc_goods['no']]);
+            if ($wc_machine_goods) $flag[] = $this->updateWcMachineGoods($inserData, ['id' => $wc_machine_goods['id']]);
+            else $flag[] = $this->addWcMachineGoods($inserData);
         }
         return true;
     }
@@ -298,25 +299,34 @@ class WeiChengClient extends ManagementClient
         return  $this->rQ($list);
     }
 
+    //删除设备绑定的微程商品
+    public function delWcMG($where)
+    {
+        return $this->rD($this->delWcMachineGoods($where));
+    }
+
     //设置虚拟货道商品排序
     public function setWcMachineChannelLists($m_id, $out_nos)
     {
         $machine = $this->getMachineFind(['m_id' => $m_id])->toArray();
         //删除历史记录，重新新增当前排序记录
         $res = $this->delWcMachineChannelInfo(['m_id' => $m_id]);
-        $wc_goods_local_lists = $this->getWcGoodsLocalList([['out_no', 'in', $out_nos]]);
-        if(!$wc_goods_local_lists) return $this->rA('上架失败，找不到微程商品信息');
-        $wc_goods_local_lists = $wc_goods_local_lists->toArray();
+
+        $wc_goods_local_lists = $this->getWcGoodsLocalList([['out_no', 'in', $out_nos]])->toArray();
+        if (empty($wc_goods_local_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
+
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
         $wc_goods_type_arr = [];
         foreach ($wc_goods_type as $v) {
             $wc_goods_type_arr[$v['id']] = $v['name'];
         }
-        if (!$wc_goods_local_lists) return $this->rA('上架失败，找不到微程商品信息');
         $inserData = [];
         $flag = [];
         foreach ($wc_goods_local_lists as $wc_goods_local) {
             $wc_goods = $this->getWcGoodsFind(['no' => $wc_goods_local['out_no']])->toArray();
+            $resourcesArray = $wc_goods['resourcesArray'] ? json_decode($wc_goods['resourcesArray'], true) : [];
+            $pic = '';
+            if (isset($resourcesArray[0]['url'])) $pic = $wc_goods['resourceDomain'] . $resourcesArray[0]['url'];
             $inserData = [
                 'm_id' => $m_id,
                 'machine_id' => $machine['machine_id'],
@@ -326,7 +336,7 @@ class WeiChengClient extends ManagementClient
                 'g_name' => $wc_goods_local['g_name'],
                 'gc_id' => $wc_goods_local['g_type'], //  这里传的type应该不是外层type  所以type_name未知
                 'gc_name' => '',
-                'pic' => $wc_goods_local['pic'],
+                'pic' => $pic,
                 'sku' => $wc_goods_local['sku'],
                 'bar_code' => $wc_goods_local['sku'],
                 'retail_price' => $wc_goods_local['retail_price'],
@@ -334,9 +344,18 @@ class WeiChengClient extends ManagementClient
             ];
             $flag[] = $this->addWcMachineChannel($inserData);
         }
-        if ($this->checkFlag($flag));
-        return $this->rA('虚拟货道微程商品上架完成');
+        if ($this->checkFlag($flag)) return $this->rA('虚拟货道微程商品上架完成');
         return $this->rA('上架失败');
+    }
+
+
+    public function getWcMachineChannelLists($where, $pageNum = 0)
+    {
+        $list  = $this->getWcMachineGoodsList($where, $pageNum, '*', 'sort asc')->toArray();
+        foreach ($list['data'] as &$v) {
+            $v['goods_list'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
+        }
+        return  $this->rQ($list);
     }
 
     public function synchronizeOrder($order)

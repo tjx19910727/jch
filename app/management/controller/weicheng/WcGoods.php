@@ -79,4 +79,15 @@ class WcGoods extends Common
         $where = $this->getWhere($postData, false, ['machine_id' => 'like']);
         return $this->app->weicheng->getWcMachineGoodsLists($where, $pageNum, "*", 'id desc');
     }
+    
+    public function delWcMachineGoods()
+    {
+        $postData = input();
+        $out_nos = $postData['out_nos'] ?? [];
+        if(!$out_nos) return  returnState(100, 'fail', 'out_nos不能为空');
+        $out_nos = is_array($out_nos) ? $out_nos : explode(',', $out_nos);
+        $where[] = ['machine_id','=',$postData['machine_id']];
+        $where[] = ['out_no','in',$out_nos];
+        return $this->app->weicheng->delWcMG($where);
+    }
 }

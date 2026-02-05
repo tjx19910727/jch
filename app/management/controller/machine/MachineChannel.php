@@ -13,6 +13,7 @@ use app\AppFactory\AppFactory;
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachineChannel;
 
+
 class MachineChannel extends Common
 {
 
@@ -135,5 +136,13 @@ class MachineChannel extends Common
         $out_nos = input('out_nos');
         $out_nos_arr = explode(',', $out_nos);
         return $this->app->weicheng->setWcMachineChannelLists($m_id, $out_nos_arr);
+    }
+
+    public function getWcGoods2Mc()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, ['m_id' => 'like']);
+        return $this->app->weicheng->getWcMachineChannelLists($where, $pageNum, "*", 'id desc');
     }
 }
