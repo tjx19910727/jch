@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by VSCode.
  * User: Alex-jixiang
@@ -11,7 +12,7 @@ namespace app\management\controller\weicheng;
 use app\AppFactory\AppFactory;
 use app\management\controller\Common;
 
-class WcGoods extends Common 
+class WcGoods extends Common
 {
 
     public function syncAll()
@@ -24,39 +25,45 @@ class WcGoods extends Common
         $goods_no = input('goods_no');
         $type = input('type');
         $res = $this->app->weicheng->synchronizeGoods($goods_no, $type);
-        if($res['status']) return returnState(200,'success','同步成功');
-        return returnState(100,'fail',$res['msg']);
+        if ($res['status']) return returnState(200, 'success', '同步成功');
+        return returnState(100, 'fail', $res['msg']);
     }
-    
-   
-    public function getList(){
+
+
+    public function getList()
+    {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, ['type' => 'like','name' => 'like','no' => 'like']);
+        $where = $this->getWhere($postData, false, ['type' => 'like', 'name' => 'like', 'no' => 'like']);
         return $this->app->weicheng->getWcGoodsInfoList($where, $pageNum, "*", 'id desc');
     }
 
-    public function setWcGoodsLocal(){
+    public function setWcGoodsLocal()
+    {
         return $this->app->weicheng->wcGoodsWriteLocal();
     }
-   
-    public function getWcPhysicalGoodsLists(){
+
+    public function getWcPhysicalGoodsLists()
+    {
         $postData = input();
-        $pageNum = $postData['pageNum'] ?? 15;
-        $where = $this->getWhere($postData, false, ['type' => 'like','name' => 'like','no' => 'like']);
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, ['type' => 'like', 'name' => 'like', 'no' => 'like']);
+        $where[] = ['type', 'in', '1,2,3,4,5']; //实物商品
         return $this->app->weicheng->getWcPhysicalGoodsLists($where, $pageNum);
     }
 
-    public function getWcCombinGoodsLists(){
+    public function getWcCombinGoodsLists()
+    {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, ['type' => 'like','name' => 'like','no' => 'like']);
+        $where = $this->getWhere($postData, false, ['type' => 'like', 'name' => 'like', 'no' => 'like']);
         $where['type'] = 11; //组合商品
         return $this->app->weicheng->getWcCombinGoodsLists($where, $pageNum, "*", 'id desc');
     }
 
     //多对多微程商品与设备绑定
-    public function setWcMachineGoodsLists(){
+    public function setWcMachineGoodsLists()
+    {
         $postData = input();
         $m_ids = $postData['m_ids'] ?? 0;
         $out_nos = $postData['out_nos'] ?? [];
@@ -65,7 +72,8 @@ class WcGoods extends Common
         return $this->app->weicheng->setWcMachineGoodsBatchLists($m_ids, $out_nos);
     }
 
-    public function getWcMachineGoodsLists(){
+    public function getWcMachineGoodsLists()
+    {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['machine_id' => 'like']);

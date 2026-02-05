@@ -220,9 +220,9 @@ class WeiChengClient extends ManagementClient
     }
 
     //获取设备可排序的微程商品列表
-    public function getWcPhysicalGoodsLists($pageNum)
+    public function getWcPhysicalGoodsLists($where, $pageNum)
     {
-        $wc_goods_local = $this->getWcGoodsLocalList([['type', 'in', '1,2,3,4,5']], $pageNum, '*', 'id desc')->toArray();
+        $wc_goods_local = $this->getWcGoodsLocalList($where, $pageNum, '*', 'id desc')->toArray();
         return  $this->rQ($wc_goods_local);
     }
 
@@ -299,12 +299,14 @@ class WeiChengClient extends ManagementClient
     }
 
     //设置虚拟货道商品排序
-    public function setWcMachineChannelLists($m_id, $wc_goods_local_ids_arr)
+    public function setWcMachineChannelLists($m_id, $out_nos)
     {
         $machine = $this->getMachineFind(['m_id' => $m_id])->toArray();
         //删除历史记录，重新新增当前排序记录
         $res = $this->delWcMachineChannelInfo(['m_id' => $m_id]);
-        $wc_goods_local_lists = $this->getWcGoodsLocalList([['id', 'in', $wc_goods_local_ids_arr]]);
+        $wc_goods_local_lists = $this->getWcGoodsLocalList([['out_no', 'in', $out_nos]]);
+        if(!$wc_goods_local_lists) return $this->rA('上架失败，找不到微程商品信息');
+        $wc_goods_local_lists = $wc_goods_local_lists->toArray();
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
         $wc_goods_type_arr = [];
         foreach ($wc_goods_type as $v) {
@@ -315,7 +317,6 @@ class WeiChengClient extends ManagementClient
         $flag = [];
         foreach ($wc_goods_local_lists as $wc_goods_local) {
             $wc_goods = $this->getWcGoodsFind(['no' => $wc_goods_local['out_no']])->toArray();
-
             $inserData = [
                 'm_id' => $m_id,
                 'machine_id' => $machine['machine_id'],
@@ -329,7 +330,7 @@ class WeiChengClient extends ManagementClient
                 'sku' => $wc_goods_local['sku'],
                 'bar_code' => $wc_goods_local['sku'],
                 'retail_price' => $wc_goods_local['retail_price'],
-                'sort' => array_search($wc_goods_local['id'], $wc_goods_local_ids_arr) + 1,
+                'sort' => array_search($wc_goods_local['id'], $out_nos) + 1,
             ];
             $flag[] = $this->addWcMachineChannel($inserData);
         }
