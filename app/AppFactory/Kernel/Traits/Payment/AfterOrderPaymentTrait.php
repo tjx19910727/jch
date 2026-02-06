@@ -12,11 +12,10 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 use app\AppFactory\Kernel\Support\Trip\Trip;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
-use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 
 trait AfterOrderPaymentTrait
 {
-    use MachineChannelTrait,WcBaseTrait;
+    use MachineChannelTrait;
 
     /**
      * 处理支付成功
@@ -51,15 +50,12 @@ trait AfterOrderPaymentTrait
         actionLog($this->order,'更新支付时间成功');
         if ($this->order['order_type'] != 4 && $this->order['out_status'] == 1) {
             $this->outGoods();
-            //这里要新增一步处理。即判断当前订单是否为虚拟货道组合商品，如果是，则需要将所有子商品进行出货处理
         }
         $this->handleHotel(1);
         actionLog($this->order,'订单数据');
         $flag[] = $this->updateSaleOrders($this->order);
         actionLog($this->getLS(),'订单修改数据');
         $result = flag_check($flag);
-        //订单推送到微程，判断条件：订单中mobile
-        if($this->order['mobile']) $flag[] = $this->orderSync2Wc($this->order);
         actionLog($flag,'支付成功处理结果flag');
         actionLog($result,'支付成功处理结果');
         $this->machine['machine_id'] = $this->order['machine_id'];
@@ -107,22 +103,16 @@ trait AfterOrderPaymentTrait
             foreach ($details as $k => $v) {
                 if(!$v['mc_id']) {
                     $outArr[$v['channel_position']][] = [
-                        "channel_code" => $v['channel_code'],
-                        "quantity" => $v['quantity'],
+                        "channel_code" => 'Z10',
+                        "quantity" => 1,
                         "is_gift" => $v['is_gift'] ?? 2,
                         "out_port" => $v['out_port'] ?? 1,
                     ];
                     continue;
                 }else{
                     $updateSod['sod_id'] = $v['sod_id'];
-                    if($v['channel_code'] == 'Z10'){
-                        $mc = $this->getWcMachineChannelFind(['mc_id' => $v['mc_id']]);
-                        //判断此微程商品是否为组合商品
-                        $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                    }else{
-                        $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
-                    }
-                    
+                
+                    $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
                     $rate_points = $this->getRateOrGiftPoints($mc);
 
                     if($rate_points['gift_points'] > 0 ){
@@ -146,30 +136,6 @@ trait AfterOrderPaymentTrait
                             "out_port" => $v['out_port'] ?? 1,
                         ];
                         $outArr[$v['channel_position']][] = $dc;
-                        //判断此微程商品是否为组合商品
-                        if(isset($mc['out_no'])){
-                            $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                            if(!$wc_goods) {
-                                $wc_goods = $wc_goods->toArray();
-                                if($wc_goods['type'] == 11){ //组合商品
-                                    $wc_goods_local_lists = $this->getWcGoodsLocalList(['out_no' => $wc_goods['no']])->toArray();
-                                    foreach($wc_goods_local_lists as $wglv){
-                                        if($wglv['g_id']){
-                                            $mc_local = $this->getMachineChannelFind(['m_id' => $this->order['m_id'],'g_id' => $wglv['g_id']]);
-                                            if($mc_local){
-                                                $dc_local = [
-                                                    "channel_code" => $mc_local['channel_code'],
-                                                    "quantity" => 1,
-                                                    "is_gift" => $v['is_gift'] ?? 2,
-                                                    "out_port" => $v['out_port'] ?? 1,
-                                                ];
-                                                $outArr[$v['channel_position']][] = $dc_local;
-                                            }
-                                        }
-                                    }    
-                                }
-                            }
-                        }
                     }
                     if ($v['g_type'] == 3) {
                         // 获取核销码
@@ -192,7 +158,6 @@ trait AfterOrderPaymentTrait
                 "outGoods" => $outArr,
                 "order_points" => $this->order['total_points']
             ];
-            dd($content);
             //循环三次，每次间隔5秒执行
             for ($i = 0; $i < 3; $i++) {
                 $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
