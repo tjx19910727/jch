@@ -1790,6 +1790,10 @@ class ApiClient extends ReceiveBaseClient
         $where['machine_id'] = $this->data['machine_id'];
         $wcMachineChannelLists = $this->getWcMachineChannelList($where, $pageNum, "*", 'sort asc');
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
+        $wcMachineChannelLists = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
+        foreach($wcMachineChannelLists as &$v){
+            $v['goods_lists'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
+        }   
         return $this->r(200, "SUCCESS", $wcMachineChannelLists);
     }
 

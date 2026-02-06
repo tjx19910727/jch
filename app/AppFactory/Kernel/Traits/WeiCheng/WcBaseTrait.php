@@ -213,7 +213,7 @@ trait WcBaseTrait
                     'g_type' => $combind_good['type'] ?? 0,
                     'g_type_name' => $wc_goods_type_arr[$combind_good['type']] ?? '',
                     'retail_price' => $combind_good['price'] ?? '',
-                    'pic' => $combind_good['main_img'] ? $resourceDomain . $combind_good['main_img'] : '',
+                    'pic' => $combind_good['main_img'] ?? '',
                     'sell_channel' => 3,
                     'desc' => $combind_good['notice'] ?? '',
                     'status' => 1,
@@ -302,10 +302,13 @@ trait WcBaseTrait
             ];
             $postUrl = $this->order_add_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
             $res = $this->weicheng_curl($postUrl, []);
-            // $res['response'] = '{"order_no":"O745770017646077","orderNo":"O745770017646077","tickets":[],"ticket_check_style":0,"tip":"出库成功","status":"success"}';
             $res_arr = json_decode($res['response'], true);
-            if ($res_arr['status'] == "fail") actionLog($detail, "子订单同步失败" . $res_arr['tip']);
-            $wc_order_no[$wc_goods_local['no']] = $res_arr['order_no'];
+            if ($res_arr['status'] == "fail") {
+                actionLog($detail, "子订单同步失败" . $res_arr['tip']);
+                $wc_order_no[$wc_goods_local['no']] = false;
+            } else {
+                $wc_order_no[$wc_goods_local['no']] = $res_arr['order_no'];
+            }
         }
         return $wc_order_no;
     }

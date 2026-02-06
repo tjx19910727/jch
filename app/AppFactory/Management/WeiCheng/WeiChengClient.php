@@ -311,9 +311,8 @@ class WeiChengClient extends ManagementClient
         $machine = $this->getMachineFind(['m_id' => $m_id])->toArray();
         //删除历史记录，重新新增当前排序记录
         $res = $this->delWcMachineChannelInfo(['m_id' => $m_id]);
-
-        $wc_goods_local_lists = $this->getWcGoodsLocalList([['out_no', 'in', $out_nos]])->toArray();
-        if (empty($wc_goods_local_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
+        $wc_machine_goods_lists = $this->getWcMachineGoodsList([['out_no', 'in', $out_nos],['m_id', '=', $m_id]])->toArray();
+        if (empty($wc_machine_goods_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
 
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
         $wc_goods_type_arr = [];
@@ -322,25 +321,21 @@ class WeiChengClient extends ManagementClient
         }
         $inserData = [];
         $flag = [];
-        foreach ($wc_goods_local_lists as $wc_goods_local) {
-            $wc_goods = $this->getWcGoodsFind(['no' => $wc_goods_local['out_no']])->toArray();
-            $resourcesArray = $wc_goods['resourcesArray'] ? json_decode($wc_goods['resourcesArray'], true) : [];
-            $pic = '';
-            if (isset($resourcesArray[0]['url'])) $pic = $wc_goods['resourceDomain'] . $resourcesArray[0]['url'];
+        foreach ($wc_machine_goods_lists as $wc_machine_goods) {
             $inserData = [
                 'm_id' => $m_id,
                 'machine_id' => $machine['machine_id'],
                 'channel_code' => 'Z10',
-                'g_id' => $wc_goods_local['g_id'],
-                'out_no' => $wc_goods_local['out_no'],
-                'g_name' => $wc_goods_local['g_name'],
-                'gc_id' => $wc_goods_local['g_type'], //  这里传的type应该不是外层type  所以type_name未知
-                'gc_name' => '',
-                'pic' => $pic,
-                'sku' => $wc_goods_local['sku'],
-                'bar_code' => $wc_goods_local['sku'],
-                'retail_price' => $wc_goods_local['retail_price'],
-                'sort' => array_search($wc_goods_local['id'], $out_nos) + 1,
+                'g_id' => $wc_machine_goods['g_id'],
+                'out_no' => $wc_machine_goods['out_no'],
+                'g_name' => $wc_machine_goods['g_name'],
+                'gc_id' => $wc_machine_goods['type'], //  这里传的type应该不是外层type  所以type_name未知
+                'gc_name' => $wc_machine_goods['type_name'],
+                'pic' => $wc_machine_goods['pic'],
+                'sku' => $wc_machine_goods['sku'],
+                'bar_code' => $wc_machine_goods['bar_code'],
+                'retail_price' => $wc_machine_goods['retail_price'],
+                'sort' => array_search($wc_machine_goods['out_no'], $out_nos) + 1,
             ];
             $flag[] = $this->addWcMachineChannel($inserData);
         }
@@ -351,7 +346,7 @@ class WeiChengClient extends ManagementClient
 
     public function getWcMachineChannelLists($where, $pageNum = 0)
     {
-        $list  = $this->getWcMachineGoodsList($where, $pageNum, '*', 'sort asc')->toArray();
+        $list  = $this->getWcMachineChannelList($where, $pageNum, '*', 'sort asc')->toArray();
         $list = !$pageNum ? $list : $list['data'];
         foreach ($list as &$v) {
             $v['goods_list'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
