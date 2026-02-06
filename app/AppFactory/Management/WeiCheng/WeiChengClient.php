@@ -352,7 +352,8 @@ class WeiChengClient extends ManagementClient
     public function getWcMachineChannelLists($where, $pageNum = 0)
     {
         $list  = $this->getWcMachineGoodsList($where, $pageNum, '*', 'sort asc')->toArray();
-        foreach ($list['data'] as &$v) {
+        $list = !$pageNum ? $list : $list['data'];
+        foreach ($list as &$v) {
             $v['goods_list'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
         }
         return  $this->rQ($list);

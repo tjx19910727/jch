@@ -129,6 +129,14 @@ class MachineChannel extends Common
             }
         }
     }
+   
+    
+    //设置货道商品积分比例
+    public function  setMCGiftPoints(){
+        $m_id = input("m_id");
+        $integral_rate = input('integral_rate') ?? 1;
+        return $this->app->machineChannel->setMachineChannelGiftPoints($m_id, $integral_rate);
+    }
 
     //设置微程商品在虚拟货道排序
     public function setWcGoods2Mc(){
