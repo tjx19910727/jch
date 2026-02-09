@@ -1392,7 +1392,7 @@ class ApiClient extends ReceiveBaseClient
     }
 
     public function requireOutGoods(){
-        $order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]); 
+        $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]); 
         if (!$order) return $this->r(300,$this->lang("VSaleOrders.order_not_data"));
         $this->order = $order->toArray();  
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
@@ -1751,7 +1751,6 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail($e->getMessage());
         }
     }
-
 
     //创建卡购买订单
     public function addCardSaleOrdersAndDetails(){
