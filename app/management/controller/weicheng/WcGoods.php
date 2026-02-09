@@ -26,7 +26,7 @@ class WcGoods extends Common
         $type = input('type');
         $res = $this->app->weicheng->synchronizeGoods($goods_no, $type);
         if ($res['status']) return returnState(200, 'success', '同步成功');
-        return returnState(100, 'fail', $res['msg']);
+        return returnState(100, $res['msg'] );
     }
 
 
@@ -84,7 +84,7 @@ class WcGoods extends Common
     {
         $postData = input();
         $out_nos = $postData['out_nos'] ?? [];
-        if(!$out_nos) return  returnState(100, 'fail', 'out_nos不能为空');
+        if(!$out_nos) return  returnState(100, 'out_nos不能为空');
         $out_nos = is_array($out_nos) ? $out_nos : explode(',', $out_nos);
         $where[] = ['machine_id','=',$postData['machine_id']];
         $where[] = ['out_no','in',$out_nos];
