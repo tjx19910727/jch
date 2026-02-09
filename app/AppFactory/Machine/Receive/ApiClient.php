@@ -1377,6 +1377,61 @@ class ApiClient extends ReceiveBaseClient
     }
 
 
+    public function requireOutGoods(){
+        $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]); 
+        if (!$order) return $this->r(300,$this->lang("VSaleOrders.order_not_data"));
+        $this->order = $order->toArray();  
+        $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
+        if ($details) {
+            $contentArr = [];
+            $outArr = [];
+            // 旧版本数据，待软件更新后删除
+            foreach ($details as $k => $v) {
+                if ($v['g_type'] == 1) {
+                    $dc = [
+                        $v['channel_code'],
+                        $v['quantity'],
+                    ];
+                    $contentArr[$v['channel_position']][] = $dc;
+                }
+            }
+            // 新数据格式
+            foreach ($details as $k => $v) {
+                if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
+                    $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
+                    actionLog($this->getLS(),'减固定组合商品酒店库存');
+                }
+                if ($v['g_type'] == 1) {
+                    $dc = [
+                        "channel_code" => $v['channel_code'],
+                        "quantity" => $v['quantity'],
+                        "is_gift" => $v['is_gift'] ?? 2,
+                        "out_port" => $v['out_port'] ?? 1,
+                    ];
+                    $outArr[$v['channel_position']][] = $dc;
+                }
+                if ($v['g_type'] == 3) {
+                    $updateSod['sod_id'] = $v['sod_id'];
+                    // 获取核销码
+                    $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
+                    $this->updateSaleOrdersDetails($updateSod);
+                }
+
+            }
+            $content = [
+                "trade_no" => $this->order['trade_no'],
+                "main" => $contentArr,
+                "outGoods" => $outArr,
+            ];
+            $this->order['out_status'] = 2;
+            $this->order['pay_status'] = 3;
+            $this->order['pay_time'] = $this->order['pay_time'] ?: time();
+            $this->updateSaleOrders($this->order);
+            return $this->r(200, 'success', $content);
+        }
+        return $this->r(100, 'failed', []);
+    }
+    
     /**
      * 取卡  卡添加积分
      * @return array|\think\response\Json
