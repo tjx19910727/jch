@@ -186,6 +186,7 @@ class VReceive extends VCommon
         "logoutH5" => ["msg_id","machine_id","timestamp"],
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
+        "retryOutGoods" => ["msg_id","machine_id","timestamp","sign","order_id"],
     ];
 
     /**

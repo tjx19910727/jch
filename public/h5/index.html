@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+    }
+
+    .box {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    html {
+      background-color: #f2f2f2;
+    }
+
+    .toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background-color: #fafafa;
+      font-size: 28px;
+      line-height: 60px;
+      padding: 0 30px;
+      user-select: none;
+      height: 60px;
+    }
+
+    .toolbar .img-wrap {
+      border-radius: 35px;
+      height: 40px;
+    }
+
+    #layWrap {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    .footer {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #fafafa;
+      height: 60px;
+      border-top: 1px solid #e0e0e0;
+    }
+
+    .btn-home {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin: 5px 30px;
+      padding: 10px 40px;
+      font-size: 16px;
+      font-weight: 500;
+      background: linear-gradient(
+        90deg,
+        #f54242 0%,
+        #f76363 100%
+      ); /* 红色渐变 */
+      color: white;
+      border: none;
+      border-radius: 35px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      /* box-shadow: 0 4px 15px rgba(249, 76, 75, 0.3); */
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-home::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.2);
+      transition: left 0.3s ease;
+    }
+
+    .btn-home:hover {
+      background: linear-gradient(
+        90deg,
+        #f54242 0%,
+        #f76363 100%
+      ); /* 红色渐变 */
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(249, 76, 75, 0.4);
+    }
+
+    .btn-home:hover::before {
+      left: 100%;
+    }
+
+    .btn-home:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(249, 76, 75, 0.2);
+    }
+
+    .btn-home svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+  </style>
+
+  <body oncontextmenu="return disableContextMenu();">
+    <div class="box" style="height: 100vh">
+      <div class="toolbar">
+        <!-- <div style="color: #999;cursor: pointer;" onclick="closeWindow()">×</div> -->
+        <!-- <img class="img-wrap" src="./quit.png" onclick="closeWindow()" alt="" /> -->
+        <!-- <div id="title">title</div> -->
+        <img class="img-wrap" src="./logo.png" alt="" />
+      </div>
+      <div id="urlWrap" style="height: 100%; position: relative">
+        <iframe frameborder="0" width="100%" height="100%"></iframe>
+      </div>
+      <div class="footer">
+        <button class="btn-home" onclick="closeWindow()">
+          <svg viewBox="0 0 24 24">
+            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+          </svg>
+          返回首页
+        </button>
+      </div>
+    </div>
+  </body>
+</html>
+
+<script>
+  function disableContextMenu() {
+    return false;
+  }
+
+  let title = "Kalos";
+  let url =
+    "";
+  let machineCode = "";
+  const getQuery = () => {
+    try {
+      const queryArr = window.location.search.substring(1).split("&");
+      for (const item of queryArr) {
+        const arr = item.split("=");
+        // if (arr[0] === 'title') {
+        //   title = arr[1]
+        //   document.getElementById('title').innerText = title
+        // }
+        if (arr[0] === "url") {
+          url = decodeURIComponent(arr[1]);
+          console.log("input url ===", url);
+          document.getElementById("urlWrap").innerHTML =
+            `<iframe id="frameWrap" sandbox="allow-same-origin allow-forms allow-scripts allow-popups allow-modals" src="${url}" frameborder="0" width="100%" height="100%"></iframe><div id="layWrap"></div>`;
+        }
+        if (arr[0] === "machineCode") machineCode = arr[1];
+      }
+    } catch (_) {
+      console.log("err ===", _);
+    }
+  };
+  getQuery();
+
+  function fetchData(url) {
+    const time = new Date().getTime();
+
+    fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        machine_id: machineCode,
+        msg_id: time,
+        timestamp: time
+      })
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return response.json(); // 假设你请求的是 JSON 格式的数据
+      })
+      .then((data) => {
+        console.log(data); // 处理返回的数据
+      })
+      .catch((error) => {
+        console.error(
+          "There has been a problem with your fetch operation:",
+          error
+        );
+      });
+  }
+
+  // 调用函数
+  function closeWindow() {
+    const api = "/machine/receive/logoutH5";
+    const apiUrl = location.href.replace("/h5/index.html", api);
+    fetchData(apiUrl);
+  }
+
+  let activeTimer = null;
+  let layTimer = null;
+  function setActiveTimer() {
+    if (activeTimer != null) {
+      clearTimeout(activeTimer);
+      activeTimer = null;
+    }
+    if (layTimer != null) {
+      clearTimeout(layTimer);
+      layTimer = null;
+    }
+    activeTimer = setTimeout(() => {
+      closeWindow();
+    }, 120 * 1000);
+    layTimer = setTimeout(() => {
+      document.getElementById("layWrap").style.zIndex = 1;
+    }, 60 * 1000);
+  }
+  setActiveTimer();
+
+  // 全局点击事件
+  document.addEventListener("click", function (e) {
+    console.log("click ===", e);
+    document.getElementById("layWrap").style.zIndex = -1;
+    setActiveTimer();
+  });
+</script>
+
+<script>
+  document.getElementById("frameWrap").contentWindow.focus();
+</script>

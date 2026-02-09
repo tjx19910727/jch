@@ -118,14 +118,17 @@ trait AfterOrderPaymentTrait
                 "main" => $contentArr,
                 "outGoods" => $outArr,
             ];
-            //循环三次，每次间隔5秒执行
-            for ($i = 0; $i < 3; $i++) {
+            // //循环三次，每次间隔5秒执行
+            // for ($i = 0; $i < 3; $i++) {
+            //     $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
+            //     if (isset($result->status) && $result->status == 'success') {
+            //         break;
+            //     }
+            //     sleep(5);
+            // } // end
+            if($this->order['machine_id'] != 'JCHM-H4DPK-0095'){
                 $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
-                if (isset($result->status) && $result->status == 'success') {
-                    break;
-                }
-                sleep(5);
-            } // end
+            }
             actionLog(@obj2arr($result),'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
             return $result;

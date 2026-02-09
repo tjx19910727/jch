@@ -53,7 +53,9 @@ class Receive extends Common
                 returnState(300,lang("error_api"))->send();
                 die();
             }
-            $this->validate($postData,$this->validatePath . $action);
+            if(!env('CglPay.is_test')){
+                $this->validate($postData,$this->validatePath . $action);
+            }
             $frequency = checkFrequency($action,1);
             if ($frequency !== true) {
                 $frequency = obj2arr($frequency);
@@ -67,10 +69,12 @@ class Receive extends Common
                 "mac" => $mac
             ];
             $this->app = AppFactory::machine($this->config);
-            if (!in_array($action, $this->noCheckApi) && $this->app->api->checkSign($postData) !== true) {
-                @cache($postData['machine_id'] . ".signKey", null);
-                returnState(100, Lang::get("check_sign_fail"))->send();
-                die();
+            if(!env('CglPay.is_test')){
+                if (!in_array($action, $this->noCheckApi) && $this->app->api->checkSign($postData) !== true) {
+                    @cache($postData['machine_id'] . ".signKey", null);
+                    returnState(100, Lang::get("check_sign_fail"))->send();
+                    die();
+                }
             }
         } catch (\Exception $e) {
             returnState(300, Lang::get($e->getMessage()))->send();
@@ -777,4 +781,13 @@ class Receive extends Common
     }
 
 
+    public function requireOutGoods()
+    {
+        try {
+            return $this->app->api->requireOutGoods();
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
 }
