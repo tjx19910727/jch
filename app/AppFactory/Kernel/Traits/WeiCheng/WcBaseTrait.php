@@ -52,6 +52,7 @@ trait WcBaseTrait
         $this->phone_login_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/phoneLogin";
         $this->user_sync_points = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/syncIntegral";
         $this->get_points_qrcode = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/getIntegralQrcode";
+        $this->query_hotel_info_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/hotel/queryDays";
     }
 
     public function getDecptData($data)
@@ -342,5 +343,11 @@ trait WcBaseTrait
         ];
         $postUrl = $this->order_refundPart_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
         return $this->weicheng_curl($postUrl, []);
+    }
+
+    public function queryHotelInfo($machine_id, $goods_no, $start_date, $end_date){
+        $this->initWcBase();
+        $postUrl = $this->query_hotel_info_url . "?machine_code=" . $machine_id . "&goods_no=" . $goods_no . "&start_date=" . $start_date . "&end_date=" . $end_date;
+        return $this->weicheng_curl($postUrl);
     }
 }
