@@ -263,6 +263,7 @@ class SaleOrdersClient extends ManagementClient
 
         if ($yesterday) $yesterday = $yesterday->toArray();
         if ($today) $data['today'] = $today;
+        if ($yesterday) $data['yesterday'] = $yesterday;
         if ($thisMonth) $data['thisMonth'] = $thisMonth;
         return $data;
     }
