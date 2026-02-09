@@ -166,9 +166,7 @@ trait AfterOrderPaymentTrait
             //     }
             //     sleep(5);
             // } // end
-            if($this->order['machine_id'] != 'JCHM-H4DPK-0095'){
-                $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
-            }
+            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
             actionLog(@obj2arr($result),'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
             return $result;
