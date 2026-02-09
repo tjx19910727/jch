@@ -51,7 +51,8 @@ return [
             39 => 'Insufficient inventory of goods',
             40 => 'No device information found',
             41 => 'Check for no pickup code information',
-            97 => '请使用multipart/form-data',
+            42 => "Machine belongs to error",
+            97 => 'please use multipart/form-data',
             98 => 'Please use the Post request method',
             99 => 'The service is unavailable',
         ],
@@ -105,4 +106,8 @@ return [
     "robot" => [
         'machine_no_data' => 'No device information found',
     ],
+
+    "card" => [
+        'can_not_find_card' => 'Can not find this card',
+    ]
 ];

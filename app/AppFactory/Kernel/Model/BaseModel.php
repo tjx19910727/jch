@@ -186,7 +186,7 @@ class BaseModel extends Model
             if(isset($where['raw'])){
                 $whereRaw = $where['raw'];
                 unset($where['raw']);
-                if(isset($where['ao_id'])) unset($where['ao_id']);
+                // if(isset($where['ao_id'])) unset($where['ao_id']);
                 $model = self::alias("a")->where($where)->whereRaw($whereRaw)->field($field)->order($order);
             }else{
                 $model = self::alias("a")->where($where)->field($field)->order($order);

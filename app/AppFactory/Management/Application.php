@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Providers\Management\ActionProvider;
 use app\AppFactory\Kernel\Providers\Management\ActivityProvider;
 use app\AppFactory\Kernel\Providers\Management\AdvertisementProvider;
 use app\AppFactory\Kernel\Providers\Management\AuthProvider;
+use app\AppFactory\Kernel\Providers\Management\CardProvider;
 use app\AppFactory\Kernel\Providers\Management\CommonProvider;
 use app\AppFactory\Kernel\Providers\Management\ConfigProvider;
 use app\AppFactory\Kernel\Providers\Management\EarthProvider;
@@ -34,6 +35,7 @@ use app\AppFactory\Kernel\Providers\Management\UpdateLogProvider;
 use app\AppFactory\Kernel\Providers\Management\WxProvider;
 use app\AppFactory\Kernel\Providers\Management\MallProvider;
 use app\AppFactory\Kernel\Providers\Management\RemoteActionLogProvider;
+use app\AppFactory\Kernel\Providers\Management\WeiChengProvider;
 
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
@@ -121,6 +123,9 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Mall\MallClient                        $mall                   商场管理
  * @property RemoteActionLog\RemoteActionLogClient  $remoteActionLog        远程操作日志管理
  *
+ * @property Card\CardClient                        $card                   商场管理会员卡
+ * @property WeiCheng\WeiChengClient                $weicheng               微程接口管理
+ * 
  * @property MicroMall\MicroMallClient              $microMall              微商城
  * @property MicroMall\MicroMallMachineClient       $microMallMachine       微商城绑定设备
  *
@@ -185,6 +190,8 @@ class Application extends ServiceContainer
         WxProvider::class,
         MallProvider::class,
         RemoteActionLogProvider::class,
+        CardProvider::class,
+        WeiChengProvider::class,
     ];
 
 }

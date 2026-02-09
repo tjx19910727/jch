@@ -187,6 +187,18 @@ class VReceive extends VCommon
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
         "retryOutGoods" => ["msg_id","machine_id","timestamp","sign","order_id"],
+
+        "cardAddPoints" => ["msg_id","machine_id","timestamp","card_no"],
+        "getCardChangeLogs" => ["msg_id","machine_id","timestamp"],
+
+        "getWcSmSCode" => ["msg_id","machine_id","timestamp","phone"],
+        "wcLoginUser" => ["msg_id","machine_id","timestamp","phone","code"],
+        "wcUserAddPoints" => ["msg_id","machine_id","timestamp","token","trade_no"],
+        "wcPointsQrcode" => ["msg_id","machine_id","timestamp","token","trade_no"],
+
+        "createdCardSaleOrder" => ["msg_id","machine_id","timestamp","sign","pay_type","pay_method"],
+        "getWcGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
+
     ];
 
     /**

@@ -11,9 +11,11 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 
 use app\AppFactory\Kernel\Support\Trip\Trip;
+use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 
 trait AfterOrderPaymentTrait
 {
+    use MachineChannelTrait;
 
     /**
      * 处理支付成功
@@ -44,7 +46,7 @@ trait AfterOrderPaymentTrait
         }
         $this->order['pay_status'] = 3;
         $this->order['pay_time'] = time();
-
+        
         actionLog($this->order,'更新支付时间成功');
         if ($this->order['order_type'] != 4 && $this->order['out_status'] == 1) {
             $this->outGoods();
@@ -70,6 +72,8 @@ trait AfterOrderPaymentTrait
 
     /**
      * 出货
+     * 支付成功后，将积分信息写入父子订单表中
+     * 
      * @return string
      */
     protected function outGoods()
@@ -80,7 +84,13 @@ trait AfterOrderPaymentTrait
             $outArr = [];
             // 旧版本数据，待软件更新后删除
             foreach ($details as $k => $v) {
-                if ($v['g_type'] == 1) {
+                if(!$v['mc_id']) {
+                    $v['g_type'] = 1;
+                    $contentArr[$v['channel_position']][] = [
+                        $v['channel_code'],
+                        $v['quantity'],
+                    ];
+                }elseif ($v['g_type'] == 1) {
                     $dc = [
                         $v['channel_code'],
                         $v['quantity'],
@@ -89,27 +99,56 @@ trait AfterOrderPaymentTrait
                 }
             }
             // 新数据格式
+            $total_points = 0;
             foreach ($details as $k => $v) {
-                if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
-                    $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
-                    actionLog($this->getLS(),'减固定组合商品酒店库存');
-                }
-                if ($v['g_type'] == 1) {
-                    $dc = [
-                        "channel_code" => $v['channel_code'],
-                        "quantity" => $v['quantity'],
+                if(!$v['mc_id']) {
+                    $outArr[$v['channel_position']][] = [
+                        "channel_code" => 'Z10',
+                        "quantity" => 1,
                         "is_gift" => $v['is_gift'] ?? 2,
                         "out_port" => $v['out_port'] ?? 1,
                     ];
-                    $outArr[$v['channel_position']][] = $dc;
-                }
-                if ($v['g_type'] == 3) {
+                    continue;
+                }else{
                     $updateSod['sod_id'] = $v['sod_id'];
-                    // 获取核销码
-                    $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
+                
+                    $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
+                    $rate_points = $this->getRateOrGiftPoints($mc);
+
+                    if($rate_points['gift_points'] > 0 ){
+                        $updateSod['intergral_rate'] = 0;
+                        $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
+                    }
+                    if($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0){
+                        $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
+                        $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $rate_points['intergral_rate'], 3);
+                    }
+                    $total_points += $updateSod['total_sod_points'];
+                    if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
+                        $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
+                        actionLog($this->getLS(),'减固定组合商品酒店库存');
+                    }
+                    if ($v['g_type'] == 1) {
+                        $dc = [
+                            "channel_code" => $v['channel_code'],
+                            "quantity" => $v['quantity'],
+                            "is_gift" => $v['is_gift'] ?? 2,
+                            "out_port" => $v['out_port'] ?? 1,
+                        ];
+                        $outArr[$v['channel_position']][] = $dc;
+                    }
+                    if ($v['g_type'] == 3) {
+                        // 获取核销码
+                        $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
+                    }
                     $this->updateSaleOrdersDetails($updateSod);
                 }
-
+            }
+            
+            if($total_points) {
+                $this->order['total_points'] = $total_points;
+                // 因为存在不同子订单   不同积分兑换比例情况，order表不做intergral_rate的记录，只记录到自订单表
+                // $this->order['intergral_rate'] = $final_intergral_rate;  
             }
 
             $content = [
@@ -117,6 +156,7 @@ trait AfterOrderPaymentTrait
                 "trade_no" => $this->order['trade_no'],
                 "main" => $contentArr,
                 "outGoods" => $outArr,
+                "order_points" => $this->order['total_points']
             ];
             // //循环三次，每次间隔5秒执行
             // for ($i = 0; $i < 3; $i++) {
@@ -277,5 +317,5 @@ trait AfterOrderPaymentTrait
                 return $updateResult;
             }
         }
-    }
+    }   
 }

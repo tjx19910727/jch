@@ -24,7 +24,7 @@ class ReceiveBaseClient extends MachineBaseClient
     use AuthManagerTrait;
 
     public $message = [];
-    public $noCheckMac = ["logoutH5"];
+    public $noCheckMac = ["logoutH5",'test'];
 
     public function __construct(ServiceContainer $app)
     {
@@ -43,6 +43,7 @@ class ReceiveBaseClient extends MachineBaseClient
                 die();
             }
         }
+
         $set = $this->setSignKey();
         if ($set !== true) {
             $set->send();

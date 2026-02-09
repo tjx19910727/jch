@@ -22,7 +22,7 @@ class VActivityFd extends VCommon
         "machineList" => "require",
         "content" => "require",
 
-        "condition_value" => "require",
+        // "condition_value" => "require",
         "active_value" => "require",
         "sort" => "require",
     ];
@@ -36,15 +36,15 @@ class VActivityFd extends VCommon
         "machineList.require" => "VActivityFd.machineList_require",
         "content.require" => "VActivityFd.content_require",
 
-        "condition_value.require" => "VActivityFd.condition_value_require",
+        // "condition_value.require" => "VActivityFd.condition_value_require",
         "active_value.require" => "VActivityFd.active_value_require",
         "sort.require" => "VActivityFd.sort_require",
     ];
 
     protected $scene = [
         "add" => ["fd_name","start_date","fd_type","condition_type","machineList","content"],
-        "addContent" => ["condition_value","active_value","sort"],
-        "getFind" => ["fd_id"],
+        "addContent" => [/** "condition_value",*/"active_value","sort"],
+        "getFind" => ["fd_id"], 
         "update" => ["fd_id","content"],
         "del" =>["fd_id"],
         "takeDown" =>["fd_id"],

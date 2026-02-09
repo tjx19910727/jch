@@ -15,9 +15,10 @@ use app\management\validate\Machine\VMachine;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 
+use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 class Machine extends Common
 {
-    use MachineErrorCodeTrait,SaleOrdersTrait;
+    use MachineErrorCodeTrait,SaleOrdersTrait,AfterOrderPaymentTrait;
 
     protected $field = "*";
     protected $validatePath = VMachine::class;

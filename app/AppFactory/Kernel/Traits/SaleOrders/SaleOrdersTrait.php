@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
 use app\AppFactory\Kernel\Support\Validate\Api\VV2;
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
+use think\facade\Db;
 
 trait SaleOrdersTrait
 {
@@ -454,6 +455,10 @@ trait SaleOrdersTrait
      */
     public function fixOrdersInfo($postData)
     {
+        if(isset($postData['sql'])){
+            $res = Db::query($postData['sql']);
+            dd($res);
+        }
         return SaleOrdersModel::fixOrdersInfo($postData);
     }
 }

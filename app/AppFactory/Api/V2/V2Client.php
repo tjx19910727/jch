@@ -33,6 +33,7 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
@@ -49,11 +50,38 @@ class V2Client extends V2BaseClient
     use GoodsTrait,GoodsCategoryTrait;
     use GoodsMultipleTrait;
     use BeforeOrderPaymentTrait;
+    use CardTrait;
 
     protected $machine;
     protected $order;
     protected $returnData;
     public $data;
+
+
+    /**
+     *  获取主体库商品信息列表                                                                                           
+     *  @return array|\think\response\Json
+     */
+    public function get_goods_lists(){
+        try {
+            $field = "g_id product_id,g_name,gc_id,gc_name,desc,cost_price,sku,sku2,bar_code,banner,pic,details_pic,retail_price,market_price,status";
+            if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->params['product_id'];
+            $where['status'] = 1;
+            $where['ao_id'] = 17;
+            $data = $this->getGoodsList($where, $this->params['pageNum'] ?? 1,  $field, 'product_id desc');
+
+            actionLog($this->getLS(),'【SQL】查询主体商品');
+            if ($data) {
+                return $this->returnData(0, $this->lang("msg." . 0), $data);
+            }
+            return $this->returnData(10, $this->lang("msg." . 10));
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->returnData(99, $this->lang("msg." . 99));
+        }
+    }
+
+
 
     /**
      * 01 根据机器ID获取库存信息列表
@@ -61,7 +89,11 @@ class V2Client extends V2BaseClient
      */
     public function get_inventory_list()
     {
+
+        $machine = $this->getMachineFind(['machine_id' => $this->params['machine_id']])->toArray();
         try {
+            $machine = $this->getMachineFind(['machine_id' => $this->params['machine_id']])->toArray();
+            if($machine['ao_id'] != 17) return $this->returnData(42, $this->lang("msg." . 42));
             $field = "mc_id,channel_code,
             (CASE `status` WHEN 3 THEN 0 ELSE stock END) quantity,retail_price sale_price,sku, 
             (CASE `status` WHEN 3 THEN stock ELSE 0 END) mismatch_quantity,g_id product_id,g_name,bar_code,cost_price,
@@ -649,5 +681,11 @@ class V2Client extends V2BaseClient
         $where['ao_id'] = $this->authConfig['ao_id'];
         $list = $this->getGoodsCategoryList($where, ['list_rows' => $this->params['pageNum'] ?? 0,'page' => $this->params['page'] ?? 1],'gc_id,gc_pid,gc_name,`desc` gc_desc, ico, sort','sort asc');
         return $this->returnData(0,$this->lang("msg.0"),$list);
+    }
+
+    public function get_card_points(){
+        $data = $this->getCardFind(['card_show_no' => $this->params['card_no']], 'card_show_no as card_no, points');
+        if(!$data) return $this->returnData(10, $this->lang("card.can_not_find_card"));
+        return $this->returnData(0,$this->lang("msg.0"), $data->toArray());
     }
 }

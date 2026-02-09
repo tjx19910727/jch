@@ -70,7 +70,10 @@ class ActivityFdClient extends ManagementClient
                     $value['fd_id'] = $fd_id;
                     $value['fd_name'] = $postData['fd_name'];
                     if ($postData["condition_type"] == 3) {
-                        $goods = $this->getGoodsFind(['sku' => $value['condition_value']]);
+                        $goods =  $this->getGoodsFind(['g_id' => $value['g_id']], 'g_id,g_name,sku,pic,gc_id,gc_name');
+                        if(!isset($value['condition_value'])){
+                            $value['condition_value'] = $goods['sku'];
+                        }
                         if (!$goods) {
                             $this->rollbackTrans();
                             return $this->rValidate($this->lang("VActivityFd.g_id_require"));

@@ -685,4 +685,10 @@ return [
         "machine_id_require" => "Machine ID cannot be empty",
         "status_in" => "Invalid status",
     ],
+
+    "VCard" => [
+        "card_no_require" => "Card NO cannot be empty",
+        "points_changed_require" => "points_changed cannot be empty",
+        "change_type_in" => "Invalid change_type",
+    ],
 ];
