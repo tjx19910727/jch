@@ -38,9 +38,17 @@ class WcGoods extends Common
         return $this->app->weicheng->getWcGoodsInfoList($where, $pageNum, "*", 'id desc');
     }
 
+    public function setSingleWcGoodsLocal()
+    {
+        $goods_no = input('goods_no') ?? '';
+        if (!$goods_no) return returnState(100, 'goods_no不能为空');
+        $wc_goods = $this->app->weicheng->getWcGoodsFind(['no' => $goods_no]);
+        return $this->app->weicheng->setWcGoodsLocal($goods_no, $wc_goods['type']);
+    }
+
     public function setWcGoodsLocal()
     {
-        return $this->app->weicheng->wcGoodsWriteLocal();
+        return $this->app->weicheng->wcGoodsWriteLocal(input('goods_no'));
     }
 
     public function getWcPhysicalGoodsLists()

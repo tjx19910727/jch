@@ -345,9 +345,15 @@ trait WcBaseTrait
         return $this->weicheng_curl($postUrl, []);
     }
 
-    public function queryHotelInfo($machine_id, $goods_no, $start_date, $end_date){
+    public function queryHotelInfo($machine_id, $goods_no, $start_date = '', $end_date = ''){
         $this->initWcBase();
-        $postUrl = $this->query_hotel_info_url . "?machine_code=" . $machine_id . "&goods_no=" . $goods_no . "&start_date=" . $start_date . "&end_date=" . $end_date;
-        return $this->weicheng_curl($postUrl);
+
+        $postUrl = $this->query_hotel_info_url . "?machine_code=" . $machine_id . "&goods_no=" . $goods_no;
+        if($start_date) $postUrl .= "&start_date=" . $start_date ;
+        if($end_date) $postUrl .= "&end_date=" . $end_date;
+        $token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ7XCJ1c2VySWRcIjo4Mjk3NzkzfSIsImV4cCI6MTc3MDY5Mzc5OCwiaWF0IjoxNzcwNjkzMTk4fQ.5eouNJLk51BSPH5kH6YplIVDe4lQRmZAXdLtoIo5OE8';
+        $header = array('token: ' . $token);
+        echo $postUrl;
+        return $this->weicheng_curl($postUrl, [], $header);
     }
 }
