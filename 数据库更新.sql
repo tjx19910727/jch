@@ -1,3 +1,8 @@
+#20260209
+ALTER TABLE kiosk.machine_config ADD points_type int NULL COMMENT '会员积分版本;0-无会员无卡     1-会员无卡   2-会员有卡' after `pay_type`;
+
+
+
 #20260123
 ALTER TABLE kiosk.wc_goods 
   ADD get_data TEXT NULL COMMENT '接口返回内容';
