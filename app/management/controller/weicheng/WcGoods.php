@@ -26,7 +26,7 @@ class WcGoods extends Common
         $type = input('type');
         $res = $this->app->weicheng->synchronizeGoods($goods_no, $type);
         if ($res['status']) return returnState(200, 'success', '同步成功');
-        return returnState(100, $res['msg'] );
+        return returnState(100, $res['msg']);
     }
 
 
@@ -43,7 +43,9 @@ class WcGoods extends Common
         $goods_no = input('goods_no') ?? '';
         if (!$goods_no) return returnState(100, 'goods_no不能为空');
         $wc_goods = $this->app->weicheng->getWcGoodsFind(['no' => $goods_no]);
-        return $this->app->weicheng->setWcGoodsLocal($goods_no, $wc_goods['type']);
+        $res = $this->app->weicheng->setWcGoodsLocal($goods_no, $wc_goods['type']);
+        if ($res) return returnState(200, 'success', '本地化处理成功');
+        return returnState(100, 'fail', '本地化处理失败');
     }
 
     public function setWcGoodsLocal()
@@ -87,15 +89,15 @@ class WcGoods extends Common
         $where = $this->getWhere($postData, false, ['machine_id' => 'like']);
         return $this->app->weicheng->getWcMachineGoodsLists($where, $pageNum, "*", 'id desc');
     }
-    
+
     public function delWcMachineGoods()
     {
         $postData = input();
         $out_nos = $postData['out_nos'] ?? [];
-        if(!$out_nos) return  returnState(100, 'out_nos不能为空');
+        if (!$out_nos) return  returnState(100, 'out_nos不能为空');
         $out_nos = is_array($out_nos) ? $out_nos : explode(',', $out_nos);
-        $where[] = ['machine_id','=',$postData['machine_id']];
-        $where[] = ['out_no','in',$out_nos];
+        $where[] = ['machine_id', '=', $postData['machine_id']];
+        $where[] = ['out_no', 'in', $out_nos];
         return $this->app->weicheng->delWcMG($where);
     }
 }

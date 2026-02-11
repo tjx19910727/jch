@@ -19,6 +19,11 @@ class WeiChengClient extends ManagementClient
 {
     use WcBaseTrait, WcGoodsTrait, MachineTrait, MachineGoodsTrait;
 
+    public function getWcGoodsInfoColumn($where, $field = "*")
+    {
+        return $this->rQ($this->getWcGoodsColumn($where, $field));
+    }
+
     public function getWcGoodsInfoList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
     {
         return $this->rQ($this->getWcGoodsList($where, $pageNum, $field, $order, $eachFun, $group));
@@ -176,7 +181,7 @@ class WeiChengClient extends ManagementClient
             if (!$res['status']) continue;
         }
         $this->wcGoodsWriteLocal();
-        return returnState('200', '分类商品同步成功',);;
+        return returnState('200', '分类商品同步成功');
     }
 
     public function synchronizeGoods($goods_no, $type)
@@ -294,7 +299,7 @@ class WeiChengClient extends ManagementClient
     {
         $list  = $this->getWcMachineGoodsList($where, $pageNum, '*', 'sort asc');
         foreach ($list as &$v) {
-            $v['goods_list'] = $this->getWcGoodsLocalList(['out_no' => $v['no']])->toArray();
+            $v['goods_list'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
         }
         return  $this->rQ($list);
     }
@@ -311,7 +316,7 @@ class WeiChengClient extends ManagementClient
         $machine = $this->getMachineFind(['m_id' => $m_id])->toArray();
         //删除历史记录，重新新增当前排序记录
         $res = $this->delWcMachineChannelInfo(['m_id' => $m_id]);
-        $wc_machine_goods_lists = $this->getWcMachineGoodsList([['out_no', 'in', $out_nos],['m_id', '=', $m_id]])->toArray();
+        $wc_machine_goods_lists = $this->getWcMachineGoodsList([['out_no', 'in', $out_nos], ['m_id', '=', $m_id]])->toArray();
         if (empty($wc_machine_goods_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
 
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();

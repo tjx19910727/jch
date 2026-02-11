@@ -172,15 +172,15 @@ trait WcBaseTrait
         $wc_goods = $this->getWcGoodsFind(['no' => $no])->toArray();
         $resourceDomain = $wc_goods['resourceDomain'];
         $resourcesArray = json_decode($wc_goods['resourcesArray'], true) ?? [];
-        
+
         if (!is_null($wc_goods['goods'])) {
             //子商品信息
             $goods = json_decode($wc_goods['goods'], true);
             foreach ($goods as $k => $good) {
-                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no'],'out_no' => $no]);
+                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no'], 'out_no' => $no]);
                 $pic = isset($resourcesArray[$k]['url']) ? $resourceDomain . $resourcesArray[$k]['url'] : '';
                 $setData = [
-                    'g_id' => $good['g_id'] ?? '',
+                    'g_id' => $good['g_id'] ?? 0,
                     'out_no' => $no ?? '',
                     'no' => $good['no'] ?? '',
                     'type' => $type,
@@ -193,11 +193,12 @@ trait WcBaseTrait
                     'desc' => $good['notice'] ?? '',
                     'status' => 1,
                     'channel_code' => 'Z10',
+                    'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
                 ];
                 if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($setData);
                 } else {
-                    $this->updateWcGoodsLocal($setData, ['no' => $good['no'],'out_no' => $no]);
+                    $this->updateWcGoodsLocal($setData, ['no' => $good['no'], 'out_no' => $no]);
                 }
             }
         }
@@ -220,16 +221,14 @@ trait WcBaseTrait
                     'status' => 1,
                     'channel_code' => 'Z10',
                 ];
-                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no'],'out_no' => $no]);
+                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no'], 'out_no' => $no]);
                 if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($combindSetData);
                 } else {
-                    $this->updateWcGoodsLocal($combindSetData, ['no' => $combindSetData['no'],'out_no' => $no]);
+                    $this->updateWcGoodsLocal($combindSetData, ['no' => $combindSetData['no'], 'out_no' => $no]);
                 }
-
             }
         }
-
         return true;
     }
 
@@ -343,17 +342,5 @@ trait WcBaseTrait
         ];
         $postUrl = $this->order_refundPart_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
         return $this->weicheng_curl($postUrl, []);
-    }
-
-    public function queryHotelInfo($machine_id, $goods_no, $start_date = '', $end_date = ''){
-        $this->initWcBase();
-
-        $postUrl = $this->query_hotel_info_url . "?machine_code=" . $machine_id . "&goods_no=" . $goods_no;
-        if($start_date) $postUrl .= "&start_date=" . $start_date ;
-        if($end_date) $postUrl .= "&end_date=" . $end_date;
-        $token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ7XCJ1c2VySWRcIjo4Mjk3NzkzfSIsImV4cCI6MTc3MDY5Mzc5OCwiaWF0IjoxNzcwNjkzMTk4fQ.5eouNJLk51BSPH5kH6YplIVDe4lQRmZAXdLtoIo5OE8';
-        $header = array('token: ' . $token);
-        echo $postUrl;
-        return $this->weicheng_curl($postUrl, [], $header);
     }
 }

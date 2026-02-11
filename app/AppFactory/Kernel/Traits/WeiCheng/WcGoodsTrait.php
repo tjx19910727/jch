@@ -14,8 +14,14 @@ use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsTypesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineChannelModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineGoodsModel;
+
 trait WcGoodsTrait
 {
+    public function getWcGoodsColumn($where, $field = '*', $order = '')
+    {
+        return WcGoodsModel::getColumn($where, $field, $order);
+    }
+
     public function getWcGoodsCount($where, $field = '*', $order = '')
     {
         return WcGoodsModel::getFind($where, $field, $order);
@@ -207,5 +213,4 @@ trait WcGoodsTrait
     {
         return WcMachineGoodsModel::whereDel($where);
     }
-    
 }
