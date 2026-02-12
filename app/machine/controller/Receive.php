@@ -768,6 +768,7 @@ class Receive extends Common
         }
     }
 
+
     /**
      * 上报回收箱信息
      * @return array|\think\response\Json
@@ -781,13 +782,17 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
-
+    
+    /**
+     * 设备主动获取出货信息
+     * @return array|string
+     */
     public function requireOutGoods()
     {
         try {
             return $this->app->api->requireOutGoods();
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
