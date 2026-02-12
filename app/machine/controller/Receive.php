@@ -915,6 +915,15 @@ class Receive extends Common
         }
     }
 
+    public function getWcUserInfo(){
+        try {
+            return $this->app->api->getWcUserAddress();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     public function test()
     {
         $this->app->api->test();

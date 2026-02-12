@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Traits\WeiCheng;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsTypesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcUserAddressesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineChannelModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineGoodsModel;
 
@@ -213,4 +214,38 @@ trait WcGoodsTrait
     {
         return WcMachineGoodsModel::whereDel($where);
     }
+
+    public function getWcUserAddressesList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return WcUserAddressesModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
+    }
+
+    public function getWcUserAddressesFind($where, $field = "*", $order = "")
+    {
+        return WcUserAddressesModel::getFind($where, $field, $order);
+    }
+
+    public function addWcUserAddresses($insert)
+    {
+        $data = WcUserAddressesModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    public function addWcUserAddressesMore($insertAll)
+    {
+        $model = new WcUserAddressesModel();
+        return $model->saveAll($insertAll);
+    }
+
+    public function updateWcUserAddresses($update, $where = [], $field = [])
+    {
+        return WcUserAddressesModel::update($update, $where, $field);
+    }
+
+    public function delWcUserAddresses($where)
+    {
+        return WcUserAddressesModel::whereDel($where);
+    }
+
 }

@@ -1,4 +1,14 @@
 #20260128
+CREATE TABLE `wc_users_addresses` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `bind_id` varchar(20) NOT NULL COMMENT '会员账户：一般为手机号',
+  `address` text COMMENT '邮寄地址',
+  `link_name` varchar(50) DEFAULT NULL COMMENT '收件人姓名',
+  `phone` varchar(100) DEFAULT NULL COMMENT '收件人手机号',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `wc_users_unique` (`bind_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='微程会员寄送地址';
+
 ALTER TABLE kiosk.wc_goods_local CHANGE g_id id int(11) NOT NULL AUTO_INCREMENT COMMENT '主键';
 ALTER TABLE kiosk.wc_goods_local   ADD g_id int(11) NULL COMMENT '核心商品库商品id' after  `no`;
 ALTER TABLE kiosk.wc_goods_local   ADD type int(11) NULL COMMENT '商品类型' after  `no`;

@@ -130,7 +130,8 @@ class ApiClient extends ReceiveBaseClient
         WxOfficialLoginTrait,
         afterOrderRefundTrait,
         CardTrait,
-        WcBaseTrait,WcGoodsTrait;
+        WcBaseTrait,
+        WcGoodsTrait;
 
 
     public $card_retail_price = 0.01;
@@ -808,10 +809,10 @@ class ApiClient extends ReceiveBaseClient
                 }
                 $this->data['carList'] = json2arr($this->data['carList']);
                 foreach ($this->data['carList'] as $key => $value) {
-                    if(isset($value['channel_code']) && $value['channel_code'] == 'Z10'){
+                    if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
                         $mc['status'] = 1;
-                    }else{
+                    } else {
                         $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
                     }
                     if (!$mc) {
@@ -839,8 +840,8 @@ class ApiClient extends ReceiveBaseClient
                         $details = [
                             "order_id" => $order_id,
                             "mc_id" => $mc['mc_id'],
-                            "shelf_way" => $mc['shelf_way'] ?? 4,//4为虚拟货道
-                            "channel_position" => $mc['channel_position'] ?? 3,//3为虚拟货道
+                            "shelf_way" => $mc['shelf_way'] ?? 4, //4为虚拟货道
+                            "channel_position" => $mc['channel_position'] ?? 3, //3为虚拟货道
                             "channel_code" => $mc['channel_code'],
                             "mg_id" => $mc['mg_id'] ?? 0,
                             "g_id" => $mc['g_id'],
@@ -1398,7 +1399,7 @@ class ApiClient extends ReceiveBaseClient
                 $check_data = $this->getCardPointsChangeLogs(['trade_no' => $this->data['trade_no']]);
                 if ($check_data) return $this->r(200, 'failed', '当前订单积分已划拨至卡或会员账户，请勿重复操作');
                 $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']], 'total_points');
-                if(!$order) return $this->r(200, 'failed', '找不到订单！');
+                if (!$order) return $this->r(200, 'failed', '找不到订单！');
                 $order = $order->toArray();
                 //如果携带卡信息，判断有没有登录，如果没有登录，积分直接写入卡
                 if ($this->data['card_no']) {
@@ -1414,11 +1415,11 @@ class ApiClient extends ReceiveBaseClient
                         $card_res = $this->changePoints($this->data['card_no'], $bind_card['points'], 2, $this->data['trade_no'], "会员绑定积分卡", $this->data['bind_id']);
                         //订单积分进卡里了，此时需要把卡内总积分同步到微程
                         $res = $this->wcUserSyncPoints($this->data['token'], $bind_card['points'], 1);
-                        if($res['status'] != 200) {
+                        if ($res['status'] != 200) {
                             if (strpos($res['response'], "message") !== false) {
                                 $response = json_decode($res['response'], true);
                                 return $this->r(200, 'failed', $res['response']['message']);
-                            }else{
+                            } else {
                                 return $this->r(200, 'failed', $res['response']);
                             }
                         }
@@ -1431,11 +1432,11 @@ class ApiClient extends ReceiveBaseClient
                     //无卡时，判断有没有会员登录，如果有登录，订单积分直接同步到微程会员，如果没登录，积分不做操作
                     if (!empty($this->data['bind_id'])) {
                         $res = $this->wcUserSyncPoints($this->data['token'], $order['total_points'], 1);
-                        if($res['status'] != 200) {
+                        if ($res['status'] != 200) {
                             if (strpos($res['response'], "message") !== false) {
                                 $response = json_decode($res['response'], true);
                                 return $this->r(200, 'failed', $res['response']['message']);
-                            }else{
+                            } else {
                                 return $this->r(200, 'failed', $res['response']);
                             }
                         }
@@ -1452,15 +1453,15 @@ class ApiClient extends ReceiveBaseClient
                     $this->addCard(['card_no' => $this->data['card_no']]);
                     $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                 }
-                if(!empty($card['bind_id']) && ($card['bind_id'] != $this->data['bind_id']))  return $this->r(200, 'failed', '感应卡已绑定其他会员！！！');
+                if (!empty($card['bind_id']) && ($card['bind_id'] != $this->data['bind_id']))  return $this->r(200, 'failed', '感应卡已绑定其他会员！！！');
                 $card_res = $this->changePoints($this->data['card_no'], $card['points'], 2, '', "会员绑定积分卡", $this->data['bind_id']);
                 $this->updateCard(['bind_id' => $this->data['bind_id']], ['card_no' => $this->data['card_no']]);
                 $res = $this->wcUserSyncPoints($this->data['token'], $card['points'], 1);
-                if($res['status'] != 200) {
+                if ($res['status'] != 200) {
                     if (strpos($res['response'], "message") !== false) {
                         $response = json_decode($res['response'], true);
                         return $this->r(200, 'failed', $res['response']['message']);
-                    }else{
+                    } else {
                         return $this->r(200, 'failed', $res['response']);
                     }
                 }
@@ -1490,16 +1491,16 @@ class ApiClient extends ReceiveBaseClient
         try {
             if (isset($this->data['bind_id']) && !empty($this->data['bind_id'])) {
                 //先判断当前登录账号登录信息是否绑定了当前传入的卡号，如果为绑定，提示用户绑卡
-                if(isset($this->data['card_no']) && !empty($this->data['card_no'])){
+                if (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                     $card_info = $this->getCardFind(['card_no' => $this->data['card_no']]);
-                    if(!$card_info) {
+                    if (!$card_info) {
                         $this->addCard(['card_no' => $this->data['card_no']]);
                         $card_info = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                     }
-                    if(!$card_info['bind_id']) 
+                    if (!$card_info['bind_id'])
                         return $this->r(200, 'failed', ['error_code' => 10002, 'message' => '应卡不在您的会员账户名下！是否绑定'], true);
-                        
-                    if(!empty($card_info['bind_id']) && $card_info['bind_id'] != $this->data['bind_id']) 
+
+                    if (!empty($card_info['bind_id']) && $card_info['bind_id'] != $this->data['bind_id'])
                         return $this->r(200, 'failed', ['error_code' => 10003, 'message' => '感应卡已绑定其他会员！！！'], true);
                 }
                 $bind_id = $this->data['bind_id'];
@@ -1515,15 +1516,15 @@ class ApiClient extends ReceiveBaseClient
                     }
                 }
                 $card_points_lists = $this->getCardColumn([['card_no', 'in', $card_no_list]], 'card_no,points, bind_id_points');
-                $bind_id_column = array_column($card_points_lists,'bind_id_points');
+                $bind_id_column = array_column($card_points_lists, 'bind_id_points');
                 $bind_id_points = max($bind_id_column) ?? 0;
                 foreach ($card_points_lists as $v) {
                     $total_card_points += $v['points'];
                 }
                 $card_info = $card_points_lists;
-            }elseif (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
+            } elseif (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
-                if(!$card) {
+                if (!$card) {
                     $this->addCard(['card_no' => $this->data['card_no']]);
                     $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                 }
@@ -1543,7 +1544,7 @@ class ApiClient extends ReceiveBaseClient
                         }
                     }
                     $card_points_lists = $this->getCardColumn([['card_no', 'in', $card_no_list]], 'card_no,points, bind_id_points');
-                    $bind_id_column = array_column($card_points_lists,'bind_id_points');
+                    $bind_id_column = array_column($card_points_lists, 'bind_id_points');
                     $bind_id_points = max($bind_id_column) ?? 0;
                     foreach ($card_points_lists as $v) {
                         $total_card_points += $v['points'];
@@ -1555,7 +1556,7 @@ class ApiClient extends ReceiveBaseClient
                     $total_card_points = $card['points'];
                     $bind_id_points = $card['bind_id_points'];
                 }
-            } 
+            }
 
             $res['data'] = $new_data;
             $res['card_info'] = $card_info;
@@ -1597,19 +1598,23 @@ class ApiClient extends ReceiveBaseClient
         $res = $this->wcLoginUser($this->data['phone'], $this->data['machine_id'], $this->data['code']);
         // $res['response'] = '{"success":true,"message":"登录成功","token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ7XCJ1c2VySWRcIjo3OTYyMjYwfSIsImV4cCI6MTc2ODgyOTIyOCwiaWF0IjoxNzY4ODI4NjI4fQ.LgquQkybzpcmJ1dgjAA3HsL7RA0iwgnV2slr-3C3pOE"}';
         actionLog($res, '登录微程返回内容');
-        if($res['status'] != 200) {
+        if ($res['status'] != 200) {
             if (strpos($res['response'], "message") !== false) {
                 $res_response = json_decode($res['response'], true);
                 return $this->r(200, 'failed', ['success' => false, 'message' => $res_response['message']]);
-            }else{
+            } else {
                 return $this->r(200, 'failed', ['success' => false, 'message' => $res['response']]);
             }
         }
         $response = json_decode($res['response'], true);
         $token = $response['token'];
+        //调用微程接口，获取用户地址信息，数据入库
+        $address_lists = $this->getWcUserInfo($this->data['phone'], $token);
+
         $card_lists = $this->getCardList(['bind_id' => $this->data['phone']]);
         if (!$card_lists) {
             $response['card_lists'] = [];
+            $response['address_lists'] = $address_lists;
             return $this->r(200, "success", $response);
         }
         $card_lists = $card_lists->toArray();
@@ -1627,13 +1632,14 @@ class ApiClient extends ReceiveBaseClient
             $card_change_res = $this->changePoints($card['card_no'], $card['points'], 2, '', "卡内积分同步至会员积分账户", $this->data['phone']);
             $res_response = json_decode($card_res['response'], true);
             actionLog($res_response, '同步卡积分微程返回内容');
-            if(isset($res_response) && isset($res_response['data']) && isset($res_response['data']['current_integral'])){
+            if (isset($res_response) && isset($res_response['data']) && isset($res_response['data']['current_integral'])) {
                 $this->updateCard(['bind_id_points' => $res_response['data']['current_integral']], ['card_no' => $card['card_no']]);
-                actionLog($card['card_no'].'--'.$res_response['data']['current_integral'], '同步卡积分微程返回内容');
+                actionLog($card['card_no'] . '--' . $res_response['data']['current_integral'], '同步卡积分微程返回内容');
             }
         }
         $card_lists = $this->getCardList(['bind_id' => $this->data['phone']])->toArray();
         $response['card_lists'] = $card_lists;
+        $response['address_lists'] = $address_lists;
         return $this->r(200, "success", $response);
     }
 
@@ -1661,7 +1667,7 @@ class ApiClient extends ReceiveBaseClient
     public function getWcPointsQrcode()
     {
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']], 'total_points');
-        if (!$order) return $this->r(100,'failed', "查无此订单");
+        if (!$order) return $this->r(100, 'failed', "查无此订单");
         $order = $order->toArray();
         $res = $this->wcPointsQrCode($order['total_points']);
         if ($res['status'] !== 200) return $this->r(100, 'failed', $res['response']);
@@ -1697,11 +1703,12 @@ class ApiClient extends ReceiveBaseClient
 
 
     //创建卡购买订单
-    public function addCardSaleOrdersAndDetails(){
+    public function addCardSaleOrdersAndDetails()
+    {
         $card_retail_price = $this->data['price'] ?: $this->card_retail_price;
         if ($this->data['pay_method'] == "41") $this->data['pay_method'] = 1;
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
-        
+
 
         $m = $this->getMachineFind(['m_id' => $this->machine['m_id']], 'factory,inventory_location');
 
@@ -1732,7 +1739,7 @@ class ApiClient extends ReceiveBaseClient
                 $updateOrder['quantity'] = 1;
                 $updateOrder['total_price'] = $card_retail_price;
                 $updateOrder['total_quantity'] = 1;
-                
+
                 $details = [
                     "order_id" => $order_id,
                     "mc_id" => 0,
@@ -1772,10 +1779,10 @@ class ApiClient extends ReceiveBaseClient
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
-        
     }
 
-    public function getWcGoodsLocalLists(){
+    public function getWcGoodsLocalLists()
+    {
         $pageNum = $this->data['pageNum'] ?? 15;
         $where['status'] = 1;
         $field = "g_id,no,g_name,gc_id,gc_name,g_type,g_type_name,pic,retail_price,desc,sell_channel,status";
@@ -1784,20 +1791,68 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200, "SUCCESS", $wcGoodsLocalLists);
     }
 
-    public function getWcMCLists(){
+    public function getWcMCLists()
+    {
         $pageNum = $this->data['pageNum'] ?? 15;
-        if(isset($this->data['m_id'])) $where['m_id'] = $this->data['m_id'];
+        if (isset($this->data['m_id'])) $where['m_id'] = $this->data['m_id'];
         $where['machine_id'] = $this->data['machine_id'];
         $wcMachineChannelLists = $this->getWcMachineChannelList($where, $pageNum, "*", 'sort asc');
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
         $wcMachineChannelLists = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
-        foreach($wcMachineChannelLists as &$v){
+        foreach ($wcMachineChannelLists as &$v) {
             $v['goods_lists'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
-        }   
+        }
         return $this->r(200, "SUCCESS", $wcMachineChannelLists);
     }
 
-    public function test(){
+    public function getWcUserInfo($bind_id, $token)
+    {
+        $res = $this->syncWcUserInfo($token);
+        if ($res['status'] != 200) return $this->r(100, 'failed', $res['response']);
+
+        $response = json_decode($res['response'], true);
+        $address_lists = $response['data']['addressList'] ?? [];
+
+        if (!empty($address_lists)) {
+            foreach ($address_lists as $v) {
+                $setData = [
+                    'bind_id' => $bind_id,
+                    'address' => trim($v['address']),
+                    'link_name' => $v['link_name'],
+                    'phone' => $v['phone'],
+                ];
+                $check = $this->getWcUserAddressesFind($setData);
+                if (!$check) {
+                    $this->addWcUserAddresses($setData);
+                } else {
+                    $this->updateWcUserAddresses($setData, ['id' => $check['id']]);
+                }
+            }
+        }
+        return $address_lists;
+    }
+
+
+    public function getWcUserAddress()
+    {
+        $bind_id = $this->data['bind_id'] ?? '';
+        $card_no = $this->data['card_no'] ?? '';
+        $address_lists = [];
+        if (empty($bind_id) && empty($card_no)) return $this->r(100, 'failed', 'bind_id和card_no不能同时为空');
+        if ($card_no) {
+            $card_info = $this->getCardFind(['card_no' => $card_no], 'bind_id');
+            if (!$card_info) return $this->r(100, 'failed', '找不到对应的卡信息');
+            if ($bind_id && $bind_id != $card_info['bind_id']) return $this->r(100, 'failed', '警告：该卡不在当前会员账户名下');
+            $address_lists = $this->getWcUserAddressesList(['bind_id' => $card_info['bind_id']]);
+        }
+        if ($bind_id) {
+            $address_lists = $this->getWcUserAddressesList(['bind_id' => $bind_id]);
+        }
+        return $this->r(200, 'success', $address_lists);
+    }
+
+    public function test()
+    {
         // $this->order = $this->getSaleOrdersFind(['order_id' => '29785']);
         // $order = $this->outGoods();
         // $this->orderSync2Wc($order);

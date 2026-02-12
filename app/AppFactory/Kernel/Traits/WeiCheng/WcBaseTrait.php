@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Traits\WeiCheng;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcRequestLogsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\Kernel\Model\WeiCheng\WcUserAddressesModel;
 
 trait WcBaseTrait
 {
@@ -53,6 +54,7 @@ trait WcBaseTrait
         $this->user_sync_points = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/syncIntegral";
         $this->get_points_qrcode = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/getIntegralQrcode";
         $this->query_hotel_info_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/hotel/queryDays";
+        $this->query_user_info_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/queryUserRights";
     }
 
     public function getDecptData($data)
@@ -342,5 +344,12 @@ trait WcBaseTrait
         ];
         $postUrl = $this->order_refundPart_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
         return $this->weicheng_curl($postUrl, []);
+    }
+
+    public function syncWcUserInfo($token)
+    {
+        $this->initWcBase();
+        $header = array('token: ' . $token);
+        return $this->weicheng_curl($this->query_user_info_url, [], $header);
     }
 }

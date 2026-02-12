@@ -125,6 +125,27 @@ class WeiChengClient extends ManagementClient
     }
 
 
+    public function getWcUserAddressesInfoList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return $this->rQ($this->getWcUserAddressesList($where, $pageNum, $field, $order, $eachFun, $group));
+    }
+
+    public function addWcUserAddressesInfo($postData)
+    {
+        return $this->rA($this->addWcUserAddresses($postData));
+    }
+
+    public function updateWcUserAddressesInfo($update, $where = [], $field = [])
+    {
+        return $this->rU($this->updateWcUserAddresses($update, $where, $field));
+    }
+
+    public function delWcUserAddressesInfo($where)
+    {
+        return $this->rD($this->delWcUserAddresses($where));
+    }
+
+
     public function synchronizeGoodsTypesAll()
     {
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']]);
@@ -357,6 +378,19 @@ class WeiChengClient extends ManagementClient
             $v['goods_list'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
         }
         return  $this->rQ($list);
+    }
+
+    public function syncUserRights($token)
+    {
+        $result = $this->syncWcUserInfo($token);
+        if ($result['status'] == 200) {
+            $res = json2arr($result['response']);
+            if (!$res || !isset($res['data'])) {
+                return ['status' => false, 'msg' => $result['response']];
+            }
+            return ['status' => true, 'data' => $res['data']];
+        }
+        return ['status' => false, 'msg' => $result['response']];;
     }
 
     public function synchronizeOrder($order)
