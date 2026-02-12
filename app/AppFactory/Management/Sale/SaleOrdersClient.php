@@ -239,6 +239,7 @@ class SaleOrdersClient extends ManagementClient
         $data = [
             "today" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
             "yesterday" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
+            "thisMonth" => ["saleMoney" => 0.00, "saleQuantity" => 0, 'discountMoney' => 0],
         ];
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
@@ -254,9 +255,16 @@ class SaleOrdersClient extends ManagementClient
         $whereYesterday = $where;
         $whereYesterday[] = ['create_date', '=', strtotime(date("Y-m-d 00:00:00", strtotime("-1 days")))];
         $yesterday = $this->getSaleOrdersFind($whereYesterday, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
+        
+        $whereThisMonth = $where;
+        $whereThisMonth[] = ['create_date', '>=', strtotime(date("Y-m-01"))];
+        $thisMonth = $this->getSaleOrdersFind($whereThisMonth, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
+        
+
         if ($yesterday) $yesterday = $yesterday->toArray();
         if ($today) $data['today'] = $today;
         if ($yesterday) $data['yesterday'] = $yesterday;
+        if ($thisMonth) $data['thisMonth'] = $thisMonth;
         return $data;
     }
 

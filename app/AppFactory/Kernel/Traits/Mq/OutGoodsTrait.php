@@ -131,6 +131,7 @@ trait OutGoodsTrait
                     // 发送补货通知
                     if ($stock <= $mc['stock_warning']) {
                         try {
+                            $errorCode = "1000101";
                             $this->noticeSendData = [
                                 "ao_id" => $this->machine['ao_id'],
                                 "m_id" => $this->machine['m_id'],
@@ -141,6 +142,9 @@ trait OutGoodsTrait
                                     "stock" => $stock,
                                     "channel_code" => $mc['channel_code'],
                                     "stock_warning" => $mc['stock_warning'] ?? 0,
+                                    "error_code" => $errorCode,
+                                    "error_time" => date('Y-m-d H:i:s'),
+                                    "error_info" => $this->lang("deviceErrorCode.".$errorCode),
                                 ]
                             ];
                             actionLog($this->noticeSendData,'发送补货通知','OutGoods');

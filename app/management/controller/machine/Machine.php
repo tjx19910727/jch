@@ -12,11 +12,13 @@ namespace app\management\controller\machine;
 use app\AppFactory\AppFactory;
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachine;
-use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+
+use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 class Machine extends Common
 {
-    use AfterOrderPaymentTrait,SaleOrdersTrait;
+    use MachineErrorCodeTrait,SaleOrdersTrait,AfterOrderPaymentTrait;
 
     protected $field = "*";
     protected $validatePath = VMachine::class;
@@ -224,4 +226,82 @@ class Machine extends Common
             return $this->app->machine->rFail('获取失败');
         }
     }
+
+    /**
+     * 远程动作 doorOpen powerWakeUp initialization axisOffset
+     * @return array|string
+     */
+    public function remoteAction()
+    {
+        $machine_id = input("machine_id");
+        $type = input('type');
+        $otherData = input("otherData") ?? [];
+        if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
+        if ($type == 'axisOffset'){
+            if(!$otherData['x_axis'] && !$otherData['y_axis']) return returnValidate(lang("VMachine.x_y_axis_require"));
+        }
+        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], $type, $otherData);
+        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+    }
+
+    /**
+     * 远程出货
+     * @return array|string
+     */
+    public function remoteOutGoods(){
+        $postData = input();
+        $result = $this->app->machine->setRemoteOutGoods($postData);
+        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+    }
+
+
+    // 远程退货动作组 获取回收箱当前数量、打开出料箱门、关闭出料箱门、拍照上传、回收商品 checkRecycleBox、pickUpDoorOpen、pickUpDoorClose、takePhotos、recycGoods
+    /**
+     * 远程退货动作组 获取回收箱当前数量、剩余数量
+     * @return array|string
+     */
+    public function getRecycleBoxInfo(){
+        $machine_id = input("machine_id");
+        $machine = $this->app->machine->getMachineFind(['machine_id' => $machine_id],'*');
+        if(!$machine) return $this->app->machine->rFail($this->app->machine->lang("VMachine.machine_not_exist"));
+        if ($machine['recycle_box_total_capacity'] == 0) {
+            $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "checkRecycleBox", []);
+            return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+        }
+        return $machine;
+        
+    }
+
+    public function setPickUpDoorOpen(){
+        $machine_id = input("machine_id");
+        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "pickUpDoorOpen", []);
+        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+    }
+
+    public function setPickUpDoorClose(){
+        $machine_id = input("machine_id");
+        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "pickUpDoorClose", []);
+        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+    }
+
+    // public function remoteTakePhotos(){
+    //     $sod_id = input('sod_id');
+    //     $machine_id = input("machine_id");
+    //     $refund_photo = $this->getSaleOrdersDetailsColumn(['sod_id' => $sod_id], 'refund_photo');
+    //     if (!$refund_photo) {
+    //         $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "takePhotos", ['sod_id' => $sod_id]);
+    //         return is_object($result) ? returnState(200,'正在从机器端获取拍照文件，请稍做等待后下载',$result) :
+    //         $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+    //     }
+    //     return returnState(200,'查询成功',$refund_photo);
+    // }
+
+    public function getRecycGoods(){
+        $machine_id = input("machine_id");
+        $sod_id = input("sod_id");
+        if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
+        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "recycGoods", ['sod_id' => $sod_id]);
+        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+    }
+    
 }

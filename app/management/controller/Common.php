@@ -160,30 +160,34 @@ class Common extends AuthController
             if($this->manager['ao_id'] == 0 || $this->manager['ao_id'] == 1){
                 if(isset($where['ao_id'])) unset($where['ao_id']);
             }
+            //添加一套逻辑， 如果登录账号为组织的管理员账号 此时查询内容为它的所以下级的数据集合
+            if($this->manager['ao_id'] > 18 && $this->manager['level'] == 3 && $this->currentMenu['url'] == "/management/sale.sale_orders/getList"){
+                $childs = $this->getChildsAoIds($this->manager['ao_id']);
+                if(isset($where['ao_id'])) {
+                    unset($where['ao_id']);
+                    $where[] = ['ao_id', 'in', $childs];
+                }
+            }
         }
         return $where;
     }
 
-    //获取架构的所有子部门
+    //获取架构的所有下级部门
     public function getChildsAoIds($ao_id){
-        $aoIdsArr = Db::name('auth_organization')
-            ->whereRaw('ao_id = '.$ao_id .' or pid = '.$ao_id)
-            ->field('ao_id')
-            ->select()->toArray();
-        $aoIds = array_column($aoIdsArr, 'ao_id');
-        $where[] = ['pid', 'in', $aoIds];
-        $childs = Db::name('auth_organization')
-            ->where($where)
-            ->field('ao_id')
-            ->select()->toArray();  
-
-        return array_column($childs, 'ao_id');
+        $sql = "WITH RECURSIVE cte AS (
+            SELECT ao_id FROM auth_organization WHERE pid = {$ao_id}
+            UNION ALL
+            SELECT a.ao_id FROM auth_organization a JOIN cte ON a.pid = cte.ao_id
+        ) SELECT ao_id FROM cte";
+        $result = Db::query($sql);
+        return array_merge(array_column($result, 'ao_id'), [$ao_id]);
     }
 
 
     //获取当前登录账号的顶级组织
     public function getOriginAoId($ao_id){
-        while(!in_array($ao_id, $this->originAoIds)) {
+        $top_ao_id = $this->getTopOrgIds();
+        while(!in_array($ao_id, $top_ao_id)) {
             $pidArr = Db::name('auth_organization')
                 ->where(['ao_id' => $ao_id])
                 ->field('pid')->select()->toArray();

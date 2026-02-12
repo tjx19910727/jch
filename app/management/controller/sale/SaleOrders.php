@@ -63,7 +63,10 @@ class SaleOrders extends Common
         $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,order_type,pay_type,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,machine_id,discount_price,factory,inventory_location,has_hotel,refund_status,(select machine_name from machine m where m.m_id = a.m_id) machine_name,(total_price - refund_amount) total_price";
         if (!empty($data))$field .= ",cost_price";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
-        // if ($postData['supplier']) unset($where['ao_id']);
+        if (isset($postData['supplier']) && $postData['supplier']) unset($where['ao_id']);
+        if($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0,1] )){
+            $where['ao_id'] = $this->manager['ao_id'];
+        }
         return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc",$postData['supplier'] ?? true);
     }
 
@@ -196,6 +199,20 @@ class SaleOrders extends Common
                 }
                 return returnState(200,'查询成功',$mec);
             }
+            if(input('status')=='remoteOutGoods'){
+                $machine_id = input('machine_id');
+                $tmp = explode('_',$trade_no);
+                $real_sod_id = $tmp[count($tmp)-1];
+                $sod = $this->app->saleOrders->getSaleOrdersDetailsFind(['sod_id' => $real_sod_id], 'remote_out_goods_video');
+                if (!$sod) return returnState(100,lang("VSaleOrders.order_no_data"));
+                if (!$sod['remote_out_goods_video']) {
+                    $otherData = ['trade_no' => $trade_no];
+                    $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], 'transactionVideo',$otherData);
+                    return is_object($result) ? returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result) :
+                    $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+                }
+                return returnState(200,'查询成功',$sod);
+            }
         }
     }
     /**
@@ -292,13 +309,34 @@ class SaleOrders extends Common
         $postData = input();
         $field = "";
         $group = "";
+        $machine_group_id = '';
+        $mIds = [];
+
+        if(isset($postData['m_id']) && !empty($postData['m_id'])){
+            if(strstr($postData['m_id'],',')){
+                $mIds = explode(',',$postData['m_id']);
+            }else{
+                $mIds = [$postData['m_id']];
+            }
+            unset($postData['m_id']);
+        }
         if (isset($postData['group'])) {
             $group = $postData['group'];
             unset($postData['group']);
         }
+        if(isset($postData['machine_group_id']) && $postData['machine_group_id']){
+            $machine_group_id = $postData['machine_group_id'];
+            unset($postData['machine_group_id']);
+        }
         $where = $this->getWhere($postData,false,["machine_id" => "like"]);
-
-        if (!isset($postData['m_id']) || !$postData['m_id']) {
+        if(!empty($mIds)) $where[] = ['m_id', 'in', $mIds];
+        if($machine_group_id){
+            $mIds_arr = $this->app->machine->getMachineGroupMGList(['mg_id' => $machine_group_id],0,'m_id')->toArray();
+            $mIds = array_column($mIds_arr,'m_id');
+            $where[] = ['m_id', 'in', $mIds];
+        }
+        
+        if (!isset($postData['m_id']) || !$postData['m_id'] || !$machine_group_id) {
             if ($this->manager['pid'] > 0) {
                 $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
                 if ($mIds) $where[] = ['m_id', 'in', $mIds];
@@ -345,6 +383,17 @@ class SaleOrders extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $order = "create_date desc";
         $group = "";
+        $machine_group_id = '';
+        $mIds = [];
+
+        if(isset($postData['m_id']) && !empty($postData['m_id'])){
+            if(strstr($postData['m_id'],',')){
+                $mIds = explode(',',$postData['m_id']);
+            }else{
+                $mIds = [$postData['m_id']];
+            }
+            unset($postData['m_id']);
+        }
         if (isset($postData['group'])) {
             $group = $postData['group'];
             unset($postData['group']);
@@ -353,14 +402,21 @@ class SaleOrders extends Common
             $order = $postData['order'];
             unset($postData['order']);
         }
-        $where = $this->getWhere($postData,true,["machine_id" => "like"]);
-        if (!isset($postData['m_id']) || !$postData['m_id']) {
+        if(isset($postData['machine_group_id']) && $postData['machine_group_id']){
+            $machine_group_id = $postData['machine_group_id'];
+            unset($postData['machine_group_id']);
+        }
+        $where = $this->getWhere($postData, false,["machine_id" => "like"]);
+        if(!empty($mIds)) $where[] = ['m_id', 'in', $mIds];
+        if($machine_group_id){
+            $mIds_arr = $this->app->machine->getMachineGroupMGList(['mg_id' => $machine_group_id],0,'m_id')->toArray();
+            $mIds = array_column($mIds_arr,'m_id');
+            $where[] = ['m_id', 'in', $mIds];
+        }
+        if (!isset($postData['m_id']) || !$postData['m_id'] || !$machine_group_id) {
             if ($this->manager['pid'] > 0) {
                 $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
-                if ($mIds) {
-                    if ($where) $where .= " AND ";
-                    $where .= 'm_id in (' . implode(",", $mIds) . ')';
-                }
+                if ($mIds) $where[] = ['m_id', 'in', $mIds];
             }
         }
         return $this->app->saleOrders->getReportList($where,$pageNum,$order,$group);
@@ -373,15 +429,44 @@ class SaleOrders extends Common
     public function exportReport()
     {
         $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
         $order = "create_date desc";
+        $group = "";
+        $machine_group_id = '';
+        $mIds = [];
+
+        if(isset($postData['m_id']) && !empty($postData['m_id'])){
+            if(strstr($postData['m_id'],',')){
+                $mIds = explode(',',$postData['m_id']);
+            }else{
+                $mIds = [$postData['m_id']];
+            }
+            unset($postData['m_id']);
+        }
+        if (isset($postData['group'])) {
+            $group = $postData['group'];
+            unset($postData['group']);
+        }
         if (isset($postData['order'])) {
             $order = $postData['order'];
             unset($postData['order']);
         }
-        $where = $this->getWhere($postData,false,["machine_id" => "like"]);
-        if ($this->manager['pid'] > 0) {
-            $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
-            if ($mIds) $where[] = ['m_id', 'in', $mIds];
+        if(isset($postData['machine_group_id']) && $postData['machine_group_id']){
+            $machine_group_id = $postData['machine_group_id'];
+            unset($postData['machine_group_id']);
+        }
+        $where = $this->getWhere($postData, false,["machine_id" => "like"]);
+        if(!empty($mIds)) $where[] = ['m_id', 'in', $mIds];
+        if($machine_group_id){
+            $mIds_arr = $this->app->machine->getMachineGroupMGList(['mg_id' => $machine_group_id],0,'m_id')->toArray();
+            $mIds = array_column($mIds_arr,'m_id');
+            $where[] = ['m_id', 'in', $mIds];
+        }
+        if (!isset($postData['m_id']) || !$postData['m_id'] || !$machine_group_id) {
+            if ($this->manager['pid'] > 0) {
+                $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+                if ($mIds) $where[] = ['m_id', 'in', $mIds];
+            }
         }
         return $this->app->saleOrders->exportReport($where,$order);
     }

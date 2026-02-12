@@ -408,6 +408,7 @@ return [
 
         "machine_offline" => "设备离线",
         "ckc_status_require" => "营业状态不能为空",
+        "x_y_axis_require" => "x，y轴至少需要定义一个偏移量",
     ],
 
     "VMachineLang" => [

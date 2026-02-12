@@ -768,14 +768,29 @@ class Receive extends Common
         }
     }
 
+
     /**
-     * 接收出货指令,此接口只有在设备接收了两条到pay_notify发送的MQ消息后出现未出货情况方可调用
-     * @return array|string
+     * 上报回收箱信息
+     * @return array|\think\response\Json
      */
-    public function retryOutGoods()
+    public function recycleBoxReport()
     {
         try {
-            return $this->app->api->retryOutGoods();
+            return $this->app->api->recycleBoxReport();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+    
+    /**
+     * 设备主动获取出货信息
+     * @return array|string
+     */
+    public function requireOutGoods()
+    {
+        try {
+            return $this->app->api->requireOutGoods();
         } catch (\Exception $e) {
             actionException($e, 1);
             return returnTryCatch($e->getMessage());

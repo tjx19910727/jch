@@ -113,6 +113,43 @@ class MqClient extends SendBaseClient
      */
 
     /**
+     * 通知设备远程开门 doorOpen
+     * @return array|string
+     */
+    /**
+     * 通知设备远程断电重启  powerWakeUp
+     * @return array|string
+     */
+    /**
+     * 通知设备远程初始化  initialization
+     * @return array|string
+     */
+    /**
+     * 通知设备主轴偏移  axisOffset
+     * @return array|string
+     */
+    /**
+     * 通知设备返回回收箱当前数量  checkRecycleBox
+     * @return array|string
+     */
+    /**
+     * 通知设备打开出料箱门  pickUpDoorOpen
+     * @return array|string
+     */
+    /**
+     * 通知设备关闭出料箱门  pickUpDoorClose
+     * @return array|string
+     */
+    /**
+     * 通知设备拍照上传  takePhotos
+     * @return array|string
+     */
+    /**
+     * 通知设备回收商品  recycGoods
+     * @return array|string
+     */
+
+    /**
      * 主动发送至MQ
      * @param $msgType
      * @param array $otherData

@@ -107,9 +107,11 @@ class MachineGoodsClient extends ManagementClient
      */
     public function updateByWhere($postData)
     {
-        $result = $this->updateMachineGoods($postData['update'], $postData['where']);
+        if (isset($postData['where']['g_id'])) $where["g_id"] = $postData['where']['g_id'];
+        if (isset($postData['where']['m_id'])) $where[] = ['m_id',"in",$postData['where']['m_id']];
+        $result = $this->updateMachineGoods($postData['update'], $where);
         if ($result) {
-            $mgList = $this->getMachineGoodsList($postData['where'], 0, 'mg_id');
+            $mgList = $this->getMachineGoodsList($where, 0, 'mg_id');
             if ($mgList) {
                 $mgList = $mgList->toArray();
                 foreach ($mgList as $mgk => $mgv) {
