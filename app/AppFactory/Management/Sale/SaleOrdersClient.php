@@ -258,8 +258,7 @@ class SaleOrdersClient extends ManagementClient
         
         $whereThisMonth = $where;
         $whereThisMonth[] = ['create_date', '>=', strtotime(date("Y-m-01"))];
-        $thisMonth = $this->getSaleOrdersFind($whereThisMonth, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney', '', 'create_date');
-        
+        $thisMonth = $this->getSaleOrdersFind($whereThisMonth, 'sum(total_price) saleMoney,sum(total_quantity) saleQuantity,sum(discount_price) discountMoney');
 
         if ($yesterday) $yesterday = $yesterday->toArray();
         if ($today) $data['today'] = $today;
