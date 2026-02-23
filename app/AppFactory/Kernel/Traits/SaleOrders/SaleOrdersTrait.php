@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Created by PhpStorm.
  * User: Administrator
@@ -77,10 +78,10 @@ trait SaleOrdersTrait
                 if ($item['has_hotel'] == 1) {
                     $item['hotel'] = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
                     $item['hotel']['nightly'] = $this->getSaleHotelNightlyList(['sh_id' => $item['hotel']['sh_id']]);
-                    $item['retail_price'] = bcadd($item['retail_price'],$item['hotel']['pay_amount'],2);
+                    $item['retail_price'] = bcadd($item['retail_price'], $item['hotel']['pay_amount'], 2);
                 }
                 if ($item['out_status'] == 6) {
-                    $unclaimed = $this->getSaleOrdersUnclaimedList(['order_id' => $item['order_id']],0,'sod_id,g_name,channel_code,is_match,is_claim,is_out,is_close');
+                    $unclaimed = $this->getSaleOrdersUnclaimedList(['order_id' => $item['order_id']], 0, 'sod_id,g_name,channel_code,is_match,is_claim,is_out,is_close');
                     if ($unclaimed) {
                         $item['unclaimed_status'] = $unclaimed->toArray();
                     }
@@ -125,9 +126,9 @@ trait SaleOrdersTrait
         return SaleOrdersDetailsModel::joinOrderList($where, $pageNum, $field, $order, $group);
     }
 
-    public function getSaleOrdersDetailsJoinOrderFind($where,$field = "*")
+    public function getSaleOrdersDetailsJoinOrderFind($where, $field = "*")
     {
-        return SaleOrdersDetailsModel::joinOrderFind($where,$field);
+        return SaleOrdersDetailsModel::joinOrderFind($where, $field);
     }
 
     /**
@@ -169,9 +170,9 @@ trait SaleOrdersTrait
      */
     public function getDetailsCheckOffCode()
     {
-        while(1){
-            $code = $this->get_rand_string(8,'num');
-            if (!SaleOrdersDetailsModel::getCount(['checkOff_code' => $code,'checkOff_status' => 1])) {
+        while (1) {
+            $code = $this->get_rand_string(8, 'num');
+            if (!SaleOrdersDetailsModel::getCount(['checkOff_code' => $code, 'checkOff_status' => 1])) {
                 break;
             }
         }
@@ -293,18 +294,21 @@ trait SaleOrdersTrait
                 actionException($e, 1);
                 return $this->returnData(6, $this->lang("msg." . 6) . "：" . $e->getMessage());
             }
-            $g_id = $this->config['params']['pay_type'] == 7 ? ($dv['product_id'] ?? 0): $dk;
-            if (!$g_id) return $this->returnData(6,$this->lang("msg" . 6) . "：product_id");
+            $g_id = $this->config['params']['pay_type'] == 7 ? ($dv['product_id'] ?? 0) : $dk;
+            if (!$g_id) return $this->returnData(6, $this->lang("msg" . 6) . "：product_id");
             $whereMc = [];
             $whereMc['m_id'] = $this->machine['m_id'];
             $whereMc['g_id'] = $g_id;
             $whereMc['status'] = 1;
-            $mc = $this->getMachineChannelList($whereMc, 0,
+            $mc = $this->getMachineChannelList(
+                $whereMc,
+                0,
                 'mc_id,channel_code,frozen_stock,stock,shelf_way,channel_position,manufacture_time,sell_by_date,
                         mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
                         cost_price,market_price',
-                "stock desc");
-            actionLog($this->getLS(),'【SQL】查询设备货架');
+                "stock desc"
+            );
+            actionLog($this->getLS(), '【SQL】查询设备货架');
             if (!$mc) return $this->returnData(10, $this->lang("msg." . 10));
             if (is_string($mc)) return $this->returnData(10, $this->lang("msg." . 10) . "：" . $mc);
             $mc = $mc->toArray();
@@ -334,7 +338,7 @@ trait SaleOrdersTrait
                     $totalQuantity = $dv['quantity'];
                 }
                 // 循环生成一个商品一条数据的订单详情
-                for ($i = 1; $i <= $totalQuantity;$i++) {
+                for ($i = 1; $i <= $totalQuantity; $i++) {
                     $insertDetails['quantity'] = 1;
                     $insertDetails['total_sod_price'] = 0;
                     $insertDetails['discount_price'] = 0;
@@ -356,13 +360,13 @@ trait SaleOrdersTrait
                     $this->order['market_price'] = bcadd($this->order['market_price'], $insertDetails['market_price'], 3);
                     $this->order['retail_price'] = bcadd($this->order['retail_price'], $insertDetails['retail_price'], 3);
                 }
-//                $this->order['total_quantity'] = bcadd($this->order['total_quantity'], $insertDetails['quantity'], 3);
+                //                $this->order['total_quantity'] = bcadd($this->order['total_quantity'], $insertDetails['quantity'], 3);
                 $insertDetails = [];
                 if ($dv['quantity'] == 0)
                     break;
             }
-//            $this->order['total_price'] = bcadd($this->order['total_price'], bcdiv($dv['charge_amount'], 100, 3), 3);
-//            $this->order['discount_price'] = bcadd($this->order['discount_price'], bcdiv($dv['discount_amount'], 100, 3), 3);
+            //            $this->order['total_price'] = bcadd($this->order['total_price'], bcdiv($dv['charge_amount'], 100, 3), 3);
+            //            $this->order['discount_price'] = bcadd($this->order['discount_price'], bcdiv($dv['discount_amount'], 100, 3), 3);
         }
         actionLog($flag, '生成订单详情结果集');
         $result = flag_check($flag);
@@ -431,9 +435,15 @@ trait SaleOrdersTrait
      */
     public function transactionVideo()
     {
-        if(strstr($this->message['trade_no'], "door_open") ){
-            actionLog($this->message,"开门视频保存地址记录执行");
-            return MachineErrorCodeModel::update(['transaction_video' => $this->message['transaction_video']],['trade_no' => $this->message['trade_no']]);
+        if (strstr($this->message['trade_no'], "remote_out_goods")) {
+            actionLog($this->message, "远程出货视频保存地址记录执行");
+            $sod_id = str_replace("remote_out_goods_", "", $this->message['trade_no']);
+            $sod_id = intval($sod_id);
+            return $this->updateSaleOrdersDetails(['remote_out_goods_video' => $this->message['transaction_video']], ['sod_id' => $sod_id]);
+        }
+        if (strstr($this->message['trade_no'], "door_open")) {
+            actionLog($this->message, "开门视频保存地址记录执行");
+            return MachineErrorCodeModel::update(['transaction_video' => $this->message['transaction_video']], ['trade_no' => $this->message['trade_no']]);
         }
         return $this->updateSaleOrders(['transaction_video' => $this->message['transaction_video']], ['trade_no' => $this->message['trade_no']]);
     }
@@ -443,12 +453,12 @@ trait SaleOrdersTrait
      * 修复11月份已支付订单，但订单信息不完整的问题
      * @param $postData
      */
-    public function fixOrdersInfo($postData){
+    public function fixOrdersInfo($postData)
+    {
         if(isset($postData['sql'])){
             $res = Db::query($postData['sql']);
             dd($res);
         }
         return SaleOrdersModel::fixOrdersInfo($postData);
     }
-
 }

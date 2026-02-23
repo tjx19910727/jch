@@ -27,6 +27,7 @@ class MachineGroup extends Common
             $where['pid'] = 0;
         }
         $this->field .= ",(SELECT count(m_id) FROM machine_group_mg mgg where mgg.mg_id = a.mg_id ) machineNum,(select mg_name from machine_group mg where mg.mg_id = a.pid) parent_name";
+        $where['ao_id'] = $this->manager['ao_id'];
         return $this->app->machineGroup->getList($where,$pageNum,$this->field,'mg_id desc');
     }
 
@@ -45,6 +46,7 @@ class MachineGroup extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
+        $postData['ao_id'] = $this->manager['ao_id'];
         return $this->app->machineGroup->addMg($postData);
     }
 

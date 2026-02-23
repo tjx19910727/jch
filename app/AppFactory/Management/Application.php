@@ -34,6 +34,7 @@ use app\AppFactory\Kernel\Providers\Management\TripProvider;
 use app\AppFactory\Kernel\Providers\Management\UpdateLogProvider;
 use app\AppFactory\Kernel\Providers\Management\WxProvider;
 use app\AppFactory\Kernel\Providers\Management\MallProvider;
+use app\AppFactory\Kernel\Providers\Management\RemoteActionLogProvider;
 use app\AppFactory\Kernel\Providers\Management\WeiChengProvider;
 
 use app\AppFactory\Kernel\ServiceContainer;
@@ -120,6 +121,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineVersionClient           $machineVersion         设备软件版本
  * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
  * @property Mall\MallClient                        $mall                   商场管理
+ * @property RemoteActionLog\RemoteActionLogClient  $remoteActionLog        远程操作日志管理
+ *
  * @property Card\CardClient                        $card                   商场管理会员卡
  * @property WeiCheng\WeiChengClient                $weicheng               微程接口管理
  * 
@@ -186,6 +189,7 @@ class Application extends ServiceContainer
         UpdateLogProvider::class,
         WxProvider::class,
         MallProvider::class,
+        RemoteActionLogProvider::class,
         CardProvider::class,
         WeiChengProvider::class,
     ];

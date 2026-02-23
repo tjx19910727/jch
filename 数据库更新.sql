@@ -242,6 +242,39 @@ CREATE TABLE `wc_request_logs` (
 ) ENGINE=InnoDB AUTO_INCREMENT=216 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='微程接口调用记录表';
 
 
+#20251230
+CREATE TABLE `remote_action_log` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `machine_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '设备id',
+  `type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '消息类型',
+  `order_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '订单id',
+  `sod_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '订单子表id',
+  `goods_id` int DEFAULT NULL COMMENT '商品id',
+  `channel_code` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '货道编号',
+  `status` int NOT NULL DEFAULT '1' COMMENT '状态： 1-已发送，2 -已接收命令，3-操作成功，4-操作失败',
+  `operator_at` timestamp NOT NULL COMMENT '每个状态记录时间',
+  `manager_id` int DEFAULT NULL COMMENT '操作人id',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='远程操作记录表';
+
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `remote_out_goods_status` int default 0 COMMENT '远程出货状态：1-已发出货指令 2-已接收出货指令  3-出货成功 4-出货失败' AFTER `fall_quantity`;
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `remote_out_goods_video` varchar(200) default NULL COMMENT '远程出货视频 ' AFTER `remote_out_goods_status`;
+
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `refund_photo` varchar(250) default NULL COMMENT '远程退货拍照' AFTER `refund_quantity`;
+
+ALTER TABLE kiosk.machine
+  ADD COLUMN `recycle_box_total_capacity` int default 0 COMMENT '回收箱容量' AFTER `version`;
+ALTER TABLE kiosk.machine
+  ADD COLUMN `recycle_box_remain_capacity` int default 0 COMMENT '回收箱当前可用容量' AFTER `recycle_box_total_capacity`;
+
+
+UPDATE kiosk.wx_template
+SET  template_id='frqumju8oA7N8msUrhIiHkY6Gu1wgiGNq_Oo5TxjYsY', body='[{"设备编号":{"value":"{{machine_id}}","field":"character_string47"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"异常时间":{"value":"{{error_time}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"异常类型":{"value":"{{error_code}}","field":"phrase13"}}]' 
+WHERE template_type='understock';
+
 #20251208
 ALTER TABLE kiosk.sale_orders
   ADD COLUMN `intergral_rate` decimal(10,3) default 0 COMMENT '当前订单积分-现金兑换比例（1元=10积分） ' AFTER `total_price`;
@@ -281,7 +314,6 @@ CREATE TABLE `mall` (
   `updator` varchar(50) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
   UNIQUE KEY `mall_id` (`mall_id`),
   UNIQUE KEY `mall_name` (`mall_name`),
   UNIQUE KEY `account` (`account`)
@@ -318,11 +350,11 @@ CREATE TABLE `request_logs` (
 
 #20251228
 UPDATE kiosk.wx_template
-SET  template_id='frqumju8oA7N8msUrhIiHkY6Gu1wgiGNq_Oo5TxjYsY', body='[{"设备编号":{"value":"{{machine_id}}","field":"character_string47"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"异常时间":{"value":"{{error_time}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"异常类型":{"value":"{{error_code}}","field":"phrase13"}}]', 
+SET  template_id='frqumju8oA7N8msUrhIiHkY6Gu1wgiGNq_Oo5TxjYsY', body='[{"设备编号":{"value":"{{machine_id}}","field":"character_string47"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"异常时间":{"value":"{{error_time}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"异常类型":{"value":"{{error_code}}","field":"phrase13"}}]' 
 WHERE template_type='mFault';
 
 UPDATE kiosk.wx_template
-SET  template_id='frqumju8oA7N8msUrhIiHsm0NQQEj3kZOgdMVnkfy-4', body='[{"设备编号":{"value":"{{machine_id}}","field":"character_string47"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"时间":{"value":"{{now}}","field":"time30"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"异常类型":{"value":"{{error_code}}","field":"phrase13"}}]', 
+SET  template_id='frqumju8oA7N8msUrhIiHsm0NQQEj3kZOgdMVnkfy-4', body='[{"设备编号":{"value":"{{machine_id}}","field":"character_string47"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"时间":{"value":"{{now}}","field":"time30"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"异常类型":{"value":"{{error_code}}","field":"phrase13"}}]' 
 WHERE template_type='tException';
 
 #20251217

@@ -768,6 +768,21 @@ class Receive extends Common
         }
     }
 
+
+    /**
+     * 上报回收箱信息
+     * @return array|\think\response\Json
+     */
+    public function recycleBoxReport()
+    {
+        try {
+            return $this->app->api->recycleBoxReport();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+    
     /**
      * 设备主动获取出货信息
      * @return array|string

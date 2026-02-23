@@ -1377,6 +1377,20 @@ class ApiClient extends ReceiveBaseClient
     }
 
 
+    
+    /**
+     * 设备上报回收箱信息
+     */
+    public function recycleBoxReport(){
+        $this->updateMachine([
+            "recycle_box_total_capacity" => $this->machine['recycle_box_total_capacity'] ?? 0,
+            "recycle_box_remain_capacity" => $this->machine['recycle_box_remain_capacity'] ?? 0
+        ],[
+            'machine_id' => $this->machine['machine_id'] ?? 0
+        ]);
+        return $this->r(200,'success');
+    }
+
     public function requireOutGoods(){
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]); 
         if (!$order) return $this->r(300,$this->lang("VSaleOrders.order_not_data"));
@@ -1431,6 +1445,7 @@ class ApiClient extends ReceiveBaseClient
         }
         return $this->r(100, 'failed', []);
     }
+
     
     /**
      * 取卡  卡添加积分
@@ -1736,14 +1751,6 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail($e->getMessage());
         }
     }
-
-    public function retryOutGoods()
-    {
-        //这里暂时预留出货动作，后续补充完整，具体方案为:服务器在拿到支付回调之后，回调信息同步存入数据库
-        //当设备主动触发出货请求时，查询回调信息，获取订单支付状态，修改对应参数，完成出货
-        return $this->r(100, $this->lang("VOutGoods.details_no_data"));
-    }
-
 
     //创建卡购买订单
     public function addCardSaleOrdersAndDetails(){
