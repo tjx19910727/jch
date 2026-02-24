@@ -414,7 +414,7 @@ trait MachineTrait
         $machine_id = input('machine_id');
         $channel_code = input('channel_code') ?? '';
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
-        if (!$detail) $this->r(100,$this->lang("VOutGoods.details_no_data"));
+        if (!$detail) return $this->r(100,"找不到订单记录");
         $order = $this->getSaleOrdersFind(['order_id' => $detail['order_id']]);
         // 先不做判断
         // if (!$channel_code){
