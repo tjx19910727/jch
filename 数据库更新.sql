@@ -258,7 +258,7 @@ CREATE TABLE `remote_action_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='远程操作记录表';
 
 ALTER TABLE kiosk.sale_orders_details
-  ADD COLUMN `remote_out_goods_status` int default 0 COMMENT '远程出货状态：1-已发出货指令 2-已接收出货指令  3-出货成功 4-出货失败' AFTER `fall_quantity`;
+  ADD COLUMN `remote_out_goods_status` int default 0 COMMENT '远程出货状态：1-已发出货指令 2-已接收出货指令  3-出货成功 4-出货失败' AFTER `fail_quantity`;
 ALTER TABLE kiosk.sale_orders_details
   ADD COLUMN `remote_out_goods_video` varchar(200) default NULL COMMENT '远程出货视频 ' AFTER `remote_out_goods_status`;
 
