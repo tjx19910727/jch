@@ -96,12 +96,18 @@ class SaleOrders extends Common
     {
         $postData = input();
         $sku = '';
-        if(!empty($postData['sku'])) {
+        $g_name = '';
+        if(isset($postData['sku']) && !empty($postData['sku'])) {
             $sku = $postData['sku'];
             unset($postData['sku']);
         }
-        $where = $this->getWhere($postData,false,["g_name" => "like","sku" => 'like',"trade_no" => "like","machine_id" => 'like',"machine_name" => 'like','factory'=>'in','inventory_location'=>'in']);
+        if(isset($postData['g_name']) && !empty($postData['g_name'])) {
+            $g_name = $postData['g_name'];
+            unset($postData['g_name']);
+        }
+        $where = $this->getWhere($postData,false,["trade_no" => "like","machine_id" => 'like',"machine_name" => 'like','factory'=>'in','inventory_location'=>'in']);
         if ($sku) $where[] = ['sod.sku', 'like', '%'.$sku.'%'];
+        if ($g_name) $where[] = ['sod.g_name', 'like', '%'.$g_name.'%'];
         $where['so.pay_status'] = 3;
 
         if($this->authMchCannel()['status'] != 0){
@@ -133,6 +139,7 @@ class SaleOrders extends Common
         $postData = input();
         $m_id = 0;
         $sku = '';
+        $g_name = '';
         if (isset($postData['m_id']) && $postData['m_id']) {
             $m_id = $postData['m_id'];
             unset($postData['m_id']);
@@ -141,7 +148,11 @@ class SaleOrders extends Common
             $sku = $postData['sku'];
             unset($postData['sku']);
         }
-        $where = $this->getWhere($postData,false,["g_name" => "like","machine_id" => 'like',"machine_name" => 'like'],'so.');
+        if(!empty($postData['g_name'])) {
+            $g_name = $postData['g_name'];
+            unset($postData['g_name']);
+        }
+        $where = $this->getWhere($postData,false,["machine_id" => 'like',"machine_name" => 'like'],'so.');
         if (isset($where['ao_id'])) {
             $where['so.ao_id'] = $where['ao_id'];
             unset($where['ao_id']);
@@ -149,6 +160,7 @@ class SaleOrders extends Common
         $where['so.pay_status'] = 3;
         if ($m_id) $where['so.m_id'] = $m_id;
         if ($sku) $where[] = ['sod.sku', 'like', '%'.$sku.'%'];
+        if ($g_name) $where[] = ['sod.g_name', 'like', '%'.$g_name.'%'];
         return $this->app->saleOrders->exportGoodsSo($where);
     }
 
