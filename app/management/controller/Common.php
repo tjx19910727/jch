@@ -226,6 +226,10 @@ class Common extends AuthController
     public function between($key,$value,&$where = [],$prefix = "")
     {
         $value = explode("~", $value);
+        if($value[0] == $value[1]) {
+            $value[0] = $value[0]. ' 00:00:00';
+            $value[1] = $value[1]. ' 23:59:59';
+        }
         if ((validateDate($value[0], 'Y-m-d') && validateDate($value[1], 'Y-m-d')) ||
             (validateDate($value[0], 'Y-m-d H:i:s') && validateDate($value[1], 'Y-m-d H:i:s'))) {
             $where[] = [$prefix . $key, 'between', [strtotime($value[0]), strtotime($value[1])]];
