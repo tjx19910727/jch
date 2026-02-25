@@ -97,8 +97,8 @@ class SaleOrdersClient extends MachineBaseClient
                                 "replaceData" => [
                                     "machine_id" => $this->machine['machine_id'],
                                     "now" => date('Y-m-d H:i:s'),
-                                    "error_info" => $this->lang("tException.unclaimed"),
-                                    "error_code" => $order['order_id'] . "_" . $d['sod_id'],
+                                    "error_info" => $order['order_id'] . "_" . $d['sod_id'],
+                                    "error_code" => $this->lang("tException.unclaimed"),
                                     "exceptionDeclaration" => $order['order_id'] . "_" . $d['sod_id'] . $this->lang("tException.unclaimed")
                                 ]
                             ];

@@ -219,6 +219,9 @@ trait AfterOrderPaymentTrait
                     "machine_name" => $this->machine['machine_name'],
                     "trade_no" => $this->order['trade_no'],
                     "money" => number_format($this->order['total_price'],2,'.',','),
+                    "now" => date('Y-m-d H:i:s'),
+                    "error_info" => "订单交易完成",
+                    "error_code" => "订单交易完成",
                 ]
             ];
             $result = @$this->noticeSend();

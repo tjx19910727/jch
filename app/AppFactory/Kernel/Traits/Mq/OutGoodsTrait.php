@@ -142,9 +142,9 @@ trait OutGoodsTrait
                                     "stock" => $stock,
                                     "channel_code" => $mc['channel_code'],
                                     "stock_warning" => $mc['stock_warning'] ?? 0,
-                                    "error_code" => $errorCode,
+                                    "error_code" => $this->lang("deviceErrorCode.".$errorCode),
                                     "error_time" => date('Y-m-d H:i:s'),
-                                    "error_info" => $this->lang("deviceErrorCode.".$errorCode),
+                                    "error_info" => $errorCode,
                                 ]
                             ];
                             actionLog($this->noticeSendData,'发送补货通知','OutGoods');

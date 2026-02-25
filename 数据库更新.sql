@@ -357,6 +357,11 @@ UPDATE kiosk.wx_template
 SET  template_id='frqumju8oA7N8msUrhIiHsm0NQQEj3kZOgdMVnkfy-4', body='[{"设备编号":{"value":"{{machine_id}}","field":"character_string47"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"时间":{"value":"{{now}}","field":"time30"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"异常类型":{"value":"{{error_code}}","field":"phrase13"}}]' 
 WHERE template_type='tException';
 
+
+UPDATE kiosk.wx_template
+SET  template_id='frqumju8oA7N8msUrhIiHvilI4ayV3u6q4TKEbCYTtM', body='[{"设备编号":{"value":"{{machine_id}}","field":"character_string16"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"时间":{"value":"{{now}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"异常类型":{"value":"{{error_code}}","field":"phrase13"}}]' 
+WHERE template_type='sale';
+
 #20251217
 UPDATE kiosk.strategy_machine SET ao_id=19 WHERE sm_id=2372;
 UPDATE kiosk.strategy_machine SET ao_id=19 WHERE sm_id=2373;
