@@ -939,6 +939,15 @@ class Receive extends Common
         }
     }
 
+    public function getLoginWcQrCode(){
+        try {
+            return $this->app->api->getLoginWcQrCode();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     public function test()
     {
         $this->app->api->test();

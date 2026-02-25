@@ -1913,6 +1913,15 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200, 'success', $address_lists);
     }
 
+    public function getLoginWcQrCode(){
+        $machine_id = $this->data['machine_id'];
+        $res = $this->wcLoginQrCode($machine_id);
+        if ($res['status'] != 200) return $this->r(100, 'failed', $res['response']);
+
+        $response = json_decode($res['response'], true);
+        return $this->r(200, 'success', $response['data']);
+    }
+
     public function test()
     {
         // $this->order = $this->getSaleOrdersFind(['order_id' => '29785']);

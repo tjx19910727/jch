@@ -55,6 +55,7 @@ trait WcBaseTrait
         $this->get_points_qrcode = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/getIntegralQrcode";
         $this->query_hotel_info_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/hotel/queryDays";
         $this->query_user_info_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/queryUserRights";
+        $this->query_login_qrcode_url = $this->config['apiDomain'] . "/msvc-shop/v1/mp/user/getLoginQrcode";
     }
 
     public function getDecptData($data)
@@ -351,5 +352,12 @@ trait WcBaseTrait
         $this->initWcBase();
         $header = array('token: ' . $token);
         return $this->weicheng_curl($this->query_user_info_url, [], $header);
+    }
+
+    public function wcLoginQrCode($machine_id)
+    {
+        $this->initWcBase();
+        $postUrl = $this->query_login_qrcode_url . "?machine_code=" . $machine_id;
+        return $this->weicheng_curl($postUrl);
     }
 }

@@ -13,6 +13,10 @@ use app\AppFactory\AppFactory;
 class WeiCheng
 {
 
+    public function scanNotify(){
+        //用户信息入库等。
+        return true;
+    }
     
     public function refund()
     {

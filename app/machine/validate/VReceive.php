@@ -200,6 +200,9 @@ class VReceive extends VCommon
         "getWcGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
         "getWcMCLists" => ["msg_id","machine_id","timestamp","sign"],
         "getWcUserInfo" => ["msg_id","machine_id","timestamp","sign"],
+
+        "getLoginWcQrCode" => ["msg_id","machine_id","timestamp","sign"],
+        
         
 
     ];
