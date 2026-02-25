@@ -257,7 +257,11 @@ class SaleOrders extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
+        $update_time = '';
+        if(isset($postData['create_time']) && !empty($postData['create_time'])) $update_time = $postData['create_time'];
+        $timeWhere = $this->getWhere(['sor.update_time' => $update_time]);
         $where = $this->authNodeWhere();
+        $where = $timeWhere + $where;
         if (isset($where['ao_id'])) {
             $where['sor.ao_id'] = $where['ao_id'];
             unset($where['ao_id']);
