@@ -3,6 +3,83 @@ ALTER TABLE kiosk.machine_config ADD points_type int 0 COMMENT '会员积分版�
 
 
 
+#20260128
+CREATE TABLE `wc_users_addresses` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `bind_id` varchar(20) NOT NULL COMMENT '会员账户：一般为手机号',
+  `address` text COMMENT '邮寄地址',
+  `link_name` varchar(50) DEFAULT NULL COMMENT '收件人姓名',
+  `phone` varchar(100) DEFAULT NULL COMMENT '收件人手机号',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `wc_users_unique` (`bind_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='微程会员寄送地址';
+
+ALTER TABLE kiosk.wc_goods_local CHANGE g_id id int(11) NOT NULL AUTO_INCREMENT COMMENT '主键';
+ALTER TABLE kiosk.wc_goods_local   ADD g_id int(11) NULL COMMENT '核心商品库商品id' after  `no`;
+ALTER TABLE kiosk.wc_goods_local   ADD type int(11) NULL COMMENT '商品类型' after  `no`;
+
+ALTER TABLE kiosk.sale_orders_details  ADD wc_order_no text NULL COMMENT '对应微程单号' after  `order_id`;
+
+CREATE TABLE `wc_machine_channel` (
+  `mc_id` int NOT NULL AUTO_INCREMENT COMMENT '货道ID',
+  `m_id` int NOT NULL COMMENT '设备ID',
+  `machine_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '设备编号',
+  `channel_code` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '货道编号',
+  `g_id` int DEFAULT '0' COMMENT '商品ID',
+  `out_no` varchar(20) COLLATE utf8mb4_unicode_ci DEFAULT '0' COMMENT '微程商品外部编码',
+  `g_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '商品名称',
+  `gc_id` int DEFAULT '0' COMMENT '分类ID',
+  `gc_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '分类名称',
+  `pic` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商品图片',
+  `sku` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'SKU码',
+  `bar_code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '条码',
+  `retail_price` decimal(10,2) DEFAULT '0.00' COMMENT '零食价',
+  `intergral_rate` decimal(10,3) DEFAULT '0.000' COMMENT '积分-现金兑换比例（1元=10积分） ',
+  `gift_points` decimal(10,3) DEFAULT '0.000' COMMENT '赠送积分',
+  `sort` int DEFAULT NULL COMMENT '排序',
+  `create_time` int DEFAULT '0' COMMENT '创建时间',
+  `update_time` int DEFAULT '0' COMMENT '修改时间',
+  PRIMARY KEY (`mc_id`) USING BTREE,
+  KEY `m_id` (`m_id`) USING BTREE,
+  KEY `machine_id` (`machine_id`) USING BTREE,
+  KEY `g_id` (`g_id`) USING BTREE,
+  KEY `sku` (`sku`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='微程虚拟商品设备货道表';
+
+
+CREATE TABLE `wc_machine_goods` (
+  `id` NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `m_id` int DEFAULT NULL COMMENT '设备ID',
+  `machine_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '设备编号',
+  `out_no` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '微程商品外部编码',
+  `g_id` int DEFAULT NULL COMMENT '商品ID',
+  `g_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商品名称',
+  `type` int DEFAULT NULL COMMENT '商品分类ID',
+  `type_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商品分类',
+  `pic` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '商品图片',
+  `sku` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'SKU码',
+  `bar_code` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `cost_price` decimal(10,2) DEFAULT '0.00' COMMENT '成本价',
+  `market_price` decimal(10,2) DEFAULT '0.00' COMMENT '市场价',
+  `retail_price` decimal(10,2) DEFAULT '0.00' COMMENT '零售价',
+  `intergral_rate` decimal(10,3) DEFAULT '0.000' COMMENT '积分-现金兑换比例（1元=10积分） ',
+  `gift_points` decimal(10,3) DEFAULT '0.000' COMMENT '赠送积分',
+  `available_stock` int DEFAULT '0' COMMENT '可用库存',
+  `disabled_stock` int DEFAULT '0' COMMENT '不可用库存',
+  `reserve_stock` int DEFAULT '0' COMMENT '预订量',
+  `standby_stock` int DEFAULT '0' COMMENT '备用库存',
+  `pre_loading_stock` int DEFAULT '0' COMMENT '预上货库存',
+  `is_shelf` tinyint(1) DEFAULT '2' COMMENT '已上架，1：是，2：否',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `g_id` (`g_id`) USING BTREE,
+  KEY `machine` (`m_id`,`machine_id`) USING BTREE,
+  KEY `type` (`type`) USING BTREE,
+  KEY `sku` (`sku`) USING BTREE,
+  KEY `bar_code` (`bar_code`) USING BTREE,
+  KEY `is_shelf` (`is_shelf`) USING BTREE,
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='微程设备商品表';
+
+
 #20260123
 ALTER TABLE kiosk.wc_goods 
   ADD get_data TEXT NULL COMMENT '接口返回内容';

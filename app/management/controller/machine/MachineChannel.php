@@ -13,6 +13,7 @@ use app\AppFactory\AppFactory;
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachineChannel;
 
+
 class MachineChannel extends Common
 {
 
@@ -127,5 +128,29 @@ class MachineChannel extends Common
                 return returnState(100,lang("action_machine_overtime"));
             }
         }
+    }
+   
+    
+    //设置货道商品积分比例
+    public function  setMCGiftPoints(){
+        $m_id = input("m_id");
+        $integral_rate = input('integral_rate') ?? 1;
+        return $this->app->machineChannel->setMachineChannelGiftPoints($m_id, $integral_rate);
+    }
+
+    //设置微程商品在虚拟货道排序
+    public function setWcGoods2Mc(){
+        $m_id = input("m_id");
+        $out_nos = input('out_nos');
+        $out_nos_arr = explode(',', $out_nos);
+        return $this->app->weicheng->setWcMachineChannelLists($m_id, $out_nos_arr);
+    }
+
+    public function getWcGoods2Mc()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, ['m_id' => 'like']);
+        return $this->app->weicheng->getWcMachineChannelLists($where, $pageNum, "*", 'id desc');
     }
 }
