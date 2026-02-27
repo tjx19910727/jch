@@ -111,22 +111,21 @@ trait AfterOrderRefundTrait
     }
 
     /**
-     * 退款成功修改订单副表
+     * 退款成功修改订单副表 
      * @param $value
      * @return mixed
      */
     protected function refundSuccessUpdateSod()
     {
-        $refund_points = 0;
         if($this->order['pay_type'] == 9){
-            $refund_points = bcmul($this->order['intergral_rate'], $this->refund['refund_amount']);
+            // $refund_points = bcmul($this->order['intergral_rate'], $this->refund['refund_cost_points']);
         // }elseif($this->order['total_points']){
         //     $saleOrdersDetails = $this->getSaleOrdersDetailsFind(['sod_id' => $this->refund['sod_id']]);
         //     if(!$saleOrdersDetails) $refund_points = 0;
         //     $refund_points = bcmul(bcdiv($this->refund['refund_quantity'], $this->saleOrdersDetails['quantity'], 0),$this->saleOrdersDetails['total_sod_points'],2);
-        }
-        if($refund_points){
-            $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']], 'refund_points', $refund_points);
+        // }
+        // if($refund_points){
+            $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']], 'refund_cost_points', $this->refund['refund_cost_points']);
             actionLog($this->getLS(),'修改订单副表退款积分SQL');
         }
         
@@ -145,13 +144,12 @@ trait AfterOrderRefundTrait
      */
     protected function refundSuccessUpdateOrder()
     {
-        $refund_points = $this->refund['refund_points'];
         $updateOrder = [
             "order_id" => $this->order['order_id'],
             "refund_status" => 2,
             "refund_amount" => $this->order['refund_amount'] + $this->data['refundAmount'],
             "refund_quantity" => $this->order['refund_quantity'],
-            'refund_points' => $this->order['refund_points'] + $refund_points ?? 0
+            'refund_cost_points' => $this->order['refund_cost_points'] + $this->refund['refund_cost_points'] ?? 0
         ];
         actionLog($updateOrder,'修改订单数据');
         $result = $this->updateSaleOrders($updateOrder);

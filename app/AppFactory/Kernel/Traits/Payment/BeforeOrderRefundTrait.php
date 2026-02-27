@@ -124,11 +124,12 @@ trait BeforeOrderRefundTrait
             $insertSor['refund_amount'] = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
             $insertSor['manager_id'] = 0;
             $insertSor['nickname'] = "收款方";
-            if($this->order['pay_type'] == 9 || $this->order['order_type'] == 7){
-                $refund_amount = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
-                $refund_points = $refund_amount * $this->order['intergral_rate'];
-                $insertSor['refund_points'] = $refund_points;
-            }else{
+            if($this->order['pay_type'] == 9 || $this->order['order_type'] == 7){//这里退的是消费的商场积分
+                // $refund_amount = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
+                // $refund_points = $refund_amount * $this->order['intergral_rate'];
+                // $insertSor['refund_points'] = $refund_points;
+                $insertSor['refund_cost_points'] = bcmul(bcdiv($this->sod['refund_quantity'], $this->sod['quantity'], 0),$this->sod['total_sod_cost_points'],2);
+            }else{//这里退的是赠送的积分
                 $insertSor['refund_points'] = bcmul(bcdiv($this->sod['refund_quantity'], $this->sod['quantity'], 0),$this->sod['total_sod_points'],2);
             }
             $this->totalRefundMoney = $this->sodRefundAmount;
@@ -175,6 +176,7 @@ trait BeforeOrderRefundTrait
             "refund_quantity" => $this->postData['refund']['quantity'],
             "user_id" => $this->order['user_id'],
             "remark" => $this->postData['remark'] ?? "",
+            "refund_cost_points" => 0,
         ];
     }
 

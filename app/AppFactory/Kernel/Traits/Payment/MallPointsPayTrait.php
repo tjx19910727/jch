@@ -10,10 +10,11 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 
 trait MallPointsPayTrait
 {
-    use AfterOrderPaymentTrait,SaleOrdersTrait;
+    use AfterOrderPaymentTrait,SaleOrdersTrait,SaleOrdersRefundTrait;
 
     public $m_AppID = '';
     public $m_PublicKey = '';
@@ -127,12 +128,12 @@ trait MallPointsPayTrait
     public function mallPointsPay()
     {
         $this->initMallPointsPay();
-        $total_price = $this->order['total_price'];
-        $score = $total_price * $this->mall['intergral_rate'];
+        // $total_price = $this->order['total_price'];
+        // $score = $total_price * $this->mall['intergral_rate'];
         $rtn = $this->mallcooPost($this->reduce_points_url, [
             'CardNo' => $this->order['pay_code'],
             'ScoreEvent' => 'BonusSum',
-            'Score' => $score,
+            'Score' => $this->order['total_cost_points'],
             'Reason' => $this->order['trade_no'].'订单消费扣减积分',
             'TransID' => $this->generateRandomString(16),
         ]);
@@ -141,8 +142,8 @@ trait MallPointsPayTrait
             //扣减积分成功，更新订单状态为已支付
             $this->order['pay_status'] = 3;
             $this->order['pay_time'] = time();
-            $this->order['intergral_rate'] = $this->mall['intergral_rate'];
-            $this->order['total_points'] = $score;
+            // $this->order['intergral_rate'] = $this->mall['intergral_rate'];
+            // $this->order['total_points'] = $this->order['total_cost_points'];
             // $this->order['order_type'] = 7;
             $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status','pay_time','total_price','intergral_rate','total_points','order_type']);
             if ($uOrder) {
@@ -161,10 +162,13 @@ trait MallPointsPayTrait
     protected function mallPointsRefund()
     {
         $this->initMallPointsPay();
+        $refundData = $this->getSaleOrdersRefundFind(['refund_trade_no' => $this->refundData['refund_trade_no']]);
+        if(!$refundData) return $this->rFail( '退款失败：找不到退款订单');
         $result = $this->mallcooPost($this->increase_points_url, [
             'CardNo' => $this->order['pay_code'],
             'ScoreEvent' => 'BonusSum',
-            'Score' => $this->refundData['refund_amount'] * $this->mall['intergral_rate'],
+            // 'Score' => $this->refundData['refund_amount'] * $this->mall['intergral_rate'],
+            'Score' => $refundData['refund_cost_points'],
             'Reason' => $this->order['trade_no'].'订单退款返回积分',
             'TransID' => $this->generateRandomString(16),
         ]);
