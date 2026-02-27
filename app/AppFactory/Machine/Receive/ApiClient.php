@@ -801,6 +801,7 @@ class ApiClient extends ReceiveBaseClient
                 $updateOrder['quantity'] = 0;
                 $updateOrder['total_price'] = 0;
                 $updateOrder['total_quantity'] = 0;
+                $updateOrder['total_cost_points'] = 0;
                 if (!isset($this->data['carList']) || !$this->data['carList']) {
                     $this->rollbackTrans();
                     return $this->rFail("购物车不能为空");
@@ -849,6 +850,7 @@ class ApiClient extends ReceiveBaseClient
                             "total_sod_price" => bcmul($mc['retail_price'], $quantity, 3),
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'],
+                            "total_sod_cost_points" => bcmul($mc['cost_points'], $quantity, 3),
                         ];
                         $sod_id = $this->addSaleOrdersDetails($details);
                         if ($sod_id) {
@@ -858,6 +860,7 @@ class ApiClient extends ReceiveBaseClient
                             $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $quantity);
                             $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 3);
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
+                            $updateOrder['total_cost_points'] = bcadd($updateOrder['total_cost_points'], $details['total_sod_cost_points'], 3);
                         } else {
                             $this->rollbackTrans();
                             return $this->r(300, $this->lang("VSubCar.make_order_details_fail"));

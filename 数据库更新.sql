@@ -1,3 +1,24 @@
+#20260226
+ALTER TABLE kiosk.machine_channel
+  ADD COLUMN `cost_points` decimal(10,3) default 0 COMMENT '消费积分' AFTER `gift_points`;
+ALTER TABLE kiosk.machine_goods
+  ADD COLUMN `cost_points` decimal(10,3) default 0 COMMENT '消费积分' AFTER `gift_points`;
+ALTER TABLE kiosk.goods
+  ADD COLUMN `cost_points` decimal(10,3) default 0 COMMENT '消费积分' AFTER `gift_points`;
+
+ALTER TABLE kiosk.sale_orders
+  ADD COLUMN `total_cost_points` decimal(10,3) default 0 COMMENT '当前订单总消费积分 ' AFTER `total_price`;
+
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `total_sod_cost_points` decimal(10,3) default 0 COMMENT '当前子订单总消费积分 ' AFTER `total_sod_price`;
+
+ALTER TABLE kiosk.sale_orders
+  ADD COLUMN `refund_cost_points` decimal(10,3) default 0 COMMENT '退还消费积分 ' AFTER `refund_amount`;
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `refund_cost_points` decimal(10,3) default 0 COMMENT '副表消耗总积分 ' AFTER `refund_amount`;
+ALTER TABLE kiosk.sale_orders_refund
+  ADD COLUMN `refund_cost_points` decimal(10,3) default 0 COMMENT '退还积分 ' AFTER `refund_amount`;
+  
 #20260209
 ALTER TABLE kiosk.machine_config ADD points_type int 0 COMMENT '会员积分版本;0-无会员无卡     1-会员无卡   2-会员有卡' after `pay_type`;
 
