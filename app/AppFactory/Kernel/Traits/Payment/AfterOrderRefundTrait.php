@@ -125,6 +125,7 @@ trait AfterOrderRefundTrait
         //     $refund_points = bcmul(bcdiv($this->refund['refund_quantity'], $this->saleOrdersDetails['quantity'], 0),$this->saleOrdersDetails['total_sod_points'],2);
         // }
         // if($refund_points){
+        
             $flag[] = $this->incSaleOrdersDetails(['sod_id' => $this->refund['sod_id']], 'refund_cost_points', $this->refund['refund_cost_points']);
             actionLog($this->getLS(),'修改订单副表退款积分SQL');
         }
