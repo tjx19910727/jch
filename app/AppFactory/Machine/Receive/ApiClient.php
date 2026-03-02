@@ -794,6 +794,17 @@ class ApiClient extends ReceiveBaseClient
         $updateOrder = [];
         $this->startTrans();
         try {
+            //这里新增一个逻辑，如果是虚拟货道的微程商品，定义一组参数用于存储订单信息；
+            $wc_goods_status = [
+                'out_goods_no' => '',//父商品编码
+                'goods_no' => '',//子商品编码
+                'order_no' => '',//订单同步时微程反馈的订单号
+                'order_date' => '',//房态商品订房日期
+                'need_local_out_goods' => 0,//是否需要本机出货  0-否 1-是
+                'out_goods_status' => 0,//出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
+                'wc_user_address_id' => '', //微程会员寄送地址id
+                'wc_user_address' => '',//微程会员寄送详细地址
+             ];
             $order_id = $this->addSaleOrders($order);
             if ($order_id) {
                 $updateOrder['order_id'] = $order_id;
@@ -812,6 +823,28 @@ class ApiClient extends ReceiveBaseClient
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
                         $mc['status'] = 1;
+                        $wc_goods_locals = $this->getWcGoodsLocalList(['out_goods' => $value['out_goods']]);
+                        if(!$wc_goods_locals){
+                            $wc_goods_locals = $wc_goods_locals->toArray();
+                            $machine_channel = 0;
+                            foreach($wc_goods_locals as $wc_goods_local){
+                                if($wc_goods_local['g_id']) {
+                                    $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
+                                    if(!$machine_channel) $machine_channel = $machine_channel->toArray();
+                                }
+                                $wc_goods_no[] = [
+                                    'out_goods_no' => $value['out_goods'],//父商品编码
+                                    'goods_no' => $wc_goods_local['goods_no'],//子商品编码
+                                    'order_no' => '',//订单同步时微程反馈的订单号
+                                    'order_date' => $value['order_date'],//房态商品订房日期
+                                    'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0,//是否需要本机出货  0-否 1-是
+                                    'out_goods_status' => 0,//出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
+                                    'real_channel_code' => '',//实际出货货道
+                                    'wc_user_address_id' => '', //微程会员寄送地址id
+                                    'wc_user_address' => '',//微程会员寄送详细地址
+                                ];
+                            }
+                        }
                     } else {
                         $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
                     }
@@ -857,6 +890,7 @@ class ApiClient extends ReceiveBaseClient
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'] ?? '',
                         ];
+                        
                         $sod_id = $this->addSaleOrdersDetails($details);
                         if ($sod_id) {
                             $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $quantity, 2), 3);
