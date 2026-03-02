@@ -142,6 +142,7 @@ trait MallPointsPayTrait
             //扣减积分成功，更新订单状态为已支付
             $this->order['pay_status'] = 3;
             $this->order['pay_time'] = time();
+            $this->order['total_price'] = 0;
             // $this->order['intergral_rate'] = $this->mall['intergral_rate'];
             // $this->order['total_points'] = $this->order['total_cost_points'];
             // $this->order['order_type'] = 7;
