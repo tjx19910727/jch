@@ -793,17 +793,6 @@ class ApiClient extends ReceiveBaseClient
         $updateOrder = [];
         $this->startTrans();
         try {
-            //这里新增一个逻辑，如果是虚拟货道的微程商品，定义一组参数用于存储订单信息；
-            // $wc_goods_status = [
-            //     'out_goods_no' => '',//父商品编码
-            //     'goods_no' => '',//子商品编码
-            //     'order_no' => '',//订单同步时微程反馈的订单号
-            //     'order_date' => '',//房态商品订房日期
-            //     'need_local_out_goods' => 0,//是否需要本机出货  0-否 1-是
-            //     'out_goods_status' => 0,//出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
-            //     // 'wc_user_address_id' => '', //微程会员寄送地址id
-            //     // 'wc_user_address' => '',//微程会员寄送详细地址
-            //  ];
             $wc_order_no = [];
             $real_channel_code = 'Z10';
             $order_id = $this->addSaleOrders($order);
@@ -825,26 +814,26 @@ class ApiClient extends ReceiveBaseClient
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
                         $mc['status'] = 1;
-                        if($value['no'])  {
+                        if ($value['no']) {
                             $wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no']]);
-                            if($wc_goods_locals){
+                            if ($wc_goods_locals) {
                                 $wc_goods_locals = $wc_goods_locals->toArray();
                                 $machine_channel = 0;
-                                foreach($wc_goods_locals as $wc_goods_local){
-                                    if($wc_goods_local['g_id']) {
+                                foreach ($wc_goods_locals as $wc_goods_local) {
+                                    if ($wc_goods_local['g_id']) {
                                         $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
-                                        if(!$machine_channel) $machine_channel = $machine_channel->toArray();
+                                        if (!$machine_channel) $machine_channel = $machine_channel->toArray();
                                         $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : 'Z10';
                                     }
                                     $wc_order_no[$wc_goods_local['no']] = [
-                                        'out_no' => $mc['out_no'],//父商品编码
-                                        'no' => $wc_goods_local['no'],//子商品编码
-                                        'order_no' => '',//订单同步时微程反馈的订单号
-                                        'order_date' => $value['order_date'] ?? '',//房态商品订房日期
-                                        'retail_price' => $value['seller_price'] ? $value['seller_price'] : ($wc_goods_local['retail_price'] ?? 0),//微程推过来的价格
-                                        'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0,//是否需要本机出货  0-否 1-是
-                                        'out_goods_status' => 0,//出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
-                                        'real_channel_code' => $real_channel_code,//实际出货货道
+                                        'out_no' => $mc['out_no'], //父商品编码
+                                        'no' => $wc_goods_local['no'], //子商品编码
+                                        'order_no' => '', //订单同步时微程反馈的订单号
+                                        'order_date' => $value['order_date'] ?? '', //房态商品订房日期
+                                        'total_price' => $value['seller_price'] ? $value['seller_price'] : ($wc_goods_local['retail_price'] ?? 0), //微程推过来的价格
+                                        'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0, //是否需要本机出货  0-否 1-是
+                                        'out_goods_status' => 0, //出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
+                                        'real_channel_code' => $real_channel_code, //实际出货货道
                                         // 'wc_user_address_id' => '', //微程会员寄送地址id
                                         // 'wc_user_address' => '',//微程会员寄送详细地址
                                     ];
@@ -874,6 +863,11 @@ class ApiClient extends ReceiveBaseClient
                         $mc['retail_price'] = 0;
                     }
                     for ($i = 0; $i < $value['quantity']; $i++) {
+                        $detail_retail_price = $mc['retail_price'];
+                         //针对微程数据，重置订单金额
+                        if ($wc_order_no) {
+                            $detail_retail_price = array_sum(array_column($wc_order_no, 'total_price'));
+                        }
                         $quantity = 1;
                         //                        $quantity = $value['quantity'];
                         $details = [
@@ -891,18 +885,13 @@ class ApiClient extends ReceiveBaseClient
                             "gc_name" => $mc['gc_name'],
                             "cost_price" => $mc['cost_price'] ?? 0,
                             "market_price" => $mc['market_price'] ?? 0,
-                            "retail_price" => $mc['retail_price'],
-                            "total_sod_price" => bcmul($mc['retail_price'], $quantity, 3),
+                            "retail_price" => $detail_retail_price,
+                            "total_sod_price" => bcmul($detail_retail_price, $quantity, 3),
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'] ?? '',
                             'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                         ];
-                        //针对微程数据，重置订单金额
-                        if($wc_order_no){
-
-                        }
-                        
                         $sod_id = $this->addSaleOrdersDetails($details);
                         if ($sod_id) {
                             $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $quantity, 2), 3);
@@ -910,9 +899,9 @@ class ApiClient extends ReceiveBaseClient
                             $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mc['retail_price'], $quantity, 2), 3);
                             $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $quantity);
                             $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 3);
-            $updateOrder['total_price'] = '0.01';
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
                             $updateOrder['total_cost_points'] = bcadd($updateOrder['total_cost_points'], $details['total_sod_cost_points'], 3);
+                           
                         } else {
                             $this->rollbackTrans();
                             return $this->r(300, $this->lang("VSubCar.make_order_details_fail"));
@@ -1432,24 +1421,26 @@ class ApiClient extends ReceiveBaseClient
     }
 
 
-    
+
     /**
      * 设备上报回收箱信息
      */
-    public function recycleBoxReport(){
+    public function recycleBoxReport()
+    {
         $this->updateMachine([
             "recycle_box_total_capacity" => $this->machine['recycle_box_total_capacity'] ?? 0,
             "recycle_box_remain_capacity" => $this->machine['recycle_box_remain_capacity'] ?? 0
-        ],[
+        ], [
             'machine_id' => $this->machine['machine_id'] ?? 0
         ]);
-        return $this->r(200,'success');
+        return $this->r(200, 'success');
     }
 
-    public function requireOutGoods(){
-        $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]); 
-        if (!$order) return $this->r(300,$this->lang("VSaleOrders.order_not_data"));
-        $this->order = $order->toArray();  
+    public function requireOutGoods()
+    {
+        $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
+        if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        $this->order = $order->toArray();
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
         if ($details) {
             $contentArr = [];
@@ -1467,8 +1458,8 @@ class ApiClient extends ReceiveBaseClient
             // 新数据格式
             foreach ($details as $k => $v) {
                 if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
-                    $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']],'stock');
-                    actionLog($this->getLS(),'减固定组合商品酒店库存');
+                    $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']], 'stock');
+                    actionLog($this->getLS(), '减固定组合商品酒店库存');
                 }
                 if ($v['g_type'] == 1) {
                     $dc = [
@@ -1485,7 +1476,6 @@ class ApiClient extends ReceiveBaseClient
                     $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
                     $this->updateSaleOrdersDetails($updateSod);
                 }
-
             }
             $content = [
                 "trade_no" => $this->order['trade_no'],
@@ -1501,7 +1491,7 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(100, 'failed', []);
     }
 
-    
+
     /**
      * 取卡  卡添加积分
      * @return array|\think\response\Json
@@ -1961,7 +1951,8 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200, 'success', $address_lists);
     }
 
-    public function getLoginWcQrCode(){
+    public function getLoginWcQrCode()
+    {
         $machine_id = $this->data['machine_id'];
         $res = $this->wcLoginQrCode($machine_id);
         if ($res['status'] != 200) return $this->r(100, 'failed', $res['response']);
