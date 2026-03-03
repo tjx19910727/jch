@@ -366,4 +366,20 @@ class MachineChannelClient extends ManagementClient
         }
         return $this->r(100,$this->lang("query_fail"));
     }
+
+
+    public function setMachineChannelGiftPoints($m_id, $integral_rate)
+    {
+        if (!$m_id) return $this->r(100,$this->lang("VMachineChannel.m_id_require"));
+        if ($integral_rate <= 0) return $this->r(100,$this->lang("请设置正常积分比例"));
+        $machine_channel_lists = $this->getMachineChannelList(['m_id' => $m_id])->toArray();
+        foreach($machine_channel_lists as $v){
+            $gift_points = bcmul($v['retail_price'], $integral_rate, 2);
+            $flag[] = $this->updateMachineChannel(['gift_points' => $gift_points], ['mc_id' => $v['mc_id']]);
+        }
+        if ($this->checkFlag($flag)) {
+            return $this->r(200,$this->lang("action_success"));
+        }
+        return $this->r(100,$this->lang('action_fail'));
+    }
 }

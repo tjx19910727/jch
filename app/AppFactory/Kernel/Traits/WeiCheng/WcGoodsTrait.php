@@ -12,9 +12,17 @@ namespace app\AppFactory\Kernel\Traits\WeiCheng;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsTypesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcUserAddressesModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcMachineChannelModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcMachineGoodsModel;
 
 trait WcGoodsTrait
 {
+    public function getWcGoodsColumn($where, $field = '*', $order = '')
+    {
+        return WcGoodsModel::getColumn($where, $field, $order);
+    }
+
     public function getWcGoodsCount($where, $field = '*', $order = '')
     {
         return WcGoodsModel::getFind($where, $field, $order);
@@ -89,6 +97,11 @@ trait WcGoodsTrait
         return WcGoodsTypesModel::whereDel($where);
     }
 
+    public function getWcGoodsLocalColumn($where, $column)
+    {
+        return WcGoodsLocalModel::getColumn($where, $column);
+    }
+
     public function getWcGoodsLocalCount($where, $field = '*', $order = '')
     {
         return WcGoodsLocalModel::getFind($where, $field, $order);
@@ -125,4 +138,114 @@ trait WcGoodsTrait
     {
         return WcGoodsLocalModel::whereDel($where);
     }
+
+    public function getWcMachineChannelList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return WcMachineChannelModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
+    }
+
+    public function getWcMachineChannelFind($where, $field = "*", $order = "")
+    {
+        return WcMachineChannelModel::getFind($where, $field, $order);
+    }
+
+    public function getWcMachineChannelSum($where, $sum)
+    {
+        return WcMachineChannelModel::getSum($where, $sum);
+    }
+
+    public function addWcMachineChannel($insert)
+    {
+        $data = WcMachineChannelModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    public function addWcMachineChannelMore($insertAll)
+    {
+        $model = new WcMachineChannelModel();
+        return $model->saveAll($insertAll);
+    }
+
+    public function updateWcMachineChannel($update, $where = [], $field = [])
+    {
+        return WcMachineChannelModel::update($update, $where, $field);
+    }
+
+    public function delWcMachineChannel($where)
+    {
+        return WcMachineChannelModel::whereDel($where);
+    }
+
+    public function getWcMachineGoodsList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return WcMachineGoodsModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
+    }
+
+    public function getWcMachineGoodsFind($where, $field = "*", $order = "")
+    {
+        return WcMachineGoodsModel::getFind($where, $field, $order);
+    }
+
+    public function getWcMachineGoodsSum($where, $sum)
+    {
+        return WcMachineGoodsModel::getSum($where, $sum);
+    }
+
+    public function addWcMachineGoods($insert)
+    {
+        $data = WcMachineGoodsModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    public function addWcMachineGoodsMore($insertAll)
+    {
+        $model = new WcMachineGoodsModel();
+        return $model->saveAll($insertAll);
+    }
+
+    public function updateWcMachineGoods($update, $where = [], $field = [])
+    {
+        return WcMachineGoodsModel::update($update, $where, $field);
+    }
+
+    public function delWcMachineGoods($where)
+    {
+        return WcMachineGoodsModel::whereDel($where);
+    }
+
+    public function getWcUserAddressesList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return WcUserAddressesModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
+    }
+
+    public function getWcUserAddressesFind($where, $field = "*", $order = "")
+    {
+        return WcUserAddressesModel::getFind($where, $field, $order);
+    }
+
+    public function addWcUserAddresses($insert)
+    {
+        $data = WcUserAddressesModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    public function addWcUserAddressesMore($insertAll)
+    {
+        $model = new WcUserAddressesModel();
+        return $model->saveAll($insertAll);
+    }
+
+    public function updateWcUserAddresses($update, $where = [], $field = [])
+    {
+        return WcUserAddressesModel::update($update, $where, $field);
+    }
+
+    public function delWcUserAddresses($where)
+    {
+        return WcUserAddressesModel::whereDel($where);
+    }
+
 }
