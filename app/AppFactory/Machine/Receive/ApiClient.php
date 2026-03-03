@@ -787,11 +787,23 @@ class ApiClient extends ReceiveBaseClient
             "create_date" => strtotime(date("Y-m-d")),
             "factory" => $m['factory'] ? $m['factory'] : '',
             "inventory_location" => $m['inventory_location'] ? $m['inventory_location'] : ''
-
         ];
         $updateOrder = [];
         $this->startTrans();
         try {
+            //这里新增一个逻辑，如果是虚拟货道的微程商品，定义一组参数用于存储订单信息；
+            // $wc_goods_status = [
+            //     'out_goods_no' => '',//父商品编码
+            //     'goods_no' => '',//子商品编码
+            //     'order_no' => '',//订单同步时微程反馈的订单号
+            //     'order_date' => '',//房态商品订房日期
+            //     'need_local_out_goods' => 0,//是否需要本机出货  0-否 1-是
+            //     'out_goods_status' => 0,//出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
+            //     // 'wc_user_address_id' => '', //微程会员寄送地址id
+            //     // 'wc_user_address' => '',//微程会员寄送详细地址
+            //  ];
+            $wc_order_no = [];
+            $real_channel_code = 'Z10';
             $order_id = $this->addSaleOrders($order);
             if ($order_id) {
                 $updateOrder['order_id'] = $order_id;
@@ -808,7 +820,37 @@ class ApiClient extends ReceiveBaseClient
                 }
                 $this->data['carList'] = json2arr($this->data['carList']);
                 foreach ($this->data['carList'] as $key => $value) {
-                    $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
+                    if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
+                        $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
+                        $mc['status'] = 1;
+                        if($value['no'])  {
+                            $wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no']]);
+                            if($wc_goods_locals){
+                                $wc_goods_locals = $wc_goods_locals->toArray();
+                                $machine_channel = 0;
+                                foreach($wc_goods_locals as $wc_goods_local){
+                                    if($wc_goods_local['g_id']) {
+                                        $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
+                                        if(!$machine_channel) $machine_channel = $machine_channel->toArray();
+                                        $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : 'Z10';
+                                    }
+                                    $wc_order_no[$wc_goods_local['no']] = [
+                                        'out_no' => $mc['out_no'],//父商品编码
+                                        'no' => $wc_goods_local['no'],//子商品编码
+                                        'order_no' => '',//订单同步时微程反馈的订单号
+                                        'order_date' => $value['order_date'] ?? '',//房态商品订房日期
+                                        'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0,//是否需要本机出货  0-否 1-是
+                                        'out_goods_status' => 0,//出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
+                                        'real_channel_code' => $real_channel_code,//实际出货货道
+                                        // 'wc_user_address_id' => '', //微程会员寄送地址id
+                                        // 'wc_user_address' => '',//微程会员寄送详细地址
+                                    ];
+                                }
+                            }
+                        }
+                    } else {
+                        $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
+                    }
                     if (!$mc) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.channel_no_data"));
@@ -851,7 +893,9 @@ class ApiClient extends ReceiveBaseClient
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'],
                             "total_sod_cost_points" => bcmul($mc['cost_points'], $quantity, 3),
+                            'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                         ];
+                        
                         $sod_id = $this->addSaleOrdersDetails($details);
                         if ($sod_id) {
                             $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $quantity, 2), 3);
@@ -1841,5 +1885,81 @@ class ApiClient extends ReceiveBaseClient
         if ($wcGoodsLocalLists) $wcGoodsLocalLists = $wcGoodsLocalLists->toArray();
         actionLog($wcGoodsLocalLists, '返回的货道数据');
         return $this->r(200, "SUCCESS", $wcGoodsLocalLists);
+    }
+
+    public function getWcMCLists()
+    {
+        $pageNum = $this->data['pageNum'] ?? 15;
+        if (isset($this->data['m_id'])) $where['m_id'] = $this->data['m_id'];
+        $where['machine_id'] = $this->data['machine_id'];
+        $wcMachineChannelLists = $this->getWcMachineChannelList($where, $pageNum, "*", 'sort asc');
+        if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
+        $wcMachineChannelLists = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
+        foreach ($wcMachineChannelLists as &$v) {
+            $v['goods_lists'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
+        }
+        return $this->r(200, "SUCCESS", $wcMachineChannelLists);
+    }
+
+    public function getWcUserInfo($bind_id, $token)
+    {
+        $res = $this->syncWcUserInfo($token);
+        if ($res['status'] != 200) return $this->r(100, 'failed', $res['response']);
+
+        $response = json_decode($res['response'], true);
+        $address_lists = $response['data']['addressList'] ?? [];
+
+        if (!empty($address_lists)) {
+            foreach ($address_lists as $v) {
+                $setData = [
+                    'bind_id' => $bind_id,
+                    'address' => trim($v['address']),
+                    'link_name' => $v['link_name'],
+                    'phone' => $v['phone'],
+                ];
+                $check = $this->getWcUserAddressesFind($setData);
+                if (!$check) {
+                    $this->addWcUserAddresses($setData);
+                } else {
+                    $this->updateWcUserAddresses($setData, ['id' => $check['id']]);
+                }
+            }
+        }
+        return $address_lists;
+    }
+
+
+    public function getWcUserAddress()
+    {
+        $bind_id = $this->data['bind_id'] ?? '';
+        $card_no = $this->data['card_no'] ?? '';
+        $address_lists = [];
+        if (empty($bind_id) && empty($card_no)) return $this->r(100, 'failed', 'bind_id和card_no不能同时为空');
+        if ($card_no) {
+            $card_info = $this->getCardFind(['card_no' => $card_no], 'bind_id');
+            if (!$card_info) return $this->r(100, 'failed', '找不到对应的卡信息');
+            if ($bind_id && $bind_id != $card_info['bind_id']) return $this->r(100, 'failed', '警告：该卡不在当前会员账户名下');
+            $address_lists = $this->getWcUserAddressesList(['bind_id' => $card_info['bind_id']]);
+        }
+        if ($bind_id) {
+            $address_lists = $this->getWcUserAddressesList(['bind_id' => $bind_id]);
+        }
+        return $this->r(200, 'success', $address_lists);
+    }
+
+    public function getLoginWcQrCode(){
+        $machine_id = $this->data['machine_id'];
+        $res = $this->wcLoginQrCode($machine_id);
+        if ($res['status'] != 200) return $this->r(100, 'failed', $res['response']);
+
+        $response = json_decode($res['response'], true);
+        return $this->r(200, 'success', $response['data']);
+    }
+
+    public function test()
+    {
+        $this->order = $this->getSaleOrdersFind(['order_id' => '29873']);
+        $order = $this->outGoods();
+        // $this->orderSync2Wc($order);
     }
 }
