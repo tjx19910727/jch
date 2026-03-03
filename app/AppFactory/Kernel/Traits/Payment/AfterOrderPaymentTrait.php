@@ -187,13 +187,12 @@ trait AfterOrderPaymentTrait
             }
 
             $content = [
-
+                "msgType" => "outGoods",
                 "trade_no" => $this->order['trade_no'],
                 "main" => $contentArr,
                 "outGoods" => $outArr,
                 "order_points" => $this->order['total_points']
             ];
-            dd($content);
             // //循环三次，每次间隔5秒执行
             // for ($i = 0; $i < 3; $i++) {
             //     $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
@@ -203,6 +202,7 @@ trait AfterOrderPaymentTrait
             //     sleep(5);
             // } // end
             //     sleep(5);
+            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
             actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
             return $result;
