@@ -841,6 +841,7 @@ class ApiClient extends ReceiveBaseClient
                                         'no' => $wc_goods_local['no'],//子商品编码
                                         'order_no' => '',//订单同步时微程反馈的订单号
                                         'order_date' => $value['order_date'] ?? '',//房态商品订房日期
+                                        'retail_price' => $value['seller_price'] ? $value['seller_price'] : ($wc_goods_local['retail_price'] ?? 0),//微程推过来的价格
                                         'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0,//是否需要本机出货  0-否 1-是
                                         'out_goods_status' => 0,//出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
                                         'real_channel_code' => $real_channel_code,//实际出货货道
@@ -897,6 +898,10 @@ class ApiClient extends ReceiveBaseClient
                             'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                         ];
+                        //针对微程数据，重置订单金额
+                        if($wc_order_no){
+
+                        }
                         
                         $sod_id = $this->addSaleOrdersDetails($details);
                         if ($sod_id) {
@@ -905,6 +910,7 @@ class ApiClient extends ReceiveBaseClient
                             $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mc['retail_price'], $quantity, 2), 3);
                             $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $quantity);
                             $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 3);
+            $updateOrder['total_price'] = '0.01';
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
                             $updateOrder['total_cost_points'] = bcadd($updateOrder['total_cost_points'], $details['total_sod_cost_points'], 3);
                         } else {
