@@ -89,13 +89,8 @@ trait AfterOrderPaymentTrait
             $outArr = [];
             // 旧版本数据，待软件更新后删除
             foreach ($details as $k => $v) {
-                if (!$v['mc_id']) {
-                    $v['g_type'] = 1;
-                    $contentArr[$v['channel_position']][] = [
-                        $v['channel_code'],
-                        $v['quantity'],
-                    ];
-                } elseif ($v['g_type'] == 1) {
+                if (!$v['mc_id']) $v['g_type'] = 1;
+                if ($v['g_type'] == 1) {
                     $dc = [
                         $v['channel_code'],
                         $v['quantity'],
@@ -150,21 +145,26 @@ trait AfterOrderPaymentTrait
                         //判断此微程商品是否为组合商品
                         if (isset($mc['out_no'])) {
                             $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                            if (!$wc_goods) {
-                                $wc_goods = $wc_goods->toArray();
-                                if ($wc_goods['type'] == 11) { //组合商品
-                                    $wc_goods_local_lists = $this->getWcGoodsLocalList(['out_no' => $wc_goods['no']])->toArray();
-                                    foreach ($wc_goods_local_lists as $wglv) {
-                                        if ($wglv['g_id']) {
-                                            $mc_local = $this->getMachineChannelFind(['m_id' => $this->order['m_id'], 'g_id' => $wglv['g_id']]);
-                                            if ($mc_local) {
-                                                $dc_local = [
-                                                    "channel_code" => $mc_local['channel_code'],
-                                                    "quantity" => 1,
-                                                    "is_gift" => $v['is_gift'] ?? 2,
-                                                    "out_port" => $v['out_port'] ?? 1,
-                                                ];
-                                                $outArr[$v['channel_position']][] = $dc_local;
+                            if ($wc_goods) $wc_goods = $wc_goods->toArray();
+                            if ($wc_goods['type'] == 11) { //组合商品
+                                //判断此微程商品是否为组合商品
+                                if (isset($mc['out_no'])) {
+                                    $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
+                                    if (!$wc_goods) {
+                                        $wc_goods = $wc_goods->toArray();
+                                        if ($wc_goods['type'] == 11) { //组合商品
+                                            //因为子订单wc_goods_no字段中已经存储了出货信息，这里直接取该字段即可
+                                            if(!empty($v['wc_goods_no'])) {
+                                                $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
+                                                foreach ($wc_goods_no_arr as $wc_goods_no_v) {
+                                                    $dc_local = [
+                                                        "channel_code" => $wc_goods_no_v['real_channel_code'],
+                                                        "quantity" => 1,
+                                                        "is_gift" => $v['is_gift'] ?? 2,
+                                                        "out_port" => $v['out_port'] ?? 1,
+                                                    ];
+                                                    $outArr[$v['channel_position']][] = $dc_local;
+                                                }
                                             }
                                         }
                                     }
@@ -187,12 +187,13 @@ trait AfterOrderPaymentTrait
             }
 
             $content = [
-                //                "msgType" => "outGoods",
+
                 "trade_no" => $this->order['trade_no'],
                 "main" => $contentArr,
                 "outGoods" => $outArr,
                 "order_points" => $this->order['total_points']
             ];
+            dd($content);
             // //循环三次，每次间隔5秒执行
             // for ($i = 0; $i < 3; $i++) {
             //     $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
@@ -201,7 +202,7 @@ trait AfterOrderPaymentTrait
             //     }
             //     sleep(5);
             // } // end
-            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
+            //     sleep(5);
             actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
             return $result;

@@ -804,8 +804,8 @@ class ApiClient extends ReceiveBaseClient
             //     // 'wc_user_address_id' => '', //微程会员寄送地址id
             //     // 'wc_user_address' => '',//微程会员寄送详细地址
             //  ];
-            $wc_goods_no = [];
-            $real_channel_code = '';
+            $wc_order_no = [];
+            $real_channel_code = 'Z10';
             $order_id = $this->addSaleOrders($order);
             if ($order_id) {
                 $updateOrder['order_id'] = $order_id;
@@ -824,27 +824,29 @@ class ApiClient extends ReceiveBaseClient
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
                         $mc['status'] = 1;
-                        $wc_goods_locals = $this->getWcGoodsLocalList(['out_goods' => $value['out_goods']]);
-                        if(!$wc_goods_locals){
-                            $wc_goods_locals = $wc_goods_locals->toArray();
-                            $machine_channel = 0;
-                            foreach($wc_goods_locals as $wc_goods_local){
-                                if($wc_goods_local['g_id']) {
-                                    $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
-                                    if(!$machine_channel) $machine_channel = $machine_channel->toArray();
-                                    $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : '';
+                        if($value['no'])  {
+                            $wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no']]);
+                            if($wc_goods_locals){
+                                $wc_goods_locals = $wc_goods_locals->toArray();
+                                $machine_channel = 0;
+                                foreach($wc_goods_locals as $wc_goods_local){
+                                    if($wc_goods_local['g_id']) {
+                                        $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
+                                        if(!$machine_channel) $machine_channel = $machine_channel->toArray();
+                                        $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : 'Z10';
+                                    }
+                                    $wc_order_no[$wc_goods_local['no']] = [
+                                        'out_no' => $mc['out_no'],//父商品编码
+                                        'no' => $wc_goods_local['no'],//子商品编码
+                                        'order_no' => '',//订单同步时微程反馈的订单号
+                                        'order_date' => $value['order_date'] ?? '',//房态商品订房日期
+                                        'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0,//是否需要本机出货  0-否 1-是
+                                        'out_goods_status' => 0,//出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
+                                        'real_channel_code' => $real_channel_code,//实际出货货道
+                                        // 'wc_user_address_id' => '', //微程会员寄送地址id
+                                        // 'wc_user_address' => '',//微程会员寄送详细地址
+                                    ];
                                 }
-                                $wc_goods_no[$wc_goods_local['goods_no']] = [
-                                    'out_goods_no' => $value['out_goods'],//父商品编码
-                                    'goods_no' => $wc_goods_local['goods_no'],//子商品编码
-                                    'order_no' => '',//订单同步时微程反馈的订单号
-                                    'order_date' => $value['order_date'],//房态商品订房日期
-                                    'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0,//是否需要本机出货  0-否 1-是
-                                    'out_goods_status' => 0,//出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
-                                    'real_channel_code' => $real_channel_code,//实际出货货道
-                                    // 'wc_user_address_id' => '', //微程会员寄送地址id
-                                    // 'wc_user_address' => '',//微程会员寄送详细地址
-                                ];
                             }
                         }
                     } else {
@@ -891,7 +893,7 @@ class ApiClient extends ReceiveBaseClient
                             "total_sod_price" => bcmul($mc['retail_price'], $quantity, 3),
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'] ?? '',
-                            'wc_goods_no' => isset($wc_goods_no) ? json_encode($wc_goods_no) : '', //微程商品信息
+                            'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                         ];
                         
                         $sod_id = $this->addSaleOrdersDetails($details);
@@ -1961,8 +1963,8 @@ class ApiClient extends ReceiveBaseClient
 
     public function test()
     {
-        // $this->order = $this->getSaleOrdersFind(['order_id' => '29785']);
-        // $order = $this->outGoods();
+        $this->order = $this->getSaleOrdersFind(['order_id' => '29873']);
+        $order = $this->outGoods();
         // $this->orderSync2Wc($order);
     }
 }
