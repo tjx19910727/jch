@@ -248,4 +248,8 @@ trait WcGoodsTrait
         return WcUserAddressesModel::whereDel($where);
     }
 
+    public function test(){
+        //测试解决冲突
+    }   
+        
 }
