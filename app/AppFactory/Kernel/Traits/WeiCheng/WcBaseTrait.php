@@ -289,11 +289,16 @@ trait WcBaseTrait
         $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $wc_machine_channel['out_no']]);
         if (!$wc_goods_locals) return true;
         $wc_goods_locals = $wc_goods_locals->toArray();
-        $wc_order_no = [];
-        foreach ($wc_goods_locals as $wc_goods_local) {
+        $wc_order_no = json_decode($detail['wc_order_no'] ?? '{}', true) ?: [];
+
+        foreach($wc_order_no as $no => $value) {
+            if($value['order_date']) $buy_date_range = [
+                'start' => $value['order_date'],
+                'end' => date('Y-m-d', strtotime($value['order_date'] . ' +1 day')),
+            ];
             $data = [
                 'out_order_no' => $order['trade_no'] . '#' . $detail['sod_id'],
-                'goods_no' => $wc_goods_local['no'],
+                'goods_no' => $no,
                 'goods_quantity' => $detail['quantity'],
                 'link_man' => '会员',
                 'link_phone' => $order['mobile'] ?: '',
@@ -303,14 +308,17 @@ trait WcBaseTrait
                 'trip_date' => date('Y-m-d'),
                 'distributor_id' => $this->config['distributor_id'],
             ];
+            if($value['order_date']) $data['buy_date_range'] = json_encode($buy_date_range);
             $postUrl = $this->order_add_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
             $res = $this->weicheng_curl($postUrl, []);
+            // $res['response'] = '{"order_no":"O757423599403734","orderNo":"O757423599403734","tickets":["68234301"],"tickets_new":[{"ticket":"68234301","num":1,"qr_code":"https://oss-weicheng.jchtechnologies.com/upload/2026/03/04/8c0ae373080843e4a6f358361e20bd21.jpg","qr_code_url":"https://oss-weicheng.jchtechnologies.com/upload/2026/03/04/8c0ae373080843e4a6f358361e20bd21.jpg"}],"ticket_check_style":0,"tip":"出库成功","status":"success"}';
             $res_arr = json_decode($res['response'], true);
             if ($res_arr['status'] == "fail") {
                 actionLog($detail, "子订单同步失败" . $res_arr['tip']);
-                $wc_order_no[$wc_goods_local['no']] = false;
+                $wc_order_no[$no]['order_no'] = '';
             } else {
-                $wc_order_no[$wc_goods_local['no']] = $res_arr['order_no'];
+                $wc_order_no[$no]['order_no'] = $res_arr['order_no'];
+                $wc_order_no[$no]['response'] = $res_arr;
             }
         }
         return $wc_order_no;

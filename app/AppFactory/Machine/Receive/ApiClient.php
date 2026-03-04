@@ -863,10 +863,11 @@ class ApiClient extends ReceiveBaseClient
                         $mc['retail_price'] = 0;
                     }
                     for ($i = 0; $i < $value['quantity']; $i++) {
-                        $detail_retail_price = $mc['retail_price'];
-                         //针对微程数据，重置订单金额
+                        //针对微程数据，重置订单金额
                         if ($wc_order_no) {
                             $detail_retail_price = array_sum(array_column($wc_order_no, 'total_price'));
+                        }else{
+                            $detail_retail_price = $mc['retail_price'];
                         }
                         $quantity = 1;
                         //                        $quantity = $value['quantity'];
@@ -1963,8 +1964,8 @@ class ApiClient extends ReceiveBaseClient
 
     public function test()
     {
-        $this->order = $this->getSaleOrdersFind(['order_id' => '29873']);
-        $order = $this->outGoods();
-        // $this->orderSync2Wc($order);
+        $this->order = $this->getSaleOrdersFind(['order_id' => '29916']);
+        // $order = $this->outGoods();
+        return $this->orderSync2Wc($this->order);
     }
 }
