@@ -175,8 +175,34 @@ trait WcBaseTrait
         $wc_goods = $this->getWcGoodsFind(['no' => $no])->toArray();
         $resourceDomain = $wc_goods['resourceDomain'];
         $resourcesArray = json_decode($wc_goods['resourcesArray'], true) ?? [];
-
-        if (!is_null($wc_goods['goods'])) {
+        $pic = '';
+        if($wc_goods['type']  == 1) {//抢购商品没有子商品信息，这里构造wc_goods_local数据
+            $pic = isset($resourcesArray[0]['url']) ? $resourceDomain . $resourcesArray[0]['url'] : '';
+            $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $wc_goods['no'], 'out_no' => $wc_goods['no']]);
+            $setData = [
+                'g_id' => 0,
+                'out_no' => $wc_goods['no'],
+                'no' => $wc_goods['no'],
+                'type' => $type,
+                'g_name' => $wc_goods['name'] ?? '',
+                'g_type' => $wc_goods['type'] ?? 0,
+                'g_type_name' => $wc_goods_type_arr[$wc_goods['type']] ?? '',   
+                'retail_price' => $wc_goods['sellerPrice'] ?? '0',
+                'pic' => $pic,
+                'sell_channel' => 3,
+                'desc' => '',
+                'status' => 1,
+                'channel_code' => 'Z10',
+                'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
+                'isNeedReserve' => $wc_goods['isNeedReserve'] ?? '0',
+            ];
+            if (!$wc_goods_local) {
+                return $this->addWcGoodsLocal($setData);
+            } else {
+                return $this->updateWcGoodsLocal($setData, ['no' => $wc_goods['no'], 'out_no' => $wc_goods['no']]);
+            }
+        }
+        if (!is_null($wc_goods['goods'])) {//子商品信息
             //子商品信息
             $goods = json_decode($wc_goods['goods'], true);
             foreach ($goods as $k => $good) {
@@ -205,7 +231,7 @@ trait WcBaseTrait
                 }
             }
         }
-        if (!is_null($wc_goods['combination_goods'])) {
+        if (!is_null($wc_goods['combination_goods'])) {//组合商品信息
             $combination_goods = json_decode($wc_goods['combination_goods'], true) ?? [];
             foreach ($combination_goods as $kk => $combind_good) {
                 $pic = isset($resourcesArray[$kk]['url']) ? $resourceDomain . $resourcesArray[$kk]['url'] : '';

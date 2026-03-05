@@ -1,3 +1,12 @@
+
+#20260305
+ALTER TABLE kiosk.wc_request_logs MODIFY COLUMN response_body longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL;
+ALTER TABLE kiosk.wc_goods MODIFY COLUMN goods longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '实物商品信息';
+ALTER TABLE kiosk.wc_goods MODIFY COLUMN get_data longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '接口返回内容';
+
+ALTER TABLE kiosk.wc_goods_local MODIFY COLUMN daysInfo longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL;
+ALTER TABLE kiosk.wc_goods_local ADD COLUMN  `isNeedReserve` int default 0 COMMENT '是否抢购' AFTER `type`;
+
 #20260226
 ALTER TABLE kiosk.machine_channel
   ADD COLUMN `cost_points` decimal(10,3) default 0 COMMENT '消费积分' AFTER `gift_points`;
