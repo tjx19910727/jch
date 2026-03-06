@@ -42,7 +42,12 @@ trait AfterOrderRefundTrait
             $flag[] = $this->refundSuccessUpdateSod();
             
             //修改卡积分 
-            // $flag[] = $this->addCardChangeLog();
+            $flag[] = $this->addCardChangeLog();
+
+            //退款信息通知微程
+            if ($this->checkWcOrder($this->order)) {
+                $flag[] = $this->refundSync2Wc($this->refund);
+            }
         }
         $this->order['refund_quantity'] += $quantity;
         // 修改订单退款状态
@@ -53,6 +58,23 @@ trait AfterOrderRefundTrait
         return true;
     }
 
+
+    //判断订单是否需要同步给微程
+    public function checkWcOrder($order)
+    {
+        $flag = false;
+        $details = $order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']]);
+        if ($details) {
+            foreach ($details as $v) {
+                if ($v['channel_position'] == 3 && $v['channel_code'] == 'Z10') {
+                    $flag = true;
+                    return $flag;
+                }
+            }
+        }
+        return $flag;
+    }
+    
     /**
      * 退分润
      * @return bool

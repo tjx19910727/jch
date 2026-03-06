@@ -173,12 +173,14 @@ trait WcBaseTrait
         }
 
         $wc_goods = $this->getWcGoodsFind(['no' => $no])->toArray();
+        //先删除原有的本地化数据，再重新构造数据插入，保证数据的完整性和准确性
+        $this->delWcGoodsLocal(['out_no' => $wc_goods['no']]);
+
         $resourceDomain = $wc_goods['resourceDomain'];
         $resourcesArray = json_decode($wc_goods['resourcesArray'], true) ?? [];
         $pic = '';
         if($wc_goods['type']  == 1) {//抢购商品没有子商品信息，这里构造wc_goods_local数据
             $pic = isset($resourcesArray[0]['url']) ? $resourceDomain . $resourcesArray[0]['url'] : '';
-            $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $wc_goods['no'], 'out_no' => $wc_goods['no']]);
             $setData = [
                 'g_id' => 0,
                 'out_no' => $wc_goods['no'],
@@ -196,17 +198,12 @@ trait WcBaseTrait
                 'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
                 'isNeedReserve' => $wc_goods['isNeedReserve'] ?? '0',
             ];
-            if (!$wc_goods_local) {
-                return $this->addWcGoodsLocal($setData);
-            } else {
-                return $this->updateWcGoodsLocal($setData, ['no' => $wc_goods['no'], 'out_no' => $wc_goods['no']]);
-            }
+            return $this->addWcGoodsLocal($setData);
         }
         if (!is_null($wc_goods['goods'])) {//子商品信息
             //子商品信息
             $goods = json_decode($wc_goods['goods'], true);
             foreach ($goods as $k => $good) {
-                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no'], 'out_no' => $no]);
                 $pic = isset($resourcesArray[$k]['url']) ? $resourceDomain . $resourcesArray[$k]['url'] : '';
                 $setData = [
                     'g_id' => $good['g_id'] ?? 0,
@@ -224,19 +221,18 @@ trait WcBaseTrait
                     'channel_code' => 'Z10',
                     'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
                 ];
-                if (!$wc_goods_local) {
-                    $this->addWcGoodsLocal($setData);
-                } else {
-                    $this->updateWcGoodsLocal($setData, ['no' => $good['no'], 'out_no' => $no]);
-                }
+                $this->addWcGoodsLocal($setData);
             }
         }
         if (!is_null($wc_goods['combination_goods'])) {//组合商品信息
+            if($wc_goods['daysInfo'] && !is_null($wc_goods['daysInfo'])) {
+                $daysInfo = json_decode($wc_goods['daysInfo'], true);
+            }
             $combination_goods = json_decode($wc_goods['combination_goods'], true) ?? [];
             foreach ($combination_goods as $kk => $combind_good) {
                 $pic = isset($resourcesArray[$kk]['url']) ? $resourceDomain . $resourcesArray[$kk]['url'] : '';
                 $combindSetData = [
-                    'g_id' => $good['g_id'] ?? '',
+                    'g_id' => $combind_good['g_id'] ?? '',
                     'out_no' => $no ?? '',
                     'no' => $combind_good['no'] ?? '',
                     'type' => $type,
@@ -249,13 +245,15 @@ trait WcBaseTrait
                     'desc' => $combind_good['notice'] ?? '',
                     'status' => 1,
                     'channel_code' => 'Z10',
+                    'isNeedReserve' => $combind_good['isNeedReserve'] ?? '0',
                 ];
-                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no'], 'out_no' => $no]);
-                if (!$wc_goods_local) {
-                    $this->addWcGoodsLocal($combindSetData);
-                } else {
-                    $this->updateWcGoodsLocal($combindSetData, ['no' => $combindSetData['no'], 'out_no' => $no]);
-                }
+                //单独处理一下daysInfo
+                if($combind_good['g_id']) $combindSetData['daysInfo'] = '';
+                if(!$combind_good['g_id'] && !$combind_good['g_id']) $combindSetData['daysInfo'] = $wc_goods['daysInfo'];
+                if($combind_good['isNeedReserve']) $combindSetData['daysInfo'] = '';
+
+                $this->addWcGoodsLocal($combindSetData);
+
             }
         }
         return true;
@@ -350,13 +348,13 @@ trait WcBaseTrait
         return $wc_order_no;
     }
 
-    public function orderRefundSync2Wc($order_no, $out_out_no)
+    public function orderRefundSync2Wc($order_no, $out_order_no)
     {
         $this->initWcBase();
         $data = [
             'distributor_id' => $this->config['distributor_id'],
             'order_no' => $order_no,
-            'out_out_no' => $out_out_no,
+            'out_order_no' => $out_order_no,
         ];
         $postUrl = $this->order_refund_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
         return $this->weicheng_curl($postUrl, []);
