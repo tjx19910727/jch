@@ -88,9 +88,12 @@ trait ActivityPickTrait
      */
     public function getActivityPickByCode()
     {
-        $where['code'] = $this->data['pick_code'];
-        $fieldAc = "apc_id,ap_id,code,order_id,trade_no,m_id,machine_id,machine_name,pick_type,status,used_time";
-        $apc = $this->getActivityPickCodeFind($where, $fieldAc);
+        //$where['code'] = $this->data['pick_code'];
+        $where['apc.code'] = $this->data['pick_code'];
+        //$fieldAc = "apc_id,ap_id,code,order_id,trade_no,m_id,machine_id,machine_name,pick_type,status,used_time";
+        // $apc = $this->getActivityPickCodeFind($where, $fieldAc);
+        //修复相同提货码下，有未开始的活动，导致活动时间内的取货码不能使用的问题
+        $apc = $this->getActivityPickCodeFindWithPick($where);
         if ($apc) {
             $apc = $apc->toArray();
             // 检查取货码使用状态
