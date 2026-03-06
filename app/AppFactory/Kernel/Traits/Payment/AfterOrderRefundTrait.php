@@ -9,10 +9,10 @@
 namespace app\AppFactory\Kernel\Traits\Payment;
 
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
-
+use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 trait AfterOrderRefundTrait
 {
-    use CardTrait;
+    use CardTrait, WcBaseTrait;
     protected $refund;
 
     /**
@@ -45,9 +45,10 @@ trait AfterOrderRefundTrait
             $flag[] = $this->addCardChangeLog();
 
             //退款信息通知微程
-            if ($this->checkWcOrder($this->order)) {
-                $flag[] = $this->refundSync2Wc($this->refund);
-            }
+            // if ($this->checkWcOrder($this->order)) {
+            //     $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $this->refund['sod_id']]);
+            //     $flag[] = $this->orderRefundSync2Wc($value['order_id'], $detail['refund_trade_no']);
+            // }
         }
         $this->order['refund_quantity'] += $quantity;
         // 修改订单退款状态
@@ -60,21 +61,21 @@ trait AfterOrderRefundTrait
 
 
     //判断订单是否需要同步给微程
-    public function checkWcOrder($order)
-    {
-        $flag = false;
-        $details = $order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']]);
-        if ($details) {
-            foreach ($details as $v) {
-                if ($v['channel_position'] == 3 && $v['channel_code'] == 'Z10') {
-                    $flag = true;
-                    return $flag;
-                }
-            }
-        }
-        return $flag;
-    }
-    
+    // public function checkWcOrder($order)
+    // {
+    //     $flag = false;
+    //     $details = $order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']]);
+    //     if ($details) {
+    //         foreach ($details as $v) {
+    //             if ($v['channel_position'] == 3 && $v['channel_code'] == 'Z10') {
+    //                 $flag = true;
+    //                 return $flag;
+    //             }
+    //         }
+    //     }
+    //     return $flag;
+    // }
+
     /**
      * 退分润
      * @return bool
