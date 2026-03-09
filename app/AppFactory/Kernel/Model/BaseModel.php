@@ -256,4 +256,52 @@ class BaseModel extends Model
     {
         return self::getLastSql();
     }
+
+        /**
+     * @param $where
+     * @param int|array $pageNum
+     * @param string $field
+     * @param string $order
+     * @param string $eachFn
+     * @param string $group
+     * @param int $limit
+     * @param array $with
+     * @return BaseModel|BaseModel[]|array|\think\Collection|\think\Paginator
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public static function getListAndWith($where,$pageNum = null,$field = "*",$order = "",$eachFn = "",$group = "",$limit = 0,$with = [])
+    {
+            if(isset($where['ao_id']) && $where['ao_id'] < 2){
+                unset($where['ao_id']);
+            }
+            $fields = array_column(Db::query("SHOW COLUMNS FROM " . self::getTable()), 'Field');
+            if (in_array('creator', $fields) && (strpos($field,"*") !== false || strpos($field, "creator") !== false)) {
+                $field .= ", (SELECT nickname FROM auth_manager au WHERE au.manager_id = a.creator) creator_nickname";
+            }
+            if (in_array('ao_id', $fields) && (strpos($field,"*") !== false || strpos($field, "ao_id") !== false)) {
+                $field .= ", (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name";
+            }
+            if (isset($pageNum) && $pageNum && !is_numeric($pageNum) && !is_array($pageNum)) throw new \Exception("页面数据条数必须为数字或数组");
+            if(isset($where['raw'])){
+                $whereRaw = $where['raw'];
+                unset($where['raw']);
+                // if(isset($where['ao_id'])) unset($where['ao_id']);
+                $model = self::alias("a")->where($where)->whereRaw($whereRaw)->field($field)->order($order);
+            }else{
+                $model = self::alias("a")->where($where)->field($field)->order($order);
+            }
+            if ($with) $model = $model->with($with);
+            if ($group) $model = $model->group($group);
+            if ($limit) $model = $model->limit($limit);
+            // $model->select();
+            // dd($model->getLastSql());
+            if (!$pageNum) return $model->select();
+            $model = $model->paginate($pageNum, false, ["query" => request()->param()]);
+            if ($eachFn && is_callable($eachFn)) {
+                $model = $model->each($eachFn);
+            }
+            return $model;
+    }
 }

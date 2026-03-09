@@ -37,6 +37,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersMachineCountTrait;
 use app\AppFactory\Management\ManagementClient;
 use app\management\validate\Machine\VMachine;
+use app\AppFactory\Kernel\Traits\Machine\MachineLevelDescTrait;
 
 class MachineClient extends ManagementClient
 {
@@ -44,7 +45,7 @@ class MachineClient extends ManagementClient
     use MachineTrait,MachineChannelTrait,MachineChannelReplenishmentTrait,MachineChannelStockTrait,MachineCheckStockTrait,MachineConfigTrait,MachineErrorCodeTrait,
         MachineGoodsTrait,
         MachineInfoTrait,MachineGroupTrait,MachineGroupMgTrait,MachineHelpTrait,MachineMqRecordTrait,MachineOnOffTrait,
-        MachineOnlineTrait,MachineOnlineDetailsTrait,MachineVersionTrait,MachineVersionPlanTrait,MachineViewTrait;
+        MachineOnlineTrait,MachineOnlineDetailsTrait,MachineVersionTrait,MachineVersionPlanTrait,MachineViewTrait,MachineLevelDescTrait;
     use SaleOrdersMachineCountTrait;
     use AuthManagerMachineTrait,AuthOrganizationTrait;
 
@@ -368,5 +369,45 @@ class MachineClient extends ManagementClient
             return $result;
         }
         return $this->r(100,$this->lang("query_fail"));
+    }
+
+    public function getLevelList($where,$pageNum = 0,$field = "",$order = "")
+    {
+
+        return $this->rQ($this->getMachineLevelList($where,$pageNum,$field,$order));
+    }
+
+    public function getLevelFind($where,$field = "")
+    {
+        $item = $this->getMachineLevelFind($where,$field);
+        if ($item) {
+            $item = $item->toArray();
+        }
+        return $this->rQ($item);
+    }
+
+    public function addMLevel($postData)
+    {
+        try {
+            $m = $this->addMachineLevel($postData);
+            return $this->rA($m);
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    public function updateMLevel($postData)
+    {
+        try {
+            $result = $this->updateMachineLevel($postData);
+            if ($result) {
+                return $this->r(200, $this->lang("update_success"));
+            }
+            return $this->r(100, $this->lang("update_fail"));
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 }
