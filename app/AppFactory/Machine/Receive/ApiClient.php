@@ -824,25 +824,27 @@ class ApiClient extends ReceiveBaseClient
                         if($wc_goods['maxBuy'] > 0 && $wc_goods['maxBuy'] < $value['quantity']) {
                             return $this->r(100, $this->lang("VSubCar.make_order_fail")."：".$wc_goods['name']."购买数量超过限购数量");
                         }
+                        // todo 添加库存校验
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
                         $mc['status'] = 1;
-                        $total_price = 0;
+                        $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $value['out_no']])->toArray();
 
+                        $total_price = 0;
                         if ($wc_goods['type'] == 1) { //抢购商品没有子商品，直接根据父商品计算价格
-                            $wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
-                            $total_price = bcmul($wc_goods['sellerPrice'] ?? 0, $value['quantity'] ?? 0, 3);
-                        } elseif ($wc_goods['type'] == 3) { //组合房态商品时：此时为单条记录
-                            $wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
-                            $daysInfo_json = $wc_goods_locals[0]['daysInfo'] ?? '';
+                            $total_price = $wc_goods['price'];
+                        } elseif ($wc_goods['type'] == 3 || $wc_goods['type'] == 11) { //组合||酒店房态商品时：此时carList传过来为单条记录
+                            $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
+                            $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
                             $daysInfo = json_decode($daysInfo_json, true);
+                            $order_date = $value['order_date'];
+                            array_pop($order_date);
+                                    dump($daysInfo);
+                            
                             foreach ($daysInfo as $vv) {
-                                if (in_array($vv['date'], $value['order_date'])) {
-                                    $total_price = bcadd($total_price, $vv['seller_price'], 3);
+                                if (in_array($vv['date'], $order_date)) {
+                                    $total_price = bcadd($total_price, $vv['price'], 3);
                                 }
                             }
-                        } elseif ($wc_goods['type'] == 11) { //组合商品去所有子商品记录，价格去组合商品父商品价格
-                            $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $value['out_no']])->toArray();
-                            $total_price = bcmul($wc_goods['sellerPrice'] ?? 0, $value['quantity'] ?? 0, 3);
                         }
                         $wc_order_no = [];
                         foreach ($wc_goods_locals as $wc_goods_local) {
@@ -857,9 +859,9 @@ class ApiClient extends ReceiveBaseClient
                                 'out_no' => $value['out_no'], //父商品编码
                                 'no' => $wc_goods_local['no'], //子商品编码
                                 'order_no' => '', //订单同步时微程反馈的订单号
-                                'order_date' => ($wc_goods_local['type'] == 3 || $wc_goods_local['type'] == 11 && $wc_goods_local['g_id'] == 9999) ? $value['order_date'] : '', //房态商品订房日期
+                                'order_date' => (($wc_goods_local['type'] == 3 || $wc_goods_local['type'] == 11) && $wc_goods_local['g_id'] == 9999) ? $value['order_date'] : '', //房态商品订房日期
                                 'quantity' => $value['quantity'] ?? 0, //微程商品数量
-                                // 'total_price' => $total_price, //不同类型商品不同的价格
+                                'total_price' => $total_price, //不同类型商品不同的价格
                                 'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0, //是否需要本机出货  0-否 1-是
                                 'out_goods_status' => 0, //出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
                                 'real_channel_code' => $real_channel_code, //实际出货货道
@@ -1993,7 +1995,8 @@ class ApiClient extends ReceiveBaseClient
 
     public function test()
     {
-        $this->order = $this->getSaleOrdersFind(['order_id' => '30030']);
+        $order_id = $this->data['order_id'] ?? 0;
+        $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
         // $order = $this->outGoods();
         return $this->orderSync2Wc($this->order);
     }

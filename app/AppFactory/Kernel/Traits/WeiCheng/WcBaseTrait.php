@@ -173,13 +173,12 @@ trait WcBaseTrait
         }
 
         $wc_goods = $this->getWcGoodsFind(['no' => $no])->toArray();
-        //先删除原有的本地化数据，再重新构造数据插入，保证数据的完整性和准确性
-        $this->delWcGoodsLocal(['out_no' => $wc_goods['no']]);
 
         $resourceDomain = $wc_goods['resourceDomain'];
         $resourcesArray = json_decode($wc_goods['resourcesArray'], true) ?? [];
         $pic = '';
         if($wc_goods['type']  == 1) {//抢购商品没有子商品信息，这里构造wc_goods_local数据
+            $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $wc_goods['no'], 'out_no' => $wc_goods['no']]);
             $pic = isset($resourcesArray[0]['url']) ? $resourceDomain . $resourcesArray[0]['url'] : '';
             $setData = [
                 'g_id' => 9999,
@@ -198,12 +197,17 @@ trait WcBaseTrait
                 'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
                 'isNeedReserve' => $wc_goods['isNeedReserve'] ?? '0',
             ];
-            return $this->addWcGoodsLocal($setData);
+            if (!$wc_goods_local) {
+                return $this->addWcGoodsLocal($setData);
+            } else {
+                return $this->updateWcGoodsLocal($setData, ['no' => $wc_goods['no'], 'out_no' => $wc_goods['no']]);
+            }
         }
         if (!is_null($wc_goods['goods'])) {//子商品信息
             //子商品信息
             $goods = json_decode($wc_goods['goods'], true);
             foreach ($goods as $k => $good) {
+                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $good['no'], 'out_no' => $no]);
                 $pic = isset($resourcesArray[$k]['url']) ? $resourceDomain . $resourcesArray[$k]['url'] : '';
                 $setData = [
                     'g_id' => $good['g_id'] ?? 9999,
@@ -221,7 +225,11 @@ trait WcBaseTrait
                     'channel_code' => 'Z10',
                     'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
                 ];
-                $this->addWcGoodsLocal($setData);
+                if (!$wc_goods_local) {
+                    $this->addWcGoodsLocal($setData);
+                } else {
+                    $this->updateWcGoodsLocal($setData, ['no' => $good['no'], 'out_no' => $no]);
+                }
             }
         }
         if (!is_null($wc_goods['combination_goods'])) {//组合商品信息
@@ -252,7 +260,12 @@ trait WcBaseTrait
                 if(!$combind_good['g_id'] && !$combind_good['g_id']) $combindSetData['daysInfo'] = $wc_goods['daysInfo'];
                 if($combind_good['isNeedReserve']) $combindSetData['daysInfo'] = '';
 
-                $this->addWcGoodsLocal($combindSetData);
+                $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no'], 'out_no' => $no]);
+                if (!$wc_goods_local) {
+                    $this->addWcGoodsLocal($combindSetData);
+                } else {
+                    $this->updateWcGoodsLocal($combindSetData, ['no' => $combindSetData['no'], 'out_no' => $no]);
+                }
 
             }
         }
