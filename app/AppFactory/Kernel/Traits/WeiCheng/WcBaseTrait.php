@@ -367,16 +367,23 @@ trait WcBaseTrait
         return $wc_order_no;
     }
 
-    public function orderRefundSync2Wc($order_no, $out_order_no)
+    public function orderRefundSync2Wc($order, $detail)
     {
         $this->initWcBase();
-        $data = [
-            'distributor_id' => $this->config['distributor_id'],
-            'order_no' => $order_no,
-            'out_order_no' => $out_order_no,
-        ];
-        $postUrl = $this->order_refund_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-        return $this->weicheng_curl($postUrl, []);
+        $wc_order_no = json_decode($detail['wc_order_no'] ?? '{}', true) ?: [];
+        foreach($wc_order_no as $no => $value) {
+            if(!empty($value['order_no'])) {
+                $data = [
+                    'distributor_id' => $this->config['distributor_id'],
+                    'order_no' => $value['order_no'],
+                    'out_order_no' => $order['trade_no'] . '#' . $detail['sod_id'],
+                ];
+                $postUrl = $this->order_refund_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
+                $flag[] =  $this->weicheng_curl($postUrl, []);
+                actionLog($flag, "退款接口返回数据");
+            }
+        }
+        return true;
     }
 
 

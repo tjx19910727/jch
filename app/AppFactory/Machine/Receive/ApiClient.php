@@ -1996,8 +1996,11 @@ class ApiClient extends ReceiveBaseClient
     public function test()
     {
         $order_id = $this->data['order_id'] ?? 0;
+        $sod_id = $this->data['sod_id'] ?? 0;
         $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
         // $order = $this->outGoods();
-        return $this->orderSync2Wc($this->order);
+        // return $this->orderSync2Wc($this->order);
+        $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
+        return $this->orderRefundSync2Wc($this->order, $detail);
     }
 }
