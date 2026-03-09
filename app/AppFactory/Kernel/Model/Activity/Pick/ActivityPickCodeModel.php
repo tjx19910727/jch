@@ -34,6 +34,7 @@ class ActivityPickCodeModel extends BaseModel
             ->where($where)
             // 活动已开始且未结束（end_time > now 或 end_time = 0 表示无限制）
             ->where('ap.start_time', '<', $now)
+            ->where('apc.status',1)
             ->where(function($query) use ($now){
                 $query->where('ap.end_time', '>', $now)->whereOr('ap.end_time', 0);
             })
