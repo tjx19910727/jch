@@ -821,7 +821,7 @@ class ApiClient extends ReceiveBaseClient
                 foreach ($this->data['carList'] as $value) {
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $wc_goods = $this->getWcGoodsFind(['no' => $value['out_no']]);
-                        if($wc_goods['maxBuy'] < $value['quantity']) {
+                        if($wc_goods['maxBuy'] > 0 && $wc_goods['maxBuy'] < $value['quantity']) {
                             return $this->r(100, $this->lang("VSubCar.make_order_fail")."：".$wc_goods['name']."购买数量超过限购数量");
                         }
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
