@@ -60,7 +60,15 @@ trait AfterOrderPaymentTrait
         actionLog($this->getLS(), '订单修改数据');
         $result = flag_check($flag);
         //订单推送到微程，判断条件：订单中mobile
-        if ($this->order['mobile']) $flag[] = $this->orderSync2Wc($this->order);
+        $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
+        $sync_flag = false;
+        foreach($details as $detail){
+            if($detail['wc_order_no']){
+                $sync_flag = true;
+                break;
+            }
+        }
+        if ($sync_flag) $flag[] = $this->orderSync2Wc($this->order);
         // if ($this->checkWcOrder($this->order)) $flag[] = $this->orderSync2Wc($this->order);
         actionLog($flag, '支付成功处理结果flag');
         actionLog($result, '支付成功处理结果');
@@ -75,22 +83,6 @@ trait AfterOrderPaymentTrait
         }
         return $result;
     }
-
-    //判断订单是否需要同步给微程
-    // public function checkWcOrder($order)
-    // {
-    //     $flag = false;
-    //     $details = $order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']]);
-    //     if ($details) {
-    //         foreach ($details as $v) {
-    //             if ($v['channel_position'] == 3 && $v['channel_code'] == 'Z10') {
-    //                 $flag = true;
-    //                 return $flag;
-    //             }
-    //         }
-    //     }
-    //     return $flag;
-    // }
 
     /**
      * 出货

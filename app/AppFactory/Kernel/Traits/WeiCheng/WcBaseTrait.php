@@ -182,7 +182,7 @@ trait WcBaseTrait
         if($wc_goods['type']  == 1) {//抢购商品没有子商品信息，这里构造wc_goods_local数据
             $pic = isset($resourcesArray[0]['url']) ? $resourceDomain . $resourcesArray[0]['url'] : '';
             $setData = [
-                'g_id' => 0,
+                'g_id' => 9999,
                 'out_no' => $wc_goods['no'],
                 'no' => $wc_goods['no'],
                 'type' => $type,
@@ -206,7 +206,7 @@ trait WcBaseTrait
             foreach ($goods as $k => $good) {
                 $pic = isset($resourcesArray[$k]['url']) ? $resourceDomain . $resourcesArray[$k]['url'] : '';
                 $setData = [
-                    'g_id' => $good['g_id'] ?? 0,
+                    'g_id' => $good['g_id'] ?? 9999,
                     'out_no' => $no ?? '',
                     'no' => $good['no'] ?? '',
                     'type' => $type,
@@ -225,9 +225,9 @@ trait WcBaseTrait
             }
         }
         if (!is_null($wc_goods['combination_goods'])) {//组合商品信息
-            if($wc_goods['daysInfo'] && !is_null($wc_goods['daysInfo'])) {
-                $daysInfo = json_decode($wc_goods['daysInfo'], true);
-            }
+            // if($wc_goods['daysInfo'] && !is_null($wc_goods['daysInfo'])) {
+            //     $daysInfo = json_decode($wc_goods['daysInfo'], true);
+            // }
             $combination_goods = json_decode($wc_goods['combination_goods'], true) ?? [];
             foreach ($combination_goods as $kk => $combind_good) {
                 $pic = isset($resourcesArray[$kk]['url']) ? $resourceDomain . $resourcesArray[$kk]['url'] : '';
@@ -315,11 +315,16 @@ trait WcBaseTrait
         $wc_goods_locals = $wc_goods_locals->toArray();
         $wc_order_no = json_decode($detail['wc_order_no'] ?? '{}', true) ?: [];
 
+        $buy_date_range = [];
         foreach($wc_order_no as $no => $value) {
-            if($value['order_date']) $buy_date_range = [
-                'start' => $value['order_date'],
-                'end' => date('Y-m-d', strtotime($value['order_date'] . ' +1 day')),
-            ];
+            if(!empty($value['order_date'])) {
+                array_multisort($value['order_date'], SORT_ASC);
+                $buy_date_range = [
+                    'start' => current($value['order_date']),
+                    'end' => end($value['order_date']),
+                ];
+            }
+
             $data = [
                 'out_order_no' => $order['trade_no'] . '#' . $detail['sod_id'],
                 'goods_no' => $no,
@@ -332,7 +337,8 @@ trait WcBaseTrait
                 'trip_date' => date('Y-m-d'),
                 'distributor_id' => $this->config['distributor_id'],
             ];
-            if($value['order_date']) $data['buy_date_range'] = json_encode($buy_date_range);
+            if(!empty($buy_date_range)) $data['buy_date_range'] = json_encode($buy_date_range);
+            actionLog($data, "子订单同步数据");
             $postUrl = $this->order_add_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
             $res = $this->weicheng_curl($postUrl, []);
             // $res['response'] = '{"order_no":"O757423599403734","orderNo":"O757423599403734","tickets":["68234301"],"tickets_new":[{"ticket":"68234301","num":1,"qr_code":"https://oss-weicheng.jchtechnologies.com/upload/2026/03/04/8c0ae373080843e4a6f358361e20bd21.jpg","qr_code_url":"https://oss-weicheng.jchtechnologies.com/upload/2026/03/04/8c0ae373080843e4a6f358361e20bd21.jpg"}],"ticket_check_style":0,"tip":"出库成功","status":"success"}';

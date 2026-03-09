@@ -793,7 +793,6 @@ class ApiClient extends ReceiveBaseClient
         $updateOrder = [];
         $this->startTrans();
         try {
-            $wc_order_no = [];
             $real_channel_code = 'Z10';
             $order_id = $this->addSaleOrders($order);
             if ($order_id) {
@@ -810,39 +809,70 @@ class ApiClient extends ReceiveBaseClient
                     return $this->rFail("购物车不能为空");
                 }
                 $this->data['carList'] = json2arr($this->data['carList']);
-                foreach ($this->data['carList'] as $key => $value) {
+                //carList数据结构：
+                //type=3 有早：[{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151411","no":"VC2507151415","order_date":["2026-03-07","2026-03-08","2026-03-09"]}]
+                //type=3 无早：[{"mc_id":186,"quantity":4,"channel_code":"Z10","out_no":"VC2507151411","no":"VC2507151414","order_date":["2026-03-11","2026-03-07","2026-03-08","2026-03-09"]}]
+                //type=3 有早+无早：[
+                //     {"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151411","no":"VC2507151415","order_date":["2026-03-07","2026-03-08","2026-03-09"]},
+                //     {"mc_id":186,"quantity":4,"channel_code":"Z10","out_no":"VC2507151411","no":"VC2507151414","order_date":["2026-03-11","2026-03-07","2026-03-08","2026-03-09"]}
+                // ]
+                //type = 1：[{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151415","no":"VC2507151415","order_date":""}]
+                //type = 11: [{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151415","no":"VC2507151415","order_date":""}]
+                foreach ($this->data['carList'] as $value) {
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
+                        $wc_goods = $this->getWcGoodsFind(['no' => $value['out_no']]);
+                        if($wc_goods['maxBuy'] < $value['quantity']) {
+                            return $this->r(100, $this->lang("VSubCar.make_order_fail")."：".$wc_goods['name']."购买数量超过限购数量");
+                        }
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
                         $mc['status'] = 1;
-                        if ($value['no']) {
-                            $wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no']]);
-                            if ($wc_goods_locals) {
-                                $wc_goods_locals = $wc_goods_locals->toArray();
-                                $machine_channel = 0;
-                                foreach ($wc_goods_locals as $wc_goods_local) {
-                                    if ($wc_goods_local['g_id']) {
-                                        $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
-                                        if (!$machine_channel) $machine_channel = $machine_channel->toArray();
-                                        $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : 'Z10';
-                                    }
-                                    $wc_order_no[$wc_goods_local['no']] = [
-                                        'out_no' => $mc['out_no'], //父商品编码
-                                        'no' => $wc_goods_local['no'], //子商品编码
-                                        'order_no' => '', //订单同步时微程反馈的订单号
-                                        'order_date' => $value['order_date'] ?? '', //房态商品订房日期
-                                        'total_price' => $value['seller_price'] ? $value['seller_price'] : ($wc_goods_local['retail_price'] ?? 0), //微程推过来的价格
-                                        'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0, //是否需要本机出货  0-否 1-是
-                                        'out_goods_status' => 0, //出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
-                                        'real_channel_code' => $real_channel_code, //实际出货货道
-                                        // 'wc_user_address_id' => '', //微程会员寄送地址id
-                                        // 'wc_user_address' => '',//微程会员寄送详细地址
-                                    ];
+                        $total_price = 0;
+
+                        if ($wc_goods['type'] == 1) { //抢购商品没有子商品，直接根据父商品计算价格
+                            $wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
+                            $total_price = bcmul($wc_goods['sellerPrice'] ?? 0, $value['quantity'] ?? 0, 3);
+                        } elseif ($wc_goods['type'] == 3) { //组合房态商品时：此时为单条记录
+                            $wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
+                            $daysInfo_json = $wc_goods_locals[0]['daysInfo'] ?? '';
+                            $daysInfo = json_decode($daysInfo_json, true);
+                            foreach ($daysInfo as $vv) {
+                                if (in_array($vv['date'], $value['order_date'])) {
+                                    $total_price = bcadd($total_price, $vv['seller_price'], 3);
                                 }
                             }
+                        } elseif ($wc_goods['type'] == 11) { //组合商品去所有子商品记录，价格去组合商品父商品价格
+                            $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $value['out_no']])->toArray();
+                            $total_price = bcmul($wc_goods['sellerPrice'] ?? 0, $value['quantity'] ?? 0, 3);
                         }
+                        $wc_order_no = [];
+                        foreach ($wc_goods_locals as $wc_goods_local) {
+                            if ($wc_goods_local['g_id'] == '9999') {
+                                $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
+                                if ($machine_channel) {
+                                    $machine_channel = $machine_channel->toArray();
+                                    $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : 'Z10';
+                                }
+                            }
+                            $wc_order_no[$wc_goods_local['no']] = [
+                                'out_no' => $value['out_no'], //父商品编码
+                                'no' => $wc_goods_local['no'], //子商品编码
+                                'order_no' => '', //订单同步时微程反馈的订单号
+                                'order_date' => ($wc_goods_local['type'] == 3 || $wc_goods_local['type'] == 11 && $wc_goods_local['g_id'] == 9999) ? $value['order_date'] : '', //房态商品订房日期
+                                'quantity' => $value['quantity'] ?? 0, //微程商品数量
+                                // 'total_price' => $total_price, //不同类型商品不同的价格
+                                'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0, //是否需要本机出货  0-否 1-是
+                                'out_goods_status' => 0, //出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
+                                'real_channel_code' => $real_channel_code, //实际出货货道
+                                // 'wc_user_address_id' => '', //微程会员寄送地址id
+                                // 'wc_user_address' => '',//微程会员寄送详细地址
+                            ];
+                        }
+                        
+                        
                     } else {
                         $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
                     }
+
                     if (!$mc) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.channel_no_data"));
@@ -862,15 +892,14 @@ class ApiClient extends ReceiveBaseClient
                     if ($this->data['pay_type'] == 0) {
                         $mc['retail_price'] = 0;
                     }
-                    for ($i = 0; $i < $value['quantity']; $i++) {
-                        //针对微程数据，重置订单金额
-                        if ($wc_order_no) {
-                            $detail_retail_price = array_sum(array_column($wc_order_no, 'total_price'));
-                        }else{
-                            $detail_retail_price = $mc['retail_price'];
-                        }
+                    if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
+                        $quantity = $value['quantity'];
+                        $foreach_quantity = 1;
+                    } else {
+                        $foreach_quantity = $value['quantity'];
                         $quantity = 1;
-                        //                        $quantity = $value['quantity'];
+                    }
+                    for ($i = 0; $i < $foreach_quantity; $i++) {
                         $details = [
                             "order_id" => $order_id,
                             "mc_id" => $mc['mc_id'],
@@ -886,14 +915,15 @@ class ApiClient extends ReceiveBaseClient
                             "gc_name" => $mc['gc_name'],
                             "cost_price" => $mc['cost_price'] ?? 0,
                             "market_price" => $mc['market_price'] ?? 0,
-                            "retail_price" => $detail_retail_price,
-                            "total_sod_price" => bcmul($detail_retail_price, $quantity, 3),
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'] ?? '',
                             'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                         ];
+                        $details['retail_price'] = !empty($wc_order_no) ? $total_price : $mc['retail_price'];
+                        $details['total_sod_price'] = bcmul($details['retail_price'], $quantity, 3);
                         $sod_id = $this->addSaleOrdersDetails($details);
+
                         if ($sod_id) {
                             $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $quantity, 2), 3);
                             $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mc['market_price'], $quantity, 2), 3);
@@ -902,7 +932,6 @@ class ApiClient extends ReceiveBaseClient
                             $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 3);
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
                             $updateOrder['total_cost_points'] = bcadd($updateOrder['total_cost_points'], $details['total_sod_cost_points'], 3);
-                           
                         } else {
                             $this->rollbackTrans();
                             return $this->r(300, $this->lang("VSubCar.make_order_details_fail"));
@@ -1964,7 +1993,7 @@ class ApiClient extends ReceiveBaseClient
 
     public function test()
     {
-        $this->order = $this->getSaleOrdersFind(['order_id' => '29925']);
+        $this->order = $this->getSaleOrdersFind(['order_id' => '30030']);
         // $order = $this->outGoods();
         return $this->orderSync2Wc($this->order);
     }
