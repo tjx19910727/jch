@@ -838,8 +838,6 @@ class ApiClient extends ReceiveBaseClient
                             $daysInfo = json_decode($daysInfo_json, true);
                             $order_date = $value['order_date'];
                             array_pop($order_date);
-                                    dump($daysInfo);
-                            
                             foreach ($daysInfo as $vv) {
                                 if (in_array($vv['date'], $order_date)) {
                                     $total_price = bcadd($total_price, $vv['price'], 3);
