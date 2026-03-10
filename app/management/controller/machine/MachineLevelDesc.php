@@ -47,7 +47,7 @@ class MachineLevelDesc extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machine->addM($postData);
+        return $this->app->machine->addMLevel($postData);
     }
 
     public function update()
