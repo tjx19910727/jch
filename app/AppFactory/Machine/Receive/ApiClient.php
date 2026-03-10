@@ -832,6 +832,9 @@ class ApiClient extends ReceiveBaseClient
                         $total_price = 0;
                         if ($wc_goods['type'] == 1) { //抢购商品没有子商品，直接根据父商品计算价格
                             $total_price = $wc_goods['price'];
+                        }elseif($wc_goods['type'] == 5){
+                            $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
+                            $total_price = $now_wc_goods_locals[0]['retail_price'] ?? 0;
                         } elseif ($wc_goods['type'] == 3 || $wc_goods['type'] == 11) { //组合||酒店房态商品时：此时carList传过来为单条记录
                             $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
                             $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
