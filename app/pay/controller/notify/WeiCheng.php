@@ -15,6 +15,9 @@ class WeiCheng
 
     public function scanNotify(){
         //用户信息入库等。
+        $postData = input();
+        $postData = json2arr($postData);
+        actionLog($postData, '微程退款推送数据');
         return true;
     }
     
