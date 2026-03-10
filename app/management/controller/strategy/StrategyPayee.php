@@ -113,4 +113,15 @@ class StrategyPayee extends Common
         $sp_id = input('sp_id');
         return $this->app->strategyPayee->getWxPlatformCert($sp_id);
     }
+
+    /**
+     * 导出收款策略
+     * @return array|string
+     */
+    public function exportPayee()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,['app_id' => "like"]);
+        return $this->app->strategyPayee->exportPayee($where);
+    }
 }
