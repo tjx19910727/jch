@@ -1302,7 +1302,7 @@ class ApiClient extends ReceiveBaseClient
         );
         $order = $order->toArray();
         actionLog($order, '订单数据');
-        $mConfig = $this->getMachineConfigFind(['m_id' => $order['m_id']], 'receipt_code1,receipt_code2,receipt_code3,receipt_desc,deal_service_phone');
+        $mConfig = $this->getMachineConfigFind(['m_id' => $order['m_id']], 'receipt_code1,receipt_code2,receipt_code3,receipt_desc,deal_service_phone,receipt_code1_desc,receipt_code2_desc');
         $pIds = $this->getAuthManagerMachineColumn(['m_id' => $this->machine['m_id']], 'manager_id');
         $pIds = array_merge($pIds, $this->getParentIdList($this->machine['creator']));
         $pIds[] = $this->machine['creator'];
@@ -1368,6 +1368,8 @@ class ApiClient extends ReceiveBaseClient
             'receipt_code2'  => $mConfig['receipt_code2'],
             'receipt_code3'  => $mConfig['receipt_code3'],
             'receipt_desc'   => $mConfig['receipt_desc'],
+            'receipt_code1_desc'  => empty($mConfig['receipt_code1_desc']) ? '客服微信' : $mConfig['receipt_code1_desc'],
+            'receipt_code2_desc'  => empty($mConfig['receipt_code2_desc']) ? '在线商城' : $mConfig['receipt_code2_desc'],
         ];
         if (in_array(1, array_column($data['detailsList'], 'is_gift')))
             $data['ac_name'] = $this->lang("gift");
