@@ -1139,3 +1139,10 @@ VALUES
   (2, '豪华版', ''),
   (3, '华屹机', ''),
   (4, '立式机', '');
+
+#20260311
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `receipt_code1_desc` VARCHAR(50) DEFAULT '' COMMENT '二维码1的自定义文字' AFTER `receipt_code3`;
+
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `receipt_code2_desc` VARCHAR(50) DEFAULT '' COMMENT '二维码2的自定义文字' AFTER `receipt_code3`;
