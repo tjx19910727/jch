@@ -821,8 +821,8 @@ class ApiClient extends ReceiveBaseClient
                 foreach ($this->data['carList'] as $value) {
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $wc_goods = $this->getWcGoodsFind(['no' => $value['out_no']]);
-                        if($wc_goods['maxBuy'] > 0 && $wc_goods['maxBuy'] < $value['quantity']) {
-                            return $this->r(100, $this->lang("VSubCar.make_order_fail")."：".$wc_goods['name']."购买数量超过限购数量");
+                        if ($wc_goods['maxBuy'] > 0 && $wc_goods['maxBuy'] < $value['quantity']) {
+                            return $this->r(100, $this->lang("VSubCar.make_order_fail") . "：" . $wc_goods['name'] . "购买数量超过限购数量");
                         }
                         // todo 添加库存校验
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
@@ -832,10 +832,10 @@ class ApiClient extends ReceiveBaseClient
                         $total_price = 0;
                         if ($wc_goods['type'] == 1) { //抢购商品没有子商品，直接根据父商品计算价格
                             $total_price = $wc_goods['price'];
-                        }elseif($wc_goods['type'] == 5){
+                        } elseif ($wc_goods['type'] == 5) {
                             $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
                             $total_price = $now_wc_goods_locals[0]['retail_price'] ?? 0;
-                        } elseif ($wc_goods['type'] == 3 || $wc_goods['type'] == 11) { //组合||酒店房态商品时：此时carList传过来为单条记录
+                        } elseif ($wc_goods['type'] == 3) { //组合||酒店房态商品时：此时carList传过来为单条记录
                             $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
                             $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
                             $daysInfo = json_decode($daysInfo_json, true);
@@ -846,10 +846,25 @@ class ApiClient extends ReceiveBaseClient
                                     $total_price = bcadd($total_price, $vv['price'], 3);
                                 }
                             }
+                        } elseif ($wc_goods['type'] == 11) { //组合||酒店房态商品时：此时carList传过来为单条记录
+                            $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
+                            if ($now_wc_goods_locals[0]['isNeedReserve']) {
+                                $total_price = $wc_goods['price'];
+                            } else {
+                                $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
+                                $daysInfo = json_decode($daysInfo_json, true);
+                                $order_date = $value['order_date'];
+                                array_pop($order_date);
+                                foreach ($daysInfo as $vv) {
+                                    if (in_array($vv['date'], $order_date)) {
+                                        $total_price = bcadd($total_price, $vv['price'], 3);
+                                    }
+                                }
+                            }
                         }
                         $wc_order_no = [];
                         foreach ($wc_goods_locals as $wc_goods_local) {
-                            if ($wc_goods_local['g_id'] == '9999') {
+                            if ($wc_goods_local['g_id'] != '9999' && $wc_goods_local['g_id'] != '0') {
                                 $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
                                 if ($machine_channel) {
                                     $machine_channel = $machine_channel->toArray();
