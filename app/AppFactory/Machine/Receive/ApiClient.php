@@ -839,8 +839,12 @@ class ApiClient extends ReceiveBaseClient
                             $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
                             $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
                             $daysInfo = json_decode($daysInfo_json, true); 
-                            if(count($value['order_date']) ==  1) $total_price = $daysInfo[0]['price'] ?? 0;
-                            else{
+                            if(empty($value['order_date'])) {
+                                $value['order_date'] = [date('Y-m-d')];
+                            }
+                            if(count($value['order_date']) ==  1) {
+                                $total_price = $daysInfo[0]['price'] ?? 0;
+                            }else{
                                 $order_date = $value['order_date'];
                                 array_pop($order_date);
                                 foreach ($daysInfo as $vv) {
@@ -852,12 +856,16 @@ class ApiClient extends ReceiveBaseClient
                         } elseif ($wc_goods['type'] == 11) { //组合||酒店房态商品时：此时carList传过来为单条记录
                             $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
                             if ($now_wc_goods_locals[0]['isNeedReserve']) {
-                                $total_price = $wc_goods['price'];
+                                $total_price = $now_wc_goods_locals[0]['retail_price'];
                             } else {
                                 $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
                                 $daysInfo = json_decode($daysInfo_json, true);
-                                if(count($value['order_date']) ==  1) $total_price = $daysInfo[0]['price'] ?? 0;
-                                else{
+                                if(empty($value['order_date'])) {
+                                    $value['order_date'] = [date('Y-m-d')];
+                                }
+                                if(count($value['order_date']) ==  1) {
+                                    $total_price = $daysInfo[0]['price'] ?? 0;
+                                }else{
                                     $order_date = $value['order_date'];
                                     array_pop($order_date);
                                     foreach ($daysInfo as $vv) {
