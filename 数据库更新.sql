@@ -1122,7 +1122,7 @@ ALTER TABLE `wx_template_log`
   ADD INDEX `ao_id` (`ao_id`) USING BTREE ,
   ADD INDEX `create_time` (`create_time`) USING BTREE ;
 
-
+#20260309
 CREATE TABLE `machine_level_desc` (
   `machine_level` int NOT NULL AUTO_INCREMENT,
   `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '等级名称',
@@ -1132,6 +1132,7 @@ CREATE TABLE `machine_level_desc` (
   PRIMARY KEY (`machine_level`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备等级表';
 
+#20260309
 INSERT INTO `machine_level_desc` (`machine_level`, `name`, `pic`)
 VALUES
   (1, '简易版', ''),
