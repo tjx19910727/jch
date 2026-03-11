@@ -835,24 +835,16 @@ class ApiClient extends ReceiveBaseClient
                         } elseif ($wc_goods['type'] == 5) {
                             $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
                             $total_price = $now_wc_goods_locals[0]['retail_price'] ?? 0;
-                        } elseif ($wc_goods['type'] == 3) { //组合||酒店房态商品时：此时carList传过来为单条记录
+                        } elseif ($wc_goods['type'] == 3) { //酒店房态商品时：此时carList传过来为单条记录
                             $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
                             $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
-                            $daysInfo = json_decode($daysInfo_json, true);
-                            $order_date = $value['order_date'];
-                            array_pop($order_date);
-                            foreach ($daysInfo as $vv) {
-                                if (in_array($vv['date'], $order_date)) {
-                                    $total_price = bcadd($total_price, $vv['price'], 3);
-                                }
+                            $daysInfo = json_decode($daysInfo_json, true); 
+                            if(empty($value['order_date'])) {
+                                $value['order_date'] = [date('Y-m-d')];
                             }
-                        } elseif ($wc_goods['type'] == 11) { //组合||酒店房态商品时：此时carList传过来为单条记录
-                            $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
-                            if ($now_wc_goods_locals[0]['isNeedReserve']) {
-                                $total_price = $wc_goods['price'];
-                            } else {
-                                $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
-                                $daysInfo = json_decode($daysInfo_json, true);
+                            if(count($value['order_date']) ==  1) {
+                                $total_price = $daysInfo[0]['price'] ?? 0;
+                            }else{
                                 $order_date = $value['order_date'];
                                 array_pop($order_date);
                                 foreach ($daysInfo as $vv) {
@@ -861,6 +853,30 @@ class ApiClient extends ReceiveBaseClient
                                     }
                                 }
                             }
+                        } elseif ($wc_goods['type'] == 11) { //组合||酒店房态商品时：此时carList传过来为单条记录
+                            $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
+                            if ($now_wc_goods_locals[0]['isNeedReserve']) {
+                                $total_price = $now_wc_goods_locals[0]['retail_price'];
+                            } else {
+                                $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
+                                $daysInfo = json_decode($daysInfo_json, true);
+                                if(empty($value['order_date'])) {
+                                    $value['order_date'] = [date('Y-m-d')];
+                                }
+                                if(count($value['order_date']) ==  1) {
+                                    $total_price = $daysInfo[0]['price'] ?? 0;
+                                }else{
+                                    $order_date = $value['order_date'];
+                                    array_pop($order_date);
+                                    foreach ($daysInfo as $vv) {
+                                        if (in_array($vv['date'], $order_date)) {
+                                            $total_price = bcadd($total_price, $vv['price'], 3);
+                                        }
+                                    }
+                                }
+                            }
+                            $other_wc_goods_locals = $this->getWcGoodsLocalList([['no', '<>', $value['no']], 'out_no' => $value['out_no']])->toArray();
+                            $total_price += array_sum(array_column($other_wc_goods_locals, 'retail_price')) ?? 0;
                         }
                         $wc_order_no = [];
                         foreach ($wc_goods_locals as $wc_goods_local) {
@@ -885,7 +901,6 @@ class ApiClient extends ReceiveBaseClient
                                 // 'wc_user_address' => '',//微程会员寄送详细地址
                             ];
                         }
-                        
                         
                     } else {
                         $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
