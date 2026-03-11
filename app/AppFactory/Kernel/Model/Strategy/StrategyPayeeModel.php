@@ -8,7 +8,7 @@
 
 namespace app\AppFactory\Kernel\Model\Strategy;
 
-
+use app\AppFactory\Kernel\Model\Auth\AuthOrganizationModel;
 use app\AppFactory\Kernel\Model\BaseModel;
 
 class StrategyPayeeModel extends BaseModel
@@ -32,5 +32,10 @@ class StrategyPayeeModel extends BaseModel
         "update_id" => "int",
         "update_time" => "int",
     ];
+
+    public function aoData()
+    {
+        return $this->hasOne(AuthOrganizationModel::class, "ao_id", "ao_id")->field("ao_id,organization_name");
+    }
 
 }

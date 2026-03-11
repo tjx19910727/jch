@@ -100,8 +100,8 @@ trait MachineTrait
      */
     public function getMachineList($where,$pageNum = null,$field = "*", $order = "",$eachFun = "",$group = '', $limit = '')
     {
-        $result = MachineModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
-
+        //$result = MachineModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
+        $result = MachineModel::getListAndWith($where,$pageNum,$field,$order,$eachFun,$group,$limit,['machineLevelData']);
         if ($result) {
             if ($pageNum) {
                 $result = $result->each(function ($item) {
