@@ -1,3 +1,14 @@
+
+#20260305
+ALTER TABLE kiosk.wc_request_logs MODIFY COLUMN response_body longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL;
+ALTER TABLE kiosk.wc_goods MODIFY COLUMN goods longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '实物商品信息';
+ALTER TABLE kiosk.wc_goods MODIFY COLUMN get_data longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '接口返回内容';
+ALTER TABLE kiosk.wc_goods MODIFY COLUMN notice text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '支付通知备注';
+
+
+ALTER TABLE kiosk.wc_goods_local MODIFY COLUMN daysInfo longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL;
+ALTER TABLE kiosk.wc_goods_local ADD COLUMN  `isNeedReserve` int default 0 COMMENT '是否抢购' AFTER `type`;
+
 #20260226
 ALTER TABLE kiosk.machine_channel
   ADD COLUMN `cost_points` decimal(10,3) default 0 COMMENT '消费积分' AFTER `gift_points`;
@@ -1111,3 +1122,27 @@ ALTER TABLE `wx_template_log`
   ADD INDEX `ao_id` (`ao_id`) USING BTREE ,
   ADD INDEX `create_time` (`create_time`) USING BTREE ;
 
+#20260309
+CREATE TABLE `machine_level_desc` (
+  `machine_level` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '等级名称',
+  `pic` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '等级图片' ,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`machine_level`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备等级表';
+
+#20260309
+INSERT INTO `machine_level_desc` (`machine_level`, `name`, `pic`)
+VALUES
+  (1, '简易版', ''),
+  (2, '豪华版', ''),
+  (3, '华屹机', ''),
+  (4, '立式机', '');
+
+#20260311
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `receipt_code1_desc` VARCHAR(50) DEFAULT '' COMMENT '二维码1的自定义文字' AFTER `receipt_code3`;
+
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `receipt_code2_desc` VARCHAR(50) DEFAULT '' COMMENT '二维码2的自定义文字' AFTER `receipt_code3`;

@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Model\Strategy;
 
 
 use app\AppFactory\Kernel\Model\BaseModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
@@ -74,5 +75,15 @@ class StrategyMachineModel extends BaseModel
             actionException($e,1);
             return $e->getMessage();
         }
+    }
+
+    public function machineData()
+    {
+        return $this->hasOne(MachineModel::class,"m_id","m_id");
+    }
+
+    public function strategyData()
+    {
+        return $this->hasOne(StrategyPayeeModel::class,"sp_id","s_id");
     }
 }

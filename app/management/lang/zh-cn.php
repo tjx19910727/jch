@@ -694,4 +694,10 @@ return [
         "points_changed_require" => "积分变动值不能为空",
         "change_type_in" => "无效的积分变动类型",
     ],
+    "VMachineLevelDesc" => [
+        "name_require" => "等级名称不能为空",
+        "pic_require" => "图片不能为空",
+        "machine_level_require" =>"等级id值不能为空",
+        "machine_level_gt" => "等级id值必须大于0",
+    ],
 ]; 

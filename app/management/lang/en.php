@@ -691,4 +691,10 @@ return [
         "points_changed_require" => "points_changed cannot be empty",
         "change_type_in" => "Invalid change_type",
     ],
+    "VMachineLevelDesc" => [
+        "name_require" => "Level Name cannot be empty",
+        "pic_require" => "Image cannot be empty",
+        "machine_level_require" =>"Level ID cannot be empty",
+        "machine_level_gt" => "Level ID must be a positive integer",
+    ],
 ];

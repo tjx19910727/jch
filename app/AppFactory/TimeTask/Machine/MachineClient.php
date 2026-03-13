@@ -222,8 +222,8 @@ class MachineClient extends TimeTaskBase
      * 定时任务-10min执行一次，将当天需要执行定时开关机的设备轮询检查
      */
     public function checkOnOff(){
-        $redis = new Redis();
-        $redis->connect(FacadeEnv::get('REDIS_host'),FacadeEnv::get('REDIS_port'));
+        // $redis = new Redis();
+        // $redis->connect(FacadeEnv::get('REDIS_host'),FacadeEnv::get('REDIS_port'));
         $dayWeek = intval(date('w'));
         $time = strtotime(date('H:i'));
 

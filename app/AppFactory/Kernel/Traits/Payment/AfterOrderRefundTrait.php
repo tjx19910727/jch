@@ -9,10 +9,10 @@
 namespace app\AppFactory\Kernel\Traits\Payment;
 
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
-
+use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 trait AfterOrderRefundTrait
 {
-    use CardTrait;
+    use CardTrait, WcBaseTrait;
     protected $refund;
 
     /**
@@ -42,7 +42,13 @@ trait AfterOrderRefundTrait
             $flag[] = $this->refundSuccessUpdateSod();
             
             //修改卡积分 
-            // $flag[] = $this->addCardChangeLog();
+            $flag[] = $this->addCardChangeLog();
+
+            $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $this->refund['sod_id']]);
+            if($detail['wc_order_no']){
+                $wc_order_no = json_decode($detail['wc_order_no'],true);
+                $flag[] = $this->orderRefundSync2Wc($value['order_id'], $detail);
+            }
         }
         $this->order['refund_quantity'] += $quantity;
         // 修改订单退款状态
@@ -52,6 +58,7 @@ trait AfterOrderRefundTrait
         if (!$result) return $this->r(100,'修改退款记录失败');
         return true;
     }
+
 
     /**
      * 退分润

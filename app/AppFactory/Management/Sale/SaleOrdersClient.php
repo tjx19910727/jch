@@ -142,6 +142,7 @@ class SaleOrdersClient extends ManagementClient
         try {
             $this->postData = $postData;// 生成退款记录
             $flag = $this->createSor();
+            dd($flag);
             if (!is_array($flag)) {
                 $this->rollbackTrans();
                 return $flag;
@@ -152,7 +153,7 @@ class SaleOrdersClient extends ManagementClient
                 // 调用平台退款
                 return $this->callRefund();
             }
-            $this->rollbackTrans();
+            // $this->rollbackTrans();
             return $this->rFail("退款失败：生成退款记录失败");
         } catch (\Exception $e) {
             $this->rollbackTrans();
