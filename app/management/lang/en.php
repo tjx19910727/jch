@@ -697,4 +697,9 @@ return [
         "machine_level_require" =>"Level ID cannot be empty",
         "machine_level_gt" => "Level ID must be a positive integer",
     ],
+    "VSubMachine" => [
+        "main_machine_id_require" => "Main machine ID cannot be empty",
+        "machine_no_update" => "Device number cannot be updated",
+        "machine_no_delete" => "Device number cannot be deleted",
+    ],
 ];

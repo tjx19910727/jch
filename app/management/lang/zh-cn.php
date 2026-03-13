@@ -700,4 +700,9 @@ return [
         "machine_level_require" =>"等级id值不能为空",
         "machine_level_gt" => "等级id值必须大于0",
     ],
+    "VSubMachine" => [
+        "main_machine_id_require" => "主设备必须选择",
+        "machine_no_update" => "此处只能编辑边柜",
+        "machine_no_delete" => "此处只能删除边柜",
+    ],
 ]; 

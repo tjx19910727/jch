@@ -1135,3 +1135,15 @@ ALTER TABLE kiosk.machine_config
 
 ALTER TABLE kiosk.machine_config
   ADD COLUMN `receipt_code2_desc` VARCHAR(50) DEFAULT '' COMMENT '二维码2的自定义文字' AFTER `receipt_code3`;
+  
+#20260312
+ALTER TABLE kiosk.machine
+  ADD COLUMN `vending_machine_type` tinyint(1) DEFAULT '1' COMMENT '售货机类型：1-主柜，2-边柜，3-弧柜' AFTER `device_type`;
+
+CREATE TABLE `machine_main_relation` (
+  `main_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '主柜machine_id',
+  `b_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '边柜machine_id',
+  `h_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '弧柜machine_id',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY (`main_mc_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备关联关系表';

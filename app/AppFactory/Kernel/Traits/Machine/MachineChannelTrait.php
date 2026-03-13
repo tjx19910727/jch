@@ -109,6 +109,12 @@ trait MachineChannelTrait
         return $data->mc_id;
     }
 
+    public function addMachineMoreChannel($insert)
+    {
+        $mc = new MachineChannelModel();
+        return $mc->saveAll($insert);
+    }
+
     public function updateMachineChannel($update, $where = [], $field = [])
     {
         return MachineChannelModel::update($update, $where, $field);
