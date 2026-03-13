@@ -421,7 +421,7 @@ class MachineClient extends ManagementClient
             if ($createMIds && $mIds) $mIds = array_unique(array_merge($mIds,$createMIds));
             $where[] = ['m_id', 'in', $mIds];
         }
-        $expr = "(a.vending_machine_type = 2 OR (a.vending_machine_type = 1 AND EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1)))";
+        $expr = "(a.vending_machine_type = 3 OR (a.vending_machine_type = 1 AND EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1)))";
         if (!empty($where['raw'])) {
             $where['raw'] .= " AND " . $expr;
         } else {
@@ -433,11 +433,11 @@ class MachineClient extends ManagementClient
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
             if (isset($item['regions_id']) && $item['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $item['regions_id']],'code,name,cname');
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
-            if($item['vending_machine_type'] == 2){
+            if($item['vending_machine_type'] == 3){
                 //边柜查关联表
                 $item['main_m_id'] = $this->getMachineMainRelationValue(['b_mc_id' => $item['m_id']], 'main_mc_id') ?: 0;
             }elseif($item['vending_machine_type'] == 1){
-                $item['vending_machine_type'] = 3;//如果是主柜且有副柜说明是弧柜，则类型改为3，前端区分展示
+                $item['vending_machine_type'] = 2;//如果是主柜且有副柜说明是弧柜，则类型改为2，前端区分展示
                 $item['main_m_id'] = $item['m_id'];
                 $item['machine_name'] = $item['machine_name'].'的弧柜';
             }
@@ -461,7 +461,7 @@ class MachineClient extends ManagementClient
             }else{
                 return $this->r(100, $this->lang("VSubMachine.main_machine_id_require"));
             }
-            $postData['vending_machine_type'] = 2;//边柜
+            $postData['vending_machine_type'] = 3;//边柜
             $m = $this->addMachine($postData);
             if ($m) {
                 $machine = $this->getMachineFind(['m_id' => $m]);
@@ -507,6 +507,7 @@ class MachineClient extends ManagementClient
                         'machine_id' => $mainM['machine_id'],
                         'ao_id' => $postData['ao_id'] ?? 0,
                         'channel_code' => '020'.$i,
+                        'channel_position' => 2,
                     ];
                     $channelAll[] = $channelData;
                 }
@@ -538,7 +539,7 @@ class MachineClient extends ManagementClient
             return $this->r(100, $this->lang("VMachine.machine_no_data"));
         }
         $m = $m->toArray();
-        if($m['vending_machine_type'] != 2){
+        if($m['vending_machine_type'] != 3){
             //主柜、弧柜在此处不允许编辑
             return $this->r(100, $this->lang("VSubMachine.machine_no_update"));
         }
@@ -597,7 +598,7 @@ class MachineClient extends ManagementClient
             return $this->r(200,$this->lang("action_success"));
         }
         $m = $m->toArray();
-        if($m['vending_machine_type'] != 2){
+        if($m['vending_machine_type'] != 3){
             //主柜、弧柜在此处不允许删除
             return $this->r(100, $this->lang("VSubMachine.machine_no_delete"));
         }

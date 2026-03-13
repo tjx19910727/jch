@@ -27,23 +27,44 @@ class MachineGoodsClient extends ManagementClient
     {
         $data = $this->getMachineGoodsList($where, $pageNum, $field, $order);
         if ($pageNum) {
-            $data = $data->each(function ($item) {
+            // $data = $data->each(function ($item) {
+            //     if ($item['is_shelf'] == 2) {
+            //         $mc = $this->getMachineChannelFind(['g_id' => $item['g_id'],'m_id' => $item['m_id']]);
+            //         if ($mc) {
+            //             $item['is_shelf'] = 1;
+            //             $this->updateMachineGoods(['mg_id' => $item['mg_id'], 'is_shelf' => 1]);
+            //         }
+            //     }
+            //     if ($item['is_shelf'] == 1) {
+            //         $mc = $this->getMachineChannelFind(['g_id' => $item['g_id'],'m_id' => $item['m_id']]);
+            //         if (!$mc) {
+            //             $item['is_shelf'] = 2;
+            //             $this->updateMachineGoods(['mg_id' => $item['mg_id'], 'is_shelf' => 2]);
+            //         }
+            //     }
+            //     return $item;
+            // });
+            //修复is_shelf状态异常导致的前端展示问题
+            $isChanged = false;
+            foreach ($data as $item) {
                 if ($item['is_shelf'] == 2) {
                     $mc = $this->getMachineChannelFind(['g_id' => $item['g_id'],'m_id' => $item['m_id']]);
                     if ($mc) {
-                        $item['is_shelf'] = 1;
                         $this->updateMachineGoods(['mg_id' => $item['mg_id'], 'is_shelf' => 1]);
+                        $isChanged = true;
                     }
                 }
                 if ($item['is_shelf'] == 1) {
                     $mc = $this->getMachineChannelFind(['g_id' => $item['g_id'],'m_id' => $item['m_id']]);
                     if (!$mc) {
-                        $item['is_shelf'] = 2;
                         $this->updateMachineGoods(['mg_id' => $item['mg_id'], 'is_shelf' => 2]);
+                        $isChanged = true;
                     }
                 }
-                return $item;
-            });
+            }
+            if ($isChanged) {
+                $data = $this->getMachineGoodsList($where, $pageNum, $field, $order);
+            }
         }
         return $this->r(200, $this->lang("query_success"), $data);
     }

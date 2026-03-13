@@ -1138,7 +1138,7 @@ ALTER TABLE kiosk.machine_config
   
 #20260312
 ALTER TABLE kiosk.machine
-  ADD COLUMN `vending_machine_type` tinyint(1) DEFAULT '1' COMMENT '售货机类型：1-主柜，2-边柜，3-弧柜' AFTER `device_type`;
+  ADD COLUMN `vending_machine_type` tinyint(1) DEFAULT '1' COMMENT '售货机类型：1-主柜，2-弧柜，3-边柜' AFTER `device_type`;
 
 CREATE TABLE `machine_main_relation` (
   `main_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '主柜machine_id',
@@ -1147,3 +1147,11 @@ CREATE TABLE `machine_main_relation` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   KEY (`main_mc_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备关联关系表';
+
+#20260312
+ALTER TABLE kiosk.machine_channel
+  ADD COLUMN `old_retail_price` decimal(10,2) DEFAULT '-1.00' COMMENT '旧零售价' AFTER `retail_price`;
+  ALTER TABLE kiosk.machine_channel
+  ADD COLUMN `old_gift_points` decimal(10,3) DEFAULT '-1.000' COMMENT '旧赠送积分' AFTER `gift_points`;
+  ALTER TABLE kiosk.machine_channel
+  ADD COLUMN `old_stock_warning` int(10) DEFAULT '-1' COMMENT '旧库存预警' AFTER `stock_warning`;
