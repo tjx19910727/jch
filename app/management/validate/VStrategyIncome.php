@@ -14,7 +14,7 @@ class VStrategyIncome extends VCommon
     protected $rule = [
         "si_id" => " require",
         "income_name" => " require",
-        "income_value" => " require|between:0,100",
+        "income_value" => " require|between:0,101",
         "status" => " require",
     ];
 
