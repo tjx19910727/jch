@@ -1613,6 +1613,7 @@ class ApiClient extends ReceiveBaseClient
                 "trade_no" => $this->order['trade_no'],
                 "main" => $contentArr,
                 "outGoods" => $outArr,
+                "order_points" => $this->order['total_points']
             ];
             $this->order['out_status'] = 2;
             $this->order['pay_status'] = 3;
