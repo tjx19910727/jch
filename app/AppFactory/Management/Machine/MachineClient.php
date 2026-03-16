@@ -413,7 +413,7 @@ class MachineClient extends ManagementClient
         }
     }
 
-    public function getSubMList($where,$pageNum = 0,$field = "",$order = "")
+    public function getSubMList($where,$pageNum = 0,$field = "",$order = "",$vending_machine_type = "")
     {
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
@@ -421,7 +421,18 @@ class MachineClient extends ManagementClient
             if ($createMIds && $mIds) $mIds = array_unique(array_merge($mIds,$createMIds));
             $where[] = ['m_id', 'in', $mIds];
         }
-        $expr = "(a.vending_machine_type = 3 OR (a.vending_machine_type = 1 AND EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1)))";
+        if(empty($vending_machine_type)){
+            $expr = "(a.vending_machine_type = 3 OR (a.vending_machine_type = 1 AND EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1)))";
+        }else{
+            if($vending_machine_type == 2){
+                //弧柜
+                $expr = "(a.vending_machine_type = 1 AND EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+            }else{
+                //边柜
+                $expr = "a.vending_machine_type = 3";
+            }
+        }
+        
         if (!empty($where['raw'])) {
             $where['raw'] .= " AND " . $expr;
         } else {
