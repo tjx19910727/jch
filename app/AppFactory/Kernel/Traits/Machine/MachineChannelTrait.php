@@ -159,7 +159,7 @@ trait MachineChannelTrait
                     if (!$mc) {
                         $mc = $value;
                         if (isset($value['g_id'])) {
-                            $gField = "g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price";
+                            $gField = "g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price,ao_id";
                             $g = $this->getGoodsFind(['g_id' => $value['g_id']], $gField);
                             if ($g) {
                                 $g = obj2arr($g);
@@ -188,7 +188,7 @@ trait MachineChannelTrait
                             "pic" => $mc['pic'] ?? "",
                             "sku" => $mc['sku'] ?? "",
                             "bar_code" => $mc['bar_code'] ?? "",
-                            "ao_id" => $this->machine['ao_id'],
+                            "ao_id" => $mc['ao_id'],
                             "change_value" => $value['stock'] ?? 0,
                             "type" => 2 ,   // 2：创建上货
 //                            "desc" => $this->lang("goodsChange.terminal_create_inc_stock"),
@@ -212,7 +212,7 @@ trait MachineChannelTrait
                             "pic" => $mc['pic'] ?? "",
                             "sku" => $mc['sku'] ?? "",
                             "bar_code" => $mc['bar_code'] ?? "",
-                            "ao_id" => $this->machine['ao_id'],
+                            "ao_id" => $mc['ao_id'],
                             "change_value" => $value['stock'] ?? 0,
                             "position" => 1,
                         ];

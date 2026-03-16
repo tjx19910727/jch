@@ -96,42 +96,45 @@ class AuthOrganization  extends Common
         }
     }
 
-    //组织关联设备货道  channel_code 为逗号分隔的字符串
-    public  function addMachineChannel()
+    /**组织租赁设备
+     * 每次执行，先将组织原租赁设备记录删除，增加新记录
+     */
+    public  function orgRentMachine()
     {
         $postData = input();
         $addData['ao_id'] = $postData['ao_id'] ?? '';
-        // id($addData['ao_id'] < 18) return 
-        $addData['m_id'] = $postData['m_id'] ?? '';
-        $addData['machine_id'] = $postData['machine_id'] ?? '';
-        $channel_code = $postData['channel_code'] ?? '';
-        $channel_code = explode(',', $channel_code);
-        $addData['channel_code'] = json_encode($channel_code);
-        $res = $this->app->authOrganization->addAuthOrgMC($addData);
-        $machine_channel_where['m_id'] = $addData['m_id'];
-        $machine_channel_where['machine_id'] = $addData['machine_id'];
-        $machine_channel_where[] = [['channel_code', 'in', $channel_code]];
-        $this->app->machine->updateMachineChannel(['ao_id' => $addData['ao_id']], $machine_channel_where);
-        return returnData($res);
+        // $addData['m_id'] = $postData['m_id'] ?? '';
+        $machine_id_raw = $postData['machine_id'] ?? '';
+        if (!$machine_id_raw) return returnState(100, 'machine_id不能为空');
+        // 支持逗号分隔的多个 machine_id 或者数组 JSON
+        if (is_array($machine_id_raw)) {
+            $machine_ids = $machine_id_raw;
+        } else {
+            $machine_ids = array_filter(array_map('trim', explode(',', $machine_id_raw)));
+        }
+
+        if (!$addData['ao_id']) return returnState(100, 'ao_id不能为空');
+
+        // 开始事务：先删除组织原有的租赁记录，再新增新的记录
+        $this->app->authOrganization->startTrans();
+        try {
+            // 删除当前组织的所有租赁记录
+            $this->app->authOrganization->delAuthOrgMC(['ao_id' => $addData['ao_id']]);
+            $inserted = [];
+            foreach ($machine_ids as $key => $mid) {
+                $res = $this->app->authOrganization->addAuthOrgMC([
+                    'ao_id' => $addData['ao_id'],
+                    'machine_id' => $mid,
+                ]);
+                $inserted[] = $res;
+            }
+            return $this->app->authOrganization->checkTrans($inserted ?? true);
+        } catch (\Exception $e) {
+            $this->app->authOrganization->rollbackTrans();
+            actionException($e, 1);
+            return $this->app->authOrganization->rValidate($e->getMessage());
+        }
     }
 
-    //组织修改设备货道信息  channel_code 为逗号分隔的字符串
-    public function  updateMachineChannel()
-    {
-
-        $postData = input();
-        $updateData['ao_id'] = $postData['ao_id'] ?? '';
-        $updateData['m_id'] = $postData['m_id'] ?? '';
-        $updateData['machine_id'] = $postData['machine_id'] ?? '';
-        $channel_code = $postData['channel_code'] ?? '';
-        $channel_code = explode(',', $channel_code);
-        $updateData['channel_code'] = json_encode($channel_code);
-        $res = $this->app->authOrganization->updateAuthOrgMc($updateData, ['id' => $postData['id']]);
-        $this->app->machine->updateMachineChannel(['ao_id' => 1], ['m_id' => $updateData['m_id']]);
-        $machine_channel_where['m_id'] = $updateData['m_id'];
-        $machine_channel_where['machine_id'] = $updateData['machine_id'];
-        $machine_channel_where[] = [['channel_code', 'in', $channel_code]];
-        $this->app->machine->updateMachineChannel(['ao_id' => $updateData['ao_id']], $machine_channel_where);
-        return returnData($res);
-    }
+    
 }

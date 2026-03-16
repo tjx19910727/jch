@@ -69,6 +69,7 @@ use think\facade\View;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -129,7 +130,8 @@ class ApiClient extends ReceiveBaseClient
         WxOfficialLoginTrait,
         afterOrderRefundTrait,
         CardTrait,
-        WcBaseTrait;
+        WcBaseTrait,
+        AuthOrgMachineChannelTrait;
 
 
     public $card_retail_price = 0.01;
@@ -377,7 +379,7 @@ class ApiClient extends ReceiveBaseClient
                 "sku" => $mc['sku'],
                 "bar_code" => $mc['bar_code'],
                 "change_value" => $mc['stock'],
-                "ao_id" => $this->machine['ao_id'],
+                "ao_id" => $mc['ao_id'],
                 "creator" => $this->data['operator'],
             ];
             // 生成原商品退货记录
@@ -457,7 +459,7 @@ class ApiClient extends ReceiveBaseClient
                 // 查询新商品，修改货道商品信息，重置库存为新数量，生成新的补货记录
                 $mg = $this->getMachineGoodsFind(
                     ['mg_id' => $this->data['mg_id']],
-                    'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock,is_shelf'
+                    'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock,is_shelf,ao_id'
                 );
                 if (!$mg) {
                     $this->rollbackTrans();
@@ -1841,5 +1843,20 @@ class ApiClient extends ReceiveBaseClient
         if ($wcGoodsLocalLists) $wcGoodsLocalLists = $wcGoodsLocalLists->toArray();
         actionLog($wcGoodsLocalLists, '返回的货道数据');
         return $this->r(200, "SUCCESS", $wcGoodsLocalLists);
+    }
+
+    public function getMachineRentOrgLists(){
+        $where['machine_id'] = $this->data['machine_id'];
+        $rent_machine_orgs = $this->getAuthOrgMCColumn($where,'ao_id');
+        return $this->r(200, "SUCCESS", $rent_machine_orgs);
+    }
+
+    public function getRentOrgGoodsLists(){
+        $where['ao_id'] = $this->data['ao_id'];
+        $where['status'] = 1;
+        $pageNum = $this->data['pageNum'] ?? 15;
+        $orgGoodsLists = $this->getGoodsList($where, $pageNum);
+
+        return $this->r(200, "SUCCESS", $orgGoodsLists);
     }
 }

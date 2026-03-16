@@ -17,10 +17,11 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthOrgRevenueTrait;
 
 trait BeforeOrderPaymentTrait
 {
-    use StrategyManagerTrait,StrategyIncomeTrait,StrategyPayeeTrait,StrategyMachineTrait;
+    use StrategyManagerTrait,StrategyIncomeTrait,StrategyPayeeTrait,StrategyMachineTrait, AuthOrgRevenueTrait;
     /**
      * @var array 收益人数据
      */
@@ -72,9 +73,30 @@ trait BeforeOrderPaymentTrait
                 'revenue_type' => 4,
                 'income_amount' =>  bcmul($sodValue['total_sod_price'], bcmul($radio, 0.01, 3), 3),
             ];
-            $flag[] = $this->addSaleOrdersRevenue($insert);
-            actionLog($flag,'生成分润记录flag');
-            actionLog($this->getLS(),'生成分润记录SQL');
+            $sor_id = $this->addSaleOrdersRevenue($insert);
+            // 写入组织分账日志
+            $log = [
+                'ao_id' => $sodValue['ao_id'] ?? 0,
+                'order_id' => $insert['order_id'] ?? '',
+                'sp_id' => $insert['sp_id'] ?? 0,
+                'm_id' => $insert['m_id'] ?? 0,
+                'machine_name' => $insert['machine_name'] ?? '',
+                'machine_id' => $insert['machine_id'] ?? '',
+                'order_amount' => $insert['order_amount'] ?? 0,
+                'sod_id' => $insert['sod_id'] ?? '',
+                'sod_amount' => $insert['sod_amount'] ?? 0,
+                'sod_quantity' => $insert['sod_quantity'] ?? 0,
+                'sod_total_price' => $insert['sod_total_price'] ?? 0,
+                'si_id' => $insert['si_id'] ?? 0,
+                'income_value' => $insert['income_value'] ?? 0,
+                'revenue_type' => $insert['revenue_type'] ?? 0,
+                'income_amount' => $insert['income_amount'] ?? 0,
+                'status' => 1,
+            ];
+            $aor_id = $this->addAuthOrgRevenueLog($log);
+            $flag[] = $sor_id;
+            actionLog($sor_id,'生成分润记录sor_id');
+            actionLog($aor_id,'生成组织分账日志aor_id');
         }
         return flag_check($flag);
     }
