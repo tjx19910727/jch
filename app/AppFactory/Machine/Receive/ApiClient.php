@@ -891,7 +891,7 @@ class ApiClient extends ReceiveBaseClient
                                 'out_no' => $value['out_no'], //父商品编码
                                 'no' => $wc_goods_local['no'], //子商品编码
                                 'order_no' => '', //订单同步时微程反馈的订单号
-                                'order_date' => (($wc_goods_local['type'] == 3 || $wc_goods_local['type'] == 11) && $wc_goods_local['g_id'] == 9999) ? $value['order_date'] : '', //房态商品订房日期
+                                'order_date' => (($wc_goods_local['type'] == 3 || $wc_goods_local['type'] == 11) && $wc_goods_local['g_id'] == 9999) ? $value['order_date'] : date('Y-m-d'), //房态商品订房日期
                                 'quantity' => $value['quantity'] ?? 0, //微程商品数量
                                 'total_price' => $total_price, //不同类型商品不同的价格
                                 'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0, //是否需要本机出货  0-否 1-是

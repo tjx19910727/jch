@@ -240,7 +240,7 @@ trait WcBaseTrait
             foreach ($combination_goods as $kk => $combind_good) {
                 $pic = isset($resourcesArray[$kk]['url']) ? $resourceDomain . $resourcesArray[$kk]['url'] : '';
                 $combindSetData = [
-                    'g_id' => $combind_good['g_id'] ?? '9999',
+                    'g_id' => $combind_good['g_id'] ?: '9999',
                     'out_no' => $no ?? '',
                     'no' => $combind_good['no'] ?? '',
                     'type' => $type,
@@ -256,10 +256,10 @@ trait WcBaseTrait
                     'isNeedReserve' => $combind_good['isNeedReserve'] ?? '0',
                 ];
                 //单独处理一下daysInfo
-                if($combind_good['g_id']) $combindSetData['daysInfo'] = '';
-                if(!$combind_good['g_id'] && !$combind_good['g_id']) $combindSetData['daysInfo'] = $wc_goods['daysInfo'];
-                if($combind_good['isNeedReserve']) $combindSetData['daysInfo'] = '';
-
+                $combindSetData['daysInfo'] = '';
+                if(($wc_goods['type'] == 3 ||$wc_goods['type'] == 11) && $combindSetData['g_id'] == 9999){
+                    $combindSetData['daysInfo'] = $wc_goods['daysInfo'];
+                }
                 $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no'], 'out_no' => $no]);
                 if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($combindSetData);
