@@ -113,7 +113,8 @@ class MachineChannelClient extends ManagementClient
             (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
             count(mc_id) bad_num', '', '', 'm_id');
         if ($list) {
-            foreach ($list as $key => $value) {
+            $list = $list->toArray();
+            foreach ($list as $key => &$value) {
                 $whereBad = [];
                 // 副柜不可用状态下，只查主柜货道
                 $sub_cabinet = $this->getMachineInfoValue(['m_id' => $value['m_id']],'sub_cabinet');
@@ -122,11 +123,16 @@ class MachineChannelClient extends ManagementClient
                 $value['total_channel'] = $this->getMachineChannelCount($whereBad);
                 $whereBad['status'] = 3;
                 $badList = $this->getMachineChannelColumn($whereBad, 'channel_code');
+                //badList为空时，unset掉
+                if (count($badList) == 0) {
+                    unset($list[$key]);
+                    continue;
+                }
                 $value['bad_channel'] = implode(",", $badList ?? []);
                 $value['bad_ratio'] = bcmul(bcdiv($value['bad_num'], $value['total_channel'], 3), 100, 1) . "%";
             }
         }
-        return $this->rQ($list);
+        return $this->rQ(array_values($list));
     }
 
     /**
