@@ -133,10 +133,10 @@ trait CardTrait
             $this->commitTrans();
             return ['card_no' => $card_no, 'points_changed' => $points_changed,  'trade_no' => $trade_no, 'bind_id' => $bind_id];
         } catch (\Exception $e) {
-            return false;
             $this->rollbackTrans();
             actionLog("修改卡积分失败");
             actionException($e, 1);
+            return false;
         }
         return $log_id;
     }

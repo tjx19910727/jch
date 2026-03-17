@@ -171,7 +171,12 @@ class MachineChannelClient extends ManagementClient
      */
     public function updateMc($postData)
     {
-        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock');
+        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,channel_position,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock');
+        //如果是货道是边柜，查询主柜信息
+        // if(isset($mc['channel_position']) && $mc['channel_position'] == 3){
+        //     $main_m_id = $this->getMachineMainRelationValue(['b_mc_id' => $mc['m_id']], 'main_mc_id');
+        //     $mc['m_id'] = $main_m_id;
+        // }
         $machine = $this->getMachineFind(['m_id' => $mc['m_id']],'m_id,machine_id,machine_name,ao_id');
         // 商品变化基础数据
         $insertGChange = [
@@ -249,8 +254,10 @@ class MachineChannelClient extends ManagementClient
         }
         $result = $this->updateMachineChannel($postData);
         if ($result) {
-            // 发送触发货道更新数据
-            $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMc',['mc_id' => $mc['mc_id']]);
+            // 发送触发货道更新数据,如果是边柜货道不发送
+            if ($mc['channel_position'] != 3) {
+                $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMc',['mc_id' => $mc['mc_id']]);
+            }
             return $this->r(200,$this->lang("action_success"));
         }
         return $this->r(100,$this->lang('action_fail'));

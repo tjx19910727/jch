@@ -553,8 +553,8 @@ class MachineClient extends ManagementClient
         }else{
             return $this->r(100, $this->lang("VSubMachine.main_machine_id_require"));
         }
-        $m = $this->getMachineFind(['m_id' => $postData['m_id']], "m_id,machine_id,machine_name");
-        if (count($m) == 0) {
+        $m = $this->getMachineFind(['m_id' => $postData['m_id']], "m_id,machine_id,machine_name,vending_machine_type");
+        if(!$m) {
             return $this->r(100, $this->lang("VMachine.machine_no_data"));
         }
         $m = $m->toArray();
