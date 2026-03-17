@@ -16,12 +16,14 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Db;
 
 class MachineChannelClient extends ManagementClient
 {
-    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait;
+    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait;
     use GoodsTrait,GoodsChangeTrait;
     use AuthManagerMachineTrait;
 
@@ -373,12 +375,24 @@ class MachineChannelClient extends ManagementClient
         $machine = $this->getMachineFind($where,'m_id,machine_id,machine_name,ao_id,vending_machine_type');
         if (!$machine) return $this->r(100,$this->lang("VMachine.machine_no_data"));
         //把货道的channel_position设置成设备相同的vending_machine_type
-        $list = $this->getMachineChannelList($where,$pageNum,$field,$order,function($item) use($machine){
-            if (isset($machine['vending_machine_type']) && $machine['vending_machine_type']) {
-                $item['channel_position'] = $machine['vending_machine_type'];
+        $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
+        $list = $list->toArray();
+        $value = $this->getMachineMainRelationValue(['main_mc_id' => $machine['m_id']],'b_mc_id');
+        if(!empty($value)){
+            $b_list = $this->getMachineChannelList([['m_id','=',$value]],$pageNum,$field,$order);
+            $b_list = $b_list->toArray();
+        }
+        if(!empty($b_list)){
+            $list = array_merge($list,$b_list);
+        }
+        foreach ($list as $key => &$value) {
+            if (isset($value['channel_code']) && in_array($value['channel_code'],['0201','0202','0203'])) {
+                $value['channel_position'] = 3;
             }
-            return $item;
-        });
+            if (isset($value['channel_code']) && in_array($value['channel_code'],['0101','0102','0103'])) {
+                $value['channel_position'] = 2;
+            }
+        }
         return $this->rQ($list);
     }
 

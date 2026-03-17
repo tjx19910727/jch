@@ -515,10 +515,11 @@ class MachineClient extends ManagementClient
                 for ($i = 1; $i <= 3 ; $i++) {
                     $channelData = [
                         'm_id' => $m,
-                        'machine_id' => $mainM['machine_id'],
+                        'machine_id' => $machine['machine_id'],
                         'ao_id' => $postData['ao_id'] ?? 0,
                         'channel_code' => '020'.$i,
-                        'channel_position' => 2,
+                        'channel_position' => 3,
+                        'width2' => 300,
                     ];
                     $channelAll[] = $channelData;
                 }
@@ -605,7 +606,7 @@ class MachineClient extends ManagementClient
     {
         //只能删除边柜信息
         $m = $this->getMachineFind(['m_id' => $m_id], "m_id,vending_machine_type");
-        if (count($m) == 0) {
+        if (!$m) {
             return $this->r(200,$this->lang("action_success"));
         }
         $m = $m->toArray();

@@ -210,18 +210,32 @@ trait AfterOrderPaymentTrait
     private function sendNotice()
     {
         try {
+            // $this->noticeSendData = [
+            //     "ao_id" => $this->machine['ao_id'],
+            //     "m_id" => $this->machine['m_id'],
+            //     "templateType" => "sale",
+            //     "replaceData" => [
+            //         "machine_id" => $this->machine['machine_id'],
+            //         "machine_name" => $this->machine['machine_name'],
+            //         "trade_no" => $this->order['trade_no'],
+            //         "money" => number_format($this->order['total_price'], 2, '.', ','),
+            //         "now" => date('Y-m-d H:i:s'),
+            //         "error_info" => "订单完成",
+            //         "error_code" => "订单完成",
+            //     ]
+            // ];
+            
+            //交易成功通知
             $this->noticeSendData = [
                 "ao_id" => $this->machine['ao_id'],
                 "m_id" => $this->machine['m_id'],
-                "templateType" => "sale",
+                "templateType" => "payment_success",
                 "replaceData" => [
                     "machine_id" => $this->machine['machine_id'],
                     "machine_name" => $this->machine['machine_name'],
                     "trade_no" => $this->order['trade_no'],
-                    "money" => number_format($this->order['total_price'], 2, '.', ','),
-                    "now" => date('Y-m-d H:i:s'),
-                    "error_info" => "订单完成",
-                    "error_code" => "订单完成",
+                    "total_price" => number_format($this->order['total_price'], 2, '.', ','),
+                    "pay_time" => $this->order['pay_time'] ? date('Y-m-d H:i:s', $this->order['pay_time']) : date('Y-m-d H:i:s'),
                 ]
             ];
             $result = @$this->noticeSend();

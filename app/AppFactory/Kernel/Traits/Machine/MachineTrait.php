@@ -255,22 +255,24 @@ trait MachineTrait
      * 断电重启：powerWakeUp，
      * 远程初始化：initialization
      * 当前命令下发前需要检查一下current_status
+     * 先注释，操作时注意设备是否在线
      */
     protected $checkCurrentStatus = [
         // "sleep",
         // "wakeUp",
-        "reboot",
-        "shutdown",
-        "update",
-        "pickUpHeadInit",
-        "conveyorBeltOpen",
-        "conveyorBeltClose",
-        "boxDoorOpen",
-        "boxDoorClose",
-        "recycleOut",
-        "recycleIntro",
-        "powerWakeUp",
-        "initialization",
+        // "reboot",
+        // "shutdown",
+        // "update",
+        // "pickUpHeadInit",
+        // "conveyorBeltOpen",
+        // "conveyorBeltClose",
+        // "boxDoorOpen",
+        // "boxDoorClose",
+        // "recycleOut",
+        // "recycleIntro",
+        // "powerWakeUp",
+        // "initialization",
+        "outGoods",
     ];
 
     /**

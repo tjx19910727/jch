@@ -202,7 +202,7 @@ class Machine extends Common
             $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             $lightArr = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             if (isset($postData['msgType']) && is_int($postData['msgType'])) {
-                $typeList = [1 => "sleep", 2 => "wakeUp"];
+                $typeList = [1 => "sleep", 2 => "wakeUp",3 => "machineCkcOnOff"];
                 $postData['msgType'] = $typeList[$postData['msgType']];
             }
             $postData['machine_id'] = explode(',',$postData['machine_id']);

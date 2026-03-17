@@ -1155,3 +1155,8 @@ ALTER TABLE kiosk.machine_channel
   ADD COLUMN `old_gift_points` decimal(10,3) DEFAULT '-1.000' COMMENT '旧赠送积分' AFTER `gift_points`;
   ALTER TABLE kiosk.machine_channel
   ADD COLUMN `old_stock_warning` int(10) DEFAULT '-1' COMMENT '旧库存预警' AFTER `stock_warning`;
+
+#20260316
+INSERT INTO `wx_template` (`wx_id`, `template_name`, `template_type`, `template_id`, `ao_id`,`miniprogram`, `body`,`status`, `create_time`, `update_time`)
+VALUES
+  (3, '设备自动售卖成功通知','payment_success','5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI','1','{"appid":"","pagepath":""}', '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',1,1773653091,1773653091);
