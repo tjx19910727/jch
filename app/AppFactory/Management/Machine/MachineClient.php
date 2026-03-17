@@ -472,8 +472,20 @@ class MachineClient extends ManagementClient
             }else{
                 return $this->r(100, $this->lang("VSubMachine.main_machine_id_require"));
             }
+            //查询此主柜是否已经关联过边柜，如果已经关联过边柜则不允许再添加边柜了
+            $relationCount = $this->getMachineMainRelationCount([['main_mc_id','=',$main_m_id]],'*');
+            if($relationCount > 0){
+                return $this->r(100, $this->lang("VSubMachine.main_machine_only_one_sub"));
+            }
             $postData['vending_machine_type'] = 3;//边柜
-            $m = $this->addMachine($postData);
+            //给边柜关联的主柜添加关联关系和创建默认货道
+            $mainM = $this->getMachineFind(['m_id' => $main_m_id]);
+            if(!$mainM){
+                return $this->r(100, $this->lang("VMachine.machine_no_data"));
+            }
+            $mainM = $mainM->toArray();
+            $postData['ao_id'] = $mainM['ao_id'];
+            $m = $this->addSubMachine($postData);
             if ($m) {
                 $machine = $this->getMachineFind(['m_id' => $m]);
                 $updateMc = [];
@@ -498,12 +510,7 @@ class MachineClient extends ManagementClient
                     }
                     $this->addMachineGroupMgMore($insertAll);
                 }
-                //给边柜关联的主柜添加关联关系和创建默认货道
-                $mainM = $this->getMachineFind(['m_id' => $main_m_id]);
-                if(!$mainM){
-                    return $this->r(100, $this->lang("VMachine.machine_no_data"));
-                }
-                $mainM = $mainM->toArray();
+                
                 //添加关联关系
                 $relationData = [
                     'main_mc_id' => $main_m_id,
@@ -554,6 +561,18 @@ class MachineClient extends ManagementClient
         if($m['vending_machine_type'] != 3){
             //主柜、弧柜在此处不允许编辑
             return $this->r(100, $this->lang("VSubMachine.machine_no_update"));
+        }
+        $mainM = $this->getMachineFind(['m_id' => $main_m_id]);
+        if(!$mainM){
+            return $this->r(100, $this->lang("VMachine.machine_no_data"));
+        }
+        $mainM = $mainM->toArray();
+        $postData['ao_id'] = $mainM['ao_id'];
+
+        //查询此主柜是否已经关联过边柜，如果已经关联过边柜则不允许再添加边柜了
+        $relationCount = $this->getMachineMainRelationCount([['main_mc_id','=',$main_m_id],['b_mc_id','<>',$postData['m_id']]],'*');
+        if($relationCount > 0){
+            return $this->r(100, $this->lang("VSubMachine.main_machine_only_one_sub"));
         }
         $this->startTrans();
         try {

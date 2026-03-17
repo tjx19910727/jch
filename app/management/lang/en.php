@@ -701,5 +701,6 @@ return [
         "main_machine_id_require" => "Main machine ID cannot be empty",
         "machine_no_update" => "Device number cannot be updated",
         "machine_no_delete" => "Device number cannot be deleted",
+        "main_machine_only_one_sub" => "Each main machine can only bind one sub machine",
     ],
 ];

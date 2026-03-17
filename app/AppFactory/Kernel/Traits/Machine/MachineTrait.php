@@ -133,6 +133,19 @@ trait MachineTrait
     }
 
     /**
+     * 添加边柜信息
+     * @param $insert
+     * @return mixed
+     */
+    public function addSubMachine($insert)
+    {
+        !isset($this->manager['manager_id']) ? :$insert['creator'] = $this->manager['manager_id'];
+        $data = MachineModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    /**
      * 修改设备信息
      * @param $update
      * @param array $where

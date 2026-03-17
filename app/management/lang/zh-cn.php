@@ -704,5 +704,6 @@ return [
         "main_machine_id_require" => "主设备必须选择",
         "machine_no_update" => "此处只能编辑边柜",
         "machine_no_delete" => "此处只能删除边柜",
+        "main_machine_only_one_sub" => "一个主设备只能绑定一个边柜",
     ],
 ]; 
