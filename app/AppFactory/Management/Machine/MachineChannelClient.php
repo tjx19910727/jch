@@ -109,12 +109,17 @@ class MachineChannelClient extends ManagementClient
             $where[] = ['m_id', 'in', $mIds];
         }
         $where['status'] = 3;
+        $expr = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+        if (!empty($where['raw'])) {
+            $where['raw'] .= " AND " . $expr;
+        } else {
+            $where['raw'] = $expr;
+        }
         $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
             (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
             count(mc_id) bad_num', '', '', 'm_id');
         if ($list) {
-            $list = $list->toArray();
-            foreach ($list as $key => &$value) {
+            foreach ($list as $key => $value) {
                 $whereBad = [];
                 // 副柜不可用状态下，只查主柜货道
                 $sub_cabinet = $this->getMachineInfoValue(['m_id' => $value['m_id']],'sub_cabinet');
@@ -124,15 +129,15 @@ class MachineChannelClient extends ManagementClient
                 $whereBad['status'] = 3;
                 $badList = $this->getMachineChannelColumn($whereBad, 'channel_code');
                 //badList为空时，unset掉
-                if (count($badList) == 0) {
-                    unset($list[$key]);
-                    continue;
-                }
+                // if (count($badList) == 0) {
+                //     unset($list[$key]);
+                //     continue;
+                // }
                 $value['bad_channel'] = implode(",", $badList ?? []);
                 $value['bad_ratio'] = bcmul(bcdiv($value['bad_num'], $value['total_channel'], 3), 100, 1) . "%";
             }
         }
-        return $this->rQ(array_values($list));
+        return $this->rQ($list);
     }
 
     /**
