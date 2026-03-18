@@ -19,7 +19,7 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
-Wuse app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 trait BeforeOrderPaymentTrait
 {
     use StrategyManagerTrait,StrategyIncomeTrait,StrategyPayeeTrait,StrategyMachineTrait,
