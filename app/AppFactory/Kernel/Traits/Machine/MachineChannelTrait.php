@@ -51,6 +51,16 @@ trait MachineChannelTrait
         return MachineChannelModel::getCount($where);
     }
 
+    public function getMachineChannelCountV2($where)
+    {
+        $whereRaw = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+        if (isset($where['raw'])) {
+            $whereRaw .= " AND " . $where['raw'];
+            unset($where['raw']);
+        }
+        return MachineChannelModel::alias("a")->where($where)->whereRaw($whereRaw)->count();
+    }
+
     public function getMachineChannelSum($where, $sum)
     {
         return MachineChannelModel::getSum($where, $sum);
@@ -107,6 +117,12 @@ trait MachineChannelTrait
     {
         $data = MachineChannelModel::create($insert);
         return $data->mc_id;
+    }
+
+    public function addMachineMoreChannel($insert)
+    {
+        $mc = new MachineChannelModel();
+        return $mc->saveAll($insert);
     }
 
     public function updateMachineChannel($update, $where = [], $field = [])

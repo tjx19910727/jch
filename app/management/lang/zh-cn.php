@@ -694,4 +694,16 @@ return [
         "points_changed_require" => "积分变动值不能为空",
         "change_type_in" => "无效的积分变动类型",
     ],
+    "VMachineLevelDesc" => [
+        "name_require" => "等级名称不能为空",
+        "pic_require" => "图片不能为空",
+        "machine_level_require" =>"等级id值不能为空",
+        "machine_level_gt" => "等级id值必须大于0",
+    ],
+    "VSubMachine" => [
+        "main_machine_id_require" => "主设备必须选择",
+        "machine_no_update" => "此处只能编辑边柜",
+        "machine_no_delete" => "此处只能删除边柜",
+        "main_machine_only_one_sub" => "一个主设备只能绑定一个边柜",
+    ],
 ]; 

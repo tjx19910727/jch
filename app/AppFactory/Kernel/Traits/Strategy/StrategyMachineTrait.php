@@ -56,6 +56,23 @@ trait StrategyMachineTrait
         return $data;
     }
 
+    /**
+     * 获取策略列表(带with)
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @return \app\AppFactory\Kernel\Model\BaseModel|\app\AppFactory\Kernel\Model\BaseModel[]|array|\think\Collection|\think\Paginator
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function getStrategyMachineWithList($where,$pageNum = 0,$field = "*", $order = "",$func = "",$group = "",$limit = "",$with = [])
+    {
+        $data = StrategyMachineModel::getListAndWith($where,$pageNum,$field,$order,$func,$group,$limit,$with);
+        return $data;
+    }
+
     public function addStrategyMachine($insert)
     {
         $this->startTrans();
@@ -134,5 +151,5 @@ trait StrategyMachineTrait
         $result = StrategyMachineModel::getStrategyFind($where,$field,$order);
         return $result;
     }
-    
+        
 }

@@ -24,7 +24,8 @@ class MachineChannel extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineChannel->getList($where,$pageNum,$this->field);
+        //return $this->app->machineChannel->getList($where,$pageNum,$this->field);
+        return $this->app->machineChannel->getMChannelList($where,$pageNum,$this->field);
     }
 
     public function getFind()
@@ -127,5 +128,37 @@ class MachineChannel extends Common
                 return returnState(100,lang("action_machine_overtime"));
             }
         }
+    }
+
+    /**
+     * 批量修改货道信息
+     * @return array|\think\response\Json
+     */
+    public function batchUpdate()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.update');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        $where = $this->getWhere(['m_id'=>$postData['m_id']], false, []);
+        return $this->app->machineChannel->batchUpdateMc($postData, $where);
+    }
+
+    /**
+     * 批量还原货道信息
+     * @return array|\think\response\Json
+     */
+    public function batchRestore()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.update');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        $where = $this->getWhere(['m_id'=>$postData['m_id']], false, []);
+        return $this->app->machineChannel->batchRestoreMc($postData, $where);
     }
 }

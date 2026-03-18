@@ -16,12 +16,14 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Db;
 
 class MachineChannelClient extends ManagementClient
 {
-    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait;
+    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait;
     use GoodsTrait,GoodsChangeTrait;
     use AuthManagerMachineTrait;
 
@@ -49,6 +51,39 @@ class MachineChannelClient extends ManagementClient
             $whereStockOut = $where;
             $whereStockOut['stock'] = 0;
             $stockOut = $this->getMachineChannelCount($whereStockOut);
+        }
+        $data = [
+            "empty" => $empty,
+            "bad" => $bad,
+            "stockOut" => $stockOut,
+        ];
+        return $data;
+    }
+
+        /**
+     * 获取空槽、BAD、空货数量 V2
+     * 如果machine_info表的sub_cabinet为2不取channel_position为2的数据
+     * @return array
+     */
+    public function getDataV2()
+    {
+        $empty = 0;
+        $bad = 0;
+        $stockOut = 0;
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $whereEmpty = $where;
+            $whereEmpty['g_id'] = 0;
+            $empty = $this->getMachineChannelCountV2($whereEmpty);
+
+            $whereBad = $where;
+            $whereBad['status'] = 3;
+            $bad = $this->getMachineChannelCountV2($whereBad);
+
+            $whereStockOut = $where;
+            $whereStockOut['stock'] = 0;
+            $stockOut = $this->getMachineChannelCountV2($whereStockOut);
         }
         $data = [
             "empty" => $empty,
@@ -107,6 +142,12 @@ class MachineChannelClient extends ManagementClient
             $where[] = ['m_id', 'in', $mIds];
         }
         $where['status'] = 3;
+        $expr = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+        if (!empty($where['raw'])) {
+            $where['raw'] .= " AND " . $expr;
+        } else {
+            $where['raw'] = $expr;
+        }
         $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
             (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
             count(mc_id) bad_num', '', '', 'm_id');
@@ -120,6 +161,11 @@ class MachineChannelClient extends ManagementClient
                 $value['total_channel'] = $this->getMachineChannelCount($whereBad);
                 $whereBad['status'] = 3;
                 $badList = $this->getMachineChannelColumn($whereBad, 'channel_code');
+                //badList为空时，unset掉
+                // if (count($badList) == 0) {
+                //     unset($list[$key]);
+                //     continue;
+                // }
                 $value['bad_channel'] = implode(",", $badList ?? []);
                 $value['bad_ratio'] = bcmul(bcdiv($value['bad_num'], $value['total_channel'], 3), 100, 1) . "%";
             }
@@ -169,7 +215,12 @@ class MachineChannelClient extends ManagementClient
      */
     public function updateMc($postData)
     {
-        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock');
+        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,channel_position,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock');
+        //如果是货道是边柜，查询主柜信息
+        // if(isset($mc['channel_position']) && $mc['channel_position'] == 3){
+        //     $main_m_id = $this->getMachineMainRelationValue(['b_mc_id' => $mc['m_id']], 'main_mc_id');
+        //     $mc['m_id'] = $main_m_id;
+        // }
         $machine = $this->getMachineFind(['m_id' => $mc['m_id']],'m_id,machine_id,machine_name,ao_id');
         // 商品变化基础数据
         $insertGChange = [
@@ -247,8 +298,10 @@ class MachineChannelClient extends ManagementClient
         }
         $result = $this->updateMachineChannel($postData);
         if ($result) {
-            // 发送触发货道更新数据
-            $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMc',['mc_id' => $mc['mc_id']]);
+            // 发送触发货道更新数据,如果是边柜货道不发送
+            if ($mc['channel_position'] != 3) {
+                $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMc',['mc_id' => $mc['mc_id']]);
+            }
             return $this->r(200,$this->lang("action_success"));
         }
         return $this->r(100,$this->lang('action_fail'));
@@ -365,5 +418,138 @@ class MachineChannelClient extends ManagementClient
             }
         }
         return $this->r(100,$this->lang("query_fail"));
+    }
+
+    public function getMChannelList($where,$pageNum = 0,$field = "",$order = "")
+    {
+        //先查询设备详情
+        $machine = $this->getMachineFind($where,'m_id,machine_id,machine_name,ao_id,vending_machine_type');
+        if (!$machine) return $this->r(100,$this->lang("VMachine.machine_no_data"));
+        //把货道的channel_position设置成设备相同的vending_machine_type
+        $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
+        $list = $list->toArray();
+        $value = $this->getMachineMainRelationValue(['main_mc_id' => $machine['m_id']],'b_mc_id');
+        if(!empty($value)){
+            $b_list = $this->getMachineChannelList([['m_id','=',$value]],$pageNum,$field,$order);
+            $b_list = $b_list->toArray();
+        }
+        if(!empty($b_list)){
+            $list = array_merge($list,$b_list);
+        }
+        foreach ($list as $key => &$value) {
+            if (isset($value['channel_code']) && in_array($value['channel_code'],['0201','0202','0203'])) {
+                $value['channel_position'] = 3;
+            }
+            if (isset($value['channel_code']) && in_array($value['channel_code'],['0101','0102','0103'])) {
+                $value['channel_position'] = 2;
+            }
+        }
+        return $this->rQ($list);
+    }
+
+    
+    /**
+     * 批量修改货道信息
+     * @param $postData
+     * @return array|string
+     */
+    public function batchUpdateMc($postData, $where = [])
+    {
+        //先查询是否有这台设备的权限
+        $machine = $this->getMachineFind($where,'m_id,machine_id,machine_name,ao_id');
+        if (!$machine) return $this->r(100,$this->lang("VMachine.machine_no_data"));
+        $mc_ids = $postData['mc_ids'] ?? '';
+        $mc_ids = explode(",",$mc_ids);
+
+        if (!$mc_ids) return $this->r(100, $this->lang("VMachineChannel.mc_id_require"));
+
+        $updateData = [];
+        if(isset($postData['retail_price'])){
+            $updateData['retail_price'] = $postData['retail_price'] < 0 ? 0 : $postData['retail_price'];
+        }
+        if(isset($postData['gift_points'])){
+            $updateData['gift_points'] = $postData['gift_points'] < 0 ? 0 : $postData['gift_points'];
+        }
+        if(isset($postData['stock_warning'])){
+            $updateData['stock_warning'] = $postData['stock_warning'] < 0 ? 0 : $postData['stock_warning'];
+        }
+        if (!$updateData) return $this->r(100, $this->lang("action_fail"));
+
+        $this->startTrans();
+        try {
+            foreach ($mc_ids as $mc_id) {
+                $mc = $this->getMachineChannelFind(['mc_id' => $mc_id,'m_id' => $machine['m_id']], 'mc_id,retail_price,gift_points,stock_warning,old_retail_price,old_gift_points,old_stock_warning,machine_id');
+                if (!$mc) continue;
+
+                $saveData = $updateData;
+                // 只要传了这个字段，就要保存当前值为旧值
+                if (isset($updateData['retail_price'])) {
+                    $saveData['old_retail_price'] = $mc['retail_price'];
+                }
+                if (isset($updateData['gift_points'])) {
+                    $saveData['old_gift_points'] = $mc['gift_points'];
+                }
+                if (isset($updateData['stock_warning'])) {
+                    $saveData['old_stock_warning'] = $mc['stock_warning'];
+                }
+
+                $this->updateMachineChannel($saveData, ['mc_id' => $mc_id]);
+                // 发送触发货道更新数据
+                $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => $mc_id]);
+            }
+            $this->commitTrans();
+            return $this->r(200, $this->lang("action_success"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            return $this->r(100, $e->getMessage());
+        }
+    }
+
+    /**
+     * 批量还原货道信息
+     * @param $postData
+     * @return array|string
+     */
+    public function batchRestoreMc($postData,$where = [])
+    {
+        //先查询是否有这台设备的权限
+        $machine = $this->getMachineFind($where,'m_id,machine_id,machine_name,ao_id');
+        if (!$machine) return $this->r(100,$this->lang("VMachine.machine_no_data"));
+        $mc_ids = $postData['mc_ids'] ?? [];
+        $fields = $postData['fields'] ?? []; // ['retail_price', 'gift_points', 'stock_warning']
+        if (!$mc_ids || !$fields) return $this->r(100, $this->lang("VMachineChannel.mc_id_require"));
+
+        $this->startTrans();
+        try {
+            foreach ($mc_ids as $mc_id) {
+                $mc = $this->getMachineChannelFind(['mc_id' => $mc_id,'m_id' => $machine['m_id']], 'mc_id,old_retail_price,old_gift_points,old_stock_warning,machine_id');
+                if (!$mc) continue;
+
+                $restoreData = [];
+                if (in_array('retail_price', $fields) && $mc['old_retail_price'] != -1) {
+                    $restoreData['retail_price'] = $mc['old_retail_price'];
+                    $restoreData['old_retail_price'] = -1;
+                }
+                if (in_array('gift_points', $fields) && $mc['old_gift_points'] != -1) {
+                    $restoreData['gift_points'] = $mc['old_gift_points'];
+                    $restoreData['old_gift_points'] = -1;
+                }
+                if (in_array('stock_warning', $fields) && $mc['old_stock_warning'] != -1) {
+                    $restoreData['stock_warning'] = $mc['old_stock_warning'];
+                    $restoreData['old_stock_warning'] = -1;
+                }
+
+                if ($restoreData) {
+                    $this->updateMachineChannel($restoreData, ['mc_id' => $mc_id]);
+                    // 发送触发货道更新数据
+                    $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => $mc_id]);
+                }
+            }
+            $this->commitTrans();
+            return $this->r(200, $this->lang("action_success"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            return $this->r(100, $e->getMessage());
+        }
     }
 }

@@ -37,6 +37,12 @@ trait StrategyPayeeTrait
         return $data;
     }
 
+    public function getStrategyPayeeListAndWith($where,$pageNum = 0,$field = "*", $order = "",$eachFn = "",$group = "",$limit = 0,$with = [])
+    {
+        $data = StrategyPayeeModel::getListAndWith($where,$pageNum,$field,$order,$eachFn,$group,$limit,$with);
+        return $data;
+    }
+
     public function addStrategyPayee($insert)
     {
         $insert['content'] = arr2json($insert['content']);

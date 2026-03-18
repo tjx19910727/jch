@@ -1111,3 +1111,52 @@ ALTER TABLE `wx_template_log`
   ADD INDEX `ao_id` (`ao_id`) USING BTREE ,
   ADD INDEX `create_time` (`create_time`) USING BTREE ;
 
+#20260309
+CREATE TABLE `machine_level_desc` (
+  `machine_level` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '等级名称',
+  `pic` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '等级图片' ,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`machine_level`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备等级表';
+
+#20260309
+INSERT INTO `machine_level_desc` (`machine_level`, `name`, `pic`)
+VALUES
+  (1, '简易版', ''),
+  (2, '豪华版', ''),
+  (3, '华屹机', ''),
+  (4, '立式机', '');
+
+#20260311
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `receipt_code1_desc` VARCHAR(50) DEFAULT '' COMMENT '二维码1的自定义文字' AFTER `receipt_code3`;
+
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `receipt_code2_desc` VARCHAR(50) DEFAULT '' COMMENT '二维码2的自定义文字' AFTER `receipt_code3`;
+  
+#20260312
+ALTER TABLE kiosk.machine
+  ADD COLUMN `vending_machine_type` tinyint(1) DEFAULT '1' COMMENT '售货机类型：1-主柜，2-弧柜，3-边柜' AFTER `device_type`;
+
+CREATE TABLE `machine_main_relation` (
+  `main_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '主柜machine_id',
+  `b_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '边柜machine_id',
+  `h_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '弧柜machine_id',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY (`main_mc_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备关联关系表';
+
+#20260312
+ALTER TABLE kiosk.machine_channel
+  ADD COLUMN `old_retail_price` decimal(10,2) DEFAULT '-1.00' COMMENT '旧零售价' AFTER `retail_price`;
+  ALTER TABLE kiosk.machine_channel
+  ADD COLUMN `old_gift_points` decimal(10,3) DEFAULT '-1.000' COMMENT '旧赠送积分' AFTER `gift_points`;
+  ALTER TABLE kiosk.machine_channel
+  ADD COLUMN `old_stock_warning` int(10) DEFAULT '-1' COMMENT '旧库存预警' AFTER `stock_warning`;
+
+#20260316
+INSERT INTO `wx_template` (`wx_id`, `template_name`, `template_type`, `template_id`, `ao_id`,`miniprogram`, `body`,`status`, `create_time`, `update_time`)
+VALUES
+  (3, '设备自动售卖成功通知','payment_success','5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI','1','{"appid":"","pagepath":""}', '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',1,1773653091,1773653091);

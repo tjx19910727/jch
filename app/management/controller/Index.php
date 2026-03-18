@@ -40,7 +40,8 @@ class Index extends Common
     public function getChannelData()
     {
 //        $where = $this->getWhere([]);
-        $data = $this->app->machineChannel->getData();
+        //$data = $this->app->machineChannel->getData();
+        $data = $this->app->machineChannel->getDataV2();
         return returnState(200,'查询成功',$data);
     }
 
