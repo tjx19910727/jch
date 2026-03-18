@@ -541,6 +541,7 @@ class MachineClient extends ManagementClient
 
     public function updateSubM($postData)
     {
+        unset($postData['machine_id']);
         $machine_group_id = [];
         $main_m_id = 0;
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {

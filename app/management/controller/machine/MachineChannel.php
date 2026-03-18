@@ -163,7 +163,7 @@ class MachineChannel extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . '.update');
+            $this->validate($postData, $this->validatePath . '.updateAll');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
@@ -179,7 +179,7 @@ class MachineChannel extends Common
     {
         $postData = input();
         try {
-            $this->validate($postData, $this->validatePath . '.update');
+            $this->validate($postData, $this->validatePath . '.updateAll');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
