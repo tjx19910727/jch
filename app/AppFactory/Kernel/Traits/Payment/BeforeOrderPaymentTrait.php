@@ -19,9 +19,11 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
+Wuse app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 trait BeforeOrderPaymentTrait
 {
-    use StrategyManagerTrait,StrategyIncomeTrait,StrategyPayeeTrait,StrategyMachineTrait, AuthOrgRevenueTrait,SaleOrdersRevenueTrait;
+    use StrategyManagerTrait,StrategyIncomeTrait,StrategyPayeeTrait,StrategyMachineTrait,
+    AuthOrgRevenueTrait,SaleOrdersRevenueTrait,AuthManagerTrait;
     /**
      * @var array 收益人数据
      */
@@ -55,6 +57,9 @@ trait BeforeOrderPaymentTrait
             if(!$strategy_income) continue;
             $strategy_income = $strategy_income->toArray();
             $radio = $strategy_income['income_value'] ?? 0;
+            $strategy_manager = $this->getStrategyManagerFind(['s_id' => $strategy_machine['s_id'],'s_type' => 1,'ao_id' => $sodValue['ao_id'],'m_id' => $this->countOrder['m_id']]);
+            if(!$strategy_manager) continue;
+            $strategy_manager = $strategy_manager->toArray();
             $insert = [
                 "order_id" => $this->countOrder['order_id'],
                 "sp_id" => $this->countOrder['sp_id'],
@@ -68,7 +73,7 @@ trait BeforeOrderPaymentTrait
                 "sod_total_price" => $sodValue['total_sod_price'],
                 'si_id' => $strategy_machine['s_id'],
                 'income_value' => $radio,
-                // 'manager_id' => $strategy_machine['s_id'],
+                'manager_id' => $strategy_manager['manager_id'],
                 // 'bill_account' => $strategy_machine['s_id'],
                 'revenue_type' => 4,
                 'income_amount' =>  bcmul($sodValue['total_sod_price'], bcmul($radio, 0.01, 3), 3),
