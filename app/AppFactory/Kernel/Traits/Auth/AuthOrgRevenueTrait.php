@@ -10,8 +10,6 @@ trait AuthOrgRevenueTrait
 {
     public function addAuthOrgRevenueLog($insert)
     {
-        if (!isset($insert['ao_id'])) $insert['ao_id'] = 0;
-        $insert['create_time'] = time();
         return AuthOrgRevenueLogModel::insertOneGetId($insert);
     }
 
