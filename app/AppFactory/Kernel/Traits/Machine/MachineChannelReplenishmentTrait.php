@@ -57,7 +57,7 @@ trait MachineChannelReplenishmentTrait
                 "m_id" => $this->machine['m_id'],
                 "machine_id" => $this->machine['machine_id'],
                 "machine_name" => $this->machine['machine_name'],
-                "ao_id" => $this->machine['ao_id'],
+                // "ao_id" => $this->machine['ao_id'],
                 "creator" => $this->data['operator'],
             ];
             foreach ($this->data['repList'] as $key => $value) {
@@ -92,6 +92,7 @@ trait MachineChannelReplenishmentTrait
                     "pic" => $mc['pic'],
                     "sku" => $mc['sku'],
                     "bar_code" => $mc['bar_code'],
+                    "ao_id" => $mc['ao_id'],
                 ]);
                 // 补货时使用了备用库存
                 if (isset($value['standby_quantity']) && $mc['mg_id'] > 0 && $value['standby_quantity'] != 0) {
@@ -194,6 +195,7 @@ trait MachineChannelReplenishmentTrait
             "before" => $mc['stock'],
             "quantity" => $quantity,
             "after" => bcadd($mc['stock'],$quantity),
+            "ao_id" => $mc['ao_id'],
             "creator" => $this->data['operator'] ?? 0
         ];
         return $repData;
