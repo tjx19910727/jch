@@ -124,7 +124,7 @@ class MachineChannelClient extends ManagementClient
                 $whereEmpty["g_id"] = 0;
                 $emptyList = $this->getMachineChannelColumn($whereEmpty, 'channel_code');
                 $value['empty_channel'] = implode(",", $emptyList ?? []);
-                $value['empty_ratio'] = bcmul(bcdiv($value['empty_num'], $value['total_channel'], 3), 100, 1) . "%";
+                $value['empty_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['empty_num'], $value['total_channel'], 3), 100, 1) . "%" ): "0%";
             }
         }
         return $this->rQ($list);
@@ -167,7 +167,7 @@ class MachineChannelClient extends ManagementClient
                 //     continue;
                 // }
                 $value['bad_channel'] = implode(",", $badList ?? []);
-                $value['bad_ratio'] = bcmul(bcdiv($value['bad_num'], $value['total_channel'], 3), 100, 1) . "%";
+                $value['bad_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['bad_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
             }
         }
         return $this->rQ($list);
@@ -202,7 +202,7 @@ class MachineChannelClient extends ManagementClient
                 $whereStockOut['stock'] = 0;
                 $stockOutList = $this->getMachineChannelColumn($whereStockOut, 'channel_code');
                 $value['stock_out_channel'] = implode(",", $stockOutList ?? []);
-                $value['stock_out_ratio'] = bcmul(bcdiv($value['stock_out_num'], $value['total_channel'], 3), 100, 1) . "%";
+                $value['stock_out_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['stock_out_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
             }
         }
         return $this->rQ($list);
