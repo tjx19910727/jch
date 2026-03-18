@@ -92,7 +92,6 @@ trait BeforeOrderPaymentTrait
                 'income_value' => $insert['income_value'] ?? 0,
                 'revenue_type' => $insert['revenue_type'] ?? 0,
                 'income_amount' => $insert['income_amount'] ?? 0,
-                'status' => 1,
             ];
             $aor_id = $this->addAuthOrgRevenueLog($log);
             $flag[] = $sor_id;
