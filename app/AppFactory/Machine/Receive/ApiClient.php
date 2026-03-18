@@ -853,6 +853,7 @@ class ApiClient extends ReceiveBaseClient
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'],
                             "total_sod_cost_points" => bcmul($mc['cost_points'], $quantity, 3),
+                            'ao_id' => $mc['ao_id'],
                         ];
                         $sod_id = $this->addSaleOrdersDetails($details);
                         if ($sod_id) {
