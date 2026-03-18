@@ -18,10 +18,10 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgRevenueTrait;
-
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 trait BeforeOrderPaymentTrait
 {
-    use StrategyManagerTrait,StrategyIncomeTrait,StrategyPayeeTrait,StrategyMachineTrait, AuthOrgRevenueTrait;
+    use StrategyManagerTrait,StrategyIncomeTrait,StrategyPayeeTrait,StrategyMachineTrait, AuthOrgRevenueTrait,SaleOrdersRevenueTrait;
     /**
      * @var array 收益人数据
      */
@@ -135,7 +135,7 @@ trait BeforeOrderPaymentTrait
                     $insert['bill_account'] = $value['bill_account'] ?? "";
                     $insert['revenue_type'] = $value['transfer_method'];
                     $income_amount = bcmul($insert['sod_total_price'], bcmul($value['income_value'], 0.01, 3), 3);
-                    if ($income_amount > 0.01 && $sodRadio > 0) {
+                    if ($income_amount >= 0.01 && $sodRadio > 0) {
                         $insert['income_amount'] = $income_amount;
                         $flag[] = $this->addSaleOrdersRevenue($insert);
                         actionLog($flag,'生成分润记录flag');
