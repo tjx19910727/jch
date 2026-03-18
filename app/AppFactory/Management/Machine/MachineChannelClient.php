@@ -60,6 +60,39 @@ class MachineChannelClient extends ManagementClient
         return $data;
     }
 
+        /**
+     * 获取空槽、BAD、空货数量 V2
+     * 如果machine_info表的sub_cabinet为2不取channel_position为2的数据
+     * @return array
+     */
+    public function getDataV2()
+    {
+        $empty = 0;
+        $bad = 0;
+        $stockOut = 0;
+        $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
+        if ($machineIds) {
+            $where[] = ['machine_id', 'in', $machineIds];
+            $whereEmpty = $where;
+            $whereEmpty['g_id'] = 0;
+            $empty = $this->getMachineChannelCountV2($whereEmpty);
+
+            $whereBad = $where;
+            $whereBad['status'] = 3;
+            $bad = $this->getMachineChannelCountV2($whereBad);
+
+            $whereStockOut = $where;
+            $whereStockOut['stock'] = 0;
+            $stockOut = $this->getMachineChannelCountV2($whereStockOut);
+        }
+        $data = [
+            "empty" => $empty,
+            "bad" => $bad,
+            "stockOut" => $stockOut,
+        ];
+        return $data;
+    }
+
     /**
      * 获取空槽货道列表
      * @param $where
