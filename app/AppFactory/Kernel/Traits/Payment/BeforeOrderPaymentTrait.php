@@ -72,6 +72,7 @@ trait BeforeOrderPaymentTrait
                 // 'bill_account' => $strategy_machine['s_id'],
                 'revenue_type' => 4,
                 'income_amount' =>  bcmul($sodValue['total_sod_price'], bcmul($radio, 0.01, 3), 3),
+                'ao_id' => $sodValue['ao_id'],
             ];
             $sor_id = $this->addSaleOrdersRevenue($insert);
             // 写入组织分账日志
