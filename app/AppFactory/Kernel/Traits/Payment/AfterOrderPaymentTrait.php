@@ -160,18 +160,13 @@ trait AfterOrderPaymentTrait
                 "outGoods" => $outArr,
                 "order_points" => $this->order['total_points']
             ];
-            // //循环三次，每次间隔5秒执行
-            // for ($i = 0; $i < 3; $i++) {
-            //     $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
-            //     if (isset($result->status) && $result->status == 'success') {
-            //         break;
-            //     }
-            //     sleep(5);
-            // } // end
-            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
-            actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
+           
+            // $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
+            // actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
+            // $this->order['out_status'] = 2;
+            // return $result;
             $this->order['out_status'] = 2;
-            return $result;
+            return true;
         }
         return $this->r(100, $this->lang("VOutGoods.details_no_data"));
     }
