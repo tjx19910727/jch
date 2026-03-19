@@ -2137,18 +2137,4 @@ class ApiClient extends ReceiveBaseClient
         return $this->orderRefundSync2Wc($this->order, $detail);
     }
 
-    public function getMachineRentOrgLists(){
-        $where['machine_id'] = $this->data['machine_id'];
-        $rent_machine_orgs = $this->getAuthOrgMCColumn($where,'ao_id');
-        return $this->r(200, "SUCCESS", $rent_machine_orgs);
-    }
-
-    public function getRentOrgGoodsLists(){
-        $where['ao_id'] = $this->data['ao_id'];
-        $where['status'] = 1;
-        $pageNum = $this->data['pageNum'] ?? 15;
-        $orgGoodsLists = $this->getGoodsList($where, $pageNum);
-
-        return $this->r(200, "SUCCESS", $orgGoodsLists);
-    }
 }
