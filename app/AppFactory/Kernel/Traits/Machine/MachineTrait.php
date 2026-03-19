@@ -119,6 +119,39 @@ trait MachineTrait
     }
 
     /**
+     * 获取设备列表(关联货道)
+     * @param $where
+     * @param int|array $pageNum
+     * @param string $field
+     * @param string $order
+     * @param string $eachFun
+     * @param string $group
+     * @param string $limit
+     * @return \app\AppFactory\Kernel\Model\BaseModel|\app\AppFactory\Kernel\Model\BaseModel[]|array|\think\Collection|\think\Paginator
+     * @throws \think\db\exception\DataNotFoundException
+     * @throws \think\db\exception\DbException
+     * @throws \think\db\exception\ModelNotFoundException
+     */
+    public function getMachineJoinChannelList($where,$pageNum = null,$field = "*", $order = "",$eachFun = "",$group = '', $limit = '',$with = [],$join = [])
+    {
+        $result = MachineModel::getListAndWith($where,$pageNum,$field,$order,$eachFun,$group,$limit,$with,$join);
+        if ($result) {
+            if ($pageNum) {
+                $result = $result->each(function ($item) {
+                    $item['lang'] = MachineLangModel::getList(['m_id' => $item['m_id']]);
+                    return $item;
+                });
+            } else {
+                $result = $result->toArray();
+                foreach ($result as $key => $value) {
+                    $result[$key]['lang'] = MachineLangModel::getList(['m_id' => $value['m_id']]);
+                }
+            }
+        }
+        return $result;
+    }
+
+    /**
      * 添加设备信息
      * @param $insert
      * @return mixed

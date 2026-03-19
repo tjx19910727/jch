@@ -271,7 +271,7 @@ class BaseModel extends Model
      * @throws \think\db\exception\DbException
      * @throws \think\db\exception\ModelNotFoundException
      */
-    public static function getListAndWith($where,$pageNum = null,$field = "*",$order = "",$eachFn = "",$group = "",$limit = 0,$with = [])
+    public static function getListAndWith($where,$pageNum = null,$field = "*",$order = "",$eachFn = "",$group = "",$limit = 0,$with = [],$join = [])
     {
             if(isset($where['ao_id']) && $where['ao_id'] < 2){
                 unset($where['ao_id']);
@@ -292,6 +292,7 @@ class BaseModel extends Model
             }else{
                 $model = self::alias("a")->where($where)->field($field)->order($order);
             }
+            if ($join) $model = $model->join($join['join'], $join['on'], $join['type'] ?? 'inner');
             if ($with) $model = $model->with($with);
             if ($group) $model = $model->group($group);
             if ($limit) $model = $model->limit($limit);

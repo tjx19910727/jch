@@ -1254,3 +1254,11 @@ ALTER TABLE kiosk.machine_channel
 INSERT INTO `wx_template` (`wx_id`, `template_name`, `template_type`, `template_id`, `ao_id`,`miniprogram`, `body`,`status`, `create_time`, `update_time`)
 VALUES
   (3, '设备自动售卖成功通知','payment_success','5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI','1','{"appid":"","pagepath":""}', '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',1,1773653091,1773653091);
+
+#20260318
+ALTER TABLE kiosk.machine_config ADD gate_detection tinyint(1) NOT NULL DEFAULT 2 COMMENT '门控检测：1开 2关闭' after `backsweeper`;
+ALTER TABLE kiosk.machine_config ADD COLUMN `receipt_code3_desc` VARCHAR(50) DEFAULT '' COMMENT '二维码3的自定义文字' AFTER `receipt_code3`;
+
+#20260319
+ALTER TABLE kiosk.machine_channel
+ADD COLUMN `channel_name` VARCHAR(50) DEFAULT '' COMMENT '货道名称' AFTER `channel_code`;
