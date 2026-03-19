@@ -39,7 +39,7 @@ class SubMachine extends Common
         $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
     
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
-        return $this->app->machine->getSubMList($where,$pageNum,'a.*,mc.channel_position,mc.channel_name',"a.m_id desc",$vending_machine_type);
+        return $this->app->machine->getSubMList($where,$pageNum,'a.*,mc.channel_position,mc.channel_name',"mc.mc_id desc",$vending_machine_type);
     }
 
     public function getFind()
