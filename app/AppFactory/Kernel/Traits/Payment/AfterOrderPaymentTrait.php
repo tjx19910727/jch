@@ -14,10 +14,11 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 use app\AppFactory\Kernel\Support\Trip\Trip;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 
 trait AfterOrderPaymentTrait
 {
-    use MachineChannelTrait, WcBaseTrait;
+    use MachineChannelTrait,AuthManagerTrait, WcBaseTrait;
 
     /**
      * 处理支付成功
@@ -202,19 +203,13 @@ trait AfterOrderPaymentTrait
                 "outGoods" => $outArr,
                 "order_points" => $this->order['total_points']
             ];
-            // //循环三次，每次间隔5秒执行
-            // for ($i = 0; $i < 3; $i++) {
-            //     $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
-            //     if (isset($result->status) && $result->status == 'success') {
-            //         break;
-            //     }
-            //     sleep(5);
-            // } // end
-            //     sleep(5);
-            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
-            actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
+           
+            // $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
+            // actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
+            // $this->order['out_status'] = 2;
+            // return $result;
             $this->order['out_status'] = 2;
-            return $result;
+            return true;
         }
         return $this->r(100, $this->lang("VOutGoods.details_no_data"));
     }
@@ -232,11 +227,11 @@ trait AfterOrderPaymentTrait
         if ($revenue) {
             foreach ($revenue as $key => $value) {
                 $update['sor_id'] = $value['sor_id'];
-                $update['status'] = $status ?: $this->revenueStatus[$value['revenue_type']];
+                $update['status'] = 1;
                 // 已分润状态，增加分润时间
-                if ($update['status'] == 2 || $update['status'] == 3) $update['revenue_time'] = time();
+                // if ($update['status'] == 2 || $update['status'] == 3) $update['revenue_time'] = time();
                 // 电子钱包
-                if ($value['revenue_type'] == 1) {
+                if (in_array($value['revenue_type'], [1, 4])) {
                     $result = $this->incAuthManager(['manager_id' => $value['manager_id']], 'balance', $value['income_amount']);
                     actionLog($result, '增加账号余额结果');
                     actionLog($this->getLS(), '增加账号余额SQL');
@@ -255,18 +250,32 @@ trait AfterOrderPaymentTrait
     private function sendNotice()
     {
         try {
+            // $this->noticeSendData = [
+            //     "ao_id" => $this->machine['ao_id'],
+            //     "m_id" => $this->machine['m_id'],
+            //     "templateType" => "sale",
+            //     "replaceData" => [
+            //         "machine_id" => $this->machine['machine_id'],
+            //         "machine_name" => $this->machine['machine_name'],
+            //         "trade_no" => $this->order['trade_no'],
+            //         "money" => number_format($this->order['total_price'], 2, '.', ','),
+            //         "now" => date('Y-m-d H:i:s'),
+            //         "error_info" => "订单完成",
+            //         "error_code" => "订单完成",
+            //     ]
+            // ];
+            
+            //交易成功通知
             $this->noticeSendData = [
                 "ao_id" => $this->machine['ao_id'],
                 "m_id" => $this->machine['m_id'],
-                "templateType" => "sale",
+                "templateType" => "payment_success",
                 "replaceData" => [
                     "machine_id" => $this->machine['machine_id'],
                     "machine_name" => $this->machine['machine_name'],
                     "trade_no" => $this->order['trade_no'],
-                    "money" => number_format($this->order['total_price'], 2, '.', ','),
-                    "now" => date('Y-m-d H:i:s'),
-                    "error_info" => "订单完成",
-                    "error_code" => "订单完成",
+                    "total_price" => number_format($this->order['total_price'], 2, '.', ','),
+                    "pay_time" => $this->order['pay_time'] ? date('Y-m-d H:i:s', $this->order['pay_time']) : date('Y-m-d H:i:s'),
                 ]
             ];
             $result = @$this->noticeSend();

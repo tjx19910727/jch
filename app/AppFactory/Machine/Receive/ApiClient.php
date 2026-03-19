@@ -70,6 +70,8 @@ use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -131,7 +133,9 @@ class ApiClient extends ReceiveBaseClient
         afterOrderRefundTrait,
         CardTrait,
         WcBaseTrait,
-        WcGoodsTrait;
+        WcGoodsTrait,
+        AuthOrgMachineChannelTrait,
+        SaleOrdersRefundTrait;
 
 
     public $card_retail_price = 0.01;
@@ -379,7 +383,7 @@ class ApiClient extends ReceiveBaseClient
                 "sku" => $mc['sku'],
                 "bar_code" => $mc['bar_code'],
                 "change_value" => $mc['stock'],
-                "ao_id" => $this->machine['ao_id'],
+                "ao_id" => $mc['ao_id'],
                 "creator" => $this->data['operator'],
             ];
             // 生成原商品退货记录
@@ -459,7 +463,7 @@ class ApiClient extends ReceiveBaseClient
                 // 查询新商品，修改货道商品信息，重置库存为新数量，生成新的补货记录
                 $mg = $this->getMachineGoodsFind(
                     ['mg_id' => $this->data['mg_id']],
-                    'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock,is_shelf'
+                    'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock,is_shelf,ao_id'
                 );
                 if (!$mg) {
                     $this->rollbackTrans();
@@ -838,13 +842,13 @@ class ApiClient extends ReceiveBaseClient
                         } elseif ($wc_goods['type'] == 3) { //酒店房态商品时：此时carList传过来为单条记录
                             $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
                             $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
-                            $daysInfo = json_decode($daysInfo_json, true); 
-                            if(empty($value['order_date'])) {
+                            $daysInfo = json_decode($daysInfo_json, true);
+                            if (empty($value['order_date'])) {
                                 $value['order_date'] = [date('Y-m-d')];
                             }
-                            if(count($value['order_date']) ==  1) {
+                            if (count($value['order_date']) ==  1) {
                                 $total_price = $daysInfo[0]['price'] ?? 0;
-                            }else{
+                            } else {
                                 $order_date = $value['order_date'];
                                 array_pop($order_date);
                                 foreach ($daysInfo as $vv) {
@@ -860,12 +864,12 @@ class ApiClient extends ReceiveBaseClient
                             } else {
                                 $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
                                 $daysInfo = json_decode($daysInfo_json, true);
-                                if(empty($value['order_date'])) {
+                                if (empty($value['order_date'])) {
                                     $value['order_date'] = [date('Y-m-d')];
                                 }
-                                if(count($value['order_date']) ==  1) {
+                                if (count($value['order_date']) ==  1) {
                                     $total_price = $daysInfo[0]['price'] ?? 0;
-                                }else{
+                                } else {
                                     $order_date = $value['order_date'];
                                     array_pop($order_date);
                                     foreach ($daysInfo as $vv) {
@@ -902,7 +906,6 @@ class ApiClient extends ReceiveBaseClient
                                 // 'wc_user_address' => '',//微程会员寄送详细地址
                             ];
                         }
-                        
                     } else {
                         $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
                     }
@@ -953,6 +956,7 @@ class ApiClient extends ReceiveBaseClient
                             "bar_code" => $mc['bar_code'] ?? '',
                             'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
+                            'ao_id' => $mc['ao_id'],
                         ];
                         $details['retail_price'] = !empty($wc_order_no) ? $total_price : $mc['retail_price'];
                         $details['total_sod_price'] = bcmul($details['retail_price'], $quantity, 3);
@@ -1578,7 +1582,7 @@ class ApiClient extends ReceiveBaseClient
                                         $wc_goods = $wc_goods->toArray();
                                         if ($wc_goods['type'] == 11) { //组合商品
                                             //因为子订单wc_goods_no字段中已经存储了出货信息，这里直接取该字段即可
-                                            if(!empty($v['wc_goods_no'])) {
+                                            if (!empty($v['wc_goods_no'])) {
                                                 $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
                                                 foreach ($wc_goods_no_arr as $wc_goods_no_v) {
                                                     $dc_local = [
@@ -2034,9 +2038,9 @@ class ApiClient extends ReceiveBaseClient
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
         $wcMachineChannelLists = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
         foreach ($wcMachineChannelLists as &$v) {
-            if($v['gc_id'] == 11){
+            if ($v['gc_id'] == 11) {
                 $daysInfo = $this->getWcGoodsColumn(['no' => $v['out_no']], 'daysInfo');
-                if($daysInfo) $v['daysInfo'] = $daysInfo[0] ?? [];
+                if ($daysInfo) $v['daysInfo'] = $daysInfo[0] ?? [];
             }
             $v['goods_lists'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
         }
@@ -2099,13 +2103,32 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200, 'success', $response['data']);
     }
 
+    public function getMachineRentOrgLists()
+    {
+        $where['machine_id'] = $this->data['machine_id'];
+        $rent_machine_orgs = $this->getAuthOrgMCColumn($where, 'ao_id');
+        return $this->r(200, "SUCCESS", $rent_machine_orgs);
+    }
+
+    public function getRentOrgGoodsLists()
+    {
+        $where['ao_id'] = $this->data['ao_id'];
+        $where['status'] = 1;
+        $pageNum = $this->data['pageNum'] ?? 15;
+        $orgGoodsLists = $this->getGoodsList($where, $pageNum);
+
+        return $this->r(200, "SUCCESS", $orgGoodsLists);
+    }
+
     public function test()
     {
         $trade_no = $this->data['trade_no'] ?? '';
         $order_id = $this->data['order_id'] ?? 0;
         $sod_id = $this->data['sod_id'] ?? 0;
         $this->order = $this->getSaleOrdersFind(['trade_no' => $trade_no]);
-        $this->outGoods();
+        $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
+        $this->addCardChangeLog();
+        // $this->outGoods();
         die();
         // $order = $this->outGoods();
         // return $this->orderSync2Wc($this->order);

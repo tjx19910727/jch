@@ -34,6 +34,8 @@ class Machine extends Common
         }
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
+        //只取vending_machine_type为1的设备，即主柜设备
+        $where[] = ['vending_machine_type', '=', 1];
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
         return $this->app->machine->getMList($where,$pageNum,$this->field,"online asc, m_id desc");
     }
@@ -109,6 +111,8 @@ class Machine extends Common
         (case device_type when 1 then '" . lang("vending_machine") . "' else '" . lang("store") . "' end) device_type,
         (case machine_level when 1 then '" . lang("simplified_version") . "' else '" . lang("luxury_edition") . "' END) machine_level,
         (case status when 1 then '" . lang("normal") . "' when 2 then '" . lang("disable") . "' when 3 then '" . lang("maintenance") . "' end) status";
+        //只取vending_machine_type为1的设备，即主柜设备
+        $where[] = ['vending_machine_type', '=', 1];
         return $this->app->machine->exportM($where,$field,"machine_id desc");
     }
 
@@ -198,7 +202,7 @@ class Machine extends Common
             $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             $lightArr = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             if (isset($postData['msgType']) && is_int($postData['msgType'])) {
-                $typeList = [1 => "sleep", 2 => "wakeUp"];
+                $typeList = [1 => "sleep", 2 => "wakeUp",3 => "machineCkcOnOff"];
                 $postData['msgType'] = $typeList[$postData['msgType']];
             }
             $postData['machine_id'] = explode(',',$postData['machine_id']);

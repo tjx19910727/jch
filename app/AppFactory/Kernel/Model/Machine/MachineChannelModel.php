@@ -95,16 +95,21 @@ class MachineChannelModel extends BaseModel
         try {
             actionLog(self::getLastSql(),'【SQL】修改货道');
             $pk = $model->getPk();
-            $mc = self::getFind(['mc_id' => $model->$pk], 'machine_id');
+            $mc = self::getFind(['mc_id' => $model->$pk], 'machine_id,channel_position');
             actionLog(self::getLastSql(),'mcAfterUpdate');
             if ($mc) {
                 $mc = $mc->toArray();
-                actionLog($mc,'mcAfterUpdate');
-                $config = [
-                    "machine_id" => $mc['machine_id'],
-                ];
-                $app = AppFactory::machine($config);
-                @$app->sendMq->sendMq("updateMc", ['mc_id' => $model->mc_id]);
+                 //如果是边柜货道，不发送更新
+                if(isset($mc['channel_position']) && $mc['channel_position'] == 3){
+                    actionLog($mc,'边柜货道不发送更新');
+                }else{
+                    actionLog($mc,'mcAfterUpdate');
+                    $config = [
+                        "machine_id" => $mc['machine_id'],
+                    ];
+                    $app = AppFactory::machine($config);
+                    @$app->sendMq->sendMq("updateMc", ['mc_id' => $model->mc_id]);
+                }
             }
         } catch (\Exception $e) {
             actionException($e,1,'mcAfterUpdate');

@@ -51,6 +51,16 @@ trait MachineChannelTrait
         return MachineChannelModel::getCount($where);
     }
 
+    public function getMachineChannelCountV2($where)
+    {
+        $whereRaw = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+        if (isset($where['raw'])) {
+            $whereRaw .= " AND " . $where['raw'];
+            unset($where['raw']);
+        }
+        return MachineChannelModel::alias("a")->where($where)->whereRaw($whereRaw)->count();
+    }
+
     public function getMachineChannelSum($where, $sum)
     {
         return MachineChannelModel::getSum($where, $sum);
@@ -109,6 +119,12 @@ trait MachineChannelTrait
         return $data->mc_id;
     }
 
+    public function addMachineMoreChannel($insert)
+    {
+        $mc = new MachineChannelModel();
+        return $mc->saveAll($insert);
+    }
+
     public function updateMachineChannel($update, $where = [], $field = [])
     {
         return MachineChannelModel::update($update, $where, $field);
@@ -159,7 +175,7 @@ trait MachineChannelTrait
                     if (!$mc) {
                         $mc = $value;
                         if (isset($value['g_id'])) {
-                            $gField = "g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price";
+                            $gField = "g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price,ao_id";
                             $g = $this->getGoodsFind(['g_id' => $value['g_id']], $gField);
                             if ($g) {
                                 $g = obj2arr($g);
@@ -188,7 +204,7 @@ trait MachineChannelTrait
                             "pic" => $mc['pic'] ?? "",
                             "sku" => $mc['sku'] ?? "",
                             "bar_code" => $mc['bar_code'] ?? "",
-                            "ao_id" => $this->machine['ao_id'],
+                            "ao_id" => $mc['ao_id'],
                             "change_value" => $value['stock'] ?? 0,
                             "type" => 2 ,   // 2：创建上货
 //                            "desc" => $this->lang("goodsChange.terminal_create_inc_stock"),
@@ -212,7 +228,7 @@ trait MachineChannelTrait
                             "pic" => $mc['pic'] ?? "",
                             "sku" => $mc['sku'] ?? "",
                             "bar_code" => $mc['bar_code'] ?? "",
-                            "ao_id" => $this->machine['ao_id'],
+                            "ao_id" => $mc['ao_id'],
                             "change_value" => $value['stock'] ?? 0,
                             "position" => 1,
                         ];
