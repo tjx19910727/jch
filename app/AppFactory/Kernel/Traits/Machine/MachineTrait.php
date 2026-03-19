@@ -259,18 +259,19 @@ trait MachineTrait
     protected $checkCurrentStatus = [
         // "sleep",
         // "wakeUp",
-        "reboot",
-        "shutdown",
-        "update",
-        "pickUpHeadInit",
-        "conveyorBeltOpen",
-        "conveyorBeltClose",
-        "boxDoorOpen",
-        "boxDoorClose",
-        "recycleOut",
-        "recycleIntro",
-        "powerWakeUp",
-        "initialization",
+        // "reboot",
+        // "shutdown",
+        // "update",
+        // "pickUpHeadInit",
+        // "conveyorBeltOpen",
+        // "conveyorBeltClose",
+        // "boxDoorOpen",
+        // "boxDoorClose",
+        // "recycleOut",
+        // "recycleIntro",
+        // "powerWakeUp",
+        // "initialization",
+        // "outGoods",
     ];
 
     /**
@@ -285,8 +286,8 @@ trait MachineTrait
         $m = $this->getMachineFind(['machine_id' => $machine['machine_id']],"mac_address,signKey,online,current_status");
         if ($m) {
             $m = $m->toArray();
-            // if (in_array($msgType,$this->checkCurrentStatus) && $m['current_status'] != "normal")
-                // return $this->lang("current_status_not_normal");
+            if (in_array($msgType,$this->checkCurrentStatus) && $m['current_status'] != "normal")
+                return $this->lang("current_status_not_normal");
             if ($m['online'] == 1) {
                 $key = $m['signKey'] ?? "";
                 if (!$key) $key = env("api.md5Key");
