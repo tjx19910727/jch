@@ -32,8 +32,8 @@ trait AfterOrderRefundTrait
             if (!$quantity) $quantity = $value['refund_quantity'];
             if (!$this->order) $this->order = $this->getSaleOrdersFind(['order_id' => $value['order_id']]);
             // 退款退分润
-            $refundRevenue = $this->refundRevenue();
-            if ($refundRevenue !== true) return $this->r(100,'退款退分润失败');
+            // $refundRevenue = $this->refundRevenue();
+            // if ($refundRevenue !== true) return $this->r(100,'退款退分润失败');
 
             // 修改退款记录
             $flag[] = $this->refundSuccessUpdateSor();
@@ -42,12 +42,11 @@ trait AfterOrderRefundTrait
             $flag[] = $this->refundSuccessUpdateSod();
             
             //修改卡积分 
-            $flag[] = $this->addCardChangeLog();
+            // $flag[] = $this->addCardChangeLog();
 
             $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $this->refund['sod_id']]);
             if($detail['wc_order_no']){
-                $wc_order_no = json_decode($detail['wc_order_no'],true);
-                $flag[] = $this->orderRefundSync2Wc($value['order_id'], $detail);
+                $flag[] = $this->orderRefundSync2Wc($this->order, $detail);
             }
         }
         $this->order['refund_quantity'] += $quantity;
@@ -169,6 +168,7 @@ trait AfterOrderRefundTrait
     public function addCardChangeLog(){
         //查询日志，根据订单号找card_no，找不到card_no时，看有没有绑bind_id
         $log_lists = $this->getCardPointsChangeLogsList(['trade_no' => $this->order['trade_no']]);
+        dd($log_lists);
         if(!$log_lists) return true;
         $card_no_column = array_column($log_lists,'card_no');
         $bind_id_column = array_column($log_lists,'bind_id');
