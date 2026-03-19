@@ -957,6 +957,7 @@ class ApiClient extends ReceiveBaseClient
                             'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                             'ao_id' => $mc['ao_id'],
+                            'ao_id' => $mc['ao_id'],
                         ];
                         $details['retail_price'] = !empty($wc_order_no) ? $total_price : $mc['retail_price'];
                         $details['total_sod_price'] = bcmul($details['retail_price'], $quantity, 3);
@@ -2134,5 +2135,20 @@ class ApiClient extends ReceiveBaseClient
         // return $this->orderSync2Wc($this->order);
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         return $this->orderRefundSync2Wc($this->order, $detail);
+    }
+
+    public function getMachineRentOrgLists(){
+        $where['machine_id'] = $this->data['machine_id'];
+        $rent_machine_orgs = $this->getAuthOrgMCColumn($where,'ao_id');
+        return $this->r(200, "SUCCESS", $rent_machine_orgs);
+    }
+
+    public function getRentOrgGoodsLists(){
+        $where['ao_id'] = $this->data['ao_id'];
+        $where['status'] = 1;
+        $pageNum = $this->data['pageNum'] ?? 15;
+        $orgGoodsLists = $this->getGoodsList($where, $pageNum);
+
+        return $this->r(200, "SUCCESS", $orgGoodsLists);
     }
 }

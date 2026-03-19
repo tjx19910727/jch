@@ -1,0 +1,41 @@
+<?php
+/**
+ * Trait: 组织提现申请相关封装
+ */
+
+namespace app\AppFactory\Kernel\Traits\Auth;
+
+
+use app\AppFactory\Kernel\Model\Auth\AuthWithdrawRequestModel;
+
+trait AuthWithdrawTrait
+{
+    /**
+     * 创建提现申请，返回插入 id
+     */
+    public function addAuthWithdrawRequest($insert)
+    {
+        $id = AuthWithdrawRequestModel::insertOneGetId($insert);
+        return $id;
+    }
+
+    public function getAuthWithdrawRequestFind($where, $field = '*')
+    {
+        return AuthWithdrawRequestModel::getFind($where, $field);
+    }
+
+    public function getAuthWithdrawRequestList($where, $pageNum = 0, $field = '*', $order = '')
+    {
+        return AuthWithdrawRequestModel::getList($where, $pageNum, $field, $order);
+    }
+
+    public function updateAuthWithdrawRequest($update)
+    {
+        if (!isset($update['wr_id'])) return false;
+        $where = ['wr_id' => $update['wr_id']];
+        $field = [];
+        return AuthWithdrawRequestModel::update($update, $where, $field);
+    }
+
+    
+}

@@ -916,6 +916,36 @@ class Receive extends Common
         }
     }
 
+    
+    /**
+     * 获取租赁设备所有组织的商品列表
+     * @return array|string
+     * @throws \Exception
+     */
+    public function getMachineRentOrgLists(){
+        try {
+            return $this->app->api->getMachineRentOrgLists();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+
+    /**
+     * 获取租赁设备所有组织的商品列表
+     * @return array|string
+     * @throws \Exception
+     */
+    public function getRentOrgGoodsLists(){
+        try {
+            return $this->app->api->getRentOrgGoodsLists();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     /**
      * 新版获取微程商品信息
      * @return array|string

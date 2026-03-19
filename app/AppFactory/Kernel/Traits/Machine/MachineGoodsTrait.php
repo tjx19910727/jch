@@ -104,7 +104,7 @@ trait MachineGoodsTrait
                     }
                 } else {
                     if (isset($value['mg_id'])) unset($value['mg_id']);
-                    $g = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price');
+                    $g = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price,ao_id');
                     if ($g) {
                         $g = obj2arr($g);
                         $g['pic'] = str_replace($this->host,'',$g['pic']);
