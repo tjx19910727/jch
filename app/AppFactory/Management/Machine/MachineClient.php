@@ -449,7 +449,7 @@ class MachineClient extends ManagementClient
                 $item['machine_name'] = $item['machine_name'].'的弧柜';
                 $item['vending_machine_type'] = 2;
             }elseif($item['channel_position'] == 3){
-                $item['machine_name'] = $item['channel_name'] ?: ($item['machine_name'].'的弧柜');
+                $item['machine_name'] = $item['channel_name'] ?: ($item['machine_name'].'的边柜');
                 $item['vending_machine_type'] = 3;
             }else{
                 $item['machine_name'] = $item['machine_name'].'的副柜';
