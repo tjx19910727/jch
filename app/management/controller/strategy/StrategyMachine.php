@@ -49,4 +49,15 @@ class StrategyMachine extends Common
         $where = $this->getWhere($postData);
         return $this->app->strategyMachine->getFind($where,"*","sm_id desc");
     }
+
+    /**
+     * 导出收款绑定
+     * @return array|string
+     */
+    public function exportStrategyMachine()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData);
+        return $this->app->strategyMachine->exportStrategyMachine($where);
+    }
 }

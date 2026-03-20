@@ -34,6 +34,11 @@ trait ActivityPickCodeTrait
         return ActivityPickCodeModel::getFind($where,$field,$order);
     }
 
+    public function getActivityPickCodeFindWithPick($where,$field = "apc.*",$order = "apc.apc_id desc")
+    {
+        return ActivityPickCodeModel::getFindWithPick($where,$field,$order);
+    }
+
     public function getActivityPickCodeList($where,$pageNum = 0,$field = "*", $order = "apc_id desc")
     {
         return ActivityPickCodeModel::getList($where,$pageNum,$field,$order);

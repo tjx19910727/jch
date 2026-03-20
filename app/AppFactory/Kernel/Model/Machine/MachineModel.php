@@ -143,4 +143,8 @@ class MachineModel extends BaseModel
 //            }
 //        }
 //    }
+    public function machineLevelData()
+    {
+        return $this->hasOne(MachineLevelDescModel::class,"machine_level","machine_level");
+    }
 }

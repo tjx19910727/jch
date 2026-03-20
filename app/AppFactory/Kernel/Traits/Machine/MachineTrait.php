@@ -100,8 +100,8 @@ trait MachineTrait
      */
     public function getMachineList($where,$pageNum = null,$field = "*", $order = "",$eachFun = "",$group = '', $limit = '')
     {
-        $result = MachineModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
-
+        //$result = MachineModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
+        $result = MachineModel::getListAndWith($where,$pageNum,$field,$order,$eachFun,$group,$limit,['machineLevelData']);
         if ($result) {
             if ($pageNum) {
                 $result = $result->each(function ($item) {
@@ -127,6 +127,19 @@ trait MachineTrait
     {
         !isset($this->manager['manager_id']) ? :$insert['creator'] = $this->manager['manager_id'];
         !isset($this->manager['ao_id']) ? : $insert['ao_id'] = $this->manager['ao_id'];
+        $data = MachineModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    /**
+     * 添加边柜信息
+     * @param $insert
+     * @return mixed
+     */
+    public function addSubMachine($insert)
+    {
+        !isset($this->manager['manager_id']) ? :$insert['creator'] = $this->manager['manager_id'];
         $data = MachineModel::create($insert);
         $pk = $data->getPk();
         return $data->$pk;
@@ -255,6 +268,7 @@ trait MachineTrait
      * 断电重启：powerWakeUp，
      * 远程初始化：initialization
      * 当前命令下发前需要检查一下current_status
+     * 先注释，操作时注意设备是否在线
      */
     protected $checkCurrentStatus = [
         // "sleep",

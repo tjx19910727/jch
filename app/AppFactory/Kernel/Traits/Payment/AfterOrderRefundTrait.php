@@ -9,10 +9,10 @@
 namespace app\AppFactory\Kernel\Traits\Payment;
 
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
-
+use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 trait AfterOrderRefundTrait
 {
-    use CardTrait;
+    use CardTrait, WcBaseTrait;
     protected $refund;
 
     /**
@@ -32,8 +32,8 @@ trait AfterOrderRefundTrait
             if (!$quantity) $quantity = $value['refund_quantity'];
             if (!$this->order) $this->order = $this->getSaleOrdersFind(['order_id' => $value['order_id']]);
             // 退款退分润
-            $refundRevenue = $this->refundRevenue();
-            if ($refundRevenue !== true) return $this->r(100,'退款退分润失败');
+            //$refundRevenue = $this->refundRevenue();
+            //if ($refundRevenue !== true) return $this->r(100,'退款退分润失败');
 
             // 修改退款记录
             $flag[] = $this->refundSuccessUpdateSor();
@@ -42,7 +42,12 @@ trait AfterOrderRefundTrait
             $flag[] = $this->refundSuccessUpdateSod();
             
             //修改卡积分 
-            // $flag[] = $this->addCardChangeLog();
+            $flag[] = $this->addCardChangeLog();
+
+            $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $this->refund['sod_id']]);
+            if($detail['wc_order_no']){
+                $flag[] = $this->orderRefundSync2Wc($this->order, $detail);
+            }
         }
         $this->order['refund_quantity'] += $quantity;
         // 修改订单退款状态
@@ -52,6 +57,7 @@ trait AfterOrderRefundTrait
         if (!$result) return $this->r(100,'修改退款记录失败');
         return true;
     }
+
 
     /**
      * 退分润
@@ -161,8 +167,8 @@ trait AfterOrderRefundTrait
 
     public function addCardChangeLog(){
         //查询日志，根据订单号找card_no，找不到card_no时，看有没有绑bind_id
-        $log_lists = $this->getCardPointsChangeLogsList(['trade_no' => $this->order['trade_no']]);
-        if(!$log_lists) return true;
+        $log_lists = $this->getCardPointsChangeLogsList(['trade_no' => $this->order['trade_no']])->toArray();
+        if(empty($log_lists)) return true;
         $card_no_column = array_column($log_lists,'card_no');
         $bind_id_column = array_column($log_lists,'bind_id');
         $card_no_arr = array_filter($card_no_column);

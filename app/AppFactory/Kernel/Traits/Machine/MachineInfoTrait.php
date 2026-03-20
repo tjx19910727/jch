@@ -11,8 +11,10 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 use app\AppFactory\Kernel\Model\Machine\MachineInfoModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
+
 trait MachineInfoTrait
 {
+    use MachineMainRelationTrait;
     /**
      * 获取设备信息字段值
      * @param $where
@@ -33,7 +35,15 @@ trait MachineInfoTrait
      */
     public function getMachineInfoFind($where,$field = "*",$order = "")
     {
-        return MachineInfoModel::getFind($where,$field,$order);
+        // return MachineInfoModel::getFind($where,$field,$order);
+        $info = MachineInfoModel::getFind($where,$field,$order);
+        if($info){
+            $info = $info->toArray();
+            $count = $this->getMachineMainRelationCount(['main_mc_id' => $info['m_id']],'*');
+             // 20250613 增加副柜2状态，查询条件增加副柜状态为2的记录数，如果大于0，说明有副柜不可用
+            $info['sub_cabinet_2'] = $count > 0 ? 1 : 2;
+        }
+        return $info;
     }
 
     /**

@@ -60,4 +60,34 @@ class StrategyPayeeClient extends ManagementClient
             return $this->rValidate($e->getMessage());
         }
     }
+
+    public function exportPayee($where)
+    {
+        $list = $this->getStrategyPayeeList($where,0,"*","sp_id desc");
+
+        if(is_null($list) || $list->isEmpty()){
+            return $this->rFail("没有数据可导出");
+
+        }
+        $payType = [1 => "微信支付", 2 => "支付宝支付", 3 => "通联支付",4 => "京东收银",5 => "丽呈小程序支付","9" => "商城积分支付"];
+        $list = $list->toArray();
+        foreach ($list as &$item) {
+            $item['content'] = json2arr($item['content']);
+            $item["organization_name"] = $item["organization_name"] ?: "未知";
+            $item["customer_num"] = $item['content']["customerNum"] ??"未知";
+            $item['payee_type_text'] = $payType[$item['payee_type']] ?? "未知";
+            $item['status_text'] = $item['status'] == 1 ? "启用" : "禁用";
+        }
+        $title = [
+            "sp_name" => "策略名称",
+            "payee_type_text" => "收款类型",
+            "organization_name" => "组织名称",
+            "customer_num" => "商户编号",
+            "mch_id" => "商户ID",
+            "app_id" => "应用ID",
+            "status_text" => "状态",
+        ];
+        $filename = "收款策略-" . date("YmdHis");
+        return $this->sendToExport("收款策略-报表", $filename, $title, $list);
+    }
 }
