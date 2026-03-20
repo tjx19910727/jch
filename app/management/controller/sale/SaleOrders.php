@@ -127,6 +127,7 @@ class SaleOrders extends Common
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
         // if ($postData['supplier']) unset($where['ao_id']);
+        $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.ao_id ='.$this->manager['ao_id'];
         return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",$postData['supplier'] ?? 'true'));
     }
 
