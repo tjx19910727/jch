@@ -318,7 +318,7 @@ trait MachineTrait
         // "recycleIntro",
         // "powerWakeUp",
         // "initialization",
-        "outGoods",
+        // "outGoods",
     ];
 
     /**

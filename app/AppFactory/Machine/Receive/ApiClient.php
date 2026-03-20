@@ -71,6 +71,7 @@ use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -133,7 +134,8 @@ class ApiClient extends ReceiveBaseClient
         CardTrait,
         WcBaseTrait,
         WcGoodsTrait,
-        AuthOrgMachineChannelTrait;
+        AuthOrgMachineChannelTrait,
+        SaleOrdersRefundTrait;
 
 
     public $card_retail_price = 0.01;
@@ -954,6 +956,7 @@ class ApiClient extends ReceiveBaseClient
                             "bar_code" => $mc['bar_code'] ?? '',
                             'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
+                            'ao_id' => $mc['ao_id'],
                             'ao_id' => $mc['ao_id'],
                         ];
                         $details['retail_price'] = !empty($wc_order_no) ? $total_price : $mc['retail_price'];
@@ -2124,11 +2127,14 @@ class ApiClient extends ReceiveBaseClient
         $order_id = $this->data['order_id'] ?? 0;
         $sod_id = $this->data['sod_id'] ?? 0;
         $this->order = $this->getSaleOrdersFind(['trade_no' => $trade_no]);
-        $this->outGoods();
+        $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
+        $this->addCardChangeLog();
+        // $this->outGoods();
         die();
         // $order = $this->outGoods();
         // return $this->orderSync2Wc($this->order);
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         return $this->orderRefundSync2Wc($this->order, $detail);
     }
+
 }

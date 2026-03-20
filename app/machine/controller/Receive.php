@@ -916,6 +916,7 @@ class Receive extends Common
         }
     }
 
+
     /**
      * 新版获取微程商品信息
      * @return array|string

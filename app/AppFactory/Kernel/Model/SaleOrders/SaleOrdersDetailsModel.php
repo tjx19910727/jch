@@ -77,10 +77,15 @@ class SaleOrdersDetailsModel extends BaseModel
      */
     public static function joinOrderList($where,$pageNum = 0,$field = "*", $order = "",$group = "")
     {
+        if($where['raw']){
+            $whereRaw= $where['raw'];
+            unset($where['raw']);
+        }
         $data = self::alias("sod")
             ->join("sale_orders so",'so.order_id = sod.order_id','left')
-            ->where($where)
-            ->field($field)
+            ->where($where);
+        if($whereRaw) $data = $data->whereRaw($whereRaw);
+        $data = $data->field($field)
             ->order($order)
             ->group($group);
         if ($pageNum)
