@@ -891,7 +891,7 @@ class ApiClient extends ReceiveBaseClient
                                     $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : 'Z10';
                                 }
                             }
-                            $value['order_date'] = $value['order_date'] ?? date('Y-m-d');
+                            $value['order_date'] = $value['order_date'] ?? [date('Y-m-d')];
                             $wc_order_no[$wc_goods_local['no']] = [
                                 'out_no' => $value['out_no'], //父商品编码
                                 'no' => $wc_goods_local['no'], //子商品编码
@@ -2126,8 +2126,9 @@ class ApiClient extends ReceiveBaseClient
         $trade_no = $this->data['trade_no'] ?? '';
         $order_id = $this->data['order_id'] ?? 0;
         $sod_id = $this->data['sod_id'] ?? 0;
-        $this->order = $this->getSaleOrdersFind(['trade_no' => $trade_no]);
-        $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
+        $this->order = $this->getSaleOrdersFind(['trade_no' => $trade_no])->toArray();;
+        // $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
+        $this->paymentSuccessful();
         $this->addCardChangeLog();
         // $this->outGoods();
         die();

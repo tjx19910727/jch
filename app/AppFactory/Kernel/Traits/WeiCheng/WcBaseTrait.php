@@ -331,11 +331,19 @@ trait WcBaseTrait
         $buy_date_range = [];
         foreach($wc_order_no as $no => $value) {
             if(!empty($value['order_date'])) {
-                array_multisort($value['order_date'], SORT_ASC);
-                $buy_date_range = [
-                    'start' => current($value['order_date']),
-                    'end' => end($value['order_date']),
-                ];
+                if(count($value['order_date']) == 1){
+                    $buy_date_range = [
+                        'start' => $value['order_date'],
+                        'end' => $value['order_date'],
+                    ];
+                }else{
+                    array_multisort($value['order_date'], SORT_ASC);
+                    $buy_date_range = [
+                        'start' => current($value['order_date']),
+                        'end' => end($value['order_date']),
+                    ];
+                }
+                
             }
 
             $data = [
