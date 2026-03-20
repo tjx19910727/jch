@@ -1262,3 +1262,24 @@ ALTER TABLE kiosk.machine_config ADD COLUMN `receipt_code3_desc` VARCHAR(50) DEF
 #20260319
 ALTER TABLE kiosk.machine_channel
 ADD COLUMN `channel_name` VARCHAR(50) DEFAULT '' COMMENT '货道名称' AFTER `channel_code`;
+
+CREATE TABLE `card_balance_change_logs` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `card_no` varchar(20) NOT NULL DEFAULT '' COMMENT '卡号',
+  `balance_before_change` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '变化前余额',
+  `balance_changed` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '余额变化量',
+  `balance` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '变化后余额',
+  `change_type` tinyint(1) NOT NULL DEFAULT 1 COMMENT '变化类型1：增加 2：减少',
+  `balance_type` tinyint(1) NOT NULL DEFAULT 0 COMMENT '变化类型1：购物消费 2：后台充值 3：提现 4：退款 5：充值到积分 6：活动赠送',
+  `trade_no` varchar(50) DEFAULT NULL COMMENT '余额变化关联订单编号',
+  `activity_id` int(11) NOT NULL DEFAULT 0 COMMENT '活动ID(预留)',
+  `reasons` varchar(200) DEFAULT NULL COMMENT '原因',
+  `remark` varchar(200) DEFAULT NULL COMMENT '备注',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `card_no_IDX` (`card_no`) USING BTREE,
+  KEY `trade_no_IDX` (`trade_no`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='卡余额变化表';
+
+ALTER TABLE kiosk.card ADD COLUMN `balance` decimal(12,2) DEFAULT 0 COMMENT '卡余额' AFTER points;
+ALTER TABLE kiosk.card ADD COLUMN `password` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '密码' AFTER points;

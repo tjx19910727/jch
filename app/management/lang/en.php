@@ -690,6 +690,9 @@ return [
         "card_no_require" => "Card NO cannot be empty",
         "points_changed_require" => "points_changed cannot be empty",
         "change_type_in" => "Invalid change_type",
+        "balance_changed_require" => "balance_changed cannot be empty",
+        "card_no_no_data" => "No card information found",
+        "balance_not_enough" => "Card balance is not enough",
     ],
     "VMachineLevelDesc" => [
         "name_require" => "Level Name cannot be empty",

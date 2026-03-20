@@ -24,7 +24,13 @@ class Logs  extends Common
         return $this->app->card->getCardPointsChangeLogsInfoList($where, $pageNum, $this->field, 'id desc');
     }
 
-    
+    public function getBalanceLogsList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, []);
+        return $this->app->card->getCardBalanceChangeLogsList($where, $pageNum, $this->field, 'id desc');
+    }
 
    
 }

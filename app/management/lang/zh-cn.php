@@ -693,6 +693,10 @@ return [
         "card_no_require" => "卡号不能为空",
         "points_changed_require" => "积分变动值不能为空",
         "change_type_in" => "无效的积分变动类型",
+        "balance_changed_require" => "余额变动值不能为空",
+        "card_no_no_data" => "查无会员卡信息",
+        "balance_not_enough" => "卡余额不足",
+        "balance_action_fail" => "余额变动失败"
     ],
     "VMachineLevelDesc" => [
         "name_require" => "等级名称不能为空",

@@ -43,4 +43,16 @@ class Card extends Common
         return $this->app->card->importCards(input());
     }
 
+    public function changeBalance()
+    {
+        try {
+            $this->validate(input(), $this->validatePath . '.addBalance');
+            $postData = input();
+            $res = $this->app->card->changeCardBalance($postData);
+            return returnData($res);
+        } catch (\Exception $e) {
+            return $this->app->card->rFail(lang("VCard.balance_action_fail") .'：'. $e->getMessage());
+        }
+    }
+
 }

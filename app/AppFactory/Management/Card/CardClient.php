@@ -100,4 +100,9 @@ class CardClient extends ManagementClient
             return $this->rValidate($e->getMessage());
         }
     }
+
+    public function changeCardBalance($data)
+    {
+        return $this->changeBalance($data);
+    }
 }
