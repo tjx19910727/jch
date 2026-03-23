@@ -709,5 +709,9 @@ return [
         "machine_no_update" => "此处只能编辑边柜",
         "machine_no_delete" => "此处只能删除边柜",
         "main_machine_only_one_sub" => "一个主设备只能绑定一个边柜",
+        "main_machine_only_one_arc" => "一个主设备只能绑定一个弧柜",
+        "no_data" => "副柜信息不存在",
+        "is_online_no_del" => "副柜已经在线，无法删除",
+        "auto_reported_no_add" => "此主柜下已自动上报副柜信息，无法挂接"
     ],
 ]; 

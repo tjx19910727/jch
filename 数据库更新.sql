@@ -1283,3 +1283,26 @@ CREATE TABLE `card_balance_change_logs` (
 
 ALTER TABLE kiosk.card ADD COLUMN `balance` decimal(12,2) DEFAULT 0 COMMENT '卡余额' AFTER points;
 ALTER TABLE kiosk.card ADD COLUMN `password` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '密码' AFTER points;
+
+#20260320
+CREATE TABLE `machine_auxiliary` (
+  `m_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `machine_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '设备编号',
+  `machine_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '设备名称',
+  `machine_serial_number` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '设备序列号',
+  `address` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '地址',
+  `pic` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '图片',
+  `mac_address` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '物理网卡地址',
+  `machine_type` tinyint DEFAULT '1' COMMENT '设备类型：1弧柜 2边柜',
+  `ao_id` int DEFAULT '0' COMMENT '归属组织ID',
+  `status` tinyint(1) DEFAULT '2' COMMENT '1:已挂接已启用 2:未挂接未启用 3:已挂接未启用',
+  `manager_id` int DEFAULT '0' COMMENT '管理员ID',
+  `remark` varchar(200) DEFAULT '' COMMENT '备注',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`m_id`),
+  KEY `machine_id_IDX` (`machine_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='副柜信息表';
+
+ALTER TABLE kiosk.machine_channel
+ADD COLUMN `is_admin` TINYINT(1) DEFAULT 2 COMMENT '是否后台创建 1是 2否' AFTER `mg_id`;

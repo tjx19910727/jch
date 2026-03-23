@@ -705,5 +705,9 @@ return [
         "machine_no_update" => "Device number cannot be updated",
         "machine_no_delete" => "Device number cannot be deleted",
         "main_machine_only_one_sub" => "Each main machine can only bind one sub machine",
+        "main_machine_only_one_arc" => "Each main machine can only bind one arc machine",
+        "no_data" => "No sub machine information found",
+        "is_online_no_del" => "Sub machine is online, cannot be deleted",
+        "auto_reported_no_add" => "Sub machine is automatically reported online, cannot be added",
     ],
 ];
