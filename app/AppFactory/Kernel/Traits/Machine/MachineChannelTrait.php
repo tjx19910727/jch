@@ -284,42 +284,60 @@ trait MachineChannelTrait
 
     public function getRateOrGiftPoints($mc)
     {
-        //如果设备货道存在配置，则使用设备货道配置的积分比例(对应设备，对应货道，对应商品)
-        //如果设备货道未配置，取设备商品积分兑换比例
-        //如果设备商品未配置，则取商品本身积分兑换比例
-        //如果商品本身未配置，则取商场积分兑换比例
-        //如果设备为配置积分比例，则取组织积分比例，这里涉及太广了，可能引起bug，暂时  不返回到这一层 
-        if($mc){
-            return [
-                'intergral_rate' => $mc['intergral_rate'],
-                'gift_points' => $mc['gift_points']
-            ];
+        // Safe handling: guard against null/invalid $mc. Return explicit defaults when missing.
+        if (empty($mc)) {
+            return ['intergral_rate' => 0, 'gift_points' => 0];
         }
-        $machineGoodsInfo = MachineGoodsModel::getFind(['g_id' => $mc['g_id'], 'machine_id' => $mc['machine_id']], 'intergral_rate,gift_points');
-        if ($machineGoodsInfo) {
+
+        // Normalize $mc to array for safe access if it's an object
+        $mcArr = $mc;
+        if (is_object($mc)) {
+            // obj2arr helper exists elsewhere in codebase
+            $mcArr = function_exists('obj2arr') ? obj2arr($mc) : (array)$mc;
+        }
+
+        // If device-channel level config exists, use it
+        $ir = $mcArr['intergral_rate'] ?? null;
+        $gp = $mcArr['gift_points'] ?? null;
+        if ($ir !== null || $gp !== null) {
             return [
-                'intergral_rate' => $machineGoodsInfo['intergral_rate'],
-                'gift_points' => $machineGoodsInfo['gift_points'],
+                'intergral_rate' => $ir ?: 0,
+                'gift_points' => $gp ?: 0,
             ];
         }
 
-        $goodsInfo = GoodsModel::getFind(['g_id' => $mc['g_id']], 'intergral_rate,gift_points');
-        if ($goodsInfo) {
-            return [
-                'intergral_rate' => $goodsInfo['intergral_rate'],
-                'gift_points' => $goodsInfo['gift_points'],
-            ];
-        }
-        $machineInfo = MachineModel::getFind(['machine_id' => $mc['machine_id']]);
-        if ($machineInfo) {
-            $mallMachine = $this->getMallMachineFind(['machine_id' => $mc['machine_id']]);
-            if ($mallMachine && $mallMachine['machine_id']) {
-                $mall = MallModel::getFind(['mall_id' => $mallMachine['m_id']], 'intergral_rate');
-                if ($mall && $mall['intergral_rate']) {
-                    return ['intergral_rate' =>  $mall['intergral_rate'], 'gift_points' => 0];
+        // Fallback to machine-goods level (requires g_id and machine_id)
+        $g_id = $mcArr['g_id'] ?? null;
+        $machine_id = $mcArr['machine_id'] ?? null;
+        if ($g_id && $machine_id) {
+            $machineGoodsInfo = MachineGoodsModel::getFind(['g_id' => $g_id, 'machine_id' => $machine_id], 'intergral_rate,gift_points');
+            if ($machineGoodsInfo) {
+                return [
+                    'intergral_rate' => $machineGoodsInfo['intergral_rate'] ?? 0,
+                    'gift_points' => $machineGoodsInfo['gift_points'] ?? 0,
+                ];
+            }
+
+            $goodsInfo = GoodsModel::getFind(['g_id' => $g_id], 'intergral_rate,gift_points');
+            if ($goodsInfo) {
+                return [
+                    'intergral_rate' => $goodsInfo['intergral_rate'] ?? 0,
+                    'gift_points' => $goodsInfo['gift_points'] ?? 0,
+                ];
+            }
+
+            $machineInfo = MachineModel::getFind(['machine_id' => $machine_id]);
+            if ($machineInfo) {
+                $mallMachine = $this->getMallMachineFind(['machine_id' => $machine_id]);
+                if ($mallMachine && !empty($mallMachine['m_id'])) {
+                    $mall = MallModel::getFind(['mall_id' => $mallMachine['m_id']], 'intergral_rate');
+                    if ($mall && !empty($mall['intergral_rate'])) {
+                        return ['intergral_rate' => $mall['intergral_rate'], 'gift_points' => 0];
+                    }
                 }
             }
         }
+
         return ['intergral_rate' => 0, 'gift_points' => 0];
     }
 }

@@ -1511,14 +1511,20 @@ class ApiClient extends ReceiveBaseClient
     {
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
-        $this->order = $order->toArray();
-        $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
-        if ($details) {
-            $contentArr = [];
-            $outArr = [];
-            // 旧版本数据，待软件更新后删除
-            foreach ($details as $k => $v) {
-                if (!$v['mc_id']) $v['g_type'] = 1;
+        $this->order = is_object($order) ? (method_exists($order,'toArray') ? $order->toArray() : (array)$order) : $order;
+
+        $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']])->toArray();
+        if (!$details || !is_array($details)) {
+            return $this->r(100, 'failed', []);
+        }
+
+        $contentArr = [];
+        $outArr = [];
+        $total_points = 0;
+
+        // 支持旧数据格式：把简单 channel/quantity 填到 contentArr
+        foreach ($details as $v) {
+            if (!$v['mc_id']) $v['g_type'] = 1;
                 if ($v['g_type'] == 1) {
                     $dc = [
                         $v['channel_code'],
@@ -1526,108 +1532,141 @@ class ApiClient extends ReceiveBaseClient
                     ];
                     $contentArr[$v['channel_position']][] = $dc;
                 }
+        }
+
+        // 新数据格式：逐条构建 out payload，并安全计算积分
+        foreach ($details as $v) {
+            // ensure sod_id present
+            $updateSod = ['sod_id' => $v['sod_id'] ?? 0];
+            $updateSod['total_sod_points'] = 0;
+            $updateSod['intergral_rate'] = $updateSod['intergral_rate'] ?? 0;
+
+            // If no mc_id, treat as simple channel out
+            if (empty($v['mc_id'])) {
+                $pos = $v['channel_position'] ?? 0;
+                $outArr[$pos][] = [
+                    'channel_code' => $v['channel_code'] ?? '',
+                    'quantity' => $v['quantity'] ?? 1,
+                    'is_gift' => $v['is_gift'] ?? 2,
+                    'out_port' => $v['out_port'] ?? 1,
+                ];
+                // persist update if needed (points or checkoff handled below)
+                $this->updateSaleOrdersDetails($updateSod);
+                continue;
             }
-            // 新数据格式
-            $total_points = 0;
-            foreach ($details as $k => $v) {
-                if (!$v['mc_id']) {
-                    $outArr[$v['channel_position']][] = [
-                        "channel_code" => $v['channel_code'],
-                        "quantity" => $v['quantity'],
-                        "is_gift" => $v['is_gift'] ?? 2,
-                        "out_port" => $v['out_port'] ?? 1,
-                    ];
-                    continue;
-                } else {
-                    $updateSod['sod_id'] = $v['sod_id'];
-                    if ($v['channel_code'] == 'Z10') {
-                        $mc = $this->getWcMachineChannelFind(['mc_id' => $v['mc_id']]);
-                        //判断此微程商品是否为组合商品
-                        $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                    } else {
-                        $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
-                    }
 
-                    $rate_points = $this->getRateOrGiftPoints($mc);
+            // load channel record safely
+            if (($v['channel_code'] ?? '') === 'Z10') {
+                $mcModel = $this->getWcMachineChannelFind(['mc_id' => $v['mc_id']]);
+            } else {
+                $mcModel = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
+            }
+            $mc = null;
+            if ($mcModel) {
+                $mc = is_object($mcModel) ? (function_exists('obj2arr') ? obj2arr($mcModel) : (array)$mcModel) : $mcModel;
+            }
 
-                    if ($rate_points['gift_points'] > 0) {
-                        $updateSod['intergral_rate'] = 0;
-                        $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
-                    }
-                    if ($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0) {
-                        $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
-                        $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $rate_points['intergral_rate'], 3);
-                    }
-                    $total_points += $updateSod['total_sod_points'];
-                    if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
-                        $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']], 'stock');
-                        actionLog($this->getLS(), '减固定组合商品酒店库存');
-                    }
-                    if ($v['g_type'] == 1) {
-                        $dc = [
-                            "channel_code" => $v['channel_code'],
-                            "quantity" => $v['quantity'],
-                            "is_gift" => $v['is_gift'] ?? 2,
-                            "out_port" => $v['out_port'] ?? 1,
-                        ];
-                        $outArr[$v['channel_position']][] = $dc;
-                        //判断此微程商品是否为组合商品
-                        if (isset($mc['out_no'])) {
-                            $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                            if ($wc_goods) $wc_goods = $wc_goods->toArray();
-                            if ($wc_goods['type'] == 11) { //组合商品
-                                //判断此微程商品是否为组合商品
-                                if (isset($mc['out_no'])) {
-                                    $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                                    if (!$wc_goods) {
-                                        $wc_goods = $wc_goods->toArray();
-                                        if ($wc_goods['type'] == 11) { //组合商品
-                                            //因为子订单wc_goods_no字段中已经存储了出货信息，这里直接取该字段即可
-                                            if (!empty($v['wc_goods_no'])) {
-                                                $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
-                                                foreach ($wc_goods_no_arr as $wc_goods_no_v) {
-                                                    $dc_local = [
-                                                        "channel_code" => $wc_goods_no_v['real_channel_code'],
-                                                        "quantity" => 1,
-                                                        "is_gift" => $v['is_gift'] ?? 2,
-                                                        "out_port" => $v['out_port'] ?? 1,
-                                                    ];
-                                                    $outArr[$v['channel_position']][] = $dc_local;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if ($v['g_type'] == 3) {
-                        // 获取核销码
-                        $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
-                    }
-                    $this->updateSaleOrdersDetails($updateSod);
+            // compute points safely
+            $rate_points = $this->getRateOrGiftPoints($mc);
+            $gift_points = $rate_points['gift_points'] ?? 0;
+            $intergral_rate = $rate_points['intergral_rate'] ?? 0;
+
+            if ($gift_points > 0) {
+                $updateSod['intergral_rate'] = 0;
+                $updateSod['total_sod_points'] = $gift_points * ($v['quantity'] ?? 1);
+            } elseif ($intergral_rate) {
+                $updateSod['intergral_rate'] = $intergral_rate;
+                $sod_price = $v['total_sod_price'] ?? 0;
+                $updateSod['total_sod_points'] = bcmul($sod_price, $intergral_rate, 3);
+            }
+
+            $total_points += (float)($updateSod['total_sod_points'] ?? 0);
+
+            // 减库存（固定组合商品）——尽量捕获异常，避免因一次失败导致整个接口崩溃
+            if (($v['g_type'] ?? 0) != 1 && !empty($v['gmg_id'])) {
+                try {
+                    $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']], 'stock');
+                    actionLog($this->getLS(), '减固定组合商品酒店库存');
+                } catch (\Exception $e) {
+                    actionException($e);
                 }
             }
 
-            if ($total_points) {
-                $this->order['total_points'] = $total_points;
-                // 因为存在不同子订单   不同积分兑换比例情况，order表不做intergral_rate的记录，只记录到自订单表
-                // $this->order['intergral_rate'] = $final_intergral_rate;  
+            // 普通出货项，构建出货列表
+            if (($v['g_type'] ?? 0) == 1) {
+                $pos = $v['channel_position'] ?? 0;
+                $outItem = [
+                    'channel_code' => $v['channel_code'] ?? '',
+                    'quantity' => $v['quantity'] ?? 1,
+                    'is_gift' => $v['is_gift'] ?? 2,
+                    'out_port' => $v['out_port'] ?? 1,
+                ];
+                $outArr[$pos][] = $outItem;
+
+                // 如果是微程组合商品（type==11），尝试解析子商品出货信息
+                if (!empty($mc['out_no'])) {
+                    $wcGoodsModel = $this->getWcGoodsFind(['no' => $mc['out_no']]);
+                    if ($wcGoodsModel) {
+                        $wcGoods = is_object($wcGoodsModel) ? (function_exists('obj2arr') ? obj2arr($wcGoodsModel) : (array)$wcGoodsModel) : $wcGoodsModel;
+                        if (($wcGoods['type'] ?? 0) == 11 && !empty($v['wc_goods_no'])) {
+                            $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
+                            if (is_array($wc_goods_no_arr)) {
+                                foreach ($wc_goods_no_arr as $wc_goods_no_v) {
+                                    $dc_local = [
+                                        'channel_code' => $wc_goods_no_v['real_channel_code'] ?? '',
+                                        'quantity' => 1,
+                                        'is_gift' => $v['is_gift'] ?? 2,
+                                        'out_port' => $v['out_port'] ?? 1,
+                                    ];
+                                    $outArr[$pos][] = $dc_local;
+                                }
+                            } else {
+                                actionLog(['sod_id' => $v['sod_id'] ?? 0, 'wc_goods_no' => $v['wc_goods_no']], 'wc_goods_no JSON parse failed');
+                            }
+                        }
+                    }
+                }
             }
-            $content = [
-                "msgType" => "outGoods",
-                "trade_no" => $this->order['trade_no'],
-                "main" => $contentArr,
-                "outGoods" => $outArr,
-                "order_points" => $this->order['total_points']
-            ];
-            $this->order['out_status'] = 2;
-            $this->order['pay_status'] = 3;
-            $this->order['pay_time'] = $this->order['pay_time'] ?: time();
-            $this->updateSaleOrders($this->order);
-            return $this->r(200, 'success', $content);
+
+            if (($v['g_type'] ?? 0) == 3) {
+                // 获取核销码
+                $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
+            }
+
+            // 更新自订单信息（积分/核销码等）——这里尽量保持原子并捕获异常
+            try {
+                $this->updateSaleOrdersDetails($updateSod);
+            } catch (\Exception $e) {
+                actionException($e);
+            }
         }
-        return $this->r(100, 'failed', []);
+
+        if ($total_points) {
+            $this->order['total_points'] = $total_points;
+        }
+
+        $content = [
+            'msgType' => 'outGoods',
+            'trade_no' => $this->order['trade_no'],
+            'main' => $contentArr,
+            'outGoods' => $outArr,
+            'order_points' => $this->order['total_points'] ?? 0,
+        ];
+
+        // 该接口为机台主动拉取（兜底）接口：构造 payload 并返回给机台（device 端请求即为确认接收）
+        // $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
+        // actionLog(@obj2arr($result), 'Http兜底方案下发数据结果');
+        // 标记订单出货已回填（因为是机台主动获取并已返回 payload，可认为设备已接收）
+        $this->order['out_status'] = 2;
+        $this->order['pay_status'] = 3;
+        $this->order['pay_time'] = $this->order['pay_time'] ?: time();
+        try {
+            $this->updateSaleOrders($this->order);
+        } catch (\Exception $e) {
+            actionException($e);
+        }
+
+        return $this->r(200, 'success', $content);
     }
 
 
@@ -2133,7 +2172,7 @@ class ApiClient extends ReceiveBaseClient
         // $this->outGoods();
         die();
         // $order = $this->outGoods();
-        // return $this->orderSync2Wc($this->order);
+        // return $this->orderSync2Wc($this->order);                    
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         return $this->orderRefundSync2Wc($this->order, $detail);
     }
