@@ -77,7 +77,9 @@ trait AfterOrderPaymentTrait
         $this->machine['machine_id'] = $this->order['machine_id'];
         $this->machine['machine_name'] = $this->order['machine_name'];
         $this->machine['m_id'] = $this->order['m_id'];
-        try {
+        $this->machine['ao_id'] = $this->order['ao_id'];
+        
+        try{
             @$this->sendNotice();
         } catch (\Exception $e) {
             actionException($e, 1, 'tryCatch');
