@@ -467,9 +467,10 @@ class MachineClient extends ManagementClient
         }
 
         return $this->rQ($this->getMachineAuxiliaryList($where,$pageNum,$field,$order,function ($item) {
-            //边柜查关联表
-            $item['main_m_id'] = $this->getMachineMainRelationValue(['b_mc_id' => $item['m_id']], 'main_mc_id') ?: 0;
-            if ($item['main_m_id']) {
+
+            $item['main_machine_id'] = '';
+            $item['main_machine_name'] = '';
+            if ($item['main_m_id'] > 0) {
                 $mainM = $this->getMachineFind(['m_id' => $item['main_m_id']], 'machine_id,machine_name');
                 $item['main_machine_id'] = $mainM['machine_id'] ?? '';
                 $item['main_machine_name'] = $mainM['machine_name'] ?? '';
@@ -477,6 +478,23 @@ class MachineClient extends ManagementClient
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
             return $item;
         }));
+    }
+
+    public function getSubMFind($where,$field = "")
+    {
+        $item = $this->getMachineAuxiliaryFind($where,$field);
+        if ($item) {
+            $item = $item->toArray();
+            $item['main_machine_id'] = '';
+            $item['main_machine_name'] = '';
+            if ($item['main_m_id'] > 0) {
+                $mainM = $this->getMachineFind(['m_id' => $item['main_m_id']], 'machine_id,machine_name');
+                $item['main_machine_id'] = $mainM['machine_id'] ?? '';
+                $item['main_machine_name'] = $mainM['machine_name'] ?? '';
+            }
+            if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
+        }
+        return $this->rQ($item);
     }
 
 
@@ -534,28 +552,33 @@ class MachineClient extends ManagementClient
             unset($postData['main_m_id']);
         }
         $machine_type = $postData['machine_type'] ?? 2; // 默认边柜
+        if (!in_array(intval($machine_type), [1, 2])) $machine_type = 2;
         $postData['status'] = 2;//未挂接未启用
+        $is_add = true;
         if($main_m_id){
-            //查询此主柜是否已经关联过同类型的副柜
-            if ($this->checkMainMachineCabinetRelation($main_m_id, $machine_type)) {
-                $msg = $machine_type == 1 ? $this->lang("VMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
-                return $this->r(100, $msg);
-            }
-            $channelPosition = ($machine_type == 1 ? 2 : 3);
-            $hasAutoReported = $this->getMachineChannelCount([
-                ['m_id', '=', $main_m_id],
-                ['channel_position', '=', $channelPosition],
-                ['is_admin', '=', 2]
-            ]);
-            if ($hasAutoReported > 0) {
-                return $this->r(100, $this->lang("VSubMachine.auto_reported_no_add"));
-            }
-            //给边柜关联的主柜添加关联关系
             $mainM = $this->getMachineFind(['m_id' => $main_m_id]);
             if(!$mainM){
                 return $this->r(100, $this->lang("VMachine.machine_no_data"));
             }
             $mainM = $mainM->toArray();
+            //查询此主柜是否已经关联过同类型的副柜
+            $existsWhere = [
+                ['main_m_id', '=', $main_m_id],
+                ['machine_type', '=', $machine_type],
+            ];
+            $AuxiliaryCount = $this->getMachineAuxiliaryCount($existsWhere);
+            if ($AuxiliaryCount > 0) {
+                $msg = $machine_type == 1 ? $this->lang("VMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
+                return $this->r(100, $msg);
+            }
+            $channelPosition = $this->getSubMachineChannelPosition($machine_type);
+            $hasAutoReported = $this->getMachineChannelCount([
+                ['m_id', '=', $main_m_id],
+                ['channel_position', '=', $channelPosition],
+            ]);
+            if ($hasAutoReported > 0) {
+                $is_add = false;
+            }
             $postData['ao_id'] = $mainM['ao_id'];
             $postData['status'] = 3;//已挂接未启用
         }
@@ -564,29 +587,14 @@ class MachineClient extends ManagementClient
         $this->startTrans();
         try {
             $m = $this->addMachineAuxiliary($postData);
-            if ($m) {
-                //添加关联关系，统一使用 b_mc_id
-                $relationData = [
-                    'main_mc_id' => $main_m_id,
-                    'b_mc_id' => $m,
-                ];
-                $this->addMachineMainRelation($relationData);
-                if($main_m_id){
-                    //创建默认货道
-                    for ($i = 1; $i <= 3 ; $i++) {
-                        $channelData = [
-                            'm_id' => $main_m_id,
-                            'machine_id' => $mainM['machine_id'] ?? '',
-                            'ao_id' => $postData['ao_id'] ?? 0,
-                            'channel_code' => ($machine_type == 1 ? '01' : '02').$i,
-                            'channel_position' => $machine_type == 1 ? 2 : 3,
-                            'channel_name' => $postData['machine_name'] ?? '',
-                            'width2' => 300,//默认值，副柜插入设备后会更新
-                        ];
-                        $channelAll[] = $channelData;
-                    }
-                    $this->addMachineMoreChannel($channelAll);
-                }
+            if ($m && $main_m_id && $is_add) {
+                // 创建默认货道
+                $this->addDefaultSubMachineChannels(
+                    $main_m_id,
+                    $mainM,
+                    $machine_type,
+                    $postData['machine_name'] ?? ''
+                );
             }
             $this->commitTrans();
             return $this->rA($m);
@@ -636,39 +644,43 @@ class MachineClient extends ManagementClient
     // }
     public function updateSubM($postData)
     {
-        $main_m_id = 0;
-        unset($postData['machine_id']);//不更新machine_id
-        if(isset($postData['main_m_id'])){
-            $main_m_id = $postData['main_m_id'];
-            unset($postData['main_m_id']);
-        }
-        $m = $this->getMachineAuxiliaryFind(['m_id' => $postData['m_id']], "m_id,machine_id,machine_name,machine_type");
-        if(!$m) {
+        $m = $this->getMachineAuxiliaryFind(['m_id' => $postData['m_id']], "m_id,machine_id,machine_name,machine_type,main_m_id");
+        if (!$m) {
             return $this->r(100, $this->lang("VSubMachine.no_data"));
         }
         $m = $m->toArray();
-        $machine_type = $postData['machine_type'] ?? $m['machine_type'];
-        
+
+        $old_main_m_id = $m['main_m_id'] ?? 0;
+        $old_machine_type = $m['machine_type'] ?? 2;
+        // 允许前端传 main_m_id = 0，表示解绑主柜；不传则沿用原值
+        $main_m_id = $postData['main_m_id'];
+        $machine_type = $postData['machine_type'];
+        if (!in_array($machine_type, [1, 2])) $machine_type = 2;
+        $mainChanged = $old_main_m_id != $main_m_id;
+        $typeChanged = $old_machine_type != $machine_type;
+        $oldChannelPosition = $this->getSubMachineChannelPosition($old_machine_type);
+        $newChannelPosition = $this->getSubMachineChannelPosition($machine_type);
+        if($typeChanged && $old_main_m_id){
+            //更新先不允许修改类型，如果要修改类型了，必须先解绑主柜，等修改完类型后再挂接主柜
+            return $this->r(100, $this->lang("VSubMachine.type_change_require_unbind"));
+        }
+        $mainM = null;
         $postData['status'] = 2;//未挂接未启用
-        if($main_m_id){
-            //查询此主柜是否已经关联过同类型的副柜
-            if ($this->checkMainMachineCabinetRelation($main_m_id, $machine_type, $postData['m_id'])) {
+        if ($main_m_id > 0) {
+            // 校验同主柜同类型副柜是否已存在（排除当前副柜）
+            $existsWhere = [
+                ['main_m_id', '=', $main_m_id],
+                ['machine_type', '=', $machine_type],
+                ['m_id', '<>', $m['m_id']],
+            ];
+            $AuxiliaryCount = $this->getMachineAuxiliaryCount($existsWhere);
+            if ($AuxiliaryCount > 0) {
                 $msg = $machine_type == 1 ? $this->lang("VMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
                 return $this->r(100, $msg);
             }
 
-            $channelPosition = ($machine_type == 1 ? 2 : 3);
-            $hasAutoReported = $this->getMachineChannelCount([
-                ['m_id', '=', $main_m_id],
-                ['channel_position', '=', $channelPosition],
-                ['is_admin', '=', 2]
-            ]);
-            if ($hasAutoReported > 0) {
-                return $this->r(100, $this->lang("VSubMachine.auto_reported_no_add"));
-            }
-            
             $mainM = $this->getMachineFind(['m_id' => $main_m_id]);
-            if(!$mainM){
+            if (!$mainM) {
                 return $this->r(100, $this->lang("VMachine.machine_no_data"));
             }
             $mainM = $mainM->toArray();
@@ -676,77 +688,135 @@ class MachineClient extends ManagementClient
             $postData['status'] = 3;//已挂接未启用
         }
 
+        $postData['machine_type'] = $machine_type;
+
         $this->startTrans();
         try {
             $result = $this->updateMachineAuxiliary($postData);
-            if ($result) {
-                //查询旧的关联关系
-                $oldRelation = $this->getMachineMainRelationFind(['b_mc_id' => $postData['m_id']], 'main_mc_id');
-                $old_main_m_id = $oldRelation['main_mc_id'] ?? 0;
-
-                //修改关联关系，统一通过 b_mc_id
-                $this->delMachineMainRelation(['b_mc_id' => $postData['m_id']]);
-                
-                if($main_m_id){
-                    $relationData = [
-                        'main_mc_id' => $main_m_id,
-                        'b_mc_id' => $postData['m_id'],
-                    ];
-                    $this->addMachineMainRelation($relationData);
-
-                    // 同步更新或创建货道信息
-                    if ($old_main_m_id == 0) {
-                        // 首次挂接，创建默认货道，如果有存在的货道则不创建
-                        $channelAll = [];
-                        for ($i = 1; $i <= 3 ; $i++) {
-                            $channelData = [
-                                'm_id' => $main_m_id,
-                                'machine_id' => $mainM['machine_id'] ?? '',
-                                'ao_id' => $postData['ao_id'] ?? 0,
-                                'channel_code' => ($machine_type == 1 ? '01' : '02').$i,
-                                'channel_position' => $machine_type == 1 ? 2 : 3,
-                                'channel_name' => $postData['machine_name'] ?? $m['machine_name'],
-                                'is_admin' => 1,//后台创建的货道
-                                'width2' => 300,
-                            ];
-                            $channelAll[] = $channelData;
-                        }
-                        $this->addMachineMoreChannel($channelAll);
-                    } else {
-                        // 已有挂接，更新货道信息
-                        $updateChannel = [];
-                        if (isset($postData['machine_name']) && $postData['machine_name'] != $m['machine_name']) {
-                            $updateChannel['channel_name'] = $postData['machine_name'];
-                        }
-                        
-                        if ($old_main_m_id != $main_m_id) {
-                            $updateChannel['m_id'] = $main_m_id;
-                            $updateChannel['machine_id'] = $mainM['machine_id'] ?? '';
-                            $whereChannel = [
-                                ['m_id', '=', $old_main_m_id],
-                            ];
-                        } else {
-                            $whereChannel = [
-                                ['m_id', '=', $main_m_id],
-                            ];
-                        }
-
-                        if ($updateChannel) {
-                            $this->updateMachineChannel($updateChannel, $whereChannel);
-                        }
-                    }
-                }
-
-                $this->commitTrans();
-                return $this->r(200, $this->lang("update_success"));
+            if (!$result) {
+                $this->rollbackTrans();
+                return $this->r(100, $this->lang("update_fail"));
             }
-            $this->rollbackTrans();
-            return $this->r(100, $this->lang("update_fail"));
+
+            // 只在 main_m_id 或 machine_type 变化时处理货道
+            if ($mainChanged || $typeChanged) {
+                if ($main_m_id > 0) {
+                    $from_main_m_id = $old_main_m_id > 0 ? $old_main_m_id : $main_m_id;
+                    $updateChannel = [];
+                    if ($mainChanged) {
+                        $updateChannel['m_id'] = $main_m_id;
+                        $updateChannel['machine_id'] = $mainM['machine_id'] ?? '';
+                        $updateChannel['ao_id'] = $mainM['ao_id'] ?? 0;
+                    }
+                    if ($typeChanged) {
+                        $updateChannel['channel_position'] = $newChannelPosition;
+                    }
+
+                    $updated = false;
+                    if ($updateChannel) {
+                        if ($typeChanged) {
+                            // 类型变化时，同步修正货道编码前缀：type=1 -> 01，type=2 -> 02
+                            $this->syncSubMachineChannelCodePrefix($from_main_m_id, $oldChannelPosition, $machine_type);
+                        }
+                        $updated = $this->updateSubMachineAdminChannels($from_main_m_id, $oldChannelPosition, $updateChannel);
+                    }
+
+                    if (!$updated && $old_main_m_id == 0) {
+                        // 原来未挂接，当前挂接时补建默认货道
+                        $this->addDefaultSubMachineChannels(
+                            $main_m_id,
+                            $mainM,
+                            $machine_type,
+                            $postData['machine_name'] ?? $m['machine_name']
+                        );
+                    }
+                } elseif ($main_m_id == 0 && $old_main_m_id > 0) {
+                    // 显式传 0 解绑主柜时，删除旧主柜下后台手动创建货道
+                    $this->deleteSubMachineAdminChannels($old_main_m_id, $oldChannelPosition);
+                }
+            }
+
+            $this->commitTrans();
+            return $this->r(200, $this->lang("update_success"));
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    private function getSubMachineChannelPosition($machine_type)
+    {
+        return intval($machine_type) == 1 ? 2 : 3;
+    }
+
+    private function addDefaultSubMachineChannels($main_m_id, $mainM, $machine_type, $channel_name)
+    {
+        $channelPosition = $this->getSubMachineChannelPosition($machine_type);
+        $channelAll = [];
+        for ($i = 1; $i <= 3; $i++) {
+            $channelAll[] = [
+                'm_id' => $main_m_id,
+                'machine_id' => $mainM['machine_id'] ?? '',
+                'ao_id' => $mainM['ao_id'] ?? 0,
+                'channel_code' => ($machine_type == 1 ? '010' : '020') . $i,
+                'channel_position' => $channelPosition,
+                'channel_name' => $channel_name,
+                'is_admin' => 1,
+                'width2' => 300,
+            ];
+        }
+        return $this->addMachineMoreChannel($channelAll);
+    }
+
+    private function updateSubMachineAdminChannels($main_m_id, $channelPosition, $updateData)
+    {
+        $whereChannel = [
+            ['m_id', '=', $main_m_id],
+            ['channel_position', '=', $channelPosition],
+        ];
+        if (!$this->getMachineChannelCount($whereChannel)) {
+            return false;
+        }
+        $this->updateMachineChannel($updateData, $whereChannel);
+        return true;
+    }
+
+    private function syncSubMachineChannelCodePrefix($main_m_id, $channelPosition, $machine_type)
+    {
+        $whereChannel = [
+            ['m_id', '=', $main_m_id],
+            ['channel_position', '=', $channelPosition],
+        ];
+        $channelList = $this->getMachineChannelList($whereChannel, 0, 'mc_id,channel_code', 'mc_id asc');
+        if (!$channelList) {
+            return false;
+        }
+
+        $prefix = intval($machine_type) === 1 ? '01' : '02';
+        foreach ($channelList as $index => $channel) {
+            $oldCode = strval($channel['channel_code'] ?? '');
+            $suffix = strlen($oldCode) > 2 ? substr($oldCode, 2) : strval($index + 1);
+            $newCode = $prefix . $suffix;
+            $this->updateMachineChannel([
+                'mc_id' => $channel['mc_id'],
+                'channel_code' => $newCode,
+            ]);
+        }
+        return true;
+    }
+
+    private function deleteSubMachineAdminChannels($main_m_id, $channelPosition)
+    {
+        $whereChannel = [
+            ['m_id', '=', $main_m_id],
+            ['channel_position', '=', $channelPosition],
+        ];
+        if (!$this->getMachineChannelCount($whereChannel)) {
+            return false;
+        }
+        $this->delMachineChannel($whereChannel);
+        return true;
     }
 
     /**
@@ -764,20 +834,12 @@ class MachineClient extends ManagementClient
         if($m['status'] == 1 ){
             return $this->r(100,$this->lang("VSubMachine.is_online_no_del"));
         }
-        $relation = $this->getMachineMainRelationFind(['b_mc_id' =>$m_id], 'main_mc_id');
-        $main_m_id = $relation['main_mc_id'] ?? 0;
+        $main_m_id = $m['main_m_id'] ?? 0;
         $where[] = ['m_id',"=",$m_id];
         $this->delMachineAuxiliary($where);
-        $this->delMachineMainRelation(['b_mc_id' => $m_id]);
         if($main_m_id){
             //如果生成了货道则删除货道信息,此处只能删除后台手动创建的货道
-            $whereChannel[] = ['m_id',"=",$main_m_id];
-            $whereChannel[] = ['channel_position',"in",[2,3]];
-            $whereChannel[] = ['is_admin','=',1];
-            $channelCount = $this->getMachineChannelCount($whereChannel);
-            if($channelCount){
-                $this->delMachineChannel($whereChannel);
-            }
+            $this->deleteSubMachineAdminChannels($main_m_id, $m['machine_type'] == 1 ? 2 : 3);
         }
         return $this->r(200,$this->lang("action_success"));
     }
@@ -913,91 +975,71 @@ class MachineClient extends ManagementClient
      */
     public function bindMainMachine($postData)
     {
-        $m_id = $postData['m_id'];
-        $main_m_id = $postData['main_m_id'];
-        
-        $m = $this->getMachineAuxiliaryFind(['m_id' => $m_id], "m_id,machine_id,machine_name,machine_type,status");
-        if(!$m) {
+        $m_id = intval($postData['m_id']);
+        $main_m_id = intval($postData['main_m_id']); // 允许为0，0表示解绑
+
+        $m = $this->getMachineAuxiliaryFind(['m_id' => $m_id], "m_id,machine_id,machine_name,machine_type,main_m_id");
+        if (!$m) {
             return $this->r(100, $this->lang("VSubMachine.no_data"));
         }
         $m = $m->toArray();
-        $machine_type = $m['machine_type'];
 
-        //查询此主柜是否已经关联过同类型的副柜
-        if ($this->checkMainMachineCabinetRelation($main_m_id, $machine_type)) {
-            $msg = $machine_type == 1 ? $this->lang("VMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
-            return $this->r(100, $msg);
+        $machine_type = intval($m['machine_type'] ?? 2);
+        $channelPosition = $this->getSubMachineChannelPosition($machine_type);
+        $old_main_m_id = intval($m['main_m_id'] ?? 0);
+
+        if ($old_main_m_id === $main_m_id) {
+            return $this->r(200, $this->lang("action_success"));
         }
 
-        $channelPosition = ($machine_type == 1 ? 2 : 3);
-        $hasAutoReported = $this->getMachineChannelCount([
-            ['m_id', '=', $main_m_id],
-            ['channel_position', '=', $channelPosition],
-            ['is_admin', '=', 2]
-        ]);
-        if ($hasAutoReported > 0) {
-            return $this->r(100, $this->lang("VSubMachine.auto_reported_no_add"));
+        $mainM = null;
+        if ($main_m_id > 0) {
+            // 查询此主柜是否已经关联过同类型副柜（排除当前副柜）
+            $existsWhere = [
+                ['main_m_id', '=', $main_m_id],
+                ['machine_type', '=', $machine_type],
+                ['m_id', '<>', $m['m_id']],
+            ];
+            $AuxiliaryCount = $this->getMachineAuxiliaryCount($existsWhere);
+            if ($AuxiliaryCount > 0) {
+                $msg = $machine_type == 1 ? $this->lang("VMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
+                return $this->r(100, $msg);
+            }
+
+            $mainM = $this->getMachineFind(['m_id' => $main_m_id]);
+            if (!$mainM) {
+                return $this->r(100, $this->lang("VMachine.machine_no_data"));
+            }
+            $mainM = $mainM->toArray();
         }
-        
-        $mainM = $this->getMachineFind(['m_id' => $main_m_id]);
-        if(!$mainM){
-            return $this->r(100, $this->lang("VMachine.machine_no_data"));
-        }
-        $mainM = $mainM->toArray();
 
         $this->startTrans();
         try {
-            // 更新副柜状态和ao_id
+            // 仅更新副柜与主柜绑定关系，不处理machine_type变化
             $updateSub = [
                 'm_id' => $m_id,
-                'ao_id' => $mainM['ao_id'],
-                'status' => 3, // 已挂接未启用
+                'main_m_id' => $main_m_id,
+                'status' => $main_m_id > 0 ? 3 : 2,
+                'ao_id' => $mainM['ao_id'] ?? 0,
             ];
             $this->updateMachineAuxiliary($updateSub);
 
-            // 查询旧的关联关系
-            $oldRelation = $this->getMachineMainRelationFind(['b_mc_id' => $m_id], 'main_mc_id');
-            $old_main_m_id = $oldRelation['main_mc_id'] ?? 0;
+            if ($main_m_id > 0) {
+                $from_main_m_id = $old_main_m_id > 0 ? $old_main_m_id : $main_m_id;
+                $updateChannel = [
+                    'm_id' => $main_m_id,
+                    'machine_id' => $mainM['machine_id'] ?? '',
+                    'ao_id' => $mainM['ao_id'] ?? 0,
+                ];
+                $updated = $this->updateSubMachineAdminChannels($from_main_m_id, $channelPosition, $updateChannel);
 
-            // 修改关联关系
-            $this->delMachineMainRelation(['b_mc_id' => $m_id]);
-            $relationData = [
-                'main_mc_id' => $main_m_id,
-                'b_mc_id' => $m_id,
-            ];
-            $this->addMachineMainRelation($relationData);
-
-            // 处理货道逻辑
-            if ($old_main_m_id == 0) {
-                // 首次挂接，创建默认货道
-                $channelAll = [];
-                for ($i = 1; $i <= 3 ; $i++) {
-                    $channelData = [
-                        'm_id' => $main_m_id,
-                        'machine_id' => $mainM['machine_id'] ?? '',
-                        'ao_id' => $mainM['ao_id'],
-                        'channel_code' => ($machine_type == 1 ? '01' : '02').$i,
-                        'channel_position' => $machine_type == 1 ? 2 : 3,
-                        'channel_name' => $m['machine_name'],
-                        'width2' => 300,
-                    ];
-                    $channelAll[] = $channelData;
+                if (!$updated && $old_main_m_id == 0) {
+                    // 首次挂接：创建默认货道
+                    $this->addDefaultSubMachineChannels($main_m_id, $mainM, $machine_type, $m['machine_name']);
                 }
-                $this->addMachineMoreChannel($channelAll);
-            } else {
-                // 更换主柜，更新货道归属
-                if ($old_main_m_id != $main_m_id) {
-                    $updateChannel = [
-                        'm_id' => $main_m_id,
-                        'machine_id' => $mainM['machine_id'] ?? '',
-                        'ao_id' => $mainM['ao_id'],
-                    ];
-                    $whereChannel = [
-                        ['m_id', '=', $old_main_m_id],
-                        ['channel_position', 'in', [2,3]]
-                    ];
-                    $this->updateMachineChannel($updateChannel, $whereChannel);
-                }
+            } elseif ($old_main_m_id > 0) {
+                // main_m_id=0 解绑：删除旧主柜下后台手动创建货道
+                $this->deleteSubMachineAdminChannels($old_main_m_id, $channelPosition);
             }
 
             $this->commitTrans();

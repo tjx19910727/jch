@@ -105,4 +105,17 @@ class CardClient extends ManagementClient
     {
         return $this->changeBalance($data);
     }
+
+    public function changeCardPwd($data)
+    {
+        if($data['password'] !== $data['confirm_password']) {
+            return $this->r(101, $this->lang('VCard.password_not_match'));
+        }
+        $where['card_no'] = $data['card_no'] ?? 0;
+        $card = $this->getCardCount($where);
+        if(!$card){
+            return $this->r(101, $this->lang('VCard.card_no_no_data'));
+        }
+        return $this->updatePwd($data);
+    }
 }

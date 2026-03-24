@@ -36,7 +36,7 @@ class SubMachine extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machine->getMFind($where,$this->field);
+        return $this->app->machine->getSubMFind($where,$this->field);
     }
 
     public function add()

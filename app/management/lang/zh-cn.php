@@ -696,7 +696,10 @@ return [
         "balance_changed_require" => "余额变动值不能为空",
         "card_no_no_data" => "查无会员卡信息",
         "balance_not_enough" => "卡余额不足",
-        "balance_action_fail" => "余额变动失败"
+        "balance_action_fail" => "余额变动失败",
+        "password_require" => "新密码不能为空",
+        "confirm_password_require" => "确认密码不能为空",
+        "password_not_match" => "两次输入的密码不一致",
     ],
     "VMachineLevelDesc" => [
         "name_require" => "等级名称不能为空",
@@ -712,6 +715,8 @@ return [
         "main_machine_only_one_arc" => "一个主设备只能绑定一个弧柜",
         "no_data" => "副柜信息不存在",
         "is_online_no_del" => "副柜已经在线，无法删除",
-        "auto_reported_no_add" => "此主柜下已自动上报副柜信息，无法挂接"
+        "auto_reported_no_add" => "此主柜下已自动上报副柜信息，无法挂接",
+        "machine_type_require" => "副柜类型不能为空",
+        "type_change_require_unbind" => "副柜类型变更需要先解绑设备",
     ],
 ]; 

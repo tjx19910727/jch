@@ -693,6 +693,9 @@ return [
         "balance_changed_require" => "balance_changed cannot be empty",
         "card_no_no_data" => "No card information found",
         "balance_not_enough" => "Card balance is not enough",
+        "password_require" => "New password cannot be empty",
+        "confirm_password_require" => "Confirm password cannot be empty",
+        "password_not_match" => "New password and confirm password do not match",
     ],
     "VMachineLevelDesc" => [
         "name_require" => "Level Name cannot be empty",
@@ -709,5 +712,7 @@ return [
         "no_data" => "No sub machine information found",
         "is_online_no_del" => "Sub machine is online, cannot be deleted",
         "auto_reported_no_add" => "Sub machine is automatically reported online, cannot be added",
+        "machine_type_require" => "Machine type cannot be empty",
+        "type_change_require_unbind" => "Machine type change requires unbinding sub machine",
     ],
 ];

@@ -1234,14 +1234,6 @@ ALTER TABLE kiosk.machine_config
 ALTER TABLE kiosk.machine
   ADD COLUMN `vending_machine_type` tinyint(1) DEFAULT '1' COMMENT '售货机类型：1-主柜，2-弧柜，3-边柜' AFTER `device_type`;
 
-CREATE TABLE `machine_main_relation` (
-  `main_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '主柜machine_id',
-  `b_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '边柜machine_id',
-  `h_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '弧柜machine_id',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY (`main_mc_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备关联关系表';
-
 #20260312
 ALTER TABLE kiosk.machine_channel
   ADD COLUMN `old_retail_price` decimal(10,2) DEFAULT '-1.00' COMMENT '旧零售价' AFTER `retail_price`;
@@ -1288,6 +1280,7 @@ ALTER TABLE kiosk.card ADD COLUMN `password` varchar(32) CHARACTER SET utf8mb4 C
 CREATE TABLE `machine_auxiliary` (
   `m_id` bigint(20) NOT NULL AUTO_INCREMENT,
   `machine_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '设备编号',
+  `main_m_id` int(10) NOT NULL DEFAULT '0' COMMENT '主柜m_id',
   `machine_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '设备名称',
   `machine_serial_number` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '设备序列号',
   `address` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '地址',

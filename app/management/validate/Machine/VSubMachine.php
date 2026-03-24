@@ -17,6 +17,7 @@ class VSubMachine extends VCommon
         "m_id" => "require",
         "main_m_id" => "require",
         "machine_id" => "require|alphaDash|unique:machine_auxiliary",
+        "machine_type" => "require",
     ];
 
     protected $message = [
@@ -25,11 +26,12 @@ class VSubMachine extends VCommon
         "machine_id.require" => "VMachine.machine_id_require",
         "machine_id.alphaDash" => "VMachine.machine_id_alphaDash",
         "machine_id.unique" => "VMachine.machine_id_exists",
+        "machine_type.require" => "VSubMachine.machine_type_require",
     ];
 
     protected $scene = [
-        "add" => ["main_m_id","machine_id"],
-        "update" => ["m_id,main_m_id"],
+        "add" => ["main_m_id","machine_id","machine_type"],
+        "update" => ["m_id","main_m_id","machine_type"],
         "del" => ["m_id"],
     ];
 }

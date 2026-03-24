@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 trait MachineInfoTrait
 {
     use MachineMainRelationTrait;
+    use MachineChannelTrait;
     /**
      * 获取设备信息字段值
      * @param $where
@@ -39,9 +40,13 @@ trait MachineInfoTrait
         $info = MachineInfoModel::getFind($where,$field,$order);
         if($info){
             $info = $info->toArray();
-            $count = $this->getMachineMainRelationCount(['main_mc_id' => $info['m_id']],'*');
-             // 20250613 增加副柜2状态，查询条件增加副柜状态为2的记录数，如果大于0，说明有副柜不可用
+            //$count = $this->getMachineMainRelationCount(['main_mc_id' => $info['m_id']],'*');
+            //直接查询边柜货道数量，数量大于0则有边柜
+            $count = $this->getMachineChannelCount(['m_id' => $info['m_id'],'channel_position' => 3]);
             $info['sub_cabinet_2'] = $count > 0 ? 1 : 2;
+            //查询此设备挂接的副柜
+            $subCabinet = $this->getMachineAuxiliaryMachineColumn(['main_mc_id' => $info['m_id']]);
+            $info['sub_cabinet_list'] = $subCabinet ? implode(',',$subCabinet) : '';
         }
         return $info;
     }

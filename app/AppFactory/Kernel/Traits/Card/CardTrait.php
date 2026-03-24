@@ -218,4 +218,11 @@ trait CardTrait
             return $this->r(100, $this->lang("VCard.balance_action_fail") .'：'. $e->getMessage());
         }
     }
+
+    public function updatePwd($data)
+    {
+        $update['password'] = md5($data['password'] . $this->salt);
+        $where['card_no'] = $data['card_no'];
+        return CardModel::update($update,$where);
+    }
 }

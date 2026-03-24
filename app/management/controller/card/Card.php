@@ -43,12 +43,26 @@ class Card extends Common
         return $this->app->card->importCards(input());
     }
 
+    //充值
     public function changeBalance()
     {
         try {
             $this->validate(input(), $this->validatePath . '.addBalance');
             $postData = input();
             $res = $this->app->card->changeCardBalance($postData);
+            return returnData($res);
+        } catch (\Exception $e) {
+            return $this->app->card->rFail(lang("VCard.balance_action_fail") .'：'. $e->getMessage());
+        }
+    }
+
+    //改密
+    public function changePwd()
+    {
+        try {
+            $this->validate(input(), $this->validatePath . '.changePwd');
+            $postData = input();
+            $res = $this->app->card->changeCardPwd($postData);
             return returnData($res);
         } catch (\Exception $e) {
             return $this->app->card->rFail(lang("VCard.balance_action_fail") .'：'. $e->getMessage());
