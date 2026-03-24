@@ -41,6 +41,7 @@ use app\management\validate\Machine\VMachine;
 use app\AppFactory\Kernel\Traits\Machine\MachineLevelDescTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
 use app\AppFactory\Kernel\Support\Excel;
+use think\facade\Db;
 
 class MachineClient extends ManagementClient
 {
@@ -462,6 +463,8 @@ class MachineClient extends ManagementClient
     // }
     public function getSubMList($where,$pageNum = 0,$field = "*",$order = "")
     {
+        $this->syncSubMachineAuxiliary();
+
         if ($this->manager['pid'] > 0) {
             $where[] = ['manager_id', '=', $this->manager['manager_id']];
         }
@@ -478,6 +481,66 @@ class MachineClient extends ManagementClient
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
             return $item;
         }));
+    }
+
+    /**
+     * 在副柜列表查询链路中补齐自动上报但未建档的副柜关系
+     */
+    private function syncSubMachineAuxiliary()
+    {
+        try {
+            $infoWhere[] = ['mi.sub_cabinet', '=', 1];
+            if ($this->manager['pid'] > 0) {
+                $authMIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+                if (!$authMIds) {
+                    return;
+                }
+                $infoWhere[] = ['mi.m_id', 'in', $authMIds];
+            }
+
+            $missingList = Db::name('machine_info')->alias('mi')
+                ->join('machine m', 'm.m_id = mi.m_id')
+                ->join('machine_channel mc', 'mc.m_id = mi.m_id AND mc.channel_position = 2')
+                ->join('machine_auxiliary ma_arc', 'ma_arc.main_m_id = mi.m_id AND ma_arc.machine_type = 1', 'LEFT')
+                ->where($infoWhere)
+                ->whereNull('ma_arc.m_id')
+                ->field([
+                    'mi.m_id' => 'main_m_id',
+                    'm.machine_name',
+                    'm.machine_id',
+                    'm.street',
+                    'm.ao_id',
+                    'm.manager_id',
+                ])
+                ->group('mi.m_id')
+                ->select()
+                ->toArray();
+
+            if (!$missingList) {
+                return;
+            }
+
+            foreach ($missingList as $row) {
+                $mainMId = intval($row['main_m_id'] ?? 0);
+                if ($mainMId <= 0) {
+                    continue;
+                }
+
+                $insertAux = [
+                    'main_m_id' => $mainMId,
+                    'machine_type' => 1,//弧柜，兼容之前没有区分的情况
+                    'machine_name' => $row['machine_name'] ?? '',
+                    'machine_id' => $row['machine_id'] ? $row['machine_id'] .'-'.mt_rand(1000, 9999): mt_rand(1000000, 9999999),
+                    'street' => $row['street'] ?: '',
+                    'ao_id' => $row['ao_id'] ?: $this->manager['ao_id'],
+                    'manager_id' => $row['manager_id'] ?: $this->manager['manager_id'],
+                    'status' => 1,
+                ];
+                $this->addMachineAuxiliary($insertAux);
+            }
+        } catch (\Exception $e) {
+            actionException($e, 1);
+        }
     }
 
     public function getSubMFind($where,$field = "")
@@ -758,7 +821,7 @@ class MachineClient extends ManagementClient
             $channelAll[] = [
                 'm_id' => $main_m_id,
                 'machine_id' => $mainM['machine_id'] ?? '',
-                'ao_id' => $mainM['ao_id'] ?? 0,
+                'ao_id' => $mainM['ao_id'] ?? $this->manager['ao_id'],
                 'channel_code' => ($machine_type == 1 ? '010' : '020') . $i,
                 'channel_position' => $channelPosition,
                 'channel_name' => $channel_name,
