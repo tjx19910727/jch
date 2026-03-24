@@ -1654,8 +1654,9 @@ class ApiClient extends ReceiveBaseClient
         ];
 
         // 该接口为机台主动拉取（兜底）接口：构造 payload 并返回给机台（device 端请求即为确认接收）
-        // $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
-        // actionLog(@obj2arr($result), 'Http兜底方案下发数据结果');
+        $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
+        actionLog(@obj2arr($result), 'Http兜底方案下发数据结果');
+        sleep(1);
         // 标记订单出货已回填（因为是机台主动获取并已返回 payload，可认为设备已接收）
         $this->order['out_status'] = 2;
         $this->order['pay_status'] = 3;

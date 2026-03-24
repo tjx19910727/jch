@@ -51,6 +51,7 @@ trait AfterOrderPaymentTrait
         $this->order['pay_time'] = time();
 
         actionLog($this->order, '更新支付时间成功');
+        sleep(1);
         if ($this->order['order_type'] != 4 && $this->order['out_status'] == 1) {
             $this->outGoods();
             //这里要新增一步处理。即判断当前订单是否为虚拟货道组合商品，如果是，则需要将所有子商品进行出货处理
@@ -77,7 +78,6 @@ trait AfterOrderPaymentTrait
         $this->machine['machine_name'] = $this->order['machine_name'];
         $this->machine['m_id'] = $this->order['m_id'];
         $this->machine['ao_id'] = $this->order['ao_id'];
-        try {
             @$this->sendNotice();
         } catch (\Exception $e) {
             actionException($e, 1, 'tryCatch');
