@@ -26,6 +26,7 @@ class StrategyPayee extends Common
             case 4: $checkName = "addJdCashier";  break;
             case 5: $checkName = "addTrip";  break;
             case 9: $checkName = "addShopPoints";  break;
+            case 20: $checkName = "addBalance";  break;
         }
         if (!$checkName) return returnValidate("未定义收款策略名称");
         $check = $this->validate($checkData,$this->validatePath . $checkName);
