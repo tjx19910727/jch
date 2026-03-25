@@ -73,13 +73,20 @@ trait AfterOrderRefundTrait
         if ($revenue) {
             foreach ($revenue as $key => $value) {
                 $update['sor_id'] = $value['sor_id'];
-                $refundRevenueAmount = bcmul($this->refund['refund_amount'],bcdiv($value['income_value'],100,2),3);
+                // defensive: ensure income_value is numeric
+                $incomeValue = isset($value['income_value']) && is_numeric($value['income_value']) ? $value['income_value'] : 0;
+                $refundRevenueAmount = 0;
+                if ($incomeValue > 0) {
+                    $refundRevenueAmount = bcmul($this->refund['refund_amount'], bcdiv($incomeValue, 100, 4), 3);
+                }
                 // 待分润，
                 $update['refund_amount'] = bcadd($value['refund_amount'],$refundRevenueAmount,3);
                 // 已分润， 电子钱包或其他线上分账方式，减账号电子钱包
                 if ($value['status'] == 2) {
                     // 减电子钱包
-                    $decResult = $this->decAuthManager(['manager_id' => $value['beneficiary']],'balance',$refundRevenueAmount);
+                    // older code referenced 'beneficiary' but revenue rows store manager id in 'manager_id'
+                    $beneficiaryManager = $value['manager_id'] ?? $value['beneficiary'] ?? 0;
+                    $decResult = $this->decAuthManager(['manager_id' => $beneficiaryManager], 'balance', $refundRevenueAmount);
                     if (!$decResult) {
                         return $this->r(100,'减分润账号电子钱包余额失败');
                     }

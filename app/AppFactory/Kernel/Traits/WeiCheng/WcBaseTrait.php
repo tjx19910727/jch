@@ -196,6 +196,7 @@ trait WcBaseTrait
                 'channel_code' => 'Z10',
                 'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
                 'isNeedReserve' => $wc_goods['isNeedReserve'] ?? '0',
+                'gift_points' => $wc_goods['present_integral'] ?? 0,
             ];
             if (!$wc_goods_local) {
                 return $this->addWcGoodsLocal($setData);
@@ -222,6 +223,7 @@ trait WcBaseTrait
                     'sell_channel' => 3,
                     'desc' => $good['notice'] ?? '',
                     'status' => 1,
+                    'gift_points' => $good['present_integral'] ?? 0,
                     'channel_code' => 'Z10',
                     'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
                 ];
@@ -252,6 +254,7 @@ trait WcBaseTrait
                     'sell_channel' => 3,
                     'desc' => $combind_good['notice'] ?? '',
                     'status' => 1,
+                    'gift_points' => $combind_good['present_integral'] ?? 0,
                     'channel_code' => 'Z10',
                     'isNeedReserve' => $combind_good['isNeedReserve'] ?? '0',
                 ];
