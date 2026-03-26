@@ -8,7 +8,7 @@
 
 namespace app\AppFactory\Management\Machine;
 
-
+use app\AppFactory\Kernel\Support\SimiotService\Simiot;
 use app\AppFactory\Kernel\Support\ZdSimService\ZdSim;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Management\ManagementClient;
@@ -65,8 +65,17 @@ class MachineInfoClient extends ManagementClient
                 if (!$uResult) return $this->rFail($this->lang("update_fail"));
                 return $this->r(200,$this->lang("query_success"),$update);
             } else {
+                
+                //查询新物联接口
+                $result = Simiot::queryCard($postData['iccid']);
+                $result = json2arr($result);
                 return $this->rFail($result['resultmsg'] ?? '');
             }
+        }else{
+            //查询新物联接口
+            $result = Simiot::queryCard($postData['iccid']);
+            $result = json2arr($result);
+            return $this->rFail($result['resultmsg'] ?? '');
         }
         return $this->rFail();
     }

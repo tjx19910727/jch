@@ -1,0 +1,164 @@
+<?php
+/**
+ * Created by PhpStorm.
+ * User: Administrator
+ * Date: 2026/3/26
+ * Time: 10:00
+ */
+
+namespace app\AppFactory\Kernel\Support\SimiotService;
+
+
+define("SIMIOT_QUERY_CARD", "https://iot.simiot.com/api/client/v1");
+
+/**
+ * Class Simiot
+ * @method static queryCard($iccid)  查询卡信息
+ * @package app\AppFactory\Kernel\Support\SimiotService
+ */
+class Simiot
+{
+    /**
+     * 错误信息
+     * @var string
+     */
+    public $curlError;
+
+    /**
+     * header头信息
+     * @var string
+     */
+    public $headerStr;
+
+    /**
+     * @var mixed appid
+     */
+    public $appId;
+
+    /**
+     * @var mixed secret
+     */
+    public $secret;
+
+    /**
+     * 请求状态
+     * @var int
+     */
+    public $status;
+
+    /**
+     * 初始化
+     * Simiot constructor.
+     */
+    public function __construct()
+    {
+        $this->appId = env("Simiot.appid");
+        $this->secret = env("Simiot.secret");
+    }
+
+    /**
+     * 静态化调用
+     * @param $name
+     * @param $arguments
+     * @return mixed
+     */
+    public static function __callStatic($name, $arguments)
+    {
+        $app = new self();
+        $name = "_" . $name;
+        return $app->$name(...$arguments);
+    }
+
+    /**
+     * 查询卡信息
+     * @param string $iccid
+     * @return array
+     */
+    public function _queryCard($iccid)
+    {
+        $data = [
+            'appid' => $this->appId,
+            'timestamp' => time(),
+            'iccids' => $iccid,
+        ];
+        $data['sign'] = $this->makePostSign($data);
+
+        $result = $this->request(SIMIOT_QUERY_CARD, 'POST', $data, [
+            'Content-Type: application/x-www-form-urlencoded;charset=utf-8'
+        ]);
+        var_dump($result);
+        if ($result === false) {
+            return ['code' => -1, 'message' => 'request new sim api failed'];
+        }
+
+        $result = json_decode($result, true);
+        if (!is_array($result)) {
+            return ['code' => -1, 'message' => 'new sim api response parse failed'];
+        }
+
+        return ['code' => 0, 'result' => $result];
+    }
+
+    /**
+     * 生成签名
+     * 所有参数按ASCII升序，key=value&key=value...拼接后直接拼接secret，
+     * 然后base64，再sha256
+     * @param array $data
+     * @return string
+     */
+    public function makePostSign($data)
+    {
+        ksort($data, SORT_STRING);
+        $pairList = [];
+        foreach ($data as $key => $value) {
+            $pairList[] = $key . "=" . $value;
+        }
+        $str = implode("&", $pairList) . $this->secret;
+        return hash('sha256', base64_encode($str));
+    }
+
+    /**
+     * curl 请求
+     * @param string $url 请求地址
+     * @param string $method 请求方式
+     * @param array $data 请求数据
+     * @param bool|array $header 请求header头
+     * @param int $timeout 超时秒数
+     * @return bool|string
+     */
+    public function request($url, $method = 'POST', $data = array(), $header = false, $timeout = 15)
+    {
+        $this->status = null;
+        $this->curlError = null;
+        $this->headerStr = null;
+
+        $curl = curl_init($url);
+        $method = strtoupper($method);
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, $method);
+        if ($method == 'POST') {
+            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($data));
+        }
+        curl_setopt($curl, CURLOPT_TIMEOUT, $timeout);
+        if ($header !== false) {
+            curl_setopt($curl, CURLOPT_HTTPHEADER, $header);
+        }
+
+        curl_setopt($curl, CURLOPT_FAILONERROR, false);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_HEADER, true);
+        curl_setopt($curl, CURLINFO_HEADER_OUT, true);
+
+        if (1 == strpos("$" . $url, "https://")) {
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
+        }
+
+        $this->curlError = curl_error($curl);
+
+        list($content, $status) = [curl_exec($curl), curl_getinfo($curl), curl_close($curl)];
+        $this->status = $status;
+        $this->headerStr = trim(substr($content, 0, $status['header_size']));
+        $content = trim(substr($content, $status['header_size']));
+        return (intval($status["http_code"]) === 200) ? $content : false;
+    }
+}
