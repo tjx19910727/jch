@@ -131,6 +131,11 @@ class PaymentClient extends PayBaseClient
                 return $this->rFail($this->lang("VOrderPay.auth_code_not_match_pay_type"));
             $this->order['pay_code'] = $this->data['authCode'];
         }
+        //余额支付
+        if ($this->order['pay_type'] == 20 && !empty($this->data['card_no'])) {
+            $this->order['pay_code'] = $this->data['card_no'];
+        }
+
 
         $where['sm.s_type'] = 1;
         $where['sp.status'] = 1;

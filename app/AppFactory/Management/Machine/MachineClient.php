@@ -49,7 +49,7 @@ class MachineClient extends ManagementClient
     use MachineTrait,MachineChannelTrait,MachineChannelReplenishmentTrait,MachineChannelStockTrait,MachineCheckStockTrait,MachineConfigTrait,MachineErrorCodeTrait,
         MachineGoodsTrait,
         MachineInfoTrait,MachineGroupTrait,MachineGroupMgTrait,MachineHelpTrait,MachineMqRecordTrait,MachineOnOffTrait,
-        MachineOnlineTrait,MachineOnlineDetailsTrait,MachineVersionTrait,MachineVersionPlanTrait,MachineViewTrait,MachineLevelDescTrait,MachineMainRelationTrait;
+        MachineOnlineTrait,MachineOnlineDetailsTrait,MachineVersionTrait,MachineVersionPlanTrait,MachineViewTrait,MachineLevelDescTrait;
     use SaleOrdersMachineCountTrait;
     use AuthManagerMachineTrait,AuthOrganizationTrait;
     use MachineAuxiliaryTrait;
@@ -550,10 +550,12 @@ class MachineClient extends ManagementClient
             $item = $item->toArray();
             $item['main_machine_id'] = '';
             $item['main_machine_name'] = '';
+            $item['machine_channel'] = [];
             if ($item['main_m_id'] > 0) {
                 $mainM = $this->getMachineFind(['m_id' => $item['main_m_id']], 'machine_id,machine_name');
                 $item['main_machine_id'] = $mainM['machine_id'] ?? '';
                 $item['main_machine_name'] = $mainM['machine_name'] ?? '';
+                $item['machine_channel'] = $this->getMachineChannelList(['m_id' => $item['main_m_id'],'channel_position' => $item['machine_type'] == 1 ? 2 :3]);
             }
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
         }
@@ -612,12 +614,12 @@ class MachineClient extends ManagementClient
         $main_m_id = 0;
         if(isset($postData['main_m_id'])){
             $main_m_id = $postData['main_m_id'] ;
-            unset($postData['main_m_id']);
         }
         $machine_type = $postData['machine_type'] ?? 2; // 默认边柜
         if (!in_array(intval($machine_type), [1, 2])) $machine_type = 2;
         $postData['status'] = 2;//未挂接未启用
         $is_add = true;
+        $postData['ao_id'] = $this->manager['ao_id'] ?? 0;
         if($main_m_id){
             $mainM = $this->getMachineFind(['m_id' => $main_m_id]);
             if(!$mainM){
@@ -631,7 +633,7 @@ class MachineClient extends ManagementClient
             ];
             $AuxiliaryCount = $this->getMachineAuxiliaryCount($existsWhere);
             if ($AuxiliaryCount > 0) {
-                $msg = $machine_type == 1 ? $this->lang("VMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
+                $msg = $machine_type == 1 ? $this->lang("VSubMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
                 return $this->r(100, $msg);
             }
             $channelPosition = $this->getSubMachineChannelPosition($machine_type);
@@ -727,6 +729,7 @@ class MachineClient extends ManagementClient
             //更新先不允许修改类型，如果要修改类型了，必须先解绑主柜，等修改完类型后再挂接主柜
             return $this->r(100, $this->lang("VSubMachine.type_change_require_unbind"));
         }
+        $postData['ao_id'] = $this->manager['ao_id'] ?? 0;
         $mainM = null;
         $postData['status'] = 2;//未挂接未启用
         if ($main_m_id > 0) {
@@ -738,7 +741,7 @@ class MachineClient extends ManagementClient
             ];
             $AuxiliaryCount = $this->getMachineAuxiliaryCount($existsWhere);
             if ($AuxiliaryCount > 0) {
-                $msg = $machine_type == 1 ? $this->lang("VMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
+                $msg = $machine_type == 1 ? $this->lang("VSubMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
                 return $this->r(100, $msg);
             }
 
@@ -747,7 +750,7 @@ class MachineClient extends ManagementClient
                 return $this->r(100, $this->lang("VMachine.machine_no_data"));
             }
             $mainM = $mainM->toArray();
-            $postData['ao_id'] = $mainM['ao_id'];
+            $postData['ao_id'] = $mainM['ao_id'] ?? 0;
             $postData['status'] = 3;//已挂接未启用
         }
 
@@ -1065,7 +1068,7 @@ class MachineClient extends ManagementClient
             ];
             $AuxiliaryCount = $this->getMachineAuxiliaryCount($existsWhere);
             if ($AuxiliaryCount > 0) {
-                $msg = $machine_type == 1 ? $this->lang("VMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
+                $msg = $machine_type == 1 ? $this->lang("VSubMachine.main_machine_only_one_arc") : $this->lang("VSubMachine.main_machine_only_one_sub");
                 return $this->r(100, $msg);
             }
 

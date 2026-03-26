@@ -27,6 +27,33 @@ class CardClient extends ManagementClient
         return $this->rA($this->addCard($postData));
     }
 
+    public function addSingleCard($postData)
+    {
+        try {
+            $card_no = $postData['card_no'] ?? '';
+            $card_show_no = $postData['card_show_no'] ?? '';
+            $count = $this->getCardCount(['card_no' => $card_no]);
+            if ($count) {
+                return $this->r(100, lang('VCard.card_no_exists'));
+            }
+            $show_count = $this->getCardCount(['card_show_no' => $card_show_no]);
+            if ($show_count) {
+                return $this->r(100, lang('VCard.card_show_no_exists'));
+            }
+
+            $insert = [
+                'card_no' => $card_no,
+                'card_show_no' => $card_show_no,
+                'name' => $postData['name'] ?? '',
+                'status' => $postData['status'] ?? 0,
+            ];
+            return $this->rA($this->addCard($insert));
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
     public function updateCardInfo($update, $where = [], $field = [])
     {
         return $this->rU($this->updateCard($update, $where, $field));
@@ -69,7 +96,7 @@ class CardClient extends ManagementClient
             $update_card_no_arr = array_column($update_card_lists,'card_no');
 
             $path = root_path() . "public" . $data['file_path'];
-            $title = ["card_show_no", "card_no"];
+            $title = ["card_show_no", "card_no", "name", "balance", "status"];
             $cards = Excel::importExcel($path, $title);
             $import_cards = [];
             $result = true;
@@ -77,11 +104,22 @@ class CardClient extends ManagementClient
                 if(in_array($v['card_no'], $update_card_no_arr)) {
                     $update_card['card_show_no'] = intval($v['card_show_no']); 
                     $update_card['card_show_no'] = str_pad($update_card['card_show_no'], 10, "0", STR_PAD_LEFT);
-                    $result = $this->updateCard(['card_show_no' => $update_card['card_show_no']], ['card_no' => intval($v['card_no'])] );
+                    $update_card['name'] = trim((string)($v['name'] ?? ''));
+                    $update_card['balance'] = floatval($v['balance'] ?? 0);
+                    $update_card['status'] = intval($v['status'] ?? 0) === 1 ? 1 : 0;
+                    $result = $this->updateCard([
+                        'card_show_no' => $update_card['card_show_no'],
+                        'name' => $update_card['name'],
+                        'balance' => $update_card['balance'],
+                        'status' => $update_card['status']
+                    ], ['card_no' => intval($v['card_no'])] );
                 }elseif(!in_array($v['card_no'], $card_no_arr)){
                     $import_card['card_no'] = intval($v['card_no']); 
                     $import_card['card_show_no'] = intval($v['card_show_no']); 
                     $import_card['card_show_no'] = str_pad($import_card['card_show_no'], 10, "0", STR_PAD_LEFT);
+                    $import_card['name'] = trim((string)($v['name'] ?? ''));
+                    $import_card['balance'] = floatval($v['balance'] ?? 0);
+                    $import_card['status'] = intval($v['status'] ?? 0) === 1 ? 1 : 0;
                     $import_cards[] = $import_card;
                 }
             }
@@ -99,6 +137,32 @@ class CardClient extends ManagementClient
             actionException($e, 1);
             return $this->rValidate($e->getMessage());
         }
+    }
+
+    public function exportCards($where)
+    {
+        $field = 'card_show_no,card_no,name,balance,points,status';
+        $list = $this->getCardList($where, 0, $field, 'card_no desc');
+        if ($list) {
+            $list = $list->toArray();
+            if ($list) {
+                foreach ($list as $key => $item) {
+                    $item['status'] = $item['status'] == 1 ? '激活' : '未激活';
+                    $list[$key] = $item;
+                }
+                $title = [
+                    'card_show_no' => '卡面号',
+                    'card_no' => '芯片号',
+                    'name' => '姓名',
+                    'balance' => '余额',
+                    'points' => '积分',
+                    'status' => '状态',
+                ];
+                $filename = '导出卡信息_' . date('YmdHis');
+                return $this->sendToExport('卡管理-卡列表', $filename, $title, $list);
+            }
+        }
+        return $this->rFail($this->lang('query_fail'));
     }
 
     public function changeCardBalance($data)

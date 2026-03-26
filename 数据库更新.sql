@@ -1275,6 +1275,9 @@ CREATE TABLE `card_balance_change_logs` (
 
 ALTER TABLE kiosk.card ADD COLUMN `balance` decimal(12,2) DEFAULT 0 COMMENT '卡余额' AFTER points;
 ALTER TABLE kiosk.card ADD COLUMN `password` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '密码' AFTER points;
+ALTER TABLE kiosk.card ADD COLUMN `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '余额卡激活状态' AFTER points;
+ALTER TABLE kiosk.card ADD COLUMN `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '余额卡持有人姓名' AFTER points;
+ALTER TABLE kiosk.card ADD COLUMN `activation_time` int(11) NOT NULL DEFAULT 0 COMMENT '余额卡激活时间' AFTER points;
 
 #20260320
 CREATE TABLE `machine_auxiliary` (
@@ -1299,3 +1302,42 @@ CREATE TABLE `machine_auxiliary` (
 
 ALTER TABLE kiosk.machine_channel
 ADD COLUMN `is_admin` TINYINT(1) DEFAULT 2 COMMENT '是否后台创建 1是 2否' AFTER `mg_id`;
+
+#20260326
+CREATE TABLE `activity_card_activation` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '卡激活活动ID',
+  `pick_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '卡激活活动名称',
+  `money` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '卡激活活动金额',
+  `desc` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '活动描述',
+  `start_time` int DEFAULT NULL COMMENT '开始时间',
+  `end_time` int DEFAULT NULL COMMENT '结束时间',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态，1：未开始，2：进行中，3：已结束，4：主动下架',
+  `ao_id` int DEFAULT '0' COMMENT '组织ID',
+  `creator` int DEFAULT NULL COMMENT '创建人ID',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  `update_time` int DEFAULT NULL COMMENT '修改时间',
+  PRIMARY KEY (`id`),
+  KEY `start_time` (`start_time`) USING BTREE,
+  KEY `end_time` (`end_time`) USING BTREE,
+  KEY `status` (`status`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='卡激活活动表';
+
+CREATE TABLE `activity_card_activation_detail` (
+  `acd_id` int NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `aca_id` int DEFAULT '0' COMMENT '活动ID',
+  `money` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '实际激活时赠送的金额',
+  `order_id` int DEFAULT NULL COMMENT '订单ID',
+  `trade_no` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '订单编号',
+  `card_no` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '卡号',
+  `m_id` int DEFAULT NULL COMMENT '设备ID',
+  `balance_log_id` bigint NOT NULL DEFAULT 0 COMMENT '余额日志ID', 
+  `machine_id` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '设备编号',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态，1：未使用，2：已使用',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  `used_time` int DEFAULT NULL COMMENT '激活时间',
+  PRIMARY KEY (`acd_id`),
+  KEY `aca_id` (`aca_id`) USING BTREE,
+  KEY `order_id` (`order_id`) USING BTREE,
+  KEY `m_id` (`m_id`) USING BTREE,
+  KEY `used_time` (`used_time`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='卡激活活动使用表';

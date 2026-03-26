@@ -14,7 +14,7 @@ use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 
 trait MachineInfoTrait
 {
-    use MachineMainRelationTrait;
+    use MachineAuxiliaryTrait;
     use MachineChannelTrait;
     /**
      * 获取设备信息字段值
@@ -45,8 +45,8 @@ trait MachineInfoTrait
             $count = $this->getMachineChannelCount(['m_id' => $info['m_id'],'channel_position' => 3]);
             $info['sub_cabinet_2'] = $count > 0 ? 1 : 2;
             //查询此设备挂接的副柜
-            $subCabinet = $this->getMachineAuxiliaryMachineColumn(['main_mc_id' => $info['m_id']]);
-            $info['sub_cabinet_list'] = $subCabinet ? implode(',',$subCabinet) : '';
+            $subCabinet = $this->getMachineAuxiliaryList(['main_m_id' => $info['m_id']]);
+            $info['sub_cabinet_list'] = $subCabinet ? $subCabinet->toArray() : [];
         }
         return $info;
     }

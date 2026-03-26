@@ -50,15 +50,5 @@ trait MachineMainRelationTrait
         return $result;
     }
 
-    public function getMachineAuxiliaryMachineColumn($where,$field = "b.*",$order = "b.m_id desc",$column = 'b.machine_id')
-    {
-        $data = MachineMainRelationModel::alias("a")
-            ->join("machine_auxiliary b","b.m_id = a.b_mc_id")
-            ->where($where)
-            ->field($field)
-            ->order($order)
-            ->column($column);
-        return $data;
-    }
 
 }

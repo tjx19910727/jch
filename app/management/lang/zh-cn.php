@@ -700,6 +700,12 @@ return [
         "password_require" => "新密码不能为空",
         "confirm_password_require" => "确认密码不能为空",
         "password_not_match" => "两次输入的密码不一致",
+        "balance_amount_error" => "支付金额有误",
+        "card_show_no_require" => "卡面号不能为空",
+        "card_no_neq" => "卡号不能为0",
+        "card_show_no_neq" => "卡面号不能为0",
+        "card_no_exists" => "芯片号已存在",
+        "card_show_no_exists" => "卡面号已存在",
     ],
     "VMachineLevelDesc" => [
         "name_require" => "等级名称不能为空",

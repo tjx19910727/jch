@@ -35,6 +35,7 @@ use app\AppFactory\Kernel\Traits\Mall\MallMachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Mall\MallTrait;
 use app\AppFactory\Kernel\Traits\Mall\MallRequestLogsTrait;
+use app\AppFactory\Kernel\Traits\Payment\BalancePayTrait;
 
 class SaleOrdersClient extends ManagementClient
 {
@@ -50,6 +51,7 @@ class SaleOrdersClient extends ManagementClient
     use BeforeOrderRefundTrait, AfterOrderRefundTrait;
     use WxPayTrait, AliPayTrait, JdCashierTrait;
     use GoodsHitTrait;
+    use BalancePayTrait;
 
     public $order;
     public $sod;
@@ -69,6 +71,7 @@ class SaleOrdersClient extends ManagementClient
         "4" => "jdRefund",
 //        "8" => "CoGoRefund",
         "9" => "mallPointsRefund",
+        "20" => "balanceRefund",
     ];
 
     protected $postData;
@@ -202,7 +205,7 @@ class SaleOrdersClient extends ManagementClient
         actionLog($check, '退款结果');
         if ($check['state'] == "200") {
             // 支付宝支付、通联支付退款实时处理，不用异步
-            if ($this->order['pay_type'] == 3 || $this->order['pay_type'] == 2 || $this->order['pay_type'] == 9) {
+            if(in_array($this->order['pay_type'], [3, 2, 9,20])){
                 $this->startTrans();
                 try {
                     $this->data['refundAmount'] = $this->totalRefundMoney;

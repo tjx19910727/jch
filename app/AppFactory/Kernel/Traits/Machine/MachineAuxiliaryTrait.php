@@ -111,4 +111,13 @@ trait MachineAuxiliaryTrait
     {
         return MachineAuxiliaryModel::saveAll($insertAll);
     }
+
+    public function getMachineAuxiliaryMachineColumn($where,$field = "*",$order = "m_id desc",$column = 'machine_id')
+    {
+        $data = MachineAuxiliaryModel::where($where)
+            ->field($field)
+            ->order($order)
+            ->column($column);
+        return $data;
+    }
 }

@@ -39,6 +39,7 @@ class VReceive extends VCommon
         "password" => "require",
 
         "manager_id" => "require",
+        "card_no" => "require",
 
 
         "pay_method" => "require",
@@ -95,6 +96,7 @@ class VReceive extends VCommon
         "password.require" => "VLogin.password_require",
 
         "manager_id.require" => "VReceive.manager_id_require",
+        "card_no.require" => "VReceive.card_no_require",
 
         "order_id.require" => "VReceive.order_id_require",
         "fd_id.require" => "VReceive.fd_id_require",
@@ -189,6 +191,7 @@ class VReceive extends VCommon
         "requireOutGoods" => ["msg_id","machine_id","timestamp","sign","trade_no"],
 
         "cardAddPoints" => ["msg_id","machine_id","timestamp","card_no"],
+        "checkBalancePayPassword" => ["msg_id","machine_id","timestamp","sign","card_no"],
         "getCardChangeLogs" => ["msg_id","machine_id","timestamp"],
 
         "getWcSmSCode" => ["msg_id","machine_id","timestamp","phone"],

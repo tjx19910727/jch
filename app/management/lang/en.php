@@ -696,6 +696,11 @@ return [
         "password_require" => "New password cannot be empty",
         "confirm_password_require" => "Confirm password cannot be empty",
         "password_not_match" => "New password and confirm password do not match",
+        "card_show_no_require" => "Card show number cannot be empty",
+        "card_no_neq" => "Card number cannot be 0",
+        "card_show_no_neq" => "Card show number cannot be 0",
+        "card_no_exists" => "Card number already exists",
+        "card_show_no_exists" => "Card show number already exists",
     ],
     "VMachineLevelDesc" => [
         "name_require" => "Level Name cannot be empty",

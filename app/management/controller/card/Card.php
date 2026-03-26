@@ -27,6 +27,14 @@ class Card extends Common
         return $this->app->card->getCardInfoList($where, $pageNum, "*", 'card_no desc');
     }
 
+    //新增单条卡信息
+    public function add()
+    {
+        $postData = input();
+        $this->validate($postData, $this->validatePath . '.add_2');
+        return returnData($this->app->card->addSingleCard($postData));
+    }
+
 
     public function changePoints()
     {
@@ -43,12 +51,29 @@ class Card extends Common
         return $this->app->card->importCards(input());
     }
 
+    //导出卡信息
+    public function export()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData, false, ['card_no' => 'like', 'card_show_no' => 'like', 'name' => 'like']);
+        if(isset($where['ao_id'])) unset($where['ao_id']);
+        return $this->app->card->exportCards($where);
+    }
+
     //充值
     public function changeBalance()
     {
         try {
             $this->validate(input(), $this->validatePath . '.addBalance');
             $postData = input();
+            $pwd = $postData['pwd'] ?? '';
+            if (!$pwd){
+                return returnState(100,lang("VLogin.password_require"));
+            }
+            if (md5($pwd.config("app.salt")) !=  $this->manager['password']){
+                return returnState(100,lang("VLogin.pwd_incorrect"));
+            }
+            unset($postData['pwd']);
             $res = $this->app->card->changeCardBalance($postData);
             return returnData($res);
         } catch (\Exception $e) {

@@ -9,7 +9,6 @@
 namespace app\AppFactory\Kernel\Traits\Payment;
 
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
-use think\facade\Db;
 
 trait BalancePayTrait
 {
@@ -18,10 +17,10 @@ trait BalancePayTrait
 
     /**
      * Balance payment method map
-     * 1: scan/normal pay entry
+     * 10: scan/normal pay entry
      */
     protected $balancePaymentMethod = [
-        "1" => "balanceDirectPay",
+        "10" => "balanceDirectPay",
     ];
 
     /**
@@ -30,7 +29,7 @@ trait BalancePayTrait
      */
     public function balancePay()
     {
-        $func_name = $this->balancePaymentMethod["1"];
+        $func_name = $this->balancePaymentMethod["10"];
         return $this->$func_name();
     }
 
@@ -40,9 +39,9 @@ trait BalancePayTrait
      */
     protected function balanceDirectPay()
     {
-        $cardNo = trim($this->data['card_no'] ?? '');
+        $cardNo = $this->order['pay_code'] ?? '';
         if (!$cardNo) {
-            return $this->rFail("余额支付缺少卡号");
+            return $this->rFail(lang('Vcard.card_no_require'));
         }
 
         $amount = round(($this->order['total_price'] ?? 0), 2);
@@ -57,54 +56,75 @@ trait BalancePayTrait
         ], 'id,balance');
 
         if ($paidLog) {
-            if ((int)($this->order['pay_status'] ?? 0) === 3) {
+            if ($this->order['pay_status'] == 3) {
                 return $this->r(200, $this->lang("VOrderPay.pay_status3"), [
                     'card_no' => $cardNo,
                     'balance' => $paidLog['balance'] ?? null,
                 ]);
-            }
-
-            $this->startTrans();
-            try {
-                $this->order['pay_code'] = $cardNo;
-                $flag[] = ($this->order['total_price'] > 0 ? $this->settlementRevenue() : 1);
-                $flag[] = $this->paymentSuccessful();
-                $result = flag_check($flag);
-                if ($result) {
-                    $this->commitTrans();
-                    return $this->r(200, $this->lang("VOrderPay.pay_status3"), [
-                        'card_no' => $cardNo,
-                        'balance' => $paidLog['balance'] ?? null,
-                    ]);
+            }elseif($this->order['pay_status'] == 1){
+                $this->startTrans();
+                try {
+                    $result = $this->paymentSuccessful();
+                    if ($result) {
+                        $this->commitTrans();
+                        return $this->r(200, $this->lang("VOrderPay.pay_status3"), [
+                            'card_no' => $cardNo,
+                            'balance' => $paidLog['balance'] ?? null,
+                        ]);
+                    }
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
+                } catch (\Exception $e) {
+                    $this->rollbackTrans();
+                    actionException($e, 1);
+                    return $this->rTryCatch($e->getMessage());
                 }
-                $this->rollbackTrans();
-                return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
-            } catch (\Exception $e) {
-                $this->rollbackTrans();
-                actionException($e, 1);
-                return $this->rTryCatch($e->getMessage());
+            }else{
+                return $this->rFail("订单状态异常");
             }
         }
-
         $this->startTrans();
         try {
-            $card = Db::name('card')->where(['card_no' => $cardNo])->lock(true)->find();
+            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no,bind_id,password,balance');
             if (!$card) {
                 $this->rollbackTrans();
                 return $this->rFail("积分卡不存在");
             }
 
-            $before = (string)($card['balance'] ?? '0');
-            if (bccomp($before, (string)$amount, 2) < 0) {
+            $bindId = trim($this->data['bind_id'] ?? '');
+            $needPayPassword = empty($bindId) || empty($card['bind_id']) || ($bindId != $card['bind_id']);
+            if ($needPayPassword) {
+                $payPassword = trim($this->data['pay_password'] ?? '');
+                if (!$payPassword) {
+                    $this->rollbackTrans();
+                    return $this->r(201, '需要输入支付密码', [
+                        'need_pay_password' => 1,
+                        'card_no' => $cardNo,
+                    ]);
+                }
+                if(empty($card['password'])){
+                    if ($payPassword != '123456') {
+                        $this->rollbackTrans();
+                        return $this->rFail('默认密码错误');
+                    }
+                }else{
+                    if (md5($payPassword . config('app.salt')) != $card['password']) {
+                        $this->rollbackTrans();
+                        return $this->rFail('支付密码错误');
+                    }
+                }
+
+            }
+
+            $before = $card['balance'] ?? '0';
+            if (bccomp($before, $amount, 2) < 0) {
                 $this->rollbackTrans();
-                return $this->rFail("积分卡余额不足");
+                return $this->rFail("余额不足");
             }
 
             $after = bcsub($before, (string)$amount, 2);
-            $update = Db::name('card')->where(['card_no' => $cardNo])->update([
-                'balance' => $after,
-            ]);
-            if ($update === false) {
+            $update = $this->updateCard(['balance' => $after], ['card_no' => $cardNo]);
+            if (!$update) {
                 $this->rollbackTrans();
                 return $this->rFail("扣减卡余额失败");
             }
@@ -129,12 +149,7 @@ trait BalancePayTrait
                     return $this->rFail("记录余额变更日志失败");
                 }
             }
-
-            $this->order['pay_code'] = $cardNo;
-            $flag[] = ($this->order['total_price'] > 0 ? $this->settlementRevenue() : 1);
-            $flag[] = $this->paymentSuccessful();
-            $result = flag_check($flag);
-
+            $result = $this->paymentSuccessful();
             if ($result) {
                 $this->commitTrans();
                 return $this->r(200, $this->lang("VOrderPay.pay_status3"), [
@@ -163,7 +178,7 @@ trait BalancePayTrait
             return $this->rFail('订单缺少余额支付卡号');
         }
 
-        $refundAmount = round((float)($this->refundData['refund_amount'] ?? 0), 2);
+        $refundAmount = round($this->refundData['refund_amount'] ?? 0, 2);
         if ($refundAmount <= 0) {
             return $this->rFail('退款金额异常');
         }
@@ -182,19 +197,17 @@ trait BalancePayTrait
 
         $this->startTrans();
         try {
-            $card = Db::name('card')->where(['card_no' => $cardNo])->lock(true)->find();
+            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no,balance');
             if (!$card) {
                 $this->rollbackTrans();
                 return $this->rFail('积分卡不存在');
             }
 
-            $before = (string)($card['balance'] ?? '0');
-            $after = bcadd($before, (string)$refundAmount, 2);
+            $before = $card['balance'] ?? '0';
+            $after = bcadd($before, $refundAmount, 2);
 
-            $update = Db::name('card')->where(['card_no' => $cardNo])->update([
-                'balance' => $after,
-            ]);
-            if ($update === false) {
+            $update = $this->updateCard(['balance' => $after], ['card_no' => $cardNo]);
+            if (!$update) {
                 $this->rollbackTrans();
                 return $this->rFail('回退卡余额失败');
             }
