@@ -18,6 +18,7 @@ trait OutGoodsTrait
      */
     public function outGoods()
     {
+        actionLog($this->message,'出货完成','OutGoods');
         $this->order = $this->getSaleOrdersFind(['trade_no' => $this->message['trade_no']]);
         if (!$this->order) {
             actionLog($this->getLS(),'查无订单数据','OutGoods');
