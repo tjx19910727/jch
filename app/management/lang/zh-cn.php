@@ -724,5 +724,6 @@ return [
         "auto_reported_no_add" => "此主柜下已自动上报副柜信息，无法挂接",
         "machine_type_require" => "副柜类型不能为空",
         "type_change_require_unbind" => "副柜类型变更需要先解绑设备",
+        "is_online_no_change" => "设备已在线，不允许变更类型、解绑"
     ],
 ]; 

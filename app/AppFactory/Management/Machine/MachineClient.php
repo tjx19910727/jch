@@ -53,6 +53,7 @@ class MachineClient extends ManagementClient
     use SaleOrdersMachineCountTrait;
     use AuthManagerMachineTrait,AuthOrganizationTrait;
     use MachineAuxiliaryTrait;
+    use MachineInfoTrait;
 
     public function addM($postData)
     {
@@ -709,12 +710,11 @@ class MachineClient extends ManagementClient
     // }
     public function updateSubM($postData)
     {
-        $m = $this->getMachineAuxiliaryFind(['m_id' => $postData['m_id']], "m_id,machine_id,machine_name,machine_type,main_m_id");
+        $m = $this->getMachineAuxiliaryFind(['m_id' => $postData['m_id']], "m_id,machine_id,machine_name,machine_type,main_m_id,status");
         if (!$m) {
             return $this->r(100, $this->lang("VSubMachine.no_data"));
         }
         $m = $m->toArray();
-
         $old_main_m_id = $m['main_m_id'] ?? 0;
         $old_machine_type = $m['machine_type'] ?? 2;
         // 允许前端传 main_m_id = 0，表示解绑主柜；不传则沿用原值
@@ -723,6 +723,11 @@ class MachineClient extends ManagementClient
         if (!in_array($machine_type, [1, 2])) $machine_type = 2;
         $mainChanged = $old_main_m_id != $main_m_id;
         $typeChanged = $old_machine_type != $machine_type;
+        //查询machine_info下的sub_cabinet字段，如果是1则说明已经上报过副柜了，此时不允许修改类型和主柜了
+        $info_value = $this->getMachineInfoValue([['m_id', '=', $m['main_m_id']]],'sub_cabinet');
+        if(($m['status'] == 1 || $info_value == 1) && ($mainChanged || $typeChanged)){
+            return $this->r(100,$this->lang("VSubMachine.is_online_no_change"));
+        }
         $oldChannelPosition = $this->getSubMachineChannelPosition($old_machine_type);
         $newChannelPosition = $this->getSubMachineChannelPosition($machine_type);
         if($typeChanged && $old_main_m_id){
@@ -897,7 +902,8 @@ class MachineClient extends ManagementClient
             return $this->r(200,$this->lang("action_success"));
         }
         //如果副柜是已挂接已使用状态则不允许删除
-        if($m['status'] == 1 ){
+        $info_value = $this->getMachineInfoValue([['m_id', '=', $m['main_m_id']]],'sub_cabinet');
+        if($m['status'] == 1 || $info_value == 1){
             return $this->r(100,$this->lang("VSubMachine.is_online_no_del"));
         }
         $main_m_id = $m['main_m_id'] ?? 0;
@@ -949,9 +955,8 @@ class MachineClient extends ManagementClient
         if (count($list)) {
             $list = $list->toArray();
             foreach ($list as $key => $item) {
-                $mainMId = $this->getMachineMainRelationValue(['b_mc_id' => $item['m_id'] ?? 0], 'main_mc_id') ?: 0;
-                if ($mainMId) {
-                    $mainM = $this->getMachineFind(['m_id' => $mainMId], 'machine_id,machine_name');
+                if ($item['main_m_id'] > 0) {
+                    $mainM = $this->getMachineFind(['m_id' => $item['main_m_id']], 'machine_id,machine_name');
                     $item['main_machine_id'] = $mainM['machine_id'] ?? '';
                     $item['main_machine_name'] = $mainM['machine_name'] ?? '';
                 } else {

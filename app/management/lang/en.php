@@ -719,5 +719,6 @@ return [
         "auto_reported_no_add" => "Sub machine is automatically reported online, cannot be added",
         "machine_type_require" => "Machine type cannot be empty",
         "type_change_require_unbind" => "Machine type change requires unbinding sub machine",
+        "is_online_no_change" => "Sub machine is online, type change and unbinding are not allowed",
     ],
 ];
