@@ -65,18 +65,46 @@ class MachineInfoClient extends ManagementClient
                 if (!$uResult) return $this->rFail($this->lang("update_fail"));
                 return $this->r(200,$this->lang("query_success"),$update);
             } else {
-                
-                //查询新物联接口
-                $result = Simiot::queryCard($postData['iccid']);
-                $result = json2arr($result);
-                return $this->rFail($result['resultmsg'] ?? '');
+                return $this->getSimiotData($postData['iccid'], $postData['mi_id']);
             }
         }else{
-            //查询新物联接口
-            $result = Simiot::queryCard($postData['iccid']);
-            $result = json2arr($result);
-            return $this->rFail($result['resultmsg'] ?? '');
+            // 查询新物联接口
+            return $this->getSimiotData($postData['iccid'], $postData['mi_id']);
         }
-        return $this->rFail();
+    }
+
+    public function getSimiotData($iccid, $mi_id)
+    {
+        $result = Simiot::queryCard($iccid);
+        $result = json2arr($result);
+        $arr = ['china_mobile' => '中国移动', 'china_unicom' => '中国联通', 'china_telecom' => '中国电信'];
+        if (isset($result['code']) && $result['code'] == 0) {
+            $newResult = $result['result']['result'][0] ?? [];
+            $key = $newResult['carrier'] ?? 'china_mobile';
+            $update['iccid'] = $newResult['iccid'] ?? '';
+            $update['operator'] = $arr[$key];
+            if(isset($newResult['package'][0]['current_period_usage'])){
+                $update['total_flow'] = $newResult['package'][0]['current_period_usage'];
+            }
+            if(!empty($newResult['package'][0]['package_capacity']) && isset($update['total_flow'])){
+                $capacity_type = $newResult['package'][0]['capacity_type'] ?? 'gb';
+                if($capacity_type == 'mb'){
+                    $count = 1024;
+                }elseif($capacity_type == 'gb'){
+                    $count = 1024 * 1024;
+                }else{
+                    $count = 1;
+                }
+                $update['remain_flow'] = $newResult['package'][0]['package_capacity'] * $count - $update['total_flow'];//剩余流量
+            }
+            $uResult = $this->updateMachineInfo($update,['mi_id' => $mi_id]);
+            if (!$uResult){
+                return $this->rFail($this->lang("update_fail"));
+            } 
+                $update['valid_time'] = $newResult['package'][0]['current_period_end_time'] ?? '';
+                return $this->r(200,$this->lang("query_success"),$update);
+        } else {
+            return $this->rFail($result['message'] ?? $this->lang("query_fail"));
+        }
     }
 }
