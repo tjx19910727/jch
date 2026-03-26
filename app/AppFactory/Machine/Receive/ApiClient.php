@@ -957,7 +957,6 @@ class ApiClient extends ReceiveBaseClient
                             'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                             'ao_id' => $mc['ao_id'],
-                            'ao_id' => $mc['ao_id'],
                         ];
                         $details['retail_price'] = !empty($wc_order_no) ? $total_price : $mc['retail_price'];
                         $details['total_sod_price'] = bcmul($details['retail_price'], $quantity, 3);

@@ -35,11 +35,12 @@ use app\AppFactory\Kernel\Traits\Mall\MallMachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Mall\MallTrait;
 use app\AppFactory\Kernel\Traits\Mall\MallRequestLogsTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDetailsDailyCountTrait;
 
 class SaleOrdersClient extends ManagementClient
 {
     use AuthManagerTrait;
-    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersUnclaimedTrait, SaleOrdersDailyCountTrait, SaleHotelTrait, SaleHotelNightlyTrait;
+    use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersUnclaimedTrait, SaleOrdersDailyCountTrait, SaleHotelTrait, SaleHotelNightlyTrait,SaleOrdersDetailsDailyCountTrait;
     use BeforeOrderPaymentTrait;
     use MallPointsPayTrait,MallMachineTrait,MachineTrait,MallTrait,MallRequestLogsTrait;
     use StrategyMachineTrait;
@@ -302,7 +303,7 @@ class SaleOrdersClient extends ManagementClient
             $group = "month";
             $where[] = ['create_date', '>=', strtotime("-12 month")];
         }
-        $data = $this->getSaleOrdersDailyCountList($where, 0, $field, '', $group);
+        $data = $this->getSaleOrdersDetailsDailyCountList($where, 0, $field, '', $group);
         return $this->rQ($data);
     }
 
@@ -626,7 +627,7 @@ class SaleOrdersClient extends ManagementClient
      */
     public function getTotalReport($where, $field = "*", $order = "", $group = "")
     {
-        $data = $this->getSaleOrdersDailyCountFind($where, $field, $order, $group);
+        $data = $this->getSaleOrdersDetailsDailyCountFind($where, $field, $order, $group);
         return $this->rQ($data);
     }
 
@@ -669,7 +670,7 @@ class SaleOrdersClient extends ManagementClient
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
         $order = 'create_date desc';
-        $data = $this->getSaleOrdersDailyCountList($where, $pageNum, $field, $order, $group);
+        $data = $this->getSaleOrdersDetailsDailyCountList($where, $pageNum, $field, $order, $group);
         return $this->rQ($data);
     }
 
@@ -691,7 +692,7 @@ class SaleOrdersClient extends ManagementClient
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
         $group = "create_date";
-        $list = $this->getSaleOrdersDailyCountList($where, 0, $field, $order, $group);
+        $list = $this->getSaleOrdersDetailsDailyCountList($where, 0, $field, $order, $group);
         if ($list) {
             $list = $list->toArray();
             $title = [
