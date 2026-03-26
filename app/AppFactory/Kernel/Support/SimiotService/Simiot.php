@@ -51,8 +51,8 @@ class Simiot
 	 */
 	public function __construct()
 	{
-		$this->appId = env("Simiot.appid");
-		$this->secret = env("Simiot.secret");
+		$this->appId = '8130053573632192';
+		$this->secret = 'W9U3pCVkLpOeEgELZJk9NxtdZid73HDm';
 	}
 
 	/**
