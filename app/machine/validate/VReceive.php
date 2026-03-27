@@ -58,6 +58,7 @@ class VReceive extends VCommon
 
         "gm_id" => "require",
         "gmg_id" => "require",
+        "errorCode" => "require",
     ];
 
     protected $message = [
@@ -110,6 +111,7 @@ class VReceive extends VCommon
 
         "gm_id.require" => "VSubGoodsMultipleOrder.gm_id_require",
         "gmg_id.require" => "VSubGoodsMultipleOrder.gmg_id_require",
+        "errorCode.require" => "VReceive.errorCode_require",
 
     ];
 
@@ -207,6 +209,8 @@ class VReceive extends VCommon
 
         "getMachineRentOrgLists" => ["msg_id","machine_id","timestamp","sign"],
         "getRentOrgGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
+
+        "sendErro" => ["msg_id","machine_id","timestamp","sign","errorCode"],
     ];
 
     /**

@@ -50,6 +50,7 @@ return [
             'details_require' => 'Order details cannot be empty',
             'mvp_id_require' => 'Version update record ID cannot be empty',
             'download_progress_require' => 'The download progress cannot be empty',
+            'errorCode_require' => 'The error code cannot be empty',
         ],
     'VRobot' =>
         [

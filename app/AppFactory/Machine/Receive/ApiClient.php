@@ -336,6 +336,26 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * http请求设备故障码上报接口
+     * @return array|\think\response\Json
+     */
+    public function sendErro()
+    {
+        try {
+            $this->message = [
+                "errorCode" => $this->data['errorCode'] ?? "",
+                "msg" => $this->data['msg'] ?? "",
+                "error_position" => $this->data['error_position'] ?? "",
+            ];
+            $this->errorCode();
+            return $this->r(200, $this->lang("action_success"));
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 终端提交货道数据，新增或修改
      * @return array|string
      */

@@ -43,6 +43,7 @@ return [
         "total_quantity_require" => "抽奖数量不能为空",
         "alc_id_require" => "抽奖活动配置ID不能为空",
 
+        "errorCode_require" => "故障码不能为空",
         "carList_require" => "购物车不能为空",
         "hotelList_require" => "酒店信息不能为空",
 

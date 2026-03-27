@@ -983,4 +983,20 @@ class Receive extends Common
     {
         $this->app->api->test();
     }
+
+    /**
+     * http请求设备故障码上报接口
+     * @return array|\think\response\Json
+     */
+    public function sendErro()
+    {
+        $postData = input();
+        //$this->validate($postData, $this->validatePath . 'sendErro');
+        try {
+            return $this->app->api->sendErro();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
 }
