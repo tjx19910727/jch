@@ -13,6 +13,7 @@ define("SIMIOT_QUERY_CARD", "https://iot.simiot.com/api/client/v1");
 /**
  * Class Simiot
  * @method static queryCard($iccid, $cycles = 12)  查询卡信息
+ * @method static queryPool()  查询流量池信息
  * @package app\AppFactory\Kernel\Support\SimiotService
  */
 class Simiot
@@ -94,6 +95,50 @@ class Simiot
 			'Content-Type: application/x-www-form-urlencoded;charset=utf-8'
 		]);
         actionLog($result, "查询新物联接口返回结果");
+		if ($result === false) {
+			return [
+				'code' => -1,
+				'message' => 'request new sim api failed',
+				'http_code' => intval($this->status['http_code'] ?? 0),
+				'curl_error' => $this->curlError,
+				'response' => $this->status['response_body'] ?? ''
+			];
+		}
+
+		$result = json_decode($result, true);
+		if (!is_array($result)) {
+			return [
+				'code' => -1,
+				'message' => 'new sim api response parse failed',
+				'http_code' => intval($this->status['http_code'] ?? 0),
+				'response' => $this->status['response_body'] ?? ''
+			];
+		}
+		return $result;
+	}
+
+		/**
+	 * 查询卡信息
+	 * @param string $iccid
+	 * @param int $cycles
+	 * @return array
+	 */
+	public function _queryPool()
+	{
+		if (!$this->appId || !$this->secret) {
+			return ['code' => -1, 'message' => 'simiot config missing'];
+		}
+
+		$data = [
+			'appid' => $this->appId,
+			'timestamp' => time(),
+		];
+		$data['sign'] = $this->makePostSign($data);
+        actionLog($data, "查询新物联流量池接口参数");
+		$result = $this->request(SIMIOT_QUERY_CARD.'/traffic-pool/pool-list', 'POST', http_build_query($data), [
+			'Content-Type: application/x-www-form-urlencoded;charset=utf-8'
+		]);
+        actionLog($result, "查询新物联流量池接口返回结果");
 		if ($result === false) {
 			return [
 				'code' => -1,

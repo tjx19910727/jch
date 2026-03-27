@@ -32,7 +32,11 @@ class MachineOnOffClient extends ManagementClient
                     $check = $check->toArray();
                     $update = array_merge($check,$postData);
                     if($check['ao_id'] == 0) $update["ao_id"] = $this->manager['ao_id'];
-                    $flag[] = $this->updateMachineOnOff($update);
+                    $result = $this->updateMachineOnOff($update);
+                    $flag[] = $result;
+                    if ($result) {
+                        $this->sendToMachine(['machine_id' => $check['machine_id']], 'updateMachineOnOff');
+                    }
 //                    return $this->rFail($check['machine_id'] . ": " . $this->lang("VMachineOnOff.is_exists"));
                 } else {
                     $machine = $this->getMachineFind(['m_id' => $m_id], 'm_id,machine_id,machine_name,ao_id');
