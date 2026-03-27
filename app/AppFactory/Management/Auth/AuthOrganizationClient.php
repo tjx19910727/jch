@@ -18,4 +18,8 @@ use app\AppFactory\Management\ManagementClient;
 class AuthOrganizationClient extends ManagementClient
 {
     use AuthOrganizationTrait,AuthOrganizationRoleTrait,AuthManagerTrait,AuthOrgMachineChannelTrait;
+
+    public function getAuthOrgMCLists($where, $pageNum, $field = '*'){
+        return $this->rQ($this->getAuthOrgMCList($where, $pageNum, $field));
+    }
 }

@@ -136,5 +136,16 @@ class AuthOrganization  extends Common
         }
     }
 
+
+    public function getAuthOrgRentMachineLists(){
+        $postData = input();
+        $pageNum = 15;
+        if(isset($postData['pageNum'])) {
+            $pageNum = $postData['pageNum'];
+            unset($postData['pageNum']);
+        }
+        return $this->app->authOrganization->getAuthOrgMCLists($postData, $pageNum);
+    }
     
 }
+ 

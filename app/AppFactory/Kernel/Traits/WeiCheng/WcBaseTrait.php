@@ -196,8 +196,9 @@ trait WcBaseTrait
                 'channel_code' => 'Z10',
                 'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
                 'isNeedReserve' => $wc_goods['isNeedReserve'] ?? '0',
-                'gift_points' => $wc_goods['present_integral'] ?? 0,
+                'gift_points' => $wc_goods['gift_points'] ?? 0,
             ];
+
             if (!$wc_goods_local) {
                 return $this->addWcGoodsLocal($setData);
             } else {

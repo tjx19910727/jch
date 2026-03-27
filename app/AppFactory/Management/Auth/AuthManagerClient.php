@@ -82,8 +82,8 @@ class AuthManagerClient extends ManagementClient
         return $this->rA($this->addAuthWithdrawRequest($insert));
     }
 
-    public function getAuthWithdrawRequestData($where, $field = '*'){
-        return $this->rQ($this->getAuthWithdrawRequestFind($where, $field = '*'));
+    public function getAuthWithdrawRequestData($where, $pageNum = '0', $field = '*'){
+        return $this->rQ($this->getAuthWithdrawRequestList($where, $pageNum, $field = '*'));
     }
 
     public function getAuthOrgRevenueLogData($where, $pageNum = 0, $field = '*', $order = '')

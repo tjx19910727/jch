@@ -16,17 +16,17 @@ trait AuthOrgMachineChannelTrait
 {
 
 
-    public function getAuthOrgMCFind($where, $column = [])
+    public function getAuthOrgMCFind($where, $field = "*", $order = "")
     {
-        return AuthOrgMachineChannelModel::getFind($where, $column);
+        return AuthOrgMachineChannelModel::getFind($where, $field, $order);
     }
 
-    public function getAuthOrgMCList($where, $column = [])
+    public function getAuthOrgMCList($where, $pageNum = 0, $field = '*', $order = '')
     {
-        return AuthOrgMachineChannelModel::getList($where, $column);
+        return AuthOrgMachineChannelModel::getList($where, $pageNum, $field, $order);
     }
 
-    public function getAuthOrgMCColumn($where, $column = [])
+    public function getAuthOrgMCColumn($where, $column)
     {
         return AuthOrgMachineChannelModel::getColumn($where, $column);
     }
