@@ -97,13 +97,17 @@ class MachineInfoClient extends ManagementClient
                 }
                 $update['remain_flow'] = $newResult['package'][0]['package_capacity'] * $count - $update['total_flow'];//剩余流量
             }
+            $update['valid_time'] = $newResult['package'][0]['end_time'] ?? '';
+            $update['valid_time'] = $update['valid_time'] ? strtotime($update['valid_time']) : 0;
+            if($update['valid_time'] > 2147483647){
+                $update['valid_time'] = 2147483647;
+            }
             $uResult = $this->updateMachineInfo($update,['mi_id' => $mi_id]);
             if (!$uResult){
                 return $this->rFail($this->lang("update_fail"));
             } 
-                $update['valid_time'] = $newResult['package'][0]['current_period_end_time'] ?? '';
-                $update['valid_time'] = $update['valid_time'] ? strtotime($update['valid_time']) : '';
-                return $this->r(200,$this->lang("query_success"),$update);
+
+            return $this->r(200,$this->lang("query_success"),$update);
         } else {
             return $this->rFail($result['message'] ?? $this->lang("query_fail"));
         }
