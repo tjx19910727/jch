@@ -135,11 +135,23 @@ class AuthManager extends Common
     }
 
     public function getAuthOrgRevenueLogs(){
-        return $this->app->authManager->getAuthOrgRevenueLogData(input());
+        $postData = input();
+        $pageNum = 15;
+        if(isset($postData['pageNum'])) {
+            $pageNum = $postData['pageNum'];
+            unset($postData['pageNum']);
+        }
+        return $this->app->authManager->getAuthOrgRevenueLogData($postData, $pageNum);
     }
 
     public function getWithDrawApply(){
-        return $this->app->authManager->getAuthWithdrawRequestData(input());
+        $postData = input();
+        $pageNum = 15;
+        if(isset($postData['pageNum'])) {
+            $pageNum = $postData['pageNum'];
+            unset($postData['pageNum']);
+        }
+        return $this->app->authManager->getAuthWithdrawRequestData($postData, $pageNum);
     }
     /**
      * 发起组织提现申请

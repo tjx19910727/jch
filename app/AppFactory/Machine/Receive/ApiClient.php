@@ -2164,6 +2164,15 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200, "SUCCESS", $orgGoodsLists);
     }
 
+    public function searchWCGoods(){
+        $where['is_pub'] = 1;
+        if(isset($this->data['name'])) $where[] = ['name', 'like', '%'.$this->data['name'].'%'];
+        $pageNum = $this->data['pageNum'] ?? 15;
+        $orgGoodsLists = $this->getWcGoodsList($where, $pageNum);
+
+        return $this->r(200, "SUCCESS", $orgGoodsLists);
+    }
+
     public function test()
     {
         $trade_no = $this->data['trade_no'] ?? '';

@@ -979,6 +979,20 @@ class Receive extends Common
         }
     }
 
+    /**
+     * 微程商品查询接口
+     * @return array|string
+     * @throws \Exception
+     */
+    public function searchWCGoods(){
+        try {
+            return $this->app->api->searchWCGoods();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     public function test()
     {
         $this->app->api->test();
