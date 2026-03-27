@@ -15,4 +15,8 @@ use app\AppFactory\Management\ManagementClient;
 class StrategyManagerClient extends ManagementClient
 {
     use StrategyManagerTrait;
+
+    public function getStrategyManagerData($where, $field = "*",$order = ""){
+        return $this->getStrategyManagerFind($where, $field,$order);
+    }
 }

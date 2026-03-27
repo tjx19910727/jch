@@ -162,11 +162,19 @@ class AuthManager extends Common
         $postData = input();
         $amount = $postData['amount'] ?? 0;
         if (!$amount || $amount <= 0) return returnState(100,'提现金额必须大于0');
+        $account_type = $postData['account_type'] ?? '';
+        if (!$account_type) return returnState(100,'请选择提现类型');
         $account = $postData['account'] ?? '';
         if (!$account) return returnState(100,'提现账户不能为空');
-        $account_type = $postData['account_type'] ?? 'bank';
-        $remark = $postData['remark'] ?? '';
 
+        //查询当前账户ao_id关联的可提现manager_id
+        $strategy_manager = $this->app->strategyManager->getStrategyManagerData(['s_type' => 2, 'ao_id' => $this->manager['ao_id']]);
+        if(!$strategy_manager) return returnState(100,'查不到分账账户信息');
+        $strategy_manager = $strategy_manager->toArray();
+        if($strategy_manager['manager_id'] != $this->manager['manager_id']) return returnState(100,'没有权限，请联系管理员');
+
+        $remark = $postData['remark'] ?? '';
+      
         $insert = [
             'ao_id' => $this->manager['ao_id'] ?? 0,
             'requester_manager_id' => $this->manager['manager_id'] ?? 0,
