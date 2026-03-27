@@ -81,7 +81,7 @@ class MachineInfoClient extends ManagementClient
         if (isset($result['code']) && $result['code'] == 0) {
             $newResult = $result['result']['result'][0] ?? [];
             $key = $newResult['carrier'] ?? 'china_mobile';
-            $update['iccid'] = $newResult['iccid'] ?? '';
+            $update['iccid'] = $newResult['iccid'] ?? $iccid;
             $update['operator'] = $arr[$key];
             if(isset($newResult['package'][0]['current_period_usage'])){
                 $update['total_flow'] = $newResult['package'][0]['current_period_usage'];
