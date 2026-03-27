@@ -113,7 +113,7 @@ class Simiot
 				'response' => $this->status['response_body'] ?? ''
 			];
 		}
-		return ['code' => 0, 'result' => $result];
+		return $result;
 	}
 
 	/**

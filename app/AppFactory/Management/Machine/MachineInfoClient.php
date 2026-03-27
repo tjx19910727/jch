@@ -79,7 +79,7 @@ class MachineInfoClient extends ManagementClient
         $result = json2arr($result);
         $arr = ['china_mobile' => '中国移动', 'china_unicom' => '中国联通', 'china_telecom' => '中国电信'];
         if (isset($result['code']) && $result['code'] == 0) {
-            $newResult = $result['result']['result'][0] ?? [];
+            $newResult = $result['result'][0] ?? [];
             $key = $newResult['carrier'] ?? 'china_mobile';
             $update['iccid'] = $newResult['iccid'] ?? $iccid;
             $update['operator'] = $arr[$key];
@@ -102,6 +102,7 @@ class MachineInfoClient extends ManagementClient
                 return $this->rFail($this->lang("update_fail"));
             } 
                 $update['valid_time'] = $newResult['package'][0]['current_period_end_time'] ?? '';
+                $update['valid_time'] = $update['valid_time'] ? strtotime($update['valid_time']) : '';
                 return $this->r(200,$this->lang("query_success"),$update);
         } else {
             return $this->rFail($result['message'] ?? $this->lang("query_fail"));
