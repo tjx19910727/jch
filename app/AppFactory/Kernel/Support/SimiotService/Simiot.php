@@ -89,10 +89,11 @@ class Simiot
 			'iccids' => $iccid,
 		];
 		$data['sign'] = $this->makePostSign($data);
-
+        actionLog($data, "查询新物联接口参数");
 		$result = $this->request(SIMIOT_QUERY_CARD.'/sim-card/base-info', 'POST', http_build_query($data), [
 			'Content-Type: application/x-www-form-urlencoded;charset=utf-8'
 		]);
+        actionLog($result, "查询新物联接口返回结果");
 		if ($result === false) {
 			return [
 				'code' => -1,
