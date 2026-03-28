@@ -104,13 +104,13 @@ class AuthOrganization  extends Common
         $postData = input();
         $addData['ao_id'] = $postData['ao_id'] ?? '';
         // $addData['m_id'] = $postData['m_id'] ?? '';
-        $machine_id_raw = $postData['machine_id'] ?? '';
-        if (!$machine_id_raw) return returnState(100, 'machine_id不能为空');
+        $m_ids_raw = $postData['m_ids'] ?? '';
+        if (!$m_ids_raw) return returnState(100, 'm_ids不能为空');
         // 支持逗号分隔的多个 machine_id 或者数组 JSON
-        if (is_array($machine_id_raw)) {
-            $machine_ids = $machine_id_raw;
+        if (is_array($m_ids_raw)) {
+            $m_ids = $m_ids_raw;
         } else {
-            $machine_ids = array_filter(array_map('trim', explode(',', $machine_id_raw)));
+            $m_ids = array_filter(array_map('trim', explode(',', $m_ids_raw)));
         }
 
         if (!$addData['ao_id']) return returnState(100, 'ao_id不能为空');
@@ -121,10 +121,12 @@ class AuthOrganization  extends Common
             // 删除当前组织的所有租赁记录
             $this->app->authOrganization->delAuthOrgMC(['ao_id' => $addData['ao_id']]);
             $inserted = [];
-            foreach ($machine_ids as $key => $mid) {
+            foreach ($m_ids as $m_id) {
+                $machine_id = $this->app->machine->getMachineValue(['m_id' => $m_id], 'machine_id');
                 $res = $this->app->authOrganization->addAuthOrgMC([
                     'ao_id' => $addData['ao_id'],
-                    'machine_id' => $mid,
+                    'm_id' => $m_id,
+                    'machine_id' => $machine_id
                 ]);
                 $inserted[] = $res;
             }
