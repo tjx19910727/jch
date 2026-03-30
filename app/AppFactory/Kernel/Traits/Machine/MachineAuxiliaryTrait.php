@@ -109,7 +109,8 @@ trait MachineAuxiliaryTrait
      */
     public function addMachineAuxiliaryMore($insertAll)
     {
-        return MachineAuxiliaryModel::saveAll($insertAll);
+        $mc = new MachineAuxiliaryModel();
+        return $mc->saveAll($insertAll);
     }
 
     public function getMachineAuxiliaryMachineColumn($where,$field = "*",$order = "m_id desc",$column = 'machine_id')
