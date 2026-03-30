@@ -1254,3 +1254,13 @@ ALTER TABLE kiosk.machine_channel
 INSERT INTO `wx_template` (`wx_id`, `template_name`, `template_type`, `template_id`, `ao_id`,`miniprogram`, `body`,`status`, `create_time`, `update_time`)
 VALUES
   (3, '设备自动售卖成功通知','payment_success','5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI','1','{"appid":"","pagepath":""}', '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',1,1773653091,1773653091);
+
+#20260330
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `internal_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过内部摄像头，1-跳过，2-不跳过' AFTER `stock_warning`;
+
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `discharge_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过出料口摄像头，1-跳过，2-不跳过' AFTER `stock_warning`;
+
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `head_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过头部摄像头，1-跳过，2-不跳过' AFTER `stock_warning`;
