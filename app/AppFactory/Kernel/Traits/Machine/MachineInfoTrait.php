@@ -139,6 +139,9 @@ trait MachineInfoTrait
             }
             actionLog($update, '修改数据', "uploadInfo");
             if ($update) {
+                if (isset($update['sub_cabinet'])) {
+                    $this->syncAuxiliaryArcStatusBySubCabinet((int)$update['sub_cabinet']);
+                }
                 // 20250613 有副柜状态，并且副柜不可用，检查副柜货道库存，并将库存退回到设备商品库，如果设备商品库没有相关联的商品，只生成新的设备商品库信息
                 if (isset($update['sub_cabinet']) && $update['sub_cabinet'] == 2) {
                     $this->subCabinetReturnInventory();
@@ -182,6 +185,31 @@ trait MachineInfoTrait
                 actionLog($this->getLS(),'增加设备商品库库存');
             }
             actionLog($flag,'副柜退库存结果集');
+        }
+    }
+
+    /**
+     * 按主柜上报的副柜可用状态同步弧柜挂接状态。
+     * machine_type=1 为弧柜：
+     * sub_cabinet=1 -> status=1(已挂接已启用)
+     * 其他值 -> status=3(已挂接未启用)
+     * @param int $subCabinet
+     * @return void
+     */
+    public function syncAuxiliaryArcStatusBySubCabinet($subCabinet)
+    {
+        $where = [
+            'main_m_id' => $this->machine['m_id'],
+            'machine_type' => 1,
+        ];
+        $count = $this->getMachineAuxiliaryCount($where);
+        actionLog($this->getLS(), '【SQL】查询弧柜信息', "uploadInfo");
+        actionLog($count, '查询到弧柜数量', "uploadInfo");
+        if ($count > 0) {
+            $status = $subCabinet === 1 ? 1 : 3;
+            $result = $this->updateMachineAuxiliary(['status' => $status], $where);
+            actionLog($this->getLS(), '【SQL】同步弧柜状态', "uploadInfo");
+            actionLog($result, '同步弧柜状态结果', "uploadInfo");
         }
     }
 }
