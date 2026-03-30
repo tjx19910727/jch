@@ -1234,14 +1234,6 @@ ALTER TABLE kiosk.machine_config
 ALTER TABLE kiosk.machine
   ADD COLUMN `vending_machine_type` tinyint(1) DEFAULT '1' COMMENT '售货机类型：1-主柜，2-弧柜，3-边柜' AFTER `device_type`;
 
-CREATE TABLE `machine_main_relation` (
-  `main_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '主柜machine_id',
-  `b_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '边柜machine_id',
-  `h_mc_id` int(10) NOT NULL DEFAULT '0' COMMENT '弧柜machine_id',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  KEY (`main_mc_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备关联关系表';
-
 #20260312
 ALTER TABLE kiosk.machine_channel
   ADD COLUMN `old_retail_price` decimal(10,2) DEFAULT '-1.00' COMMENT '旧零售价' AFTER `retail_price`;
@@ -1254,3 +1246,98 @@ ALTER TABLE kiosk.machine_channel
 INSERT INTO `wx_template` (`wx_id`, `template_name`, `template_type`, `template_id`, `ao_id`,`miniprogram`, `body`,`status`, `create_time`, `update_time`)
 VALUES
   (3, '设备自动售卖成功通知','payment_success','5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI','1','{"appid":"","pagepath":""}', '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',1,1773653091,1773653091);
+
+#20260318
+ALTER TABLE kiosk.machine_config ADD gate_detection tinyint(1) NOT NULL DEFAULT 2 COMMENT '门控检测：1开 2关闭' after `backsweeper`;
+ALTER TABLE kiosk.machine_config ADD COLUMN `receipt_code3_desc` VARCHAR(50) DEFAULT '' COMMENT '二维码3的自定义文字' AFTER `receipt_code3`;
+
+#20260319
+ALTER TABLE kiosk.machine_channel
+ADD COLUMN `channel_name` VARCHAR(50) DEFAULT '' COMMENT '货道名称' AFTER `channel_code`;
+
+CREATE TABLE `card_balance_change_logs` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `card_no` varchar(20) NOT NULL DEFAULT '' COMMENT '卡号',
+  `balance_before_change` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '变化前余额',
+  `balance_changed` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '余额变化量',
+  `balance` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '变化后余额',
+  `change_type` tinyint(1) NOT NULL DEFAULT 1 COMMENT '变化类型1：增加 2：减少',
+  `balance_type` tinyint(1) NOT NULL DEFAULT 0 COMMENT '变化类型1：购物消费 2：后台充值 3：提现 4：退款 5：充值到积分 6：活动赠送',
+  `trade_no` varchar(50) DEFAULT NULL COMMENT '余额变化关联订单编号',
+  `activity_id` int(11) NOT NULL DEFAULT 0 COMMENT '活动ID(预留)',
+  `reasons` varchar(200) DEFAULT NULL COMMENT '原因',
+  `remark` varchar(200) DEFAULT NULL COMMENT '备注',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `card_no_IDX` (`card_no`) USING BTREE,
+  KEY `trade_no_IDX` (`trade_no`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='卡余额变化表';
+
+ALTER TABLE kiosk.card ADD COLUMN `balance` decimal(12,2) DEFAULT 0 COMMENT '卡余额' AFTER points;
+ALTER TABLE kiosk.card ADD COLUMN `password` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '密码' AFTER points;
+ALTER TABLE kiosk.card ADD COLUMN `status` tinyint(1) NOT NULL DEFAULT 0 COMMENT '余额卡激活状态' AFTER points;
+ALTER TABLE kiosk.card ADD COLUMN `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '余额卡持有人姓名' AFTER points;
+ALTER TABLE kiosk.card ADD COLUMN `activation_time` int(11) NOT NULL DEFAULT 0 COMMENT '余额卡激活时间' AFTER points;
+
+#20260320
+CREATE TABLE `machine_auxiliary` (
+  `m_id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `machine_id` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '设备编号',
+  `main_m_id` int(10) NOT NULL DEFAULT '0' COMMENT '主柜m_id',
+  `machine_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '设备名称',
+  `machine_serial_number` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '设备序列号',
+  `address` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '地址',
+  `pic` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '图片',
+  `mac_address` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '物理网卡地址',
+  `machine_type` tinyint DEFAULT '1' COMMENT '设备类型：1弧柜 2边柜',
+  `ao_id` int DEFAULT '0' COMMENT '归属组织ID',
+  `status` tinyint(1) DEFAULT '2' COMMENT '1:已挂接已启用 2:未挂接未启用 3:已挂接未启用',
+  `manager_id` int DEFAULT '0' COMMENT '管理员ID',
+  `remark` varchar(200) DEFAULT '' COMMENT '备注',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`m_id`),
+  KEY `machine_id_IDX` (`machine_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='副柜信息表';
+
+ALTER TABLE kiosk.machine_channel
+ADD COLUMN `is_admin` TINYINT(1) DEFAULT 2 COMMENT '是否后台创建 1是 2否' AFTER `mg_id`;
+
+#20260326
+CREATE TABLE `activity_card_activation` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '卡激活活动ID',
+  `pick_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '卡激活活动名称',
+  `money` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '卡激活活动金额',
+  `desc` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '活动描述',
+  `start_time` int DEFAULT NULL COMMENT '开始时间',
+  `end_time` int DEFAULT NULL COMMENT '结束时间',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态，1：未开始，2：进行中，3：已结束，4：主动下架',
+  `ao_id` int DEFAULT '0' COMMENT '组织ID',
+  `creator` int DEFAULT NULL COMMENT '创建人ID',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  `update_time` int DEFAULT NULL COMMENT '修改时间',
+  PRIMARY KEY (`id`),
+  KEY `start_time` (`start_time`) USING BTREE,
+  KEY `end_time` (`end_time`) USING BTREE,
+  KEY `status` (`status`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='卡激活活动表';
+
+CREATE TABLE `activity_card_activation_detail` (
+  `acd_id` int NOT NULL AUTO_INCREMENT COMMENT '自增ID',
+  `aca_id` int DEFAULT '0' COMMENT '活动ID',
+  `money` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '实际激活时赠送的金额',
+  `order_id` int DEFAULT NULL COMMENT '订单ID',
+  `trade_no` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '订单编号',
+  `card_no` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '卡号',
+  `m_id` int DEFAULT NULL COMMENT '设备ID',
+  `balance_log_id` bigint NOT NULL DEFAULT 0 COMMENT '余额日志ID', 
+  `machine_id` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '设备编号',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态，1：未使用，2：已使用',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  `used_time` int DEFAULT NULL COMMENT '激活时间',
+  PRIMARY KEY (`acd_id`),
+  KEY `aca_id` (`aca_id`) USING BTREE,
+  KEY `order_id` (`order_id`) USING BTREE,
+  KEY `m_id` (`m_id`) USING BTREE,
+  KEY `used_time` (`used_time`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='卡激活活动使用表';

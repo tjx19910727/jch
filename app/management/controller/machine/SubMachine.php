@@ -27,26 +27,16 @@ class SubMachine extends Common
     public function getList()
     {
         $postData = input();
-        $machineIds = [];
-        if (!empty($postData['machine_group_id'])) {
-            $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
-            unset($postData['machine_group_id']);
-            if (!$machineIds) return $this->app->machine->rNoData();
-        }
         $pageNum = $postData['pageNum'] ?? 20;
-        $vending_machine_type = $postData['vending_machine_type'] ?? '';
-        unset($postData['vending_machine_type']);
         $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
-    
-        if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
-        return $this->app->machine->getSubMList($where,$pageNum,$this->field,"m_id desc",$vending_machine_type);
+        return $this->app->machine->getSubMList($where,$pageNum,$this->field,"m_id desc");
     }
 
     public function getFind()
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machine->getMFind($where,$this->field);
+        return $this->app->machine->getSubMFind($where,$this->field);
     }
 
     public function add()
@@ -88,5 +78,37 @@ class SubMachine extends Common
         return $this->app->machine->delSubM($postData['m_id']);
     }
 
-    
+    /**
+     * 导出副柜
+     * @return array|\think\response\Json
+     */
+    public function export()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
+        return $this->app->machine->exportSubM($where);
+    }
+
+    /**
+     * 导入副柜
+     * @return array|string
+     */
+    public function import()
+    {
+        $postData = input();
+        if (empty($postData['file_path'])) return returnValidate("请先上传文件");
+        return $this->app->machine->importSubM($postData);
+    }
+
+    public function bind()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.bind');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machine->bindMainMachine($postData);
+    }
+
 }

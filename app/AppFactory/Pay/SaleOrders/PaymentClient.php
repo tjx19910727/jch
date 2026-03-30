@@ -16,6 +16,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\AliPayTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\Payment\BalancePayTrait;
 use app\AppFactory\Kernel\Traits\Payment\JdCashierTrait;
 use app\AppFactory\Kernel\Traits\Payment\TripPay;
 use app\AppFactory\Kernel\Traits\Payment\WxPayTrait;
@@ -39,7 +40,7 @@ class PaymentClient extends PayBaseClient
         StrategyPayeeTrait,StrategyIncomeTrait,
         StrategyMachineTrait,
         WxPayTrait,AliPayTrait,JdCashierTrait,TripPay,
-        MallPointsPayTrait,MallMachineTrait,MallTrait,MallRequestLogsTrait,
+        MallPointsPayTrait,BalancePayTrait,MallMachineTrait,MallTrait,MallRequestLogsTrait,
         BeforeOrderPaymentTrait,
         UserTrait,
         SaleHotelTrait,SaleHotelNightlyTrait,
@@ -67,6 +68,7 @@ class PaymentClient extends PayBaseClient
         "4" => "jdPay",
         "5" => "tripPay",
         "9" => "mallPointsPay",
+        "20" => "balancePay",
     ];
 
     protected $cancelType = [
@@ -129,6 +131,11 @@ class PaymentClient extends PayBaseClient
                 return $this->rFail($this->lang("VOrderPay.auth_code_not_match_pay_type"));
             $this->order['pay_code'] = $this->data['authCode'];
         }
+        //余额支付
+        if ($this->order['pay_type'] == 20 && !empty($this->data['card_no'])) {
+            $this->order['pay_code'] = $this->data['card_no'];
+        }
+
 
         $where['sm.s_type'] = 1;
         $where['sp.status'] = 1;

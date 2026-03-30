@@ -831,6 +831,20 @@ class Receive extends Common
         }
     }
 
+    /**
+     * 检查余额支付是否需要支付密码
+     * @return array|\think\response\Json
+     */
+    public function checkBalancePayPassword()
+    {
+        try {
+            return $this->app->api->checkBalancePayPassword();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
      /**
      * 获取微程短信验证码
      * @return array|\think\response\Json

@@ -1787,6 +1787,39 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 检查本次余额支付是否需要支付密码
+     * 规则：未登录，或登录手机号与卡绑定手机号不一致时，需要输入支付密码
+     * @return array|\think\response\Json
+     */
+    public function checkBalancePayPassword()
+    {
+        try {
+            $cardNo = trim($this->data['card_no'] ?? '');
+            $bindId = trim($this->data['bind_id'] ?? '');
+            if (!$cardNo) {
+                return $this->r(100, 'failed', 'card_no不能为空');
+            }
+
+            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no,bind_id,password');
+            if (!$card) {
+                return $this->r(100, 'failed', '找不到对应的积分卡');
+            }
+
+            $needPayPassword = empty($bindId) || empty($card['bind_id']) || ((string)$bindId !== (string)$card['bind_id']);
+            $data = [
+                'card_no' => $cardNo,
+                'bind_id' => $bindId,
+                'card_bind_id' => $card['bind_id'] ?? '',
+                'need_pay_password' => $needPayPassword ? 1 : 0,
+                'has_pay_password' => empty($card['password']) ? 0 : 1,
+            ];
+            return $this->r(200, 'success', $data);
+        } catch (\Exception $e) {
+            return $this->rFail($e->getMessage());
+        }
+    }
+
+    /**
      * 获取积分变化类型
      * @return array|\think\response\Json
      * @throws \Exception
