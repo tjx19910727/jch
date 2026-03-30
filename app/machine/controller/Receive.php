@@ -1007,6 +1007,34 @@ class Receive extends Common
         $postData = input();
         //$this->validate($postData, $this->validatePath . 'sendErro');
         try {
+            // 用于本地联调：simulate_mq=1 时按 MQ 的消息结构模拟一次故障码上报
+            if (!empty($postData['simulate_mq'])) {
+                $mqData = [
+                    "msg_id" => $postData['mq_msg_id'] ?? uniqid("mq_"),
+                    "machine_id" => $postData['machine_id'],
+                    "timestamp" => time(),
+                    "data" => json_encode([
+                        "msgType" => "errorCode",
+                        "errorCode" => $postData['errorCode'] ?? "",
+                        "msg" => $postData['msg'] ?? "",
+                        "error_position" => $postData['error_position'] ?? "",
+                    ], JSON_UNESCAPED_UNICODE),
+                    "mac" => $this->request->header("mac") ?? "",
+                ];
+                $mqData['sign'] = $this->app->api->makeSign($mqData);
+                $mqConfig = [
+                    "machine_id" => $mqData['machine_id'],
+                    "data" => $mqData,
+                    "mac" => $mqData['mac'],
+                ];
+                $mqApp = AppFactory::machine($mqConfig);
+                $mqResult = $mqApp->mq->onMessage();
+                return returnState(200, '模拟MQ故障码上报完成', [
+                    'mode' => 'mq',
+                    'msg_id' => $mqData['msg_id'],
+                    'result' => $mqResult,
+                ]);
+            }
             return $this->app->api->sendErro();
         } catch (\Exception $e) {
             actionException($e, 1);
