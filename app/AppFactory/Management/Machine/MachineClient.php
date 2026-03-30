@@ -1009,6 +1009,7 @@ class MachineClient extends ManagementClient
                 $mainMIdsMap = []; // 存储导入数据中副柜索引与对应主柜ID的映射
                 
                 foreach ($importData as $key => $value) {
+                    if (empty($value['machine_id'])) continue;
                     // 处理设备类型文字转数字
                     if (isset($value['machine_type_desc'])) {
                         if ($value['machine_type_desc'] == "弧柜") $value['machine_type'] = 1;
@@ -1027,7 +1028,7 @@ class MachineClient extends ManagementClient
                 }
 
                 if ($insertAuxiliary) {
-                    // 批量插入副柜，使用 saveAll 以便获取自增ID
+
                     $this->addMachineAuxiliaryMore($insertAuxiliary);
                 }
 
