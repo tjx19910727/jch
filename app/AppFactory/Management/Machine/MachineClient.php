@@ -949,8 +949,7 @@ class MachineClient extends ManagementClient
      */
     public function exportSubM($where)
     {
-        $list = $this->getMachineAuxiliaryList($where, 0, 'm_id,machine_id,machine_name,address,
-        (CASE machine_type WHEN 1 THEN "弧柜" WHEN 2 THEN "边柜" ELSE "未知" END) machine_type, remark, updated_at, created_at');
+        $list = $this->getMachineAuxiliaryList($where, 0, '*', 'created_at desc');
 
         if (count($list)) {
             $list = $list->toArray();
@@ -966,7 +965,11 @@ class MachineClient extends ManagementClient
                 $list[$key] = $item;
                 unset($list[$key]['m_id']);
             }
-
+            if($item['machine_type'] == 1) {
+                $item['machine_type'] = '弧柜';
+            } else{
+                $item['machine_type'] = '边柜';
+            } 
             $title = [
                 "machine_id" => "副柜编号",
                 "machine_name" => "副柜名称",
