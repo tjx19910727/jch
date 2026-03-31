@@ -509,7 +509,7 @@ class MachineChannelClient extends ManagementClient
                 }
                 $this->updateMachineChannel($saveData, ['mc_id' => $mc_id]);
                 // 发送触发货道更新数据
-                $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => $mc_id]);
+                $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => (int)$mc_id]);
             }
             return $this->r(200, $this->lang("action_success"));
         } catch (\Exception $e) {
@@ -554,7 +554,7 @@ class MachineChannelClient extends ManagementClient
                 if ($restoreData) {
                     $this->updateMachineChannel($restoreData, ['mc_id' => $mc_id]);
                     // 发送触发货道更新数据
-                    $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => $mc_id]);
+                    $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => (int)$mc_id]);
                 }
             }
             $this->commitTrans();
