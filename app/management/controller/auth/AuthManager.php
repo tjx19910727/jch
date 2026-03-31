@@ -136,22 +136,16 @@ class AuthManager extends Common
 
     public function getAuthOrgRevenueLogs(){
         $postData = input();
-        $pageNum = 15;
-        if(isset($postData['pageNum'])) {
-            $pageNum = $postData['pageNum'];
-            unset($postData['pageNum']);
-        }
-        return $this->app->authManager->getAuthOrgRevenueLogData($postData, $pageNum);
+        $pageNum = $postData['pageNum'] ?? '';
+        $where = $this->getWhere($postData, false, []);
+        return $this->app->authManager->getAuthOrgRevenueLogData($where, $pageNum);
     }
 
     public function getWithDrawApply(){
         $postData = input();
-        $pageNum = 15;
-        if(isset($postData['pageNum'])) {
-            $pageNum = $postData['pageNum'];
-            unset($postData['pageNum']);
-        }
-        return $this->app->authManager->getAuthWithdrawRequestData($postData, $pageNum);
+        $pageNum = $postData['pageNum'] ?? '';
+        $where = $this->getWhere($postData, false, []);
+        return $this->app->authManager->getAuthWithdrawRequestData($where, $pageNum);
     }
     /**
      * 发起组织提现申请

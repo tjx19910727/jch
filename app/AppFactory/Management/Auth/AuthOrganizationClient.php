@@ -19,7 +19,7 @@ class AuthOrganizationClient extends ManagementClient
 {
     use AuthOrganizationTrait,AuthOrganizationRoleTrait,AuthManagerTrait,AuthOrgMachineChannelTrait;
 
-    public function getAuthOrgMCLists($where, $pageNum = null, $field = '*', $order = ''){
-        return $this->rQ($this->getAuthOrgMCList($where, $pageNum = null, $field = '*', $order = ''));
+    public function getAuthOrgMCLists($where, $pageNum = '', $field = '*', $order = '', $eachFn = "", $group = "", $limit = 0){
+        return $this->rQ($this->getAuthOrgMCList($where, $pageNum, $field, $order));
     }
 }

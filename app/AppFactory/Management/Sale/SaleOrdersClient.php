@@ -36,10 +36,11 @@ use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Mall\MallTrait;
 use app\AppFactory\Kernel\Traits\Mall\MallRequestLogsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDetailsDailyCountTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
 
 class SaleOrdersClient extends ManagementClient
 {
-    use AuthManagerTrait;
+    use AuthManagerTrait, AuthOrgMachineChannelTrait;
     use SaleOrdersTrait, SaleOrdersRefundTrait, SaleOrdersRevenueTrait, SaleOrdersUnclaimedTrait, SaleOrdersDailyCountTrait, SaleHotelTrait, SaleHotelNightlyTrait,SaleOrdersDetailsDailyCountTrait;
     use BeforeOrderPaymentTrait;
     use MallPointsPayTrait,MallMachineTrait,MachineTrait,MallTrait,MallRequestLogsTrait;
@@ -86,6 +87,10 @@ class SaleOrdersClient extends ManagementClient
      */
     public function getSoList($where, $pageNum = 0, $field = "*", $order = "", $supplier = false)
     {
+        //检查当前登录用组织是否租赁设备
+        $this->manager['ao_id'] = 33;
+        $authOrgMc = $this->getAuthOrgMCCount(['ao_id' => $this->manager['ao_id']]);
+        if($authOrgMc) return $this->getGerSoList($where, $pageNum, $field, $order, $this->manager['ao_id']);
         try {
             if($supplier){
                 if ($this->manager['pid'] > 0) {
@@ -99,6 +104,54 @@ class SaleOrdersClient extends ManagementClient
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    
+    public function getGerSoList($where, $pageNum = 0, $field = "*", $order = "", $detailAoId = 0)
+    {
+        try {
+            if ($detailAoId) {
+                $orderIds = array_values(array_unique($this->getSaleOrdersDetailsColumn(['ao_id' => $detailAoId], 'order_id')));
+                if (!$orderIds) $orderIds = [0];
+                $where[] = ['order_id', 'in', $orderIds];
+            }
+            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order)->toArray();
+
+            if ($detailAoId) {
+                $data = $this->filterSaleOrdersByDetailAoId($data, $detailAoId, $pageNum);
+            }
+            return $this->r(200, $this->lang("query_success"), $data);
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    protected function filterSaleOrdersByDetailAoId($data, $detailAoId, $pageNum = 0)
+    {
+        $rows = $pageNum ? ($data['data'] ?? []) : $data;
+
+        foreach ($rows as $key => $row) {
+            $details = obj2arr($row['details'] ?? []);
+            $details = array_values(array_filter($details, function ($detail) use ($detailAoId) {
+                return isset($detail['ao_id']) && (string) $detail['ao_id'] === (string) $detailAoId;
+            }));
+
+            if (!$details) {
+                unset($rows[$key]);
+                continue;
+            }
+
+            $rows[$key]['details'] = $details;
+        }
+
+        $rows = array_values($rows);
+        if ($pageNum) {
+            $data['data'] = $rows;
+            return $data;
+        }
+
+        return $rows;
     }
 
     public function getDetailsList($where, $pageNum = 0, $field = "*", $order = "", $supplier = false)
