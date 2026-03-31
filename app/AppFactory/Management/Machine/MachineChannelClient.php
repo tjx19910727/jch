@@ -491,7 +491,6 @@ class MachineChannelClient extends ManagementClient
         }
         if (!$updateData) return $this->r(100, $this->lang("action_fail"));
 
-        $this->startTrans();
         try {
             foreach ($mc_ids as $mc_id) {
                 $mc = $this->getMachineChannelFind(['mc_id' => $mc_id,'m_id' => $machine['m_id']], 'mc_id,retail_price,gift_points,stock_warning,old_retail_price,old_gift_points,old_stock_warning,machine_id');
@@ -508,15 +507,12 @@ class MachineChannelClient extends ManagementClient
                 if (isset($updateData['stock_warning'])) {
                     $saveData['old_stock_warning'] = $mc['stock_warning'];
                 }
-
                 $this->updateMachineChannel($saveData, ['mc_id' => $mc_id]);
                 // 发送触发货道更新数据
                 $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => $mc_id]);
             }
-            $this->commitTrans();
             return $this->r(200, $this->lang("action_success"));
         } catch (\Exception $e) {
-            $this->rollbackTrans();
             return $this->r(100, $e->getMessage());
         }
     }
