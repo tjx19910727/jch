@@ -8,12 +8,16 @@
 
 namespace app\AppFactory\Kernel\Support\SimiotService;
 
+use app\AppFactory\AppFactory;
+use think\facade\Db;
+
 define("SIMIOT_QUERY_CARD", "https://iot.simiot.com/api/client/v1");
 
 /**
  * Class Simiot
  * @method static queryCard($iccid, $cycles = 12)  查询卡信息
  * @method static queryPool()  查询流量池信息
+ * @method static checkWarning()  查询是否需要预警
  * @package app\AppFactory\Kernel\Support\SimiotService
  */
 class Simiot
@@ -46,6 +50,24 @@ class Simiot
 	 */
 	public $status;
 
+	public $defaultWarningValue;
+	public $defaultWarningAoId;
+
+	/**
+	 * 流量预警接收账号（auth_manager.account）
+	 * @var array
+	 */
+	public $warningAccounts = [
+		'18163326',
+		'18163058',
+		'jixiang2026',
+		'gfliu',
+		'18138127',
+		'82005720',
+		'82006153',
+		'18162217',
+	];
+
 	/**
 	 * 初始化
 	 * Simiot constructor.
@@ -54,6 +76,8 @@ class Simiot
 	{
 		$this->appId = '8130053573632192';
 		$this->secret = 'W9U3pCVkLpOeEgELZJk9NxtdZid73HDm';
+		$this->defaultWarningValue = 5; //默认预警值,单位%
+		$this->defaultWarningAoId = 1;
 	}
 
 	/**
@@ -117,10 +141,8 @@ class Simiot
 		return $result;
 	}
 
-		/**
-	 * 查询卡信息
-	 * @param string $iccid
-	 * @param int $cycles
+	/**
+	 * 查询流量池信息
 	 * @return array
 	 */
 	public function _queryPool()
@@ -160,6 +182,98 @@ class Simiot
 		}
 		return $result;
 	}
+
+	/**
+	 * 查询是否需要预警
+	 * @return bool
+	 */
+	public function _checkWarning()
+	{
+		$result = $this->_queryPool();
+		if (isset($result['code']) && $result['code'] == 0) {
+			$res = $result['result'][0] ?? [];
+			if (isset($res['traffic_left']) && !empty($res['traffic_total'])) {
+				$rate = bcdiv((string)$res['traffic_left'], (string)$res['traffic_total'], 4) * 100;
+				if ($rate <= $this->defaultWarningValue) {
+					// 每天开始，触发后，4小时发送一次
+					$cacheKey = 'simiot.pool.warning.sent.' . date('Ymd');
+					if (!cache($cacheKey)) {
+						$sendResult = $this->sendTrafficWarningNotice($rate, $res);
+						if ($sendResult !== false) {
+							cache($cacheKey, 1, 14400);
+						}
+					}else{
+						actionLog([], '已发送，无需重复发送');
+					}
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * 发送流量预警模板消息
+	 * @param float $rate
+	 */
+	protected function sendTrafficWarningNotice($rate)
+	{
+		try {
+			$list = Db::name('auth_manager')
+				->whereIn('account', $this->warningAccounts)
+				->where('status', 1)
+				->field('manager_id,nickname,ao_id,openid,wx_notice')
+				->select()
+				->toArray();
+			$receivers = [];
+			foreach ($list as $item) {
+				if ($item['openid']) {
+					$receivers[] = [
+						'manager_id' => $item['manager_id'],
+						'nickname' => $item['nickname'],
+						'ao_id' => $this->defaultWarningAoId,
+						'openid' => $item['openid'],
+					];
+				}
+			}
+			if (empty($receivers)) {
+				actionLog(['accounts' => $this->warningAccounts], '流量预警通知发送失败，未找到接收账号');
+				return false;
+			}
+
+			$warningData = [
+				'machine_id' => 'LLYJ',
+				'machine_name' => '流量预警',
+				'errorCode' => '120333311',
+				'error_code' => '剩余流量仅' . $rate . '%，请及时充值',
+				'error_info' => '120333311',
+				'error_time' => date('Y-m-d H:i:s'),
+			];
+
+			$hasSend = false;
+			if (!empty($receivers) ) {
+				$noticeData = [
+					'ao_id' => $this->defaultWarningAoId,
+					'sendType' => 1,
+					'templateType' => 'mFault',
+					'receiver' => $receivers,
+					'replaceData' => $warningData,
+				];
+				actionLog($noticeData, '发送新物联流量预警微信通知');
+				$result = AppFactory::notice($noticeData)->weChat->send();
+				actionLog($result, '发送新物联流量预警微信通知结果');
+				if ($result !== false) {
+					$hasSend = true;
+				}
+			}
+
+			return $hasSend;
+		} catch (\Throwable $e) {
+			actionException($e, 1);
+			return false;
+		}
+	}
+
 
 	/**
 	 * 生成签名
