@@ -76,6 +76,7 @@ class MachineInfoClient extends ManagementClient
     public function getSimiotData($iccid, $mi_id)
     {
         $result = Simiot::queryCard($iccid);
+        $result2 = Simiot::checkWarning();//发送流量预警
         $result = json2arr($result);
         $arr = ['china_mobile' => '中国移动', 'china_unicom' => '中国联通', 'china_telecom' => '中国电信'];
         if (isset($result['code']) && $result['code'] == 0) {

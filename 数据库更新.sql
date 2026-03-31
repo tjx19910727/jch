@@ -1340,4 +1340,21 @@ CREATE TABLE `activity_card_activation_detail` (
   KEY `order_id` (`order_id`) USING BTREE,
   KEY `m_id` (`m_id`) USING BTREE,
   KEY `used_time` (`used_time`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='卡激活活动使用表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='卡激活活动使用表';  (3, '设备自动售卖成功通知','payment_success','5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI','1','{"appid":"","pagepath":""}', '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',1,1773653091,1773653091);
+
+#20260330
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `internal_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过内部摄像头，1-跳过，2-不跳过' AFTER `stock_warning`;
+
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `discharge_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过出料口摄像头，1-跳过，2-不跳过' AFTER `stock_warning`;
+
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `head_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过头部摄像头，1-跳过，2-不跳过' AFTER `stock_warning`;
+
+#20260331
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `pay_qrcode_url` VARCHAR(255) DEFAULT '' COMMENT '支付二维码URL' AFTER `receipt_code3`;
+
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `pay_qrcode2_url` VARCHAR(255) DEFAULT '' COMMENT '支付二维码URL2' AFTER `receipt_code3`;
