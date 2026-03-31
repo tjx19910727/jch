@@ -1264,3 +1264,10 @@ ALTER TABLE kiosk.machine_config
 
 ALTER TABLE kiosk.machine_config
   ADD COLUMN `head_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过头部摄像头，1-跳过，2-不跳过' AFTER `stock_warning`;
+
+#20260331
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `pay_qrcode_url` VARCHAR(255) DEFAULT '' COMMENT '支付二维码URL' AFTER `receipt_code3`;
+
+ALTER TABLE kiosk.machine_config
+  ADD COLUMN `pay_qrcode2_url` VARCHAR(255) DEFAULT '' COMMENT '支付二维码URL2' AFTER `receipt_code3`;
