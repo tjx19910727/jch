@@ -195,15 +195,15 @@ class Simiot
 			if (isset($res['traffic_left']) && !empty($res['traffic_total'])) {
 				$rate = bcdiv((string)$res['traffic_left'], (string)$res['traffic_total'], 4) * 100;
 				if ($rate <= $this->defaultWarningValue) {
-					// 发送预警通知，一天只发送一次
+					// 每天开始，触发后，4小时发送一次
 					$cacheKey = 'simiot.pool.warning.sent.' . date('Ymd');
 					if (!cache($cacheKey)) {
 						$sendResult = $this->sendTrafficWarningNotice($rate, $res);
 						if ($sendResult !== false) {
-							cache($cacheKey, 1, 86400);
+							cache($cacheKey, 1, 14400);
 						}
 					}else{
-						actionLog([], '今日已发送，无需重复发送');
+						actionLog([], '已发送，无需重复发送');
 					}
 					return true;
 				}
