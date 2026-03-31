@@ -24,9 +24,9 @@ trait AuthWithdrawTrait
         return AuthWithdrawRequestModel::getFind($where, $field);
     }
 
-    public function getAuthWithdrawRequestList($where, $pageNum = 0, $field = '*', $order = '')
+    public function getAuthWithdrawRequestList($where, $pageNum = '', $field = '*', $order = '', $eachFn = "", $group = "", $limit = 0)
     {
-        return AuthWithdrawRequestModel::getList($where, $pageNum, $field, $order);
+        return AuthWithdrawRequestModel::getList($where, $pageNum, $field, $order, $eachFn, $group, $limit);
     }
 
     public function updateAuthWithdrawRequest($update)

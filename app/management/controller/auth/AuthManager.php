@@ -134,6 +134,7 @@ class AuthManager extends Common
         return $result;
     }
 
+    //查询分账记录
     public function getAuthOrgRevenueLogs(){
         $postData = input();
         $pageNum = $postData['pageNum'] ?? '';
@@ -141,10 +142,22 @@ class AuthManager extends Common
         return $this->app->authManager->getAuthOrgRevenueLogData($where, $pageNum);
     }
 
+    //根据当前用户身份，返回对应的提现数据
     public function getWithDrawApply(){
         $postData = input();
         $pageNum = $postData['pageNum'] ?? '';
-        $where = $this->getWhere($postData, false, []);
+
+        if($this->manager['audit_status'] == 1){
+             $where = $this->getWhere($postData, false, []);
+        }else{
+            //找提交人
+            $strategy_managers = $this->app->strategyManager->getStrategyManagerColumnDatas(['s_type' => 2], 'manager_id');
+            if(empty($strategy_managers)) $where['ao_id'] = ''; 
+            if(in_array($this->manager['manager_id'], $strategy_managers)){
+                $where['ao_id'] = $this->manager['ao_id'];
+            }
+        }
+
         return $this->app->authManager->getAuthWithdrawRequestData($where, $pageNum);
     }
     /**
@@ -156,7 +169,7 @@ class AuthManager extends Common
         $postData = input();
         $amount = $postData['amount'] ?? 0;
         if (!$amount || $amount <= 0) return returnState(100,'提现金额必须大于0');
-        $account_type = $postData['account_type'] ?? '';
+        $account_type = $postData['account_type'] ?? ''; 
         if (!$account_type) return returnState(100,'请选择提现类型');
         $account = $postData['account'] ?? '';
         if (!$account) return returnState(100,'提现账户不能为空');

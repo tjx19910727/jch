@@ -88,7 +88,6 @@ class SaleOrdersClient extends ManagementClient
     public function getSoList($where, $pageNum = 0, $field = "*", $order = "", $supplier = false)
     {
         //检查当前登录用组织是否租赁设备
-        $this->manager['ao_id'] = 33;
         $authOrgMc = $this->getAuthOrgMCCount(['ao_id' => $this->manager['ao_id']]);
         if($authOrgMc) return $this->getGerSoList($where, $pageNum, $field, $order, $this->manager['ao_id']);
         try {

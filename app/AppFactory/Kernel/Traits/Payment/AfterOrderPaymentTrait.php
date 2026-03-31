@@ -133,7 +133,7 @@ trait AfterOrderPaymentTrait
                     $mc = $mc ? (is_array($mc) ? $mc : obj2arr($mc)) : [];
 
                     //微程积分记录到details表
-                    if(!empty($updateSod['wc_order_no'])){
+                    if(!empty($v['wc_order_no'])){
                         $wc_order_no = json_decode($wc_order_no, true);
                         $updateSod['total_sod_points'] = $wc_order_no['total_sod_points'];
                     }else{
