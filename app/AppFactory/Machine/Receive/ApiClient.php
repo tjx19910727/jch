@@ -660,7 +660,7 @@ class ApiClient extends ReceiveBaseClient
         $aoIds = $this->getPathIds($this->machine["ao_id"], 1);
         if ($aoIds) {
             $goodsList = $this->getGoodsJoinMachineGoodsList(
-                [['ao_id', 'in', $aoIds]],
+                [['g.ao_id', 'in', $aoIds]],
                 $this->data['pageNum'] ?? 0,
                 $this->goodsField,
                 'g.update_time desc',
