@@ -842,6 +842,7 @@ class ApiClient extends ReceiveBaseClient
                 // ]
                 //type = 1：[{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151415","no":"VC2507151415","order_date":""}]
                 //type = 11: [{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151415","no":"VC2507151415","order_date":""}]
+                $total_sod_points = 0;
                 foreach ($this->data['carList'] as $value) {
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $wc_goods = $this->getWcGoodsFind(['no' => $value['out_no']]);
@@ -904,6 +905,7 @@ class ApiClient extends ReceiveBaseClient
                         }
                         $wc_order_no = [];
                         foreach ($wc_goods_locals as $wc_goods_local) {
+                            $total_sod_points += $wc_goods_local['gift_points'];
                             if ($wc_goods_local['g_id'] != '9999' && $wc_goods_local['g_id'] != '0') {
                                 $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
                                 if ($machine_channel) {
@@ -922,6 +924,7 @@ class ApiClient extends ReceiveBaseClient
                                 'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0, //是否需要本机出货  0-否 1-是
                                 'out_goods_status' => 0, //出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
                                 'real_channel_code' => $real_channel_code, //实际出货货道
+                                'total_sod_points' => $total_sod_points, //子订单微程商品赠送积分
                                 // 'wc_user_address_id' => '', //微程会员寄送地址id
                                 // 'wc_user_address' => '',//微程会员寄送详细地址
                             ];

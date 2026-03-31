@@ -132,16 +132,23 @@ trait AfterOrderPaymentTrait
                     // normalize to array/object as needed
                     $mc = $mc ? (is_array($mc) ? $mc : obj2arr($mc)) : [];
 
-                    $rate_points = $this->getRateOrGiftPoints($mc);
+                    //微程积分记录到details表
+                    if(!empty($updateSod['wc_order_no'])){
+                        $wc_order_no = json_decode($wc_order_no, true);
+                        $updateSod['total_sod_points'] = $wc_order_no['total_sod_points'];
+                    }else{
+                        $rate_points = $this->getRateOrGiftPoints($mc);
 
-                    if ($rate_points['gift_points'] > 0) {
-                        $updateSod['intergral_rate'] = 0;
-                        $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
+                        if ($rate_points['gift_points'] > 0) {
+                            $updateSod['intergral_rate'] = 0;
+                            $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
+                        }
+                        if ($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0) {
+                            $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
+                            $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $rate_points['intergral_rate'], 3);
+                        }
                     }
-                    if ($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0) {
-                        $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
-                        $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $rate_points['intergral_rate'], 3);
-                    }
+                    
                     $total_points += $updateSod['total_sod_points'];
                     if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
                         $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']], 'stock');

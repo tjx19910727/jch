@@ -21,9 +21,14 @@ trait AuthOrgMachineChannelTrait
         return AuthOrgMachineChannelModel::getFind($where, $field, $order);
     }
 
-    public function getAuthOrgMCList($where, $pageNum = 0, $field = '*', $order = '')
+    public function getAuthOrgMCCount($where, $field= '*')
     {
-        return AuthOrgMachineChannelModel::getList($where, $pageNum, $field, $order);
+        return AuthOrgMachineChannelModel::getCount($where, $field);
+    }
+
+    public function getAuthOrgMCList($where, $pageNum, $field= '*', $order= '', $eachFn = "", $group = "", $limit = 0)
+    {
+        return AuthOrgMachineChannelModel::getList($where, $pageNum, $field, $order, $eachFn = "", $group = "", $limit = 0);
     }
 
     public function getAuthOrgMCColumn($where, $column)
