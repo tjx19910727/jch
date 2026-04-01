@@ -23,4 +23,8 @@ class StrategyManagerClient extends ManagementClient
     public function getStrategyManagerColumnDatas($where, $field = "*",$key = ""){
         return $this->getStrategyManagerColumns($where, $field, $key);
     }
+    
+    public function updateStrategyManagerData($update,$where){
+        return $this->updateStrategyManager($update,$where);
+    }
 }

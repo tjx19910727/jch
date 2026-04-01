@@ -10,4 +10,8 @@ class AuthWithdrawRequestModel extends BaseModel
 {
     protected $table = 'auth_withdraw_requests';
 
+    public function managerData()
+    {
+        return $this->hasOne(AuthManagerModel::class,"manager_id","requester_manager_id");
+    }
 }

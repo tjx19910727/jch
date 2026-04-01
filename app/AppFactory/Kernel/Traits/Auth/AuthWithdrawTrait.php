@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Trait: 组织提现申请相关封装
  */
@@ -24,9 +25,9 @@ trait AuthWithdrawTrait
         return AuthWithdrawRequestModel::getFind($where, $field);
     }
 
-    public function getAuthWithdrawRequestList($where, $pageNum = '', $field = '*', $order = '', $eachFn = "", $group = "", $limit = 0)
+    public function getAuthWithdrawRequestList($where, $pageNum = '', $field = '*', $order = '', $eachFn = "", $group = "", $limit = 0, $with = [])
     {
-        return AuthWithdrawRequestModel::getList($where, $pageNum, $field, $order, $eachFn, $group, $limit);
+        return AuthWithdrawRequestModel::getListAndWith($where, $pageNum, $field, $order, $eachFn, $group, $limit, ['managerData']);
     }
 
     public function updateAuthWithdrawRequest($update)
@@ -36,6 +37,4 @@ trait AuthWithdrawTrait
         $field = [];
         return AuthWithdrawRequestModel::update($update, $where, $field);
     }
-
-    
 }
