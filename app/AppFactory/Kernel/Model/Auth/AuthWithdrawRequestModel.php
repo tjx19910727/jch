@@ -14,4 +14,9 @@ class AuthWithdrawRequestModel extends BaseModel
     {
         return $this->hasOne(AuthManagerModel::class,"manager_id","requester_manager_id");
     }
+
+    public function auditData()
+    {
+        return $this->hasOne(AuthManagerModel::class,"manager_id","manager_id");
+    }
 }

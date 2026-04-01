@@ -12,14 +12,14 @@ namespace app\AppFactory\Management\Auth;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Management\ManagementClient;
-use app\AppFactory\Kernel\Traits\Auth\AuthWithdrawTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthWithdrawRequestTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgRevenueTrait;
 
 class AuthManagerClient extends ManagementClient
 {
     use AuthManagerTrait;
     use WxOfficialTrait;
-    use AuthWithdrawTrait;
+    use AuthWithdrawRequestTrait;
     use AuthOrgRevenueTrait;
 
     public function updateSelfPwd($postData)
