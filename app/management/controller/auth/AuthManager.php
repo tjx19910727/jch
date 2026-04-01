@@ -38,7 +38,7 @@ class AuthManager extends Common
             $where['au.ao_id'] = $where['ao_id'];
             unset($where['ao_id']);
         }
-        $field = "au.manager_id,au.nickname,au.account,au.pid,au.openid,
+        $field = "au.manager_id,au.nickname,au.account,au.pid,au.openid,au.audit_status,
         au.bill_account,au.real_name,au.level,au.sex,au.pic,au.status,au.creator,au.ao_id,au.wx_notice,au.email_notice,au.email,au.openid,
         au.create_time,ao.organization_name";
         $result = $this->app->authManager->getList($where,$pageNum,$field);
@@ -134,6 +134,7 @@ class AuthManager extends Common
         return $result;
     }
 
+    //查询分账记录
     public function getAuthOrgRevenueLogs(){
         $postData = input();
         $pageNum = $postData['pageNum'] ?? '';
@@ -141,10 +142,21 @@ class AuthManager extends Common
         return $this->app->authManager->getAuthOrgRevenueLogData($where, $pageNum);
     }
 
+    //根据当前用户身份，返回对应的提现数据
     public function getWithDrawApply(){
         $postData = input();
         $pageNum = $postData['pageNum'] ?? '';
-        $where = $this->getWhere($postData, false, []);
+
+        if($this->manager['audit_status'] == 1){
+             $where = $this->getWhere($postData, false, []);
+        }else{
+            //找提交人
+            $strategy_managers = $this->app->strategyManager->getStrategyManagerColumnDatas(['s_type' => 2], 'manager_id');
+            if(empty($strategy_managers)) $where['ao_id'] = ''; 
+            if(in_array($this->manager['manager_id'], $strategy_managers)){
+                $where['ao_id'] = $this->manager['ao_id'];
+            }
+        }
         return $this->app->authManager->getAuthWithdrawRequestData($where, $pageNum);
     }
     /**
@@ -156,7 +168,7 @@ class AuthManager extends Common
         $postData = input();
         $amount = $postData['amount'] ?? 0;
         if (!$amount || $amount <= 0) return returnState(100,'提现金额必须大于0');
-        $account_type = $postData['account_type'] ?? '';
+        $account_type = $postData['account_type'] ?? ''; 
         if (!$account_type) return returnState(100,'请选择提现类型');
         $account = $postData['account'] ?? '';
         if (!$account) return returnState(100,'提现账户不能为空');
@@ -188,6 +200,18 @@ class AuthManager extends Common
             $this->app->authManager->rollbackTrans();
             actionException($e,1);
             return returnState($e->getMessage());
+        }
+    }
+
+    /**
+     * 取消提现审核
+     */
+    public function cancelApplyWithdraw(){
+        $strategy_managers = $this->app->strategyManager->getStrategyManagerColumnDatas(['s_type' => 2], 'manager_id');
+        if(empty($strategy_managers)) return returnState(100, 'failed', ['无权限操作']);
+        if(in_array($this->manager['manager_id'], $strategy_managers)){
+            $postData = input();
+            return returnState(200,'success', $this->app->strategyManager->updateStrategyManagerData($postData,['wr_id' => $postData['wr_id']]));
         }
     }
 
