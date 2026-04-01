@@ -891,6 +891,132 @@ class MachineClient extends ManagementClient
     }
 
     /**
+     * 副柜新增货道（仅边柜可操作，且必须绑定主柜）
+     * @param array $postData
+     * @return array|string
+     */
+    public function addSubMChannel($postData)
+    {
+        $m_id = intval($postData['m_id'] ?? 0);
+        $subMachine = $this->getMachineAuxiliaryFind(['m_id' => $m_id], 'm_id,machine_name,machine_type,main_m_id');
+        if (!$subMachine) {
+            return $this->r(100, $this->lang("VSubMachine.no_data"));
+        }
+        $subMachine = $subMachine->toArray();
+
+        if (intval($subMachine['machine_type'] ?? 0) !== 2) {
+            return $this->r(100, $this->lang("VSubMachine.only_edge_add_channel"));
+        }
+
+        $main_m_id = intval($subMachine['main_m_id'] ?? 0);
+        if ($main_m_id <= 0) {
+            return $this->r(100, $this->lang("VSubMachine.bind_main_before_add_channel"));
+        }
+
+        $mainM = $this->getMachineFind(['m_id' => $main_m_id], 'm_id,machine_id,ao_id');
+        if (!$mainM) {
+            return $this->r(100, $this->lang("VMachine.machine_no_data"));
+        }
+        $mainM = $mainM->toArray();
+
+        $channelList = $this->getMachineChannelList([
+            ['m_id', '=', $main_m_id],
+            ['channel_position', '=', 3],
+        ], 0, 'channel_code', 'mc_id asc');
+
+        $existCodes = [];
+        $maxNum = 0;
+        if ($channelList) {
+            foreach ($channelList as $row) {
+                $code = strval($row['channel_code'] ?? '');
+                if (preg_match('/^02(\d+)$/', $code, $matches)) {
+                    $existCodes[$code] = 1;
+                    $num = intval($matches[1]);
+                    if ($num > $maxNum) {
+                        $maxNum = $num;
+                    }
+                }
+            }
+        }
+
+        $channelCode = trim(strval($postData['channel_code'] ?? ''));
+        if (!$channelCode) {
+            $channelCode = '02' . str_pad((string)($maxNum + 1), 2, '0', STR_PAD_LEFT);
+        }
+
+        if (isset($existCodes[$channelCode])) {
+            return $this->r(100, '货道编号已存在');
+        }
+
+        $insert = $postData;
+        unset($insert['m_id']);
+        unset($insert['mc_id']);
+
+        $insert = array_merge($insert, [
+            'm_id' => $main_m_id,
+            'machine_id' => $mainM['machine_id'] ?? '',
+            'ao_id' => $mainM['ao_id'] ?? ($this->manager['ao_id'] ?? 0),
+            'channel_code' => $channelCode,
+            'channel_position' => 3,
+            'channel_name' => $postData['channel_name'] ?? ($subMachine['machine_name'] ?? ''),
+            'is_admin' => 1,
+            'width2' => $postData['width2'] ?? 300,
+        ]);
+
+        $mc_id = $this->addMachineChannel($insert);
+        if (!$mc_id) {
+            return $this->r(100, $this->lang('add_fail'));
+        }
+
+        return $this->r(200, $this->lang('add_success'), [
+            'mc_id' => $mc_id,
+            'channel_code' => $channelCode,
+        ]);
+    }
+
+    /**
+     * 副柜删除货道（仅边柜可操作）
+     * @param array $postData
+     * @return array|string
+     */
+    public function delSubMChannel($postData)
+    {
+        $m_id = intval($postData['m_id'] ?? 0);
+        $mc_id = intval($postData['mc_id'] ?? 0);
+
+        $subMachine = $this->getMachineAuxiliaryFind(['m_id' => $m_id], 'm_id,machine_type,main_m_id');
+        if (!$subMachine) {
+            return $this->r(100, $this->lang("VSubMachine.no_data"));
+        }
+        $subMachine = $subMachine->toArray();
+
+        if (intval($subMachine['machine_type'] ?? 0) !== 2) {
+            return $this->r(100, $this->lang("VSubMachine.only_edge_del_channel"));
+        }
+
+        $main_m_id = intval($subMachine['main_m_id'] ?? 0);
+        if ($main_m_id <= 0) {
+            return $this->r(100, $this->lang('query_fail'));
+        }
+
+        $channel = $this->getMachineChannelFind([
+            ['mc_id', '=', $mc_id],
+            ['m_id', '=', $main_m_id],
+            ['channel_position', '=', 3],
+        ], 'mc_id');
+        if (!$channel) {
+            return $this->r(100, $this->lang('query_fail'));
+        }
+
+        $result = $this->delMachineChannel([['mc_id', '=', $mc_id]]);
+        if (!$result) {
+            return $this->r(100, $this->lang('del_fail'));
+        }
+
+        return $this->r(200, $this->lang('del_success'));
+    }
+
+    /**
      * 删除设备信息
      * @param $m_id
      * @return array|\think\response\Json
