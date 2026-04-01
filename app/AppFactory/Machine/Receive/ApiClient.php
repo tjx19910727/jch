@@ -403,7 +403,6 @@ class ApiClient extends ReceiveBaseClient
                 "sku" => $mc['sku'],
                 "bar_code" => $mc['bar_code'],
                 "change_value" => $mc['stock'],
-                "ao_id" => $mc['ao_id'],
                 "creator" => $this->data['operator'],
             ];
             // 生成原商品退货记录
@@ -932,20 +931,21 @@ class ApiClient extends ReceiveBaseClient
                     } else {
                         $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
                     }
-
                     if (!$mc) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.channel_no_data"));
                     }
+                    $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']]);
+
                     if (!isset($value['channel_code']) && !$mc['mg_id']) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.mg_id_require"));
                     }
-                    if ($value['channel_code'] != 'Z10' && $mc['status'] != 1) {
+                    if (isset($value['channel_code']) && $value['channel_code'] != 'Z10' && $mc['status'] != 1) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.channel_status_no_3"));
                     }
-                    if ($value['channel_code'] != 'Z10' &&  ($mc['stock'] < $value['quantity'])) {
+                    if (isset($value['channel_code']) && $value['channel_code'] != 'Z10' &&  ($mc['stock'] < $value['quantity'])) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.under_stock"));
                     }
@@ -979,7 +979,7 @@ class ApiClient extends ReceiveBaseClient
                             "bar_code" => $mc['bar_code'] ?? '',
                             'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
-                            'ao_id' => $mc['ao_id'],
+                            'ao_id' => $mg['ao_id'] ?? '',
                         ];
                         $details['retail_price'] = !empty($wc_order_no) ? $total_price : $mc['retail_price'];
                         $details['total_sod_price'] = bcmul($details['retail_price'], $quantity, 3);
@@ -2232,16 +2232,18 @@ class ApiClient extends ReceiveBaseClient
     public function test()
     {
         $trade_no = $this->data['trade_no'] ?? '';
+        $this->refundTradeNo = $this->data['refund_trade_no'];
         $order_id = $this->data['order_id'] ?? 0;
         $sod_id = $this->data['sod_id'] ?? 0;
         $this->order = $this->getSaleOrdersFind(['trade_no' => $trade_no])->toArray();;
-        // $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
+        $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
+        $this->refundSuccess();;
+        die();
         $this->paymentSuccessful();
         $this->addCardChangeLog();
         // $this->outGoods();
         die();
         // $order = $this->outGoods();
-        // return $this->orderSync2Wc($this->order);                    
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         return $this->orderRefundSync2Wc($this->order, $detail);
     }

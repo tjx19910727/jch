@@ -228,7 +228,7 @@ trait MachineChannelTrait
                             "pic" => $mc['pic'] ?? "",
                             "sku" => $mc['sku'] ?? "",
                             "bar_code" => $mc['bar_code'] ?? "",
-                            "ao_id" => $mc['ao_id'],
+                            "ao_id" => $this->machine['ao_id'],
                             "change_value" => $value['stock'] ?? 0,
                             "position" => 1,
                         ];

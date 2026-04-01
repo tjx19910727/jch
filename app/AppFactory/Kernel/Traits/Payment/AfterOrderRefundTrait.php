@@ -115,7 +115,7 @@ trait AfterOrderRefundTrait
     protected function refundSuccessUpdateSor()
     {
         $update = [];
-        $update['refund_no'] = $this->refund_no;
+        $update['refund_no'] = $this->refund_no ?? '';
         $update['sor_id'] = $this->refund['sor_id'];
         $update['status'] = 2;
         $result = $this->updateSaleOrdersRefund($update);
