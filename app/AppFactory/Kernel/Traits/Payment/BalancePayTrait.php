@@ -85,7 +85,7 @@ trait BalancePayTrait
         }
         $this->startTrans();
         try {
-            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no,bind_id,password,balance');
+            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no,bind_id,password');
             if (!$card) {
                 $this->rollbackTrans();
                 return $this->rFail("积分卡不存在");
@@ -116,18 +116,21 @@ trait BalancePayTrait
 
             }
 
-            $before = $card['balance'] ?? '0';
-            if (bccomp($before, $amount, 2) < 0) {
+            $summaryBefore = $this->getCardBalanceSummary($cardNo);
+            $before = $summaryBefore['available_balance'] ?? '0.00';
+            if (bccomp($before, (string)$amount, 2) < 0) {
                 $this->rollbackTrans();
                 return $this->rFail("余额不足");
             }
 
-            $after = bcsub($before, (string)$amount, 2);
-            $update = $this->updateCard(['balance' => $after], ['card_no' => $cardNo]);
-            if (!$update) {
+            $consumeResult = $this->consumeCardBalanceBuckets($cardNo, $amount);
+            if (!$consumeResult) {
                 $this->rollbackTrans();
                 return $this->rFail("扣减卡余额失败");
             }
+
+            $summaryAfter = $this->getCardBalanceSummary($cardNo);
+            $after = $summaryAfter['available_balance'] ?? '0.00';
 
             if ($amount > 0) {
                 $logInsert = [
@@ -140,7 +143,10 @@ trait BalancePayTrait
                     'trade_no' => $this->order['trade_no'],
                     'activity_id' => 0,
                     'reasons' => '设备订单余额支付扣减',
-                    'remark' => 'order_id:' . $this->order['order_id'],
+                    'remark' => json_encode([
+                        'order_id' => $this->order['order_id'],
+                        'allocations' => $consumeResult['allocations'] ?? [],
+                    ], JSON_UNESCAPED_UNICODE),
                     'created_at' => date('Y-m-d H:i:s'),
                 ];
                 $logId = $this->addCardBalanceChangeLogs($logInsert);
@@ -197,20 +203,33 @@ trait BalancePayTrait
 
         $this->startTrans();
         try {
-            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no,balance');
+            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no');
             if (!$card) {
                 $this->rollbackTrans();
                 return $this->rFail('积分卡不存在');
             }
 
-            $before = $card['balance'] ?? '0';
-            $after = bcadd($before, $refundAmount, 2);
+            $summaryBefore = $this->getCardBalanceSummary($cardNo);
+            $before = $summaryBefore['available_balance'] ?? '0.00';
 
-            $update = $this->updateCard(['balance' => $after], ['card_no' => $cardNo]);
-            if (!$update) {
+            $payLog = $this->getCardBalanceChangeLogs([
+                'trade_no' => $this->order['trade_no'],
+                'change_type' => 2,
+            ], 'id,remark');
+            if (!$payLog) {
                 $this->rollbackTrans();
-                return $this->rFail('回退卡余额失败');
+                return $this->rFail('未找到原支付扣减记录，无法退款');
             }
+
+            $allocations = [];
+            $remarkArr = json_decode($payLog['remark'] ?? '', true);
+            if (is_array($remarkArr) && !empty($remarkArr['allocations']) && is_array($remarkArr['allocations'])) {
+                $allocations = $remarkArr['allocations'];
+            }
+
+            $restoreResult = $this->restoreCardBalanceBucketsByAllocations($cardNo, $allocations, $refundAmount);
+            $summaryAfter = $this->getCardBalanceSummary($cardNo);
+            $after = $summaryAfter['available_balance'] ?? '0.00';
 
             $logInsert = [
                 'card_no' => $cardNo,
@@ -222,7 +241,10 @@ trait BalancePayTrait
                 'trade_no' => $this->refundData['refund_trade_no'],
                 'activity_id' => 0,
                 'reasons' => '订单退款返还余额',
-                'remark' => 'order_id:' . $this->order['order_id'],
+                'remark' => json_encode([
+                    'order_id' => $this->order['order_id'],
+                    'restored' => $restoreResult['restored'] ?? [],
+                ], JSON_UNESCAPED_UNICODE),
                 'created_at' => date('Y-m-d H:i:s'),
             ];
             $logId = $this->addCardBalanceChangeLogs($logInsert);
