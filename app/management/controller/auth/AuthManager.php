@@ -38,7 +38,7 @@ class AuthManager extends Common
             $where['au.ao_id'] = $where['ao_id'];
             unset($where['ao_id']);
         }
-        $field = "au.manager_id,au.nickname,au.account,au.pid,au.openid,
+        $field = "au.manager_id,au.nickname,au.account,au.pid,au.openid,au.audit_status,
         au.bill_account,au.real_name,au.level,au.sex,au.pic,au.status,au.creator,au.ao_id,au.wx_notice,au.email_notice,au.email,au.openid,
         au.create_time,ao.organization_name";
         $result = $this->app->authManager->getList($where,$pageNum,$field);
@@ -157,7 +157,6 @@ class AuthManager extends Common
                 $where['ao_id'] = $this->manager['ao_id'];
             }
         }
-
         return $this->app->authManager->getAuthWithdrawRequestData($where, $pageNum);
     }
     /**
@@ -201,6 +200,18 @@ class AuthManager extends Common
             $this->app->authManager->rollbackTrans();
             actionException($e,1);
             return returnState($e->getMessage());
+        }
+    }
+
+    /**
+     * 取消提现审核
+     */
+    public function cancelApplyWithdraw(){
+        $strategy_managers = $this->app->strategyManager->getStrategyManagerColumnDatas(['s_type' => 2], 'manager_id');
+        if(empty($strategy_managers)) return returnState(100, 'failed', ['无权限操作']);
+        if(in_array($this->manager['manager_id'], $strategy_managers)){
+            $postData = input();
+            return returnState(200,'success', $this->app->strategyManager->updateStrategyManagerData($postData,['wr_id' => $postData['wr_id']]));
         }
     }
 
