@@ -41,6 +41,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineCalibrationConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
@@ -98,6 +99,7 @@ class ApiClient extends ReceiveBaseClient
         GoodsMultipleGoodsTrait,
         GoodsMultipleMachineTrait,
         MachineViewTrait,
+        MachineCalibrationConfigTrait,
         MachineConfigTrait,
         MachineConfigLangTrait,
         MachineInfoTrait,
@@ -263,6 +265,169 @@ class ApiClient extends ReceiveBaseClient
     {
         $result = $this->getMachineLangList(['m_id' => $this->machine['m_id']]);
         return $this->rQ($result);
+    }
+
+    /**
+     * 获取并同步设备校准页配置
+     *
+     * 规则：
+     * 1. 数据库为空时，以设备上报配置初始化；
+     * 2. 设备版本大于数据库版本时，写入新版本全量配置；
+     * 3. 版本相同或更小，不改数据库，仅返回当前最新版本。
+     *
+     * @return array|\think\response\Json
+     */
+    public function machineCalibrationConfig()
+    {
+        $where["m_id"] = $this->machine['m_id'];
+        $mId = $this->machine['m_id'];
+        $incomingList = $this->getIncomingCalibrationList();
+        $incomingVersion = $this->data['version'] ?? '';
+
+        $latestRow = $this->getMachineCalibrationConfigFind(['m_id' => $mId], 'version,id', 'version desc');
+        $latestVersion = $latestRow ? (string)$latestRow['version'] : '';
+
+        if (!$latestVersion) {
+            if (!empty($incomingList)) {
+                $initVersion = $incomingVersion ?: 1;
+                $this->insertCalibrationRows($incomingList, $mId,  $initVersion);
+                $latestVersion = $initVersion;
+            }
+        } elseif ($incomingVersion && $incomingVersion > $latestVersion && !empty($incomingList)) {
+            $this->insertCalibrationRows($incomingList, $mId,  $incomingVersion);
+            $latestVersion = $incomingVersion;
+        }else{
+            $latestVersion = $incomingVersion;
+        }
+
+
+        $list = $this->getMachineCalibrationConfigList(
+            ['m_id' => $mId, 'version' => $latestVersion],
+            0,
+            'key,value,value_type',
+            'id asc'
+        );
+        $list = $list ? $list->toArray() : [];
+        $res = [];
+        if ($list) {
+            foreach ($list as $k => $item) {
+                $res[$item['key']] = $this->castCalibrationValueByType($item['value'], $item['value_type'] ?? 'string');
+            }
+        }
+
+        return $this->rQ($res);
+    }
+
+    /**
+     * 兼容不同字段名，获取设备上传的校准配置数组
+     * @return array
+     */
+    protected function getIncomingCalibrationList()
+    {
+        $list = [];
+        if (isset($this->data['data']) && is_array($this->data['data'])) {
+            $list = $this->data['data'];
+        } elseif (isset($this->data['data']) && is_string($this->data['data']) && $this->data['data'] !== '') {
+            $decodeData = json2arr($this->data['data']);
+            if (is_array($decodeData)) {
+                $list = $decodeData;
+            }
+        } 
+        return $list;
+    }
+
+    /**
+     * 写入某一版本的全量校准配置
+     * @param array $rows
+     * @param int $mId
+     * @param string $machineId
+     * @param string $version
+     */
+    protected function insertCalibrationRows($rows, $mId, $version)
+    {
+        foreach ($rows as $row) {
+            if (!isset($row['key']) || $row['key'] === '') {
+                continue;
+            }
+            $key = (string)$row['key'];
+            $title = isset($row['title']) && $row['title'] !== '' ? (string)$row['title'] : $key;
+            $valueType = $this->detectCalibrationValueType($row['value'] ?? null, $row['value_type'] ?? '');
+            $value = $this->normalizeCalibrationValueForStorage($row['value'] ?? null, $valueType);
+            $this->addMachineCalibrationConfig([
+                'm_id' => $mId,
+                'name' => $title,
+                'version' => $version,
+                'key' => $key,
+                'value' => $value,
+                'value_type' => $valueType,
+                'desc' => isset($row['desc']) ? (string)$row['desc'] : '',
+            ]);
+        }
+    }
+
+    /**
+     * 根据前端传入值判断配置值类型
+     * @param mixed $value
+     * @param string $inputType
+     * @return string
+     */
+    protected function detectCalibrationValueType($value, $inputType = '')
+    {
+        $inputType = strtolower((string)$inputType);
+        if (in_array($inputType, ['string', 'int', 'float', 'bool'], true)) {
+            return $inputType;
+        }
+        if (is_bool($value)) {
+            return 'bool';
+        }
+        if (is_int($value)) {
+            return 'int';
+        }
+        if (is_float($value)) {
+            return 'float';
+        }
+        return 'string';
+    }
+
+    /**
+     * 入库前统一转为字符串存储
+     * @param mixed $value
+     * @param string $valueType
+     * @return string
+     */
+    protected function normalizeCalibrationValueForStorage($value, $valueType)
+    {
+        if ($value === null) {
+            return '';
+        }
+        if ($valueType === 'bool') {
+            return $value ? '1' : '0';
+        }
+        return (string)$value;
+    }
+
+    /**
+     * 按 value_type 将字符串值转换回对应类型
+     * @param mixed $value
+     * @param string $valueType
+     * @return mixed
+     */
+    protected function castCalibrationValueByType($value, $valueType)
+    {
+        switch ((string)$valueType) {
+            case 'int':
+                return intval($value);
+            case 'float':
+                return floatval($value);
+            case 'bool':
+                if (is_bool($value)) {
+                    return $value;
+                }
+                $v = strtolower(trim((string)$value));
+                return in_array($v, ['1', 'true', 'yes', 'on'], true);
+            default:
+                return (string)$value;
+        }
     }
 
     /**

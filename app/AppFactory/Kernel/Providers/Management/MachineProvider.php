@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Providers\Management;
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\Machine\MachineChannelClient;
+use app\AppFactory\Management\Machine\MachineCalibrationConfigClient;
 use app\AppFactory\Management\Machine\MachineChannelReplenishmentClient;
 use app\AppFactory\Management\Machine\MachineChannelStockClient;
 use app\AppFactory\Management\Machine\MachineChannelStockReportClient;
@@ -65,6 +66,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineConfig'] = function ($app) {
             return new MachineConfigClient($app);
+        };
+        $app['machineCalibrationConfig'] = function ($app) {
+            return new MachineCalibrationConfigClient($app);
         };
         $app['machineConfigLang'] = function ($app) {
             return new MachineConfigLangClient($app);
