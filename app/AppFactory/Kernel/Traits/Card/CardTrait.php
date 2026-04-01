@@ -14,12 +14,12 @@ use app\AppFactory\Kernel\Model\Card\CardPointsChangeLogsModel;
 use app\AppFactory\Kernel\Model\Card\CardBalanceChangeLogsModel;
 use app\AppFactory\Kernel\Traits\ReturnTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
-use think\facade\Db;
 
 trait CardTrait
 {
     use WcBaseTrait;
     use ReturnTrait;
+    use \app\AppFactory\Kernel\Traits\Card\CardBalanceBucketsTrait;
 
 
     public function getCardColumn($where, $column, $key = "")
@@ -161,53 +161,285 @@ trait CardTrait
         return $data->$pk;
     }
 
+    /**
+     * 获取当前可用余额汇总（实时按有效期过滤）
+     * @param string $card_no
+     * @return array
+     */
+    public function getCardBalanceSummary($card_no)
+    {
+        $now = time();
+        $row = $this->getCardBalanceBucketSummaryRow($card_no, $now);
+
+        return [
+            'available_balance' => number_format($row['available_balance'] ?? 0, 2, '.', ''),
+            'principal_balance' => number_format($row['principal_balance'] ?? 0, 2, '.', ''),
+            'gift_balance' => number_format($row['gift_balance'] ?? 0, 2, '.', ''),
+            'refundable_balance' => number_format($row['refundable_balance'] ?? 0, 2, '.', ''),
+        ];
+    }
+
+    /**
+     * 新增余额分笔记录
+     * @param array $insert
+     * @return int|string
+     */
+    public function addCardBalanceBucket($insert)
+    {
+        return $this->insertCardBalanceBucket($insert);
+    }
+
+    /**
+     * 扣减余额分笔（先到期先扣）
+     * @param string $card_no
+     * @param float|string $amount
+     * @return array
+     * @throws \Exception
+     */
+    public function consumeCardBalanceBuckets($card_no, $amount)
+    {
+        $amount = number_format((float)$amount, 2, '.', '');
+        if (bccomp($amount, '0', 2) <= 0) {
+            return [
+                'allocations' => [],
+                'consumed_amount' => '0.00',
+            ];
+        }
+
+        $now = time();
+        $rows = $this->getCardBalanceBucketsForConsume($card_no, $now);
+
+        $remainNeed = $amount;
+        $allocations = [];
+
+        foreach ($rows as $row) {
+            if (bccomp($remainNeed, '0', 2) <= 0) {
+                break;
+            }
+            $currentRemain = number_format((float)($row['remain_amount'] ?? 0), 2, '.', '');
+            if (bccomp($currentRemain, '0', 2) <= 0) {
+                continue;
+            }
+
+            $consume = bccomp($currentRemain, $remainNeed, 2) >= 0 ? $remainNeed : $currentRemain;
+            $afterRemain = bcsub($currentRemain, $consume, 2);
+
+            $this->updateCardBalanceBucketRemain($row['id'], $afterRemain);
+
+            $allocations[] = [
+                'bucket_id' => intval($row['id']),
+                'amount' => $consume,
+                'amount_type' => intval($row['amount_type'] ?? 1),
+                'expire_at' => intval($row['expire_at'] ?? 0),
+            ];
+            $remainNeed = bcsub($remainNeed, $consume, 2);
+        }
+
+        if (bccomp($remainNeed, '0', 2) > 0) {
+            throw new \Exception($this->lang("VCard.balance_not_enough"));
+        }
+
+        return [
+            'allocations' => $allocations,
+            'consumed_amount' => $amount,
+        ];
+    }
+
+    /**
+     * 按扣减分摊明细回补余额分笔（用于退款）
+     * @param string $card_no
+     * @param array $allocations
+     * @param float|string $refundAmount
+     * @return array
+     */
+    public function restoreCardBalanceBucketsByAllocations($card_no, $allocations, $refundAmount)
+    {
+        $refundAmount = number_format((float)$refundAmount, 2, '.', '');
+        $remain = $refundAmount;
+        $restored = [];
+
+        if (!is_array($allocations)) {
+            $allocations = [];
+        }
+
+        foreach ($allocations as $allocation) {
+            if (bccomp($remain, '0', 2) <= 0) {
+                break;
+            }
+            $bucketId = intval($allocation['bucket_id'] ?? 0);
+            $allocAmount = number_format((float)($allocation['amount'] ?? 0), 2, '.', '');
+            if ($bucketId <= 0 || bccomp($allocAmount, '0', 2) <= 0) {
+                continue;
+            }
+
+            $restoreAmount = bccomp($allocAmount, $remain, 2) >= 0 ? $remain : $allocAmount;
+
+            $row = $this->findCardBalanceBucketForUpdate($bucketId, $card_no);
+
+            if ($row) {
+                $currentRemain = number_format((float)($row['remain_amount'] ?? 0), 2, '.', '');
+                $totalAmount = number_format((float)($row['total_amount'] ?? 0), 2, '.', '');
+                $afterRemain = bcadd($currentRemain, $restoreAmount, 2);
+                if (bccomp($afterRemain, $totalAmount, 2) > 0) {
+                    $afterRemain = $totalAmount;
+                }
+                $actualRestore = bcsub($afterRemain, $currentRemain, 2);
+                if (bccomp($actualRestore, '0', 2) > 0) {
+                    $this->updateCardBalanceBucketRemain($bucketId, $afterRemain);
+                    $restored[] = [
+                        'bucket_id' => $bucketId,
+                        'amount' => $actualRestore,
+                    ];
+                    $remain = bcsub($remain, $actualRestore, 2);
+                }
+            }
+        }
+
+        // 回补有剩余时，补到一条新的本金永久余额分笔，避免退款金额丢失
+        if (bccomp($remain, '0', 2) > 0) {
+            $newId = $this->addCardBalanceBucket([
+                'card_no' => $card_no,
+                'batch_no' => 'RF' . date('YmdHis') . mt_rand(1000, 9999),
+                'source_type' => 'order_refund',
+                'source_no' => '',
+                'amount_type' => 1,
+                'refund_eligible' => 1,
+                'total_amount' => $remain,
+                'remain_amount' => $remain,
+                'expire_at' => 0,
+            ]);
+            $restored[] = [
+                'bucket_id' => intval($newId),
+                'amount' => $remain,
+            ];
+            $remain = '0.00';
+        }
+
+        return [
+            'restored' => $restored,
+            'refund_amount' => $refundAmount,
+        ];
+    }
+
     // 余额变化接口
     public function changeBalance($data)
     {
         $card_no = $data['card_no'] ?? '';
-        $balance_changed = $data['balance_changed'] ?? 0;
+        $balance_changed = number_format((float)($data['balance_changed'] ?? 0), 2, '.', '');
+        $gift_balance = number_format((float)($data['gift_balance'] ?? 0), 2, '.', '');
         $change_type = $data['change_type'] ?? 0;
-        $trade_no = $data['trade_no'] ?? '';
+        $trade_no = $data['trade_no'] ?? ('CB' . date('YmdHis') . mt_rand(1000, 9999));
         $remark = $data['remark'] ?? '';
+        $use_expire = intval($data['use_expire'] ?? 0);
+        $expire_at = intval($data['expire_at'] ?? 0);
 
         try {
             $this->startTrans();
-            $card = $this->getCardFind(['card_no' => $card_no], 'card_no,balance');
+            $card = $this->getCardFind(['card_no' => $card_no], 'card_no');
             if (!$card) {
                 return $this->r(100, $this->lang("VCard.card_no_no_data"));
             }
-            $balance_before_change = $card['balance'] ?? 0.00;
-            if(!$balance_before_change < $balance_changed){
-                return $this->r(100, $this->lang("VCard.balance_not_enough"));
+
+            if ($use_expire === 1 && $expire_at <= 0) {
+                $this->rollbackTrans();
+                return $this->r(100, $this->lang("VCard.expire_at_require"));
             }
-            $balance = 0.00;
+
+            $finalExpireAt = $use_expire === 1 ? $expire_at : 0;
+
+            $summaryBefore = $this->getCardBalanceSummary($card_no);
+            $balance_before_change = $summaryBefore['available_balance'];
+            $deltaAmount = '0.00';
+            $remarkData = [
+                'remark' => $remark,
+                'use_expire' => $use_expire,
+                'expire_at' => $finalExpireAt,
+                'buckets' => [],
+            ];
+
             if ($change_type == 1) { // 增加
-                $balance = bcadd($balance_before_change, $balance_changed, 2);
+                if (bccomp($balance_changed, '0', 2) <= 0 && bccomp($gift_balance, '0', 2) <= 0) {
+                    $this->rollbackTrans();
+                    return $this->r(100, $this->lang("VCard.balance_amount_error"));
+                }
+                $batchNo = 'RC' . date('YmdHis') . mt_rand(1000, 9999);
+                if (bccomp($balance_changed, '0', 2) > 0) {
+                    $bucketId = $this->addCardBalanceBucket([
+                        'card_no' => $card_no,
+                        'batch_no' => $batchNo,
+                        'source_type' => 'recharge',
+                        'source_no' => $trade_no,
+                        'amount_type' => 1,
+                        'refund_eligible' => 1,
+                        'total_amount' => $balance_changed,
+                        'remain_amount' => $balance_changed,
+                        'expire_at' => $finalExpireAt,
+                    ]);
+                    $remarkData['buckets'][] = [
+                        'bucket_id' => intval($bucketId),
+                        'amount' => $balance_changed,
+                        'amount_type' => 1,
+                    ];
+                    $deltaAmount = bcadd($deltaAmount, $balance_changed, 2);
+                }
+                if (bccomp($gift_balance, '0', 2) > 0) {
+                    $bucketId = $this->addCardBalanceBucket([
+                        'card_no' => $card_no,
+                        'batch_no' => $batchNo,
+                        'source_type' => 'gift',
+                        'source_no' => $trade_no,
+                        'amount_type' => 2,
+                        'refund_eligible' => 0,
+                        'total_amount' => $gift_balance,
+                        'remain_amount' => $gift_balance,
+                        'expire_at' => $finalExpireAt,
+                    ]);
+                    $remarkData['buckets'][] = [
+                        'bucket_id' => intval($bucketId),
+                        'amount' => $gift_balance,
+                        'amount_type' => 2,
+                    ];
+                    $deltaAmount = bcadd($deltaAmount, $gift_balance, 2);
+                }
             } elseif ($change_type == 2) { // 减少
-                $balance = bcsub($balance_before_change, $balance_changed, 2);
+                if (bccomp($balance_changed, '0', 2) <= 0) {
+                    $this->rollbackTrans();
+                    return $this->r(100, $this->lang("VCard.balance_amount_error"));
+                }
+                $consumeResult = $this->consumeCardBalanceBuckets($card_no, $balance_changed);
+                $remarkData['allocations'] = $consumeResult['allocations'];
+                $deltaAmount = $balance_changed;
+            } else {
+                $this->rollbackTrans();
+                return $this->r(100, $this->lang("VCard.change_type_in"));
             }
+
+            $summaryAfter = $this->getCardBalanceSummary($card_no);
+            $balance = $summaryAfter['available_balance'];
 
             $insert = [
                 'card_no' => $card_no,
                 'balance_before_change' => $balance_before_change,
-                'balance_changed' => $balance_changed,
+                'balance_changed' => $deltaAmount,
                 'balance' => $balance,
                 'change_type' => $change_type,
                 'balance_type' => 2,//后台充值
                 'trade_no' => $trade_no,
                 'activity_id' => 0,
                 'reasons' => '',
-                'remark' => $remark,
+                'remark' => json_encode($remarkData, JSON_UNESCAPED_UNICODE),
                 'created_at' => date('Y-m-d H:i:s'),
             ];
 
             $log_id = $this->addCardBalanceChangeLogs($insert);
-            $this->updateCard(['balance' => $balance], ['card_no' => $card_no]);
             $this->commitTrans();
             return [
                 'card_no' => $card_no,
-                'balance_changed' => $balance_changed,
+                'balance_changed' => $deltaAmount,
                 'balance' => $balance,
+                'principal_balance' => $summaryAfter['principal_balance'],
+                'gift_balance' => $summaryAfter['gift_balance'],
+                'refundable_balance' => $summaryAfter['refundable_balance'],
                 'trade_no' => $trade_no,
                 'log_id' => $log_id
             ];

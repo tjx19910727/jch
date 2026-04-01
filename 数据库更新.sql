@@ -1294,6 +1294,7 @@ CREATE TABLE `machine_auxiliary` (
   `status` tinyint(1) DEFAULT '2' COMMENT '1:已挂接已启用 2:未挂接未启用 3:已挂接未启用',
   `manager_id` int DEFAULT '0' COMMENT '管理员ID',
   `remark` varchar(200) DEFAULT '' COMMENT '备注',
+  `bind_time` bigint(20) DEFAULT '0' COMMENT '挂接时间',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`m_id`),
@@ -1341,3 +1342,23 @@ CREATE TABLE `activity_card_activation_detail` (
   KEY `m_id` (`m_id`) USING BTREE,
   KEY `used_time` (`used_time`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='卡激活活动使用表';
+
+#20260401
+CREATE TABLE `card_balance_buckets` (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `card_no` varchar(20) NOT NULL DEFAULT '' COMMENT '卡号',
+  `batch_no` varchar(50) NOT NULL DEFAULT '' COMMENT '批次号(同一次充值本金和赠送关联)',
+  `source_type` varchar(30) NOT NULL DEFAULT '' COMMENT '来源类型: recharge/gift/order_refund/refund',
+  `source_no` varchar(50) NOT NULL DEFAULT '' COMMENT '来源单号',
+  `amount_type` tinyint(1) NOT NULL DEFAULT 1 COMMENT '金额类型 1本金 2赠送',
+  `refund_eligible` tinyint(1) NOT NULL DEFAULT 1 COMMENT '是否可退卡 1是 0否',
+  `total_amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '分笔总额',
+  `remain_amount` decimal(12,2) NOT NULL DEFAULT 0.00 COMMENT '分笔剩余额度',
+  `expire_at` bigint(20) NOT NULL DEFAULT 0 COMMENT '有效期时间戳, 0为永久',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_card_no` (`card_no`) USING BTREE,
+  KEY `idx_card_expire_remain` (`card_no`,`expire_at`,`remain_amount`) USING BTREE,
+  KEY `idx_source_no` (`source_no`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='卡余额分笔表';

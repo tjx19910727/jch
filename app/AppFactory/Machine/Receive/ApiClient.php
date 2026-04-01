@@ -1766,6 +1766,7 @@ class ApiClient extends ReceiveBaseClient
         $card_points_lists = [];
         $new_data = [];
         $total_card_points = 0;
+        $total_balance = '0.00';
         $card_info = [];
         $bind_id = '';
         try {
@@ -1844,6 +1845,12 @@ class ApiClient extends ReceiveBaseClient
             $res['bind_id'] = $bind_id;
             $res['bind_id_points'] = $bind_id_points;
             $res['total_points'] = $res['total_card_points'] + $res['bind_id_points'];
+            $currentCardNo = trim((string)($this->data['card_no'] ?? ''));
+            if ($currentCardNo !== '') {
+                $summary = $this->getCardBalanceSummary($currentCardNo);
+                $total_balance = (string)($summary['available_balance'] ?? '0.00');
+            }
+            $res['total_balance'] = $total_balance;
             return $this->r(200, 'success', $res);
         } catch (\Exception $e) {
             $this->rollbackTrans();

@@ -19,7 +19,17 @@ class CardClient extends ManagementClient
 
     public function getCardInfoList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
     {
-        return $this->rQ($this->getCardList($where, $pageNum, $field, $order, $eachFun, $group));
+        $list = $this->getCardList($where, $pageNum, $field, $order, function ($item) {
+            $summary = $this->getCardBalanceSummary($item['card_no']);
+            $item['available_balance'] = $summary['available_balance'];
+            $item['principal_balance'] = $summary['principal_balance'];
+            $item['gift_balance'] = $summary['gift_balance'];
+            $item['refundable_balance'] = $summary['refundable_balance'];
+            // 对外兼容字段，余额展示为实时可用余额
+            $item['balance'] = $summary['available_balance'];
+            return $item;
+        }, $group);
+        return $this->rQ($list);
     }
 
     public function addCardInfo($postData)
@@ -141,12 +151,17 @@ class CardClient extends ManagementClient
 
     public function exportCards($where)
     {
-        $field = 'card_show_no,card_no,name,balance,points,status';
+        $field = 'card_show_no,card_no,name,points,status';
         $list = $this->getCardList($where, 0, $field, 'card_no desc');
         if ($list) {
             $list = $list->toArray();
             if ($list) {
                 foreach ($list as $key => $item) {
+                    $summary = $this->getCardBalanceSummary($item['card_no']);
+                    $item['balance'] = $summary['available_balance'];
+                    $item['principal_balance'] = $summary['principal_balance'];
+                    $item['gift_balance'] = $summary['gift_balance'];
+                    $item['refundable_balance'] = $summary['refundable_balance'];
                     $item['status'] = $item['status'] == 1 ? '激活' : '未激活';
                     $list[$key] = $item;
                 }
@@ -154,7 +169,10 @@ class CardClient extends ManagementClient
                     'card_show_no' => '卡面号',
                     'card_no' => '芯片号',
                     'name' => '姓名',
-                    'balance' => '余额',
+                    'balance' => '可用余额',
+                    'principal_balance' => '本金余额',
+                    'gift_balance' => '赠送余额',
+                    'refundable_balance' => '可退余额',
                     'points' => '积分',
                     'status' => '状态',
                 ];

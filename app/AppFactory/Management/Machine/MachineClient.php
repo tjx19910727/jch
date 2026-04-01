@@ -552,11 +552,13 @@ class MachineClient extends ManagementClient
             $item['main_machine_id'] = '';
             $item['main_machine_name'] = '';
             $item['machine_channel'] = [];
+            $item['bind_time'] = $item['bind_time'] ? date("Y-m-d H:i:s", $item['bind_time']) : '';
             if ($item['main_m_id'] > 0) {
-                $mainM = $this->getMachineFind(['m_id' => $item['main_m_id']], 'machine_id,machine_name');
+                $mainM = $this->getMachineFind(['m_id' => $item['main_m_id']], 'machine_id,machine_name,street');
                 $item['main_machine_id'] = $mainM['machine_id'] ?? '';
                 $item['main_machine_name'] = $mainM['machine_name'] ?? '';
                 $item['machine_channel'] = $this->getMachineChannelList(['m_id' => $item['main_m_id'],'channel_position' => $item['machine_type'] == 1 ? 2 :3]);
+                $item['main_machine_address'] = $mainM['street'] ?? '';
             }
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
         }
@@ -619,6 +621,7 @@ class MachineClient extends ManagementClient
         $machine_type = $postData['machine_type'] ?? 2; // 默认边柜
         if (!in_array(intval($machine_type), [1, 2])) $machine_type = 2;
         $postData['status'] = 2;//未挂接未启用
+        $postData['bind_time'] = 0;
         $is_add = true;
         $postData['ao_id'] = $this->manager['ao_id'] ?? 0;
         if($main_m_id){
@@ -647,6 +650,7 @@ class MachineClient extends ManagementClient
             }
             $postData['ao_id'] = $mainM['ao_id'];
             $postData['status'] = 3;//已挂接未启用
+            $postData['bind_time'] = time();
         }
 
         $postData['manager_id'] = $this->manager['manager_id'] ?? 0;
@@ -759,6 +763,12 @@ class MachineClient extends ManagementClient
             $postData['status'] = 3;//已挂接未启用
         }
 
+        if ($main_m_id == 0) {
+            $postData['bind_time'] = 0;
+        } elseif ($mainChanged) {
+            $postData['bind_time'] = time();
+        }
+
         $postData['machine_type'] = $machine_type;
 
         $this->startTrans();
@@ -777,7 +787,6 @@ class MachineClient extends ManagementClient
                     if ($mainChanged) {
                         $updateChannel['m_id'] = $main_m_id;
                         $updateChannel['machine_id'] = $mainM['machine_id'] ?? '';
-                        $updateChannel['ao_id'] = $mainM['ao_id'] ?? 0;
                     }
                     if ($typeChanged) {
                         $updateChannel['channel_position'] = $newChannelPosition;
@@ -829,7 +838,6 @@ class MachineClient extends ManagementClient
             $channelAll[] = [
                 'm_id' => $main_m_id,
                 'machine_id' => $mainM['machine_id'] ?? '',
-                'ao_id' => $mainM['ao_id'] ?? $this->manager['ao_id'],
                 'channel_code' => ($machine_type == 1 ? '010' : '020') . $i,
                 'channel_position' => $channelPosition,
                 'channel_name' => $channel_name,
@@ -955,7 +963,6 @@ class MachineClient extends ManagementClient
         $insert = array_merge($insert, [
             'm_id' => $main_m_id,
             'machine_id' => $mainM['machine_id'] ?? '',
-            'ao_id' => $mainM['ao_id'] ?? ($this->manager['ao_id'] ?? 0),
             'channel_code' => $channelCode,
             'channel_position' => 3,
             'channel_name' => $postData['channel_name'] ?? ($subMachine['machine_name'] ?? ''),
@@ -1222,6 +1229,7 @@ class MachineClient extends ManagementClient
                 'main_m_id' => $main_m_id,
                 'status' => $main_m_id > 0 ? 3 : 2,
                 'ao_id' => $mainM['ao_id'] ?? 0,
+                'bind_time' => $main_m_id > 0 ? time() : 0,
             ];
             $this->updateMachineAuxiliary($updateSub);
 
