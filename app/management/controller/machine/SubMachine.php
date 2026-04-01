@@ -111,4 +111,34 @@ class SubMachine extends Common
         return $this->app->machine->bindMainMachine($postData);
     }
 
+    /**
+     * 副柜新增货道（仅边柜）
+     * @return array|string
+     */
+    public function addChannel()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.addChannel');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machine->addSubMChannel($postData);
+    }
+
+    /**
+     * 副柜删除货道（仅边柜）
+     * @return array|string
+     */
+    public function delChannel()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.delChannel');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machine->delSubMChannel($postData);
+    }
+
 }
