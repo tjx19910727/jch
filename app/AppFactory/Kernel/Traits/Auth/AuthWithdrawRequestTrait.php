@@ -9,7 +9,7 @@ namespace app\AppFactory\Kernel\Traits\Auth;
 
 use app\AppFactory\Kernel\Model\Auth\AuthWithdrawRequestModel;
 
-trait AuthWithdrawTrait
+trait AuthWithdrawRequestTrait
 {
     /**
      * 创建提现申请，返回插入 id
@@ -27,7 +27,7 @@ trait AuthWithdrawTrait
 
     public function getAuthWithdrawRequestList($where, $pageNum = '', $field = '*', $order = '', $eachFn = "", $group = "", $limit = 0, $with = [])
     {
-        return AuthWithdrawRequestModel::getListAndWith($where, $pageNum, $field, $order, $eachFn, $group, $limit, ['managerData']);
+        return AuthWithdrawRequestModel::getListAndWith($where, $pageNum, $field, $order, $eachFn, $group, $limit, ['managerData','auditData']);
     }
 
     public function updateAuthWithdrawRequest($update)
