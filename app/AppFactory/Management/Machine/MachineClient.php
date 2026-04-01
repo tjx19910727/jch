@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCountriesTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthRegionsTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthStatesTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineAuxiliaryTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelStockTrait;
@@ -46,6 +47,7 @@ use think\facade\Db;
 class MachineClient extends ManagementClient
 {
     use EarthCountriesTrait,EarthStatesTrait,EarthCitiesTrait,EarthRegionsTrait;
+    use GoodsTrait;
     use MachineTrait,MachineChannelTrait,MachineChannelReplenishmentTrait,MachineChannelStockTrait,MachineCheckStockTrait,MachineConfigTrait,MachineErrorCodeTrait,
         MachineGoodsTrait,
         MachineInfoTrait,MachineGroupTrait,MachineGroupMgTrait,MachineHelpTrait,MachineMqRecordTrait,MachineOnOffTrait,
@@ -954,6 +956,30 @@ class MachineClient extends ManagementClient
 
         if (isset($existCodes[$channelCode])) {
             return $this->r(100, '货道编号已存在');
+        }
+
+        $g_id = intval($postData['g_id'] ?? 0);
+        if ($g_id > 0) {
+            $goods = $this->getGoodsFind(['g_id' => $g_id], 'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price');
+            if (!$goods) {
+                return $this->r(100, $this->lang('VMachineGoods.goods_no_data'));
+            }
+            $goods = $goods->toArray();
+            $postData['g_id'] = $goods['g_id'] ?? 0;
+            $postData['g_name'] = $goods['g_name'] ?? '';
+            $postData['gc_id'] = $goods['gc_id'] ?? 0;
+            $postData['gc_name'] = $goods['gc_name'] ?? '';
+            $postData['pic'] = $goods['pic'] ?? '';
+            $postData['sku'] = $goods['sku'] ?? '';
+            $postData['bar_code'] = $goods['bar_code'] ?? '';
+
+            $mg_id = intval($postData['mg_id'] ?? 0);
+            if ($mg_id <= 0) {
+                $postData['mg_id'] = $this->getMachineGoodsValue([
+                    ['m_id', '=', $main_m_id],
+                    ['g_id', '=', $g_id],
+                ], 'mg_id') ?? 0;
+            }
         }
 
         $insert = $postData;
