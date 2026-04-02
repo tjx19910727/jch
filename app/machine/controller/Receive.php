@@ -34,7 +34,6 @@ class Receive extends Common
     protected $noCheckApi = [
         "logoutH5",
         'test',
-        'testUploadInfoMq'
     ];
 
     /**
@@ -1057,32 +1056,4 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
-    /**
-     * 测试上报 machine_info 到 MQ（msgType=uploadInfo）
-     * @return array|\think\response\Json
-     */
-    public function testUploadInfoMq()
-    {
-        $postData = input();
-        try {
-            $payload = [
-                'msg_id' => $postData['msg_id'] ?? ('mq_uploadinfo_' . time() . mt_rand(1000, 9999)),
-                'machine_id' => $postData['machine_id'] ?? '',
-                'mac' => $postData['mac'] ?? ($this->request->header('mac') ?? ''),
-                'data' => json_encode([
-                    'msgType' => 'uploadInfo',
-                    'sub_cabinet' => intval($postData['sub_cabinet'] ?? 2),
-                ], JSON_UNESCAPED_UNICODE),
-            ];
-            $result = MqProducer::dataUpload($payload);
-            return returnState(200, 'MQ上报成功', [
-                'result' => $result,
-                'payload' => $payload,
-            ]);
-        } catch (\Exception $e) {
-            actionException($e, 1);
-            return returnTryCatch($e->getMessage());
-        }
-    }
-
 }

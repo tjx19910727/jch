@@ -25,7 +25,7 @@ trait CardBalanceBucketsTrait
     {
         $now = intval($now);
         return CardBalanceBucketsModel::where('card_no', $card_no)
-            ->fieldRaw("IFNULL(SUM(CASE WHEN (expire_at = 0 OR expire_at >= {$now}) THEN remain_amount ELSE 0 END),0) AS available_balance, IFNULL(SUM(CASE WHEN amount_type = 1 AND (expire_at = 0 OR expire_at >= {$now}) THEN remain_amount ELSE 0 END),0) AS principal_balance, IFNULL(SUM(CASE WHEN amount_type = 2 AND (expire_at = 0 OR expire_at >= {$now}) THEN remain_amount ELSE 0 END),0) AS gift_balance, IFNULL(SUM(CASE WHEN refund_eligible = 1 AND (expire_at = 0 OR expire_at >= {$now}) THEN remain_amount ELSE 0 END),0) AS refundable_balance")
+            ->fieldRaw("IFNULL(SUM(CASE WHEN (expire_at = 0 OR expire_at >= {$now}) THEN remain_amount ELSE 0 END),0) AS available_balance, IFNULL(SUM(CASE WHEN amount_type = 1 AND (expire_at = 0 OR expire_at >= {$now}) THEN remain_amount ELSE 0 END),0) AS principal_balance, IFNULL(SUM(CASE WHEN amount_type = 2 AND (expire_at = 0 OR expire_at >= {$now}) THEN remain_amount ELSE 0 END),0) AS gift_balance, IFNULL(SUM(CASE WHEN expire_at > 0 AND expire_at >= {$now} THEN remain_amount ELSE 0 END),0) AS expire_balance, IFNULL(SUM(CASE WHEN refund_eligible = 1 AND (expire_at = 0 OR expire_at >= {$now}) THEN remain_amount ELSE 0 END),0) AS refundable_balance")
             ->find();
     }
 

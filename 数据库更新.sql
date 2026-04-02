@@ -1265,6 +1265,7 @@ CREATE TABLE `card_balance_change_logs` (
   `balance_type` tinyint(1) NOT NULL DEFAULT 0 COMMENT '变化类型1：购物消费 2：后台充值 3：提现 4：退款 5：充值到积分 6：活动赠送',
   `trade_no` varchar(50) DEFAULT NULL COMMENT '余额变化关联订单编号',
   `activity_id` int(11) NOT NULL DEFAULT 0 COMMENT '活动ID(预留)',
+  `expire_at` bigint(20) NOT NULL DEFAULT 0 COMMENT '有效期时间戳，0为永久',
   `reasons` varchar(200) DEFAULT NULL COMMENT '原因',
   `remark` varchar(200) DEFAULT NULL COMMENT '备注',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
