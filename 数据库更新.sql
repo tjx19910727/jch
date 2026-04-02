@@ -1254,3 +1254,77 @@ ALTER TABLE kiosk.machine_channel
 INSERT INTO `wx_template` (`wx_id`, `template_name`, `template_type`, `template_id`, `ao_id`,`miniprogram`, `body`,`status`, `create_time`, `update_time`)
 VALUES
   (3, '设备自动售卖成功通知','payment_success','5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI','1','{"appid":"","pagepath":""}', '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',1,1773653091,1773653091);
+
+  #20260401
+ALTER TABLE kiosk.auth_manager ADD audit_status INT DEFAULT 0 NULL COMMENT '是否有审核分账权限：0无1有'  AFTER status;
+
+ALTER TABLE kiosk.wc_goods ADD COLUMN `gift_points` decimal(10,3) DEFAULT 0 COMMENT '微程赠送积分' AFTER `no`;
+ALTER TABLE kiosk.wc_goods_local ADD COLUMN `gift_points` decimal(10,3) DEFAULT 0 COMMENT '微程赠送积分' AFTER `intergral_rate`;
+
+
+ALTER TABLE kiosk.machine_goods ADD ao_id int NULL after `machine_id`;
+update machine_goods a set a.ao_id = (select b.ao_id from machine b where b.m_id = a.m_id);
+
+
+ALTER TABLE kiosk.sale_orders_revenue ADD ao_id INT NULL COMMENT '组织id'AFTER m_id;
+ALTER TABLE kiosk.sale_orders_details ADD ao_id INT DEFAULT 0 COMMENT '组织id' AFTER sod_id;
+
+update kiosk.sale_orders_details a set a.ao_id = (select b.ao_id from sale_orders b where a.order_id = b.ao_id) where a.ao_id  = 0 ;
+
+ALTER TABLE kiosk.strategy_manager ADD m_id int NULL COMMENT '设备id'  AFTER s_id;
+
+
+CREATE TABLE `auth_org_machine_channel` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `ao_id` int DEFAULT NULL COMMENT '组织id',
+  `m_id` int DEFAULT NULL COMMENT '设备m_id',
+  `machine_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '设备编码',
+  `channel_code` text COMMENT '货道编码',
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `auth_org_machine_channel_unique` (`ao_id`,`m_id`,`machine_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='组织租赁货道信息表';
+
+CREATE TABLE `auth_withdraw_requests` (
+  `wr_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '提现申请ID',
+  `ao_id` int(11) NOT NULL COMMENT '组织ID',
+  `requester_manager_id` int(11) DEFAULT NULL COMMENT '申请人管理员ID',
+  `amount` decimal(10,2) NOT NULL COMMENT '提现金额',
+  `account` varchar(255) DEFAULT NULL COMMENT '提现账号（银行卡/支付宝/微信/京东分账账户）',
+  `account_type` varchar(50) DEFAULT 'bank' COMMENT '账户类型 bank/alipay/wechat/jd_account',
+  `status` tinyint(1) DEFAULT 1 COMMENT '状态：1-待审核，2-通过，3-拒绝',
+  `manager_id` int(11) DEFAULT NULL COMMENT '审核人管理员ID',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注/审核意见',
+  `creator` int(11) DEFAULT NULL COMMENT '创建人',
+  `created_at`  timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`  timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`wr_id`),
+  KEY `idx_ao_id` (`ao_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='组织提现申请表';
+
+
+CREATE TABLE `auth_org_revenue_logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '组织分账日志ID',
+  `ao_id` int(11) NOT NULL COMMENT '组织ID',
+  `order_id` varchar(50) DEFAULT NULL COMMENT '订单ID',
+  `m_id` int(11) DEFAULT NULL COMMENT '设备ID',
+  `machine_name` varchar(200) DEFAULT NULL COMMENT '机器名称',
+  `machine_id` varchar(50) DEFAULT NULL COMMENT '设备编码',
+  `order_amount` decimal(10,2) DEFAULT 0.00 COMMENT '订单金额',
+  `sod_id` varchar(50) DEFAULT NULL COMMENT '子订单ID',
+  `sod_amount` decimal(10,2) DEFAULT 0.00 COMMENT '子订单单价',
+  `sod_quantity` int(11) DEFAULT 0 COMMENT '子订单数量',
+  `sod_total_price` decimal(10,2) DEFAULT 0.00 COMMENT '子订单总价',
+  `sp_id` int(11) DEFAULT NULL COMMENT '策略ID',
+  `si_id` int(11) DEFAULT NULL COMMENT '分润策略ID',
+  `income_value` decimal(10,3) DEFAULT 0.000 COMMENT '分润比例(%)或固定值',
+  `revenue_type` tinyint(1) DEFAULT 0 COMMENT '分账方式(参照revenue_type)',
+  `income_amount` decimal(10,2) DEFAULT 0.00 COMMENT '应分账金额',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_ao_id` (`ao_id`),
+  KEY `idx_order_id` (`order_id`),
+  KEY `idx_si_id` (`si_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='组织分账日志表';
