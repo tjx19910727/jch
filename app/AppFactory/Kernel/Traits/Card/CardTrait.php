@@ -175,6 +175,7 @@ trait CardTrait
             'available_balance' => number_format($row['available_balance'] ?? 0, 2, '.', ''),
             'principal_balance' => number_format($row['principal_balance'] ?? 0, 2, '.', ''),
             'gift_balance' => number_format($row['gift_balance'] ?? 0, 2, '.', ''),
+            'expire_balance' => number_format($row['expire_balance'] ?? 0, 2, '.', ''),
             'refundable_balance' => number_format($row['refundable_balance'] ?? 0, 2, '.', ''),
         ];
     }
@@ -330,7 +331,6 @@ trait CardTrait
         $change_type = $data['change_type'] ?? 0;
         $trade_no = $data['trade_no'] ?? ('CB' . date('YmdHis') . mt_rand(1000, 9999));
         $remark = $data['remark'] ?? '';
-        $use_expire = intval($data['use_expire'] ?? 0);
         $expire_at = intval($data['expire_at'] ?? 0);
 
         try {
@@ -340,29 +340,44 @@ trait CardTrait
                 return $this->r(100, $this->lang("VCard.card_no_no_data"));
             }
 
-            if ($use_expire === 1 && $expire_at <= 0) {
-                $this->rollbackTrans();
-                return $this->r(100, $this->lang("VCard.expire_at_require"));
+            if (!empty($expire_at)) {
+                $expire_at = strtotime($data['expire_at']);
             }
-
-            $finalExpireAt = $use_expire === 1 ? $expire_at : 0;
 
             $summaryBefore = $this->getCardBalanceSummary($card_no);
             $balance_before_change = $summaryBefore['available_balance'];
             $deltaAmount = '0.00';
+            $logIds = [];
             $remarkData = [
                 'remark' => $remark,
-                'use_expire' => $use_expire,
-                'expire_at' => $finalExpireAt,
+                'expire_at' => $expire_at,
                 'buckets' => [],
             ];
 
             if ($change_type == 1) { // 增加
+                // 本金和赠送都为0时直接忽略，不写入任何数据
+                if (bccomp($balance_changed, '0', 2) == 0 && bccomp($gift_balance, '0', 2) == 0) {
+                    $this->rollbackTrans();
+                    return [
+                        'card_no' => $card_no,
+                        'balance_changed' => '0.00',
+                        'balance' => $summaryBefore['available_balance'],
+                        'principal_balance' => $summaryBefore['principal_balance'],
+                        'gift_balance' => $summaryBefore['gift_balance'],
+                        'refundable_balance' => $summaryBefore['refundable_balance'],
+                        'trade_no' => $trade_no,
+                        'log_id' => 0,
+                        'log_ids' => [],
+                        'ignored' => 1,
+                    ];
+                }
                 if (bccomp($balance_changed, '0', 2) <= 0 && bccomp($gift_balance, '0', 2) <= 0) {
                     $this->rollbackTrans();
                     return $this->r(100, $this->lang("VCard.balance_amount_error"));
                 }
                 $batchNo = 'RC' . date('YmdHis') . mt_rand(1000, 9999);
+                $runningBefore = $balance_before_change;
+
                 if (bccomp($balance_changed, '0', 2) > 0) {
                     $bucketId = $this->addCardBalanceBucket([
                         'card_no' => $card_no,
@@ -373,7 +388,7 @@ trait CardTrait
                         'refund_eligible' => 1,
                         'total_amount' => $balance_changed,
                         'remain_amount' => $balance_changed,
-                        'expire_at' => $finalExpireAt,
+                        'expire_at' => $expire_at,
                     ]);
                     $remarkData['buckets'][] = [
                         'bucket_id' => intval($bucketId),
@@ -381,6 +396,23 @@ trait CardTrait
                         'amount_type' => 1,
                     ];
                     $deltaAmount = bcadd($deltaAmount, $balance_changed, 2);
+
+                    $runningAfter = bcadd($runningBefore, $balance_changed, 2);
+                    $logIds[] = $this->addCardBalanceChangeLogs([
+                        'card_no' => $card_no,
+                        'balance_before_change' => $runningBefore,
+                        'balance_changed' => $balance_changed,
+                        'balance' => $runningAfter,
+                        'change_type' => 1,
+                        'balance_type' => 2,//后台充值本金
+                        'trade_no' => $trade_no,
+                        'activity_id' => 0,
+                        'reasons' => '',
+                        'remark' => $remark,
+                        'expire_at' => $expire_at,
+                        'created_at' => date('Y-m-d H:i:s'),
+                    ]);
+                    $runningBefore = $runningAfter;
                 }
                 if (bccomp($gift_balance, '0', 2) > 0) {
                     $bucketId = $this->addCardBalanceBucket([
@@ -392,7 +424,7 @@ trait CardTrait
                         'refund_eligible' => 0,
                         'total_amount' => $gift_balance,
                         'remain_amount' => $gift_balance,
-                        'expire_at' => $finalExpireAt,
+                        'expire_at' => $expire_at,
                     ]);
                     $remarkData['buckets'][] = [
                         'bucket_id' => intval($bucketId),
@@ -400,6 +432,23 @@ trait CardTrait
                         'amount_type' => 2,
                     ];
                     $deltaAmount = bcadd($deltaAmount, $gift_balance, 2);
+
+                    $runningAfter = bcadd($runningBefore, $gift_balance, 2);
+                    $logIds[] = $this->addCardBalanceChangeLogs([
+                        'card_no' => $card_no,
+                        'balance_before_change' => $runningBefore,
+                        'balance_changed' => $gift_balance,
+                        'balance' => $runningAfter,
+                        'change_type' => 1,
+                        'balance_type' => 6,//活动赠送
+                        'trade_no' => $trade_no,
+                        'activity_id' => 0,
+                        'reasons' => '',
+                        'remark' => $remark,
+                        'expire_at' => $expire_at,
+                        'created_at' => date('Y-m-d H:i:s'),
+                    ]);
+                    $runningBefore = $runningAfter;
                 }
             } elseif ($change_type == 2) { // 减少
                 if (bccomp($balance_changed, '0', 2) <= 0) {
@@ -417,21 +466,25 @@ trait CardTrait
             $summaryAfter = $this->getCardBalanceSummary($card_no);
             $balance = $summaryAfter['available_balance'];
 
-            $insert = [
-                'card_no' => $card_no,
-                'balance_before_change' => $balance_before_change,
-                'balance_changed' => $deltaAmount,
-                'balance' => $balance,
-                'change_type' => $change_type,
-                'balance_type' => 2,//后台充值
-                'trade_no' => $trade_no,
-                'activity_id' => 0,
-                'reasons' => '',
-                'remark' => json_encode($remarkData, JSON_UNESCAPED_UNICODE),
-                'created_at' => date('Y-m-d H:i:s'),
-            ];
+            if ($change_type == 2) {
+                $insert = [
+                    'card_no' => $card_no,
+                    'balance_before_change' => $balance_before_change,
+                    'balance_changed' => $deltaAmount,
+                    'balance' => $balance,
+                    'change_type' => $change_type,
+                    'balance_type' => 2,//后台操作
+                    'trade_no' => $trade_no,
+                    'activity_id' => 0,
+                    'reasons' => '',
+                    'remark' => json_encode($remarkData, JSON_UNESCAPED_UNICODE),
+                    'expire_at' => 0,
+                    'created_at' => date('Y-m-d H:i:s'),
+                ];
+                $logIds[] = $this->addCardBalanceChangeLogs($insert);
+            }
 
-            $log_id = $this->addCardBalanceChangeLogs($insert);
+            $log_id = !empty($logIds) ? $logIds[0] : 0;
             $this->commitTrans();
             return [
                 'card_no' => $card_no,
@@ -441,7 +494,8 @@ trait CardTrait
                 'gift_balance' => $summaryAfter['gift_balance'],
                 'refundable_balance' => $summaryAfter['refundable_balance'],
                 'trade_no' => $trade_no,
-                'log_id' => $log_id
+                'log_id' => $log_id,
+                'log_ids' => $logIds,
             ];
         } catch (\Exception $e) {
             $this->rollbackTrans();

@@ -66,14 +66,11 @@ class Card extends Common
         try {
             $this->validate(input(), $this->validatePath . '.addBalance');
             $postData = input();
-            $pwd = $postData['pwd'] ?? '';
-            if (!$pwd){
-                return returnState(100,lang("VLogin.password_require"));
-            }
+            $pwd = $postData['password'] ?? '';
             if (md5($pwd.config("app.salt")) !=  $this->manager['password']){
                 return returnState(100,lang("VLogin.pwd_incorrect"));
             }
-            unset($postData['pwd']);
+            unset($postData['password']);
             $res = $this->app->card->changeCardBalance($postData);
             return returnData($res);
         } catch (\Exception $e) {

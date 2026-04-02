@@ -210,7 +210,6 @@ class VReceive extends VCommon
 
         "getMachineRentOrgLists" => ["msg_id","machine_id","timestamp","sign"],
         "getRentOrgGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
-        "testUploadInfoMq" => ["msg_id","machine_id","timestamp"],
     ];
 
     /**
