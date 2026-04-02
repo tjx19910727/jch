@@ -24,9 +24,13 @@ class CardClient extends ManagementClient
             $item['available_balance'] = $summary['available_balance'];
             $item['principal_balance'] = $summary['principal_balance'];
             $item['gift_balance'] = $summary['gift_balance'];
+            $item['expire_balance'] = $summary['expire_balance'];
             $item['refundable_balance'] = $summary['refundable_balance'];
+            // 新增明确语义字段
+            $item['available_balance_no_gift'] = $summary['principal_balance'];
+            $item['total_available_balance'] = $summary['available_balance'];
             // 对外兼容字段，余额展示为实时可用余额
-            $item['balance'] = $summary['available_balance'];
+            $item['balance'] = $item['total_available_balance'];
             return $item;
         }, $group);
         return $this->rQ($list);

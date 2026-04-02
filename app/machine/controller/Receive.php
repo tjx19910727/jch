@@ -34,7 +34,6 @@ class Receive extends Common
     protected $noCheckApi = [
         "logoutH5",
         'test',
-        'testUploadInfoMq'
     ];
 
     /**
@@ -1013,7 +1012,11 @@ class Receive extends Common
     {
         $this->app->api->test();
     }
+<<<<<<< .mine
 
+=======
+
+>>>>>>> .theirs
     /**
      * http请求设备故障码上报接口
      * @return array|\think\response\Json
@@ -1057,6 +1060,7 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+<<<<<<< .mine
     /**
      * 测试上报 machine_info 到 MQ（msgType=uploadInfo）
      * @return array|\think\response\Json
@@ -1085,4 +1089,34 @@ class Receive extends Common
         }
     }
 
+=======
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+>>>>>>> .theirs
 }
