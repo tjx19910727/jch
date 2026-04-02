@@ -42,7 +42,7 @@ trait AfterOrderRefundTrait
             $flag[] = $this->refundSuccessUpdateSod();
             
             //修改卡积分 
-            $flag[] = $this->addCardChangeLog();
+            // $flag[] = $this->addCardChangeLog();
 
             $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $this->refund['sod_id']]);
             if($detail['wc_order_no']){
