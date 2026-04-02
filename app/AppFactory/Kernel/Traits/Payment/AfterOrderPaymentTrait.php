@@ -207,10 +207,8 @@ trait AfterOrderPaymentTrait
                 "outGoods" => $outArr,
                 "order_points" => $this->order['total_points']
             ];
-            // $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
-            // actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
-            // $this->order['out_status'] = 2;
-            // return $result;
+            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
+            actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
             return true;
         }
