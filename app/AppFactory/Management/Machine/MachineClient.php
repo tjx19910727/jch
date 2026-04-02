@@ -468,9 +468,9 @@ class MachineClient extends ManagementClient
     {
         $this->syncSubMachineAuxiliary();
 
-        if ($this->manager['pid'] > 0) {
-            $where[] = ['manager_id', '=', $this->manager['manager_id']];
-        }
+        // if ($this->manager['pid'] > 0) {
+        //     $where[] = ['manager_id', '=', $this->manager['manager_id']];
+        // }
 
         return $this->rQ($this->getMachineAuxiliaryList($where,$pageNum,$field,$order,function ($item) {
 
@@ -534,7 +534,7 @@ class MachineClient extends ManagementClient
                     'machine_type' => 1,//弧柜，兼容之前没有区分的情况
                     'machine_name' => $row['machine_name'] ?? '',
                     'machine_id' => $row['machine_id'] ? $row['machine_id'] .'-'.mt_rand(1000, 9999): mt_rand(1000000, 9999999),
-                    'street' => $row['street'] ?: '',
+                    'address' => $row['street'] ?: '',
                     'ao_id' => $row['ao_id'] ?: $this->manager['ao_id'],
                     'manager_id' => $row['manager_id'] ?: $this->manager['manager_id'],
                     'status' => 1,
