@@ -125,7 +125,7 @@ class SaleOrders extends Common
         }
 
         $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,so.refund_status,so.factory,so.inventory_location,
-        sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,
+        sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,sod.cost_price,(sod.total_sod_points - sod.refund_points) total_sod_points,(sod.total_sod_cost_points - sod.refund_cost_points) total_sod_cost_points,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
         // if ($postData['supplier']) unset($where['ao_id']);                                                                                                                                                                                                                                                                                                                                                                                                           
         $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.ao_id ='.$this->manager['ao_id'];
