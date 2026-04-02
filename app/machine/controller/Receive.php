@@ -11,6 +11,7 @@ namespace app\machine\controller;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Machine\Application;
+use app\AppFactory\RabbitMq\MqProducer;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
@@ -32,7 +33,7 @@ class Receive extends Common
 
     protected $noCheckApi = [
         "logoutH5",
-        'test'
+        'test',
     ];
 
     /**
@@ -1011,7 +1012,6 @@ class Receive extends Common
     {
         $this->app->api->test();
     }
-
     /**
      * http请求设备故障码上报接口
      * @return array|\think\response\Json
