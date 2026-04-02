@@ -1012,6 +1012,7 @@ class Receive extends Common
     {
         $this->app->api->test();
     }
+
     /**
      * http请求设备故障码上报接口
      * @return array|\think\response\Json
