@@ -77,8 +77,9 @@ class SaleOrdersDetailsModel extends BaseModel
      */
     public static function joinOrderList($where,$pageNum = 0,$field = "*", $order = "",$group = "")
     {
+        $whereRaw = '';
         if(isset($where['raw'])){
-            $whereRaw= $where['raw'];
+            $whereRaw = $where['raw'];
             unset($where['raw']);
         }
         $data = self::alias("sod")

@@ -128,7 +128,7 @@ class SaleOrders extends Common
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,sod.cost_price,(sod.total_sod_points - sod.refund_points) total_sod_points,(sod.total_sod_cost_points - sod.refund_cost_points) total_sod_cost_points,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount";
         // if ($postData['supplier']) unset($where['ao_id']);                                                                                                                                                                                                                                                                                                                                                                                                           
-        $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.ao_id ='.$this->manager['ao_id'];
+        // $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.ao_id ='.$this->manager['ao_id'];
         return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",$postData['supplier'] ?? 'true'));
     }
 
@@ -504,7 +504,7 @@ class SaleOrders extends Common
                 if ($mIds) $where[] = ['m_id', 'in', $mIds];
             }
         }
-        $where['sod.ao_id'] = $this->manager['ao_id'];
+        // $where['sod.ao_id'] = $this->manager['ao_id'];
         return $this->app->saleOrders->saleDataCollect($where);
 
     }
