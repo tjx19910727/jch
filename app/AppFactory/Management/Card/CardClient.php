@@ -131,10 +131,14 @@ class CardClient extends ManagementClient
                     $update_card['card_show_no'] = str_pad($update_card['card_show_no'], 10, "0", STR_PAD_LEFT);
                     $update_card['name'] = $name;
                     $update_card['status'] = $status;
+                    if ($status === 1) {
+                        $update_card['activation_time'] = time();
+                    }
                     $result = $this->updateCard([
                         'card_show_no' => $update_card['card_show_no'],
                         'name' => $update_card['name'],
-                        'status' => $update_card['status']
+                        'status' => $update_card['status'],
+                        'activation_time' => $update_card['activation_time'] ?? 0,
                     ], ['card_no' => $cardNo] );
                 }elseif(!in_array($v['card_no'], $card_no_arr)){
                     $import_card['card_no'] = $cardNo;
@@ -142,6 +146,7 @@ class CardClient extends ManagementClient
                     $import_card['card_show_no'] = str_pad($import_card['card_show_no'], 10, "0", STR_PAD_LEFT);
                     $import_card['name'] = $name;
                     $import_card['status'] = $status;
+                    $import_card['activation_time'] = $status === 1 ? time() : 0;
                     $import_card['password'] = '123456'.md5(config('app.salt') . $cardNo);
                     $import_cards[] = $import_card;
                 }
