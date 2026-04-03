@@ -91,8 +91,8 @@ class SaleOrdersClient extends ManagementClient
     public function getSoList($where, $pageNum = 0, $field = "*", $order = "", $supplier = false)
     {
         //检查当前登录用组织是否租赁设备
-        $authOrgMc = $this->getAuthOrgMCCount(['ao_id' => $this->manager['ao_id']]);
-        if($authOrgMc) return $this->getGerSoList($where, $pageNum, $field, $order, $this->manager['ao_id']);
+        // $authOrgMc = $this->getAuthOrgMCCount(['ao_id' => $this->manager['ao_id']]);
+        // if($authOrgMc) return $this->getGerSoList($where, $pageNum, $field, $order, $this->manager['ao_id']);
         try {
             if($supplier){
                 if ($this->manager['pid'] > 0) {
@@ -358,7 +358,7 @@ class SaleOrdersClient extends ManagementClient
             $group = "month";
             $where[] = ['create_date', '>=', strtotime("-12 month")];
         }
-        $data = $this->getSaleOrdersDetailsDailyCountList($where, 0, $field, '', $group);
+        $data = $this->getSaleOrdersDailyCountList($where, 0, $field, '', $group);
         return $this->rQ($data);
     }
 
@@ -682,7 +682,7 @@ class SaleOrdersClient extends ManagementClient
      */
     public function getTotalReport($where, $field = "*", $order = "", $group = "")
     {
-        $data = $this->getSaleOrdersDetailsDailyCountFind($where, $field, $order, $group);
+        $data = $this->getSaleOrdersDailyCountFind($where, $field, $order, $group);
         return $this->rQ($data);
     }
 
@@ -725,7 +725,7 @@ class SaleOrdersClient extends ManagementClient
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
         $order = 'create_date desc';
-        $data = $this->getSaleOrdersDetailsDailyCountList($where, $pageNum, $field, $order, $group);
+        $data = $this->getSaleOrdersDailyCountList($where, $pageNum, $field, $order, $group);
         return $this->rQ($data);
     }
 
@@ -747,7 +747,7 @@ class SaleOrdersClient extends ManagementClient
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(giftQuantity) giftQuantity";
         $group = "create_date";
-        $list = $this->getSaleOrdersDetailsDailyCountList($where, 0, $field, $order, $group);
+        $list = $this->getSaleOrdersDailyCountList($where, 0, $field, $order, $group);
         if ($list) {
             $list = $list->toArray();
             $title = [
