@@ -220,4 +220,53 @@ class PaymentClient extends PayBaseClient
             return $this->rTryCatch($e->getMessage());
         }
     }
+
+    /**
+     * 改密码
+     * @return array|string
+     */
+    public function changeCardPwd(){
+        try {
+            $cardNo = trim((string)($this->data['card_no'] ?? ''));
+            $oldPwd = isset($this->data['old_pwd']) ? (string)$this->data['old_pwd'] : '';
+            $newPwd = (string)($this->data['new_pwd'] ?? '');
+            $confirmPwd = (string)($this->data['confirm_pwd'] ?? '');
+
+            if ($cardNo === '') {
+                return $this->rFail('卡号不能为空');
+            }
+            if ($newPwd === '') {
+                return $this->rFail('新密码不能为空');
+            }
+            if ($confirmPwd === '') {
+                return $this->rFail('确认密码不能为空');
+            }
+            if ($newPwd !== $confirmPwd) {
+                return $this->rFail('两次输入的密码不一致');
+            }
+
+            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no,password');
+            if (!$card) {
+                return $this->rFail('查无会员卡信息');
+            }
+
+            $oldPwdEncrypt = md5($oldPwd . config('app.salt').$cardNo);
+            $cardPassword = (string)($card['password'] ?? '');
+            if ($oldPwdEncrypt !== $cardPassword) {
+                return $this->rFail('旧密码错误');
+            }
+
+            $result = $this->updateCard([
+                'password' => md5($newPwd . config('app.salt').$cardNo),
+            ], ['card_no' => $cardNo]);
+
+            if ($result) {
+                return $this->rSuccess('修改成功');
+            }
+            return $this->rFail('修改失败');
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
 }

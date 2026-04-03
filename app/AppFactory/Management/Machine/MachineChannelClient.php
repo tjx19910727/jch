@@ -444,22 +444,17 @@ class MachineChannelClient extends ManagementClient
         //把货道的channel_position设置成设备相同的vending_machine_type
         $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
         $list = $list->toArray();
-        $value = $this->getMachineMainRelationValue(['main_mc_id' => $machine['m_id']],'b_mc_id');
-        if(!empty($value)){
-            $b_list = $this->getMachineChannelList([['m_id','=',$value]],$pageNum,$field,$order);
-            $b_list = $b_list->toArray();
-        }
-        if(!empty($b_list)){
-            $list = array_merge($list,$b_list);
-        }
-        foreach ($list as $key => &$value) {
-            if (isset($value['channel_code']) && in_array($value['channel_code'],['0201','0202','0203'])) {
-                $value['channel_position'] = 3;
-            }
-            if (isset($value['channel_code']) && in_array($value['channel_code'],['0101','0102','0103'])) {
-                $value['channel_position'] = 2;
-            }
-        }
+        // foreach ($list as $key => &$value) {
+        //     if (!isset($value['channel_code'])) {
+        //         continue;
+        //     }
+        //     $channelCode = strval($value['channel_code']);
+        //     if (strpos($channelCode, '02') === 0) {
+        //         $value['channel_position'] = 3;
+        //     } elseif (strpos($channelCode, '01') === 0) {
+        //         $value['channel_position'] = 2;
+        //     }
+        // }
         return $this->rQ($list);
     }
 

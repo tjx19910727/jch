@@ -63,4 +63,13 @@ class Payment extends Common
     {
         return $this->app->payment->cancelPay();
     }
+
+    /**
+     * 改密码
+     * @return array|string
+     */
+    public function changePassword()
+    {
+        return $this->app->payment->changeCardPwd();
+    }
 }

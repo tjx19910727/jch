@@ -507,7 +507,7 @@ trait CardTrait
 
     public function updatePwd($data)
     {
-        $update['password'] = md5($data['password'] . $this->salt);
+        $update['password'] = md5($data['password'] . $this->salt.$data['card_no']);
         $where['card_no'] = $data['card_no'];
         return CardModel::update($update,$where);
     }
