@@ -1697,7 +1697,7 @@ class ApiClient extends ReceiveBaseClient
                 //机台登录会员后，无订单刷卡场景，直接把卡积分同步到微程会员
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
                 if (!$card) {
-                    $this->addCard(['card_no' => $this->data['card_no']]);
+                    $this->addCard(['card_no' => $this->data['card_no'],'password' => md5(config('app.salt') . $this->data['card_no'])]);
                     $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                 }
                 if (!empty($card['bind_id']) && ($card['bind_id'] != $this->data['bind_id']))  return $this->r(200, 'failed', '感应卡已绑定其他会员！！！');
@@ -1769,13 +1769,14 @@ class ApiClient extends ReceiveBaseClient
         $total_balance = '0.00';
         $card_info = [];
         $bind_id = '';
+        $card_one = [];
         try {
             if (isset($this->data['bind_id']) && !empty($this->data['bind_id'])) {
                 //先判断当前登录账号登录信息是否绑定了当前传入的卡号，如果为绑定，提示用户绑卡
                 if (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                     $card_info = $this->getCardFind(['card_no' => $this->data['card_no']]);
                     if (!$card_info) {
-                        $this->addCard(['card_no' => $this->data['card_no']]);
+                        $this->addCard(['card_no' => $this->data['card_no'],'password' => md5(config('app.salt') . $this->data['card_no'])]);
                         $card_info = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                     }
                     if (!$card_info['bind_id'])
@@ -1806,7 +1807,7 @@ class ApiClient extends ReceiveBaseClient
             } elseif (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
                 if (!$card) {
-                    $this->addCard(['card_no' => $this->data['card_no']]);
+                    $this->addCard(['card_no' => $this->data['card_no'],'password' => md5(config('app.salt') . $this->data['card_no'])]);
                     $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                 }
                 //查询此卡关联的会员id
@@ -1852,10 +1853,10 @@ class ApiClient extends ReceiveBaseClient
             }
             $res['total_balance'] = $total_balance;
             //用户是否需要输入密码
-            $res['need_pay_password'] = 0;
+            $res['need_pay_password'] = 1;
             $check_password = md5(config('app.salt') . $this->data['card_no']);
-            if(!empty($card_info['password']) && $card_info['password'] !== $check_password){
-                $res['need_pay_password'] = 1;
+            if(!empty($card['password']) && $card['password'] == $check_password){
+                $res['need_pay_password'] = 0;
             }
             return $this->r(200, 'success', $res);
         } catch (\Exception $e) {
