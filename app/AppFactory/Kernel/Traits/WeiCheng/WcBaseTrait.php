@@ -20,9 +20,7 @@ trait WcBaseTrait
 
     public function initWcBase()
     {
-        $this->configType = "weicheng";
         if (env("CglPay.is_test")) {
-            $this->configType = "weichengTest";
             $this->config = [
                 "distributor_id" => "520253",
                 "apikey" => "ab50e9d1038e4905b1d5f1f263e69e18_n",
@@ -32,12 +30,11 @@ trait WcBaseTrait
                 "apiDomain" => "https://test-api-weicheng.jchtechnologies.com",
             ];
         } else {
-            $this->configType = "weicheng";
             $this->config = [
-                "distributor_id" => "520253",
-                "apikey" => "ab50e9d1038e4905b1d5f1f263e69e18_n",
-                "apisecret" => "d1e79b35bc6f491993f873c56b163f47",
-                "secretkey" => "8f8d4818c49f44e6bb53d04b",
+                "distributor_id" => "520443",
+                "apikey" => "5e819581b8a04b2b98f767c517c100fb_n",
+                "apisecret" => "2674529f13c84ea0a8d4d00461c1243c",
+                "secretkey" => "a5e0267f83d04741a9a72fdc",
                 "domain" => "https://admin-weicheng.jchtechnologies.com",
                 "apiDomain" => "https://api-weicheng.jchtechnologies.com",
             ];
