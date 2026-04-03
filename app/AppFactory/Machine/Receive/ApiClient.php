@@ -139,6 +139,7 @@ class ApiClient extends ReceiveBaseClient
 
 
     public $card_retail_price = 0.01;
+    public $card_default_pwd = '123456';
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
@@ -1763,7 +1764,7 @@ class ApiClient extends ReceiveBaseClient
                 //机台登录会员后，无订单刷卡场景，直接把卡积分同步到微程会员
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
                 if (!$card) {
-                    $this->addCard(['card_no' => $this->data['card_no'],'password' => md5(config('app.salt') . $this->data['card_no'])]);
+                    $this->addCard(['card_no' => $this->data['card_no'],'password' => $this->card_default_pwd.md5(config('app.salt') . $this->data['card_no'])]);
                     $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                 }
                 if (!empty($card['bind_id']) && ($card['bind_id'] != $this->data['bind_id']))  return $this->r(200, 'failed', '感应卡已绑定其他会员！！！');
@@ -1842,7 +1843,7 @@ class ApiClient extends ReceiveBaseClient
                 if (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                     $card_info = $this->getCardFind(['card_no' => $this->data['card_no']]);
                     if (!$card_info) {
-                        $this->addCard(['card_no' => $this->data['card_no'],'password' => md5(config('app.salt') . $this->data['card_no'])]);
+                        $this->addCard(['card_no' => $this->data['card_no'],'password' => $this->card_default_pwd.md5(config('app.salt') . $this->data['card_no'])]);
                         $card_info = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                     }
                     if (!$card_info['bind_id'])
@@ -1873,7 +1874,7 @@ class ApiClient extends ReceiveBaseClient
             } elseif (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
                 if (!$card) {
-                    $this->addCard(['card_no' => $this->data['card_no'],'password' => md5(config('app.salt') . $this->data['card_no'])]);
+                    $this->addCard(['card_no' => $this->data['card_no'],'password' => $this->card_default_pwd.md5(config('app.salt') . $this->data['card_no'])]);
                     $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                 }
                 //查询此卡关联的会员id
