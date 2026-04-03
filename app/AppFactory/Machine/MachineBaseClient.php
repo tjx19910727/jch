@@ -10,6 +10,7 @@ namespace app\AppFactory\Machine;
 
 
 use app\AppFactory\Kernel\BaseClient;
+use app\AppFactory\Kernel\Model\Machine\MachineVersionPlanModel;
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
@@ -105,6 +106,35 @@ class MachineBaseClient extends BaseClient
                 actionLog("发送在线通知抛出异常");
                 actionException($e,1);
             }
+
+            // 设备离线后上线时，检查是否需要补发 APP 更新触发消息。
+            $this->resendUpdateVersionPlanWhenOnline();
+        }
+    }
+
+    /**
+     * 设备上线时补发更新版本 MQ（仅离线->上线触发一次）
+     */
+    protected function resendUpdateVersionPlanWhenOnline()
+    {
+        try {
+            $plan = MachineVersionPlanModel::where([
+                'machine_id' => $this->machine['machine_id'],
+                'status' => 1,
+            ])->field('mvp_id,machine_id,mv_id,version_no,publish_time')
+            ->order('create_time desc')
+            ->find();
+            if (empty($plan)) {
+                return;
+            }
+            $sendResult = $this->sendToMachine(['machine_id' => $this->machine['machine_id']], 'updateVersionPlan');
+            actionLog([
+                'machine_id' => $this->machine['machine_id'],
+                'mvp_id' => $plan['mvp_id'] ?? 0,
+                'sendResult' => is_object($sendResult) ? obj2arr($sendResult) : $sendResult,
+            ], '设备上线补发更新版本MQ');
+        } catch (\Throwable $e) {
+            actionException($e, 1);
         }
     }
 
