@@ -235,12 +235,6 @@ class PaymentClient extends PayBaseClient
             if ($cardNo === '') {
                 return $this->rFail('卡号不能为空');
             }
-            if ($newPwd === '') {
-                return $this->rFail('新密码不能为空');
-            }
-            if ($confirmPwd === '') {
-                return $this->rFail('确认密码不能为空');
-            }
             if ($newPwd !== $confirmPwd) {
                 return $this->rFail('两次输入的密码不一致');
             }
