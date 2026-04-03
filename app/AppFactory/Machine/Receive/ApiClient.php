@@ -1917,6 +1917,12 @@ class ApiClient extends ReceiveBaseClient
                 $total_balance = (string)($summary['available_balance'] ?? '0.00');
             }
             $res['total_balance'] = $total_balance;
+            //用户是否需要输入密码
+            $res['need_pay_password'] = 0;
+            $check_password = md5(config('app.salt') . $this->data['card_no']);
+            if(!empty($card_info['password']) && $card_info['password'] !== $check_password){
+                $res['need_pay_password'] = 1;
+            }
             return $this->r(200, 'success', $res);
         } catch (\Exception $e) {
             $this->rollbackTrans();
