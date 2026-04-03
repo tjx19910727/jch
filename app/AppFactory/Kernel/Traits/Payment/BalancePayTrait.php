@@ -92,26 +92,16 @@ trait BalancePayTrait
             }
 
             $bindId = trim($this->data['bind_id'] ?? '');
-            $needPayPassword = empty($bindId) || empty($card['bind_id']) || ($bindId != $card['bind_id']);
+            $checkPwd = md5(config('app.salt').$cardNo);
+            $needPayPassword = 1;
+            if($checkPwd == $card['password']){
+                $needPayPassword = 0;
+            }
             if ($needPayPassword) {
                 $payPassword = trim($this->data['pay_password'] ?? '');
-                if (!$payPassword) {
+                if (md5($payPassword . config('app.salt').$cardNo) != $card['password']) {
                     $this->rollbackTrans();
-                    return $this->r(201, '需要输入支付密码', [
-                        'need_pay_password' => 1,
-                        'card_no' => $cardNo,
-                    ]);
-                }
-                if(empty($card['password'])){
-                    if ($payPassword != '123456') {
-                        $this->rollbackTrans();
-                        return $this->rFail('默认密码错误');
-                    }
-                }else{
-                    if (md5($payPassword . config('app.salt')) != $card['password']) {
-                        $this->rollbackTrans();
-                        return $this->rFail('支付密码错误');
-                    }
+                    return $this->rFail('支付密码错误');
                 }
 
             }
