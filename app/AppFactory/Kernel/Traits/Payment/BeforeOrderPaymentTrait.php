@@ -50,14 +50,14 @@ trait BeforeOrderPaymentTrait
         $this->countOrder = $this->order;
         $flag[] = 1;
         foreach ($this->countOrder['details'] as $sodKey => $sodValue) {
-            $strategy_machine = $this->getStrategyMachineFind(['s_type' => 3,'ao_id' => $sodValue['ao_id'],'m_id' => $this->countOrder['m_id']]);
+            $strategy_machine = $this->getStrategyMachineFind(['s_type' => 3,'ao_id' => $sodValue['sod_ao_id'],'m_id' => $this->countOrder['m_id']]);
             if(!$strategy_machine) continue;
             $strategy_machine = $strategy_machine->toArray();
             $strategy_income = $this->getStrategyIncomeFind(['si_id' => $strategy_machine['s_id']]);
             if(!$strategy_income) continue;
             $strategy_income = $strategy_income->toArray();
             $radio = $strategy_income['income_value'] ?? 0;
-            $strategy_manager = $this->getStrategyManagerFind(['s_id' => $strategy_machine['s_id'],'s_type' => 1,'ao_id' => $sodValue['ao_id'],'m_id' => $this->countOrder['m_id']]);
+            $strategy_manager = $this->getStrategyManagerFind(['s_id' => $strategy_machine['s_id'],'s_type' => 1,'ao_id' => $sodValue['sod_ao_id'],'m_id' => $this->countOrder['m_id']]);
             if(!$strategy_manager) continue;
             $strategy_manager = $strategy_manager->toArray();
             $insert = [
@@ -77,12 +77,12 @@ trait BeforeOrderPaymentTrait
                 // 'bill_account' => $strategy_machine['s_id'],
                 'revenue_type' => 4,
                 'income_amount' =>  bcmul($sodValue['total_sod_price'], bcmul($radio, 0.01, 3), 3),
-                'ao_id' => $sodValue['ao_id'],
+                'ao_id' => $sodValue['sod_ao_id'],
             ];
             $sor_id = $this->addSaleOrdersRevenue($insert);
             // 写入组织分账日志
             $log = [
-                'ao_id' => $sodValue['ao_id'] ?? 0,
+                'ao_id' => $sodValue['sod_ao_id'] ?? 0,
                 'order_id' => $insert['order_id'] ?? '',
                 'sp_id' => $insert['sp_id'] ?? 0,
                 'm_id' => $insert['m_id'] ?? 0,

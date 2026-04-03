@@ -404,6 +404,7 @@ class ApiClient extends ReceiveBaseClient
                 "sku" => $mc['sku'],
                 "bar_code" => $mc['bar_code'],
                 "change_value" => $mc['stock'],
+                "ao_id" => $this->machine['ao_id'],
                 "creator" => $this->data['operator'],
             ];
             // 生成原商品退货记录
@@ -483,7 +484,7 @@ class ApiClient extends ReceiveBaseClient
                 // 查询新商品，修改货道商品信息，重置库存为新数量，生成新的补货记录
                 $mg = $this->getMachineGoodsFind(
                     ['mg_id' => $this->data['mg_id']],
-                    'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock,is_shelf,ao_id'
+                    'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,standby_stock,is_shelf'
                 );
                 if (!$mg) {
                     $this->rollbackTrans();
@@ -980,7 +981,7 @@ class ApiClient extends ReceiveBaseClient
                             "bar_code" => $mc['bar_code'] ?? '',
                             'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
-                            'ao_id' => $mg['ao_id'] ?? '',
+                            'sod_ao_id' => $mg['ao_id'] ?? '',
                         ];
                         $details['retail_price'] = !empty($wc_order_no) ? $total_price : $mc['retail_price'];
                         $details['total_sod_price'] = bcmul($details['retail_price'], $quantity, 3);
