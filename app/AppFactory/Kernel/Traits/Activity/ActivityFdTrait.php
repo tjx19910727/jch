@@ -314,13 +314,13 @@ trait ActivityFdTrait
         if ($this->fd['fd_type'] == 4) {
             // 非指定SKU的直接用订单总额计算
             if ($this->fd['condition_type'] != 3) {
-                $discount_price = round(bcmul($this->order['total_price'], bcdiv($value['active_value'], 100, 2), 3),2);
+                $discount_price = round(bcmul($this->order['total_price'], bcdiv(bcsub(100,$value['active_value']), 100, 2), 3),2);
             } else {
                 // 指定SKU，优惠金额以商品单价计算
                 $discount_price = round(bcmul(
                     bcmul($this->sku['total_sod_price'],$this->sku['quantity'],3),
                     bcdiv(
-                        $value['active_value'],
+                        bcsub(100,$value['active_value']),
                         100,
                         2),
                     3),2);
