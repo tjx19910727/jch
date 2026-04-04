@@ -57,8 +57,9 @@ class WcGoods extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, ['type' => 'like', 'name' => 'like', 'no' => 'like']);
-        $where[] = ['type', 'in', '1,2,3,4,5']; //实物商品
+        // 这里不再透传 type like，避免与实物类型固定筛选冲突导致结果为空
+        $where = $this->getWhere($postData, false, ['name' => 'like', 'no' => 'like']);
+        $where[] = ['type', 'in', [1, 2, 3, 4, 5]]; // 实物商品
         return $this->app->weicheng->getWcPhysicalGoodsLists($where, $pageNum);
     }
 
