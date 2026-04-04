@@ -123,6 +123,8 @@ trait AfterOrderPaymentTrait
                     continue;
                 } else {
                     $updateSod['sod_id'] = $v['sod_id'];
+                    $updateSod['total_sod_points'] = 0;
+                    $updateSod['intergral_rate'] = 0;
                     if ($v['channel_code'] == 'Z10') {
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $v['mc_id']]);
                     } else {
@@ -134,8 +136,10 @@ trait AfterOrderPaymentTrait
 
                     //微程积分记录到details表
                     if(!empty($v['wc_order_no'])){
-                        $wc_order_no = json_decode($wc_order_no, true);
-                        $updateSod['total_sod_points'] = $wc_order_no['total_sod_points'];
+                        $wc_order_no = json_decode($v['wc_order_no'], true);
+                        if (is_array($wc_order_no) && isset($wc_order_no['total_sod_points'])) {
+                            $updateSod['total_sod_points'] = $wc_order_no['total_sod_points'];
+                        }
                     }else{
                         $rate_points = $this->getRateOrGiftPoints($mc);
 
@@ -149,7 +153,7 @@ trait AfterOrderPaymentTrait
                         }
                     }
                     
-                    $total_points += $updateSod['total_sod_points'];
+                    $total_points += (float)($updateSod['total_sod_points'] ?? 0);
                     if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
                         $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']], 'stock');
                         actionLog($this->getLS(), '减固定组合商品酒店库存');
@@ -205,7 +209,7 @@ trait AfterOrderPaymentTrait
                 "trade_no" => $this->order['trade_no'],
                 "main" => $contentArr,
                 "outGoods" => $outArr,
-                "order_points" => $this->order['total_points']
+                "order_points" => $this->order['total_points'] ?? 0
             ];
             $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
             actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
