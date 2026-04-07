@@ -28,8 +28,31 @@ class Logs  extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
+        $where = $this->buildWhere($postData);
         return $this->app->card->getCardBalanceLogsList($where, $pageNum, $this->field, 'id desc');
+    }
+
+    protected function buildWhere($postData)
+    {
+        $where = $this->getWhere($postData, false, []);
+
+        if (!empty($postData['created_at']) && is_string($postData['created_at']) && strpos($postData['created_at'], '~') !== false) {
+            $range = explode('~', $postData['created_at'], 2);
+            $start = trim($range[0] ?? '');
+            $end = trim($range[1] ?? '');
+
+            if ($start !== '' && $end !== '') {
+                foreach ($where as $idx => $item) {
+                    if (is_array($item) && ($item[0] ?? '') === 'created_at') {
+                        unset($where[$idx]);
+                    }
+                }
+                $where[] = ['created_at', 'between', [$start, $end]];
+                $where = array_values($where);
+            }
+        }
+
+        return $where;
     }
 
    
