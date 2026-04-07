@@ -74,7 +74,8 @@ class Card extends Common
             $res = $this->app->card->changeCardBalance($postData);
             return returnData($res);
         } catch (\Exception $e) {
-            return $this->app->card->rFail(lang("VCard.balance_action_fail") .'：'. $e->getMessage());
+            return returnState(101, lang("VCard.balance_action_fail") .'：'. $e->getMessage());
+            //return $this->app->card->rFail(lang("VCard.balance_action_fail") .'：'. $e->getMessage());
         }
     }
 

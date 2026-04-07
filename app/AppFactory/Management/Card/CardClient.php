@@ -247,4 +247,9 @@ class CardClient extends ManagementClient
         }
         return $this->updatePwd($data);
     }
+
+    public function getCardBalanceLogsList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return $this->rQ($this->getCardBalanceChangeLogsList($where, $pageNum, $field, $order, $eachFun, $group));
+    }
 }

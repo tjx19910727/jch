@@ -29,7 +29,7 @@ class Logs  extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
-        return $this->app->card->getCardBalanceChangeLogsList($where, $pageNum, $this->field, 'id desc');
+        return $this->app->card->getCardBalanceLogsList($where, $pageNum, $this->field, 'id desc');
     }
 
    
