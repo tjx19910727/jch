@@ -47,13 +47,18 @@ trait CardBalanceBucketsTrait
      * @param int $now
      * @return array
      */
-    protected function getCardBalanceBucketsForConsume($card_no, $now)
+    protected function getCardBalanceBucketsForConsume($card_no, $now, $amountType = null)
     {
-        return CardBalanceBucketsModel::where('card_no', $card_no)
+        $query = CardBalanceBucketsModel::where('card_no', $card_no)
             ->where('remain_amount', '>', 0)
             ->whereRaw("(expire_at = 0 OR expire_at >= {$now})")
-            ->orderRaw("CASE WHEN expire_at = 0 THEN 1 ELSE 0 END ASC, expire_at ASC, amount_type ASC, id ASC")
-            ->lock(true)
+            ->orderRaw("CASE WHEN expire_at = 0 THEN 1 ELSE 0 END ASC, expire_at ASC, amount_type ASC, id ASC");
+
+        if ($amountType !== null) {
+            $query->where('amount_type', intval($amountType));
+        }
+
+        return $query->lock(true)
             ->select()
             ->toArray();
     }
