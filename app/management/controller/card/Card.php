@@ -30,9 +30,13 @@ class Card extends Common
     //新增单条卡信息
     public function add()
     {
-        $postData = input();
-        $this->validate($postData, $this->validatePath . '.add_2');
-        return returnData($this->app->card->addSingleCard($postData));
+        try {
+           $postData = input();
+            ///$this->validate($postData, $this->validatePath . '.add_2');
+            return $this->app->card->addSingleCard($postData);
+        } catch (\Exception $e) {
+            return $this->app->card->rFail('添加卡失败');
+        }
     }
 
 
