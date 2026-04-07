@@ -89,6 +89,7 @@ trait ActivityFdTrait
     private $fd;
     private $content;
     private $lastContent;
+    private $skuMatchedContents = [];
     private $countContent = ["discount_price" => 0, "mc_id" => 0];
 
     /**
@@ -133,6 +134,7 @@ trait ActivityFdTrait
         if (is_string($this->content)) return $this->rFail($this->content);
         actionLog($this->getLS(),'【SQL】查询活动规则');
         $this->content = $this->content->toArray();
+        $this->skuMatchedContents = [];
 
         $this->startTrans();
         try {
@@ -147,15 +149,40 @@ trait ActivityFdTrait
             }
             // 指定SKU
             if ($this->fd['condition_type'] == 3) {
-                $this->designatedSku();
+                //$this->designatedSku
+                $this->designatedSkuV2();
             }
             // 不限额
             if ($this->fd['condition_type'] == 0) {
                 $this->unlimited();
             }
             $flag[] = $this->handleActivityFd();
-            if ($this->lastContent) {
-                // 生成满减满赠活动使用记录
+            if ($this->fd['condition_type'] == 3 && $this->skuMatchedContents) {
+                foreach ($this->skuMatchedContents as $matchedContent) {
+                    // 指定SKU支持多规则命中，按命中规则逐条落库
+                    $insertUsed = [
+                        "fd_id" => $this->fd['fd_id'],
+                        "fd_name" => $this->fd['fd_name'],
+                        "order_id" => $this->order['order_id'],
+                        "trade_no" => $this->order['trade_no'],
+                        "m_id" => $this->order['m_id'],
+                        "machine_id" => $this->order['machine_id'],
+                        "machine_name" => $this->order['machine_name'],
+                        "fd_type" => $this->fd['fd_type'],
+                        "condition_type" => $this->fd['condition_type'],
+                        "fdc_id" => $matchedContent['fdc_id'] ?? 0,
+                        "condition_value" => $matchedContent['condition_value'] ?? '',
+                        "active_value" => $matchedContent['active_value'] ?? 0,
+                        "g_id" => $matchedContent['g_id'] ?? 0,
+                        "g_name" => $matchedContent['g_name'] ?? '',
+                        "sku" => $matchedContent['sku'] ?? '',
+                        "pic" => $matchedContent['pic'] ?? '',
+                    ];
+                    $flag[] = $this->addActivityFdUsed($insertUsed);
+                    actionLog($this->getLS(), '【SQL】添加活动使用记录');
+                }
+            } elseif ($this->lastContent) {
+                // 非指定SKU维持原有单条活动使用记录逻辑
                 $insertUsed = [
                     "fd_id" => $this->fd['fd_id'],
                     "fd_name" => $this->fd['fd_name'],
@@ -253,6 +280,40 @@ trait ActivityFdTrait
                 continue;
             }
             break;
+        }
+    }
+
+    /**
+     * 指定SKU条件循环
+     */
+    private function designatedSkuV2()
+    {
+        // 同一个活动规则里可能出现重复SKU，按当前排序优先级只处理第一条
+        $handledSku = [];
+        foreach ($this->content as $key => $value) {
+            $ruleSku = (string)$value['condition_value'];
+            if (isset($handledSku[$ruleSku])) {
+                continue;
+            }
+            $handledSku[$ruleSku] = 1;
+
+            $detailsList = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id'],'sku' => $value['condition_value']],
+                0,'sod_id,total_sod_price,discount_price,quantity');
+            actionLog($this->getLS(),'查询指定SKU');
+            if ($detailsList) {
+                $detailsList = $detailsList->toArray();
+                foreach ($detailsList as $dk => $dv) {
+                    $this->sku = $dv;
+                    // 满足条件，执行逻辑，不满足就跳出
+                    $this->countContent($value);
+                    $this->lastContent = $value;
+                    if (isset($value['fdc_id'])) {
+                        $this->skuMatchedContents[$value['fdc_id']] = $value;
+                    } else {
+                        $this->skuMatchedContents[] = $value;
+                    }
+                }
+            }
         }
     }
 
