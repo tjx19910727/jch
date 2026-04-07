@@ -108,6 +108,12 @@ class MachineChannelClient extends ManagementClient
         }
         $where[] = ['status','<>',2];
         $where['g_id'] = 0;
+        $expr = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+        if (!empty($where['raw'])) {
+            $where['raw'] .= " AND " . $expr;
+        } else {
+            $where['raw'] = $expr;
+        }
         $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
         count(mc_id) empty_num', '', '', 'm_id');
@@ -185,6 +191,12 @@ class MachineChannelClient extends ManagementClient
             $where[] = ['m_id', 'in', $mIds];
         }
         $where['stock'] = 0;
+        $expr = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+        if (!empty($where['raw'])) {
+            $where['raw'] .= " AND " . $expr;
+        } else {
+            $where['raw'] = $expr;
+        }
         $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
             (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
             count(mc_id) stock_out_num', '', '', 'm_id');
