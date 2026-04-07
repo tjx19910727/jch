@@ -47,6 +47,12 @@ class CardClient extends ManagementClient
             $card_no = $postData['card_no'] ?? '';
             $card_show_no = $postData['card_show_no'] ?? '';
             $count = $this->getCardCount(['card_no' => $card_no]);
+            if(!$card_no){
+                return $this->r(100, lang('VCard.card_no_require'));
+            }
+            if(!$card_show_no){
+                return $this->r(100, lang('VCard.card_show_no_require'));
+            }
             if ($count) {
                 return $this->r(100, lang('VCard.card_no_exists'));
             }
@@ -60,12 +66,13 @@ class CardClient extends ManagementClient
                 'card_show_no' => $card_show_no,
                 'name' => $postData['name'] ?? '',
                 'status' => $postData['status'] ?? 0,
-                'password' => '123456'.md5(config('app.salt') . $card_no),
+                'password' => md5('123456'.config('app.salt') . $card_no),
             ];
             return $this->rA($this->addCard($insert));
         } catch (\Exception $e) {
             actionException($e, 1);
-            return $this->rValidate($e->getMessage());
+            throw new \Exception($e->getMessage());
+            //return $this->rValidate($e->getMessage());
         }
     }
 
@@ -147,7 +154,7 @@ class CardClient extends ManagementClient
                     $import_card['name'] = $name;
                     $import_card['status'] = $status;
                     $import_card['activation_time'] = $status === 1 ? time() : 0;
-                    $import_card['password'] = '123456'.md5(config('app.salt') . $cardNo);
+                    $import_card['password'] = md5('123456'.config('app.salt') . $cardNo);
                     $import_cards[] = $import_card;
                 }
 
