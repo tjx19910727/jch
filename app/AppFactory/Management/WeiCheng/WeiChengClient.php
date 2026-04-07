@@ -296,6 +296,13 @@ class WeiChengClient extends ManagementClient
             $resourcesArray = $wc_goods['resourcesArray'] ? json_decode($wc_goods['resourcesArray'], true) : [];
             $pic = '';
             if (isset($resourcesArray[0]['url'])) $pic = $wc_goods['resourceDomain'] . $resourcesArray[0]['url'];
+            //添加一步处理，判断wc_goods类型，如果是5，则说明g_id有值，此时去wc_goods_local中找到它的g_id
+            if ($wc_goods['type'] == 5) {
+                $wc_goods_local = $this->getWcGoodsLocalFind(['out_no' => $wc_goods['no']]);
+                if ($wc_goods_local) {
+                    $wc_goods['g_id'] = $wc_goods_local['g_id'];
+                }
+            }
             $inserData = [
                 'm_id' => $m_id,
                 'machine_id' => $machine_id,
