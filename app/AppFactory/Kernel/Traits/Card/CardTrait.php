@@ -487,7 +487,7 @@ trait CardTrait
                     'trade_no' => $trade_no,
                     'activity_id' => 0,
                     'reasons' => '',
-                    'remark' => json_encode($remarkData, JSON_UNESCAPED_UNICODE),
+                    'remark' => '后台扣减',
                     'expire_at' => 0,
                     'created_at' => date('Y-m-d H:i:s'),
                 ];
@@ -511,7 +511,7 @@ trait CardTrait
             $this->rollbackTrans();
             actionLog("修改卡余额失败: " . $e->getMessage());
             actionException($e, 1);
-            return $this->r(100, $this->lang("VCard.balance_action_fail") .'：'. $e->getMessage());
+            throw new \Exception($e->getMessage());
         }
     }
 
