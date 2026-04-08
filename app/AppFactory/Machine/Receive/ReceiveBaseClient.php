@@ -54,10 +54,6 @@ class ReceiveBaseClient extends MachineBaseClient
             $this->heartbeat();
         }
 
-        // 设备重启后可能未先被判离线，补发逻辑在心跳路径兜底触发一次（含冷却限制）。
-        if (isset($this->data['msgType']) && $this->data['msgType'] == "heartbeat") {
-            $this->resendUpdateVersionPlanWhenOnline();
-        }
         $this->newRecord();
 
         $this->ignoreList = (config("auth_manager_log_list.ignore")['machine'] ?? []);

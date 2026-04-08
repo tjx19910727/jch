@@ -16,7 +16,6 @@ use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
-use think\facade\Db;
 
 class MachineBaseClient extends BaseClient
 {
@@ -110,49 +109,6 @@ class MachineBaseClient extends BaseClient
         }
     }
 
-    /**
-     * 设备上线时补发更新版本 MQ（仅离线->上线触发一次）
-     */
-    protected function resendUpdateVersionPlanWhenOnline()
-    {
-        try {
-            $now = time();
-            $checkKey = 'machine.updateVersionPlan.check.' . $this->machine['machine_id'];
-            $checkCoolDown = 120;
-
-            // 心跳兜底时限频检查，避免每次心跳都查数据库。
-            $lastCheckTime = cache($checkKey);
-            if ($lastCheckTime && ($now - $lastCheckTime < $checkCoolDown)) {
-                return;
-            }
-            cache($checkKey, $now, $checkCoolDown);
-            $plan = Db::name('machine_version_plan')->where([
-                'machine_id' => $this->machine['machine_id'],
-                'status' => 1,
-            ])->where('publish_time', '<=', $now)
-            ->field('mvp_id,machine_id,mv_id,version_no,publish_time')
-            ->order('publish_time asc,mvp_id asc')
-            ->find();
-            if (empty($plan)) {
-                return;
-            }
-            $sendResult = $this->sendToMachine(
-                ['machine_id' => $this->machine['machine_id']],
-                'updateVersionPlan',
-                [
-                    'mvp_id' => $plan['mvp_id'] ?? 0,
-                    'version_no' => $plan['version_no'] ?? '',
-                ]
-            );
-            actionLog([
-                'machine_id' => $this->machine['machine_id'],
-                'mvp_id' => $plan['mvp_id'] ?? 0,
-                'sendResult' => is_object($sendResult) ? obj2arr($sendResult) : $sendResult,
-            ], '设备上线补发更新版本MQ');
-        } catch (\Throwable $e) {
-            actionException($e, 1);
-        }
-    }
 
     /**
      * 记录接收到的上报数据
