@@ -10,13 +10,13 @@ namespace app\AppFactory\Machine;
 
 
 use app\AppFactory\Kernel\BaseClient;
-use app\AppFactory\Kernel\Model\Machine\MachineVersionPlanModel;
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
+use think\facade\Db;
 
 class MachineBaseClient extends BaseClient
 {
@@ -107,8 +107,6 @@ class MachineBaseClient extends BaseClient
                 actionException($e,1);
             }
 
-            // 设备离线后上线时，检查是否需要补发 APP 更新触发消息。
-            $this->resendUpdateVersionPlanWhenOnline();
         }
     }
 
@@ -118,16 +116,34 @@ class MachineBaseClient extends BaseClient
     protected function resendUpdateVersionPlanWhenOnline()
     {
         try {
-            $plan = MachineVersionPlanModel::where([
+            $now = time();
+            $checkKey = 'machine.updateVersionPlan.check.' . $this->machine['machine_id'];
+            $checkCoolDown = 120;
+
+            // 心跳兜底时限频检查，避免每次心跳都查数据库。
+            $lastCheckTime = cache($checkKey);
+            if ($lastCheckTime && ($now - $lastCheckTime < $checkCoolDown)) {
+                return;
+            }
+            cache($checkKey, $now, $checkCoolDown);
+            $plan = Db::name('machine_version_plan')->where([
                 'machine_id' => $this->machine['machine_id'],
                 'status' => 1,
-            ])->field('mvp_id,machine_id,mv_id,version_no,publish_time')
-            ->order('create_time desc')
+            ])->where('publish_time', '<=', $now)
+            ->field('mvp_id,machine_id,mv_id,version_no,publish_time')
+            ->order('publish_time asc,mvp_id asc')
             ->find();
             if (empty($plan)) {
                 return;
             }
-            $sendResult = $this->sendToMachine(['machine_id' => $this->machine['machine_id']], 'updateVersionPlan');
+            $sendResult = $this->sendToMachine(
+                ['machine_id' => $this->machine['machine_id']],
+                'updateVersionPlan',
+                [
+                    'mvp_id' => $plan['mvp_id'] ?? 0,
+                    'version_no' => $plan['version_no'] ?? '',
+                ]
+            );
             actionLog([
                 'machine_id' => $this->machine['machine_id'],
                 'mvp_id' => $plan['mvp_id'] ?? 0,
