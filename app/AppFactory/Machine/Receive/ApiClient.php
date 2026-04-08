@@ -885,9 +885,10 @@ class ApiClient extends ReceiveBaseClient
                         }
                         $wc_order_no = [];
                         foreach ($wc_goods_locals as $wc_goods_local) {
+                            $wcLocalGid = $wc_goods_local['g_id'] ?? '9999';
                             $total_sod_points += $wc_goods_local['gift_points'];
-                            if ($wc_goods_local['g_id'] != '9999' && $wc_goods_local['g_id'] != '0') {
-                                $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
+                            if ($wcLocalGid != '9999' && $wcLocalGid != '0') {
+                                $machine_channel = $this->getMachineChannelFind(['g_id' => $wcLocalGid, 'm_id' => $this->machine['m_id']]);
                                 if ($machine_channel) {
                                     $machine_channel = $machine_channel->toArray();
                                     $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : 'Z10';
@@ -901,7 +902,7 @@ class ApiClient extends ReceiveBaseClient
                                 'order_date' => $value['order_date'], //房态商品订房日期
                                 'quantity' => $value['quantity'] ?? 0, //微程商品数量
                                 'total_price' => $total_price, //不同类型商品不同的价格
-                                'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0, //是否需要本机出货  0-否 1-是
+                                'need_local_out_goods' => $wcLocalGid ? 1 : 0, //是否需要本机出货  0-否 1-是
                                 'out_goods_status' => 0, //出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
                                 'real_channel_code' => $real_channel_code, //实际出货货道
                                 'total_sod_points' => $total_sod_points, //子订单微程商品赠送积分
@@ -1263,7 +1264,7 @@ class ApiClient extends ReceiveBaseClient
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
                         } else {
                             $this->rollbackTrans();
-                            return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                            return $this->r(100, $this->lang("VAAAAAAAAAAAAAAAAAAAAAA.make_order_details_fail"));
                         }
                     }
                     if ($value['sod_price'] != $sod_price) {
