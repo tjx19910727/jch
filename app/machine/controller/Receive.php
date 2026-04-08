@@ -11,6 +11,7 @@ namespace app\machine\controller;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Machine\Application;
+use app\AppFactory\RabbitMq\MqProducer;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
@@ -32,7 +33,7 @@ class Receive extends Common
 
     protected $noCheckApi = [
         "logoutH5",
-        'test'
+        'test',
     ];
 
     /**
@@ -831,6 +832,20 @@ class Receive extends Common
         }
     }
 
+    /**
+     * 检查余额支付是否需要支付密码
+     * @return array|\think\response\Json
+     */
+    public function checkBalancePayPassword()
+    {
+        try {
+            return $this->app->api->checkBalancePayPassword();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
      /**
      * 获取微程短信验证码
      * @return array|\think\response\Json
@@ -916,6 +931,7 @@ class Receive extends Common
         }
     }
 
+
     /**
      * 新版获取微程商品信息
      * @return array|string
@@ -948,9 +964,97 @@ class Receive extends Common
         }
     }
 
+    
+    /**
+     * 获取租赁设备所有组织的商品列表
+     * @return array|string
+     * @throws \Exception
+     */
+    public function getMachineRentOrgLists(){
+        try {
+            return $this->app->api->getMachineRentOrgLists();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+
+    /**
+     * 获取租赁设备所有组织的商品列表
+     * @return array|string
+     * @throws \Exception
+     */
+    public function getRentOrgGoodsLists(){
+        try {
+            return $this->app->api->getRentOrgGoodsLists();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 微程商品查询接口
+     * @return array|string
+     * @throws \Exception
+     */
+    public function searchWCGoods(){
+        try {
+            return $this->app->api->searchWCGoods();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     public function test()
     {
         $this->app->api->test();
+    }
+
+    /**
+     * http请求设备故障码上报接口
+     * @return array|\think\response\Json
+     */
+    public function sendErro()
+    {
+        $postData = input();
+        //$this->validate($postData, $this->validatePath . 'sendErro');
+        try {
+            // 用于本地联调：simulate_mq=1 时按 MQ 的消息结构模拟一次故障码上报
+            if (!empty($postData['simulate_mq'])) {
+                $mqData = [
+                    "msg_id" => $postData['mq_msg_id'] ?? uniqid("mq_"),
+                    "machine_id" => $postData['machine_id'],
+                    "timestamp" => time(),
+                    "data" => json_encode([
+                        "msgType" => "errorCode",
+                        "errorCode" => $postData['errorCode'] ?? "",
+                        "msg" => $postData['msg'] ?? "",
+                        "error_position" => $postData['error_position'] ?? "",
+                    ], JSON_UNESCAPED_UNICODE),
+                    "mac" => $this->request->header("mac") ?? "",
+                ];
+                $mqData['sign'] = $this->app->api->makeSign($mqData);
+                $mqConfig = [
+                    "machine_id" => $mqData['machine_id'],
+                    "data" => $mqData,
+                    "mac" => $mqData['mac'],
+                ];
+                $mqApp = AppFactory::machine($mqConfig);
+                $mqResult = $mqApp->mq->onMessage();
+                return returnState(200, '模拟MQ故障码上报完成', [
+                    'mode' => 'mq',
+                    'msg_id' => $mqData['msg_id'],
+                    'result' => $mqResult,
+                ]);
+            }
+            return $this->app->api->sendErro();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
     }
 
     /**

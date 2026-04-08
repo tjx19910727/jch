@@ -32,8 +32,8 @@ trait AfterOrderRefundTrait
             if (!$quantity) $quantity = $value['refund_quantity'];
             if (!$this->order) $this->order = $this->getSaleOrdersFind(['order_id' => $value['order_id']]);
             // 退款退分润
-            // $refundRevenue = $this->refundRevenue();
-            // if ($refundRevenue !== true) return $this->r(100,'退款退分润失败');
+            //$refundRevenue = $this->refundRevenue();
+            //if ($refundRevenue !== true) return $this->r(100,'退款退分润失败');
 
             // 修改退款记录
             $flag[] = $this->refundSuccessUpdateSor();
@@ -73,13 +73,20 @@ trait AfterOrderRefundTrait
         if ($revenue) {
             foreach ($revenue as $key => $value) {
                 $update['sor_id'] = $value['sor_id'];
-                $refundRevenueAmount = bcmul($this->refund['refund_amount'],bcdiv($value['income_value'],100,2),3);
+                // defensive: ensure income_value is numeric
+                $incomeValue = isset($value['income_value']) && is_numeric($value['income_value']) ? $value['income_value'] : 0;
+                $refundRevenueAmount = 0;
+                if ($incomeValue > 0) {
+                    $refundRevenueAmount = bcmul($this->refund['refund_amount'], bcdiv($incomeValue, 100, 4), 3);
+                }
                 // 待分润，
                 $update['refund_amount'] = bcadd($value['refund_amount'],$refundRevenueAmount,3);
                 // 已分润， 电子钱包或其他线上分账方式，减账号电子钱包
                 if ($value['status'] == 2) {
                     // 减电子钱包
-                    $decResult = $this->decAuthManager(['manager_id' => $value['beneficiary']],'balance',$refundRevenueAmount);
+                    // older code referenced 'beneficiary' but revenue rows store manager id in 'manager_id'
+                    $beneficiaryManager = $value['manager_id'] ?? $value['beneficiary'] ?? 0;
+                    $decResult = $this->decAuthManager(['manager_id' => $beneficiaryManager], 'balance', $refundRevenueAmount);
                     if (!$decResult) {
                         return $this->r(100,'减分润账号电子钱包余额失败');
                     }
@@ -108,7 +115,7 @@ trait AfterOrderRefundTrait
     protected function refundSuccessUpdateSor()
     {
         $update = [];
-        $update['refund_no'] = $this->refund_no;
+        $update['refund_no'] = $this->refund_no ?? '';
         $update['sor_id'] = $this->refund['sor_id'];
         $update['status'] = 2;
         $result = $this->updateSaleOrdersRefund($update);
@@ -167,9 +174,8 @@ trait AfterOrderRefundTrait
 
     public function addCardChangeLog(){
         //查询日志，根据订单号找card_no，找不到card_no时，看有没有绑bind_id
-        $log_lists = $this->getCardPointsChangeLogsList(['trade_no' => $this->order['trade_no']]);
-        dd($log_lists);
-        if(!$log_lists) return true;
+        $log_lists = $this->getCardPointsChangeLogsList(['trade_no' => $this->order['trade_no']])->toArray();
+        if(empty($log_lists)) return true;
         $card_no_column = array_column($log_lists,'card_no');
         $bind_id_column = array_column($log_lists,'bind_id');
         $card_no_arr = array_filter($card_no_column);

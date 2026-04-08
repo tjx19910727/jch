@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits\Strategy;
 
 use app\AppFactory\Kernel\Model\Strategy\StrategyPayeeModel;
 use app\AppFactory\Kernel\Support\Validate\Pay\VAliPay;
+use app\AppFactory\Kernel\Support\Validate\Pay\VBalancePay;
 use app\AppFactory\Kernel\Support\Validate\Pay\VJdCashierPay;
 use app\AppFactory\Kernel\Support\Validate\Pay\VTlPay;
 use app\AppFactory\Kernel\Support\Validate\Pay\VTrip;
@@ -45,7 +46,7 @@ trait StrategyPayeeTrait
 
     public function addStrategyPayee($insert)
     {
-        $insert['content'] = arr2json($insert['content']);
+        $insert['content'] = arr2json($insert['content'] ?? ['appid' => '']);
         $insert['creator'] = $this->manager['manager_id'];
         $data = StrategyPayeeModel::create($insert);
         return $data->sp_id;
@@ -70,6 +71,7 @@ trait StrategyPayeeTrait
         4 => VJdCashierPay::class,
         5 => VTrip::class,
         9 => VMallPointsPay::class,
+        20 => VBalancePay::class,
     ];
     protected $scene = [
         1 => "wx",
@@ -78,6 +80,7 @@ trait StrategyPayeeTrait
         4 => "jdPay",
         5 => "tripPay",
         9 => "mallPointsPay",
+        20 => "balancePay",
     ];
 
     /**

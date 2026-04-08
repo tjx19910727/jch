@@ -145,6 +145,7 @@ return [
             "209624300" => 'Feeding box grating fault - Return command - Analysis',
             "120325000" => 'Head camera reading image malfunction - return command - analysis',
             "120325100" => 'Head camera reading image malfunction - return command - analysis',
+            "1100101" => 'Device initialization failed',
         ],
     'VNotice' =>
         [

@@ -320,7 +320,7 @@ trait ActivityFdTrait
                 $discount_price = round(bcmul(
                     bcmul($this->sku['total_sod_price'],$this->sku['quantity'],3),
                     bcdiv(
-                        $value['active_value'],
+                        bcsub(100,$value['active_value']),
                         100,
                         2),
                     3),2);

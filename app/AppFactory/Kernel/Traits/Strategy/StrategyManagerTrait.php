@@ -19,6 +19,11 @@ trait StrategyManagerTrait
         return $data;
     }
 
+    public function getStrategyManagerColumns($where, $field = "*", $key = "")
+    {
+        return StrategyManagerModel::getColumn($where,$field,$key);
+    }
+
     public function getStrategyManagerList($where,$pageNum = 0,$field = "*", $order = "",$eachFn = null, $group = "")
     {
         $data = StrategyManagerModel::getList($where,$pageNum,$field,$order,$eachFn,$group);

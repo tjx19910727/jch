@@ -21,6 +21,15 @@ class WeiCheng
         return true;
     }
     
+    //最新商品信息同步
+    public function syncGoodsInfo(){
+		//用户信息入库等。
+        $postData = input();
+        $postData = json2arr($postData);
+        actionLog($postData, '最新商品数据');
+        return true;
+    }
+
     public function refund()
     {
         try {

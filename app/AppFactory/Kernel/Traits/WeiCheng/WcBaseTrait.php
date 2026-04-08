@@ -20,9 +20,7 @@ trait WcBaseTrait
 
     public function initWcBase()
     {
-        $this->configType = "weicheng";
         if (env("CglPay.is_test")) {
-            $this->configType = "weichengTest";
             $this->config = [
                 "distributor_id" => "520253",
                 "apikey" => "ab50e9d1038e4905b1d5f1f263e69e18_n",
@@ -32,12 +30,11 @@ trait WcBaseTrait
                 "apiDomain" => "https://test-api-weicheng.jchtechnologies.com",
             ];
         } else {
-            $this->configType = "weicheng";
             $this->config = [
-                "distributor_id" => "520253",
-                "apikey" => "ab50e9d1038e4905b1d5f1f263e69e18_n",
-                "apisecret" => "d1e79b35bc6f491993f873c56b163f47",
-                "secretkey" => "8f8d4818c49f44e6bb53d04b",
+                "distributor_id" => "520443",
+                "apikey" => "5e819581b8a04b2b98f767c517c100fb_n",
+                "apisecret" => "2674529f13c84ea0a8d4d00461c1243c",
+                "secretkey" => "a5e0267f83d04741a9a72fdc",
                 "domain" => "https://admin-weicheng.jchtechnologies.com",
                 "apiDomain" => "https://api-weicheng.jchtechnologies.com",
             ];
@@ -196,7 +193,9 @@ trait WcBaseTrait
                 'channel_code' => 'Z10',
                 'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
                 'isNeedReserve' => $wc_goods['isNeedReserve'] ?? '0',
+                'gift_points' => $wc_goods['gift_points'] ?? 0,
             ];
+
             if (!$wc_goods_local) {
                 return $this->addWcGoodsLocal($setData);
             } else {
@@ -222,6 +221,7 @@ trait WcBaseTrait
                     'sell_channel' => 3,
                     'desc' => $good['notice'] ?? '',
                     'status' => 1,
+                    'gift_points' => $good['present_integral'] ?? 0,
                     'channel_code' => 'Z10',
                     'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
                 ];
@@ -252,6 +252,7 @@ trait WcBaseTrait
                     'sell_channel' => 3,
                     'desc' => $combind_good['notice'] ?? '',
                     'status' => 1,
+                    'gift_points' => $combind_good['present_integral'] ?? 0,
                     'channel_code' => 'Z10',
                     'isNeedReserve' => $combind_good['isNeedReserve'] ?? '0',
                 ];
@@ -331,11 +332,19 @@ trait WcBaseTrait
         $buy_date_range = [];
         foreach($wc_order_no as $no => $value) {
             if(!empty($value['order_date'])) {
-                array_multisort($value['order_date'], SORT_ASC);
-                $buy_date_range = [
-                    'start' => current($value['order_date']),
-                    'end' => end($value['order_date']),
-                ];
+                if(count($value['order_date']) == 1){
+                    $buy_date_range = [
+                        'start' => $value['order_date'],
+                        'end' => $value['order_date'],
+                    ];
+                }else{
+                    array_multisort($value['order_date'], SORT_ASC);
+                    $buy_date_range = [
+                        'start' => current($value['order_date']),
+                        'end' => end($value['order_date']),
+                    ];
+                }
+                
             }
 
             $data = [

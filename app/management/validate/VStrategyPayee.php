@@ -14,7 +14,7 @@ class VStrategyPayee extends VCommon
     protected $rule = [
         "sp_id" => "require",
         "sp_name" => 'require',
-        "payee_type" => 'require|in:1,2,4,5,9',
+        "payee_type" => 'require|in:1,2,4,5,9,20',
         "app_id" => 'require',
         "mch_id" => "require",
         "content" => 'require',
@@ -101,6 +101,7 @@ class VStrategyPayee extends VCommon
         "addJdCashier" => ["agentNum","customerNum","shopNum","accessKey","secretKey"],
         "addTrip" => ["appId","appSecret","baseUrl"],
         "updateSp" => ['sp_id'],
-        "addShopPoints" => ["app_id","publicKey","privateKey"]
+        "addShopPoints" => ["app_id","publicKey","privateKey"],
+        "addBalance" => ["sp_name","payee_type","title","status"]
     ];
 }

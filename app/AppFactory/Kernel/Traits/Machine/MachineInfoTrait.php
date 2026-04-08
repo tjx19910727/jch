@@ -11,8 +11,11 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 use app\AppFactory\Kernel\Model\Machine\MachineInfoModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
+
 trait MachineInfoTrait
 {
+    use MachineAuxiliaryTrait;
+    use MachineChannelTrait;
     /**
      * 获取设备信息字段值
      * @param $where
@@ -33,7 +36,19 @@ trait MachineInfoTrait
      */
     public function getMachineInfoFind($where,$field = "*",$order = "")
     {
-        return MachineInfoModel::getFind($where,$field,$order);
+        // return MachineInfoModel::getFind($where,$field,$order);
+        $info = MachineInfoModel::getFind($where,$field,$order);
+        if($info){
+            $info = $info->toArray();
+            //$count = $this->getMachineMainRelationCount(['main_mc_id' => $info['m_id']],'*');
+            //直接查询边柜货道数量，数量大于0则有边柜
+            $count = $this->getMachineChannelCount(['m_id' => $info['m_id'],'channel_position' => 3]);
+            $info['sub_cabinet_2'] = $count > 0 ? 1 : 2;
+            //查询此设备挂接的副柜
+            $subCabinet = $this->getMachineAuxiliaryList(['main_m_id' => $info['m_id']]);
+            $info['sub_cabinet_list'] = $subCabinet ? $subCabinet->toArray() : [];
+        }
+        return $info;
     }
 
     /**
@@ -128,6 +143,9 @@ trait MachineInfoTrait
                 if (isset($update['sub_cabinet']) && $update['sub_cabinet'] == 2) {
                     $this->subCabinetReturnInventory();
                 }
+                if(isset($update['sub_cabinet'])){
+                    $this->syncAuxiliaryArcStatusBySubCabinet($update['sub_cabinet']);
+                }
                 $result = $this->updateMachineInfo($update, ['m_id' => $this->machine['m_id']]);
                 actionLog($this->getLS(), '【SQL】修改设备信息', "uploadInfo");
                 actionLog($result, '修改设备信息结果', "uploadInfo");
@@ -167,6 +185,42 @@ trait MachineInfoTrait
                 actionLog($this->getLS(),'增加设备商品库库存');
             }
             actionLog($flag,'副柜退库存结果集');
+        }
+    }
+
+    /**
+     * 按主柜上报的副柜可用状态同步弧柜挂接状态。
+     * machine_type=1 为弧柜：
+     * sub_cabinet=1 -> status=1(已挂接已启用)
+     * 其他值 -> status=2(未挂接未启用)
+     * @param int $subCabinet
+     * @return void
+     */
+    public function syncAuxiliaryArcStatusBySubCabinet($subCabinet)
+    {
+        $where = [
+            'main_m_id' => $this->machine['m_id'],
+            'machine_type' => 1,
+        ];
+        $one = $this->getMachineAuxiliaryFind($where);
+        actionLog($this->getLS(), '【SQL】查询弧柜信息', "uploadInfo");
+        actionLog($one, '查询到弧柜信息', "uploadInfo");
+        if (!empty($one)) {
+            $status = $subCabinet == 1 ? 1 : 2;
+            $update['status'] = $status;
+            if($status == 2){
+                $update['main_m_id'] = 0;
+                //如果此主柜下有弧柜货道，删掉
+                $whereSubMc['channel_position'] = 2;//弧柜
+                $whereSubMc['m_id'] = $this->machine['m_id'];
+                if($this->getMachineChannelCount($whereSubMc) > 0){
+                    $this->delMachineChannel($whereSubMc);
+                    actionLog($this->getLS(), '【SQL】删除弧柜货道', "uploadInfo"); 
+                }
+            }
+            $result = $this->updateMachineAuxiliary($update, ['m_id' => $one['m_id'] ?? 0]);
+            actionLog($this->getLS(), '【SQL】同步弧柜状态', "uploadInfo");
+            actionLog($result, '同步弧柜状态结果', "uploadInfo");
         }
     }
 }

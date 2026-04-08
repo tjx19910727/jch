@@ -226,6 +226,8 @@ class WeiChengClient extends ManagementClient
                 $updateData['resourcesArray'] = json_encode($updateData['resourcesArray'], JSON_UNESCAPED_UNICODE);
             if (isset($updateData['daysInfo']))
                 $updateData['daysInfo'] = json_encode($updateData['daysInfo']);
+            if (isset($updateData['present_integral']))
+                $updateData['gift_points'] = $updateData['present_integral'] ?? 0;
 
             //type值是从goods_type带过来的，这里不要修改商品的type，否则查询不到数据
             if (isset($updateData['type'])) unset($updateData['type']);
@@ -306,6 +308,7 @@ class WeiChengClient extends ManagementClient
                 'sku' => $wc_goods['sku'] ?? '',
                 'bar_code' => $wc_goods['sku'] ?? '',
                 'retail_price' => $wc_goods['price'] ?? 0,
+                'gift_points' => $wc_goods['gift_points'] ?? 0,
                 'sort' => array_search($wc_goods['no'], $out_nos) + 1,
             ];
             $wc_machine_goods = $this->getWcMachineGoodsFind(['m_id' => $m_id, 'machine_id' => $machine_id, 'out_no' => $wc_goods['no']]);
@@ -361,6 +364,7 @@ class WeiChengClient extends ManagementClient
                 'sku' => $wc_machine_goods['sku'],
                 'bar_code' => $wc_machine_goods['bar_code'],
                 'retail_price' => $wc_machine_goods['retail_price'],
+                'gift_points' => $wc_machine_goods['gift_points'] ?? 0,
                 'sort' => array_search($wc_machine_goods['out_no'], $out_nos) + 1,
             ];
             $flag[] = $this->addWcMachineChannel($inserData);

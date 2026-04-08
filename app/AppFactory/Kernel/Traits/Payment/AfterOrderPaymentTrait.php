@@ -14,10 +14,11 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 use app\AppFactory\Kernel\Support\Trip\Trip;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 
 trait AfterOrderPaymentTrait
 {
-    use MachineChannelTrait, WcBaseTrait;
+    use MachineChannelTrait,AuthManagerTrait, WcBaseTrait;
 
     /**
      * 处理支付成功
@@ -50,6 +51,7 @@ trait AfterOrderPaymentTrait
         $this->order['pay_time'] = time();
 
         actionLog($this->order, '更新支付时间成功');
+        sleep(1);
         if ($this->order['order_type'] != 4 && $this->order['out_status'] == 1) {
             $this->outGoods();
             //这里要新增一步处理。即判断当前订单是否为虚拟货道组合商品，如果是，则需要将所有子商品进行出货处理
@@ -76,7 +78,8 @@ trait AfterOrderPaymentTrait
         $this->machine['machine_name'] = $this->order['machine_name'];
         $this->machine['m_id'] = $this->order['m_id'];
         $this->machine['ao_id'] = $this->order['ao_id'];
-        try {
+        
+        try{
             @$this->sendNotice();
         } catch (\Exception $e) {
             actionException($e, 1, 'tryCatch');
@@ -120,25 +123,37 @@ trait AfterOrderPaymentTrait
                     continue;
                 } else {
                     $updateSod['sod_id'] = $v['sod_id'];
+                    $updateSod['total_sod_points'] = 0;
+                    $updateSod['intergral_rate'] = 0;
                     if ($v['channel_code'] == 'Z10') {
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $v['mc_id']]);
-                        //判断此微程商品是否为组合商品
-                        $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
                     } else {
                         $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
                     }
 
-                    $rate_points = $this->getRateOrGiftPoints($mc);
+                    // normalize to array/object as needed
+                    $mc = $mc ? (is_array($mc) ? $mc : obj2arr($mc)) : [];
 
-                    if ($rate_points['gift_points'] > 0) {
-                        $updateSod['intergral_rate'] = 0;
-                        $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
+                    //微程积分记录到details表
+                    if(!empty($v['wc_order_no'])){
+                        $wc_order_no = json_decode($v['wc_order_no'], true);
+                        if (is_array($wc_order_no) && isset($wc_order_no['total_sod_points'])) {
+                            $updateSod['total_sod_points'] = $wc_order_no['total_sod_points'];
+                        }
+                    }else{
+                        $rate_points = $this->getRateOrGiftPoints($mc);
+
+                        if ($rate_points['gift_points'] > 0) {
+                            $updateSod['intergral_rate'] = 0;
+                            $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
+                        }
+                        if ($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0) {
+                            $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
+                            $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $rate_points['intergral_rate'], 3);
+                        }
                     }
-                    if ($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0) {
-                        $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
-                        $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $rate_points['intergral_rate'], 3);
-                    }
-                    $total_points += $updateSod['total_sod_points'];
+                    
+                    $total_points += (float)($updateSod['total_sod_points'] ?? 0);
                     if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
                         $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']], 'stock');
                         actionLog($this->getLS(), '减固定组合商品酒店库存');
@@ -152,28 +167,22 @@ trait AfterOrderPaymentTrait
                         ];
                         $outArr[$v['channel_position']][] = $dc;
                         //判断此微程商品是否为组合商品
-                        if (isset($mc['out_no'])) {
+                        if (!empty($mc) && !empty($mc['out_no'])) {
                             $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                            if ($wc_goods) $wc_goods = $wc_goods->toArray();
-                            if ($wc_goods['type'] == 11) { //组合商品
-                                //判断此微程商品是否为组合商品
-                                if (isset($mc['out_no'])) {
-                                    $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                                    if (!$wc_goods) {
-                                        $wc_goods = $wc_goods->toArray();
-                                        if ($wc_goods['type'] == 11) { //组合商品
-                                            //因为子订单wc_goods_no字段中已经存储了出货信息，这里直接取该字段即可
-                                            if(!empty($v['wc_goods_no'])) {
-                                                $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
-                                                foreach ($wc_goods_no_arr as $wc_goods_no_v) {
-                                                    $dc_local = [
-                                                        "channel_code" => $wc_goods_no_v['real_channel_code'],
-                                                        "quantity" => 1,
-                                                        "is_gift" => $v['is_gift'] ?? 2,
-                                                        "out_port" => $v['out_port'] ?? 1,
-                                                    ];
-                                                    $outArr[$v['channel_position']][] = $dc_local;
-                                                }
+                            if ($wc_goods) {
+                                $wc_goods = $wc_goods->toArray();
+                                if (isset($wc_goods['type']) && $wc_goods['type'] == 11) { // 组合商品
+                                    if (!empty($v['wc_goods_no'])) {
+                                        $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
+                                        if (is_array($wc_goods_no_arr)) {
+                                            foreach ($wc_goods_no_arr as $wc_goods_no_v) {
+                                                $dc_local = [
+                                                    "channel_code" => $wc_goods_no_v['real_channel_code'],
+                                                    "quantity" => 1,
+                                                    "is_gift" => $v['is_gift'] ?? 2,
+                                                    "out_port" => $v['out_port'] ?? 1,
+                                                ];
+                                                $outArr[$v['channel_position']][] = $dc_local;
                                             }
                                         }
                                     }
@@ -200,21 +209,12 @@ trait AfterOrderPaymentTrait
                 "trade_no" => $this->order['trade_no'],
                 "main" => $contentArr,
                 "outGoods" => $outArr,
-                "order_points" => $this->order['total_points']
+                "order_points" => $this->order['total_points'] ?? 0
             ];
-            // //循环三次，每次间隔5秒执行
-            // for ($i = 0; $i < 3; $i++) {
-            //     $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
-            //     if (isset($result->status) && $result->status == 'success') {
-            //         break;
-            //     }
-            //     sleep(5);
-            // } // end
-            //     sleep(5);
-            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']],'outGoods',$content);
+            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
             actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
-            return $result;
+            return true;
         }
         return $this->r(100, $this->lang("VOutGoods.details_no_data"));
     }
@@ -232,11 +232,11 @@ trait AfterOrderPaymentTrait
         if ($revenue) {
             foreach ($revenue as $key => $value) {
                 $update['sor_id'] = $value['sor_id'];
-                $update['status'] = $status ?: $this->revenueStatus[$value['revenue_type']];
+                $update['status'] = 1;
                 // 已分润状态，增加分润时间
-                if ($update['status'] == 2 || $update['status'] == 3) $update['revenue_time'] = time();
+                // if ($update['status'] == 2 || $update['status'] == 3) $update['revenue_time'] = time();
                 // 电子钱包
-                if ($value['revenue_type'] == 1) {
+                if (in_array($value['revenue_type'], [1, 4])) {
                     $result = $this->incAuthManager(['manager_id' => $value['manager_id']], 'balance', $value['income_amount']);
                     actionLog($result, '增加账号余额结果');
                     actionLog($this->getLS(), '增加账号余额SQL');
@@ -255,18 +255,32 @@ trait AfterOrderPaymentTrait
     private function sendNotice()
     {
         try {
+            // $this->noticeSendData = [
+            //     "ao_id" => $this->machine['ao_id'],
+            //     "m_id" => $this->machine['m_id'],
+            //     "templateType" => "sale",
+            //     "replaceData" => [
+            //         "machine_id" => $this->machine['machine_id'],
+            //         "machine_name" => $this->machine['machine_name'],
+            //         "trade_no" => $this->order['trade_no'],
+            //         "money" => number_format($this->order['total_price'], 2, '.', ','),
+            //         "now" => date('Y-m-d H:i:s'),
+            //         "error_info" => "订单完成",
+            //         "error_code" => "订单完成",
+            //     ]
+            // ];
+            
+            //交易成功通知
             $this->noticeSendData = [
                 "ao_id" => $this->machine['ao_id'],
                 "m_id" => $this->machine['m_id'],
-                "templateType" => "sale",
+                "templateType" => "payment_success",
                 "replaceData" => [
                     "machine_id" => $this->machine['machine_id'],
                     "machine_name" => $this->machine['machine_name'],
                     "trade_no" => $this->order['trade_no'],
-                    "money" => number_format($this->order['total_price'], 2, '.', ','),
-                    "now" => date('Y-m-d H:i:s'),
-                    "error_info" => "订单完成",
-                    "error_code" => "订单完成",
+                    "total_price" => number_format($this->order['total_price'], 2, '.', ','),
+                    "pay_time" => $this->order['pay_time'] ? date('Y-m-d H:i:s', $this->order['pay_time']) : date('Y-m-d H:i:s'),
                 ]
             ];
             $result = @$this->noticeSend();

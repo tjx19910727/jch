@@ -16,6 +16,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\AliPayTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
+use app\AppFactory\Kernel\Traits\Payment\BalancePayTrait;
 use app\AppFactory\Kernel\Traits\Payment\JdCashierTrait;
 use app\AppFactory\Kernel\Traits\Payment\TripPay;
 use app\AppFactory\Kernel\Traits\Payment\WxPayTrait;
@@ -39,7 +40,7 @@ class PaymentClient extends PayBaseClient
         StrategyPayeeTrait,StrategyIncomeTrait,
         StrategyMachineTrait,
         WxPayTrait,AliPayTrait,JdCashierTrait,TripPay,
-        MallPointsPayTrait,MallMachineTrait,MallTrait,MallRequestLogsTrait,
+        MallPointsPayTrait,BalancePayTrait,MallMachineTrait,MallTrait,MallRequestLogsTrait,
         BeforeOrderPaymentTrait,
         UserTrait,
         SaleHotelTrait,SaleHotelNightlyTrait,
@@ -67,6 +68,7 @@ class PaymentClient extends PayBaseClient
         "4" => "jdPay",
         "5" => "tripPay",
         "9" => "mallPointsPay",
+        "20" => "balancePay",
     ];
 
     protected $cancelType = [
@@ -129,6 +131,11 @@ class PaymentClient extends PayBaseClient
                 return $this->rFail($this->lang("VOrderPay.auth_code_not_match_pay_type"));
             $this->order['pay_code'] = $this->data['authCode'];
         }
+        //余额支付
+        if ($this->order['pay_type'] == 20 && !empty($this->data['card_no'])) {
+            $this->order['pay_code'] = $this->data['card_no'];
+        }
+
 
         $where['sm.s_type'] = 1;
         $where['sp.status'] = 1;
@@ -208,6 +215,49 @@ class PaymentClient extends PayBaseClient
                 return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
             }
             return $this->rSuccess();
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 改密码
+     * @return array|string
+     */
+    public function changeCardPwd(){
+        try {
+            $cardNo = trim((string)($this->data['card_no'] ?? ''));
+            $oldPwd = isset($this->data['old_pwd']) ? (string)$this->data['old_pwd'] : '';
+            $newPwd = (string)($this->data['new_pwd'] ?? '');
+            $confirmPwd = (string)($this->data['confirm_pwd'] ?? '');
+
+            if ($cardNo === '') {
+                return $this->rFail('卡号不能为空');
+            }
+            if ($newPwd !== $confirmPwd) {
+                return $this->rFail('两次输入的密码不一致');
+            }
+
+            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no,password');
+            if (!$card) {
+                return $this->rFail('查无会员卡信息');
+            }
+
+            $oldPwdEncrypt = md5($oldPwd . config('app.salt').$cardNo);
+            $cardPassword = (string)($card['password'] ?? '');
+            if ($oldPwdEncrypt !== $cardPassword) {
+                return $this->rFail('旧密码错误');
+            }
+
+            $result = $this->updateCard([
+                'password' => md5($newPwd . config('app.salt').$cardNo),
+            ], ['card_no' => $cardNo]);
+
+            if ($result) {
+                return $this->rSuccess('修改成功');
+            }
+            return $this->rFail('修改失败');
         } catch (\Exception $e) {
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());

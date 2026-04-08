@@ -124,6 +124,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property RemoteActionLog\RemoteActionLogClient  $remoteActionLog        远程操作日志管理
  *
  * @property Card\CardClient                        $card                   商场管理会员卡
+ * @property Card\CardActivationClient              $cardActivation         会员卡激活活动
  * @property WeiCheng\WeiChengClient                $weicheng               微程接口管理
  * 
  * @property MicroMall\MicroMallClient              $microMall              微商城

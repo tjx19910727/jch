@@ -18,6 +18,7 @@ class VMachineChannel extends VCommon
         "m_id" => "require",
         "machine_id" => "require",
         "channel_code" => "require",
+        "mc_ids" => "require",
     ];
 
     protected $message = [
@@ -25,11 +26,13 @@ class VMachineChannel extends VCommon
         "m_id.require" => "VMachineChannel.m_id_require",
         "machine_id.require" => "VMachineChannel.machine_id_require",
         "channel_code.require" => "VMachineChannel.channel_code_require",
+        "mc_ids.require" => "VMachineChannel.mc_id_require",
     ];
 
     protected $scene = [
         "add" => ["m_id", "machine_id", "channel_code"],
         "update" => ["mc_id"],
+        "updateAll" => ["mc_ids"],
         "del" => ["mc_id"],
     ];
 }

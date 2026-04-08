@@ -12,11 +12,15 @@ namespace app\AppFactory\Management\Auth;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Management\ManagementClient;
+use app\AppFactory\Kernel\Traits\Auth\AuthWithdrawRequestTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthOrgRevenueTrait;
 
 class AuthManagerClient extends ManagementClient
 {
     use AuthManagerTrait;
     use WxOfficialTrait;
+    use AuthWithdrawRequestTrait;
+    use AuthOrgRevenueTrait;
 
     public function updateSelfPwd($postData)
     {
@@ -73,4 +77,45 @@ class AuthManagerClient extends ManagementClient
             return $this->r(100,'微信返回错误信息：' . $e->getMessage());
         }
     }
+
+    public function addAuthWithdrawRequestData($insert){
+        return $this->rA($this->addAuthWithdrawRequest($insert));
+    }
+
+    public function getAuthWithdrawRequestData($where, $pageNum = '', $field = '*', $order = '', $eachFn = "", $group = "", $limit = 0){
+        return $this->rQ($this->getAuthWithdrawRequestList($where, $pageNum, $field, $order, $eachFn, $group, $limit));
+    }
+
+    public function getAuthOrgRevenueLogData($where, $pageNum = 0, $field = '*', $order = '')
+    {
+        return $this->rQ($this->getAuthOrgRevenueLogList($where, $pageNum, $field, $order));
+    }
+
+    /**
+     * 审核提现申请
+     * @param $wr_id
+     * @param $auditor_manager_id
+     * @param $status 2=approved,3=rejected
+     * @param string $remark
+     * @return bool|int
+     */
+    public function auditAuthWithdrawRequest($wr_id, $manager_id, $status, $remark = '')
+    {
+        $req = $this->getAuthWithdrawRequestFind(['wr_id' => $wr_id]);
+        if (!$req) return $this->rFail('申请不存在');
+        $req = $req->toArray() ?: obj2arr($req);
+        if ($req['status'] != 1) return $this->rFail('该申请已处理');
+        $update = [
+            'wr_id' => $wr_id,
+            'status' => $status,
+            'manager_id' => $manager_id,
+            'remark' => $remark,
+        ];
+        $res = $this->updateAuthWithdrawRequest($update);
+        if ($res && $status == 2) {
+            // TODO: 通过后执行实际打款/记录流水（此处只记录状态，具体出款留给业务侧）
+        }
+        return $res;
+    }
+
 }

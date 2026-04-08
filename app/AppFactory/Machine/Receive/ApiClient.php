@@ -71,6 +71,8 @@ use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -133,10 +135,13 @@ class ApiClient extends ReceiveBaseClient
         afterOrderRefundTrait,
         CardTrait,
         WcBaseTrait,
-        WcGoodsTrait;
+        WcGoodsTrait,
+        AuthOrgMachineChannelTrait,
+        SaleOrdersRefundTrait;
 
 
     public $card_retail_price = 0.01;
+    public $card_default_pwd = '123456';
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
@@ -500,6 +505,26 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * http请求设备故障码上报接口
+     * @return array|\think\response\Json
+     */
+    public function sendErro()
+    {
+        try {
+            $this->message = [
+                "errorCode" => $this->data['errorCode'] ?? "",
+                "msg" => $this->data['msg'] ?? "",
+                "error_position" => $this->data['error_position'] ?? "",
+            ];
+            $this->errorCode();
+            return $this->r(200, $this->lang("action_success"));
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 终端提交货道数据，新增或修改
      * @return array|string
      */
@@ -824,7 +849,7 @@ class ApiClient extends ReceiveBaseClient
         $aoIds = $this->getPathIds($this->machine["ao_id"], 1);
         if ($aoIds) {
             $goodsList = $this->getGoodsJoinMachineGoodsList(
-                [['ao_id', 'in', $aoIds]],
+                [['g.ao_id', 'in', $aoIds]],
                 $this->data['pageNum'] ?? 0,
                 $this->goodsField,
                 'g.update_time desc',
@@ -986,6 +1011,7 @@ class ApiClient extends ReceiveBaseClient
                 // ]
                 //type = 1：[{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151415","no":"VC2507151415","order_date":""}]
                 //type = 11: [{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151415","no":"VC2507151415","order_date":""}]
+                $total_sod_points = 0;
                 foreach ($this->data['carList'] as $value) {
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $wc_goods = $this->getWcGoodsFind(['no' => $value['out_no']]);
@@ -1006,13 +1032,13 @@ class ApiClient extends ReceiveBaseClient
                         } elseif ($wc_goods['type'] == 3) { //酒店房态商品时：此时carList传过来为单条记录
                             $now_wc_goods_locals = $this->getWcGoodsLocalList(['no' => $value['no'], 'out_no' => $value['out_no']])->toArray();
                             $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
-                            $daysInfo = json_decode($daysInfo_json, true); 
-                            if(empty($value['order_date'])) {
+                            $daysInfo = json_decode($daysInfo_json, true);
+                            if (empty($value['order_date'])) {
                                 $value['order_date'] = [date('Y-m-d')];
                             }
-                            if(count($value['order_date']) ==  1) {
+                            if (count($value['order_date']) ==  1) {
                                 $total_price = $daysInfo[0]['price'] ?? 0;
-                            }else{
+                            } else {
                                 $order_date = $value['order_date'];
                                 array_pop($order_date);
                                 foreach ($daysInfo as $vv) {
@@ -1028,12 +1054,12 @@ class ApiClient extends ReceiveBaseClient
                             } else {
                                 $daysInfo_json = $now_wc_goods_locals[0]['daysInfo'] ?? '';
                                 $daysInfo = json_decode($daysInfo_json, true);
-                                if(empty($value['order_date'])) {
+                                if (empty($value['order_date'])) {
                                     $value['order_date'] = [date('Y-m-d')];
                                 }
-                                if(count($value['order_date']) ==  1) {
+                                if (count($value['order_date']) ==  1) {
                                     $total_price = $daysInfo[0]['price'] ?? 0;
-                                }else{
+                                } else {
                                     $order_date = $value['order_date'];
                                     array_pop($order_date);
                                     foreach ($daysInfo as $vv) {
@@ -1048,6 +1074,7 @@ class ApiClient extends ReceiveBaseClient
                         }
                         $wc_order_no = [];
                         foreach ($wc_goods_locals as $wc_goods_local) {
+                            $total_sod_points += $wc_goods_local['gift_points'];
                             if ($wc_goods_local['g_id'] != '9999' && $wc_goods_local['g_id'] != '0') {
                                 $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
                                 if ($machine_channel) {
@@ -1055,7 +1082,7 @@ class ApiClient extends ReceiveBaseClient
                                     $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : 'Z10';
                                 }
                             }
-                            $value['order_date'] = $value['order_date'] ?? date('Y-m-d');
+                            $value['order_date'] = $value['order_date'] ?? [date('Y-m-d')];
                             $wc_order_no[$wc_goods_local['no']] = [
                                 'out_no' => $value['out_no'], //父商品编码
                                 'no' => $wc_goods_local['no'], //子商品编码
@@ -1066,28 +1093,29 @@ class ApiClient extends ReceiveBaseClient
                                 'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0, //是否需要本机出货  0-否 1-是
                                 'out_goods_status' => 0, //出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
                                 'real_channel_code' => $real_channel_code, //实际出货货道
+                                'total_sod_points' => $total_sod_points, //子订单微程商品赠送积分
                                 // 'wc_user_address_id' => '', //微程会员寄送地址id
                                 // 'wc_user_address' => '',//微程会员寄送详细地址
                             ];
                         }
-                        
                     } else {
                         $mc = $this->getMachineChannelFind(['mc_id' => $value['mc_id']]);
                     }
-
                     if (!$mc) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.channel_no_data"));
                     }
+                    $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']]);
+
                     if (!isset($value['channel_code']) && !$mc['mg_id']) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.mg_id_require"));
                     }
-                    if ($value['channel_code'] != 'Z10' && $mc['status'] != 1) {
+                    if (isset($value['channel_code']) && $value['channel_code'] != 'Z10' && $mc['status'] != 1) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.channel_status_no_3"));
                     }
-                    if ($value['channel_code'] != 'Z10' &&  ($mc['stock'] < $value['quantity'])) {
+                    if (isset($value['channel_code']) && $value['channel_code'] != 'Z10' &&  ($mc['stock'] < $value['quantity'])) {
                         $this->rollbackTrans();
                         return $this->r(300, $this->lang("VSubCar.under_stock"));
                     }
@@ -1121,6 +1149,7 @@ class ApiClient extends ReceiveBaseClient
                             "bar_code" => $mc['bar_code'] ?? '',
                             'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
+                            'sod_ao_id' => $mg['ao_id'] ?? '',
                         ];
                         $details['retail_price'] = !empty($wc_order_no) ? $total_price : $mc['retail_price'];
                         $details['total_sod_price'] = bcmul($details['retail_price'], $quantity, 3);
@@ -1674,14 +1703,20 @@ class ApiClient extends ReceiveBaseClient
     {
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
-        $this->order = $order->toArray();
-        $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
-        if ($details) {
-            $contentArr = [];
-            $outArr = [];
-            // 旧版本数据，待软件更新后删除
-            foreach ($details as $k => $v) {
-                if (!$v['mc_id']) $v['g_type'] = 1;
+        $this->order = is_object($order) ? (method_exists($order,'toArray') ? $order->toArray() : (array)$order) : $order;
+
+        $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']])->toArray();
+        if (!$details || !is_array($details)) {
+            return $this->r(100, 'failed', []);
+        }
+
+        $contentArr = [];
+        $outArr = [];
+        $total_points = 0;
+
+        // 支持旧数据格式：把简单 channel/quantity 填到 contentArr
+        foreach ($details as $v) {
+            if (!$v['mc_id']) $v['g_type'] = 1;
                 if ($v['g_type'] == 1) {
                     $dc = [
                         $v['channel_code'],
@@ -1689,108 +1724,146 @@ class ApiClient extends ReceiveBaseClient
                     ];
                     $contentArr[$v['channel_position']][] = $dc;
                 }
+        }
+
+        // 新数据格式：逐条构建 out payload，并安全计算积分
+        foreach ($details as $v) {
+            // ensure sod_id present
+            $updateSod = ['sod_id' => $v['sod_id'] ?? 0];
+            $updateSod['total_sod_points'] = 0;
+            $updateSod['intergral_rate'] = $updateSod['intergral_rate'] ?? 0;
+
+            // If no mc_id, treat as simple channel out
+            if (empty($v['mc_id'])) {
+                $pos = $v['channel_position'] ?? 0;
+                $outArr[$pos][] = [
+                    'channel_code' => $v['channel_code'] ?? '',
+                    'quantity' => $v['quantity'] ?? 1,
+                    'is_gift' => $v['is_gift'] ?? 2,
+                    'out_port' => $v['out_port'] ?? 1,
+                ];
+                // persist update if needed (points or checkoff handled below)
+                $this->updateSaleOrdersDetails($updateSod);
+                continue;
             }
-            // 新数据格式
-            $total_points = 0;
-            foreach ($details as $k => $v) {
-                if (!$v['mc_id']) {
-                    $outArr[$v['channel_position']][] = [
-                        "channel_code" => $v['channel_code'],
-                        "quantity" => $v['quantity'],
-                        "is_gift" => $v['is_gift'] ?? 2,
-                        "out_port" => $v['out_port'] ?? 1,
-                    ];
-                    continue;
-                } else {
-                    $updateSod['sod_id'] = $v['sod_id'];
-                    if ($v['channel_code'] == 'Z10') {
-                        $mc = $this->getWcMachineChannelFind(['mc_id' => $v['mc_id']]);
-                        //判断此微程商品是否为组合商品
-                        $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                    } else {
-                        $mc = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
-                    }
 
-                    $rate_points = $this->getRateOrGiftPoints($mc);
+            // load channel record safely
+            if (($v['channel_code'] ?? '') === 'Z10') {
+                $mcModel = $this->getWcMachineChannelFind(['mc_id' => $v['mc_id']]);
+            } else {
+                $mcModel = $this->getMachineChannelFind(['mc_id' => $v['mc_id']]);
+            }
+            $mc = null;
+            if ($mcModel) {
+                $mc = is_object($mcModel) ? (function_exists('obj2arr') ? obj2arr($mcModel) : (array)$mcModel) : $mcModel;
+            }
 
-                    if ($rate_points['gift_points'] > 0) {
-                        $updateSod['intergral_rate'] = 0;
-                        $updateSod['total_sod_points'] = $rate_points['gift_points'] * $v['quantity'];
-                    }
-                    if ($rate_points['intergral_rate'] && $rate_points['gift_points'] == 0) {
-                        $updateSod['intergral_rate'] = $rate_points['intergral_rate'];
-                        $updateSod['total_sod_points'] = bcmul($v['total_sod_price'], $rate_points['intergral_rate'], 3);
-                    }
-                    $total_points += $updateSod['total_sod_points'];
-                    if ($v['g_type'] != 1 && isset($v['gmg_id']) && $v['gmg_id']) {
-                        $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']], 'stock');
-                        actionLog($this->getLS(), '减固定组合商品酒店库存');
-                    }
-                    if ($v['g_type'] == 1) {
-                        $dc = [
-                            "channel_code" => $v['channel_code'],
-                            "quantity" => $v['quantity'],
-                            "is_gift" => $v['is_gift'] ?? 2,
-                            "out_port" => $v['out_port'] ?? 1,
-                        ];
-                        $outArr[$v['channel_position']][] = $dc;
-                        //判断此微程商品是否为组合商品
-                        if (isset($mc['out_no'])) {
-                            $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                            if ($wc_goods) $wc_goods = $wc_goods->toArray();
-                            if ($wc_goods['type'] == 11) { //组合商品
-                                //判断此微程商品是否为组合商品
-                                if (isset($mc['out_no'])) {
-                                    $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                                    if (!$wc_goods) {
-                                        $wc_goods = $wc_goods->toArray();
-                                        if ($wc_goods['type'] == 11) { //组合商品
-                                            //因为子订单wc_goods_no字段中已经存储了出货信息，这里直接取该字段即可
-                                            if(!empty($v['wc_goods_no'])) {
-                                                $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
-                                                foreach ($wc_goods_no_arr as $wc_goods_no_v) {
-                                                    $dc_local = [
-                                                        "channel_code" => $wc_goods_no_v['real_channel_code'],
-                                                        "quantity" => 1,
-                                                        "is_gift" => $v['is_gift'] ?? 2,
-                                                        "out_port" => $v['out_port'] ?? 1,
-                                                    ];
-                                                    $outArr[$v['channel_position']][] = $dc_local;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if ($v['g_type'] == 3) {
-                        // 获取核销码
-                        $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
-                    }
-                    $this->updateSaleOrdersDetails($updateSod);
+            // compute points safely
+            $rate_points = $this->getRateOrGiftPoints($mc);
+            $gift_points = $rate_points['gift_points'] ?? 0;
+            $intergral_rate = $rate_points['intergral_rate'] ?? 0;
+
+            if ($gift_points > 0) {
+                $updateSod['intergral_rate'] = 0;
+                $updateSod['total_sod_points'] = $gift_points * ($v['quantity'] ?? 1);
+            } elseif ($intergral_rate) {
+                $updateSod['intergral_rate'] = $intergral_rate;
+                $sod_price = $v['total_sod_price'] ?? 0;
+                $updateSod['total_sod_points'] = bcmul($sod_price, $intergral_rate, 3);
+            }
+
+            $total_points += (float)($updateSod['total_sod_points'] ?? 0);
+
+            // 减库存（固定组合商品）——尽量捕获异常，避免因一次失败导致整个接口崩溃
+            if (($v['g_type'] ?? 0) != 1 && !empty($v['gmg_id'])) {
+                try {
+                    $flag[] = $this->setGoodsMultipleGoodsDec(['gmg_id' => $v['gmg_id']], 'stock');
+                    actionLog($this->getLS(), '减固定组合商品酒店库存');
+                } catch (\Exception $e) {
+                    actionException($e);
                 }
             }
 
-            if ($total_points) {
-                $this->order['total_points'] = $total_points;
-                // 因为存在不同子订单   不同积分兑换比例情况，order表不做intergral_rate的记录，只记录到自订单表
-                // $this->order['intergral_rate'] = $final_intergral_rate;  
+            // 普通出货项，构建出货列表
+            if (($v['g_type'] ?? 0) == 1) {
+                $pos = $v['channel_position'] ?? 0;
+                $outItem = [
+                    'channel_code' => $v['channel_code'] ?? '',
+                    'quantity' => $v['quantity'] ?? 1,
+                    'is_gift' => $v['is_gift'] ?? 2,
+                    'out_port' => $v['out_port'] ?? 1,
+                ];
+                $outArr[$pos][] = $outItem;
+
+                // 如果是微程组合商品（type==11），尝试解析子商品出货信息
+                if (!empty($mc['out_no'])) {
+                    $wcGoodsModel = $this->getWcGoodsFind(['no' => $mc['out_no']]);
+                    if ($wcGoodsModel) {
+                        $wcGoods = is_object($wcGoodsModel) ? (function_exists('obj2arr') ? obj2arr($wcGoodsModel) : (array)$wcGoodsModel) : $wcGoodsModel;
+                        if (($wcGoods['type'] ?? 0) == 11 && !empty($v['wc_goods_no'])) {
+                            $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
+                            if (is_array($wc_goods_no_arr)) {
+                                foreach ($wc_goods_no_arr as $wc_goods_no_v) {
+                                    $dc_local = [
+                                        'channel_code' => $wc_goods_no_v['real_channel_code'] ?? '',
+                                        'quantity' => 1,
+                                        'is_gift' => $v['is_gift'] ?? 2,
+                                        'out_port' => $v['out_port'] ?? 1,
+                                    ];
+                                    $outArr[$pos][] = $dc_local;
+                                }
+                            } else {
+                                actionLog(['sod_id' => $v['sod_id'] ?? 0, 'wc_goods_no' => $v['wc_goods_no']], 'wc_goods_no JSON parse failed');
+                            }
+                        }
+                    }
+                }
             }
-            $content = [
-                "msgType" => "outGoods",
-                "trade_no" => $this->order['trade_no'],
-                "main" => $contentArr,
-                "outGoods" => $outArr,
-                "order_points" => $this->order['total_points']
-            ];
-            $this->order['out_status'] = 2;
-            $this->order['pay_status'] = 3;
-            $this->order['pay_time'] = $this->order['pay_time'] ?: time();
-            $this->updateSaleOrders($this->order);
-            return $this->r(200, 'success', $content);
+
+            if (($v['g_type'] ?? 0) == 3) {
+                // 获取核销码
+                $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
+            }
+
+            // 更新自订单信息（积分/核销码等）——这里尽量保持原子并捕获异常
+            try {
+                $this->updateSaleOrdersDetails($updateSod);
+            } catch (\Exception $e) {
+                actionException($e);
+            }
         }
-        return $this->r(100, 'failed', []);
+
+        if ($total_points) {
+            $this->order['total_points'] = $total_points;
+        }
+
+        $content = [
+            'msgType' => 'outGoods',
+            'trade_no' => $this->order['trade_no'],
+            'main' => $contentArr,
+            'outGoods' => $outArr,
+            'order_points' => $this->order['total_points'] ?? 0,
+         ];
+
+        $this->order['out_status'] = 2;
+        $this->order['pay_status'] = 3;
+        $this->order['pay_time'] = $this->order['pay_time'] ?: time();
+        try {
+            $this->updateSaleOrders($this->order);
+        } catch (\Exception $e) {
+            actionException($e);
+        }
+
+        for($i = 0 ; $i < 10; $i++){
+            $latest_order = $this->getSaleOrdersFind(['trade_no' => $this->order['trade_no']]);
+            actionLog(@obj2arr($latest_order), '最新订单信息');
+            if($latest_order['out_status'] == 4) break;
+            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
+            actionLog(@obj2arr($result), 'Http兜底方案下发数据结果');
+            sleep(5);
+        }
+
+        return $this->r(200, 'success', $content);
     }
 
 
@@ -1860,7 +1933,7 @@ class ApiClient extends ReceiveBaseClient
                 //机台登录会员后，无订单刷卡场景，直接把卡积分同步到微程会员
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
                 if (!$card) {
-                    $this->addCard(['card_no' => $this->data['card_no']]);
+                    $this->addCard(['card_no' => $this->data['card_no'],'password' => md5($this->card_default_pwd.config('app.salt') . $this->data['card_no']),'status'=>1,'activation_time'=>time()]);
                     $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                 }
                 if (!empty($card['bind_id']) && ($card['bind_id'] != $this->data['bind_id']))  return $this->r(200, 'failed', '感应卡已绑定其他会员！！！');
@@ -1887,6 +1960,39 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 检查本次余额支付是否需要支付密码
+     * 规则：未登录，或登录手机号与卡绑定手机号不一致时，需要输入支付密码
+     * @return array|\think\response\Json
+     */
+    public function checkBalancePayPassword()
+    {
+        try {
+            $cardNo = trim($this->data['card_no'] ?? '');
+            $bindId = trim($this->data['bind_id'] ?? '');
+            if (!$cardNo) {
+                return $this->r(100, 'failed', 'card_no不能为空');
+            }
+
+            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no,bind_id,password');
+            if (!$card) {
+                return $this->r(100, 'failed', '找不到对应的积分卡');
+            }
+
+            $needPayPassword = empty($bindId) || empty($card['bind_id']) || ((string)$bindId !== (string)$card['bind_id']);
+            $data = [
+                'card_no' => $cardNo,
+                'bind_id' => $bindId,
+                'card_bind_id' => $card['bind_id'] ?? '',
+                'need_pay_password' => $needPayPassword ? 1 : 0,
+                'has_pay_password' => empty($card['password']) ? 0 : 1,
+            ];
+            return $this->r(200, 'success', $data);
+        } catch (\Exception $e) {
+            return $this->rFail($e->getMessage());
+        }
+    }
+
+    /**
      * 获取积分变化类型
      * @return array|\think\response\Json
      * @throws \Exception
@@ -1896,15 +2002,17 @@ class ApiClient extends ReceiveBaseClient
         $card_points_lists = [];
         $new_data = [];
         $total_card_points = 0;
+        $total_balance = '0.00';
         $card_info = [];
         $bind_id = '';
+        $card_one = [];
         try {
             if (isset($this->data['bind_id']) && !empty($this->data['bind_id'])) {
                 //先判断当前登录账号登录信息是否绑定了当前传入的卡号，如果为绑定，提示用户绑卡
                 if (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                     $card_info = $this->getCardFind(['card_no' => $this->data['card_no']]);
                     if (!$card_info) {
-                        $this->addCard(['card_no' => $this->data['card_no']]);
+                        $this->addCard(['card_no' => $this->data['card_no'],'password' => md5($this->card_default_pwd.config('app.salt') . $this->data['card_no']),'status'=>1,'activation_time'=>time()]);
                         $card_info = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                     }
                     if (!$card_info['bind_id'])
@@ -1935,7 +2043,7 @@ class ApiClient extends ReceiveBaseClient
             } elseif (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
                 if (!$card) {
-                    $this->addCard(['card_no' => $this->data['card_no']]);
+                    $this->addCard(['card_no' => $this->data['card_no'],'password' => md5($this->card_default_pwd.config('app.salt') . $this->data['card_no']),'status'=>1,'activation_time'=>time()]);
                     $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                 }
                 //查询此卡关联的会员id
@@ -1974,6 +2082,18 @@ class ApiClient extends ReceiveBaseClient
             $res['bind_id'] = $bind_id;
             $res['bind_id_points'] = $bind_id_points;
             $res['total_points'] = $res['total_card_points'] + $res['bind_id_points'];
+            $currentCardNo = trim((string)($this->data['card_no'] ?? ''));
+            if ($currentCardNo !== '') {
+                $summary = $this->getCardBalanceSummary($currentCardNo);
+                $total_balance = (string)($summary['available_balance'] ?? '0.00');
+            }
+            $res['total_balance'] = $total_balance;
+            //用户是否需要输入密码
+            $res['need_pay_password'] = 1;
+            $check_password = md5(config('app.salt') . $this->data['card_no']);
+            if(!empty($card['password']) && $card['password'] == $check_password){
+                $res['need_pay_password'] = 0;
+            }
             return $this->r(200, 'success', $res);
         } catch (\Exception $e) {
             $this->rollbackTrans();
@@ -2202,9 +2322,9 @@ class ApiClient extends ReceiveBaseClient
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
         $wcMachineChannelLists = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
         foreach ($wcMachineChannelLists as &$v) {
-            if($v['gc_id'] == 11){
+            if ($v['gc_id'] == 11) {
                 $daysInfo = $this->getWcGoodsColumn(['no' => $v['out_no']], 'daysInfo');
-                if($daysInfo) $v['daysInfo'] = $daysInfo[0] ?? [];
+                if ($daysInfo) $v['daysInfo'] = $daysInfo[0] ?? [];
             }
             $v['goods_lists'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
         }
@@ -2267,17 +2387,49 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200, 'success', $response['data']);
     }
 
+    public function getMachineRentOrgLists()
+    {
+        $where['machine_id'] = $this->data['machine_id'];
+        $rent_machine_orgs = $this->getAuthOrgMCColumn($where, 'ao_id');
+        return $this->r(200, "SUCCESS", $rent_machine_orgs);
+    }
+
+    public function getRentOrgGoodsLists()
+    {
+        $where['ao_id'] = $this->data['ao_id'];
+        $where['status'] = 1;
+        $pageNum = $this->data['pageNum'] ?? 15;
+        $orgGoodsLists = $this->getGoodsList($where, $pageNum);
+
+        return $this->r(200, "SUCCESS", $orgGoodsLists);
+    }
+
+    public function searchWCGoods(){
+        $where['is_pub'] = 1;
+        if(isset($this->data['name'])) $where[] = ['name', 'like', '%'.$this->data['name'].'%'];
+        $pageNum = $this->data['pageNum'] ?? 15;
+        $orgGoodsLists = $this->getWcGoodsList($where, $pageNum);
+
+        return $this->r(200, "SUCCESS", $orgGoodsLists);
+    }
+
     public function test()
     {
         $trade_no = $this->data['trade_no'] ?? '';
+        $this->refundTradeNo = $this->data['refund_trade_no'];
         $order_id = $this->data['order_id'] ?? 0;
         $sod_id = $this->data['sod_id'] ?? 0;
-        $this->order = $this->getSaleOrdersFind(['trade_no' => $trade_no]);
-        $this->outGoods();
+        $this->order = $this->getSaleOrdersFind(['trade_no' => $trade_no])->toArray();;
+        $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
+        $this->refundSuccess();;
+        die();
+        $this->paymentSuccessful();
+        $this->addCardChangeLog();
+        // $this->outGoods();
         die();
         // $order = $this->outGoods();
-        // return $this->orderSync2Wc($this->order);
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         return $this->orderRefundSync2Wc($this->order, $detail);
     }
+
 }

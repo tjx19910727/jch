@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Traits\Auth;
 
 
 use app\AppFactory\Kernel\Model\Auth\AuthOrganizationModel;
+use app\AppFactory\Kernel\Model\Auth\AuthOrgMachineChannelModel;
 
 trait AuthOrganizationTrait
 {
@@ -64,9 +65,15 @@ trait AuthOrganizationTrait
             $item['roleName'] = '';
             if ($arList) {
                 $arList = $arList->toArray();
-                $item['roleName'] = implode(",",array_column($arList,'name'));
+                $item['roleName'] = implode(",", array_column($arList, 'name'));
             }
             $item['userNum'] = $this->getAuthManagerCount(['ao_id' => $item['ao_id']]);
+            $mcColumn = $this->getAuthOrgMCColumn(['ao_id' => $item['ao_id']], 'machine_id');
+            $item['deviceNum'] = 0;
+            if ($mcColumn && is_array($mcColumn)) {
+                $item['deviceNum'] = count(array_unique($mcColumn));
+            }
+            
             return $item;
         });
         return $result;
