@@ -65,7 +65,7 @@ class VReport extends SupportValidate
     protected $scene = [
         "onMessage" => ["machine_id","msg_id","timestamp","sign"],
 
-        "outGoods" => ["msgType","trade_no","main"],
+        "outGoods" => ["msgType","trade_no"],
         "heartbeat" => ["msgType"],
         "updateComplete" => ["msgType","mvp_id","status"],
         "goodsHit" => ["msgType","g_id"],

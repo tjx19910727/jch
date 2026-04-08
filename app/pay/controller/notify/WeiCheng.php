@@ -18,7 +18,7 @@ class WeiCheng
         $postData = input();
         $postData = json2arr($postData);
         actionLog($postData, '微程退款推送数据');
-        return true;
+        return 'ok';
     }
     
     //最新商品信息同步
@@ -27,7 +27,7 @@ class WeiCheng
         $postData = input();
         $postData = json2arr($postData);
         actionLog($postData, '最新商品数据');
-        return true;
+        return 'ok';                                                                                                                                                                                                                                    
     }
 
     public function refund()
