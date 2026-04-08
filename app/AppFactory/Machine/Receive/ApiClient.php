@@ -281,40 +281,42 @@ class ApiClient extends ReceiveBaseClient
     {
         $where["m_id"] = $this->machine['m_id'];
         $mId = $this->machine['m_id'];
+        //获取machine信息
+        $machineData = $this->getMachineFind(['m_id' => $mId], "machine_id");
         $incomingList = $this->getIncomingCalibrationList();
         $incomingVersion = $this->data['version'] ?? '';
 
         $latestRow = $this->getMachineCalibrationConfigFind(['m_id' => $mId], 'version,id', 'version desc');
-        $latestVersion = $latestRow ? (string)$latestRow['version'] : '';
+        $latestVersion = $latestRow ? $latestRow['version'] : '';
 
         if (!$latestVersion) {
             if (!empty($incomingList)) {
                 $initVersion = $incomingVersion ?: 1;
-                $this->insertCalibrationRows($incomingList, $mId,  $initVersion);
+                $this->insertCalibrationRows($incomingList, $mId, $machineData['machine_id'] ?? '', $initVersion);
                 $latestVersion = $initVersion;
             }
         } elseif ($incomingVersion && $incomingVersion > $latestVersion && !empty($incomingList)) {
-            $this->insertCalibrationRows($incomingList, $mId,  $incomingVersion);
+            $this->insertCalibrationRows($incomingList, $mId, $machineData['machine_id'] ?? '', $incomingVersion);
             $latestVersion = $incomingVersion;
         }else{
-            $latestVersion = $incomingVersion;
+            $latestVersion = $incomingVersion > $latestVersion ? $incomingVersion : $latestVersion;
         }
 
 
         $list = $this->getMachineCalibrationConfigList(
             ['m_id' => $mId, 'version' => $latestVersion],
             0,
-            'key,value,value_type',
+            'key,value,value_type,version',
             'id asc'
         );
         $list = $list ? $list->toArray() : [];
         $res = [];
         if ($list) {
             foreach ($list as $k => $item) {
+                $res['version'] = intval($item['version']);
                 $res[$item['key']] = $this->castCalibrationValueByType($item['value'], $item['value_type'] ?? 'string');
             }
         }
-
         return $this->rQ($res);
     }
 
@@ -343,7 +345,7 @@ class ApiClient extends ReceiveBaseClient
      * @param string $machineId
      * @param string $version
      */
-    protected function insertCalibrationRows($rows, $mId, $version)
+    protected function insertCalibrationRows($rows, $mId, $machine_id, $version)
     {
         foreach ($rows as $row) {
             if (!isset($row['key']) || $row['key'] === '') {
@@ -355,6 +357,7 @@ class ApiClient extends ReceiveBaseClient
             $value = $this->normalizeCalibrationValueForStorage($row['value'] ?? null, $valueType);
             $this->addMachineCalibrationConfig([
                 'm_id' => $mId,
+                'machine_id' => $machine_id,
                 'name' => $title,
                 'version' => $version,
                 'key' => $key,

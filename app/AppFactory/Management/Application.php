@@ -156,6 +156,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Wx\WxOfficialClient                    $wxOfficial             微信公众号
  * @property Wx\WxTemplateClient                    $wxTemplate             微信公众号消息模板
  * @property Wx\WxTemplateLogClient                 $wxTemplateLog          微信公众号消息模板通知日志
+ * @property Machine\MachineCalibrationConfigClient $machineCalibrationConfig 设备校准配置
  *
  *
  * @package app\AppFactory\Management

@@ -131,24 +131,77 @@ class MachineCalibrationConfigClient extends ManagementClient
             return $this->rFail('配置不存在');
         }
 
-        $update = ['id' => intval($postData['id'])];
-        if (isset($postData['title'])) {
-            $update['name'] = $postData['title'];
-        }
-        if (isset($postData['key'])) {
-            $update['key'] = $postData['key'];
-        }
-        if (array_key_exists('value', $postData)) {
-            $valueType = $this->detectValueType($postData['value'], $postData['value_type'] ?? ($row['value_type'] ?? ''));
-            $update['value_type'] = $valueType;
-            $update['value'] = $this->normalizeValueForStorage($postData['value'], $valueType);
-        }
-        if (isset($postData['desc'])) {
-            $update['desc'] = $postData['desc'];
+        $machine = $this->resolveMachine(['m_id' => intval($row['m_id'])]);
+        if (!$machine) {
+            return $this->rFail('设备不存在');
         }
 
-        $result = $this->updateMachineCalibrationConfig($update);
-        return $this->rU($result);
+        $latestVersion = $this->getMachineCalibrationConfigValue(['m_id' => $machine['m_id']], 'version', 'id desc');
+        if (!$latestVersion) {
+            return $this->rFail('当前设备暂无配置');
+        }
+        $newVersion = $this->increaseVersion($latestVersion);
+
+        $latestRows = $this->getMachineCalibrationConfigList(
+            ['m_id' => $machine['m_id'], 'version' => $latestVersion],
+            0,
+            'id,name,`key`,`value`,value_type,`desc`',
+            'id asc'
+        );
+        $latestRows = obj2arr($latestRows);
+        if (!$latestRows) {
+            return $this->rFail('当前设备暂无配置');
+        }
+
+        $targetId = $postData['id'];
+        $targetKey = $row['key'];
+
+        $this->startTrans();
+        try {
+            foreach ($latestRows as $old) {
+                $title = $old['name'];
+                $key = $old['key'];
+                $value = $old['value'];
+                $valueType = $old['value_type'] ?: 'string';
+                $desc = $old['desc'] ?? '';
+
+                $isTarget = ($old['id'] == $targetId) || ($old['key'] == $targetKey);
+                if ($isTarget) {
+                    if (isset($postData['title'])) {
+                        $title = $postData['title'];
+                    }
+                    if (isset($postData['key']) && $postData['key'] !== '') {
+                        $key = $postData['key'];
+                    }
+                    if (array_key_exists('value', $postData)) {
+                        // 沿用上一版本对应配置项的value_type，保证类型以设备端上报为准
+                        $value = $this->normalizeValueForStorage($postData['value'], $valueType);
+                    }
+                    if (isset($postData['desc'])) {
+                        $desc = $postData['desc'];
+                    }
+                }
+
+                $this->addMachineCalibrationConfig([
+                    'm_id' => $machine['m_id'],
+                    'machine_id' => $machine['machine_id'],
+                    'version' => $newVersion,
+                    'name' => $title,
+                    'key' => $key,
+                    'value' => $value,
+                    'value_type' => $valueType,
+                    'desc' => $desc,
+                ]);
+            }
+            $this->commitTrans();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+
+        $this->pushCalibrationUpdateMq($machine, $newVersion);
+        return $this->r(200, $this->lang('update_success'), ['version' => $newVersion]);
     }
 
     public function updateCalibrationList($postData)
@@ -162,8 +215,23 @@ class MachineCalibrationConfigClient extends ManagementClient
             return $this->rFail('data不能为空');
         }
 
-        $latestVersion = $this->getMachineCalibrationConfigValue(['m_id' => $machine['m_id']], 'version', 'id desc');
-        $newVersion = $latestVersion ? $this->increaseVersion($latestVersion) : ($postData['version'] ?? '1.0.0');
+        $latestVersion = $this->getMachineCalibrationConfigValue(['m_id' => $machine['m_id']], 'version', 'version desc');
+        if ($latestVersion === null || $latestVersion === '') {
+            return $this->rFail('当前设备暂无配置');
+        }
+        $newVersion = $this->increaseVersion($latestVersion);
+
+        $latestRows = $this->getMachineCalibrationConfigList(
+            ['m_id' => $machine['m_id'], 'version' => $latestVersion],
+            0,
+            'name,`key`,`value`,value_type,`desc`',
+            'id asc'
+        );
+        $latestRows = obj2arr($latestRows);
+        $latestMap = [];
+        foreach ($latestRows as $val) {
+            $latestMap[$val['key']] = $val;
+        }
 
         $this->startTrans();
         try {
@@ -171,17 +239,20 @@ class MachineCalibrationConfigClient extends ManagementClient
                 if (!isset($item['key']) || $item['key'] === '') {
                     continue;
                 }
-                $valueType = $this->detectValueType($item['value'] ?? null, $item['value_type'] ?? '');
+                $key = $item['key'];
+                $old = $latestMap[$key] ?? [];
+                // 沿用上一版本对应配置项的value_type，保证类型以设备端上报为准
+                $valueType = $old['value_type'] ?? 'string';
                 $value = $this->normalizeValueForStorage($item['value'] ?? null, $valueType);
                 $this->addMachineCalibrationConfig([
                     'm_id' => $machine['m_id'],
                     'machine_id' => $machine['machine_id'],
                     'version' => $newVersion,
-                    'name' => $item['title'] ?? $item['key'],
-                    'key' => $item['key'],
+                    'name' => $item['title'] ?? ($old['name'] ?? $key),
+                    'key' => $key,
                     'value' => $value,
                     'value_type' => $valueType,
-                    'desc' => $item['desc'] ?? '',
+                    'desc' => $item['desc'] ?? ($old['desc'] ?? ''),
                 ]);
             }
             $this->commitTrans();
@@ -191,7 +262,7 @@ class MachineCalibrationConfigClient extends ManagementClient
             return $this->rTryCatch($e->getMessage());
         }
 
-        $this->sendToMachine(['machine_id' => $machine['machine_id']], 'updateMachineCalibrationConfig', ['version' => $newVersion]);
+        $this->pushCalibrationUpdateMq($machine, $newVersion);
         return $this->r(200, $this->lang('update_success'), ['version' => $newVersion]);
     }
 
@@ -269,7 +340,7 @@ class MachineCalibrationConfigClient extends ManagementClient
             return '';
         }
         if ($valueType === 'bool') {
-            return $value ? '1' : '0';
+            return $value ? 'true' : 'false';
         }
         return (string)$value;
     }
@@ -294,23 +365,49 @@ class MachineCalibrationConfigClient extends ManagementClient
 
     protected function increaseVersion($version)
     {
-        $parts = explode('.', (string)$version);
-        $nums = [];
-        foreach ($parts as $part) {
-            $nums[] = is_numeric($part) ? intval($part) : 0;
+        $v = intval($version);
+        if ($v < 0) {
+            $v = 0;
         }
-        while (count($nums) < 3) {
-            $nums[] = 0;
-        }
+        return $v + 1;
+    }
 
-        $idx = count($nums) - 1;
-        $nums[$idx]++;
-        while ($idx > 0 && $nums[$idx] > 99) {
-            $nums[$idx] = 0;
-            $idx--;
-            $nums[$idx]++;
-        }
+    /**
+     * 触发设备端校准配置更新消息
+     * @param array $machine
+     * @param string $version
+     */
+    protected function pushCalibrationUpdateMq($machine, $version)
+    {
+        $payload = [
+            'data' => $this->buildCalibrationDataByVersion($machine['m_id'], $version),
+            'm_id' => intval($machine['m_id']),
+            'version' => intval($version),
+        ];
+        $this->sendToMachine($machine, 'calibrationUpdate', $payload);
+    }
 
-        return implode('.', $nums);
+    /**
+     * 组装指定版本的校准配置数据
+     * 格式同设备端 getCalibrationConfig 入参中的 data
+     * @param int $mId
+     * @param string $version
+     * @return array
+     */
+    protected function buildCalibrationDataByVersion($mId, $version)
+    {
+        $rows = $this->getMachineCalibrationConfigList(
+            ['m_id' => $mId, 'version' => $version],
+            0,
+            'name,`key`,`value`,value_type',
+            'id asc'
+        );
+        $rows = obj2arr($rows);
+        $data = [];
+        foreach ($rows as $row) {
+            $data[$row['key']] = $this->castValueByType($row['value'], $row['value_type'] ?? 'string');
+        }
+        $data['version'] = $version;
+        return $data;
     }
 }
