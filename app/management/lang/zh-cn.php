@@ -702,7 +702,7 @@ return [
         "card_no_no_data" => "查无会员卡信息",
         "balance_not_enough" => "卡余额不足",
         "balance_action_fail" => "余额变动失败",
-        "password_require" => "新密码不能为空",
+        "password_require" => "密码不能为空",
         "confirm_password_require" => "确认密码不能为空",
         "password_not_match" => "两次输入的密码不一致",
         "balance_amount_error" => "支付金额有误",

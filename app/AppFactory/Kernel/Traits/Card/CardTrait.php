@@ -197,7 +197,7 @@ trait CardTrait
      * @return array
      * @throws \Exception
      */
-    public function consumeCardBalanceBuckets($card_no, $amount)
+    public function consumeCardBalanceBuckets($card_no, $amount, $amountType = null)
     {
         $amount = number_format((float)$amount, 2, '.', '');
         if (bccomp($amount, '0', 2) <= 0) {
@@ -208,7 +208,7 @@ trait CardTrait
         }
 
         $now = time();
-        $rows = $this->getCardBalanceBucketsForConsume($card_no, $now);
+        $rows = $this->getCardBalanceBucketsForConsume($card_no, $now, $amountType);
 
         $remainNeed = $amount;
         $allocations = [];
@@ -451,13 +451,23 @@ trait CardTrait
                     $runningBefore = $runningAfter;
                 }
             } elseif ($change_type == 2) { // 减少
-                if (bccomp($balance_changed, '0', 2) <= 0) {
+                if (bccomp($balance_changed, '0', 2) <= 0 && bccomp($gift_balance, '0', 2) <= 0) {
                     $this->rollbackTrans();
                     return $this->r(100, $this->lang("VCard.balance_amount_error"));
                 }
-                $consumeResult = $this->consumeCardBalanceBuckets($card_no, $balance_changed);
-                $remarkData['allocations'] = $consumeResult['allocations'];
-                $deltaAmount = $balance_changed;
+                $remarkData['allocations'] = [];
+
+                if (bccomp($balance_changed, '0', 2) > 0) {
+                    $principalConsume = $this->consumeCardBalanceBuckets($card_no, $balance_changed, 1);
+                    $remarkData['allocations'] = array_merge($remarkData['allocations'], $principalConsume['allocations']);
+                    $deltaAmount = bcadd($deltaAmount, $balance_changed, 2);
+                }
+
+                if (bccomp($gift_balance, '0', 2) > 0) {
+                    $giftConsume = $this->consumeCardBalanceBuckets($card_no, $gift_balance, 2);
+                    $remarkData['allocations'] = array_merge($remarkData['allocations'], $giftConsume['allocations']);
+                    $deltaAmount = bcadd($deltaAmount, $gift_balance, 2);
+                }
             } else {
                 $this->rollbackTrans();
                 return $this->r(100, $this->lang("VCard.change_type_in"));
@@ -477,7 +487,7 @@ trait CardTrait
                     'trade_no' => $trade_no,
                     'activity_id' => 0,
                     'reasons' => '',
-                    'remark' => json_encode($remarkData, JSON_UNESCAPED_UNICODE),
+                    'remark' => '后台扣减',
                     'expire_at' => 0,
                     'created_at' => date('Y-m-d H:i:s'),
                 ];
@@ -501,7 +511,7 @@ trait CardTrait
             $this->rollbackTrans();
             actionLog("修改卡余额失败: " . $e->getMessage());
             actionException($e, 1);
-            return $this->r(100, $this->lang("VCard.balance_action_fail") .'：'. $e->getMessage());
+            throw new \Exception($e->getMessage());
         }
     }
 

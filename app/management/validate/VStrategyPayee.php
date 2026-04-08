@@ -102,6 +102,6 @@ class VStrategyPayee extends VCommon
         "addTrip" => ["appId","appSecret","baseUrl"],
         "updateSp" => ['sp_id'],
         "addShopPoints" => ["app_id","publicKey","privateKey"],
-        "addBalance" => ["sp_name","payee_type","title","status"]
+        "addBalance" => ["payee_type"]
     ];
 }
