@@ -1056,4 +1056,18 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+
+    /**
+     * 获取并同步设备校准页配置
+     * @return array|string
+     */
+    public function getCalibrationConfig()
+    {
+        try {
+            return $this->app->api->machineCalibrationConfig();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
 }
