@@ -569,25 +569,22 @@ trait MachineTrait
                 return;
             }
             cache($checkKey, $now, $checkCoolDown);
-            //create_time大于此功能上线的时间，避免历史数据上线时被补发。2026-04-08
+            //create_time大于此功能上线的时间，避免历史数据上线时被补发。2026-04-09
             $plan = Db::name('machine_version_plan')->where([
                 'machine_id' => $this->machine['machine_id'],
                 'status' => 1,
             ])->where('publish_time', '<=', $now)
-            ->where('create_time', '>', 1775653175)
+            ->where('create_time', '>', 1775719747)
             ->field('mvp_id,machine_id,mv_id,version_no,publish_time')
             ->order('publish_time asc,mvp_id asc')
             ->find();
+            actionLog($plan, '上线补发更新版本MQ检查结果');
             if (empty($plan)) {
                 return;
             }
             $sendResult = $this->sendToMachine(
                 ['machine_id' => $this->machine['machine_id']],
-                'updateVersionPlan',
-                [
-                    'mvp_id' => $plan['mvp_id'] ?? 0,
-                    'version_no' => $plan['version_no'] ?? '',
-                ]
+                'updateVersionPlan'
             );
             actionLog([
                 'machine_id' => $this->machine['machine_id'],
