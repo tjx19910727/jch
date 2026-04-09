@@ -1,4 +1,3 @@
-
 #20260305
 ALTER TABLE kiosk.wc_request_logs MODIFY COLUMN response_body longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL;
 ALTER TABLE kiosk.wc_goods MODIFY COLUMN goods longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '实物商品信息';
@@ -1328,3 +1327,9 @@ CREATE TABLE `auth_org_revenue_logs` (
   KEY `idx_order_id` (`order_id`),
   KEY `idx_si_id` (`si_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='组织分账日志表';
+
+
+
+#20260408--设备在营标记
+ALTER TABLE kiosk.machine
+  ADD COLUMN `is_operating` tinyint(1) NOT NULL DEFAULT 2 COMMENT '在营状态，1-在营 2-在库' AFTER `status`;

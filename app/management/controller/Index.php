@@ -56,6 +56,16 @@ class Index extends Common
     }
 
     /**
+     * 导出空槽列表
+     * @return array|\think\response\Json
+     */
+    public function exportEmptyChannel()
+    {
+        $where = $this->getWhere([]);
+        return $this->app->machineChannel->exportEmptyList($where);
+    }
+
+    /**
      * 获取Bad列表
      * @return array|string
      */
@@ -66,6 +76,16 @@ class Index extends Common
     }
 
     /**
+     * 导出Bad列表
+     * @return array|\think\response\Json
+     */
+    public function exportBadChannel()
+    {
+        $where = $this->getWhere([]);
+        return $this->app->machineChannel->exportBadList($where);
+    }
+
+    /**
      * 获取空货列表
      * @return array|string
      */
@@ -73,6 +93,16 @@ class Index extends Common
     {
         $where = $this->getWhere([]);
         return $this->app->machineChannel->getStockOutList($where);
+    }
+
+    /**
+     * 导出空货列表
+     * @return array|\think\response\Json
+     */
+    public function exportStockOutChannel()
+    {
+        $where = $this->getWhere([]);
+        return $this->app->machineChannel->exportStockOutList($where);
     }
 
     /**

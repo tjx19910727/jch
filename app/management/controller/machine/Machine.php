@@ -75,6 +75,31 @@ class Machine extends Common
         return $this->app->machine->updateMore($postData);
     }
 
+    /**
+     * 设置单个设备在营状态
+     * @return array|string
+     */
+    public function setOperating()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.setOperating');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machine->setOperating($postData);
+    }
+
+    /**
+     * 批量设置设备在营状态
+     * @return array|string
+     */
+    public function setOperatingBatch()
+    {
+        $postData = input();
+        return $this->app->machine->setOperatingBatch($postData);
+    }
+
     public function del()
     {
         $postData = input();
@@ -110,6 +135,7 @@ class Machine extends Common
         FROM_UNIXTIME(last_online_time) last_online_time,
         (case device_type when 1 then '" . lang("vending_machine") . "' else '" . lang("store") . "' end) device_type,
         (case machine_level when 1 then '" . lang("simplified_version") . "' else '" . lang("luxury_edition") . "' END) machine_level,
+    (case is_operating when 1 then '在营' else '停营' END) is_operating,
         (case status when 1 then '" . lang("normal") . "' when 2 then '" . lang("disable") . "' when 3 then '" . lang("maintenance") . "' end) status";
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];

@@ -157,6 +157,68 @@ class MachineClient extends ManagementClient
         return $this->rAction(1);
     }
 
+    /**
+     * 设置单个设备在营状态
+     * @param array $postData
+     * @return array|string
+     */
+    public function setOperating($postData)
+    {
+        if (!isset($postData['is_operating']) || !in_array(intval($postData['is_operating']), [1, 2])) {
+            return $this->rValidate('在营状态参数错误');
+        }
+        $machine = $this->getMachineFind(['m_id' => $postData['m_id']], 'm_id,machine_id,machine_name');
+        if (!$machine) {
+            return $this->r(100, $this->lang("VMachine.machine_no_data"));
+        }
+        $machine = $machine->toArray();
+        $result = $this->updateMachine([
+            'm_id' => $machine['m_id'],
+            'is_operating' => intval($postData['is_operating']),
+        ]);
+        if ($result) {
+            $this->sendToMachine($machine, 'updateMachine');
+        }
+        return $this->rU($result);
+    }
+
+    /**
+     * 批量设置设备在营状态
+     * @param array $postData
+     * @return array|string
+     */
+    public function setOperatingBatch($postData)
+    {
+        if (!isset($postData['is_operating']) || !in_array(intval($postData['is_operating']), [1, 2])) {
+            return $this->rValidate('在营状态参数错误');
+        }
+        $mIds = $postData['m_ids'] ?? ($postData['m_id'] ?? []);
+        if (!is_array($mIds)) {
+            $mIds = explode(',', strval($mIds));
+        }
+        $mIds = array_values(array_filter(array_map('intval', $mIds)));
+        if (!$mIds) {
+            return $this->rValidate('m_ids不能为空');
+        }
+
+        $where = [];
+        $where[] = ['m_id', 'in', $mIds];
+        $machines = $this->getMachineList($where, 0, 'm_id,machine_id,machine_name');
+
+        if (!$machines) {
+            return $this->r(100, $this->lang("VMachine.machine_no_data"));
+        }
+
+        $flag = [];
+        foreach ($machines as $machine) {
+            $flag[] = $this->updateMachine([
+                'm_id' => $machine['m_id'],
+                'is_operating' => intval($postData['is_operating']),
+            ]);
+        }
+        return $this->rAction(flag_check($flag));
+    }
+
     public function getMList($where,$pageNum = 0,$field = "",$order = "")
     {
         if ($this->manager['pid'] > 0) {
@@ -213,6 +275,7 @@ class MachineClient extends ManagementClient
                 "address" => "详细地址",
                 "device_type" => "应用类型",
                 "machine_level" => "设备等级",
+                "is_operating" => "在营状态",
                 "status" => "设备状态",
                 "online" => "设备在离线",
                 "last_online_time" => "最后上线时间",
