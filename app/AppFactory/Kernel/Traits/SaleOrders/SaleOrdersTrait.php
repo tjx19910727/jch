@@ -461,4 +461,45 @@ trait SaleOrdersTrait
         }
         return SaleOrdersModel::fixOrdersInfo($postData);
     }
+    
+    /**
+     * 查询异常订单列表（左连接异常处理表）
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @param string $eachFn
+     * @param string $group
+     * @param int $limit
+     * @return SaleOrdersModel|SaleOrdersModel[]|array|\think\Collection|\think\Paginator
+     */
+    public function getSaleOrdersExceptionList($where, $pageNum = 0, $field = "*", $order = "", $eachFn = '', $group = '', $limit = 0)
+    {
+        $join = [
+            ['join' => 'sale_orders_exception se','on' => 'se.order_id = a.order_id','type' => 'left',],
+            ['join' => 'auth_manager am', 'on' => 'am.manager_id = se.manager_id', 'type' => 'left'],
+        ];
+        $data = SaleOrdersModel::getListAndWith($where, $pageNum, $field, $order, $eachFn, $group, $limit, [], $join);
+        $data = $data->each(function ($item) {
+            //去掉null显示
+            $item['exception_status'] = is_null($item['exception_status']) ? 2 : 1;
+            $item['exception_remark'] = $item['exception_remark'] ?: '';
+            $item['manager_account'] = $item['manager_account'] ?: '';
+            $item['manager_nickname'] = $item['manager_nickname'] ?: '';
+            $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
+            if ($item['has_hotel'] == 1) {
+                $item['hotel'] = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
+                $item['hotel']['nightly'] = $this->getSaleHotelNightlyList(['sh_id' => $item['hotel']['sh_id']]);
+                $item['retail_price'] = bcadd($item['retail_price'], $item['hotel']['pay_amount'], 2);
+            }
+            if ($item['out_status'] == 6) {
+                $unclaimed = $this->getSaleOrdersUnclaimedList(['order_id' => $item['order_id']], 0, 'sod_id,g_name,channel_code,is_match,is_claim,is_out,is_close');
+                if ($unclaimed) {
+                    $item['unclaimed_status'] = $unclaimed->toArray();
+                }
+            }
+            return $item;
+        });
+        return $data;
+    }
 }

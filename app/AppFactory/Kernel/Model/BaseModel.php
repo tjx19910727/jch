@@ -292,7 +292,19 @@ class BaseModel extends Model
             }else{
                 $model = self::alias("a")->where($where)->field($field)->order($order);
             }
-            if ($join) $model = $model->join($join['join'], $join['on'], $join['type'] ?? 'inner');
+            if ($join) {
+                // 兼容两种传参：
+                // 1) ['join' => 'table t', 'on' => 't.id = a.id', 'type' => 'left']
+                // 2) [ [...], [...], ... ]
+                if (isset($join['join'])) {
+                    $model = $model->join($join['join'], $join['on'], $join['type'] ?? 'inner');
+                } else {
+                    foreach ($join as $jv) {
+                        if (!is_array($jv) || !isset($jv['join']) || !isset($jv['on'])) continue;
+                        $model = $model->join($jv['join'], $jv['on'], $jv['type'] ?? 'inner');
+                    }
+                }
+            }
             if ($with) $model = $model->with($with);
             if ($group) $model = $model->group($group);
             if ($limit) $model = $model->limit($limit);

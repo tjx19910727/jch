@@ -626,4 +626,91 @@ class SaleOrders extends Common
         $postData['manager_id'] = $this->manager['manager_id'];
         return $this->app->saleOrders->fixOrdersInfo($postData);
     }
+
+    
+    /**
+     * 异常订单处理列表
+     * 列表查询条件与订单列表一致，增加异常处理状态字段：1.已处理，2.未处理
+     * @param bool supplier 供应商账号是否跳过组织选择查看所属商品订单
+     * @return mixed
+     */
+    public function getExceptionList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+
+        $isProcessed = $postData['is_processed'] ?? '';
+        unset($postData['is_processed']);
+
+        $allowOutStatus = ['2', '5', '6'];
+        if (isset($postData['out_status']) && $postData['out_status'] !== '') {
+            $outStatusList = array_values(array_filter(array_map('trim', explode(',', $postData['out_status']))));
+            $invalidOutStatus = array_diff($outStatusList, $allowOutStatus);
+            if ($invalidOutStatus) return returnState(100, 'out_status 仅支持 2,5,6');
+            if (!$outStatusList) return returnState(100, 'out_status 仅支持 2,5,6');
+            $postData['out_status'] = implode(',', $outStatusList);
+        } else {
+            $postData['out_status'] = implode(',', $allowOutStatus);
+        }
+
+        $machineIds = [];
+        if (!empty($postData['machine_group_id'])) {
+            $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']], 'machine_id');
+            unset($postData['machine_group_id']);
+            if (!$machineIds) return $this->app->machine->rNoData();
+        }
+
+        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'a.');
+        $where['raw'] = "a.pay_status in ('3', '7')";
+        if ($isProcessed == 1) {
+            $where['raw'] .= " AND se.status IS NOT NULL";
+        }
+        if ($isProcessed == 2) {
+            $where['raw'] .= " AND se.status IS NULL";
+        }
+        if ($this->authMchCannel()['status'] != 0) {
+            $orderIds = Db::name('sale_orders_details')
+                ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
+                ->field('order_id')
+                ->select();
+
+            $order_id = [];
+            foreach ($orderIds as $item) {
+                array_push($order_id, $item['order_id']);
+            }
+            $where[] = ['a.order_id', 'in', $order_id];
+        }
+        // 查看成本价查询账号是否包含当前权限
+        if ($this->manager['pid'] > 0) {
+            $whereArn[] = ['role_id', 'in', $this->app->authManagerRole->getAuthManagerRoleColumn(['manager_id' => $this->manager['manager_id'], 'is_del' => 2], 'role_id')];
+            $whereArn['is_del'] = 2;
+            $node = $this->app->authNode->getAuthNodeColumn(['url' => '/management/sale.sale_orders/getList?get_cost_price'], 'node_id');
+            $authRole = $this->app->authRoleNode->getAuthRoleNodeColumn($whereArn, 'node_id');
+            $inter = array_intersect($node, $authRole);
+
+            $whereAuth[] = ['node_id', 'in', $inter];
+        }
+        $whereAuth['status'] = 1;
+        $data = $this->app->authNode->getAuthNodeList($whereAuth, 0, 'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status', 'sort asc');
+        $data = obj2arr($data);
+
+        $field = "a.order_id,a.trade_no,a.mch_no,a.total_quantity,a.total_price,a.total_points,a.discount_price,a.retail_price,a.out_status,a.order_type,a.pay_type,a.user_id,a.out_trade_no,a.pay_status,a.pay_time,a.out_time,a.machine_name,a.machine_id,a.discount_price,a.factory,a.inventory_location,a.has_hotel,a.refund_status,(a.total_price - a.refund_amount) total_price,(a.total_cost_points - a.refund_cost_points) total_cost_points,a.pay_code,a.mobile,se.status exception_status,se.remark exception_remark,se.manager_id exception_manager_id,se.create_time exception_create_time,am.account manager_account,am.nickname manager_nickname";
+        if (!empty($data)) $field .= ",a.cost_price";
+        if (!empty($machineIds)) $where[] = ['a.machine_id', 'in', $machineIds];
+        if (isset($postData['supplier']) && $postData['supplier']) unset($where['a.ao_id']);
+        if ($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0, 1])) {
+            $where['a.ao_id'] = $this->manager['ao_id'];
+        }
+        return $this->app->saleOrders->getExceptionSoList($where, $pageNum, $field, 'a.order_id desc', $postData['supplier'] ?? true);
+    }
+
+    /**
+     * 异常订单处理
+     * @return array|string
+     */
+    public function exceptionHandle()
+    {
+        $postData = input();
+        return $this->app->saleOrders->exceptionHandle($postData);
+    }
 }
