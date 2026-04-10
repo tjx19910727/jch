@@ -158,6 +158,7 @@ class ApiClient extends ReceiveBaseClient
 
 
     protected $order;
+    protected $refundTradeNo;
 
     /**
      * 登录验证

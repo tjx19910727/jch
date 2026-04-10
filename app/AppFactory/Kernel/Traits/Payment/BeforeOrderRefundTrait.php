@@ -162,7 +162,7 @@ trait BeforeOrderRefundTrait
             "m_id" => $this->order['m_id'],
             "machine_id" => $this->order['machine_id'],
             "machine_name" => $this->order['machine_name'],
-            "ao_id" => $this->sod['ao_id'],
+            "ao_id" => $this->sod['sod_ao_id'] ?? ($this->order['ao_id'] ?? 0),
             "mc_id" => $this->sod['mc_id'],
             "channel_position" => $this->sod['channel_position'],
             "channel_code" => $this->sod['channel_code'],
