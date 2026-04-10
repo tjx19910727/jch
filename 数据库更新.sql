@@ -1437,3 +1437,18 @@ CREATE TABLE `auth_org_revenue_logs` (
   KEY `idx_order_id` (`order_id`),
   KEY `idx_si_id` (`si_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='组织分账日志表';
+
+#20260409
+CREATE TABLE `sale_orders_exception` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增id',
+  `order_id` int DEFAULT NULL COMMENT '订单ID',
+  `sod_id` int DEFAULT '0' COMMENT '订单副表ID',
+  `m_id` int DEFAULT 0 COMMENT '设备ID',
+  `manager_id` int DEFAULT 0 COMMENT '处理人ID',
+  `remark` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '备注信息',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态，1. 已处理，2. 未处理',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `order_id` (`order_id`) USING BTREE,
+  KEY `sod_id` (`sod_id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='异常订单处理表';
