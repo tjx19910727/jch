@@ -284,26 +284,25 @@ class ApiClient extends ReceiveBaseClient
      */
     public function machineCalibrationConfig()
     {
-        $where["m_id"] = $this->machine['m_id'];
         $mId = $this->machine['m_id'];
         //获取machine信息
         $machineData = $this->getMachineFind(['m_id' => $mId], "machine_id");
         $incomingList = $this->getIncomingCalibrationList();
-        $incomingVersion = $this->data['version'] ?? '';
+        $incomingVersion = isset($this->data['version']) && $this->data['version'] !== '' ? intval($this->data['version']) : 0;
 
-        $latestRow = $this->getMachineCalibrationConfigFind(['m_id' => $mId], 'version,id', 'version desc');
-        $latestVersion = $latestRow ? $latestRow['version'] : '';
+        $latestRow = $this->getMachineCalibrationConfigFind(['m_id' => $mId], 'version,id', 'id desc');
+        $latestVersion = $latestRow ? intval($latestRow['version']) : 0;
 
-        if (!$latestVersion) {
+        if ($latestVersion <= 0) {
             if (!empty($incomingList)) {
-                $initVersion = $incomingVersion ?: 1;
+                $initVersion = $incomingVersion > 0 ? $incomingVersion : 1;
                 $this->insertCalibrationRows($incomingList, $mId, $machineData['machine_id'] ?? '', $initVersion);
                 $latestVersion = $initVersion;
             }
-        } elseif ($incomingVersion && $incomingVersion > $latestVersion && !empty($incomingList)) {
+        } elseif ($incomingVersion > $latestVersion && !empty($incomingList)) {
             $this->insertCalibrationRows($incomingList, $mId, $machineData['machine_id'] ?? '', $incomingVersion);
             $latestVersion = $incomingVersion;
-        }else{
+        } else {
             $latestVersion = $incomingVersion > $latestVersion ? $incomingVersion : $latestVersion;
         }
 
@@ -352,12 +351,24 @@ class ApiClient extends ReceiveBaseClient
      */
     protected function insertCalibrationRows($rows, $mId, $machine_id, $version)
     {
+        $seenKey = [];
         foreach ($rows as $row) {
             if (!isset($row['key']) || $row['key'] === '') {
                 continue;
             }
-            $key = (string)$row['key'];
-            $title = isset($row['title']) && $row['title'] !== '' ? (string)$row['title'] : $key;
+            $key = $row['key'];
+            if (isset($seenKey[$key])) {
+                continue;
+            }
+            $seenKey[$key] = 1;
+
+            // 幂等保护：同设备同版本同key存在则不重复写入。
+            $exists = $this->getMachineCalibrationConfigValue(['m_id' => $mId, 'version' => $version, 'key' => $key], 'id', 'version desc');
+            if ($exists) {
+                continue;
+            }
+
+            $title = isset($row['title']) && $row['title'] !== '' ? $row['title'] : $key;
             $valueType = $this->detectCalibrationValueType($row['value'] ?? null, $row['value_type'] ?? '');
             $value = $this->normalizeCalibrationValueForStorage($row['value'] ?? null, $valueType);
             $this->addMachineCalibrationConfig([
@@ -368,7 +379,7 @@ class ApiClient extends ReceiveBaseClient
                 'key' => $key,
                 'value' => $value,
                 'value_type' => $valueType,
-                'desc' => isset($row['desc']) ? (string)$row['desc'] : '',
+                'desc' => isset($row['desc']) ? $row['desc'] : '',
             ]);
         }
     }
