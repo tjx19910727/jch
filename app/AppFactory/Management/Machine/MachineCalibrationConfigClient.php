@@ -99,7 +99,7 @@ class MachineCalibrationConfigClient extends ManagementClient
         if (!$version) {
             $version = $this->getMachineCalibrationConfigValue(['m_id' => $machine['m_id']], 'version', 'id desc');
             if (!$version) {
-                $version = '1.0.0';
+                $version = 1;
             }
         }
 
@@ -233,12 +233,18 @@ class MachineCalibrationConfigClient extends ManagementClient
             $latestMap[$val['key']] = $val;
         }
 
+        // 同批次按key去重，最后一条生效，避免重复key写入同一新版本。
+        $inputMap = [];
+        foreach ($list as $item) {
+            if (!isset($item['key']) || $item['key'] === '') {
+                continue;
+            }
+            $inputMap[$item['key']] = $item;
+        }
+
         $this->startTrans();
         try {
-            foreach ($list as $item) {
-                if (!isset($item['key']) || $item['key'] === '') {
-                    continue;
-                }
+            foreach ($inputMap as $item) {
                 $key = $item['key'];
                 $old = $latestMap[$key] ?? [];
                 // 沿用上一版本对应配置项的value_type，保证类型以设备端上报为准

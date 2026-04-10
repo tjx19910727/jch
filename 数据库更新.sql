@@ -1444,7 +1444,7 @@ CREATE TABLE `machine_calibration_config` (
   `m_id` int NOT NULL DEFAULT 0 COMMENT '设备m_id' ,
   `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '名称',
   `machine_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '设备的machine_id' ,
-  `version` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的版本',
+  `version` int NOT NULL DEFAULT 0 COMMENT '配置的版本',
   `key` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的键',
   `value` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的值',
   `value_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'string' COMMENT '配置的值类型: string, int, float, bool',
