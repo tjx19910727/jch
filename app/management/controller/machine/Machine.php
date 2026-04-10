@@ -334,4 +334,19 @@ class Machine extends Common
         return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
     }
     
+    public function exportEmptyChannel(){
+        $postData = input();
+        $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
+        return $this->app->machineChannel->exportEmptyList($where);
+    }
+    public function exportBadChannel(){
+        $postData = input();
+        $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
+        return $this->app->machineChannel->exportBadList($where);
+    }
+    public function exportStockOutChannel(){
+        $postData = input();
+        $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
+        return $this->app->machineChannel->exportStockOutList($where);
+    }
 }
