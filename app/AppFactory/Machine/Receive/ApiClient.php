@@ -159,6 +159,7 @@ class ApiClient extends ReceiveBaseClient
 
 
     protected $order;
+    protected $refundTradeNo;
 
     /**
      * 登录验证
@@ -1678,8 +1679,6 @@ class ApiClient extends ReceiveBaseClient
          ];
 
         $this->order['out_status'] = 2;
-        $this->order['pay_status'] = 3;
-        $this->order['pay_time'] = $this->order['pay_time'] ?: time();
         try {
             $this->updateSaleOrders($this->order);
         } catch (\Exception $e) {
@@ -1696,6 +1695,32 @@ class ApiClient extends ReceiveBaseClient
         // }
 
         return $this->r(200, 'success', $content);
+    }
+
+    /**
+     * 获取订单支付状态
+     * 支持 trade_no / order_id 二选一查询
+     * @return array
+     */
+    public function getOrderPayStatus()
+    {
+        $where = [];
+        if (!empty($this->data['trade_no'])) {
+            $where['trade_no'] = $this->data['trade_no'];
+        } elseif (!empty($this->data['order_id'])) {
+            $where['order_id'] = intval($this->data['order_id']);
+        } else {
+            return $this->r(100, 'trade_no 或 order_id 不能为空');
+        }
+
+        $field = 'order_id,trade_no,mch_no,pay_status,pay_type,pay_method,out_status,refund_status,total_price,refund_amount,create_time,pay_time,out_time';
+        $order = $this->getSaleOrdersFind($where, $field);
+        if (!$order) {
+            return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        }
+
+        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+        return $this->r(200, 'success', $order);
     }
 
 
