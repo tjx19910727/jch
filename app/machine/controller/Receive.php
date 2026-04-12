@@ -1056,4 +1056,19 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+
+    
+    /**
+     * 获取设备主题配置
+     * @return array|string
+     */
+    public function getTopicPage()
+    {
+        try {
+            return $this->app->api->topicPage();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
 }

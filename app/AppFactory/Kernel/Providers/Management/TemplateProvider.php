@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Providers\Management;
 
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
+use app\AppFactory\Management\Template\TopicPageClient;
 use app\AppFactory\Management\Template\TemplateClient;
 use app\AppFactory\Management\Template\TemplateLayoutClient;
 use app\AppFactory\Management\Template\TemplatePluginsClient;
@@ -32,6 +33,9 @@ class TemplateProvider implements ServiceProviderInterface
         };
         $app['templatePlugins'] = function ($app) {
             return new TemplatePluginsClient($app);
+        };
+        $app['topicPage'] = function ($app) {
+            return new TopicPageClient($app);
         };
     }
 }
