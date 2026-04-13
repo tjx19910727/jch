@@ -1436,7 +1436,7 @@ CREATE TABLE `auth_org_revenue_logs` (
   KEY `idx_order_id` (`order_id`),
   KEY `idx_si_id` (`si_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='组织分账日志表';
-  ADD COLUMN `receipt_code2_desc` VARCHAR(50) DEFAULT '' COMMENT '二维码2的自定义文字' AFTER `receipt_code3`;
+  
 #20260331.15:38
 CREATE TABLE `machine_calibration_config` (
   `id` int NOT NULL AUTO_INCREMENT,

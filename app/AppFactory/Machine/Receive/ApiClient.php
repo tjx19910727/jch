@@ -1717,7 +1717,6 @@ class ApiClient extends ReceiveBaseClient
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         $this->order = is_object($order) ? (method_exists($order,'toArray') ? $order->toArray() : (array)$order) : $order;
-
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']])->toArray();
         if (!$details || !is_array($details)) {
             return $this->r(100, 'failed', []);
@@ -1876,6 +1875,21 @@ class ApiClient extends ReceiveBaseClient
 
         return $this->r(200, 'success', $content);
     }
+     
+    //设备设置订单http_out_status状态，供Http兜底方案使用
+    public function setHttpOutStatus()
+    {
+        $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
+        if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        try {
+            $this->updateSaleOrders(['trade_no' => $this->data['trade_no'], 'http_out_status' => intval($this->data['http_out_status'])]);
+        } catch (\Exception $e) {
+            actionException($e);
+            return $this->rTryCatch($e->getMessage());
+        }
+        return $this->r(200, 'success');
+    }
+
 
     /**
      * 获取订单支付状态
@@ -1893,7 +1907,7 @@ class ApiClient extends ReceiveBaseClient
             return $this->r(100, 'trade_no 或 order_id 不能为空');
         }
 
-        $field = 'order_id,trade_no,mch_no,pay_status,pay_type,pay_method,out_status,refund_status,total_price,refund_amount,create_time,pay_time,out_time';
+        $field = 'order_id,trade_no,mch_no,pay_status,pay_type,pay_method,out_status,refund_status,total_price,refund_amount,create_time,pay_time,out_time,http_out_status';
         $order = $this->getSaleOrdersFind($where, $field);
         if (!$order) {
             return $this->r(300, $this->lang("VSaleOrders.order_not_data"));

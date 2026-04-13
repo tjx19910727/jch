@@ -206,7 +206,7 @@ class MachineChannelClient extends ManagementClient
                 $where[] = ['m_id', 'in', $mIds];
             }
         }
-        $where[] = ['status','<>',2];
+        $where[] = ['status', '<>', 2];
         $where['g_id'] = 0;
         $expr = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
         $exprOperating = "EXISTS(SELECT 1 FROM machine m WHERE m.m_id = a.m_id AND m.is_operating = 1)";
@@ -218,23 +218,22 @@ class MachineChannelClient extends ManagementClient
         $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
         count(mc_id) empty_num', '', '', 'm_id');
-        if ($list) {
-            foreach ($list as $key => $value) {
-                $whereEmpty = [];
-                // 副柜不可用状态下，只查主柜货道
-                $sub_cabinet = $this->getMachineInfoValue(['m_id' => $value['m_id']],'sub_cabinet');
-                if (!$sub_cabinet || $sub_cabinet == 2 ){
-                    $whereEmpty[] = ['channel_position', '<>', 2];
-                }
-                $whereEmpty[] = ['m_id', '=', $value['m_id']];
-                $whereEmpty[] = ['status',"<>",2];
-                $value['total_channel'] = $this->getMachineChannelCount($whereEmpty);
+        if (!$list) return [];
 
-                $whereEmpty[] = ['g_id', '=', 0];
-                $emptyList = $this->getMachineChannelColumn($whereEmpty, 'channel_code');
-                $value['empty_channel'] = implode(",", $emptyList ?? []);
-                $value['empty_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['empty_num'], $value['total_channel'], 3), 100, 1) . "%" ): "0%";
-            }
+        $list = $list->toArray();
+        foreach ($list as $key => $value) {
+            $whereEmpty = [];
+            $sub_cabinet = $this->getMachineInfoValue(['m_id' => $value['m_id']], 'sub_cabinet');
+            if (!$sub_cabinet || $sub_cabinet == 2) $whereEmpty['channel_position'] = 1;
+            $whereEmpty['m_id'] = $value['m_id'];
+            $whereEmpty[] = ['status', "<>", 2];
+            $value['total_channel'] = $this->getMachineChannelCount($whereEmpty);
+
+            $whereEmpty['g_id'] = 0;
+            $emptyList = $this->getMachineChannelColumn($whereEmpty, 'channel_code');
+            $value['empty_channel'] = implode(",", $emptyList ?? []);
+            $value['empty_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['empty_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
+            $list[$key] = $value;
         }
         return $list;
     }
@@ -258,27 +257,23 @@ class MachineChannelClient extends ManagementClient
         } else {
             $where['raw'] = $expr . " AND " . $exprOperating;
         }
-        $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
-            (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
+        $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id,
+            (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name,
             count(mc_id) bad_num', '', '', 'm_id');
-        if ($list) {
-            foreach ($list as $key => $value) {
-                $whereBad = [];
-                // 副柜不可用状态下，只查主柜货道
-                $sub_cabinet = $this->getMachineInfoValue(['m_id' => $value['m_id']],'sub_cabinet');
-                if (!$sub_cabinet || $sub_cabinet == 2 ) $whereBad[] = ['channel_position', '<>', 2];
-                $whereBad[] = ['m_id', '=', $value['m_id']];
-                $value['total_channel'] = $this->getMachineChannelCount($whereBad);
-                $whereBad[] = ['status', '=', 3];
-                $badList = $this->getMachineChannelColumn($whereBad, 'channel_code');
-                //badList为空时，unset掉
-                // if (count($badList) == 0) {
-                //     unset($list[$key]);
-                //     continue;
-                // }
-                $value['bad_channel'] = implode(",", $badList ?? []);
-                $value['bad_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['bad_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
-            }
+        if (!$list) return [];
+
+        $list = $list->toArray();
+        foreach ($list as $key => $value) {
+            $whereBad = [];
+            $sub_cabinet = $this->getMachineInfoValue(['m_id' => $value['m_id']], 'sub_cabinet');
+            if (!$sub_cabinet || $sub_cabinet == 2) $whereBad['channel_position'] = 1;
+            $whereBad['m_id'] = $value['m_id'];
+            $value['total_channel'] = $this->getMachineChannelCount($whereBad);
+            $whereBad['status'] = 3;
+            $badList = $this->getMachineChannelColumn($whereBad, 'channel_code');
+            $value['bad_channel'] = implode(",", $badList ?? []);
+            $value['bad_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['bad_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
+            $list[$key] = $value;
         }
         return $list;
     }
@@ -305,23 +300,21 @@ class MachineChannelClient extends ManagementClient
         $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
             (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
             count(mc_id) stock_out_num', '', '', 'm_id');
-        if ($list) {
-            foreach ($list as $key => $value) {
-                $whereStockOut = [];
+        if (!$list) return [];
 
-                // 副柜不可用状态下，只查主柜货道
-                $sub_cabinet = $this->getMachineInfoValue(['m_id' => $value['m_id']],'sub_cabinet');
-                if (!$sub_cabinet || $sub_cabinet == 2 ){
-                    $whereStockOut[] = ['channel_position', '<>', 2];
-                }
+        $list = $list->toArray();
+        foreach ($list as $key => $value) {
+            $whereStockOut = [];
+            $sub_cabinet = $this->getMachineInfoValue(['m_id' => $value['m_id']], 'sub_cabinet');
+            if (!$sub_cabinet || $sub_cabinet == 2) $whereStockOut['channel_position'] = 1;
 
-                $whereStockOut[] = ['m_id', '=', $value['m_id']];
-                $value['total_channel'] = $this->getMachineChannelCount($whereStockOut);
-                $whereStockOut[] = ['stock', '=', 0];
-                $stockOutList = $this->getMachineChannelColumn($whereStockOut, 'channel_code');
-                $value['stock_out_channel'] = implode(",", $stockOutList ?? []);
-                $value['stock_out_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['stock_out_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
-            }
+            $whereStockOut['m_id'] = $value['m_id'];
+            $value['total_channel'] = $this->getMachineChannelCount($whereStockOut);
+            $whereStockOut['stock'] = 0;
+            $stockOutList = $this->getMachineChannelColumn($whereStockOut, 'channel_code');
+            $value['stock_out_channel'] = implode(",", $stockOutList ?? []);
+            $value['stock_out_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['stock_out_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
+            $list[$key] = $value;
         }
         return $list;
     }
