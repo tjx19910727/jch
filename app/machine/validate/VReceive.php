@@ -58,6 +58,8 @@ class VReceive extends VCommon
 
         "gm_id" => "require",
         "gmg_id" => "require",
+        "trade_no" => "require",
+        "status" => "integer",
     ];
 
     protected $message = [
@@ -110,6 +112,8 @@ class VReceive extends VCommon
 
         "gm_id.require" => "VSubGoodsMultipleOrder.gm_id_require",
         "gmg_id.require" => "VSubGoodsMultipleOrder.gmg_id_require",
+
+        "trade_no.require" => "VReceive.trade_no_require",
 
     ];
 
@@ -187,6 +191,8 @@ class VReceive extends VCommon
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
         "requireOutGoods" => ["msg_id","machine_id","timestamp","sign","trade_no"],
+        "setHttpOutStatus" => ["msg_id","machine_id","timestamp","sign","trade_no","http_out_status"],
+        "triggerOutGoodsByHttp" => ["msg_id","machine_id","timestamp","sign","trade_no"],
 
         "cardAddPoints" => ["msg_id","machine_id","timestamp","card_no"],
         "getCardChangeLogs" => ["msg_id","machine_id","timestamp"],
