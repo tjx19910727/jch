@@ -69,6 +69,7 @@ use app\AppFactory\RabbitMq\MqProducer;
 use app\machine\validate\VReceive;
 use think\facade\Db;
 use think\facade\View;
+use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
@@ -1956,6 +1957,12 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail('status仅支持2/3/4');
         }
 
+        $order = $this->getSaleOrdersFind(['trade_no' => $tradeNo], 'order_id,trade_no,machine_id,out_status');
+        if (!$order) {
+            return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        }
+        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+
         // 已完成出货，避免重复闭环
         if ((int)($order['out_status'] ?? 0) === 4) {
             return $this->r(200, 'success', [
@@ -1964,13 +1971,6 @@ class ApiClient extends ReceiveBaseClient
                 'reason' => 'order out_status already 4',
             ]);
         }
-
-        $order = $this->getSaleOrdersFind(['trade_no' => $tradeNo], 'order_id,trade_no,machine_id,out_status');
-        if (!$order) {
-            return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
-        }
-        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
-
 
         $main = $this->data['main'] ?? [];
         if (is_string($main) && $main !== '') {
@@ -2019,17 +2019,42 @@ class ApiClient extends ReceiveBaseClient
             'data' => json_encode($payload, 320),
         ];
 
-        $push = MqProducer::dataUpload($mqData);
-        actionLog(['mqData' => $mqData, 'result' => $push], 'HTTP触发MQ出货闭环');
+        // 默认同步触发，确保即使MQ消费者未运行也能进入 OutGoodsTrait::outGoods。
+        $sync = isset($this->data['sync']) ? intval($this->data['sync']) : 1;
+        $syncResult = null;
+        if ($sync === 1) {
+            try {
+                $config = [
+                    'machine_id' => $mqData['machine_id'],
+                    'data' => $mqData,
+                    'mac' => $mqData['mac'],
+                ];
+                $syncResult = AppFactory::machine($config)->mq->onMessage();
+                actionLog(['mqData' => $mqData, 'syncResult' => $syncResult], 'HTTP同步触发出货闭环');
+            } catch (\Exception $e) {
+                actionException($e, 1, 'triggerOutGoodsByHttp-sync');
+                return $this->rTryCatch($e->getMessage());
+            }
+        }
 
-        if ($push !== 'OK' && $push !== true) {
+        // 可选入队：默认关闭，避免同步执行后再次被队列重复消费。
+        $enqueue = isset($this->data['enqueue']) ? intval($this->data['enqueue']) : 0;
+        $push = true;
+        if ($enqueue === 1) {
+            $push = MqProducer::dataUpload($mqData);
+            actionLog(['mqData' => $mqData, 'result' => $push], 'HTTP触发MQ出货闭环(入队)');
+        }
+
+        if ($enqueue === 1 && $push !== 'OK' && $push !== true) {
             return $this->rFail(is_string($push) ? $push : '投递MQ失败');
         }
 
         return $this->r(200, 'success', [
             'trade_no' => $tradeNo,
             'status' => $status,
-            'queued' => 1,
+            'sync' => $sync,
+            'sync_result' => $syncResult,
+            'queued' => $enqueue === 1 ? 1 : 0,
             'main_count' => count($main),
         ]);
     }
