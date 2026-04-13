@@ -73,6 +73,7 @@ class MachineChannelClient extends ManagementClient
         $machineIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"machine_id");
         if ($machineIds) {
             $where[] = ['machine_id', 'in', $machineIds];
+            $where['raw'] = "EXISTS(SELECT 1 FROM machine m WHERE m.m_id = a.m_id AND m.is_operating = 1)";
             $whereEmpty = $where;
             $whereEmpty['g_id'] = 0;
             $empty = $this->getMachineChannelCountV2($whereEmpty);
@@ -100,6 +101,105 @@ class MachineChannelClient extends ManagementClient
      */
     public function getEmptyList($where)
     {
+        $list = $this->buildEmptyListData($where);
+        return $this->rQ($list);
+    }
+
+    /**
+     * 获取Bad货道列表
+     * @param $where
+     * @return array|string
+     */
+    public function getBadList($where)
+    {
+        $list = $this->buildBadListData($where);
+        return $this->rQ($list);
+    }
+
+    /**
+     * 获取空货列表
+     * @param $where
+     * @return array|string
+     */
+    public function getStockOutList($where)
+    {
+        $list = $this->buildStockOutListData($where);
+        return $this->rQ($list);
+    }
+
+    /**
+     * 导出空槽列表
+     * @param array $where
+     * @return array|\think\response\Json
+     */
+    public function exportEmptyList($where = [])
+    {
+        $list = $this->buildEmptyListData($where);
+        if (!$list) return $this->rNoData();
+
+        $title = [
+            "machine_id" => "设备编号",
+            "machine_name" => "设备名称",
+            "total_channel" => "总货道数",
+            "empty_num" => "空槽数",
+            "empty_channel" => "空槽编号",
+            "empty_ratio" => "空槽占比",
+        ];
+        $filename = "首页-空槽列表-" . date("YmdHis");
+        return $this->sendToExport("首页-空槽列表", $filename, $title, $list);
+    }
+
+    /**
+     * 导出Bad列表
+     * @param array $where
+     * @return array|\think\response\Json
+     */
+    public function exportBadList($where = [])
+    {
+        $list = $this->buildBadListData($where);
+        if (!$list) return $this->rNoData();
+
+        $title = [
+            "machine_id" => "设备编号",
+            "machine_name" => "设备名称",
+            "total_channel" => "总货道数",
+            "bad_num" => "BAD数",
+            "bad_channel" => "BAD槽位",
+            "bad_ratio" => "BAD占比",
+        ];
+        $filename = "首页-BAD列表-" . date("YmdHis");
+        return $this->sendToExport("首页-BAD列表", $filename, $title, $list);
+    }
+
+    /**
+     * 导出空货列表
+     * @param array $where
+     * @return array|\think\response\Json
+     */
+    public function exportStockOutList($where = [])
+    {
+        $list = $this->buildStockOutListData($where);
+        if (!$list) return $this->rNoData();
+
+        $title = [
+            "machine_id" => "设备编号",
+            "machine_name" => "设备名称",
+            "total_channel" => "总货道数",
+            "stock_out_num" => "空货数",
+            "stock_out_channel" => "空货槽位",
+            "stock_out_ratio" => "空货占比",
+        ];
+        $filename = "首页-空货列表-" . date("YmdHis");
+        return $this->sendToExport("首页-空货列表", $filename, $title, $list);
+    }
+
+    /**
+     * 构建空槽列表数据
+     * @param array $where
+     * @return array
+     */
+    private function buildEmptyListData($where = [])
+    {
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) {
@@ -109,10 +209,11 @@ class MachineChannelClient extends ManagementClient
         $where[] = ['status','<>',2];
         $where['g_id'] = 0;
         $expr = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+        $exprOperating = "EXISTS(SELECT 1 FROM machine m WHERE m.m_id = a.m_id AND m.is_operating = 1)";
         if (!empty($where['raw'])) {
-            $where['raw'] .= " AND " . $expr;
+            $where['raw'] .= " AND " . $expr . " AND " . $exprOperating;
         } else {
-            $where['raw'] = $expr;
+            $where['raw'] = $expr . " AND " . $exprOperating;
         }
         $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
         (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
@@ -135,15 +236,15 @@ class MachineChannelClient extends ManagementClient
                 $value['empty_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['empty_num'], $value['total_channel'], 3), 100, 1) . "%" ): "0%";
             }
         }
-        return $this->rQ($list);
+        return $list;
     }
 
     /**
-     * 获取Bad货道列表
-     * @param $where
-     * @return array|string
+     * 构建Bad列表数据
+     * @param array $where
+     * @return array
      */
-    public function getBadList($where)
+    private function buildBadListData($where = [])
     {
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
@@ -151,10 +252,11 @@ class MachineChannelClient extends ManagementClient
         }
         $where['status'] = 3;
         $expr = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+        $exprOperating = "EXISTS(SELECT 1 FROM machine m WHERE m.m_id = a.m_id AND m.is_operating = 1)";
         if (!empty($where['raw'])) {
-            $where['raw'] .= " AND " . $expr;
+            $where['raw'] .= " AND " . $expr . " AND " . $exprOperating;
         } else {
-            $where['raw'] = $expr;
+            $where['raw'] = $expr . " AND " . $exprOperating;
         }
         $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
             (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
@@ -178,15 +280,15 @@ class MachineChannelClient extends ManagementClient
                 $value['bad_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['bad_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
             }
         }
-        return $this->rQ($list);
+        return $list;
     }
 
     /**
-     * 获取空货列表
-     * @param $where
-     * @return array|string
+     * 构建空货列表数据
+     * @param array $where
+     * @return array
      */
-    public function getStockOutList($where)
+    private function buildStockOutListData($where = [])
     {
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
@@ -194,10 +296,11 @@ class MachineChannelClient extends ManagementClient
         }
         $where['stock'] = 0;
         $expr = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+        $exprOperating = "EXISTS(SELECT 1 FROM machine m WHERE m.m_id = a.m_id AND m.is_operating = 1)";
         if (!empty($where['raw'])) {
-            $where['raw'] .= " AND " . $expr;
+            $where['raw'] .= " AND " . $expr . " AND " . $exprOperating;
         } else {
-            $where['raw'] = $expr;
+            $where['raw'] = $expr . " AND " . $exprOperating;
         }
         $list = $this->getMachineChannelList($where, 0, 'm_id,machine_id, 
             (SELECT machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name ,
@@ -211,7 +314,6 @@ class MachineChannelClient extends ManagementClient
                 if (!$sub_cabinet || $sub_cabinet == 2 ){
                     $whereStockOut[] = ['channel_position', '<>', 2];
                 }
-                    
 
                 $whereStockOut[] = ['m_id', '=', $value['m_id']];
                 $value['total_channel'] = $this->getMachineChannelCount($whereStockOut);
@@ -221,7 +323,7 @@ class MachineChannelClient extends ManagementClient
                 $value['stock_out_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['stock_out_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
             }
         }
-        return $this->rQ($list);
+        return $list;
     }
 
     /**

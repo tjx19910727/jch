@@ -105,8 +105,10 @@ class MachineBaseClient extends BaseClient
                 actionLog("发送在线通知抛出异常");
                 actionException($e,1);
             }
+
         }
     }
+
 
     /**
      * 记录接收到的上报数据

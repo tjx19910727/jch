@@ -41,6 +41,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineCalibrationConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
@@ -100,6 +101,7 @@ class ApiClient extends ReceiveBaseClient
         GoodsMultipleGoodsTrait,
         GoodsMultipleMachineTrait,
         MachineViewTrait,
+        MachineCalibrationConfigTrait,
         MachineConfigTrait,
         MachineConfigLangTrait,
         MachineInfoTrait,
@@ -269,6 +271,183 @@ class ApiClient extends ReceiveBaseClient
     {
         $result = $this->getMachineLangList(['m_id' => $this->machine['m_id']]);
         return $this->rQ($result);
+    }
+
+    /**
+     * 获取并同步设备校准页配置
+     *
+     * 规则：
+     * 1. 数据库为空时，以设备上报配置初始化；
+     * 2. 设备版本大于数据库版本时，写入新版本全量配置；
+     * 3. 版本相同或更小，不改数据库，仅返回当前最新版本。
+     *
+     * @return array|\think\response\Json
+     */
+    public function machineCalibrationConfig()
+    {
+        $mId = $this->machine['m_id'];
+        //获取machine信息
+        $machineData = $this->getMachineFind(['m_id' => $mId], "machine_id");
+        $incomingList = $this->getIncomingCalibrationList();
+        $incomingVersion = isset($this->data['version']) && $this->data['version'] !== '' ? intval($this->data['version']) : 0;
+
+        $latestRow = $this->getMachineCalibrationConfigFind(['m_id' => $mId], 'version,id', 'id desc');
+        $latestVersion = $latestRow ? intval($latestRow['version']) : 0;
+
+        if ($latestVersion <= 0) {
+            if (!empty($incomingList)) {
+                $initVersion = $incomingVersion > 0 ? $incomingVersion : 1;
+                $this->insertCalibrationRows($incomingList, $mId, $machineData['machine_id'] ?? '', $initVersion);
+                $latestVersion = $initVersion;
+            }
+        } elseif ($incomingVersion > $latestVersion && !empty($incomingList)) {
+            $this->insertCalibrationRows($incomingList, $mId, $machineData['machine_id'] ?? '', $incomingVersion);
+            $latestVersion = $incomingVersion;
+        } else {
+            $latestVersion = $incomingVersion > $latestVersion ? $incomingVersion : $latestVersion;
+        }
+
+
+        $list = $this->getMachineCalibrationConfigList(
+            ['m_id' => $mId, 'version' => $latestVersion],
+            0,
+            'key,value,value_type,version',
+            'id asc'
+        );
+        $list = $list ? $list->toArray() : [];
+        $res = [];
+        if ($list) {
+            foreach ($list as $k => $item) {
+                $res['version'] = intval($item['version']);
+                $res[$item['key']] = $this->castCalibrationValueByType($item['value'], $item['value_type'] ?? 'string');
+            }
+        }
+        return $this->rQ($res);
+    }
+
+    /**
+     * 兼容不同字段名，获取设备上传的校准配置数组
+     * @return array
+     */
+    protected function getIncomingCalibrationList()
+    {
+        $list = [];
+        if (isset($this->data['data']) && is_array($this->data['data'])) {
+            $list = $this->data['data'];
+        } elseif (isset($this->data['data']) && is_string($this->data['data']) && $this->data['data'] !== '') {
+            $decodeData = json2arr($this->data['data']);
+            if (is_array($decodeData)) {
+                $list = $decodeData;
+            }
+        } 
+        return $list;
+    }
+
+    /**
+     * 写入某一版本的全量校准配置
+     * @param array $rows
+     * @param int $mId
+     * @param string $machineId
+     * @param string $version
+     */
+    protected function insertCalibrationRows($rows, $mId, $machine_id, $version)
+    {
+        $seenKey = [];
+        foreach ($rows as $row) {
+            if (!isset($row['key']) || $row['key'] === '') {
+                continue;
+            }
+            $key = $row['key'];
+            if (isset($seenKey[$key])) {
+                continue;
+            }
+            $seenKey[$key] = 1;
+
+            // 幂等保护：同设备同版本同key存在则不重复写入。
+            $exists = $this->getMachineCalibrationConfigValue(['m_id' => $mId, 'version' => $version, 'key' => $key], 'id', 'version desc');
+            if ($exists) {
+                continue;
+            }
+
+            $title = isset($row['title']) && $row['title'] !== '' ? $row['title'] : $key;
+            $valueType = $this->detectCalibrationValueType($row['value'] ?? null, $row['value_type'] ?? '');
+            $value = $this->normalizeCalibrationValueForStorage($row['value'] ?? null, $valueType);
+            $this->addMachineCalibrationConfig([
+                'm_id' => $mId,
+                'machine_id' => $machine_id,
+                'name' => $title,
+                'version' => $version,
+                'key' => $key,
+                'value' => $value,
+                'value_type' => $valueType,
+                'desc' => isset($row['desc']) ? $row['desc'] : '',
+            ]);
+        }
+    }
+
+    /**
+     * 根据前端传入值判断配置值类型
+     * @param mixed $value
+     * @param string $inputType
+     * @return string
+     */
+    protected function detectCalibrationValueType($value, $inputType = '')
+    {
+        $inputType = strtolower((string)$inputType);
+        if (in_array($inputType, ['string', 'int', 'float', 'bool'], true)) {
+            return $inputType;
+        }
+        if (is_bool($value)) {
+            return 'bool';
+        }
+        if (is_int($value)) {
+            return 'int';
+        }
+        if (is_float($value)) {
+            return 'float';
+        }
+        return 'string';
+    }
+
+    /**
+     * 入库前统一转为字符串存储
+     * @param mixed $value
+     * @param string $valueType
+     * @return string
+     */
+    protected function normalizeCalibrationValueForStorage($value, $valueType)
+    {
+        if ($value === null) {
+            return '';
+        }
+        if ($valueType === 'bool') {
+            return $value ? '1' : '0';
+        }
+        return (string)$value;
+    }
+
+    /**
+     * 按 value_type 将字符串值转换回对应类型
+     * @param mixed $value
+     * @param string $valueType
+     * @return mixed
+     */
+    protected function castCalibrationValueByType($value, $valueType)
+    {
+        switch ((string)$valueType) {
+            case 'int':
+                return intval($value);
+            case 'float':
+                return floatval($value);
+            case 'bool':
+                if (is_bool($value)) {
+                    return $value;
+                }
+                $v = strtolower(trim((string)$value));
+                return in_array($v, ['1', 'true', 'yes', 'on'], true);
+            default:
+                return (string)$value;
+        }
     }
 
     /**
@@ -907,9 +1086,10 @@ class ApiClient extends ReceiveBaseClient
                         }
                         $wc_order_no = [];
                         foreach ($wc_goods_locals as $wc_goods_local) {
+                            $wcLocalGid = $wc_goods_local['g_id'] ?? '9999';
                             $total_sod_points += $wc_goods_local['gift_points'];
-                            if ($wc_goods_local['g_id'] != '9999' && $wc_goods_local['g_id'] != '0') {
-                                $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
+                            if ($wcLocalGid != '9999' && $wcLocalGid != '0') {
+                                $machine_channel = $this->getMachineChannelFind(['g_id' => $wcLocalGid, 'm_id' => $this->machine['m_id']]);
                                 if ($machine_channel) {
                                     $machine_channel = $machine_channel->toArray();
                                     $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : 'Z10';
@@ -923,7 +1103,7 @@ class ApiClient extends ReceiveBaseClient
                                 'order_date' => $value['order_date'], //房态商品订房日期
                                 'quantity' => $value['quantity'] ?? 0, //微程商品数量
                                 'total_price' => $total_price, //不同类型商品不同的价格
-                                'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0, //是否需要本机出货  0-否 1-是
+                                'need_local_out_goods' => $wcLocalGid ? 1 : 0, //是否需要本机出货  0-否 1-是
                                 'out_goods_status' => 0, //出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
                                 'real_channel_code' => $real_channel_code, //实际出货货道
                                 'total_sod_points' => $total_sod_points, //子订单微程商品赠送积分
@@ -1285,7 +1465,7 @@ class ApiClient extends ReceiveBaseClient
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
                         } else {
                             $this->rollbackTrans();
-                            return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                            return $this->r(100, $this->lang("VAAAAAAAAAAAAAAAAAAAAAA.make_order_details_fail"));
                         }
                     }
                     if ($value['sod_price'] != $sod_price) {
