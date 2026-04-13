@@ -1470,3 +1470,5 @@ CREATE TABLE `topic_page_machine` (
   KEY `idx_topic_id` (`topic_id`) USING BTREE,
   KEY `idx_m_id` (`m_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主题页分配设备表';
+
+ALTER TABLE kiosk.machine_config ADD `raster_state` tinyint(1) NOT NULL DEFAULT 1 COMMENT '取货后是否开启光栅检测：1开 2关闭' after `backsweeper`;
