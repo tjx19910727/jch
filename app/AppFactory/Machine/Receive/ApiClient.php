@@ -41,6 +41,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+1use app\AppFactory\Kernel\Traits\Machine\MachineCalibrationConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
@@ -100,6 +101,7 @@ class ApiClient extends ReceiveBaseClient
         GoodsMultipleGoodsTrait,
         GoodsMultipleMachineTrait,
         MachineViewTrait,
+        MachineCalibrationConfigTrait,
         MachineConfigTrait,
         MachineConfigLangTrait,
         MachineInfoTrait,
@@ -139,6 +141,7 @@ class ApiClient extends ReceiveBaseClient
 
 
     public $card_retail_price = 0.01;
+    public $card_default_pwd = '123456';
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
@@ -271,6 +274,183 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 获取并同步设备校准页配置
+     *
+     * 规则：
+     * 1. 数据库为空时，以设备上报配置初始化；
+     * 2. 设备版本大于数据库版本时，写入新版本全量配置；
+     * 3. 版本相同或更小，不改数据库，仅返回当前最新版本。
+     *
+     * @return array|\think\response\Json
+     */
+    public function machineCalibrationConfig()
+    {
+        $mId = $this->machine['m_id'];
+        //获取machine信息
+        $machineData = $this->getMachineFind(['m_id' => $mId], "machine_id");
+        $incomingList = $this->getIncomingCalibrationList();
+        $incomingVersion = isset($this->data['version']) && $this->data['version'] !== '' ? intval($this->data['version']) : 0;
+
+        $latestRow = $this->getMachineCalibrationConfigFind(['m_id' => $mId], 'version,id', 'id desc');
+        $latestVersion = $latestRow ? intval($latestRow['version']) : 0;
+
+        if ($latestVersion <= 0) {
+            if (!empty($incomingList)) {
+                $initVersion = $incomingVersion > 0 ? $incomingVersion : 1;
+                $this->insertCalibrationRows($incomingList, $mId, $machineData['machine_id'] ?? '', $initVersion);
+                $latestVersion = $initVersion;
+            }
+        } elseif ($incomingVersion > $latestVersion && !empty($incomingList)) {
+            $this->insertCalibrationRows($incomingList, $mId, $machineData['machine_id'] ?? '', $incomingVersion);
+            $latestVersion = $incomingVersion;
+        } else {
+            $latestVersion = $incomingVersion > $latestVersion ? $incomingVersion : $latestVersion;
+        }
+
+
+        $list = $this->getMachineCalibrationConfigList(
+            ['m_id' => $mId, 'version' => $latestVersion],
+            0,
+            'key,value,value_type,version',
+            'id asc'
+        );
+        $list = $list ? $list->toArray() : [];
+        $res = [];
+        if ($list) {
+            foreach ($list as $k => $item) {
+                $res['version'] = intval($item['version']);
+                $res[$item['key']] = $this->castCalibrationValueByType($item['value'], $item['value_type'] ?? 'string');
+            }
+        }
+        return $this->rQ($res);
+    }
+
+    /**
+     * 兼容不同字段名，获取设备上传的校准配置数组
+     * @return array
+     */
+    protected function getIncomingCalibrationList()
+    {
+        $list = [];
+        if (isset($this->data['data']) && is_array($this->data['data'])) {
+            $list = $this->data['data'];
+        } elseif (isset($this->data['data']) && is_string($this->data['data']) && $this->data['data'] !== '') {
+            $decodeData = json2arr($this->data['data']);
+            if (is_array($decodeData)) {
+                $list = $decodeData;
+            }
+        } 
+        return $list;
+    }
+
+    /**
+     * 写入某一版本的全量校准配置
+     * @param array $rows
+     * @param int $mId
+     * @param string $machineId
+     * @param string $version
+     */
+    protected function insertCalibrationRows($rows, $mId, $machine_id, $version)
+    {
+        $seenKey = [];
+        foreach ($rows as $row) {
+            if (!isset($row['key']) || $row['key'] === '') {
+                continue;
+            }
+            $key = $row['key'];
+            if (isset($seenKey[$key])) {
+                continue;
+            }
+            $seenKey[$key] = 1;
+
+            // 幂等保护：同设备同版本同key存在则不重复写入。
+            $exists = $this->getMachineCalibrationConfigValue(['m_id' => $mId, 'version' => $version, 'key' => $key], 'id', 'version desc');
+            if ($exists) {
+                continue;
+            }
+
+            $title = isset($row['title']) && $row['title'] !== '' ? $row['title'] : $key;
+            $valueType = $this->detectCalibrationValueType($row['value'] ?? null, $row['value_type'] ?? '');
+            $value = $this->normalizeCalibrationValueForStorage($row['value'] ?? null, $valueType);
+            $this->addMachineCalibrationConfig([
+                'm_id' => $mId,
+                'machine_id' => $machine_id,
+                'name' => $title,
+                'version' => $version,
+                'key' => $key,
+                'value' => $value,
+                'value_type' => $valueType,
+                'desc' => isset($row['desc']) ? $row['desc'] : '',
+            ]);
+        }
+    }
+
+    /**
+     * 根据前端传入值判断配置值类型
+     * @param mixed $value
+     * @param string $inputType
+     * @return string
+     */
+    protected function detectCalibrationValueType($value, $inputType = '')
+    {
+        $inputType = strtolower((string)$inputType);
+        if (in_array($inputType, ['string', 'int', 'float', 'bool'], true)) {
+            return $inputType;
+        }
+        if (is_bool($value)) {
+            return 'bool';
+        }
+        if (is_int($value)) {
+            return 'int';
+        }
+        if (is_float($value)) {
+            return 'float';
+        }
+        return 'string';
+    }
+
+    /**
+     * 入库前统一转为字符串存储
+     * @param mixed $value
+     * @param string $valueType
+     * @return string
+     */
+    protected function normalizeCalibrationValueForStorage($value, $valueType)
+    {
+        if ($value === null) {
+            return '';
+        }
+        if ($valueType === 'bool') {
+            return $value ? '1' : '0';
+        }
+        return (string)$value;
+    }
+
+    /**
+     * 按 value_type 将字符串值转换回对应类型
+     * @param mixed $value
+     * @param string $valueType
+     * @return mixed
+     */
+    protected function castCalibrationValueByType($value, $valueType)
+    {
+        switch ((string)$valueType) {
+            case 'int':
+                return intval($value);
+            case 'float':
+                return floatval($value);
+            case 'bool':
+                if (is_bool($value)) {
+                    return $value;
+                }
+                $v = strtolower(trim((string)$value));
+                return in_array($v, ['1', 'true', 'yes', 'on'], true);
+            default:
+                return (string)$value;
+        }
+    }
+
+    /**
      * 设备商品信息
      * @return array|string
      */
@@ -334,6 +514,26 @@ class ApiClient extends ReceiveBaseClient
         }
         actionLog($mcList, '返回的货道数据');
         return $this->r(200, "SUCCESS", $mcList);
+    }
+
+    /**
+     * http请求设备故障码上报接口
+     * @return array|\think\response\Json
+     */
+    public function sendErro()
+    {
+        try {
+            $this->message = [
+                "errorCode" => $this->data['errorCode'] ?? "",
+                "msg" => $this->data['msg'] ?? "",
+                "error_position" => $this->data['error_position'] ?? "",
+            ];
+            $this->errorCode();
+            return $this->r(200, $this->lang("action_success"));
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 
     /**
@@ -1517,7 +1717,6 @@ class ApiClient extends ReceiveBaseClient
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         $this->order = is_object($order) ? (method_exists($order,'toArray') ? $order->toArray() : (array)$order) : $order;
-
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']])->toArray();
         if (!$details || !is_array($details)) {
             return $this->r(100, 'failed', []);
@@ -1659,8 +1858,6 @@ class ApiClient extends ReceiveBaseClient
          ];
 
         $this->order['out_status'] = 2;
-        $this->order['pay_status'] = 3;
-        $this->order['pay_time'] = $this->order['pay_time'] ?: time();
         try {
             $this->updateSaleOrders($this->order);
         } catch (\Exception $e) {
@@ -1677,6 +1874,47 @@ class ApiClient extends ReceiveBaseClient
         // }
 
         return $this->r(200, 'success', $content);
+    }
+     
+    //设备设置订单http_out_status状态，供Http兜底方案使用
+    public function setHttpOutStatus()
+    {
+        $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
+        if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        try {
+            $this->updateSaleOrders(['trade_no' => $this->data['trade_no'], 'http_out_status' => intval($this->data['http_out_status'])]);
+        } catch (\Exception $e) {
+            actionException($e);
+            return $this->rTryCatch($e->getMessage());
+        }
+        return $this->r(200, 'success');
+    }
+
+
+    /**
+     * 获取订单支付状态
+     * 支持 trade_no / order_id 二选一查询
+     * @return array
+     */
+    public function getOrderPayStatus()
+    {
+        $where = [];
+        if (!empty($this->data['trade_no'])) {
+            $where['trade_no'] = $this->data['trade_no'];
+        } elseif (!empty($this->data['order_id'])) {
+            $where['order_id'] = intval($this->data['order_id']);
+        } else {
+            return $this->r(100, 'trade_no 或 order_id 不能为空');
+        }
+
+        $field = 'order_id,trade_no,mch_no,pay_status,pay_type,pay_method,out_status,refund_status,total_price,refund_amount,create_time,pay_time,out_time,http_out_status';
+        $order = $this->getSaleOrdersFind($where, $field);
+        if (!$order) {
+            return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        }
+
+        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+        return $this->r(200, 'success', $order);
     }
 
 
@@ -1746,7 +1984,7 @@ class ApiClient extends ReceiveBaseClient
                 //机台登录会员后，无订单刷卡场景，直接把卡积分同步到微程会员
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
                 if (!$card) {
-                    $this->addCard(['card_no' => $this->data['card_no']]);
+                    $this->addCard(['card_no' => $this->data['card_no'],'password' => md5($this->card_default_pwd.config('app.salt') . $this->data['card_no']),'status'=>1,'activation_time'=>time()]);
                     $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                 }
                 if (!empty($card['bind_id']) && ($card['bind_id'] != $this->data['bind_id']))  return $this->r(200, 'failed', '感应卡已绑定其他会员！！！');
@@ -1773,6 +2011,39 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 检查本次余额支付是否需要支付密码
+     * 规则：未登录，或登录手机号与卡绑定手机号不一致时，需要输入支付密码
+     * @return array|\think\response\Json
+     */
+    public function checkBalancePayPassword()
+    {
+        try {
+            $cardNo = trim($this->data['card_no'] ?? '');
+            $bindId = trim($this->data['bind_id'] ?? '');
+            if (!$cardNo) {
+                return $this->r(100, 'failed', 'card_no不能为空');
+            }
+
+            $card = $this->getCardFind(['card_no' => $cardNo], 'card_no,bind_id,password');
+            if (!$card) {
+                return $this->r(100, 'failed', '找不到对应的积分卡');
+            }
+
+            $needPayPassword = empty($bindId) || empty($card['bind_id']) || ((string)$bindId !== (string)$card['bind_id']);
+            $data = [
+                'card_no' => $cardNo,
+                'bind_id' => $bindId,
+                'card_bind_id' => $card['bind_id'] ?? '',
+                'need_pay_password' => $needPayPassword ? 1 : 0,
+                'has_pay_password' => empty($card['password']) ? 0 : 1,
+            ];
+            return $this->r(200, 'success', $data);
+        } catch (\Exception $e) {
+            return $this->rFail($e->getMessage());
+        }
+    }
+
+    /**
      * 获取积分变化类型
      * @return array|\think\response\Json
      * @throws \Exception
@@ -1782,15 +2053,17 @@ class ApiClient extends ReceiveBaseClient
         $card_points_lists = [];
         $new_data = [];
         $total_card_points = 0;
+        $total_balance = '0.00';
         $card_info = [];
         $bind_id = '';
+        $card_one = [];
         try {
             if (isset($this->data['bind_id']) && !empty($this->data['bind_id'])) {
                 //先判断当前登录账号登录信息是否绑定了当前传入的卡号，如果为绑定，提示用户绑卡
                 if (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                     $card_info = $this->getCardFind(['card_no' => $this->data['card_no']]);
                     if (!$card_info) {
-                        $this->addCard(['card_no' => $this->data['card_no']]);
+                        $this->addCard(['card_no' => $this->data['card_no'],'password' => md5($this->card_default_pwd.config('app.salt') . $this->data['card_no']),'status'=>1,'activation_time'=>time()]);
                         $card_info = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                     }
                     if (!$card_info['bind_id'])
@@ -1821,7 +2094,7 @@ class ApiClient extends ReceiveBaseClient
             } elseif (isset($this->data['card_no']) && !empty($this->data['card_no'])) {
                 $card = $this->getCardFind(['card_no' => $this->data['card_no']]);
                 if (!$card) {
-                    $this->addCard(['card_no' => $this->data['card_no']]);
+                    $this->addCard(['card_no' => $this->data['card_no'],'password' => md5($this->card_default_pwd.config('app.salt') . $this->data['card_no']),'status'=>1,'activation_time'=>time()]);
                     $card = $this->getCardFind(['card_no' => $this->data['card_no']])->toArray();
                 }
                 //查询此卡关联的会员id
@@ -1860,6 +2133,18 @@ class ApiClient extends ReceiveBaseClient
             $res['bind_id'] = $bind_id;
             $res['bind_id_points'] = $bind_id_points;
             $res['total_points'] = $res['total_card_points'] + $res['bind_id_points'];
+            $currentCardNo = trim((string)($this->data['card_no'] ?? ''));
+            if ($currentCardNo !== '') {
+                $summary = $this->getCardBalanceSummary($currentCardNo);
+                $total_balance = (string)($summary['available_balance'] ?? '0.00');
+            }
+            $res['total_balance'] = $total_balance;
+            //用户是否需要输入密码
+            $res['need_pay_password'] = 1;
+            $check_password = md5(config('app.salt') . $this->data['card_no']);
+            if(!empty($card['password']) && $card['password'] == $check_password){
+                $res['need_pay_password'] = 0;
+            }
             return $this->r(200, 'success', $res);
         } catch (\Exception $e) {
             $this->rollbackTrans();
