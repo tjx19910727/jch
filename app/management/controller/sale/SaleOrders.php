@@ -668,9 +668,12 @@ class SaleOrders extends Common
         if ($isProcessed == 2) {
             $where['raw'] .= " AND (se.status = 2 OR se.status IS NULL)";
         }
-        if ($this->authMchCannel()['status'] != 0) {
+        $authMch = $this->authMchCannel();
+        if (($authMch['status'] ?? 0) != 0) {
+            $mcIds = $authMch['data']['mc_id'] ?? [];
+            if (empty($mcIds)) return $this->app->machine->rNoData();
             $orderIds = Db::name('sale_orders_details')
-                ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
+                ->whereIn('mc_id', $mcIds)
                 ->field('order_id')
                 ->select();
 
@@ -742,9 +745,12 @@ class SaleOrders extends Common
         if ($isProcessed == 2) {
             $where['raw'] .= " AND (se.status = 2 OR se.status IS NULL)";
         }
-        if ($this->authMchCannel()['status'] != 0) {
+        $authMch = $this->authMchCannel();
+        if (($authMch['status'] ?? 0) != 0) {
+            $mcIds = $authMch['data']['mc_id'] ?? [];
+            if (empty($mcIds)) return $this->app->machine->rNoData();
             $orderIds = Db::name('sale_orders_details')
-                ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
+                ->whereIn('mc_id', $mcIds)
                 ->field('order_id')
                 ->select();
 
