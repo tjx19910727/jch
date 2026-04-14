@@ -26,75 +26,100 @@ trait OutGoodsTrait
         }
         $this->order = $this->order->toArray();
 
-        // 设备状态上报映射：status=2->out_status=3，status=3->out_status=4，status=4->out_status=5
-        $status = isset($this->message['status']) ? (int)$this->message['status'] : 0;
-        $statusMap = [
-            2 => 3,
-            3 => 4,
-            4 => 5,
-        ];
-        if ($status && isset($statusMap[$status]) && $this->order['out_status'] != 6) {
-            // 防止状态回退
-            if ($statusMap[$status] >= (int)$this->order['out_status']) {
-                $this->order['out_status'] = $statusMap[$status];
+        // 加分布式/进程锁：防止同一 trade_no 被并发处理（例如 HTTP 兜底触发 + MQ 消费同时到达）
+        $tradeNo = $this->message['trade_no'] ?? '';
+        $lockKey = $tradeNo ? "outGoods_lock_" . $tradeNo : null;
+        if ($lockKey) {
+            // 如果存在锁，记录并跳过处理
+            if (cache($lockKey)) {
+                actionLog($this->message, 'outGoods 已有锁，跳过重复处理', 'OutGoods');
+                return $this->rFail("订单正在处理中");
             }
-            if (in_array($status, [3, 4])) {
-                $this->order['out_time'] = time();
+            // 30 秒短超时，保证即使处理异常也能很快释放
+            cache($lockKey, 1, 30);
+        }
+
+        try {
+            // 设备状态上报映射：status=2->out_status=3，status=3->out_status=4，status=4->out_status=5
+            $status = isset($this->message['status']) ? (int)$this->message['status'] : 0;
+            $statusMap = [
+                2 => 3,
+                3 => 4,
+                4 => 5,
+            ];
+            if ($status && isset($statusMap[$status]) && $this->order['out_status'] != 6) {
+                // 防止状态回退
+                if ($statusMap[$status] >= (int)$this->order['out_status']) {
+                    $this->order['out_status'] = $statusMap[$status];
+                }
+                if (in_array($status, [3, 4])) {
+                    $this->order['out_time'] = time();
+                }
+                $this->order['remark'] = "接收到出货状态上报,status=" . $status;
             }
-            $this->order['remark'] = "接收到出货状态上报,status=" . $status;
-        }
 
-        // status=2 表示设备已接收指令，直接更新订单状态即可
-        if ($status === 2) {
-            $result = $this->updateSaleOrders($this->order);
-            actionLog($this->order, '收到status=2，更新订单出货状态', 'OutGoods');
-            actionLog($this->getLS(), '【SQL】修改订单(status=2回执)', 'OutGoods');
-            return $this->rAction($result);
-        }
+            // status=2 表示设备已接收指令，直接更新订单状态即可
+            if ($status === 2) {
+                $result = $this->updateSaleOrders($this->order);
+                actionLog($this->order, '收到status=2，更新订单出货状态', 'OutGoods');
+                actionLog($this->getLS(), '【SQL】修改订单(status=2回执)', 'OutGoods');
+                return $this->rAction($result);
+            }
 
-        // 仅状态回执（无main）
-        if (empty($this->message['main']) && in_array($status, [3, 4])) {
-            $result = $this->updateSaleOrders($this->order);
-            actionLog($this->order, '仅状态回执，更新订单出货状态', 'OutGoods');
-            actionLog($this->getLS(), '【SQL】修改订单(仅状态回执)', 'OutGoods');
-            return $this->rAction($result);
-        }
+            // 仅状态回执（无main）
+            if (empty($this->message['main']) && in_array($status, [3, 4])) {
+                $result = $this->updateSaleOrders($this->order);
+                actionLog($this->order, '仅状态回执，更新订单出货状态', 'OutGoods');
+                actionLog($this->getLS(), '【SQL】修改订单(仅状态回执)', 'OutGoods');
+                return $this->rAction($result);
+            }
 
-        if ($this->order['out_status'] >= 4 && $this->order['out_status'] != 6) {
-            actionLog($this->order,'订单已处理过了','OutGoods');
-            return $this->rFail("订单已处理过了");
-        }
-        if (empty($this->message['main'])) {
-            actionLog($this->message, '缺少main主体数据', 'OutGoods');
-            return $this->rFail("主体数据不能为空");
-        }
+            if ($this->order['out_status'] >= 4 && $this->order['out_status'] != 6) {
+                actionLog($this->order,'订单已处理过了','OutGoods');
+                return $this->rFail("订单已处理过了");
+            }
+            if (empty($this->message['main'])) {
+                actionLog($this->message, '缺少main主体数据', 'OutGoods');
+                return $this->rFail("主体数据不能为空");
+            }
 //        $this->startTrans();
-        try {// 处理修改订单及货道数据
-            $flag = $this->handleData();
-            if ($this->order['coupon_id']) {
-                $this->handleCoupon();
-            }
-            if ($this->order['apc_id']) {
-                $this->handlePick();
-            }
-            if ($this->order['lottery_id']) {
-                $this->handleLottery();
-            }
-            if ($this->order['fd_id']) {
-                $this->handleFd();
-            }
-            $result = $this->checkFlag($flag);
-            if ($result) {
+            try {// 处理修改订单及货道数据
+                $flag = $this->handleData();
+                if ($this->order['coupon_id']) {
+                    $this->handleCoupon();
+                }
+                if ($this->order['apc_id']) {
+                    $this->handlePick();
+                }
+                if ($this->order['lottery_id']) {
+                    $this->handleLottery();
+                }
+                if ($this->order['fd_id']) {
+                    $this->handleFd();
+                }
+                $result = $this->checkFlag($flag);
+                if ($result) {
 //                $this->commitTrans();
-                $this->handleTripPayCallback();
-            }
+                    $this->handleTripPayCallback();
+                }
 //            else
 //                $this->rollbackTrans();
-            return $this->rAction($result);
-        } catch (\Exception $e) {
+                return $this->rAction($result);
+            } catch (\Exception $e) {
 //            $this->rollbackTrans();
-            actionException($e,1,'OutGoods');
-            return $this->rTryCatch($e->getMessage());
+                actionException($e,1,'OutGoods');
+                return $this->rTryCatch($e->getMessage());
+            }
+        } finally {
+            if ($lockKey) {
+                // 释放锁
+                try {
+                    cache($lockKey, null);
+                } catch (\Exception $e) {
+                    // 即便释放锁失败也不应影响业务流程，记录异常
+                    actionLog($e->getMessage(), '释放 outGoods 锁失败', 'OutGoods');
+                }
+            }
         }
     }
 
