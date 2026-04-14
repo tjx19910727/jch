@@ -62,6 +62,7 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
+use app\AppFactory\Kernel\Traits\Template\TopicPageTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
@@ -116,6 +117,7 @@ class ApiClient extends ReceiveBaseClient
         MachineHelpTrait,
         MachineOnOffTrait,
         MachineTrait,
+        TopicPageTrait,
         TemplateViewTrait,
 
         EarthCountriesTrait,
@@ -820,6 +822,56 @@ class ApiClient extends ReceiveBaseClient
                 }
             }
         }
+        return $this->rQ($data);
+    }
+
+    /**
+     * 获取设备当前主题配置
+     * @return array|\think\response\Json
+     */
+    public function topicPage()
+    {
+        $data = [
+            'top_logo' => '',
+            'bg_url' => '',
+            'maintenance_bg' => '',
+            'error_url' => '',
+            'closed_url' => '',
+            'verification_url' => '',
+            'pickup_url' => '',
+            'shipping_url' => '',
+            'pickup_qrcode_1' => '',
+            'pickup_qrcode_2' => '',
+            'qr_code_url' => '',
+            'scan_url' => '',
+            'balance_url' => '',
+            'card_url' => '',
+        ];
+        
+        $topicIds = $this->getTopicPageMachineColumn(['machine_id' => $this->machine['machine_id']], 'topic_id');
+        if (!$topicIds) {
+            return $this->rQ($data);
+        }
+
+        $topicIds = array_values(array_unique(array_filter($topicIds)));
+        if (!$topicIds) {
+            return $this->rQ($data);
+        }
+        $field = implode(',', array_keys($data));
+        $topic = $this->getTopicPageFind([
+            ['id', 'in', $topicIds],
+            ['status', '=', 1],
+        ], $field, 'id desc');
+
+        if ($topic) {
+            $topic = $topic->toArray();
+            foreach ($data as $key => $value) {
+                if (isset($topic[$key]) && $topic[$key] !== '' && $topic[$key] !== null) {
+                    $data[$key] = $topic[$key];
+                }
+            }
+        }
+
         return $this->rQ($data);
     }
 

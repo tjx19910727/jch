@@ -1459,3 +1459,38 @@ CREATE TABLE `machine_calibration_config` (
 #20260408--设备在营标记
 ALTER TABLE kiosk.machine
   ADD COLUMN `is_operating` tinyint(1) NOT NULL DEFAULT 2 COMMENT '在营状态，1-在营 2-在库' AFTER `status`;
+
+#20260410~19:20
+CREATE TABLE `topic_page` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `top_logo` varchar(255) NOT NULL DEFAULT '' COMMENT '顶部logo',
+  `bg_url` varchar(255) NOT NULL DEFAULT '' COMMENT '背景图',
+  `maintenance_bg` varchar(255) NOT NULL DEFAULT '' COMMENT '维护页背景图',
+  `error_url` varchar(255) NOT NULL DEFAULT '' COMMENT '错误页背景图',
+  `closed_url` varchar(255) NOT NULL DEFAULT '' COMMENT '暂停营业背景图',
+  `verification_url` varchar(255) NOT NULL DEFAULT '' COMMENT '核销背景图',
+  `pickup_url` varchar(255) NOT NULL DEFAULT '' COMMENT '取货页广告图',
+  `shipping_url` varchar(255) NOT NULL DEFAULT '' COMMENT '出货页广告图',
+  `pickup_qrcode_1` varchar(255) NOT NULL DEFAULT '' COMMENT '出/取货图片1',
+  `pickup_qrcode_2` varchar(255) NOT NULL DEFAULT '' COMMENT '出/取货图片2',
+  `scan_url` varchar(255) NOT NULL DEFAULT '' COMMENT '支付页反扫图',
+  `qr_code_url` varchar(255) NOT NULL DEFAULT '' COMMENT '支付页扫码图',
+  `balance_url` varchar(255) NOT NULL DEFAULT '' COMMENT '支付页余额支付图',
+  `card_url` varchar(255) NOT NULL DEFAULT '' COMMENT '支付页刷卡图',
+  `manager_id` int(11) NOT NULL DEFAULT 0 COMMENT '管理员ID',
+  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态 1启用 2禁用',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_manager_id` (`manager_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主题页表';
+
+CREATE TABLE `topic_page_machine` (
+  `topic_id` int(11) NOT NULL DEFAULT 0 COMMENT '主题页ID',
+  `m_id` int(11) NOT NULL DEFAULT 0 COMMENT '设备m_id',
+  `machine_id` varchar(255) NOT NULL DEFAULT '' COMMENT '设备编码',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_topic_id` (`topic_id`) USING BTREE,
+  KEY `idx_m_id` (`m_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主题页分配设备表';
+
+ALTER TABLE kiosk.machine_config ADD `raster_state` tinyint(1) NOT NULL DEFAULT 1 COMMENT '取货后是否开启光栅检测：1开 2关闭' after `backsweeper`;

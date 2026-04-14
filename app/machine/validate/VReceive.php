@@ -133,6 +133,7 @@ class VReceive extends VCommon
         "getMachineInfo" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineConfig" => ["msg_id","machine_id","timestamp","sign"],
         "getCalibrationConfig" => ["msg_id","machine_id","timestamp","sign"],
+        "getTopicPage" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineConfigLangList" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineOnOff" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineHelp" => ["msg_id","machine_id","timestamp","sign"],
