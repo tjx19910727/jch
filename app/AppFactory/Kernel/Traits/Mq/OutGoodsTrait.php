@@ -26,17 +26,83 @@ trait OutGoodsTrait
         }
         $this->order = $this->order->toArray();
 
-        // 加分布式/进程锁：防止同一 trade_no 被并发处理（例如 HTTP 兜底触发 + MQ 消费同时到达）
+        // 使用 Redis 分布式锁：防止同一 trade_no 被并发处理（例如 HTTP 兜底触发 + MQ 消费同时到达）
         $tradeNo = $this->message['trade_no'] ?? '';
         $lockKey = $tradeNo ? "outGoods_lock_" . $tradeNo : null;
+        /** @var \Redis|null $redis */
+        $redis = null;
+        $lockVal = null;
+        $lockTtl = 60; // seconds, safety TTL in Redis
+        $lockAcquired = false;
+
         if ($lockKey) {
-            // 如果存在锁，记录并跳过处理
-            if (cache($lockKey)) {
-                actionLog($this->message, 'outGoods 已有锁，跳过重复处理', 'OutGoods');
-                return $this->rFail("订单正在处理中");
+            try {
+                $redisConfig = config('redis') ?: [];
+                $host = $redisConfig['host'] ?? '127.0.0.1';
+                $port = $redisConfig['port'] ?? 6379;
+                $timeout = $redisConfig['timeout'] ?? 0;
+                if (!class_exists('Redis')) {
+                    throw new \Exception('phpredis extension not installed');
+                }
+                $redis = new \Redis();
+                // suppress warnings - connection errors will be handled by catch
+                $redis->connect($host, $port, $timeout);
+                if (!empty($redisConfig['password'])) {
+                    try { $redis->auth($redisConfig['password']); } catch (\Throwable $__e) { /* ignore auth failure here */ }
+                }
+
+                // unique token for this lock owner
+                $lockVal = uniqid('', true) . mt_rand(1000, 9999);
+                // try atomic SET NX EX first (phpredis supports options array), fallback to setnx+expire
+                $setResult = false;
+                try {
+                    // phpredis >=5: set($key, $val, ['nx', 'ex' => $ttl])
+                    $setResult = $redis->set($lockKey, $lockVal, ['nx', 'ex' => $lockTtl]);
+                } catch (\Throwable $e) {
+                    // fallback to setnx + expire
+                    try {
+                        if ($redis->setnx($lockKey, $lockVal)) {
+                            $redis->expire($lockKey, $lockTtl);
+                            $setResult = true;
+                        }
+                    } catch (\Throwable $__e) {
+                        $setResult = false;
+                    }
+                }
+
+                if ($setResult) {
+                    $lockAcquired = true;
+                    // 在脚本结束时尽量释放锁（若进程正常退出或发生可捕获的致命错误，shutdown handler 会运行）
+                    try {
+                        $r = $redis;
+                        $k = $lockKey;
+                        $v = $lockVal;
+                        register_shutdown_function(function() use ($r, $k, $v) {
+                            try {
+                                if ($r && $k && $v) {
+                                    $script = 'if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end';
+                                    $r->eval($script, [$k, $v], 1);
+                                }
+                            } catch (\Throwable $__e) {
+                                // 忽略释放失败，TTL 保证最终会过期
+                            }
+                        });
+                    } catch (\Throwable $__e) {
+                        // ignore register failures
+                    }
+                } else {
+                    actionLog($this->message, 'outGoods Redis 锁已存在，跳过重复处理', 'OutGoods');
+                    return $this->rFail("订单正在处理中");
+                }
+            } catch (\Throwable $e) {
+                // 无法使用 Redis 时回退到 cache()，以防锁机制不可用导致重复处理
+                actionLog($e->getMessage(), '获取 Redis 锁失败，回退到 cache 锁', 'OutGoods');
+                if (cache($lockKey)) {
+                    actionLog($this->message, 'outGoods 已有 cache 锁，跳过重复处理', 'OutGoods');
+                    return $this->rFail("订单正在处理中");
+                }
+                cache($lockKey, 1);
             }
-            // 30 秒短超时，保证即使处理异常也能很快释放
-            cache($lockKey, 1, 30);
         }
 
         try {
@@ -112,9 +178,21 @@ trait OutGoodsTrait
             }
         } finally {
             if ($lockKey) {
-                // 释放锁
+                // 释放锁：优先使用 Redis 原子比对删除（仅当 value 匹配时释放），否则回退到 cache()
                 try {
-                    cache($lockKey, null);
+                    if (!empty($redis) && $lockAcquired && $lockVal) {
+                        try {
+                            $script = 'if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end';
+                            // EVAL script with 1 key
+                            $redis->eval($script, [$lockKey, $lockVal], 1);
+                        } catch (\Throwable $__e) {
+                            // 尝试直接 del（不安全，但作为最后手段）
+                            try { $redis->del($lockKey); } catch (\Throwable $__ee) { /* ignore */ }
+                        }
+                    } else {
+                        // 回退到 cache 清理
+                        try { cache($lockKey, null); } catch (\Throwable $__e) { /* ignore */ }
+                    }
                 } catch (\Exception $e) {
                     // 即便释放锁失败也不应影响业务流程，记录异常
                     actionLog($e->getMessage(), '释放 outGoods 锁失败', 'OutGoods');
