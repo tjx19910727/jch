@@ -2025,7 +2025,13 @@ class ApiClient extends ReceiveBaseClient
         //         return $this->rTryCatch($e->getMessage());
         //     }
         // }
-
+        $config = [
+            'machine_id' => $mqData['machine_id'],
+            'data' => $mqData,
+            'mac' => $mqData['mac'],
+        ];
+        $syncResult = AppFactory::machine($config)->mq->onMessage();
+        actionLog(['mqData' => $mqData, 'syncResult' => $syncResult], 'HTTP同步触发出货闭环');
         // 可选入队：默认关闭，避免同步执行后再次被队列重复消费。
         // $enqueue = isset($this->data['enqueue']) ? intval($this->data['enqueue']) : 0;
         // $push = true;
@@ -2033,8 +2039,6 @@ class ApiClient extends ReceiveBaseClient
             // $push = MqProducer::dataUpload($mqData);
             // actionLog(['mqData' => $mqData, 'result' => $push], 'HTTP触发MQ出货闭环(入队)');
         // }
-        $push = MqProducer::dataUpload($mqData);
-        actionLog(['mqData' => $mqData, 'result' => $push], 'HTTP触发MQ出货闭环(入队)');
 
         // if ($enqueue === 1 && $push !== 'OK' && $push !== true) {
         //     return $this->rFail(is_string($push) ? $push : '投递MQ失败');
