@@ -1944,8 +1944,12 @@ class ApiClient extends ReceiveBaseClient
      * 适用：仅调用 requireOutGoods 后，设备未通过MQ回传出货结果的场景
      * @return array|string
      */
-    private function triggerOutGoodsByHttp($tradeNo, $status)
+    public function triggerOutGoodsByHttp()
     {
+        $tradeNo = $this->data['trade_no'] ?? '';
+        $status = isset($this->data['http_out_status']) ? intval($this->data['http_out_status']) : 0;
+        $machine_id = $this->data['machine_id'] ??  '';
+
         $order = $this->getSaleOrdersFind(['trade_no' => $tradeNo], 'order_id,trade_no,machine_id,out_status');
         if (!$order) {
             return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
@@ -1999,12 +2003,12 @@ class ApiClient extends ReceiveBaseClient
             'status' => $status,
             'main' => $main,
         ];
-
+        $machine = $this->getMachineFind(['machine_id' => $machine_id], 'machine_id,mac_address');
         $mqData = [
             'msg_id' => $this->data['msg_id'] ?? uniqid('http_out_', true),
             'timestamp' => time(),
-            'machine_id' => $order['machine_id'] ?: $this->machine['machine_id'],
-            'mac' => $this->machine['mac_address'] ?? '',
+            'machine_id' => $machine_id,
+            'mac' => $machine['mac_address'] ?? '',
             'data' => json_encode($payload, 320),
         ];
 
@@ -2061,7 +2065,7 @@ class ApiClient extends ReceiveBaseClient
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         $this->updateSaleOrders(['http_out_status' => intval($this->data['http_out_status'])],['trade_no' => $this->data['trade_no']]);
         if($this->data['http_out_status'] == 3){
-            $this->triggerOutGoodsByHttp($this->data['trade_no'], $this->data['http_out_status']);
+            $this->triggerOutGoodsByHttp();
         }
         return $this->r(200, 'success');
     }
