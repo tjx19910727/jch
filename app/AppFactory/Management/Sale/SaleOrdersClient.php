@@ -1073,8 +1073,8 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 0 THEN '免支付' END) pay_type,
             FROM_UNIXTIME(a.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
             FROM_UNIXTIME(a.out_time,'%Y-%m-%d %H:%i:%s') out_time,
-            (CASE WHEN se.status = 1 THEN '已处理' ELSE '未处理' END) exception_status,
-            (CASE WHEN se.status = 1 THEN IFNULL(am.nickname, am.account) ELSE '' END) exception_manager";
+            (CASE se.status WHEN 1 THEN '已处理' ELSE '未处理' END) deal_status,
+            (CASE se.status WHEN  1 THEN IFNULL(am.nickname, am.account) ELSE '' END) deal_manager";
             $list = $this->getSaleOrdersExceptionList($where, 0, $field, 'a.order_id desc')->toArray();
             if ($list) {
                 $title = [
@@ -1094,8 +1094,8 @@ class SaleOrdersClient extends ManagementClient
                     'pay_type' => '支付类型',
                     'pay_time' => '支付时间',
                     'out_time' => '出货时间',
-                    'exception_status' => '处理状态',
-                    'exception_manager' => '处理人',
+                    'deal_status' => '处理状态',
+                    'deal_manager' => '处理人',
                 ];
                 $filename = '异常订单列表-' . date('YmdHis');
                 return $this->sendToExport('订单管理-销售订单', $filename, $title, $list);
