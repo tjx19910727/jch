@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
 use app\AppFactory\Kernel\Support\Validate\Api\VV2;
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
+use app\AppFactory\Kernel\Model\Auth\AuthOrgMachineChannelModel;
 use think\facade\Db;
 
 trait SaleOrdersTrait
@@ -237,10 +238,79 @@ trait SaleOrdersTrait
      */
     public function addSaleOrdersDetails($insert)
     {
+        if (!isset($insert['sod_ao_id']) || intval($insert['sod_ao_id']) <= 0) {
+            $insert['sod_ao_id'] = $this->resolveSaleOrderDetailAoId($insert);
+        }
         $sod = SaleOrdersDetailsModel::create($insert);
         actionLog($this->getLS(), '生成订单详情SQL');
         actionLog($sod, '生成订单详情结果');
         return $sod->sod_id;
+    }
+
+    /**
+     * 解析订单详情所属组织（子单组织）
+     * 规则：显式值 > 货道商品组织 > 设备租赁组织 > 订单主组织
+     * @param array $insert
+     * @return int
+     */
+    protected function resolveSaleOrderDetailAoId(array $insert): int
+    {
+        $sodAoId = intval($insert['sod_ao_id'] ?? 0);
+        if ($sodAoId > 0) {
+            return $sodAoId;
+        }
+
+        $mgAoId = 0;
+        $mgId = intval($insert['mg_id'] ?? 0);
+        if ($mgId > 0) {
+            $mgAoId = intval(Db::name('machine_goods')->where(['mg_id' => $mgId])->value('ao_id'));
+        }
+
+        if ($mgAoId <= 0) {
+            $mcId = intval($insert['mc_id'] ?? 0);
+            if ($mcId > 0) {
+                $mcMgId = intval(Db::name('machine_channel')->where(['mc_id' => $mcId])->value('mg_id'));
+                if ($mcMgId > 0) {
+                    $mgAoId = intval(Db::name('machine_goods')->where(['mg_id' => $mcMgId])->value('ao_id'));
+                }
+            }
+        }
+
+        if ($mgAoId > 0) {
+            return $mgAoId;
+        }
+
+        $order = [];
+        $orderId = intval($insert['order_id'] ?? 0);
+        if ($orderId > 0) {
+            $order = SaleOrdersModel::getFind(['order_id' => $orderId], 'order_id,m_id,machine_id,ao_id');
+            $order = obj2arr($order);
+        }
+
+        $rentAoId = 0;
+        if (!empty($order['m_id']) || !empty($order['machine_id'])) {
+            $rentWhere = [];
+            if (!empty($order['m_id'])) {
+                $rentWhere['m_id'] = $order['m_id'];
+            }
+            if (!empty($order['machine_id'])) {
+                $rentWhere['machine_id'] = $order['machine_id'];
+            }
+
+            if ($rentWhere) {
+                $rentAoIds = AuthOrgMachineChannelModel::getColumn($rentWhere, 'ao_id');
+                $rentAoIds = array_values(array_unique(array_filter(array_map('intval', $rentAoIds))));
+                if (count($rentAoIds) === 1) {
+                    $rentAoId = intval($rentAoIds[0]);
+                }
+            }
+        }
+
+        if ($rentAoId > 0) {
+            return $rentAoId;
+        }
+
+        return intval($order['ao_id'] ?? 0);
     }
 
     /**

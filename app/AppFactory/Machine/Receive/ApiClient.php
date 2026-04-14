@@ -65,8 +65,11 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
+use app\AppFactory\RabbitMq\MqProducer;
 use app\machine\validate\VReceive;
+use think\facade\Db;
 use think\facade\View;
+use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
@@ -161,6 +164,7 @@ class ApiClient extends ReceiveBaseClient
 
 
     protected $order;
+    protected $refundTradeNo;
 
     /**
      * 登录验证
@@ -423,6 +427,68 @@ class ApiClient extends ReceiveBaseClient
             return $value ? '1' : '0';
         }
         return (string)$value;
+    }
+
+    /**
+     * 读取一条设备校准配置
+     * @param array $where
+     * @param string $field
+     * @param string $order
+     * @return array|null
+     */
+    protected function getMachineCalibrationConfigFind($where, $field = '*', $order = '')
+    {
+        $query = Db::name('machine_calibration_config')->where($where)->field($field);
+        if ($order) {
+            $query->order($order);
+        }
+        return $query->find();
+    }
+
+    /**
+     * 读取设备校准配置列表
+     * @param array $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @return \think\Collection|\think\Paginator
+     */
+    protected function getMachineCalibrationConfigList($where, $pageNum = 0, $field = '*', $order = '')
+    {
+        $query = Db::name('machine_calibration_config')->where($where)->field($field);
+        if ($order) {
+            $query->order($order);
+        }
+        if ($pageNum) {
+            return $query->paginate($pageNum);
+        }
+        return $query->select();
+    }
+
+    /**
+     * 获取设备校准配置字段值
+     * @param array $where
+     * @param string $value
+     * @param string $order
+     * @return mixed
+     */
+    protected function getMachineCalibrationConfigValue($where, $value, $order = '')
+    {
+        $query = Db::name('machine_calibration_config')->where($where);
+        if ($order) {
+            $query->order($order);
+        }
+        return $query->value($value);
+    }
+
+    /**
+     * 新增设备校准配置
+     * @param array $insert
+     * @return int|string
+     */
+    protected function addMachineCalibrationConfig($insert)
+    {
+        return Db::name('machine_calibration_config')->insertGetId($insert);
     }
 
     /**
@@ -1716,7 +1782,6 @@ class ApiClient extends ReceiveBaseClient
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         $this->order = is_object($order) ? (method_exists($order,'toArray') ? $order->toArray() : (array)$order) : $order;
-
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']])->toArray();
         if (!$details || !is_array($details)) {
             return $this->r(100, 'failed', []);
@@ -1858,24 +1923,172 @@ class ApiClient extends ReceiveBaseClient
          ];
 
         $this->order['out_status'] = 2;
-        $this->order['pay_status'] = 3;
-        $this->order['pay_time'] = $this->order['pay_time'] ?: time();
         try {
             $this->updateSaleOrders($this->order);
         } catch (\Exception $e) {
             actionException($e);
         }
 
-        for($i = 0 ; $i < 10; $i++){
-            $latest_order = $this->getSaleOrdersFind(['trade_no' => $this->order['trade_no']]);
-            actionLog(@obj2arr($latest_order), '最新订单信息');
-            if($latest_order['out_status'] == 4) break;
-            $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
-            actionLog(@obj2arr($result), 'Http兜底方案下发数据结果');
-            sleep(5);
-        }
+        // for($i = 0 ; $i < 10; $i++){
+        //     $latest_order = $this->getSaleOrdersFind(['trade_no' => $this->order['trade_no']]);
+        //     actionLog(@obj2arr($latest_order), '最新订单信息');
+        //     if($latest_order['out_status'] == 4) break;
+        //     $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
+        //     actionLog(@obj2arr($result), 'Http兜底方案下发数据结果');
+        //     sleep(5);
+        // }
 
         return $this->r(200, 'success', $content);
+    }
+
+    /**
+     * HTTP触发出货结果闭环：将出货回执投递到MQ，触发 OutGoodsTrait::outGoods
+     * 适用：仅调用 requireOutGoods 后，设备未通过MQ回传出货结果的场景
+     * @return array|string
+     */
+    private function triggerOutGoodsByHttp($tradeNo, $status)
+    {
+        $order = $this->getSaleOrdersFind(['trade_no' => $tradeNo], 'order_id,trade_no,machine_id,out_status');
+        if (!$order) {
+            return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        }
+        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+
+        // 已完成出货，避免重复闭环
+        if ((int)($order['out_status'] ?? 0) === 4) {
+            return $this->r(200, 'success', [
+                'trade_no' => $tradeNo,
+                'skip' => 1,
+                'reason' => 'order out_status already 4',
+            ]);
+        }
+
+        $main = $this->data['main'] ?? [];
+        if (is_string($main) && $main !== '') {
+            $main = json2arr($main);
+        }
+        if (!is_array($main)) {
+            $main = [];
+        }
+
+        // 未传main时按订单明细自动构建“全成功”回执，确保能触发 outGoods 完整处理
+        if (empty($main) && in_array($status, [3, 4], true)) {
+            $details = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0, 'channel_position,channel_code,quantity');
+            $details = $details ? (is_object($details) ? $details->toArray() : (array)$details) : [];
+            foreach ($details as $row) {
+                $position = $row['channel_position'] ?? 0;
+                $channelCode = $row['channel_code'] ?? '';
+                if ($channelCode === '') {
+                    continue;
+                }
+                $quantity = intval($row['quantity'] ?? 0);
+                if ($quantity <= 0) {
+                    continue;
+                }
+                $main[$position][] = [
+                    'channel_code' => $channelCode,
+                    'success_quantity' => $quantity,
+                    'fail_quantity' => 0,
+                    'deliver_pics' => '',
+                    'out_sequence' => 1,
+                ];
+            }
+        }
+
+        $payload = [
+            'msgType' => 'outGoods',
+            'trade_no' => $tradeNo,
+            'status' => $status,
+            'main' => $main,
+        ];
+
+        $mqData = [
+            'msg_id' => $this->data['msg_id'] ?? uniqid('http_out_', true),
+            'timestamp' => time(),
+            'machine_id' => $order['machine_id'] ?: $this->machine['machine_id'],
+            'mac' => $this->machine['mac_address'] ?? '',
+            'data' => json_encode($payload, 320),
+        ];
+
+        // 默认同步触发，确保即使MQ消费者未运行也能进入 OutGoodsTrait::outGoods。
+        // $sync = isset($this->data['sync']) ? intval($this->data['sync']) : 1;
+        // $syncResult = null;
+        // if ($sync === 1) {
+        //     try {
+        //         $config = [
+        //             'machine_id' => $mqData['machine_id'],
+        //             'data' => $mqData,
+        //             'mac' => $mqData['mac'],
+        //         ];
+        //         $syncResult = AppFactory::machine($config)->mq->onMessage();
+        //         actionLog(['mqData' => $mqData, 'syncResult' => $syncResult], 'HTTP同步触发出货闭环');
+        //     } catch (\Exception $e) {
+        //         actionException($e, 1, 'triggerOutGoodsByHttp-sync');
+        //         return $this->rTryCatch($e->getMessage());
+        //     }
+        // }
+
+        // 可选入队：默认关闭，避免同步执行后再次被队列重复消费。
+        // $enqueue = isset($this->data['enqueue']) ? intval($this->data['enqueue']) : 0;
+        // $push = true;
+        // if ($enqueue === 1) {
+            // $push = MqProducer::dataUpload($mqData);
+            // actionLog(['mqData' => $mqData, 'result' => $push], 'HTTP触发MQ出货闭环(入队)');
+        // }
+        $push = MqProducer::dataUpload($mqData);
+        actionLog(['mqData' => $mqData, 'result' => $push], 'HTTP触发MQ出货闭环(入队)');
+
+        // if ($enqueue === 1 && $push !== 'OK' && $push !== true) {
+        //     return $this->rFail(is_string($push) ? $push : '投递MQ失败');
+        // }
+
+        return $this->r(200, 'success', [
+            'trade_no' => $tradeNo,
+            'status' => $status,
+            // 'sync' => $sync,
+            // 'sync_result' => $syncResult,
+            // 'queued' => $enqueue === 1 ? 1 : 0,
+            'main_count' => count($main),
+        ]);
+    }
+     
+    //设备设置订单http_out_status状态，供Http兜底方案使用
+    public function setHttpOutStatus()
+    {
+        $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
+        if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        $this->updateSaleOrders(['http_out_status' => intval($this->data['http_out_status'])],['trade_no' => $this->data['trade_no']]);
+        if($this->data['http_out_status'] == 3){
+            $this->triggerOutGoodsByHttp($this->data['trade_no'], $this->data['http_out_status']);
+        }
+        return $this->r(200, 'success');
+    }
+
+
+    /**
+     * 获取订单支付状态
+     * 支持 trade_no / order_id 二选一查询
+     * @return array
+     */
+    public function getOrderPayStatus()
+    {
+        $where = [];
+        if (!empty($this->data['trade_no'])) {
+            $where['trade_no'] = $this->data['trade_no'];
+        } elseif (!empty($this->data['order_id'])) {
+            $where['order_id'] = intval($this->data['order_id']);
+        } else {
+            return $this->r(100, 'trade_no 或 order_id 不能为空');
+        }
+
+        $field = 'order_id,trade_no,mch_no,pay_status,pay_type,pay_method,out_status,refund_status,total_price,refund_amount,create_time,pay_time,out_time,http_out_status';
+        $order = $this->getSaleOrdersFind($where, $field);
+        if (!$order) {
+            return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        }
+
+        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+        return $this->r(200, 'success', $order);
     }
 
 
@@ -2002,6 +2215,28 @@ class ApiClient extends ReceiveBaseClient
         } catch (\Exception $e) {
             return $this->rFail($e->getMessage());
         }
+    }
+
+    /**
+     * 获取单卡可用余额汇总（按积分折算金额）
+     * @param string $cardNo
+     * @return array
+     */
+    protected function getCardBalanceSummary($cardNo)
+    {
+        $cardNo = trim((string)$cardNo);
+        if ($cardNo === '') {
+            return ['available_balance' => '0.00', 'points' => 0];
+        }
+
+        $card = $this->getCardFind(['card_no' => $cardNo], 'points');
+        if (!$card) {
+            return ['available_balance' => '0.00', 'points' => 0];
+        }
+        $card = is_object($card) ? (method_exists($card, 'toArray') ? $card->toArray() : (array)$card) : $card;
+        $points = (float)($card['points'] ?? 0);
+        $balance = bcmul((string)$points, (string)$this->card_retail_price, 2);
+        return ['available_balance' => $balance, 'points' => $points];
     }
 
     /**

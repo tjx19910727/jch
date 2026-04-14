@@ -113,7 +113,7 @@ class SaleOrdersClient extends ManagementClient
     {
         try {
             if ($detailAoId) {
-                $orderIds = array_values(array_unique($this->getSaleOrdersDetailsColumn(['ao_id' => $detailAoId], 'order_id')));
+                $orderIds = array_values(array_unique($this->getSaleOrdersDetailsColumn(['sod_ao_id' => $detailAoId], 'order_id')));
                 if (!$orderIds) $orderIds = [0];
                 $where[] = ['order_id', 'in', $orderIds];
             }
@@ -136,7 +136,7 @@ class SaleOrdersClient extends ManagementClient
         foreach ($rows as $key => $row) {
             $details = obj2arr($row['details'] ?? []);
             $details = array_values(array_filter($details, function ($detail) use ($detailAoId) {
-                return isset($detail['ao_id']) && (string) $detail['ao_id'] === (string) $detailAoId;
+                return isset($detail['sod_ao_id']) && (string) $detail['sod_ao_id'] === (string) $detailAoId;
             }));
 
             if (!$details) {

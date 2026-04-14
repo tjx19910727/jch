@@ -135,10 +135,6 @@ class Common extends AuthController
             if ($this->currentMenu['d_type'] == 2 && $this->manager['ao_id'] > 0) {
                 if (isset($where['creator'])) unset($where['creator']);
                 if (!in_array($api,$this->commonApi)) $where["ao_id"] = $this->manager['ao_id'];
-                if( $this->currentMenu['url'] == "/management/sale.sale_orders/getDetailsList"){
-                    $where['sod.ao_id'] = $this->manager['ao_id'];
-                    if (isset($where['ao_id'])) unset($where['ao_id']);
-                }
             }
             if ($this->currentMenu['d_type'] >= 3) {
                 $ids[] = $this->manager['manager_id'];
