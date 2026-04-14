@@ -816,15 +816,15 @@ class Receive extends Common
      * HTTP触发出货结果闭环（投递MQ，触发OutGoodsTrait::outGoods）
      * @return array|string
      */
-    public function triggerOutGoodsByHttp()
-    {
-        try {
-            return $this->app->api->triggerOutGoodsByHttp();
-        } catch (\Exception $e) {
-            actionException($e, 1);
-            return returnTryCatch($e->getMessage());
-        }
-    }
+    // public function triggerOutGoodsByHttp()
+    // {
+    //     try {
+    //         return $this->app->api->triggerOutGoodsByHttp();
+    //     } catch (\Exception $e) {
+    //         actionException($e, 1);
+    //         return returnTryCatch($e->getMessage());
+    //     }
+    // }
 
     /**
      * 获取订单支付状态

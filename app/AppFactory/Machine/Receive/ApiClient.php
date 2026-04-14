@@ -1945,18 +1945,8 @@ class ApiClient extends ReceiveBaseClient
      * 适用：仅调用 requireOutGoods 后，设备未通过MQ回传出货结果的场景
      * @return array|string
      */
-    public function triggerOutGoodsByHttp()
+    private function triggerOutGoodsByHttp($tradeNo, $status)
     {
-        $tradeNo = trim((string)($this->data['trade_no'] ?? ''));
-        if ($tradeNo === '') {
-            return $this->rFail('trade_no不能为空');
-        }
-
-        $status = intval($this->data['status'] ?? 3);
-        if (!in_array($status, [2, 3, 4], true)) {
-            return $this->rFail('status仅支持2/3/4');
-        }
-
         $order = $this->getSaleOrdersFind(['trade_no' => $tradeNo], 'order_id,trade_no,machine_id,out_status');
         if (!$order) {
             return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
@@ -2020,41 +2010,43 @@ class ApiClient extends ReceiveBaseClient
         ];
 
         // 默认同步触发，确保即使MQ消费者未运行也能进入 OutGoodsTrait::outGoods。
-        $sync = isset($this->data['sync']) ? intval($this->data['sync']) : 1;
-        $syncResult = null;
-        if ($sync === 1) {
-            try {
-                $config = [
-                    'machine_id' => $mqData['machine_id'],
-                    'data' => $mqData,
-                    'mac' => $mqData['mac'],
-                ];
-                $syncResult = AppFactory::machine($config)->mq->onMessage();
-                actionLog(['mqData' => $mqData, 'syncResult' => $syncResult], 'HTTP同步触发出货闭环');
-            } catch (\Exception $e) {
-                actionException($e, 1, 'triggerOutGoodsByHttp-sync');
-                return $this->rTryCatch($e->getMessage());
-            }
-        }
+        // $sync = isset($this->data['sync']) ? intval($this->data['sync']) : 1;
+        // $syncResult = null;
+        // if ($sync === 1) {
+        //     try {
+        //         $config = [
+        //             'machine_id' => $mqData['machine_id'],
+        //             'data' => $mqData,
+        //             'mac' => $mqData['mac'],
+        //         ];
+        //         $syncResult = AppFactory::machine($config)->mq->onMessage();
+        //         actionLog(['mqData' => $mqData, 'syncResult' => $syncResult], 'HTTP同步触发出货闭环');
+        //     } catch (\Exception $e) {
+        //         actionException($e, 1, 'triggerOutGoodsByHttp-sync');
+        //         return $this->rTryCatch($e->getMessage());
+        //     }
+        // }
 
         // 可选入队：默认关闭，避免同步执行后再次被队列重复消费。
-        $enqueue = isset($this->data['enqueue']) ? intval($this->data['enqueue']) : 0;
-        $push = true;
-        if ($enqueue === 1) {
-            $push = MqProducer::dataUpload($mqData);
-            actionLog(['mqData' => $mqData, 'result' => $push], 'HTTP触发MQ出货闭环(入队)');
-        }
+        // $enqueue = isset($this->data['enqueue']) ? intval($this->data['enqueue']) : 0;
+        // $push = true;
+        // if ($enqueue === 1) {
+            // $push = MqProducer::dataUpload($mqData);
+            // actionLog(['mqData' => $mqData, 'result' => $push], 'HTTP触发MQ出货闭环(入队)');
+        // }
+        $push = MqProducer::dataUpload($mqData);
+        actionLog(['mqData' => $mqData, 'result' => $push], 'HTTP触发MQ出货闭环(入队)');
 
-        if ($enqueue === 1 && $push !== 'OK' && $push !== true) {
-            return $this->rFail(is_string($push) ? $push : '投递MQ失败');
-        }
+        // if ($enqueue === 1 && $push !== 'OK' && $push !== true) {
+        //     return $this->rFail(is_string($push) ? $push : '投递MQ失败');
+        // }
 
         return $this->r(200, 'success', [
             'trade_no' => $tradeNo,
             'status' => $status,
-            'sync' => $sync,
-            'sync_result' => $syncResult,
-            'queued' => $enqueue === 1 ? 1 : 0,
+            // 'sync' => $sync,
+            // 'sync_result' => $syncResult,
+            // 'queued' => $enqueue === 1 ? 1 : 0,
             'main_count' => count($main),
         ]);
     }
@@ -2064,11 +2056,9 @@ class ApiClient extends ReceiveBaseClient
     {
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
-        try {
-            $this->updateSaleOrders(['http_out_status' => intval($this->data['http_out_status'])],['trade_no' => $this->data['trade_no']]);
-        } catch (\Exception $e) {
-            actionException($e);
-            return $this->rTryCatch($e->getMessage());
+        $this->updateSaleOrders(['http_out_status' => intval($this->data['http_out_status'])],['trade_no' => $this->data['trade_no']]);
+        if($this->data['http_out_status'] == 3){
+            $this->triggerOutGoodsByHttp($this->data['trade_no'], $this->data['http_out_status']);
         }
         return $this->r(200, 'success');
     }

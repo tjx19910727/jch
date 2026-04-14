@@ -196,7 +196,7 @@ class VReceive extends VCommon
         "requireOutGoods" => ["msg_id","machine_id","timestamp","sign","trade_no"],
         "getOrderPayStatus" => ["msg_id","machine_id","timestamp","sign"],
         "setHttpOutStatus" => ["msg_id","machine_id","timestamp","sign","trade_no","http_out_status"],
-        "triggerOutGoodsByHttp" => ["msg_id","machine_id","timestamp","sign","trade_no"],
+        // "triggerOutGoodsByHttp" => ["msg_id","machine_id","timestamp","sign","trade_no"],
 
         "cardAddPoints" => ["msg_id","machine_id","timestamp","card_no"],
         "checkBalancePayPassword" => ["msg_id","machine_id","timestamp","sign","card_no"],
