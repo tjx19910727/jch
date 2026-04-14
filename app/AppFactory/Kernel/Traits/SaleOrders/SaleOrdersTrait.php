@@ -488,12 +488,18 @@ trait SaleOrdersTrait
             $item['manager_nickname'] = $item['manager_nickname'] ?: '';
             $item['exception_create_time'] = !empty($item['exception_create_time']) ? date('Y-m-d H:i:s', $item['exception_create_time']) : '';
             $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
-            if ($item['has_hotel'] == 1) {
-                $item['hotel'] = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
-                $item['hotel']['nightly'] = $this->getSaleHotelNightlyList(['sh_id' => $item['hotel']['sh_id']]);
-                $item['retail_price'] = bcadd($item['retail_price'], $item['hotel']['pay_amount'], 2);
+            $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
+            if (($item['has_hotel'] ?? 0) == 1) {
+                $hotel = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
+                if ($hotel) {
+                    $hotel['nightly'] = $this->getSaleHotelNightlyList(['sh_id' => $hotel['sh_id']]);
+                    $item['hotel'] = $hotel;
+                    $item['retail_price'] = bcadd((string)($item['retail_price'] ?? 0), (string)($hotel['pay_amount'] ?? 0), 2);
+                } else {
+                    $item['hotel'] = [];
+                }
             }
-            if ($item['out_status'] == 6) {
+            if (($item['out_status'] ?? 0) == 6) {
                 $unclaimed = $this->getSaleOrdersUnclaimedList(['order_id' => $item['order_id']], 0, 'sod_id,g_name,channel_code,is_match,is_claim,is_out,is_close');
                 if ($unclaimed) {
                     $item['unclaimed_status'] = $unclaimed->toArray();
