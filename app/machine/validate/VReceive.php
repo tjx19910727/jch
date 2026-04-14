@@ -190,6 +190,7 @@ class VReceive extends VCommon
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
         "requireOutGoods" => ["msg_id","machine_id","timestamp","sign","trade_no"],
+        "getOrderPayStatus" => ["msg_id","machine_id","timestamp","sign"],
 
         "cardAddPoints" => ["msg_id","machine_id","timestamp","card_no"],
         "checkBalancePayPassword" => ["msg_id","machine_id","timestamp","sign","card_no"],
