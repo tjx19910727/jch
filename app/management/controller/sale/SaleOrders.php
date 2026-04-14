@@ -663,10 +663,10 @@ class SaleOrders extends Common
         $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'a.');
         $where['raw'] = "a.pay_status in ('3', '7')";
         if ($isProcessed == 1) {
-            $where['raw'] .= " AND se.status IS NOT NULL";
+            $where['raw'] .= " AND se.status = 1";
         }
         if ($isProcessed == 2) {
-            $where['raw'] .= " AND se.status IS NULL";
+            $where['raw'] .= " AND (se.status = 2 OR se.status IS NULL)";
         }
         if ($this->authMchCannel()['status'] != 0) {
             $orderIds = Db::name('sale_orders_details')
@@ -701,7 +701,66 @@ class SaleOrders extends Common
         if ($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0, 1])) {
             $where['a.ao_id'] = $this->manager['ao_id'];
         }
-        return $this->app->saleOrders->getExceptionSoList($where, $pageNum, $field, 'a.order_id desc', $postData['supplier'] ?? true);
+        return $this->app->saleOrders->getExceptionSoList($where, $pageNum, $field, 'a.pay_time asc', $postData['supplier'] ?? true);
+    }
+
+    /**
+     * 导出异常订单列表
+     * @param bool supplier 供应商账号是否跳过组织选择查看所属商品订单
+     * @return array|string
+     */
+    public function exportException()
+    {
+        $postData = input();
+
+        $isProcessed = $postData['is_processed'] ?? '';
+        unset($postData['is_processed']);
+
+        $allowOutStatus = ['2', '5', '6'];
+        if (isset($postData['out_status']) && $postData['out_status'] !== '') {
+            $outStatusList = array_values(array_filter(array_map('trim', explode(',', $postData['out_status']))));
+            $invalidOutStatus = array_diff($outStatusList, $allowOutStatus);
+            if ($invalidOutStatus) return returnState(100, 'out_status 仅支持 2,5,6');
+            if (!$outStatusList) return returnState(100, 'out_status 仅支持 2,5,6');
+            $postData['out_status'] = implode(',', $outStatusList);
+        } else {
+            $postData['out_status'] = implode(',', $allowOutStatus);
+        }
+
+        $machineIds = [];
+        if (!empty($postData['machine_group_id'])) {
+            $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']], 'machine_id');
+            unset($postData['machine_group_id']);
+            if (!$machineIds) return $this->app->machine->rNoData();
+        }
+
+        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'a.');
+        $where['raw'] = "a.pay_status in ('3', '7')";
+        if ($isProcessed == 1) {
+            $where['raw'] .= " AND se.status = 1";
+        }
+        if ($isProcessed == 2) {
+            $where['raw'] .= " AND (se.status = 2 OR se.status IS NULL)";
+        }
+        if ($this->authMchCannel()['status'] != 0) {
+            $orderIds = Db::name('sale_orders_details')
+                ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
+                ->field('order_id')
+                ->select();
+
+            $order_id = [];
+            foreach ($orderIds as $item) {
+                array_push($order_id, $item['order_id']);
+            }
+            $where[] = ['a.order_id', 'in', $order_id];
+        }
+        if (!empty($machineIds)) $where[] = ['a.machine_id', 'in', $machineIds];
+        if (isset($postData['supplier']) && $postData['supplier']) unset($where['a.ao_id']);
+        if ($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0, 1])) {
+            $where['a.ao_id'] = $this->manager['ao_id'];
+        }
+
+        return $this->app->saleOrders->exportExceptionSo($where, $postData['supplier'] ?? true);
     }
 
     /**

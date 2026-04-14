@@ -556,6 +556,7 @@ trait SaleOrdersTrait
             $item['exception_remark'] = $item['exception_remark'] ?: '';
             $item['manager_account'] = $item['manager_account'] ?: '';
             $item['manager_nickname'] = $item['manager_nickname'] ?: '';
+            $item['exception_create_time'] = !empty($item['exception_create_time']) ? date('Y-m-d H:i:s', $item['exception_create_time']) : '';
             $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
             if ($item['has_hotel'] == 1) {
                 $item['hotel'] = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
