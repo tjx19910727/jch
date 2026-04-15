@@ -2393,8 +2393,10 @@ class ApiClient extends ReceiveBaseClient
             $currentCardNo = trim((string)($this->data['card_no'] ?? ''));
             if ($currentCardNo !== '') {
                 $summary = $this->getCardBalanceSummary($currentCardNo);
+                actionLog($summary, '查询卡余额返回内容');
                 $total_balance = (string)($summary['available_balance'] ?? '0.00');
             }
+            actionLog($currentCardNo, '当前查询的卡号');
             $res['total_balance'] = $total_balance;
             //用户是否需要输入密码
             $res['need_pay_password'] = 1;
