@@ -1849,29 +1849,29 @@ class ApiClient extends ReceiveBaseClient
             $res['total_points'] = $res['total_card_points'] + $res['bind_id_points'];
             $currentCardNo = trim((string)($this->data['card_no'] ?? ''));
             if ($currentCardNo !== '') {
-                try {
-                    $summaryMethod = new \ReflectionMethod($this, 'getCardBalanceSummary');
-                    actionLog([
-                        'class' => $summaryMethod->getDeclaringClass()->getName(),
-                        'file' => $summaryMethod->getFileName(),
-                        'start_line' => $summaryMethod->getStartLine(),
-                        'end_line' => $summaryMethod->getEndLine(),
-                    ], '卡余额汇总方法定位');
+                // try {
+                //     $summaryMethod = new \ReflectionMethod($this, 'getCardBalanceSummary');
+                //     actionLog([
+                //         'class' => $summaryMethod->getDeclaringClass()->getName(),
+                //         'file' => $summaryMethod->getFileName(),
+                //         'start_line' => $summaryMethod->getStartLine(),
+                //         'end_line' => $summaryMethod->getEndLine(),
+                //     ], '卡余额汇总方法定位');
 
-                    $bucketMethod = new \ReflectionMethod($this, 'getCardBalanceBucketSummaryRow');
-                    actionLog([
-                        'class' => $bucketMethod->getDeclaringClass()->getName(),
-                        'file' => $bucketMethod->getFileName(),
-                        'start_line' => $bucketMethod->getStartLine(),
-                        'end_line' => $bucketMethod->getEndLine(),
-                    ], '卡余额分笔方法定位');
-                } catch (\Exception $e) {
-                    actionLog($e->getMessage(), '卡余额方法定位异常');
-                }
+                //     $bucketMethod = new \ReflectionMethod($this, 'getCardBalanceBucketSummaryRow');
+                //     actionLog([
+                //         'class' => $bucketMethod->getDeclaringClass()->getName(),
+                //         'file' => $bucketMethod->getFileName(),
+                //         'start_line' => $bucketMethod->getStartLine(),
+                //         'end_line' => $bucketMethod->getEndLine(),
+                //     ], '卡余额分笔方法定位');
+                // } catch (\Exception $e) {
+                //     actionLog($e->getMessage(), '卡余额方法定位异常');
+                // }
 
-                $bucketCount = \app\AppFactory\Kernel\Model\Card\CardBalanceBucketsModel::where('card_no', $currentCardNo)->count();
-                actionLog($bucketCount, '当前卡分笔记录数量');
-                $summary = $this->getCardBalanceSummary($currentCardNo);
+                // $bucketCount = \app\AppFactory\Kernel\Model\Card\CardBalanceBucketsModel::where('card_no', $currentCardNo)->count();
+                // actionLog($bucketCount, '当前卡分笔记录数量');
+                $summary = $this->getCardBalance($currentCardNo);
                 actionLog($summary, '查询卡余额返回内容');
                 $total_balance = (string)($summary['available_balance'] ?? '0.00');
             }
@@ -2207,6 +2207,11 @@ class ApiClient extends ReceiveBaseClient
         // return $this->orderSync2Wc($this->order);
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         return $this->orderRefundSync2Wc($this->order, $detail);
+    }
+
+    public function getCardBalance($card_no)
+    {
+        return $this->getCardBalanceSummary($card_no);
     }
 
 }
