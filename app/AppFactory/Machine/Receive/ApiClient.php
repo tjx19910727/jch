@@ -1784,10 +1784,25 @@ class ApiClient extends ReceiveBaseClient
         if (!$details || !is_array($details)) {
             return $this->r(100, 'failed', []);
         }
-
+        $now_time = time();
         $contentArr = [];
         $outArr = [];
         $total_points = 0;
+        $can_out_goods = true;
+
+        if($now_time - $this->order['pay_time'] > 180){
+            $can_out_goods = false;
+            $content = [
+                'msgType' => 'outGoods',
+                'trade_no' => $this->order['trade_no'],
+                'main' => $contentArr,
+                'outGoods' => $outArr,
+                'order_points' => $this->order['total_points'] ?? 0,
+                'can_out_goods' => $can_out_goods,
+            ];
+            return $this->r(200, 'success', $content);
+        }
+        
 
         // 支持旧数据格式：把简单 channel/quantity 填到 contentArr
         foreach ($details as $v) {
@@ -1918,6 +1933,7 @@ class ApiClient extends ReceiveBaseClient
             'main' => $contentArr,
             'outGoods' => $outArr,
             'order_points' => $this->order['total_points'] ?? 0,
+            'can_out_goods' => $can_out_goods,
          ];
 
         $this->order['out_status'] = 2;
@@ -1926,15 +1942,6 @@ class ApiClient extends ReceiveBaseClient
         } catch (\Exception $e) {
             actionException($e);
         }
-
-        // for($i = 0 ; $i < 10; $i++){
-        //     $latest_order = $this->getSaleOrdersFind(['trade_no' => $this->order['trade_no']]);
-        //     actionLog(@obj2arr($latest_order), '最新订单信息');
-        //     if($latest_order['out_status'] == 4) break;
-        //     $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
-        //     actionLog(@obj2arr($result), 'Http兜底方案下发数据结果');
-        //     sleep(5);
-        // }
 
         return $this->r(200, 'success', $content);
     }
