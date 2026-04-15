@@ -2231,27 +2231,6 @@ class ApiClient extends ReceiveBaseClient
         }
     }
 
-    /**
-     * 获取单卡可用余额汇总（按积分折算金额）
-     * @param string $cardNo
-     * @return array
-     */
-    protected function getCardBalanceSummary($cardNo)
-    {
-        $cardNo = trim((string)$cardNo);
-        if ($cardNo === '') {
-            return ['available_balance' => '0.00', 'points' => 0];
-        }
-
-        $card = $this->getCardFind(['card_no' => $cardNo], 'points');
-        if (!$card) {
-            return ['available_balance' => '0.00', 'points' => 0];
-        }
-        $card = is_object($card) ? (method_exists($card, 'toArray') ? $card->toArray() : (array)$card) : $card;
-        $points = (float)($card['points'] ?? 0);
-        $balance = bcmul((string)$points, (string)$this->card_retail_price, 2);
-        return ['available_balance' => $balance, 'points' => $points];
-    }
 
     /**
      * 获取积分变化类型
