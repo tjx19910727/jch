@@ -2094,6 +2094,7 @@ class ApiClient extends ReceiveBaseClient
         }
 
         $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+        $order['now_time'] = time();
         return $this->r(200, 'success', $order);
     }
 
