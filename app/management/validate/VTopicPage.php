@@ -14,6 +14,7 @@ class VTopicPage extends VCommon
     protected $rule = [
         'id' => 'require|number|gt:0',
         'status' => 'require|in:1,2',
+        'title' => 'require',
     ];
 
     protected $message = [
@@ -22,11 +23,12 @@ class VTopicPage extends VCommon
         'id.gt' => 'VTopicPage.id_gt',
         'status.require' => 'VTopicPage.status_require',
         'status.in' => 'VTopicPage.status_in',
+        'title.require' => 'VTopicPage.title_require',
     ];
 
     protected $scene = [
-        'add' => ['status'],
-        'update' => ['id'],
+        'add' => ['status', 'title'],
+        'update' => ['id', 'title'],
         'del' => ['id'],
         'assignMachine' => ['id'],
         'setStatus' => ['id', 'status'],

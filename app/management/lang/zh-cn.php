@@ -745,5 +745,6 @@ return [
         "data_assigned" => "主题已分配设备，不能删除",
         "data_invalid" => "设备数据异常，存在无效m_id",
         "data_assign_fail" => "分配设备失败",
+        "title_require" => "主题标题不能为空"
     ],
 ]; 

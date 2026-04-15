@@ -741,5 +741,6 @@ return [
         "data_assigned" => "Topic has been assigned to devices, cannot be deleted",
         "data_invalid" => "Device data is abnormal, invalid m_id exists",
         "data_assign_fail" => "Failed to assign devices",
+        "title_require" => "Topic title cannot be empty",
     ],
 ];
