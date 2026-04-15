@@ -1042,7 +1042,7 @@ class SaleOrdersClient extends ManagementClient
                 }
             }
 
-            $field = "a.order_id,a.machine_id,a.machine_name,a.trade_no,a.mch_no,a.total_quantity,(a.total_price - a.refund_amount) total_price,a.discount_price,a.retail_price,a.factory,a.inventory_location,
+            $field = "a.order_id,a.machine_id,a.machine_name,a.trade_no,a.mch_no,a.total_quantity,(a.total_price - a.refund_amount) total_price,a.discount_price,a.retail_price,a.factory,a.inventory_location,se.remark exception_remark,se.create_time exception_create_time,
             (CASE a.order_type 
                 WHEN 1 THEN '普通订单'
                 WHEN 2 THEN '优惠券订单'
@@ -1094,8 +1094,10 @@ class SaleOrdersClient extends ManagementClient
                     'pay_type' => '支付类型',
                     'pay_time' => '支付时间',
                     'out_time' => '出货时间',
+                    'exception_remark' => '处理备注',
                     'deal_status' => '处理状态',
                     'deal_manager' => '处理人',
+                    'exception_create_time' => '处理时间',
                 ];
                 $filename = '异常订单列表-' . date('YmdHis');
                 return $this->sendToExport('订单管理-销售订单', $filename, $title, $list);
