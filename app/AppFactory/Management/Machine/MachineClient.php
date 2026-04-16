@@ -189,7 +189,7 @@ class MachineClient extends ManagementClient
      */
     public function setOperatingBatch($postData)
     {
-        if (!isset($postData['is_operating']) || !in_array(intval($postData['is_operating']), [1, 2])) {
+        if (!isset($postData['is_operating']) || !in_array(intval($postData['is_operating']), [1, 2, 3])) {
             return $this->rValidate('在营状态参数错误');
         }
         $mIds = $postData['m_ids'] ?? ($postData['m_id'] ?? []);
