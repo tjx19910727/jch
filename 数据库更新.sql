@@ -1473,6 +1473,15 @@ CREATE TABLE `machine_calibration_config` (
 
 #20260408--设备在营标记
 ALTER TABLE kiosk.machine
+  ADD COLUMN `is_operating` tinyint(1) NOT NULL DEFAULT 2 COMMENT '在营状态，1-在营 2-在库3-外售' AFTER `status`;
+ALTER TABLE kiosk.sale_orders ADD http_out_status TINYINT DEFAULT 1 NULL COMMENT 'http出货状态：1-已发送，2 -已接收命令，3-操作成功，4-操作失败' after `out_status` ;
+
+
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `remote_refund_status` int default 0 COMMENT '远程退货状态：0-失败 1-成功' AFTER `refund_photo`;
+
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `remote_refund_audit_manager` int default 0 COMMENT '远程退货状态：0-失败 1-成功' AFTER `refund_photo`;
   ADD COLUMN `is_operating` tinyint(1) NOT NULL DEFAULT 2 COMMENT '在营状态，1-在营 2-在库' AFTER `status`;
 
 #20260410~19:20
