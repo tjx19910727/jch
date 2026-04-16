@@ -32,5 +32,6 @@ class VTopicPage extends VCommon
         'del' => ['id'],
         'assignMachine' => ['id'],
         'setStatus' => ['id', 'status'],
+        'copy' => ['id', 'title'],
     ];
 }
