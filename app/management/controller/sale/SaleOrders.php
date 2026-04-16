@@ -245,7 +245,7 @@ class SaleOrders extends Common
         $sale_orders_details = $this->app->saleOrders->getSaleOrdersDetailsFind(['sod_id' => $sod_id], 'remote_refund_status');
         if (!$sale_orders_details) return returnState(100, '订单详情不存在');
 
-        $this->app->saleOrders->updateSaleOrdersDetails(['remote_refund_status' => $remote_refund_status], ['sod_id' => $sod_id]);
+        $this->app->saleOrders->updateSaleOrdersDetails(['remote_refund_status' => $remote_refund_status, 'remote_refund_audit_manager' => $this->manager['manager_id']], ['sod_id' => $sod_id]);
         return returnState(200, 'success', ['remote_refund_status' => $remote_refund_status]);
     }
     /**
