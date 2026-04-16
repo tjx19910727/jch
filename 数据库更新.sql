@@ -1471,19 +1471,6 @@ CREATE TABLE `machine_calibration_config` (
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备校准页配置表';
 
 
-#20260408--设备在营标记
-ALTER TABLE kiosk.machine
-  ADD COLUMN `is_operating` tinyint(1) NOT NULL DEFAULT 2 COMMENT '在营状态，1-在营 2-在库3-外售' AFTER `status`;
-ALTER TABLE kiosk.sale_orders ADD http_out_status TINYINT DEFAULT 1 NULL COMMENT 'http出货状态：1-已发送，2 -已接收命令，3-操作成功，4-操作失败' after `out_status` ;
-
-
-ALTER TABLE kiosk.sale_orders_details
-  ADD COLUMN `remote_refund_status` int default 0 COMMENT '远程退货状态：0-失败 1-成功' AFTER `refund_photo`;
-
-ALTER TABLE kiosk.sale_orders_details
-  ADD COLUMN `remote_refund_audit_manager` int default 0 COMMENT '远程退货状态：0-失败 1-成功' AFTER `refund_photo`;
-  ADD COLUMN `is_operating` tinyint(1) NOT NULL DEFAULT 2 COMMENT '在营状态，1-在营 2-在库' AFTER `status`;
-
 #20260410~19:20
 CREATE TABLE `topic_page` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -1518,3 +1505,20 @@ CREATE TABLE `topic_page_machine` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主题页分配设备表';
 
 ALTER TABLE kiosk.machine_config ADD `raster_state` tinyint(1) NOT NULL DEFAULT 1 COMMENT '取货后是否开启光栅检测：1开 2关闭' after `backsweeper`;
+
+ALTER TABLE kiosk.machine_config ADD `raster_delay_time` int NOT NULL DEFAULT 5 COMMENT '光栅检测延迟时间，单位秒' after `raster_state`;
+ALTER TABLE kiosk.machine_config ADD `discharge_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过出料口摄像头，1-跳过，2-不跳过',
+ALTER TABLE kiosk.machine_config ADD  `internal_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过内部摄像头，1-跳过，2-不跳过',
+
+#20260408--设备在营标记
+ALTER TABLE kiosk.machine
+  ADD COLUMN `is_operating` tinyint(1) NOT NULL DEFAULT 2 COMMENT '在营状态，1-在营 2-在库3-外售' AFTER `status`;
+ALTER TABLE kiosk.sale_orders ADD http_out_status TINYINT DEFAULT 1 NULL COMMENT 'http出货状态：1-已发送，2 -已接收命令，3-操作成功，4-操作失败' after `out_status` ;
+
+
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `remote_refund_status` int default 0 COMMENT '远程退货状态：0-未退货 1-已退货' AFTER `refund_photo`;
+
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `remote_refund_audit_manager` int default 0 COMMENT '远程退货操作人' AFTER `refund_photo`;
+
