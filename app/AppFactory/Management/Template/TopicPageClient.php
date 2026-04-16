@@ -279,4 +279,22 @@ class TopicPageClient extends ManagementClient
         }
         return array_values(array_unique($ids));
     }
+
+    /**
+     * 复制主题
+     * @param $postData
+     * @return array|\think\response\Json
+     */
+    public function copyTopic($postData)
+    {
+        $tg = $this->getTopicPageFind(['id' => $postData['id']]);
+        if (!$tg) return $this->r(100,$this->lang("query_fail"));
+        $tg = $tg->toArray();
+        unset($tg['id']);
+        $tg['title'] = $postData['title'] ?? ($tg['title'] . '_copy_' . time());
+        $tg['created_at'] = date('Y-m-d H:i:s');
+        $tg['manager_id'] = $this->manager['manager_id'] ?? $tg['manager_id'];
+        $result = $this->addTopicPage($tg);
+        return $this->r(200,$this->lang("action_success"));
+    }
 }

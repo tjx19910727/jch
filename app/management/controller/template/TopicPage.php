@@ -87,4 +87,15 @@ class TopicPage extends Common
         }
         return $this->app->topicPage->setStatus($postData);
     }
+
+    public function copy()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'copy');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->topicPage->copyTopic($postData);
+    }
 }
