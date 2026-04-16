@@ -1520,5 +1520,6 @@ ALTER TABLE kiosk.sale_orders_details
   ADD COLUMN `remote_refund_status` int default 0 COMMENT '远程退货状态：0-未退货 1-已退货' AFTER `refund_photo`;
 
 ALTER TABLE kiosk.sale_orders_details
-  ADD COLUMN `remote_refund_audit_manager` int default 0 COMMENT '远程退货操作人' AFTER `refund_photo`;
+  ADD COLUMN `remote_refund_audit_manager` int default 0 COMMENT '远程退货执行人' AFTER `refund_photo`;
 
+  update wx_template set body = '[{"设备编号":{"value":"{{machine_id}}","field":"character_string16"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"异常时间":{"value":"{{error_time}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"设备地址":{"value":"{{error_code}}","field":"thing9"}}]' , template_id = 'frqumju8oA7N8msUrhIiHpDd18j2Ie-DxLGlz5jWz8g' where wt_id =5;
