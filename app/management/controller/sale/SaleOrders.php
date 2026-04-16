@@ -229,6 +229,25 @@ class SaleOrders extends Common
             }
         }
     }
+
+    /**
+     * 设置子订单远程退货状态
+     * 接口参数：sod_id int, status int (0-未退货，1-已退货)
+     * @return array|string
+     */
+    public function setRemoteRefundStatus()
+    {
+        $postData = input();
+        $sod_id = intval($postData['sod_id'] ?? 0);
+        $remote_refund_status = intval($postData['remote_refund_status'] ?? 0);
+        if (!$sod_id) return returnState(100, 'sod_id is required');
+
+        $sale_orders_details = $this->app->saleOrders->getSaleOrdersDetailsFind(['sod_id' => $sod_id], 'remote_refund_status');
+        if (!$sale_orders_details) return returnState(100, '订单详情不存在');
+
+        $this->app->saleOrders->updateSaleOrdersDetails(['remote_refund_status' => $remote_refund_status, 'remote_refund_audit_manager' => $this->manager['manager_id']], ['sod_id' => $sod_id]);
+        return returnState(200, 'success', ['remote_refund_status' => $remote_refund_status]);
+    }
     /**
      * 导出订单列表信息
      * @return array|string
