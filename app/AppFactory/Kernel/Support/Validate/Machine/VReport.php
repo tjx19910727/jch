@@ -33,6 +33,7 @@ class VReport extends SupportValidate
         "value" => "require",
 
         "channel_code" => "require",
+        "mc_id" => "require",
 
         "errorCode" => "require",
     ];
@@ -58,6 +59,7 @@ class VReport extends SupportValidate
         "value.require" => "数值不能为空",
 
         "channel_code.require" => "货道编号不能为空",
+        "mc_id.require" => "货道ID不能为空",
 
         "errorCode.require" => "错误码不能为空",
     ];
@@ -90,6 +92,7 @@ class VReport extends SupportValidate
         "initialization" => ["msgType"],//远程初始化
         "axisOffset" => ["msgType","x_axis","y_axis"],//主轴偏移
         "remoteOutGoods" => ["msgType", 'status'],//远程出货
+        "remoteRemovalEnd" => ["msgType", 'mc_id', 'channel_code'],//远程下架回收结果
 
     ];
 }

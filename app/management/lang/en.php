@@ -427,6 +427,8 @@ return [
         "channel_code_require" => "Channel number cannot be empty",
         "synchronization_fail" => "Failed to synchronize device channel",
         "update_price_error" => "Locked shelf price error",
+        "mc_data_empty" => "Device channel information does not exist",
+        "mc_empty_goods" => "Device channel has no bound goods",
     ],
 
     "VMachineErrorCode" => [

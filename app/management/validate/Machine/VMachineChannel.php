@@ -33,6 +33,7 @@ class VMachineChannel extends VCommon
         "add" => ["m_id", "machine_id", "channel_code"],
         "update" => ["mc_id"],
         "updateAll" => ["mc_ids"],
+        "remoteRemoval" => ["mc_id"],
         "del" => ["mc_id"],
     ];
 }

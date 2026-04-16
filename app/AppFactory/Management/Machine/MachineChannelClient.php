@@ -19,7 +19,6 @@ use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
-use think\facade\Db;
 
 class MachineChannelClient extends ManagementClient
 {
@@ -574,5 +573,62 @@ class MachineChannelClient extends ManagementClient
             $this->rollbackTrans();
             return $this->r(100, $e->getMessage());
         }
+    }
+
+    /**
+     * 远程下架货道商品进行回收
+     * @param array $postData
+     * @return array|string
+     */
+    public function remoteRemoval($postData)
+    {
+        $mc = $this->getMachineChannelFind(
+            ['mc_id' => $postData['mc_id']],
+            'mc_id,m_id,machine_id,channel_code,mg_id,g_id,sku,stock'
+        );
+        if (!$mc) {
+            return $this->r(100, $this->lang("VMachineChannel.mc_data_empty"));
+        }
+        $mc = $mc->toArray();
+        if (intval($mc['g_id']) <= 0) {
+            return $this->r(100, $this->lang("VMachineChannel.mc_empty_goods"));
+        }
+
+        $send = $this->sendToMachine(
+            ['machine_id' => $mc['machine_id']],
+            'remoteRemoval',
+            [
+                'mc_id' => intval($mc['mc_id']),
+                'channel_code' => $mc['channel_code'],
+            ]
+        );
+
+        if (!$send || is_string($send)) {
+            return $this->r(100, is_string($send) ? $send : $this->lang('action_fail'));
+        }
+
+        if (is_array($send) && isset($send['state']) && intval($send['state']) != 200) {
+            return $this->r(100, $send['msg'] ?? $this->lang('action_fail'));
+        }
+
+        $insert = [
+            'm_id' => $mc['m_id'],
+            'machine_id' => $mc['machine_id'],
+            'mc_id' => $mc['mc_id'],
+            'g_id' => $mc['g_id'],
+            'sku' => $mc['sku'] ?? '',
+            'total_count' => max(intval($mc['stock']), 0),
+            'success_count' => 0,
+            'fail_count' => 0,
+            'remark' => '下发remoteRemoval指令',
+            'created_at' => time(),
+            'reported_at' => 0,
+        ];
+        $this->addRemoteRemovalLog($insert);
+
+        return $this->r(200, $this->lang('action_success'), [
+            'mc_id' => intval($mc['mc_id']),
+            'channel_code' => $mc['channel_code'],
+        ]);
     }
 }

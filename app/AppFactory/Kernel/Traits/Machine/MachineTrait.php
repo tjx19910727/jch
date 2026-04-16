@@ -18,9 +18,10 @@ use app\AppFactory\Kernel\Model\Wx\WxOfficialLoginModel;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Model\RemoteActionLog\RemoteActionLogModel;
 use app\AppFactory\Kernel\Traits\RemoteActionLog\RemoteActionLogTrait;
+use app\AppFactory\Kernel\Traits\RemoteRemovalLog\RemoteRemovalLogTrait;
 trait MachineTrait
 {
-    use SaleOrdersTrait, RemoteActionLogTrait;
+    use SaleOrdersTrait, RemoteActionLogTrait, RemoteRemovalLogTrait,MachineChannelTrait;
     /**
      * 获取设备指定列数据
      * @param $where
@@ -530,6 +531,116 @@ trait MachineTrait
         actionLog($this->message, "远程出货接收mq");
         RemoteActionLogModel::update(['status' => $this->message['status']], ['id' => $this->message['log_id']]);
         return $this->updateSaleOrdersDetails(['sod_id' => $this->message['sod_id'], 'remote_out_goods_status' => $this->message['status']]);
+    }
+
+    /**
+     * 远程下架回收结束上报
+     * 根据成功回收数量扣减货道库存；库存不足则清空货道商品并下发更新货道MQ。
+     * @return int
+     */
+    public function remoteRemovalEnd()
+    {
+        try {
+            $whereMc = ['m_id' => $this->machine['m_id']];
+            if (isset($this->message['mc_id']) && $this->message['mc_id']) {
+                $whereMc['mc_id'] = intval($this->message['mc_id']);
+            }
+            if (isset($this->message['channel_code']) && $this->message['channel_code']) {
+                $whereMc['channel_code'] = $this->message['channel_code'];
+            }
+
+            if (!isset($whereMc['mc_id']) && !isset($whereMc['channel_code'])) {
+                actionLog($this->message, 'remoteRemovalEnd参数缺少mc_id/channel_code', 'DataUpload');
+                return 1;
+            }
+
+            $mc = $this->getMachineChannelFind(
+                $whereMc,
+                'mc_id,m_id,machine_id,mg_id,g_id,g_name,gc_id,gc_name,pic,channel_code,sku,bar_code,cost_price,market_price,retail_price,gift_points,stock,frozen_stock'
+            );
+            if (!$mc) {
+                actionLog($whereMc, 'remoteRemovalEnd未找到货道', 'DataUpload');
+                return 1;
+            }
+            $mc = $mc->toArray();
+
+            $totalCount = intval($this->message['total_count'] ?? 0);
+            $successCount = intval($this->message['success_count'] ?? ($this->message['success'] ?? 0));
+            $failCount = intval($this->message['fail_count'] ?? ($this->message['fail'] ?? 0));
+            if ($totalCount <= 0) {
+                $totalCount = $successCount + $failCount;
+            }
+            if ($failCount <= 0 && $totalCount > $successCount) {
+                $failCount = $totalCount - $successCount;
+            }
+            if ($successCount < 0) {
+                $successCount = 0;
+            }
+
+            $remark = $this->message['remark'] ?? ($this->message['msg'] ?? '');
+            if (is_array($remark) || is_object($remark)) {
+                $remark = json_encode($remark, 320);
+            }
+
+            $lastLog = $this->getRemoteRemovalLogFind(
+                ['m_id' => $mc['m_id'], 'mc_id' => $mc['mc_id']],
+                'id',
+                'id desc'
+            );
+
+            $logData = [
+                'm_id' => $mc['m_id'],
+                'machine_id' => $mc['machine_id'],
+                'mc_id' => $mc['mc_id'],
+                'g_id' => $mc['g_id'],
+                'sku' => $mc['sku'] ?? '',
+                'total_count' => $totalCount,
+                'success_count' => $successCount,
+                'fail_count' => $failCount,
+                'remark' => $remark,
+                'reported_at' => time(),
+            ];
+
+            if ($lastLog) {
+                $this->updateRemoteRemovalLog($logData, ['id' => $lastLog['id']]);
+            } else {
+                $logData['created_at'] = time();
+                $this->addRemoteRemovalLog($logData);
+            }
+
+            if ($successCount > 0) {
+                $newStock = intval($mc['stock']) - $successCount;
+                if ($newStock > 0) {
+                    $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $newStock]);
+                } else {
+                    $clearData = [
+                        'mc_id' => $mc['mc_id'],
+                        'mg_id' => 0,
+                        'g_id' => 0,
+                        'g_name' => '',
+                        'gc_id' => 0,
+                        'gc_name' => '',
+                        'pic' => '',
+                        'sku' => '',
+                        'bar_code' => '',
+                        'cost_price' => 0,
+                        'market_price' => 0,
+                        'retail_price' => 0,
+                        'gift_points' => 0,
+                        'stock' => 0,
+                        'frozen_stock' => 0,
+                    ];
+                    $this->updateMachineChannel($clearData);
+                }
+
+                $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => intval($mc['mc_id'])]);
+            }
+
+            return 1;
+        } catch (\Exception $e) {
+            actionException($e, 1, 'remoteRemovalEnd');
+            return 1;
+        }
     }
 
     // public function checkRecycleBox(){
