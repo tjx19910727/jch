@@ -155,10 +155,7 @@ class SaleOrders extends Common
             unset($postData['g_name']);
         }
         $where = $this->getWhere($postData,false,["machine_id" => 'like',"machine_name" => 'like'],'so.');
-        if (isset($where['ao_id'])) {
-            $where['so.ao_id'] = $where['ao_id'];
-            unset($where['ao_id']);
-        }
+        $this->formatAoIdWhereWithPrefix($where, 'so.');
         $where['so.pay_status'] = 3;
         if ($m_id) $where['so.m_id'] = $m_id;
         if ($sku) $where[] = ['sod.sku', 'like', '%'.$sku.'%'];
@@ -283,10 +280,7 @@ class SaleOrders extends Common
         $timeWhere = $this->getWhere(['sor.update_time' => $update_time]);
         $where = $this->authNodeWhere();
         $where = $timeWhere + $where;
-        if (isset($where['ao_id'])) {
-            $where['sor.ao_id'] = $where['ao_id'];
-            unset($where['ao_id']);
-        }
+        $this->formatAoIdWhereWithPrefix($where, 'sor.');
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
             $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
             unset($postData['machine_group_id']);

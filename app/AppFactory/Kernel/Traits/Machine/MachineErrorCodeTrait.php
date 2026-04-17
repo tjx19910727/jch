@@ -64,7 +64,8 @@ trait MachineErrorCodeTrait
         ];
         $result = $this->addMachineErrorCode($insert);
         if ($result) {
-            if (!$lastEc) {
+            //不需要发送模板消息的错误码：1100000、1000001
+            if (!$lastEc && !in_array($this->message['errorCode'], ['1100000', '1000001'])) {
                 $machine = $this->machine;
                 if (!is_array($this->machine)) $machine = $this->machine->toArray();
                 $errorMsg = $this->lang("deviceErrorCode." . $this->message['errorCode']);
