@@ -173,6 +173,40 @@ class Common extends AuthController
         return $where;
     }
 
+    /**
+     * 将 where 中 ao_id 条件统一改为带前缀字段
+     * 兼容两种结构：
+     * 1) $where['ao_id'] = 17
+     * 2) $where[] = ['ao_id', 'in', [11,22]]
+     * @param $where
+     * @param $prefix 例如 so. / sod. / sor.
+     * @return array
+     */
+    public function formatAoIdWhereWithPrefix($where,$prefix)
+    {
+        if ($prefix === '' || strpos($prefix, '.') === false) {
+            return $where;
+        }
+
+        $prefixAoId = $prefix . 'ao_id';
+
+        if (isset($where['ao_id'])) {
+            $where[$prefixAoId] = $where['ao_id'];
+            unset($where['ao_id']);
+        }
+
+        foreach ($where as $k => $v) {
+            if (!is_array($v) || !isset($v[0]) || !is_string($v[0])) {
+                continue;
+            }
+            if ($v[0] == 'ao_id') {
+                $where[$k][0] = $prefixAoId;
+            }
+        }
+
+        return $where;
+    }
+
     //获取架构的所有下级部门
     public function getChildsAoIds($ao_id){
         $sql = "WITH RECURSIVE cte AS (
