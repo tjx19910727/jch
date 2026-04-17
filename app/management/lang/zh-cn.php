@@ -427,6 +427,8 @@ return [
         "channel_code_require" => "货道编号不能为空",
         "synchronization_fail" => "同步设备货道失败",
         "update_price_error" => "锁定货架价格错误",
+        "mc_data_empty" => "设备货道信息不存在",
+        "mc_empty_goods" => "设备货道未绑定商品",
     ],
 
     "VMachineErrorCode" => [
