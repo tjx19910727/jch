@@ -23,6 +23,11 @@ trait MachineVersionPlanTrait
         return MachineVersionPlanModel::getList($where,$pageNum,$field,$order,$eachFun);
     }
 
+    public function getMachineVersionPlanWithMachineNameList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "")
+    {
+        return MachineVersionPlanModel::getListAndWith($where,$pageNum,$field,$order,$eachFun,'',0,['machine']);
+    }
+
     public function addMachineVersionPlan($insert)
     {
         !isset($this->manager['manager_id']) ? :$insert['creator'] = $this->manager['manager_id'];
