@@ -300,7 +300,7 @@ class WeiChengClient extends ManagementClient
             if ($wc_goods['type'] == 5) {
                 $wc_goods_local = $this->getWcGoodsLocalFind(['out_no' => $wc_goods['no']]);
                 if ($wc_goods_local) {
-                    $wc_goods['g_id'] = $wc_goods_local['g_id'];
+                    $wc_goods['g_id'] = $wc_goods_local['g_id'] ?? '';
                 }
             }
             $inserData = [

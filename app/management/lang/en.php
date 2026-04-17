@@ -731,4 +731,16 @@ return [
         "type_change_require_unbind" => "Machine type change requires unbinding sub machine",
         "is_online_no_change" => "Sub machine is online, type change and unbinding are not allowed",
     ],
+    "VTopicPage" => [
+        "id_require" => "Topic ID cannot be empty",
+        "id_number" => "Topic ID format is incorrect",
+        "id_gt" => "Topic ID must be greater than 0",
+        "status_require" => "Status cannot be empty",
+        "status_in" => "Status can only be 1 or 2",
+        "data_empty" => "Topic does not exist",
+        "data_assigned" => "Topic has been assigned to devices, cannot be deleted",
+        "data_invalid" => "Device data is abnormal, invalid m_id exists",
+        "data_assign_fail" => "Failed to assign devices",
+        "title_require" => "Topic title cannot be empty",
+    ],
 ];

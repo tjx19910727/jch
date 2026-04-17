@@ -53,6 +53,7 @@ class ReceiveBaseClient extends MachineBaseClient
         if (!isset($this->data['msgType']) || (isset($this->data['msgType']) && $this->data['msgType'] != "heartbeat")) {
             $this->heartbeat();
         }
+
         $this->newRecord();
 
         $this->ignoreList = (config("auth_manager_log_list.ignore")['machine'] ?? []);

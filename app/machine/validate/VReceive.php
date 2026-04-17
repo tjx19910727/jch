@@ -59,6 +59,8 @@ class VReceive extends VCommon
 
         "gm_id" => "require",
         "gmg_id" => "require",
+        "trade_no" => "require",
+        "status" => "integer",
     ];
 
     protected $message = [
@@ -113,6 +115,8 @@ class VReceive extends VCommon
         "gm_id.require" => "VSubGoodsMultipleOrder.gm_id_require",
         "gmg_id.require" => "VSubGoodsMultipleOrder.gmg_id_require",
 
+        "trade_no.require" => "VReceive.trade_no_require",
+
     ];
 
     protected $scene = [
@@ -128,6 +132,8 @@ class VReceive extends VCommon
         "getMachineGoods" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineInfo" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineConfig" => ["msg_id","machine_id","timestamp","sign"],
+        "getCalibrationConfig" => ["msg_id","machine_id","timestamp","sign"],
+        "getTopicPage" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineConfigLangList" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineOnOff" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineHelp" => ["msg_id","machine_id","timestamp","sign"],
@@ -190,6 +196,8 @@ class VReceive extends VCommon
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
         "requireOutGoods" => ["msg_id","machine_id","timestamp","sign","trade_no"],
         "getOrderPayStatus" => ["msg_id","machine_id","timestamp","sign"],
+        "setHttpOutStatus" => ["msg_id","machine_id","timestamp","sign","trade_no","http_out_status"],
+        // "triggerOutGoodsByHttp" => ["msg_id","machine_id","timestamp","sign","trade_no"],
 
         "cardAddPoints" => ["msg_id","machine_id","timestamp","card_no"],
         "checkBalancePayPassword" => ["msg_id","machine_id","timestamp","sign","card_no"],

@@ -735,4 +735,16 @@ return [
         "type_change_require_unbind" => "副柜类型变更需要先解绑设备",
         "is_online_no_change" => "设备已在线，不允许变更类型、解绑"
     ],
+    "VTopicPage" => [
+        "id_require" => "主题ID不能为空",
+        "id_number" => "主题ID格式错误",
+        "id_gt" => "主题ID必须大于0",
+        "status_require" => "状态不能为空",
+        "status_in" => "状态只能是1或2",
+        "data_empty" => "主题不存在",
+        "data_assigned" => "主题已分配设备，不能删除",
+        "data_invalid" => "设备数据异常，存在无效m_id",
+        "data_assign_fail" => "分配设备失败",
+        "title_require" => "主题标题不能为空"
+    ],
 ]; 

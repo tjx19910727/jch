@@ -18,6 +18,7 @@ use app\AppFactory\Kernel\Model\Wx\WxOfficialLoginModel;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Model\RemoteActionLog\RemoteActionLogModel;
 use app\AppFactory\Kernel\Traits\RemoteActionLog\RemoteActionLogTrait;
+use think\facade\Db;
 trait MachineTrait
 {
     use SaleOrdersTrait, RemoteActionLogTrait;
@@ -213,6 +214,10 @@ trait MachineTrait
         $update['online'] = 1;
         if (isset($this->data["version"]) && $this->data['version']) $update['version'] = $this->data['version'];
         $result = $this->updateMachine($update);
+
+        // 心跳后触发上线补发更新版本检查、兼容发布时间配置。
+        $this->resendUpdateVersionPlanWhenOnline();
+
         return $result;
     }
 
@@ -548,5 +553,46 @@ trait MachineTrait
     //     ]);
     // }
 
-    
+        /**
+     * 设备上线时补发更新版本 MQ（仅离线->上线触发一次）
+     */
+    protected function resendUpdateVersionPlanWhenOnline()
+    {
+        try {
+            $now = time();
+            $checkKey = 'machine.updateVersionPlan.check.' . $this->machine['machine_id'];
+            $checkCoolDown = 120;
+
+            // 心跳兜底时限频检查，避免每次心跳都查数据库。
+            $lastCheckTime = cache($checkKey);
+            if ($lastCheckTime && ($now - $lastCheckTime < $checkCoolDown)) {
+                return;
+            }
+            cache($checkKey, $now, $checkCoolDown);
+            //create_time大于此功能上线的时间，避免历史数据上线时被补发。2026-04-15
+            $plan = Db::name('machine_version_plan')->where([
+                'machine_id' => $this->machine['machine_id'],
+                'status' => 1,
+            ])->where('publish_time', '<=', $now)
+            ->where('create_time', '>', 1776219898)
+            ->field('mvp_id,machine_id,mv_id,version_no,publish_time')
+            ->order('publish_time asc,mvp_id asc')
+            ->find();
+            actionLog($plan, '上线补发更新版本MQ检查结果');
+            if (empty($plan)) {
+                return;
+            }
+            $sendResult = $this->sendToMachine(
+                ['machine_id' => $this->machine['machine_id']],
+                'updateVersionPlan'
+            );
+            actionLog([
+                'machine_id' => $this->machine['machine_id'],
+                'mvp_id' => $plan['mvp_id'] ?? 0,
+                'sendResult' => is_object($sendResult) ? obj2arr($sendResult) : $sendResult,
+            ], '设备上线补发更新版本MQ');
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+        }
+    }
 }

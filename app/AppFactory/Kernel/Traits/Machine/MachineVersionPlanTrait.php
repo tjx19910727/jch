@@ -60,6 +60,9 @@ trait MachineVersionPlanTrait
                 }
                 $flag[] = $this->updateMachineVersionPlan(['mvp_id' => $this->message['mvp_id'], 'status' => $this->message['status']]);
                 actionLog($this->getLS(), '【SQL】修改设备更新计划状态', "DataUpload");
+                if ($this->message['status'] == 2) {
+                    $this->completeSameUpdateTimePendingPlans($mvp);
+                }
                 $this->checkTrans($this->checkFlag($flag));
             } catch (\Exception $e) {
                 $this->rollbackTrans();
@@ -67,5 +70,30 @@ trait MachineVersionPlanTrait
             }
         }
 
+    }
+
+    /**
+     * 更新完成时，同步将同设备同 update_time 的其他未更新计划置为已下架
+     * @param $mvp
+     * @return int
+     */
+    protected function completeSameUpdateTimePendingPlans($mvp)
+    {
+        if(empty($mvp['m_id']) || empty($mvp['mvp_id'])){
+            return 0;
+        }
+        $where = [
+            ['m_id', '=', $mvp['m_id'] ?? 0],
+            ['status', '=', 1],
+            ['mvp_id', '<>', $mvp['mvp_id']],
+        ];
+        $affected = MachineVersionPlanModel::where($where)->update(['status' => 4]);
+        actionLog([
+            'machine_id' => $mvp['machine_id'] ?? '',
+            'mvp_id' => $mvp['mvp_id'],
+            'update_time' => time(),
+            'affected' => $affected,
+        ], '更新完成后批量置同时间节点计划为已下架', "DataUpload");
+        return $affected;
     }
 }

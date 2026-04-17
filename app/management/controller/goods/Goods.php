@@ -49,6 +49,41 @@ class Goods extends Common
     }
 
     /**
+     * 获取设备货道商品列表
+     * 传入 m_id（如：11,22,33）时仅返回这些设备货道上的商品；
+     * m_id 未传或为空时返回全部商品。
+     * @return mixed
+     */
+    public function getMcList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+
+        $mIds = $postData['m_id'] ?? [];
+        unset($postData['m_id']);
+        $where = $this->getWhere($postData,false,['g_name' => "like",'sku' => "like"]);
+        if (!is_array($mIds)) {
+            $mIds = explode(",",$mIds);
+        }
+        $mIds = array_values(array_filter(array_map('trim',$mIds), function ($v) {
+            return $v !== '';
+        }));
+
+        if ($mIds) {
+            $whereMc[] = ['m_id','in',$mIds];
+            $gIds = $this->app->machineChannel->getMachineChannelColumn($whereMc,'g_id');
+            $gIds = array_values(array_unique(array_filter($gIds)));
+            if (!$gIds) {
+                $where[] = ['g_id','=',0];
+            } else {
+                $where[] = ['g_id','in',$gIds];
+            }
+        }
+
+        return $this->app->goods->getList($where,$pageNum,$this->field,'g_id desc');
+    }
+
+    /**
      * 添加商品
      * @return array|mixed|string
      */

@@ -38,6 +38,7 @@ use app\AppFactory\Kernel\Traits\Mall\MallRequestLogsTrait;
 use app\AppFactory\Kernel\Traits\Payment\BalancePayTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDetailsDailyCountTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
+use think\facade\Db;
 
 class SaleOrdersClient extends ManagementClient
 {
@@ -113,7 +114,7 @@ class SaleOrdersClient extends ManagementClient
     {
         try {
             if ($detailAoId) {
-                $orderIds = array_values(array_unique($this->getSaleOrdersDetailsColumn(['ao_id' => $detailAoId], 'order_id')));
+                $orderIds = array_values(array_unique($this->getSaleOrdersDetailsColumn(['sod_ao_id' => $detailAoId], 'order_id')));
                 if (!$orderIds) $orderIds = [0];
                 $where[] = ['order_id', 'in', $orderIds];
             }
@@ -136,7 +137,7 @@ class SaleOrdersClient extends ManagementClient
         foreach ($rows as $key => $row) {
             $details = obj2arr($row['details'] ?? []);
             $details = array_values(array_filter($details, function ($detail) use ($detailAoId) {
-                return isset($detail['ao_id']) && (string) $detail['ao_id'] === (string) $detailAoId;
+                return isset($detail['sod_ao_id']) && (string) $detail['sod_ao_id'] === (string) $detailAoId;
             }));
 
             if (!$details) {
@@ -949,5 +950,198 @@ class SaleOrdersClient extends ManagementClient
             return $this->sendToExport("运营数据-销售数据", $filename, $title, $list);
         }
         return $this->r(100, $this->lang("query_fail"));
+    }
+    
+    /**
+     * 异常订单列表（左连接异常处理表）
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @param bool $supplier
+     * @return array|string
+     */
+    public function getExceptionSoList($where, $pageNum = 0, $field = "*", $order = "", $supplier = false)
+    {
+        try {
+            $this->autoInitExceptionPendingOrders();
+            if ($supplier) {
+                if ($this->manager['pid'] > 0) {
+                    $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+                    if ($mIds) $where[] = ['a.m_id', 'in', $mIds];
+                }
+            }
+
+            $data = $this->getSaleOrdersExceptionList($where, $pageNum, $field, $order ?: 'a.order_id desc')->toArray();
+            return $this->r(200, $this->lang("query_success"), $data);
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 功能上线历史数据补录：把历史未处理异常订单批量写入异常处理表
+     * @return bool
+     */
+    protected function autoInitExceptionPendingOrders()
+    {
+        try {
+            $deadlineTs = 1776149111;
+            $rows = Db::name('sale_orders')->alias('a')
+                ->leftJoin('sale_orders_exception se', 'se.order_id = a.order_id')
+                ->whereNull('se.id')
+                ->whereIn('a.pay_status', ['3', '7'])
+                ->whereIn('a.out_status', ['2', '5', '6'])
+                ->where('a.pay_time', '<', $deadlineTs)
+                ->field('a.order_id,a.m_id')
+                ->select()
+                ->toArray();
+
+            if (!$rows) {
+                return true;
+            }
+
+            $now = time();
+            $insertData = [];
+            foreach ($rows as $row) {
+                $insertData[] = [
+                    'order_id' => $row['order_id'],
+                    'sod_id' => 0,
+                    'm_id' => $row['m_id'] ?? 0,
+                    'manager_id' => $this->manager['manager_id'] ?? 0,
+                    'remark' => '系统自动补录：功能上线前未处理异常订单',
+                    'status' => 1,
+                    'create_time' => $now,
+                ];
+            }
+
+            if ($insertData) {
+                Db::name('sale_orders_exception')->insertAll($insertData);
+            }
+            return true;
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return false;
+        }
+    }
+
+    /**
+     * 导出异常订单
+     * @param $where
+     * @param bool $supplier
+     * @return array|string
+     */
+    public function exportExceptionSo($where, $supplier = false)
+    {
+        try {
+            if ($supplier) {
+                if ($this->manager['pid'] > 0) {
+                    $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+                    if ($mIds) $where[] = ['a.m_id', 'in', $mIds];
+                }
+            }
+
+            $field = "a.order_id,a.machine_id,a.machine_name,a.trade_no,a.mch_no,a.total_quantity,(a.total_price - a.refund_amount) total_price,a.discount_price,a.retail_price,a.factory,a.inventory_location,se.remark exception_remark,se.create_time exception_create_time,
+            (CASE a.order_type 
+                WHEN 1 THEN '普通订单'
+                WHEN 2 THEN '优惠券订单'
+                WHEN 3 THEN '取货码订单'
+                WHEN 4 THEN '盲盒活动'
+                WHEN 5 THEN '满减满送活动'
+                WHEN 6 THEN '叠加营销活动'
+                END
+            ) order_type,
+            (CASE a.out_status
+                WHEN 1 THEN '正常'
+                WHEN 2 THEN '已发出货命令'
+                WHEN 3 THEN '等待出货结果'
+                WHEN 4 THEN (CASE a.refund_status WHEN 1 THEN '正常' WHEN 2 THEN '已退款' WHEN 3 THEN '退款失败' END)
+                WHEN 5 THEN '出货失败'
+                WHEN 6 THEN '未取商品'
+                END
+            ) refund_status,
+            (CASE a.pay_type
+                WHEN 1 THEN '微信支付'
+                WHEN 2 THEN '支付宝支付'
+                WHEN 3 THEN ''
+                WHEN 4 THEN '京东收银'
+                WHEN 5 THEN '会员支付'
+                WHEN 6 THEN '丽呈线上支付'
+                WHEN 7 THEN '机器人线上支付'
+                WHEN 8 THEN '八达通COGOLINK'
+                WHEN 0 THEN '免支付' END) pay_type,
+            FROM_UNIXTIME(a.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
+            FROM_UNIXTIME(a.out_time,'%Y-%m-%d %H:%i:%s') out_time,
+            (CASE se.status WHEN 1 THEN '已处理' ELSE '未处理' END) deal_status,
+            (CASE se.status WHEN  1 THEN IFNULL(am.nickname, am.account) ELSE '' END) deal_manager";
+            $list = $this->getSaleOrdersExceptionList($where, 0, $field, 'a.order_id desc')->toArray();
+            if ($list) {
+                $title = [
+                    'order_id' => '订单ID',
+                    'machine_id' => '设备编号',
+                    'machine_name' => '设备名称',
+                    'trade_no' => '订单编号',
+                    'mch_no' => '支付编号',
+                    'total_quantity' => '订单总数',
+                    'total_price' => '支付金额',
+                    'discount_price' => '优惠金额',
+                    'retail_price' => '原订单总额',
+                    'factory' => '所属工厂',
+                    'inventory_location' => '库存地点',
+                    'refund_status' => '订单状态',
+                    'order_type' => '订单类型',
+                    'pay_type' => '支付类型',
+                    'pay_time' => '支付时间',
+                    'out_time' => '出货时间',
+                    'exception_remark' => '处理备注',
+                    'deal_status' => '处理状态',
+                    'deal_manager' => '处理人',
+                    'exception_create_time' => '处理时间',
+                ];
+                $filename = '异常订单列表-' . date('YmdHis');
+                return $this->sendToExport('订单管理-销售订单', $filename, $title, $list);
+            }
+            return $this->rFail("暂无数据可导出");
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 异常订单处理
+     * @param array $postData
+     * @return array|string
+     */
+    public function exceptionHandle($postData = [])
+    {
+        try {
+            $order = $this->getSaleOrdersFind(['order_id' => $postData['order_id']], 'order_id,m_id');
+            if (!$order) return $this->r(100, $this->lang("VSaleOrders.order_no_data"));
+
+            $insert = [
+                'order_id' => $postData['order_id'],
+                'sod_id' => 0,//目前没有关联具体子订单详情，后续如果有需要再修改
+                'm_id' => $order['m_id'],
+                'manager_id' => $this->manager['manager_id'],
+                'remark' => $postData['remark'],
+                'status' => 1,
+                'create_time' => time(),
+            ];
+
+            $exist = Db::name('sale_orders_exception')->where(['order_id' => $postData['order_id']])->order('id desc')->find();
+            if ($exist) {
+                $result = Db::name('sale_orders_exception')->where(['id' => $exist['id']])->update($insert);
+            } else {
+                $result = Db::name('sale_orders_exception')->insert($insert);
+            }
+
+            if ($result === false) return $this->rFail('处理失败');
+            return $this->rSuccess('处理成功');
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 }

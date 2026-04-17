@@ -1,4 +1,3 @@
-
 #20260305
 ALTER TABLE kiosk.wc_request_logs MODIFY COLUMN response_body longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL;
 ALTER TABLE kiosk.wc_goods MODIFY COLUMN goods longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL COMMENT '实物商品信息';
@@ -1437,3 +1436,90 @@ CREATE TABLE `auth_org_revenue_logs` (
   KEY `idx_order_id` (`order_id`),
   KEY `idx_si_id` (`si_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='组织分账日志表';
+
+#20260409
+CREATE TABLE `sale_orders_exception` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增id',
+  `order_id` int DEFAULT NULL COMMENT '订单ID',
+  `sod_id` int DEFAULT '0' COMMENT '订单副表ID',
+  `m_id` int DEFAULT 0 COMMENT '设备ID',
+  `manager_id` int DEFAULT 0 COMMENT '处理人ID',
+  `remark` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '备注信息',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态，1. 已处理，2. 未处理',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `order_id` (`order_id`) USING BTREE,
+  KEY `sod_id` (`sod_id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='异常订单处理表';
+  
+#20260331.15:38
+CREATE TABLE `machine_calibration_config` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `m_id` int NOT NULL DEFAULT 0 COMMENT '设备m_id' ,
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '名称',
+  `machine_id` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '设备的machine_id' ,
+  `version` int NOT NULL DEFAULT 0 COMMENT '配置的版本',
+  `key` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的键',
+  `value` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的值',
+  `value_type` varchar(20) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'string' COMMENT '配置的值类型: string, int, float, bool',
+  `desc` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的描述',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  key `m_id` (`m_id`) USING BTREE,
+  key `machine_id` (`machine_id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备校准页配置表';
+
+
+#20260410~19:20
+CREATE TABLE `topic_page` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `top_logo` varchar(255) NOT NULL DEFAULT '' COMMENT '顶部logo',
+  `bg_url` varchar(255) NOT NULL DEFAULT '' COMMENT '背景图',
+  `maintenance_bg` varchar(255) NOT NULL DEFAULT '' COMMENT '维护页背景图',
+  `error_url` varchar(255) NOT NULL DEFAULT '' COMMENT '错误页背景图',
+  `closed_url` varchar(255) NOT NULL DEFAULT '' COMMENT '暂停营业背景图',
+  `verification_url` varchar(255) NOT NULL DEFAULT '' COMMENT '核销背景图',
+  `pickup_url` varchar(255) NOT NULL DEFAULT '' COMMENT '取货页广告图',
+  `shipping_url` varchar(255) NOT NULL DEFAULT '' COMMENT '出货页广告图',
+  `pickup_qrcode_1` varchar(255) NOT NULL DEFAULT '' COMMENT '出/取货图片1',
+  `pickup_qrcode_2` varchar(255) NOT NULL DEFAULT '' COMMENT '出/取货图片2',
+  `scan_url` varchar(255) NOT NULL DEFAULT '' COMMENT '支付页反扫图',
+  `qr_code_url` varchar(255) NOT NULL DEFAULT '' COMMENT '支付页扫码图',
+  `balance_url` varchar(255) NOT NULL DEFAULT '' COMMENT '支付页余额支付图',
+  `card_url` varchar(255) NOT NULL DEFAULT '' COMMENT '支付页刷卡图',
+  `manager_id` int(11) NOT NULL DEFAULT 0 COMMENT '管理员ID',
+  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态 1启用 2禁用',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_manager_id` (`manager_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主题页表';
+
+CREATE TABLE `topic_page_machine` (
+  `topic_id` int(11) NOT NULL DEFAULT 0 COMMENT '主题页ID',
+  `m_id` int(11) NOT NULL DEFAULT 0 COMMENT '设备m_id',
+  `machine_id` varchar(255) NOT NULL DEFAULT '' COMMENT '设备编码',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_topic_id` (`topic_id`) USING BTREE,
+  KEY `idx_m_id` (`m_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='主题页分配设备表';
+
+ALTER TABLE kiosk.machine_config ADD `raster_state` tinyint(1) NOT NULL DEFAULT 1 COMMENT '取货后是否开启光栅检测：1开 2关闭' after `backsweeper`;
+
+ALTER TABLE kiosk.machine_config ADD `raster_delay_time` int NOT NULL DEFAULT 5 COMMENT '光栅检测延迟时间，单位秒' after `raster_state`;
+ALTER TABLE kiosk.machine_config ADD `discharge_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过出料口摄像头，1-跳过，2-不跳过',
+ALTER TABLE kiosk.machine_config ADD  `internal_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过内部摄像头，1-跳过，2-不跳过',
+
+#20260408--设备在营标记
+ALTER TABLE kiosk.machine
+  ADD COLUMN `is_operating` tinyint(1) NOT NULL DEFAULT 2 COMMENT '在营状态，1-在营 2-在库3-外售' AFTER `status`;
+ALTER TABLE kiosk.sale_orders ADD http_out_status TINYINT DEFAULT 1 NULL COMMENT 'http出货状态：1-已发送，2 -已接收命令，3-操作成功，4-操作失败' after `out_status` ;
+
+
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `remote_refund_status` int default 0 COMMENT '远程退货状态：0-未退货 1-已退货' AFTER `refund_photo`;
+
+ALTER TABLE kiosk.sale_orders_details
+  ADD COLUMN `remote_refund_audit_manager` int default 0 COMMENT '远程退货执行人' AFTER `refund_photo`;
+
+  update wx_template set body = '[{"设备编号":{"value":"{{machine_id}}","field":"character_string16"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"异常时间":{"value":"{{error_time}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"设备地址":{"value":"{{error_code}}","field":"thing9"}}]' , template_id = 'frqumju8oA7N8msUrhIiHpDd18j2Ie-DxLGlz5jWz8g' where wt_id =5;

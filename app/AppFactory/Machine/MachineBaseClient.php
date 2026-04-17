@@ -51,16 +51,20 @@ class MachineBaseClient extends BaseClient
      */
     public function checkMac($mac = "")
     {
-        if (isset($this->machine['version']) && $this->machine['version']) {
-            $versionArr = explode(".", $this->machine['version']);
-            // 版本号小于0.2.12时，采用旧的MQ队列，大于等于0.2.12时，MQ队列名称增加MAC地址标示
-            if (isset($versionArr[0]) && $versionArr[0] == 0 && isset($versionArr[1]) && $versionArr[1] >= 2 && isset($versionArr[2]) &&  $versionArr[2] >= 12) {
-                if ($mac != $this->machine['mac_address']) {
-                    actionLog($versionArr,'设备版本',"mac_check");
-                    actionLog(["mac" => $mac,"mac_address" => $this->machine['mac_address']],"Mac地址匹配失败","mac_check");
-                    return $this->r(300, $this->lang("mac_not_match"));
-                }
-            }
+        // if (isset($this->machine['version']) && $this->machine['version']) {
+        //     $versionArr = explode(".", $this->machine['version']);
+        //     // 版本号小于0.2.12时，采用旧的MQ队列，大于等于0.2.12时，MQ队列名称增加MAC地址标示
+        //     if (isset($versionArr[0]) && $versionArr[0] == 0 && isset($versionArr[1]) && $versionArr[1] >= 2 && isset($versionArr[2]) &&  $versionArr[2] >= 12) {
+        //         if ($mac != $this->machine['mac_address']) {
+        //             actionLog($versionArr,'设备版本',"mac_check");
+        //             actionLog(["mac" => $mac,"mac_address" => $this->machine['mac_address']],"Mac地址匹配失败","mac_check");
+        //             return $this->r(300, $this->lang("mac_not_match"));
+        //         }
+        //     }
+        // }
+        if ($mac != $this->machine['mac_address']) {
+            actionLog(["mac" => $mac,"mac_address" => $this->machine['mac_address']],"Mac地址匹配失败","mac_check");
+            return $this->r(300, $this->lang("mac_not_match"));
         }
         return true;
     }
@@ -105,8 +109,10 @@ class MachineBaseClient extends BaseClient
                 actionLog("发送在线通知抛出异常");
                 actionException($e,1);
             }
+
         }
     }
+
 
     /**
      * 记录接收到的上报数据

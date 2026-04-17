@@ -798,6 +798,34 @@ class Receive extends Common
         }
     }
 
+     /**
+     * 设置设备http_out_status状态
+     * @return array|string
+     */
+    public function setHttpOutStatus()
+    {
+        try {
+            return $this->app->api->setHttpOutStatus();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * HTTP触发出货结果闭环（投递MQ，触发OutGoodsTrait::outGoods）
+     * @return array|string
+     */
+    // public function triggerOutGoodsByHttp()
+    // {
+    //     try {
+    //         return $this->app->api->triggerOutGoodsByHttp();
+    //     } catch (\Exception $e) {
+    //         actionException($e, 1);
+    //         return returnTryCatch($e->getMessage());
+    //     }
+    // }
+
     /**
      * 获取订单支付状态
      * @return array|string
@@ -1065,6 +1093,35 @@ class Receive extends Common
                 ]);
             }
             return $this->app->api->sendErro();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    
+    /**
+     * 获取设备主题配置
+     * @return array|string
+     */
+    public function getTopicPage()
+    {
+        try {
+            return $this->app->api->topicPage();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+	/**
+     * 获取并同步设备校准页配置
+     * @return array|string
+     */
+    public function getCalibrationConfig()
+    {
+        try {
+            return $this->app->api->machineCalibrationConfig();
         } catch (\Exception $e) {
             actionException($e, 1);
             return returnTryCatch($e->getMessage());

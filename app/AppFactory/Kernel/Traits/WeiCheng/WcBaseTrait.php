@@ -240,7 +240,7 @@ trait WcBaseTrait
             foreach ($combination_goods as $kk => $combind_good) {
                 $pic = isset($resourcesArray[$kk]['url']) ? $resourceDomain . $resourcesArray[$kk]['url'] : '';
                 $combindSetData = [
-                    'g_id' => $combind_good['g_id'] ?: '9999',
+                    'g_id' => $combind_good['g_id'] ?? '9999',
                     'out_no' => $no ?? '',
                     'no' => $combind_good['no'] ?? '',
                     'type' => $type,

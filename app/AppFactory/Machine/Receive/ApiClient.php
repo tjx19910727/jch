@@ -41,6 +41,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineCalibrationConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
@@ -61,11 +62,15 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
+use app\AppFactory\Kernel\Traits\Template\TopicPageTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
+use app\AppFactory\RabbitMq\MqProducer;
 use app\machine\validate\VReceive;
+use think\facade\Db;
 use think\facade\View;
+use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
@@ -100,6 +105,7 @@ class ApiClient extends ReceiveBaseClient
         GoodsMultipleGoodsTrait,
         GoodsMultipleMachineTrait,
         MachineViewTrait,
+        MachineCalibrationConfigTrait,
         MachineConfigTrait,
         MachineConfigLangTrait,
         MachineInfoTrait,
@@ -111,6 +117,7 @@ class ApiClient extends ReceiveBaseClient
         MachineHelpTrait,
         MachineOnOffTrait,
         MachineTrait,
+        TopicPageTrait,
         TemplateViewTrait,
 
         EarthCountriesTrait,
@@ -269,6 +276,245 @@ class ApiClient extends ReceiveBaseClient
     {
         $result = $this->getMachineLangList(['m_id' => $this->machine['m_id']]);
         return $this->rQ($result);
+    }
+
+    /**
+     * 获取并同步设备校准页配置
+     *
+     * 规则：
+     * 1. 数据库为空时，以设备上报配置初始化；
+     * 2. 设备版本大于数据库版本时，写入新版本全量配置；
+     * 3. 版本相同或更小，不改数据库，仅返回当前最新版本。
+     *
+     * @return array|\think\response\Json
+     */
+    public function machineCalibrationConfig()
+    {
+        $mId = $this->machine['m_id'];
+        //获取machine信息
+        $machineData = $this->getMachineFind(['m_id' => $mId], "machine_id");
+        $incomingList = $this->getIncomingCalibrationList();
+        $incomingVersion = isset($this->data['version']) && $this->data['version'] !== '' ? intval($this->data['version']) : 0;
+
+        $latestRow = $this->getMachineCalibrationConfigFind(['m_id' => $mId], 'version,id', 'id desc');
+        $latestVersion = $latestRow ? intval($latestRow['version']) : 0;
+
+        if ($latestVersion <= 0) {
+            if (!empty($incomingList)) {
+                $initVersion = $incomingVersion > 0 ? $incomingVersion : 1;
+                $this->insertCalibrationRows($incomingList, $mId, $machineData['machine_id'] ?? '', $initVersion);
+                $latestVersion = $initVersion;
+            }
+        } elseif ($incomingVersion > $latestVersion && !empty($incomingList)) {
+            $this->insertCalibrationRows($incomingList, $mId, $machineData['machine_id'] ?? '', $incomingVersion);
+            $latestVersion = $incomingVersion;
+        } else {
+            $latestVersion = $incomingVersion > $latestVersion ? $incomingVersion : $latestVersion;
+        }
+
+
+        $list = $this->getMachineCalibrationConfigList(
+            ['m_id' => $mId, 'version' => $latestVersion],
+            0,
+            'key,value,value_type,version',
+            'id asc'
+        );
+        $list = $list ? $list->toArray() : [];
+        $res = [];
+        if ($list) {
+            foreach ($list as $k => $item) {
+                $res['version'] = intval($item['version']);
+                $res[$item['key']] = $this->castCalibrationValueByType($item['value'], $item['value_type'] ?? 'string');
+            }
+        }
+        return $this->rQ($res);
+    }
+
+    /**
+     * 兼容不同字段名，获取设备上传的校准配置数组
+     * @return array
+     */
+    protected function getIncomingCalibrationList()
+    {
+        $list = [];
+        if (isset($this->data['data']) && is_array($this->data['data'])) {
+            $list = $this->data['data'];
+        } elseif (isset($this->data['data']) && is_string($this->data['data']) && $this->data['data'] !== '') {
+            $decodeData = json2arr($this->data['data']);
+            if (is_array($decodeData)) {
+                $list = $decodeData;
+            }
+        } 
+        return $list;
+    }
+
+    /**
+     * 写入某一版本的全量校准配置
+     * @param array $rows
+     * @param int $mId
+     * @param string $machineId
+     * @param string $version
+     */
+    protected function insertCalibrationRows($rows, $mId, $machine_id, $version)
+    {
+        $seenKey = [];
+        foreach ($rows as $row) {
+            if (!isset($row['key']) || $row['key'] === '') {
+                continue;
+            }
+            $key = $row['key'];
+            if (isset($seenKey[$key])) {
+                continue;
+            }
+            $seenKey[$key] = 1;
+
+            // 幂等保护：同设备同版本同key存在则不重复写入。
+            $exists = $this->getMachineCalibrationConfigValue(['m_id' => $mId, 'version' => $version, 'key' => $key], 'id', 'version desc');
+            if ($exists) {
+                continue;
+            }
+
+            $title = isset($row['title']) && $row['title'] !== '' ? $row['title'] : $key;
+            $valueType = $this->detectCalibrationValueType($row['value'] ?? null, $row['value_type'] ?? '');
+            $value = $this->normalizeCalibrationValueForStorage($row['value'] ?? null, $valueType);
+            $this->addMachineCalibrationConfig([
+                'm_id' => $mId,
+                'machine_id' => $machine_id,
+                'name' => $title,
+                'version' => $version,
+                'key' => $key,
+                'value' => $value,
+                'value_type' => $valueType,
+                'desc' => isset($row['desc']) ? $row['desc'] : '',
+            ]);
+        }
+    }
+
+    /**
+     * 根据前端传入值判断配置值类型
+     * @param mixed $value
+     * @param string $inputType
+     * @return string
+     */
+    protected function detectCalibrationValueType($value, $inputType = '')
+    {
+        $inputType = strtolower((string)$inputType);
+        if (in_array($inputType, ['string', 'int', 'float', 'bool'], true)) {
+            return $inputType;
+        }
+        if (is_bool($value)) {
+            return 'bool';
+        }
+        if (is_int($value)) {
+            return 'int';
+        }
+        if (is_float($value)) {
+            return 'float';
+        }
+        return 'string';
+    }
+
+    /**
+     * 入库前统一转为字符串存储
+     * @param mixed $value
+     * @param string $valueType
+     * @return string
+     */
+    protected function normalizeCalibrationValueForStorage($value, $valueType)
+    {
+        if ($value === null) {
+            return '';
+        }
+        if ($valueType === 'bool') {
+            return $value ? '1' : '0';
+        }
+        return (string)$value;
+    }
+
+    /**
+     * 读取一条设备校准配置
+     * @param array $where
+     * @param string $field
+     * @param string $order
+     * @return array|null
+     */
+    protected function getMachineCalibrationConfigFind($where, $field = '*', $order = '')
+    {
+        $query = Db::name('machine_calibration_config')->where($where)->field($field);
+        if ($order) {
+            $query->order($order);
+        }
+        return $query->find();
+    }
+
+    /**
+     * 读取设备校准配置列表
+     * @param array $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @return \think\Collection|\think\Paginator
+     */
+    protected function getMachineCalibrationConfigList($where, $pageNum = 0, $field = '*', $order = '')
+    {
+        $query = Db::name('machine_calibration_config')->where($where)->field($field);
+        if ($order) {
+            $query->order($order);
+        }
+        if ($pageNum) {
+            return $query->paginate($pageNum);
+        }
+        return $query->select();
+    }
+
+    /**
+     * 获取设备校准配置字段值
+     * @param array $where
+     * @param string $value
+     * @param string $order
+     * @return mixed
+     */
+    protected function getMachineCalibrationConfigValue($where, $value, $order = '')
+    {
+        $query = Db::name('machine_calibration_config')->where($where);
+        if ($order) {
+            $query->order($order);
+        }
+        return $query->value($value);
+    }
+
+    /**
+     * 新增设备校准配置
+     * @param array $insert
+     * @return int|string
+     */
+    protected function addMachineCalibrationConfig($insert)
+    {
+        return Db::name('machine_calibration_config')->insertGetId($insert);
+    }
+
+    /**
+     * 按 value_type 将字符串值转换回对应类型
+     * @param mixed $value
+     * @param string $valueType
+     * @return mixed
+     */
+    protected function castCalibrationValueByType($value, $valueType)
+    {
+        switch ((string)$valueType) {
+            case 'int':
+                return intval($value);
+            case 'float':
+                return floatval($value);
+            case 'bool':
+                if (is_bool($value)) {
+                    return $value;
+                }
+                $v = strtolower(trim((string)$value));
+                return in_array($v, ['1', 'true', 'yes', 'on'], true);
+            default:
+                return (string)$value;
+        }
     }
 
     /**
@@ -576,6 +822,56 @@ class ApiClient extends ReceiveBaseClient
                 }
             }
         }
+        return $this->rQ($data);
+    }
+
+    /**
+     * 获取设备当前主题配置
+     * @return array|\think\response\Json
+     */
+    public function topicPage()
+    {
+        $data = [
+            'top_logo' => '',
+            'bg_url' => '',
+            'maintenance_bg' => '',
+            'error_url' => '',
+            'closed_url' => '',
+            'verification_url' => '',
+            'pickup_url' => '',
+            'shipping_url' => '',
+            'pickup_qrcode_1' => '',
+            'pickup_qrcode_2' => '',
+            'qr_code_url' => '',
+            'scan_url' => '',
+            'balance_url' => '',
+            'card_url' => '',
+        ];
+        
+        $topicIds = $this->getTopicPageMachineColumn(['machine_id' => $this->machine['machine_id']], 'topic_id');
+        if (!$topicIds) {
+            return $this->rQ($data);
+        }
+
+        $topicIds = array_values(array_unique(array_filter($topicIds)));
+        if (!$topicIds) {
+            return $this->rQ($data);
+        }
+        $field = implode(',', array_keys($data));
+        $topic = $this->getTopicPageFind([
+            ['id', 'in', $topicIds],
+            ['status', '=', 1],
+        ], $field, 'id desc');
+
+        if ($topic) {
+            $topic = $topic->toArray();
+            foreach ($data as $key => $value) {
+                if (isset($topic[$key]) && $topic[$key] !== '' && $topic[$key] !== null) {
+                    $data[$key] = $topic[$key];
+                }
+            }
+        }
+
         return $this->rQ($data);
     }
 
@@ -907,9 +1203,10 @@ class ApiClient extends ReceiveBaseClient
                         }
                         $wc_order_no = [];
                         foreach ($wc_goods_locals as $wc_goods_local) {
+                            $wcLocalGid = $wc_goods_local['g_id'] ?? '9999';
                             $total_sod_points += $wc_goods_local['gift_points'];
-                            if ($wc_goods_local['g_id'] != '9999' && $wc_goods_local['g_id'] != '0') {
-                                $machine_channel = $this->getMachineChannelFind(['g_id' => $wc_goods_local['g_id'], 'm_id' => $this->machine['m_id']]);
+                            if ($wcLocalGid != '9999' && $wcLocalGid != '0') {
+                                $machine_channel = $this->getMachineChannelFind(['g_id' => $wcLocalGid, 'm_id' => $this->machine['m_id']]);
                                 if ($machine_channel) {
                                     $machine_channel = $machine_channel->toArray();
                                     $real_channel_code = $machine_channel ? $machine_channel['channel_code'] : 'Z10';
@@ -923,7 +1220,7 @@ class ApiClient extends ReceiveBaseClient
                                 'order_date' => $value['order_date'], //房态商品订房日期
                                 'quantity' => $value['quantity'] ?? 0, //微程商品数量
                                 'total_price' => $total_price, //不同类型商品不同的价格
-                                'need_local_out_goods' => $wc_goods_local['g_id'] ? 1 : 0, //是否需要本机出货  0-否 1-是
+                                'need_local_out_goods' => $wcLocalGid ? 1 : 0, //是否需要本机出货  0-否 1-是
                                 'out_goods_status' => 0, //出货状态  need_local_out_goods = 1时生效  0-未出货   1-已出货
                                 'real_channel_code' => $real_channel_code, //实际出货货道
                                 'total_sod_points' => $total_sod_points, //子订单微程商品赠送积分
@@ -1285,7 +1582,7 @@ class ApiClient extends ReceiveBaseClient
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
                         } else {
                             $this->rollbackTrans();
-                            return $this->r(100, $this->lang("VSubCar.make_order_details_fail"));
+                            return $this->r(100, $this->lang("VAAAAAAAAAAAAAAAAAAAAAA.make_order_details_fail"));
                         }
                     }
                     if ($value['sod_price'] != $sod_price) {
@@ -1537,15 +1834,29 @@ class ApiClient extends ReceiveBaseClient
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         $this->order = is_object($order) ? (method_exists($order,'toArray') ? $order->toArray() : (array)$order) : $order;
-
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']])->toArray();
         if (!$details || !is_array($details)) {
             return $this->r(100, 'failed', []);
         }
-
+        $now_time = time();
         $contentArr = [];
         $outArr = [];
         $total_points = 0;
+        $can_out_goods = true;
+
+        if($now_time - $this->order['pay_time'] > 180){
+            $can_out_goods = false;
+            $content = [
+                'msgType' => 'outGoods',
+                'trade_no' => $this->order['trade_no'],
+                'main' => $contentArr,
+                'outGoods' => $outArr,
+                'order_points' => $this->order['total_points'] ?? 0,
+                'can_out_goods' => $can_out_goods,
+            ];
+            return $this->r(200, 'success', $content);
+        }
+        
 
         // 支持旧数据格式：把简单 channel/quantity 填到 contentArr
         foreach ($details as $v) {
@@ -1676,6 +1987,7 @@ class ApiClient extends ReceiveBaseClient
             'main' => $contentArr,
             'outGoods' => $outArr,
             'order_points' => $this->order['total_points'] ?? 0,
+            'can_out_goods' => $can_out_goods,
          ];
 
         $this->order['out_status'] = 2;
@@ -1685,17 +1997,140 @@ class ApiClient extends ReceiveBaseClient
             actionException($e);
         }
 
-        // for($i = 0 ; $i < 10; $i++){
-        //     $latest_order = $this->getSaleOrdersFind(['trade_no' => $this->order['trade_no']]);
-        //     actionLog(@obj2arr($latest_order), '最新订单信息');
-        //     if($latest_order['out_status'] == 4) break;
-        //     $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
-        //     actionLog(@obj2arr($result), 'Http兜底方案下发数据结果');
-        //     sleep(5);
-        // }
-
         return $this->r(200, 'success', $content);
     }
+
+    /**
+     * HTTP触发出货结果闭环：将出货回执投递到MQ，触发 OutGoodsTrait::outGoods
+     * 适用：仅调用 requireOutGoods 后，设备未通过MQ回传出货结果的场景
+     * @return array|string
+     */
+    public function triggerOutGoodsByHttp()
+    {
+        $tradeNo = $this->data['trade_no'] ?? '';
+        $status = isset($this->data['http_out_status']) ? intval($this->data['http_out_status']) : 0;
+        $machine_id = $this->data['machine_id'] ??  '';
+
+        $order = $this->getSaleOrdersFind(['trade_no' => $tradeNo], 'order_id,trade_no,machine_id,out_status');
+        if (!$order) {
+            return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        }
+        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+
+        // 已完成出货，避免重复闭环
+        if ((int)($order['out_status'] ?? 0) === 4) {
+            return $this->r(200, 'success', [
+                'trade_no' => $tradeNo,
+                'skip' => 1,
+                'reason' => 'order out_status already 4',
+            ]);
+        }
+
+        $main = $this->data['main'] ?? [];
+        if (is_string($main) && $main !== '') {
+            $main = json2arr($main);
+        }
+        if (!is_array($main)) {
+            $main = [];
+        }
+
+        // 未传main时按订单明细自动构建“全成功”回执，确保能触发 outGoods 完整处理
+        if (empty($main) && in_array($status, [3, 4], true)) {
+            $details = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0, 'channel_position,channel_code,quantity');
+            $details = $details ? (is_object($details) ? $details->toArray() : (array)$details) : [];
+            foreach ($details as $row) {
+                $position = $row['channel_position'] ?? 0;
+                $channelCode = $row['channel_code'] ?? '';
+                if ($channelCode === '') {
+                    continue;
+                }
+                $quantity = intval($row['quantity'] ?? 0);
+                if ($quantity <= 0) {
+                    continue;
+                }
+                $main[$position][] = [
+                    'channel_code' => $channelCode,
+                    'success_quantity' => $quantity,
+                    'fail_quantity' => 0,
+                    'deliver_pics' => '',
+                    'out_sequence' => 1,
+                ];
+            }
+        }
+
+        $payload = [
+            'msgType' => 'outGoods',
+            'trade_no' => $tradeNo,
+            'status' => $status,
+            'main' => $main,
+        ];
+        $machine = $this->getMachineFind(['machine_id' => $machine_id], 'machine_id,mac_address');
+        $mqData = [
+            'msg_id' => $this->data['msg_id'] ?? uniqid('http_out_', true),
+            'timestamp' => time(),
+            'machine_id' => $machine_id,
+            'mac' => $machine['mac_address'] ?? '',
+            'data' => json_encode($payload, 320),
+        ];
+
+        // 默认同步触发，确保即使MQ消费者未运行也能进入 OutGoodsTrait::outGoods。
+        // $sync = isset($this->data['sync']) ? intval($this->data['sync']) : 1;
+        // $syncResult = null;
+        // if ($sync === 1) {
+        //     try {
+        //         $config = [
+        //             'machine_id' => $mqData['machine_id'],
+        //             'data' => $mqData,
+        //             'mac' => $mqData['mac'],
+        //         ];
+        //         $syncResult = AppFactory::machine($config)->mq->onMessage();
+        //         actionLog(['mqData' => $mqData, 'syncResult' => $syncResult], 'HTTP同步触发出货闭环');
+        //     } catch (\Exception $e) {
+        //         actionException($e, 1, 'triggerOutGoodsByHttp-sync');
+        //         return $this->rTryCatch($e->getMessage());
+        //     }
+        // }
+        $config = [
+            'machine_id' => $mqData['machine_id'],
+            'data' => $mqData,
+            'mac' => $mqData['mac'],
+        ];
+        $syncResult = AppFactory::machine($config)->mq->onMessage();
+        actionLog(['mqData' => $mqData, 'syncResult' => $syncResult], 'HTTP同步触发出货闭环');
+        // 可选入队：默认关闭，避免同步执行后再次被队列重复消费。
+        // $enqueue = isset($this->data['enqueue']) ? intval($this->data['enqueue']) : 0;
+        // $push = true;
+        // if ($enqueue === 1) {
+            // $push = MqProducer::dataUpload($mqData);
+            // actionLog(['mqData' => $mqData, 'result' => $push], 'HTTP触发MQ出货闭环(入队)');
+        // }
+
+        // if ($enqueue === 1 && $push !== 'OK' && $push !== true) {
+        //     return $this->rFail(is_string($push) ? $push : '投递MQ失败');
+        // }
+
+        return $this->r(200, 'success', [
+            'trade_no' => $tradeNo,
+            'status' => $status,
+            // 'sync' => $sync,
+            // 'sync_result' => $syncResult,
+            // 'queued' => $enqueue === 1 ? 1 : 0,
+            'main_count' => count($main),
+        ]);
+    }
+     
+    //设备设置订单http_out_status状态，供Http兜底方案使用
+    public function setHttpOutStatus()
+    {
+        $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
+        if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
+        $this->updateSaleOrders(['http_out_status' => intval($this->data['http_out_status'])],['trade_no' => $this->data['trade_no']]);
+        if($this->data['http_out_status'] == 3){
+            $this->triggerOutGoodsByHttp();
+        }
+        return $this->r(200, 'success');
+    }
+
 
     /**
      * 获取订单支付状态
@@ -1713,13 +2148,14 @@ class ApiClient extends ReceiveBaseClient
             return $this->r(100, 'trade_no 或 order_id 不能为空');
         }
 
-        $field = 'order_id,trade_no,mch_no,pay_status,pay_type,pay_method,out_status,refund_status,total_price,refund_amount,create_time,pay_time,out_time';
+        $field = 'order_id,trade_no,mch_no,pay_status,pay_type,pay_method,out_status,refund_status,total_price,refund_amount,create_time,pay_time,out_time,http_out_status';
         $order = $this->getSaleOrdersFind($where, $field);
         if (!$order) {
             return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         }
 
         $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+        $order['now_time'] = time();
         return $this->r(200, 'success', $order);
     }
 
@@ -1849,6 +2285,7 @@ class ApiClient extends ReceiveBaseClient
         }
     }
 
+
     /**
      * 获取积分变化类型
      * @return array|\think\response\Json
@@ -1941,9 +2378,33 @@ class ApiClient extends ReceiveBaseClient
             $res['total_points'] = $res['total_card_points'] + $res['bind_id_points'];
             $currentCardNo = trim((string)($this->data['card_no'] ?? ''));
             if ($currentCardNo !== '') {
-                $summary = $this->getCardBalanceSummary($currentCardNo);
+                // try {
+                //     $summaryMethod = new \ReflectionMethod($this, 'getCardBalanceSummary');
+                //     actionLog([
+                //         'class' => $summaryMethod->getDeclaringClass()->getName(),
+                //         'file' => $summaryMethod->getFileName(),
+                //         'start_line' => $summaryMethod->getStartLine(),
+                //         'end_line' => $summaryMethod->getEndLine(),
+                //     ], '卡余额汇总方法定位');
+
+                //     $bucketMethod = new \ReflectionMethod($this, 'getCardBalanceBucketSummaryRow');
+                //     actionLog([
+                //         'class' => $bucketMethod->getDeclaringClass()->getName(),
+                //         'file' => $bucketMethod->getFileName(),
+                //         'start_line' => $bucketMethod->getStartLine(),
+                //         'end_line' => $bucketMethod->getEndLine(),
+                //     ], '卡余额分笔方法定位');
+                // } catch (\Exception $e) {
+                //     actionLog($e->getMessage(), '卡余额方法定位异常');
+                // }
+
+                // $bucketCount = \app\AppFactory\Kernel\Model\Card\CardBalanceBucketsModel::where('card_no', $currentCardNo)->count();
+                // actionLog($bucketCount, '当前卡分笔记录数量');
+                $summary = $this->getCardBalance($currentCardNo);
+                actionLog($summary, '查询卡余额返回内容');
                 $total_balance = (string)($summary['available_balance'] ?? '0.00');
             }
+            actionLog($currentCardNo, '当前查询的卡号');
             $res['total_balance'] = $total_balance;
             //用户是否需要输入密码
             $res['need_pay_password'] = 1;
@@ -2287,6 +2748,11 @@ class ApiClient extends ReceiveBaseClient
         // $order = $this->outGoods();
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         return $this->orderRefundSync2Wc($this->order, $detail);
+    }
+
+    public function getCardBalance($card_no)
+    {
+        return $this->getCardBalanceSummary($card_no);
     }
 
 }
