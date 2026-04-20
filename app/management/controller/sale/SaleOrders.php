@@ -238,6 +238,7 @@ class SaleOrders extends Common
     public function setRemoteRefundStatus()
     {
         $postData = input();
+        $machine_id = input("machine_id");
         $sod_id = intval($postData['sod_id'] ?? 0);
         $remote_refund_status = intval($postData['remote_refund_status'] ?? 0);
         if (!$sod_id) return returnState(100, 'sod_id is required');
@@ -246,6 +247,9 @@ class SaleOrders extends Common
         if (!$sale_orders_details) return returnState(100, '订单详情不存在');
 
         $this->app->saleOrders->updateSaleOrdersDetails(['remote_refund_status' => $remote_refund_status, 'remote_refund_audit_manager' => $this->manager['manager_id']], ['sod_id' => $sod_id]);
+        if($remote_refund_status == 2){
+            $this->app->machine->sendToMachine(['machine_id' => $machine_id], "recycGoods", ['sod_id' => $sod_id]);
+        }
         return returnState(200, 'success', ['remote_refund_status' => $remote_refund_status]);
     }
     /**
@@ -793,5 +797,13 @@ class SaleOrders extends Common
     {
         $postData = input();
         return $this->app->saleOrders->exceptionHandle($postData);
+    }
+
+    /**
+     * 远程回收订单详情
+     */
+    public function remoteRecycleSodDetail()
+    {
+        return $this->app->saleOrders->getRemoteRecycleSodDetail(input());
     }
 }
