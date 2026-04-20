@@ -196,24 +196,24 @@ class MachineClient extends TimeTaskBase
                     if ($machine) {
                         $machine = $machine->toArray();
                         $machine['online'] = "offline";
-                        // $this->noticeSendData = [
-                        //     "ao_id" => $machine['ao_id'],
-                        //     "m_id" => $machine['m_id'],
-                        //     "templateType" => "online",
-                        //     "replaceData" => $machine,
-                        // ];
-                        $machine['errorCode'] = '在营设备离线';
-                        $machine['date'] = date("Y年m月d日");
-                        $machine['exceptionDeclaration'] = '在营设备离线';
-                        $machine['error_code'] = '在营设备离线';
-                        $machine['error_time'] = date('Y-m-d H:i:s');
-                        $machine['error_info'] = 11103021; // 在营设备离线
                         $this->noticeSendData = [
                             "ao_id" => $machine['ao_id'],
                             "m_id" => $machine['m_id'],
-                            "templateType" => "mFault",
+                            "templateType" => "online",
                             "replaceData" => $machine,
                         ];
+                        // $machine['errorCode'] = '在营设备离线';
+                        // $machine['date'] = date("Y年m月d日");
+                        // $machine['exceptionDeclaration'] = '在营设备离线';
+                        // $machine['error_code'] = '在营设备离线';
+                        // $machine['error_time'] = date('Y-m-d H:i:s');
+                        // $machine['error_info'] = 11103021; // 在营设备离线
+                        // $this->noticeSendData = [
+                        //     "ao_id" => $machine['ao_id'],
+                        //     "m_id" => $machine['m_id'],
+                        //     "templateType" => "mFault",
+                        //     "replaceData" => $machine,
+                        // ];
 
                         $this->noticeSend();
                     }
@@ -303,9 +303,11 @@ class MachineClient extends TimeTaskBase
 
             $query = Db::name('machine')->alias('m')
                     ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left');
+            $title = '';
             if (env('CglPay.is_test')) {
                 // 测试环境仅查询特定设备，方便测试验证
                 $query = $query->where('m.machine_id', 'JCHM-H2D-0064');
+                $title = '测试';
             }else{
                 $query = $query->where('m.online', 2)
                     ->where('m.is_operating', 1)
@@ -390,10 +392,10 @@ class MachineClient extends TimeTaskBase
                 }
                 $currentStage = $nextStage;
 
-                $item['errorCode'] = '在营设备未开机测试';
+                $item['errorCode'] = '在营设备未开机'.$title;
                 $item['date'] = date("Y年m月d日");
                 $item['exceptionDeclaration'] = '在营设备未开机';
-                $item['error_code'] = '在营设备未开机测试';
+                $item['error_code'] = '在营设备未开机'.$title;
                 $item['error_time'] = date('Y-m-d H:i:s');
                 $item['error_info'] = 11102011; // 在营设备未开机
                 $item['machine_name'] = $item['machine_id'];
