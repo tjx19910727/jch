@@ -38,6 +38,7 @@ class WeChatClient extends NoticeBaseClient
                             "template_id" => $this->config['template']['template_id'],
                         ];
                         if ($this->config['template']['url']) $data['url'] = $this->config['template']['url'];
+                        if (!empty($this->config['url'])) $data['url'] = $this->config['url'];
                         if ($this->config['template']['miniprogram']) $data['miniprogram'] = json2arr($this->config['template']['miniprogram']);
                         $body = json2arr($this->config['template']['body']);
                         foreach ($body as $bk => $bv) {
