@@ -288,6 +288,11 @@ class MachineClient extends TimeTaskBase
         try {
             $now = time();
             $hour = intval(date('H', $now));
+            $today = date('Y-m-d');
+            $todayKey = date('Ymd');
+            $ttl = strtotime(date('Y-m-d 23:59:59', $now)) - $now;//当前时间距离当天结束的秒数，用于设置缓存过期时间
+            $intervals = [300, 900, 1800, 3600, 7200];// 阶梯秒数：5、15、30、60、120分钟
+            $firstInterval = intval($intervals[0] ?? 300);
             // 每天22:00-次日06:00跳过，不执行查库
             if ($hour >= 22 || $hour < 6) {
                 actionLog(date('Y-m-d H:i:s', $now), '静默时段跳过未开机巡检', 'checkOperatingStartup');
@@ -295,33 +300,33 @@ class MachineClient extends TimeTaskBase
             }
 
             $week = intval(date('N')) - 1; // 0-6 => 周一到周日
-            $today = date('Y-m-d');
-            $todayKey = date('Ymd');
-            $listCacheKey = 'machine_startup_exception_notice_list:' . $todayKey;
-            $notifiedMids = Cache::get($listCacheKey);
-            if (!is_array($notifiedMids)) {
-                $notifiedMids = [];
-            }
 
             $query = Db::name('machine')->alias('m')
-                ->where('m.online', 2)
-                ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left')
-                ->where('m.is_operating', 1)
-                ->whereNotNull('moo.on_off_machine')
-                ->where('moo.on_off_machine', '<>', '')
-                ->where('moo.on_off_machine', '<>', '{}');
-            if ($notifiedMids) {
-                $query->whereNotIn('m.m_id', $notifiedMids);
+                    ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left');
+            if (env('CglPay.is_test')) {
+                // 测试环境仅查询特定设备，方便测试验证
+                $query = $query->where('m.machine_id', 'JCHM-H2D-0064');
+            }else{
+                $query = $query->where('m.online', 2)
+                    ->where('m.is_operating', 1)
+                    ->whereNotNull('moo.on_off_machine')
+                    ->where('moo.on_off_machine', '<>', '')
+                    ->where('moo.on_off_machine', '<>', '{}')
+                    ->where('moo.status', 1);
             }
             $list = $query
-                ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.last_online_time,m.ao_id,moo.on_off_machine')
-                ->order('m.m_id desc')
-                ->select();
-
+                    ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.last_online_time,m.ao_id,moo.on_off_machine')
+                    ->order('m.m_id desc')
+                    ->select();
+            if(count($list) == 0){
+                return;
+            }
+            $list = $list->toArray();
             $flag = [];
             foreach ($list as $item) {
-                $cacheKey = 'machine_startup_exception_notice:' . $item['m_id'] . ':' . $todayKey;
-                if (Cache::get($cacheKey)) {
+                //这里是用户点击了确认生成的缓存
+                $muteCacheKey = 'machine_startup_exception_mute:' . $item['m_id'] . ':' . $todayKey;
+                if (Cache::get($muteCacheKey)) {
                     continue;
                 }
                 $onOffMachine = $item['on_off_machine'];
@@ -367,32 +372,51 @@ class MachineClient extends TimeTaskBase
                 if ($now < $startupTimestamp || $now > $shutdownTimestamp) {
                     continue;
                 }
-                if ($now <= $startupTimestamp + 300) {
+                if ($now <= $startupTimestamp + $firstInterval) {
                     continue;
                 }
 
-                $item['errorCode'] = '在营设备未开机';
+                $elapsed = $now - $startupTimestamp;//当前时间与开机时间的时间差
+                $stageCacheKey = 'machine_startup_exception_stage:' . $item['m_id'] . ':' . $todayKey;
+                $sentStage = intval(Cache::get($stageCacheKey, 0));
+                $nextStage = $sentStage + 1;
+                //如果已发送阶段超过设定的阶梯数，则不再发送
+                if ($nextStage > count($intervals)) {
+                    continue;
+                }
+                $needSeconds = intval($intervals[$nextStage - 1]);
+                if ($elapsed < $needSeconds) {//未达到下一个阶段的时间要求，继续等待
+                    continue;
+                }
+                $currentStage = $nextStage;
+
+                $item['errorCode'] = '在营设备未开机测试';
                 $item['date'] = date("Y年m月d日");
                 $item['exceptionDeclaration'] = '在营设备未开机';
-                $item['error_code'] = '在营设备未开机';
+                $item['error_code'] = '在营设备未开机测试';
                 $item['error_time'] = date('Y-m-d H:i:s');
                 $item['error_info'] = 11102011; // 在营设备未开机
+                $item['machine_name'] = $item['machine_id'];
+
+                $confirmUrl = $this->buildStartupNoticeConfirmUrl($item['m_id'], $todayKey);
                 $this->noticeSendData = [
                     "ao_id" => $item['ao_id'],
                     "m_id" => $item['m_id'],
                     "templateType" => "mFault",
                     "replaceData" => $item,
+                    "url" => $confirmUrl,
                 ];
 
                 $flag[] = $this->noticeSend();
-
-                $ttl = strtotime(date('Y-m-d 23:59:59')) - $now;
-                Cache::set($cacheKey, 1, $ttl > 0 ? $ttl : 60);
-                if (!in_array($item['m_id'], $notifiedMids)) {
-                    $notifiedMids[] = $item['m_id'];
-                    Cache::set($listCacheKey, $notifiedMids, $ttl > 0 ? $ttl : 60);
-                }
-                actionLog($item, '发送设备未开机提醒', 'checkOperatingStartup');
+                //当前阶段的通知发送成功后，更新已发送阶段数缓存，过期时间为当天23:59:59
+                Cache::set($stageCacheKey, $currentStage, $ttl > 0 ? $ttl : 60);
+                actionLog([
+                    'm_id' => $item['m_id'],
+                    'machine_id' => $item['machine_id'],
+                    'stage' => $currentStage,
+                    'elapsed' => $elapsed,
+                    'need_seconds' => $needSeconds,
+                ], '发送设备未开机提醒', 'checkOperatingStartup');
             }
 
             actionLog($flag, '处理运营中设备未开机提醒结果', 'checkOperatingStartup');
@@ -401,6 +425,44 @@ class MachineClient extends TimeTaskBase
         }
 
         return '处理成功';
+    }
+
+
+    /**
+     * 生成“今日不再提醒”确认链接
+     * @param int $mId
+     * @param string $dayKey
+     * @return string
+     */
+    private function buildStartupNoticeConfirmUrl($mId, $dayKey)
+    {
+        $host = rtrim(config('app.app_host') ?: env('app.host', ''), '/');
+        if (!$host) {
+            actionLog(['m_id' => $mId], '未配置app_host，使用模板默认URL', 'checkOperatingStartup');
+            return '';
+        }
+        $expire = strtotime(date('Y-m-d 23:59:59'));
+        $sign = $this->buildStartupNoticeSign($mId, $dayKey, $expire);
+        $query = http_build_query([
+            'm_id' => intval($mId),
+            'd' => $dayKey,
+            'expire' => $expire,
+            'sign' => $sign,
+        ]);
+        return $host . '/wx/official/confirmStartupNotice?' . $query;
+    }
+
+    /**
+     * 生成确认链接签名
+     * @param int $mId
+     * @param string $dayKey
+     * @param int $expire
+     * @return string
+     */
+    private function buildStartupNoticeSign($mId, $dayKey, $expire)
+    {
+        $secret = config('app.salt') ?: 'startup_notice_secret';
+        return hash('sha256', intval($mId) . '|' . $dayKey . '|' . intval($expire) . '|' . $secret);
     }
 
 //    public function machineUploadQueue()
