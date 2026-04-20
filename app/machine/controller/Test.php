@@ -693,6 +693,7 @@ class Test extends BaseController
      */
     public function triggerCheckOperatingStartup()
     {
+        die;
         try {
             $secret = trim(input('secret'));
             if (!$secret || $secret !== '123dd4567890abcdef1234567890abcdef') {
