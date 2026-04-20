@@ -66,7 +66,7 @@ class V2Client extends V2BaseClient
         try {
             $field = "g_id product_id,g_name,gc_id,gc_name,desc,cost_price,sku,sku2,bar_code,banner,pic,details_pic,retail_price,market_price,status";
             if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->params['product_id'];
-            $where['status'] = 1;
+            // $where['status'] = 1;
             $where['ao_id'] = 17;
             $data = $this->getGoodsList($where, $this->params['pageNum'] ?? 1,  $field, 'product_id desc');
 

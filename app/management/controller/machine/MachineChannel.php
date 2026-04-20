@@ -186,4 +186,19 @@ class MachineChannel extends Common
         $where = $this->getWhere(['m_id'=>$postData['m_id']], false, []);
         return $this->app->machineChannel->batchRestoreMc($postData, $where);
     }
+
+    /**
+     * 远程下架货道商品回收
+     * @return array|string
+     */
+    public function remoteRemoval()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.remoteRemoval');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineChannel->remoteRemoval($postData);
+    }
 }
