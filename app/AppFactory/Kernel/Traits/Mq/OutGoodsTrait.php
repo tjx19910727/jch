@@ -273,7 +273,7 @@ trait OutGoodsTrait
                 $whereMc['m_id'] = $this->machine['m_id'];
                 $whereMc['channel_position'] = $position;
                 $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,frozen_stock,stock,stock_warning');
-                if ($success > 0) {
+                if ($success > 0 && in_array($status, [21, 3], true)) {
                     // 外部预订提货码订单，减冻结库存
                     if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);
