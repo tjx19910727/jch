@@ -106,10 +106,17 @@ trait OutGoodsTrait
         }
 
         try {
-            // 设备状态上报映射：status=2->out_status=3，status=3->out_status=4，status=4->out_status=5
+            // 设备状态上报映射：
+            // status=1->out_status=2
+            // status=2/20/21->out_status=3
+            // status=3->out_status=4
+            // status=4->out_status=5
             $status = isset($this->message['status']) ? (int)$this->message['status'] : 0;
             $statusMap = [
+                1 => 2,
                 2 => 3,
+                20 => 3,
+                21 => 3,
                 3 => 4,
                 4 => 5,
             ];
@@ -124,16 +131,16 @@ trait OutGoodsTrait
                 $this->order['remark'] = "接收到出货状态上报,status=" . $status;
             }
 
-            // status=2 表示设备已接收指令，直接更新订单状态即可
-            if ($status === 2) {
+            // status=1/2/20 仅更新订单状态，不触发出货结果处理
+            if (in_array($status, [1, 2, 20], true)) {
                 $result = $this->updateSaleOrders($this->order);
-                actionLog($this->order, '收到status=2，更新订单出货状态', 'OutGoods');
-                actionLog($this->getLS(), '【SQL】修改订单(status=2回执)', 'OutGoods');
+                actionLog($this->order, '收到状态回执，更新订单出货状态', 'OutGoods');
+                actionLog($this->getLS(), '【SQL】修改订单(状态回执)', 'OutGoods');
                 return $this->rAction($result);
             }
 
             // 仅状态回执（无main）
-            if (empty($this->message['main']) && in_array($status, [3, 4])) {
+            if (empty($this->message['main']) && in_array($status, [21, 3, 4], true)) {
                 $result = $this->updateSaleOrders($this->order);
                 actionLog($this->order, '仅状态回执，更新订单出货状态', 'OutGoods');
                 actionLog($this->getLS(), '【SQL】修改订单(仅状态回执)', 'OutGoods');
@@ -211,12 +218,16 @@ trait OutGoodsTrait
         if ($this->order['out_status'] != 6) {
             if ($status == 4) {
                 $this->order['out_status'] = 5;
+            } elseif ($status == 21) {
+                $this->order['out_status'] = max((int)$this->order['out_status'], 3);
             } else {
                 $this->order['out_status'] = 4;
             }
         }
-        $this->order['out_time'] = time();
-        $this->order['remark'] = "接收到出货结果";
+        if ($status != 21) {
+            $this->order['out_time'] = time();
+        }
+        $this->order['remark'] = $status == 21 ? "接收到出货结果并扣减库存,status=21" : "接收到出货结果";
 
         $insertGChange = [
             "m_id" => $this->machine['m_id'],
@@ -262,7 +273,7 @@ trait OutGoodsTrait
                 $whereMc['m_id'] = $this->machine['m_id'];
                 $whereMc['channel_position'] = $position;
                 $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,frozen_stock,stock,stock_warning');
-                if ($success > 0) {
+                if ($success > 0 && in_array($status, [21, 3], true)) {
                     // 外部预订提货码订单，减冻结库存
                     if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);
@@ -328,7 +339,9 @@ trait OutGoodsTrait
                 }
                 if ($fail > 0) {
 //                    $updateMc['status'] = 3;
-                    $this->order['out_status'] == 6 ? : $this->order['out_status'] = 5;
+                    if ($status != 21) {
+                        $this->order['out_status'] == 6 ? : $this->order['out_status'] = 5;
+                    }
 
                     // 出货失败发送通知
                     try {

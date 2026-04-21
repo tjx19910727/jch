@@ -9,12 +9,13 @@
 namespace app\AppFactory\Management\Machine;
 
 
+use app\AppFactory\Kernel\Traits\Machine\MachineOnlineSnapshotTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class MachineOnlineClient extends ManagementClient
 {
-    use MachineOnlineTrait;
+    use MachineOnlineTrait, MachineOnlineSnapshotTrait;
 
     public function export($where)
     {
@@ -41,5 +42,56 @@ class MachineOnlineClient extends ManagementClient
             }
         }
         return $this->r(100, $this->lang("query_fail"));
+    }
+
+    /**
+     * Export online snapshots for operating machines from today 00:00 to now.
+     */
+    public function exportTodayOperatingSnapshot($where = [])
+    {
+        $today = strtotime(date("Y-m-d"));
+        $now = time();
+        $where[] = ['record_date', '=', $today];
+        $where[] = ['collect_time', 'between', [$today, $now]];
+        $where[] = ['is_operating', '=', 1];
+
+        $field = 'mos_id,machine_id,machine_name,online,is_operating,ckc_status,collect_time,slot_start_time,business_start_time,business_end_time,create_time';
+        $list = $this->getMachineOnlineSnapshotList($where, 0, $field, 'collect_time asc, machine_id asc');
+        if (!$list) {
+            return $this->r(100, $this->lang("query_fail"));
+        }
+
+        $list = $list->toArray();
+        if (!$list) {
+            return $this->r(100, $this->lang("query_fail"));
+        }
+
+        foreach ($list as $key => $value) {
+            $value['online'] = intval($value['online']) === 1 ? 'online' : 'offline';
+            $value['is_operating'] = intval($value['is_operating']) === 1 ? 'yes' : 'no';
+            $value['ckc_status'] = intval($value['ckc_status']) === 1 ? 'normal' : 'pause';
+            $value['collect_time'] = date("Y-m-d H:i:s", intval($value['collect_time']));
+            $value['slot_start_time'] = date("Y-m-d H:i:s", intval($value['slot_start_time']));
+            $value['business_start_time'] = Int2HourMinuteSec(intval($value['business_start_time']));
+            $value['business_end_time'] = Int2HourMinuteSec(intval($value['business_end_time']));
+            $value['create_time'] = date("Y-m-d H:i:s", intval($value['create_time']));
+            $list[$key] = $value;
+        }
+
+        $title = [
+            'mos_id' => 'ID',
+            'machine_id' => 'Machine ID',
+            'machine_name' => 'Machine Name',
+            'online' => 'Online Status',
+            'is_operating' => 'Operating',
+            'ckc_status' => 'Business Status',
+            'collect_time' => 'Collect Time',
+            'slot_start_time' => 'Slot Start Time',
+            'business_start_time' => 'Business Start',
+            'business_end_time' => 'Business End',
+            'create_time' => 'Create Time',
+        ];
+        $filename = "machine_online_snapshot_" . date("Ymd_His");
+        return $this->sendToExport("统计报表-设备在线状态快照", $filename, $title, $list);
     }
 }

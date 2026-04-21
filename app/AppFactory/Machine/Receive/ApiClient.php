@@ -1755,8 +1755,6 @@ class ApiClient extends ReceiveBaseClient
         $ac_name = [];
         if ($order['fd_id'] > 0) $ac_name[] = "满减";
         if ($order['coupon_id'] > 0) $ac_name[] = "优惠券";
-        $pay_type_list = [0 => "免支付", 1 => "微信", 2 => "支付宝", 3 => "未定义", 4 => "京东收银", 5 => "会员", 6 => "丽呈线上", 7 => "机器人线上", 8 => "COGOLINK", 9 => "商场积分支付"];
-        $pay_method_list = [0 => "免支付", 1 => "扫码支付", 2 => "付款码支付", 3 => "POS机支付", 4 => "商场积分支付"];
         $mch_no = "";
         if (isset($order['mch_no']) && $order['mch_no']) {
             $mch_no = substr($order['mch_no'], 0, 10) . "****" . substr($order['mch_no'], -4);
@@ -1794,7 +1792,7 @@ class ApiClient extends ReceiveBaseClient
             'total_price'    => number_format($order['total_price'], 2),
             'total_points' => $order['total_points'],
             'ac_name' => implode("/", $ac_name),
-            'pay_type' => $pay_type_list[$order['pay_type']] . ($order['pay_method'] > 0 ? "-" . $pay_method_list[$order['pay_method']] : ""),
+            'pay_type' => $this->formatPayType($order['pay_type'] ?? 0) . (($order['pay_method'] ?? 0) > 0 ? "-" . $this->formatPayMethod($order['pay_method']) : ""),
             'service_tel'    => $mConfig['deal_service_phone'],
             'receipt_code1'  => $mConfig['receipt_code1'],
             'receipt_code2'  => $mConfig['receipt_code2'],
@@ -2157,6 +2155,27 @@ class ApiClient extends ReceiveBaseClient
         $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
         $order['now_time'] = time();
         return $this->r(200, 'success', $order);
+    }
+
+    /**
+     * 获取设备侧销售订单筛选项
+     * @return array
+     */
+    public function getSaleOrderQueryConditionOptions()
+    {
+        $data = [
+            'pay_type_list' => $this->getPayTypeOptions(),
+            'pay_channel_list' => [],
+        ];
+
+        foreach ($this->getPayChannelNameMap() as $value => $label) {
+            $data['pay_channel_list'][] = [
+                'value' => intval($value),
+                'label' => $label,
+            ];
+        }
+
+        return $this->r(200, 'success', $data);
     }
 
 

@@ -515,15 +515,13 @@ trait MachineTrait
                 "log_id" => $log_id,
             ];
             $result = $this->sendToMachine(['machine_id' => $machine_id], 'remoteOutGoods', $content);
-            //修改订单子表出货成功+1  出货失败-1   remote_out_goods_status = 1  订单状态
+            // 远程出货发起时仅记录子订单远程出货状态，实际成功/失败结果由MQ回执处理
             $updateData['sod_id'] = $detail['sod_id'];
-            // $updateData['success_quantity'] = $detail['success_quantity'] + 1;
-            // $updateData['fail_quantity'] = $detail['fail_quantity'] - 1;
             $updateData['remote_out_goods_status'] = 1;
             $this->updateSaleOrdersDetails($updateData);
             $this->commitTrans();
         }catch(\Exception $e){
-            $this->rollBackTrans();
+            $this->rollbackTrans();
             actionLog($e,'远程出货异常：');
             return $e->getMessage();
         }
@@ -534,8 +532,108 @@ trait MachineTrait
 
     public function remoteOutGoods(){
         actionLog($this->message, "远程出货接收mq");
-        RemoteActionLogModel::update(['status' => $this->message['status']], ['id' => $this->message['log_id']]);
-        return $this->updateSaleOrdersDetails(['sod_id' => $this->message['sod_id'], 'remote_out_goods_status' => $this->message['status']]);
+        $status = intval($this->message['status'] ?? 0);
+        $sodId = intval($this->message['sod_id'] ?? 0);
+        $logId = intval($this->message['log_id'] ?? 0);
+        if (!$sodId) {
+            actionLog($this->message, "远程出货缺少sod_id", "remoteOutGoods");
+            return false;
+        }
+
+        $detail = $this->getSaleOrdersDetailsFind(
+            ['sod_id' => $sodId],
+            'sod_id,channel_code,channel_position,success_quantity,fail_quantity,remote_out_goods_status'
+        );
+        if (!$detail) {
+            actionLog(['sod_id' => $sodId], "远程出货未找到子订单", "remoteOutGoods");
+            return false;
+        }
+        $detail = is_object($detail) ? $detail->toArray() : $detail;
+
+        $log = null;
+        if ($logId) {
+            $log = RemoteActionLogModel::getFind(['id' => $logId], 'id,machine_id,channel_code,status');
+            $log = is_object($log) ? $log->toArray() : $log;
+        }
+
+        try {
+            $this->startTrans();
+
+            if ($logId) {
+                $this->updateRALog(
+                    ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')],
+                    ['id' => $logId],
+                    ['status', 'operator_at']
+                );
+            }
+
+            $updateSod = [
+                'sod_id' => $sodId,
+                'remote_out_goods_status' => $status,
+            ];
+            $updateFields = ['remote_out_goods_status'];
+            $flag = [];
+
+            // remoteOutGoods 状态定义：
+            // 1-已发指令 2-设备已接收 20-不减库存 21-扣减库存 3-出货成功 4-出货失败
+            // status=21/3 都允许处理子订单附表及货道，但仅执行一次；status=20/4 不处理库存，不修改 out_status
+            if (in_array($status, [21, 3], true) && !in_array(intval($detail['remote_out_goods_status'] ?? 0), [21, 3, 4], true)) {
+                $updateSod['success_quantity'] = intval($detail['success_quantity'] ?? 0) + 1;
+                $updateSod['fail_quantity'] = max(0, intval($detail['fail_quantity'] ?? 0) - 1);
+                $updateFields[] = 'success_quantity';
+                $updateFields[] = 'fail_quantity';
+
+                $channelCode = $this->message['channel_code'] ?? ($log['channel_code'] ?? $detail['channel_code']);
+                $machineMId = $this->machine['m_id'] ?? 0;
+                if (!$machineMId && !empty($log['machine_id'])) {
+                    $machineInfo = $this->getMachineFind(['machine_id' => $log['machine_id']], 'm_id');
+                    $machineMId = intval($machineInfo['m_id'] ?? 0);
+                }
+
+                if (!$channelCode || !$machineMId) {
+                    actionLog(['m_id' => $machineMId, 'channel_code' => $channelCode], '远程出货缺少货道定位信息', 'remoteOutGoods');
+                    $this->rollbackTrans();
+                    return false;
+                }
+
+                $mc = $this->getMachineChannelFind(
+                    ['m_id' => $machineMId, 'channel_code' => $channelCode],
+                    'mc_id,channel_code,channel_position,stock'
+                );
+                if (!$mc) {
+                    actionLog(['m_id' => $machineMId, 'channel_code' => $channelCode], '远程出货未找到对应货道', 'remoteOutGoods');
+                    $this->rollbackTrans();
+                    return false;
+                }
+                $mc = is_object($mc) ? $mc->toArray() : $mc;
+                $updateSod['channel_code'] = $mc['channel_code'];
+                $updateSod['channel_position'] = $mc['channel_position'];
+                $updateFields[] = 'channel_code';
+                $updateFields[] = 'channel_position';
+
+                $flag[] = $this->updateMachineChannel([
+                    'mc_id' => $mc['mc_id'],
+                    'stock' => bcsub($mc['stock'], 1),
+                ]);
+                actionLog($this->getLS(), '【SQL】远程出货(status=21/3)修改货道', 'remoteOutGoods');
+            }
+
+            $flag[] = $this->updateSaleOrdersDetails($updateSod, [], $updateFields);
+            actionLog($this->getLS(), '【SQL】远程出货修改订单副表', 'remoteOutGoods');
+
+            $result = $this->checkFlag($flag);
+            if (!$result) {
+                $this->rollbackTrans();
+                return false;
+            }
+
+            $this->commitTrans();
+            return true;
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1, 'remoteOutGoods');
+            return false;
+        }
     }
 
     /**
