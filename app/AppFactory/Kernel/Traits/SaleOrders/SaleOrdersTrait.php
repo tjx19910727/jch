@@ -228,6 +228,9 @@ trait SaleOrdersTrait
             return $update;
         }
 
+        $refreshPayChannel = intval($update['refresh_pay_channel'] ?? 0);
+        unset($update['refresh_pay_channel']);
+
         // 显式传入 pay_channel 时，仅兜底补 pay_channel_name
         if (isset($update['pay_channel']) && intval($update['pay_channel']) > 0) {
             if (empty($update['pay_channel_name'])) {
@@ -236,7 +239,57 @@ trait SaleOrdersTrait
                     $field[] = 'pay_channel_name';
                 }
             }
+            unset($update['has_wc_order_no']);
             return $update;
+        }
+
+        if (!$refreshPayChannel) {
+            unset($update['has_wc_order_no']);
+            return $update;
+        }
+
+        $orderId = intval($update['order_id'] ?? 0);
+        if ($orderId <= 0 && isset($where['order_id'])) {
+            $orderId = intval($where['order_id']);
+        }
+        if ($orderId <= 0 && !empty($update['trade_no'])) {
+            $orderId = intval($this->getSaleOrdersValue(['trade_no' => $update['trade_no']], 'order_id'));
+        }
+        if ($orderId <= 0 && !empty($where['trade_no'])) {
+            $orderId = intval($this->getSaleOrdersValue(['trade_no' => $where['trade_no']], 'order_id'));
+        }
+        if ($orderId <= 0) {
+            unset($update['has_wc_order_no']);
+            return $update;
+        }
+
+        $order = $this->getSaleOrdersFind(
+            ['order_id' => $orderId],
+            'order_id,order_type,pay_type,pay_method,total_cost_points,gift_points,total_points,acp_id,pay_channel,pay_channel_name'
+        );
+        if (!$order) {
+            unset($update['has_wc_order_no']);
+            return $update;
+        }
+
+        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+        $snapshot = array_merge($order, $update);
+        $snapshot['order_id'] = $orderId;
+        if (!array_key_exists('has_wc_order_no', $snapshot)) {
+            $snapshot['has_wc_order_no'] = $this->hasWcOrderNo($orderId) ? 1 : 0;
+        }
+
+        $result = $this->buildOrderPayChannel($snapshot);
+        $update['pay_channel'] = $result['pay_channel'];
+        $update['pay_channel_name'] = $result['pay_channel_name'];
+        unset($update['has_wc_order_no']);
+        if ($field) {
+            if (!in_array('pay_channel', $field, true)) {
+                $field[] = 'pay_channel';
+            }
+            if (!in_array('pay_channel_name', $field, true)) {
+                $field[] = 'pay_channel_name';
+            }
         }
         return $update;
     }
@@ -254,6 +307,9 @@ trait SaleOrdersTrait
         $acpId = intval($order['acp_id'] ?? 0);
         $totalCostPoints = floatval($order['total_cost_points'] ?? 0);
         $giftPoints = floatval($order['gift_points'] ?? 0);
+        if ($giftPoints <= 0) {
+            $giftPoints = floatval($order['total_points'] ?? 0);
+        }
 
         if ($payType === 20) {
             return $this->formatPayChannel(6);
@@ -265,7 +321,7 @@ trait SaleOrdersTrait
         $hasWcOrderNo = intval($order['has_wc_order_no'] ?? -1);
         if ($hasWcOrderNo < 0) {
             $orderId = intval($order['order_id'] ?? 0);
-            $hasWcOrderNo = $this->hasNonDefaultWcOrderNo($orderId) ? 1 : 0;
+            $hasWcOrderNo = $this->hasWcOrderNo($orderId) ? 1 : 0;
         }
 
         if ($giftPoints > 0 && !$hasWcOrderNo) {
@@ -296,11 +352,11 @@ trait SaleOrdersTrait
     }
 
     /**
-     * 是否存在非默认微程订单号
+     * 是否存在非空微程订单号
      * @param int $orderId
      * @return bool
      */
-    protected function hasNonDefaultWcOrderNo($orderId)
+    protected function hasWcOrderNo($orderId)
     {
         if ($orderId <= 0) {
             return false;
@@ -318,7 +374,7 @@ trait SaleOrdersTrait
             return false;
         }
         foreach ($wcOrderNoList as $wcOrderNo) {
-            if (!$this->isDefaultWcOrderNo($wcOrderNo)) {
+            if (!$this->isEmptyWcOrderNo($wcOrderNo)) {
                 return true;
             }
         }
@@ -326,11 +382,47 @@ trait SaleOrdersTrait
     }
 
     /**
-     * 判断 wc_order_no 是否默认值
+     * 批量计算订单是否存在有效 wc_order_no
+     * @param array $orderIds
+     * @return array
+     */
+    protected function buildOrderHasWcOrderNoMap($orderIds = [])
+    {
+        $map = [];
+        if (!$orderIds) {
+            return $map;
+        }
+
+        $rows = Db::name('sale_orders_details')
+            ->whereIn('order_id', $orderIds)
+            ->field('order_id,wc_order_no')
+            ->select()
+            ->toArray();
+        if (!$rows) {
+            return $map;
+        }
+
+        foreach ($rows as $row) {
+            $orderId = intval($row['order_id'] ?? 0);
+            if ($orderId <= 0) {
+                continue;
+            }
+            if (!isset($map[$orderId])) {
+                $map[$orderId] = 0;
+            }
+            if (!$this->isEmptyWcOrderNo($row['wc_order_no'] ?? null)) {
+                $map[$orderId] = 1;
+            }
+        }
+        return $map;
+    }
+
+    /**
+     * 判断 wc_order_no 是否为空
      * @param mixed $value
      * @return bool
      */
-    protected function isDefaultWcOrderNo($value)
+    protected function isEmptyWcOrderNo($value)
     {
         if ($value === null) {
             return true;
@@ -338,11 +430,7 @@ trait SaleOrdersTrait
         if (is_array($value)) {
             return empty($value);
         }
-        $value = trim((string)$value);
-        if ($value === '' || $value === '0' || $value === '[]' || $value === '{}' || strtolower($value) === 'null') {
-            return true;
-        }
-        return false;
+        return trim((string)$value) === '';
     }
 
     /**

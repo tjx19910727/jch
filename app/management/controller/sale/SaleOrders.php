@@ -298,6 +298,7 @@ class SaleOrders extends Common
         if (isset($postData['machine_id']) && $postData['machine_id']) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
         if (isset($postData['refund_no']) && $postData['refund_no']) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
         if (isset($postData['pay_type']) && $postData['pay_type']) $where['pay_type'] = $postData['pay_type'];
+        if (isset($postData['pay_channel']) && $postData['pay_channel']) $where['so.pay_channel'] = $postData['pay_channel'];
 //        $where = $this->getWhere($postData,false,['refund_trade_no' => "like",'machine_id' => "like",'trade_no' => "like","refund_no" => "like"]);
         if ($this->manager['pid'] > 0) {
             $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
@@ -335,6 +336,7 @@ class SaleOrders extends Common
         if (isset($postData['machine_id']) && $postData['machine_id']) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
         if (isset($postData['refund_no']) && $postData['refund_no']) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
         if (isset($postData['pay_type']) && $postData['pay_type']) $where['pay_type'] = $postData['pay_type'];
+        if (isset($postData['pay_channel']) && $postData['pay_channel']) $where['so.pay_channel'] = $postData['pay_channel'];
         return $this->app->saleOrders->exportRefund($where);
     }
 
@@ -645,6 +647,18 @@ class SaleOrders extends Common
         $postData = input();
         $postData['manager_id'] = $this->manager['manager_id'];
         return $this->app->saleOrders->fixOrdersInfo($postData);
+    }
+
+    /**
+     * 历史订单分类回填
+     * 参数：
+     * batch_size,max_batches,start_order_id,end_order_id,only_unclassified,dry_run
+     * @return array|string
+     */
+    public function backfillPayChannel()
+    {
+        $postData = input();
+        return $this->app->saleOrders->backfillPayChannelHistory($postData);
     }
 
     /**
