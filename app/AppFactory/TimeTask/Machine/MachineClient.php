@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineOnlineSnapshotTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
@@ -29,7 +30,7 @@ use think\facade\Env as FacadeEnv;
 
 class MachineClient extends TimeTaskBase
 {
-    use MachineOnlineTrait,MachineOnlineDetailsTrait,MachineTrait,MachineOnOffTrait,MachineMqRecordTrait;
+    use MachineOnlineTrait,MachineOnlineDetailsTrait,MachineOnlineSnapshotTrait,MachineTrait,MachineOnOffTrait,MachineMqRecordTrait;
     use SaleOrdersTrait;
     use AuthManagerMachineTrait;
     use ActivityCouponUsedTrait;
@@ -145,7 +146,107 @@ class MachineClient extends TimeTaskBase
     }
 
     /**
-     * 定时任务-30秒查询一次，间隔3分钟，检查掉线的在线记录
+     * Scheduled task: collect online snapshots for operating machines every 2 hours.
+     * command: php think time_task machine collectOperatingOnlineSnapshot
+     */
+    public function collectOperatingOnlineSnapshot()
+    {
+        $today = strtotime(date("Y-m-d"));
+        $now = time();
+        $nowSec = HourMinuteSec2int(date("H:i:s", $now));
+        $slotStart = $today + intval(floor(($now - $today) / 7200)) * 7200;
+        $slotEnd = min($slotStart + 7199, $today + 86399);
+
+        $where = [
+            ['is_operating', '=', 1],
+            ['vending_machine_type', '=', 1],
+        ];
+        $machines = $this->getMachineList($where, 0, 'm_id,machine_id,machine_name,online,is_operating,ckc_status,ao_id');
+        if (!$machines) {
+            return "no data";
+        }
+
+        $flag = [];
+        foreach ($machines as $machine) {
+            [$businessStart, $businessEnd] = $this->getMachineBusinessWindow($machine['m_id'], $today);
+            if ($nowSec < $businessStart || $nowSec > $businessEnd) {
+                continue;
+            }
+
+            $saveData = [
+                'm_id' => $machine['m_id'],
+                'machine_id' => $machine['machine_id'],
+                'machine_name' => $machine['machine_name'],
+                'online' => $machine['online'],
+                'is_operating' => $machine['is_operating'],
+                'ckc_status' => $machine['ckc_status'] ?? 1,
+                'record_date' => $today,
+                'collect_time' => $now,
+                'slot_start_time' => $slotStart,
+                'slot_end_time' => $slotEnd,
+                'business_start_time' => $businessStart,
+                'business_end_time' => $businessEnd,
+                'ao_id' => $machine['ao_id'] ?? 0,
+            ];
+
+            $exists = $this->getMachineOnlineSnapshotFind([
+                'm_id' => $machine['m_id'],
+                'record_date' => $today,
+                'slot_start_time' => $slotStart,
+            ], 'mos_id');
+            if ($exists) {
+                $saveData['mos_id'] = $exists['mos_id'];
+                $flag[] = $this->updateMachineOnlineSnapshot($saveData);
+            } else {
+                $flag[] = $this->addMachineOnlineSnapshot($saveData);
+            }
+        }
+
+        actionLog($flag, 'collectOperatingOnlineSnapshot');
+        return "ok";
+    }
+
+    /**
+     * Resolve business window (seconds in day) from machine on/off config.
+     */
+    protected function getMachineBusinessWindow($mId, $today)
+    {
+        $default = [0, 86399];
+        $onOff = $this->getMachineOnOffFind(['m_id' => $mId, 'status' => 1], 'on_off_machine');
+        if (!$onOff || empty($onOff['on_off_machine'])) {
+            return $default;
+        }
+
+        $onOffList = json_decode($onOff['on_off_machine'], true);
+        if (!$onOffList || !is_array($onOffList)) {
+            return $default;
+        }
+
+        $week = intval(date('w', $today));
+        if (!isset($onOffList[$week])) {
+            return $default;
+        }
+
+        $timeRange = explode(",", strval($onOffList[$week]));
+        $pointA = trim($timeRange[0] ?? '');
+        $pointB = trim($timeRange[1] ?? '');
+        if (
+            $pointA === '' || $pointB === '' ||
+            strtolower($pointA) === 'null' || strtolower($pointB) === 'null'
+        ) {
+            return $default;
+        }
+
+        $secA = HourMinuteSec2int($pointA);
+        $secB = HourMinuteSec2int($pointB);
+        $start = min($secA, $secB);
+        $end = max($secA, $secB);
+
+        return [$start, $end];
+    }
+
+    /**
+     * Scheduled task: check offline records.
      */
     public function checkOffline()
     {

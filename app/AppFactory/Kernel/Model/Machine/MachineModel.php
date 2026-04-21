@@ -86,6 +86,7 @@ class MachineModel extends BaseModel
         MachineOnOffModel::whereDel($where);
         MachineOnlineModel::whereDel($where);
         MachineOnlineDetailsModel::whereDel($where);
+        MachineOnlineSnapshotModel::whereDel($where);
         MachineVersionPlanModel::whereDel($where);
         MachineViewModel::whereDel($where);
 
