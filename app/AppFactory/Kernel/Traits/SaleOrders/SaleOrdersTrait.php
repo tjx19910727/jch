@@ -19,6 +19,74 @@ use think\facade\Db;
 
 trait SaleOrdersTrait
 {
+    public function getPayTypeNameMap()
+    {
+        return config('payment.pay_type_map') ?: [];
+    }
+
+    public function getPayMethodNameMap()
+    {
+        return config('payment.pay_method_map') ?: [];
+    }
+
+    public function getStrategyPayeeTypeNameMap()
+    {
+        return config('payment.strategy_payee_type_map') ?: [];
+    }
+
+    public function getPayChannelNameMap()
+    {
+        return config('payment.pay_channel_map') ?: [];
+    }
+
+    public function formatPayType($payType, $defaultPrefix = '支付类型#')
+    {
+        $payType = intval($payType);
+        $map = $this->getPayTypeNameMap();
+        return $map[$payType] ?? ($defaultPrefix . $payType);
+    }
+
+    public function formatPayMethod($payMethod, $defaultPrefix = '支付方式#')
+    {
+        $payMethod = intval($payMethod);
+        $map = $this->getPayMethodNameMap();
+        return $map[$payMethod] ?? ($defaultPrefix . $payMethod);
+    }
+
+    public function getPayTypeOptions($values = [])
+    {
+        $map = $this->getPayTypeNameMap();
+        if ($values) {
+            $map = array_intersect_key($map, array_flip(array_map('intval', $values)));
+        }
+
+        $data = [];
+        foreach ($map as $value => $label) {
+            $data[] = [
+                'value' => intval($value),
+                'label' => $label,
+            ];
+        }
+        return $data;
+    }
+
+    public function getPayMethodOptions($values = [])
+    {
+        $map = $this->getPayMethodNameMap();
+        if ($values) {
+            $map = array_intersect_key($map, array_flip(array_map('intval', $values)));
+        }
+
+        $data = [];
+        foreach ($map as $value => $label) {
+            $data[] = [
+                'value' => intval($value),
+                'label' => $label,
+            ];
+        }
+        return $data;
+    }
+
     public function getSaleOrdersValue($where, $value)
     {
         return SaleOrdersModel::getFieldValue($where, $value);
@@ -99,6 +167,7 @@ trait SaleOrdersTrait
      */
     public function addSaleOrders($insert)
     {
+        $insert = $this->appendOrderPayChannel($insert);
         $order = SaleOrdersModel::create($insert);
         actionLog($this->getLS(), '生成订单SQL');
         actionLog($order, '生成订单结果');
@@ -114,7 +183,191 @@ trait SaleOrdersTrait
      */
     public function updateSaleOrders($update, $where = [], $field = [])
     {
+        $update = $this->appendOrderPayChannelForUpdate($update, $where, $field);
         return SaleOrdersModel::update($update, $where, $field);
+    }
+
+    /**
+     * 自动补全订单分类（创建时）
+     * @param array $order
+     * @return array
+     */
+    protected function appendOrderPayChannel($order)
+    {
+        if (is_object($order)) {
+            $order = method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
+        }
+        if (!is_array($order)) {
+            return $order;
+        }
+        if (isset($order['pay_channel']) && intval($order['pay_channel']) > 0) {
+            if (empty($order['pay_channel_name'])) {
+                $order['pay_channel_name'] = $this->getPayChannelName(intval($order['pay_channel']));
+            }
+            return $order;
+        }
+        $result = $this->buildOrderPayChannel($order);
+        $order['pay_channel'] = $result['pay_channel'];
+        $order['pay_channel_name'] = $result['pay_channel_name'];
+        return $order;
+    }
+
+    /**
+     * 自动补全订单分类（更新时）
+     * @param array $update
+     * @param array $where
+     * @param array $field
+     * @return array
+     */
+    protected function appendOrderPayChannelForUpdate($update, array &$where, array &$field)
+    {
+        if (is_object($update)) {
+            $update = method_exists($update, 'toArray') ? $update->toArray() : (array)$update;
+        }
+        if (!is_array($update)) {
+            return $update;
+        }
+
+        // 显式传入 pay_channel 时，仅兜底补 pay_channel_name
+        if (isset($update['pay_channel']) && intval($update['pay_channel']) > 0) {
+            if (empty($update['pay_channel_name'])) {
+                $update['pay_channel_name'] = $this->getPayChannelName(intval($update['pay_channel']));
+                if ($field && !in_array('pay_channel_name', $field, true)) {
+                    $field[] = 'pay_channel_name';
+                }
+            }
+            return $update;
+        }
+        return $update;
+    }
+
+    /**
+     * 订单分类统一判定
+     * @param array $order
+     * @return array
+     */
+    public function buildOrderPayChannel(array $order)
+    {
+        $payType = intval($order['pay_type'] ?? 0);
+        $payMethod = intval($order['pay_method'] ?? 0);
+        $orderType = intval($order['order_type'] ?? 0);
+        $acpId = intval($order['acp_id'] ?? 0);
+        $totalCostPoints = floatval($order['total_cost_points'] ?? 0);
+        $giftPoints = floatval($order['gift_points'] ?? 0);
+
+        if ($payType === 20) {
+            return $this->formatPayChannel(6);
+        }
+        if ($totalCostPoints > 0) {
+            return $this->formatPayChannel(4);
+        }
+
+        $hasWcOrderNo = intval($order['has_wc_order_no'] ?? -1);
+        if ($hasWcOrderNo < 0) {
+            $orderId = intval($order['order_id'] ?? 0);
+            $hasWcOrderNo = $this->hasNonDefaultWcOrderNo($orderId) ? 1 : 0;
+        }
+
+        if ($giftPoints > 0 && !$hasWcOrderNo) {
+            return $this->formatPayChannel(3);
+        }
+        if ($hasWcOrderNo) {
+            return $this->formatPayChannel(1);
+        }
+        if ($payType === 7) {
+            return $this->formatPayChannel(2);
+        }
+        if ($orderType === 3 && $acpId > 0) {
+            return $this->formatPayChannel(5);
+        }
+        if (in_array($payType, [1, 11, 12], true)) {
+            return $this->formatPayChannel(7);
+        }
+        if (in_array($payType, [2, 21, 22], true)) {
+            return $this->formatPayChannel(8);
+        }
+        if (in_array($payMethod, [3, 4, 5], true) || in_array($payType, [4, 10, 33, 34, 35], true)) {
+            return $this->formatPayChannel(9);
+        }
+        if (in_array($payMethod, [6, 7], true) || in_array($payType, [36, 37], true)) {
+            return $this->formatPayChannel(10);
+        }
+        return $this->formatPayChannel(11);
+    }
+
+    /**
+     * 是否存在非默认微程订单号
+     * @param int $orderId
+     * @return bool
+     */
+    protected function hasNonDefaultWcOrderNo($orderId)
+    {
+        if ($orderId <= 0) {
+            return false;
+        }
+        try {
+            $wcOrderNoList = Db::name('sale_orders_details')
+                ->where(['order_id' => $orderId])
+                ->column('wc_order_no');
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return false;
+        }
+
+        if (!$wcOrderNoList) {
+            return false;
+        }
+        foreach ($wcOrderNoList as $wcOrderNo) {
+            if (!$this->isDefaultWcOrderNo($wcOrderNo)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 判断 wc_order_no 是否默认值
+     * @param mixed $value
+     * @return bool
+     */
+    protected function isDefaultWcOrderNo($value)
+    {
+        if ($value === null) {
+            return true;
+        }
+        if (is_array($value)) {
+            return empty($value);
+        }
+        $value = trim((string)$value);
+        if ($value === '' || $value === '0' || $value === '[]' || $value === '{}' || strtolower($value) === 'null') {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 获取分类名称
+     * @param int $payChannel
+     * @return string
+     */
+    protected function getPayChannelName($payChannel)
+    {
+        $map = $this->getPayChannelNameMap();
+        return $map[intval($payChannel)] ?? '其他';
+    }
+
+    /**
+     * 格式化分类结果
+     * @param int $payChannel
+     * @return array
+     */
+    protected function formatPayChannel($payChannel)
+    {
+        $payChannel = intval($payChannel);
+        return [
+            'pay_channel' => $payChannel,
+            'pay_channel_name' => $this->getPayChannelName($payChannel),
+        ];
     }
 
     public function joinSoSodColumn($where, $column, $group = "")

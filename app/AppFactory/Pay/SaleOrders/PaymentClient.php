@@ -63,7 +63,11 @@ class PaymentClient extends PayBaseClient
      */
     protected $paymentType = [
         "1" => "wxPay",
+        "11" => "wxPay",
+        "12" => "wxPay",
         "2" => "aliPay",
+        "21" => "aliPay",
+        "22" => "aliPay",
         "3" => "tlPay",
         "4" => "jdPay",
         "5" => "tripPay",
@@ -73,7 +77,11 @@ class PaymentClient extends PayBaseClient
 
     protected $cancelType = [
         "1" => "wxCancel",
+        "11" => "wxCancel",
+        "12" => "wxCancel",
         "2" => "aliCancel",
+        "21" => "aliCancel",
+        "22" => "aliCancel",
         "3" => "tlCancel",
         "4" => "jdCancel",
     ];
@@ -96,6 +104,19 @@ class PaymentClient extends PayBaseClient
         1 => "WX",
         2 => "ALIPAY",
     ];
+
+    /**
+     * 获取兼容的收款策略支付类型（新细分类型回退到主通道）
+     * @param int $payType
+     * @return int
+     */
+    protected function getCompatiblePayeeType($payType)
+    {
+        $payType = intval($payType);
+        if (in_array($payType, [11, 12], true)) return 1;
+        if (in_array($payType, [21, 22], true)) return 2;
+        return $payType;
+    }
 
     /**
      * 发起订单支付
@@ -127,8 +148,14 @@ class PaymentClient extends PayBaseClient
             $this->data['authCode'] = str_replace("Num Lock",'',$this->data['authCode']);
             $paymentType = AuthCode::getCodePayee($this->data['authCode']);
             if (!$paymentType) return $this->rFail($this->lang("VOrderPay.unKnow_auth_code"));
-            if (in_array($this->order['pay_type'],[1,2]) && $paymentType != $this->order['pay_type'])
-                return $this->rFail($this->lang("VOrderPay.auth_code_not_match_pay_type"));
+            if (in_array($this->order['pay_type'], [1, 2, 11, 12, 21, 22], true)) {
+                $expectPayType = $this->order['pay_type'];
+                if (in_array($expectPayType, [11, 12], true)) $expectPayType = 1;
+                if (in_array($expectPayType, [21, 22], true)) $expectPayType = 2;
+                if ($paymentType != $expectPayType) {
+                    return $this->rFail($this->lang("VOrderPay.auth_code_not_match_pay_type"));
+                }
+            }
             $this->order['pay_code'] = $this->data['authCode'];
         }
         //余额支付
@@ -145,6 +172,10 @@ class PaymentClient extends PayBaseClient
             $where['sm.ao_id'] = $this->machine['ao_id'];
         }
         $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');
+        if ((!is_array($this->strategyPayee) || !$this->strategyPayee) && in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
+            $where['sp.payee_type'] = $this->getCompatiblePayeeType($this->order['pay_type']);
+            $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');
+        }
         if (!is_array($this->strategyPayee)) return $this->strategyPayee;
         if (!in_array($this->strategyPayee['payee_type'],array_keys($this->paymentType))) {
             return $this->rFail($this->lang("VOrderPay.unKnow_pay_type"));
@@ -155,7 +186,9 @@ class PaymentClient extends PayBaseClient
 
 
 
-        $this->order['pay_type'] = $this->strategyPayee['payee_type'];
+        if (!in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
+            $this->order['pay_type'] = $this->strategyPayee['payee_type'];
+        }
         $this->order['sp_id'] = $this->strategyPayee['sp_id'];
         $uOrder = $this->updateSaleOrders($this->order,[],['pay_code',"pay_method",'pay_type','sp_id']);
         if ($uOrder) {
@@ -193,6 +226,10 @@ class PaymentClient extends PayBaseClient
                         $where['sm.ao_id'] = $this->order['ao_id'];
                     }
                     $this->strategyPayee = $this->getStrategyPayeeContent($where, 'sp.*', '');
+                    if ((!is_array($this->strategyPayee) || !$this->strategyPayee) && in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
+                        $where['sp.payee_type'] = $this->getCompatiblePayeeType($this->order['pay_type']);
+                        $this->strategyPayee = $this->getStrategyPayeeContent($where, 'sp.*', '');
+                    }
                     if (!is_array($this->strategyPayee)) return $this->strategyPayee;
                     if (!in_array($this->strategyPayee['payee_type'], array_keys($this->cancelType))) {
                         return $this->rFail($this->lang("VOrderPay.unKnow_pay_type"));
