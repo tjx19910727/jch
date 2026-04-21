@@ -49,6 +49,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineHelpTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
+use app\AppFactory\Kernel\Traits\Machine\SimCardInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
@@ -116,6 +117,7 @@ class ApiClient extends ReceiveBaseClient
         MachineGoodsTrait,
         MachineHelpTrait,
         MachineOnOffTrait,
+        SimCardInfoTrait,
         MachineTrait,
         TopicPageTrait,
         TemplateViewTrait,
@@ -2755,4 +2757,82 @@ class ApiClient extends ReceiveBaseClient
         return $this->getCardBalanceSummary($card_no);
     }
 
+    /**
+     * 设备上报每日流量使用情况
+     * 约定：camera_usage = usage - machine_usage
+     * @return array|\think\response\Json
+     */
+    public function reportSimCardMachineUsage()
+    {
+        try {
+            $date = date('Y-m-d', $this->data['date']);
+            $ydate = date('Y-m-d', strtotime('-1 day', strtotime($date)));
+            $machineUsage = $this->data['machine_usage'] ?? 0;
+            $iccid = trim($this->data['iccid'] ?? '');
+            if (!$iccid) {
+                $iccid = $this->getSimCardInfoValue(['m_id' => $this->machine['m_id']], 'iccid', 'id desc');
+            }
+            if (!$iccid) {
+                return $this->rFail('iccid不能为空');
+            }
+
+            $where = [
+                'm_id' => $this->machine['m_id'],
+                'machine_id' => $this->machine['machine_id'],
+                'iccid' => $iccid,
+                'date' => $date,
+            ];
+
+            $row = $this->getSimCardMachineFind($where);
+            $usage = 0;
+            $totalUsage = $row['total_usage'] ?? 0;
+            $machine_usage = $this->data['machine_usage'] ?? 0;
+            if ($row) {
+                $usage = $row['usage'] ?? 0;
+                
+            } else {
+                if ($totalUsage > 0) {
+                    $prev = $this->getSimCardMachineFind([
+                        'iccid' => $iccid,
+                        'date' => $ydate
+                    ], 'total_usage', 'date desc,id desc');
+                    $prevTotal = $prev['total_usage'] ?? 0;
+                    $usage = bcsub($totalUsage, $prevTotal, 2);
+                    if ($usage < 0) {
+                        $usage = 0;
+                    }
+                }
+            }
+            $cameraUsage = bcsub($usage, $machineUsage, 2);
+            if ($cameraUsage < 0) {
+                $cameraUsage = 0;
+            }
+            $resData = [
+                'm_id' => $this->machine['m_id'],
+                'machine_id' => $this->machine['machine_id'],
+                'iccid' => $iccid,
+                'date' => $date,
+                'total_usage' => $totalUsage,
+                'usage' => $usage,
+                'machine_usage' => $machine_usage,
+                'camera_usage' => $cameraUsage,
+                'remark' => $this->data['remark'] ?? '',
+            ];
+            if($row) {
+                $this->addSimCardMachine($resData);
+            } else {
+                $this->updateSimCardMachine($resData, ['id' => $row['id']]);
+            }    
+            return $this->r(200, 'SUCCESS', [
+                'date' => $date,
+                'iccid' => $iccid,
+                'usage' => $usage,
+                'machine_usage' => $machineUsage,
+                'camera_usage' => $cameraUsage,
+            ]);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
 }

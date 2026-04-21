@@ -15,9 +15,11 @@ use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
+use app\AppFactory\Kernel\Traits\Machine\SimCardInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
+use app\AppFactory\Kernel\Support\SimiotService\Simiot;
 use app\AppFactory\TimeTask\TimeTaskBase;
 use think\cache\driver\Redis;
 use think\db\exception\DataNotFoundException;
@@ -33,6 +35,7 @@ class MachineClient extends TimeTaskBase
     use SaleOrdersTrait;
     use AuthManagerMachineTrait;
     use ActivityCouponUsedTrait;
+    use SimCardInfoTrait;
     use ToManagerTrait;
 
     /**
@@ -274,4 +277,213 @@ class MachineClient extends TimeTaskBase
 //        if ($list) $list = $list->toArray();
 //        cache("machineUploadQueueList",$list);
 //    }
+
+    /**
+     * 每天0点1分同步物联卡信息并统计昨日流量
+     * 命令示例：php think time_task machine updateSimCardUsage
+     * 可选参数：date=YYYY-mm-dd（默认当天）
+     * @return string
+     */
+    public function updateSimCardUsage()
+    {
+        $date = date('Y-m-d',strtotime("-1 days"));
+        $y_date = date('Y-m-d',strtotime("-2 days"));
+        $machineInfoList = Db::name('machine_info')
+            ->whereNotNull('iccid')
+            ->where('iccid', '<>', '')
+            ->where('iccid', '<>', '0')
+            ->field('m_id,machine_id,iccid')
+            ->select()
+            ->toArray();
+
+        if (!$machineInfoList) {
+            return '无可同步的物联卡';
+        }
+
+        $iccidList = array_values(array_unique(array_map(function ($item) {
+            return strval($item['iccid']);
+        }, $machineInfoList)));
+
+        $batchRes = Simiot::queryCardBatch($iccidList, 90);
+        if (!is_array($batchRes) || intval($batchRes['code'] ?? -1) !== 0) {
+            return '同步失败：榫卯接口调用失败';
+        }
+        if(!isset($batchRes['result']) || !is_array($batchRes['result'])) {
+            return '同步失败：榫卯接口返回数据异常';
+        }
+        $cardMap = [];
+        foreach ($batchRes['result'] as $card) {
+            $iccid = strval($card['iccid'] ?? '');
+            if ($iccid !== '') {
+                $cardMap[$iccid] = $card;
+            }
+        }
+
+        $existTodayRows = Db::name('sim_card_machine')
+            ->where('date', $date)
+            ->whereIn('iccid', $iccidList)
+            ->field('m_id,machine_id,iccid,date')
+            ->select()
+            ->toArray();
+        $existTodayMap = [];
+        foreach ($existTodayRows as $row) {
+            $key = intval($row['m_id']) . '|' . strval($row['machine_id']) . '|' . strval($row['iccid']) . '|' . strval($row['date']);
+            $existTodayMap[$key] = 1;
+        }
+
+        $prevRows = Db::name('sim_card_machine')
+            ->whereIn('iccid', $iccidList)
+            ->where('date', $y_date)
+            ->field('iccid,total_usage,date,id')
+            ->order('iccid asc,date desc,id desc')
+            ->select()
+            ->toArray();
+        $prevMap = [];
+        foreach ($prevRows as $row) {
+            $iccid = strval($row['iccid']);
+            if (!isset($prevMap[$iccid])) {
+                $prevMap[$iccid] = $row['total_usage'] ?? 0;
+            }
+        }
+
+        $insertInfoRows = [];
+        $updateInfoRows = [];
+        $insertMachineRows = [];
+        $success = 0;
+        $fail = 0;
+
+        foreach ($machineInfoList as $item) {
+            try {
+                $iccid = strval($item['iccid']);
+                if (!isset($cardMap[$iccid])) {
+                    $fail++;
+                    actionLog(['iccid' => $iccid], '物联卡信息同步失败，未返回该iccid数据');
+                    continue;
+                }
+
+                $card = $cardMap[$iccid] ?? [];
+                if (!$card || !is_array($card)) {
+                    $fail++;
+                    actionLog(['iccid' => $iccid], '物联卡信息为空');
+                    continue;
+                }
+
+                $infoData = $this->mapSimCardInfoData($item, $card);
+                $existInfo = $this->getSimCardInfoFind([
+                    'm_id' => $item['m_id'],
+                    'machine_id' => $item['machine_id'],
+                    'iccid' => $iccid,
+                ], 'id');
+                if ($existInfo) {
+                    $infoData['id'] = $existInfo['id'];
+                    $updateInfoRows[] = $infoData;
+                } else {
+                    $insertInfoRows[] = $infoData;
+                }
+
+                $totalUsage = $card['current_period_usage'] ?? 0;
+                $compositeKey = $item['m_id'] . '|' . $item['machine_id'] . '|' . $iccid . '|' . $date;
+                if (!isset($existTodayMap[$compositeKey])) {
+                    $prevTotal = $prevMap[$iccid] ?? 0;
+                    $usage = bcsub($totalUsage, $prevTotal, 2);
+                    if ($usage < 0) {
+                        $usage = 0;
+                    }
+                    $insertMachineRows[] = [
+                        'm_id' => $item['m_id'],
+                        'machine_id' => $item['machine_id'],
+                        'iccid' => $iccid,
+                        'date' => $date,
+                        'total_usage' => $totalUsage,
+                        'usage' => $usage,
+                        'machine_usage' => 0,
+                        'camera_usage' => 0,
+                        'remark' => '',
+                    ];
+                    $existTodayMap[$compositeKey] = 1;
+                    $prevMap[$iccid] = $totalUsage;
+                }
+                $success++;
+            } catch (\Throwable $e) {
+                $fail++;
+                actionException($e, 1);
+            }
+        }
+
+        if ($insertInfoRows) {
+            Db::name('sim_card_info')->insertAll($insertInfoRows);
+        }
+        if ($updateInfoRows) {
+            foreach ($updateInfoRows as $updateRow) {
+                $id = $updateRow['id'];
+                unset($updateRow['id']);
+                $this->updateSimCardInfo($updateRow, ['id' => $id]);
+            }
+        }
+        if ($insertMachineRows) {
+            Db::name('sim_card_machine')->insertAll($insertMachineRows);
+        }
+
+        return "处理成功，总数:" . count($machineInfoList) . "，成功:" . $success . "，失败:" . $fail . "，基础新增:" . count($insertInfoRows) . "，日流量新增:" . count($insertMachineRows);
+    }
+
+    protected function mapSimCardInfoData($old, $card)
+    {
+        $power_status = 2; // 默认未知
+        $online_status = 2; // 默认未知
+        if (isset($card['power_status'])) {
+            if (in_array($card['power_status'], [0, '0', 'off', 'OFF'])) {
+                $power_status = 0;
+            } elseif (in_array($card['power_status'], [1, '1', 'on', 'ON'])) {
+                $power_status = 1;
+            }
+        }
+        if (isset($card['online_status'])) {
+            if (in_array($card['online_status'], [0, '0', 'offline', 'OFFLINE'])) {
+                $online_status = 0;
+            } elseif (in_array($card['online_status'], [1, '1', 'online', 'ONLINE'])) {
+                $online_status = 1;
+            }
+        }
+        return [
+            'm_id' => $old['m_id'],
+            'machine_id' => $old['machine_id'],
+            'iccid' => $old['iccid'],
+            'carrier' => $card['carrier'] ?? '',
+            'carrier_id' => $card['carrier_id'] ?? 0,
+            'msisdn' => $card['msisdn'] ?? $card['mobile'] ?? '',
+            'imsi' => $card['imsi'] ?? '',
+            'allocated_at' => $card['allocated_at'] ?? null,
+            'silent_period_end_date' => $card['silent_period_end_date'] ?? null,
+            'activated_time' => $card['activated_time'] ?? $card['activated_at'] ?? null,
+            'service_end_time' => $card['service_end_time'] ?? null,
+            'expect_cancel_time' => $card['expect_cancel_time'] ?? null,
+            'life_cycle' => $card['life_cycle'] ?? 0,
+            'network_status' => $card['network_status'] ?? 0,
+            'imei' => $card['imei'] ?? '',
+            'device_card_status' => $card['device_card_status'] ?? '',
+            'power_status' => $power_status,
+            'online_status' => $online_status,
+            'business_type' => $card['package'][0]['business_type'] ?? 0,
+            'number' => $card['package'][0]['number'] ?? '',
+            'title' => $card['package'][0]['title'] ?? '',
+            'service_period' => $card['package'][0]['service_period'] ?? 0,
+            'service_period_type' => $card['package'][0]['service_period_type'] ?? 0,
+            'package_capacity' => $card['package'][0]['package_capacity'] ?? 0,
+            'capacity_type' => $card['package'][0]['capacity_type'] ?? '',
+            'voice_capacity' => $card['package'][0]['voice_capacity'] ?? 0,
+            'subscribed_time' => $card['package'][0]['subscribed_time'] ?? null,
+            'start_time' => $card['package'][0]['start_time'] ?? null,
+            'end_time' => $card['package'][0]['end_time'] ?? null,
+            'periods' => $card['package'][0]['periods'] ?? 0,
+            'period_list' => $card['package'][0]['period_list'] ?? '',
+            'current_period_begin_time' => $card['package'][0]['current_period_begin_time'] ?? null,
+            'current_period_end_time' => $card['package'][0]['current_period_end_time'] ?? null,
+            'current_period_usage' => $card['package'][0]['current_period_usage'] ?? 0,
+            'current_period_voice_usage' => $card['package'][0]['current_period_voice_usage'] ?? 0,
+            'future_package_count' => $card['package'][0]['future_package_count'] ?? 0,
+            'future_cycle_count' => $card['package'][0]['future_cycle_count'] ?? 0,
+        ];
+    }
+
 }

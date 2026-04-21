@@ -61,6 +61,8 @@ class VReceive extends VCommon
         "gmg_id" => "require",
         "trade_no" => "require",
         "status" => "integer",
+        "date" => "require",
+        "machine_usage" => "require",
     ];
 
     protected $message = [
@@ -116,6 +118,8 @@ class VReceive extends VCommon
         "gmg_id.require" => "VSubGoodsMultipleOrder.gmg_id_require",
 
         "trade_no.require" => "VReceive.trade_no_require",
+        "date.require" => "VReceive.date_require",
+        "machine_usage.require" => "VReceive.machine_usage_require",
 
     ];
 
@@ -219,6 +223,7 @@ class VReceive extends VCommon
 
         "getMachineRentOrgLists" => ["msg_id","machine_id","timestamp","sign"],
         "getRentOrgGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
+        "reportSimCardMachineUsage" => ["msg_id","machine_id","timestamp","sign","date","machine_usage"],
 
         "searchWCGoods" => ["msg_id","machine_id","timestamp","name"],
         "sendErrorCode" => ["msg_id","machine_id","timestamp","sign","errorCode"],
