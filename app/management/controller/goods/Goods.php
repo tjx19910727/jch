@@ -158,4 +158,27 @@ class Goods extends Common
         return $this->app->goods->exportAllGoodsToExcel($where);
     }
 
+    
+    /**
+     * 导出异常条形码商品Excel
+     * @return array|string
+     */
+    public function exportAbnormalBarCodeExcel()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
+        $where[] = ['bar_code','not like','69%'];
+        return $this->app->goods->exportAbnormalBarCodeExcel($where);
+    }
+
+    /**
+     * 导入商品条形码
+     * @return array|string
+     */
+    public function importBarCode()
+    {
+        $postData = input();
+        return $this->app->goods->importBarCode($postData);
+    }
+
 }

@@ -272,5 +272,89 @@ class GoodsClient extends ManagementClient
         }
         return $this->r(100, $this->lang("action_fail"));
     }
+
+    
+    /**
+     * 导入条形码
+     * @param $data
+     * @return array|string
+     */
+    public function importBarCode($data)
+    {
+        try {
+            $path = root_path() . "public" . ($data['file_path'] ?? '');
+            $title = ["g_id", "bar_code"];
+            $rows = Excel::importExcel($path, $title);
+            if (is_object($rows)) return $rows;
+            if (!$rows) return $this->r(100, '获取不到Excel文档中的数据');
+            $resultData = [
+                'total' => count($rows),
+                'success' => 0,
+                'skip_exists' => 0,
+                'skip_invalid' => 0,
+                'failed' => 0,
+                'skip_exists_list' => [],
+                'skip_invalid_list' => [],
+                'failed_list' => [],
+            ];
+            foreach ($rows as $value) {
+                $gId = intval($value['g_id'] ?? 0);
+                $barCode = trim($value['bar_code'] ?? '');
+                if (!$gId || !$barCode) {
+                    $resultData['skip_invalid']++;
+                    $resultData['skip_invalid_list'][] = ['g_id' => $gId, 'bar_code' => $barCode];
+                    continue;
+                }
+                $goods = $this->getGoodsFind(['g_id' => $gId], 'g_id');
+                if (!$goods) {
+                    $resultData['skip_invalid']++;
+                    $resultData['skip_invalid_list'][] = ['g_id' => $gId, 'bar_code' => $barCode];
+                    continue;
+                }
+                $whereExist = [];
+                $whereExist[] = ['bar_code', '=', $barCode];
+                $whereExist[] = ['g_id', '<>', $gId];
+                $existGoods = $this->getGoodsFind($whereExist,'g_id');
+                if ($existGoods) {
+                    $resultData['skip_exists']++;
+                    $resultData['skip_exists_list'][] = ['g_id' => $gId, 'bar_code' => $barCode];
+                    continue;
+                }
+                $update = ['bar_code' => $barCode];
+                $updateResult = $this->updateGoods($update, ['g_id' => $gId], ['bar_code']);
+                if ($updateResult) {
+                    $resultData['success']++;
+                } else {
+                    $resultData['failed']++;
+                    $resultData['failed_list'][] = ['g_id' => $gId, 'bar_code' => $barCode];
+                }
+            }
+            return $this->r(200, '导入完成', $resultData);
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
+     * 导出异常条形码商品
+     * @param $where
+     * @return array|string
+     */
+    public function exportAbnormalBarCodeExcel($where)
+    {
+        $list = $this->getGoodsList($where, 0, 'g_id,g_name,bar_code');
+        if ($list) {
+            $list = $list->toArray();
+            $title = [
+                'g_id' => $this->lang("export.g_id"),
+                'g_name' => $this->lang("export.g_name"),
+                'bar_code' => $this->lang("export.bar_code"),
+            ];
+            $filename = '异常条形码商品列表-' . date("Ymd");
+            return $this->sendToExport('商品管理-异常条形码商品列表', $filename, $title, $list);
+        }
+        return $this->r(100, $this->lang("action_fail"));
+    }
     
 }
