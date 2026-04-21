@@ -163,7 +163,7 @@ class Goods extends Common
      * 导出异常条形码商品Excel
      * @return array|string
      */
-    public function exportAbnormalBarCodeExcel()
+    public function exportAbnormalBarCode()
     {
         $postData = input();
         $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
