@@ -899,7 +899,6 @@ trait SaleOrdersTrait
             $item['manager_nickname'] = $item['manager_nickname'] ?: '';
             $item['exception_create_time'] = !empty($item['exception_create_time']) ? date('Y-m-d H:i:s', $item['exception_create_time']) : '';
             $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
-            $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
             if (($item['has_hotel'] ?? 0) == 1) {
                 $hotel = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
                 if ($hotel) {

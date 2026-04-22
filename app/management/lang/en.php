@@ -471,6 +471,8 @@ return [
         "content_require" => "Content cannot be empty",
         "lang_require" => "Language type cannot be empty",
         "get_computer_overtime" => "Timeout getting central computer data",
+        "get_img_overtime" => "Timeout getting image data",
+        "overtime_message" => "Request timeout, please try again",
     ],
 
     "VMachineHelp" => [

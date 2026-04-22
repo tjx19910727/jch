@@ -109,8 +109,8 @@ class MachineInfo extends Common
             }
             sleep(1);
             $n++;
-            if ($n >= 50) {
-                return returnState(300,lang("action_machine_overtime"));
+            if ($n >= 20) {
+                return returnState(300,lang("VMachineInfo.get_img_overtime"));
             }
         }
     }
