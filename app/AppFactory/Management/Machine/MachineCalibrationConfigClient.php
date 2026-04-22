@@ -10,12 +10,14 @@ namespace app\AppFactory\Management\Machine;
 
 
 use app\AppFactory\Kernel\Traits\Machine\MachineCalibrationConfigTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class MachineCalibrationConfigClient extends ManagementClient
 {
     use MachineTrait;
+    use MachineConfigTrait;
     use MachineCalibrationConfigTrait;
 
     public function getCalibrationList($postData)
@@ -210,6 +212,13 @@ class MachineCalibrationConfigClient extends ManagementClient
         if (!$machine) {
             return $this->rFail('设备不存在');
         }
+
+        $machineConfig = $this->getMachineConfigFind(['m_id' => $machine['m_id']], 'remote_calibration');
+        $remoteCalibration = $machineConfig['remote_calibration'] ?? 0;
+        if ($remoteCalibration != 1) {
+            return $this->rFail('先开启设备远程校准');
+        }
+
         $list = $postData['data'] ?? [];
         if (!$list || !is_array($list)) {
             return $this->rFail('data不能为空');
