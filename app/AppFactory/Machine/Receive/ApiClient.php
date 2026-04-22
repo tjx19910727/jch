@@ -293,6 +293,11 @@ class ApiClient extends ReceiveBaseClient
         $mId = $this->machine['m_id'];
         //获取machine信息
         $machineData = $this->getMachineFind(['m_id' => $mId], "machine_id");
+        $machineConfig = $this->getMachineConfigFind(['m_id' => $mId], 'remote_calibration');
+        $remoteCalibration = $machineConfig['remote_calibration'] ?? 0;
+        if ($remoteCalibration != 1) {
+            return $this->r(300, '先开启设备远程校准');
+        }
         $incomingList = $this->getIncomingCalibrationList();
         $incomingVersion = isset($this->data['version']) && $this->data['version'] !== '' ? intval($this->data['version']) : 0;
 
