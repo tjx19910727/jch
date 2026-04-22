@@ -398,32 +398,53 @@ class WeiChengClient extends ManagementClient
             $machine_maps[$id] = $machine->toArray();
         }
         if (count($m_ids) !== count($machine_maps)) return $this->r(100, '选中的设备存在异常的设备');
-        //$wc_machine_goods_lists = $this->getWcMachineGoodsList([['out_no', 'in', $out_nos], ['m_id', 'in', $m_ids]])->toArray();
-        $wc_machine_goods_lists = $this->getWcGoodsLocalList([['out_no', 'in', $out_nos], ['m_id', 'in', $m_ids]])->toArray();
-        if (empty($wc_machine_goods_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
+
+        $wc_goods_local_lists = $this->getWcGoodsLocalList([['out_no', 'in', $out_nos]])->toArray();
+        if (empty($wc_goods_local_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
+
+        $goods_local_map = [];
+        foreach ($wc_goods_local_lists as $wc_goods_local) {
+            $outNo = $wc_goods_local['out_no'] ?? '';
+            if ($outNo === '') continue;
+            if (!isset($goods_local_map[$outNo])) {
+                $goods_local_map[$outNo] = $wc_goods_local;
+            }
+        }
+
+        $missing_out_nos = [];
+        foreach ($out_nos as $out_no) {
+            if (!isset($goods_local_map[$out_no])) {
+                $missing_out_nos[] = $out_no;
+            }
+        }
+        if (!empty($missing_out_nos)) {
+            return $this->r(100, '上架失败，以下微程商品不存在本地化信息：' . implode(',', $missing_out_nos));
+        }
 
         $sort_map = array_flip($out_nos);
         $insert_all = [];
-        foreach ($wc_machine_goods_lists as $wc_machine_goods) {
-            $id = $wc_machine_goods['m_id'];
-            if (!isset($machine_maps[$id])) continue;
+        foreach ($m_ids as $id) {
             $machine = $machine_maps[$id];
-            $insert_all[] = [
-                'm_id' => $id,
-                'machine_id' => $machine['machine_id'],
-                'channel_code' => 'Z10',
-                'g_id' => $wc_machine_goods['g_id'],
-                'out_no' => $wc_machine_goods['out_no'],
-                'g_name' => $wc_machine_goods['g_name'],
-                'gc_id' => $wc_machine_goods['type'], //  这里传的type应该不是外层type  所以type_name未知
-                'gc_name' => $wc_machine_goods['type_name'],
-                'pic' => $wc_machine_goods['pic'],
-                'sku' => $wc_machine_goods['sku'],
-                'bar_code' => $wc_machine_goods['bar_code'],
-                'retail_price' => $wc_machine_goods['retail_price'],
-                'gift_points' => $wc_machine_goods['gift_points'] ?? 0,
-                'sort' => isset($sort_map[$wc_machine_goods['out_no']]) ? $sort_map[$wc_machine_goods['out_no']] + 1 : 0,
-            ];
+            foreach ($out_nos as $out_no) {
+                if (!isset($goods_local_map[$out_no])) continue;
+                $wc_goods_local = $goods_local_map[$out_no];
+                $insert_all[] = [
+                    'm_id' => $id,
+                    'machine_id' => $machine['machine_id'],
+                    'channel_code' => 'Z10',
+                    'g_id' => $wc_goods_local['g_id'] ?? 0,
+                    'out_no' => $wc_goods_local['out_no'] ?? '',
+                    'g_name' => $wc_goods_local['g_name'] ?? '',
+                    'gc_id' => $wc_goods_local['gc_id'] ?? ($wc_goods_local['type'] ?? 0),
+                    'gc_name' => $wc_goods_local['gc_name'] ?? ($wc_goods_local['type_name'] ?? ''),
+                    'pic' => $wc_goods_local['pic'] ?? '',
+                    'sku' => $wc_goods_local['sku'] ?? '',
+                    'bar_code' => $wc_goods_local['bar_code'] ?? '',
+                    'retail_price' => $wc_goods_local['retail_price'] ?? 0,
+                    'gift_points' => $wc_goods_local['gift_points'] ?? 0,
+                    'sort' => isset($sort_map[$out_no]) ? $sort_map[$out_no] + 1 : 0,
+                ];
+            }
         }
         if (empty($insert_all)) return $this->r(100, '上架失败，找不到微程商品信息');
 
