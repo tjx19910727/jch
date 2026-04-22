@@ -203,7 +203,7 @@ class GoodsClient extends ManagementClient
     {
         try {
             $path = root_path() . "public" . $data['file_path'];
-            $title = ["g_id", "g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status",'length','width','height'];
+            $title = ["g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status",'length','width','height',"g_id"];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
             $goods = Excel::importExcel($path, $title, $other);
             if (is_object($goods)) return $goods;
