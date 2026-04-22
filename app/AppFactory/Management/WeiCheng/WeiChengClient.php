@@ -380,6 +380,70 @@ class WeiChengClient extends ManagementClient
         return $this->rA('上架失败');
     }
 
+    //设置虚拟货道商品排序
+    public function setWcMachineChannelListsV2($m_id, $out_nos)
+    {
+        $m_ids = is_array($m_id) ? $m_id : explode(',', (string)$m_id);
+        $m_ids = array_values(array_unique($m_ids));
+        if (empty($m_ids)) return $this->r(100, '请选择设备');
+
+        $out_nos = is_array($out_nos) ? $out_nos : explode(',', (string)$out_nos);
+        $out_nos = array_values(array_unique($out_nos));
+        if (empty($out_nos)) return $this->r(100, '请选择微程商品');
+
+        $machine_maps = [];
+        foreach ($m_ids as $id) {
+            $machine = $this->getMachineFind(['m_id' => $id]);
+            if (!$machine) continue;
+            $machine_maps[$id] = $machine->toArray();
+        }
+        if (count($m_ids) !== count($machine_maps)) return $this->r(100, '选中的设备存在异常的设备');
+
+        $wc_machine_goods_lists = $this->getWcMachineGoodsList([['out_no', 'in', $out_nos], ['m_id', 'in', $m_ids]])->toArray();
+        if (empty($wc_machine_goods_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
+
+        $sort_map = array_flip($out_nos);
+        $insert_all = [];
+        foreach ($wc_machine_goods_lists as $wc_machine_goods) {
+            $id = $wc_machine_goods['m_id'];
+            if (!isset($machine_maps[$id])) continue;
+            $machine = $machine_maps[$id];
+            $insert_all[] = [
+                'm_id' => $id,
+                'machine_id' => $machine['machine_id'],
+                'channel_code' => 'Z10',
+                'g_id' => $wc_machine_goods['g_id'],
+                'out_no' => $wc_machine_goods['out_no'],
+                'g_name' => $wc_machine_goods['g_name'],
+                'gc_id' => $wc_machine_goods['type'], //  这里传的type应该不是外层type  所以type_name未知
+                'gc_name' => $wc_machine_goods['type_name'],
+                'pic' => $wc_machine_goods['pic'],
+                'sku' => $wc_machine_goods['sku'],
+                'bar_code' => $wc_machine_goods['bar_code'],
+                'retail_price' => $wc_machine_goods['retail_price'],
+                'gift_points' => $wc_machine_goods['gift_points'] ?? 0,
+                'sort' => isset($sort_map[$wc_machine_goods['out_no']]) ? $sort_map[$wc_machine_goods['out_no']] + 1 : 0,
+            ];
+        }
+        if (empty($insert_all)) return $this->r(100, '上架失败，找不到微程商品信息');
+
+        $this->startTrans();
+        try {
+            // 先清理目标设备历史数据，再批量入库新排序
+            $this->delWcMachineChannelInfo([['m_id', 'in', $m_ids]]);
+            $result = $this->addWcMachineChannelMore($insert_all);
+            if (!$result) {
+                $this->rollbackTrans();
+                return $this->rA('上架失败');
+            }
+            $this->commitTrans();
+            return $this->rA('虚拟货道微程商品上架完成');
+        } catch (\Throwable $e) {
+            $this->rollbackTrans();
+            return $this->r(100, $e->getMessage());
+        }
+    }
+
 
     public function getWcMachineChannelLists($where, $pageNum = 0)
     {
