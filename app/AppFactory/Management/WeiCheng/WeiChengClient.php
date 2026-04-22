@@ -399,26 +399,29 @@ class WeiChengClient extends ManagementClient
         }
         if (count($m_ids) !== count($machine_maps)) return $this->r(100, '选中的设备存在异常的设备');
 
-        $wc_goods_local_lists = $this->getWcGoodsLocalList([['out_no', 'in', $out_nos]])->toArray();
-        if (empty($wc_goods_local_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
+        $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
+        $wc_goods_type_arr = array_column($wc_goods_type, 'name', 'id');
 
-        $goods_local_map = [];
-        foreach ($wc_goods_local_lists as $wc_goods_local) {
-            $outNo = $wc_goods_local['out_no'] ?? '';
-            if ($outNo === '') continue;
-            if (!isset($goods_local_map[$outNo])) {
-                $goods_local_map[$outNo] = $wc_goods_local;
+        $wc_goods_lists = $this->getWcGoodsList([['no', 'in', $out_nos]])->toArray();
+        if (empty($wc_goods_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
+
+        $goods_map = [];
+        foreach ($wc_goods_lists as $wc_goods) {
+            $no = $wc_goods['no'] ?? '';
+            if ($no === '') continue;
+            if (!isset($goods_map[$no])) {
+                $goods_map[$no] = $wc_goods;
             }
         }
 
         $missing_out_nos = [];
         foreach ($out_nos as $out_no) {
-            if (!isset($goods_local_map[$out_no])) {
+            if (!isset($goods_map[$out_no])) {
                 $missing_out_nos[] = $out_no;
             }
         }
         if (!empty($missing_out_nos)) {
-            return $this->r(100, '上架失败，以下微程商品不存在本地化信息：' . implode(',', $missing_out_nos));
+            return $this->r(100, '上架失败，以下微程商品不存在商品库信息：' . implode(',', $missing_out_nos));
         }
 
         $sort_map = array_flip($out_nos);
@@ -426,22 +429,25 @@ class WeiChengClient extends ManagementClient
         foreach ($m_ids as $id) {
             $machine = $machine_maps[$id];
             foreach ($out_nos as $out_no) {
-                if (!isset($goods_local_map[$out_no])) continue;
-                $wc_goods_local = $goods_local_map[$out_no];
+                if (!isset($goods_map[$out_no])) continue;
+                $wc_goods = $goods_map[$out_no];
+                $resourcesArray = $wc_goods['resourcesArray'] ? json_decode($wc_goods['resourcesArray'], true) : [];
+                $pic = '';
+                if (isset($resourcesArray[0]['url'])) $pic = ($wc_goods['resourceDomain'] ?? '') . $resourcesArray[0]['url'];
                 $insert_all[] = [
                     'm_id' => $id,
                     'machine_id' => $machine['machine_id'],
                     'channel_code' => 'Z10',
-                    'g_id' => $wc_goods_local['g_id'] ?? 0,
-                    'out_no' => $wc_goods_local['out_no'] ?? '',
-                    'g_name' => $wc_goods_local['g_name'] ?? '',
-                    'gc_id' => $wc_goods_local['gc_id'] ?? ($wc_goods_local['type'] ?? 0),
-                    'gc_name' => $wc_goods_local['gc_name'] ?? ($wc_goods_local['type_name'] ?? ''),
-                    'pic' => $wc_goods_local['pic'] ?? '',
-                    'sku' => $wc_goods_local['sku'] ?? '',
-                    'bar_code' => $wc_goods_local['bar_code'] ?? '',
-                    'retail_price' => $wc_goods_local['retail_price'] ?? 0,
-                    'gift_points' => $wc_goods_local['gift_points'] ?? 0,
+                    'g_id' => $wc_goods['g_id'] ?? 0,
+                    'out_no' => $wc_goods['no'] ?? '',
+                    'g_name' => $wc_goods['name'] ?? '',
+                    'gc_id' => $wc_goods['type'] ?? 0,
+                    'gc_name' => $wc_goods_type_arr[$wc_goods['type']] ?? '',
+                    'pic' => $pic,
+                    'sku' => $wc_goods['sku'] ?? '',
+                    'bar_code' => $wc_goods['sku'] ?? '',
+                    'retail_price' => $wc_goods['price'] ?? 0,
+                    'gift_points' => $wc_goods['gift_points'] ?? 0,
                     'sort' => isset($sort_map[$out_no]) ? $sort_map[$out_no] + 1 : 0,
                 ];
             }
