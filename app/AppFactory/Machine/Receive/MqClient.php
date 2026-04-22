@@ -110,4 +110,35 @@ class MqClient extends ReceiveBaseClient
         }
     }
 
+    /**
+     * 处理回收箱容量上报（设备对 checkRecycleBox 的响应）
+     * 期望设备上报字段：recycle_box_remain_capacity, recycle_box_total_capacity
+     * 如果收到这些字段，则写入 machine_info 表（通过 updateMachineInfo）
+     * @return int 0 成功, 1 失败
+     */
+    public function checkRecycleBox()
+    {
+        try {
+            $update = [];
+            if (isset($this->message['recycle_box_remain_capacity'])) {
+                $update['recycle_box_remain_capacity'] = (int)$this->message['recycle_box_remain_capacity'];
+            }
+            if (isset($this->message['recycle_box_total_capacity'])) {
+                $update['recycle_box_total_capacity'] = (int)$this->message['recycle_box_total_capacity'];
+            }
+            if (empty($update)) {
+                actionLog($this->message, 'checkRecycleBox 接收数据为空或无效字段');
+                return 1;
+            }
+            // 使用 m_id 进行更新，保持与 uploadInfo 一致的更新方式
+            $result = $this->updateMachineInfo($update, ['m_id' => $this->machine['m_id']]);
+            actionLog($this->getLS(), '【SQL】更新回收箱容量', 'checkRecycleBox');
+            actionLog($result, '更新回收箱容量结果', 'checkRecycleBox');
+            return 0;
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return 1;
+        }
+    }
+
 }
