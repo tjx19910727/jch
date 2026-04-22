@@ -292,13 +292,12 @@ class Machine extends Common
      */
     public function getRecycleBoxInfo(){
         $machine_id = input("machine_id");
-        $machine = $this->app->machine->getMachineFind(['machine_id' => $machine_id],'*');
+        $machine = $this->app->machine->getMachineFind(['machine_id' => $machine_id],'machine_id,recycle_box_total_capacity,recycle_box_remain_capacity');
         if(!$machine) return $this->app->machine->rFail($this->app->machine->lang("VMachine.machine_not_exist"));
-        if ($machine['recycle_box_total_capacity'] == 0) {
-            $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "checkRecycleBox", []);
-            return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+        if ($machine['recycle_box_remain_capacity'] == '-1') {
+            $this->app->machine->sendToMachine(['machine_id' => $machine_id], "checkRecycleBox", []);
         }
-        return $machine;
+        return returnState(200, '查询成功', $machine);
         
     }
 
