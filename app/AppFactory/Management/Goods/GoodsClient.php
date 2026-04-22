@@ -195,6 +195,79 @@ class GoodsClient extends ManagementClient
     }
 
     /**
+     * 导入Excel有商品ID则更新，目前只更新（bar_code）
+     * @param $data
+     * @return array|string
+     */
+    public function importExcelV2($data)
+    {
+        try {
+            $path = root_path() . "public" . $data['file_path'];
+            $title = ["g_id", "g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status",'length','width','height'];
+            $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
+            $goods = Excel::importExcel($path, $title, $other);
+            if (is_object($goods)) return $goods;
+            actionLog($goods, '导入的商品数据');
+            if ($goods) {
+                $insertGoods = [];
+                $resultData = [
+                    'total' => count($goods),
+                    'update_success' => 0,
+                    'update_fail' => 0,
+                    'insert_total' => 0,
+                    'insert_success' => 0,
+                    'insert_fail' => 0,
+                    'insert_fail_list' => [],
+                ];
+                foreach ($goods as $key => $value) {
+                    $gId = intval($value['g_id'] ?? 0);
+                    if ($gId > 0) {
+                        $goodsFind = $this->getGoodsFind(['g_id' => $gId], 'g_id');
+                        if ($goodsFind) {
+                            $update = ['bar_code' => trim($value['bar_code'] ?? '')];
+                            $updateResult = $this->updateGoods($update, ['g_id' => $gId], ['bar_code']);
+                            if ($updateResult) {
+                                $resultData['update_success']++;
+                            } else {
+                                $resultData['update_fail']++;
+                            }
+                            continue;
+                        }
+                    }
+                    unset($value['g_id']);
+                    try {
+                        validate(VGoods::class)->scene("importExcel")->check($value);
+                    } catch (\Exception $e) {
+                        $resultData['insert_fail']++;
+                        $resultData['insert_fail_list'][] = [
+                            'row' => $key + 2,
+                            'error' => $e->getMessage(),
+                        ];
+                        continue;
+                    }
+                    $insertGoods[] = $value;
+                }
+
+                $resultData['insert_total'] = count($insertGoods);
+                if ($insertGoods) {
+                    $insertResult = $this->addMoreGoods($insertGoods);
+                    if ($insertResult) {
+                        $resultData['insert_success'] = count($insertGoods);
+                    } else {
+                        $resultData['insert_fail'] += count($insertGoods);
+                    }
+                }
+
+                return $this->r(200, '导入完成', $resultData);
+            }
+            return $this->r(100, '获取不到Excel文档中的数据');
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rValidate($e->getMessage());
+        }
+    }
+
+    /**
      * 导出商品
      * @param $where
      * @return array|string
@@ -207,7 +280,7 @@ class GoodsClient extends ManagementClient
             '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
             '" ELSE "' . $this->lang("export.g_type_unDefine") . '" END) g_type,
-            model,sku,cost_price,market_price,retail_price');
+            model,sku,bar_code,cost_price,market_price,retail_price');
         if ($list) {
             $list = $list->toArray();
             $title = [
@@ -217,6 +290,7 @@ class GoodsClient extends ManagementClient
                 'gc_name' => $this->lang("export.gc_name"),
                 'model' => $this->lang("export.model"),
                 'sku' => $this->lang("export.sku"),
+                'bar_code' => $this->lang("export.bar_code"),
                 'cost_price' => $this->lang("export.cost_price"),
                 'market_price' => $this->lang("export.market_price"),
                 'retail_price' => $this->lang("export.retail_price"),

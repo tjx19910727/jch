@@ -40,6 +40,13 @@ class Goods extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['g_name' => "like",'sku' => "like"]);
+        if (isset($postData['bar_code'])) {
+            if ((string)$postData['bar_code'] == 1) {
+                $where[] = ['bar_code','not like','69%'];
+            } elseif ((string)$postData['bar_code'] == 2) {
+                $where[] = ['bar_code','like','69%'];
+            }
+        }
         if(!empty($postData['machine_id'])||!empty($postData['sale_check'])){
             $result = $this->app->goods->getAuthList($where,$pageNum,$this->field,'g_id desc',$postData);
             return $result;
@@ -133,7 +140,7 @@ class Goods extends Common
     public function importExcel()
     {
         $postData = input();
-        return $this->app->goods->importExcel($postData);
+        return $this->app->goods->importExcelV2($postData);
     }
 
     /**
@@ -144,6 +151,13 @@ class Goods extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
+        if (isset($postData['bar_code'])) {
+            if ((string)$postData['bar_code'] == 1) {
+                $where[] = ['bar_code','not like','69%'];
+            } elseif ((string)$postData['bar_code'] == 2) {
+                $where[] = ['bar_code','like','69%'];
+            }
+        }
         return $this->app->goods->exportExcel($where);
     }
 
