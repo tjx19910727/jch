@@ -398,8 +398,8 @@ class WeiChengClient extends ManagementClient
             $machine_maps[$id] = $machine->toArray();
         }
         if (count($m_ids) !== count($machine_maps)) return $this->r(100, '选中的设备存在异常的设备');
-
-        $wc_machine_goods_lists = $this->getWcMachineGoodsList([['out_no', 'in', $out_nos], ['m_id', 'in', $m_ids]])->toArray();
+        //$wc_machine_goods_lists = $this->getWcMachineGoodsList([['out_no', 'in', $out_nos], ['m_id', 'in', $m_ids]])->toArray();
+        $wc_machine_goods_lists = $this->getWcGoodsLocalList([['out_no', 'in', $out_nos], ['m_id', 'in', $m_ids]])->toArray();
         if (empty($wc_machine_goods_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
 
         $sort_map = array_flip($out_nos);
