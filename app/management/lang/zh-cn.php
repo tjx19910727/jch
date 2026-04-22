@@ -409,6 +409,8 @@ return [
         "machine_offline" => "设备离线",
         "ckc_status_require" => "营业状态不能为空",
         "x_y_axis_require" => "x，y轴至少需要定义一个偏移量",
+        "get_recycle_box_overtime" => "获取回收箱容量数据超时",
+        "pick_up_door_overtime" => "获取出料箱门操作结果超时",
     ],
 
     "VMachineLang" => [

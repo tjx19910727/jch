@@ -409,6 +409,8 @@ return [
         "machine_offline" => "Device offline",
         "ckc_status_require" => "Business status cannot be empty",
         "x_y_axis_require" => "x，y axis cannot be all empty",
+        "get_recycle_box_overtime" => "Timeout getting recycle box capacity data",
+        "pick_up_door_overtime" => "Timeout waiting for the pickup door action result",
     ],
 
     "VMachineLang" => [
