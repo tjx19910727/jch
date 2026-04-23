@@ -291,4 +291,31 @@ class AuthManager extends Common
         $csv = implode("\n", $lines);
         return returnState(200, 'success', ['csv' => $csv]);
     }
+
+    /**
+     * 获取账号通知配置（故障模板）
+     */
+    public function getNoticeConfig()
+    {
+        $postData = input();
+        $managerId = intval($postData['manager_id'] ?? 0);
+        $noticeType = strval($postData['notice_type'] ?? 'mFault');
+        if ($managerId <= 0) {
+            return returnState(100, 'manager_id不能为空');
+        }
+        return $this->app->authManager->getNoticeConfig($managerId, $noticeType);
+    }
+
+    /**
+     * 保存账号通知配置（故障模板）
+     */
+    public function saveNoticeConfig()
+    {
+        $postData = input();
+        $managerId = intval($postData['manager_id'] ?? 0);
+        if ($managerId <= 0) {
+            return returnState(100, 'manager_id不能为空');
+        }
+        return $this->app->authManager->saveNoticeConfig($postData);
+    }
 }

@@ -20,6 +20,7 @@ use app\AppFactory\Kernel\Traits\Email\EmailTemplateTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxTemplateLogTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxTemplateTrait;
+use think\facade\Db;
 
 class NoticeBaseClient extends BaseClient
 {
@@ -151,7 +152,88 @@ class NoticeBaseClient extends BaseClient
                 $this->config['receiver'] = $this->getAmmJoinAmList($where, 'am.manager_id,am.nickname,am.ao_id,am.email,am.openid');
                 if ($this->config['receiver']) $this->config['receiver'] = $this->config['receiver']->toArray();
                 actionLog($this->getLS(), '获取收件人SQL');
+
+                // 仅对故障模板按账号通知配置做发送频率/次数过滤，未配置则走旧流程。
+                if ($this->config['sendType'] == 1 &&
+                    isset($this->config['templateType']) && $this->config['templateType'] == 'mFault' &&
+                    !empty($this->config['receiver'])) {
+                    $mId = intval($this->config['m_id'] ?? 0);
+                    $errorCode = strval($this->config['replaceData']['error_info'] ?? $this->config['replaceData']['errorCode'] ?? '');
+                    $receiver = [];
+                    foreach ($this->config['receiver'] as $item) {
+                        $managerId = intval($item['manager_id'] ?? 0);
+                        $openid = $item['openid'] ?? '';
+                        if (!$managerId) {
+                            $receiver[] = $item;
+                            continue;
+                        }
+                        if ($this->allowFaultNoticeByManagerConfig($managerId, $openid, $mId, $errorCode)) {
+                            $receiver[] = $item;
+                        }
+                    }
+                    $this->config['receiver'] = $receiver;
+                }
             }
+        }
+    }
+
+    /**
+     * 账号故障通知配置过滤：
+     * 1. 未配置 => 兼容旧流程，允许发送
+     * 2. 配置了每日次数和频率 => 按规则过滤
+     */
+    protected function allowFaultNoticeByManagerConfig($managerId, $openid = '', $mId = 0, $errorCode = '')
+    {
+        try {
+            $config = Db::name('auth_manager_notice_config')
+                ->where([
+                    'manager_id' => $managerId,
+                    'notice_type' => 'mFault',
+                    'status' => 1,
+                ])
+                ->order('id desc')
+                ->find();
+
+            // 未配置时，继续按旧逻辑发送。
+            if (!$config) {
+                return true;
+            }
+
+            if (!$openid || !$mId || !$errorCode) {
+                return false;
+            }
+
+            $interval_minutes = $config['interval_minutes'] ?? 0;
+            $times = $config['day_count'] ?? 0;
+
+            if ($times <= 0) {
+                return false;
+            }
+
+            $query = Db::name('wx_template_log')->where([
+                'openid' => $openid,
+                'm_id' => $mId,
+                'error_code' => $errorCode,
+            ]);
+
+            $todayStart = strtotime(date('Y-m-d 00:00:00'));
+            $todayEnd = strtotime(date('Y-m-d 23:59:59'));
+            $todayCount = (clone $query)->whereBetween('create_time', [$todayStart, $todayEnd])->count();
+            if ($times > 0 && $todayCount >= $times) {
+                return false;
+            }
+
+            if ($interval_minutes > 0) {
+                $last = (clone $query)->order('create_time desc')->value('create_time');
+                if ($last && (time() - intval($last) < $interval_minutes * 60)) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (\Exception $e) {
+            // 配置表或字段异常时回退旧流程，避免影响发送主链路。
+            actionLog($e->getMessage(), '故障通知配置过滤异常，回退旧流程');
+            return true;
         }
     }
 

@@ -38,7 +38,6 @@ class WeChatClient extends NoticeBaseClient
                             "template_id" => $this->config['template']['template_id'],
                         ];
                         if ($this->config['template']['url']) $data['url'] = $this->config['template']['url'];
-                        if (!empty($this->config['url'])) $data['url'] = $this->config['url'];
                         if ($this->config['template']['miniprogram']) $data['miniprogram'] = json2arr($this->config['template']['miniprogram']);
                         $body = json2arr($this->config['template']['body']);
                         foreach ($body as $bk => $bv) {
@@ -46,10 +45,20 @@ class WeChatClient extends NoticeBaseClient
                                 $data['data'][$bvv['field']] = trim($bvv['value']);
                             }
                         }
+
+                        $wtlId = $this->addTemplateLog($value, $data);
+                        if ($wtlId > 0 && isset($this->config['templateType']) && $this->config['templateType'] === 'mFault') {
+                            $confirmUrl = $this->buildConfirmUrl($wtlId);
+                            if ($confirmUrl) {
+                                $data['url'] = $confirmUrl;
+                            }
+                        }
+
                         actionLog($data, '发送微信通知数据');
                         $result = @$app->template_message->send($data);
                         actionLog($result, '发送微信通知结果');
-                        $this->addTemplateLog($value, $data, $result);
+                        $sendStatus = (is_array($result) && isset($result['errcode']) && intval($result['errcode']) === 0) ? 1 : 2;
+                        $this->updateTemplateLogResult($wtlId, $result, $sendStatus);
                     }
                 }
                 return true;
@@ -67,8 +76,9 @@ class WeChatClient extends NoticeBaseClient
         return true;
     }
 
-    private function addTemplateLog($receiver,$data,$result)
+    private function addTemplateLog($receiver, $data)
     {
+        $errorCode = strval($this->config['replaceData']['error_info'] ?? $this->config['replaceData']['errorCode'] ?? '');
         $insert = [
             "wt_id" => $this->config['template']['wt_id'],
             "template_name" => $this->config['template']['template_name'],
@@ -79,10 +89,47 @@ class WeChatClient extends NoticeBaseClient
             "template_id" => $this->config['template']['template_id'],
             "params" => json_encode($data['data']),
             "template_type" => $this->config['template']['template_type'],
-            "remark" => json_encode($result),
+            "remark" => '',
             "status" => 1,
-            "ao_id" => $this->config['config']['ao_id'],
+            "ao_id" => $this->config['ao_id'] ?? 1,
+            "me_id" => intval($this->config['me_id'] ?? 0),
+            "m_id" => intval($this->config['m_id'] ?? 0),
+            "error_code" => $errorCode,
+            "send_status" => 2,
+            "confirm_status" => 2,
+            "confirm_time" => 0,
         ];
         return $this->addWxTemplateLog($insert);
+    }
+
+    private function updateTemplateLogResult($wtlId, $result, $sendStatus)
+    {
+        if (!$wtlId) {
+            return;
+        }
+        $remark = $sendStatus == 1 ? '发送成功' : ('发送失败：' .(isset($result['errcode']) ? ($result['errcode'].'-') : ''). ($result['errmsg'] ?? '未知错误'));
+        $this->updateWxTemplateLog([
+            'remark' => $remark,
+            'send_status' => $sendStatus,
+        ],['wtl_id' => $wtlId]);
+    }
+
+    private function buildConfirmUrl($wtlId)
+    {
+        $host = rtrim(config('app.app_host') ?: env('app.host', ''), '/');
+        if (!$host) {
+            actionLog(['wtl_id' => $wtlId], '未配置app_host，无法生成确认链接', 'noticeSend');
+            return '';
+        }
+
+        $expire = strtotime(date('Y-m-d 23:59:59'));
+        $secret = config('app.salt') ?: 'startup_notice_secret';
+        $sign = hash('sha256', intval($wtlId) . '|' . intval($expire) . '|' . $secret);
+        $query = http_build_query([
+            'wtl_id' => intval($wtlId),
+            'expire' => intval($expire),
+            'sign' => $sign,
+        ]);
+        return $host . '/wx/official/confirmStartupNotice?' . $query;
     }
 }

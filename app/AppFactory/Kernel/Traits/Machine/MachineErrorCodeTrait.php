@@ -78,6 +78,7 @@ trait MachineErrorCodeTrait
                 $this->noticeSendData = [
                     "ao_id" => $this->machine['ao_id'],
                     "m_id" => $this->machine['m_id'],
+                    "me_id" => $result,
                     "templateType" => "mFault",
                     "replaceData" => $machine,
                 ];

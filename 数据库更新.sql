@@ -1526,3 +1526,26 @@ ALTER TABLE kiosk.sale_orders_details
 #20260422--是否开启远程校准功能
 ALTER TABLE kiosk.machine_config ADD  `remote_calibration` tinyint(1) DEFAULT '2' COMMENT '是否开启远程校准功能，1-开启，2-关闭';
 ALTER TABLE kiosk.machine_config ADD  `head_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过头部摄像头，1-跳过，2-不跳过';
+#20260423
+ALTER TABLE kiosk.wx_template_log
+ADD COLUMN `me_id` bigint DEFAULT 0 COMMENT '错误ID' AFTER `remark`,
+ADD COLUMN `send_status` tinyint(1) DEFAULT 2 COMMENT '发送状态：1-发送成功，2-发送失败' AFTER `remark`,
+ADD COLUMN `confirm_status` tinyint(1) DEFAULT 2 COMMENT '确认状态：1-已确认，2-未确认' AFTER `remark`,
+ADD COLUMN `error_code` varchar(20) DEFAULT '' COMMENT '错误码' AFTER `remark`,
+ADD COLUMN `m_id` int DEFAULT 0 COMMENT '设备ID' AFTER `remark`,
+ADD COLUMN `confirm_time` bigint DEFAULT 0 COMMENT '确认时间' AFTER `remark`;
+
+CREATE INDEX idx_me_id ON kiosk.wx_template_log(me_id);
+CREATE INDEX idx_m_id ON kiosk.wx_template_log(m_id);
+
+CREATE TABLE `auth_manager_notice_config` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增id',
+  `manager_id` int not null DEFAULT 0 COMMENT '管理员id',
+  `interval_minutes` int not null DEFAULT '0' COMMENT '通知频率:分钟',
+  `day_count` int DEFAULT 0 COMMENT '次数/天',
+  `notice_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '备注信息',
+  `create_time` bigint not null DEFAULT 0 COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `manager_id` (`manager_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员通知配置表';
+
