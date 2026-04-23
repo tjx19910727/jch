@@ -1216,7 +1216,7 @@ SQL;
 
     public function getRemoteRecycleSodDetail($where)
     {
-        $field = "sod_id,order_id,pic,sku,g_name,channel_code,remote_refund_status,quantity,success_quantity,refund_quantity";
+        $field = "sod_id,order_id,pic,total_sod_price,sku,g_name,channel_code,remote_refund_status,quantity,success_quantity,refund_quantity";
         $sale_order_field = "order_id,machine_id,machine_name,trade_no,out_status,order_type,pay_type,pay_method,pay_time,out_time";
         $sale_order_detail = $this->getSaleOrdersDetailsFind($where, $field)->toArray();
         $sale_order_data = $this->getSaleOrdersFind(['order_id' => $sale_order_detail['order_id']], $sale_order_field)->toArray();

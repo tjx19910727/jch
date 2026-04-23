@@ -292,25 +292,40 @@ class Machine extends Common
      */
     public function getRecycleBoxInfo(){
         $machine_id = input("machine_id");
-        $machine = $this->app->machine->getMachineFind(['machine_id' => $machine_id],'machine_id,recycle_box_total_capacity,recycle_box_remain_capacity');
-        if(!$machine) return $this->app->machine->rFail($this->app->machine->lang("VMachine.machine_not_exist"));
-        if ($machine['recycle_box_remain_capacity'] == '-1') {
-            $this->app->machine->sendToMachine(['machine_id' => $machine_id], "checkRecycleBox", []);
+        if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
+        $send = 0;
+        $n = 0;
+        while (1) {
+            $machine = $this->app->machine->getMachineFind(
+                ['machine_id' => $machine_id],
+                'machine_id,recycle_box_total_capacity,recycle_box_remain_capacity'
+            );
+            if (!$machine) return $this->app->machine->rFail($this->app->machine->lang("VMachine.machine_no_data"));
+            if ($machine['recycle_box_remain_capacity'] != '-1') {
+                return returnState(200, lang("query_success"), $machine);
+            }
+            if (!$send) {
+                $this->app->machine->sendToMachine(['machine_id' => $machine_id], "checkRecycleBox", []);
+                $send = 1;
+            }
+            sleep(1);
+            $n++;
+            if ($n >= 20) {
+                return returnState(300, lang("VMachine.get_recycle_box_overtime"));
+            }
         }
-        return returnState(200, '查询成功', $machine);
-        
     }
 
     public function setPickUpDoorOpen(){
         $machine_id = input("machine_id");
-        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "pickUpDoorOpen", []);
-        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+        $sod_id = input("sod_id");
+        return $this->waitRemoteActionLogResult($machine_id, $sod_id, "pickUpDoorOpen");
     }
 
     public function setPickUpDoorClose(){
         $machine_id = input("machine_id");
-        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "pickUpDoorClose", []);
-        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+        $sod_id = input("sod_id");
+        return $this->waitRemoteActionLogResult($machine_id, $sod_id, "pickUpDoorClose");
     }
 
     // public function remoteTakePhotos(){
@@ -331,6 +346,56 @@ class Machine extends Common
         if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
         $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "recycGoods", ['sod_id' => $sod_id]);
         return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+    }
+
+    /**
+     * 通过 remote_action_log 等待设备动作回执。
+     * 下发前先创建日志，设备回执后按 log_id 更新 status，再轮询该日志状态返回结果。
+     * @param string $machine_id
+     * @param string $msgType
+     * @return array|string
+     */
+    protected function waitRemoteActionLogResult($machine_id, $sod_id, $msgType)
+    {
+        if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
+        $logId = $this->app->machine->addRALog([
+            'machine_id' => $machine_id,      
+            'sod_id' => $sod_id,  
+            'type' => $msgType,
+            'status' => 1,
+            'manager_id' => $this->manager['manager_id'] ?? 0,
+            'operator_at' => date('Y-m-d H:i:s'),
+        ]);
+        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], $msgType, ['log_id' => $logId]);
+        if (!is_object($result)) {
+            $this->app->machine->updateRALog(
+                ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
+                ['id' => $logId],
+                ['status', 'operator_at']
+            );
+            $msg = $result ? $this->app->machine->lang("VMachine." . $result) : $this->app->machine->lang("VMachine.machine_no_data");
+            return $this->app->machine->rFail($msg);
+        }
+
+        $n = 0;
+        $overtime = 20;
+        while (1) {
+            $log = $this->app->machine->getRALogsCount(['id' => $logId], 'id,machine_id,type,status,operator_at');
+            if ($log) {
+                $log = is_object($log) ? $log->toArray() : $log;
+                if (intval($log['status']) === 3) {
+                    return returnState(200, lang("query_success"), $log);
+                }
+                if (intval($log['status']) === 4) {
+                    return returnState(100, lang("action_fail"), $log);
+                }
+            }
+            sleep(1);
+            $n++;
+            if ($n >= $overtime) {
+                return returnState(300, lang("VMachine.pick_up_door_overtime"), ['log_id' => $logId]);
+            }
+        }
     }
     
     public function exportEmptyChannel(){

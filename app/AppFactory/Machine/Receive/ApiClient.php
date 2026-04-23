@@ -2664,6 +2664,8 @@ class ApiClient extends ReceiveBaseClient
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
         $wcMachineChannelLists = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
         foreach ($wcMachineChannelLists as &$v) {
+            $wc_goods = $this->getWcGoodsFind(['no' => $v['out_no']]);
+            $v['desc'] = $wc_goods['description'] ?? '';
             if ($v['gc_id'] == 11) {
                 $daysInfo = $this->getWcGoodsColumn(['no' => $v['out_no']], 'daysInfo');
                 if ($daysInfo) $v['daysInfo'] = $daysInfo[0] ?? [];
