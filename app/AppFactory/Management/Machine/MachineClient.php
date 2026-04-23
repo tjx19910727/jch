@@ -171,7 +171,7 @@ class MachineClient extends ManagementClient
      */
     public function setOperating($postData)
     {
-        if (!isset($postData['is_operating']) || !in_array(intval($postData['is_operating']), [1, 2])) {
+        if (!isset($postData['is_operating']) || !in_array(intval($postData['is_operating']), [1, 2,3])) {
             return $this->rValidate('在营状态参数错误');
         }
         $machine = $this->getMachineFind(['m_id' => $postData['m_id']], 'm_id,machine_id,machine_name');
