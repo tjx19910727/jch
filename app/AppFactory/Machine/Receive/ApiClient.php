@@ -827,6 +827,9 @@ class ApiClient extends ReceiveBaseClient
                 }
             }
         }
+        if(!isset($data['is_operating'])){
+            $data['is_operating'] = $this->getMachineValue(['m_id' => $this->machine['m_id']], 'is_operating');
+        }
         return $this->rQ($data);
     }
 
