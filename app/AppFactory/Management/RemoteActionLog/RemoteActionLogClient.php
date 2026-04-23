@@ -18,7 +18,7 @@ class RemoteActionLogClient extends ManagementClient
 
     public function getRemoteActionLogsList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
     {
-        return $this->rQ($this->getRALogsCount($where, $pageNum, $field, $order, $eachFun, $group));
+        return $this->rQ($this->getRALogsList($where, $pageNum, $field, $order, $eachFun, $group));
     }
     
     public function addRemoteActionLog($postData)

@@ -185,7 +185,7 @@ trait WcBaseTrait
                 'g_name' => $wc_goods['name'] ?? '',
                 'g_type' => $wc_goods['type'] ?? 0,
                 'g_type_name' => $wc_goods_type_arr[$wc_goods['type']] ?? '',   
-                'retail_price' => $wc_goods['sellerPrice'] ?? '0',
+                'retail_price' => $wc_goods['price'] ?? '0',
                 'pic' => $pic,
                 'sell_channel' => 3,
                 'desc' => '',

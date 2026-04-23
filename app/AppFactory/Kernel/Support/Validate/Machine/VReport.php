@@ -93,6 +93,8 @@ class VReport extends SupportValidate
         "axisOffset" => ["msgType","x_axis","y_axis"],//主轴偏移
         "remoteOutGoods" => ["msgType", 'status'],//远程出货
         "remoteRemovalEnd" => ["msgType", 'mc_id', 'channel_code'],//远程下架回收结果
+        "pickUpDoorOpen" => ["msgType"],//打开出料箱门回执
+        "pickUpDoorClose" => ["msgType"],//关闭出料箱门回执
 
     ];
 }

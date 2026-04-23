@@ -141,4 +141,65 @@ class MqClient extends ReceiveBaseClient
         }
     }
 
+    /**
+     * 处理打开出料箱门回执。
+     * @return int
+     */
+    public function pickUpDoorOpen()
+    {
+        return $this->updateRemoteActionLogStatus('pickUpDoorOpen');
+    }
+
+    /**
+     * 处理关闭出料箱门回执。
+     * @return int
+     */
+    public function pickUpDoorClose()
+    {
+        return $this->updateRemoteActionLogStatus('pickUpDoorClose');
+    }
+
+    /**
+     * 根据设备回执更新远程动作日志状态。
+     * 优先按 log_id 更新；旧设备未回传 log_id 时，回退到该设备该动作最近一条待处理日志。
+     * @param string $msgType
+     * @return int
+     */
+    protected function updateRemoteActionLogStatus($msgType)
+    {
+        try {
+            $status = intval($this->message['status'] ?? 3);
+            if (!in_array($status, [2, 3, 4], true)) {
+                $status = 3;
+            }
+
+            $logId = intval($this->message['log_id'] ?? 0);
+            if ($logId) {
+                $log = $this->getRALogsCount(['id' => $logId], 'id,status');
+            } else {
+                $log = $this->getRALogsCount([
+                    'machine_id' => $this->machine['machine_id'],
+                    'type' => $msgType,
+                    ['status', 'in', [1, 2]],
+                ], 'id,status', 'id desc');
+            }
+            if (!$log) {
+                actionLog($this->message, $msgType . ' 未匹配到远程动作日志');
+                return 1;
+            }
+            $log = is_object($log) ? $log->toArray() : $log;
+
+            $result = $this->updateRALog(
+                ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')],
+                ['id' => $log['id']],
+                ['status', 'operator_at']
+            );
+            actionLog($result, $msgType . ' 更新远程动作日志结果');
+            return 0;
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return 1;
+        }
+    }
+
 }
