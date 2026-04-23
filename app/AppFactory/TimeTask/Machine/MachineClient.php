@@ -306,7 +306,7 @@ class MachineClient extends TimeTaskBase
             $title = '';
             if (env('CglPay.is_test')) {
                 // 测试环境仅查询特定设备，方便测试验证
-                $query = $query->where('m.machine_id', 'JCHM-H2D-0064');
+                $query = $query->where('m.machine_id', 'JCHM-H2D-0064')->where('m.online', 2);
                 $title = '测试';
             }else{
                 $query = $query->where('m.online', 2)
