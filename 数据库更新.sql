@@ -1523,3 +1523,26 @@ ALTER TABLE kiosk.sale_orders_details
   ADD COLUMN `remote_refund_audit_manager` int default 0 COMMENT '远程退货执行人' AFTER `refund_photo`;
 
   update wx_template set body = '[{"设备编号":{"value":"{{machine_id}}","field":"character_string16"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"异常时间":{"value":"{{error_time}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"设备地址":{"value":"{{error_code}}","field":"thing9"}}]' , template_id = 'frqumju8oA7N8msUrhIiHpDd18j2Ie-DxLGlz5jWz8g' where wt_id =5;
+#20260423
+ALTER TABLE kiosk.wx_template_log
+ADD COLUMN `me_id` bigint DEFAULT 0 COMMENT '错误ID' AFTER `remark`,
+ADD COLUMN `send_status` tinyint(1) DEFAULT 2 COMMENT '发送状态：1-发送成功，2-发送失败' AFTER `remark`,
+ADD COLUMN `confirm_status` tinyint(1) DEFAULT 2 COMMENT '确认状态：1-已确认，2-未确认' AFTER `remark`,
+ADD COLUMN `error_code` varchar(20) DEFAULT '' COMMENT '错误码' AFTER `remark`,
+ADD COLUMN `m_id` int DEFAULT 0 COMMENT '设备ID' AFTER `remark`,
+ADD COLUMN `confirm_time` bigint DEFAULT 0 COMMENT '确认时间' AFTER `remark`;
+
+CREATE INDEX idx_me_id ON kiosk.wx_template_log(me_id);
+CREATE INDEX idx_m_id ON kiosk.wx_template_log(m_id);
+
+CREATE TABLE `auth_manager_notice_config` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增id',
+  `manager_id` int not null DEFAULT 0 COMMENT '管理员id',
+  `interval_minutes` int not null DEFAULT '0' COMMENT '通知频率:分钟',
+  `day_count` int DEFAULT 0 COMMENT '次数/天',
+  `notice_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '备注信息',
+  `create_time` bigint not null DEFAULT 0 COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `manager_id` (`manager_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员通知配置表';
+

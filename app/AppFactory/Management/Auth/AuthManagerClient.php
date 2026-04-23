@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Management\ManagementClient;
 use app\AppFactory\Kernel\Traits\Auth\AuthWithdrawRequestTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgRevenueTrait;
+use think\facade\Db;
 
 class AuthManagerClient extends ManagementClient
 {
@@ -116,6 +117,71 @@ class AuthManagerClient extends ManagementClient
             // TODO: 通过后执行实际打款/记录流水（此处只记录状态，具体出款留给业务侧）
         }
         return $res;
+    }
+
+    /**
+     * 获取账号通知配置（故障模板）
+     */
+    public function getNoticeConfig($managerId, $noticeType = 'mFault')
+    {
+        $data = Db::name('auth_manager_notice_config')
+            ->where([
+                'manager_id' => intval($managerId),
+                'notice_type' => $noticeType,
+            ])
+            ->order('id desc')
+            ->find();
+        if (!$data) {
+            $data = [
+                'manager_id' => $managerId,
+                'notice_type' => $noticeType,
+                'interval_minutes' => 0,
+                'day_count' => 0,
+                'status' => 1,
+            ];
+        }
+        return $this->r(200, 'success', $data);
+    }
+
+    /**
+     * 保存账号通知配置（故障模板）
+     */
+    public function saveNoticeConfig($postData)
+    {
+        $managerId = intval($postData['manager_id'] ?? 0);
+        $noticeType = strval($postData['notice_type'] ?? 'mFault');
+        $intervalMinutes = intval($postData['interval_minutes'] ?? 0);
+        $dayCount = intval($postData['day_count'] ?? 0);
+        $status = intval($postData['status'] ?? 1);
+
+        $exists = Db::name('auth_manager_notice_config')
+            ->where([
+                'manager_id' => $managerId,
+                'notice_type' => $noticeType,
+            ])
+            ->find();
+
+        if ($exists) {
+            $update = [
+                
+                'interval_minutes' => $intervalMinutes,
+                'day_count' => $dayCount,
+                'status' => $status,
+            ];
+            $result = Db::name('auth_manager_notice_config')->where('id', $exists['id'])->update($update);
+            return $this->rU($result);
+        }
+
+        $insert = [
+            'manager_id' => $managerId,
+            'notice_type' => $noticeType,
+            'interval_minutes' => $intervalMinutes,
+            'day_count' => $dayCount,
+            'status' => $status,
+            'creator' => $this->manager['manager_id'] ?? 0,
+        ];
+        $id = Db::name('auth_manager_notice_config')->insertGetId($insert);
+        return $this->rA($id);
     }
 
 }

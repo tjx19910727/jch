@@ -326,11 +326,6 @@ class MachineClient extends TimeTaskBase
             $list = $list->toArray();
             $flag = [];
             foreach ($list as $item) {
-                //这里是用户点击了确认生成的缓存
-                $muteCacheKey = 'machine_startup_exception_mute:' . $item['m_id'] . ':' . $todayKey;
-                if (Cache::get($muteCacheKey)) {
-                    continue;
-                }
                 $onOffMachine = $item['on_off_machine'];
                 if (is_string($onOffMachine)) {
                     $onOffMachine = json_decode($onOffMachine, true);
@@ -400,13 +395,11 @@ class MachineClient extends TimeTaskBase
                 $item['error_info'] = 11102011; // 在营设备未开机
                 $item['machine_name'] = $item['machine_id'];
 
-                $confirmUrl = $this->buildStartupNoticeConfirmUrl($item['m_id'], $todayKey);
                 $this->noticeSendData = [
                     "ao_id" => $item['ao_id'],
                     "m_id" => $item['m_id'],
                     "templateType" => "mFault",
                     "replaceData" => $item,
-                    "url" => $confirmUrl,
                 ];
 
                 $flag[] = $this->noticeSend();
@@ -428,45 +421,6 @@ class MachineClient extends TimeTaskBase
 
         return '处理成功';
     }
-
-
-    /**
-     * 生成“今日不再提醒”确认链接
-     * @param int $mId
-     * @param string $dayKey
-     * @return string
-     */
-    private function buildStartupNoticeConfirmUrl($mId, $dayKey)
-    {
-        $host = rtrim(config('app.app_host') ?: env('app.host', ''), '/');
-        if (!$host) {
-            actionLog(['m_id' => $mId], '未配置app_host，使用模板默认URL', 'checkOperatingStartup');
-            return '';
-        }
-        $expire = strtotime(date('Y-m-d 23:59:59'));
-        $sign = $this->buildStartupNoticeSign($mId, $dayKey, $expire);
-        $query = http_build_query([
-            'm_id' => intval($mId),
-            'd' => $dayKey,
-            'expire' => $expire,
-            'sign' => $sign,
-        ]);
-        return $host . '/wx/official/confirmStartupNotice?' . $query;
-    }
-
-    /**
-     * 生成确认链接签名
-     * @param int $mId
-     * @param string $dayKey
-     * @param int $expire
-     * @return string
-     */
-    private function buildStartupNoticeSign($mId, $dayKey, $expire)
-    {
-        $secret = config('app.salt') ?: 'startup_notice_secret';
-        return hash('sha256', intval($mId) . '|' . $dayKey . '|' . intval($expire) . '|' . $secret);
-    }
-
 //    public function machineUploadQueue()
 //    {
 //        $where[] = ['status',"in",[1,3]];

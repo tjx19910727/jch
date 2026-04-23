@@ -13,7 +13,7 @@ namespace app\wx\controller;
 use app\AppFactory\AppFactory;
 use app\BaseController;
 use app\AppFactory\Kernel\Traits\ReturnTrait;
-use think\facade\Cache;
+use think\facade\Db;
 
 class Official extends BaseController
 {
@@ -54,48 +54,178 @@ class Official extends BaseController
         return AppFactory::wx()->official->editMenu($data);
     }
 
-    // 点击模板消息链接后确认：今日不再发送设备未开机提醒
+    // 点击模板消息链接后确认：更新通知确认状态
     public function confirmStartupNotice()
     {
         $renderHtml = function ($message, $success = false) {
             $title = $success ? '确认成功' : '确认失败';
-            $color = $success ? '#0a7f3f' : '#c62828';
-            return "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>{$title}</title></head><body style=\"margin:0;background:#f5f7fb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;\"><div style=\"max-width:640px;margin:48px auto;padding:0 16px;\"><div style=\"background:#fff;border-radius:14px;padding:28px 20px;box-shadow:0 8px 28px rgba(0,0,0,.06);text-align:center;\"><h2 style=\"margin:0 0 12px;color:{$color};font-size:22px;\">{$title}</h2><p style=\"margin:0;color:#334155;line-height:1.7;font-size:16px;\">{$message}</p></div></div></body></html>";
+                        $accent = $success ? '#0f8a5f' : '#d14343';
+                        $badgeBg = $success ? 'rgba(15,138,95,0.12)' : 'rgba(209,67,67,0.12)';
+                        $badgeText = $success ? 'SUCCESS' : 'FAILED';
+                        $safeTitle = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+                        $safeMessage = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
+
+                        return "<!doctype html>
+<html lang=\"zh-CN\">
+<head>
+    <meta charset=\"utf-8\">
+    <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+    <title>{$safeTitle}</title>
+    <style>
+        :root { color-scheme: light; }
+        html {
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Segoe UI', sans-serif;
+            background:
+                radial-gradient(circle at 10% 10%, #f9f4ea 0, rgba(249,244,234,0) 45%),
+                radial-gradient(circle at 90% 20%, #eaf5ff 0, rgba(234,245,255,0) 42%),
+                linear-gradient(160deg, #f4f7fb 0%, #eef3f9 45%, #f7fafc 100%);
+            color: #1f2a37;
+        }
+        .panel {
+            width: min(760px, 100%);
+            background: rgba(255,255,255,0.92);
+            border: 1px solid rgba(255,255,255,0.65);
+            border-radius: 22px;
+            box-shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+            backdrop-filter: blur(5px);
+            overflow: hidden;
+        }
+        .top {
+            padding: 26px 30px 18px;
+            border-bottom: 1px solid #eef2f7;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .brand {
+            font-size: 14px;
+            letter-spacing: 0.08em;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+        .badge {
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            color: {$accent};
+            background: {$badgeBg};
+        }
+        .content {
+            padding: 28px 30px 34px;
+            text-align: center;
+        }
+        .title {
+            margin: 0;
+            font-size: 36px;
+            line-height: 1.28;
+            color: {$accent};
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+        .desc {
+            margin: 18px auto 0;
+            max-width: 560px;
+            font-size: 18px;
+            line-height: 1.9;
+            color: #344256;
+            font-weight: 500;
+        }
+        .footer {
+            margin-top: 22px;
+            font-size: 14px;
+            color: #8a95a6;
+            letter-spacing: 0.02em;
+        }
+        @media (max-width: 640px) {
+            body { padding: 14px; }
+            .top, .content { padding-left: 18px; padding-right: 18px; }
+            .top { padding-top: 18px; padding-bottom: 12px; }
+            .content { padding-top: 20px; padding-bottom: 24px; }
+            .title {
+                font-size: clamp(56px, 18vw, 132px);
+                line-height: 1.06;
+                letter-spacing: 0.01em;
+                font-weight: 800;
+                word-break: break-word;
+            }
+            .desc { font-size: 22px; line-height: 1.75; }
+            .footer { font-size: 16px; }
+            .brand { font-size: 13px; }
+            .badge { font-size: 13px; }
+        }
+    </style>
+</head>
+<body>
+    <div class=\"panel\">
+        <div class=\"top\">
+            <div class=\"brand\">Notice Center</div>
+            <div class=\"badge\">{$badgeText}</div>
+        </div>
+        <div class=\"content\">
+            <h1 class=\"title\">{$safeTitle}</h1>
+            <p class=\"desc\">{$safeMessage}</p>
+            <div class=\"footer\">消息确认结果已同步到系统</div>
+        </div>
+    </div>
+</body>
+</html>";
         };
 
         $now = time();
-        $mId = intval(input('m_id'));
-        $dayKey = trim((string)input('d'));
+        $wtlId = intval(input('wtl_id'));
         $expire = intval(input('expire'));
         $sign = trim((string)input('sign'));
 
-        if (!$mId || !$dayKey || !$expire || !$sign) {
+        if (!$wtlId || !$expire || !$sign) {
             return $renderHtml('参数错误，请返回公众号重试。');
-        }
-        if (!preg_match('/^\d{8}$/', $dayKey)) {
-            return $renderHtml('参数格式错误，请返回公众号重试。');
-        }
-        if ($dayKey !== date('Ymd', $now)) {
-            return $renderHtml('该确认链接已过期，请以最新消息为准。');
         }
         if ($expire < $now) {
             return $renderHtml('该确认链接已失效，请以最新消息为准。');
         }
 
         $secret = config('app.salt') ?: 'startup_notice_secret';
-        $localSign = hash('sha256', $mId . '|' . $dayKey . '|' . $expire . '|' . $secret);
+        $localSign = hash('sha256', $wtlId . '|' . $expire . '|' . $secret);
         if (!hash_equals($localSign, $sign)) {
             return $renderHtml('签名校验失败，请返回公众号重试。');
         }
 
-        $ttl = strtotime(date('Y-m-d 23:59:59', $now)) - $now;
-        Cache::set('machine_startup_exception_mute:' . $mId . ':' . $dayKey, 1, $ttl > 0 ? $ttl : 60);
-        actionLog([
-            'm_id' => $mId,
-            'day' => $dayKey,
-            'expire' => $expire,
-        ], '公众号点击确认今日不再提醒', 'confirmStartupNotice');
+        $log = Db::name('wx_template_log')->where('wtl_id', $wtlId)->find();
+        if (!$log) {
+            return $renderHtml('通知记录不存在，请返回公众号查看最新消息。');
+        }
 
-        return $renderHtml('已确认，今日将不再发送该设备未开机提醒。', true);
+        if (intval($log['send_status'] ?? 0) !== 1) {
+            return $renderHtml('该通知尚未发送成功，暂不可确认。');
+        }
+
+        if (intval($log['confirm_status'] ?? 0) === 1) {
+            return $renderHtml('该通知已确认，无需重复操作。', true);
+        }
+
+        Db::name('wx_template_log')->where('wtl_id', $wtlId)->update([
+            'confirm_status' => 1,
+            'confirm_time' => $now,
+        ]);
+
+        actionLog([
+            'wtl_id' => $wtlId,
+            'expire' => $expire,
+        ], '公众号点击确认通知', 'confirmStartupNotice');
+
+        return $renderHtml('已确认收到该通知。', true);
     }
 }
