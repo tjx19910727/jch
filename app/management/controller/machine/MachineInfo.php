@@ -92,7 +92,7 @@ class MachineInfo extends Common
                 'manager_id' => $this->manager['manager_id'] ?? 0,
                 'operator_at' => date('Y-m-d H:i:s'),
             ]);
-            $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], 'img', ['log_id' => $logId]);
+            $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], 'img', ['log_id' => $logId, 'field' => $field]);
             if (!is_object($result)) {
                 $this->app->machine->updateRALog(
                     ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
