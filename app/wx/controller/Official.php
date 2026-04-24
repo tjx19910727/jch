@@ -55,7 +55,7 @@ class Official extends BaseController
     }
 
     // 点击模板消息链接后确认：更新通知确认状态
-    public function confirmStartupNotice()
+        public function confirmStartupNotice()
     {
         $renderHtml = function ($message, $success = false) {
             $title = $success ? '确认成功' : '确认失败';
@@ -139,14 +139,14 @@ class Official extends BaseController
         .desc {
             margin: 18px auto 0;
             max-width: 560px;
-            font-size: 9px;
+            font-size: 14px;
             line-height: 1.9;
             color: #344256;
             font-weight: 500;
         }
         .footer {
             margin-top: 22px;
-            font-size: 7px;
+            font-size: 12px;
             color: #8a95a6;
             letter-spacing: 0.02em;
         }
@@ -162,8 +162,8 @@ class Official extends BaseController
                 font-weight: 800;
                 word-break: break-word;
             }
-            .desc { font-size: 13px; line-height: 1.75; }
-            .footer { font-size: 11px; }
+            .desc { font-size: 16px; line-height: 1.75; }
+            .footer { font-size: 13px; }
             .brand { font-size: 13px; }
             .badge { font-size: 13px; }
         }
