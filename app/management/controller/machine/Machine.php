@@ -318,14 +318,12 @@ class Machine extends Common
 
     public function setPickUpDoorOpen(){
         $machine_id = input("machine_id");
-        $sod_id = input("sod_id");
-        return $this->waitRemoteActionLogResult($machine_id, $sod_id, "pickUpDoorOpen");
+        return $this->waitRemoteActionLogResult($machine_id, "pickUpDoorOpen");
     }
 
     public function setPickUpDoorClose(){
         $machine_id = input("machine_id");
-        $sod_id = input("sod_id");
-        return $this->waitRemoteActionLogResult($machine_id, $sod_id, "pickUpDoorClose");
+        return $this->waitRemoteActionLogResult($machine_id, "pickUpDoorClose");
     }
 
     // public function remoteTakePhotos(){
@@ -355,12 +353,11 @@ class Machine extends Common
      * @param string $msgType
      * @return array|string
      */
-    protected function waitRemoteActionLogResult($machine_id, $sod_id, $msgType)
+    protected function waitRemoteActionLogResult($machine_id, $msgType)
     {
         if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
         $logId = $this->app->machine->addRALog([
-            'machine_id' => $machine_id,      
-            'sod_id' => $sod_id,  
+            'machine_id' => $machine_id,
             'type' => $msgType,
             'status' => 1,
             'manager_id' => $this->manager['manager_id'] ?? 0,
@@ -380,7 +377,7 @@ class Machine extends Common
         $n = 0;
         $overtime = 20;
         while (1) {
-            $log = $this->app->machine->getRALogsCount(['id' => $logId], 'id,machine_id,type,status,operator_at');
+            $log = $this->app->machine->getRALogsFind(['id' => $logId], 'id,machine_id,type,status,operator_at');
             if ($log) {
                 $log = is_object($log) ? $log->toArray() : $log;
                 if (intval($log['status']) === 3) {

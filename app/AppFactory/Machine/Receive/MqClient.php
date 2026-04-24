@@ -39,6 +39,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Mq\OutGoodsTrait;
+use app\AppFactory\Kernel\Traits\RemoteActionLog\RemoteActionLogTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
@@ -46,6 +47,7 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 class MqClient extends ReceiveBaseClient
 {
     use SaleOrdersTrait,OutGoodsTrait;
+    use RemoteActionLogTrait;
     use MachineInfoTrait,MachineGoodsTrait,MachineChannelTrait,MachineVersionPlanTrait,MachineConfigTrait;
     use MachineErrorCodeTrait;
     use GoodsTrait,GoodsHitTrait,GoodsChangeTrait;
@@ -175,9 +177,9 @@ class MqClient extends ReceiveBaseClient
 
             $logId = intval($this->message['log_id'] ?? 0);
             if ($logId) {
-                $log = $this->getRALogsCount(['id' => $logId], 'id,status');
+                $log = $this->getRALogsFind(['id' => $logId], 'id,status');
             } else {
-                $log = $this->getRALogsCount([
+                $log = $this->getRALogsFind([
                     'machine_id' => $this->machine['machine_id'],
                     'type' => $msgType,
                     ['status', 'in', [1, 2]],

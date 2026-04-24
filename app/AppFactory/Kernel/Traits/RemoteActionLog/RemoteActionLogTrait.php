@@ -12,7 +12,7 @@ use app\AppFactory\Kernel\Model\RemoteActionLog\RemoteActionLogModel;
 
 trait RemoteActionLogTrait
 {
-    public function getRALogsCount($where, $field = '*', $order = '')
+    public function getRALogsFind($where, $field = '*', $order = '')
     {
         return RemoteActionLogModel::getFind($where, $field, $order);
     }
