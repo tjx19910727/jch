@@ -154,7 +154,9 @@ class NoticeBaseClient extends BaseClient
                 actionLog($this->getLS(), '获取收件人SQL');
 
                 // 仅对故障模板按账号通知配置做发送频率/次数过滤，未配置则走旧流程。
-                if ($this->config['sendType'] == 1 && !empty($this->config['receiver'])) {
+                if ($this->config['sendType'] == 1 &&
+                    isset($this->config['templateType']) && $this->config['templateType'] == 'mFault' &&
+                    !empty($this->config['receiver'])) {
                     $mId = intval($this->config['m_id'] ?? 0);
                     $errorCode = strval($this->config['replaceData']['error_info'] ?? $this->config['replaceData']['errorCode'] ?? '');
                     $receiver = [];
@@ -182,13 +184,13 @@ class NoticeBaseClient extends BaseClient
     protected function allowFaultNoticeByManagerConfig($managerId, $openid = '', $mId = 0, $errorCode = '')
     {
         if (!$openid || !$mId || !$errorCode) {
-            return false;
+            return true;
         }
         try {
             $config = Db::name('auth_manager_notice_config')
                 ->where([
                     'manager_id' => $managerId,
-                    // 'notice_type' => 'mFault',
+                    'notice_type' => 'mFault',
                 ])
                 ->order('id desc')
                 ->find();
@@ -227,7 +229,6 @@ class NoticeBaseClient extends BaseClient
         } catch (\Exception $e) {
             // 配置表或字段异常时回退旧流程，避免影响发送主链路。
             actionLog($e->getMessage(), '故障通知配置过滤异常，回退旧流程');
-            var_dump($managerId, $openid, $mId, $errorCode, $e->getMessage());die;
             return $this->checkTplCount($openid, $mId, $errorCode);
         }
     }
@@ -239,6 +240,7 @@ class NoticeBaseClient extends BaseClient
                 'openid' => $openid,
                 'm_id' => $mId,
                 'error_code' => $errorCode,
+                'template_type' => 'mFault',
                 'send_status' => 1,
             ])->order('create_time desc')->value('create_time');
         return !$last || (time() - intval($last) >= $noticeTime);
