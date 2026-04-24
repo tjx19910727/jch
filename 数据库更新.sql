@@ -1546,3 +1546,5 @@ CREATE TABLE `auth_manager_notice_config` (
   KEY `manager_id` (`manager_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员通知配置表';
 
+update wx_template set body = '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',template_id = '5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI'  where wt_id =9;
+
