@@ -277,7 +277,7 @@ trait AfterOrderPaymentTrait
                 "templateType" => "payment_success",
                 "replaceData" => [
                     "machine_id" => $this->machine['machine_id'],
-                    "machine_name" => $this->machine['machine_name'],
+                    "machine_name" => mb_substr($this->machine['machine_name'], 0, 20, 'UTF-8'),
                     "trade_no" => $this->order['trade_no'],
                     "total_price" => number_format($this->order['total_price'], 2, '.', ','),
                     "pay_time" => $this->order['pay_time'] ? date('Y-m-d H:i:s', $this->order['pay_time']) : date('Y-m-d H:i:s'),
