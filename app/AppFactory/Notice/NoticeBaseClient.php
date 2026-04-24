@@ -135,16 +135,21 @@ class NoticeBaseClient extends BaseClient
     {
         if (!isset($this->config['receiver']) || !$this->config['receiver']) {
             if (isset($this->config['m_id']) && $this->config['m_id']) {
+                $noticeType = $this->config['templateType'] ?? '';
+                // 兼容历史配置：支付成功模板使用 payment_success，但权限字段仍配置为 sale。
+                if ($noticeType === 'payment_success') {
+                    $noticeType = 'sale';
+                }
                 $where['amm.m_id'] = $this->config['m_id'];
                 $where['am.status'] = 1;
                 if ($this->config['sendType'] == 1) {
-                    $where[] = ['am.wx_notice', 'like', "%" . $this->config['templateType'] . "%"];
+                    $where[] = ['am.wx_notice', 'like', "%" . $noticeType . "%"];
                     $where[] = function ($query) {
                         $query->where("am.openid is not null  AND am.openid <> ''");
                     };
                 }
                 if ($this->config['sendType'] == 2) {
-                    $where[] = ['am.email_notice', 'like', "%" . $this->config['templateType'] . "%"];
+                    $where[] = ['am.email_notice', 'like', "%" . $noticeType . "%"];
                     $where[] = function ($query) {
                         $query->where("am.email is not null AND am.email <> ''");
                     };
