@@ -63,7 +63,7 @@ trait MachineErrorCodeTrait
             "ao_id" => $this->machine['ao_id'] ?? 0,
         ];
         $result = $this->addMachineErrorCode($insert);
-        if ($result) {
+        if ($result && !in_array($this->message['errorCode'], ['1100000', '1000001'])) {
             //if (!$lastEc) {
                 $machine = $this->machine;
                 if (!is_array($this->machine)) $machine = $this->machine->toArray();
