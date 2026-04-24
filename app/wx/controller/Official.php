@@ -130,7 +130,7 @@ class Official extends BaseController
         }
         .title {
             margin: 0;
-            font-size: 36px;
+            font-size: 18px;
             line-height: 1.28;
             color: {$accent};
             font-weight: 800;
@@ -139,14 +139,14 @@ class Official extends BaseController
         .desc {
             margin: 18px auto 0;
             max-width: 560px;
-            font-size: 18px;
+            font-size: 9px;
             line-height: 1.9;
             color: #344256;
             font-weight: 500;
         }
         .footer {
             margin-top: 22px;
-            font-size: 14px;
+            font-size: 7px;
             color: #8a95a6;
             letter-spacing: 0.02em;
         }
@@ -156,14 +156,14 @@ class Official extends BaseController
             .top { padding-top: 18px; padding-bottom: 12px; }
             .content { padding-top: 20px; padding-bottom: 24px; }
             .title {
-                font-size: clamp(56px, 18vw, 132px);
+                font-size: clamp(28px, 9vw, 66px);
                 line-height: 1.06;
                 letter-spacing: 0.01em;
                 font-weight: 800;
                 word-break: break-word;
             }
-            .desc { font-size: 22px; line-height: 1.75; }
-            .footer { font-size: 16px; }
+            .desc { font-size: 11px; line-height: 1.75; }
+            .footer { font-size: 8px; }
             .brand { font-size: 13px; }
             .badge { font-size: 13px; }
         }

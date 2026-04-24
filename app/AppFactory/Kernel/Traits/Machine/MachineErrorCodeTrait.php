@@ -64,9 +64,10 @@ trait MachineErrorCodeTrait
         ];
         $result = $this->addMachineErrorCode($insert);
         if ($result) {
-            if (!$lastEc) {
+            //if (!$lastEc) {
                 $machine = $this->machine;
                 if (!is_array($this->machine)) $machine = $this->machine->toArray();
+                $machine['machine_name'] = mb_substr($machine['machine_name'], 0, 20, 'UTF-8');
                 $errorMsg = $this->lang("deviceErrorCode." . $this->message['errorCode']);
                 $machine['errorCode'] = $errorMsg == "deviceErrorCode." . $this->message['errorCode'] ? $this->message['errorCode'] : $errorMsg;
                 $machine['date'] = date("Y年m月d日");
@@ -83,7 +84,7 @@ trait MachineErrorCodeTrait
                 ];
                 actionLog($this->noticeSendData, '发送设备故障通知');
                 @$this->noticeSend();
-            }
+            //}
         }
         return 1;
     }
