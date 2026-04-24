@@ -783,7 +783,6 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
-    
     /**
      * 设备主动获取出货信息
      * @return array|string
@@ -1127,4 +1126,20 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+
+    
+    /**
+     * 设备上报每日物联卡流量使用
+     * @return array|string
+     */
+    public function reportSimCardMachineUsage()
+    {
+        try {
+            return $this->app->api->reportSimCardMachineUsage();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+    
 }

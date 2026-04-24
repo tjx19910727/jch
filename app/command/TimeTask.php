@@ -45,6 +45,7 @@ class TimeTask extends Command
      *          countOnline                 结算设备昨天在线数据
      *          checkOffline                检查设备最后心跳时间判断在线离线
      *          checkOnOff                  检查设备定时开关机是否正常
+    *          updateSimCardUsage          每天0点同步物联卡基础信息并统计流量
      *          checkOperatingStartup       检查设备是否超时未开机并发送提醒
      *      machineChannelStock
      *          countMcStock                统计库存报表，已废弃，使用实时获取
