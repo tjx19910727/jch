@@ -59,8 +59,8 @@ class Official extends BaseController
     {
         $renderHtml = function ($message, $success = false) {
             $title = $success ? '确认成功' : '确认失败';
-                        $accent = $success ? '#0f8a5f' : '#d14343';
-                        $badgeBg = $success ? 'rgba(15,138,95,0.12)' : 'rgba(209,67,67,0.12)';
+                        $accent = $success ? '#07C160' : '#ED2633';
+                        $badgeBg = $success ? 'rgba(15,138,95,0.12)' : 'rgba(237,38,51,0.12)';
                         $badgeText = $success ? 'SUCCESS' : 'FAILED';
                         $safeTitle = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
                         $safeMessage = nl2br(htmlspecialchars($message, ENT_QUOTES, 'UTF-8'));
@@ -162,8 +162,8 @@ class Official extends BaseController
                 font-weight: 800;
                 word-break: break-word;
             }
-            .desc { font-size: 11px; line-height: 1.75; }
-            .footer { font-size: 8px; }
+            .desc { font-size: 13px; line-height: 1.75; }
+            .footer { font-size: 11px; }
             .brand { font-size: 13px; }
             .badge { font-size: 13px; }
         }
