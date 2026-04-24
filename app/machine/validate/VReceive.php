@@ -221,7 +221,7 @@ class VReceive extends VCommon
         "getRentOrgGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
 
         "searchWCGoods" => ["msg_id","machine_id","timestamp","name"],
-        "sendErrorCode" => ["msg_id","machine_id","timestamp","sign","errorCode"],
+        "sendError" => ["msg_id","machine_id","timestamp","sign","errorCode"],
 
         "testUploadInfoMq" => ["msg_id","machine_id","timestamp"],
     ];
