@@ -2766,7 +2766,7 @@ class ApiClient extends ReceiveBaseClient
     {
         try {
             $date = date('Y-m-d', $this->data['date']);
-            $ydate = date('Y-m-d', strtotime('-1 day', strtotime($date)));
+            $ydate = date('Y-m-d', strtotime('-1 day', $this->data['date'] ?? 0));
             $machineUsage = $this->data['machine_usage'] ?? 0;
             $iccid = trim($this->data['iccid'] ?? '');
             if (!$iccid) {
