@@ -102,6 +102,8 @@ class MachineInfo extends Common
                 $msg = $result ? $this->app->machine->lang("VMachine." . $result) : $this->app->machine->lang("VMachine.machine_no_data");
                 return $this->app->machine->rFail($msg);
             }
+            // 已经下发过一次获取远程退货图片的指令，标记为已发送，避免在循环里再次下发
+            $send = 1;
         }
         
         while(1) {  
