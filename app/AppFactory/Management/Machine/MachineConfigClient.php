@@ -11,6 +11,7 @@ namespace app\AppFactory\Management\Machine;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineCalibrationConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
@@ -18,7 +19,7 @@ use app\management\validate\Machine\VMachineConfig;
 
 class MachineConfigClient extends ManagementClient
 {
-    use MachineTrait,MachineConfigTrait;
+    use MachineTrait,MachineConfigTrait,MachineCalibrationConfigTrait;
     use AuthManagerTrait;
 
     public function updateMc($postData)
@@ -28,6 +29,42 @@ class MachineConfigClient extends ManagementClient
             $mc = $this->getMachineConfigFind(['mc_id' => $postData['mc_id']],'machine_id');
             $mc = $mc->toArray();
             $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMachineConfig');
+        }
+        return $this->rU($result);
+    }
+
+    public function updateMcV2($postData)
+    {
+        $oldMc = $this->getMachineConfigFind(['mc_id' => $postData['mc_id']], 'mc_id,m_id,machine_id,remote_calibration');
+        $oldMc = $oldMc ? $oldMc->toArray() : [];
+        $oldRemoteCalibration = isset($oldMc['remote_calibration']) ? intval($oldMc['remote_calibration']) : null;
+        $newRemoteCalibration = isset($postData['remote_calibration']) ? intval($postData['remote_calibration']) : null;
+
+        $result = $this->updateMachineConfig($postData);
+        if ($result) {
+            $machineId = $oldMc['machine_id'] ?? '';
+            if (!$machineId) {
+                $mc = $this->getMachineConfigFind(['mc_id' => $postData['mc_id']], 'machine_id');
+                $mc = $mc ? $mc->toArray() : [];
+                $machineId = $mc['machine_id'] ?? '';
+            }
+
+            if ($oldRemoteCalibration !== null && $newRemoteCalibration !== null && $oldRemoteCalibration !== $newRemoteCalibration) {
+                if ($oldRemoteCalibration === 1 && $newRemoteCalibration === 2) {
+                    $mId = intval($oldMc['m_id'] ?? 0);
+                    if ($mId > 0) {
+                        $this->delMachineCalibrationConfig(['m_id' => $mId]);
+                    }
+                }
+
+                if ($oldRemoteCalibration === 2 && $newRemoteCalibration === 1 && $machineId) {
+                    $this->sendToMachine(['machine_id' => $machineId], 'calibrationAdd');
+                }
+            }
+
+            if ($machineId) {
+                $this->sendToMachine(['machine_id' => $machineId], 'updateMachineConfig');
+            }
         }
         return $this->rU($result);
     }
