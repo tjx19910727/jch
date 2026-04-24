@@ -9,15 +9,11 @@
 namespace app\management\controller\machine;
 
 
-use app\AppFactory\AppFactory;
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachineInfo;
-use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 
 class MachineInfo extends Common
 {
-    use SaleOrdersTrait;
-
     protected $field = "*";
     protected $validatePath = VMachineInfo::class;
 
@@ -75,7 +71,7 @@ class MachineInfo extends Common
         return $this->app->machineInfo->del($postData);
     }
 
-    /**
+    /** 
      * 获取设备实时图片
      * @return array|string
      */
@@ -83,17 +79,43 @@ class MachineInfo extends Common
     {
         $field = input('field');
         $machine_id = input('machine_id');
+        $sodId = intval(input('sod_id'));
         if (!in_array($field,["screen_img","camera_img","exchange_img","remote_refund_goods"])) return returnState(100,lang("query_out_range"));
         if (!$machine_id) return returnState(100,lang("VMachineInfo.machine_id_require"));
         $send = "";
         $n = 0;
-        while(1) {
+        if($field == "remote_refund_goods"){
+            $logId = $this->app->machine->addRALog([
+                'machine_id' => $machine_id,
+                'type' => 'remote_refund_goods_img',
+                'status' => 1,
+                'manager_id' => $this->manager['manager_id'] ?? 0,
+                'operator_at' => date('Y-m-d H:i:s'),
+            ]);
+            $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], 'img', ['log_id' => $logId]);
+            if (!is_object($result)) {
+                $this->app->machine->updateRALog(
+                    ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
+                    ['id' => $logId],
+                    ['status', 'operator_at']
+                );
+                $msg = $result ? $this->app->machine->lang("VMachine." . $result) : $this->app->machine->lang("VMachine.machine_no_data");
+                return $this->app->machine->rFail($msg);
+            }
+        }
+        
+        while(1) {  
             //远程退货图片
             if($field == "remote_refund_goods"){
-                $sod_id = input('sod_id') ?? '';
-                $sod = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id])->toArray();
-                if ($sod['refund_photo']) {
-                    return returnState(200,lang("query_success"),$sod['refund_photo']);
+                $log = $this->app->machine->getRALogsFind(['id' => $logId], 'id,machine_id,type,status,field,operator_at');
+                if ($log) {
+                    $log = is_object($log) ? $log->toArray() : $log;
+                    if (intval($log['status']) == 3 || !empty($log['field'])) {
+                        return returnState(200, lang("query_success"), $log);
+                    }
+                    if (intval($log['status']) == 4) {
+                        return returnState(100, lang("action_fail"), $log);
+                    }
                 }
             }else{
                 $shotImg = $this->app->machineInfo->getMachineInfoValue(['machine_id' => $machine_id],$field);
@@ -104,7 +126,16 @@ class MachineInfo extends Common
             }
             if (!$send) {
                 // 下发获取首页截屏、设备内部照片、出货箱照片
-                $this->app->machine->sendToMachine(['machine_id' => $machine_id],"img",["field" => $field]);
+                $content = ["field" => $field];
+                if ($field == "remote_refund_goods") {
+                    if ($logId) {
+                        $content['log_id'] = $logId;
+                    }
+                    if ($sodId) {
+                        $content['sod_id'] = $sodId;
+                    }
+                }
+                $this->app->machine->sendToMachine(['machine_id' => $machine_id],"img",$content);
                 $send = 1;
             }
             sleep(1);

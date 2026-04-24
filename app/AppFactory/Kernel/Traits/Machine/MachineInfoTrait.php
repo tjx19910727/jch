@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 use app\AppFactory\Kernel\Model\Machine\MachineInfoModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
+use app\AppFactory\Kernel\Model\RemoteActionLog\RemoteActionLogModel;
 
 trait MachineInfoTrait
 {
@@ -108,10 +109,50 @@ trait MachineInfoTrait
      */
     public function img()
     {
-        if (isset($this->message['sod_id'])) {
+        if (($this->message['field'] ?? '') === 'remote_refund_goods') {
             actionLog($this->message, "远程退货照片保存地址记录执行");
-            $result = SaleOrdersDetailsModel::update(['refund_photo' => $this->message['path']], ['sod_id' => $this->message['sod_id']]);
+            $status = isset($this->message['status']) ? intval($this->message['status']) : (!empty($this->message['path']) ? 3 : 4);
+            if (!in_array($status, [2, 3, 4], true)) {
+                $status = !empty($this->message['path']) ? 3 : 4;
+            }
+            $logId = intval($this->message['log_id'] ?? 0);
+            $where = ['id' => $logId];
+            $order = '';
+            if (!$logId) {
+                $where = [
+                    'machine_id' => $this->machine['machine_id'],
+                    'type' => 'remote_refund_goods',
+                    ['status', 'in', [1, 2]],
+                ];
+                if (!empty($this->message['sod_id'])) {
+                    $where['sod_id'] = intval($this->message['sod_id']);
+                }
+                $order = 'id desc';
+            }
+            $log = RemoteActionLogModel::getFind($where, 'id', $order);
+            if (!$log) {
+                actionLog($this->message, '远程退货照片未匹配到远程动作日志', 'img');
+                return false;
+            }
+            $log = is_object($log) ? $log->toArray() : $log;
+            $update = ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')];
+            $updateField = ['status', 'operator_at'];
+            if (!empty($this->message['path'])) {
+                $update['field'] = $this->message['path'];
+                $updateField[] = 'field';
+            }
+            $result = RemoteActionLogModel::update(
+                $update,
+                ['id' => $log['id']],
+                $updateField
+            );
+            SaleOrdersDetailsModel::update(['refund_photo' => $this->message['path']], ['sod_id' => $this->message['sod_id']]);
+            actionLog($result, '远程退货照片写入远程动作日志结果', 'img');
             return $result;
+        }
+        if (empty($this->message['path'])) {
+            actionLog($this->message, '图片路径不能为空', 'img');
+            return false;
         }
         $result = $this->updateMachineInfo([$this->message['field'] => $this->message['path']],['machine_id' => $this->machine['machine_id']]);
         actionLog($this->getLS(),'【SQL】写入图片路径');
