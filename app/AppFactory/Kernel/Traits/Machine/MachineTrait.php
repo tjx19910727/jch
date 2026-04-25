@@ -212,9 +212,7 @@ trait MachineTrait
         $update['m_id'] = $this->machine['m_id'];
         $update['last_online_time'] = time();
         $update['online'] = 1;
-        actionLog($this->message['version'] ?? '内层未知版本','心跳版本测试校验-'.$this->machine['machine_id'] ?? '未知设备','heartbeat');
-        actionLog($this->data['version'] ?? '外层未知版本','心跳版本测试校验-'.$this->machine['machine_id'] ?? '未知设备','heartbeatv2');
-        if (isset($this->data["version"]) && $this->data['version']) $update['version'] = $this->data['version'];
+        //if (isset($this->data["version"]) && $this->data['version']) $update['version'] = $this->data['version'];
         $result = $this->updateMachine($update);
 
         // 心跳后触发上线补发更新版本检查、兼容发布时间配置。
