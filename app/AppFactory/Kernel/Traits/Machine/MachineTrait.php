@@ -212,7 +212,8 @@ trait MachineTrait
         $update['m_id'] = $this->machine['m_id'];
         $update['last_online_time'] = time();
         $update['online'] = 1;
-        actionLog($this->message['version'] ?? '未知版本','心跳版本测试校验','heartbeat');
+        actionLog($this->message['version'] ?? '内层未知版本','心跳版本测试校验','heartbeat');
+        actionLog($this->data['version'] ?? '外层未知版本','心跳版本测试校验','heartbeatv2');
         if (isset($this->data["version"]) && $this->data['version']) $update['version'] = $this->data['version'];
         $result = $this->updateMachine($update);
 
