@@ -10,6 +10,7 @@ namespace app\management\controller\machine;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Support\SimiotService\Simiot;
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachineInfo;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
@@ -33,7 +34,13 @@ class MachineInfo extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineInfo->getFind($where);
+        $info = $this->app->machineInfo->getFind($where);
+        if(!empty($info['iccid'])){
+            //获取流量池数据进行覆盖
+            $pool_result = Simiot::queryPool($info['iccid']);
+            $info['remain_flow'] = $pool_result['result'][0]['traffic_left'] ?? 0;
+        }
+        return $info;
     }
 
     public function add()
