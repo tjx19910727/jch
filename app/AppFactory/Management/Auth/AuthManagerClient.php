@@ -152,7 +152,6 @@ class AuthManagerClient extends ManagementClient
         $noticeType = strval($postData['notice_type'] ?? 'mFault');
         $intervalMinutes = intval($postData['interval_minutes'] ?? 0);
         $dayCount = intval($postData['day_count'] ?? 0);
-        $status = intval($postData['status'] ?? 1);
 
         $exists = Db::name('auth_manager_notice_config')
             ->where([
@@ -163,10 +162,8 @@ class AuthManagerClient extends ManagementClient
 
         if ($exists) {
             $update = [
-                
                 'interval_minutes' => $intervalMinutes,
                 'day_count' => $dayCount,
-                'status' => $status,
             ];
             $result = Db::name('auth_manager_notice_config')->where('id', $exists['id'])->update($update);
             return $this->rU($result);
@@ -177,8 +174,6 @@ class AuthManagerClient extends ManagementClient
             'notice_type' => $noticeType,
             'interval_minutes' => $intervalMinutes,
             'day_count' => $dayCount,
-            'status' => $status,
-            'creator' => $this->manager['manager_id'] ?? 0,
         ];
         $id = Db::name('auth_manager_notice_config')->insertGetId($insert);
         return $this->rA($id);
