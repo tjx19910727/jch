@@ -76,6 +76,7 @@ class MachineInfoClient extends ManagementClient
     public function getSimiotData($iccid, $mi_id)
     {
         $result = Simiot::queryCard($iccid);
+        $pool_result = Simiot::queryPool($iccid);
         $result2 = Simiot::checkWarning();//发送流量预警
         $result = json2arr($result);
         $arr = ['china_mobile' => '中国移动', 'china_unicom' => '中国联通', 'china_telecom' => '中国电信'];
@@ -96,7 +97,7 @@ class MachineInfoClient extends ManagementClient
                 }else{
                     $count = 1;
                 }
-                $update['remain_flow'] = $newResult['package'][0]['package_capacity'] * $count - $update['total_flow'];//剩余流量
+                //$update['remain_flow'] = $newResult['package'][0]['package_capacity'] * $count - $update['total_flow'];//剩余流量
             }
             $update['valid_time'] = $newResult['package'][0]['end_time'] ?? '';
             $update['valid_time'] = $update['valid_time'] ? strtotime($update['valid_time']) : 0;
@@ -107,7 +108,7 @@ class MachineInfoClient extends ManagementClient
             if (!$uResult){
                 return $this->rFail($this->lang("update_fail"));
             } 
-
+            $update['remain_flow'] = isset($pool_result['result'][0]['traffic_left']) ? $pool_result['result'][0]['traffic_left'] : 0;
             return $this->r(200,$this->lang("query_success"),$update);
         } else {
             return $this->rFail($result['message'] ?? $this->lang("query_fail"));
