@@ -27,4 +27,16 @@ class SimCardInfoClient extends ManagementClient
         $data = $this->getSimCardInfoFind($where, $field);
         return $this->rQ($data);
     }
+
+    public function getMachineListData($where, $pageNum = 0, $field = "*", $order = "id desc")
+    {
+        $list = $this->getSimCardMachineList($where, $pageNum, $field, $order);
+        return $this->rQ($list);
+    }
+
+    public function getMachineFindData($where, $field = "*")
+    {
+        $data = $this->getSimCardMachineFind($where, $field);
+        return $this->rQ($data);
+    }
 }
