@@ -213,7 +213,7 @@ trait MachineTrait
         $update['m_id'] = $this->machine['m_id'];
         $update['last_online_time'] = time();
         $update['online'] = 1;
-        //if (isset($this->data["version"]) && $this->data['version']) $update['version'] = $this->data['version'];
+        if (isset($this->data["version"]) && $this->data['version']) $update['version'] = $this->data['version'];
         $result = $this->updateMachine($update);
 
         // 心跳后触发上线补发更新版本检查、兼容发布时间配置。
