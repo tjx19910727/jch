@@ -152,8 +152,7 @@ class AuthManagerClient extends ManagementClient
         $noticeType = strval($postData['notice_type'] ?? 'mFault');
         $intervalMinutes = intval($postData['interval_minutes'] ?? 0);
         $dayCount = intval($postData['day_count'] ?? 0);
-        $status = intval($postData['status'] ?? 1);
-
+        $is_default = isset($postData['is_default']) ? intval($postData['is_default']) : 1;
         $exists = Db::name('auth_manager_notice_config')
             ->where([
                 'manager_id' => $managerId,
@@ -161,24 +160,31 @@ class AuthManagerClient extends ManagementClient
             ])
             ->find();
 
+        if($is_default == 2){
+            //频率最小为1，次数最大为50
+            if($intervalMinutes < 1){
+                return $this->rFail('通知频率最小为1分钟');
+            }
+            if($dayCount > 50){
+                return $this->rFail('每天通知次数最大为50次');
+            }
+        }
         if ($exists) {
             $update = [
-                
                 'interval_minutes' => $intervalMinutes,
                 'day_count' => $dayCount,
-                'status' => $status,
+                'is_default' => $is_default,
             ];
             $result = Db::name('auth_manager_notice_config')->where('id', $exists['id'])->update($update);
             return $this->rU($result);
         }
-
+        
         $insert = [
             'manager_id' => $managerId,
             'notice_type' => $noticeType,
             'interval_minutes' => $intervalMinutes,
             'day_count' => $dayCount,
-            'status' => $status,
-            'creator' => $this->manager['manager_id'] ?? 0,
+            'is_default' => $is_default,
         ];
         $id = Db::name('auth_manager_notice_config')->insertGetId($insert);
         return $this->rA($id);

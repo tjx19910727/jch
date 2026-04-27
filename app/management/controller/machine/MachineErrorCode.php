@@ -90,4 +90,21 @@ class MachineErrorCode extends Common
         if (!isset($postData['create_time']) || !$postData['create_time']) $where[] = ['create_time','>=',strtotime("-1 month")];
         return $this->app->machineErrorCode->exportEc($where,$this->field,'create_time desc');
     }
+
+    /**
+     * 根据故障记录ID查询模板消息通知日志
+     * wx_template_log.me_id = 传入me_id
+     * @return array|\think\response\Json
+     */
+    public function getTemplateNoticeList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $me_id = $postData['me_id'] ?? 0;
+        if (!$me_id) return returnValidate(lang("VMachineErrorCode.me_id_require"));
+        $where = [
+            'me_id' => intval($me_id),
+        ];
+        return $this->app->wxTemplateLog->getTemplateLogList($where, $pageNum, '*', 'create_time desc');
+    }
 }
