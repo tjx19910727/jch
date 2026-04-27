@@ -543,11 +543,13 @@ class MachineClient extends TimeTaskBase
     {
         $date = date('Y-m-d',strtotime("-1 days"));
         $y_date = date('Y-m-d',strtotime("-2 days"));
-        $machineInfoList = Db::name('machine_info')
-            ->whereNotNull('iccid')
-            ->where('iccid', '<>', '')
-            ->where('iccid', '<>', '0')
-            ->field('m_id,machine_id,iccid')
+        $machineInfoList = Db::name('machine_info')->alias('a')
+            ->join('machine b', 'a.m_id = b.m_id')
+            ->whereNotNull('a.iccid')
+            ->where('a.iccid', '<>', '')
+            ->where('a.iccid', '<>', '0')
+            ->whereIn('b.is_operating', [1,3])//在营、外售
+            ->field('a.m_id,b.machine_id,a.iccid')
             ->select()
             ->toArray();
 
@@ -555,21 +557,20 @@ class MachineClient extends TimeTaskBase
             return '无可同步的物联卡';
         }
 
-        $iccidList = array_values(array_unique(array_map(function ($item) {
-            return strval($item['iccid']);
-        }, $machineInfoList)));
+        $iccidList = array_values(array_unique(array_column($machineInfoList, 'iccid')));
 
         $batchRes = Simiot::queryCardBatch($iccidList, 90);
-        if (!is_array($batchRes) || intval($batchRes['code'] ?? -1) !== 0) {
+        if (!is_array($batchRes)) {
             return '同步失败：榫卯接口调用失败';
         }
-        if(!isset($batchRes['result']) || !is_array($batchRes['result'])) {
+        if (!isset($batchRes['result']) || !is_array($batchRes['result'])) {
             return '同步失败：榫卯接口返回数据异常';
         }
         $cardMap = [];
         foreach ($batchRes['result'] as $card) {
             $iccid = strval($card['iccid'] ?? '');
-            if ($iccid !== '') {
+            $res_code = intval($card['code'] ?? -1);
+            if ($iccid !== '' && $res_code === 0) {
                 $cardMap[$iccid] = $card;
             }
         }

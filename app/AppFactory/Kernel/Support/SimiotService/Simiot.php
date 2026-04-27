@@ -167,7 +167,7 @@ class Simiot
 		$chunks = array_chunk($iccids, $batchSize);
 		foreach ($chunks as $chunk) {
 			$res = $this->_queryCard(implode(',', $chunk));
-			if (!is_array($res) || intval($res['code'] ?? -1) !== 0) {
+			if (!is_array($res) || empty($res['result'])) {
 				$failed[] = [
 					'iccids' => $chunk,
 					'res' => $res,
