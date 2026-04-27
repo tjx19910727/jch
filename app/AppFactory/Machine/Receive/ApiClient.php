@@ -299,7 +299,7 @@ class ApiClient extends ReceiveBaseClient
             return $this->r(300, '先开启设备远程校准');
         }
         $incomingList = $this->getIncomingCalibrationList();
-        $incomingVersion = isset($this->data['version']) && $this->data['version'] !== '' ? intval($this->data['version']) : 0;
+        $incomingVersion = $this->getIncomingCalibrationVersion($incomingList);
 
         $latestRow = $this->getMachineCalibrationConfigFind(['m_id' => $mId], 'version,id', 'id desc');
         $latestVersion = $latestRow ? intval($latestRow['version']) : 0;
@@ -351,6 +351,30 @@ class ApiClient extends ReceiveBaseClient
             }
         } 
         return $list;
+    }
+
+    /**
+     * 获取设备上传的版本号，优先读取 data 内 key=version 的值
+     * @param array $list
+     * @return int
+     */
+    protected function getIncomingCalibrationVersion($list = [])
+    {
+        if (!empty($list) && is_array($list)) {
+            foreach ($list as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                if (isset($row['key']) && strtolower((string)$row['key']) === 'version') {
+                    if (isset($row['value']) && $row['value'] !== '') {
+                        return intval($row['value']);
+                    }
+                    return 0;
+                }
+            }
+        }
+
+        return isset($this->data['version']) && $this->data['version'] !== '' ? intval($this->data['version']) : 0;
     }
 
     /**
