@@ -35,10 +35,13 @@ class MachineInfo extends Common
         $postData = input();
         $where = $this->getWhere($postData, false, []);
         $info = $this->app->machineInfo->getFind($where);
-        if(!empty($info['iccid'])){
-            //获取流量池数据进行覆盖
-            $pool_result = Simiot::queryPool($info['iccid']);
-            $info['remain_flow'] = $pool_result['result'][0]['traffic_left'] ?? 0;
+        if (is_object($info) && method_exists($info, 'getData')) {
+            $payload = $info->getData();
+            $machineInfo = $payload['data'] ?? [];
+            // 获取流量池数据进行覆盖
+            $pool_result = Simiot::queryPool();
+            $machineInfo['remain_flow'] = $pool_result['result'][0]['traffic_left'] ?? 0;
+            return returnState($payload['state'] ?? 200, $payload['msg'] ?? lang('query_success'), $machineInfo);
         }
         return $info;
     }
