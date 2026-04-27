@@ -199,8 +199,13 @@ class NoticeBaseClient extends BaseClient
                 ])
                 ->order('id desc')
                 ->find();
-            // 未配置时走旧逻辑：同一openid+设备+错误码在noticeTime窗口内仅发送一次。
-            if (!$config) {
+            // 未配置或选择默认策略时，走旧逻辑：同一openid+设备+错误码在noticeTime窗口内仅发送一次。
+            if (!$config || intval($config['is_default'] ?? 1) === 1) {
+                return $this->checkTplCount($openid, $mId, $errorCode);
+            }
+
+            // 仅 is_default = 2 走频率/次数策略，其它值回退旧逻辑。
+            if (intval($config['is_default']) !== 2) {
                 return $this->checkTplCount($openid, $mId, $errorCode);
             }
 

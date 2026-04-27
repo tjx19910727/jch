@@ -1538,6 +1538,7 @@ CREATE INDEX idx_m_id ON kiosk.wx_template_log(m_id);
 CREATE TABLE `auth_manager_notice_config` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增id',
   `manager_id` int not null DEFAULT 0 COMMENT '管理员id',
+  `is_default` tinyint not null DEFAULT '0' COMMENT '是否默认通知配置，1是 2自定义',
   `interval_minutes` int not null DEFAULT '0' COMMENT '通知频率:分钟',
   `day_count` int DEFAULT 0 COMMENT '次数/天',
   `notice_type` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '备注信息',
