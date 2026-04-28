@@ -1523,3 +1523,19 @@ ALTER TABLE kiosk.sale_orders_details
   ADD COLUMN `remote_refund_audit_manager` int default 0 COMMENT '远程退货执行人' AFTER `refund_photo`;
 
   update wx_template set body = '[{"设备编号":{"value":"{{machine_id}}","field":"character_string16"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"异常时间":{"value":"{{error_time}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"设备地址":{"value":"{{error_code}}","field":"thing9"}}]' , template_id = 'frqumju8oA7N8msUrhIiHpDd18j2Ie-DxLGlz5jWz8g' where wt_id =5;
+#20260428
+CREATE TABLE `laser_resource` (
+  `res_id` int NOT NULL AUTO_INCREMENT COMMENT '素材ID',
+  `file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '素材文件路径',
+  `type` tinyint(1) NOT NULL DEFAULT 1 COMMENT '素材类型（1：图片，2：视频）',
+  `file_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '原文件名',
+  `desc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '素材描述',
+  `length` int DEFAULT '0' COMMENT '高度',
+  `width` int DEFAULT '0' COMMENT '宽度',
+  `size` int DEFAULT '0' COMMENT '素材大小，B',
+  `order_id` int DEFAULT '0' COMMENT '归属订单ID',
+  `is_diy` tinyint(1) DEFAULT '2' COMMENT '是否是diy素材,1是 2否',
+  `create_time` bigint NOT NULL DEFAULT 0 COMMENT '创建时间',
+  PRIMARY KEY (`res_id`) USING BTREE,
+  KEY `order_id` (`order_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='镭射机素材表';
