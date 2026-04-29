@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Providers\TimeTask;
 
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
+use app\AppFactory\TimeTask\Machine\MachineAutoRefundClient;
 use app\AppFactory\TimeTask\Machine\MachineChannelStockClient;
 use app\AppFactory\TimeTask\Machine\MachineClient;
 
@@ -24,6 +25,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineChannelStock'] = function ($app) {
             return new MachineChannelStockClient($app);
+        };
+        $app['machineAutoRefund'] = function ($app) {
+            return new MachineAutoRefundClient($app);
         };
     }
 }
