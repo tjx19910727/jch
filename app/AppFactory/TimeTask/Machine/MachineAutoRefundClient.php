@@ -26,25 +26,24 @@ class MachineAutoRefundClient extends TimeTaskBase
             $limit = 100;
         }
         $remark = input('remark', '系统自动退款：出货异常超时');
-
+        $where[] = ['mg.auto_refund', '=', 1];
+        $where[] = ['so.pay_status', '=', 3];
+        $where[] = ['so.out_status', 'in', [2, 3 , 5]];
+        $where[] = ['so.http_out_status', '<>', 3];
+        $where[] = ['so.pay_time', '<', $now - 180];
+        $where[] = ['so.create_time', '>=', $now - 900];
+        $where[] = ['sod.success_quantity', '=', 0];
+        $where[] = ['sod.refund_quantity', '=', 0];
         $rows = Db::name('sale_orders_details')->alias('sod')
             ->join('sale_orders so', 'so.order_id = sod.order_id')
             ->join('machine_goods mg', 'mg.mg_id = sod.mg_id')
-            ->where('mg.auto_refund', 1)
-            ->where('so.pay_status', 3)
-            ->whereIn('so.out_status', [2, 3 , 5])
-            ->where('so.http_out_status', '<>', 3)
-            ->where('so.pay_time', '>', 0)
-            ->where('so.pay_time', '<', $now - 180)
-            ->where('so.create_time', '>', 0)
-            ->where('so.create_time', '>=', $now - 900)
-            ->where('sod.quantity', 1)
-            ->where('sod.refund_quantity', 0)
+            ->where($where)
             ->field('so.order_id,so.trade_no,so.pay_type,sod.sod_id,sod.quantity,sod.refund_quantity')
             ->order('so.pay_time asc,so.order_id asc,sod.sod_id asc')
             ->limit($limit)
             ->select()
             ->toArray();
+        actionLog(Db::getLastSql(), 'autoRefund.rows.sql');
 
         if (!$rows) {
             actionLog('没有符合自动退款条件的订单', 'autoRefund');
@@ -80,16 +79,7 @@ class MachineAutoRefundClient extends TimeTaskBase
                     ->join('machine_goods mg', 'mg.mg_id = sod.mg_id')
                     ->where('so.order_id', $orderId)
                     ->where('sod.sod_id', $sodId)
-                    ->where('mg.auto_refund', 1)
-                    ->where('so.pay_status', 3)
-                    ->whereIn('so.out_status', [5, 2, 3])
-                    ->where('so.http_out_status', '<>', 3)
-                    ->where('so.pay_time', '>', 0)
-                    ->where('so.pay_time', '<', $now - 180)
-                    ->where('so.create_time', '>', 0)
-                    ->where('so.create_time', '>=', $now - 900)
-                    ->where('sod.quantity', 1)
-                    ->where('sod.refund_quantity', 0)
+                    ->where($where)
                     ->find();
 
                 if (!$recheck) {
@@ -106,8 +96,9 @@ class MachineAutoRefundClient extends TimeTaskBase
                     ],
                 ]);
 
+                $result = obj2arr($result);
                 $state = is_array($result) ? intval($result['state'] ?? 0) : 0;
-                if ($state === 200) {
+                if ($state == 200) {
                     $success++;
                 } else {
                     $fail++;
@@ -134,7 +125,8 @@ class MachineAutoRefundClient extends TimeTaskBase
     protected function requestRefundBySaleOrdersClient(array $postData)
     {
         try {
-            return AppFactory::management([])->saleOrders->refundOrder($postData);
+            $result = AppFactory::management([])->saleOrders->refundOrder($postData);
+            return obj2arr($result);
         } catch (\Throwable $e) {
             actionException($e, 1, 'autoRefund.requestRefundBySaleOrdersClient');
             return [
