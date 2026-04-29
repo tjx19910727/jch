@@ -138,6 +138,7 @@ class AuthManagerClient extends ManagementClient
                 'interval_minutes' => 0,
                 'day_count' => 0,
                 'status' => 1,
+                'is_default' => 1,
             ];
         }
         return $this->r(200, 'success', $data);
