@@ -43,10 +43,10 @@ class MachineAutoRefundClient extends TimeTaskBase
             ->limit($limit)
             ->select()
             ->toArray();
-        actionLog(Db::getLastSql(), 'autoRefund.rows.sql');
+        actionLog(Db::getLastSql(), 'autoRefund.rows.sql','autoRefund');
 
         if (!$rows) {
-            actionLog('没有符合自动退款条件的订单', 'autoRefund');
+            actionLog('没有符合自动退款条件的订单', 'autoRefund','autoRefund');
             return '自动退款处理完成：0条';
         }
 
@@ -106,7 +106,7 @@ class MachineAutoRefundClient extends TimeTaskBase
                         'order_id' => $orderId,
                         'sod_id' => $sodId,
                         'result' => $result,
-                    ], 'autoRefund执行失败');
+                    ], 'autoRefund执行失败','autoRefund');
                 }
             } catch (\Throwable $e) {
                 $fail++;
