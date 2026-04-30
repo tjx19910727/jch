@@ -37,6 +37,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\SimSignalLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Mq\OutGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
@@ -47,6 +48,7 @@ class MqClient extends ReceiveBaseClient
 {
     use SaleOrdersTrait,OutGoodsTrait;
     use MachineInfoTrait,MachineGoodsTrait,MachineChannelTrait,MachineVersionPlanTrait,MachineConfigTrait;
+    use SimSignalLogTrait;
     use MachineErrorCodeTrait;
     use GoodsTrait,GoodsHitTrait,GoodsChangeTrait;
     use StrategyPayeeTrait,StrategyMachineTrait;
@@ -83,7 +85,7 @@ class MqClient extends ReceiveBaseClient
      * 处理设备上报
      * msgType: outGoods、heartbeat、updateComplete、goodsHit、transactionVideo、img、channelImg、
      *          light、volume、errorCode、uploadInfo、machineCkcOnOff
-     *          doorOpen、powerWakeUp、initialization、axisOffset
+    *          doorOpen、powerWakeUp、initialization、axisOffset、updateSimSignal
      * 远程退货动作组：remoteOutGoods、checkRecycleBox、pickUpDoorOpen、pickUpDoorClose、takePhotos、recycGoods
      * @return int
      */

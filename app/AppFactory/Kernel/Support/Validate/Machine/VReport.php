@@ -36,6 +36,8 @@ class VReport extends SupportValidate
         "mc_id" => "require",
 
         "errorCode" => "require",
+        "rsrp" => "require",
+        "sinr" => "require",
     ];
 
     protected $message = [
@@ -62,6 +64,8 @@ class VReport extends SupportValidate
         "mc_id.require" => "货道ID不能为空",
 
         "errorCode.require" => "错误码不能为空",
+        "rsrp.require" => "信号强度不能为空",
+        "sinr.require" => "信噪比不能为空",
     ];
 
     protected $scene = [
@@ -93,6 +97,7 @@ class VReport extends SupportValidate
         "axisOffset" => ["msgType","x_axis","y_axis"],//主轴偏移
         "remoteOutGoods" => ["msgType", 'status'],//远程出货
         "remoteRemovalEnd" => ["msgType", 'mc_id', 'channel_code'],//远程下架回收结果
+        "updateSimSignal" => ["msgType", "rsrp", "sinr"],//物联卡信号上报
 
     ];
 }

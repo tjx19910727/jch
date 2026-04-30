@@ -1584,3 +1584,20 @@ CREATE TABLE `sim_card_machine` (
   KEY `idx_iccid` (`iccid`) USING BTREE,
   KEY `idx_m_id` (`m_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物联卡每日使用流量表';
+
+CREATE TABLE `sim_signal_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `m_id` int(11) NOT NULL DEFAULT 0 COMMENT '设备ID',
+  `machine_id` varchar(50) NOT NULL DEFAULT '' COMMENT '设备编码',
+  `iccid` varchar(50) NOT NULL DEFAULT '' COMMENT '物联卡id',
+  `rsrp` int(11) NOT NULL DEFAULT 0 COMMENT '信号强度',
+  `rsrp_level` tinyint(1) NOT NULL DEFAULT 0 COMMENT '信号强度等级',
+  `sinr` int(11) NOT NULL DEFAULT 0 COMMENT '信噪比',
+  `sinr_level` tinyint(1) NOT NULL DEFAULT 0 COMMENT '信噪比等级',
+  `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_iccid` (`iccid`) USING BTREE,
+  KEY `idx_m_id` (`m_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物联卡实时信号表';
+
+ALTER TABLE kiosk.machine_config ADD `automatic_goods_sorting` tinyint(1) DEFAULT '2' COMMENT '是否开启自动理货1开启2关闭' after `gate_detection`;
