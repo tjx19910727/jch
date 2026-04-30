@@ -425,7 +425,7 @@ class MachineClient extends TimeTaskBase
                     ->order('m.m_id desc')
                     ->select();
             if(count($list) == 0){
-                return;
+                return '无需处理';
             }
             $list = $list->toArray();
             $flag = [];
@@ -521,6 +521,7 @@ class MachineClient extends TimeTaskBase
             actionLog($flag, '处理运营中设备未开机提醒结果', 'checkOperatingStartup');
         } catch (\Exception $e) {
             actionException($e, 1, 'checkOperatingStartup');
+            return '处理异常';
         }
 
         return '处理成功';
