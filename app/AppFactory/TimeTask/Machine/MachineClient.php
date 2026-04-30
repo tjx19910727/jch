@@ -413,8 +413,10 @@ class MachineClient extends TimeTaskBase
                 $query = $query->where('m.machine_id', 'JCHM-H2D-0064')->where('m.online', 2);
                 $title = '测试';
             }else{
+                //只查询最近的2天有在线记录的设备，避免查询历史数据较多的设备，影响巡检效率
                 $query = $query->where('m.online', 2)
                     ->where('m.is_operating', 1)
+                    ->where('m.last_online_time', '>', strtotime('-2 day'))
                     ->whereNotNull('moo.on_off_machine')
                     ->where('moo.on_off_machine', '<>', '')
                     ->where('moo.on_off_machine', '<>', '{}')
