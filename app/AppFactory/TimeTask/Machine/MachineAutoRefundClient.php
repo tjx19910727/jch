@@ -138,15 +138,31 @@ class MachineAutoRefundClient extends TimeTaskBase
 
     protected function acquireAutoRefundLock(string $key, int $ttl = 170): bool
     {
-        if (Cache::has($key)) {
-            return false;
+        try {
+            $cache = Cache::store('redis');
+            if ($cache->has($key)) {
+                return false;
+            }
+            $cache->set($key, 1, $ttl);
+            return true;
+        } catch (\Throwable $e) {
+            actionLog([
+                'key' => $key,
+                'msg' => $e->getMessage(),
+            ], 'autoRefund redis锁异常，降级为无锁执行', 'autoRefund');
+            return true;
         }
-        Cache::set($key, 1, $ttl);
-        return true;
     }
 
     protected function releaseAutoRefundLock(string $key): void
     {
-        // 当前接口环境无缓存删除权限，锁交由 TTL 自动过期释放。
+        try {
+            Cache::store('redis')->delete($key);
+        } catch (\Throwable $e) {
+            actionLog([
+                'key' => $key,
+                'msg' => $e->getMessage(),
+            ], 'autoRefund redis解锁异常，等待TTL自动过期', 'autoRefund');
+        }
     }
 }
