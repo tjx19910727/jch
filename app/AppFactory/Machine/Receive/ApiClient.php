@@ -2871,7 +2871,7 @@ class ApiClient extends ReceiveBaseClient
                 'camera_usage' => $cameraUsage,
                 'remark' => $this->data['remark'] ?? '',
             ];
-            if($row) {
+            if(!$row) {
                 $this->addSimCardMachine($resData);
             } else {
                 $this->updateSimCardMachine($resData, ['id' => $row['id']]);
