@@ -136,7 +136,7 @@ class MachineAutoRefundClient extends TimeTaskBase
         }
     }
 
-    protected function acquireAutoRefundLock(string $key, int $ttl = 180): bool
+    protected function acquireAutoRefundLock(string $key, int $ttl = 170): bool
     {
         if (Cache::has($key)) {
             return false;
@@ -147,6 +147,6 @@ class MachineAutoRefundClient extends TimeTaskBase
 
     protected function releaseAutoRefundLock(string $key): void
     {
-        Cache::delete($key);
+        // 当前接口环境无缓存删除权限，锁交由 TTL 自动过期释放。
     }
 }
