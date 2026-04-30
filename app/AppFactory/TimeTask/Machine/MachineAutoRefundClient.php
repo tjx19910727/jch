@@ -43,10 +43,10 @@ class MachineAutoRefundClient extends TimeTaskBase
             ->limit($limit)
             ->select()
             ->toArray();
-        actionLog(Db::getLastSql(), 'autoRefund.rows.sql');
+        actionLog(Db::getLastSql(), 'autoRefund.rows.sql','autoRefund');
 
         if (!$rows) {
-            actionLog('没有符合自动退款条件的订单', 'autoRefund');
+            actionLog('没有符合自动退款条件的订单', 'autoRefund','autoRefund');
             return '自动退款处理完成：0条';
         }
 
@@ -106,7 +106,7 @@ class MachineAutoRefundClient extends TimeTaskBase
                         'order_id' => $orderId,
                         'sod_id' => $sodId,
                         'result' => $result,
-                    ], 'autoRefund执行失败');
+                    ], 'autoRefund执行失败','autoRefund');
                 }
             } catch (\Throwable $e) {
                 $fail++;
@@ -136,17 +136,33 @@ class MachineAutoRefundClient extends TimeTaskBase
         }
     }
 
-    protected function acquireAutoRefundLock(string $key, int $ttl = 180): bool
+    protected function acquireAutoRefundLock(string $key, int $ttl = 170): bool
     {
-        if (Cache::has($key)) {
-            return false;
+        try {
+            $cache = Cache::store('redis');
+            if ($cache->has($key)) {
+                return false;
+            }
+            $cache->set($key, 1, $ttl);
+            return true;
+        } catch (\Throwable $e) {
+            actionLog([
+                'key' => $key,
+                'msg' => $e->getMessage(),
+            ], 'autoRefund redis锁异常，降级为无锁执行', 'autoRefund');
+            return true;
         }
-        Cache::set($key, 1, $ttl);
-        return true;
     }
 
     protected function releaseAutoRefundLock(string $key): void
     {
-        Cache::delete($key);
+        try {
+            Cache::store('redis')->delete($key);
+        } catch (\Throwable $e) {
+            actionLog([
+                'key' => $key,
+                'msg' => $e->getMessage(),
+            ], 'autoRefund redis解锁异常，等待TTL自动过期', 'autoRefund');
+        }
     }
 }
