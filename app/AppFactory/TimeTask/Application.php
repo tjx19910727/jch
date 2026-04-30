@@ -22,6 +22,7 @@ use app\AppFactory\Kernel\ServiceContainer;
  * @property AuthManager\AuthManagerLogClient           $log                   用户事件定时任务
  * @property Machine\MachineClient                      $machine               设备定时任务
  * @property Machine\MachineChannelStockClient          $machineChannelStock   设备库存报表定时任务
+ * @property Machine\MachineAutoRefundClient            $machineAutoRefund     设备自动退款定时任务
  * @property Goods\GoodsClient                          $goods                 商品定时任务
  * @property Payment\AliClient                          $ali                   支付宝定时查询反扫付款码支付结果
  * @property Payment\WxClient                           $wx                    微信定时查询反扫付款码支付结果

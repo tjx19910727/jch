@@ -1583,7 +1583,7 @@ CREATE TABLE `sim_card_machine` (
   PRIMARY KEY (`id`),
   KEY `idx_iccid` (`iccid`) USING BTREE,
   KEY `idx_m_id` (`m_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物联卡每日使用流量表';  update wx_template set body = '[{"设备编号":{"value":"{{machine_id}}","field":"character_string16"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"异常时间":{"value":"{{error_time}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"设备地址":{"value":"{{error_code}}","field":"thing9"}}]' , template_id = 'frqumju8oA7N8msUrhIiHpDd18j2Ie-DxLGlz5jWz8g' where wt_id =5;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物联卡每日使用流量表';
 #20260422--是否开启远程校准功能
 ALTER TABLE kiosk.machine_config ADD  `remote_calibration` tinyint(1) DEFAULT '2' COMMENT '是否开启远程校准功能，1-开启，2-关闭';
 ALTER TABLE kiosk.machine_config ADD  `head_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过头部摄像头，1-跳过，2-不跳过';
@@ -1613,3 +1613,5 @@ CREATE TABLE `auth_manager_notice_config` (
 
 update wx_template set body = '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',template_id = '5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI'  where wt_id =9;
 
+#20260429
+alter table kiosk.machine_goods add column `auto_refund` tinyint(1) default 2 comment '是否自动退款1是 2否' after `is_shelf`;

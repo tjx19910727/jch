@@ -34,7 +34,8 @@ class TimeTask extends Command
      * php /home/wwwroot/kiosk/think time_task machine checkOperatingStartup    每隔5分钟检查运营中设备是否超过开机时间5分钟仍未开机，并发送异常提醒（每日每机一次）
      * php /home/wwwroot/kiosk/think time_task export clearExcel                清除超过3天的Excel，每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task coupon clearCouponUsed           清除已过期或已作废未使用的优惠券码，每天定时任务运行一次
-     *
+     * php /home/wwwroot/kiosk/think time_task machineAutoRefund autoRefund     自动退款（出货超时/异常），每3分钟执行一次
+     * 
      * command
      *      php think time_task [moduleType] [actionType]
      * moduleType     machine：设备定时任务，goods：商品定时任务，export：导出， activity：营销活动
@@ -56,6 +57,8 @@ class TimeTask extends Command
      *          clearExcel                  清除超过3天的Excel
      *      coupon：
      *          clearCouponUsed             清除已过期或已作废未使用的优惠券码
+     *      machineAutoRefund
+     *          autoRefund                  自动退款（出货超时/异常），每3分钟执行一次
      * @param Input $input
      * @param Output $output
      * @return int|null|void
