@@ -95,12 +95,11 @@ class MqProducer
              * AMQPMessage::DELIVERY_MODE_PERSISTENT = 2: 持久化
              *///将要发送数据变为json字符串
             $messageBody = json_encode($data);
-            // 如果是出货下发消息，为避免设备长时间离线导致重复处理，设置消息过期时间为 3 分钟（180000 ms）
-            $expiration = null;
-            if (isset($data['msgType']) && $data['msgType'] === 'outGoods') {
-                // RabbitMQ expects expiration in milliseconds as string
-                $expiration = (string)(180 * 1000);
-            }
+            // 所有后台下发到设备的 MQ 指令统一设置过期时间，默认 3 分钟（单位：毫秒）
+            // RabbitMQ expects expiration in milliseconds as string
+            $expirationMs = (int)(config('rabbit_mq.data_send_expiration_ms') ?: (180 * 1000));
+            if ($expirationMs < 1000) $expirationMs = 180 * 1000;
+            $expiration = (string)$expirationMs;
             /**
              * 创建AMQP消息类型
              * $messageBody:消息体
@@ -108,9 +107,7 @@ class MqProducer
              * AMQPMessage::DELIVERY_MODE_NON_PERSISTENT = 1; 不持久化AMOPMessage: :DELIVERY_MODE_PERSISTENT = 2: 持久化
              */
             $messageProps = array('content_type' => 'text/plain', 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT);
-            if ($expiration !== null) {
-                $messageProps['expiration'] = $expiration;
-            }
+            $messageProps['expiration'] = $expiration;
             $message = new AMQPMessage($messageBody, $messageProps);
 
             $channel->set_ack_handler(function (AMQPMessage $message){
