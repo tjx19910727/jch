@@ -37,6 +37,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineServiceLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Mq\OutGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
@@ -46,7 +47,7 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 class MqClient extends ReceiveBaseClient
 {
     use SaleOrdersTrait,OutGoodsTrait;
-    use MachineInfoTrait,MachineGoodsTrait,MachineChannelTrait,MachineVersionPlanTrait,MachineConfigTrait;
+    use MachineInfoTrait,MachineGoodsTrait,MachineVersionPlanTrait,MachineConfigTrait;
     use MachineErrorCodeTrait;
     use GoodsTrait,GoodsHitTrait,GoodsChangeTrait;
     use StrategyPayeeTrait,StrategyMachineTrait;
@@ -56,6 +57,7 @@ class MqClient extends ReceiveBaseClient
     use ActivityPickTrait,ActivityPickCodeTrait;
     use ActivityLotteryTrait,ActivityLotteryConfigTrait,ActivityLotteryContentTrait,ActivityLotteryUsedTrait,ActivityLotteryUsedGoodsTrait;
     use EarthCitiesTrait,EarthRegionsTrait,EarthCountriesTrait,EarthStatesTrait;
+    use MachineServiceLogTrait;
 
     protected $order;
     public function __construct(ServiceContainer $app)
