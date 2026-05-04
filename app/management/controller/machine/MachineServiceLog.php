@@ -46,7 +46,7 @@ class MachineServiceLog extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineServiceLog->add($postData);
+        return $this->app->machineServiceLog->addLog($postData);
     }
 
     public function update()
@@ -57,7 +57,7 @@ class MachineServiceLog extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineServiceLog->update($postData);
+        return $this->app->machineServiceLog->updateLog($postData);
     }
 
     public function del()
@@ -68,7 +68,7 @@ class MachineServiceLog extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineServiceLog->del($postData);
+        return $this->app->machineServiceLog->delLog($postData);
     }
 
     /**

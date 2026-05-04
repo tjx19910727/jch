@@ -17,37 +17,25 @@ class MachineServiceLogClient extends ManagementClient
     use MachineTrait;
     use MachineServiceLogTrait;
 
-    public function add($insert, $rA = 1)
+    public function addLog($postData)
     {
-        $postData = $insert;
-        $machine = $this->resolveMachine($postData);
-        if ($machine) {
-            $postData['m_id'] = $machine['m_id'];
-            $postData['machine_id'] = $machine['machine_id'];
+        if ($postData['m_id'] > 0) {
+            $postData['machine_id'] = $this->getMachineValue(['m_id' => $postData['m_id']], 'machine_id');
         }
         $result = $this->addMachineServiceLog($postData);
-        if ($rA) {
-            return $this->rA($result);
-        }
-        return $result;
+        return $this->rA($result);
     }
 
-    public function update($update, $where = [], $field = [], $rU = 1)
+    public function updateLog($postData, $where = [], $field = [], $rU = 1)
     {
-        $postData = $update;
-        $machine = $this->resolveMachine($postData);
-        if ($machine) {
-            $postData['m_id'] = $machine['m_id'];
-            $postData['machine_id'] = $machine['machine_id'];
+        if ($postData['m_id'] > 0) {
+            $postData['machine_id'] = $this->getMachineValue(['m_id' => $postData['m_id']], 'machine_id');
         }
         $result = $this->updateMachineServiceLog($postData, $where, $field);
-        if ($rU) {
-            return $this->rU($result);
-        }
-        return $result;
+        return $this->rU($result);
     }
 
-    public function del($where, $rD = 1)
+    public function delLog($where, $rD = 1)
     {
         $postData = $where;
         $id = $postData['id'] ?? '';
@@ -71,29 +59,45 @@ class MachineServiceLogClient extends ManagementClient
      */
     public function getMachineServiceLogByDate($postData)
     {
-        $machine = $this->resolveMachine($postData);
-        if (!$machine) {
+        $mId = $postData['m_id'] ?? 0;
+        $time = $postData['date'] ? strtotime($postData['date']) : time();
+        $date = date('Y-m-d', $time);
+        if ($mId <= 0) {
+            return $this->rFail('设备不存在');
+        }
+        $machineId = $this->getMachineValue(['m_id' => $mId], 'machine_id');
+        if (!$machineId) {
             return $this->rFail('设备不存在');
         }
 
+        $machine = [
+            'm_id' => $mId,
+            'machine_id' => $machineId,
+        ];
+
         $where = [
             'm_id' => $machine['m_id'],
-            'date' => $postData['date'],
+            'date' => $date,
         ];
-        $existList = $this->getMachineServiceLogList($where, 0, 'id,m_id,machine_id,name,path,date,remark,create_time', 'id desc');
-        if ($existList && count($existList) > 0) {
-            return returnState(200, '查询成功', obj2arr($existList));
-        }
-
-        $result = $this->sendToMachine($machine, 'machineServiceLog', [
-            'date' => $postData['date'],
-        ]);
-
-        if (is_array($result) && intval($result['state'] ?? 0) == 200) {
+        $existList = $this->getMachineServiceLogFind($where, '*', 'id desc');
+        //半个小时只能下发一次，避免重复下发
+        if (!empty($existList['create_time']) && $existList['create_time'] > (time() - 1800)) {
             return returnState(200, '正在从设备获取运行日志，请稍后刷新列表', [
                 'machine_id' => $machine['machine_id'],
                 'm_id' => $machine['m_id'],
-                'date' => $postData['date'],
+                'date' => $date,
+            ]);
+        }
+
+        $result = $this->sendToMachine($machine, 'machineServiceLog', [
+            'date' => $date,
+        ]);
+
+        if (is_object($result)) {
+            return returnState(200, '正在从设备获取运行日志，请稍后刷新列表', [
+                'machine_id' => $machine['machine_id'],
+                'm_id' => $machine['m_id'],
+                'date' => $date,
             ]);
         }
 
@@ -102,26 +106,5 @@ class MachineServiceLogClient extends ManagementClient
         }
 
         return $result ?: $this->rFail('下发失败');
-    }
-
-    protected function resolveMachine($postData)
-    {
-        $mId = isset($postData['m_id']) ? intval($postData['m_id']) : 0;
-        $machineId = trim($postData['machine_id'] ?? '');
-
-        if ($mId <= 0 && $machineId) {
-            $mId = intval($this->getMachineValue(['machine_id' => $machineId], 'm_id'));
-        }
-        if (!$machineId && $mId > 0) {
-            $machineId = (string)$this->getMachineValue(['m_id' => $mId], 'machine_id');
-        }
-        if ($mId <= 0 || !$machineId) {
-            return [];
-        }
-
-        return [
-            'm_id' => $mId,
-            'machine_id' => $machineId,
-        ];
     }
 }

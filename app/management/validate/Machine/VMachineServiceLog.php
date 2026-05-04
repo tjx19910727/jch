@@ -14,8 +14,7 @@ class VMachineServiceLog extends VCommon
 {
     protected $rule = [
         'id' => 'require',
-        'm_id' => 'requireWithout:machine_id',
-        'machine_id' => 'requireWithout:m_id',
+        'm_id' => 'require|gt:0',
         'name' => 'require|max:255',
         'path' => 'require|max:255',
         'date' => 'require|dateFormat:Y-m-d',
@@ -24,8 +23,8 @@ class VMachineServiceLog extends VCommon
 
     protected $message = [
         'id.require' => 'id不能为空',
-        'm_id.requireWithout' => 'm_id和machine_id不能同时为空',
-        'machine_id.requireWithout' => 'machine_id和m_id不能同时为空',
+        'm_id.require' => 'm_id不能为空',
+        'm_id.gt' => 'm_id必须大于0',
         'name.require' => '文件名称不能为空',
         'name.max' => '文件名称长度不能超过255',
         'path.require' => '文件路径不能为空',
@@ -36,9 +35,9 @@ class VMachineServiceLog extends VCommon
     ];
 
     protected $scene = [
-        'add' => ['m_id', 'machine_id', 'name', 'path', 'date', 'remark'],
-        'update' => ['id', 'm_id', 'machine_id', 'name', 'path', 'date', 'remark'],
+        'add' => ['m_id', 'name', 'path', 'date', 'remark'],
+        'update' => ['id', 'm_id', 'name', 'path', 'date', 'remark'],
         'del' => ['id'],
-        'getMachineServiceLog' => ['m_id', 'machine_id', 'date'],
+        'getMachineServiceLog' => ['m_id', 'date'],
     ];
 }
