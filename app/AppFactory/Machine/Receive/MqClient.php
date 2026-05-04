@@ -47,7 +47,7 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 class MqClient extends ReceiveBaseClient
 {
     use SaleOrdersTrait,OutGoodsTrait;
-    use MachineInfoTrait,MachineGoodsTrait,MachineVersionPlanTrait,MachineConfigTrait;
+    use MachineInfoTrait,MachineGoodsTrait,MachineChannelTrait,MachineVersionPlanTrait,MachineConfigTrait;
     use MachineErrorCodeTrait;
     use GoodsTrait,GoodsHitTrait,GoodsChangeTrait;
     use StrategyPayeeTrait,StrategyMachineTrait;
