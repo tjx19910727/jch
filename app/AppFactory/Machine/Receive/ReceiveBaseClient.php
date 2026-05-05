@@ -127,7 +127,7 @@ class ReceiveBaseClient extends MachineBaseClient
                 [
                     'file' => [
 //                        "fileSize" => 2 * 1024 * 1024,
-                        "fileExt" => "jpg,jpeg,gif,png,mp4,flv,wav,aiff,aac,flac,ogg,m4a,amr,wma,pcm",
+                        "fileExt" => "jpg,jpeg,gif,png,mp4,flv,wav,aiff,aac,flac,ogg,m4a,amr,wma,pcm,log",
                     ],
                 ],
                 [
