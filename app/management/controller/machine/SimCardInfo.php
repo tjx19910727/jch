@@ -27,8 +27,9 @@ class SimCardInfo extends Common
             'carrier' => 'like',
             'imei' => 'like',
             'device_card_status' => 'like',
-        ]);
-        return  $this->app->simCardInfo->getListData($where, $pageNum, $this->field, 'id desc');
+        ],'a.');
+        $where = $this->formatAoIdWhereWithPrefix($where,'m.');
+        return  $this->app->simCardInfo->getListData($where, $pageNum, $this->field, 'a.id desc');
     }
 
     public function getFind()
@@ -50,8 +51,9 @@ class SimCardInfo extends Common
             'machine_id' => 'like',
             'iccid' => 'like',
             'remark' => 'like',
-        ]);
-        return $this->app->simCardInfo->getMachineListData($where, $pageNum, $this->field, 'id desc');
+        ],'a.');
+        $where = $this->formatAoIdWhereWithPrefix($where,'m.');
+        return $this->app->simCardInfo->getMachineListData($where, $pageNum, $this->field, 'a.id desc');
     }
 
     /**
@@ -63,6 +65,33 @@ class SimCardInfo extends Common
         $postData = input();
         $where = $this->getWhere($postData, false, []);
         return $this->app->simCardInfo->getMachineFindData($where, $this->field);
+    }
+
+    /**
+     * 获取 sim_signal_log 列表（分页）
+     * @return array|\think\response\Json
+     */
+    public function getSignalList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, [
+            'machine_id' => 'like',
+            'iccid' => 'like',
+        ],'a.');
+        $where = $this->formatAoIdWhereWithPrefix($where,'m.');
+        return $this->app->simCardInfo->getSignalListData($where, $pageNum, $this->field, 'a.id desc');
+    }
+
+    /**
+     * 获取 sim_signal_log 单条数据
+     * @return array|\think\response\Json
+     */
+    public function getSignalFind()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData, false, []);
+        return $this->app->simCardInfo->getSignalFindData($where, $this->field);
     }
 
     /**

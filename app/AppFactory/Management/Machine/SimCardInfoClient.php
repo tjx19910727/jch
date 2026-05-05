@@ -10,15 +10,17 @@ namespace app\AppFactory\Management\Machine;
 
 
 use app\AppFactory\Kernel\Traits\Machine\SimCardInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\SimSignalLogTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class SimCardInfoClient extends ManagementClient
 {
     use SimCardInfoTrait;
+    use SimSignalLogTrait;
 
-    public function getListData($where, $pageNum = 0, $field = "*", $order = "id desc")
+    public function getListData($where, $pageNum = 0, $field = "a.*", $order = "a.id desc")
     {
-        $list = $this->getSimCardInfoList($where, $pageNum, $field, $order);
+        $list = $this->getSimCardInfoListJoinMachine($where, $pageNum, $field, $order);
         return $this->rQ($list);
     }
 
@@ -28,15 +30,27 @@ class SimCardInfoClient extends ManagementClient
         return $this->rQ($data);
     }
 
-    public function getMachineListData($where, $pageNum = 0, $field = "*", $order = "id desc")
+    public function getMachineListData($where, $pageNum = 0, $field = "a.*", $order = "a.id desc")
     {
-        $list = $this->getSimCardMachineList($where, $pageNum, $field, $order);
+        $list = $this->getSimCardMachineListJoinMachine($where, $pageNum, $field, $order);
         return $this->rQ($list);
     }
 
     public function getMachineFindData($where, $field = "*")
     {
         $data = $this->getSimCardMachineFind($where, $field);
+        return $this->rQ($data);
+    }
+
+    public function getSignalListData($where, $pageNum = 0, $field = "a.*", $order = "a.id desc")
+    {
+        $list = $this->getSimSignalLogListJoinMachine($where, $pageNum, $field, $order);
+        return $this->rQ($list);
+    }
+
+    public function getSignalFindData($where, $field = "*")
+    {
+        $data = $this->getSimSignalLogFind($where, $field);
         return $this->rQ($data);
     }
 }

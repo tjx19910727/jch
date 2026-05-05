@@ -14,6 +14,27 @@ use app\AppFactory\Kernel\Model\Machine\SimCardMachineModel;
 
 trait SimCardInfoTrait
 {
+    public function getSimCardInfoListJoinMachine($where, $pageNum = null, $field = "a.*", $order = "a.id desc", $eachFun = "", $group = '', $limit = '')
+    {
+        $join = [[
+            'join' => 'machine m',
+            'on' => 'm.machine_id = a.machine_id',
+            'type' => 'inner',
+        ]];
+        return SimCardInfoModel::getListAndWith($where, $pageNum, $field, $order, $eachFun, $group, $limit, [], $join);
+    }
+
+    public function getSimCardMachineListJoinMachine($where, $pageNum = null, $field = "a.*", $order = "a.id desc", $eachFun = "", $group = '', $limit = '')
+    {
+        $join = [[
+            'join' => 'machine m',
+            'on' => 'm.machine_id = a.machine_id',
+            'type' => 'inner',
+        ]];
+        return SimCardMachineModel::getListAndWith($where, $pageNum, $field, $order, $eachFun, $group, $limit, [], $join);
+    }
+
+
     public function getSimCardInfoColumn($where, $column, $key = "")
     {
         return SimCardInfoModel::getColumn($where, $column, $key);
