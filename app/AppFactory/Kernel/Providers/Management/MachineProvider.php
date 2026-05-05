@@ -38,6 +38,7 @@ use app\AppFactory\Management\Machine\MachineVersionClient;
 use app\AppFactory\Management\Machine\MachineVersionPlanClient;
 use app\AppFactory\Management\Machine\MachineViewClient;
 use app\AppFactory\Management\Machine\SimCardInfoClient;
+use app\AppFactory\Management\Machine\MachineServiceLogClient;
 
 class MachineProvider implements ServiceProviderInterface
 {
@@ -118,6 +119,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineVersionPlan'] = function ($app) {
             return new MachineVersionPlanClient($app);
+        };
+        $app['machineServiceLog'] = function ($app) {
+            return new MachineServiceLogClient($app);
         };
         $app['machineSale'] = function ($app) {
             return new MachineSaleClient($app);

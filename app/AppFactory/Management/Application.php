@@ -121,6 +121,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineVersionClient           $machineVersion         设备软件版本
  * @property Machine\MachineVersionPlanClient       $machineVersionPlan     设备软件发布计划
  * @property Machine\SimCardInfoClient              $simCardInfo            物联卡基础信息
+ * @property Machine\MachineServiceLogClient        $machineServiceLog      设备运行日志
  * @property Mall\MallClient                        $mall                   商场管理
  * @property RemoteActionLog\RemoteActionLogClient  $remoteActionLog        远程操作日志管理
  *

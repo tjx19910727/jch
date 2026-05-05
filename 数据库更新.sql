@@ -1632,3 +1632,17 @@ CREATE TABLE `sim_signal_log` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物联卡实时信号表';
 
 ALTER TABLE kiosk.machine_config ADD `automatic_goods_sorting` tinyint(1) DEFAULT '2' COMMENT '是否开启自动理货1开启2关闭' after `gate_detection`;
+#20260430
+CREATE TABLE `machine_service_log` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '操作视频ID',
+  `m_id` int DEFAULT 0 COMMENT '设备ID',
+  `machine_id` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '设备编码',
+  `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '文件名称',
+  `path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '文件路径',
+  `date` date DEFAULT NULL COMMENT '日志日期',
+  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '文件备注',
+  `create_time` bigint DEFAULT 0 COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `machine_id` (`machine_id`) USING BTREE,
+  KEY `m_id` (`m_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备运行日志表';
