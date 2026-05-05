@@ -1566,7 +1566,7 @@ CREATE TABLE `sim_card_info` (
   `created_at` datetime NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_iccid` (`iccid`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物联卡信息表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物联卡信息表';
 
 CREATE TABLE `sim_card_machine` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -1583,7 +1583,7 @@ CREATE TABLE `sim_card_machine` (
   PRIMARY KEY (`id`),
   KEY `idx_iccid` (`iccid`) USING BTREE,
   KEY `idx_m_id` (`m_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物联卡每日使用流量表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物联卡每日使用流量表';
 #20260422--是否开启远程校准功能
 ALTER TABLE kiosk.machine_config ADD  `remote_calibration` tinyint(1) DEFAULT '2' COMMENT '是否开启远程校准功能，1-开启，2-关闭';
 ALTER TABLE kiosk.machine_config ADD  `head_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过头部摄像头，1-跳过，2-不跳过';
@@ -1629,7 +1629,7 @@ CREATE TABLE `sim_signal_log` (
   PRIMARY KEY (`id`),
   KEY `idx_iccid` (`iccid`) USING BTREE,
   KEY `idx_m_id` (`m_id`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='物联卡实时信号表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物联卡实时信号表';
 
 ALTER TABLE kiosk.machine_config ADD `automatic_goods_sorting` tinyint(1) DEFAULT '2' COMMENT '是否开启自动理货1开启2关闭' after `gate_detection`;
 #20260430
