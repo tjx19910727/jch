@@ -20,56 +20,59 @@ trait OutGoodsTrait
      */
     public function outGoods()
     {
-        $tradeNo = (string)($this->message['trade_no'] ?? '');
-        $lockName = $tradeNo ? ('out_goods_' . md5($tradeNo)) : '';
-        $lockAcquired = false;
-
-        if ($lockName) {
-            try {
-                $lockRs = Db::query("SELECT GET_LOCK('{$lockName}', 3) AS lock_flag");
-                $lockAcquired = ((int)($lockRs[0]['lock_flag'] ?? 0) === 1);
-            } catch (\Exception $e) {
-                actionException($e, 1, 'OutGoods lock');
-                return $this->rFail("系统繁忙，请稍后重试");
-            }
-            if (!$lockAcquired) {
-                actionLog($this->message, '同一trade_no并发处理，已拦截', 'OutGoods');
-                return $this->rFail("订单正在处理中");
-            }
+        $tradeNo = trim((string)($this->message['trade_no'] ?? ''));
+        if ($tradeNo === '') {
+            actionLog($this->message, 'trade_no为空，拒绝处理', 'OutGoods');
+            return $this->rFail("trade_no不能为空");
         }
 
+        Db::startTrans();
         try {
-        actionLog($this->message,'出货完成','OutGoods');
-        $this->order = $this->getSaleOrdersFind(['trade_no' => $this->message['trade_no']]);
-        if (!$this->order) {
-            actionLog($this->getLS(),'查无订单数据','OutGoods');
-            return $this->rFail("查无订单数据");
-        }
-        $this->order = $this->order->toArray();
-        // 设备状态上报映射：
-        // status=1->out_status=2
-        // status=2/20/21->out_status=3
-        // status=3->out_status=4
-        // status=4->out_status=5
-        $status = isset($this->message['status']) ? (int)$this->message['status'] : 0;
-        $statusMap = [
-            1 => 2,
-            2 => 3,
-            20 => 3,
-            21 => 3,
-            3 => 4,
-            4 => 5,
-        ];
-        if ($status && isset($statusMap[$status]) && $this->order['out_status'] != 6) {
-            // 防止状态回退
-            if ($statusMap[$status] >= (int)$this->order['out_status']) {
-                $this->order['out_status'] = $statusMap[$status];
+            actionLog($this->message,'出货完成','OutGoods');
+            // 使用行锁保证同一trade_no并发时串行处理
+            $this->order = Db::name('sale_orders')->where(['trade_no' => $tradeNo])->lock(true)->find();
+            if (!$this->order) {
+                actionLog($this->getLS(),'查无订单数据','OutGoods');
+                Db::rollback();
+                return $this->rFail("查无订单数据");
             }
-            if (in_array($status, [3, 4])) {
-                $this->order['out_time'] = time();
+
+            $status = isset($this->message['status']) ? (int)$this->message['status'] : 0;
+            $statusMap = [
+                1 => 2,
+                2 => 3,
+                20 => 3,
+                21 => 3,
+                3 => 4,
+                4 => 5,
+            ];
+            if ($status && isset($statusMap[$status]) && $this->order['out_status'] != 6) {
+                // 防止状态回退
+                if ($statusMap[$status] >= (int)$this->order['out_status']) {
+                    $this->order['out_status'] = $statusMap[$status];
+                }
+                if (in_array($status, [3, 4], true)) {
+                    $this->order['out_time'] = time();
+                }
+                $this->order['remark'] = "接收到出货状态上报,status=" . $status;
             }
-            $this->order['remark'] = "接收到出货状态上报,status=" . $status;
-        }
+
+            // 幂等短路：已处理过的结果回调直接成功返回，避免重复扣减/回调
+            if (!empty($this->message['main']) && in_array($status, [21, 3, 4], true)
+                && (int)$this->order['out_status'] >= 4 && (int)$this->order['out_status'] != 6) {
+                actionLog($this->order, '订单已处理过，本次按幂等成功返回', 'OutGoods');
+                Db::commit();
+                return $this->rAction(true);
+            }
+
+            // status=1/2/20 仅更新订单状态，不触发出货结果处理
+            if (in_array($status, [1, 2, 20], true)) {
+                $result = $this->updateSaleOrders($this->order);
+                actionLog($this->order, '收到状态回执，更新订单出货状态', 'OutGoods');
+                actionLog($this->getLS(), '【SQL】修改订单(状态回执)', 'OutGoods');
+                Db::commit();
+                return $this->rAction($result);
+            }
 
         try {
             // 设备状态上报映射：
@@ -145,19 +148,11 @@ trait OutGoodsTrait
 //                $this->rollbackTrans();
                 return $this->rAction($result);
         } catch (\Exception $e) {
-//            $this->rollbackTrans();
+            Db::rollback();
             actionException($e,1,'OutGoods');
             return $this->rTryCatch($e->getMessage());
         }
-        } finally {
-            if ($lockAcquired && $lockName) {
-                try {
-                    Db::query("SELECT RELEASE_LOCK('{$lockName}')");
-                } catch (\Exception $e) {
-                    actionException($e, 1, 'OutGoods unlock');
-                }
-            }
-        }
+
     }
 
     /**
@@ -187,6 +182,7 @@ trait OutGoodsTrait
             "machine_name" => $this->machine['machine_name'],
             "ao_id" => $this->machine['ao_id'],
         ];
+
         foreach ($this->message['main'] as $key => $value) {
             $position = $key;
             foreach ($value as $vv) {
