@@ -49,7 +49,8 @@ return [
         "goods_list" => "商品列表",
 
         "goodsRankingFileName" => "首页-人气商品排行榜（最近7天）",
-
+        "goodsTopList" => "人气商品排行榜-",
+        "goodsTopRankFileName" => "首页-人气商品排行榜",
     ],
 
     "getSelfRoleNode" => [
