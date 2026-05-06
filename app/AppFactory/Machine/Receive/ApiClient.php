@@ -41,6 +41,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineCalibrationConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
@@ -48,6 +49,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineHelpTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
+use app\AppFactory\Kernel\Traits\Machine\SimCardInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
@@ -61,6 +63,7 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
+use app\AppFactory\Kernel\Traits\Template\TopicPageTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
@@ -103,6 +106,7 @@ class ApiClient extends ReceiveBaseClient
         GoodsMultipleGoodsTrait,
         GoodsMultipleMachineTrait,
         MachineViewTrait,
+        MachineCalibrationConfigTrait,
         MachineConfigTrait,
         MachineConfigLangTrait,
         MachineInfoTrait,
@@ -113,7 +117,9 @@ class ApiClient extends ReceiveBaseClient
         MachineGoodsTrait,
         MachineHelpTrait,
         MachineOnOffTrait,
+        SimCardInfoTrait,
         MachineTrait,
+        TopicPageTrait,
         TemplateViewTrait,
 
         EarthCountriesTrait,
@@ -289,8 +295,13 @@ class ApiClient extends ReceiveBaseClient
         $mId = $this->machine['m_id'];
         //获取machine信息
         $machineData = $this->getMachineFind(['m_id' => $mId], "machine_id");
+        $machineConfig = $this->getMachineConfigFind(['m_id' => $mId], 'remote_calibration');
+        $remoteCalibration = $machineConfig['remote_calibration'] ?? 0;
+        if ($remoteCalibration != 1) {
+            return $this->r(300, '先开启设备远程校准');
+        }
         $incomingList = $this->getIncomingCalibrationList();
-        $incomingVersion = isset($this->data['version']) && $this->data['version'] !== '' ? intval($this->data['version']) : 0;
+        $incomingVersion = $this->getIncomingCalibrationVersion($incomingList);
 
         $latestRow = $this->getMachineCalibrationConfigFind(['m_id' => $mId], 'version,id', 'id desc');
         $latestVersion = $latestRow ? intval($latestRow['version']) : 0;
@@ -342,6 +353,30 @@ class ApiClient extends ReceiveBaseClient
             }
         } 
         return $list;
+    }
+
+    /**
+     * 获取设备上传的版本号，优先读取 data 内 key=version 的值
+     * @param array $list
+     * @return int
+     */
+    protected function getIncomingCalibrationVersion($list = [])
+    {
+        if (!empty($list) && is_array($list)) {
+            foreach ($list as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                if (isset($row['key']) && strtolower((string)$row['key']) === 'version') {
+                    if (isset($row['value']) && $row['value'] !== '') {
+                        return intval($row['value']);
+                    }
+                    return 0;
+                }
+            }
+        }
+
+        return isset($this->data['version']) && $this->data['version'] !== '' ? intval($this->data['version']) : 0;
     }
 
     /**
@@ -818,6 +853,59 @@ class ApiClient extends ReceiveBaseClient
                 }
             }
         }
+        if(!isset($data['is_operating'])){
+            $data['is_operating'] = $this->getMachineValue(['m_id' => $this->machine['m_id']], 'is_operating');
+        }
+        return $this->rQ($data);
+    }
+
+    /**
+     * 获取设备当前主题配置
+     * @return array|\think\response\Json
+     */
+    public function topicPage()
+    {
+        $data = [
+            'top_logo' => '',
+            'bg_url' => '',
+            'maintenance_bg' => '',
+            'error_url' => '',
+            'closed_url' => '',
+            'verification_url' => '',
+            'pickup_url' => '',
+            'shipping_url' => '',
+            'pickup_qrcode_1' => '',
+            'pickup_qrcode_2' => '',
+            'qr_code_url' => '',
+            'scan_url' => '',
+            'balance_url' => '',
+            'card_url' => '',
+        ];
+        
+        $topicIds = $this->getTopicPageMachineColumn(['machine_id' => $this->machine['machine_id']], 'topic_id');
+        if (!$topicIds) {
+            return $this->rQ($data);
+        }
+
+        $topicIds = array_values(array_unique(array_filter($topicIds)));
+        if (!$topicIds) {
+            return $this->rQ($data);
+        }
+        $field = implode(',', array_keys($data));
+        $topic = $this->getTopicPageFind([
+            ['id', 'in', $topicIds],
+            ['status', '=', 1],
+        ], $field, 'id desc');
+
+        if ($topic) {
+            $topic = $topic->toArray();
+            foreach ($data as $key => $value) {
+                if (isset($topic[$key]) && $topic[$key] !== '' && $topic[$key] !== null) {
+                    $data[$key] = $topic[$key];
+                }
+            }
+        }
+
         return $this->rQ($data);
     }
 
@@ -1701,8 +1789,6 @@ class ApiClient extends ReceiveBaseClient
         $ac_name = [];
         if ($order['fd_id'] > 0) $ac_name[] = "满减";
         if ($order['coupon_id'] > 0) $ac_name[] = "优惠券";
-        $pay_type_list = [0 => "免支付", 1 => "微信", 2 => "支付宝", 3 => "未定义", 4 => "京东收银", 5 => "会员", 6 => "丽呈线上", 7 => "机器人线上", 8 => "COGOLINK", 9 => "商场积分支付"];
-        $pay_method_list = [0 => "免支付", 1 => "扫码支付", 2 => "付款码支付", 3 => "POS机支付", 4 => "商场积分支付"];
         $mch_no = "";
         if (isset($order['mch_no']) && $order['mch_no']) {
             $mch_no = substr($order['mch_no'], 0, 10) . "****" . substr($order['mch_no'], -4);
@@ -1740,7 +1826,7 @@ class ApiClient extends ReceiveBaseClient
             'total_price'    => number_format($order['total_price'], 2),
             'total_points' => $order['total_points'],
             'ac_name' => implode("/", $ac_name),
-            'pay_type' => $pay_type_list[$order['pay_type']] . ($order['pay_method'] > 0 ? "-" . $pay_method_list[$order['pay_method']] : ""),
+            'pay_type' => $this->formatPayType($order['pay_type'] ?? 0) . (($order['pay_method'] ?? 0) > 0 ? "-" . $this->formatPayMethod($order['pay_method']) : ""),
             'service_tel'    => $mConfig['deal_service_phone'],
             'receipt_code1'  => $mConfig['receipt_code1'],
             'receipt_code2'  => $mConfig['receipt_code2'],
@@ -1773,6 +1859,85 @@ class ApiClient extends ReceiveBaseClient
             'machine_id' => $this->machine['machine_id'] ?? 0
         ]);
         return $this->r(200, 'success');
+    }
+
+    /**
+     * HTTP 心跳上报
+     * 与 MQ 心跳保持一致：写设备在线状态，同时记录 http_status。
+     * 若 5 分钟内存在重启指令，则直接回传重启命令给设备。
+     *
+     * @return array|string
+     */
+    public function httpHeartbeat()
+    {
+       
+        $update = [
+            'm_id' => $this->machine['m_id'],
+            'online' => 1,
+            'last_online_time' => time(),
+        ];
+        if (isset($this->data['version']) && $this->data['version']) {
+            $update['version'] = $this->data['version'];
+        }
+        $this->updateMachine($update);
+
+        $restartCommand = $this->getRecentRestartCommand(300);
+        if ($restartCommand) {
+            return $this->r(200, 'success', [
+                'has_restart_command' => 1,
+                'restart' => [
+                    'msgType' => $restartCommand['msgType'],
+                    'msg_id' => $restartCommand['msg_id'] ?? '',
+                    'timestamp' => intval($restartCommand['timestamp'] ?? 0),
+                ],
+            ]);
+        }
+
+        return $this->r(200, 'success', [
+            'has_restart_command' => 0,
+        ]);
+    }
+
+    /**
+     * 获取最近指定时间内的重启指令
+     * @param int $seconds
+     * @return array|null
+     */
+    protected function getRecentRestartCommand($seconds = 300)
+    {
+        $rows = Db::name('machine_mq_record')
+            ->where('machine_id', $this->machine['machine_id'])
+            ->where('type', 2)
+            ->where('create_time', '>=', time() - intval($seconds))
+            ->order('mr_id', 'desc')
+            ->limit(20)
+            ->select()
+            ->toArray();
+
+        if (!$rows) {
+            return null;
+        }
+
+        $restartTypes = ['http_reboot'];
+        foreach ($rows as $row) {
+            $record = json2arr($row['content'] ?? '');
+            if (!$record) {
+                continue;
+            }
+            $payload = json2arr($record['data'] ?? '');
+            if (!$payload || !isset($payload['msgType'])) {
+                continue;
+            }
+            if (in_array($payload['msgType'], $restartTypes, true)) {
+                return [
+                    'msgType' => $payload['msgType'],
+                    'msg_id' => $record['msg_id'] ?? ($row['msg_id'] ?? ''),
+                    'timestamp' => $record['timestamp'] ?? ($row['create_time'] ?? 0),
+                ];
+            }
+        }
+
+        return null;
     }
 
     public function requireOutGoods()
@@ -1956,12 +2121,18 @@ class ApiClient extends ReceiveBaseClient
         $tradeNo = $this->data['trade_no'] ?? '';
         $status = isset($this->data['http_out_status']) ? intval($this->data['http_out_status']) : 0;
         $machine_id = $this->data['machine_id'] ??  '';
+        if (!in_array($status, [1, 2, 20, 21, 3, 4], true)) {
+            return $this->r(300, 'http_out_status参数无效');
+        }
 
         $order = $this->getSaleOrdersFind(['trade_no' => $tradeNo], 'order_id,trade_no,machine_id,out_status');
         if (!$order) {
             return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         }
         $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+        if (!$machine_id) {
+            $machine_id = $order['machine_id'] ?? '';
+        }
 
         // 已完成出货，避免重复闭环
         if ((int)($order['out_status'] ?? 0) === 4) {
@@ -2004,6 +2175,11 @@ class ApiClient extends ReceiveBaseClient
             }
         }
 
+        // 与 OutGoodsTrait 规则对齐：status=3/4 时必须有 main 主体数据
+        if (empty($main) && in_array($status, [3, 4], true)) {
+            return $this->r(300, '主体数据不能为空');
+        }
+
         $payload = [
             'msgType' => 'outGoods',
             'trade_no' => $tradeNo,
@@ -2011,6 +2187,9 @@ class ApiClient extends ReceiveBaseClient
             'main' => $main,
         ];
         $machine = $this->getMachineFind(['machine_id' => $machine_id], 'machine_id,mac_address');
+        if (!$machine) {
+            return $this->r(300, $this->lang("query_machine_no_data"));
+        }
         $mqData = [
             'msg_id' => $this->data['msg_id'] ?? uniqid('http_out_', true),
             'timestamp' => time(),
@@ -2072,7 +2251,12 @@ class ApiClient extends ReceiveBaseClient
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         $this->updateSaleOrders(['http_out_status' => intval($this->data['http_out_status'])],['trade_no' => $this->data['trade_no']]);
         if($this->data['http_out_status'] == 3){
-            $this->triggerOutGoodsByHttp();
+            $triggerResult = $this->triggerOutGoodsByHttp();
+            $triggerData = obj2arr($triggerResult);
+            if (is_array($triggerData) && isset($triggerData['state']) && intval($triggerData['state']) !== 200) {
+                actionLog($triggerData, 'setHttpOutStatus触发闭环失败');
+                return $triggerResult;
+            }
         }
         return $this->r(200, 'success');
     }
@@ -2103,6 +2287,27 @@ class ApiClient extends ReceiveBaseClient
         $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
         $order['now_time'] = time();
         return $this->r(200, 'success', $order);
+    }
+
+    /**
+     * 获取设备侧销售订单筛选项
+     * @return array
+     */
+    public function getSaleOrderQueryConditionOptions()
+    {
+        $data = [
+            'pay_type_list' => $this->getPayTypeOptions(),
+            'pay_channel_list' => [],
+        ];
+
+        foreach ($this->getPayChannelNameMap() as $value => $label) {
+            $data['pay_channel_list'][] = [
+                'value' => intval($value),
+                'label' => $label,
+            ];
+        }
+
+        return $this->r(200, 'success', $data);
     }
 
 
@@ -2324,9 +2529,33 @@ class ApiClient extends ReceiveBaseClient
             $res['total_points'] = $res['total_card_points'] + $res['bind_id_points'];
             $currentCardNo = trim((string)($this->data['card_no'] ?? ''));
             if ($currentCardNo !== '') {
-                $summary = $this->getCardBalanceSummary($currentCardNo);
+                // try {
+                //     $summaryMethod = new \ReflectionMethod($this, 'getCardBalanceSummary');
+                //     actionLog([
+                //         'class' => $summaryMethod->getDeclaringClass()->getName(),
+                //         'file' => $summaryMethod->getFileName(),
+                //         'start_line' => $summaryMethod->getStartLine(),
+                //         'end_line' => $summaryMethod->getEndLine(),
+                //     ], '卡余额汇总方法定位');
+
+                //     $bucketMethod = new \ReflectionMethod($this, 'getCardBalanceBucketSummaryRow');
+                //     actionLog([
+                //         'class' => $bucketMethod->getDeclaringClass()->getName(),
+                //         'file' => $bucketMethod->getFileName(),
+                //         'start_line' => $bucketMethod->getStartLine(),
+                //         'end_line' => $bucketMethod->getEndLine(),
+                //     ], '卡余额分笔方法定位');
+                // } catch (\Exception $e) {
+                //     actionLog($e->getMessage(), '卡余额方法定位异常');
+                // }
+
+                // $bucketCount = \app\AppFactory\Kernel\Model\Card\CardBalanceBucketsModel::where('card_no', $currentCardNo)->count();
+                // actionLog($bucketCount, '当前卡分笔记录数量');
+                $summary = $this->getCardBalance($currentCardNo);
+                actionLog($summary, '查询卡余额返回内容');
                 $total_balance = (string)($summary['available_balance'] ?? '0.00');
             }
+            actionLog($currentCardNo, '当前查询的卡号');
             $res['total_balance'] = $total_balance;
             //用户是否需要输入密码
             $res['need_pay_password'] = 1;
@@ -2562,6 +2791,8 @@ class ApiClient extends ReceiveBaseClient
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
         $wcMachineChannelLists = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
         foreach ($wcMachineChannelLists as &$v) {
+            $wc_goods = $this->getWcGoodsFind(['no' => $v['out_no']]);
+            $v['desc'] = $wc_goods['description'] ?? '';
             if ($v['gc_id'] == 11) {
                 $daysInfo = $this->getWcGoodsColumn(['no' => $v['out_no']], 'daysInfo');
                 if ($daysInfo) $v['daysInfo'] = $daysInfo[0] ?? [];
@@ -2672,4 +2903,87 @@ class ApiClient extends ReceiveBaseClient
         return $this->orderRefundSync2Wc($this->order, $detail);
     }
 
+    public function getCardBalance($card_no)
+    {
+        return $this->getCardBalanceSummary($card_no);
+    }
+
+    /**
+     * 设备上报每日流量使用情况
+     * 约定：camera_usage = usage - machine_usage
+     * @return array|\think\response\Json
+     */
+    public function reportSimCardMachineUsage()
+    {
+        try {
+            $date = date('Y-m-d', $this->data['date']);
+            $ydate = date('Y-m-d', strtotime('-1 day', $this->data['date'] ?? 0));
+            $machineUsage = $this->data['machine_usage'] ?? 0;
+            $iccid = trim($this->data['iccid'] ?? '');
+            if (!$iccid) {
+                $iccid = $this->getSimCardInfoValue(['m_id' => $this->machine['m_id']], 'iccid', 'id desc');
+            }
+            if (!$iccid) {
+                return $this->rFail('iccid不能为空');
+            }
+
+            $where = [
+                'm_id' => $this->machine['m_id'],
+                'machine_id' => $this->machine['machine_id'],
+                'iccid' => $iccid,
+                'date' => $date,
+            ];
+
+            $row = $this->getSimCardMachineFind($where);
+            $usage = 0;
+            $totalUsage = $row['total_usage'] ?? 0;
+            $machine_usage = $this->data['machine_usage'] ?? 0;
+            if ($row) {
+                $usage = $row['usage'] ?? 0;
+                
+            } else {
+                if ($totalUsage > 0) {
+                    $prev = $this->getSimCardMachineFind([
+                        'iccid' => $iccid,
+                        'date' => $ydate
+                    ], 'total_usage', 'date desc,id desc');
+                    $prevTotal = $prev['total_usage'] ?? 0;
+                    $usage = bcsub($totalUsage, $prevTotal, 2);
+                    if ($usage < 0) {
+                        $usage = 0;
+                    }
+                }
+            }
+            $cameraUsage = bcsub($usage, $machineUsage, 2);
+            if ($cameraUsage < 0) {
+                $cameraUsage = 0;
+            }
+            $resData = [
+                'm_id' => $this->machine['m_id'],
+                'machine_id' => $this->machine['machine_id'],
+                'iccid' => $iccid,
+                'date' => $date,
+                'total_usage' => $totalUsage,
+                'usage' => $usage,
+                'machine_usage' => $machine_usage,
+                'camera_usage' => $cameraUsage,
+                'remark' => $this->data['remark'] ?? '',
+            ];
+            if(!$row) {
+                $this->addSimCardMachine($resData);
+            } else {
+                $this->updateSimCardMachine($resData, ['id' => $row['id']]);
+            }    
+            return $this->r(200, 'SUCCESS', [
+                'date' => $date,
+                'iccid' => $iccid,
+                'usage' => $usage,
+                'machine_usage' => $machineUsage,
+                'camera_usage' => $cameraUsage,
+            ]);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
 }
