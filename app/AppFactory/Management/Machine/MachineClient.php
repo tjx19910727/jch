@@ -1349,4 +1349,108 @@ class MachineClient extends ManagementClient
             return $this->rTryCatch($e->getMessage());
         }
     }
+    
+    /**
+     * 概览——设备排行榜（分页）
+     * @param array $where
+     * @param int $pageNum
+     * @return array|string
+     */
+    public function getRankingList($where = [], $pageNum = 0, $topType = 1)
+    {
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            }
+        }
+
+        $order = 'totalPrice desc,totalQuantity desc, m_id desc';
+        if (intval($topType) === 2) {
+            $order = 'totalQuantity desc,totalPrice desc, m_id desc';
+        }
+
+        $list = $this->getSaleOrdersMachineCountList(
+            $where,
+            $pageNum,
+            'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
+            $order,
+            '',
+            'm_id'
+        );
+
+        if ($list) {
+            if ($pageNum) {
+                $list = $list->each(function ($item) {
+                    $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                    if ($m) {
+                        if ($m['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $m['country_id']], 'code,name,cname');
+                        if ($m['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $m['state_id']], 'code,name,cname');
+                        if ($m['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $m['city_id']], 'code,name,cname');
+                        if ($m['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $m['regions_id']], 'code,name,cname');
+                    }
+                    return $item;
+                });
+            } else {
+                $list = $list->toArray();
+                foreach ($list as $key => $item) {
+                    $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                    if ($m) {
+                        if ($m['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $m['country_id']], 'code,name,cname');
+                        if ($m['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $m['state_id']], 'code,name,cname');
+                        if ($m['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $m['city_id']], 'code,name,cname');
+                        if ($m['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $m['regions_id']], 'code,name,cname');
+                    }
+                    $list[$key] = $item;
+                }
+            }
+        }
+
+        return $this->rQ($list);
+    }
+    
+    /**
+     * 导出设备排行榜（V2）
+     * @param array $where
+     * @return array|\think\response\Json
+     */
+    public function exportRankingListV2($where = [], $topType = 1)
+    {
+        $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"m_id");
+        if ($mIds) {
+            $where[] = ['m_id', 'in', $mIds];
+        }
+
+        $order = 'totalPrice desc,totalQuantity desc, m_id desc';
+        if (intval($topType) === 2) {
+            $order = 'totalQuantity desc,totalPrice desc, m_id desc';
+        }
+
+        $list = $this->getSaleOrdersMachineCountList($where, 0,
+            'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
+            $order, '', 'm_id');
+        if ($list) {
+            $list = $list->toArray();
+            foreach ($list as $key => $item) {
+                $item['address'] = "";
+                $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                if ($m['country_id']) $item['address'] = $this->getEarthCountriesValue(['id' => $m['country_id']], 'name');
+                if ($m['state_id']) $item['address'] .= "-" . $this->getEarthStatesValue(['id' => $m['state_id']], 'name');
+                if ($m['city_id']) $item['address'] .= "-" . $this->getEarthCitiesValue(['id' => $m['city_id']], 'name');
+                if ($m['regions_id']) $item['address'] .= "-" . $this->getEarthRegionsValue(['id' => $m['regions_id']], 'name');
+                $list[$key] = $item;
+            }
+            $title = [
+                "machine_id" => "机器ID",
+                "machine_name" => "机器名称",
+                "address" => "机器位置",
+                "totalPrice" => "销售额",
+                "coupon_used" => "优惠券",
+            ];
+            $filename = "设备排行榜-" . date("YmdHis");
+            $result = $this->sendToExport("首页-设备排行榜", $filename, $title, $list);
+            return $result;
+        }
+        return $this->r(100,$this->lang("query_fail"));
+    }
 }

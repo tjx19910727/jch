@@ -19,6 +19,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
 use app\management\validate\VGoods;
+use think\facade\Db;
 
 class GoodsClient extends ManagementClient
 {
@@ -271,6 +272,153 @@ class GoodsClient extends ManagementClient
             return $result;
         }
         return $this->r(100, $this->lang("action_fail"));
+    }
+    
+    /**
+     * 概览——商品排行榜（分页）
+     * @param array $where
+     * @param int $pageNum
+     * @return array|string
+     */
+    public function getRankingList($where = [], $pageNum = 0, $topType = 1)
+    {
+        if($this->manager['account']=='meichitu'){
+            $where[] = ['gc_name','like','%美驰图%'];
+        }
+
+        $list = $this->queryGoodsRanking($where, $topType, $pageNum);
+
+        if ($list) {
+            $lang = input("lang");
+            if ($lang) {
+                if ($pageNum) {
+                    $list = $list->each(function ($item) use ($lang) {
+                        $gl = $this->getGoodsLangFind(['lang' => $lang, 'g_id' => $item['g_id']], 0, 'g_name');
+                        if ($gl) {
+                            $item['g_name'] = $gl['g_name'];
+                        }
+                        return $item;
+                    });
+                } else {
+                    $list = $list->toArray();
+                    foreach ($list as $key => $value) {
+                        $gl = $this->getGoodsLangFind(['lang' => $lang, 'g_id' => $value['g_id']], 0, 'g_name');
+                        if ($gl) {
+                            $value['g_name'] = $gl['g_name'];
+                        }
+                        $list[$key] = $value;
+                    }
+                }
+            }
+        }
+
+        return $this->rQ($list);
+    }
+
+    
+    /**
+     * 导出商品排行榜（V2）
+     * @param array $where
+     * @return array|\think\response\Json|string
+     */
+    public function exportRankingListV2($where, $topType = 1)
+    {
+        if($this->manager['account']=='meichitu'){
+            $where[] = ['gc_name','like','%美驰图%'];
+        }
+
+        $list = $this->queryGoodsRanking($where, $topType, 0);
+        if ($list) {
+            $list = $list->toArray();
+            $title = [
+                "g_name" => $this->lang("export.g_name"),
+                "totalQuantity" => $this->lang("export.totalQuantity"),
+                "retail_price" => $this->lang("export.retail_price"),
+            ];
+            $filename = $this->lang("export.goodsTopList") . date("Ymd");
+            $result = $this->sendToExport($this->lang("export.goodsTopRankFileName"), $filename, $title, $list);
+            return $result;
+        }
+        return $this->rQ($list);
+    }
+
+    /**
+     * 商品排行榜聚合查询（基于订单明细，不依赖统计视图）
+     * @param array $where
+     * @param int $topType
+     * @param int $pageNum
+     * @return \think\Collection|\think\Paginator
+     */
+    private function queryGoodsRanking($where, $topType = 1, $pageNum = 0)
+    {
+        $order = 'totalPrice desc,totalQuantity desc,g_id desc';
+        if ($topType == 2) {
+            $order = 'totalQuantity desc,totalPrice desc,g_id desc';
+        }
+
+        $query = Db::name('sale_orders_details')->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id')
+            ->where('so.pay_status', 3)
+            ->field([
+                'sod.g_id' => 'g_id',
+                'MAX(sod.g_name)' => 'g_name',
+                'SUM(sod.total_sod_price)' => 'totalPrice',
+                'SUM(sod.quantity)' => 'totalQuantity',
+                'MAX(sod.retail_price)' => 'retail_price',
+                'MAX(sod.pic)' => 'pic',
+            ])
+            ->group('sod.g_id')
+            ->orderRaw($order);
+
+        $this->applyGoodsRankingWhere($query, $where);
+
+        if ($pageNum) {
+            return $query->paginate($pageNum, false, ["query" => request()->param()]);
+        }
+        return $query->select();
+    }
+
+    /**
+     * 将通用where映射到订单明细排行榜查询
+     * @param $query
+     * @param array $where
+     */
+    private function applyGoodsRankingWhere(&$query, $where)
+    {
+        if (isset($where['ao_id']) && $where['ao_id'] !== '') {
+            $query->where('so.ao_id', '=', $where['ao_id']);
+        }
+
+        foreach ($where as $k => $v) {
+            if (!is_int($k) || !is_array($v) || count($v) < 3) {
+                continue;
+            }
+
+            $field = $v[0];
+            $op = strtolower($v[1]);
+            $value = $v[2];
+
+            if ($field == 'm_id') {
+                $query->where('so.m_id', $op, $value);
+                continue;
+            }
+            if ($field == 'countDate') {
+                $query->where('so.create_date', $op, $value);
+                continue;
+            }
+            if ($field == 'ao_id') {
+                $query->where('so.ao_id', $op, $value);
+                continue;
+            }
+            if ($field == 'gc_name') {
+                $query->where('sod.gc_name', $op, $value);
+                continue;
+            }
+            if ($field == 'g_id') {
+                $query->where('sod.g_id', $op, $value);
+                continue;
+            }
+        }
     }
     
 }
