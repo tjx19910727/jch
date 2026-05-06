@@ -32,7 +32,10 @@ class Country extends Common
         $postData = input();
         $where = $this->getWhere($postData,false,["name" => "like","full_name" => "like","cname" => "like","full_cname" => "like"]);
         $pageNum = $postData['pageNum'] ?? 0;
-        return returnData($this->app->earth->getEarthCountriesList($where,$pageNum,'*'));
+        $field = "*,(case when a.code='CHN' then 0 else 1 end) chn_first";
+        $order = "chn_first asc,a.id asc";
+        $data = $this->app->earth->getEarthCountriesList($where,$pageNum,$field,$order);
+        return returnData($data);
     }
 
     /**
