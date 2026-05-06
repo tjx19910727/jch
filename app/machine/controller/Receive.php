@@ -783,6 +783,21 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+
+    /**
+     * HTTP心跳上报
+     * @return array|string
+     */
+    public function httpHeartbeat()
+    {
+        try {
+            return $this->app->api->httpHeartbeat();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     /**
      * 设备主动获取出货信息
      * @return array|string

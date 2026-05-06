@@ -1861,6 +1861,85 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200, 'success');
     }
 
+    /**
+     * HTTP 心跳上报
+     * 与 MQ 心跳保持一致：写设备在线状态，同时记录 http_status。
+     * 若 5 分钟内存在重启指令，则直接回传重启命令给设备。
+     *
+     * @return array|string
+     */
+    public function httpHeartbeat()
+    {
+       
+        $update = [
+            'm_id' => $this->machine['m_id'],
+            'online' => 1,
+            'last_online_time' => time(),
+        ];
+        if (isset($this->data['version']) && $this->data['version']) {
+            $update['version'] = $this->data['version'];
+        }
+        $this->updateMachine($update);
+
+        $restartCommand = $this->getRecentRestartCommand(300);
+        if ($restartCommand) {
+            return $this->r(200, 'success', [
+                'has_restart_command' => 1,
+                'restart' => [
+                    'msgType' => $restartCommand['msgType'],
+                    'msg_id' => $restartCommand['msg_id'] ?? '',
+                    'timestamp' => intval($restartCommand['timestamp'] ?? 0),
+                ],
+            ]);
+        }
+
+        return $this->r(200, 'success', [
+            'has_restart_command' => 0,
+        ]);
+    }
+
+    /**
+     * 获取最近指定时间内的重启指令
+     * @param int $seconds
+     * @return array|null
+     */
+    protected function getRecentRestartCommand($seconds = 300)
+    {
+        $rows = Db::name('machine_mq_record')
+            ->where('machine_id', $this->machine['machine_id'])
+            ->where('type', 2)
+            ->where('create_time', '>=', time() - intval($seconds))
+            ->order('mr_id', 'desc')
+            ->limit(20)
+            ->select()
+            ->toArray();
+
+        if (!$rows) {
+            return null;
+        }
+
+        $restartTypes = ['reboot', 'powerWakeUp', 'restart', 'resetMachine'];
+        foreach ($rows as $row) {
+            $record = json2arr($row['content'] ?? '');
+            if (!$record) {
+                continue;
+            }
+            $payload = json2arr($record['data'] ?? '');
+            if (!$payload || !isset($payload['msgType'])) {
+                continue;
+            }
+            if (in_array($payload['msgType'], $restartTypes, true)) {
+                return [
+                    'msgType' => $payload['msgType'],
+                    'msg_id' => $record['msg_id'] ?? ($row['msg_id'] ?? ''),
+                    'timestamp' => $record['timestamp'] ?? ($row['create_time'] ?? 0),
+                ];
+            }
+        }
+
+        return null;
+    }
+
     public function requireOutGoods()
     {
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
