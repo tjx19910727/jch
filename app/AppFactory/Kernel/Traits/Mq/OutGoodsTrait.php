@@ -37,6 +37,8 @@ trait OutGoodsTrait
                 return $this->rFail("查无订单数据");
             }
 
+            $originOutStatus = (int)$this->order['out_status'];
+
             $status = isset($this->message['status']) ? (int)$this->message['status'] : 0;
             $statusMap = [
                 1 => 2,
@@ -59,7 +61,7 @@ trait OutGoodsTrait
 
             // 幂等短路：已处理过的结果回调直接成功返回，避免重复扣减/回调
             if (!empty($this->message['main']) && in_array($status, [21, 3, 4], true)
-                && (int)$this->order['out_status'] >= 4 && (int)$this->order['out_status'] != 6) {
+                && $originOutStatus >= 4 && $originOutStatus != 6) {
                 actionLog($this->order, '订单已处理过，本次按幂等成功返回', 'OutGoods');
                 Db::commit();
                 return $this->rAction(true);
@@ -116,7 +118,7 @@ trait OutGoodsTrait
                 return $this->rAction($result);
             }
 
-            if ($this->order['out_status'] >= 4 && $this->order['out_status'] != 6) {
+            if ($originOutStatus >= 4 && $originOutStatus != 6) {
                 actionLog($this->order,'订单已处理过了','OutGoods');
                 return $this->rFail("订单已处理过了");
             }
