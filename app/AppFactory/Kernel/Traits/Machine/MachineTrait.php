@@ -81,8 +81,11 @@ trait MachineTrait
      * @param string $order
      * @return MachineModel|array|mixed|null|\think\Model
      */
-    public function getMachineFind($where,$field = "*",$order = "")
+    public function getMachineFind($where,$field = "*",$order = "",$with = [])
     {
+        if ($with) {
+            return MachineModel::with($with)->where($where)->field($field)->order($order)->find();
+        }
         return MachineModel::getFind($where,$field,$order);
     }
 
@@ -103,7 +106,9 @@ trait MachineTrait
     public function getMachineList($where,$pageNum = null,$field = "*", $order = "",$eachFun = "",$group = '', $limit = '')
     {
         //$result = MachineModel::getList($where,$pageNum,$field,$order,$eachFun,$group,$limit);
-        $result = MachineModel::getListAndWith($where,$pageNum,$field,$order,$eachFun,$group,$limit,['machineLevelData']);
+        $result = MachineModel::getListAndWith($where,$pageNum,$field,$order,$eachFun,$group,$limit,['machineLevelData','simSignalLog' => function ($query) {
+                $query->whereTime('created_at', 'today')->order('id desc');
+            },]);
         if ($result) {
             if ($pageNum) {
                 $result = $result->each(function ($item) {
