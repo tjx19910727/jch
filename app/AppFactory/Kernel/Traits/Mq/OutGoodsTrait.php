@@ -76,79 +76,48 @@ trait OutGoodsTrait
                 return $this->rAction($result);
             }
 
-        try {
-            // 设备状态上报映射：
-            // status=1->out_status=2
-            // status=2/20/21->out_status=3
-            // status=3->out_status=4
-            // status=4->out_status=5
-            $status = isset($this->message['status']) ? (int)$this->message['status'] : 0;
-            $statusMap = [
-                1 => 2,
-                2 => 3,
-                20 => 3,
-                21 => 3,
-                3 => 4,
-                4 => 5,
-            ];
-            if ($status && isset($statusMap[$status]) && $this->order['out_status'] != 6) {
-                // 防止状态回退
-                if ($statusMap[$status] >= (int)$this->order['out_status']) {
-                    $this->order['out_status'] = $statusMap[$status];
-                }
-                if (in_array($status, [3, 4])) {
-                    $this->order['out_time'] = time();
-                }
-                $this->order['remark'] = "接收到出货状态上报,status=" . $status;
-            }
-
-            // status=1/2/20 仅更新订单状态，不触发出货结果处理
-            if (in_array($status, [1, 2, 20], true)) {
-                $result = $this->updateSaleOrders($this->order);
-                actionLog($this->order, '收到状态回执，更新订单出货状态', 'OutGoods');
-                actionLog($this->getLS(), '【SQL】修改订单(状态回执)', 'OutGoods');
-                return $this->rAction($result);
-            }
-
             // 仅状态回执（无main）
             if (empty($this->message['main']) && in_array($status, [21, 3, 4], true)) {
                 $result = $this->updateSaleOrders($this->order);
                 actionLog($this->order, '仅状态回执，更新订单出货状态', 'OutGoods');
                 actionLog($this->getLS(), '【SQL】修改订单(仅状态回执)', 'OutGoods');
+                Db::commit();
                 return $this->rAction($result);
             }
 
             if ($originOutStatus >= 4 && $originOutStatus != 6) {
-                actionLog($this->order,'订单已处理过了','OutGoods');
-                return $this->rFail("订单已处理过了");
+                actionLog($this->order,'订单已处理过了(幂等)','OutGoods');
+                Db::commit();
+                return $this->rAction(true);
             }
             if (empty($this->message['main'])) {
                 actionLog($this->message, '缺少main主体数据', 'OutGoods');
+                Db::rollback();
                 return $this->rFail("主体数据不能为空");
             }
-//        $this->startTrans();
-        try {// 处理修改订单及货道数据
-                $flag = $this->handleData();
-                if ($this->order['coupon_id']) {
-                    $this->handleCoupon();
-                }
-                if ($this->order['apc_id']) {
-                    $this->handlePick();
-                }
-                if ($this->order['lottery_id']) {
-                    $this->handleLottery();
-                }
-                if ($this->order['fd_id']) {
-                    $this->handleFd();
-                }
-                $result = $this->checkFlag($flag);
-                if ($result) {
-//                $this->commitTrans();
-                    $this->handleTripPayCallback();
-                }
-//            else
-//                $this->rollbackTrans();
-                return $this->rAction($result);
+
+            // 处理修改订单及货道数据
+            $flag = $this->handleData();
+            if ($this->order['coupon_id']) {
+                $this->handleCoupon();
+            }
+            if ($this->order['apc_id']) {
+                $this->handlePick();
+            }
+            if ($this->order['lottery_id']) {
+                $this->handleLottery();
+            }
+            if ($this->order['fd_id']) {
+                $this->handleFd();
+            }
+            $result = $this->checkFlag($flag);
+            if ($result) {
+                $this->handleTripPayCallback();
+                Db::commit();
+            } else {
+                Db::rollback();
+            }
+            return $this->rAction($result);
         } catch (\Exception $e) {
             Db::rollback();
             actionException($e,1,'OutGoods');
