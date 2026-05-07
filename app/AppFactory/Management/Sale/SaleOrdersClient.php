@@ -105,6 +105,7 @@ class SaleOrdersClient extends ManagementClient
                 }
             }
             $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, $supplier)->toArray();
+            actionLog($this->getLS(), '【SQL】订单列表','sale_orders');
             return $this->r(200, $this->lang("query_success"), $data);
         } catch (\Exception $e) {
             actionException($e, 1);
@@ -168,7 +169,9 @@ class SaleOrdersClient extends ManagementClient
                 if ($mIds) $where[] = ['m_id', 'in', $mIds];
             }
         }
-        return $this->r(200, 'query_success', $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, $order));
+        $data = $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, $order);
+        actionLog($this->getLS(), '【SQL】商品交易列表','sale_orders_details');
+        return $this->r(200, 'query_success', $data);
 
     }
 
