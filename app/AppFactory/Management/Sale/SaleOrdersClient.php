@@ -520,30 +520,30 @@ class SaleOrdersClient extends ManagementClient
             WHEN 5 THEN '满减满送订单'
             WHEN 6 THEN '叠加营销活动订单'
             ELSE '' END) order_type,
-            (CASE so.pay_type 
-            WHEN 0 THEN '免支付' 
-            WHEN 1 THEN '微信' 
-            WHEN 2 THEN '支付宝'
-            WHEN 4 THEN '京东收银'
-            WHEN 5 THEN '会员支付'
-            WHEN 6 THEN '丽呈线上支付'
-            WHEN 7 THEN '机器人线上支付'
-            WHEN 8 THEN '八达通COGOLINK'
-            ELSE '' END) pay_type,
-            (CASE so.pay_method 
-            WHEN 0 THEN '免支付' 
-            WHEN 1 THEN '扫码支付' 
-            WHEN 41 THEN '扫码支付' 
-            WHEN 2 THEN '被扫支付'
-            ELSE '' END) pay_method,
+            (CASE
+            WHEN so.pay_type = 0 THEN '免支付'
+            WHEN so.pay_type = 1 THEN '微信'
+            WHEN so.pay_type = 2 THEN '支付宝'
+            WHEN so.pay_type = 4 THEN '京东收银'
+            WHEN so.pay_type = 5 THEN '会员支付'
+            WHEN so.pay_type = 6 THEN '丽呈线上支付'
+            WHEN so.pay_type = 7 THEN '机器人线上支付'
+            WHEN so.pay_type = 8 THEN '八达通COGOLINK'
+            ELSE CONCAT('支付类型#', so.pay_type) END) pay_type,
+            (CASE
+            WHEN so.pay_method = 0 THEN '免支付'
+            WHEN so.pay_method = 1 THEN '扫码支付'
+            WHEN so.pay_method = 41 THEN '扫码支付'
+            WHEN so.pay_method = 2 THEN '被扫支付'
+            ELSE CONCAT('支付方式#', so.pay_method) END) pay_method,
             
             (CASE out_status 
                 WHEN 1 THEN 
                     \"正常\"
                 WHEN 2 THEN 
-                    \"已发出货命令\"
+                    \"已发出货指令\"
                 WHEN 3 THEN 
-                    \"等待出货结果\"
+                    \"设备已接收指令\"
                 WHEN 4 THEN 
                    (CASE WHEN so.refund_amount > 0 THEN so.refund_amount ELSE '正常' END)
                 WHEN 5 THEN
@@ -564,7 +564,7 @@ class SaleOrdersClient extends ManagementClient
                 if (isset($where[0][0]) && strpos($where[0][0],"create_time") !== false) $where[0][0] = "sor.update_time";
                 $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
                     "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
-                            (CASE so.out_status WHEN 1 THEN '待取货' WHEN 2 THEN '已发出货命令' WHEN 3 THEN '等待出货结果' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
+                            (CASE so.out_status WHEN 1 THEN '待取货' WHEN 2 THEN '已发出货命令' WHEN 3 THEN '设备已接收指令' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
                         (CASE so.order_type 
                         WHEN 1 THEN '普通订单' 
                         WHEN 2 THEN '优惠券订单'
@@ -573,22 +573,22 @@ class SaleOrdersClient extends ManagementClient
                         WHEN 5 THEN '满减满送订单'
                         WHEN 6 THEN '叠加营销活动订单'
                         ELSE '' END) order_type,
-                        (CASE so.pay_type 
-                        WHEN 0 THEN '免支付' 
-                        WHEN 1 THEN '微信' 
-                        WHEN 2 THEN '支付宝'
-                        WHEN 4 THEN '京东收银'
-                        WHEN 5 THEN '会员支付'
-                        WHEN 6 THEN '丽呈线上支付'
-                        WHEN 7 THEN '机器人线上支付'
-                        WHEN 8 THEN '八达通COGOLINK'
-                        ELSE '' END) pay_type,
-                        (CASE so.pay_method 
-                        WHEN 0 THEN '免支付' 
-                        WHEN 1 THEN '扫码支付' 
-                        WHEN 41 THEN '扫码支付' 
-                        WHEN 2 THEN '被扫支付'
-                        ELSE '' END) pay_method,
+                        (CASE
+                        WHEN so.pay_type = 0 THEN '免支付'
+                        WHEN so.pay_type = 1 THEN '微信'
+                        WHEN so.pay_type = 2 THEN '支付宝'
+                        WHEN so.pay_type = 4 THEN '京东收银'
+                        WHEN so.pay_type = 5 THEN '会员支付'
+                        WHEN so.pay_type = 6 THEN '丽呈线上支付'
+                        WHEN so.pay_type = 7 THEN '机器人线上支付'
+                        WHEN so.pay_type = 8 THEN '八达通COGOLINK'
+                        ELSE CONCAT('支付类型#', so.pay_type) END) pay_type,
+                        (CASE
+                        WHEN so.pay_method = 0 THEN '免支付'
+                        WHEN so.pay_method = 1 THEN '扫码支付'
+                        WHEN so.pay_method = 41 THEN '扫码支付'
+                        WHEN so.pay_method = 2 THEN '被扫支付'
+                        ELSE CONCAT('支付方式#', so.pay_method) END) pay_method,
                         ('已退款') order_status,
                         FROM_UNIXTIME(sor.update_time,'%Y-%m-%d %H:%i:%s') pay_time,
                         FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
