@@ -22,14 +22,12 @@ class WcGoods extends Common
         $cacheKey = 'wc_goods_sync_all_lock';
         if (Cache::get($cacheKey)) return returnState(100, '5分钟内只能请求一次，请稍后重试');
 
-        $goods_no = input('goods_no') ?? '';
-        $type = input('type');
+        $goods_type = input('goods_type') ?? '';
         $res = MqProducer::export([
             'job_type' => 'wc_goods_sync',
             'request_time' => date('Y-m-d H:i:s'),
             'manager_id' => input('manager_id') ?? 0,
-            'goods_no' => $goods_no,
-            'type' => $type,
+            'goods_type' => $goods_type,
         ]);
         if ($res != 'OK') return returnState(100, '同步请求提交失败：' . $res);
         Cache::set($cacheKey, 1, 300);

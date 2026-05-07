@@ -202,11 +202,13 @@ class MqConsumer
 
             if ($jobType == 'wc_goods_sync') {
                 $app = AppFactory::management();
-                $goods_no = $data['goods_no'] ?? '';
-                $type = $data['type'] ?? '';
-
-                $syncRes = $app->weicheng->synchronizeGoods($goods_no, $type);
-                actionLog($syncRes, '微程分类商品同步结果', "export_message_sync");
+                $goods_type = $data['goods_type'] ?? '';
+                if ($goods_type) {
+                    $syncRes = $app->weicheng->synchronizeGoodsTypes($goods_type);
+                } else {
+                    $syncRes = $app->weicheng->synchronizeGoodsTypesAll();
+                }
+                actionLog($syncRes, '微程分类同步结果', "export_message_sync");
 
                 $result = $app->weicheng->synchronizeGoodsAll();
                 actionLog($result, '微程同步处理结果', "export_message_syncAll");
