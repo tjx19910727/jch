@@ -249,12 +249,17 @@ class Index extends Common
         $dateRange = '';
         if (isset($postData['countDate']) && $postData['countDate']) {
             $dateRange = $postData['countDate'];
-        } elseif (isset($postData['date']) && $postData['date']) {
-            $dateRange = $postData['date'];
         }
 
         if ($dateRange) {
-            $this->between('countDate', $dateRange, $where);
+            $parts = explode('~', $dateRange);
+            if (isset($parts[0]) && isset($parts[1])) {
+                $startTime = strtotime(trim($parts[0]));
+                $endTime = strtotime(trim($parts[1]));
+                if ($startTime !== false && $endTime !== false) {
+                    $where[] = ['countDate', 'between', [$startTime, $endTime]];
+                }
+            }
         }
 
         $mIds = $this->resolveRankingMIds($postData);
