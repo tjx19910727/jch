@@ -435,6 +435,11 @@ class MachineClient extends ManagementClient
                 "machine_name" => "机器名称",
                 "address" => "机器位置",
                 "totalPrice" => "销售额",
+                "totalQuantity" => "销量",
+                "totalDiscountPrice" => "优惠金额",
+                "totalRefundAmount" => "退款金额",
+                "totalRefundQuantity" => "退款数量",
+                "order_num" => "订单数",
                 "coupon_used" => "优惠券",
             ];
             $filename = "设备排行榜（最近7天）-" . date("YmdHis");
@@ -1370,14 +1375,7 @@ class MachineClient extends ManagementClient
             $order = 'totalQuantity desc,totalPrice desc, m_id desc';
         }
 
-        $list = $this->getSaleOrdersMachineCountList(
-            $where,
-            $pageNum,
-            'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
-            $order,
-            '',
-            'm_id'
-        );
+        $list = $this->queryMachineRanking($where, $order, $pageNum);
 
         if ($list) {
             if ($pageNum) {
@@ -1426,9 +1424,7 @@ class MachineClient extends ManagementClient
             $order = 'totalQuantity desc,totalPrice desc, m_id desc';
         }
 
-        $list = $this->getSaleOrdersMachineCountList($where, 0,
-            'm_id,machine_id,machine_name,totalPrice,totalQuantity,totalDiscountPrice,order_num,coupon_used',
-            $order, '', 'm_id');
+        $list = $this->queryMachineRanking($where, $order, 0);
         if ($list) {
             $list = $list->toArray();
             foreach ($list as $key => $item) {
@@ -1452,5 +1448,82 @@ class MachineClient extends ManagementClient
             return $result;
         }
         return $this->r(100,$this->lang("query_fail"));
+    }
+
+    /**
+     * 设备排行榜聚合查询（基于订单，不依赖统计视图）
+     * @param array $where
+     * @param string $order
+     * @param int $pageNum
+     * @return \think\Collection|\think\Paginator
+     */
+    private function queryMachineRanking($where, $order, $pageNum = 0)
+    {
+        $query = Db::name('sale_orders')->alias('so')
+            ->where('so.pay_status', 3)
+            ->field([
+                'so.m_id' => 'm_id',
+                'MAX(so.machine_id)' => 'machine_id',
+                'MAX(so.machine_name)' => 'machine_name',
+                'SUM(IFNULL(so.refund_amount,0))' => 'totalRefundAmount',
+                'SUM(IFNULL(so.refund_quantity,0))' => 'totalRefundQuantity',
+                'SUM(so.total_price)' => 'totalPrice',
+                'SUM(so.total_quantity)' => 'totalQuantity',
+                'SUM(so.discount_price)' => 'totalDiscountPrice',
+                'COUNT(so.order_id)' => 'order_num',
+                'COUNT((SELECT acu.cu_id FROM activity_coupon_used acu WHERE acu.order_id = so.order_id AND acu.status = 2))' => 'coupon_used',
+            ])
+            ->group('so.m_id')
+            ->orderRaw($order);
+
+        $this->applyMachineRankingWhere($query, $where);
+
+        if ($pageNum) {
+            return $query->paginate($pageNum, false, ["query" => request()->param()]);
+        }
+        return $query->select();
+    }
+
+    /**
+     * 将通用where映射到设备排行榜查询
+     * @param $query
+     * @param array $where
+     */
+    private function applyMachineRankingWhere(&$query, $where)
+    {
+        if (isset($where['ao_id']) && $where['ao_id'] !== '') {
+            $query->where('so.ao_id', '=', $where['ao_id']);
+        }
+
+        foreach ($where as $k => $v) {
+            if (!is_int($k) || !is_array($v) || count($v) < 3) {
+                continue;
+            }
+
+            $field = $v[0];
+            $op = strtolower($v[1]);
+            $value = $v[2];
+
+            if ($field == 'm_id') {
+                $query->where('so.m_id', $op, $value);
+                continue;
+            }
+            if ($field == 'countDate') {
+                $query->where('so.create_date', $op, $value);
+                continue;
+            }
+            if ($field == 'ao_id') {
+                $query->where('so.ao_id', $op, $value);
+                continue;
+            }
+            if ($field == 'machine_id') {
+                $query->where('so.machine_id', $op, $value);
+                continue;
+            }
+            if ($field == 'machine_name') {
+                $query->where('so.machine_name', $op, $value);
+                continue;
+            }
+        }
     }
 }

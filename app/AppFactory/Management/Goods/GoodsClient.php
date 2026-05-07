@@ -332,7 +332,11 @@ class GoodsClient extends ManagementClient
             $list = $list->toArray();
             $title = [
                 "g_name" => $this->lang("export.g_name"),
+                "totalPrice" => $this->lang("export.totalPrice"),
                 "totalQuantity" => $this->lang("export.totalQuantity"),
+                "totalDiscountPrice" => "优惠金额",
+                "totalRefundAmount" => "退款金额",
+                "totalRefundQuantity" => "退款数量",
                 "retail_price" => $this->lang("export.retail_price"),
             ];
             $filename = $this->lang("export.goodsTopList") . date("Ymd");
@@ -362,10 +366,18 @@ class GoodsClient extends ManagementClient
             ->field([
                 'sod.g_id' => 'g_id',
                 'MAX(sod.g_name)' => 'g_name',
+                'MAX(sod.pic)' => 'pic',
+                'MAX(sod.sku)' => 'sku',
+                'MAX(sod.gc_id)' => 'gc_id',
+                'MAX(sod.gc_name)' => 'gc_name',
+                'MAX(sod.cost_price)' => 'cost_price',
+                'MAX(sod.market_price)' => 'market_price',
+                'MAX(sod.retail_price)' => 'retail_price',
                 'SUM(sod.total_sod_price)' => 'totalPrice',
                 'SUM(sod.quantity)' => 'totalQuantity',
-                'MAX(sod.retail_price)' => 'retail_price',
-                'MAX(sod.pic)' => 'pic',
+                'SUM(IFNULL(sod.refund_amount,0))' => 'totalRefundAmount',
+                'SUM(IFNULL(sod.refund_quantity,0))' => 'totalRefundQuantity',
+                'SUM(sod.discount_price)' => 'totalDiscountPrice',
             ])
             ->group('sod.g_id')
             ->orderRaw($order);
