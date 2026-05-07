@@ -232,6 +232,10 @@ class SaleOrdersClient extends ManagementClient
 
     protected function buildSqlCaseByMap($column, $map, $defaultPrefix)
     {
+        if (!is_array($map) || !$map) {
+            return "IFNULL(CONCAT('" . str_replace("'", "''", $defaultPrefix) . "',{$column}), '')";
+        }
+
         $cases = [];
         foreach ($map as $value => $label) {
             $cases[] = "WHEN " . intval($value) . " THEN '" . str_replace("'", "''", $label) . "'";
