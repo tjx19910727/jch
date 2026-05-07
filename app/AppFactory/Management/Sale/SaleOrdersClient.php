@@ -508,7 +508,7 @@ class SaleOrdersClient extends ManagementClient
         }
         $where['raw'] = "pay_status in ('3', '7')";
         $field = 'order_id,machine_id,machine_name,pay_status,trade_no,mch_no,total_quantity,total_price,total_cost_points,total_points,discount_price,retail_price,factory,inventory_location,
-            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = ao_id) organization_name,
+            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name,
                 (CASE order_type
                     WHEN 1 THEN "普通订单"
                     WHEN 2 THEN "优惠券订单"
