@@ -508,7 +508,7 @@ class SaleOrdersClient extends ManagementClient
         }
         $where['raw'] = "pay_status in ('3', '7')";
         $field = 'order_id,machine_id,machine_name,pay_status,trade_no,mch_no,total_quantity,total_price,total_cost_points,total_points,discount_price,retail_price,factory,inventory_location,
-            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sale_orders.ao_id) organization_name,
+            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = ao_id) organization_name,
                 (CASE order_type
                     WHEN 1 THEN "普通订单"
                     WHEN 2 THEN "优惠券订单"
@@ -616,7 +616,7 @@ class SaleOrdersClient extends ManagementClient
                     ELSE "其他" END)) pay_channel,
                 ' . $soPayTypeCase . ' pay_type,
                 FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time';
-            if ($hasCostPriceAuth) $refundField .= ',("-") cost_price';
+            if ($hasCostPriceAuth) $refundField .= ',so.cost_price';
             $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, $refundField, 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
             $title = [
@@ -747,7 +747,7 @@ class SaleOrdersClient extends ManagementClient
                         (sor.refund_quantity) quantity,
                         (sod.success_quantity) success_quantity,
                         (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name";
-                if ($hasCostPriceAuth) $refundField .= ",('-') cost_price";
+                if ($hasCostPriceAuth) $refundField .= ",sod.cost_price";
                 $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
                     $refundField);
                 if ($refund) $list = array_merge($list, $refund->toArray());
