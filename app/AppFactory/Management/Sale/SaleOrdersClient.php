@@ -249,6 +249,46 @@ class SaleOrdersClient extends ManagementClient
         return $this->buildSqlCaseByMap($column, $this->getPayMethodNameMap(), '支付方式#');
     }
 
+    protected function normalizeUtf8Recursive($value)
+    {
+        if (is_array($value)) {
+            foreach ($value as $k => $v) {
+                $value[$k] = $this->normalizeUtf8Recursive($v);
+            }
+            return $value;
+        }
+
+        if (is_object($value)) {
+            $value = obj2arr($value);
+            return $this->normalizeUtf8Recursive($value);
+        }
+
+        if (!is_string($value) || $value === '') {
+            return $value;
+        }
+
+        if (preg_match('//u', $value)) {
+            return $value;
+        }
+
+        $converted = @iconv('UTF-8', 'UTF-8//IGNORE', $value);
+        if ($converted === false || $converted === null || $converted === '') {
+            if (function_exists('mb_convert_encoding')) {
+                $converted = @mb_convert_encoding($value, 'UTF-8', 'GBK,GB2312,BIG5,ISO-8859-1,UTF-8');
+            }
+        }
+
+        if (!is_string($converted) || $converted === '') {
+            return '';
+        }
+
+        if (!preg_match('//u', $converted)) {
+            return '';
+        }
+
+        return $converted;
+    }
+
     /**
      * 发起订单退款
      * @param $postData
@@ -453,7 +493,7 @@ class SaleOrdersClient extends ManagementClient
      * @return array|string
      * @throws \Exception
      */
-    public function exportSo($where)
+    public function exportSo($where, $hasCostPriceAuth = false)
     {
         $mIds = [];
         $payTypeCase = $this->buildPayTypeCaseSql('pay_type');
@@ -463,18 +503,18 @@ class SaleOrdersClient extends ManagementClient
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
         $where['raw'] = "pay_status in ('3', '7')";
-        $field = <<<SQL
-order_id,machine_id,machine_name,pay_status,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,factory,inventory_location,
-                (CASE order_type 
+        $field = 'order_id,machine_id,machine_name,pay_status,trade_no,mch_no,total_quantity,total_price,total_cost_points,total_points,discount_price,retail_price,factory,inventory_location,
+            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sale_orders.ao_id) organization_name,
+                (CASE order_type
                     WHEN 1 THEN "普通订单"
                     WHEN 2 THEN "优惠券订单"
                     WHEN 3 THEN "取货码订单"
                     WHEN 4 THEN "盲盒活动"
                     WHEN 5 THEN "满减满送活动"
                     WHEN 6 THEN "叠加营销活动"
-                    END 
+                    END
                 ) order_type,
-                IFNULL(NULLIF(pay_channel_name,""),(CASE pay_channel 
+                IFNULL(NULLIF(pay_channel_name,""),(CASE pay_channel
                     WHEN 1 THEN "微程小程序订单"
                     WHEN 2 THEN "机械车小程序订单"
                     WHEN 3 THEN "售卖机会员积分订单"
@@ -487,25 +527,25 @@ order_id,machine_id,machine_name,pay_status,trade_no,mch_no,total_quantity,total
                     WHEN 10 THEN "现金支付"
                     WHEN 11 THEN "其他"
                     ELSE "其他" END)) pay_channel,
-                (CASE out_status 
-                    WHEN 1 THEN 
+                (CASE out_status
+                    WHEN 1 THEN
                         "正常"
-                    WHEN 2 THEN 
+                    WHEN 2 THEN
                         "已发出货命令"
-                    WHEN 3 THEN 
+                    WHEN 3 THEN
                         "设备已接收"
-                    WHEN 4 THEN 
+                    WHEN 4 THEN
                         (CASE refund_status WHEN 1 THEN "正常" WHEN 2 THEN "已退款" WHEN 3 THEN "退款失败" END)
                     WHEN 5 THEN
                         "出货失败"
-                    WHEN 6 THEN 
+                    WHEN 6 THEN
                         "未取商品"
-                    END 
+                    END
                 ) refund_status,
-                {$payTypeCase} pay_type,
+                ' . $payTypeCase . ' pay_type,
                 FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
-                FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time
-SQL;
+                FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time';
+        if ($hasCostPriceAuth) $field .= ',cost_price';
         $list = $this->getSaleOrdersList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
@@ -543,19 +583,19 @@ SQL;
                 $whereRefund[] = ['so.pay_time','between',[$pay_time1,$pay_time2]];
             }
 
-            $refundField = <<<SQL
-sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
+            $refundField = 'sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
+            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = so.ao_id) organization_name,
             sor.refund_quantity total_quantity,
-             (0-sor.refund_amount) total_price,("-") discount_price,("-") retail_price,
+             (0-sor.refund_amount) total_price,("-") total_cost_points,("-") total_points,("-") discount_price,("-") retail_price,
              ("已退款") refund_status,
-                (CASE order_type 
+                (CASE order_type
                     WHEN 1 THEN "普通订单"
                     WHEN 2 THEN "优惠券订单"
                     WHEN 3 THEN "取货码订单"
                     WHEN 4 THEN "盲盒活动"
                     WHEN 5 THEN "满减满送活动"
                     WHEN 6 THEN "叠加营销活动"
-                    END 
+                    END
                 ) order_type,
                 IFNULL(NULLIF(so.pay_channel_name,""),(CASE so.pay_channel
                     WHEN 1 THEN "微程小程序订单"
@@ -570,9 +610,9 @@ sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,s
                     WHEN 10 THEN "现金支付"
                     WHEN 11 THEN "其他"
                     ELSE "其他" END)) pay_channel,
-                {$soPayTypeCase} pay_type,
-                FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time
-SQL;
+                ' . $soPayTypeCase . ' pay_type,
+                FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time';
+            if ($hasCostPriceAuth) $refundField .= ',("-") cost_price';
             $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, $refundField, 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
             $title = [
@@ -583,10 +623,13 @@ SQL;
                 "mch_no" => "支付编号",
                 "total_quantity" => "订单总数",
                 "total_price" => "支付金额",
+                "total_cost_points" => "消费积分",
+                "total_points" => "赠送积分",
                 "discount_price" => "优惠金额",
                 "retail_price" => "原订单总额",
                 'factory' => "所属工厂",
                 'inventory_location' => "库存地点",
+                'organization_name' => "所属组织",
                 "refund_status" => "订单状态",
                 "order_type" => "订单类型",
                 "pay_channel" => "订单分类",
@@ -594,6 +637,7 @@ SQL;
                 "pay_time" => "支付时间",
                 "out_time" => "出货时间",
             ];
+            if ($hasCostPriceAuth) $title['cost_price'] = "成本价";
             $filename = "订单交易-" . date("Ymd");
             return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
         }
@@ -605,7 +649,7 @@ SQL;
      * @param $where
      * @return array|string
      */
-    public function exportGoodsSo($where)
+    public function exportGoodsSo($where, $hasCostPriceAuth = false)
     {
         $soPayTypeCase = $this->buildPayTypeCaseSql('so.pay_type');
         $soPayMethodCase = $this->buildPayMethodCaseSql('so.pay_method');
@@ -614,7 +658,7 @@ SQL;
             if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
         }
         $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,
-        sod.total_sod_price,so.factory,so.inventory_location,
+        sod.total_sod_price,sod.total_sod_cost_points,sod.total_sod_points,so.factory,so.inventory_location,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '设备已接收' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
             (CASE so.order_type 
             WHEN 1 THEN '普通订单' 
@@ -658,20 +702,18 @@ SQL;
             FROM_UNIXTIME(so.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
             FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
             (sod.quantity) quantity,
-            (sod.success_quantity) success_quantity";
+            (sod.success_quantity) success_quantity,
+            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name";
+        if ($hasCostPriceAuth) $field .= ",sod.cost_price";
         $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
             if ($list) {
                 $where['sor.status'] = 2;
                 if (isset($where[0][0]) && strpos($where[0][0],"create_time") !== false) $where[0][0] = "sor.update_time";
-                $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
-                    "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
-<<<<<<< .mine
+                $refundField = "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
+                            (0-sod.refund_cost_points) total_sod_cost_points,(0-sod.refund_points) total_sod_points,
                             (CASE so.out_status WHEN 1 THEN '待取货' WHEN 2 THEN '已发出货命令' WHEN 3 THEN '设备已接收' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
-=======
-                            (CASE so.out_status WHEN 1 THEN '待取货' WHEN 2 THEN '已发出货命令' WHEN 3 THEN '设备已接收指令' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
->>>>>>> .theirs
                         (CASE so.order_type 
                         WHEN 1 THEN '普通订单' 
                         WHEN 2 THEN '优惠券订单'
@@ -699,8 +741,13 @@ SQL;
                         FROM_UNIXTIME(sor.update_time,'%Y-%m-%d %H:%i:%s') pay_time,
                         FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
                         (sor.refund_quantity) quantity,
-                        (sod.success_quantity) success_quantity");
+                        (sod.success_quantity) success_quantity,
+                        (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name";
+                if ($hasCostPriceAuth) $refundField .= ",('-') cost_price";
+                $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
+                    $refundField);
                 if ($refund) $list = array_merge($list, $refund->toArray());
+        $list = $this->normalizeUtf8Recursive($list);
                 $title = [
                     "machine_id" => "设备编号",
                     "machine_name" => "设备名称",
@@ -712,6 +759,8 @@ SQL;
                     "retail_price" => "单价",
                     "discount_price" => "优惠价",
                     "total_sod_price" => "支付金额",
+                    "total_sod_cost_points" => "消费积分",
+                    "total_sod_points" => "赠送积分",
                     'factory' => "所属工厂",
                     'inventory_location' => "库存地点",
                     "out_status" => "出货状态",
@@ -724,7 +773,10 @@ SQL;
                     "out_time" => "出货时间",
                     "quantity" => "商品总数",
                     "success_quantity" => "出货成功数量",
+                    "organization_name" => "所属组织",
                 ];
+                if ($hasCostPriceAuth) $title['cost_price'] = "成本价";
+                $title = $this->normalizeUtf8Recursive($title);
                 $filename = "商品交易列表-" . date("YmdHis");
                 return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
             }

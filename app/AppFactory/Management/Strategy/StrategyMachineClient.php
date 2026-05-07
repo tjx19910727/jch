@@ -31,12 +31,14 @@ class StrategyMachineClient extends ManagementClient
         $list = $list->toArray();
         foreach ($list as &$item) {
             $item['machine_id'] = $item['machineData']['machine_id'] ?? "未知";
+            $item['machine_name'] = $item['machineData']['machine_name'] ?? "未知";
             $item['name'] = $item['strategyData']['sp_name'] ?? "未知";
             $item['s_type_text'] = $payType[$item['s_type']] ?? "未知";
         }
         $title = [
             "name" => "策略名称",
             "machine_id" => "设备编号",
+            "machine_name" => "设备名称",
             "organization_name" => "组织名称",
             "s_type_text" => "策略类型",
         ];

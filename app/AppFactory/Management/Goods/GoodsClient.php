@@ -276,7 +276,7 @@ class GoodsClient extends ManagementClient
     public function exportExcel($where)
     {
         $list = $this->getGoodsList($where, 0,
-            'g_id,g_name,gc_name,
+            'g_id,g_name,gc_name,gift_points,cost_points,
             (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
             '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
@@ -295,6 +295,8 @@ class GoodsClient extends ManagementClient
                 'cost_price' => $this->lang("export.cost_price"),
                 'market_price' => $this->lang("export.market_price"),
                 'retail_price' => $this->lang("export.retail_price"),
+                'gift_points' => $this->lang("export.gift_points"),
+                'cost_points' => $this->lang("export.cost_points"),
             ];
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);

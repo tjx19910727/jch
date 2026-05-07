@@ -280,6 +280,8 @@ class MachineClient extends ManagementClient
             $title = [
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
+                "organization_name" => "所属组织",
+                "machine_group_name" => "所属分组",
                 "address" => "详细地址",
                 "device_type" => "应用类型",
                 "machine_level" => "设备等级",

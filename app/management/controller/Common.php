@@ -207,6 +207,32 @@ class Common extends AuthController
         return $where;
     }
 
+    /**
+     * 当前账号是否拥有成本价查看权限
+     * @param string $url
+     * @return bool
+     */
+    public function hasCostPriceAuth($url = '/management/sale.sale_orders/getList?get_cost_price')
+    {
+        if ($this->manager['pid'] <= 0) return true;
+
+        $roleIds = $this->app->authManagerRole->getAuthManagerRoleColumn([
+            'manager_id' => $this->manager['manager_id'],
+            'is_del' => 2
+        ], 'role_id');
+        if (!$roleIds) return false;
+
+        $nodeIds = $this->app->authNode->getAuthNodeColumn(['url' => $url], 'node_id');
+        if (!$nodeIds) return false;
+
+        $whereArn[] = ['role_id', 'in', $roleIds];
+        $whereArn['is_del'] = 2;
+        $authNodeIds = $this->app->authRoleNode->getAuthRoleNodeColumn($whereArn, 'node_id');
+        if (!$authNodeIds) return false;
+
+        return !empty(array_intersect($nodeIds, $authNodeIds));
+    }
+
     //获取架构的所有下级部门
     public function getChildsAoIds($ao_id){
         $sql = "WITH RECURSIVE cte AS (
