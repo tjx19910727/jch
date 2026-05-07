@@ -50,6 +50,8 @@ return [
 
         "goodsRankingFileName" => "Homepage - Popular Products Ranking (Last 7 Days)",
 
+        "gift_points" => "Gift Points",
+        "cost_points" => "Consumption Points",
     ],
 
     "getSelfRoleNode" => [

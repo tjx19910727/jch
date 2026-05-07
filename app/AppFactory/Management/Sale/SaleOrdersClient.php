@@ -369,16 +369,15 @@ class SaleOrdersClient extends ManagementClient
      * @return array|string
      * @throws \Exception
      */
-    public function exportSo($where)
+    public function exportSo($where, $hasCostPriceAuth = false)
     {
         $mIds = [];
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
-        $where['raw'] = "pay_status in ('3', '7')";
-        $list = $this->getSaleOrdersList($where, 0,
-            'order_id,machine_id,machine_name,pay_status,trade_no,mch_no,total_quantity,total_price,discount_price,retail_price,factory,inventory_location,
+        $field = 'order_id,machine_id,machine_name,pay_status,trade_no,mch_no,total_quantity,total_price,total_cost_points,total_points,discount_price,retail_price,factory,inventory_location,
+                (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sale_orders.ao_id) organization_name,
                 (CASE order_type 
                     WHEN 1 THEN "普通订单"
                     WHEN 2 THEN "优惠券订单"
@@ -414,9 +413,10 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 8 THEN "八达通COGOLINK" 
                 WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
-                FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time
-                '
-        );
+                FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time';
+        if ($hasCostPriceAuth) $field .= ',cost_price';
+        $where['raw'] = "pay_status in ('3', '7')";
+        $list = $this->getSaleOrdersList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
             $postData = input();
@@ -453,9 +453,10 @@ class SaleOrdersClient extends ManagementClient
                 $whereRefund[] = ['so.pay_time','between',[$pay_time1,$pay_time2]];
             }
 
-            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, 'sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
+            $refundField = 'sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
+            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = so.ao_id) organization_name,
             sor.refund_quantity total_quantity,
-             (0-sor.refund_amount) total_price,("-") discount_price,("-") retail_price,
+             (0-sor.refund_amount) total_price,("-") total_cost_points,("-") total_points,("-") discount_price,("-") retail_price,
              ("已退款") refund_status,
                 (CASE order_type 
                     WHEN 1 THEN "普通订单"
@@ -476,7 +477,9 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 7 THEN "机器人线上支付" 
                 WHEN 8 THEN "八达通COGOLINK" 
                 WHEN 0 THEN "免支付" END) pay_type,
-                FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time', 'sor.update_time asc');
+                FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time';
+            if ($hasCostPriceAuth) $refundField .= ',("-") cost_price';//占位列
+            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, $refundField, 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
             $title = [
                 "order_id" => "订单ID",
@@ -486,16 +489,20 @@ class SaleOrdersClient extends ManagementClient
                 "mch_no" => "支付编号",
                 "total_quantity" => "订单总数",
                 "total_price" => "支付金额",
+                "total_cost_points" => "消费积分",
+                "total_points" => "赠送积分",
                 "discount_price" => "优惠金额",
                 "retail_price" => "原订单总额",
                 'factory' => "所属工厂",
                 'inventory_location' => "库存地点",
+                'organization_name' => "所属组织",
                 "refund_status" => "订单状态",
                 "order_type" => "订单类型",
                 "pay_type" => "支付类型",
                 "pay_time" => "支付时间",
                 "out_time" => "出货时间",
             ];
+            if ($hasCostPriceAuth) $title['cost_price'] = "成本价";
             $filename = "订单交易-" . date("Ymd");
             return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
         }
@@ -559,7 +566,8 @@ class SaleOrdersClient extends ManagementClient
             FROM_UNIXTIME(so.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
             FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
             (sod.quantity) quantity,
-            (sod.success_quantity) success_quantity";
+            (sod.success_quantity) success_quantity,
+            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name";
         $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
@@ -621,6 +629,7 @@ class SaleOrdersClient extends ManagementClient
                     "out_time" => "出货时间",
                     "quantity" => "商品总数",
                     "success_quantity" => "出货成功数量",
+                    "organization_name" => "所属组织",
                 ];
                 $filename = "商品交易列表-" . date("YmdHis");
                 return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);

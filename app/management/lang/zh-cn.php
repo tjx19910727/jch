@@ -49,7 +49,8 @@ return [
         "goods_list" => "商品列表",
 
         "goodsRankingFileName" => "首页-人气商品排行榜（最近7天）",
-
+        "gift_points" => "赠送积分",
+        "cost_points" => "消费积分",
     ],
 
     "getSelfRoleNode" => [

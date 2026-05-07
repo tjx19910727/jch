@@ -130,7 +130,8 @@ class Machine extends Common
         }
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
         if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
-        $field = "m_id,machine_id,machine_name,country_id,state_id,city_id,regions_id,street,floor,version,factory,inventory_location,
+        $field = "m_id,machine_id,machine_name,ao_id,country_id,state_id,city_id,regions_id,street,floor,version,factory,inventory_location,
+        IFNULL((SELECT GROUP_CONCAT(DISTINCT mg.mg_name ORDER BY mg.id SEPARATOR ',') FROM machine_group_mg mg WHERE mg.m_id = a.m_id),'') machine_group_name,
         (case online when 1 then '" . lang("online") . "' else '" . lang("offline"). "' END) online,
         FROM_UNIXTIME(last_online_time) last_online_time,
         (case device_type when 1 then '" . lang("vending_machine") . "' else '" . lang("store") . "' end) device_type,
