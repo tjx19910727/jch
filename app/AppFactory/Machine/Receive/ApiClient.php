@@ -1918,7 +1918,7 @@ class ApiClient extends ReceiveBaseClient
             return null;
         }
 
-        $restartTypes = ['reboot', 'powerWakeUp', 'restart', 'resetMachine'];
+        $restartTypes = ['http_reboot'];
         foreach ($rows as $row) {
             $record = json2arr($row['content'] ?? '');
             if (!$record) {
@@ -2121,12 +2121,18 @@ class ApiClient extends ReceiveBaseClient
         $tradeNo = $this->data['trade_no'] ?? '';
         $status = isset($this->data['http_out_status']) ? intval($this->data['http_out_status']) : 0;
         $machine_id = $this->data['machine_id'] ??  '';
+        if (!in_array($status, [1, 2, 20, 21, 3, 4], true)) {
+            return $this->r(300, 'http_out_status参数无效');
+        }
 
         $order = $this->getSaleOrdersFind(['trade_no' => $tradeNo], 'order_id,trade_no,machine_id,out_status');
         if (!$order) {
             return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         }
         $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+        if (!$machine_id) {
+            $machine_id = $order['machine_id'] ?? '';
+        }
 
         // 已完成出货，避免重复闭环
         if ((int)($order['out_status'] ?? 0) === 4) {
@@ -2169,6 +2175,11 @@ class ApiClient extends ReceiveBaseClient
             }
         }
 
+        // 与 OutGoodsTrait 规则对齐：status=3/4 时必须有 main 主体数据
+        if (empty($main) && in_array($status, [3, 4], true)) {
+            return $this->r(300, '主体数据不能为空');
+        }
+
         $payload = [
             'msgType' => 'outGoods',
             'trade_no' => $tradeNo,
@@ -2176,6 +2187,9 @@ class ApiClient extends ReceiveBaseClient
             'main' => $main,
         ];
         $machine = $this->getMachineFind(['machine_id' => $machine_id], 'machine_id,mac_address');
+        if (!$machine) {
+            return $this->r(300, $this->lang("query_machine_no_data"));
+        }
         $mqData = [
             'msg_id' => $this->data['msg_id'] ?? uniqid('http_out_', true),
             'timestamp' => time(),
@@ -2237,7 +2251,12 @@ class ApiClient extends ReceiveBaseClient
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         $this->updateSaleOrders(['http_out_status' => intval($this->data['http_out_status'])],['trade_no' => $this->data['trade_no']]);
         if($this->data['http_out_status'] == 3){
-            $this->triggerOutGoodsByHttp();
+            $triggerResult = $this->triggerOutGoodsByHttp();
+            $triggerData = obj2arr($triggerResult);
+            if (is_array($triggerData) && isset($triggerData['state']) && intval($triggerData['state']) !== 200) {
+                actionLog($triggerData, 'setHttpOutStatus触发闭环失败');
+                return $triggerResult;
+            }
         }
         return $this->r(200, 'success');
     }

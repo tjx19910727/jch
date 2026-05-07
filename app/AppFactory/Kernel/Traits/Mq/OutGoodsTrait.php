@@ -76,13 +76,19 @@ trait OutGoodsTrait
                 return $this->rAction($result);
             }
 
-            // 仅状态回执（无main）
-            if (empty($this->message['main']) && in_array($status, [21, 3, 4], true)) {
+            // 仅状态回执（无main）：status=21 仅更新到“处理中”；status=3/4 需带main，否则拒绝完结
+            if (empty($this->message['main']) && $status === 21) {
                 $result = $this->updateSaleOrders($this->order);
                 actionLog($this->order, '仅状态回执，更新订单出货状态', 'OutGoods');
                 actionLog($this->getLS(), '【SQL】修改订单(仅状态回执)', 'OutGoods');
                 Db::commit();
                 return $this->rAction($result);
+            }
+
+            if (empty($this->message['main']) && in_array($status, [3, 4], true)) {
+                actionLog($this->message, 'status=3/4缺少main主体数据，拒绝完结', 'OutGoods');
+                Db::rollback();
+                return $this->rFail("主体数据不能为空");
             }
 
             if ($originOutStatus >= 4 && $originOutStatus != 6) {
@@ -132,12 +138,11 @@ trait OutGoodsTrait
      */
     protected function handleData()
     {
+        $flag = [];
         $status = isset($this->message['status']) ? (int)$this->message['status'] : 0;
         if ($this->order['out_status'] != 6) {
             if ($status == 4) {
                 $this->order['out_status'] = 5;
-            } elseif ($status == 21) {
-                $this->order['out_status'] = max((int)$this->order['out_status'], 3);
             } else {
                 $this->order['out_status'] = 4;
             }
@@ -157,9 +162,9 @@ trait OutGoodsTrait
         foreach ($this->message['main'] as $key => $value) {
             $position = $key;
             foreach ($value as $vv) {
-                $channel_code = $vv["channel_code"];
-                $success = $vv["success_quantity"];
-                $fail = $vv["fail_quantity"];
+                $channel_code = $vv["channel_code"] ?? '';
+                $success = intval($vv["success_quantity"] ?? 0);
+                $fail = intval($vv["fail_quantity"] ?? 0);
                 $deliver_pics = $vv["deliver_pics"] ?? "";
                 $out_sequence = $vv["out_sequence"] ?? 1;
 
@@ -192,6 +197,10 @@ trait OutGoodsTrait
                 $whereMc['m_id'] = $this->machine['m_id'];
                 $whereMc['channel_position'] = $position;
                 $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,frozen_stock,stock,stock_warning');
+                if (!$mc) {
+                    actionLog($whereMc, '未找到货道，跳过货道库存处理', 'OutGoods');
+                    continue;
+                }
                 if ($success > 0 && in_array($status, [21, 3], true)) {
                     // 外部预订提货码订单，减冻结库存
                     if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
@@ -258,9 +267,7 @@ trait OutGoodsTrait
                 }
                 if ($fail > 0) {
 //                    $updateMc['status'] = 3;
-                    if ($status != 21) {
-                        $this->order['out_status'] == 6 ? : $this->order['out_status'] = 5;
-                    }
+                    $this->order['out_status'] == 6 ? : $this->order['out_status'] = 5;
 
                     // 出货失败发送通知
                     try {
@@ -358,6 +365,9 @@ trait OutGoodsTrait
             // 网上预售的订单，出货成功需要发至商城或第三方平台核销
             if ($pickCode['pick_type'] == 3) {
                 $advance = $this->getApiAdvanceFind(['apc_id' => $pickCode['apc_id']]);
+                if (!$advance) {
+                    actionLog($pickCode, '未找到API预订记录，跳过核销回调', 'DataUpload');
+                } else {
                 $flag[] = $this->updateApiAdvance(['status' => $aaStatus,"pick_time" => date("Y-m-d H:i:s")],['apc_id' => $pickCode['apc_id']]);
                 actionLog($this->getLS(),'【SQL】修改API预订商品记录',"DataUpload");
                 $details = $this->getSaleOrdersDetailsList(['order_id' => $advance['order_id']],0,'g_id product_id,success_quantity,fail_quantity');
@@ -384,6 +394,7 @@ trait OutGoodsTrait
                 ];
                 $ac_id = $this->addApiCallback($insertCallback);
                 $ac = $this->getApiCallbackFind(['ac_id' => $ac_id]);
+                }
             }
             $flag[] = $this->updateActivityPickCode($update);
             actionLog($this->getLS(),'【SQL】修改取货码使用记录',"DataUpload");
