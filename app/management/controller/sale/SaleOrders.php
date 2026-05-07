@@ -127,6 +127,7 @@ class SaleOrders extends Common
     public function exportGoodsList()
     {
         $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
         $m_id = 0;
         $sku = '';
         $g_name = '';
@@ -151,7 +152,7 @@ class SaleOrders extends Common
         if ($m_id) $where['so.m_id'] = $m_id;
         if ($sku) $where[] = ['sod.sku', 'like', '%'.$sku.'%'];
         if ($g_name) $where[] = ['sod.g_name', 'like', '%'.$g_name.'%'];
-        return $this->app->saleOrders->exportGoodsSo($where);
+        return $this->app->saleOrders->exportGoodsSo($where, $hasCostPriceAuth);
     }
 
     /**
