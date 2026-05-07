@@ -11,5 +11,6 @@ return [
         'time_task' => 'app\command\TimeTask',
         'api' => 'app\command\Api',
         'payment' => 'app\command\Payment',
+        'visual_screen_ws' => 'app\command\VisualScreenWs',
     ],
 ];
