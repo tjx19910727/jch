@@ -198,9 +198,16 @@ class MqConsumer
             $data = $message->body;
             $data = json2arr($data);
             actionLog($data, '消息处理', "export_message");
+            $jobType = $data['job_type'] ?? 'export';
 
-            $app = AppFactory::timeTask();
-            $app->export->makeExcel($data);
+            if ($jobType == 'wc_goods_sync') {
+                $app = AppFactory::management();
+                $result = $app->weicheng->synchronizeGoodsAll();
+                actionLog($result, '微程同步处理结果', "export_message");
+            } else {
+                $app = AppFactory::timeTask();
+                $app->export->makeExcel($data);
+            }
         } catch (\Exception $e) {
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"export_message");
             actionLog($e->getTrace(), 'tryCatchTrace',"export_message");

@@ -10,6 +10,7 @@
 namespace app\management\controller\weicheng;
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\RabbitMq\MqProducer;
 use app\management\controller\Common;
 
 class WcGoods extends Common
@@ -17,7 +18,13 @@ class WcGoods extends Common
 
     public function syncAll()
     {
-        return $this->app->weicheng->synchronizeGoodsAll();
+        $res = MqProducer::export([
+            'job_type' => 'wc_goods_sync',
+            'request_time' => date('Y-m-d H:i:s'),
+            'manager_id' => input('manager_id') ?? 0,
+        ]);
+        if ($res != 'OK') return returnState(100, '同步请求提交失败：' . $res);
+        return returnState(200, 'success', '同步请求已提交，请5分钟后再刷新页面');
     }
 
     public function sync()

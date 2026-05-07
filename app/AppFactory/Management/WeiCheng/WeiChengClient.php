@@ -196,7 +196,7 @@ class WeiChengClient extends ManagementClient
 
     public function synchronizeGoodsAll()
     {
-        $wc_goods = $this->getWcGoodsList([['id', '>', '0']])->toArray();
+        $wc_goods = $this->getWcGoodsList([['id', '>', '0'],['is_pub', '=', '1']])->toArray();
         foreach ($wc_goods as $v) {
             $res = $this->synchronizeGoods($v['no'], $v['type']);
             if (!$res['status']) continue;
@@ -239,7 +239,7 @@ class WeiChengClient extends ManagementClient
 
     public function wcGoodsWriteLocal()
     {
-        $wc_goods = $this->getWcGoodsList([['id', '>', '0']])->toArray();
+        $wc_goods = $this->getWcGoodsList([['id', '>', '0'],['is_pub', '=', '1']])->toArray();
         // $wc_goods = $this->getWcGoodsList(['no'=>'VC2601071001'])->toArray();
         foreach ($wc_goods as $wc_good) {
             $res = $this->setWcGoodsLocal($wc_good['no'], $wc_good['type']);
