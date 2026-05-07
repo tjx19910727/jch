@@ -73,6 +73,7 @@ trait SaleOrdersTrait
     public function getSaleOrdersList($where, $pageNum = 0, $field = "*", $order = "", $eachFn = '', $group = '', $limit = 0)
     {
         $data = SaleOrdersModel::getList($where, $pageNum, $field, $order, $eachFn, $group, $limit);
+        actionLog($this->getLS(), '【SQL】订单列表主查询', 'sale_orders');
         if ($pageNum)
             $data = $data->each(function ($item) {
                 $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);

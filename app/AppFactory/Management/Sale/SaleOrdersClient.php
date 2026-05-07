@@ -105,7 +105,6 @@ class SaleOrdersClient extends ManagementClient
                 }
             }
             $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, $supplier)->toArray();
-            actionLog($this->getLS(), '【SQL】订单列表','sale_orders');
             return $this->r(200, $this->lang("query_success"), $data);
         } catch (\Exception $e) {
             actionException($e, 1);
