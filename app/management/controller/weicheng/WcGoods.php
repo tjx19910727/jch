@@ -20,7 +20,7 @@ class WcGoods extends Common
     public function syncAll()
     {
         $cacheKey = 'wc_goods_sync_all_lock';
-        if (Cache::get($cacheKey)) return returnState(100, '5分钟内只能请求一次，请稍后重试');
+        if (Cache::get($cacheKey)) return returnState(100, '10分钟内只能请求一次，请稍后重试');
 
         $goods_type = input('goods_type') ?? '';
         $res = MqProducer::export([
@@ -30,8 +30,8 @@ class WcGoods extends Common
             'goods_type' => $goods_type,
         ]);
         if ($res != 'OK') return returnState(100, '同步请求提交失败：' . $res);
-        Cache::set($cacheKey, 1, 300);
-        return returnState(200, 'success', '同步请求已提交，请5分钟后再刷新页面');
+        Cache::set($cacheKey, 1, 600);
+        return returnState(200, 'success', '同步请求已提交，请10分钟后再刷新页面');
     }
 
     public function sync()

@@ -208,10 +208,22 @@ class MqConsumer
                 } else {
                     $syncRes = $app->weicheng->synchronizeGoodsTypesAll();
                 }
-                actionLog($syncRes, '微程分类同步结果', "export_message_sync");
+                $syncResLog = $syncRes;
+                if (is_object($syncRes) && method_exists($syncRes, 'getData')) {
+                    $syncResLog = $syncRes->getData();
+                } elseif (is_object($syncRes) && method_exists($syncRes, 'getContent')) {
+                    $syncResLog = json2arr($syncRes->getContent());
+                }
+                actionLog($syncResLog, '微程分类同步结果', "export_message_sync");
 
                 $result = $app->weicheng->synchronizeGoodsAll();
-                actionLog($result, '微程同步处理结果', "export_message_syncAll");
+                $resultLog = $result;
+                if (is_object($result) && method_exists($result, 'getData')) {
+                    $resultLog = $result->getData();
+                } elseif (is_object($result) && method_exists($result, 'getContent')) {
+                    $resultLog = json2arr($result->getContent());
+                }
+                actionLog($resultLog, '微程同步处理结果', "export_message_syncAll");
             } else {
                 $app = AppFactory::timeTask();
                 $app->export->makeExcel($data);
