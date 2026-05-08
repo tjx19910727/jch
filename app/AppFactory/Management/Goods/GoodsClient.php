@@ -373,11 +373,11 @@ class GoodsClient extends ManagementClient
                 'MAX(sod.cost_price)' => 'cost_price',
                 'MAX(sod.market_price)' => 'market_price',
                 'MAX(sod.retail_price)' => 'retail_price',
-                'SUM(sod.total_sod_price)' => 'totalPrice',
+                'ROUND(SUM(sod.total_sod_price),2)' => 'totalPrice',
                 'SUM(sod.quantity)' => 'totalQuantity',
-                'SUM(IFNULL(sod.refund_amount,0))' => 'totalRefundAmount',
+                'ROUND(SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalRefundAmount',
                 'SUM(IFNULL(sod.refund_quantity,0))' => 'totalRefundQuantity',
-                'SUM(sod.discount_price)' => 'totalDiscountPrice',
+                'ROUND(SUM(sod.discount_price),2)' => 'totalDiscountPrice',
             ])
             ->group('sod.g_id')
             ->orderRaw($order);
