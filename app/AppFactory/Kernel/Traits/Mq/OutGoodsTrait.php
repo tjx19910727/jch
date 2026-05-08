@@ -60,7 +60,7 @@ trait OutGoodsTrait
             }
 
             // 幂等短路：已处理过的结果回调直接成功返回，避免重复扣减/回调
-            if (!empty($this->message['main']) && in_array($status, [21, 3, 4], true)
+            if ((!empty($this->message['main']) || in_array($status, [21, 3, 4])) 
                 && $originOutStatus >= 4 && $originOutStatus != 6) {
                 actionLog($this->order, '订单已处理过，本次按幂等成功返回', 'OutGoods');
                 Db::commit();
@@ -201,7 +201,7 @@ trait OutGoodsTrait
                     actionLog($whereMc, '未找到货道，跳过货道库存处理', 'OutGoods');
                     continue;
                 }
-                if ($success > 0 && in_array($status, [21, 3], true)) {
+                if ($success > 0 && (in_array($status, [21, 3]) || $this->message['main'])) {
                     // 外部预订提货码订单，减冻结库存
                     if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);
