@@ -729,14 +729,14 @@ class MachineChannelClient extends ManagementClient
 
         $lastLog = $this->getRemoteRemovalLogFind(
             [
-                ['mc_id', '=', $mc['mc_id']],
+                ['m_id', '=', $mc['m_id']],
                 ['created_at', '>=', time() - 600],
             ],
             'id,created_at',
             'id desc'
         );
         if ($lastLog) {
-            return $this->r(100, '10分钟内只能执行一次远程下架回收');
+            return $this->r(100, '同一台设备10分钟内只能执行一次远程下架回收');
         }
 
         $send = $this->sendToMachine(
