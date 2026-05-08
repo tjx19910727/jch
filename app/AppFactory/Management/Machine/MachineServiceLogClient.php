@@ -60,7 +60,7 @@ class MachineServiceLogClient extends ManagementClient
     public function getMachineServiceLogByDate($postData)
     {
         $mId = $postData['m_id'] ?? 0;
-        $time = $postData['date'] ? strtotime($postData['date']) : time();
+        $time = !empty($postData['date']) ? strtotime($postData['date']) : time();
         $date = date('Y-m-d', $time);
         if ($mId <= 0) {
             return $this->rFail('设备不存在');
@@ -79,32 +79,46 @@ class MachineServiceLogClient extends ManagementClient
             'm_id' => $machine['m_id'],
             'date' => $date,
         ];
+
+        // 已有最近上传结果则直接返回，避免重复等待。
         $existList = $this->getMachineServiceLogFind($where, '*', 'id desc');
-        //半个小时只能下发一次，避免重复下发
-        if (!empty($existList['create_time']) && $existList['create_time'] > (time() - 1800)) {
-            return returnState(200, '正在从设备获取运行日志，请稍后刷新列表', [
-                'machine_id' => $machine['machine_id'],
-                'm_id' => $machine['m_id'],
-                'date' => $date,
-            ]);
+        if (!empty($existList['create_time']) && $existList['create_time'] > (time() - 1800) && !empty($existList['path'])) {
+            return returnState(200, lang('query_success'), $existList['path']);
         }
 
-        $result = $this->sendToMachine($machine, 'machineServiceLog', [
+        $sendResult = $this->sendToMachine($machine, 'machineServiceLog', [
             'date' => $date,
         ]);
 
-        if (is_object($result)) {
-            return returnState(200, '正在从设备获取运行日志，请稍后刷新列表', [
-                'machine_id' => $machine['machine_id'],
+        if (is_string($sendResult)) {
+            return $this->rFail($sendResult);
+        }
+
+        if (is_array($sendResult) && isset($sendResult['state']) && $sendResult['state'] != 200) {
+            return $sendResult;
+        }
+
+        $startTime = time();
+        $overtime = 50;
+        $n = 0;
+
+        while (1) {
+            $waitWhere = [
                 'm_id' => $machine['m_id'],
                 'date' => $date,
-            ]);
-        }
+                ['create_time', '>=', $startTime],
+            ];
 
-        if (is_string($result)) {
-            return $this->rFail($result);
-        }
+            $uploadLog = $this->getMachineServiceLogFind($waitWhere, '*', 'id desc');
+            if (!empty($uploadLog['path'])) {
+                return returnState(200, lang('query_success'), $uploadLog['path']);
+            }
 
-        return $result ?: $this->rFail('下发失败');
+            sleep(1);
+            $n++;
+            if ($n >= $overtime) {
+                return returnState(300, lang('action_machine_overtime'));
+            }
+        }
     }
 }
