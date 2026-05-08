@@ -148,4 +148,11 @@ class MachineModel extends BaseModel
     {
         return $this->hasOne(MachineLevelDescModel::class,"machine_level","machine_level");
     }
+
+    public function simSignalLog()
+    {
+        return $this->hasOne(SimSignalLogModel::class, "m_id", "m_id")
+            ->whereTime('created_at', 'today')
+            ->order('id desc');
+    }
 }
