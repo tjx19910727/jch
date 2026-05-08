@@ -17,6 +17,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
+use app\AppFactory\Kernel\Traits\RemoteRemovalLog\RemoteRemovalLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
 
@@ -25,6 +26,7 @@ class MachineChannelClient extends ManagementClient
     use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait;
     use GoodsTrait,GoodsChangeTrait;
     use AuthManagerMachineTrait;
+    use RemoteRemovalLogTrait;
 
     /**
      * 获取空槽、BAD、空货数量
@@ -592,6 +594,18 @@ class MachineChannelClient extends ManagementClient
         $mc = $mc->toArray();
         if (intval($mc['g_id']) <= 0) {
             return $this->r(100, $this->lang("VMachineChannel.mc_empty_goods"));
+        }
+
+        $lastLog = $this->getRemoteRemovalLogFind(
+            [
+                ['mc_id', '=', $mc['mc_id']],
+                ['created_at', '>=', time() - 600],
+            ],
+            'id,created_at',
+            'id desc'
+        );
+        if ($lastLog) {
+            return $this->r(100, '10分钟内只能执行一次远程下架回收');
         }
 
         $send = $this->sendToMachine(
