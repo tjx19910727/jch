@@ -280,6 +280,12 @@ class MachineClient extends ManagementClient
                 if (isset($item['city_id']) && $item['city_id'])  $address[] = $cities[$item['city_id']][$fieldName];
                 if (isset($item['regions_id']) && $item['regions_id'])  $address[] = $regions[$item['regions_id']][$fieldName];
                 $item['address'] = implode("",$address) . $item['street'] . $item['floor'];
+
+                $simLog = $this->getTodayLatestSimSignalLogByMid($item['m_id']);
+                $item['rsrp'] = $simLog['rsrp'] ?? '未知';
+                $item['sinr'] = $simLog['sinr'] ?? '未知';
+                $item['stock_ratio'] = $this->getMachineStockRatioText($item['m_id']);
+
                 unset($item['country_id'],$item['state_id'],$item['city_id'],$item['regions_id'],$item['street'],$item['floor']);
                 $list[$key] = $item;
             }
@@ -296,6 +302,9 @@ class MachineClient extends ManagementClient
                 "status" => "设备状态",
                 "online" => "设备在离线",
                 "last_online_time" => "最后上线时间",
+                "rsrp" => "信号强度",
+                "sinr" => "信噪比",
+                "stock_ratio" => "库存比例",
                 "version" => "软件版本",
                 'factory' => "所属工厂",
                 'inventory_location' => "库存地点"
@@ -303,6 +312,46 @@ class MachineClient extends ManagementClient
             return $this->sendToExport("设备管理-设备列表", $filename, $title, $list);
         }
         return $this->rFail($this->lang("query_fail"));
+    }
+
+    /**
+     * 获取设备当天最新信号日志
+     * @param int $mId
+     * @return array
+     */
+    private function getTodayLatestSimSignalLogByMid($mId)
+    {
+        if (!$mId) return [];
+        $todayStart = date('Y-m-d 00:00:00');
+        $todayEnd = date('Y-m-d 23:59:59');
+        try {
+            $log = Db::name('sim_signal_log')
+                ->where('m_id', $mId)
+                ->whereBetweenTime('created_at', $todayStart, $todayEnd)
+                ->order('id desc')
+                ->find();
+            return $log ?: [] ;
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * 获取设备库存比例文本
+     * @param int $mId
+     * @return string
+     */
+    private function getMachineStockRatioText($mId)
+    {
+        if (!$mId) return '0%';
+        $ratioWhere[] = ['m_id', '=', $mId];
+        $ratioWhere[] = ['status', '<>', 2];
+        $totalCapacity = $this->getMachineChannelSum($ratioWhere, 'capacity');
+        $totalStock = $this->getMachineChannelSum($ratioWhere, 'stock');
+        $stock_ratio = ($totalCapacity > 0)
+            ? (bcmul(bcdiv($totalStock, $totalCapacity, 4), '100', 2) . '%')
+            : "0%";
+        return $stock_ratio;
     }
 
     /**
