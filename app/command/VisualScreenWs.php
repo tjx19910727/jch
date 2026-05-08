@@ -24,6 +24,9 @@ use Workerman\Worker;
  */
 class VisualScreenWs extends Command
 {
+    /** @var int 最近一次已推送的成交订单ID */
+    protected static $lastPaidOrderId = 0;
+
     protected function configure()
     {
         $this->setName('visual_screen_ws')
@@ -54,6 +57,28 @@ class VisualScreenWs extends Command
         $worker = new Worker($socket);
         $worker->name = 'visual_screen_ws';
         $worker->count = 1;
+
+        $worker->onWorkerStart = function (Worker $worker) {
+            self::$lastPaidOrderId = self::queryLatestPaidOrderId();
+            $cfg = Config::get('visual_screen');
+            $interval = (float) ($cfg['auto_push_poll_interval'] ?? 2.0);
+            if ($interval <= 0) {
+                $interval = 2.0;
+            }
+
+            self::addTimer($interval, function () use ($worker) {
+                if (empty($worker->connections)) {
+                    return;
+                }
+                $fromOrderId = self::$lastPaidOrderId;
+                $latestPaidOrderId = self::queryLatestPaidOrderId();
+                if ($latestPaidOrderId <= 0 || $latestPaidOrderId <= self::$lastPaidOrderId) {
+                    return;
+                }
+                self::$lastPaidOrderId = $latestPaidOrderId;
+                self::broadcastIncrementToAll($worker, $fromOrderId, $latestPaidOrderId, (string) $latestPaidOrderId);
+            });
+        };
 
         $worker->onWebSocketConnect = function (TcpConnection $connection, $httpBuffer) {
             $token = '';
@@ -192,5 +217,157 @@ class VisualScreenWs extends Command
             return null;
         }
         return is_array($row) ? $row : $row->toArray();
+    }
+
+    protected static function queryLatestPaidOrderId(): int
+    {
+        try {
+            return (int) Db::name('sale_orders')
+                ->where('pay_status', 3)
+                ->max('order_id');
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    protected static function addTimer(float $interval, callable $callback): void
+    {
+        if (class_exists('Workerman\\Lib\\Timer')) {
+            \Workerman\Lib\Timer::add($interval, $callback);
+            return;
+        }
+        if (class_exists('Workerman\\Timer')) {
+            \Workerman\Timer::add($interval, $callback);
+        }
+    }
+
+    protected static function broadcastIncrementToAll(Worker $worker, int $fromOrderId, int $toOrderId, ?string $traceId = null): void
+    {
+        if (empty($worker->connections)) {
+            return;
+        }
+        foreach ($worker->connections as $connection) {
+            if (!isset($connection->visualScreenManager) || !is_array($connection->visualScreenManager)) {
+                continue;
+            }
+            $ctx = (isset($connection->visualScreenCtx) && is_array($connection->visualScreenCtx))
+                ? $connection->visualScreenCtx
+                : [
+                    'regionType' => 'national',
+                    'regionName' => '',
+                    'cycle' => 'day',
+                    'machinePage' => 1,
+                    'machinePageSize' => 128,
+                ];
+            try {
+                $inc = self::queryOrderIncrementForContext($connection->visualScreenManager, $ctx, $fromOrderId, $toOrderId);
+                if (($inc['newOrderCount'] ?? 0) <= 0) {
+                    continue;
+                }
+                $connection->send(json_encode(
+                    VisualScreenService::wsPushPayload('visual_screen_order_paid_increment', $inc, $traceId),
+                    JSON_UNESCAPED_UNICODE
+                ));
+            } catch (\Throwable $e) {
+                $connection->send(json_encode(
+                    VisualScreenService::wsPushPayload('error', [
+                        'code' => 'AUTO_PUSH_ERROR',
+                        'message' => $e->getMessage(),
+                    ], $traceId),
+                    JSON_UNESCAPED_UNICODE
+                ));
+            }
+        }
+    }
+
+    /**
+     * @param array<string,mixed> $manager
+     * @param array<string,mixed> $ctx
+     * @return array<string,mixed>
+     */
+    protected static function queryOrderIncrementForContext(array $manager, array $ctx, int $fromOrderId, int $toOrderId): array
+    {
+        $app = AppFactory::management($manager);
+        $svc = new VisualScreenService($app);
+        $regionType = (string) ($ctx['regionType'] ?? 'national');
+        $regionName = trim((string) ($ctx['regionName'] ?? ''));
+        $mScope = $svc->effectiveMachineIds($regionType, $regionName);
+
+        if (is_array($mScope) && $mScope === []) {
+            return [
+                'regionType' => $regionType,
+                'regionName' => $regionName,
+                'fromOrderId' => $fromOrderId,
+                'toOrderId' => $toOrderId,
+                'newOrderCount' => 0,
+                'salesAmountDelta' => 0,
+                'quantityDelta' => 0,
+                'latestOrder' => null,
+                'recentOrders' => [],
+            ];
+        }
+
+        $baseQuery = Db::name('sale_orders')
+            ->where('pay_status', 3)
+            ->where('order_id', '>', $fromOrderId)
+            ->where('order_id', '<=', $toOrderId);
+        if ($mScope !== null) {
+            $baseQuery->whereIn('m_id', $mScope);
+        }
+
+        $stat = (clone $baseQuery)
+            ->fieldRaw('COUNT(*) as cnt, IFNULL(SUM(total_price),0) as amount, IFNULL(SUM(total_quantity),0) as qty, IFNULL(MAX(order_id),0) as latest_order_id')
+            ->find();
+        $stat = is_array($stat) ? $stat : (array) $stat;
+        $newOrderCount = (int) ($stat['cnt'] ?? 0);
+
+        $recentRows = [];
+        if ($newOrderCount > 0) {
+            $recentRows = (clone $baseQuery)
+                ->field('order_id,trade_no,machine_id,machine_name,total_price,total_quantity,create_time')
+                ->order('order_id', 'desc')
+                ->limit(5)
+                ->select()
+                ->toArray();
+        }
+
+        $latestOrder = null;
+        if (!empty($recentRows)) {
+            $r = $recentRows[0];
+            $latestOrder = [
+                'orderId' => (int) ($r['order_id'] ?? 0),
+                'tradeNo' => (string) ($r['trade_no'] ?? ''),
+                'machineId' => (string) ($r['machine_id'] ?? ''),
+                'machineName' => (string) ($r['machine_name'] ?? ''),
+                'amount' => round((float) ($r['total_price'] ?? 0), 2),
+                'quantity' => (int) ($r['total_quantity'] ?? 0),
+                'time' => isset($r['create_time']) ? date('Y-m-d H:i:s', (int) $r['create_time']) : '',
+            ];
+        }
+
+        $recentOrders = [];
+        foreach ($recentRows as $r) {
+            $recentOrders[] = [
+                'orderId' => (int) ($r['order_id'] ?? 0),
+                'tradeNo' => (string) ($r['trade_no'] ?? ''),
+                'machineId' => (string) ($r['machine_id'] ?? ''),
+                'machineName' => (string) ($r['machine_name'] ?? ''),
+                'amount' => round((float) ($r['total_price'] ?? 0), 2),
+                'quantity' => (int) ($r['total_quantity'] ?? 0),
+                'time' => isset($r['create_time']) ? date('Y-m-d H:i:s', (int) $r['create_time']) : '',
+            ];
+        }
+
+        return [
+            'regionType' => $regionType,
+            'regionName' => $regionName,
+            'fromOrderId' => $fromOrderId,
+            'toOrderId' => $toOrderId,
+            'newOrderCount' => $newOrderCount,
+            'salesAmountDelta' => round((float) ($stat['amount'] ?? 0), 2),
+            'quantityDelta' => (int) ($stat['qty'] ?? 0),
+            'latestOrder' => $latestOrder,
+            'recentOrders' => $recentOrders,
+        ];
     }
 }

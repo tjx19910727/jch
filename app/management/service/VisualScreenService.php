@@ -116,6 +116,10 @@ class VisualScreenService
         if ($mScope !== null) {
             $saleDataWhere[] = ['m_id', 'in', $mScope];
         }
+        $chartWhere = [];
+        if ($mScope !== null) {
+            $chartWhere[] = ['m_id', 'in', $mScope];
+        }
 
         $saleData = $this->app->saleOrders->getData($saleDataWhere);
         $screenCounts = $this->buildMachineScreenCounts($mScope);
@@ -149,7 +153,7 @@ class VisualScreenService
         ];
 
         $chartType = $this->cycleToChartType($cycle);
-        $chartResp = $this->app->saleOrders->getChartData($saleDataWhere, $chartType);
+    $chartResp = $this->app->saleOrders->getChartData($chartWhere, $chartType);
         $chartRows = is_array($chartResp) && isset($chartResp['data']) ? $chartResp['data'] : [];
 
         return [
@@ -189,8 +193,12 @@ class VisualScreenService
         if ($mScope !== null) {
             $saleDataWhere[] = ['m_id', 'in', $mScope];
         }
+        $chartWhere = [];
+        if ($mScope !== null) {
+            $chartWhere[] = ['m_id', 'in', $mScope];
+        }
         $chartType = $this->cycleToChartType($cycle);
-        $chartResp = $this->app->saleOrders->getChartData($saleDataWhere, $chartType);
+        $chartResp = $this->app->saleOrders->getChartData($chartWhere, $chartType);
         $chartRows = is_array($chartResp) && isset($chartResp['data']) ? $chartResp['data'] : [];
         return [
             'cycle' => $cycle,
@@ -378,7 +386,7 @@ class VisualScreenService
             ->join('goods g', 'g.g_id = sod.g_id', 'left')
             ->join('goods_category gc', 'gc.gc_id = g.gc_id', 'left')
             ->where($where)
-            ->field('sod.g_id,sod.g_name as name, IFNULL(SUM(sod.quantity - sod.refund_quantity),0) as value, IFNULL(gc.gc_name,"") as category')
+            ->field('sod.g_id,sod.g_name as name, sod.retail_price,IFNULL(SUM(sod.quantity - sod.refund_quantity),0) as value, IFNULL(gc.gc_name,"") as category')
             ->group('sod.g_id,sod.g_name,gc.gc_name')
             ->order('value', 'desc')
             ->limit(10)
@@ -390,7 +398,7 @@ class VisualScreenService
                 $gIds[] = (int) $r['g_id'];
             }
         }
-        $rebuyMap = $this->fetchRebuyRatesForGids($gIds, $since30, $saleWhere);
+        // $rebuyMap = $this->fetchRebuyRatesForGids($gIds, $since30, $saleWhere);
         $out = [];
         foreach ($rows as $r) {
             $gid = (int) ($r['g_id'] ?? 0);
@@ -398,7 +406,7 @@ class VisualScreenService
                 'name' => (string) $r['name'],
                 'value' => (int) round((float) $r['value']),
                 'category' => (string) ($r['category'] ?? ''),
-                'rebuyRate' => (int) ($rebuyMap[$gid] ?? 0),
+                'retail_price' => (float) ($r['retail_price']),
             ];
         }
         return $out;
@@ -685,7 +693,7 @@ class VisualScreenService
             ->join('machine m', 'm.m_id = so.m_id', 'left')
             ->join('earth_states s', 'm.state_id = s.id', 'left')
             ->where($where)
-            ->field('so.trade_no,so.machine_name,so.create_time,so.total_price,s.cname as state_name,(SELECT sod.g_name FROM sale_orders_details sod WHERE sod.order_id = so.order_id LIMIT 1) as g_name')
+            ->field('so.trade_no,so.machine_name,so.create_time,so.total_price,s.cname as state_name,(SELECT sod.g_name FROM sale_orders_details sod WHERE sod.order_id = so.order_id LIMIT 1) as g_name, m.lng,m.lat')
             ->order('so.order_id', 'desc')
             ->limit($limit)
             ->select()
@@ -739,13 +747,15 @@ class VisualScreenService
     protected function queryProvinceMIds(string $regionName): array
     {
         $norm = preg_replace('/(省|市|壮族自治区|回族自治区|维吾尔自治区|自治区)$/', '', trim($regionName));
+        $likeRegion = '%' . $regionName . '%';
+        $likeNorm = '%' . $norm . '%';
         $rows = Db::name('machine')->alias('m')
             ->join('earth_states s', 'm.state_id = s.id', 'left')
-            ->where(function ($q) use ($norm, $regionName) {
-                $q->whereLike('s.cname', '%' . $regionName . '%')
-                    ->whereOrLike('s.cname', '%' . $norm . '%')
-                    ->whereOrLike('s.name', '%' . $norm . '%');
-            })
+            ->whereRaw('(s.cname LIKE ? OR s.cname LIKE ? OR s.name LIKE ?)', [
+                $likeRegion,
+                $likeNorm,
+                $likeNorm,
+            ])
             ->column('m.m_id');
         return array_values(array_unique(array_map('intval', $rows)));
     }
