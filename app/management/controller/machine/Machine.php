@@ -35,7 +35,7 @@ class Machine extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
         //只取vending_machine_type为1的设备，即主柜设备
-        $where[] = ['vending_machine_type', '=', 1];
+        $where[] = ['vending_machine_type', '=', 1];//vending_machine_type字段已废弃，入库默认值为1，代码层面涉及此字段的不用管
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
         return $this->app->machine->getMList($where,$pageNum,$this->field,"online asc, m_id desc");
     }
@@ -349,5 +349,18 @@ class Machine extends Common
         $postData = input();
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
         return $this->app->machineChannel->exportStockOutList($where);
+    }
+
+    /**
+     * 导出设备货道库存明细
+     * @return array|string
+     */
+    public function exportStockRatio()
+    {
+        $mId = input('m_id');
+        if (!$mId) {
+            return returnValidate(lang("VMachine.machine_id_require"));
+        }
+        return $this->app->machineChannel->exportStockRatioByMachine($mId);
     }
 }
