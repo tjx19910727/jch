@@ -32,14 +32,6 @@ class VisualScreenService
             return null;
         }
         $provMids = $this->queryProvinceMIds($regionName);
-        if ($this->manager['pid'] > 0) {
-            $auth = $this->app->machine->getAuthManagerMachineColumn(
-                ['manager_id' => $this->manager['manager_id']],
-                'm_id'
-            );
-            $auth = is_array($auth) ? $auth : (array) $auth;
-            return array_values(array_unique(array_map('intval', array_intersect($auth, $provMids))));
-        }
         return array_values(array_unique(array_map('intval', $provMids)));
     }
 
@@ -53,14 +45,6 @@ class VisualScreenService
         $q = Db::name('machine')->where('vending_machine_type', 1);
         if ($mScope !== null) {
             $q->whereIn('m_id', $mScope);
-        } elseif ($this->manager['pid'] > 0) {
-            $auth = $this->app->machine->getAuthManagerMachineColumn(
-                ['manager_id' => $this->manager['manager_id']],
-                'm_id'
-            );
-            if ($auth) {
-                $q->whereIn('m_id', $auth);
-            }
         }
         return $q;
     }
@@ -96,7 +80,7 @@ class VisualScreenService
     }
 
     /**
-     * @param array{regionType?:string,regionName?:string,cycle?:string,machinePage?:int,machinePageSize?:int} $ctx
+     * @param array{regionType?:string,regionName?:string,cycle?:string,machinePage?:int,machinePageSize?:int,lastOrderId?:int} $ctx
      * @return array<string,mixed>
      */
     public function buildSnapshot(array $ctx): array
@@ -106,6 +90,7 @@ class VisualScreenService
         $cycle = $ctx['cycle'] ?? 'day';
         $page = max(1, (int) ($ctx['machinePage'] ?? 1));
         $pageSize = min(256, max(1, (int) ($ctx['machinePageSize'] ?? 128)));
+    $lastOrderId = max(0, (int) ($ctx['lastOrderId'] ?? 0));
 
         $mScope = $this->effectiveMachineIds($regionType, $regionName);
         if (is_array($mScope) && $mScope === []) {
@@ -174,6 +159,7 @@ class VisualScreenService
             ],
             'machineList' => $this->buildMachineList($mScope, $page, $pageSize, $screenCounts),
             'realtimeOrders' => $this->buildRealtimeOrders($saleDataWhere, $regionType, $regionName, 30),
+            'orderIncrement' => $this->buildOrderIncrement($saleDataWhere, $lastOrderId, $regionType, $regionName),
         ];
     }
 
@@ -244,6 +230,84 @@ class VisualScreenService
                 'list' => [],
             ],
             'realtimeOrders' => [],
+            'orderIncrement' => [
+                'regionType' => $regionType,
+                'regionName' => $regionName,
+                'fromOrderId' => 0,
+                'toOrderId' => 0,
+                'newOrderCount' => 0,
+                'salesAmountDelta' => 0,
+                'quantityDelta' => 0,
+                'latestOrder' => null,
+                'recentOrders' => [],
+            ],
+        ];
+    }
+
+    /**
+     * @param array $saleWhere
+     * @return array<string,mixed>
+     */
+    protected function buildOrderIncrement(array $saleWhere, int $lastOrderId, string $regionType, string $regionName): array
+    {
+        $where = $this->saleWhereToQuery($saleWhere);
+        $query = Db::name('sale_orders')->alias('so')
+            ->where($where)
+            ->where('so.order_id', '>', $lastOrderId);
+
+        $stat = (clone $query)
+            ->fieldRaw('COUNT(*) as cnt, IFNULL(SUM(so.total_price),0) as amount, IFNULL(SUM(so.total_quantity),0) as qty, IFNULL(MAX(so.order_id),0) as latest_order_id')
+            ->find();
+        $stat = is_array($stat) ? $stat : (array) $stat;
+        $newOrderCount = (int) ($stat['cnt'] ?? 0);
+
+        $recentRows = [];
+        if ($newOrderCount > 0) {
+            $recentRows = (clone $query)
+                ->field('so.order_id,so.trade_no,so.machine_id,so.machine_name,so.total_price,so.total_quantity,so.create_time')
+                ->order('so.order_id', 'desc')
+                ->limit(5)
+                ->select()
+                ->toArray();
+        }
+
+        $latestOrder = null;
+        if (!empty($recentRows)) {
+            $r = $recentRows[0];
+            $latestOrder = [
+                'orderId' => (int) ($r['order_id'] ?? 0),
+                'tradeNo' => (string) ($r['trade_no'] ?? ''),
+                'machineId' => (string) ($r['machine_id'] ?? ''),
+                'machineName' => (string) ($r['machine_name'] ?? ''),
+                'amount' => round((float) ($r['total_price'] ?? 0), 2),
+                'quantity' => (int) ($r['total_quantity'] ?? 0),
+                'time' => isset($r['create_time']) ? date('Y-m-d H:i:s', (int) $r['create_time']) : '',
+            ];
+        }
+
+        $recentOrders = [];
+        foreach ($recentRows as $r) {
+            $recentOrders[] = [
+                'orderId' => (int) ($r['order_id'] ?? 0),
+                'tradeNo' => (string) ($r['trade_no'] ?? ''),
+                'machineId' => (string) ($r['machine_id'] ?? ''),
+                'machineName' => (string) ($r['machine_name'] ?? ''),
+                'amount' => round((float) ($r['total_price'] ?? 0), 2),
+                'quantity' => (int) ($r['total_quantity'] ?? 0),
+                'time' => isset($r['create_time']) ? date('Y-m-d H:i:s', (int) $r['create_time']) : '',
+            ];
+        }
+
+        return [
+            'regionType' => $regionType,
+            'regionName' => $regionName,
+            'fromOrderId' => $lastOrderId,
+            'toOrderId' => (int) ($stat['latest_order_id'] ?? 0),
+            'newOrderCount' => $newOrderCount,
+            'salesAmountDelta' => round((float) ($stat['amount'] ?? 0), 2),
+            'quantityDelta' => (int) ($stat['qty'] ?? 0),
+            'latestOrder' => $latestOrder,
+            'recentOrders' => $recentOrders,
         ];
     }
 
@@ -467,7 +531,7 @@ class VisualScreenService
 
     /**
      * @param int[]|null $mScope
-     * @return array{level:string,provinceName:string,items:array<int,array{name:string,value:int,adcode:int}>}
+    * @return array{level:string,provinceName:string,items:array<int,array{name:string,value:int,adcode:string}>}
      */
     protected function buildMapValues(string $regionType, string $regionName, ?array $mScope): array
     {
@@ -493,10 +557,11 @@ class VisualScreenService
 
     /**
      * @param int[]|null $mScope
-     * @return array<int,array{name:string,value:int,adcode:int}>
+    * @return array<int,array{name:string,value:int,adcode:string}>
      */
     protected function aggregateSalesByProvince(?array $mScope): array
     {
+        $debugEnabled = $this->shouldExposeAdcodeDebug();
         $q = Db::name('sale_orders')->alias('so')
             ->join('machine m', 'm.m_id = so.m_id', 'left')
             ->join('earth_states s', 'm.state_id = s.id', 'left')
@@ -508,14 +573,6 @@ class VisualScreenService
             ->limit(40);
         if ($mScope !== null) {
             $q->whereIn('so.m_id', $mScope);
-        } elseif ($this->manager['pid'] > 0) {
-            $auth = $this->app->machine->getAuthManagerMachineColumn(
-                ['manager_id' => $this->manager['manager_id']],
-                'm_id'
-            );
-            if ($auth) {
-                $q->whereIn('so.m_id', $auth);
-            }
         }
         $rows = $q->select()->toArray();
         $out = [];
@@ -523,33 +580,109 @@ class VisualScreenService
             if ($r['name'] === '') {
                 continue;
             }
-            $adcode = (int) preg_replace('/\D/', '', (string) ($r['adcode'] ?? '0'));
-            $out[] = [
+            $rawAdcode = (string) ($r['adcode'] ?? '');
+            $adcode = $this->normalizeGbAdcode((string) ($r['adcode'] ?? ''));
+            $item = [
                 'name' => (string) $r['name'],
                 'value' => (int) round((float) $r['v']),
                 'adcode' => $adcode,
             ];
+            if ($debugEnabled) {
+                $item['debugAdcode'] = [
+                    'raw' => $rawAdcode,
+                    'stateRaw' => '',
+                    'normalized' => $adcode,
+                ];
+            }
+            $out[] = $item;
+        }
+
+        $zeroItems = $this->buildProvinceZeroItems($mScope, $debugEnabled);
+        if ($zeroItems !== []) {
+            $exists = [];
+            foreach ($out as $it) {
+                $exists[(string) ($it['name'] ?? '')] = true;
+            }
+            foreach ($zeroItems as $it) {
+                $name = (string) ($it['name'] ?? '');
+                if ($name === '' || isset($exists[$name])) {
+                    continue;
+                }
+                $out[] = $it;
+            }
+        }
+
+        usort($out, static function (array $a, array $b): int {
+            return (int) ($b['value'] ?? 0) <=> (int) ($a['value'] ?? 0);
+        });
+        return array_slice($out, 0, 40);
+    }
+
+    /**
+     * national 视图兜底：有设备但近30天无支付订单的省份也返回 value=0
+     *
+     * @param int[]|null $mScope
+     * @return array<int,array{name:string,value:int,adcode:string}>
+     */
+    protected function buildProvinceZeroItems(?array $mScope, bool $debugEnabled = false): array
+    {
+        $q = Db::name('machine')->alias('m')
+            ->join('earth_states s', 'm.state_id = s.id', 'left')
+            ->where('m.vending_machine_type', 1)
+            ->field('IFNULL(s.cname,"") as name, IFNULL(s.code_full,s.code) as adcode')
+            ->group('m.state_id,s.cname,s.code,s.code_full')
+            ->order('m.state_id', 'asc')
+            ->limit(60);
+        if ($mScope !== null) {
+            if ($mScope === []) {
+                return [];
+            }
+            $q->whereIn('m.m_id', $mScope);
+        }
+        $rows = $q->select()->toArray();
+        $out = [];
+        foreach ($rows as $r) {
+            if (($r['name'] ?? '') === '') {
+                continue;
+            }
+            $rawAdcode = (string) ($r['adcode'] ?? '');
+            $adcode = $this->normalizeGbAdcode($rawAdcode);
+            $item = [
+                'name' => (string) $r['name'],
+                'value' => 0,
+                'adcode' => $adcode,
+            ];
+            if ($debugEnabled) {
+                $item['debugAdcode'] = [
+                    'raw' => $rawAdcode,
+                    'stateRaw' => '',
+                    'normalized' => $adcode,
+                ];
+            }
+            $out[] = $item;
         }
         return $out;
     }
 
     /**
      * @param int[] $mids
-     * @return array<int,array{name:string,value:int,adcode:int}>
+    * @return array<int,array{name:string,value:int,adcode:string}>
      */
     protected function aggregateSalesByCity(array $mids): array
     {
+        $debugEnabled = $this->shouldExposeAdcodeDebug();
         if ($mids === []) {
             return [];
         }
         $rows = Db::name('sale_orders')->alias('so')
             ->join('machine m', 'm.m_id = so.m_id', 'left')
             ->join('earth_cities c', 'm.city_id = c.id', 'left')
+            ->join('earth_states s', 'm.state_id = s.id', 'left')
             ->where('so.pay_status', '=', 3)
             ->whereIn('so.m_id', $mids)
             ->where('so.create_date', '>=', strtotime('-30 days'))
-            ->field('IFNULL(c.cname,"") as name, IFNULL(c.code_full,c.code) as adcode, IFNULL(SUM(so.total_quantity),0) as v')
-            ->group('m.city_id,c.cname,c.code,c.code_full')
+            ->field('IFNULL(c.cname,"") as name, IFNULL(c.code_full,c.code) as adcode, IFNULL(s.code_full,s.code) as state_adcode, IFNULL(SUM(so.total_quantity),0) as v')
+            ->group('m.city_id,c.cname,c.code,c.code_full,s.code,s.code_full')
             ->order('v', 'desc')
             ->limit(40)
             ->select()
@@ -559,14 +692,153 @@ class VisualScreenService
             if ($r['name'] === '') {
                 continue;
             }
-            $adcode = (int) preg_replace('/\D/', '', (string) ($r['adcode'] ?? '0'));
-            $out[] = [
+            $rawAdcode = (string) ($r['adcode'] ?? '');
+            $stateRawAdcode = (string) ($r['state_adcode'] ?? '');
+            $adcode = $this->normalizeGbAdcode(
+                $rawAdcode,
+                $stateRawAdcode
+            );
+            $item = [
                 'name' => (string) $r['name'],
                 'value' => (int) round((float) $r['v']),
                 'adcode' => $adcode,
             ];
+            if ($debugEnabled) {
+                $item['debugAdcode'] = [
+                    'raw' => $rawAdcode,
+                    'stateRaw' => $stateRawAdcode,
+                    'normalized' => $adcode,
+                ];
+            }
+            $out[] = $item;
+        }
+        if ($out === []) {
+            return $this->buildCityZeroItems($mids, $debugEnabled);
         }
         return $out;
+    }
+
+    /**
+     * 省份视图兜底：该省设备有数据权限但近30天无支付订单时，返回城市列表（value=0）
+     *
+     * @param int[] $mids
+     * @return array<int,array{name:string,value:int,adcode:string}>
+     */
+    protected function buildCityZeroItems(array $mids, bool $debugEnabled = false): array
+    {
+        if ($mids === []) {
+            return [];
+        }
+        $rows = Db::name('machine')->alias('m')
+            ->join('earth_cities c', 'm.city_id = c.id', 'left')
+            ->join('earth_states s', 'm.state_id = s.id', 'left')
+            ->whereIn('m.m_id', $mids)
+            ->field('IFNULL(c.cname,"") as name, IFNULL(c.code_full,c.code) as adcode, IFNULL(s.code_full,s.code) as state_adcode')
+            ->group('m.city_id,c.cname,c.code,c.code_full,s.code,s.code_full')
+            ->order('m.city_id', 'asc')
+            ->limit(40)
+            ->select()
+            ->toArray();
+        $out = [];
+        foreach ($rows as $r) {
+            if (($r['name'] ?? '') === '') {
+                continue;
+            }
+            $rawAdcode = (string) ($r['adcode'] ?? '');
+            $stateRawAdcode = (string) ($r['state_adcode'] ?? '');
+            $adcode = $this->normalizeGbAdcode($rawAdcode, $stateRawAdcode);
+            $item = [
+                'name' => (string) $r['name'],
+                'value' => 0,
+                'adcode' => $adcode,
+            ];
+            if ($debugEnabled) {
+                $item['debugAdcode'] = [
+                    'raw' => $rawAdcode,
+                    'stateRaw' => $stateRawAdcode,
+                    'normalized' => $adcode,
+                ];
+            }
+            $out[] = $item;
+        }
+        return $out;
+    }
+
+    protected function shouldExposeAdcodeDebug(): bool
+    {
+        if (function_exists('env')) {
+            return (bool) \env('app_debug', false);
+        }
+        $val = getenv('APP_DEBUG');
+        if ($val === false) {
+            return false;
+        }
+        return in_array(strtolower((string) $val), ['1', 'true', 'on', 'yes'], true);
+    }
+
+    /**
+     * 归一化为国标 6 位 adcode（仅数字）：
+     * - 2 位省码 => XX0000
+     * - 4 位地市码 => XXXX00
+     * - 6 位直接使用
+     * - 1~2 位市码 + 2 位省码 => 省码 + 市码(左补0) + 00（兼容直辖市）
+     */
+    protected function normalizeGbAdcode(string $adcodeRaw, string $stateAdcodeRaw = ''): string
+    {
+        $adcode = preg_replace('/\D/', '', $adcodeRaw);
+        $stateAdcode = preg_replace('/\D/', '', $stateAdcodeRaw);
+
+        if ($adcode === null || $stateAdcode === null) {
+            return '000000';
+        }
+
+        $state2 = '';
+        $state1 = '';
+        $city2 = '';
+        if (strlen($stateAdcode) >= 1) {
+            $state1 = substr($stateAdcode, -1);
+        }
+        if (strlen($stateAdcode) >= 2) {
+            $state2 = substr($stateAdcode, -2);
+        }
+        if (strlen($adcode) >= 2) {
+            $city2 = substr($adcode, -2);
+        }
+        $adcodeLen = strlen($adcode);
+        if ($adcodeLen >= 6) {
+            $six = substr($adcode, 0, 6);
+            if ($six[0] !== '0') {
+                return $six;
+            }
+            if ($state2 !== '' && $city2 !== '') {
+                return $state2 . $city2 . '00';
+            }
+            if ($state1 !== '' && $state1 !== '0') {
+                return $state1 . substr($six, 1, 5);
+            }
+            return $six;
+        }
+
+        if ($adcodeLen === 4) {
+            return $adcode . '00';
+        }
+
+        if ($adcodeLen >= 1 && $adcodeLen <= 2) {
+            if ($state2 !== '') {
+                $cityPart = str_pad(substr($adcode, 0, 2), 2, '0', STR_PAD_LEFT);
+                return $state2 . $cityPart . '00';
+            }
+        }
+
+        if ($adcodeLen === 2) {
+            return $adcode . '0000';
+        }
+
+        if ($adcodeLen > 0 && $adcodeLen < 6) {
+            return str_pad($adcode, 6, '0', STR_PAD_RIGHT);
+        }
+
+        return '000000';
     }
 
     /**
@@ -581,14 +853,6 @@ class VisualScreenService
             ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.street');
         if ($mScope !== null) {
             $q->whereIn('m.m_id', $mScope);
-        } elseif ($this->manager['pid'] > 0) {
-            $auth = $this->app->machine->getAuthManagerMachineColumn(
-                ['manager_id' => $this->manager['manager_id']],
-                'm_id'
-            );
-            if ($auth) {
-                $q->whereIn('m.m_id', $auth);
-            }
         }
         $total = (int) (clone $q)->count();
         $rows = $q->order('m.m_id', 'desc')

@@ -13,7 +13,7 @@ class VisualScreen extends Common
 {
     /**
      * 全量快照（等同 WS 事件 visual_screen_snapshot 的 payload）
-     * 参数：regionType, regionName, cycle, machinePage, machinePageSize
+     * 参数：regionType, regionName, cycle, machinePage, machinePageSize, lastOrderId
      */
     public function getSnapshot()
     {
@@ -23,6 +23,7 @@ class VisualScreen extends Common
             'cycle' => input('cycle/s', 'day'),
             'machinePage' => input('machinePage/d', 1),
             'machinePageSize' => input('machinePageSize/d', 128),
+            'lastOrderId' => input('lastOrderId/d', 0),
         ];
         $svc = new VisualScreenService($this->app);
         $data = $svc->buildSnapshot($ctx);

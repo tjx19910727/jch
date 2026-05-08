@@ -58,26 +58,9 @@ class VisualScreenWs extends Command
         $worker->name = 'visual_screen_ws';
         $worker->count = 1;
 
+        // 不做 WS 定时增量推送：增量统一随 visual_screen_snapshot 返回
         $worker->onWorkerStart = function (Worker $worker) {
             self::$lastPaidOrderId = self::queryLatestPaidOrderId();
-            $cfg = Config::get('visual_screen');
-            $interval = (float) ($cfg['auto_push_poll_interval'] ?? 2.0);
-            if ($interval <= 0) {
-                $interval = 2.0;
-            }
-
-            self::addTimer($interval, function () use ($worker) {
-                if (empty($worker->connections)) {
-                    return;
-                }
-                $fromOrderId = self::$lastPaidOrderId;
-                $latestPaidOrderId = self::queryLatestPaidOrderId();
-                if ($latestPaidOrderId <= 0 || $latestPaidOrderId <= self::$lastPaidOrderId) {
-                    return;
-                }
-                self::$lastPaidOrderId = $latestPaidOrderId;
-                self::broadcastIncrementToAll($worker, $fromOrderId, $latestPaidOrderId, (string) $latestPaidOrderId);
-            });
         };
 
         $worker->onWebSocketConnect = function (TcpConnection $connection, $httpBuffer) {
@@ -105,6 +88,7 @@ class VisualScreenWs extends Command
                 'cycle' => 'day',
                 'machinePage' => 1,
                 'machinePageSize' => 128,
+                'lastOrderId' => self::$lastPaidOrderId,
             ];
         };
 
@@ -136,6 +120,7 @@ class VisualScreenWs extends Command
                         $ctx['cycle'] = $payload['cycle'] ?? 'day';
                         $ctx['machinePage'] = (int) ($payload['machinePage'] ?? 1);
                         $ctx['machinePageSize'] = (int) ($payload['machinePageSize'] ?? 128);
+                        $ctx['lastOrderId'] = max(0, (int) ($payload['lastOrderId'] ?? 0));
                         $connection->visualScreenCtx = $ctx;
                         $snap = $svc->buildSnapshot($ctx);
                         $connection->send(json_encode(
@@ -146,6 +131,9 @@ class VisualScreenWs extends Command
                     case 'visual_screen_switch_region':
                         $ctx['regionType'] = $payload['regionType'] ?? 'national';
                         $ctx['regionName'] = isset($payload['regionName']) ? (string) $payload['regionName'] : '';
+                        if (isset($payload['lastOrderId'])) {
+                            $ctx['lastOrderId'] = max(0, (int) $payload['lastOrderId']);
+                        }
                         $connection->visualScreenCtx = $ctx;
                         $snap = $svc->buildSnapshot($ctx);
                         $connection->send(json_encode(
@@ -155,6 +143,9 @@ class VisualScreenWs extends Command
                         break;
                     case 'visual_screen_switch_cycle':
                         $ctx['cycle'] = $payload['cycle'] ?? 'day';
+                        if (isset($payload['lastOrderId'])) {
+                            $ctx['lastOrderId'] = max(0, (int) $payload['lastOrderId']);
+                        }
                         $connection->visualScreenCtx = $ctx;
                         $trend = $svc->buildSalesTrend($ctx);
                         $connection->send(json_encode(
@@ -264,8 +255,12 @@ class VisualScreenWs extends Command
                 if (($inc['newOrderCount'] ?? 0) <= 0) {
                     continue;
                 }
+                $app = AppFactory::management($connection->visualScreenManager);
+                $svc = new VisualScreenService($app);
+                $snapshot = $svc->buildSnapshot($ctx);
+                $snapshot['orderIncrement'] = $inc;
                 $connection->send(json_encode(
-                    VisualScreenService::wsPushPayload('visual_screen_order_paid_increment', $inc, $traceId),
+                    VisualScreenService::wsPushPayload('visual_screen_snapshot', $snapshot, $traceId),
                     JSON_UNESCAPED_UNICODE
                 ));
             } catch (\Throwable $e) {
