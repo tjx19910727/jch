@@ -193,6 +193,42 @@ class MachineChannelClient extends ManagementClient
     }
 
     /**
+     * 导出单设备货道库存明细
+     * @param mixed $deviceId
+     * @return array|string
+     */
+    public function exportStockRatioByMachine($deviceId)
+    {
+        $machine = $this->getMachineFind(['m_id'=>$deviceId], 'm_id,machine_id,machine_name');
+        if (!$machine) {
+            return $this->r(100, $this->lang('VMachine.machine_no_data'));
+        }
+
+        $field = 'channel_code,g_name,retail_price,capacity,stock';
+        $list = $this->getMachineChannelList(['m_id' => $machine['m_id']], 0, $field, 'channel_code asc');
+        if (!$list) {
+            return $this->rNoData();
+        }
+
+        $list = $list->toArray();
+        foreach ($list as $key => $item) {
+            $item['channel_name'] = '货道' . $item['channel_code'];
+            $list[$key] = $item;
+        }
+
+        $title = [
+            'channel_code' => '货道编号',
+            'channel_name' => '货道名称',
+            'g_name' => '商品名称',
+            'retail_price' => '商品售价',
+            'capacity' => '货道容量',
+            'stock' => '货道库存',
+        ];
+        $filename = '设备货道库存明细-' . $machine['machine_id'] . '-' . date('YmdHis');
+        return $this->sendToExport('设备管理-设备货道库存明细', $filename, $title, $list);
+    }
+
+    /**
      * 构建空槽列表数据
      * @param array $where
      * @return array
