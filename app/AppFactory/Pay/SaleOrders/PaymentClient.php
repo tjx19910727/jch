@@ -137,12 +137,6 @@ class PaymentClient extends PayBaseClient
         actionLog($this->machine,'发起支付设备数据');
         $paymentType = 1;
 
-        // 订单金额大于0才能执行分润，生成分润记录
-        if ($this->order['total_price'] > 0) {
-            $flag[] = $this->countIncome();
-        }
-
-
         // 反扫支付二维码
         if (isset($this->data['authCode']) && $this->order['pay_method'] == 2) {
             $this->data['authCode'] = str_replace("Num Lock",'',$this->data['authCode']);
@@ -190,6 +184,12 @@ class PaymentClient extends PayBaseClient
             $this->order['pay_type'] = $this->strategyPayee['payee_type'];
         }
         $this->order['sp_id'] = $this->strategyPayee['sp_id'];
+
+        // 分润须在 sp_id、pay_type 与本次收款策略确定之后执行，保证 sale_orders_revenue.sp_id 与当笔支付一致
+        if ($this->order['total_price'] > 0) {
+            $this->countIncome();
+        }
+
         $uOrder = $this->updateSaleOrders($this->order,[],['pay_code',"pay_method",'pay_type','sp_id']);
         if ($uOrder) {
             actionLog($this->getLS(), '修改订单支付状态信息');

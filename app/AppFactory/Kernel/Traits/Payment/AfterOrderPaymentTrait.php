@@ -231,15 +231,29 @@ trait AfterOrderPaymentTrait
         $revenue = $this->getSaleOrdersRevenueList($where);
         if ($revenue) {
             foreach ($revenue as $key => $value) {
+                $currentStatus = intval($value['status'] ?? 0);
+                // 幂等：已结算不重复处理
+                if ($currentStatus === 1) {
+                    continue;
+                }
+
+                $incomeAmount = (string) (is_numeric($value['income_amount'] ?? null) ? $value['income_amount'] : 0);
+                $refundAmount = (string) (is_numeric($value['refund_amount'] ?? null) ? $value['refund_amount'] : 0);
+                $settleableAmount = bcsub($incomeAmount, $refundAmount, 3);
+                if (bccomp($settleableAmount, '0', 3) < 0) {
+                    $settleableAmount = '0';
+                }
+
                 $update['sor_id'] = $value['sor_id'];
                 $update['status'] = 1;
                 // 已分润状态，增加分润时间
                 // if ($update['status'] == 2 || $update['status'] == 3) $update['revenue_time'] = time();
                 // 电子钱包
-                if (in_array($value['revenue_type'], [1, 4])) {
-                    $result = $this->incAuthManager(['manager_id' => $value['manager_id']], 'balance', $value['income_amount']);
+                if (in_array($value['revenue_type'], [1, 4]) && bccomp($settleableAmount, '0', 3) > 0) {
+                    $result = $this->incAuthManager(['manager_id' => $value['manager_id']], 'balance', $settleableAmount);
                     actionLog($result, '增加账号余额结果');
                     actionLog($this->getLS(), '增加账号余额SQL');
+                    $flag[] = $result;
                 }
                 $flag[] = $this->updateSaleOrdersRevenue($update);
                 actionLog($this->getLS(), '结算收益SQL');

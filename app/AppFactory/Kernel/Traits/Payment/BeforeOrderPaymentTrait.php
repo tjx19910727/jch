@@ -37,9 +37,162 @@ trait BeforeOrderPaymentTrait
      */
     public function countIncome()
     {
-        // $this->getStrategy();
-        // return $this->addRevenue();
-        return $this->addAuthOrgMachineChannelRevenue();
+        $this->order['details'] = $this->order['detail'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']])->toArray();
+        $this->countOrder = $this->order;
+        $details = $this->countOrder['details'] ?? [];
+        if (!$details) return true;
+
+        $parentAoId = intval($this->countOrder['ao_id'] ?? 0);
+        $needLegacy = false;
+        foreach ($details as $sodValue) {
+            $detailAoId = intval($sodValue['sod_ao_id'] ?? 0);
+            if (!$this->shouldUseRentalRevenueMode($detailAoId, $parentAoId)) {
+                $needLegacy = true;
+                break;
+            }
+        }
+        if ($needLegacy) {
+            $this->beneficiary = [];
+            $this->getStrategy();
+        }
+        $legacyRadio = 100;
+        $this->handleRadio($legacyRadio);
+
+        $flag = [1];
+        foreach ($details as $sodValue) {
+            $detailAoId = intval($sodValue['sod_ao_id'] ?? 0);
+            $sodId = $sodValue['sod_id'] ?? 0;
+            if ($this->shouldUseRentalRevenueMode($detailAoId, $parentAoId)) {
+                actionLog([
+                    'mode' => 'rental',
+                    'sod_id' => $sodId,
+                    'sod_ao_id' => $detailAoId,
+                    'order_ao_id' => $parentAoId,
+                ], '分账路由命中');
+                $flag[] = $this->addAuthOrgMachineChannelRevenueByDetail($sodValue, $detailAoId);
+                continue;
+            }
+            actionLog([
+                'mode' => 'legacy',
+                'sod_id' => $sodId,
+                'sod_ao_id' => $detailAoId,
+                'order_ao_id' => $parentAoId,
+            ], '分账路由命中');
+            $flag[] = $this->addLegacyRevenueByDetail($sodValue, $legacyRadio);
+        }
+        return flag_check($flag);
+    }
+
+    /**
+     * 是否走组织租赁分账模式（sod_ao_id 与父订单 ao_id 不同）
+     */
+    protected function shouldUseRentalRevenueMode(int $detailAoId, int $parentAoId): bool
+    {
+        if ($detailAoId <= 0 || $parentAoId <= 0) {
+            return false;
+        }
+        return $detailAoId !== $parentAoId;
+    }
+
+    /**
+     * 旧方案：按已整理 beneficiary 对单个子订单生成待分润
+     */
+    protected function addLegacyRevenueByDetail(array $sodValue, $radio = 100)
+    {
+        $flag = [1];
+        if (!$this->beneficiary) {
+            return true;
+        }
+        $sodRadio = $radio;
+        $insert = [
+            "order_id" => $this->countOrder['order_id'],
+            "sp_id" => $this->countOrder['sp_id'],
+            "m_id" => $this->countOrder['m_id'],
+            "machine_name" => $this->countOrder['machine_name'],
+            "machine_id" => $this->countOrder['machine_id'],
+            "order_amount" => $this->countOrder['total_price'],
+            "sod_id" => $sodValue['sod_id'],
+            "sod_amount" => $sodValue['retail_price'],
+            "sod_quantity" => $sodValue['quantity'],
+            "sod_total_price" => $sodValue['total_sod_price'],
+        ];
+        foreach ($this->beneficiary as $value) {
+            $sodRadio = bcsub($sodRadio, $value['income_value']);
+            $insert['si_id'] = $value['si_id'];
+            $insert['income_value'] = $value['income_value'];
+            $insert['manager_id'] = $value['manager_id'];
+            $insert['bill_account'] = $value['bill_account'] ?? "";
+            $insert['revenue_type'] = $value['transfer_method'];
+            $income_amount = bcmul($insert['sod_total_price'], bcmul($value['income_value'], 0.01, 3), 3);
+            if ($income_amount >= 0.01 && $sodRadio > 0) {
+                $insert['income_amount'] = $income_amount;
+                $flag[] = $this->addSaleOrdersRevenue($insert);
+                actionLog($flag,'生成分润记录flag');
+                actionLog($this->getLS(),'生成分润记录SQL');
+            }
+        }
+        return flag_check($flag);
+    }
+
+    /**
+     * 组织租赁分账：按单个子订单生成待分润与组织分账日志
+     */
+    protected function addAuthOrgMachineChannelRevenueByDetail(array $sodValue, int $detailAoId)
+    {
+        if ($detailAoId <= 0) return true;
+
+        $strategy_machine = $this->getStrategyMachineFind(['s_type' => 3,'ao_id' => $detailAoId,'m_id' => $this->countOrder['m_id']]);
+        if(!$strategy_machine) return true;
+        $strategy_machine = $strategy_machine->toArray();
+        $strategy_income = $this->getStrategyIncomeFind(['si_id' => $strategy_machine['s_id']]);
+        if(!$strategy_income) return true;
+        $strategy_income = $strategy_income->toArray();
+        $radio = $strategy_income['income_value'] ?? 0;
+        $strategy_manager = $this->getStrategyManagerFind(['s_id' => $strategy_machine['s_id'],'s_type' => 1,'ao_id' => $detailAoId,'m_id' => $this->countOrder['m_id']]);
+        if(!$strategy_manager) return true;
+        $strategy_manager = $strategy_manager->toArray();
+        $insert = [
+            "order_id" => $this->countOrder['order_id'],
+            "sp_id" => $this->countOrder['sp_id'],
+            "m_id" => $this->countOrder['m_id'],
+            "machine_name" => $this->countOrder['machine_name'],
+            "machine_id" => $this->countOrder['machine_id'],
+            "order_amount" => $this->countOrder['total_price'],
+            "sod_id" => $sodValue['sod_id'],
+            "sod_amount" => $sodValue['retail_price'],
+            "sod_quantity" => $sodValue['quantity'],
+            "sod_total_price" => $sodValue['total_sod_price'],
+            'si_id' => $strategy_machine['s_id'],
+            'income_value' => $radio,
+            'manager_id' => $strategy_manager['manager_id'],
+            'revenue_type' => 4,
+            'income_amount' =>  bcmul($sodValue['total_sod_price'], bcmul($radio, 0.01, 3), 3),
+            'ao_id' => $detailAoId,
+        ];
+        $sor_id = $this->addSaleOrdersRevenue($insert);
+        // 写入组织分账日志
+        $log = [
+            'ao_id' => $detailAoId,
+            'order_id' => $insert['order_id'] ?? '',
+            'sp_id' => $insert['sp_id'] ?? 0,
+            'm_id' => $insert['m_id'] ?? 0,
+            'machine_name' => $insert['machine_name'] ?? '',
+            'machine_id' => $insert['machine_id'] ?? '',
+            'order_amount' => $insert['order_amount'] ?? 0,
+            'sod_id' => $insert['sod_id'] ?? '',
+            'sod_amount' => $insert['sod_amount'] ?? 0,
+            'sod_quantity' => $insert['sod_quantity'] ?? 0,
+            'sod_total_price' => $insert['sod_total_price'] ?? 0,
+            'si_id' => $insert['si_id'] ?? 0,
+            'income_value' => $insert['income_value'] ?? 0,
+            'revenue_type' => $insert['revenue_type'] ?? 0,
+            'income_amount' => $insert['income_amount'] ?? 0,
+        ];
+        $aor_id = $this->addAuthOrgRevenueLog($log);
+        actionLog($sor_id,'生成分润记录sor_id');
+        actionLog($aor_id,'生成组织分账日志aor_id');
+
+        return !!$sor_id;
     }
 
     /**
@@ -55,60 +208,7 @@ trait BeforeOrderPaymentTrait
             // if ($detailAoId <= 0) {
             //     $detailAoId = intval($this->countOrder['ao_id'] ?? 0);
             // }
-            if ($detailAoId <= 0) continue;
-
-            $strategy_machine = $this->getStrategyMachineFind(['s_type' => 3,'ao_id' => $detailAoId,'m_id' => $this->countOrder['m_id']]);
-            if(!$strategy_machine) continue;
-            $strategy_machine = $strategy_machine->toArray();
-            $strategy_income = $this->getStrategyIncomeFind(['si_id' => $strategy_machine['s_id']]);
-            if(!$strategy_income) continue;
-            $strategy_income = $strategy_income->toArray();
-            $radio = $strategy_income['income_value'] ?? 0;
-            $strategy_manager = $this->getStrategyManagerFind(['s_id' => $strategy_machine['s_id'],'s_type' => 1,'ao_id' => $detailAoId,'m_id' => $this->countOrder['m_id']]);
-            if(!$strategy_manager) continue;
-            $strategy_manager = $strategy_manager->toArray();
-            $insert = [
-                "order_id" => $this->countOrder['order_id'],
-                "sp_id" => $this->countOrder['sp_id'],
-                "m_id" => $this->countOrder['m_id'],
-                "machine_name" => $this->countOrder['machine_name'],
-                "machine_id" => $this->countOrder['machine_id'],
-                "order_amount" => $this->countOrder['total_price'],
-                "sod_id" => $sodValue['sod_id'],
-                "sod_amount" => $sodValue['retail_price'],
-                "sod_quantity" => $sodValue['quantity'],
-                "sod_total_price" => $sodValue['total_sod_price'],
-                'si_id' => $strategy_machine['s_id'],
-                'income_value' => $radio,
-                'manager_id' => $strategy_manager['manager_id'],
-                // 'bill_account' => $strategy_machine['s_id'],
-                'revenue_type' => 4,
-                'income_amount' =>  bcmul($sodValue['total_sod_price'], bcmul($radio, 0.01, 3), 3),
-                'ao_id' => $detailAoId,
-            ];
-            $sor_id = $this->addSaleOrdersRevenue($insert);
-            // 写入组织分账日志
-            $log = [
-                'ao_id' => $detailAoId,
-                'order_id' => $insert['order_id'] ?? '',
-                'sp_id' => $insert['sp_id'] ?? 0,
-                'm_id' => $insert['m_id'] ?? 0,
-                'machine_name' => $insert['machine_name'] ?? '',
-                'machine_id' => $insert['machine_id'] ?? '',
-                'order_amount' => $insert['order_amount'] ?? 0,
-                'sod_id' => $insert['sod_id'] ?? '',
-                'sod_amount' => $insert['sod_amount'] ?? 0,
-                'sod_quantity' => $insert['sod_quantity'] ?? 0,
-                'sod_total_price' => $insert['sod_total_price'] ?? 0,
-                'si_id' => $insert['si_id'] ?? 0,
-                'income_value' => $insert['income_value'] ?? 0,
-                'revenue_type' => $insert['revenue_type'] ?? 0,
-                'income_amount' => $insert['income_amount'] ?? 0,
-            ];
-            $aor_id = $this->addAuthOrgRevenueLog($log);
-            $flag[] = $sor_id;
-            actionLog($sor_id,'生成分润记录sor_id');
-            actionLog($aor_id,'生成组织分账日志aor_id');
+            $flag[] = $this->addAuthOrgMachineChannelRevenueByDetail($sodValue, $detailAoId);
         }
         return flag_check($flag);
     }

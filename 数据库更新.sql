@@ -1647,3 +1647,6 @@ CREATE TABLE `machine_service_log` (
   KEY `machine_id` (`machine_id`) USING BTREE,
   KEY `m_id` (`m_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备运行日志表';
+
+#20260507 HTTP 心跳在线状态（与 MQ/综合 online 区分）
+ALTER TABLE kiosk.machine ADD COLUMN `http_online` tinyint(1) NOT NULL DEFAULT 2 COMMENT 'HTTP心跳在线：1在线 2离线' AFTER `online`;

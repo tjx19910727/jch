@@ -32,8 +32,8 @@ trait AfterOrderRefundTrait
             if (!$quantity) $quantity = $value['refund_quantity'];
             if (!$this->order) $this->order = $this->getSaleOrdersFind(['order_id' => $value['order_id']]);
             // 退款退分润
-            //$refundRevenue = $this->refundRevenue();
-            //if ($refundRevenue !== true) return $this->r(100,'退款退分润失败');
+            $refundRevenue = $this->refundRevenue();
+            if ($refundRevenue !== true) return $this->r(100,'退款退分润失败');
 
             // 修改退款记录
             $flag[] = $this->refundSuccessUpdateSor();
@@ -72,20 +72,35 @@ trait AfterOrderRefundTrait
         // 查分润列表
         if ($revenue) {
             foreach ($revenue as $key => $value) {
+                $update = [];
                 $update['sor_id'] = $value['sor_id'];
                 // defensive: ensure income_value is numeric
                 $incomeValue = isset($value['income_value']) && is_numeric($value['income_value']) ? $value['income_value'] : 0;
-                $refundRevenueAmount = 0;
+                $incomeAmount = isset($value['income_amount']) && is_numeric($value['income_amount']) ? $value['income_amount'] : 0;
+                $currentRefundAmount = isset($value['refund_amount']) && is_numeric($value['refund_amount']) ? $value['refund_amount'] : 0;
+                $refundRevenueAmountRaw = 0;
                 if ($incomeValue > 0) {
-                    $refundRevenueAmount = bcmul($this->refund['refund_amount'], bcdiv($incomeValue, 100, 4), 3);
+                    $refundRevenueAmountRaw = bcmul($this->refund['refund_amount'], bcdiv($incomeValue, 100, 4), 3);
+                }
+                // 封顶：最多退到应分润金额，不允许累计超退
+                $remainRefundable = bcsub($incomeAmount, $currentRefundAmount, 3);
+                if (bccomp($remainRefundable, '0', 3) < 0) {
+                    $remainRefundable = '0';
+                }
+                $refundRevenueAmount = $refundRevenueAmountRaw;
+                if (bccomp((string)$refundRevenueAmount, (string)$remainRefundable, 3) > 0) {
+                    $refundRevenueAmount = $remainRefundable;
                 }
                 // 待分润，
-                $update['refund_amount'] = bcadd($value['refund_amount'],$refundRevenueAmount,3);
+                $update['refund_amount'] = bcadd($currentRefundAmount, $refundRevenueAmount, 3);
                 // 已分润， 电子钱包或其他线上分账方式，减账号电子钱包
-                if ($value['status'] == 2) {
+                if (intval($value['status']) == 1 && bccomp((string)$refundRevenueAmount, '0', 3) > 0) {
                     // 减电子钱包
                     // older code referenced 'beneficiary' but revenue rows store manager id in 'manager_id'
                     $beneficiaryManager = $value['manager_id'] ?? $value['beneficiary'] ?? 0;
+                    if (!$beneficiaryManager) {
+                        return $this->r(100,'减分润账号电子钱包余额失败：收益人为空');
+                    }
                     $decResult = $this->decAuthManager(['manager_id' => $beneficiaryManager], 'balance', $refundRevenueAmount);
                     if (!$decResult) {
                         return $this->r(100,'减分润账号电子钱包余额失败');
@@ -94,7 +109,7 @@ trait AfterOrderRefundTrait
                 // 退款状态为部分退款
                 $update['refund_status'] = 2;
                 // 退款金额已达到分润金额全部金额，退款状态为已全部退款
-                if ($update['refund_amount'] >= $value['income_amount']) {
+                if (bccomp((string)$update['refund_amount'], (string)$incomeAmount, 3) >= 0) {
                     $update['refund_status'] = 3;
                 }
                 $updateResult = $this->updateSaleOrdersRevenue($update);

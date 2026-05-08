@@ -1863,17 +1863,17 @@ class ApiClient extends ReceiveBaseClient
 
     /**
      * HTTP 心跳上报
-     * 与 MQ 心跳保持一致：写设备在线状态，同时记录 http_status。
+     * 与 MQ 心跳类似：更新 last_online_time、online；并单独维护 http_online（仅 HTTP 通道，与 machine.online 可区分）。
      * 若 5 分钟内存在重启指令，则直接回传重启命令给设备。
      *
      * @return array|string
      */
     public function httpHeartbeat()
     {
-       
         $update = [
             'm_id' => $this->machine['m_id'],
             'online' => 1,
+            'http_online' => 1,
             'last_online_time' => time(),
         ];
         if (isset($this->data['version']) && $this->data['version']) {
