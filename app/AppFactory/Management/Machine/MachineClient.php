@@ -384,7 +384,8 @@ class MachineClient extends ManagementClient
 
     public function getMFind($where,$field = "")
     {
-        $item = $this->getMachineFind($where,$field);
+        $with = ['simSignalLog'];
+        $item = $this->getMachineFind($where,$field, "", $with);
         if ($item) {
             $item = $item->toArray();
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
