@@ -30,6 +30,68 @@ class VisualScreen extends Common
         return returnState(200, '查询成功', $data);
     }
 
+
+    public function getMachineList(){
+        $body = [];
+        $rawInput = request()->getInput();
+        $contentType = strtolower((string) request()->header('content-type', ''));
+        $looksLikeJson = strpos($contentType, 'application/json') !== false;
+        if (!$looksLikeJson && is_string($rawInput) && trim($rawInput) !== '') {
+            $looksLikeJson = (bool) preg_match('/^\s*[\{\[]/', $rawInput);
+        }
+        if (is_string($rawInput) && $rawInput !== '') {
+            $decoded = json_decode($rawInput, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $body = $decoded;
+            } elseif ($looksLikeJson) {
+                return returnState(400, '请求体 JSON 格式错误，请使用 "pageSize": 3 这样的键值写法', []);
+            }
+        }
+        $regionType = input('regionType/s', '');
+
+        if ($regionType === '' && array_key_exists('regionType', $body)) {
+            $regionType = (string) $body['regionType'];
+        }
+        if ($regionType === '') {
+            $regionType = 'national';
+        }
+
+        $regionName = input('regionName/s', '');
+        if ($regionName === '' && array_key_exists('regionName', $body)) {
+            $regionName = (string) $body['regionName'];
+        }
+        $regionName = trim($regionName);
+
+        $pageRaw = input('page', null);
+        if (($pageRaw === null || $pageRaw === '') && array_key_exists('page', $body)) {
+            $pageRaw = $body['page'];
+        }
+        if (($pageRaw === null || $pageRaw === '') && array_key_exists('machinePage', $body)) {
+            $pageRaw = $body['machinePage'];
+        }
+
+        $pageSizeRaw = input('pageSize', null);
+        if ($pageSizeRaw === null || $pageSizeRaw === '') {
+            $pageSizeRaw = input('machinePageSize', null);
+        }
+        if (($pageSizeRaw === null || $pageSizeRaw === '') && array_key_exists('pageSize', $body)) {
+            $pageSizeRaw = $body['pageSize'];
+        }
+        if (($pageSizeRaw === null || $pageSizeRaw === '') && array_key_exists('machinePageSize', $body)) {
+            $pageSizeRaw = $body['machinePageSize'];
+        }
+
+        $ctx = [
+            'regionType' => $regionType,
+            'regionName' => $regionName,
+            'page' => max(1, (int) ($pageRaw ?? 1)),
+            'pageSize' => min(256, max(1, (int) ($pageSizeRaw ?? 15))),
+        ];
+        $svc = new VisualScreenService($this->app);
+        $data = $svc->getMachineList($ctx); 
+        return returnState(200, '查询成功', $data);
+    }
+
     /**
      * 销售趋势（等同 WS 事件 visual_screen_sales_trend_update 的 payload）
      */

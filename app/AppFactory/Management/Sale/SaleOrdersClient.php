@@ -338,12 +338,12 @@ class SaleOrdersClient extends ManagementClient
     {
         $field = "";
         $group = "";
-        if ($this->manager['pid'] > 0) {
-            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-            if ($mIds) {
-                $where[] = ['m_id', 'in', $mIds];
-            }
-        }
+        // if ($this->manager['pid'] > 0) {
+        //     $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+        //     if ($mIds) {
+        //         $where[] = ['m_id', 'in', $mIds];
+        //     }
+        // }
         if ($type == 1) {
             $field = "SUM(totalPrice - totalRefundAmount) totalPrice,SUM(totalQuantity - totalRefundQuantity) totalQuantity,countDate";
             $group = "create_date";
