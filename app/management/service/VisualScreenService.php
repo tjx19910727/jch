@@ -154,10 +154,10 @@ class VisualScreenService
             'deviceOverview' => $deviceOverview,
             'cargoStats' => $cargoStats,
             'tradeMetrics' => $tradeMetrics,
-            'productSalesShare' => $this->buildProductSalesShare($saleDataWhere),
-            'machineSalesShare' => $this->buildMachineSalesShare($saleDataWhere),
-            'deviceSalesRank' => $this->buildDeviceSalesRank($saleDataWhere),
-            'goodsPopularityRank' => $this->buildGoodsPopularityRank($saleDataWhere),
+            'productSalesShare' => $this->buildProductSalesShare($saleDataWhere, $cycle),
+            'machineSalesShare' => $this->buildMachineSalesShare($saleDataWhere, $cycle),
+            'deviceSalesRank' => $this->buildDeviceSalesRank($saleDataWhere, $cycle),
+            'goodsPopularityRank' => $this->buildGoodsPopularityRank($saleDataWhere, $cycle),
             'mapValues' => $this->buildMapValues($regionType, $regionName, $mScope),
             'salesTrend' => [
                 'cycle' => $cycle,
@@ -386,6 +386,30 @@ class VisualScreenService
     }
 
     /**
+     * 把 cycle 转为自义定查询起始时间戳（秒）
+     * day => 当天 0 点
+     * week => 最近 7 天
+     * month => 最近 30 天
+     */
+    protected function cycleToSince(string $cycle, string $fallback = 'month'): ?int
+    {
+        $c = $cycle;
+        if (!in_array($c, ['day', 'week', 'month'], true)) {
+            $c = $fallback;
+        }
+        if ($c === 'day') {
+            return strtotime(date('Y-m-d'));
+        }
+        if ($c === 'week') {
+            return strtotime('-7 days');
+        }
+        if ($c === 'month') {
+            return strtotime('-30 days');
+        }
+        return null;
+    }
+
+    /**
      * @param mixed $chartRows
      * @return array<int,array{label:string,value:float|int}>
      */
@@ -471,13 +495,17 @@ class VisualScreenService
      * @param array $saleWhere
      * @return array<int,array{label:string,value:int,percent:int}>
      */
-    protected function buildProductSalesShare(array $saleWhere): array
+    protected function buildProductSalesShare(array $saleWhere, string $cycle = 'month'): array
     {
+        $since = $this->cycleToSince($cycle);
         $where = $this->saleWhereToQuery($saleWhere);
         $where[] = ['sod.g_id', '>', 0];
         $rows = Db::name('sale_orders')->alias('so')
             ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
             ->where($where)
+            ->when($since, function ($query) use ($since) {
+                $query->where('so.create_date', '>=', $since);
+            })
             ->field('sod.g_name as label, IFNULL(SUM(sod.quantity - sod.refund_quantity),0) as v')
             ->group('sod.g_id,sod.g_name')
             ->order('v', 'desc')
@@ -501,11 +529,15 @@ class VisualScreenService
      * @param array $saleWhere
      * @return array<int,array{label:string,value:int,percent:int}>
      */
-    protected function buildMachineSalesShare(array $saleWhere): array
+    protected function buildMachineSalesShare(array $saleWhere, string $cycle = 'month'): array
     {
+        $since = $this->cycleToSince($cycle);
         $where = $this->saleWhereToQuery($saleWhere);
         $rows = Db::name('sale_orders')->alias('so')
             ->where($where)
+            ->when($since, function ($query) use ($since) {
+                $query->where('so.create_date', '>=', $since);
+            })
             ->field('so.machine_name as label, IFNULL(SUM(so.total_quantity),0) as v')
             ->group('so.m_id,so.machine_name')
             ->order('v', 'desc')
@@ -529,12 +561,15 @@ class VisualScreenService
      * @param array $saleWhere
      * @return array<int,array{name:string,value:float|int}>
      */
-    protected function buildDeviceSalesRank(array $saleWhere): array
+    protected function buildDeviceSalesRank(array $saleWhere, string $cycle = 'week'): array
     {
+        $since = $this->cycleToSince($cycle, 'week');
         $where = $this->saleWhereToQuery($saleWhere);
-        $where[] = ['so.create_date', '>=', strtotime('-7 days')];
         $rows = Db::name('sale_orders')->alias('so')
             ->where($where)
+            ->when($since, function ($query) use ($since) {
+                $query->where('so.create_date', '>=', $since);
+            })
             ->field('so.machine_name as name, IFNULL(SUM(so.total_price),0) as value')
             ->group('so.m_id,so.machine_name')
             ->order('value', 'desc')
@@ -552,17 +587,19 @@ class VisualScreenService
      * @param array $saleWhere
     * @return array<int,array{name:string,value:int,category:string,rebuyRate:int}>
      */
-    protected function buildGoodsPopularityRank(array $saleWhere): array
+    protected function buildGoodsPopularityRank(array $saleWhere, string $cycle = 'month'): array
     {
+        $since = $this->cycleToSince($cycle);
         $where = $this->saleWhereToQuery($saleWhere);
         $where[] = ['sod.g_id', '>', 0];
-        $since30 = strtotime('-30 days');
-        $where[] = ['so.create_date', '>=', $since30];
         $rows = Db::name('sale_orders')->alias('so')
             ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
             ->join('goods g', 'g.g_id = sod.g_id', 'left')
             ->join('goods_category gc', 'gc.gc_id = g.gc_id', 'left')
             ->where($where)
+            ->when($since, function ($query) use ($since) {
+                $query->where('so.create_date', '>=', $since);
+            })
             ->field('sod.g_id,sod.g_name as name, sod.retail_price,IFNULL(SUM(sod.quantity - sod.refund_quantity),0) as value, IFNULL(gc.gc_name,"") as category')
             ->group('sod.g_id,sod.g_name,gc.gc_name')
             ->order('value', 'desc')
@@ -1020,8 +1057,9 @@ class VisualScreenService
         $offset = ($page - 1) * $pageSize;
 
         $q = Db::name('machine')->alias('m')
+            ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left')
             ->where('m.vending_machine_type', 1)
-            ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.street');
+            ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.street,moo.on_off_machine,moo.on_off_ckc');
         if ($mScope !== null) {
             $q->whereIn('m.m_id', $mScope);
         }
@@ -1031,18 +1069,23 @@ class VisualScreenService
             ->select()
             ->toArray();
         $mIds = array_column($rows, 'm_id');
-        $chStats = $this->channelStatsForMids($mIds);
         $salesMap = $this->todaySalesByMids($mIds);
-        $list = [];
+    // 频道统计与 on-off 原始字段
+    $chStats = $this->channelStatsForMids($mIds);
+    // 保留原始 on_off 字段，不在此解析
+    $onOffMap = [];
+    $list = [];
         foreach ($rows as $m) {
             $mid = (int) $m['m_id'];
             $st = $chStats[$mid] ?? ['emptyChannels' => 0, 'badChannels' => 0, 'emptySlots' => 0];
-            $hours = '';
+            $onOff = $onOffMap[$mid] ?? ['businessHours' => '', 'powerOnTime' => '', 'powerOffTime' => ''];
             $list[] = [
                 'id' => (string) ($m['machine_id'] ?? ''),
                 'name' => (string) ($m['machine_name'] ?? ''),
                 'online' => (int) ($m['online'] ?? 0) === 1,
-                'businessHours' => $hours,
+                'businessHours' => (string) ($onOff['businessHours'] ?? ''),
+                'on_off_machine' => $m['on_off_machine'] ?? '',
+                'on_off_ckc' =>  $m['on_off_ckc'] ?? '',
                 'address' => (string) ($m['street'] ?? ''),
                 'sales' => (int) ($salesMap[$mid] ?? 0),
                 'emptyChannels' => (int) $st['emptyChannels'],
