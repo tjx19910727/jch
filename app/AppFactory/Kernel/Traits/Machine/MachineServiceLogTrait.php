@@ -80,13 +80,11 @@ trait MachineServiceLogTrait
 
         $exists = $this->getMachineServiceLogFind([
             'm_id' => $this->machine['m_id'],
-            'path' => $path,
             'date' => $date,
         ], 'id');
 
         if ($exists) {
-            $insert['id'] = $exists['id'];
-            $this->updateMachineServiceLog($insert);
+            $this->updateMachineServiceLog($insert,['id' => $exists['id']]);
             return 1;
         }
 
