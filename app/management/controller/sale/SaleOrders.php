@@ -715,7 +715,7 @@ class SaleOrders extends Common
         if ($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0, 1])) {
             $where['a.ao_id'] = $this->manager['ao_id'];
         }
-        return $this->app->saleOrders->getExceptionSoList($where, $pageNum, $field, 'a.pay_time asc', $postData['supplier'] ?? true);
+        return $this->app->saleOrders->getExceptionSoList($where, $pageNum, $field, 'a.pay_time desc', $postData['supplier'] ?? true);
     }
 
     /**
