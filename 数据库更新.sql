@@ -1523,7 +1523,80 @@ ALTER TABLE kiosk.sale_orders_details
   ADD COLUMN `remote_refund_audit_manager` int default 0 COMMENT '远程退货执行人' AFTER `refund_photo`;
 
   update wx_template set body = '[{"设备编号":{"value":"{{machine_id}}","field":"character_string16"}},{"设备名称":{"value":"{{machine_name}}","field":"thing6"}},{"异常时间":{"value":"{{error_time}}","field":"time15"}},{"异常现象":{"value":"{{error_info}}","field":"thing12"}},{"设备地址":{"value":"{{error_code}}","field":"thing9"}}]' , template_id = 'frqumju8oA7N8msUrhIiHpDd18j2Ie-DxLGlz5jWz8g' where wt_id =5;
-#20260421~10:51
+
+
+
+#20260511 因为本次更新内容较多：需要先备份sale_orders，sale_orders_details表，同时需要定义以下几个定时任务：
+1.每天0点1分定时同步物联卡流量数据：php /app/kiosk/backend/think time_task machine updateSimCardUsage
+2.每隔5分钟执行，检查在营设备未开机的设备：php /app/kiosk/backend/think time_task machine checkOperatingStartup
+
+
+#20260418 订单分类能力
+ALTER TABLE kiosk.sale_orders
+  ADD COLUMN `pay_channel` tinyint(1) NOT NULL DEFAULT '0' COMMENT '订单分类渠道' AFTER `pay_method`,
+  ADD COLUMN `pay_channel_name` varchar(50) NOT NULL DEFAULT '' COMMENT '订单分类名称快照' AFTER `pay_channel`;
+
+
+ALTER TABLE kiosk.machine MODIFY COLUMN recycle_box_remain_capacity INTEGER DEFAULT -1 NULL COMMENT '回收箱当前可用容量';
+
+ALTER TABLE kiosk.remote_action_log ADD msgType varchar(100) NULL COMMENT 'mq类型' AFTER channel_code;
+ALTER TABLE kiosk.machine ADD COLUMN `http_online` tinyint(1) NOT NULL DEFAULT 2 COMMENT 'HTTP心跳在线：1在线 2离线' AFTER `online`;
+
+ALTER TABLE kiosk.remote_action_log
+  ADD COLUMN `field` varchar(250) DEFAULT NULL COMMENT '图片地址' AFTER `manager_id`;
+
+update machine set country_id = 44, state_id = 53, city_id = 683, regions_id = 1791 where is_operating  = 2 or (is_operating  = 1 and  street like '%东莞%') ;
+
+ALTER TABLE kiosk.machine_config ADD  `remote_calibration` tinyint(1) DEFAULT '2' COMMENT '是否开启远程校准功能，1-开启，2-关闭';
+ALTER TABLE kiosk.machine_config ADD  `head_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过头部摄像头，1-跳过，2-不跳过';
+
+
+ALTER TABLE kiosk.wx_template_log
+    ADD COLUMN `me_id` bigint DEFAULT 0 COMMENT '错误ID' AFTER `remark`,
+    ADD COLUMN `send_status` tinyint(1) DEFAULT 2 COMMENT '发送状态：1-发送成功，2-发送失败' AFTER `remark`,
+    ADD COLUMN `confirm_status` tinyint(1) DEFAULT 2 COMMENT '确认状态：1-已确认，2-未确认' AFTER `remark`,
+    ADD COLUMN `error_code` varchar(20) DEFAULT '' COMMENT '错误码' AFTER `remark`,
+    ADD COLUMN `m_id` int DEFAULT 0 COMMENT '设备ID' AFTER `remark`,
+    ADD COLUMN `confirm_time` bigint DEFAULT 0 COMMENT '确认时间' AFTER `remark`;
+
+CREATE INDEX idx_me_id ON kiosk.wx_template_log(me_id);
+CREATE INDEX idx_m_id ON kiosk.wx_template_log(m_id);
+
+update wx_template set body = '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',template_id = '5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI'  where wt_id =9;
+
+alter table kiosk.machine_goods add column `auto_refund` tinyint(1) default 2 comment '是否自动退款1是 2否' after `is_shelf`;
+
+ALTER TABLE kiosk.machine_config ADD `automatic_goods_sorting` tinyint(1) DEFAULT '1' COMMENT '是否开启自动理货1开启2关闭' after `gate_detection`;
+
+
+#20260419--在营设备2小时在线状态快照
+CREATE TABLE `machine_online_snapshot` (
+  `mos_id` int(11) NOT NULL AUTO_INCREMENT,
+  `m_id` int(11) NOT NULL DEFAULT 0 COMMENT '设备ID',
+  `machine_id` varchar(50) NOT NULL DEFAULT '' COMMENT '设备编号',
+  `machine_name` varchar(100) NOT NULL DEFAULT '' COMMENT '设备名称',
+  `record_date` int(11) NOT NULL DEFAULT 0 COMMENT '统计日期（当天0点时间戳）',
+  `collect_time` int(11) NOT NULL DEFAULT 0 COMMENT '采集时间',
+  `slot_start_time` int(11) NOT NULL DEFAULT 0 COMMENT '2小时槽位开始时间',
+  `slot_end_time` int(11) NOT NULL DEFAULT 0 COMMENT '2小时槽位结束时间',
+  `online` tinyint(1) NOT NULL DEFAULT 2 COMMENT '在线状态：1在线 2离线',
+  `is_operating` tinyint(1) NOT NULL DEFAULT 2 COMMENT '在营状态：1在营 2在库 3外售',
+  `ckc_status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '营业状态：1正常营业 2暂停营业',
+  `business_start_time` int(11) NOT NULL DEFAULT 0 COMMENT '营业开始秒数',
+  `business_end_time` int(11) NOT NULL DEFAULT 86399 COMMENT '营业结束秒数',
+  `ao_id` int(11) NOT NULL DEFAULT 0 COMMENT '组织ID',
+  `create_time` int(11) DEFAULT NULL COMMENT '创建时间',
+  `update_time` int(11) DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`mos_id`),
+  UNIQUE KEY `uniq_machine_day_slot` (`machine_id`,`record_date`,`slot_start_time`) USING BTREE,
+  KEY `idx_m_id` (`m_id`) USING BTREE,
+  KEY `idx_collect_time` (`collect_time`) USING BTREE,
+  KEY `idx_ao_id` (`ao_id`) USING BTREE,
+  KEY `idx_online` (`online`) USING BTREE,
+  KEY `idx_is_operating` (`is_operating`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='在营设备2小时在线状态快照表';
+
+
 CREATE TABLE `sim_card_info` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `m_id` int(11) NOT NULL DEFAULT 0 COMMENT '设备ID',
@@ -1568,6 +1641,7 @@ CREATE TABLE `sim_card_info` (
   KEY `idx_iccid` (`iccid`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物联卡信息表';
 
+
 CREATE TABLE `sim_card_machine` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `m_id` int(11) NOT NULL DEFAULT 0 COMMENT '设备ID',
@@ -1584,20 +1658,7 @@ CREATE TABLE `sim_card_machine` (
   KEY `idx_iccid` (`iccid`) USING BTREE,
   KEY `idx_m_id` (`m_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物联卡每日使用流量表';
-#20260422--是否开启远程校准功能
-ALTER TABLE kiosk.machine_config ADD  `remote_calibration` tinyint(1) DEFAULT '2' COMMENT '是否开启远程校准功能，1-开启，2-关闭';
-ALTER TABLE kiosk.machine_config ADD  `head_camera_check` tinyint(1) DEFAULT '2' COMMENT '初始化是否跳过头部摄像头，1-跳过，2-不跳过';
-#20260423
-ALTER TABLE kiosk.wx_template_log
-ADD COLUMN `me_id` bigint DEFAULT 0 COMMENT '错误ID' AFTER `remark`,
-ADD COLUMN `send_status` tinyint(1) DEFAULT 2 COMMENT '发送状态：1-发送成功，2-发送失败' AFTER `remark`,
-ADD COLUMN `confirm_status` tinyint(1) DEFAULT 2 COMMENT '确认状态：1-已确认，2-未确认' AFTER `remark`,
-ADD COLUMN `error_code` varchar(20) DEFAULT '' COMMENT '错误码' AFTER `remark`,
-ADD COLUMN `m_id` int DEFAULT 0 COMMENT '设备ID' AFTER `remark`,
-ADD COLUMN `confirm_time` bigint DEFAULT 0 COMMENT '确认时间' AFTER `remark`;
 
-CREATE INDEX idx_me_id ON kiosk.wx_template_log(me_id);
-CREATE INDEX idx_m_id ON kiosk.wx_template_log(m_id);
 
 CREATE TABLE `auth_manager_notice_config` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '自增id',
@@ -1610,11 +1671,6 @@ CREATE TABLE `auth_manager_notice_config` (
   PRIMARY KEY (`id`),
   KEY `manager_id` (`manager_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='管理员通知配置表';
-
-update wx_template set body = '[{"设备编号":{"value":"{{machine_id}}","field":"character_string1"}},{"设备名称":{"value":"{{machine_name}}","field":"thing8"}},{"订单编号":{"value":"{{trade_no}}","field":"character_string6"}},{"金额":{"value":"{{total_price}}","field":"amount7"}},{"时间":{"value":"{{pay_time}}","field":"time5"}}]',template_id = '5uXcNNLJWe4Pr8X_ciZ_6vOGNb5625d25DyTtRSBYHI'  where wt_id =9;
-
-#20260429
-alter table kiosk.machine_goods add column `auto_refund` tinyint(1) default 2 comment '是否自动退款1是 2否' after `is_shelf`;
 
 CREATE TABLE `sim_signal_log` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -1631,9 +1687,7 @@ CREATE TABLE `sim_signal_log` (
   KEY `idx_m_id` (`m_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='物联卡实时信号表';
 
-ALTER TABLE kiosk.machine_config ADD `automatic_goods_sorting` tinyint(1) DEFAULT '1' COMMENT '是否开启自动理货1开启2关闭' after `gate_detection`;
 
-#20260430
 CREATE TABLE `machine_service_log` (
   `id` int NOT NULL AUTO_INCREMENT COMMENT '操作视频ID',
   `m_id` int DEFAULT 0 COMMENT '设备ID',
@@ -1648,5 +1702,51 @@ CREATE TABLE `machine_service_log` (
   KEY `m_id` (`m_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备运行日志表';
 
-#20260507 HTTP 心跳在线状态（与 MQ/综合 online 区分）
-ALTER TABLE kiosk.machine ADD COLUMN `http_online` tinyint(1) NOT NULL DEFAULT 2 COMMENT 'HTTP心跳在线：1在线 2离线' AFTER `online`;
+
+
+以下sql是对历史订单信息兼容新支付渠道字段的更新sql, 计划执行但暂不执行，待上线一周后观察订单及出货无误，同时确保新上线的支付渠道分类逻辑运行无误后，再确认执行
+
+#20260418 历史订单分类回填（仅补分类，不改支付原字段）
+UPDATE kiosk.sale_orders so
+LEFT JOIN (
+  SELECT
+    order_id,
+    MAX(
+      CASE
+        WHEN wc_order_no IS NULL OR wc_order_no = '' THEN 0
+        ELSE 1
+      END
+    ) AS has_wc_order_no
+  FROM kiosk.sale_orders_details
+  GROUP BY order_id
+) sod ON sod.order_id = so.order_id
+SET
+  so.pay_channel = CASE
+    WHEN so.pay_type = 20 THEN 6
+    WHEN IFNULL(so.total_cost_points, 0) > 0 THEN 4
+    WHEN (IFNULL(so.gift_points, 0) > 0 OR IFNULL(so.total_points, 0) > 0) AND IFNULL(sod.has_wc_order_no, 0) = 0 THEN 3
+    WHEN IFNULL(sod.has_wc_order_no, 0) = 1 THEN 1
+    WHEN so.pay_type = 7 THEN 2
+    WHEN so.order_type = 3 AND IFNULL(so.acp_id, 0) > 0 THEN 5
+    WHEN so.pay_type IN (1, 11, 12) THEN 7
+    WHEN so.pay_type IN (2, 21, 22) THEN 8
+    WHEN so.pay_method IN (3, 4, 5) OR so.pay_type IN (4, 10, 33, 34, 35) THEN 9
+    WHEN so.pay_method IN (6, 7) OR so.pay_type IN (36, 37) THEN 10
+    ELSE 11
+  END,
+  so.pay_channel_name = CASE
+    WHEN so.pay_type = 20 THEN '余额支付订单'
+    WHEN IFNULL(so.total_cost_points, 0) > 0 THEN '商场积分订单'
+    WHEN (IFNULL(so.gift_points, 0) > 0 OR IFNULL(so.total_points, 0) > 0) AND IFNULL(sod.has_wc_order_no, 0) = 0 THEN '售卖机会员积分订单'
+    WHEN IFNULL(sod.has_wc_order_no, 0) = 1 THEN '微程小程序订单'
+    WHEN so.pay_type = 7 THEN '机械车小程序订单'
+    WHEN so.order_type = 3 AND IFNULL(so.acp_id, 0) > 0 THEN '取货码订单'
+    WHEN so.pay_type IN (1, 11, 12) THEN '微信支付'
+    WHEN so.pay_type IN (2, 21, 22) THEN '支付宝支付'
+    WHEN so.pay_method IN (3, 4, 5) OR so.pay_type IN (4, 10, 33, 34, 35) THEN 'POS/刷卡支付'
+    WHEN so.pay_method IN (6, 7) OR so.pay_type IN (36, 37) THEN '现金支付'
+    ELSE '其他'
+  END
+WHERE IFNULL(so.pay_channel, 0) = 0
+   OR IFNULL(so.pay_channel_name, '') = '';
+
