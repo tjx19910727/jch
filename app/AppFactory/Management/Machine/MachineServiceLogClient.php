@@ -97,28 +97,28 @@ class MachineServiceLogClient extends ManagementClient
         if (is_array($sendResult) && isset($sendResult['state']) && $sendResult['state'] != 200) {
             return $sendResult;
         }
+        return returnState(200, lang('query_success'), []);
+        // $startTime = time();
+        // $overtime = 50;
+        // $n = 0;
 
-        $startTime = time();
-        $overtime = 50;
-        $n = 0;
+        // while (1) {
+        //     $waitWhere = [
+        //         'm_id' => $machine['m_id'],
+        //         'date' => $date,
+        //         ['create_time', '>=', $startTime],
+        //     ];
 
-        while (1) {
-            $waitWhere = [
-                'm_id' => $machine['m_id'],
-                'date' => $date,
-                ['create_time', '>=', $startTime],
-            ];
+        //     $uploadLog = $this->getMachineServiceLogFind($waitWhere, '*', 'id desc');
+        //     if (!empty($uploadLog['path'])) {
+        //         return returnState(200, lang('query_success'), $uploadLog['path']);
+        //     }
 
-            $uploadLog = $this->getMachineServiceLogFind($waitWhere, '*', 'id desc');
-            if (!empty($uploadLog['path'])) {
-                return returnState(200, lang('query_success'), $uploadLog['path']);
-            }
-
-            sleep(1);
-            $n++;
-            if ($n >= $overtime) {
-                return returnState(300, lang('action_machine_overtime'));
-            }
-        }
+        //     sleep(1);
+        //     $n++;
+        //     if ($n >= $overtime) {
+        //         return returnState(300, lang('action_machine_overtime'));
+        //     }
+        // }
     }
 }
