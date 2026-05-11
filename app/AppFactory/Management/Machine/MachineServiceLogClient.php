@@ -82,8 +82,8 @@ class MachineServiceLogClient extends ManagementClient
 
         // 已有最近上传结果则直接返回，避免重复等待。
         $existList = $this->getMachineServiceLogFind($where, '*', 'id desc');
-        if (!empty($existList['create_time']) && $existList['create_time'] > (time() - 1800) && !empty($existList['path'])) {
-            return returnState(200, lang('query_success'), $existList['path']);
+        if (!empty($existList['create_time']) && $existList['create_time'] > (time() - 300)) {
+            return returnState(100, '5分钟内只能下发一次，请稍后再试');
         }
 
         $sendResult = $this->sendToMachine($machine, 'machineServiceLog', [
