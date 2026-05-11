@@ -143,6 +143,7 @@ class SaleOrders extends Common
             unset($postData['g_name']);
         }
         $where = $this->getWhere($postData,false,["machine_id" => 'like',"machine_name" => 'like'],'so.');
+        $where = $this->formatAoIdWhereWithPrefix($where, 'so.');
         // if (isset($where['ao_id'])) {
         //     $where['so.ao_id'] = $where['ao_id'];
         //     unset($where['ao_id']);
