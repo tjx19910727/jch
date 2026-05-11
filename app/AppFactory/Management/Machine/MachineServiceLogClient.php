@@ -98,12 +98,12 @@ class MachineServiceLogClient extends ManagementClient
             return $sendResult;
         }
         $insert = [
-            'm_id' => $this->machine['m_id'],
-            'machine_id' => $this->machine['machine_id'],
+            'm_id' => $mId,
+            'machine_id' => $machineId,
             'name' => '',
             'path' => '',
             'date' => $date,
-            'remark' => $this->message['remark'] ?? '',
+            'remark' => '',
             'create_time' => time(),
         ];
         $this->addMachineServiceLog($insert);
