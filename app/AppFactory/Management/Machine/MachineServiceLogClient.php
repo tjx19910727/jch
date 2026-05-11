@@ -83,7 +83,7 @@ class MachineServiceLogClient extends ManagementClient
         // 已有最近上传结果则直接返回，避免重复等待。
         $existList = $this->getMachineServiceLogFind($where, '*', 'id desc');
         if (!empty($existList['create_time']) && $existList['create_time'] > (time() - 1800) && !empty($existList['path'])) {
-            return returnState(200, lang('a_success'), $existList['path']);
+            return returnState(200, lang('query_success'), $existList['path']);
         }
 
         $sendResult = $this->sendToMachine($machine, 'machineServiceLog', [
@@ -97,6 +97,16 @@ class MachineServiceLogClient extends ManagementClient
         if (is_array($sendResult) && isset($sendResult['state']) && $sendResult['state'] != 200) {
             return $sendResult;
         }
+        $insert = [
+            'm_id' => $this->machine['m_id'],
+            'machine_id' => $this->machine['machine_id'],
+            'name' => '',
+            'path' => '',
+            'date' => $date,
+            'remark' => $this->message['remark'] ?? '',
+            'create_time' => time(),
+        ];
+        $this->addMachineServiceLog($insert);
         return returnState(200, '下发成功，请稍后到列表查看', []);
         // $startTime = time();
         // $overtime = 50;
