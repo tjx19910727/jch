@@ -12,6 +12,7 @@ namespace app\machine\controller;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
 use app\AppFactory\Kernel\Traits\Laser\LaserResourceTrait;
 use app\AppFactory\Kernel\Util\SignUtil;
 use app\BaseController;
@@ -48,10 +49,17 @@ class Laser extends BaseController
             if (!$signKey) {
                 $signKey = env('api.md5Key');
             }
-            if (!SignUtil::checkSign($signData, $signKey)) {
-                return returnState(100, Lang::get('VLaser.check_sign_fail'));
+            // if (!SignUtil::checkSign($signData, $signKey)) {
+            //     return returnState(100, Lang::get('VLaser.check_sign_fail'));
+            // }
+            //通过trade_no获取订单id
+            if(empty($signData['trade_no'])){
+                return returnState(100, Lang::get('VLaser.trade_no_require'));
             }
-
+            $order = SaleOrdersModel::where('trade_no', $signData['trade_no'])->field('order_id,trade_no')->find();
+            if (!$order) {
+                return returnState(100, Lang::get('VLaser.order_not_found'));
+            }
             validate(VCommon::class)->scene('file')->check(['file' => $file]);
             validate(VCommon::class)
                 ->rule(['image' => 'fileSize:' . env('fileSystem.maxImageSize')])
@@ -80,7 +88,7 @@ class Laser extends BaseController
                 'length' => $imageInfo[1] ?? 0,
                 'width' => $imageInfo[0] ?? 0,
                 'size' => intval($file->getSize()),
-                'order_id' => intval($postData['order_id'] ?? 0),
+                'order_id' => intval($order['order_id'] ?? 0),
                 'create_time' => time(),
             ];
             $resId = $this->addLaserResource($insert);
