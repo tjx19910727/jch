@@ -1861,7 +1861,7 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200, 'success');
     }
 
-    /**
+/**
      * HTTP 心跳上报
      * 与 MQ 心跳类似：更新 last_online_time、online；并单独维护 http_online（仅 HTTP 通道，与 machine.online 可区分）。
      * 若 5 分钟内存在重启指令，则直接回传重启命令给设备。
@@ -1871,7 +1871,6 @@ class ApiClient extends ReceiveBaseClient
     public function httpHeartbeat()
     {
         $update = [
-            'm_id' => $this->machine['m_id'],
             'online' => 1,
             'http_online' => 1,
             'last_online_time' => time(),
@@ -1879,7 +1878,21 @@ class ApiClient extends ReceiveBaseClient
         if (isset($this->data['version']) && $this->data['version']) {
             $update['version'] = $this->data['version'];
         }
-        $this->updateMachine($update);
+        $where = ['m_id' => $this->machine['m_id']];
+        actionLog(
+            [
+                'machine_id' => $this->machine['machine_id'] ?? '',
+                'm_id' => $this->machine['m_id'] ?? 0,
+                'msgType' => $this->data['msgType'] ?? null,
+                'db_http_online_before' => $this->machine['http_online'] ?? null,
+                'update' => $update,
+                'where' => $where,
+            ],
+            'HTTP心跳即将更新 machine（online/http_online/last_online_time）',
+            'httpHeartbeat'
+        );
+        $this->updateMachine($update, $where);
+        actionLog($this->getLS(), 'HTTP心跳执行 updateMachine SQL', 'httpHeartbeat');
 
         $restartCommand = $this->getRecentRestartCommand(300);
         if ($restartCommand) {
@@ -1918,7 +1931,7 @@ class ApiClient extends ReceiveBaseClient
             return null;
         }
 
-        $restartTypes = ['http_reboot'];
+        $restartTypes = ['reboot','powerWakeUp'];
         foreach ($rows as $row) {
             $record = json2arr($row['content'] ?? '');
             if (!$record) {

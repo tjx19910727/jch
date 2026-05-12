@@ -241,6 +241,12 @@ class MachineClient extends ManagementClient
             if (isset($item['regions_id']) && $item['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $item['regions_id']],'code,name,cname');
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
             $item['machine_on_off'] = $this->getMachineOnOffFind(['m_id' => $item['m_id'],'status' => 1],'on_off_ckc,on_off_machine');
+            if(empty($item['simSignalLog'])){
+                $item['simSignalLog']['rsrp'] = -999;
+                $item['simSignalLog']['sinr'] = -999;
+                $item['simSignalLog']['rsrp_level'] = 0;
+                $item['simSignalLog']['sinr_level'] = 0;
+            }
             $ratioWhere[] = ['m_id', '=', $item['m_id']];
             $ratioWhere[] = ['status', '<>', 2];
             $totalCapacity = $this->getMachineChannelSum($ratioWhere, 'capacity');
