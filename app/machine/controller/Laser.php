@@ -49,9 +49,9 @@ class Laser extends BaseController
             if (!$signKey) {
                 $signKey = env('api.md5Key');
             }
-            // if (!SignUtil::checkSign($signData, $signKey)) {
-            //     return returnState(100, Lang::get('VLaser.check_sign_fail'));
-            // }
+            if (!SignUtil::checkSign($signData, $signKey) && !env('CglPay.is_test')) {
+                return returnState(100, Lang::get('VLaser.check_sign_fail'));
+            }
             //通过trade_no获取订单id
             if(empty($signData['trade_no'])){
                 return returnState(100, Lang::get('VLaser.trade_no_require'));
