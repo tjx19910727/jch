@@ -234,7 +234,8 @@ class MachineClient extends ManagementClient
             if ($createMIds && $mIds) $mIds = array_unique(array_merge($mIds,$createMIds));
             $where[] = ['m_id', 'in', $mIds];
         }
-        return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) {
+        $defaultSignal = ['rsrp' => -999, 'sinr' => -999, 'rsrp_level' => 0, 'sinr_level' => 0];
+        return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) use ($defaultSignal) {
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
             if (isset($item['state_id']) && $item['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $item['state_id']],'code,name,cname');
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
@@ -242,10 +243,7 @@ class MachineClient extends ManagementClient
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
             $item['machine_on_off'] = $this->getMachineOnOffFind(['m_id' => $item['m_id'],'status' => 1],'on_off_ckc,on_off_machine');
             if(empty($item['simSignalLog'])){
-                $item['simSignalLog']['rsrp'] = -999;
-                $item['simSignalLog']['sinr'] = -999;
-                $item['simSignalLog']['rsrp_level'] = 0;
-                $item['simSignalLog']['sinr_level'] = 0;
+                $item['simSignalLog'] = $defaultSignal;
             }
             $ratioWhere[] = ['m_id', '=', $item['m_id']];
             $ratioWhere[] = ['status', '<>', 2];
