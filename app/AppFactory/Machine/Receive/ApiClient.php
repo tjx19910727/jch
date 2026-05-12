@@ -2954,10 +2954,12 @@ class ApiClient extends ReceiveBaseClient
                     }
                 }
             }
-            $cameraUsage = bcsub($usage, $machineUsage, 2);
-            if ($cameraUsage < 0) {
-                $cameraUsage = 0;
-            }
+            //目前软件上报是上行下行一起，包含了摄像头流量
+            $cameraUsage = 0;
+            // $cameraUsage = bcsub($usage, $machineUsage, 2);
+            // if ($cameraUsage < 0) {
+            //     $cameraUsage = 0;
+            // }
             $resData = [
                 'm_id' => $this->machine['m_id'],
                 'machine_id' => $this->machine['machine_id'],
@@ -2966,7 +2968,7 @@ class ApiClient extends ReceiveBaseClient
                 'total_usage' => $totalUsage,
                 'usage' => $usage,
                 'machine_usage' => $machine_usage,
-                'camera_usage' => $cameraUsage,
+                'camera_usage' => 0,
                 'remark' => $this->data['remark'] ?? '',
             ];
             if(!$row) {
