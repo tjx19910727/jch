@@ -237,6 +237,45 @@ class Index extends Common
     }
 
     /**
+     * 商品滞销设备列表
+     * 入参支持：m_id(逗号分隔/数组)、machine_group_id、countDate、sale_count
+     * @return array|string
+     */
+    public function getSlowMovingGoodsList()
+    {
+        $postData = input();
+        $where = $this->getWhere([]);
+        $postData['so_where'] = $this->formatAoIdWhereWithPrefix($where, 'so.');
+        return $this->app->machineChannel->getSlowMovingGoodsList($postData);
+    }
+
+    /**
+     * 导出商品滞销设备列表
+     * 筛选条件与 getSlowMovingGoodsList 一致
+     * @return array|\think\response\Json
+     */
+    public function exportSlowMovingGoodsList()
+    {
+        $postData = input();
+        $where = $this->getWhere([]);
+        $postData['so_where'] = $this->formatAoIdWhereWithPrefix($where, 'so.');
+        return $this->app->machineChannel->exportSlowMovingGoodsList($postData);
+    }
+
+    /**
+     * 商品滞销设备货道详情
+     * 传入 m_id，返回当前设备满足筛选条件的滞销货道与空货货道
+     * @return array|string
+     */
+    public function getSlowMovingGoodsDetail()
+    {
+        $postData = input();
+        $where = $this->getWhere([]);
+        $postData['so_where'] = $this->formatAoIdWhereWithPrefix($where, 'so.');
+        return $this->app->machineChannel->getSlowMovingGoodsDetail($postData);
+    }
+
+    /**
      * 组装V2排行榜筛选条件
      * @param array $postData
      * @param bool $forMachine 是否设备排行榜
