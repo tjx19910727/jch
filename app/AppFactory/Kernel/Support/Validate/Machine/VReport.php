@@ -88,7 +88,6 @@ class VReport extends SupportValidate
 
         "uploadInfo" => ["msgType"],
         "machineServiceLog" => ["msgType"],
-        "updateSimSignal" => ["msgType"],
         "currentStatus" => ["msgType","current_status"],
         
         "machineCkcOnOff" => ["msgType","ckc_status"],
