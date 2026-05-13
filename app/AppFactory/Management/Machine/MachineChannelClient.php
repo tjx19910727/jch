@@ -172,7 +172,7 @@ class MachineChannelClient extends ManagementClient
             ->alias('mc')
             ->join('machine m', 'm.m_id = mc.m_id', 'left')
             ->leftJoin([$saleByMcSubQuery => 'sm'], 'sm.sale_m_id = mc.m_id and sm.mc_id = mc.mc_id')
-            
+            ->where('m.is_operating', 1)
             ->where('mc.status', '<>', 2)
             ->whereRaw('(mc.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = mc.m_id AND mi.sub_cabinet = 1))')
             ->field('mc.m_id,m.machine_id,m.machine_name,' . $slowCountExpr . ' channel_count,sum(case when mc.g_id = 0 OR mc.stock = 0 then 1 else 0 end) empty_channel')
@@ -219,6 +219,7 @@ class MachineChannelClient extends ManagementClient
             ->join('machine m', 'm.m_id = mc.m_id', 'left')
             ->leftJoin([$saleByMcSubQuery => 'sm'], 'sm.sale_m_id = mc.m_id and sm.mc_id = mc.mc_id')
             ->where('mc.status', '<>', 2)
+            ->where('m.is_operating', 1)
             ->whereRaw('(mc.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = mc.m_id AND mi.sub_cabinet = 1))')
             ->field('mc.m_id,m.machine_id,m.machine_name,' . $slowCountExpr . ' channel_count,sum(case when mc.g_id = 0 OR mc.stock = 0 then 1 else 0 end) empty_channel')
             ->group('mc.m_id,m.machine_id,m.machine_name')
@@ -337,6 +338,74 @@ class MachineChannelClient extends ManagementClient
             'machine_name' => $machineInfo['machine_name'],
             'slow_channel_list' => $slowChannelList,
             'empty_channel_list' => $emptyChannelList,
+        ]);
+    }
+
+    /**
+     * 商品滞销汇总（最近15天销量为0）
+     * 滞销货道数：沿用滞销货道口径（mc_id维度，销量<=0）
+     * 滞销商品数：在营设备货道上的商品ID中，最近15天销量为0的商品数
+     * @param array $postData
+     * @return array|string
+     */
+    public function getSlowMovingGoodsSummary($postData = [])
+    {
+        $postData['sale_count'] = 0;
+        $postData['countDate'] = '';
+
+        $context = $this->buildSlowMovingQueryContext($postData);
+        if ($context['empty']) {
+            return $this->rQ([
+                'slow_goods_count' => 0,
+                'slow_channel_count' => 0,
+            ]);
+        }
+
+        $queryMIds = $context['query_m_ids'];
+        $saleWhere = $context['sale_where'];
+        $saleByMcSubQuery = $context['sale_sub_mc_query'];
+
+        $slowChannelCount = Db::name('machine_channel')
+            ->alias('mc')
+            ->join('machine m', 'm.m_id = mc.m_id', 'left')
+            ->leftJoin([$saleByMcSubQuery => 'sm'], 'sm.sale_m_id = mc.m_id and sm.mc_id = mc.mc_id')
+            ->where('m.is_operating', 1)
+            ->where('mc.status', '<>', 2)
+            ->where('mc.g_id', '>', 0)
+            ->whereRaw('(mc.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = mc.m_id AND mi.sub_cabinet = 1))')
+            ->whereRaw('IFNULL(sm.sale_num,0) <= 0');
+        if ($queryMIds !== null) {
+            $slowChannelCount->whereIn('mc.m_id', $queryMIds);
+        }
+        $slowChannelCount = $slowChannelCount->count();
+
+        $saleGoodsExpr = 'IFNULL(NULLIF(sod.g_id,0),IFNULL(sod.g_id,0))';
+        $saleByGoodsSubQuery = Db::name('sale_orders_details')
+            ->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id', 'left')
+            ->where($saleWhere)
+            ->field($saleGoodsExpr . ' sale_g_id,sum(sod.quantity) sale_num')
+            ->whereRaw($saleGoodsExpr . ' > 0')
+            ->group($saleGoodsExpr)
+            ->buildSql();
+
+        $slowGoodsCount = Db::name('machine_channel')
+            ->alias('mc')
+            ->join('machine m', 'm.m_id = mc.m_id', 'left')
+            ->leftJoin([$saleByGoodsSubQuery => 'sg'], 'sg.sale_g_id = mc.g_id')
+            ->where('m.is_operating', 1)
+            ->where('mc.status', '<>', 2)
+            ->where('mc.g_id', '>', 0)
+            ->whereRaw('(mc.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = mc.m_id AND mi.sub_cabinet = 1))')
+            ->whereRaw('IFNULL(sg.sale_num,0) <= 0');
+        if ($queryMIds !== null) {
+            $slowGoodsCount->whereIn('mc.m_id', $queryMIds);
+        }
+        $slowGoodsCount = $slowGoodsCount->count('distinct mc.g_id');
+
+        return $this->rQ([
+            'slow_goods_count' => $slowGoodsCount,
+            'slow_channel_count' => $slowChannelCount,
         ]);
     }
 
