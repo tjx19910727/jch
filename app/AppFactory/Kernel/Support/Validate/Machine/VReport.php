@@ -87,6 +87,7 @@ class VReport extends SupportValidate
         "errorCode" => ["msgType","errorCode"],
 
         "uploadInfo" => ["msgType"],
+        "machineServiceLog" => ["msgType"],
         "currentStatus" => ["msgType","current_status"],
         
         "machineCkcOnOff" => ["msgType","ckc_status"],
