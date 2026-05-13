@@ -276,6 +276,19 @@ class Index extends Common
     }
 
     /**
+     * 商品滞销汇总（最近15天销量为0）
+     * 返回：滞销商品数、滞销货道数
+     * @return array|string
+     */
+    public function getSlowMovingGoodsSummary()
+    {
+        $postData = input();
+        $where = $this->getWhere([]);
+        $postData['so_where'] = $this->formatAoIdWhereWithPrefix($where, 'so.');
+        return $this->app->machineChannel->getSlowMovingGoodsSummary($postData);
+    }
+
+    /**
      * 组装V2排行榜筛选条件
      * @param array $postData
      * @param bool $forMachine 是否设备排行榜
