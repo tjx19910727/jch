@@ -505,7 +505,7 @@ class MachineClient extends TimeTaskBase
                 $item['error_code'] = '在营设备未开机'.$title;
                 $item['error_time'] = date('Y-m-d H:i:s');
                 $item['error_info'] = 11102011; // 在营设备未开机
-                $item['machine_name'] = $item['machine_id'];
+                $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
 
                 $this->noticeSendData = [
                     "ao_id" => $item['ao_id'],
