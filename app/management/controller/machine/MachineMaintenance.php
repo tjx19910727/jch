@@ -89,7 +89,10 @@ class MachineMaintenance extends Common
             $where['machine_id'] = $postData['device_id'];
         }
         if (!empty($postData['records_code'])) $where['records_code'] = $postData['records_code'];
-        if (isset($postData['maintainer_id'])) $where['maintainer_id'] = $postData['maintainer_id'];
+        if (isset($postData['manager_id'])) $where['manager_id'] = $postData['manager_id'];
+        if (isset($postData['page'])) $where['page'] = intval($postData['page']);
+        if (isset($postData['pageNum'])) $where['pageNum'] = intval($postData['pageNum']);
+        if (isset($postData['pageSize'])) $where['pageSize'] = intval($postData['pageSize']);
         return $this->app->machineMaintenance->getRecords($where);
     }
 }

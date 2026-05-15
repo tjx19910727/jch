@@ -89,6 +89,12 @@ class MachineCheckList extends Common
         if (isset($postData['maintainer_id'])) {
             $where['maintainer_id'] = $postData['maintainer_id'];
         }
+        if (isset($postData['manager_id'])) {
+            $where['manager_id'] = $postData['manager_id'];
+        }
+        if (isset($postData['page'])) $where['page'] = intval($postData['page']);
+        if (isset($postData['pageNum'])) $where['pageNum'] = intval($postData['pageNum']);
+        if (isset($postData['pageSize'])) $where['pageSize'] = intval($postData['pageSize']);
         return $this->app->machineCheckList->getRecords($where);
     }
 }
