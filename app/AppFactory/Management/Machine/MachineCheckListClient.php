@@ -144,14 +144,63 @@ class MachineCheckListClient extends ManagementClient
             $query = Db::name('check_list_records')->alias('cr')
                 ->leftJoin('check_list_items ci', 'ci.id = cr.item_id');
 
+            $codeQuery = Db::name('check_list_records')->alias('cr');
+
             if (!empty($where['machine_id'])) {
                 $query->where('cr.machine_id', $where['machine_id']);
+                $codeQuery->where('cr.machine_id', $where['machine_id']);
             }
             if (!empty($where['records_code'])) {
                 $query->where('cr.records_code', $where['records_code']);
+                $codeQuery->where('cr.records_code', $where['records_code']);
+            }
+            if (isset($where['maintainer_id']) && $where['maintainer_id'] !== '') {
+                $query->where('cr.manager_id', $where['maintainer_id']);
+                $codeQuery->where('cr.manager_id', $where['maintainer_id']);
             }
             if (isset($where['manager_id']) && $where['manager_id'] !== '') {
                 $query->where('cr.manager_id', $where['manager_id']);
+                $codeQuery->where('cr.manager_id', $where['manager_id']);
+            }
+
+            $page = max(1, intval($where['page'] ?? 1));
+            $pageSize = intval($where['pageNum'] ?? ($where['pageSize'] ?? 0));
+            $total = 0;
+
+            if ($pageSize > 0) {
+                $total = intval($codeQuery->distinct(true)->count('cr.records_code'));
+                if ($total <= 0) {
+                    return $this->rQ([
+                        'list' => [],
+                        'pagination' => [
+                            'page' => $page,
+                            'pageSize' => $pageSize,
+                            'total' => 0,
+                            'totalPage' => 0,
+                        ],
+                    ]);
+                }
+
+                $codes = $codeQuery->field('cr.records_code,max(cr.id) as max_id')
+                    ->group('cr.records_code')
+                    ->order('max_id desc')
+                    ->page($page, $pageSize)
+                    ->select()
+                    ->column('records_code');
+
+                if (!$codes) {
+                    return $this->rQ([
+                        'list' => [],
+                        'pagination' => [
+                            'page' => $page,
+                            'pageSize' => $pageSize,
+                            'total' => $total,
+                            'totalPage' => (int)ceil($total / $pageSize),
+                        ],
+                    ]);
+                }
+
+                $query->whereIn('cr.records_code', $codes);
             }
 
             $list = $query->field('cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.parent_id,ci.item_level')
@@ -166,8 +215,8 @@ class MachineCheckListClient extends ManagementClient
                     $grouped[$code] = [
                         'records_code' => $code,
                         'machine_id' => $item['machine_id'],
-                        'maintainer_id' => $item['maintainer_id'],
-                        'maintenance_time' => $item['maintenance_time'],
+                        'manager_id' => $item['manager_id'],
+                        'check_time' => $item['check_time'],
                         'records' => [],
                     ];
                 }
@@ -178,13 +227,27 @@ class MachineCheckListClient extends ManagementClient
                     'check_status' => intval($item['check_status'] ?? 0),
                     'parent_id' => $item['parent_id'],
                     'item_level' => $item['item_level'],
-                    'maintenance_time' => $item['maintenance_time'],
+                    'manager_id' => $item['manager_id'],
+                    'check_time' => $item['check_time'],
                     'notes' => $item['notes'],
                     'created_at' => $item['created_at'],
                 ];
             }
 
-            return $this->rQ(array_values($grouped));
+            $result = array_values($grouped);
+            if ($pageSize > 0) {
+                return $this->rQ([
+                    'list' => $result,
+                    'pagination' => [
+                        'page' => $page,
+                        'pageSize' => $pageSize,
+                        'total' => $total,
+                        'totalPage' => (int)ceil($total / $pageSize),
+                    ],
+                ]);
+            }
+
+            return $this->rQ($result);
         } catch (\Exception $e) {
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());

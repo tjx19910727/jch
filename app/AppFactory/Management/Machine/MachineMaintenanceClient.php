@@ -169,14 +169,59 @@ class MachineMaintenanceClient extends ManagementClient
             $query = Db::name('maintenance_records')->alias('mr')
                 ->leftJoin('maintenance_items mi', 'mi.id = mr.item_id');
 
+            $codeQuery = Db::name('maintenance_records')->alias('mr');
+
             if (!empty($where['machine_id'])) {
                 $query->where('mr.machine_id', $where['machine_id']);
+                $codeQuery->where('mr.machine_id', $where['machine_id']);
             }
             if (!empty($where['records_code'])) {
                 $query->where('mr.records_code', $where['records_code']);
+                $codeQuery->where('mr.records_code', $where['records_code']);
             }
             if (isset($where['maintainer_id']) && $where['maintainer_id'] !== '') {
                 $query->where('mr.maintainer_id', $where['maintainer_id']);
+                $codeQuery->where('mr.maintainer_id', $where['maintainer_id']);
+            }
+
+            $page = max(1, intval($where['page'] ?? 1));
+            $pageSize = intval($where['pageNum'] ?? ($where['pageSize'] ?? 0));
+            $total = 0;
+
+            if ($pageSize > 0) {
+                $total = intval($codeQuery->distinct(true)->count('mr.records_code'));
+                if ($total <= 0) {
+                    return $this->rQ([
+                        'list' => [],
+                        'pagination' => [
+                            'page' => $page,
+                            'pageSize' => $pageSize,
+                            'total' => 0,
+                            'totalPage' => 0,
+                        ],
+                    ]);
+                }
+
+                $codes = $codeQuery->field('mr.records_code,max(mr.id) as max_id')
+                    ->group('mr.records_code')
+                    ->order('max_id desc')
+                    ->page($page, $pageSize)
+                    ->select()
+                    ->column('records_code');
+
+                if (!$codes) {
+                    return $this->rQ([
+                        'list' => [],
+                        'pagination' => [
+                            'page' => $page,
+                            'pageSize' => $pageSize,
+                            'total' => $total,
+                            'totalPage' => (int)ceil($total / $pageSize),
+                        ],
+                    ]);
+                }
+
+                $query->whereIn('mr.records_code', $codes);
             }
 
             $list = $query->field('mr.id,mr.records_code,mr.item_id,mr.machine_id,mr.maintainer_id,mr.maintenance_time,mr.notes,mr.created_at,mi.item_name,mi.parent_id,mi.item_level')
@@ -208,7 +253,20 @@ class MachineMaintenanceClient extends ManagementClient
                 ];
             }
 
-            return $this->rQ(array_values($grouped));
+            $result = array_values($grouped);
+            if ($pageSize > 0) {
+                return $this->rQ([
+                    'list' => $result,
+                    'pagination' => [
+                        'page' => $page,
+                        'pageSize' => $pageSize,
+                        'total' => $total,
+                        'totalPage' => (int)ceil($total / $pageSize),
+                    ],
+                ]);
+            }
+
+            return $this->rQ($result);
         } catch (\Exception $e) {
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());

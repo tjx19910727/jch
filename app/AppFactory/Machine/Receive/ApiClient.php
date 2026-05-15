@@ -3025,6 +3025,49 @@ class ApiClient extends ReceiveBaseClient
                 $where[] = ['mr.records_code', '=', trim($this->data['records_code'])];
             }
 
+            $page = max(1, intval($this->data['page'] ?? 1));
+            $pageSize = intval($this->data['pageNum'] ?? ($this->data['pageSize'] ?? 0));
+            $total = 0;
+
+            $baseCodeQuery = Db::name('maintenance_records')->alias('mr')->where($where);
+            if ($pageSize > 0) {
+                $total = intval($baseCodeQuery->distinct(true)->count('mr.records_code'));
+                if ($total <= 0) {
+                    return $this->r(200, 'SUCCESS', [
+                        'list' => [],
+                        'pagination' => [
+                            'page' => $page,
+                            'pageSize' => $pageSize,
+                            'total' => 0,
+                            'totalPage' => 0,
+                        ],
+                    ]);
+                }
+
+                $codes = Db::name('maintenance_records')->alias('mr')
+                    ->where($where)
+                    ->field('mr.records_code,max(mr.id) as max_id')
+                    ->group('mr.records_code')
+                    ->order('max_id desc')
+                    ->page($page, $pageSize)
+                    ->select()
+                    ->column('records_code');
+
+                if (!$codes) {
+                    return $this->r(200, 'SUCCESS', [
+                        'list' => [],
+                        'pagination' => [
+                            'page' => $page,
+                            'pageSize' => $pageSize,
+                            'total' => $total,
+                            'totalPage' => (int)ceil($total / $pageSize),
+                        ],
+                    ]);
+                }
+
+                $where[] = ['mr.records_code', 'in', $codes];
+            }
+
             $list = Db::name('maintenance_records')
                 ->alias('mr')
                 ->leftJoin('maintenance_items mi', 'mi.id = mr.item_id')
@@ -3058,7 +3101,20 @@ class ApiClient extends ReceiveBaseClient
                 ];
             }
 
-            return $this->r(200, 'SUCCESS', array_values($grouped));
+            $result = array_values($grouped);
+            if ($pageSize > 0) {
+                return $this->r(200, 'SUCCESS', [
+                    'list' => $result,
+                    'pagination' => [
+                        'page' => $page,
+                        'pageSize' => $pageSize,
+                        'total' => $total,
+                        'totalPage' => (int)ceil($total / $pageSize),
+                    ],
+                ]);
+            }
+
+            return $this->r(200, 'SUCCESS', $result);
         } catch (\Throwable $e) {
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
@@ -3258,6 +3314,49 @@ class ApiClient extends ReceiveBaseClient
                 $where[] = ['cr.records_code', '=', trim($this->data['records_code'])];
             }
 
+            $page = max(1, intval($this->data['page'] ?? 1));
+            $pageSize = intval($this->data['pageNum'] ?? ($this->data['pageSize'] ?? 0));
+            $total = 0;
+
+            $baseCodeQuery = Db::name('check_list_records')->alias('cr')->where($where);
+            if ($pageSize > 0) {
+                $total = intval($baseCodeQuery->distinct(true)->count('cr.records_code'));
+                if ($total <= 0) {
+                    return $this->r(200, 'SUCCESS', [
+                        'list' => [],
+                        'pagination' => [
+                            'page' => $page,
+                            'pageSize' => $pageSize,
+                            'total' => 0,
+                            'totalPage' => 0,
+                        ],
+                    ]);
+                }
+
+                $codes = Db::name('check_list_records')->alias('cr')
+                    ->where($where)
+                    ->field('cr.records_code,max(cr.id) as max_id')
+                    ->group('cr.records_code')
+                    ->order('max_id desc')
+                    ->page($page, $pageSize)
+                    ->select()
+                    ->column('records_code');
+
+                if (!$codes) {
+                    return $this->r(200, 'SUCCESS', [
+                        'list' => [],
+                        'pagination' => [
+                            'page' => $page,
+                            'pageSize' => $pageSize,
+                            'total' => $total,
+                            'totalPage' => (int)ceil($total / $pageSize),
+                        ],
+                    ]);
+                }
+
+                $where[] = ['cr.records_code', 'in', $codes];
+            }
+
             $list = Db::name('check_list_records')
                 ->alias('cr')
                 ->leftJoin('check_list_items ci', 'ci.id = cr.item_id')
@@ -3292,7 +3391,20 @@ class ApiClient extends ReceiveBaseClient
                 ];
             }
 
-            return $this->r(200, 'SUCCESS', array_values($grouped));
+            $result = array_values($grouped);
+            if ($pageSize > 0) {
+                return $this->r(200, 'SUCCESS', [
+                    'list' => $result,
+                    'pagination' => [
+                        'page' => $page,
+                        'pageSize' => $pageSize,
+                        'total' => $total,
+                        'totalPage' => (int)ceil($total / $pageSize),
+                    ],
+                ]);
+            }
+
+            return $this->r(200, 'SUCCESS', $result);
         } catch (\Throwable $e) {
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
