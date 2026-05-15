@@ -2975,7 +2975,7 @@ class ApiClient extends ReceiveBaseClient
                 $insertAll[] = [
                     'records_code' => $recordsCode,
                     'item_id' => $itemId,
-                    'device_id' => $this->machine['machine_id'],
+                    'machine_id' => $this->machine['machine_id'],
                     'maintainer_id' => $maintainerId,
                     'maintenance_time' => $maintenanceTime,
                     'notes' => $notes,
@@ -2992,7 +2992,7 @@ class ApiClient extends ReceiveBaseClient
 
             return $this->r(200, 'SUCCESS', [
                 'records_code' => $recordsCode,
-                'device_id' => $this->machine['machine_id'],
+                'machine_id' => $this->machine['machine_id'],
                 'count' => count($insertAll),
             ]);
         } catch (\Throwable $e) {
@@ -3010,7 +3010,7 @@ class ApiClient extends ReceiveBaseClient
     {
         try {
             $where = [];
-            $where[] = ['mr.device_id', '=', $this->machine['machine_id']];
+            $where[] = ['mr.machine_id', '=', $this->machine['machine_id']];
             if (!empty($this->data['records_code'])) {
                 $where[] = ['mr.records_code', '=', trim($this->data['records_code'])];
             }
@@ -3019,7 +3019,7 @@ class ApiClient extends ReceiveBaseClient
                 ->alias('mr')
                 ->leftJoin('maintenance_items mi', 'mi.id = mr.item_id')
                 ->where($where)
-                ->field('mr.id,mr.records_code,mr.item_id,mr.device_id,mr.maintainer_id,mr.maintenance_time,mr.notes,mr.created_at,mi.item_name,mi.parent_id,mi.item_level')
+                ->field('mr.id,mr.records_code,mr.item_id,mr.machine_id,mr.maintainer_id,mr.maintenance_time,mr.notes,mr.created_at,mi.item_name,mi.parent_id,mi.item_level')
                 ->order('mr.records_code desc,mr.id asc')
                 ->select()
                 ->toArray();
@@ -3030,7 +3030,7 @@ class ApiClient extends ReceiveBaseClient
                 if (!isset($grouped[$code])) {
                     $grouped[$code] = [
                         'records_code' => $code,
-                        'device_id' => $item['device_id'],
+                        'machine_id' => $item['machine_id'],
                         'maintainer_id' => $item['maintainer_id'],
                         'maintenance_time' => $item['maintenance_time'],
                         'records' => [],
@@ -3078,6 +3078,256 @@ class ApiClient extends ReceiveBaseClient
             }
         }
         return $tree;
+    }
+
+    /**
+     * 获取检查清单项目（树形，一级固定：基础状态/商品陈列/核心功能）
+     * @return array|\think\response\Json
+     */
+    public function getCheckListItems()
+    {
+        try {
+            $items = Db::name('check_list_items')
+                ->where(['is_active' => 1])
+                ->field('id,parent_id,item_name,item_level,description,sort_order,is_active,updated_at')
+                ->order('sort_order asc,id asc')
+                ->select()
+                ->toArray();
+
+            $tree = $this->buildMaintenanceItemTree($items);
+            $tree = $this->mergeDefaultCheckListRoots($tree);
+            return $this->r(200, 'SUCCESS', $tree);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 提交检查清单记录
+     * 参数：check_list（每项包含 item_id, check_status=1|2, notes可选）
+     * @return array|\think\response\Json
+     */
+    public function submitCheckListRecord()
+    {
+        try {
+            $checkList = $this->data['check_list'] ?? [];
+            if (!is_array($checkList)) {
+                $decoded = json_decode(strval($checkList), true);
+                $checkList = is_array($decoded) ? $decoded : [];
+            }
+            if (!$checkList) {
+                return $this->rValidate('check_list不能为空');
+            }
+
+            $enabledItems = Db::name('check_list_items')
+                ->where(['is_active' => 1])
+                ->field('id,item_name')
+                ->order('sort_order asc,id asc')
+                ->select()
+                ->toArray();
+            if (!$enabledItems) {
+                return $this->rFail('暂无启用检查项');
+            }
+
+            $enabledMap = [];
+            foreach ($enabledItems as $enabledItem) {
+                $enabledMap[intval($enabledItem['id'])] = $enabledItem;
+            }
+            $enabledIds = array_keys($enabledMap);
+
+            $submittedMap = [];
+            $invalidStatusItems = [];
+            $submittedIds = [];
+            foreach ($checkList as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+                $itemId = intval($row['item_id'] ?? ($row['id'] ?? 0));
+                if ($itemId <= 0) {
+                    continue;
+                }
+                $submittedIds[] = $itemId;
+                $checkStatus = intval($row['check_status'] ?? 0);
+                $rowNotes = trim(strval($row['notes'] ?? ''));
+                $submittedMap[$itemId] = [
+                    'check_status' => $checkStatus,
+                    'notes' => $rowNotes,
+                ];
+
+                if (!in_array($checkStatus, [1, 2], true)) {
+                    $invalidStatusItems[$itemId] = [
+                        'item_id' => $itemId,
+                        'item_name' => $enabledMap[$itemId]['item_name'] ?? '',
+                        'reason' => 'check_status必须为1或2',
+                    ];
+                }
+            }
+
+            if (!$submittedMap) {
+                return $this->rValidate('check_list不能为空');
+            }
+
+            $submittedIds = array_values(array_unique(array_map('intval', $submittedIds)));
+            $existSubmittedIds = Db::name('check_list_items')->where([['id', 'in', $submittedIds]])->column('id');
+            $notExists = array_values(array_diff($submittedIds, $existSubmittedIds));
+            if ($notExists) {
+                return $this->rFail('检查项不存在:' . implode(',', $notExists));
+            }
+
+            $missingStatusItems = [];
+            foreach ($enabledItems as $enabledItem) {
+                $itemId = intval($enabledItem['id']);
+                if (!isset($submittedMap[$itemId])) {
+                    $missingStatusItems[] = [
+                        'item_id' => $itemId,
+                        'item_name' => $enabledItem['item_name'],
+                        'reason' => '未提交check_status',
+                    ];
+                }
+            }
+            if ($invalidStatusItems) {
+                $missingStatusItems = array_merge($missingStatusItems, array_values($invalidStatusItems));
+            }
+            if ($missingStatusItems) {
+                return $this->r(300, '存在未提交check_status的信息', [
+                    'missing_check_status_items' => $missingStatusItems,
+                ]);
+            }
+
+            $recordsCode = date('YmdHi');
+            $managerId = trim($this->data['manager_id'] ?? '');
+            $notes = trim(strval($this->data['notes'] ?? ''));
+            $checkTime = date('Y-m-d H:i:s');
+
+            $insertAll = [];
+            foreach ($enabledIds as $itemId) {
+                $rowStatus = intval($submittedMap[$itemId]['check_status'] ?? 0);
+                $rowNotes = strval($submittedMap[$itemId]['notes'] ?? '');
+                $insertAll[] = [
+                    'records_code' => $recordsCode,
+                    'item_id' => $itemId,
+                    'machine_id' => $this->machine['machine_id'],
+                    'manager_id' => $managerId,
+                    'check_status' => $rowStatus,
+                    'check_time' => $checkTime,
+                    'notes' => $rowNotes !== '' ? $rowNotes : $notes,
+                ];
+            }
+
+            Db::startTrans();
+            $result = Db::name('check_list_records')->insertAll($insertAll);
+            if (!$result) {
+                Db::rollback();
+                return $this->rFail('检查记录提交失败');
+            }
+            Db::commit();
+
+            return $this->r(200, 'SUCCESS', [
+                'records_code' => $recordsCode,
+                'machine_id' => $this->machine['machine_id'],
+                'count' => count($insertAll),
+            ]);
+        } catch (\Throwable $e) {
+            Db::rollback();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取检查清单记录（按records_code归类）
+     * @return array|\think\response\Json
+     */
+    public function getCheckListRecords()
+    {
+        try {
+            $where = [];
+            $where[] = ['cr.machine_id', '=', $this->machine['machine_id']];
+            if (!empty($this->data['records_code'])) {
+                $where[] = ['cr.records_code', '=', trim($this->data['records_code'])];
+            }
+
+            $list = Db::name('check_list_records')
+                ->alias('cr')
+                ->leftJoin('check_list_items ci', 'ci.id = cr.item_id')
+                ->where($where)
+                ->field('cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.parent_id,ci.item_level')
+                ->order('cr.records_code desc,cr.id asc')
+                ->select()
+                ->toArray();
+
+            $grouped = [];
+            foreach ($list as $item) {
+                $code = $item['records_code'];
+                if (!isset($grouped[$code])) {
+                    $grouped[$code] = [
+                        'records_code' => $code,
+                        'machine_id' => $item['machine_id'],
+                        'manager_id' => $item['manager_id'],
+                        'check_time' => $item['check_time'],
+                        'records' => [],
+                    ];
+                }
+                $grouped[$code]['records'][] = [
+                    'id' => $item['id'],
+                    'item_id' => $item['item_id'],
+                    'item_name' => $item['item_name'],
+                    'check_status' => intval($item['check_status'] ?? 0),
+                    'parent_id' => $item['parent_id'],
+                    'item_level' => $item['item_level'],
+                    'manager_id' => $item['manager_id'],
+                    'notes' => $item['notes'],
+                    'created_at' => $item['created_at'],
+                ];
+            }
+
+            return $this->r(200, 'SUCCESS', array_values($grouped));
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 固定检查清单一级节点
+     * @param array $tree
+     * @return array
+     */
+    protected function mergeDefaultCheckListRoots($tree)
+    {
+        $defaultNames = ['基础状态', '商品陈列', '核心功能'];
+        $rootByName = [];
+        $otherRoots = [];
+        foreach ($tree as $node) {
+            $name = trim(strval($node['item_name'] ?? ''));
+            if (in_array($name, $defaultNames, true)) {
+                $rootByName[$name] = $node;
+            } else {
+                $otherRoots[] = $node;
+            }
+        }
+
+        $result = [];
+        foreach ($defaultNames as $index => $name) {
+            if (isset($rootByName[$name])) {
+                $result[] = $rootByName[$name];
+            } else {
+                $result[] = [
+                    'id' => 0,
+                    'parent_id' => null,
+                    'item_name' => $name,
+                    'item_level' => 1,
+                    'description' => '',
+                    'sort_order' => $index + 1,
+                    'is_active' => 1,
+                    'updated_at' => '',
+                    'children' => [],
+                ];
+            }
+        }
+
+        return array_merge($result, $otherRoots);
     }
 
     /**

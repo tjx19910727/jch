@@ -60,6 +60,8 @@ class VReceive extends VCommon
         "gm_id" => "require",
         "gmg_id" => "require",
         "trade_no" => "require",
+        "item_ids" => "require",
+        "check_list" => "require|array",
         "status" => "integer",
         "date" => "require",
         "machine_usage" => "require",
@@ -118,6 +120,9 @@ class VReceive extends VCommon
         "gmg_id.require" => "VSubGoodsMultipleOrder.gmg_id_require",
 
         "trade_no.require" => "VReceive.trade_no_require",
+        "item_ids.require" => "item_ids不能为空",
+        "check_list.require" => "check_list不能为空",
+        "check_list.array" => "check_list格式错误",
         "date.require" => "VReceive.date_require",
         "machine_usage.require" => "VReceive.machine_usage_require",
 
@@ -232,6 +237,10 @@ class VReceive extends VCommon
         "getMaintenanceItems" => ["msg_id","machine_id","timestamp","sign"],
         "submitMaintenanceRecord" => ["msg_id","machine_id","timestamp","sign","manager_id","item_ids"],
         "getMaintenanceRecords" => ["msg_id","machine_id","timestamp","sign"],
+
+        "getCheckListItems" => ["msg_id","machine_id","timestamp","sign"],
+        "submitCheckListRecord" => ["msg_id","machine_id","timestamp","sign","manager_id","check_list"],
+        "getCheckListRecords" => ["msg_id","machine_id","timestamp","sign"],
 
         "testUploadInfoMq" => ["msg_id","machine_id","timestamp"],
     ];

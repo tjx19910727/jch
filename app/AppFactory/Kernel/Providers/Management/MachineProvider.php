@@ -18,6 +18,7 @@ use app\AppFactory\Management\Machine\MachineChannelStockClient;
 use app\AppFactory\Management\Machine\MachineChannelStockReportClient;
 use app\AppFactory\Management\Machine\MachineCheckStockClient;
 use app\AppFactory\Management\Machine\MachineCheckStockCountClient;
+use app\AppFactory\Management\Machine\MachineCheckListClient;
 use app\AppFactory\Management\Machine\MachineClient;
 use app\AppFactory\Management\Machine\MachineConfigClient;
 use app\AppFactory\Management\Machine\MachineConfigLangClient;
@@ -62,6 +63,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineCheckStockCount'] = function ($app) {
             return new MachineCheckStockCountClient($app);
+        };
+        $app['machineCheckList'] = function ($app) {
+            return new MachineCheckListClient($app);
         };
         $app['machine'] = function ($app) {
             return new MachineClient($app);

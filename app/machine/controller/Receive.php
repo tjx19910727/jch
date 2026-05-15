@@ -1106,6 +1106,48 @@ class Receive extends Common
         }
     }
 
+    /**
+     * 获取检查清单项目（按层级）
+     * @return array|string
+     */
+    public function getCheckListItems()
+    {
+        try {
+            return $this->app->api->getCheckListItems();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 提交检查清单记录
+     * @return array|string
+     */
+    public function submitCheckListRecord()
+    {
+        try {
+            return $this->app->api->submitCheckListRecord();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 查询检查清单记录（按records_code归类）
+     * @return array|string
+     */
+    public function getCheckListRecords()
+    {
+        try {
+            return $this->app->api->getCheckListRecords();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     public function test()
     {
         $this->app->api->test();

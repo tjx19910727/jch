@@ -73,4 +73,23 @@ class MachineMaintenance extends Common
         }
         return $this->app->machineMaintenance->delItem($postData);
     }
+
+    /**
+     * 管理端：查询维护记录（支持 machine_id / records_code / maintainer_id）
+     * 返回结构与设备端 `/machine/receive/getMaintenanceRecords` 保持一致（按 records_code 分组）
+     */
+    public function getRecords()
+    {
+        $postData = input();
+        $where = [];
+        if (!empty($postData['machine_id'])) {
+            $where['machine_id'] = $postData['machine_id'];
+        } elseif (!empty($postData['device_id'])) {
+            // 兼容旧参数
+            $where['machine_id'] = $postData['device_id'];
+        }
+        if (!empty($postData['records_code'])) $where['records_code'] = $postData['records_code'];
+        if (isset($postData['maintainer_id'])) $where['maintainer_id'] = $postData['maintainer_id'];
+        return $this->app->machineMaintenance->getRecords($where);
+    }
 }
