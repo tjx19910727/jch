@@ -1064,6 +1064,48 @@ class Receive extends Common
         }
     }
 
+    /**
+     * 获取维护项目（按层级）
+     * @return array|string
+     */
+    public function getMaintenanceItems()
+    {
+        try {
+            return $this->app->api->getMaintenanceItems();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 提交维护记录
+     * @return array|string
+     */
+    public function submitMaintenanceRecord()
+    {
+        try {
+            return $this->app->api->submitMaintenanceRecord();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 查询维护记录（按records_code归类）
+     * @return array|string
+     */
+    public function getMaintenanceRecords()
+    {
+        try {
+            return $this->app->api->getMaintenanceRecords();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     public function test()
     {
         $this->app->api->test();

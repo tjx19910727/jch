@@ -2932,6 +2932,165 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 获取维护项目（树形）
+     * @return array|\think\response\Json
+     */
+    public function getMaintenanceItems()
+    {
+        try {
+            $items = Db::name('maintenance_items')
+                ->where(['is_active' => 1])
+                ->field('id,parent_id,item_name,item_level,cycle_days,description,sort_order,is_active,updated_at')
+                ->order('sort_order asc,id asc')
+                ->select()
+                ->toArray();
+
+            return $this->r(200, 'SUCCESS', $this->buildMaintenanceItemTree($items));
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 提交维护记录
+     * 兼容参数：item_id / id / item_ids
+     * @return array|\think\response\Json
+     */
+    public function submitMaintenanceRecord()
+    {
+        $itemIds = $this->data['item_ids'] ?? ($this->data['item_id'] ?? ($this->data['id'] ?? []));
+        if (!is_array($itemIds)) {
+            $itemIds = explode(',', strval($itemIds));
+        }
+        $itemIds = array_values(array_unique(array_filter(array_map('intval', $itemIds))));
+        if (!$itemIds) {
+            return $this->rValidate('item_id不能为空');
+        }
+
+        try {
+            $exists = Db::name('maintenance_items')->where([['id', 'in', $itemIds]])->column('id');
+            $missing = array_values(array_diff($itemIds, $exists));
+            if ($missing) {
+                return $this->rFail('维护项目不存在:' . implode(',', $missing));
+            }
+
+            $recordsCode = date('YmdHi');
+            $maintainerId = trim(strval($this->data['maintainer_id'] ?? ($this->data['manager_id'] ?? ($this->data['operator'] ?? $this->machine['machine_id']))));
+            $notes = trim(strval($this->data['notes'] ?? ''));
+            $maintenanceTime = date('Y-m-d H:i:s');
+
+            $insertAll = [];
+            foreach ($itemIds as $itemId) {
+                $insertAll[] = [
+                    'records_code' => $recordsCode,
+                    'item_id' => $itemId,
+                    'device_id' => $this->machine['machine_id'],
+                    'maintainer_id' => $maintainerId,
+                    'maintenance_time' => $maintenanceTime,
+                    'notes' => $notes,
+                ];
+            }
+
+            Db::startTrans();
+            $result = Db::name('maintenance_records')->insertAll($insertAll);
+            if (!$result) {
+                Db::rollback();
+                return $this->rFail('维护记录提交失败');
+            }
+            Db::commit();
+
+            return $this->r(200, 'SUCCESS', [
+                'records_code' => $recordsCode,
+                'device_id' => $this->machine['machine_id'],
+                'count' => count($insertAll),
+            ]);
+        } catch (\Throwable $e) {
+            Db::rollback();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取维护记录（按records_code归类）
+     * @return array|\think\response\Json
+     */
+    public function getMaintenanceRecords()
+    {
+        try {
+            $where = [];
+            $where[] = ['mr.device_id', '=', $this->machine['machine_id']];
+            if (!empty($this->data['records_code'])) {
+                $where[] = ['mr.records_code', '=', trim($this->data['records_code'])];
+            }
+
+            $list = Db::name('maintenance_records')
+                ->alias('mr')
+                ->leftJoin('maintenance_items mi', 'mi.id = mr.item_id')
+                ->where($where)
+                ->field('mr.id,mr.records_code,mr.item_id,mr.device_id,mr.maintainer_id,mr.maintenance_time,mr.notes,mr.created_at,mi.item_name,mi.parent_id,mi.item_level')
+                ->order('mr.records_code desc,mr.id asc')
+                ->select()
+                ->toArray();
+
+            $grouped = [];
+            foreach ($list as $item) {
+                $code = $item['records_code'];
+                if (!isset($grouped[$code])) {
+                    $grouped[$code] = [
+                        'records_code' => $code,
+                        'device_id' => $item['device_id'],
+                        'maintainer_id' => $item['maintainer_id'],
+                        'maintenance_time' => $item['maintenance_time'],
+                        'records' => [],
+                    ];
+                }
+                $grouped[$code]['records'][] = [
+                    'id' => $item['id'],
+                    'item_id' => $item['item_id'],
+                    'item_name' => $item['item_name'],
+                    'parent_id' => $item['parent_id'],
+                    'item_level' => $item['item_level'],
+                    'maintenance_time' => $item['maintenance_time'],
+                    'notes' => $item['notes'],
+                    'created_at' => $item['created_at'],
+                ];
+            }
+
+            return $this->r(200, 'SUCCESS', array_values($grouped));
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 维护项目树形结构
+     * @param array $items
+     * @return array
+     */
+    protected function buildMaintenanceItemTree($items)
+    {
+        $nodes = [];
+        foreach ($items as $item) {
+            $item['children'] = [];
+            $nodes[$item['id']] = $item;
+        }
+
+        $tree = [];
+        foreach ($nodes as $id => $node) {
+            $parentId = intval($node['parent_id']);
+            if ($parentId > 0 && isset($nodes[$parentId])) {
+                $nodes[$parentId]['children'][] = &$nodes[$id];
+            } else {
+                $tree[] = &$nodes[$id];
+            }
+        }
+        return $tree;
+    }
+
+    /**
      * 设备上报每日流量使用情况
      * 约定：camera_usage = usage - machine_usage
      * @return array|\think\response\Json

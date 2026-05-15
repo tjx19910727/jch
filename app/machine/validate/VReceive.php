@@ -229,6 +229,10 @@ class VReceive extends VCommon
         "searchWCGoods" => ["msg_id","machine_id","timestamp","name"],
         "sendError" => ["msg_id","machine_id","timestamp","sign","errorCode"],
 
+        "getMaintenanceItems" => ["msg_id","machine_id","timestamp","sign"],
+        "submitMaintenanceRecord" => ["msg_id","machine_id","timestamp","sign","manager_id","item_ids"],
+        "getMaintenanceRecords" => ["msg_id","machine_id","timestamp","sign"],
+
         "testUploadInfoMq" => ["msg_id","machine_id","timestamp"],
     ];
 

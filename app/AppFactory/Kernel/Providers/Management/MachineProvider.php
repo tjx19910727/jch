@@ -30,10 +30,10 @@ use app\AppFactory\Management\Machine\MachineGroupMgClient;
 use app\AppFactory\Management\Machine\MachineHelpClient;
 use app\AppFactory\Management\Machine\MachineInfoClient;
 use app\AppFactory\Management\Machine\MachineLangClient;
+use app\AppFactory\Management\Machine\MachineMaintenanceClient;
 use app\AppFactory\Management\Machine\MachineOnlineClient;
 use app\AppFactory\Management\Machine\MachineOnlineDetailsClient;
 use app\AppFactory\Management\Machine\MachineOnOffClient;
-use app\AppFactory\Management\Machine\MachineSaleClient;
 use app\AppFactory\Management\Machine\MachineVersionClient;
 use app\AppFactory\Management\Machine\MachineVersionPlanClient;
 use app\AppFactory\Management\Machine\MachineViewClient;
@@ -102,6 +102,9 @@ class MachineProvider implements ServiceProviderInterface
         $app['machineLang'] = function ($app) {
             return new MachineLangClient($app);
         };
+        $app['machineMaintenance'] = function ($app) {
+            return new MachineMaintenanceClient($app);
+        };
         $app['machineView'] = function ($app) {
             return new MachineViewClient($app);
         };
@@ -122,9 +125,6 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineServiceLog'] = function ($app) {
             return new MachineServiceLogClient($app);
-        };
-        $app['machineSale'] = function ($app) {
-            return new MachineSaleClient($app);
         };
         $app['simCardInfo'] = function ($app) {
             return new SimCardInfoClient($app);
