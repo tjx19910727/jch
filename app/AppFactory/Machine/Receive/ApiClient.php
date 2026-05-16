@@ -2811,6 +2811,9 @@ class ApiClient extends ReceiveBaseClient
                 if ($daysInfo) $v['daysInfo'] = $daysInfo[0] ?? [];
             }
             $v['goods_lists'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
+            foreach($v['goods_lists'] as &$item){
+                $item['desc'] .= $wc_goods['description'] ?? '';
+            }
         }
         return $this->r(200, "SUCCESS", $wcMachineChannelLists);
     }
