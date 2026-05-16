@@ -65,6 +65,8 @@ class VReceive extends VCommon
         "status" => "integer",
         "date" => "require",
         "machine_usage" => "require",
+        "file_content" => "require",
+        "per_row" => "integer",
     ];
 
     protected $message = [
@@ -123,6 +125,8 @@ class VReceive extends VCommon
         "item_ids.require" => "item_ids不能为空",
         "check_list.require" => "check_list不能为空",
         "check_list.array" => "check_list格式错误",
+    "file_content.require" => "file_content不能为空",
+    "per_row.integer" => "per_row格式错误",
         "date.require" => "VReceive.date_require",
         "machine_usage.require" => "VReceive.machine_usage_require",
 
@@ -238,9 +242,13 @@ class VReceive extends VCommon
         "submitMaintenanceRecord" => ["msg_id","machine_id","timestamp","sign","manager_id","item_ids"],
         "getMaintenanceRecords" => ["msg_id","machine_id","timestamp","sign"],
 
+    // 导入维护记录
+    "importMaintenanceRecords" => ["msg_id","machine_id","timestamp","sign","file_content","per_row"],
+
         "getCheckListItems" => ["msg_id","machine_id","timestamp","sign"],
         "submitCheckListRecord" => ["msg_id","machine_id","timestamp","sign","manager_id","check_list"],
         "getCheckListRecords" => ["msg_id","machine_id","timestamp","sign"],
+    "importCheckListRecords" => ["msg_id","machine_id","timestamp","sign","file_content","per_row"],
 
         "testUploadInfoMq" => ["msg_id","machine_id","timestamp"],
     ];
