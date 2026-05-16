@@ -3013,6 +3013,129 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 从文件内容生成 maintenance_records 的 INSERT SQL
+     * 接收参数：file_content (string)，可选参数：per_row (bool) 默认为 false（生成一个多行 VALUES 的 INSERT）
+     * 文档列对应：| maintenance_time | 无意义 | maintenance_item.id 或 item_name | maintainer_id |
+     * 如果第三列不是数字，会尝试按 item_name 在 maintenance_items 表查找 id，找不到会返回错误信息
+     * @return array|\think\response\Json
+     */
+    public function importMaintenanceRecordsFromFile()
+    {
+        $content = trim(strval($this->data['file_content'] ?? ''));
+        $perRow = !empty($this->data['per_row']);
+        if ($content === '') {
+            return $this->rValidate('file_content不能为空');
+        }
+
+        // 移除可能的 Markdown 代码块标记
+        $content = preg_replace('/^```[\s\S]*|[\s\S]*```$/', '', $content);
+        $lines = preg_split('/\r?\n/', $content);
+        $insertAll = [];
+        $errors = [];
+        $missingItems = [];
+        $machineId = $this->machine['machine_id'] ?? '';
+
+        // 仅处理形如: | 2026-05-15 16:14:38 | 完成 | 齿轮 / 齿条 | 123 | 的生效行，其他行跳过
+        // 列位定义：| maintenance_time | 无意义状态文本 | maintenance_item.id或item_name | maintainer_id |
+        $patternMaintenance = '/^\|\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s*\|\s*([^|]*)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|?$/';
+        foreach ($lines as $ln) {
+            $ln = trim($ln);
+            if ($ln === '') continue;
+            if (!preg_match($patternMaintenance, $ln, $match)) {
+                // 非生效格式行跳过
+                continue;
+            }
+
+            $maintenanceTimeRaw = trim($match[1]);
+            // $match[2] 为状态文本（例如：完成），按需求无业务意义，忽略
+            $itemCol = trim($match[3]);
+            $maintainerId = trim($match[4]);
+
+            $ts = strtotime($maintenanceTimeRaw);
+            if ($ts === false) {
+                $errors[] = "时间格式无效: {$maintenanceTimeRaw}";
+                continue;
+            }
+            $maintenanceTime = date('Y-m-d H:i:s', $ts);
+            $recordsCode = date('YmdHi', $ts);
+
+            $itemId = null;
+            if (is_numeric($itemCol)) {
+                $itemId = intval($itemCol);
+            } else {
+                $itemName = $itemCol;
+                $itemId = Db::name('maintenance_items')->where('item_name', $itemName)->value('id');
+                if (!$itemId) {
+                    $missingItems[] = $itemName;
+                    continue;
+                }
+            }
+
+            $insertAll[] = [
+                'records_code' => $recordsCode,
+                'item_id' => intval($itemId),
+                'machine_id' => $machineId,
+                'maintainer_id' => trim($maintainerId),
+                'maintenance_time' => $maintenanceTime,
+                'notes' => '',
+            ];
+        }
+
+        if ($missingItems) {
+            $missingItems = array_values(array_unique($missingItems));
+            return $this->rFail('未找到对应的维护项目: ' . implode(',', $missingItems));
+        }
+        if (empty($insertAll)) {
+            return $this->rFail('没有可插入的记录', ['errors' => $errors]);
+        }
+
+        // 构建 SQL 字符串用于日志记录
+        $columns = "`records_code`,`item_id`,`machine_id`,`maintainer_id`,`maintenance_time`,`notes`";
+        $valueTuples = [];
+        foreach ($insertAll as $row) {
+            $v = [
+                addslashes($row['records_code']),
+                addslashes($row['item_id']),
+                addslashes($row['machine_id']),
+                addslashes($row['maintainer_id']),
+                addslashes($row['maintenance_time']),
+                addslashes($row['notes']),
+            ];
+            $valueTuples[] = "('" . implode("','", $v) . "')";
+        }
+        $sql = "INSERT INTO `maintenance_records` ({$columns}) VALUES " . implode(' , ', $valueTuples) . ";";
+
+        // 记录将要执行的 SQL（插入前）
+        actionLog(['machine_id' => $machineId, 'sql' => $sql, 'count' => count($insertAll)], 'importMaintenanceRecordsFromFile_sql_before');
+
+        // 执行批量插入
+        try {
+            Db::startTrans();
+            $result = Db::name('maintenance_records')->insertAll($insertAll);
+            if ($result === false) {
+                Db::rollback();
+                actionLog(['machine_id' => $machineId, 'sql' => $sql, 'error' => 'insertAll returned false'], 'importMaintenanceRecordsFromFile_error');
+                return $this->rFail('维护记录插入失败');
+            }
+            Db::commit();
+
+            // 记录操作日志（插入后）
+            actionLog(['machine_id' => $machineId, 'sql' => $sql, 'count' => $result], 'importMaintenanceRecordsFromFile_sql_after');
+
+            return $this->r(200, 'SUCCESS', [
+                'count' => $result,
+                'errors' => $errors,
+            ]);
+        } catch (\Throwable $e) {
+            Db::rollback();
+            // 异常也写日志，包含 SQL 与异常信息
+            actionLog(['machine_id' => $machineId, 'sql' => $sql, 'exception' => $e->getMessage()], 'importMaintenanceRecordsFromFile_exception');
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 获取维护记录（按records_code归类）
      * @return array|\think\response\Json
      */
@@ -3406,6 +3529,139 @@ class ApiClient extends ReceiveBaseClient
 
             return $this->r(200, 'SUCCESS', $result);
         } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 从文件内容生成并插入 check_list_records
+     * 接收参数：file_content (string)，可选参数：per_row (bool)
+     * 文档列对应：| check_time | check_status(1/2) | check_list_items.id or item_name | maintainer_id |
+     * 根据 check_time 生成 records_code (YmdHi)
+     */
+    public function importCheckListRecordsFromFile()
+    {
+        $content = trim(strval($this->data['file_content'] ?? ''));
+        $perRow = !empty($this->data['per_row']);
+        if ($content === '') {
+            return $this->rValidate('file_content不能为空');
+        }
+
+        $content = preg_replace('/^```[\s\S]*|[\s\S]*```$/', '', $content);
+        $lines = preg_split('/\r?\n/', $content);
+
+        $insertAll = [];
+        $errors = [];
+        $missingItems = [];
+        $machineId = $this->machine['machine_id'] ?? '';
+
+        // 仅处理形如: | 2026-05-15 16:14:47 | 正常 | 电源与系统 | 123 | 的生效行，其他行跳过
+        // 列位定义：| check_time | 结果(正常/异常) | check_list_items.id或item_name | maintainer_id |
+        $patternCheck = '/^\|\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2})\s*\|\s*(正常|异常|1|2)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|?$/u';
+        foreach ($lines as $ln) {
+            $ln = trim($ln);
+            if ($ln === '') continue;
+            if (!preg_match($patternCheck, $ln, $match)) {
+                // 非生效格式行跳过
+                continue;
+            }
+
+            $checkTimeRaw = trim($match[1]);
+            $statusCol = trim($match[2]);
+            $itemCol = trim($match[3]);
+            $maintainerId = trim($match[4]);
+
+            $ts = strtotime($checkTimeRaw);
+            if ($ts === false) {
+                $errors[] = "时间格式无效: {$checkTimeRaw}";
+                continue;
+            }
+            $checkTime = date('Y-m-d H:i:s', $ts);
+            $recordsCode = date('YmdHi', $ts);
+
+            // check_status 解析
+            if ($statusCol === '正常') {
+                $checkStatus = 1;
+            } elseif ($statusCol === '异常') {
+                $checkStatus = 2;
+            } else {
+                $checkStatus = intval($statusCol);
+            }
+            if ($checkStatus !== 1 && $checkStatus !== 2) {
+                $errors[] = "check_status 格式错误: {$statusCol}";
+                continue;
+            }
+
+            // item id 解析
+            if (is_numeric($itemCol)) {
+                $itemId = intval($itemCol);
+            } else {
+                $itemName = $itemCol;
+                $itemId = Db::name('check_list_items')->where('item_name', $itemName)->value('id');
+                if (!$itemId) {
+                    $missingItems[] = $itemName;
+                    continue;
+                }
+            }
+
+            $insertAll[] = [
+                'records_code' => $recordsCode,
+                'item_id' => intval($itemId),
+                'machine_id' => $machineId,
+                'manager_id' => trim($maintainerId),
+                'check_status' => $checkStatus,
+                'check_time' => $checkTime,
+                'notes' => '',
+            ];
+        }
+
+        if ($missingItems) {
+            $missingItems = array_values(array_unique($missingItems));
+            return $this->rFail('未找到对应的检查项目: ' . implode(',', $missingItems));
+        }
+        if (empty($insertAll)) {
+            return $this->rFail('没有可插入的记录', ['errors' => $errors]);
+        }
+
+        // 构建 SQL 字符串用于日志
+        $columns = "`records_code`,`item_id`,`machine_id`,`manager_id`,`check_status`,`check_time`,`notes`";
+        $valueTuples = [];
+        foreach ($insertAll as $row) {
+            $v = [
+                addslashes($row['records_code']),
+                addslashes($row['item_id']),
+                addslashes($row['machine_id']),
+                addslashes($row['manager_id']),
+                addslashes($row['check_status']),
+                addslashes($row['check_time']),
+                addslashes($row['notes']),
+            ];
+            $valueTuples[] = "('" . implode("','", $v) . "')";
+        }
+        $sql = "INSERT INTO `check_list_records` ({$columns}) VALUES " . implode(' , ', $valueTuples) . ";";
+
+        actionLog(['machine_id' => $machineId, 'sql' => $sql, 'count' => count($insertAll)], 'importCheckListRecordsFromFile_sql_before');
+
+        try {
+            Db::startTrans();
+            $result = Db::name('check_list_records')->insertAll($insertAll);
+            if ($result === false) {
+                Db::rollback();
+                actionLog(['machine_id' => $machineId, 'sql' => $sql, 'error' => 'insertAll returned false'], 'importCheckListRecordsFromFile_error');
+                return $this->rFail('检查记录插入失败');
+            }
+            Db::commit();
+
+            actionLog(['machine_id' => $machineId, 'sql' => $sql, 'count' => $result], 'importCheckListRecordsFromFile_sql_after');
+
+            return $this->r(200, 'SUCCESS', [
+                'count' => $result,
+                'errors' => $errors,
+            ]);
+        } catch (\Throwable $e) {
+            Db::rollback();
+            actionLog(['machine_id' => $machineId, 'sql' => $sql, 'exception' => $e->getMessage()], 'importCheckListRecordsFromFile_exception');
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }

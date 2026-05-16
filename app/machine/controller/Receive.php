@@ -1093,6 +1093,34 @@ class Receive extends Common
     }
 
     /**
+     * 从上传的文件内容生成 maintenance_records 的 INSERT SQL
+     * @return array|string
+     */
+    public function importMaintenanceRecords()
+    {
+        try {
+            return $this->app->api->importMaintenanceRecordsFromFile();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 从上传的文件内容生成并插入 check_list_records
+     * @return array|string
+     */
+    public function importCheckListRecords()
+    {
+        try {
+            return $this->app->api->importCheckListRecordsFromFile();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 查询维护记录（按records_code归类）
      * @return array|string
      */
