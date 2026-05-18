@@ -242,6 +242,32 @@ class MachineClient extends ManagementClient
             if (isset($item['regions_id']) && $item['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $item['regions_id']],'code,name,cname');
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
             $item['machine_on_off'] = $this->getMachineOnOffFind(['m_id' => $item['m_id'],'status' => 1],'on_off_ckc,on_off_machine');
+            if(!empty($item['machine_on_off']['on_off_machine'])){
+                if(!is_array($item['machine_on_off']['on_off_machine'])){
+                    $item['machine_on_off']['on_off_machine'] = json_decode($item['machine_on_off']['on_off_machine'], true);
+                }
+                if(is_array($item['machine_on_off']['on_off_machine'])){
+                    foreach ($item['machine_on_off']['on_off_machine'] as $day => $timeRange) {
+                        if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
+                            continue;
+                        }
+                        $parts = explode(',', $timeRange);
+                        if (count($parts) !== 2) {
+                            continue;
+                        }
+                        $startTime = trim($parts[0]);
+                        $endTime = trim($parts[1]);
+                        if (
+                            preg_match('/^\d{2}:\d{2}$/', $startTime)
+                            && preg_match('/^\d{2}:\d{2}$/', $endTime)
+                            && strcmp($startTime, $endTime) > 0
+                        ) {
+                            $item['machine_on_off']['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                        }
+                    }
+                    $item['machine_on_off']['on_off_machine'] = json_encode($item['machine_on_off']['on_off_machine'], JSON_UNESCAPED_UNICODE);
+                }
+            }
             if(empty($item['simSignalLog'])){
                 $item['simSignalLog'] = $defaultSignal;
             }
