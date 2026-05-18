@@ -350,6 +350,7 @@ class VisualScreenService
                 'rawPage' => $ctx['page'] ?? ($ctx['machinePage'] ?? null),
                 'rawPageSize' => $ctx['pageSize'] ?? ($ctx['machinePageSize'] ?? null),
             ];
+            // $out['debugAccountScope'] = $this->buildAccountScopeDebug();
         }
         return $out;
     }
@@ -1253,23 +1254,31 @@ class VisualScreenService
 
         $q = Db::name('machine')->alias('m')
             ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left')
+            ->join('earth_states s', 'm.state_id = s.id', 'left')
+            ->join('earth_cities c', 'm.city_id = c.id', 'left')
             ->where('m.vending_machine_type', 1)
             ->where('m.is_operating', 1)
-            ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.street,moo.on_off_machine,moo.on_off_ckc');
+            ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.street,m.state_id,m.city_id,m.regions_id,moo.on_off_machine,moo.on_off_ckc,IFNULL(s.cname,s.name) as state_name,IFNULL(c.cname,c.name) as city_name');
         if ($mScope !== null) {
             $q->whereIn('m.m_id', $mScope);
-        }
+        }                                                                         
         if ($onlineStatus === 'online') {
             $q->where('m.online', 1);
         } elseif ($onlineStatus === 'offline') {
             $q->where('m.online', 2);
         }
         $total = (int) (clone $q)->count();
-        $rows = $q->order('m.m_id', 'desc')
+        $rows = $q->order('m.online', 'asc')
             ->limit($offset, $pageSize)
             ->select()
             ->toArray();
         $mIds = array_column($rows, 'm_id');
+        $regionIds = array_values(array_unique(array_filter(array_map(static function ($row): int {
+            return (int) ($row['regions_id'] ?? 0);
+        }, $rows), static function (int $id): bool {
+            return $id > 0;
+        })));
+        $regionNameMap = $this->resolveRegionNamesByIds($regionIds);
         $salesMap = $this->todaySalesByMids($mIds);
     // 频道统计与 on-off 原始字段
     $chStats = $this->channelStatsForMids($mIds);
@@ -1280,31 +1289,103 @@ class VisualScreenService
             $mid = (int) $m['m_id'];
             $st = $chStats[$mid] ?? ['emptyChannels' => 0, 'badChannels' => 0, 'emptySlots' => 0];
             $onOff = $onOffMap[$mid] ?? ['businessHours' => '', 'powerOnTime' => '', 'powerOffTime' => ''];
+            $stateName = trim((string) ($m['state_name'] ?? ''));
+            $cityName = trim((string) ($m['city_name'] ?? ''));
+            $regionName = trim((string) ($regionNameMap[(int) ($m['regions_id'] ?? 0)] ?? ''));
+            $street = trim((string) ($m['street'] ?? ''));
+            $fullAddress = $this->joinAddressParts([$stateName, $cityName, $regionName, $street]);
             $list[] = [
                 'id' => (string) ($m['machine_id'] ?? ''),
+                'm_id' => $mid,
                 'name' => (string) ($m['machine_name'] ?? ''),
-                'online' => (int) ($m['online'] ?? 0) === 1,
+                'online' => $m['online'],
                 'businessHours' => (string) ($onOff['businessHours'] ?? ''),
                 'on_off_machine' => $m['on_off_machine'] ?? '',
                 'on_off_ckc' =>  $m['on_off_ckc'] ?? '',
                 'address' => (string) ($m['street'] ?? ''),
+                'full_address' => $fullAddress,
                 'sales' => (int) ($salesMap[$mid] ?? 0),
                 'emptyChannels' => (int) $st['emptyChannels'],
                 'badChannels' => (int) $st['badChannels'],
                 'emptySlots' => (int) $st['emptySlots'],
             ];
         }
+        $summaryTotal = (int) ($screenCounts['total'] ?? $total);
+        $summaryOnline = (int) ($screenCounts['online'] ?? 0);
+        $summaryOffline = (int) ($screenCounts['offline'] ?? 0);
+        if ($onlineStatus === 'online') {
+            $summaryTotal = $total;
+            $summaryOnline = $total;
+            $summaryOffline = 0;
+        } elseif ($onlineStatus === 'offline') {
+            $summaryTotal = $total;
+            $summaryOnline = 0;
+            $summaryOffline = $total;
+        }
         return [
             'summary' => [
-                'total' => (int) ($screenCounts['total'] ?? $total),
-                'online' => (int) ($screenCounts['online'] ?? 0),
-                'offline' => (int) ($screenCounts['offline'] ?? 0),
+                'total' => $summaryTotal,
+                'online' => $summaryOnline,
+                'offline' => $summaryOffline,
             ],
             'page' => $page,
             'pageSize' => $pageSize,
             'total' => $total,
             'list' => $list,
         ];
+    }
+
+    /**
+     * @param int[] $regionIds
+     * @return array<int,string>
+     */
+    protected function resolveRegionNamesByIds(array $regionIds): array
+    {
+        if ($regionIds === []) {
+            return [];
+        }
+
+        $candidateTables = ['earth_regions', 'earth_areas', 'earth_area'];
+        $map = [];
+        foreach ($candidateTables as $table) {
+            try {
+                $rows = Db::name($table)
+                    ->whereIn('id', $regionIds)
+                    ->field('id,IFNULL(cname,name) as name')
+                    ->select()
+                    ->toArray();
+                foreach ($rows as $row) {
+                    $id = (int) ($row['id'] ?? 0);
+                    if ($id <= 0 || isset($map[$id])) {
+                        continue;
+                    }
+                    $map[$id] = trim((string) ($row['name'] ?? ''));
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+            if ($map !== []) {
+                break;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param array<int,string> $parts
+     */
+    protected function joinAddressParts(array $parts): string
+    {
+        $clean = [];
+        foreach ($parts as $part) {
+            $v = trim((string) $part);
+            if ($v !== '') {
+                $clean[] = $v;
+            }
+        }
+
+        return implode('', $clean);
     }
 
     /**
