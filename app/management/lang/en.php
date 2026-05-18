@@ -750,5 +750,12 @@ return [
         "data_invalid" => "Device data is abnormal, invalid m_id exists",
         "data_assign_fail" => "Failed to assign devices",
         "title_require" => "Topic title cannot be empty",
+        "claim_goods_title_require" => "Pickup page copy cannot be empty",
+        "out_goods_title_require" => "Delivery page copy cannot be empty",
+        "deal_success_title_require" => "Transaction success title cannot be empty",
+        "deal_success_sub_title_require" => "Transaction success subtitle cannot be empty",
+        "deal_abnormal_pic_require" => "Transaction abnormal picture cannot be empty",
+        "deal_fail_title_require" => "Transaction failure title cannot be empty",
+        "deal_fail_sub_title_require" => "Transaction failure subtitle cannot be empty",
     ],
 ];
