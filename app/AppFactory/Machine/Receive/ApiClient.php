@@ -880,6 +880,14 @@ class ApiClient extends ReceiveBaseClient
             'scan_url' => '',
             'balance_url' => '',
             'card_url' => '',
+            'out_goods_title' => '',
+            'claim_goods_title' => '',
+            'is_service_phone' => 2,
+            'deal_fail_sub_title' => '',
+            'deal_fail_title' => '',
+            'deal_abnormal_pic' => '',
+            'deal_success_sub_title'  => '',
+            'deal_success_title' => '',
         ];
         
         $topicIds = $this->getTopicPageMachineColumn(['machine_id' => $this->machine['machine_id']], 'topic_id');
