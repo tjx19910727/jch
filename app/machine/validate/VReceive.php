@@ -62,6 +62,7 @@ class VReceive extends VCommon
         "trade_no" => "require",
         "item_ids" => "require",
         "check_list" => "require|array",
+    "maintainer_id" => "require",
         "status" => "integer",
         "date" => "require",
         "machine_usage" => "require",
@@ -125,6 +126,7 @@ class VReceive extends VCommon
         "item_ids.require" => "item_ids不能为空",
         "check_list.require" => "check_list不能为空",
         "check_list.array" => "check_list格式错误",
+        "maintainer_id.require" => "maintainer_id不能为空",
     "file_content.require" => "file_content不能为空",
     "per_row.integer" => "per_row格式错误",
         "date.require" => "VReceive.date_require",
@@ -239,7 +241,7 @@ class VReceive extends VCommon
         "sendError" => ["msg_id","machine_id","timestamp","sign","errorCode"],
 
         "getMaintenanceItems" => ["msg_id","machine_id","timestamp","sign"],
-        "submitMaintenanceRecord" => ["msg_id","machine_id","timestamp","sign","manager_id","item_ids"],
+    "submitMaintenanceRecord" => ["msg_id","machine_id","timestamp","sign","maintainer_id","check_list"],
         "getMaintenanceRecords" => ["msg_id","machine_id","timestamp","sign"],
 
     // 导入维护记录

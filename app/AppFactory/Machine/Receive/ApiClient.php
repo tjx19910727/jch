@@ -2944,41 +2944,93 @@ class ApiClient extends ReceiveBaseClient
 
     /**
      * 提交维护记录
-     * 兼容参数：item_id / id / item_ids
+     * 参数：check_list（每项包含 item_id, check_status=1|2, notes可选）, maintainer_id
      * @return array|\think\response\Json
      */
     public function submitMaintenanceRecord()
     {
-        $itemIds = $this->data['item_ids'] ?? ($this->data['item_id'] ?? ($this->data['id'] ?? []));
-        if (!is_array($itemIds)) {
-            $itemIds = explode(',', strval($itemIds));
-        }
-        $itemIds = array_values(array_unique(array_filter(array_map('intval', $itemIds))));
-        if (!$itemIds) {
-            return $this->rValidate('item_id不能为空');
-        }
-
         try {
-            $exists = Db::name('maintenance_items')->where([['id', 'in', $itemIds]])->column('id');
-            $missing = array_values(array_diff($itemIds, $exists));
+            $checkList = $this->data['check_list'] ?? [];
+            if (!is_array($checkList)) {
+                $decoded = json_decode(strval($checkList), true);
+                $checkList = is_array($decoded) ? $decoded : [];
+            }
+            if (!$checkList) {
+                return $this->rValidate('check_list不能为空');
+            }
+
+            $submittedMap = [];
+            foreach ($checkList as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                $itemId = intval($row['item_id'] ?? ($row['id'] ?? 0));
+                if ($itemId <= 0) {
+                    continue;
+                }
+
+                $submittedMap[$itemId] = [
+                    'check_status' => intval($row['check_status'] ?? 0),
+                    'notes' => trim(strval($row['notes'] ?? '')),
+                ];
+            }
+
+            if (!$submittedMap) {
+                return $this->rValidate('check_list不能为空');
+            }
+
+            $itemIds = array_values(array_map('intval', array_keys($submittedMap)));
+            $itemRows = Db::name('maintenance_items')
+                ->where([['id', 'in', $itemIds]])
+                ->field('id,item_level')
+                ->select()
+                ->toArray();
+
+            $itemLevelMap = [];
+            foreach ($itemRows as $itemRow) {
+                $itemLevelMap[intval($itemRow['id'])] = intval($itemRow['item_level'] ?? 0);
+            }
+
+            $missing = array_values(array_diff($itemIds, array_keys($itemLevelMap)));
             if ($missing) {
                 return $this->rFail('维护项目不存在:' . implode(',', $missing));
             }
 
+            $invalidStatusIds = [];
+            foreach ($submittedMap as $itemId => $submittedRow) {
+                $itemLevel = intval($itemLevelMap[$itemId] ?? 0);
+                if ($itemLevel === 1) {
+                    continue;
+                }
+                $checkStatus = intval($submittedRow['check_status'] ?? 0);
+                if (!in_array($checkStatus, [1, 2], true)) {
+                    $invalidStatusIds[] = intval($itemId);
+                }
+            }
+            if ($invalidStatusIds) {
+                return $this->rFail('check_status必须为1或2, item_id:' . implode(',', array_values(array_unique($invalidStatusIds))));
+            }
+
             $recordsCode = date('YmdHi');
-            $maintainerId = trim(strval($this->data['maintainer_id'] ?? ($this->data['manager_id'] ?? ($this->data['operator'] ?? $this->machine['machine_id']))));
-            $notes = trim(strval($this->data['notes'] ?? ''));
+            $maintainerId = trim(strval($this->data['maintainer_id'] ?? ''));
+            if ($maintainerId === '') {
+                return $this->rValidate('maintainer_id不能为空');
+            }
+
+            $defaultNotes = trim(strval($this->data['notes'] ?? ''));
             $maintenanceTime = date('Y-m-d H:i:s');
 
             $insertAll = [];
             foreach ($itemIds as $itemId) {
+                $rowNotes = strval($submittedMap[$itemId]['notes'] ?? '');
                 $insertAll[] = [
                     'records_code' => $recordsCode,
                     'item_id' => $itemId,
                     'machine_id' => $this->machine['machine_id'],
                     'maintainer_id' => $maintainerId,
                     'maintenance_time' => $maintenanceTime,
-                    'notes' => $notes,
+                    'notes' => $rowNotes !== '' ? $rowNotes : $defaultNotes,
                 ];
             }
 
@@ -3142,21 +3194,23 @@ class ApiClient extends ReceiveBaseClient
             $pageSize = intval($this->data['pageNum'] ?? ($this->data['pageSize'] ?? 0));
             $total = 0;
 
-            $baseCodeQuery = Db::name('maintenance_records')->alias('mr')->where($where);
+            $groupSql = Db::name('maintenance_records')
+                ->alias('mr')
+                ->where($where)
+                ->field('mr.records_code')
+                ->group('mr.records_code')
+                ->fetchSql(true)
+                ->select();
+            $totalSql = "SELECT COUNT(1) AS tp_count FROM ({$groupSql}) AS t";
+            actionLog([
+                'machine_id' => $this->machine['machine_id'] ?? '',
+                'where' => $where,
+                'totalSql' => $totalSql,
+            ], 'getMaintenanceRecords_total_sql');
+            $totalRows = Db::query($totalSql);
+            $total = intval($totalRows[0]['tp_count'] ?? 0);
             if ($pageSize > 0) {
-                $total = intval($baseCodeQuery->distinct(true)->count('mr.records_code'));
-                if ($total <= 0) {
-                    return $this->r(200, 'SUCCESS', [
-                        'list' => [],
-                        'pagination' => [
-                            'page' => $page,
-                            'pageSize' => $pageSize,
-                            'total' => 0,
-                            'totalPage' => 0,
-                        ],
-                    ]);
-                }
-
+                
                 $codes = Db::name('maintenance_records')->alias('mr')
                     ->where($where)
                     ->field('mr.records_code,max(mr.id) as max_id')
@@ -3171,9 +3225,9 @@ class ApiClient extends ReceiveBaseClient
                         'list' => [],
                         'pagination' => [
                             'page' => $page,
-                            'pageSize' => $pageSize,
+                            'pageSize' => 0,
                             'total' => $total,
-                            'totalPage' => (int)ceil($total / $pageSize),
+                            'totalPage' => 0,
                         ],
                     ]);
                 }
@@ -3184,12 +3238,12 @@ class ApiClient extends ReceiveBaseClient
             $list = Db::name('maintenance_records')
                 ->alias('mr')
                 ->leftJoin('maintenance_items mi', 'mi.id = mr.item_id')
+                ->leftJoin('auth_manager am', 'am.manager_id = mr.maintainer_id')
                 ->where($where)
-                ->field('mr.id,mr.records_code,mr.item_id,mr.machine_id,mr.maintainer_id,mr.maintenance_time,mr.notes,mr.created_at,mi.item_name,mi.parent_id,mi.item_level')
+                ->field("mr.id,mr.records_code,mr.item_id,mr.machine_id,mr.maintainer_id,mr.maintenance_time,mr.notes,mr.created_at,mi.item_name,mi.description,mi.parent_id,mi.item_level,IFNULL(NULLIF(am.nickname,''), mr.maintainer_id) as nickname")
                 ->order('mr.records_code desc,mr.id asc')
                 ->select()
                 ->toArray();
-
             $grouped = [];
             foreach ($list as $item) {
                 $code = $item['records_code'];
@@ -3198,6 +3252,7 @@ class ApiClient extends ReceiveBaseClient
                         'records_code' => $code,
                         'machine_id' => $item['machine_id'],
                         'maintainer_id' => $item['maintainer_id'],
+                        'nickname' => $item['nickname'] ?? '',
                         'maintenance_time' => $item['maintenance_time'],
                         'records' => [],
                     ];
@@ -3206,8 +3261,11 @@ class ApiClient extends ReceiveBaseClient
                     'id' => $item['id'],
                     'item_id' => $item['item_id'],
                     'item_name' => $item['item_name'],
+                    'description' => $item['description'] ?? '',
                     'parent_id' => $item['parent_id'],
                     'item_level' => $item['item_level'],
+                    'maintainer_id' => $item['maintainer_id'],
+                    'nickname' => $item['nickname'] ?? '',
                     'maintenance_time' => $item['maintenance_time'],
                     'notes' => $item['notes'],
                     'created_at' => $item['created_at'],
@@ -3216,13 +3274,15 @@ class ApiClient extends ReceiveBaseClient
 
             $result = array_values($grouped);
             if ($pageSize > 0) {
+                $currentCount = count($result);
+                $responsePageSize = $currentCount;
                 return $this->r(200, 'SUCCESS', [
                     'list' => $result,
                     'pagination' => [
                         'page' => $page,
-                        'pageSize' => $pageSize,
+                        'pageSize' => $responsePageSize,
                         'total' => $total,
-                        'totalPage' => (int)ceil($total / $pageSize),
+                        'totalPage' => $responsePageSize > 0 ? (int)ceil($total / $responsePageSize) : 0,
                     ],
                 ]);
             }
@@ -3301,7 +3361,7 @@ class ApiClient extends ReceiveBaseClient
 
             $enabledItems = Db::name('check_list_items')
                 ->where(['is_active' => 1])
-                ->field('id,item_name')
+                ->field('id,item_name,item_level')
                 ->order('sort_order asc,id asc')
                 ->select()
                 ->toArray();
@@ -3313,7 +3373,12 @@ class ApiClient extends ReceiveBaseClient
             foreach ($enabledItems as $enabledItem) {
                 $enabledMap[intval($enabledItem['id'])] = $enabledItem;
             }
-            $enabledIds = array_keys($enabledMap);
+            $requiredItemIds = [];
+            foreach ($enabledMap as $enabledId => $enabledItem) {
+                if (intval($enabledItem['item_level'] ?? 0) !== 1) {
+                    $requiredItemIds[] = intval($enabledId);
+                }
+            }
 
             $submittedMap = [];
             $invalidStatusItems = [];
@@ -3334,7 +3399,8 @@ class ApiClient extends ReceiveBaseClient
                     'notes' => $rowNotes,
                 ];
 
-                if (!in_array($checkStatus, [1, 2], true)) {
+                $itemLevel = intval($enabledMap[$itemId]['item_level'] ?? 0);
+                if ($itemLevel !== 1 && !in_array($checkStatus, [1, 2], true)) {
                     $invalidStatusItems[$itemId] = [
                         'item_id' => $itemId,
                         'item_name' => $enabledMap[$itemId]['item_name'] ?? '',
@@ -3355,12 +3421,12 @@ class ApiClient extends ReceiveBaseClient
             }
 
             $missingStatusItems = [];
-            foreach ($enabledItems as $enabledItem) {
-                $itemId = intval($enabledItem['id']);
+            foreach ($requiredItemIds as $itemId) {
+                $enabledItem = $enabledMap[$itemId] ?? [];
                 if (!isset($submittedMap[$itemId])) {
                     $missingStatusItems[] = [
                         'item_id' => $itemId,
-                        'item_name' => $enabledItem['item_name'],
+                        'item_name' => $enabledItem['item_name'] ?? '',
                         'reason' => '未提交check_status',
                     ];
                 }
@@ -3380,7 +3446,7 @@ class ApiClient extends ReceiveBaseClient
             $checkTime = date('Y-m-d H:i:s');
 
             $insertAll = [];
-            foreach ($enabledIds as $itemId) {
+            foreach ($submittedMap as $itemId => $submittedRow) {
                 $rowStatus = intval($submittedMap[$itemId]['check_status'] ?? 0);
                 $rowNotes = strval($submittedMap[$itemId]['notes'] ?? '');
                 $insertAll[] = [
@@ -3431,15 +3497,28 @@ class ApiClient extends ReceiveBaseClient
             $pageSize = intval($this->data['pageNum'] ?? ($this->data['pageSize'] ?? 0));
             $total = 0;
 
-            $baseCodeQuery = Db::name('check_list_records')->alias('cr')->where($where);
+            $groupSql = Db::name('check_list_records')
+                ->alias('cr')
+                ->where($where)
+                ->field('cr.records_code')
+                ->group('cr.records_code')
+                ->fetchSql(true)
+                ->select();
+            $totalSql = "SELECT COUNT(1) AS tp_count FROM ({$groupSql}) AS t";
+            actionLog([
+                'machine_id' => $this->machine['machine_id'] ?? '',
+                'where' => $where,
+                'totalSql' => $totalSql,
+            ], 'getCheckListRecords_total_sql');
+            $totalRows = Db::query($totalSql);
+            $total = intval($totalRows[0]['tp_count'] ?? 0);
             if ($pageSize > 0) {
-                $total = intval($baseCodeQuery->distinct(true)->count('cr.records_code'));
                 if ($total <= 0) {
                     return $this->r(200, 'SUCCESS', [
                         'list' => [],
                         'pagination' => [
                             'page' => $page,
-                            'pageSize' => $pageSize,
+                            'pageSize' => 0,
                             'total' => 0,
                             'totalPage' => 0,
                         ],
@@ -3460,9 +3539,9 @@ class ApiClient extends ReceiveBaseClient
                         'list' => [],
                         'pagination' => [
                             'page' => $page,
-                            'pageSize' => $pageSize,
+                            'pageSize' => 0,
                             'total' => $total,
-                            'totalPage' => (int)ceil($total / $pageSize),
+                            'totalPage' => 0,
                         ],
                     ]);
                 }
@@ -3473,8 +3552,9 @@ class ApiClient extends ReceiveBaseClient
             $list = Db::name('check_list_records')
                 ->alias('cr')
                 ->leftJoin('check_list_items ci', 'ci.id = cr.item_id')
+                ->leftJoin('auth_manager am', 'am.manager_id = cr.manager_id')
                 ->where($where)
-                ->field('cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.parent_id,ci.item_level')
+                ->field("cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.description,ci.parent_id,ci.item_level,IFNULL(NULLIF(am.nickname,''), cr.manager_id) as nickname")
                 ->order('cr.records_code desc,cr.id asc')
                 ->select()
                 ->toArray();
@@ -3487,6 +3567,7 @@ class ApiClient extends ReceiveBaseClient
                         'records_code' => $code,
                         'machine_id' => $item['machine_id'],
                         'manager_id' => $item['manager_id'],
+                        'nickname' => $item['nickname'] ?? '',
                         'check_time' => $item['check_time'],
                         'records' => [],
                     ];
@@ -3495,10 +3576,12 @@ class ApiClient extends ReceiveBaseClient
                     'id' => $item['id'],
                     'item_id' => $item['item_id'],
                     'item_name' => $item['item_name'],
+                    'description' => $item['description'] ?? '',
                     'check_status' => intval($item['check_status'] ?? 0),
                     'parent_id' => $item['parent_id'],
                     'item_level' => $item['item_level'],
                     'manager_id' => $item['manager_id'],
+                    'nickname' => $item['nickname'] ?? '',
                     'notes' => $item['notes'],
                     'created_at' => $item['created_at'],
                 ];
@@ -3506,13 +3589,15 @@ class ApiClient extends ReceiveBaseClient
 
             $result = array_values($grouped);
             if ($pageSize > 0) {
+                $currentCount = count($result);
+                $responsePageSize = $currentCount;
                 return $this->r(200, 'SUCCESS', [
                     'list' => $result,
                     'pagination' => [
                         'page' => $page,
-                        'pageSize' => $pageSize,
+                        'pageSize' => $responsePageSize,
                         'total' => $total,
-                        'totalPage' => (int)ceil($total / $pageSize),
+                        'totalPage' => $responsePageSize > 0 ? (int)ceil($total / $responsePageSize) : 0,
                     ],
                 ]);
             }
