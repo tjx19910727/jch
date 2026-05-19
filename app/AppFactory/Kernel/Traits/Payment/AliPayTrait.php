@@ -34,11 +34,23 @@ trait AliPayTrait
     public function aliPay()
     {
 
+        actionLog([
+            'order_id' => $this->order['order_id'] ?? null,
+            'trade_no' => $this->order['trade_no'] ?? null,
+            'pay_method' => $this->order['pay_method'] ?? null,
+            'sp_id' => $this->strategyPayee['sp_id'] ?? null,
+        ], '支付宝入口-开始分派');
+
         if (!in_array($this->order['pay_method'],array_keys($this->aliPaymentMethod)))
             return $this->rFail($this->lang("pay_type_not_in_scope"));
         try {
             validate(VAliPay::class)->scene('ali')->check($this->strategyPayee);
         } catch (\Exception $e) {
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+                'pay_method' => $this->order['pay_method'] ?? null,
+                'error' => $e->getMessage(),
+            ], '支付宝入口-配置校验失败');
             return $this->rValidate($this->lang($e->getMessage()));
         }
 
@@ -52,7 +64,19 @@ trait AliPayTrait
         $this->aliApp = Factory::trade($this->strategyPayee);
         $this->order['sp_id'] = $this->strategyPayee['sp_id'];
         $func_name = $this->aliPaymentMethod[$this->order['pay_method']];
-        return $this->$func_name();
+        actionLog([
+            'order_id' => $this->order['order_id'] ?? null,
+            'pay_method' => $this->order['pay_method'] ?? null,
+            'dispatch_method' => $func_name,
+        ], '支付宝入口-分派子方法');
+        $result = $this->$func_name();
+        actionLog([
+            'order_id' => $this->order['order_id'] ?? null,
+            'dispatch_method' => $func_name,
+            'result_code' => $result['code'] ?? null,
+            'result_msg' => $result['msg'] ?? null,
+        ], '支付宝入口-子方法返回');
+        return $result;
 
     }
 
@@ -153,7 +177,20 @@ trait AliPayTrait
                 'total_amount' => round($this->order['total_price'],2),
                 'subject' => $this->order['machine_id'] . '购买支付',
             ];
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+                'trade_no' => $data['out_trade_no'],
+                'total_amount' => $data['total_amount'],
+                'subject' => $data['subject'],
+            ], '支付宝预下单-请求参数');
             $result = $this->aliApp->trade->preCreate($data);
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+                'code' => $result['code'] ?? null,
+                'msg' => $result['msg'] ?? null,
+                'sub_msg' => $result['sub_msg'] ?? null,
+                'has_qr_code' => !empty($result['qr_code']),
+            ], '支付宝预下单-返回结果');
             if ($result) {
                 if ($result['code'] == 10000) {
                     $this->returnData['order'] = $this->order;
@@ -166,8 +203,15 @@ trait AliPayTrait
                     return $this->r(100, $this->lang("init_payment_fail") . '：' . $msg, $result);
                 }
             }
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+            ], '支付宝预下单-空响应');
         } catch (\Exception $e) {
             actionException($e,1);
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+                'error' => $e->getMessage(),
+            ], '支付宝预下单-异常');
             return $this->rValidate($e->getMessage());
         }
     }
