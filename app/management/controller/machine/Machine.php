@@ -35,7 +35,7 @@ class Machine extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $field = $this->field;
         if (!empty($postData['stock_ratio'])) {
-            $field .= ", (SELECT IF(SUM(capacity) > 0, SUM(stock) / SUM(capacity), 0) FROM machine_channel WHERE m_id = a.m_id AND status <> 2) stock_ratio_sort";
+            $field .= ", (SELECT IF(SUM(capacity) > 0, LEAST(GREATEST(SUM(stock) / SUM(capacity), 0), 1), 0) FROM machine_channel WHERE m_id = a.m_id AND status <> 2) stock_ratio_sort";
         }
         $order = $this->buildMachineListOrder($postData);
         unset($postData['version_sort'],$postData['stock_ratio']);
