@@ -195,6 +195,7 @@ trait AliPayTrait
                 if ($result['code'] == 10000) {
                     $this->returnData['order'] = $this->order;
                     $this->returnData['paymentUrlLink'] = $result['qr_code'];
+                    $this->returnData['qrCodeLink'] = $result['qr_code'];
                     $this->returnData['result'] = $result;
                     return $this->r(200, $result['msg'], $this->returnData);
                 } else {
@@ -206,6 +207,10 @@ trait AliPayTrait
             actionLog([
                 'order_id' => $this->order['order_id'] ?? null,
             ], '支付宝预下单-空响应');
+            return $this->r(100, $this->lang("init_payment_fail") . '：支付宝预下单无响应', [
+                'order_id' => $this->order['order_id'] ?? null,
+                'trade_no' => $data['out_trade_no'] ?? null,
+            ]);
         } catch (\Exception $e) {
             actionException($e,1);
             actionLog([
