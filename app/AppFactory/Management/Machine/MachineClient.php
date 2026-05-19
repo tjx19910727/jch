@@ -226,13 +226,30 @@ class MachineClient extends ManagementClient
         return $this->rAction(flag_check($flag));
     }
 
-    public function getMList($where,$pageNum = 0,$field = "",$order = "")
+    /**
+     * 与 Machine::getList -> getMList 一致的账号可见 m_id 范围
+     * @return int[]|null null 表示不限制（超管等）
+     */
+    public function resolvePermittedMachineIds(): ?array
     {
         if ($this->manager['pid'] > 0) {
-            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-            $createMIds = $this->getMachineColumn(['creator' => $this->manager['manager_id']],'m_id');
-            if ($createMIds && $mIds) $mIds = array_unique(array_merge($mIds,$createMIds));
-            $where[] = ['m_id', 'in', $mIds];
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+            $createMIds = $this->getMachineColumn(['creator' => $this->manager['manager_id']], 'm_id');
+            $mIds = array_values(array_unique(array_merge(
+                is_array($mIds) ? $mIds : [],
+                is_array($createMIds) ? $createMIds : []
+            )));
+            return array_values(array_unique(array_map('intval', $mIds)));
+        }
+
+        return null;
+    }
+
+    public function getMList($where,$pageNum = 0,$field = "",$order = "")
+    {
+        $permitted = $this->resolvePermittedMachineIds();
+        if ($permitted !== null) {
+            $where[] = ['m_id', 'in', $permitted];
         }
         $defaultSignal = ['rsrp' => -999, 'sinr' => -999, 'rsrp_level' => 0, 'sinr_level' => 0];
         return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) use ($defaultSignal) {

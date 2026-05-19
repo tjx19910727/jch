@@ -24,6 +24,7 @@ class VisualScreen extends Common
             'machinePage' => input('machinePage/d', 1),
             'machinePageSize' => input('machinePageSize/d', 128),
             'lastOrderId' => input('lastOrderId/d', 0),
+            'accountMachineScope' => $this->app->machine->resolvePermittedMachineIds(),
         ];
         $svc = new VisualScreenService($this->app);
         $data = $svc->buildSnapshot($ctx);
@@ -95,6 +96,7 @@ class VisualScreen extends Common
             'page' => max(1, (int) ($pageRaw ?? 1)),
             'pageSize' => min(256, max(1, (int) ($pageSizeRaw ?? 15))),
             'onlineStatus' => $onlineStatus,
+            'accountMachineScope' => $this->app->machine->resolvePermittedMachineIds(),
         ];
         $svc = new VisualScreenService($this->app);
         $data = $svc->getMachineList($ctx); 
