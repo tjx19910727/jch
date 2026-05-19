@@ -1750,3 +1750,221 @@ SET
 WHERE IFNULL(so.pay_channel, 0) = 0
    OR IFNULL(so.pay_channel_name, '') = '';
 
+#20260519
+alter table machine_config add column machine_button_1 tinyint(1) default 2 comment '预留按钮1 1开启2关闭' after automatic_goods_sorting;
+alter table machine_config add column machine_button_2 tinyint(1) default 2 comment '预留按钮2 1开启2关闭' after automatic_goods_sorting;
+alter table machine_config add column machine_button_3 tinyint(1) default 2 comment '预留按钮3 1开启2关闭' after automatic_goods_sorting;
+alter table machine_config add column machine_button_4 tinyint(1) default 2 comment '预留按钮4 1开启2关闭' after automatic_goods_sorting;
+alter table machine_config add column machine_button_5 tinyint(1) default 2 comment '预留按钮5 1开启2关闭' after automatic_goods_sorting;
+
+alter table topic_page add column `deal_success_title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '交易成功页方案，标题' after `manager_id`;
+alter table topic_page add column `deal_success_sub_title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '交易成功页副标题' after `manager_id`;
+alter table topic_page add column `deal_abnormal_pic` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '交易异常页图片' after `manager_id`;
+alter table topic_page add column `deal_fail_title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '交易失败页方案，标题' after `manager_id`;
+alter table topic_page add column `deal_fail_sub_title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '交易失败页副标题' after `manager_id`;
+alter table topic_page add column `is_service_phone` tinyint(1)  DEFAULT 2 COMMENT '交易客服是否隐藏，1显示2隐藏' after `manager_id` ;
+alter table topic_page add column `claim_goods_title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '取货页文案' after `manager_id`;
+alter table topic_page add column `out_goods_title` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '出货页文案' after `manager_id`;
+alter table topic_page add column `pickup_qrcode_text1` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '出/取货二维码文案1' after `manager_id`;
+alter table topic_page add column `pickup_qrcode_text2` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '出/取货二维码文案2' after `manager_id`;
+
+
+ALTER TABLE kiosk.sale_orders_refund MODIFY COLUMN remark text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '退款备注';
+
+ALTER TABLE `machine_online_snapshot`
+  MODIFY COLUMN `record_date` timestamp NOT NULL COMMENT '统计日期（当天0点）',
+  MODIFY COLUMN `collect_time` timestamp NOT NULL COMMENT '采集时间',
+  MODIFY COLUMN `slot_start_time` timestamp NOT NULL COMMENT '2小时槽位开始时间',
+  MODIFY COLUMN `slot_end_time` timestamp NOT NULL COMMENT '2小时槽位结束时间',
+  MODIFY COLUMN `business_start_time` timestamp NOT NULL COMMENT '营业开始时间',
+  MODIFY COLUMN `business_end_time` timestamp NOT NULL COMMENT '营业结束时间',
+  MODIFY COLUMN `create_time` timestamp NULL DEFAULT NULL COMMENT '创建时间',
+  MODIFY COLUMN `update_time` timestamp NULL DEFAULT NULL COMMENT '更新时间';
+
+CREATE TABLE `maintenance_items` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '项目唯一ID',
+  `parent_id` int DEFAULT NULL COMMENT '父项目ID',
+  `item_name` varchar(255) NOT NULL COMMENT '项目名称',
+  `item_level` tinyint NOT NULL DEFAULT '1' COMMENT '层级',
+  `cycle_days` int DEFAULT NULL COMMENT '维护周期',
+  `description` text COMMENT '描述',
+  `sort_order` int DEFAULT '0' COMMENT '排序',
+  `is_active` tinyint(1) DEFAULT '1' COMMENT '是否启用',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_parent_id` (`parent_id`),
+  KEY `idx_item_level` (`item_level`),
+  KEY `idx_is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='维护项目清单表';
+
+CREATE TABLE `maintenance_records` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '记录唯一ID',
+  `records_code` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NOT NULL COMMENT '操作记录编码',
+  `item_id` int NOT NULL COMMENT '关联的项目ID',
+  `machine_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '设备编号',
+  `maintainer_id` varchar(50) NOT NULL COMMENT '维护人ID',
+  `check_status` int NULL COMMENT '1-正常 2-异常';
+  `maintenance_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '维护时间',
+  `notes` text COMMENT '备注',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_item_id` (`item_id`),
+  KEY `idx_maintainer_id` (`maintainer_id`),
+  KEY `idx_maintenance_time` (`maintenance_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COMMENT='设备维护记录表';
+
+CREATE TABLE `check_list_items` (
+  `id` int NOT NULL AUTO_INCREMENT COMMENT '项目唯一ID',
+  `parent_id` int DEFAULT NULL COMMENT '父项目ID',
+  `item_name` varchar(255) NOT NULL COMMENT '项目名称',
+  `item_level` tinyint NOT NULL DEFAULT '1' COMMENT '层级',
+  `cycle_days` int DEFAULT NULL COMMENT '维护周期',
+  `description` text COMMENT '描述',
+  `sort_order` int DEFAULT '0' COMMENT '排序',
+  `is_active` tinyint(1) DEFAULT '1' COMMENT '是否启用',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_parent_id` (`parent_id`),
+  KEY `idx_item_level` (`item_level`),
+  KEY `idx_is_active` (`is_active`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='小蜜蜂维护清单表';
+
+CREATE TABLE `check_list_records` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '记录唯一ID',
+  `records_code` varchar(20) CHARACTER SET utf8mb4  NOT NULL COMMENT '操作记录编码',
+  `item_id` int NOT NULL COMMENT '关联的项目ID',
+  `machine_id` varchar(50) CHARACTER SET utf8mb4  DEFAULT NULL COMMENT '设备编号',
+  `manager_id` varchar(50) NOT NULL COMMENT '维护人ID',
+  `check_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '维护时间',
+  `check_status` int  DEFAULT NULL COMMENT '维护状态1-正常，2-异常',
+  `notes` text COMMENT '备注',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '入库时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_item_id` (`item_id`),
+  KEY `idx_manager_id` (`manager_id`),
+  KEY `idx_check_time` (`check_time`)
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='小蜜蜂设备维护记录表';
+
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(1, NULL, '基础状态', 1, NULL, 1, 1, '2026-05-15 16:00:21', '2026-05-15 16:00:35');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(2, NULL, '商品陈列', 1, NULL, 2, 1, '2026-05-15 16:04:13', '2026-05-15 16:04:13');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(3, NULL, '核心功能', 1, NULL, 3, 1, '2026-05-15 16:04:30', '2026-05-15 16:04:37');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(4, 1, '电源与系统', 1, '机台已通电，屏幕点亮，购买销售界面正常', 4, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(5, 1, '外观清洁', 1, '玻璃、触摸屏、无污渍、灰尘、指纹', 5, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(6, 1, '活动物料', 1, '（1）活动内容在当期内，未过期；（2）摆放位置显眼合理，无明损坏', 6, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(7, 1, '营业环境', 1, '地面干净，无纸屑、杂物、污渍等垃圾', 7, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(8, 1, '机台皮肤', 1, '皮肤完好，关键重要正面位置无划痕、破损、变形', 8, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(9, 1, '机台内部', 1, '无杂物堆积、无违规存放货品、物料等，整体干净卫生', 9, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(10, 1, 'POP 海报/宣传图片', 1, '各类 POP 海报/宣传图片，确认无过期物料；有异常通知点位负责人协助处理', 10, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:13');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(11, 1, '广告机', 1, '有电视的点位，需确保电视 100% 开机，大屏画面全屏露出，无画面不全、黑屏情况', 11, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:13');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(12, 1, '机台美陈', 1, '检查电视周边及机台旁的 KT 板，确认无脱胶/掉落、损坏情况，若有问题需及反馈更换', 12, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:21');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(13, 2, '主机价格签', 2, '每个商品均有价签，价签位置统一（对应产品正中间），价格与系统显示一致', 1, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:29');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(14, 2, '库存情况', 2, '快速巡视，通报货道仅1的商品；同时，提前评估热销款及补货需求', 2, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:39');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(15, 2, '展品陈列', 2, '机台边柜、弧柜出样商品需按标准陈列，无歪斜、无空货道', 3, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:39');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(16, 2, '展柜/弧柜水牌', 2, '陈列品价格水牌是否都有且对应正确', 4, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:57');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(17, 3, '商品界面', 3, '主机上架的产品，与机台的陈列匹配', 1, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:01');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(18, 3, '价格设定', 3, '核对机台商品标价与实际收费是否一致，无错价、漏价情况', 2, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:07');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(19, 3, '商品选购', 3, '模拟顾客选择商品，流程顺畅，界面无卡顿', 3, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:16');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(20, 3, '支付测试', 3, '检查多种支付方式（如扫码、反扫等）是否正常，支付后能否顺利触发出货', 4, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:16');
+
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(1, NULL, '基础状态', 1, NULL, 1, 1, '2026-05-15 16:00:21', '2026-05-15 16:00:35');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(2, NULL, '商品陈列', 1, NULL, 2, 1, '2026-05-15 16:04:13', '2026-05-15 16:04:13');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(3, NULL, '核心功能', 1, NULL, 3, 1, '2026-05-15 16:04:30', '2026-05-15 16:04:37');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(4, 1, '电源与系统', 1, '机台已通电，屏幕点亮，购买销售界面正常', 4, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(5, 1, '外观清洁', 1, '玻璃、触摸屏、无污渍、灰尘、指纹', 5, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(6, 1, '活动物料', 1, '（1）活动内容在当期内，未过期；（2）摆放位置显眼合理，无明损坏', 6, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(7, 1, '营业环境', 1, '地面干净，无纸屑、杂物、污渍等垃圾', 7, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(8, 1, '机台皮肤', 1, '皮肤完好，关键重要正面位置无划痕、破损、变形', 8, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(9, 1, '机台内部', 1, '无杂物堆积、无违规存放货品、物料等，整体干净卫生', 9, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:02');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(10, 1, 'POP 海报/宣传图片', 1, '各类 POP 海报/宣传图片，确认无过期物料；有异常通知点位负责人协助处理', 10, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:13');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(11, 1, '广告机', 1, '有电视的点位，需确保电视 100% 开机，大屏画面全屏露出，无画面不全、黑屏情况', 11, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:13');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(12, 1, '机台美陈', 1, '检查电视周边及机台旁的 KT 板，确认无脱胶/掉落、损坏情况，若有问题需及反馈更换', 12, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:21');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(13, 2, '主机价格签', 2, '每个商品均有价签，价签位置统一（对应产品正中间），价格与系统显示一致', 1, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:29');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(14, 2, '库存情况', 2, '快速巡视，通报货道仅1的商品；同时，提前评估热销款及补货需求', 2, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:39');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(15, 2, '展品陈列', 2, '机台边柜、弧柜出样商品需按标准陈列，无歪斜、无空货道', 3, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:39');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(16, 2, '展柜/弧柜水牌', 2, '陈列品价格水牌是否都有且对应正确', 4, 1, '2026-05-15 16:04:30', '2026-05-15 20:27:57');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(17, 3, '商品界面', 3, '主机上架的产品，与机台的陈列匹配', 1, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:01');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(18, 3, '价格设定', 3, '核对机台商品标价与实际收费是否一致，无错价、漏价情况', 2, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:07');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(19, 3, '商品选购', 3, '模拟顾客选择商品，流程顺畅，界面无卡顿', 3, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:16');
+INSERT INTO check_list_items
+(id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
+VALUES(20, 3, '支付测试', 3, '检查多种支付方式（如扫码、反扫等）是否正常，支付后能否顺利触发出货', 4, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:16');
