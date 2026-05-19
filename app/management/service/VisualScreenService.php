@@ -22,6 +22,170 @@ class VisualScreenService
         $this->manager = $app->getConfig();
     }
 
+    // /**
+    //  * 归纳 getWhere / getList 权限规则，支持“全账号查询规则 + 指定账号测算结果”
+    //  *
+    //  * 说明：
+    //  * - getWhere 指 `app/management/controller/Common.php::getWhere` 及其 `authNodeWhere`
+    //  * - getList 指 `app/management/controller/machine/Machine.php::getList`
+    //  *   到 `app/AppFactory/Management/Machine/MachineClient.php::getMList` 的权限链路
+    //  *
+    //  * @param array|null $managerContext 可传入任意账号上下文（manager_id/pid/ao_id/level）进行规则测算
+    //  * @return array<string,mixed>
+    //  */
+    // public function summarizeGetWhereAndGetListAuthRules(?array $managerContext = null): array
+    // {
+    //     $ctx = is_array($managerContext) ? $managerContext : $this->manager;
+    //     $pid = (int) ($ctx['pid'] ?? 0);
+    //     $aoId = (int) ($ctx['ao_id'] ?? 0);
+    //     $managerId = (int) ($ctx['manager_id'] ?? 0);
+    //     $level = (int) ($ctx['level'] ?? 0);
+
+    //     $permittedMachineIds = $this->resolvePermittedMachineIdsByManagerContext($ctx);
+    //     $isSuperLike = ($aoId === 0 || $aoId === 1);
+
+    //     return [
+    //         'scope' => 'all_accounts_query_rule',
+    //         'accountQueryRule' => [
+    //             'table' => 'auth_manager',
+    //             'alias' => 'am',
+    //             'suggestedWhere' => [
+    //                 ['am.is_del', '=', 2],
+    //             ],
+    //             'requiredFields' => ['manager_id', 'pid', 'ao_id', 'level'],
+    //             'description' => '先按账号表批量拉取账号上下文（manager_id/pid/ao_id/level），再套用本方法规则计算每个账号权限范围。',
+    //         ],
+    //         'managerContext' => [
+    //             'managerId' => $managerId,
+    //             'pid' => $pid,
+    //             'aoId' => $aoId,
+    //             'level' => $level,
+    //             'isSuperLikeAo' => $isSuperLike,
+    //         ],
+    //         'getWhereAuthRules' => [
+    //             [
+    //                 'rule' => '统一入口追加数据权限',
+    //                 'source' => 'Common::getWhere -> authNodeWhere',
+    //                 'detail' => '所有通过 getWhere 组装的 where，最终都会进入 authNodeWhere 进行数据权限补充。',
+    //             ],
+    //             [
+    //                 'rule' => '按菜单 data_auth + d_type 生效',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => '仅当 currentMenu.data_auth=1 且 d_type>0 时，才追加数据权限过滤。',
+    //             ],
+    //             [
+    //                 'rule' => 'd_type=2 按部门过滤',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => '非通用 API 时附加 ao_id=当前账号 ao_id。',
+    //             ],
+    //             [
+    //                 'rule' => 'd_type>=3 按账号范围过滤',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => '通过节点配置字段（getAuthDataFieldByUrl）追加 [field in 可见账号ID]；d_type=5 仅直接下级。',
+    //             ],
+    //             [
+    //                 'rule' => '组织树特殊规则',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => '顶级组织查询 /management/auth.auth_organization/getList 时改为 ao_id in 子组织集合。',
+    //             ],
+    //             [
+    //                 'rule' => '超管组织豁免 ao_id',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => 'ao_id 为 0 或 1 时，移除 where 中 ao_id 限制。',
+    //             ],
+    //             [
+    //                 'rule' => '销售订单列表特判',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => '当 ao_id>18 且 level=3 且 URL=/management/sale.sale_orders/getList，按子组织 ao_id in 过滤。',
+    //             ],
+    //             [
+    //                 'rule' => 'meichitu 账号专项处理',
+    //                 'source' => 'management/machine.machine/getList -> MachineClient::getMList',
+    //                 'detail' => "当 \$this->manager['account'] == 'meichitu' 时，设备口径按 management/machine.machine/getList 处理：先走 getWhere 条件，再追加 vending_machine_type=1，并在 getMList 内按 resolvePermittedMachineIds 收敛（auth_manager_machine 绑定设备 + creator 自建设备；pid<=0 不限制）。",
+    //             ],
+    //         ],
+    //         'getListAuthRules' => [
+    //             [
+    //                 'rule' => '设备列表固定只查主柜',
+    //                 'source' => 'Machine::getList',
+    //                 'detail' => '追加条件 vending_machine_type = 1。',
+    //             ],
+    //             [
+    //                 'rule' => '设备分组前置过滤',
+    //                 'source' => 'Machine::getList',
+    //                 'detail' => '传 machine_group_id 时先换算 machine_id 集合，再追加 machine_id in (...)。',
+    //             ],
+    //             [
+    //                 'rule' => 'getWhere 基础权限先执行',
+    //                 'source' => 'Machine::getList',
+    //                 'detail' => '列表 where 由 getWhere 生成，先带上 authNodeWhere 的数据权限规则。',
+    //             ],
+    //             [
+    //                 'rule' => '账号设备范围二次收敛',
+    //                 'source' => 'MachineClient::getMList',
+    //                 'detail' => '非顶级账号(pid>0)仅可见 auth_manager_machine 绑定设备 + 自己创建设备（m_id in permitted）。',
+    //             ],
+    //         ],
+    //         'permittedMachineQueryRule' => [
+    //             'steps' => [
+    //                 [
+    //                     'step' => 1,
+    //                     'when' => 'pid > 0',
+    //                     'query' => 'SELECT m_id FROM auth_manager_machine WHERE manager_id = :manager_id',
+    //                 ],
+    //                 [
+    //                     'step' => 2,
+    //                     'when' => 'pid > 0',
+    //                     'query' => 'SELECT m_id FROM machine WHERE creator = :manager_id',
+    //                 ],
+    //                 [
+    //                     'step' => 3,
+    //                     'when' => 'pid > 0',
+    //                     'query' => '并集去重后得到 permitted m_id；pid <= 0 则返回 null（不限制）',
+    //                 ],
+    //             ],
+    //         ],
+    //         'effectiveResultForCurrentAccount' => [
+    //             'machineScopeType' => $permittedMachineIds === null ? 'unrestricted' : 'restricted',
+    //             'permittedMachineCount' => is_array($permittedMachineIds) ? count($permittedMachineIds) : null,
+    //             'permittedMachineSample' => is_array($permittedMachineIds) ? array_slice(array_values($permittedMachineIds), 0, 20) : null,
+    //         ],
+    //     ];
+    // }
+
+    // /**
+    //  * 按账号上下文模拟 MachineClient::resolvePermittedMachineIds 的规则
+    //  *
+    //  * @param array $ctx
+    //  * @return int[]|null
+    //  */
+    // protected function resolvePermittedMachineIdsByManagerContext(array $ctx): ?array
+    // {
+    //     $account = (string) ($ctx['account'] ?? '');
+    //     if ($account === 'meichitu') {
+    //         $mIds = Db::name('machine_channel')->alias('mc')
+    //             ->join('goods g', 'mc.g_id = g.g_id')
+    //             ->where('g.gc_name', 'like', '%美驰图%')
+    //             ->distinct(true)
+    //             ->column('mc.m_id');
+    //         return array_values(array_unique(array_map('intval', is_array($mIds) ? $mIds : [])));
+    //     }
+
+    //     $pid = (int) ($ctx['pid'] ?? 0);
+    //     $managerId = (int) ($ctx['manager_id'] ?? 0);
+    //     if ($pid <= 0 || $managerId <= 0) {
+    //         return null;
+    //     }
+
+    //     $bindMids = Db::name('auth_manager_machine')->where('manager_id', $managerId)->column('m_id');
+    //     $createMids = Db::name('machine')->where('creator', $managerId)->column('m_id');
+
+    //     return array_values(array_unique(array_map('intval', array_merge(
+    //         is_array($bindMids) ? $bindMids : [],
+    //         is_array($createMids) ? $createMids : []
+    //     ))));
+    // }
+
     /**
      * 省份视图下有效 m_id 列表；null 表示不按省份追加 m_id（仍走各 Client 内账号设备权限）
      * @return int[]|null
@@ -42,9 +206,11 @@ class VisualScreenService
      * @param int[]|null $mScope
      * @return int[]
      */
-    protected function resolveOperatingMachineIds(?array $mScope): array
+    protected function resolveOperatingMachineIds(?array $mScope, ?array $accountScope = null): array
     {
-        $accountScope = $this->resolveAccountMachineScope();
+        if ($accountScope === null) {
+            $accountScope = $this->resolveAccountMachineScope();
+        }
         $finalScope = $this->intersectMachineScopes($mScope, $accountScope);
 
         $q = Db::name('machine')
@@ -61,48 +227,72 @@ class VisualScreenService
     }
 
     /**
-     * 账号维度设备范围：组织设备 ∩ 账号绑定设备
-     * 返回 null 表示不限制（超管）；[] 表示无权限设备
+     * 设备总览统计范围（主柜，不限定在营）
+     * 口径：先按 resolvePermittedMachineIdsByManagerContext 取账号可见设备，再叠加区域 mScope
+     *
+     * @param int[]|null $mScope
+     * @return int[]
+     */
+    protected function resolveDashboardMachineIds(?array $mScope, ?array $accountScope = null): array
+    {
+        if ($accountScope === null) {
+            $accountScope = $this->resolveAccountMachineScope();
+        }
+        $finalScope = $this->intersectMachineScopes($mScope, $accountScope);
+
+        $q = Db::name('machine')->where('vending_machine_type', 1);
+        if ($finalScope !== null) {
+            if ($finalScope === []) {
+                return [];
+            }
+            $q->whereIn('m_id', $finalScope);
+        }
+        $mids = $q->column('m_id');
+        return array_values(array_unique(array_map('intval', is_array($mids) ? $mids : [])));
+    }
+
+    /**
+     * 按指定 m_id 列表统计设备总览
+     * 口径：total 为 m_ids 数量；operating/inStock/online/offline 在该 m_ids 内统计
+     *
+     * @param int[] $mIds
+     * @return array{total:int,operating:int,inStock:int,online:int,offline:int}
+     */
+    protected function buildMachineScreenCountsByMIds(array $mIds): array
+    {
+        $mIds = array_values(array_unique(array_map('intval', $mIds)));
+        if ($mIds === []) {
+            return ['total' => 0, 'operating' => 0, 'inStock' => 0, 'online' => 0, 'offline' => 0];
+        }
+
+        $row = Db::name('machine')
+            ->whereIn('m_id', $mIds)
+            ->fieldRaw(
+                'SUM(CASE WHEN IFNULL(is_operating,0) = 1 THEN 1 ELSE 0 END) AS operating'
+                . ', SUM(CASE WHEN IFNULL(is_operating,0) = 2 THEN 1 ELSE 0 END) AS in_stock'
+                . ', SUM(CASE WHEN IFNULL(online,0) = 1 THEN 1 ELSE 0 END) AS online'
+                . ', SUM(CASE WHEN IFNULL(online,0) = 2 THEN 1 ELSE 0 END) AS offline'
+            )
+            ->find();
+
+        $a = is_array($row) ? $row : (is_object($row) ? $row->toArray() : []);
+        return [
+            'total' => count($mIds),
+            'operating' => (int) ($a['operating'] ?? 0),
+            'inStock' => (int) ($a['in_stock'] ?? 0),
+            'online' => (int) ($a['online'] ?? 0),
+            'offline' => (int) ($a['offline'] ?? 0),
+        ];
+    }
+
+    /**
+     * 账号维度设备范围（与 Machine::getList -> getMList 一致）
+     * 返回 null 表示不限制；[] 表示无权限设备
      * @return int[]|null
      */
     protected function resolveAccountMachineScope(): ?array
     {
-        $managerId = intval($this->manager['manager_id'] ?? 0);
-        $aoId = intval($this->manager['ao_id'] ?? 0);
-        $pid = intval($this->manager['pid'] ?? 0);
-
-        // 超管/平台管理员：不限制
-        if (in_array($aoId, [0, 1], true)) {
-            return null;
-        }
-
-        // 组织范围（当前账号所属组织）
-        $orgMids = Db::name('machine')
-            ->where('ao_id', $aoId)
-            ->column('m_id');
-        $orgMids = array_values(array_unique(array_map('intval', is_array($orgMids) ? $orgMids : [])));
-
-        // 账号绑定设备（auth_manager_machine 存 machine_id）
-        $bindMachineIds = Db::name('auth_manager_machine')
-            ->where('manager_id', $managerId)
-            ->column('machine_id');
-        $bindMachineIds = array_values(array_unique(array_filter(array_map('strval', is_array($bindMachineIds) ? $bindMachineIds : []))));
-
-        if ($bindMachineIds !== []) {
-            $bindMids = Db::name('machine')
-                ->whereIn('machine_id', $bindMachineIds)
-                ->column('m_id');
-            $bindMids = array_values(array_unique(array_map('intval', is_array($bindMids) ? $bindMids : [])));
-            // 组织 + 绑定设备 取交集
-            return array_values(array_intersect($orgMids, $bindMids));
-        }
-
-        // 子账号无绑定设备时，不返回任何设备；主账号退化为所属组织范围
-        if ($pid > 0) {
-            return [];
-        }
-
-        return $orgMids;
+        return $this->app->machine->resolvePermittedMachineIds();
     }
 
     /**
@@ -175,6 +365,7 @@ class VisualScreenService
      */
     public function buildSnapshot(array $ctx): array
     {
+        
         $regionType = $ctx['regionType'] ?? 'national';
         $regionName = trim((string) ($ctx['regionName'] ?? ''));
         $cycle = trim((string) ($ctx['cycle'] ?? 'day'));
@@ -183,24 +374,40 @@ class VisualScreenService
         }
         $page = max(1, (int) ($ctx['machinePage'] ?? 1));
         $pageSize = min(256, max(1, (int) ($ctx['machinePageSize'] ?? 128)));
-    $lastOrderId = max(0, (int) ($ctx['lastOrderId'] ?? 0));
+        $lastOrderId = max(0, (int) ($ctx['lastOrderId'] ?? 0));
         $timeRange = $this->parseCycleRange($cycle);
 
-        $mScope = $this->effectiveMachineIds($regionType, $regionName);
-        $operatingScope = $this->resolveOperatingMachineIds($mScope);
-        if ($operatingScope === []) {
-            return $this->emptySnapshot($regionType, $regionName, $cycle, $page, $pageSize);
+        $accountScope = $ctx['accountMachineScope'] ?? null;
+        if ($accountScope === null) {
+            // 第一步：先按 management/machine.machine/getList 口径取当前账号可见设备
+            $accountScope = $this->resolveAccountMachineScope();
         }
 
-        $saleDataWhere = ['pay_status' => 3];
-        $saleDataWhere[] = ['m_id', 'in', $operatingScope];
-    $this->appendTimeRangeToWhere($saleDataWhere, $timeRange['start'], $timeRange['end']);
-        $chartWhere = [['m_id', 'in', $operatingScope]];
-    $this->appendTimeRangeToWhere($chartWhere, $timeRange['start'], $timeRange['end']);
+        $authRuleSummary = [];
+        // 第二步：再叠加 regionType / regionName 选择范围
+        $mScope = $this->effectiveMachineIds($regionType, $regionName);
+        $dashboardScope = $this->resolveDashboardMachineIds($mScope, $accountScope);
+        if ($dashboardScope === []) {
+            return $this->emptySnapshot($regionType, $regionName, $cycle, $page, $pageSize, $authRuleSummary);
+        }
+        $operatingScope = $this->resolveOperatingMachineIds($mScope, $accountScope);
+        $operatingScopeForQuery = $operatingScope === [] ? [0] : $operatingScope;
 
-        $saleData = $this->app->saleOrders->getData($saleDataWhere);
-        $screenCounts = $this->buildMachineScreenCounts($operatingScope);
-        $cargo = $this->app->machineChannel->getDataV2();
+        // 第三步：按 cycle 追加时间条件，并统一用于后续业务查询
+        $queryWhere = ['pay_status' => 3];
+        $queryWhere[] = ['m_id', 'in', $operatingScopeForQuery];
+        $this->appendTimeRangeToWhere($queryWhere, $timeRange['start'], $timeRange['end']);
+
+    // 纯实时增量口径：不受 cycle 时间窗限制，仅保留设备范围与支付状态
+    $orderIncrementWhere = ['pay_status' => 3];
+    $orderIncrementWhere[] = ['m_id', 'in', $operatingScopeForQuery];
+
+        $chartWhere = [['m_id', 'in', $operatingScopeForQuery]];
+        $this->appendTimeRangeToWhere($chartWhere, $timeRange['start'], $timeRange['end']);
+
+        $saleData = $this->app->saleOrders->getData($queryWhere);
+        $screenCounts = $this->buildMachineScreenCountsByMIds($dashboardScope);
+        $cargo = $this->app->machineChannel->getDataV2ByMIds($operatingScopeForQuery);
 
         $todayOrders = (int) ($saleData['today']['saleQuantity'] ?? 0);
         $yesterdayOrders = (int) ($saleData['yesterday']['saleQuantity'] ?? 0);
@@ -244,18 +451,19 @@ class VisualScreenService
             'deviceOverview' => $deviceOverview,
             'cargoStats' => $cargoStats,
             'tradeMetrics' => $tradeMetrics,
-            'productSalesShare' => $this->buildProductSalesShare($saleDataWhere, $cycle),
-            'machineSalesShare' => $this->buildMachineSalesShare($saleDataWhere, $cycle),
-            'deviceSalesRank' => $this->buildDeviceSalesRank($saleDataWhere, $cycle),
-            'goodsPopularityRank' => $this->buildGoodsPopularityRank($saleDataWhere, $cycle),
+            'productSalesShare' => $this->buildProductSalesShare($queryWhere, $cycle),
+            'machineSalesShare' => $this->buildMachineSalesShare($queryWhere, $cycle),
+            'deviceSalesRank' => $this->buildDeviceSalesRank($queryWhere, $cycle),
+            'goodsPopularityRank' => $this->buildGoodsPopularityRank($queryWhere, $cycle),
             'mapValues' => $this->buildMapValues($regionType, $regionName, $operatingScope),
             'salesTrend' => [
                 'cycle' => $cycle,
                 'points' => $this->chartRowsToPoints($cycle, $chartRows),
             ],
             // 'machineList' => $this->buildMachineList($mScope, $page, $pageSize, $screenCounts),
-            'realtimeOrders' => $this->buildRealtimeOrders($saleDataWhere, $regionType, $regionName, 30),
-            'orderIncrement' => $this->buildOrderIncrement($saleDataWhere, $lastOrderId, $regionType, $regionName),
+            'realtimeOrders' => $this->buildRealtimeOrders($queryWhere, $regionType, $regionName, 30),
+            'orderIncrement' => $this->buildOrderIncrement($orderIncrementWhere, $lastOrderId, $regionType, $regionName),
+            'authPermissionRules' => $authRuleSummary,
         ];
     }
 
@@ -272,8 +480,9 @@ class VisualScreenService
         }
         $debugEnabled = $this->shouldExposeAdcodeDebug();
         $timeRange = $this->parseCycleRange($cycle);
+        $accountScope = $ctx['accountMachineScope'] ?? null;
         $mScope = $this->effectiveMachineIds($regionType, $regionName);
-        $operatingScope = $this->resolveOperatingMachineIds($mScope);
+        $operatingScope = $this->resolveOperatingMachineIds($mScope, $accountScope);
         if ($operatingScope === []) {
             $out = ['cycle' => $cycle, 'points' => []];
             if ($debugEnabled) {
@@ -327,8 +536,9 @@ class VisualScreenService
             $onlineStatus = 'all';
         }
 
+        $accountScope = $ctx['accountMachineScope'] ?? null;
         $mScope = $this->effectiveMachineIds($regionType, $regionName);
-        $operatingScope = $this->resolveOperatingMachineIds($mScope);
+        $operatingScope = $this->resolveOperatingMachineIds($mScope, $accountScope);
         if ($operatingScope === []) {
             return [
                 'summary' => ['total' => 0, 'online' => 0, 'offline' => 0],
@@ -360,7 +570,8 @@ class VisualScreenService
         string $regionName,
         string $cycle,
         int $page,
-        int $pageSize
+        int $pageSize,
+        array $authRuleSummary = []
     ): array {
         return [
             'serverTime' => date('Y-m-d H:i:s'),
@@ -404,6 +615,7 @@ class VisualScreenService
                 'latestOrder' => null,
                 'recentOrders' => [],
             ],
+            'authPermissionRules' => $authRuleSummary,
         ];
     }
 
