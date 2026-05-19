@@ -888,6 +888,8 @@ class ApiClient extends ReceiveBaseClient
             'deal_abnormal_pic' => '',
             'deal_success_sub_title'  => '',
             'deal_success_title' => '',
+            'pickup_qrcode_text1' => '',
+            'pickup_qrcode_text2' => ''
         ];
         
         $topicIds = $this->getTopicPageMachineColumn(['machine_id' => $this->machine['machine_id']], 'topic_id');

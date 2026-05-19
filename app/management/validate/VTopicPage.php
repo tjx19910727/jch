@@ -42,8 +42,8 @@ class VTopicPage extends VCommon
     ];
 
     protected $scene = [
-        'add' => ['status', 'title', 'is_service_phone','claim_goods_title','out_goods_title','deal_success_title','deal_success_sub_title','deal_abnormal_pic','deal_fail_title','deal_fail_sub_title'],
-        'update' => ['id', 'title', 'is_service_phone','claim_goods_title','out_goods_title','deal_success_title','deal_success_sub_title','deal_abnormal_pic','deal_fail_title','deal_fail_sub_title'],
+        'add' => ['status', 'title'],
+        'update' => ['id', 'title'],
         'del' => ['id'],
         'assignMachine' => ['id'],
         'setStatus' => ['id', 'status'],
