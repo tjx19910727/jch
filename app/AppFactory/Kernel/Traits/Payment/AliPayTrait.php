@@ -69,14 +69,7 @@ trait AliPayTrait
             'pay_method' => $this->order['pay_method'] ?? null,
             'dispatch_method' => $func_name,
         ], '支付宝入口-分派子方法');
-        $result = $this->$func_name();
-        actionLog([
-            'order_id' => $this->order['order_id'] ?? null,
-            'dispatch_method' => $func_name,
-            'result_code' => $result['code'] ?? null,
-            'result_msg' => $result['msg'] ?? null,
-        ], '支付宝入口-子方法返回');
-        return $result;
+        return $this->$func_name();        
 
     }
 

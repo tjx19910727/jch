@@ -203,22 +203,6 @@ class PaymentClient extends PayBaseClient
                 'dispatch_method' => $func_name,
             ], '支付方法路由分派');
             $result = $this->$func_name();
-            $resultCode = null;
-            $resultMsg = null;
-            if (is_array($result)) {
-                $resultCode = $result['code'] ?? null;
-                $resultMsg = $result['msg'] ?? null;
-            } elseif (is_object($result)) {
-                $resultCode = $result->code ?? null;
-                $resultMsg = $result->msg ?? null;
-            }
-            actionLog([
-                'order_id' => $this->order['order_id'] ?? null,
-                'dispatch_method' => $func_name,
-                'result_type' => is_object($result) ? get_class($result) : gettype($result),
-                'result_code' => $resultCode,
-                'result_msg' => $resultMsg,
-            ], '支付方法路由返回');
             return $result;
         }
         return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
