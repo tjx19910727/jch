@@ -282,9 +282,18 @@ class MachineClient extends ManagementClient
             $ratioWhere[] = ['status', '<>', 2];
             $totalCapacity = $this->getMachineChannelSum($ratioWhere, 'capacity');
             $totalStock = $this->getMachineChannelSum($ratioWhere, 'stock');
-            $item['stock_ratio'] = ($totalCapacity > 0)
-                ? (bcmul(bcdiv($totalStock, $totalCapacity, 4), '100', 2) . '%')
-                : "0%";
+            if ($totalCapacity > 0) {
+                $ratio = bcdiv($totalStock, $totalCapacity, 4);
+                if (bccomp($ratio, '1', 4) > 0) {
+                    $ratio = '1';
+                }
+                if (bccomp($ratio, '0', 4) < 0) {
+                    $ratio = '0';
+                }
+                $item['stock_ratio'] = bcmul($ratio, '100', 2) . '%';
+            } else {
+                $item['stock_ratio'] = "0%";
+            }
             return $item;
         }));
     }
@@ -385,9 +394,18 @@ class MachineClient extends ManagementClient
         $ratioWhere[] = ['status', '<>', 2];
         $totalCapacity = $this->getMachineChannelSum($ratioWhere, 'capacity');
         $totalStock = $this->getMachineChannelSum($ratioWhere, 'stock');
-        $stock_ratio = ($totalCapacity > 0)
-            ? (bcmul(bcdiv($totalStock, $totalCapacity, 4), '100', 2) . '%')
-            : "0%";
+        if ($totalCapacity > 0) {
+            $ratio = bcdiv($totalStock, $totalCapacity, 4);
+            if (bccomp($ratio, '1', 4) > 0) {
+                $ratio = '1';
+            }
+            if (bccomp($ratio, '0', 4) < 0) {
+                $ratio = '0';
+            }
+            $stock_ratio = bcmul($ratio, '100', 2) . '%';
+        } else {
+            $stock_ratio = "0%";
+        }
         return $stock_ratio;
     }
 
