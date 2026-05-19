@@ -3029,6 +3029,7 @@ class ApiClient extends ReceiveBaseClient
                     'item_id' => $itemId,
                     'machine_id' => $this->machine['machine_id'],
                     'maintainer_id' => $maintainerId,
+                    'check_status' => intval($submittedMap[$itemId]['check_status'] ?? 0),
                     'maintenance_time' => $maintenanceTime,
                     'notes' => $rowNotes !== '' ? $rowNotes : $defaultNotes,
                 ];
@@ -3240,7 +3241,7 @@ class ApiClient extends ReceiveBaseClient
                 ->leftJoin('maintenance_items mi', 'mi.id = mr.item_id')
                 ->leftJoin('auth_manager am', 'am.manager_id = mr.maintainer_id')
                 ->where($where)
-                ->field("mr.id,mr.records_code,mr.item_id,mr.machine_id,mr.maintainer_id,mr.maintenance_time,mr.notes,mr.created_at,mi.item_name,mi.description,mi.parent_id,mi.item_level,IFNULL(NULLIF(am.nickname,''), mr.maintainer_id) as nickname")
+                ->field("mr.id,mr.records_code,mr.item_id,mr.machine_id,mr.maintainer_id,mr.check_status,mr.maintenance_time,mr.notes,mr.created_at,mi.item_name,mi.description,mi.parent_id,mi.item_level,IFNULL(NULLIF(am.nickname,''), mr.maintainer_id) as nickname")
                 ->order('mr.records_code desc,mr.id asc')
                 ->select()
                 ->toArray();
@@ -3253,6 +3254,7 @@ class ApiClient extends ReceiveBaseClient
                         'machine_id' => $item['machine_id'],
                         'maintainer_id' => $item['maintainer_id'],
                         'nickname' => $item['nickname'] ?? '',
+                        'check_status' => $item['check_status'],
                         'maintenance_time' => $item['maintenance_time'],
                         'records' => [],
                     ];
@@ -3266,6 +3268,7 @@ class ApiClient extends ReceiveBaseClient
                     'item_level' => $item['item_level'],
                     'maintainer_id' => $item['maintainer_id'],
                     'nickname' => $item['nickname'] ?? '',
+                    'check_status' => $item['check_status'],
                     'maintenance_time' => $item['maintenance_time'],
                     'notes' => $item['notes'],
                     'created_at' => $item['created_at'],
