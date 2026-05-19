@@ -180,7 +180,6 @@ trait WxPayTrait
             if (isset($result['code_url'])) {
                 $this->returnData['order'] = $this->order;
                 $this->returnData['paymentUrlLink'] = $result['code_url'];
-                $this->returnData['qrCodeLink'] = $result['code_url'];
                 $this->returnData['result'] = $result;
                 return $this->r(200, 'SUCCESS', $this->returnData);
             }
