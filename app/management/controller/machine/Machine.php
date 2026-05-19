@@ -33,11 +33,33 @@ class Machine extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
         $pageNum = $postData['pageNum'] ?? 0;
+        $field = $this->field;
+        if (!empty($postData['stock_ratio'])) {
+            $field .= ", (SELECT IF(SUM(capacity) > 0, LEAST(GREATEST(SUM(stock) / SUM(capacity), 0), 1), 0) FROM machine_channel WHERE m_id = a.m_id AND status <> 2) stock_ratio_sort";
+        }
+        $order = $this->buildMachineListOrder($postData);
+        unset($postData['version_sort'],$postData['stock_ratio']);
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];//vending_machine_type字段已废弃，入库默认值为1，代码层面涉及此字段的不用管
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
-        return $this->app->machine->getMList($where,$pageNum,$this->field,"online asc, m_id desc");
+        return $this->app->machine->getMList($where,$pageNum,$field,$order);
+    }
+
+    private function buildMachineListOrder($postData)
+    {
+        $orderList = [];
+        if (!empty($postData['version_sort'])) {
+            $versionDirection = $postData['version_sort'] == 1 ? 'asc' : 'desc';
+            $orderList[] = "version {$versionDirection}";
+        }
+        if (!empty($postData['stock_ratio'])) {
+            $stockRatioDirection = $postData['stock_ratio'] == 1 ? 'asc' : 'desc';
+            $orderList[] = "stock_ratio_sort {$stockRatioDirection}";
+        }
+        $orderList[] = 'online asc';
+        $orderList[] = 'm_id desc';
+        return implode(', ', $orderList);
     }
 
     public function getFind()
