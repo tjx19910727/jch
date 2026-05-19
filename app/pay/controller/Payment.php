@@ -52,17 +52,6 @@ class Payment extends Common
     {
         $result = $this->app->payment->orderPay();
         actionLog(@obj2arr($result) ?? "",'发起支付返回结果');
-        $resultArr = is_array($result) ? $result : (is_object($result) ? obj2arr($result) : []);
-        actionLog([
-            'result_type' => is_object($result) ? get_class($result) : gettype($result),
-            'state' => $resultArr['state'] ?? null,
-            'code' => $resultArr['code'] ?? null,
-            'msg' => $resultArr['msg'] ?? null,
-            'has_data' => isset($resultArr['data']),
-            'has_paymentUrlLink' => !empty($resultArr['data']['paymentUrlLink'] ?? null),
-            'trade_no' => $resultArr['data']['order']['trade_no'] ?? null,
-            'order_id' => $resultArr['data']['order']['order_id'] ?? null,
-        ], '发起支付-最终下发响应摘要');
         return $result;
     }
 

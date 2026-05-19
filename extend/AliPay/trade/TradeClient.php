@@ -143,26 +143,7 @@ class TradeClient extends BaseClient
         ];
         if ($optional) $this->bizContent = array_merge($this->bizContent,$optional);
         $this->notifyUrl ? : ($this->notifyUrl = ($data['notifyUrl'] ?? ""));
-        actionLog([
-            'onceName' => $this->onceName,
-            'bizContent' => $this->bizContent,
-            'notifyUrl' => $this->notifyUrl,
-        ], 'AlipayTradePrecreateRequest-请求');
-        try {
-            $result = $this->execute();
-            actionLog([
-                'code' => $result['code'] ?? null,
-                'msg' => $result['msg'] ?? null,
-                'sub_msg' => $result['sub_msg'] ?? null,
-                'has_qr_code' => !empty($result['qr_code']),
-            ], 'AlipayTradePrecreateRequest-响应');
-            return $result;
-        } catch (\Exception $e) {
-            actionLog([
-                'error' => $e->getMessage(),
-            ], 'AlipayTradePrecreateRequest-异常');
-            throw $e;
-        }
+        return $this->execute();
     }
 
     /**
