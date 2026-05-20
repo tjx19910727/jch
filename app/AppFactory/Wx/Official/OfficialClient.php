@@ -103,11 +103,6 @@ class OfficialClient extends WxBaseClient
             return "暂无待确认的后台登录二维码，请先在后台扫码。";
         }
 
-        if ($login['status'] == 3) {
-            cache('wxLoginPendingOpenid_' . $this->open_id, null);
-            return "该登录已确认，请返回后台页面继续操作。";
-        }
-
         $manager = Db::name('auth_manager')
             ->where('openid', $this->open_id)
             ->where('status', 1)
@@ -116,6 +111,11 @@ class OfficialClient extends WxBaseClient
             ->find();
         if (!$manager) {
             return "当前微信未绑定可用管理员账号，请先在系统内完成绑定。";
+        }
+
+        if ($login['status'] == 3) {
+            cache('wxLoginPendingOpenid_' . $this->open_id, null);
+            return "登录确认成功，登录账户" . $manager['account'] . "（" . $manager['nickname'] . "）" ;
         }
 
         $result = AppFactory::wx()->login->managerLogin([
