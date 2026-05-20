@@ -79,30 +79,28 @@ class OfficialClient extends WxBaseClient
     private function receive_text($message)
     {
         $content = trim(($message['Content'] ?? ""));
+        $defaultReply = "哇喔，很幸运被小主翻牌了\n开心到飞起\n感谢小主的好眼光\n今天最美的瞬间就是遇到您🎉\nbiubiu~";
+        $pendingLoginId = intval(cache('wxLoginPendingOpenid_' . $this->open_id));
         if ($content === "") {
-            return "消息为空，请发送【确定登录】进行确认。";
+            return $defaultReply;
         }
 
-        if ($content != "确定登录") {
-            $waitLogin = Db::name('wx_official_login')
-                ->where('openid', $this->open_id)
-                ->where('login_type', 1)
-                ->where('status', 2)
-                ->order('id', 'desc')
-                ->find();
-            if ($waitLogin) {
-                return "已检测到后台登录待确认，请发送【确定登录】完成授权。";
-            }
-            return "如需确认后台扫码登录，请先扫码后发送【确定登录】。";
+        if ($content != "确认登录") {
+            return $defaultReply;
+        }
+
+        if (!$pendingLoginId) {
+            return "暂无待确认的后台登录二维码，请先在后台扫码。";
         }
 
         $login = Db::name('wx_official_login')
+            ->where('id', $pendingLoginId)
             ->where('openid', $this->open_id)
             ->where('login_type', 1)
             ->where('status', 2)
-            ->order('id', 'desc')
             ->find();
         if (!$login) {
+            cache('wxLoginPendingOpenid_' . $this->open_id, null);
             return "暂无待确认的后台登录二维码，请先在后台扫码。";
         }
 
@@ -121,7 +119,8 @@ class OfficialClient extends WxBaseClient
             'manager_id' => $manager['manager_id'],
         ]);
         if (isset($result['code']) && intval($result['code']) == 200) {
-            return "登录确认成功，请返回后台页面继续操作。";
+            cache('wxLoginPendingOpenid_' . $this->open_id, null);
+            return "登录确认成功，登录账户" . $manager['account'] . "（" . $manager['nickname'] . "）" ;
         }
         if (is_array($result) && isset($result['msg'])) {
             return "登录确认失败：" . $result['msg'];
@@ -333,11 +332,8 @@ class OfficialClient extends WxBaseClient
                 $wx_id = $qrScene[0] ?? 0;
                 $type = $qrScene[1] ?? 0;
                 $scanLoginId = 0;
-                if ($type == 3) {
+                if ($type == 5) {
                     $scanLoginId = intval($qrScene[2] ?? 0);
-                } elseif (is_numeric($key)) {
-                    // 兼容部分公众号回调仅返回数值scene_id的情况
-                    $scanLoginId = intval($key);
                 }
                 actionLog(['wx_id' => $wx_id, 'type' => $type, 'scanLoginId' => $scanLoginId], '扫码事件解析结果');
                 // 管理员绑定微信用户
@@ -366,9 +362,11 @@ class OfficialClient extends WxBaseClient
                                 'status' => 2,
                             ]);
                         actionLog(['updateResult' => $updateResult, 'scanLoginId' => $scanLoginId, 'openid' => $this->open_id], '扫码登录记录更新结果');
+                        cache('wxLoginPendingOpenid_' . $this->open_id, $scanLoginId, ['expire' => 600]);
+                        actionLog(['cacheKey' => 'wxLoginPendingOpenid_' . $this->open_id, 'scanLoginId' => $scanLoginId], '写入openid待确认登录缓存');
                         cache('wxLogin1' . $scanLoginId, null);
                         actionLog('wxLogin1' . $scanLoginId, '清理扫码登录缓存key');
-                        $reply = "欢迎登录嘉潮汇，请确认操作\n<a href=\"###\">确认登录</a>";
+                        $reply = '欢迎登录嘉潮汇，请确认是本人操作，点击<a href="weixin://bizmsgmenu?msgmenuid=1&msgmenucontent=确认登录">确认登录</a>';
                         actionLog($reply, '扫码事件回复文案');
                     } else {
                         $reply .= "登录二维码已失效，请返回后台刷新重试";

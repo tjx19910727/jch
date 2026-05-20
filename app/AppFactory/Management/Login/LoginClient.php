@@ -116,8 +116,8 @@ class LoginClient extends ManagementClient
         if (!$id) return $this->r(100,$this->lang("action_fail"));
         try {
             $this->getWxApp($config);
-            // V2 使用数值scene_id，确保公众号回调EventKey稳定可识别（qrscene_{id}/id）
-            $qrScene = intval($id);
+            // V2 场景值：公众号ID_业务类型_登录记录ID，type=5 表示管理后台扫码登录
+            $qrScene = $config['id'] . "_5_" . $id;
             $result = $this->wx_app->qrcode->temporary($qrScene, 5 * 60);
             if (!isset($result['ticket'])) {
                 return $this->r(100, $result['errorMsg'] ?? $this->lang("action_fail"));
