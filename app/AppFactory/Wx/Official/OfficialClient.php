@@ -9,6 +9,7 @@
 namespace app\AppFactory\Wx\Official;
 
 
+use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\User\UserTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
@@ -46,7 +47,7 @@ class OfficialClient extends WxBaseClient
                                 return $this->receive_event($message);
                                 break;
                             case "text":
-                                return "哇喔，很幸运被小主翻牌了\n开心到飞起\n感谢小主的好眼光\n今天最美的瞬间就是遇到您🎉\nbiubiu~";
+                                return $this->receive_text($message);
                                 break;
                             case "image":
                                 return "哇喔，很幸运被小主翻牌了\n开心到飞起\n感谢小主的好眼光\n今天最美的瞬间就是遇到您🎉\nbiubiu~";
@@ -68,6 +69,64 @@ class OfficialClient extends WxBaseClient
         } catch (\ReflectionException $e) {
             actionException($e,1);
         }
+    }
+
+    /**
+     * 处理公众号文字消息
+     * @param $message
+     * @return string
+     */
+    private function receive_text($message)
+    {
+        $content = trim(($message['Content'] ?? ""));
+        if ($content === "") {
+            return "消息为空，请发送【确定登录】进行确认。";
+        }
+
+        if ($content != "确定登录") {
+            $waitLogin = Db::name('wx_official_login')
+                ->where('openid', $this->open_id)
+                ->where('login_type', 1)
+                ->where('status', 2)
+                ->order('id', 'desc')
+                ->find();
+            if ($waitLogin) {
+                return "已检测到后台登录待确认，请发送【确定登录】完成授权。";
+            }
+            return "如需确认后台扫码登录，请先扫码后发送【确定登录】。";
+        }
+
+        $login = Db::name('wx_official_login')
+            ->where('openid', $this->open_id)
+            ->where('login_type', 1)
+            ->where('status', 2)
+            ->order('id', 'desc')
+            ->find();
+        if (!$login) {
+            return "暂无待确认的后台登录二维码，请先在后台扫码。";
+        }
+
+        $manager = Db::name('auth_manager')
+            ->where('openid', $this->open_id)
+            ->where('status', 1)
+            ->order('manager_id', 'desc')
+            ->field('manager_id,account,nickname')
+            ->find();
+        if (!$manager) {
+            return "当前微信未绑定可用管理员账号，请先在系统内完成绑定。";
+        }
+
+        $result = AppFactory::wx()->login->managerLogin([
+            'login_id' => $login['id'],
+            'manager_id' => $manager['manager_id'],
+        ]);
+        if (isset($result['code']) && intval($result['code']) == 200) {
+            return "登录确认成功，请返回后台页面继续操作。";
+        }
+        if (is_array($result) && isset($result['msg'])) {
+            return "登录确认失败：" . $result['msg'];
+        }
+        return "登录确认失败，请稍后重试。";
     }
 
     /**
@@ -256,30 +315,71 @@ class OfficialClient extends WxBaseClient
      */
     private function receive_subscribe($event)
     {
+        actionLog($event, '扫码/关注事件原始消息');
         $user_info = $this->wx_app->user->get($this->open_id);
         actionLog($user_info,'获取微信用户信息');
         $info = $this->getUserFind(['openid' => $this->open_id]);
         $auth_user = $this->setUserInfo($user_info,$info);
         $reply = "感谢关注此公众号\n";
+
         if (isset($event['EventKey']) && trim($event['EventKey']) != '') {
             $key = $event['EventKey'];
+            actionLog($key, '扫码事件EventKey原始值');
             if (false !== strpos($key, 'qrscene_')) $key = str_replace('qrscene_', '', $key);
+            actionLog($key, '扫码事件EventKey去前缀后');
             $qrScene = explode('_', $key);
             actionLog($qrScene, 'qrSceneArr');
             if ($qrScene) {
                 $wx_id = $qrScene[0] ?? 0;
                 $type = $qrScene[1] ?? 0;
+                $scanLoginId = 0;
+                if ($type == 3) {
+                    $scanLoginId = intval($qrScene[2] ?? 0);
+                } elseif (is_numeric($key)) {
+                    // 兼容部分公众号回调仅返回数值scene_id的情况
+                    $scanLoginId = intval($key);
+                }
+                actionLog(['wx_id' => $wx_id, 'type' => $type, 'scanLoginId' => $scanLoginId], '扫码事件解析结果');
                 // 管理员绑定微信用户
                 if ($type == 1 || $type == 2) {
                     $manager_id = $qrScene[2];
+                    actionLog(['manager_id' => $manager_id, 'wx_id' => $wx_id], '管理员绑定流程开始');
                     $auth_user['manager_id'] = $manager_id;
                     $this->updateUser($auth_user);
                     $this->updateAuthManager(['manager_id' => $manager_id,'user_id' => $auth_user['user_id'],"wx_id" => $wx_id,'openid' => $this->open_id]);
                     actionLog($this->getLS(),'绑定账号微信OPENID');
                     $reply .= "绑定管理员成功";
                 }
+                // 管理后台扫码登录：仅标记已扫码，等待用户在公众号发送“确定登录”完成确认
+                if ($scanLoginId) {
+                    actionLog(['scanLoginId' => $scanLoginId], '管理后台扫码登录流程开始');
+                    $login = Db::name('wx_official_login')
+                            ->where('id', $scanLoginId)
+                            ->where('login_type', 1)
+                            ->find();
+                    actionLog($login, '查询扫码登录记录结果');
+                    if ($login) {
+                        $updateResult = Db::name('wx_official_login')
+                            ->where('id', $scanLoginId)
+                            ->update([
+                                'openid' => $this->open_id,
+                                'status' => 2,
+                            ]);
+                        actionLog(['updateResult' => $updateResult, 'scanLoginId' => $scanLoginId, 'openid' => $this->open_id], '扫码登录记录更新结果');
+                        cache('wxLogin1' . $scanLoginId, null);
+                        actionLog('wxLogin1' . $scanLoginId, '清理扫码登录缓存key');
+                        $reply = "欢迎登录嘉潮汇，请确认操作\n<a href=\"###\">确认登录</a>";
+                        actionLog($reply, '扫码事件回复文案');
+                    } else {
+                        $reply .= "登录二维码已失效，请返回后台刷新重试";
+                        actionLog(['scanLoginId' => $scanLoginId], '扫码登录记录不存在');
+                    }
+                }
             }
+        } else {
+            actionLog($event, '扫码/关注事件缺少EventKey');
         }
+        actionLog($reply, '扫码/关注事件最终回复文案');
         return $reply;
     }
 
