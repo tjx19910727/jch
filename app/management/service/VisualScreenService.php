@@ -414,8 +414,14 @@ class VisualScreenService
         $todaySales = (float) ($saleData['today']['saleMoney'] ?? 0);
         $yesterdaySales = (float) ($saleData['yesterday']['saleMoney'] ?? 0);
         $avgOrder = $todayOrders > 0 ? round($todaySales / $todayOrders, 2) : 0.0;
-        $orderCountDelta = $todayOrders - $yesterdayOrders;
-        $salesAmountDelta = round($todaySales - $yesterdaySales, 2);
+        $tradeWhere = $this->saleWhereToQuery($queryWhere);
+        $tradeStat = Db::name('sale_orders')->alias('so')
+            ->where($tradeWhere)
+            ->fieldRaw('COUNT(*) as cnt, IFNULL(SUM(so.total_price),0) as amount')
+            ->find();
+        $tradeStat = is_array($tradeStat) ? $tradeStat : (array) $tradeStat;
+        $orderCountDelta = (int) ($tradeStat['cnt'] ?? 0);
+        $salesAmountDelta = round((float) ($tradeStat['amount'] ?? 0), 2);
 
         // is_operating：1=在营 2=在库 3=外售（见数据库更新.sql）；仅统计主柜 vending_machine_type=1
         $deviceOverview = [
@@ -819,6 +825,29 @@ class VisualScreenService
         if ($raw === '') {
             return ['start' => null, 'end' => null];
         }
+
+        $keyword = $this->normalizeCycleKeyword($raw);
+        if ($keyword !== null) {
+            if ($keyword === 'day') {
+                return [
+                    'start' => strtotime(date('Y-m-d')) ?: null,
+                    'end' => time(),
+                ];
+            }
+            if ($keyword === 'week') {
+                return [
+                    'start' => strtotime('-7 days') ?: null,
+                    'end' => time(),
+                ];
+            }
+            if ($keyword === 'month') {
+                return [
+                    'start' => strtotime('-30 days') ?: null,
+                    'end' => time(),
+                ];
+            }
+        }
+
         if (!preg_match('/^\s*(.+?)\s*[~～]\s*(.+?)\s*$/u', $raw, $m)) {
             return ['start' => null, 'end' => null];
         }
