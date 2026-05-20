@@ -99,7 +99,7 @@ class VisualScreen extends Common
             'accountMachineScope' => $this->app->machine->resolvePermittedMachineIds(),
         ];
         $svc = new VisualScreenService($this->app);
-        $data = $svc->getMachineList($ctx); 
+        $data = $svc->getMachineList($ctx);
         return returnState(200, '查询成功', $data);
     }
 
