@@ -398,9 +398,9 @@ class VisualScreenService
         $queryWhere[] = ['m_id', 'in', $operatingScopeForQuery];
         $this->appendTimeRangeToWhere($queryWhere, $timeRange['start'], $timeRange['end']);
 
-    // 纯实时增量口径：不受 cycle 时间窗限制，仅保留设备范围与支付状态
-    $orderIncrementWhere = ['pay_status' => 3];
-    $orderIncrementWhere[] = ['m_id', 'in', $operatingScopeForQuery];
+        // 纯实时增量口径：不受 cycle 时间窗限制，仅保留设备范围与支付状态
+        $orderIncrementWhere = ['pay_status' => 3];
+        $orderIncrementWhere[] = ['m_id', 'in', $operatingScopeForQuery];
 
         $chartWhere = [['m_id', 'in', $operatingScopeForQuery]];
         $this->appendTimeRangeToWhere($chartWhere, $timeRange['start'], $timeRange['end']);
@@ -414,6 +414,8 @@ class VisualScreenService
         $todaySales = (float) ($saleData['today']['saleMoney'] ?? 0);
         $yesterdaySales = (float) ($saleData['yesterday']['saleMoney'] ?? 0);
         $avgOrder = $todayOrders > 0 ? round($todaySales / $todayOrders, 2) : 0.0;
+        $orderCountDelta = $todayOrders - $yesterdayOrders;
+        $salesAmountDelta = round($todaySales - $yesterdaySales, 2);
 
         // is_operating：1=在营 2=在库 3=外售（见数据库更新.sql）；仅统计主柜 vending_machine_type=1
         $deviceOverview = [
@@ -434,6 +436,8 @@ class VisualScreenService
             'todaySalesAmount' => $todaySales,
             'yesterdaySalesAmount' => $yesterdaySales,
             'averageOrderAmount' => $avgOrder,
+            'orderCountDelta' => $orderCountDelta,
+            'salesAmountDelta' => $salesAmountDelta,
         ];
 
         $chartType = $this->cycleToChartType($cycle);
@@ -463,7 +467,6 @@ class VisualScreenService
             // 'machineList' => $this->buildMachineList($mScope, $page, $pageSize, $screenCounts),
             'realtimeOrders' => $this->buildRealtimeOrders($queryWhere, $regionType, $regionName, 30),
             'orderIncrement' => $this->buildOrderIncrement($orderIncrementWhere, $lastOrderId, $regionType, $regionName),
-            'authPermissionRules' => $authRuleSummary,
         ];
     }
 
@@ -585,6 +588,9 @@ class VisualScreenService
                 'todaySalesAmount' => 0.0,
                 'yesterdaySalesAmount' => 0.0,
                 'averageOrderAmount' => 0.0,
+                'orderCountDelta' => 0,
+                'salesAmountDelta' => 0.0,
+
             ],
             'productSalesShare' => [],
             'machineSalesShare' => [],
@@ -1676,7 +1682,7 @@ class VisualScreenService
                 'id' => (string) ($r['trade_no'] ?? ''),
                 'machine' => (string) ($r['machine_name'] ?? ''),
                 'product' => (string) ($r['g_name'] ?? ''),
-                'time' => isset($r['create_time']) ? date('H:i:s', (int) $r['create_time']) : '',
+                'time' => isset($r['create_time']) ? date('Y-m-d H:i:s', (int) $r['create_time']) : '',
                 'amount' => round((float) ($r['total_price'] ?? 0), 2),
                 'status' => '已支付',
                 'regionType' => $regionType === 'province' ? 'province' : 'national',
