@@ -85,7 +85,7 @@ class OfficialClient extends WxBaseClient
             return $defaultReply;
         }
         $pendingLoginId = intval(cache('wxLoginPendingOpenid_' . $this->open_id));
-        if($pendingLoginId){
+        if(!$pendingLoginId){
             return $defaultReply;
         }
         $confirmCommands = ['确认登录', '确定登录'];
@@ -117,16 +117,11 @@ class OfficialClient extends WxBaseClient
         if (!$manager) {
             return "当前微信未绑定可用管理员账号，请先在系统内完成绑定。";
         }
-        $update['manager_id'] = $manager['manager_id'];
-        $update['account'] = $manager['account'];// 总后台登录，生成Token
-        $update['status'] = 3;
-        $update['update_time'] = time();
-        $result = Db::name('wx_official_login')->where('id', $pendingLoginId)->update($update);
-        if (!$result) {
-            return "登录确认失败，请稍后重试。";
-        }
-        $this->recordManagerLog($manager,1);
-        cache("wxLogin1" . $pendingLoginId, null);
+
+        $result = AppFactory::wx()->login->managerLogin([
+            'login_id' => $pendingLoginId,
+            'manager_id' => $manager['manager_id'],
+        ]);
         if (isset($result['code']) && intval($result['code']) == 200) {
             cache('wxLoginPendingOpenid_' . $this->open_id, null);
             return "登录确认成功，登录账户" . $manager['account'] . "（" . $manager['nickname'] . "）" ;
