@@ -118,13 +118,13 @@ class LoginClient extends ManagementClient
             $this->getWxApp($config);
             // V2 场景值：公众号ID_业务类型_登录记录ID，type=5 表示管理后台扫码登录
             $qrScene = $config['id'] . "_5_" . $id;
-            $result = $this->wx_app->qrcode->temporary($qrScene, 5 * 60);
+            $result = $this->wx_app->qrcode->temporary($qrScene, 2 * 60);
             if (!isset($result['ticket'])) {
                 return $this->r(100, $result['errorMsg'] ?? $this->lang("action_fail"));
             }
             $loginUrl = $this->wx_app->qrcode->url($result['ticket']);
             $this->updateWxOfficialLogin(['id' => $id,"login_url" => $loginUrl]);
-            return $this->r(200,$this->lang("action_success"),["id" => $id,'status' => 1,"login_url" => $loginUrl]);
+            return $this->r(200,$this->lang("action_success"),["id" => $id,'status' => 1,"login_url" => $loginUrl, "ticket" => $result['ticket']]);
         } catch (\Exception $e) {
             return $this->r(100,'微信返回错误信息：' . $e->getMessage());
         }
@@ -137,14 +137,37 @@ class LoginClient extends ManagementClient
      */
     public function checkWxLoginStatus($postData)
     {
-        $login = cache("wxLogin1" . $postData['id']);
-        if (!$login) {
-            $login = $this->getWxOfficialLoginFind(['id' => $postData['id']], 'id,wx_id,login_token,login_type,status,create_time');
-            if (!$login) return $this->r(100,$this->lang("query_fail"));
-            $login = $login->toArray();
-            cache("wxLogin1" . $postData['id'],$login,['expire' => 120]);
+        $ticket = trim($postData['ticket'] ?? '');
+        if (!$ticket) {
+            return $this->r(100,'ticket不能为空');
         }
-        unset($login['wx_id'],$login['id']);
-        return $this->r(200,$this->lang("query_success"),$login);
+        $where = [];
+        $where[] = ['login_type', '=', 1];
+        $where[] = ['login_url', 'like', '%' . $ticket . '%'];
+        $loginFind = $this->getWxOfficialLoginFind($where, 'id,create_time', 'id desc');
+        if (!$loginFind) {
+            return $this->r(100,'ticket无效或登录记录不存在');
+        }
+        $loginFind = $loginFind->toArray();
+        if ($loginFind['create_time'] + 120 <= time()) {
+            return $this->r(100,'二维码已过期，请刷新二维码重试');
+        }
+        $postData['id'] = $loginFind['id'];
+        $login = $this->getWxOfficialLoginFind(['id' => $postData['id']], 'id,login_token,status,create_time');
+        if (!$login) return $this->r(100,$this->lang("query_fail"));
+        $login = $login->toArray();
+        if ($login['create_time'] + 120 <= time()) {
+            return $this->r(100,'二维码已过期，请刷新二维码重试');
+        }
+        if ($login['status'] == 3) {
+            if(!empty($login['login_token'])){
+                return returnState(200, 'VLogin.login_success', $login['login_token']);
+            }
+             return $this->r(100,'登录失败，登录Token不存在');
+        }elseif($login['status'] == 2){
+            return $this->r(100,'已扫码待确认');
+        }else{
+            return $this->r(100,'未扫码');
+        }
     }
 }
