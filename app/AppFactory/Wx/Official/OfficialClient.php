@@ -80,28 +80,32 @@ class OfficialClient extends WxBaseClient
     {
         $content = trim(($message['Content'] ?? ""));
         $defaultReply = "哇喔，很幸运被小主翻牌了\n开心到飞起\n感谢小主的好眼光\n今天最美的瞬间就是遇到您🎉\nbiubiu~";
-        $pendingLoginId = intval(cache('wxLoginPendingOpenid_' . $this->open_id));
+
         if ($content === "") {
             return $defaultReply;
         }
-
-        if ($content != "确认登录") {
+        $pendingLoginId = intval(cache('wxLoginPendingOpenid_' . $this->open_id));
+        if($pendingLoginId){
+            return $defaultReply;
+        }
+        $confirmCommands = ['确认登录', '确定登录'];
+        if (!in_array($content, $confirmCommands)) {
             return $defaultReply;
         }
 
-        if (!$pendingLoginId) {
-            return "暂无待确认的后台登录二维码，请先在后台扫码。";
-        }
-
         $login = Db::name('wx_official_login')
-            ->where('id', $pendingLoginId)
             ->where('openid', $this->open_id)
             ->where('login_type', 1)
-            ->where('status', 2)
+            ->where('id', $pendingLoginId)
             ->find();
         if (!$login) {
             cache('wxLoginPendingOpenid_' . $this->open_id, null);
             return "暂无待确认的后台登录二维码，请先在后台扫码。";
+        }
+
+        if ($login['status'] == 3) {
+            cache('wxLoginPendingOpenid_' . $this->open_id, null);
+            return "该登录已确认，请返回后台页面继续操作。";
         }
 
         $manager = Db::name('auth_manager')
@@ -113,11 +117,16 @@ class OfficialClient extends WxBaseClient
         if (!$manager) {
             return "当前微信未绑定可用管理员账号，请先在系统内完成绑定。";
         }
-
-        $result = AppFactory::wx()->login->managerLogin([
-            'login_id' => $login['id'],
-            'manager_id' => $manager['manager_id'],
-        ]);
+        $update['manager_id'] = $manager['manager_id'];
+        $update['account'] = $manager['account'];// 总后台登录，生成Token
+        $update['status'] = 3;
+        $update['update_time'] = time();
+        $result = Db::name('wx_official_login')->where('id', $pendingLoginId)->update($update);
+        if (!$result) {
+            return "登录确认失败，请稍后重试。";
+        }
+        $this->recordManagerLog($manager,1);
+        cache("wxLogin1" . $pendingLoginId, null);
         if (isset($result['code']) && intval($result['code']) == 200) {
             cache('wxLoginPendingOpenid_' . $this->open_id, null);
             return "登录确认成功，登录账户" . $manager['account'] . "（" . $manager['nickname'] . "）" ;
