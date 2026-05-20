@@ -1486,7 +1486,9 @@ class VisualScreenService
             $q->where('m.online', 2);
         }
         $total = (int) (clone $q)->count();
+        $todayStart = strtotime(date('Y-m-d'));
         $rows = $q->order('m.online', 'asc')
+            ->orderRaw('(SELECT IFNULL(SUM(so.total_quantity),0) FROM sale_orders so WHERE so.pay_status = 3 AND so.create_date >= ' . (int) $todayStart . ' AND so.m_id = m.m_id) DESC')
             ->limit($offset, $pageSize)
             ->select()
             ->toArray();
@@ -1523,6 +1525,7 @@ class VisualScreenService
                 'address' => (string) ($m['street'] ?? ''),
                 'full_address' => $fullAddress,
                 'sales' => (int) ($salesMap[$mid] ?? 0),
+                'salesQuantity' => (int) ($salesMap[$mid] ?? 0),
                 'emptyChannels' => (int) $st['emptyChannels'],
                 'badChannels' => (int) $st['badChannels'],
                 'emptySlots' => (int) $st['emptySlots'],
@@ -1649,13 +1652,13 @@ class VisualScreenService
             ->where('pay_status', 3)
             ->where('create_date', '>=', $start)
             ->whereIn('m_id', $mIds)
-            ->field('m_id, IFNULL(SUM(total_price),0) as v')
+            ->field('m_id, IFNULL(SUM(total_quantity),0) as v')
             ->group('m_id')
             ->select()
             ->toArray();
         $map = [];
         foreach ($rows as $r) {
-            $map[(int) $r['m_id']] = round((float) $r['v'], 2);
+            $map[(int) $r['m_id']] = (int) round((float) $r['v']);
         }
         return $map;
     }
