@@ -21,6 +21,17 @@ class GoodsModel extends BaseModel
 {
     protected $name = "goods";
     protected $pk = "g_id";
+    protected static $disableQueuePushOnce = false;
+
+    public static function disableQueuePushOnce()
+    {
+        self::$disableQueuePushOnce = true;
+    }
+
+    public static function clearDisableQueuePushFlag()
+    {
+        self::$disableQueuePushOnce = false;
+    }
 
 //    protected $schema = [
 //        "g_id" => "int",
@@ -127,6 +138,10 @@ class GoodsModel extends BaseModel
      */
     protected static function onAfterUpdate(Model $model)
     {
+        if (self::$disableQueuePushOnce) {
+            self::$disableQueuePushOnce = false;
+            return;
+        }
         $redis = new \Redis();
         $config = config("redis");
         $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
