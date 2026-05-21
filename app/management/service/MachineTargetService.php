@@ -20,21 +20,43 @@ class MachineTargetService
     }
 
     /**
+     * @param array{m_id:mixed,date:mixed,price:mixed} $ctx
+     * @return array{state:int,msg:string,data:array<string,mixed>}
+     */
+    public function add(array $ctx): array
+    {
+        return $this->saveInternal($ctx, false);
+    }
+
+    /**
+     * @param array{id:mixed,m_id:mixed,date:mixed,price:mixed} $ctx
+     * @return array{state:int,msg:string,data:array<string,mixed>}
+     */
+    public function update(array $ctx): array
+    {
+        $groupId = intval($ctx['id'] ?? 0);
+        if ($groupId <= 0) {
+            return ['state' => 100, 'msg' => 'id不能为空', 'data' => []];
+        }
+        $ctx['id'] = $groupId;
+        return $this->saveInternal($ctx, true);
+    }
+
+    /**
      * @param array{id?:int,m_id:mixed,date:mixed,price:mixed} $ctx
      * @return array{state:int,msg:string,data:array<string,mixed>}
      */
-    public function save(array $ctx): array
+    protected function saveInternal(array $ctx, bool $isUpdate): array
     {
         $targetPrice = round((float) ($ctx['price'] ?? 0), 2);
         if ($targetPrice <= 0) {
             return ['state' => 100, 'msg' => '目标金额必须大于0', 'data' => []];
         }
 
-        $mIds = $this->normalizeMachineIdInput($ctx['m_id'] ?? '');
-        if ($mIds === []) {
+        $mIds = !empty($ctx['m_id']) ? explode(',',$ctx['m_id']) : [];
+        if (!$mIds) {
             return ['state' => 100, 'msg' => '设备id不能为空', 'data' => []];
         }
-
         $monthParse = $this->parseMonthSelection($ctx['date'] ?? '', false);
         if (($monthParse['state'] ?? 100) !== 200) {
             return ['state' => 100, 'msg' => (string) ($monthParse['msg'] ?? '月份格式错误'), 'data' => []];
@@ -45,15 +67,15 @@ class MachineTargetService
             return ['state' => 100, 'msg' => '月份不能为空', 'data' => []];
         }
 
-        $allowedMids = $this->resolveOperatingMachineIds();
-        if ($allowedMids === []) {
-            return ['state' => 100, 'msg' => '当前账号下没有可配置的在营设备', 'data' => []];
-        }
+        // $allowedMids = $this->resolveOperatingMachineIds();
+        // if ($allowedMids === []) {
+        //     return ['state' => 100, 'msg' => '当前账号下没有可配置的在营设备', 'data' => []];
+        // }
 
-        $mIds = array_values(array_intersect($mIds, $allowedMids));
-        if ($mIds === []) {
-            return ['state' => 100, 'msg' => '设备不在当前账号可配置范围内', 'data' => []];
-        }
+        // $mIds = array_values(array_intersect($mIds, $allowedMids));
+        // if ($mIds === []) {
+        //     return ['state' => 100, 'msg' => '设备不在当前账号可配置范围内', 'data' => []];
+        // }
 
         sort($mIds);
         sort($months);
@@ -61,7 +83,11 @@ class MachineTargetService
         $groupId = max(0, intval($ctx['id'] ?? 0));
         Db::startTrans();
         try {
-            if ($groupId > 0) {
+            if ($isUpdate) {
+                if ($groupId <= 0) {
+                    Db::rollback();
+                    return ['state' => 100, 'msg' => 'id不能为空', 'data' => []];
+                }
                 $exist = Db::name('machine_target_group')->where('id', $groupId)->find();
                 if (!$exist) {
                     Db::rollback();
@@ -432,7 +458,6 @@ class MachineTargetService
     {
         $accountScope = $this->resolveAccountMachineScope();
         $query = Db::name('machine')
-            ->where('vending_machine_type', 1)
             ->where('is_operating', 1);
 
         if ($accountScope !== null) {

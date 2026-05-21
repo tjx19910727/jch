@@ -7,50 +7,38 @@ use app\management\service\MachineTargetService;
 
 class MachineTarget extends Common
 {
-    protected function requestBody(): array
-    {
-        $body = [];
-        $rawInput = request()->getInput();
-        if (is_string($rawInput) && trim($rawInput) !== '') {
-            $decoded = json_decode($rawInput, true);
-            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
-                $body = $decoded;
-            }
-        }
-        return $body;
-    }
-
     /**
-     * @param mixed $default
-     * @return mixed
+     * 新增设备目标配置
      */
-    protected function pickInput(string $name, array $body, $default = null)
+    public function add()
     {
-        $all = input();
-        if (array_key_exists($name, $all) && $all[$name] !== '' && $all[$name] !== null) {
-            return $all[$name];
-        }
-        if (array_key_exists($name, $body) && $body[$name] !== '' && $body[$name] !== null) {
-            return $body[$name];
-        }
-        return $default;
-    }
-
-    /**
-     * 保存设备目标配置（新增/编辑）
-     */
-    public function save()
-    {
-        $body = $this->requestBody();
+        $postData = input();
         $ctx = [
-            'id' => intval($this->pickInput('id', $body, 0)),
-            'm_id' => $this->pickInput('m_id', $body, ''),
-            'date' => $this->pickInput('date', $body, ''),
-            'price' => $this->pickInput('price', $body, 0),
+            'm_id' => $postData['m_id'] ?? '',
+            'date' => $postData['date'] ?? '',
+            'price' => $postData['price'] ?? 0,
         ];
 
         $svc = new MachineTargetService($this->app);
-        $res = $svc->save($ctx);
+        $res = $svc->add($ctx);
+        return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '保存失败'), $res['data'] ?? []);
+    }
+
+    /**
+     * 修改设备目标配置
+     */
+    public function update()
+    {
+        $postData = input();
+        $ctx = [
+            'id' => $postData['id'] ?? 0,
+            'm_id' => $postData['m_id'] ?? '',
+            'date' => $postData['date'] ?? '',
+            'price' => $postData['price'] ?? 0,
+        ];
+
+        $svc = new MachineTargetService($this->app);
+        $res = $svc->update($ctx);
         return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '保存失败'), $res['data'] ?? []);
     }
 
@@ -59,8 +47,8 @@ class MachineTarget extends Common
      */
     public function detail()
     {
-        $body = $this->requestBody();
-        $id = intval($this->pickInput('id', $body, 0));
+        $postData = input();
+        $id = intval($postData['id'] ?? 0);
         if ($id <= 0) {
             return returnState(100, 'id不能为空', []);
         }
@@ -75,9 +63,9 @@ class MachineTarget extends Common
      */
     public function devices()
     {
-        $body = $this->requestBody();
+        $postData = input();
         $ctx = [
-            'date' => $this->pickInput('date', $body, date('Y-m')),
+            'date' => $postData['date'] ?? date('Y-m'),
         ];
 
         $svc = new MachineTargetService($this->app);
@@ -90,10 +78,10 @@ class MachineTarget extends Common
      */
     public function stats()
     {
-        $body = $this->requestBody();
+        $postData = input();
         $ctx = [
-            'm_id' => $this->pickInput('m_id', $body, ''),
-            'date' => $this->pickInput('date', $body, date('Y-m')),
+            'm_id' => $postData['m_id'] ?? '',
+            'date' => $postData['date'] ?? date('Y-m'),
         ];
 
         $svc = new MachineTargetService($this->app);
