@@ -3,6 +3,7 @@
 namespace app\management\service;
 
 use app\AppFactory\Management\Application;
+use app\AppFactory\RabbitMq\MqProducer;
 use think\facade\Db;
 
 class MachineTargetService
@@ -53,10 +54,21 @@ class MachineTargetService
             return ['state' => 100, 'msg' => '目标金额必须大于0', 'data' => []];
         }
 
-        $mIds = !empty($ctx['m_id']) ? explode(',',$ctx['m_id']) : [];
-        if (!$mIds) {
+        $mIds = $this->normalizeMachineIdInput($ctx['m_id'] ?? '');
+        if ($mIds === []) {
             return ['state' => 100, 'msg' => '设备id不能为空', 'data' => []];
         }
+
+        $authWhere = is_array($ctx['auth_where'] ?? null) ? $ctx['auth_where'] : [];
+        $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
+        if ($allowedMids === []) {
+            return ['state' => 100, 'msg' => '当前账号下没有可操作设备', 'data' => []];
+        }
+        $mIds = array_values(array_intersect($mIds, $allowedMids));
+        if ($mIds === []) {
+            return ['state' => 100, 'msg' => '设备不在当前账号可操作范围内', 'data' => []];
+        }
+
         $monthParse = $this->parseMonthSelection($ctx['date'] ?? '', false);
         if (($monthParse['state'] ?? 100) !== 200) {
             return ['state' => 100, 'msg' => (string) ($monthParse['msg'] ?? '月份格式错误'), 'data' => []];
@@ -66,16 +78,6 @@ class MachineTargetService
         if (!is_array($months) || $months === []) {
             return ['state' => 100, 'msg' => '月份不能为空', 'data' => []];
         }
-
-        // $allowedMids = $this->resolveOperatingMachineIds();
-        // if ($allowedMids === []) {
-        //     return ['state' => 100, 'msg' => '当前账号下没有可配置的在营设备', 'data' => []];
-        // }
-
-        // $mIds = array_values(array_intersect($mIds, $allowedMids));
-        // if ($mIds === []) {
-        //     return ['state' => 100, 'msg' => '设备不在当前账号可配置范围内', 'data' => []];
-        // }
 
         sort($mIds);
         sort($months);
@@ -165,7 +167,7 @@ class MachineTargetService
     /**
      * @return array{state:int,msg:string,data:array<string,mixed>}
      */
-    public function detail(int $id): array
+    public function detail(int $id, array $authWhere = []): array
     {
         $row = Db::name('machine_target_group')->where('id', $id)->find();
         if (!$row) {
@@ -173,6 +175,14 @@ class MachineTargetService
         }
 
         $mIds = $this->normalizeMachineIdInput((string) ($row['m_id'] ?? ''));
+        $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
+        if ($allowedMids === []) {
+            return ['state' => 100, 'msg' => '当前账号无权限查看该配置', 'data' => []];
+        }
+        $mIds = array_values(array_intersect($mIds, $allowedMids));
+        if ($mIds === []) {
+            return ['state' => 100, 'msg' => '当前账号无权限查看该配置', 'data' => []];
+        }
 
         $months = $this->normalizeMonthList((string) ($row['months'] ?? ''));
         $machineRows = [];
@@ -217,7 +227,8 @@ class MachineTargetService
         }
         $months = $parsed['months'];
 
-        $allowedMids = $this->resolveOperatingMachineIds();
+        $authWhere = is_array($ctx['auth_where'] ?? null) ? $ctx['auth_where'] : [];
+        $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
         if ($allowedMids === []) {
             return [
                 'date' => implode(',', $months),
@@ -233,9 +244,7 @@ class MachineTargetService
             ->group('m.m_id,m.machine_id,m.machine_name')
             ->order('m.m_id', 'desc');
 
-        if ($allowedMids !== null) {
-            $query->whereIn('mt.m_id', $allowedMids);
-        }
+        $query->whereIn('mt.m_id', $allowedMids);
 
         $rows = $query->select()->toArray();
         $list = [];
@@ -261,6 +270,94 @@ class MachineTargetService
      */
     public function stats(array $ctx): array
     {
+        return $this->statsSummary($ctx);
+    }
+
+    /**
+     * @param array{m_id?:mixed,date?:mixed} $ctx
+     * @return array{state:int,msg:string,data:array<string,mixed>}
+     */
+    public function statsSummary(array $ctx): array
+    {
+        $res = $this->statsCore($ctx);
+        if (($res['state'] ?? 100) !== 200) {
+            return $res;
+        }
+
+        $data = is_array($res['data'] ?? null) ? $res['data'] : [];
+        return [
+            'state' => 200,
+            'msg' => '查询成功',
+            'data' => [
+                'summary' => $data['summary'] ?? [],
+                'summaryCompare' => $data['summaryCompare'] ?? [],
+            ],
+        ];
+    }
+
+    /**
+     * @param array{m_id?:mixed,date?:mixed} $ctx
+     * @return array{state:int,msg:string,data:array<string,mixed>}
+     */
+    public function statsList(array $ctx): array
+    {
+        $res = $this->statsCore($ctx);
+        if (($res['state'] ?? 100) !== 200) {
+            return $res;
+        }
+
+        $data = is_array($res['data'] ?? null) ? $res['data'] : [];
+        return [
+            'state' => 200,
+            'msg' => '查询成功',
+            'data' => [
+                'list' => $data['list'] ?? [],
+                'total' => intval($data['total'] ?? 0),
+            ],
+        ];
+    }
+
+    /**
+     * @param array{m_id?:mixed,date?:mixed} $ctx
+     * @return array{state:int,msg:string,data:array<string,mixed>}
+     */
+    public function exportStatsList(array $ctx): array
+    {
+        $res = $this->statsCore($ctx);
+        if (($res['state'] ?? 100) !== 200) {
+            return $res;
+        }
+
+        $data = is_array($res['data'] ?? null) ? $res['data'] : [];
+        $list = is_array($data['list'] ?? null) ? $data['list'] : [];
+
+        $title = [
+            'machine_id' => '设备编号',
+            'machine_name' => '设备名称',
+            'target_amount' => '目标金额',
+            'sale_amount' => '销售额',
+            'cost_amount' => '成本',
+            'estimated_profit' => '预估毛利',
+            'achievement_rate' => '达成率(%)',
+            'turnover_ratio' => '周转比',
+            'turnover_days' => '周转周期(天)',
+            'prev_sale_amount' => '上期销售额',
+            'prev_cost_amount' => '上期成本',
+            'prev_profit_amount' => '上期预估毛利',
+            'prev_turnover_ratio' => '上期周转比',
+            'prev_turnover_days' => '上期周转周期(天)',
+        ];
+
+        $filename = '设备目标统计列表-' . date('Ymd');
+        return $this->enqueueExport('统计报表-设备目标统计列表', $filename, $title, $list);
+    }
+
+    /**
+     * @param array{m_id?:mixed,date?:mixed} $ctx
+     * @return array{state:int,msg:string,data:array<string,mixed>}
+     */
+    protected function statsCore(array $ctx): array
+    {
         $parsed = $this->parseMonthSelection($ctx['date'] ?? date('Y-m'), true);
         if (($parsed['state'] ?? 100) !== 200) {
             return ['state' => 100, 'msg' => strval($parsed['msg'] ?? '月份格式错误'), 'data' => []];
@@ -273,7 +370,8 @@ class MachineTargetService
         $prevEnd = intval($parsed['prevEnd']);
         $dayCount = max(1, intval($parsed['dayCount']));
 
-        $allowedMids = $this->resolveOperatingMachineIds();
+        $authWhere = is_array($ctx['auth_where'] ?? null) ? $ctx['auth_where'] : [];
+        $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
         if ($allowedMids === []) {
             return [
                 'state' => 200,
@@ -282,7 +380,10 @@ class MachineTargetService
             ];
         }
 
-        $devices = $this->devices(['date' => implode(',', $months)]);
+        $devices = $this->devices([
+            'date' => implode(',', $months),
+            'auth_where' => $authWhere,
+        ]);
         $deviceOptions = is_array($devices['list'] ?? null) ? $devices['list'] : [];
         $configuredMids = [];
         foreach ($deviceOptions as $item) {
@@ -420,51 +521,28 @@ class MachineTargetService
     /**
      * @return int[]|null
      */
-    protected function resolveAccountMachineScope(): ?array
+    protected function resolveAuthorizedMachineIds(array $authWhere = []): array
     {
-        $managerId = intval($this->manager['manager_id'] ?? 0);
-        $aoId = intval($this->manager['ao_id'] ?? 0);
-        $pid = intval($this->manager['pid'] ?? 0);
+        $query = Db::name('machine')->where('vending_machine_type', 1);
 
-        if (in_array($aoId, [0, 1], true)) {
-            return null;
-        }
-
-        $orgMids = Db::name('machine')->where('ao_id', $aoId)->column('m_id');
-        $orgMids = array_values(array_unique(array_map('intval', is_array($orgMids) ? $orgMids : [])));
-
-        $bindMachineIds = Db::name('auth_manager_machine')
-            ->where('manager_id', $managerId)
-            ->column('machine_id');
-        $bindMachineIds = array_values(array_unique(array_filter(array_map('strval', is_array($bindMachineIds) ? $bindMachineIds : []))));
-
-        if ($bindMachineIds !== []) {
-            $bindMids = Db::name('machine')->whereIn('machine_id', $bindMachineIds)->column('m_id');
-            $bindMids = array_values(array_unique(array_map('intval', is_array($bindMids) ? $bindMids : [])));
-            return array_values(array_intersect($orgMids, $bindMids));
-        }
-
-        if ($pid > 0) {
-            return [];
-        }
-
-        return $orgMids;
-    }
-
-    /**
-     * @return int[]
-     */
-    protected function resolveOperatingMachineIds(): array
-    {
-        $accountScope = $this->resolveAccountMachineScope();
-        $query = Db::name('machine')
-            ->where('is_operating', 1);
-
-        if ($accountScope !== null) {
-            if ($accountScope === []) {
-                return [];
+        foreach ($authWhere as $k => $v) {
+            if (is_array($v) && isset($v[0], $v[1])) {
+                $field = strval($v[0]);
+                $op = strval($v[1]);
+                $value = $v[2] ?? null;
+                if ($field === '' || $op === '') {
+                    continue;
+                }
+                if ($value === null) {
+                    continue;
+                }
+                $query->where($field, $op, $value);
+                continue;
             }
-            $query->whereIn('m_id', $accountScope);
+
+            if (is_string($k) && $k !== '') {
+                $query->where($k, '=', $v);
+            }
         }
 
         $mids = $query->column('m_id');
@@ -739,6 +817,49 @@ class MachineTargetService
         }
 
         return $map;
+    }
+
+    /**
+     * @param array<string,string> $title
+     * @param array<int,array<string,mixed>> $list
+     * @return array{state:int,msg:string,data:array<string,mixed>}
+     */
+    protected function enqueueExport(string $position, string $filename, array $title, array $list): array
+    {
+        $insert = [
+            'request_time' => time(),
+            'export_position' => $position,
+            'file_name' => $filename,
+            'status' => 1,
+            'ao_id' => intval($this->manager['ao_id'] ?? 0),
+            'creator' => intval($this->manager['manager_id'] ?? 0),
+            'create_time' => time(),
+        ];
+
+        $exportId = intval(Db::name('export_log')->insertGetId($insert));
+        if ($exportId <= 0) {
+            return ['state' => 100, 'msg' => '导出任务创建失败', 'data' => []];
+        }
+
+        $payload = [
+            'export_id' => $exportId,
+            'filename' => $filename,
+            'title' => $title,
+            'list' => $list,
+            'otherData' => [],
+        ];
+
+        $mqResult = MqProducer::export($payload);
+        if ($mqResult !== 'OK') {
+            Db::name('export_log')->where('export_id', $exportId)->update(['status' => 4]);
+            return ['state' => 100, 'msg' => '导出任务提交失败：' . strval($mqResult), 'data' => []];
+        }
+
+        return [
+            'state' => 200,
+            'msg' => '导出任务已提交，请稍后在导出记录查看',
+            'data' => ['export_id' => $exportId],
+        ];
     }
 
     /**

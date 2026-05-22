@@ -17,6 +17,7 @@ class MachineTarget extends Common
             'm_id' => $postData['m_id'] ?? '',
             'date' => $postData['date'] ?? '',
             'price' => $postData['price'] ?? 0,
+            'auth_where' => $this->getWhere([]),
         ];
 
         $svc = new MachineTargetService($this->app);
@@ -35,6 +36,7 @@ class MachineTarget extends Common
             'm_id' => $postData['m_id'] ?? '',
             'date' => $postData['date'] ?? '',
             'price' => $postData['price'] ?? 0,
+            'auth_where' => $this->getWhere([]),
         ];
 
         $svc = new MachineTargetService($this->app);
@@ -54,7 +56,7 @@ class MachineTarget extends Common
         }
 
         $svc = new MachineTargetService($this->app);
-        $res = $svc->detail($id);
+        $res = $svc->detail($id, $this->getWhere([]));
         return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '查询失败'), $res['data'] ?? []);
     }
 
@@ -66,6 +68,7 @@ class MachineTarget extends Common
         $postData = input();
         $ctx = [
             'date' => $postData['date'] ?? date('Y-m'),
+            'auth_where' => $this->getWhere([]),
         ];
 
         $svc = new MachineTargetService($this->app);
@@ -74,7 +77,7 @@ class MachineTarget extends Common
     }
 
     /**
-     * 目标统计
+     * 目标统计汇总
      */
     public function stats()
     {
@@ -82,10 +85,45 @@ class MachineTarget extends Common
         $ctx = [
             'm_id' => $postData['m_id'] ?? '',
             'date' => $postData['date'] ?? date('Y-m'),
+            'auth_where' => $this->getWhere([]),
         ];
 
         $svc = new MachineTargetService($this->app);
-        $res = $svc->stats($ctx);
+        $res = $svc->statsSummary($ctx);
+        return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '查询失败'), $res['data'] ?? []);
+    }
+
+    /**
+     * 目标统计列表
+     */
+    public function statsList()
+    {
+        $postData = input();
+        $ctx = [
+            'm_id' => $postData['m_id'] ?? '',
+            'date' => $postData['date'] ?? date('Y-m'),
+            'auth_where' => $this->getWhere([]),
+        ];
+
+        $svc = new MachineTargetService($this->app);
+        $res = $svc->statsList($ctx);
+        return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '查询失败'), $res['data'] ?? []);
+    }
+
+    /**
+     * 导出目标统计列表（筛选条件与列表一致）
+     */
+    public function exportStatsList()
+    {
+        $postData = input();
+        $ctx = [
+            'm_id' => $postData['m_id'] ?? '',
+            'date' => $postData['date'] ?? date('Y-m'),
+            'auth_where' => $this->getWhere([]),
+        ];
+
+        $svc = new MachineTargetService($this->app);
+        $res = $svc->exportStatsList($ctx);
         return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '查询失败'), $res['data'] ?? []);
     }
 }
