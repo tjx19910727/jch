@@ -335,6 +335,8 @@ class MachineTargetService
             'machine_id' => '设备编号',
             'machine_name' => '设备名称',
             'target_amount' => '目标金额',
+            'full_channel_amount' => '上满货金额',
+            'full_channel_cost' => '上满货成本',
             'sale_amount' => '销售额',
             'cost_amount' => '成本',
             'estimated_profit' => '预估毛利',
@@ -414,12 +416,15 @@ class MachineTargetService
 
         $machineMap = $this->queryMachineBaseInfo($baseMids);
         $targetMap = $this->queryTargetAmountMap($baseMids, $months);
+        $fullChannelMap = $this->queryFullChannelAmountCostMap($baseMids);
         $currentMap = $this->queryAmountCostMap($baseMids, $start, $end);
         $prevMap = $this->queryAmountCostMap($baseMids, $prevStart, $prevEnd);
 
         $list = [];
         $sumCurrentSale = 0;
         $sumCurrentCost = 0;
+        $sumFullChannelAmount = 0;
+        $sumFullChannelCost = 0;
         $sumCurrentTarget = 0;
         $sumPrevSale = 0;
         $sumPrevCost = 0;
@@ -428,8 +433,11 @@ class MachineTargetService
             $machine = $machineMap[$mid] ?? ['machine_id' => '', 'machine_name' => ''];
             $current = $currentMap[$mid] ?? ['sale' => 0, 'cost' => 0];
             $prev = $prevMap[$mid] ?? ['sale' => 0, 'cost' => 0];
+            $fullChannel = $fullChannelMap[$mid] ?? ['amount' => 0, 'cost' => 0];
 
             $targetAmount = round((float) ($targetMap[$mid] ?? 0), 2);
+            $fullChannelAmount = round((float) ($fullChannel['amount'] ?? 0), 2);
+            $fullChannelCost = round((float) ($fullChannel['cost'] ?? 0), 2);
             $saleAmount = round((float) ($current['sale'] ?? 0), 2);
             $costAmount = round((float) ($current['cost'] ?? 0), 2);
             $profitAmount = round($saleAmount - $costAmount, 2);
@@ -439,16 +447,18 @@ class MachineTargetService
             $prevProfit = round($prevSale - $prevCost, 2);
 
             $achievementRate = $targetAmount > 0 ? round($saleAmount / $targetAmount * 100, 2) : 0;
-            $turnoverRatio = $costAmount > 0 ? round($saleAmount / $costAmount, 2) : 0;
+            $turnoverRatio = $fullChannelCost > 0 ? round($saleAmount / $fullChannelCost, 2) : 0;
             $turnoverDays = $turnoverRatio > 0 ? round($dayCount / $turnoverRatio, 1) : 0;
 
-            $prevTurnoverRatio = $prevCost > 0 ? round($prevSale / $prevCost, 2) : 0;
+            $prevTurnoverRatio = $fullChannelCost > 0 ? round($prevSale / $fullChannelCost, 2) : 0;
             $prevTurnoverDays = $prevTurnoverRatio > 0 ? round($dayCount / $prevTurnoverRatio, 1) : 0;
 
             $list[] = [
                 'm_id' => $mid,
                 'machine_id' => strval($machine['machine_id'] ?? ''),
                 'machine_name' => strval($machine['machine_name'] ?? ''),
+                'full_channel_amount' => $fullChannelAmount,
+                'full_channel_cost' => $fullChannelCost,
                 'sale_amount' => $saleAmount,
                 'cost_amount' => $costAmount,
                 'estimated_profit' => $profitAmount,
@@ -467,6 +477,8 @@ class MachineTargetService
 
             $sumCurrentSale += $saleAmount;
             $sumCurrentCost += $costAmount;
+            $sumFullChannelAmount += $fullChannelAmount;
+            $sumFullChannelCost += $fullChannelCost;
             $sumCurrentTarget += $targetAmount;
             $sumPrevSale += $prevSale;
             $sumPrevCost += $prevCost;
@@ -474,16 +486,18 @@ class MachineTargetService
 
         $sumCurrentSale = round($sumCurrentSale, 2);
         $sumCurrentCost = round($sumCurrentCost, 2);
+        $sumFullChannelAmount = round($sumFullChannelAmount, 2);
+        $sumFullChannelCost = round($sumFullChannelCost, 2);
         $sumCurrentProfit = round($sumCurrentSale - $sumCurrentCost, 2);
         $sumCurrentRate = $sumCurrentTarget > 0 ? round($sumCurrentSale / $sumCurrentTarget * 100, 2) : 0;
-        $sumCurrentRatio = $sumCurrentCost > 0 ? round($sumCurrentSale / $sumCurrentCost, 2) : 0;
+        $sumCurrentRatio = $sumFullChannelCost > 0 ? round($sumCurrentSale / $sumFullChannelCost, 2) : 0;
         $sumCurrentDays = $sumCurrentRatio > 0 ? round($dayCount / $sumCurrentRatio, 1) : 0;
 
         $sumPrevSale = round($sumPrevSale, 2);
         $sumPrevCost = round($sumPrevCost, 2);
         $sumPrevProfit = round($sumPrevSale - $sumPrevCost, 2);
         $sumPrevRate = $sumCurrentTarget > 0 ? round($sumPrevSale / $sumCurrentTarget * 100, 2) : 0;
-        $sumPrevRatio = $sumPrevCost > 0 ? round($sumPrevSale / $sumPrevCost, 2) : 0;
+        $sumPrevRatio = $sumFullChannelCost > 0 ? round($sumPrevSale / $sumFullChannelCost, 2) : 0;
         $sumPrevDays = $sumPrevRatio > 0 ? round($dayCount / $sumPrevRatio, 1) : 0;
 
         return [
@@ -497,6 +511,8 @@ class MachineTargetService
                 ],
                 'machineOptions' => $deviceOptions,
                 'summary' => [
+                    'full_channel_amount' => $sumFullChannelAmount,
+                    'full_channel_cost' => $sumFullChannelCost,
                     'sale_amount' => $sumCurrentSale,
                     'cost_amount' => $sumCurrentCost,
                     'estimated_profit' => $sumCurrentProfit,
@@ -505,6 +521,8 @@ class MachineTargetService
                     'turnover_days' => $sumCurrentDays,
                 ],
                 'summaryCompare' => [
+                    'full_channel_amount' => $this->compare($sumFullChannelAmount, $sumFullChannelAmount),
+                    'full_channel_cost' => $this->compare($sumFullChannelCost, $sumFullChannelCost),
                     'sale_amount' => $this->compare($sumCurrentSale, $sumPrevSale),
                     'cost_amount' => $this->compare($sumCurrentCost, $sumPrevCost),
                     'estimated_profit' => $this->compare($sumCurrentProfit, $sumPrevProfit),
@@ -820,6 +838,42 @@ class MachineTargetService
     }
 
     /**
+     * 货道上满货金额/成本（仅统计 g_id > 0 的货道）
+     * @param int[] $mIds
+     * @return array<int,array{amount:float,cost:float}>
+     */
+    protected function queryFullChannelAmountCostMap(array $mIds): array
+    {
+        if ($mIds === []) {
+            return [];
+        }
+
+        $rows = Db::name('machine_channel')
+            ->whereIn('m_id', $mIds)
+            ->where('g_id', '>', 0)
+            ->field('m_id, IFNULL(SUM(IFNULL(capacity,0) * IFNULL(retail_price,0)),0) as full_amount, IFNULL(SUM(IFNULL(capacity,0) * IFNULL(cost_price,0)),0) as full_cost')
+            ->group('m_id')
+            ->select()
+            ->toArray();
+
+        $map = [];
+        foreach ($mIds as $mid) {
+            $map[$mid] = ['amount' => 0, 'cost' => 0];
+        }
+
+        foreach ($rows as $row) {
+            $mid = intval($row['m_id'] ?? 0);
+            if (!isset($map[$mid])) {
+                continue;
+            }
+            $map[$mid]['amount'] = round((float) ($row['full_amount'] ?? 0), 2);
+            $map[$mid]['cost'] = round((float) ($row['full_cost'] ?? 0), 2);
+        }
+
+        return $map;
+    }
+
+    /**
      * @param array<string,string> $title
      * @param array<int,array<string,mixed>> $list
      * @return array{state:int,msg:string,data:array<string,mixed>}
@@ -876,6 +930,8 @@ class MachineTargetService
             ],
             'machineOptions' => $deviceOptions,
             'summary' => [
+                'full_channel_amount' => 0,
+                'full_channel_cost' => 0,
                 'sale_amount' => 0,
                 'cost_amount' => 0,
                 'estimated_profit' => 0,
@@ -884,6 +940,8 @@ class MachineTargetService
                 'turnover_days' => 0,
             ],
             'summaryCompare' => [
+                'full_channel_amount' => $this->compare(0, 0),
+                'full_channel_cost' => $this->compare(0, 0),
                 'sale_amount' => $this->compare(0, 0),
                 'cost_amount' => $this->compare(0, 0),
                 'estimated_profit' => $this->compare(0, 0),
