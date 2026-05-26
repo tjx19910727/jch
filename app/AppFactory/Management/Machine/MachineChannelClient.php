@@ -51,6 +51,7 @@ class MachineChannelClient extends ManagementClient
 
             $whereStockOut = $where;
             $whereStockOut['stock'] = 0;
+            $whereStockOut[] = ['g_id', '>', 0];
             $stockOut = $this->getMachineChannelCount($whereStockOut);
         }
         $data = [
@@ -85,6 +86,7 @@ class MachineChannelClient extends ManagementClient
 
             $whereStockOut = $where;
             $whereStockOut['stock'] = 0;
+            $whereStockOut[] = ['g_id', '>', 0];
             $stockOut = $this->getMachineChannelCountV2($whereStockOut);
         }
         $data = [
@@ -187,7 +189,8 @@ class MachineChannelClient extends ManagementClient
             "machine_name" => "设备名称",
             "total_channel" => "总货道数",
             "stock_out_num" => "空货数",
-            "stock_out_channel" => "空货槽位",
+            "stock_out_channel" => "基础机组空货槽位",
+            "stock_out_channel_arc" => "弧柜空货槽位",
             "stock_out_ratio" => "空货占比",
         ];
         $filename = "首页-空货列表-" . date("YmdHis");
@@ -327,6 +330,7 @@ class MachineChannelClient extends ManagementClient
             $where[] = ['m_id', 'in', $mIds];
         }
         $where['stock'] = 0;
+        $where[] = ['g_id', '>', 0];
         $expr = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
         $exprOperating = "EXISTS(SELECT 1 FROM machine m WHERE m.m_id = a.m_id AND m.is_operating = 1)";
         if (!empty($where['raw'])) {
@@ -341,15 +345,23 @@ class MachineChannelClient extends ManagementClient
 
         $list = $list->toArray();
         foreach ($list as $key => $value) {
-            $whereStockOut = [];
+            $whereTotal = [];
             $sub_cabinet = $this->getMachineInfoValue(['m_id' => $value['m_id']], 'sub_cabinet');
-            if (!$sub_cabinet || $sub_cabinet == 2) $whereStockOut['channel_position'] = 1;
+            if (!$sub_cabinet || $sub_cabinet == 2) $whereTotal['channel_position'] = 1;
 
-            $whereStockOut['m_id'] = $value['m_id'];
-            $value['total_channel'] = $this->getMachineChannelCount($whereStockOut);
-            $whereStockOut['stock'] = 0;
-            $stockOutList = $this->getMachineChannelColumn($whereStockOut, 'channel_code');
+            $whereTotal['m_id'] = $value['m_id'];
+            $value['total_channel'] = $this->getMachineChannelCount($whereTotal);
+
+            $whereStockOutBase = ['m_id' => $value['m_id'], 'channel_position' => 1, 'stock' => 0];
+            $whereStockOutBase[] = ['g_id', '>', 0];
+            $stockOutList = $this->getMachineChannelColumn($whereStockOutBase, 'channel_code');
             $value['stock_out_channel'] = implode(",", $stockOutList ?? []);
+
+            $whereStockOutArc = ['m_id' => $value['m_id'], 'channel_position' => 2, 'stock' => 0];
+            $whereStockOutArc[] = ['g_id', '>', 0];
+            $stockOutArcList = $this->getMachineChannelColumn($whereStockOutArc, 'channel_code');
+            $value['stock_out_channel_arc'] = implode(",", $stockOutArcList ?? []);
+
             $value['stock_out_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['stock_out_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
             $list[$key] = $value;
         }
