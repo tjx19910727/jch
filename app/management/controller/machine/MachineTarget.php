@@ -63,19 +63,20 @@ class MachineTarget extends Common
         return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '保存失败'), $res['data'] ?? []);
     }
 
+
     /**
      * 读取目标配置详情
      */
     public function detail()
     {
         $postData = input();
-        $id = intval($postData['id'] ?? 0);
-        if ($id <= 0) {
-            return returnState(100, 'id不能为空', []);
+        $mId = intval($postData['m_id'] ?? 0);
+        if ($mId <= 0) {
+            return returnState(100, 'm_id不能为空', []);
         }
 
         $svc = new MachineTargetService($this->app);
-        $res = $svc->detail($id, $this->getWhere([]));
+        $res = $svc->detail($mId, $this->getWhere([]));
         return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '查询失败'), $res['data'] ?? []);
     }
 

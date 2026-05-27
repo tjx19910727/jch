@@ -26,7 +26,89 @@ class MachineTargetService
      */
     public function add(array $ctx): array
     {
-        return $this->saveInternal($ctx, false);
+        $mIds = $this->normalizeMachineIdInput($ctx['m_id'] ?? '');
+        if ($mIds === []) {
+            return ['state' => 100, 'msg' => '设备id不能为空', 'data' => []];
+        }
+        //传入的m_id是否在getWhere的权限范围内，避免越权操作
+        $authWhere = is_array($ctx['auth_where'] ?? null) ? $ctx['auth_where'] : [];
+        $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
+        if ($allowedMids === []) {
+            return ['state' => 100, 'msg' => '当前账号下没有可操作设备', 'data' => []];
+        }
+        $mIds = array_values(array_intersect($mIds, $allowedMids));
+        if ($mIds === []) {
+            return ['state' => 100, 'msg' => '设备不在当前账号可操作范围内', 'data' => []];
+        }
+        // 日期和金额输入解析
+        $monthPriceParse = $this->parseMonthPriceInput($ctx['date'] ?? '', $ctx['price'] ?? '');
+        if (($monthPriceParse['state'] ?? 100) !== 200) {
+            return ['state' => 100, 'msg' => (string) ($monthPriceParse['msg'] ?? '日期或金额格式错误'), 'data' => []];
+        }
+
+        $months = is_array($monthPriceParse['months'] ?? null) ? $monthPriceParse['months'] : [];
+        $priceList = is_array($monthPriceParse['price_list'] ?? null) ? $monthPriceParse['price_list'] : [];
+        $monthPriceMap = is_array($monthPriceParse['month_price_map'] ?? null) ? $monthPriceParse['month_price_map'] : [];
+        if ($months === [] || $priceList === [] || $monthPriceMap === []) {
+            return ['state' => 100, 'msg' => '日期或金额不能为空', 'data' => []];
+        }
+
+        $currentMonth = date('Y-m');
+        foreach ($months as $month) {
+            if (strval($month) < $currentMonth) {
+                return ['state' => 100, 'msg' => '设置月份不能小于当前月', 'data' => []];
+            }
+        }
+
+        sort($mIds);
+        sort($months);
+
+        Db::startTrans();
+        try {
+            Db::name('machine_target_monthly')
+                ->whereIn('m_id', $mIds)
+                ->where('month', '>=', $currentMonth)
+                ->delete();
+
+            $rows = [];
+            foreach ($months as $month) {
+                $bounds = $this->monthBounds($month);
+                $monthPrice = round((float) ($monthPriceMap[$month] ?? 0), 2);
+                foreach ($mIds as $mid) {
+                    $rows[] = [
+                        'target_group_id' => 0,
+                        'm_id' => $mid,
+                        'month' => $month,
+                        'start_time' => $bounds['start'],
+                        'end_time' => $bounds['end'],
+                        'target_amount' => $monthPrice,
+                    ];
+                }
+            }
+
+            if ($rows !== []) {
+                Db::name('machine_target_monthly')->insertAll($rows);
+            }
+
+            Db::commit();
+            return [
+                'state' => 200,
+                'msg' => '设置成功',
+                'data' => [
+                    'm_id' => implode(',', $mIds),
+                    'm_id_list' => $mIds,
+                    'date' => implode(',', $months),
+                    'months' => $months,
+                    'price' => implode(',', array_map('strval', $priceList)),
+                    'price_list' => $priceList,
+                    'rows' => count($rows),
+                ],
+            ];
+        } catch (\Throwable $e) {
+            Db::rollback();
+            actionException($e, 1);
+            return ['state' => 100, 'msg' => '设置失败：' . $e->getMessage(), 'data' => []];
+        }
     }
 
     /**
@@ -392,72 +474,60 @@ class MachineTargetService
     /**
      * @return array{state:int,msg:string,data:array<string,mixed>}
      */
-    public function detail(int $id, array $authWhere = []): array
+    public function detail(int $mId, array $authWhere = []): array
     {
-        $row = Db::name('machine_target_group')->where('id', $id)->find();
-        if (!$row) {
-            return ['state' => 100, 'msg' => '目标配置不存在', 'data' => []];
+        if ($mId <= 0) {
+            return ['state' => 100, 'msg' => 'm_id不能为空', 'data' => []];
         }
 
-        $mIds = $this->normalizeMachineIdInput((string) ($row['m_id'] ?? ''));
         $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
         if ($allowedMids === []) {
-            return ['state' => 100, 'msg' => '当前账号无权限查看该配置', 'data' => []];
+            return ['state' => 100, 'msg' => '当前账号无权限查看该设备', 'data' => []];
         }
-        $mIds = array_values(array_intersect($mIds, $allowedMids));
-        if ($mIds === []) {
-            return ['state' => 100, 'msg' => '当前账号无权限查看该配置', 'data' => []];
+        if (!in_array($mId, $allowedMids, true)) {
+            return ['state' => 100, 'msg' => '当前账号无权限查看该设备', 'data' => []];
         }
 
-        $months = $this->normalizeMonthList((string) ($row['months'] ?? ''));
-        $monthPriceRows = Db::name('machine_target_monthly')
-            ->where('target_group_id', intval($row['id'] ?? 0))
+        $currentMonth = date('Y-m');
+        $rows = Db::name('machine_target_monthly')
+            ->where('m_id', '=', $mId)
+            ->where('month', '>=', $currentMonth)
             ->field('month, IFNULL(MAX(target_amount),0) as target_amount')
             ->group('month')
+            ->order('month', 'asc')
             ->select()
             ->toArray();
 
-        $monthPriceMap = [];
-        foreach ($monthPriceRows as $item) {
-            $month = strval($item['month'] ?? '');
+        $machineRow = Db::name('machine')
+            ->where('m_id', '=', $mId)
+            ->field('machine_id,machine_name')
+            ->find();
+
+        $date = [];
+        $info = [];
+        foreach ($rows as $row) {
+            $month = strval($row['month'] ?? '');
             if ($month === '') {
                 continue;
             }
-            $monthPriceMap[$month] = round((float) ($item['target_amount'] ?? 0), 2);
-        }
 
-        $priceList = [];
-        foreach ($months as $month) {
-            if (isset($monthPriceMap[$month])) {
-                $priceList[] = $monthPriceMap[$month];
-                continue;
-            }
-            $priceList[] = round((float) ($row['target_amount'] ?? 0), 2);
-        }
-
-        $machineRows = [];
-        if ($mIds !== []) {
-            $machineRows = Db::name('machine')
-                ->whereIn('m_id', $mIds)
-                ->field('m_id,machine_id,machine_name')
-                ->order('m_id', 'desc')
-                ->select()
-                ->toArray();
+            $price = round((float) ($row['target_amount'] ?? 0), 2);
+            $date[] = $month;
+            $info[] = [
+                'date' => $month,
+                'price' => $price,
+            ];
         }
 
         return [
             'state' => 200,
             'msg' => '查询成功',
             'data' => [
-                'id' => intval($row['id'] ?? 0),
-                'm_id' => implode(',', $mIds),
-                'm_id_list' => $mIds,
-                'date' => implode(',', $months),
-                'months' => $months,
-                'price' => implode(',', array_map('strval', $priceList)),
-                'price_list' => $priceList,
-                'create_time' => intval($row['create_time'] ?? 0),
-                'machines' => $machineRows,
+                'm_id' => $mId,
+                'machine_id' => strval($machineRow['machine_id'] ?? ''),
+                'machine_name' => strval($machineRow['machine_name'] ?? ''),
+                'date' => $date,
+                'info' => $info,
             ],
         ];
     }
