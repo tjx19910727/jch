@@ -49,11 +49,6 @@ class MachineTargetService
      */
     protected function saveInternal(array $ctx, bool $isUpdate): array
     {
-        $targetPrice = round((float) ($ctx['price'] ?? 0), 2);
-        if ($targetPrice <= 0) {
-            return ['state' => 100, 'msg' => '目标金额必须大于0', 'data' => []];
-        }
-
         $mIds = $this->normalizeMachineIdInput($ctx['m_id'] ?? '');
         if ($mIds === []) {
             return ['state' => 100, 'msg' => '设备id不能为空', 'data' => []];
@@ -69,18 +64,21 @@ class MachineTargetService
             return ['state' => 100, 'msg' => '设备不在当前账号可操作范围内', 'data' => []];
         }
 
-        $monthParse = $this->parseMonthSelection($ctx['date'] ?? '', false);
-        if (($monthParse['state'] ?? 100) !== 200) {
-            return ['state' => 100, 'msg' => (string) ($monthParse['msg'] ?? '月份格式错误'), 'data' => []];
+        $monthPriceParse = $this->parseMonthPriceInput($ctx['date'] ?? '', $ctx['price'] ?? '');
+        if (($monthPriceParse['state'] ?? 100) !== 200) {
+            return ['state' => 100, 'msg' => (string) ($monthPriceParse['msg'] ?? '日期或金额格式错误'), 'data' => []];
         }
 
-        $months = $monthParse['months'] ?? [];
-        if (!is_array($months) || $months === []) {
-            return ['state' => 100, 'msg' => '月份不能为空', 'data' => []];
+        $months = is_array($monthPriceParse['months'] ?? null) ? $monthPriceParse['months'] : [];
+        $priceList = is_array($monthPriceParse['price_list'] ?? null) ? $monthPriceParse['price_list'] : [];
+        $monthPriceMap = is_array($monthPriceParse['month_price_map'] ?? null) ? $monthPriceParse['month_price_map'] : [];
+        $groupTargetAmount = round((float) array_sum($priceList), 2);
+
+        if ($months === [] || $priceList === [] || $monthPriceMap === []) {
+            return ['state' => 100, 'msg' => '日期或金额不能为空', 'data' => []];
         }
 
         sort($mIds);
-        sort($months);
 
         $groupId = max(0, intval($ctx['id'] ?? 0));
         Db::startTrans();
@@ -99,7 +97,7 @@ class MachineTargetService
                 Db::name('machine_target_group')->where('id', $groupId)->update([
                     'm_id' => implode(',', $mIds),
                     'months' => implode(',', $months),
-                    'target_amount' => $targetPrice,
+                    'target_amount' => $groupTargetAmount,
                     'create_time' => time(),
                 ]);
 
@@ -108,7 +106,7 @@ class MachineTargetService
                 $groupId = intval(Db::name('machine_target_group')->insertGetId([
                     'm_id' => implode(',', $mIds),
                     'months' => implode(',', $months),
-                    'target_amount' => $targetPrice,
+                    'target_amount' => $groupTargetAmount,
                     'create_time' => time(),
                 ]));
             }
@@ -116,6 +114,7 @@ class MachineTargetService
             $rows = [];
             foreach ($months as $month) {
                 $bounds = $this->monthBounds($month);
+                $monthPrice = round((float) ($monthPriceMap[$month] ?? 0), 2);
                 foreach ($mIds as $mid) {
                     $rows[] = [
                         'target_group_id' => $groupId,
@@ -123,7 +122,7 @@ class MachineTargetService
                         'month' => $month,
                         'start_time' => $bounds['start'],
                         'end_time' => $bounds['end'],
-                        'target_amount' => $targetPrice,
+                        'target_amount' => $monthPrice,
                     ];
                 }
             }
@@ -153,7 +152,9 @@ class MachineTargetService
                     'id' => $groupId,
                     'm_id' => implode(',', $mIds),
                     'months' => $months,
-                    'price' => $targetPrice,
+                    'date' => implode(',', $months),
+                    'price' => implode(',', array_map('strval', $priceList)),
+                    'price_list' => $priceList,
                     'rows' => count($rows),
                 ],
             ];
@@ -185,6 +186,31 @@ class MachineTargetService
         }
 
         $months = $this->normalizeMonthList((string) ($row['months'] ?? ''));
+        $monthPriceRows = Db::name('machine_target_monthly')
+            ->where('target_group_id', intval($row['id'] ?? 0))
+            ->field('month, IFNULL(MAX(target_amount),0) as target_amount')
+            ->group('month')
+            ->select()
+            ->toArray();
+
+        $monthPriceMap = [];
+        foreach ($monthPriceRows as $item) {
+            $month = strval($item['month'] ?? '');
+            if ($month === '') {
+                continue;
+            }
+            $monthPriceMap[$month] = round((float) ($item['target_amount'] ?? 0), 2);
+        }
+
+        $priceList = [];
+        foreach ($months as $month) {
+            if (isset($monthPriceMap[$month])) {
+                $priceList[] = $monthPriceMap[$month];
+                continue;
+            }
+            $priceList[] = round((float) ($row['target_amount'] ?? 0), 2);
+        }
+
         $machineRows = [];
         if ($mIds !== []) {
             $machineRows = Db::name('machine')
@@ -204,10 +230,132 @@ class MachineTargetService
                 'm_id_list' => $mIds,
                 'date' => implode(',', $months),
                 'months' => $months,
-                'price' => round((float) ($row['target_amount'] ?? 0), 2),
+                'price' => implode(',', array_map('strval', $priceList)),
+                'price_list' => $priceList,
                 'create_time' => intval($row['create_time'] ?? 0),
                 'machines' => $machineRows,
             ],
+        ];
+    }
+
+    /**
+     * @param mixed $rawDate
+     * @param mixed $rawPrice
+     * @return array<string,mixed>
+     */
+    protected function parseMonthPriceInput($rawDate, $rawPrice): array
+    {
+        $dateRaw = trim((string) $rawDate);
+        if ($dateRaw === '') {
+            return ['state' => 100, 'msg' => '日期不能为空'];
+        }
+
+        $months = [];
+        if (preg_match('/^\s*(\d{4}-(0[1-9]|1[0-2]))\s*[~～]\s*(\d{4}-(0[1-9]|1[0-2]))\s*$/', $dateRaw, $match)) {
+            $startMonth = $match[1];
+            $endMonth = $match[3];
+            if ($startMonth > $endMonth) {
+                $tmp = $startMonth;
+                $startMonth = $endMonth;
+                $endMonth = $tmp;
+            }
+
+            $cursor = $startMonth;
+            while ($cursor <= $endMonth) {
+                $months[] = $cursor;
+                $cursor = date('Y-m', strtotime($cursor . '-01 +1 month'));
+            }
+        } else {
+            $monthParts = preg_split('/[，,\s]+/', $dateRaw) ?: [];
+            $monthMap = [];
+            foreach ($monthParts as $month) {
+                $month = trim($month);
+                if ($month === '') {
+                    continue;
+                }
+                if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
+                    return ['state' => 100, 'msg' => '日期格式错误，示例：2026-05,2026-06'];
+                }
+                if (isset($monthMap[$month])) {
+                    return ['state' => 100, 'msg' => '日期中存在重复月份'];
+                }
+                $monthMap[$month] = $month;
+            }
+            $months = array_values($monthMap);
+        }
+        if ($months === []) {
+            return ['state' => 100, 'msg' => '日期不能为空'];
+        }
+
+        $priceRaw = trim((string) $rawPrice);
+        if ($priceRaw === '') {
+            return ['state' => 100, 'msg' => '目标金额不能为空'];
+        }
+
+        $priceParts = preg_split('/[，,\s]+/', $priceRaw) ?: [];
+        $prices = [];
+        foreach ($priceParts as $part) {
+            $part = trim($part);
+            if ($part === '') {
+                continue;
+            }
+            if (!is_numeric($part)) {
+                return ['state' => 100, 'msg' => '目标金额格式错误'];
+            }
+            $price = round((float) $part, 2);
+            if ($price <= 0) {
+                return ['state' => 100, 'msg' => '目标金额必须大于0'];
+            }
+            $prices[] = $price;
+        }
+
+        if ($prices === []) {
+            return ['state' => 100, 'msg' => '目标金额不能为空'];
+        }
+        if (count($months) !== count($prices)) {
+            return ['state' => 100, 'msg' => '日期数量与金额数量不一致'];
+        }
+
+        $pairs = [];
+        for ($i = 0; $i < count($months); $i++) {
+            $pairs[] = [
+                'month' => $months[$i],
+                'price' => $prices[$i],
+            ];
+        }
+
+        usort($pairs, function ($a, $b) {
+            $ma = strval($a['month'] ?? '');
+            $mb = strval($b['month'] ?? '');
+            if ($ma === $mb) {
+                return 0;
+            }
+            return $ma < $mb ? -1 : 1;
+        });
+
+        $sortedMonths = [];
+        $sortedPrices = [];
+        $monthPriceMap = [];
+        foreach ($pairs as $pair) {
+            $month = strval($pair['month'] ?? '');
+            $price = round((float) ($pair['price'] ?? 0), 2);
+            if ($month === '' || $price <= 0) {
+                continue;
+            }
+            $sortedMonths[] = $month;
+            $sortedPrices[] = $price;
+            $monthPriceMap[$month] = $price;
+        }
+
+        if ($sortedMonths === [] || $sortedPrices === [] || $monthPriceMap === []) {
+            return ['state' => 100, 'msg' => '日期或金额格式错误'];
+        }
+
+        return [
+            'state' => 200,
+            'months' => $sortedMonths,
+            'price_list' => $sortedPrices,
+            'month_price_map' => $monthPriceMap,
         ];
     }
 
