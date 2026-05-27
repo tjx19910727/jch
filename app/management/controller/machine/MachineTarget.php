@@ -8,6 +8,25 @@ use app\management\service\MachineTargetService;
 class MachineTarget extends Common
 {
     /**
+     * 目标配置列表（用于编辑入口）
+     */
+    public function configList()
+    {
+        $postData = input();
+        $ctx = [
+            'm_id' => $postData['m_id'] ?? '',
+            'date' => $postData['date'] ?? '',
+            'page' => $postData['page'] ?? 1,
+            'page_size' => $postData['page_size'] ?? 20,
+            'auth_where' => $this->getWhere([]),
+        ];
+
+        $svc = new MachineTargetService($this->app);
+        $res = $svc->configList($ctx);
+        return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '查询失败'), $res['data'] ?? []);
+    }
+
+    /**
      * 新增设备目标配置
      */
     public function add()

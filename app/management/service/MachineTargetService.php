@@ -44,6 +44,230 @@ class MachineTargetService
     }
 
     /**
+     * 目标配置列表（用于编辑入口）
+     * @param array{m_id?:mixed,date?:mixed,page?:mixed,page_size?:mixed,auth_where?:mixed} $ctx
+     * @return array{state:int,msg:string,data:array<string,mixed>}
+     */
+    public function configList(array $ctx): array
+    {
+        $page = intval($ctx['page'] ?? 1);
+        if ($page <= 0) {
+            $page = 1;
+        }
+        $pageSize = intval($ctx['page_size'] ?? 20);
+        if ($pageSize <= 0) {
+            $pageSize = 20;
+        }
+        if ($pageSize > 200) {
+            $pageSize = 200;
+        }
+
+        $authWhere = is_array($ctx['auth_where'] ?? null) ? $ctx['auth_where'] : [];
+        $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
+        if ($allowedMids === []) {
+            return [
+                'state' => 200,
+                'msg' => '查询成功',
+                'data' => [
+                    'list' => [],
+                    'total' => 0,
+                    'page' => $page,
+                    'page_size' => $pageSize,
+                ],
+            ];
+        }
+
+        $filterMids = $this->normalizeMachineIdInput($ctx['m_id'] ?? '');
+        if ($filterMids !== []) {
+            $filterMids = array_values(array_intersect($filterMids, $allowedMids));
+            if ($filterMids === []) {
+                return [
+                    'state' => 200,
+                    'msg' => '查询成功',
+                    'data' => [
+                        'list' => [],
+                        'total' => 0,
+                        'page' => $page,
+                        'page_size' => $pageSize,
+                    ],
+                ];
+            }
+        } else {
+            $filterMids = $allowedMids;
+        }
+
+        $monthFilter = [];
+        $dateRaw = trim((string) ($ctx['date'] ?? ''));
+        if ($dateRaw !== '') {
+            $monthParsed = $this->parseMonthSelection($dateRaw, false);
+            if (($monthParsed['state'] ?? 100) !== 200) {
+                return ['state' => 100, 'msg' => strval($monthParsed['msg'] ?? '日期格式错误'), 'data' => []];
+            }
+            $monthFilter = is_array($monthParsed['months'] ?? null) ? $monthParsed['months'] : [];
+        }
+
+        $idQuery = Db::name('machine_target_monthly')->alias('mt')
+            ->whereIn('mt.m_id', $filterMids)
+            ->field('mt.target_group_id')
+            ->group('mt.target_group_id');
+        if ($monthFilter !== []) {
+            $idQuery->whereIn('mt.month', $monthFilter);
+        }
+        $groupIds = $idQuery->column('mt.target_group_id');
+        $groupIds = array_values(array_unique(array_map('intval', is_array($groupIds) ? $groupIds : [])));
+
+        if ($groupIds === []) {
+            return [
+                'state' => 200,
+                'msg' => '查询成功',
+                'data' => [
+                    'list' => [],
+                    'total' => 0,
+                    'page' => $page,
+                    'page_size' => $pageSize,
+                ],
+            ];
+        }
+
+        $total = count($groupIds);
+        $rows = Db::name('machine_target_group')
+            ->whereIn('id', $groupIds)
+            ->order('id', 'desc')
+            ->page($page, $pageSize)
+            ->select()
+            ->toArray();
+
+        if ($rows === []) {
+            return [
+                'state' => 200,
+                'msg' => '查询成功',
+                'data' => [
+                    'list' => [],
+                    'total' => $total,
+                    'page' => $page,
+                    'page_size' => $pageSize,
+                ],
+            ];
+        }
+
+        $pageGroupIds = [];
+        $allMachineIds = [];
+        foreach ($rows as $row) {
+            $gid = intval($row['id'] ?? 0);
+            if ($gid > 0) {
+                $pageGroupIds[] = $gid;
+            }
+            $midList = $this->normalizeMachineIdInput((string) ($row['m_id'] ?? ''));
+            foreach ($midList as $mid) {
+                $allMachineIds[] = $mid;
+            }
+        }
+        $pageGroupIds = array_values(array_unique($pageGroupIds));
+        $allMachineIds = array_values(array_unique($allMachineIds));
+
+        $monthlyRows = [];
+        if ($pageGroupIds !== []) {
+            $monthlyRows = Db::name('machine_target_monthly')
+                ->whereIn('target_group_id', $pageGroupIds)
+                ->field('target_group_id,month,IFNULL(MAX(target_amount),0) as target_amount')
+                ->group('target_group_id,month')
+                ->select()
+                ->toArray();
+        }
+
+        $groupMonthPriceMap = [];
+        foreach ($monthlyRows as $item) {
+            $gid = intval($item['target_group_id'] ?? 0);
+            $month = strval($item['month'] ?? '');
+            if ($gid <= 0 || $month === '') {
+                continue;
+            }
+            if (!isset($groupMonthPriceMap[$gid])) {
+                $groupMonthPriceMap[$gid] = [];
+            }
+            $groupMonthPriceMap[$gid][$month] = round((float) ($item['target_amount'] ?? 0), 2);
+        }
+
+        $machineRows = [];
+        if ($allMachineIds !== []) {
+            $machineRows = Db::name('machine')
+                ->whereIn('m_id', $allMachineIds)
+                ->field('m_id,machine_id,machine_name')
+                ->select()
+                ->toArray();
+        }
+
+        $machineMap = [];
+        foreach ($machineRows as $item) {
+            $mid = intval($item['m_id'] ?? 0);
+            if ($mid <= 0) {
+                continue;
+            }
+            $machineMap[$mid] = [
+                'm_id' => $mid,
+                'machine_id' => strval($item['machine_id'] ?? ''),
+                'machine_name' => strval($item['machine_name'] ?? ''),
+                'label' => strval($item['machine_id'] ?? '') . ' ' . strval($item['machine_name'] ?? ''),
+            ];
+        }
+
+        $list = [];
+        foreach ($rows as $row) {
+            $gid = intval($row['id'] ?? 0);
+            if ($gid <= 0) {
+                continue;
+            }
+
+            $mIds = $this->normalizeMachineIdInput((string) ($row['m_id'] ?? ''));
+            $mIds = array_values(array_intersect($mIds, $allowedMids));
+            if ($mIds === []) {
+                continue;
+            }
+
+            $months = $this->normalizeMonthList((string) ($row['months'] ?? ''));
+            $priceMap = $groupMonthPriceMap[$gid] ?? [];
+            $priceList = [];
+            foreach ($months as $month) {
+                if (isset($priceMap[$month])) {
+                    $priceList[] = $priceMap[$month];
+                    continue;
+                }
+                $priceList[] = round((float) ($row['target_amount'] ?? 0), 2);
+            }
+
+            $machines = [];
+            foreach ($mIds as $mid) {
+                if (isset($machineMap[$mid])) {
+                    $machines[] = $machineMap[$mid];
+                }
+            }
+
+            $list[] = [
+                'id' => $gid,
+                'm_id' => implode(',', $mIds),
+                'm_id_list' => $mIds,
+                'machines' => $machines,
+                'date' => implode(',', $months),
+                'months' => $months,
+                'price' => implode(',', array_map('strval', $priceList)),
+                'price_list' => $priceList,
+                'create_time' => intval($row['create_time'] ?? 0),
+            ];
+        }
+
+        return [
+            'state' => 200,
+            'msg' => '查询成功',
+            'data' => [
+                'list' => $list,
+                'total' => $total,
+                'page' => $page,
+                'page_size' => $pageSize,
+            ],
+        ];
+    }
+
+    /**
      * @param array{id?:int,m_id:mixed,date:mixed,price:mixed} $ctx
      * @return array{state:int,msg:string,data:array<string,mixed>}
      */
@@ -689,7 +913,7 @@ class MachineTargetService
      */
     protected function resolveAuthorizedMachineIds(array $authWhere = []): array
     {
-        $query = Db::name('machine')->where('vending_machine_type', 1);
+        $query = Db::name('machine');
 
         foreach ($authWhere as $k => $v) {
             if (is_array($v) && isset($v[0], $v[1])) {
