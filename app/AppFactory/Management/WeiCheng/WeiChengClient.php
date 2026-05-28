@@ -501,7 +501,10 @@ class WeiChengClient extends ManagementClient
                             continue;
                         }
 
-                        if (!empty($item['daysInfo'])) {
+                        if (empty($item['daysInfo'])) {
+                            $days_price = $item['retail_price'] ?? 0;
+                            continue;
+                        } else {
                             $daysInfo = json_decode($item['daysInfo'], true);
                             if (is_array($daysInfo)) {
                                 foreach ($daysInfo as $day) {
