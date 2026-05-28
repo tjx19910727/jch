@@ -24,6 +24,7 @@ class VisualScreen extends Common
             'machinePage' => input('machinePage/d', 1),
             'machinePageSize' => input('machinePageSize/d', 128),
             'lastOrderId' => input('lastOrderId/d', 0),
+            'accountMachineScope' => $this->app->machine->resolvePermittedMachineIds(),
         ];
         $svc = new VisualScreenService($this->app);
         $data = $svc->buildSnapshot($ctx);
@@ -81,14 +82,24 @@ class VisualScreen extends Common
             $pageSizeRaw = $body['machinePageSize'];
         }
 
+        $onlineStatus = input('onlineStatus/s', '');
+        if ($onlineStatus === '' && array_key_exists('onlineStatus', $body)) {
+            $onlineStatus = (string) $body['onlineStatus'];
+        }
+        if ($onlineStatus === '') {
+            $onlineStatus = 'all';
+        }
+
         $ctx = [
             'regionType' => $regionType,
             'regionName' => $regionName,
             'page' => max(1, (int) ($pageRaw ?? 1)),
             'pageSize' => min(256, max(1, (int) ($pageSizeRaw ?? 15))),
+            'onlineStatus' => $onlineStatus,
+            'accountMachineScope' => $this->app->machine->resolvePermittedMachineIds(),
         ];
         $svc = new VisualScreenService($this->app);
-        $data = $svc->getMachineList($ctx); 
+        $data = $svc->getMachineList($ctx);
         return returnState(200, '查询成功', $data);
     }
 

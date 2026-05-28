@@ -194,6 +194,14 @@ class PaymentClient extends PayBaseClient
         if ($uOrder) {
             actionLog($this->getLS(), '修改订单支付状态信息');
             $func_name = $this->paymentType[$this->strategyPayee['payee_type']];
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+                'pay_type' => $this->order['pay_type'] ?? null,
+                'pay_method' => $this->order['pay_method'] ?? null,
+                'sp_id' => $this->order['sp_id'] ?? null,
+                'payee_type' => $this->strategyPayee['payee_type'] ?? null,
+                'dispatch_method' => $func_name,
+            ], '支付方法路由分派');
             $result = $this->$func_name();
             return $result;
         }

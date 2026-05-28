@@ -159,6 +159,10 @@ class MachineClient extends TimeTaskBase
         $nowSec = HourMinuteSec2int(date("H:i:s", $now));
         $slotStart = $today + intval(floor(($now - $today) / 7200)) * 7200;
         $slotEnd = min($slotStart + 7199, $today + 86399);
+        $recordDate = date("Y-m-d H:i:s", $today);
+        $collectTime = date("Y-m-d H:i:s", $now);
+        $slotStartTime = date("Y-m-d H:i:s", $slotStart);
+        $slotEndTime = date("Y-m-d H:i:s", $slotEnd);
 
         $where = [
             ['is_operating', '=', 1],
@@ -183,19 +187,19 @@ class MachineClient extends TimeTaskBase
                 'online' => $machine['online'],
                 'is_operating' => $machine['is_operating'],
                 'ckc_status' => $machine['ckc_status'] ?? 1,
-                'record_date' => $today,
-                'collect_time' => $now,
-                'slot_start_time' => $slotStart,
-                'slot_end_time' => $slotEnd,
-                'business_start_time' => $businessStart,
-                'business_end_time' => $businessEnd,
+                'record_date' => $recordDate,
+                'collect_time' => $collectTime,
+                'slot_start_time' => $slotStartTime,
+                'slot_end_time' => $slotEndTime,
+                'business_start_time' => date("Y-m-d H:i:s", $today + intval($businessStart)),
+                'business_end_time' => date("Y-m-d H:i:s", $today + intval($businessEnd)),
                 'ao_id' => $machine['ao_id'] ?? 0,
             ];
 
             $exists = $this->getMachineOnlineSnapshotFind([
                 'm_id' => $machine['m_id'],
-                'record_date' => $today,
-                'slot_start_time' => $slotStart,
+                'record_date' => $recordDate,
+                'slot_start_time' => $slotStartTime,
             ], 'mos_id');
             if ($exists) {
                 $saveData['mos_id'] = $exists['mos_id'];
@@ -292,12 +296,20 @@ class MachineClient extends TimeTaskBase
                         $flag[] = $this->updateMachineOnlineDetails($update);
                         actionLog($this->getLS(),'修改设备在线记录详情状态','checkOffline');
                     }
-                    $flag[] = $this->updateMachine([
+                    $upData = [
                         'm_id' => $value['m_id'],
                         'online' => 2,
-                        'http_online' => 2,
                         'sighKey' => "",
-                    ]);
+                    ];
+                    //查找machine_mq_record表是否有path等于/httpHeartbeat且时间在15分钟内的记录
+                    $mqCount = Db::name('machine_mq_record')
+                    ->where('m_id', $value['m_id'])
+                    ->where('path', '/httpHeartbeat')
+                    ->where('create_time', '>', time() - 900)->count();
+                    if(!$mqCount){
+                        $upData['http_online'] = 2;
+                    }
+                    $flag[] = $this->updateMachine($upData);
                     actionLog($this->getLS(),'修改设备在线状态','checkOffline');
 
                     /** 发送离线通知 开始 **/

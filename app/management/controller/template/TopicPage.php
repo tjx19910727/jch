@@ -37,6 +37,7 @@ class TopicPage extends Common
         $postData = input();
         try {
             $postData['status'] = $postData['status'] ?? 0;
+            $postData['is_service_phone'] = $postData['is_service_phone'] ?? 2;
             $this->validate($postData, $this->validatePath . 'add');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
