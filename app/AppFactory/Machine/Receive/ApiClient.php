@@ -856,6 +856,9 @@ class ApiClient extends ReceiveBaseClient
         if(!isset($data['is_operating'])){
             $data['is_operating'] = $this->getMachineValue(['m_id' => $this->machine['m_id']], 'is_operating');
         }
+        if(isset($data['limit_quantity'])){
+            $data['cart_num_limit'] = $data['limit_quantity'];
+        }
         return $this->rQ($data);
     }
 
