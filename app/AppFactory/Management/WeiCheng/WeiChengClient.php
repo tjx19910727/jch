@@ -481,7 +481,7 @@ class WeiChengClient extends ManagementClient
 
             if (!empty($v['goods_list'])) {
                 $need_pic = empty($v['pic']);
-                $need_price = empty($v['retail_price']);
+                $need_price = (float)($v['retail_price'] ?? 0) == 0;
                 $physical_total = 0;
                 $days_price = 0;
                 $today = date('Y-m-d');
@@ -506,13 +506,18 @@ class WeiChengClient extends ManagementClient
                             continue;
                         } else {
                             $daysInfo = json_decode($item['daysInfo'], true);
+                            $matched_today_price = false;
                             if (is_array($daysInfo)) {
                                 foreach ($daysInfo as $day) {
                                     if (isset($day['date']) && $day['date'] == $today) {
                                         $days_price = $day['price'] ?? 0;
+                                        $matched_today_price = true;
                                         break;
                                     }
                                 }
+                            }
+                            if (!$matched_today_price) {
+                                $days_price = $item['retail_price'] ?? 0;
                             }
                         }
                     }
