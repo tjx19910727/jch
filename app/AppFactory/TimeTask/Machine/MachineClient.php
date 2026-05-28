@@ -258,6 +258,7 @@ class MachineClient extends TimeTaskBase
     public function checkOffline()
     {
         $details = $this->getMachineOnlineDetailsList(['offline_time' => 0, ['heart_time', '<', time() - env("machine.timeout",60)]], 0, 'mod_id,m_id,machine_name,machine_id,online_time,d_date');
+        $httpFlag = [];
         if ($details) {
             $flag[] = 1;
             $this->startTrans();
@@ -305,7 +306,7 @@ class MachineClient extends TimeTaskBase
                     $mqCount = Db::name('machine_mq_record')
                     ->where('m_id', $value['m_id'])
                     ->where('path', '/httpHeartbeat')
-                    ->where('create_time', '>', time() - 900)->count();
+                    ->where('create_time', '>=', time() - 900)->count();
                     if(!$mqCount){
                         $upData['http_online'] = 2;
                     }
@@ -349,6 +350,33 @@ class MachineClient extends TimeTaskBase
                 actionLog($e->getTrace(), 'tryCatchTrace','checkOffline');
             }
         }
+
+        try {
+            $httpList = Db::name('machine')
+                ->where('online', 2)
+                ->where('http_online', '<>', 2)
+                ->field('m_id,machine_id,http_online')
+                ->select()
+                ->toArray();
+            foreach ($httpList as $item) {
+                $mqCount = Db::name('machine_mq_record')
+                    ->where('m_id', $item['m_id'])
+                    ->where('path', '/httpHeartbeat')
+                    ->where('create_time', '>=', time() - 900)
+                    ->count();
+                if (!$mqCount) {
+                    $httpFlag[] = $this->updateMachine([
+                        'm_id' => $item['m_id'],
+                        'http_online' => 2,
+                    ]);
+                }
+            }
+            actionLog($httpFlag, '补偿处理HTTP在线状态', 'checkOffline');
+        } catch (\Exception $e) {
+            actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(), 'httpCheckTryCatchMessage', 'checkOffline');
+            actionLog($e->getTrace(), 'httpCheckTryCatchTrace', 'checkOffline');
+        }
+
         return "处理成功";
     }
 
