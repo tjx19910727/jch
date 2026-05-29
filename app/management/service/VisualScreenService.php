@@ -403,7 +403,15 @@ class VisualScreenService
         $orderIncrementWhere[] = ['m_id', 'in', $operatingScopeForQuery];
 
         $chartWhere = [['m_id', 'in', $operatingScopeForQuery]];
-        $this->appendTimeRangeToWhere($chartWhere, $timeRange['start'], $timeRange['end']);
+        // 当入参 cycle 为 day 时，salesTrend 希望展示最近 7 天的数据（包含今日），
+        // 只调整用于图表查询的时间窗，不影响其它基于 $timeRange 的统计口径。
+        $chartTimeRange = $timeRange;
+        if ($this->normalizeCycleKeyword($cycle) === 'day') {
+            // 与 parseCycleRange('week') 保持一致，使用最近 7 天作为起始点
+            $chartTimeRange['start'] = strtotime('-7 days');
+            $chartTimeRange['end'] = time();
+        }
+        $this->appendTimeRangeToWhere($chartWhere, $chartTimeRange['start'], $chartTimeRange['end']);
 
         $saleData = $this->app->saleOrders->getData($queryWhere);
         $screenCounts = $this->buildMachineScreenCountsByMIds($dashboardScope);
@@ -504,9 +512,15 @@ class VisualScreenService
         }
         $saleDataWhere = ['pay_status' => 3];
         $saleDataWhere[] = ['m_id', 'in', $operatingScope];
-    $this->appendTimeRangeToWhere($saleDataWhere, $timeRange['start'], $timeRange['end']);
+        $this->appendTimeRangeToWhere($saleDataWhere, $timeRange['start'], $timeRange['end']);
         $chartWhere = [['m_id', 'in', $operatingScope]];
-    $this->appendTimeRangeToWhere($chartWhere, $timeRange['start'], $timeRange['end']);
+        // 当 cycle 为 day 时，希望 salesTrend 返回最近 7 天的点，因此单独扩展图表查询时间窗
+        $chartTimeRange = $timeRange;
+        if ($this->normalizeCycleKeyword($cycle) === 'day') {
+            $chartTimeRange['start'] = strtotime('-7 days');
+            $chartTimeRange['end'] = time();
+        }
+        $this->appendTimeRangeToWhere($chartWhere, $chartTimeRange['start'], $chartTimeRange['end']);
         $chartType = $this->cycleToChartType($cycle);
         $chartResp = $this->app->saleOrders->getChartData($chartWhere, $chartType);
         $chartPayload = is_array($chartResp) ? $chartResp : obj2arr($chartResp);

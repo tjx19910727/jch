@@ -3254,7 +3254,7 @@ class ApiClient extends ReceiveBaseClient
                 ->leftJoin('maintenance_items mi', 'mi.id = mr.item_id')
                 ->leftJoin('auth_manager am', 'am.manager_id = mr.maintainer_id')
                 ->where($where)
-                ->field("mr.id,mr.records_code,mr.item_id,mr.machine_id,mr.maintainer_id,mr.check_status,mr.maintenance_time,mr.notes,mr.created_at,mi.item_name,mi.description,mi.parent_id,mi.item_level,IFNULL(NULLIF(am.nickname,''), mr.maintainer_id) as nickname")
+                ->field("mr.id,mr.records_code,mr.item_id,mr.machine_id,mr.maintainer_id,mr.check_status,mr.maintenance_time,mr.notes,mr.created_at,mi.item_name,mi.description,mi.parent_id,mi.item_level,mi.cycle_days,IFNULL(NULLIF(am.nickname,''), mr.maintainer_id) as nickname")
                 ->order('mr.records_code desc,mr.id asc')
                 ->select()
                 ->toArray();
@@ -3269,8 +3269,18 @@ class ApiClient extends ReceiveBaseClient
                         'nickname' => $item['nickname'] ?? '',
                         'check_status' => $item['check_status'],
                         'maintenance_time' => $item['maintenance_time'],
+                        'next_maintenance_date' => '',
                         'records' => [],
                     ];
+                }
+                $cycleDays = intval($item['cycle_days'] ?? 0);
+                $maintainTime = $item['maintenance_time'] ?: $grouped[$code]['maintenance_time'];
+                $nextDate = '';
+                if ($cycleDays > 0 && $maintainTime) {
+                    $ts = is_numeric($maintainTime) ? intval($maintainTime) : strtotime((string)$maintainTime);
+                    if ($ts) {
+                        $nextDate = date('Y-m-d', strtotime('+' . $cycleDays . ' days', $ts));
+                    }
                 }
                 $grouped[$code]['records'][] = [
                     'id' => $item['id'],
@@ -3279,13 +3289,19 @@ class ApiClient extends ReceiveBaseClient
                     'description' => $item['description'] ?? '',
                     'parent_id' => $item['parent_id'],
                     'item_level' => $item['item_level'],
+                    'cycle_days' => $cycleDays,
                     'maintainer_id' => $item['maintainer_id'],
                     'nickname' => $item['nickname'] ?? '',
                     'check_status' => $item['check_status'],
                     'maintenance_time' => $item['maintenance_time'],
+                    'next_maintenance_date' => $nextDate,
                     'notes' => $item['notes'],
                     'created_at' => $item['created_at'],
                 ];
+                if ($nextDate !== '') {
+                    $prev = $grouped[$code]['next_maintenance_date'] ?? '';
+                    $grouped[$code]['next_maintenance_date'] = ($prev === '' || $nextDate < $prev) ? $nextDate : $prev;
+                }
             }
 
             $result = array_values($grouped);
