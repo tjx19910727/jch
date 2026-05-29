@@ -534,6 +534,7 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
+        $where = $this->formatAoIdWhereWithPrefix($where, 'so.');
         // 添加美驰图账号判断
         if ($this->manager['account'] != 'meichitu'){
             if (!isset($postData['m_id']) || !$postData['m_id']) {
@@ -557,7 +558,7 @@ class SaleOrders extends Common
         }
 
         $where['so.pay_status'] = 3;
-        // $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.ao_id ='.$this->manager['ao_id'];
+        //$where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
         actionLog($where,'查询条件');
         return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20);
     }
@@ -571,12 +572,13 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
+        $where = $this->formatAoIdWhereWithPrefix($where, 'so.');
         if ($this->manager['pid'] > 0) {
             $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
         $where['so.pay_status'] = 3;
-        $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.ao_id ='.$this->manager['ao_id'];
+        $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
         return $this->app->saleOrders->exportSaleDataCollect($where);
     }
 
