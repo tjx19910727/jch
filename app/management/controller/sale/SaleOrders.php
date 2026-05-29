@@ -413,6 +413,7 @@ class SaleOrders extends Common
         sum(totalRefundAmount) totalRefundAmount,
         SUM(totalRefundQuantity) totalRefundQuantity,
         SUM(totalPrice) totalPrice,
+    SUM(totalPrice - totalRefundAmount) totalSalePrice,
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(totalQuantity) totalQuantity,
         SUM(giftQuantity) giftQuantity,
