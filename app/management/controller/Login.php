@@ -111,7 +111,7 @@ class Login extends BaseController
     public function getWxLoginUrlV2()
     {
         $postData = input();
-        return AppFactory::management()->login->getWxLoginUrlV2($postData);
+        return AppFactory::management()->login->getWxLoginUrlAdmin($postData);
     }
 
     /**
