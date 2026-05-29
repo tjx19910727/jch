@@ -497,7 +497,7 @@ class WeiChengClient extends ManagementClient
                     // 价格处理：外层 retail_price 为 0 时计算（实物累加 + 当日 daysInfo）
                     if ($need_price) {
                         if (!$is_virtual) {
-                            $physical_total += $item['retail_price'] ?? 0;
+                            $physical_total = bcadd($physical_total, $item['retail_price'] ?? 0, 2);
                             continue;
                         }
 
@@ -524,7 +524,8 @@ class WeiChengClient extends ManagementClient
                 }
 
                 if ($need_price) {
-                    $v['retail_price'] = $physical_total + $days_price;
+                    $v['retail_price'] = bcadd($physical_total, $days_price, 2);
+                    $v['retail_price'] = round($v['retail_price'], 2);
                 }
             }
         }
