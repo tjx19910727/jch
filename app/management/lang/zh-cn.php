@@ -754,6 +754,13 @@ return [
         "data_assigned" => "主题已分配设备，不能删除",
         "data_invalid" => "设备数据异常，存在无效m_id",
         "data_assign_fail" => "分配设备失败",
-        "title_require" => "主题标题不能为空"
+        "title_require" => "主题标题不能为空",
+        "claim_goods_title_require" => "取货页文案不能为空",
+        "out_goods_title_require" => "出货页文案不能为空",
+        "deal_success_title_require" => "交易成功标题不能为空",
+        "deal_success_sub_title_require" => "交易成功副标题不能为空",
+        "deal_abnormal_pic_require" => "交易异常图片不能为空",
+        "deal_fail_title_require" => "交易失败标题不能为空",
+        "deal_fail_sub_title_require" => "交易失败副标题不能为空",
     ],
 ]; 

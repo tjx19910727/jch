@@ -502,8 +502,6 @@ class SaleOrdersClient extends ManagementClient
     public function exportSo($where, $hasCostPriceAuth = false)
     {
         $mIds = [];
-        $payTypeCase = $this->buildPayTypeCaseSql('pay_type');
-        $soPayTypeCase = $this->buildPayTypeCaseSql('so.pay_type');
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
@@ -548,7 +546,16 @@ class SaleOrdersClient extends ManagementClient
                         "未取商品"
                     END
                 ) refund_status,
-                ' . $payTypeCase . ' pay_type,
+                (CASE pay_type 
+                WHEN 1 THEN "微信支付" 
+                WHEN 2 THEN "支付宝支付" 
+                WHEN 3 THEN "" 
+                WHEN 4 THEN "京东收银" 
+                WHEN 5 THEN "会员支付" 
+                WHEN 6 THEN "丽呈线上支付" 
+                WHEN 7 THEN "机器人线上支付" 
+                WHEN 8 THEN "八达通COGOLINK" 
+                WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
                 FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time';
         if ($hasCostPriceAuth) $field .= ',cost_price';
@@ -604,21 +611,30 @@ class SaleOrdersClient extends ManagementClient
                     END
                 ) order_type,
                 IFNULL(NULLIF(so.pay_channel_name,""),(CASE so.pay_channel
-                    WHEN 1 THEN "微程小程序订单"
-                    WHEN 2 THEN "机械车小程序订单"
-                    WHEN 3 THEN "售卖机会员积分订单"
-                    WHEN 4 THEN "商场积分订单"
-                    WHEN 5 THEN "取货码订单"
-                    WHEN 6 THEN "余额支付订单"
-                    WHEN 7 THEN "微信支付"
-                    WHEN 8 THEN "支付宝支付"
-                    WHEN 9 THEN "POS/刷卡支付"
-                    WHEN 10 THEN "现金支付"
-                    WHEN 11 THEN "其他"
-                    ELSE "其他" END)) pay_channel,
-                ' . $soPayTypeCase . ' pay_type,
+                WHEN 1 THEN "微程小程序订单"
+                WHEN 2 THEN "机械车小程序订单"
+                WHEN 3 THEN "售卖机会员积分订单"
+                WHEN 4 THEN "商场积分订单"
+                WHEN 5 THEN "取货码订单"
+                WHEN 6 THEN "余额支付订单"
+                WHEN 7 THEN "微信支付"
+                WHEN 8 THEN "支付宝支付"
+                WHEN 9 THEN "POS/刷卡支付"
+                WHEN 10 THEN "现金支付"
+                WHEN 11 THEN "其他"
+                ELSE "其他" END)) pay_channel,
+                (CASE pay_type 
+                WHEN 1 THEN "微信支付" 
+                WHEN 2 THEN "支付宝支付" 
+                WHEN 3 THEN "" 
+                WHEN 4 THEN "京东收银" 
+                WHEN 5 THEN "会员支付" 
+                WHEN 6 THEN "丽呈线上支付" 
+                WHEN 7 THEN "机器人线上支付" 
+                WHEN 8 THEN "八达通COGOLINK" 
+                WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time';
-            if ($hasCostPriceAuth) $refundField .= ',so.cost_price';
+			if ($hasCostPriceAuth) $refundField .= ',so.cost_price';
             $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, $refundField, 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
             $title = [
@@ -657,8 +673,6 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportGoodsSo($where, $hasCostPriceAuth = false)
     {
-        $soPayTypeCase = $this->buildPayTypeCaseSql('so.pay_type');
-        $soPayMethodCase = $this->buildPayMethodCaseSql('so.pay_method');
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
@@ -687,8 +701,22 @@ class SaleOrdersClient extends ManagementClient
             WHEN 10 THEN '现金支付'
             WHEN 11 THEN '其他'
             ELSE '其他' END)) pay_channel,
-            {$soPayTypeCase} pay_type,
-            {$soPayMethodCase} pay_method,
+            (CASE so.pay_type 
+            WHEN 0 THEN '免支付' 
+            WHEN 1 THEN '微信' 
+            WHEN 2 THEN '支付宝'
+            WHEN 4 THEN '京东收银'
+            WHEN 5 THEN '会员支付'
+            WHEN 6 THEN '丽呈线上支付'
+            WHEN 7 THEN '机器人线上支付'
+            WHEN 8 THEN '八达通COGOLINK'
+            ELSE '' END) pay_type,
+            (CASE so.pay_method 
+            WHEN 0 THEN '免支付' 
+            WHEN 1 THEN '扫码支付' 
+            WHEN 41 THEN '扫码支付' 
+            WHEN 2 THEN '被扫支付'
+            ELSE '' END) pay_method,
             
             (CASE out_status 
                 WHEN 1 THEN 
@@ -741,8 +769,22 @@ class SaleOrdersClient extends ManagementClient
                         WHEN 10 THEN '现金支付'
                         WHEN 11 THEN '其他'
                         ELSE '其他' END)) pay_channel,
-                        {$soPayTypeCase} pay_type,
-                        {$soPayMethodCase} pay_method,
+                        (CASE so.pay_type 
+                        WHEN 0 THEN '免支付' 
+                        WHEN 1 THEN '微信' 
+                        WHEN 2 THEN '支付宝'
+                        WHEN 4 THEN '京东收银'
+                        WHEN 5 THEN '会员支付'
+                        WHEN 6 THEN '丽呈线上支付'
+                        WHEN 7 THEN '机器人线上支付'
+                        WHEN 8 THEN '八达通COGOLINK'
+                        ELSE '' END) pay_type,
+                        (CASE so.pay_method 
+                        WHEN 0 THEN '免支付' 
+                        WHEN 1 THEN '扫码支付' 
+                        WHEN 41 THEN '扫码支付' 
+                        WHEN 2 THEN '被扫支付'
+                        ELSE '' END) pay_method,
                         ('已退款') order_status,
                         FROM_UNIXTIME(sor.update_time,'%Y-%m-%d %H:%i:%s') pay_time,
                         FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
@@ -753,7 +795,6 @@ class SaleOrdersClient extends ManagementClient
                 $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
                     $refundField);
                 if ($refund) $list = array_merge($list, $refund->toArray());
-        $list = $this->normalizeUtf8Recursive($list);
                 $title = [
                     "machine_id" => "设备编号",
                     "machine_name" => "设备名称",

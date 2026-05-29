@@ -159,6 +159,10 @@ class MachineClient extends TimeTaskBase
         $nowSec = HourMinuteSec2int(date("H:i:s", $now));
         $slotStart = $today + intval(floor(($now - $today) / 7200)) * 7200;
         $slotEnd = min($slotStart + 7199, $today + 86399);
+        $recordDate = date("Y-m-d H:i:s", $today);
+        $collectTime = date("Y-m-d H:i:s", $now);
+        $slotStartTime = date("Y-m-d H:i:s", $slotStart);
+        $slotEndTime = date("Y-m-d H:i:s", $slotEnd);
 
         $where = [
             ['is_operating', '=', 1],
@@ -183,19 +187,19 @@ class MachineClient extends TimeTaskBase
                 'online' => $machine['online'],
                 'is_operating' => $machine['is_operating'],
                 'ckc_status' => $machine['ckc_status'] ?? 1,
-                'record_date' => $today,
-                'collect_time' => $now,
-                'slot_start_time' => $slotStart,
-                'slot_end_time' => $slotEnd,
-                'business_start_time' => $businessStart,
-                'business_end_time' => $businessEnd,
+                'record_date' => $recordDate,
+                'collect_time' => $collectTime,
+                'slot_start_time' => $slotStartTime,
+                'slot_end_time' => $slotEndTime,
+                'business_start_time' => date("Y-m-d H:i:s", $today + intval($businessStart)),
+                'business_end_time' => date("Y-m-d H:i:s", $today + intval($businessEnd)),
                 'ao_id' => $machine['ao_id'] ?? 0,
             ];
 
             $exists = $this->getMachineOnlineSnapshotFind([
                 'm_id' => $machine['m_id'],
-                'record_date' => $today,
-                'slot_start_time' => $slotStart,
+                'record_date' => $recordDate,
+                'slot_start_time' => $slotStartTime,
             ], 'mos_id');
             if ($exists) {
                 $saveData['mos_id'] = $exists['mos_id'];
@@ -408,8 +412,8 @@ class MachineClient extends TimeTaskBase
             $today = date('Y-m-d');
             $todayKey = date('Ymd');
             $ttl = strtotime(date('Y-m-d 23:59:59', $now)) - $now;//当前时间距离当天结束的秒数，用于设置缓存过期时间
-            $intervals = [300, 900, 1800, 3600, 7200];// 阶梯秒数：5、15、30、60、120分钟
-            $firstInterval = intval($intervals[0] ?? 300);
+            $intervals = [480, 900, 1800, 3600, 7200];// 阶梯秒数：8、15、30、60、120分钟
+            $firstInterval = intval($intervals[0] ?? 480);
             // 每天22:00-次日06:00跳过，不执行查库
             if ($hour >= 22 || $hour < 6) {
                 actionLog(date('Y-m-d H:i:s', $now), '静默时段跳过未开机巡检', 'checkOperatingStartup');
@@ -423,11 +427,12 @@ class MachineClient extends TimeTaskBase
             $title = '';
             if (env('CglPay.is_test')) {
                 // 测试环境仅查询特定设备，方便测试验证
-                $query = $query->where('m.machine_id', 'JCHM-H2D-0064')->where('m.online', 2);
+                $query = $query->where('m.machine_id', 'JCHM-H2D-0064')->where('m.online', 2)->where('m.http_online', 2);
                 $title = '测试';
             }else{
                 //只查询最近的2天有在线记录的设备，避免查询历史数据较多的设备，影响巡检效率
                 $query = $query->where('m.online', 2)
+                    ->where('m.http_online', 2)
                     ->where('m.is_operating', 1)
                     ->where('m.last_online_time', '>', strtotime('-2 day'))
                     ->whereNotNull('moo.on_off_machine')
@@ -436,7 +441,7 @@ class MachineClient extends TimeTaskBase
                     ->where('moo.status', 1);
             }
             $list = $query
-                    ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.last_online_time,m.ao_id,moo.on_off_machine')
+                    ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.last_online_time,m.ao_id,moo.on_off_machine')
                     ->order('m.m_id desc')
                     ->select();
             if(count($list) == 0){
@@ -484,7 +489,7 @@ class MachineClient extends TimeTaskBase
                     ], '无效营业时间配置(不支持跨天)，跳过巡检', 'checkOperatingStartup');
                     continue;
                 }
-                // 仅在开机窗口内进行检查，且开机后5分钟内不告警
+                // 仅在开机窗口内进行检查，且开机后8分钟内不告警
                 if ($now < $startupTimestamp || $now > $shutdownTimestamp) {
                     continue;
                 }
@@ -512,7 +517,7 @@ class MachineClient extends TimeTaskBase
                 $item['error_code'] = '在营设备未开机'.$title;
                 $item['error_time'] = date('Y-m-d H:i:s');
                 $item['error_info'] = 11102011; // 在营设备未开机
-                $item['machine_name'] = $item['machine_id'];
+                $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
 
                 $this->noticeSendData = [
                     "ao_id" => $item['ao_id'],

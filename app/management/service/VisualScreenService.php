@@ -22,6 +22,170 @@ class VisualScreenService
         $this->manager = $app->getConfig();
     }
 
+    // /**
+    //  * 归纳 getWhere / getList 权限规则，支持“全账号查询规则 + 指定账号测算结果”
+    //  *
+    //  * 说明：
+    //  * - getWhere 指 `app/management/controller/Common.php::getWhere` 及其 `authNodeWhere`
+    //  * - getList 指 `app/management/controller/machine/Machine.php::getList`
+    //  *   到 `app/AppFactory/Management/Machine/MachineClient.php::getMList` 的权限链路
+    //  *
+    //  * @param array|null $managerContext 可传入任意账号上下文（manager_id/pid/ao_id/level）进行规则测算
+    //  * @return array<string,mixed>
+    //  */
+    // public function summarizeGetWhereAndGetListAuthRules(?array $managerContext = null): array
+    // {
+    //     $ctx = is_array($managerContext) ? $managerContext : $this->manager;
+    //     $pid = (int) ($ctx['pid'] ?? 0);
+    //     $aoId = (int) ($ctx['ao_id'] ?? 0);
+    //     $managerId = (int) ($ctx['manager_id'] ?? 0);
+    //     $level = (int) ($ctx['level'] ?? 0);
+
+    //     $permittedMachineIds = $this->resolvePermittedMachineIdsByManagerContext($ctx);
+    //     $isSuperLike = ($aoId === 0 || $aoId === 1);
+
+    //     return [
+    //         'scope' => 'all_accounts_query_rule',
+    //         'accountQueryRule' => [
+    //             'table' => 'auth_manager',
+    //             'alias' => 'am',
+    //             'suggestedWhere' => [
+    //                 ['am.is_del', '=', 2],
+    //             ],
+    //             'requiredFields' => ['manager_id', 'pid', 'ao_id', 'level'],
+    //             'description' => '先按账号表批量拉取账号上下文（manager_id/pid/ao_id/level），再套用本方法规则计算每个账号权限范围。',
+    //         ],
+    //         'managerContext' => [
+    //             'managerId' => $managerId,
+    //             'pid' => $pid,
+    //             'aoId' => $aoId,
+    //             'level' => $level,
+    //             'isSuperLikeAo' => $isSuperLike,
+    //         ],
+    //         'getWhereAuthRules' => [
+    //             [
+    //                 'rule' => '统一入口追加数据权限',
+    //                 'source' => 'Common::getWhere -> authNodeWhere',
+    //                 'detail' => '所有通过 getWhere 组装的 where，最终都会进入 authNodeWhere 进行数据权限补充。',
+    //             ],
+    //             [
+    //                 'rule' => '按菜单 data_auth + d_type 生效',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => '仅当 currentMenu.data_auth=1 且 d_type>0 时，才追加数据权限过滤。',
+    //             ],
+    //             [
+    //                 'rule' => 'd_type=2 按部门过滤',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => '非通用 API 时附加 ao_id=当前账号 ao_id。',
+    //             ],
+    //             [
+    //                 'rule' => 'd_type>=3 按账号范围过滤',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => '通过节点配置字段（getAuthDataFieldByUrl）追加 [field in 可见账号ID]；d_type=5 仅直接下级。',
+    //             ],
+    //             [
+    //                 'rule' => '组织树特殊规则',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => '顶级组织查询 /management/auth.auth_organization/getList 时改为 ao_id in 子组织集合。',
+    //             ],
+    //             [
+    //                 'rule' => '超管组织豁免 ao_id',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => 'ao_id 为 0 或 1 时，移除 where 中 ao_id 限制。',
+    //             ],
+    //             [
+    //                 'rule' => '销售订单列表特判',
+    //                 'source' => 'Common::authNodeWhere',
+    //                 'detail' => '当 ao_id>18 且 level=3 且 URL=/management/sale.sale_orders/getList，按子组织 ao_id in 过滤。',
+    //             ],
+    //             [
+    //                 'rule' => 'meichitu 账号专项处理',
+    //                 'source' => 'management/machine.machine/getList -> MachineClient::getMList',
+    //                 'detail' => "当 \$this->manager['account'] == 'meichitu' 时，设备口径按 management/machine.machine/getList 处理：先走 getWhere 条件，再追加 vending_machine_type=1，并在 getMList 内按 resolvePermittedMachineIds 收敛（auth_manager_machine 绑定设备 + creator 自建设备；pid<=0 不限制）。",
+    //             ],
+    //         ],
+    //         'getListAuthRules' => [
+    //             [
+    //                 'rule' => '设备列表固定只查主柜',
+    //                 'source' => 'Machine::getList',
+    //                 'detail' => '追加条件 vending_machine_type = 1。',
+    //             ],
+    //             [
+    //                 'rule' => '设备分组前置过滤',
+    //                 'source' => 'Machine::getList',
+    //                 'detail' => '传 machine_group_id 时先换算 machine_id 集合，再追加 machine_id in (...)。',
+    //             ],
+    //             [
+    //                 'rule' => 'getWhere 基础权限先执行',
+    //                 'source' => 'Machine::getList',
+    //                 'detail' => '列表 where 由 getWhere 生成，先带上 authNodeWhere 的数据权限规则。',
+    //             ],
+    //             [
+    //                 'rule' => '账号设备范围二次收敛',
+    //                 'source' => 'MachineClient::getMList',
+    //                 'detail' => '非顶级账号(pid>0)仅可见 auth_manager_machine 绑定设备 + 自己创建设备（m_id in permitted）。',
+    //             ],
+    //         ],
+    //         'permittedMachineQueryRule' => [
+    //             'steps' => [
+    //                 [
+    //                     'step' => 1,
+    //                     'when' => 'pid > 0',
+    //                     'query' => 'SELECT m_id FROM auth_manager_machine WHERE manager_id = :manager_id',
+    //                 ],
+    //                 [
+    //                     'step' => 2,
+    //                     'when' => 'pid > 0',
+    //                     'query' => 'SELECT m_id FROM machine WHERE creator = :manager_id',
+    //                 ],
+    //                 [
+    //                     'step' => 3,
+    //                     'when' => 'pid > 0',
+    //                     'query' => '并集去重后得到 permitted m_id；pid <= 0 则返回 null（不限制）',
+    //                 ],
+    //             ],
+    //         ],
+    //         'effectiveResultForCurrentAccount' => [
+    //             'machineScopeType' => $permittedMachineIds === null ? 'unrestricted' : 'restricted',
+    //             'permittedMachineCount' => is_array($permittedMachineIds) ? count($permittedMachineIds) : null,
+    //             'permittedMachineSample' => is_array($permittedMachineIds) ? array_slice(array_values($permittedMachineIds), 0, 20) : null,
+    //         ],
+    //     ];
+    // }
+
+    // /**
+    //  * 按账号上下文模拟 MachineClient::resolvePermittedMachineIds 的规则
+    //  *
+    //  * @param array $ctx
+    //  * @return int[]|null
+    //  */
+    // protected function resolvePermittedMachineIdsByManagerContext(array $ctx): ?array
+    // {
+    //     $account = (string) ($ctx['account'] ?? '');
+    //     if ($account === 'meichitu') {
+    //         $mIds = Db::name('machine_channel')->alias('mc')
+    //             ->join('goods g', 'mc.g_id = g.g_id')
+    //             ->where('g.gc_name', 'like', '%美驰图%')
+    //             ->distinct(true)
+    //             ->column('mc.m_id');
+    //         return array_values(array_unique(array_map('intval', is_array($mIds) ? $mIds : [])));
+    //     }
+
+    //     $pid = (int) ($ctx['pid'] ?? 0);
+    //     $managerId = (int) ($ctx['manager_id'] ?? 0);
+    //     if ($pid <= 0 || $managerId <= 0) {
+    //         return null;
+    //     }
+
+    //     $bindMids = Db::name('auth_manager_machine')->where('manager_id', $managerId)->column('m_id');
+    //     $createMids = Db::name('machine')->where('creator', $managerId)->column('m_id');
+
+    //     return array_values(array_unique(array_map('intval', array_merge(
+    //         is_array($bindMids) ? $bindMids : [],
+    //         is_array($createMids) ? $createMids : []
+    //     ))));
+    // }
+
     /**
      * 省份视图下有效 m_id 列表；null 表示不按省份追加 m_id（仍走各 Client 内账号设备权限）
      * @return int[]|null
@@ -35,6 +199,120 @@ class VisualScreenService
 
         $provMids = $this->queryProvinceMIds($regionName);
         return array_values(array_unique(array_map('intval', $provMids)));
+    }
+
+    /**
+     * 统一在营设备作用域（主柜 + is_operating=1）
+     * @param int[]|null $mScope
+     * @return int[]
+     */
+    protected function resolveOperatingMachineIds(?array $mScope, ?array $accountScope = null): array
+    {
+        if ($accountScope === null) {
+            $accountScope = $this->resolveAccountMachineScope();
+        }
+        $finalScope = $this->intersectMachineScopes($mScope, $accountScope);
+
+        $q = Db::name('machine')
+            ->where('vending_machine_type', 1)
+            ->where('is_operating', 1);
+        if ($finalScope !== null) {
+            if ($finalScope === []) {
+                return [];
+            }
+            $q->whereIn('m_id', $finalScope);
+        }
+        $mids = $q->column('m_id');
+        return array_values(array_unique(array_map('intval', is_array($mids) ? $mids : [])));
+    }
+
+    /**
+     * 设备总览统计范围（主柜，不限定在营）
+     * 口径：先按 resolvePermittedMachineIdsByManagerContext 取账号可见设备，再叠加区域 mScope
+     *
+     * @param int[]|null $mScope
+     * @return int[]
+     */
+    protected function resolveDashboardMachineIds(?array $mScope, ?array $accountScope = null): array
+    {
+        if ($accountScope === null) {
+            $accountScope = $this->resolveAccountMachineScope();
+        }
+        $finalScope = $this->intersectMachineScopes($mScope, $accountScope);
+
+        $q = Db::name('machine')->where('vending_machine_type', 1);
+        if ($finalScope !== null) {
+            if ($finalScope === []) {
+                return [];
+            }
+            $q->whereIn('m_id', $finalScope);
+        }
+        $mids = $q->column('m_id');
+        return array_values(array_unique(array_map('intval', is_array($mids) ? $mids : [])));
+    }
+
+    /**
+     * 按指定 m_id 列表统计设备总览
+     * 口径：total 为 m_ids 数量；operating/inStock/online/offline 在该 m_ids 内统计
+     *
+     * @param int[] $mIds
+     * @return array{total:int,operating:int,inStock:int,online:int,offline:int}
+     */
+    protected function buildMachineScreenCountsByMIds(array $mIds): array
+    {
+        $mIds = array_values(array_unique(array_map('intval', $mIds)));
+        if ($mIds === []) {
+            return ['total' => 0, 'operating' => 0, 'inStock' => 0, 'online' => 0, 'offline' => 0];
+        }
+
+        $row = Db::name('machine')
+            ->whereIn('m_id', $mIds)
+            ->fieldRaw(
+                'SUM(CASE WHEN IFNULL(is_operating,0) = 1 THEN 1 ELSE 0 END) AS operating'
+                . ', SUM(CASE WHEN IFNULL(is_operating,0) = 2 THEN 1 ELSE 0 END) AS in_stock'
+                . ', SUM(CASE WHEN IFNULL(online,0) = 1 THEN 1 ELSE 0 END) AS online'
+                . ', SUM(CASE WHEN IFNULL(online,0) = 2 THEN 1 ELSE 0 END) AS offline'
+            )
+            ->find();
+
+        $a = is_array($row) ? $row : (is_object($row) ? $row->toArray() : []);
+        return [
+            'total' => count($mIds),
+            'operating' => (int) ($a['operating'] ?? 0),
+            'inStock' => (int) ($a['in_stock'] ?? 0),
+            'online' => (int) ($a['online'] ?? 0),
+            'offline' => (int) ($a['offline'] ?? 0),
+        ];
+    }
+
+    /**
+     * 账号维度设备范围（与 Machine::getList -> getMList 一致）
+     * 返回 null 表示不限制；[] 表示无权限设备
+     * @return int[]|null
+     */
+    protected function resolveAccountMachineScope(): ?array
+    {
+        return $this->app->machine->resolvePermittedMachineIds();
+    }
+
+    /**
+     * 设备范围交集：null 表示不限制
+     * @param int[]|null $a
+     * @param int[]|null $b
+     * @return int[]|null
+     */
+    protected function intersectMachineScopes(?array $a, ?array $b): ?array
+    {
+        if ($a === null) {
+            return $b;
+        }
+        if ($b === null) {
+            return $a;
+        }
+        return array_values(array_intersect(
+            array_values(array_unique(array_map('intval', $a))),
+            array_values(array_unique(array_map('intval', $b)))
+        ));
     }
 
     /**
@@ -87,36 +365,63 @@ class VisualScreenService
      */
     public function buildSnapshot(array $ctx): array
     {
+        
         $regionType = $ctx['regionType'] ?? 'national';
         $regionName = trim((string) ($ctx['regionName'] ?? ''));
-        $cycle = $ctx['cycle'] ?? 'day';
+        $cycle = trim((string) ($ctx['cycle'] ?? 'day'));
+        if ($cycle === '') {
+            $cycle = 'day';
+        }
         $page = max(1, (int) ($ctx['machinePage'] ?? 1));
         $pageSize = min(256, max(1, (int) ($ctx['machinePageSize'] ?? 128)));
-    $lastOrderId = max(0, (int) ($ctx['lastOrderId'] ?? 0));
+        $lastOrderId = max(0, (int) ($ctx['lastOrderId'] ?? 0));
+        $timeRange = $this->parseCycleRange($cycle);
 
+        $accountScope = $ctx['accountMachineScope'] ?? null;
+        if ($accountScope === null) {
+            // 第一步：先按 management/machine.machine/getList 口径取当前账号可见设备
+            $accountScope = $this->resolveAccountMachineScope();
+        }
+
+        $authRuleSummary = [];
+        // 第二步：再叠加 regionType / regionName 选择范围
         $mScope = $this->effectiveMachineIds($regionType, $regionName);
-        if (is_array($mScope) && $mScope === []) {
-            return $this->emptySnapshot($regionType, $regionName, $cycle, $page, $pageSize);
+        $dashboardScope = $this->resolveDashboardMachineIds($mScope, $accountScope);
+        if ($dashboardScope === []) {
+            return $this->emptySnapshot($regionType, $regionName, $cycle, $page, $pageSize, $authRuleSummary);
         }
+        $operatingScope = $this->resolveOperatingMachineIds($mScope, $accountScope);
+        $operatingScopeForQuery = $operatingScope === [] ? [0] : $operatingScope;
 
-        $saleDataWhere = ['pay_status' => 3];
-        if ($mScope !== null) {
-            $saleDataWhere[] = ['m_id', 'in', $mScope];
-        }
-        $chartWhere = [];
-        if ($mScope !== null) {
-            $chartWhere[] = ['m_id', 'in', $mScope];
-        }
+        // 第三步：按 cycle 追加时间条件，并统一用于后续业务查询
+        $queryWhere = ['pay_status' => 3];
+        $queryWhere[] = ['m_id', 'in', $operatingScopeForQuery];
+        $this->appendTimeRangeToWhere($queryWhere, $timeRange['start'], $timeRange['end']);
 
-        $saleData = $this->app->saleOrders->getData($saleDataWhere);
-        $screenCounts = $this->buildMachineScreenCounts($mScope);
-        $cargo = $this->app->machineChannel->getDataV2();
+        // 纯实时增量口径：不受 cycle 时间窗限制，仅保留设备范围与支付状态
+        $orderIncrementWhere = ['pay_status' => 3];
+        $orderIncrementWhere[] = ['m_id', 'in', $operatingScopeForQuery];
+
+        $chartWhere = [['m_id', 'in', $operatingScopeForQuery]];
+        $this->appendTimeRangeToWhere($chartWhere, $timeRange['start'], $timeRange['end']);
+
+        $saleData = $this->app->saleOrders->getData($queryWhere);
+        $screenCounts = $this->buildMachineScreenCountsByMIds($dashboardScope);
+        $cargo = $this->app->machineChannel->getDataV2ByMIds($operatingScopeForQuery);
 
         $todayOrders = (int) ($saleData['today']['saleQuantity'] ?? 0);
         $yesterdayOrders = (int) ($saleData['yesterday']['saleQuantity'] ?? 0);
         $todaySales = (float) ($saleData['today']['saleMoney'] ?? 0);
         $yesterdaySales = (float) ($saleData['yesterday']['saleMoney'] ?? 0);
         $avgOrder = $todayOrders > 0 ? round($todaySales / $todayOrders, 2) : 0.0;
+        $tradeWhere = $this->saleWhereToQuery($queryWhere);
+        $tradeStat = Db::name('sale_orders')->alias('so')
+            ->where($tradeWhere)
+            ->fieldRaw('COUNT(*) as cnt, IFNULL(SUM(so.total_price),0) as amount')
+            ->find();
+        $tradeStat = is_array($tradeStat) ? $tradeStat : (array) $tradeStat;
+        $orderCountDelta = (int) ($tradeStat['cnt'] ?? 0);
+        $salesAmountDelta = round((float) ($tradeStat['amount'] ?? 0), 2);
 
         // is_operating：1=在营 2=在库 3=外售（见数据库更新.sql）；仅统计主柜 vending_machine_type=1
         $deviceOverview = [
@@ -137,6 +442,8 @@ class VisualScreenService
             'todaySalesAmount' => $todaySales,
             'yesterdaySalesAmount' => $yesterdaySales,
             'averageOrderAmount' => $avgOrder,
+            'orderCountDelta' => $orderCountDelta,
+            'salesAmountDelta' => $salesAmountDelta,
         ];
 
         $chartType = $this->cycleToChartType($cycle);
@@ -154,18 +461,18 @@ class VisualScreenService
             'deviceOverview' => $deviceOverview,
             'cargoStats' => $cargoStats,
             'tradeMetrics' => $tradeMetrics,
-            'productSalesShare' => $this->buildProductSalesShare($saleDataWhere, $cycle),
-            'machineSalesShare' => $this->buildMachineSalesShare($saleDataWhere, $cycle),
-            'deviceSalesRank' => $this->buildDeviceSalesRank($saleDataWhere, $cycle),
-            'goodsPopularityRank' => $this->buildGoodsPopularityRank($saleDataWhere, $cycle),
-            'mapValues' => $this->buildMapValues($regionType, $regionName, $mScope),
+            'productSalesShare' => $this->buildProductSalesShare($queryWhere, $cycle),
+            'machineSalesShare' => $this->buildMachineSalesShare($queryWhere, $cycle),
+            'deviceSalesRank' => $this->buildDeviceSalesRank($queryWhere, $cycle),
+            'goodsPopularityRank' => $this->buildGoodsPopularityRank($queryWhere, $cycle),
+            'mapValues' => $this->buildMapValues($regionType, $regionName, $operatingScope),
             'salesTrend' => [
                 'cycle' => $cycle,
                 'points' => $this->chartRowsToPoints($cycle, $chartRows),
             ],
             // 'machineList' => $this->buildMachineList($mScope, $page, $pageSize, $screenCounts),
-            'realtimeOrders' => $this->buildRealtimeOrders($saleDataWhere, $regionType, $regionName, 30),
-            'orderIncrement' => $this->buildOrderIncrement($saleDataWhere, $lastOrderId, $regionType, $regionName),
+            'realtimeOrders' => $this->buildRealtimeOrders($queryWhere, $regionType, $regionName, 30),
+            'orderIncrement' => $this->buildOrderIncrement($orderIncrementWhere, $lastOrderId, $regionType, $regionName),
         ];
     }
 
@@ -176,10 +483,16 @@ class VisualScreenService
     {
         $regionType = $ctx['regionType'] ?? 'national';
         $regionName = trim((string) ($ctx['regionName'] ?? ''));
-        $cycle = $ctx['cycle'] ?? 'day';
+        $cycle = trim((string) ($ctx['cycle'] ?? 'day'));
+        if ($cycle === '') {
+            $cycle = 'day';
+        }
         $debugEnabled = $this->shouldExposeAdcodeDebug();
+        $timeRange = $this->parseCycleRange($cycle);
+        $accountScope = $ctx['accountMachineScope'] ?? null;
         $mScope = $this->effectiveMachineIds($regionType, $regionName);
-        if (is_array($mScope) && $mScope === []) {
+        $operatingScope = $this->resolveOperatingMachineIds($mScope, $accountScope);
+        if ($operatingScope === []) {
             $out = ['cycle' => $cycle, 'points' => []];
             if ($debugEnabled) {
                 $out['debugTrend'] = [
@@ -190,13 +503,10 @@ class VisualScreenService
             return $out;
         }
         $saleDataWhere = ['pay_status' => 3];
-        if ($mScope !== null) {
-            $saleDataWhere[] = ['m_id', 'in', $mScope];
-        }
-        $chartWhere = [];
-        if ($mScope !== null) {
-            $chartWhere[] = ['m_id', 'in', $mScope];
-        }
+        $saleDataWhere[] = ['m_id', 'in', $operatingScope];
+    $this->appendTimeRangeToWhere($saleDataWhere, $timeRange['start'], $timeRange['end']);
+        $chartWhere = [['m_id', 'in', $operatingScope]];
+    $this->appendTimeRangeToWhere($chartWhere, $timeRange['start'], $timeRange['end']);
         $chartType = $this->cycleToChartType($cycle);
         $chartResp = $this->app->saleOrders->getChartData($chartWhere, $chartType);
         $chartPayload = is_array($chartResp) ? $chartResp : obj2arr($chartResp);
@@ -220,7 +530,7 @@ class VisualScreenService
     /**
      * 独立设备列表接口：按区域返回设备列表与汇总
      *
-     * @param array{regionType?:string,regionName?:string,page?:int,pageSize?:int,machinePage?:int,machinePageSize?:int} $ctx
+     * @param array{regionType?:string,regionName?:string,page?:int,pageSize?:int,machinePage?:int,machinePageSize?:int,onlineStatus?:string} $ctx
      * @return array<string,mixed>
      */
     public function getMachineList(array $ctx): array
@@ -230,20 +540,28 @@ class VisualScreenService
         $debugEnabled = $this->shouldExposeAdcodeDebug();
         $page = max(1, (int) ($ctx['page'] ?? ($ctx['machinePage'] ?? 1)));
         $pageSize = min(256, max(1, (int) ($ctx['pageSize'] ?? ($ctx['machinePageSize'] ?? 15))));
+        $onlineStatus = strtolower(trim((string) ($ctx['onlineStatus'] ?? 'all')));
+        if (!in_array($onlineStatus, ['all', 'online', 'offline'], true)) {
+            $onlineStatus = 'all';
+        }
 
+        $accountScope = $ctx['accountMachineScope'] ?? null;
         $mScope = $this->effectiveMachineIds($regionType, $regionName);
-        if (is_array($mScope) && $mScope === []) {
+        $operatingScope = $this->resolveOperatingMachineIds($mScope, $accountScope);
+        if ($operatingScope === []) {
             return [
                 'summary' => ['total' => 0, 'online' => 0, 'offline' => 0],
                 'page' => $page,
                 'pageSize' => $pageSize,
                 'total' => 0,
                 'list' => [],
+                'onlineStatus' => $onlineStatus,
             ];
         }
 
-        $screenCounts = $this->buildMachineScreenCounts($mScope);
-        $out = $this->buildMachineList($mScope, $page, $pageSize, $screenCounts);
+        $screenCounts = $this->buildMachineScreenCounts($operatingScope);
+        $out = $this->buildMachineList($operatingScope, $page, $pageSize, $screenCounts, $onlineStatus);
+        $out['onlineStatus'] = $onlineStatus;
         if ($debugEnabled) {
             $out['debugPaging'] = [
                 'resolvedPage' => (int) ($out['page'] ?? $page),
@@ -251,6 +569,7 @@ class VisualScreenService
                 'rawPage' => $ctx['page'] ?? ($ctx['machinePage'] ?? null),
                 'rawPageSize' => $ctx['pageSize'] ?? ($ctx['machinePageSize'] ?? null),
             ];
+            // $out['debugAccountScope'] = $this->buildAccountScopeDebug();
         }
         return $out;
     }
@@ -260,7 +579,8 @@ class VisualScreenService
         string $regionName,
         string $cycle,
         int $page,
-        int $pageSize
+        int $pageSize,
+        array $authRuleSummary = []
     ): array {
         return [
             'serverTime' => date('Y-m-d H:i:s'),
@@ -274,13 +594,16 @@ class VisualScreenService
                 'todaySalesAmount' => 0.0,
                 'yesterdaySalesAmount' => 0.0,
                 'averageOrderAmount' => 0.0,
+                'orderCountDelta' => 0,
+                'salesAmountDelta' => 0.0,
+
             ],
             'productSalesShare' => [],
             'machineSalesShare' => [],
             'deviceSalesRank' => [],
             'goodsPopularityRank' => [],
             'mapValues' => [
-                'level' => $regionType === 'province' ? 'province' : 'national',
+                'level' => in_array($regionType, ['province', 'city'], true) ? $regionType : 'national',
                 'provinceName' => $regionName,
                 'items' => [],
             ],
@@ -304,6 +627,7 @@ class VisualScreenService
                 'latestOrder' => null,
                 'recentOrders' => [],
             ],
+            'authPermissionRules' => $authRuleSummary,
         ];
     }
 
@@ -376,11 +700,20 @@ class VisualScreenService
 
     protected function cycleToChartType(string $cycle): int
     {
-        if ($cycle === 'week') {
+        $key = $this->normalizeCycleKeyword($cycle);
+        if ($key === 'week') {
             return 2;
         }
-        if ($cycle === 'month') {
+        if ($key === 'month') {
             return 3;
+        }
+        if ($key === 'day') {
+            return 1;
+        }
+        $range = $this->parseCycleRange($cycle);
+        if ($range['start'] !== null && $range['end'] !== null) {
+            // 自定义区间按日粒度图表
+            return 1;
         }
         return 1;
     }
@@ -393,9 +726,18 @@ class VisualScreenService
      */
     protected function cycleToSince(string $cycle, string $fallback = 'month'): ?int
     {
-        $c = $cycle;
-        if (!in_array($c, ['day', 'week', 'month'], true)) {
+        $range = $this->parseCycleRange($cycle);
+        if ($range['start'] !== null) {
+            return $range['start'];
+        }
+
+        $c = $this->normalizeCycleKeyword($cycle);
+        if ($c === null) {
             $c = $fallback;
+        }
+        $fallbackKey = $this->normalizeCycleKeyword($fallback);
+        if (!in_array($c, ['day', 'week', 'month'], true)) {
+            $c = $fallbackKey ?: 'month';
         }
         if ($c === 'day') {
             return strtotime(date('Y-m-d'));
@@ -418,13 +760,18 @@ class VisualScreenService
         if (!is_array($chartRows)) {
             return [];
         }
+        $cycleKey = $this->normalizeCycleKeyword($cycle);
+        if ($cycleKey === null) {
+            $range = $this->parseCycleRange($cycle);
+            $cycleKey = ($range['start'] !== null && $range['end'] !== null) ? 'day' : 'month';
+        }
         $points = [];
         foreach ($chartRows as $row) {
             if (!is_array($row)) {
                 continue;
             }
             $label = '';
-            if ($cycle === 'day') {
+            if ($cycleKey === 'day') {
                 $rawDate = $this->pickRowValue($row, ['countDate', 'countdate', 'create_date', 'createDate', 'date']);
                 if ($rawDate !== null && $rawDate !== '') {
                     if (is_numeric($rawDate)) {
@@ -436,7 +783,7 @@ class VisualScreenService
                         }
                     }
                 }
-            } elseif ($cycle === 'week') {
+            } elseif ($cycleKey === 'week') {
                 $label = (string) ($this->pickRowValue($row, ['week', 'Week']) ?? '');
             } else {
                 $label = (string) ($this->pickRowValue($row, ['month', 'Month']) ?? '');
@@ -448,6 +795,87 @@ class VisualScreenService
             }
         }
         return $points;
+    }
+
+    /**
+     * 兼容周期参数：day/week/month 与 日/周/月
+     */
+    protected function normalizeCycleKeyword(string $cycle): ?string
+    {
+        $c = strtolower(trim($cycle));
+        if ($c === 'day' || $c === '日') {
+            return 'day';
+        }
+        if ($c === 'week' || $c === '周') {
+            return 'week';
+        }
+        if ($c === 'month' || $c === '月') {
+            return 'month';
+        }
+        return null;
+    }
+
+    /**
+     * 解析自定义区间：start~end（支持 ~ 或 ～）
+     * @return array{start:?int,end:?int}
+     */
+    protected function parseCycleRange(string $cycle): array
+    {
+        $raw = trim($cycle);
+        if ($raw === '') {
+            return ['start' => null, 'end' => null];
+        }
+
+        $keyword = $this->normalizeCycleKeyword($raw);
+        if ($keyword !== null) {
+            if ($keyword === 'day') {
+                return [
+                    'start' => strtotime(date('Y-m-d')) ?: null,
+                    'end' => time(),
+                ];
+            }
+            if ($keyword === 'week') {
+                return [
+                    'start' => strtotime('-7 days') ?: null,
+                    'end' => time(),
+                ];
+            }
+            if ($keyword === 'month') {
+                return [
+                    'start' => strtotime('-30 days') ?: null,
+                    'end' => time(),
+                ];
+            }
+        }
+
+        if (!preg_match('/^\s*(.+?)\s*[~～]\s*(.+?)\s*$/u', $raw, $m)) {
+            return ['start' => null, 'end' => null];
+        }
+        $start = strtotime(trim($m[1]));
+        $end = strtotime(trim($m[2]));
+        if ($start === false || $end === false) {
+            return ['start' => null, 'end' => null];
+        }
+        if ($start > $end) {
+            $tmp = $start;
+            $start = $end;
+            $end = $tmp;
+        }
+        return ['start' => (int) $start, 'end' => (int) $end];
+    }
+
+    /**
+     * 将 create_date 时间区间条件附加到 where
+     * @param array<int,mixed> $where
+     */
+    protected function appendTimeRangeToWhere(array &$where, ?int $start, ?int $end): void
+    {
+        if ($start !== null) {
+            $where[] = ['create_date', '>=', $start];
+        }
+        if ($end !== null) {
+            $where[] = ['create_date', '<=', $end];
+        }
     }
 
     /**
@@ -559,7 +987,7 @@ class VisualScreenService
 
     /**
      * @param array $saleWhere
-     * @return array<int,array{name:string,value:float|int}>
+     * @return array<int,array{name:string,value:int}>
      */
     protected function buildDeviceSalesRank(array $saleWhere, string $cycle = 'week'): array
     {
@@ -570,7 +998,7 @@ class VisualScreenService
             ->when($since, function ($query) use ($since) {
                 $query->where('so.create_date', '>=', $since);
             })
-            ->field('so.machine_name as name, IFNULL(SUM(so.total_price),0) as value')
+            ->field('so.machine_name as name, IFNULL(SUM(so.total_quantity),0) as value')
             ->group('so.m_id,so.machine_name')
             ->order('value', 'desc')
             ->limit(10)
@@ -578,7 +1006,7 @@ class VisualScreenService
             ->toArray();
         $out = [];
         foreach ($rows as $r) {
-            $out[] = ['name' => (string) $r['name'], 'value' => round((float) $r['value'], 2)];
+            $out[] = ['name' => (string) $r['name'], 'value' => (int) round((float) $r['value'])];
         }
         return $out;
     }
@@ -689,9 +1117,24 @@ class VisualScreenService
             if ($mids === null) {
                 $mids = $this->queryProvinceMIds($regionName);
             }
+
             $items = $this->aggregateSalesByCity($mids);
             return [
                 'level' => 'province',
+                'provinceName' => $regionName,
+                'items' => $items,
+            ];
+        }
+        if ($regionType === 'city' && $regionName !== '') {
+            $mids = $mScope;
+            if ($mids === null) {
+                $mids = $this->queryProvinceMIds($regionName);
+            }
+
+            // 当前库内暂无独立区县维度聚合实现，先按城市作用域返回，避免错误回退到 national
+            $items = $this->aggregateSalesByCity($mids);
+            return [
+                'level' => 'city',
                 'provinceName' => $regionName,
                 'items' => $items,
             ];
@@ -1050,7 +1493,7 @@ class VisualScreenService
      * @param array{total:int,operating:int,inStock:int,online:int,offline:int} $screenCounts
      * @return array<string,mixed>
      */
-    protected function buildMachineList(?array $mScope, int $page, int $pageSize, array $screenCounts): array
+    protected function buildMachineList(?array $mScope, int $page, int $pageSize, array $screenCounts, string $onlineStatus = 'all'): array
     {
         $page = max(1, (int) $page);
         $pageSize = min(256, max(1, (int) $pageSize));
@@ -1058,17 +1501,33 @@ class VisualScreenService
 
         $q = Db::name('machine')->alias('m')
             ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left')
+            ->join('earth_states s', 'm.state_id = s.id', 'left')
+            ->join('earth_cities c', 'm.city_id = c.id', 'left')
             ->where('m.vending_machine_type', 1)
-            ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.street,moo.on_off_machine,moo.on_off_ckc');
+            ->where('m.is_operating', 1)
+            ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.street,m.state_id,m.city_id,m.regions_id,moo.on_off_machine,moo.on_off_ckc,IFNULL(s.cname,s.name) as state_name,IFNULL(c.cname,c.name) as city_name');
         if ($mScope !== null) {
             $q->whereIn('m.m_id', $mScope);
+        }                                                                         
+        if ($onlineStatus === 'online') {
+            $q->where('m.online', 1);
+        } elseif ($onlineStatus === 'offline') {
+            $q->where('m.online', 2);
         }
         $total = (int) (clone $q)->count();
-        $rows = $q->order('m.m_id', 'desc')
+        $todayStart = strtotime(date('Y-m-d'));
+        $rows = $q->order('m.online', 'asc')
+            ->orderRaw('(SELECT IFNULL(SUM(so.total_quantity),0) FROM sale_orders so WHERE so.pay_status = 3 AND so.create_date >= ' . (int) $todayStart . ' AND so.m_id = m.m_id) DESC')
             ->limit($offset, $pageSize)
             ->select()
             ->toArray();
         $mIds = array_column($rows, 'm_id');
+        $regionIds = array_values(array_unique(array_filter(array_map(static function ($row): int {
+            return (int) ($row['regions_id'] ?? 0);
+        }, $rows), static function (int $id): bool {
+            return $id > 0;
+        })));
+        $regionNameMap = $this->resolveRegionNamesByIds($regionIds);
         $salesMap = $this->todaySalesByMids($mIds);
     // 频道统计与 on-off 原始字段
     $chStats = $this->channelStatsForMids($mIds);
@@ -1079,31 +1538,104 @@ class VisualScreenService
             $mid = (int) $m['m_id'];
             $st = $chStats[$mid] ?? ['emptyChannels' => 0, 'badChannels' => 0, 'emptySlots' => 0];
             $onOff = $onOffMap[$mid] ?? ['businessHours' => '', 'powerOnTime' => '', 'powerOffTime' => ''];
+            $stateName = trim((string) ($m['state_name'] ?? ''));
+            $cityName = trim((string) ($m['city_name'] ?? ''));
+            $regionName = trim((string) ($regionNameMap[(int) ($m['regions_id'] ?? 0)] ?? ''));
+            $street = trim((string) ($m['street'] ?? ''));
+            $fullAddress = $this->joinAddressParts([$stateName, $cityName, $regionName, $street]);
             $list[] = [
                 'id' => (string) ($m['machine_id'] ?? ''),
+                'm_id' => $mid,
                 'name' => (string) ($m['machine_name'] ?? ''),
-                'online' => (int) ($m['online'] ?? 0) === 1,
+                'online' => $m['online'],
                 'businessHours' => (string) ($onOff['businessHours'] ?? ''),
                 'on_off_machine' => $m['on_off_machine'] ?? '',
                 'on_off_ckc' =>  $m['on_off_ckc'] ?? '',
                 'address' => (string) ($m['street'] ?? ''),
+                'full_address' => $fullAddress,
                 'sales' => (int) ($salesMap[$mid] ?? 0),
+                'salesQuantity' => (int) ($salesMap[$mid] ?? 0),
                 'emptyChannels' => (int) $st['emptyChannels'],
                 'badChannels' => (int) $st['badChannels'],
                 'emptySlots' => (int) $st['emptySlots'],
             ];
         }
+        $summaryTotal = (int) ($screenCounts['total'] ?? $total);
+        $summaryOnline = (int) ($screenCounts['online'] ?? 0);
+        $summaryOffline = (int) ($screenCounts['offline'] ?? 0);
+        if ($onlineStatus === 'online') {
+            $summaryTotal = $total;
+            $summaryOnline = $total;
+            $summaryOffline = 0;
+        } elseif ($onlineStatus === 'offline') {
+            $summaryTotal = $total;
+            $summaryOnline = 0;
+            $summaryOffline = $total;
+        }
         return [
             'summary' => [
-                'total' => (int) ($screenCounts['total'] ?? $total),
-                'online' => (int) ($screenCounts['online'] ?? 0),
-                'offline' => (int) ($screenCounts['offline'] ?? 0),
+                'total' => $summaryTotal,
+                'online' => $summaryOnline,
+                'offline' => $summaryOffline,
             ],
             'page' => $page,
             'pageSize' => $pageSize,
             'total' => $total,
             'list' => $list,
         ];
+    }
+
+    /**
+     * @param int[] $regionIds
+     * @return array<int,string>
+     */
+    protected function resolveRegionNamesByIds(array $regionIds): array
+    {
+        if ($regionIds === []) {
+            return [];
+        }
+
+        $candidateTables = ['earth_regions', 'earth_areas', 'earth_area'];
+        $map = [];
+        foreach ($candidateTables as $table) {
+            try {
+                $rows = Db::name($table)
+                    ->whereIn('id', $regionIds)
+                    ->field('id,IFNULL(cname,name) as name')
+                    ->select()
+                    ->toArray();
+                foreach ($rows as $row) {
+                    $id = (int) ($row['id'] ?? 0);
+                    if ($id <= 0 || isset($map[$id])) {
+                        continue;
+                    }
+                    $map[$id] = trim((string) ($row['name'] ?? ''));
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+            if ($map !== []) {
+                break;
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param array<int,string> $parts
+     */
+    protected function joinAddressParts(array $parts): string
+    {
+        $clean = [];
+        foreach ($parts as $part) {
+            $v = trim((string) $part);
+            if ($v !== '') {
+                $clean[] = $v;
+            }
+        }
+
+        return implode('', $clean);
     }
 
     /**
@@ -1149,13 +1681,13 @@ class VisualScreenService
             ->where('pay_status', 3)
             ->where('create_date', '>=', $start)
             ->whereIn('m_id', $mIds)
-            ->field('m_id, IFNULL(SUM(total_price),0) as v')
+            ->field('m_id, IFNULL(SUM(total_quantity),0) as v')
             ->group('m_id')
             ->select()
             ->toArray();
         $map = [];
         foreach ($rows as $r) {
-            $map[(int) $r['m_id']] = round((float) $r['v'], 2);
+            $map[(int) $r['m_id']] = (int) round((float) $r['v']);
         }
         return $map;
     }
@@ -1182,7 +1714,7 @@ class VisualScreenService
                 'id' => (string) ($r['trade_no'] ?? ''),
                 'machine' => (string) ($r['machine_name'] ?? ''),
                 'product' => (string) ($r['g_name'] ?? ''),
-                'time' => isset($r['create_time']) ? date('H:i:s', (int) $r['create_time']) : '',
+                'time' => isset($r['create_time']) ? date('Y-m-d H:i:s', (int) $r['create_time']) : '',
                 'amount' => round((float) ($r['total_price'] ?? 0), 2),
                 'status' => '已支付',
                 'regionType' => $regionType === 'province' ? 'province' : 'national',

@@ -62,6 +62,43 @@ class MachineChannelClient extends ManagementClient
         return $data;
     }
 
+    /**
+     * 按 m_id 列表统计空槽/BAD/空货（大屏等场景，与账号设备权限范围一致）
+     *
+     * @param int[] $mIds
+     * @return array{empty:int,bad:int,stockOut:int}
+     */
+    public function getDataV2ByMIds(array $mIds): array
+    {
+        $mIds = array_values(array_unique(array_filter(array_map('intval', $mIds))));
+        if ($mIds === []) {
+            return ['empty' => 0, 'bad' => 0, 'stockOut' => 0];
+        }
+
+        $where = [
+            ['m_id', 'in', $mIds],
+            'raw' => 'EXISTS(SELECT 1 FROM machine m WHERE m.m_id = a.m_id AND m.is_operating = 1)',
+        ];
+
+        $whereEmpty = $where;
+        $whereEmpty['g_id'] = 0;
+        $empty = $this->getMachineChannelCountV2($whereEmpty);
+
+        $whereBad = $where;
+        $whereBad['status'] = 3;
+        $bad = $this->getMachineChannelCountV2($whereBad);
+
+        $whereStockOut = $where;
+        $whereStockOut['stock'] = 0;
+        $stockOut = $this->getMachineChannelCountV2($whereStockOut);
+
+        return [
+            'empty' => (int) $empty,
+            'bad' => (int) $bad,
+            'stockOut' => (int) $stockOut,
+        ];
+    }
+
         /**
      * 获取空槽、BAD、空货数量 V2
      * 如果machine_info表的sub_cabinet为2不取channel_position为2的数据
