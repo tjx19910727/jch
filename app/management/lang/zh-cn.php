@@ -621,6 +621,16 @@ return [
         "payee_config_no_json" => "收款方配置信息不是JSON方式",
 
         "free_can_not_refund" => "免支付方式不能退款",
+        "offline_refund_pay_type_invalid" => "该订单支付类型不支持线下退款",
+        "offline_refund_use_online" => "该订单请使用在线退款接口",
+        "offline_refund_payment_no_require" => "打款流水号与打款凭证号至少填写一项",
+        "offline_refund_payment_time_invalid" => "打款时间格式无效",
+        "offline_refund_amount_mismatch" => "退款金额与系统计算金额不一致",
+        "offline_refund_payment_method_require" => "打款方式不能为空",
+        "offline_refund_payment_time_require" => "打款时间不能为空",
+        "offline_refund_payment_amount_require" => "退款金额不能为空",
+        "offline_refund_payment_amount_invalid" => "退款金额格式无效",
+        "offline_refund_receiver_account_require" => "收款账号不能为空",
     ],
 
     "VSaleOrdersRefund" => [

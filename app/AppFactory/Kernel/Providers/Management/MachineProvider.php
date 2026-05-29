@@ -18,6 +18,7 @@ use app\AppFactory\Management\Machine\MachineChannelStockClient;
 use app\AppFactory\Management\Machine\MachineChannelStockReportClient;
 use app\AppFactory\Management\Machine\MachineCheckStockClient;
 use app\AppFactory\Management\Machine\MachineCheckStockCountClient;
+use app\AppFactory\Management\Machine\MachineCheckListClient;
 use app\AppFactory\Management\Machine\MachineClient;
 use app\AppFactory\Management\Machine\MachineConfigClient;
 use app\AppFactory\Management\Machine\MachineConfigLangClient;
@@ -30,10 +31,10 @@ use app\AppFactory\Management\Machine\MachineGroupMgClient;
 use app\AppFactory\Management\Machine\MachineHelpClient;
 use app\AppFactory\Management\Machine\MachineInfoClient;
 use app\AppFactory\Management\Machine\MachineLangClient;
+use app\AppFactory\Management\Machine\MachineMaintenanceClient;
 use app\AppFactory\Management\Machine\MachineOnlineClient;
 use app\AppFactory\Management\Machine\MachineOnlineDetailsClient;
 use app\AppFactory\Management\Machine\MachineOnOffClient;
-use app\AppFactory\Management\Machine\MachineSaleClient;
 use app\AppFactory\Management\Machine\MachineVersionClient;
 use app\AppFactory\Management\Machine\MachineVersionPlanClient;
 use app\AppFactory\Management\Machine\MachineViewClient;
@@ -62,6 +63,9 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineCheckStockCount'] = function ($app) {
             return new MachineCheckStockCountClient($app);
+        };
+        $app['machineCheckList'] = function ($app) {
+            return new MachineCheckListClient($app);
         };
         $app['machine'] = function ($app) {
             return new MachineClient($app);
@@ -102,6 +106,9 @@ class MachineProvider implements ServiceProviderInterface
         $app['machineLang'] = function ($app) {
             return new MachineLangClient($app);
         };
+        $app['machineMaintenance'] = function ($app) {
+            return new MachineMaintenanceClient($app);
+        };
         $app['machineView'] = function ($app) {
             return new MachineViewClient($app);
         };
@@ -122,9 +129,6 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineServiceLog'] = function ($app) {
             return new MachineServiceLogClient($app);
-        };
-        $app['machineSale'] = function ($app) {
-            return new MachineSaleClient($app);
         };
         $app['simCardInfo'] = function ($app) {
             return new SimCardInfoClient($app);

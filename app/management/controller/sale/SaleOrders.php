@@ -172,6 +172,27 @@ class SaleOrders extends Common
     }
 
     /**
+     * 线下退款（人工打款，不调支付平台）
+     * @return array|bool|string
+     */
+    public function offlineRefund()
+    {
+        $postData = input();
+        actionLog($postData, '线下退款数据');
+        try {
+            $this->validate($postData, $this->validatePath . 'offlineRefund');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        $check = checkFrequency('offline_refund' . $postData['order_id'], 10);
+        if ($check !== true) {
+            return returnState(100, $check);
+        }
+        $postData['refund'] = json2arr($postData['refund']);
+        return $this->app->saleOrders->offlineRefundOrder($postData);
+    }
+
+    /**
      * 下发获取交易视频
      * @return array|string
      */
@@ -392,6 +413,7 @@ class SaleOrders extends Common
         sum(totalRefundAmount) totalRefundAmount,
         SUM(totalRefundQuantity) totalRefundQuantity,
         SUM(totalPrice) totalPrice,
+    SUM(totalPrice - totalRefundAmount) totalSalePrice,
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(totalQuantity) totalQuantity,
         SUM(giftQuantity) giftQuantity,

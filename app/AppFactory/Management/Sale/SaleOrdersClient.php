@@ -296,6 +296,138 @@ class SaleOrdersClient extends ManagementClient
     }
 
     /**
+     * 支持线下退款的支付类型（无在线退款通道）
+     */
+    protected $offlineRefundPayTypes = [5, 6, 7, 8, 10, 34];
+
+    /**
+     * 线下退款（人工打款，不调支付平台）
+     * @param array $postData
+     * @return array|bool|string
+     */
+    public function offlineRefundOrder(array $postData)
+    {
+        $this->order = $this->getSaleOrdersFind(['order_id' => $postData['order_id']]);
+        if (!$this->order) {
+            return $this->rFail($this->lang("VSaleOrdersRefund.order_no_data"));
+        }
+        $this->order = $this->order->toArray();
+        if (intval($this->order['pay_type']) === 0) {
+            return $this->r(100, $this->lang("VSaleOrders.free_can_not_refund"));
+        }
+        if (!in_array(intval($this->order['pay_type']), $this->offlineRefundPayTypes, true)
+            && intval($this->order['pay_method']) !== 5) {
+            return $this->rFail($this->lang("VSaleOrders.offline_refund_pay_type_invalid"));
+        }
+        if (isset($this->refundType[(string)$this->order['pay_type']])) {
+            return $this->rFail($this->lang("VSaleOrders.offline_refund_use_online"));
+        }
+        $serialNo = trim((string)($postData['payment_serial_no'] ?? ''));
+        $voucherNo = trim((string)($postData['payment_voucher_no'] ?? ''));
+        if ($serialNo === '' && $voucherNo === '') {
+            return $this->rFail($this->lang("VSaleOrders.offline_refund_payment_no_require"));
+        }
+        $paymentTime = $this->parseOfflinePaymentTime($postData['payment_time'] ?? '');
+        if ($paymentTime === false) {
+            return $this->rFail($this->lang("VSaleOrders.offline_refund_payment_time_invalid"));
+        }
+        $checkRefund = $this->getSaleOrdersRefundFind(['order_id' => $postData['order_id'], 'status' => 1]);
+        if ($checkRefund) {
+            if ($checkRefund['create_time'] >= time() - 3600) {
+                return $this->rFail($this->lang("VSaleOrdersRefund.refunding") . ": " . $checkRefund['remark']);
+            }
+            $this->delSaleOrdersRefund(['sor_id' => $checkRefund['sor_id']]);
+        }
+        $calc = $this->calcSodRefundAmount($postData['refund']);
+        if (!is_array($calc) || !isset($calc['amount'])) {
+            return $calc;
+        }
+        $expectedAmount = number_format((float)$calc['amount'], 2, '.', '');
+        $paymentAmount = number_format((float)$postData['payment_amount'], 2, '.', '');
+        if (bccomp($paymentAmount, $expectedAmount, 2) !== 0) {
+            return $this->rFail($this->lang("VSaleOrders.offline_refund_amount_mismatch") . "（系统金额：{$expectedAmount}）");
+        }
+        $postData['remark'] = $this->buildOfflineRefundRemark($postData, $paymentTime, $serialNo, $voucherNo);
+        $this->refund_no = $serialNo !== '' ? $serialNo : $voucherNo;
+        $this->startTrans();
+        try {
+            $this->postData = $postData;
+            $flag = $this->createSor();
+            if (!is_array($flag)) {
+                $this->rollbackTrans();
+                return $flag;
+            }
+            if (!flag_check($flag)) {
+                $this->rollbackTrans();
+                return $this->rFail("退款失败：生成退款记录失败");
+            }
+            $this->data['refundAmount'] = $this->totalRefundMoney;
+            $end = $this->refundSuccess();
+            if ($end !== true) {
+                $this->rollbackTrans();
+                return $end;
+            }
+            $this->commitTrans();
+            // 确保订单主表的退款状态被标记为已退款（2），以便前端/报表显示“已退款”状态
+            $this->updateSaleOrders(['order_id' => $this->order['order_id'], 'refund_status' => 2]);
+            actionLog(['order_id' => $this->order['order_id'], 'refund_status' => 2], 'offlineRefundOrder.updateOrderRefundStatus');
+
+            return $this->r(200, '线下退款成功', [
+                'refund_trade_no' => $this->refundTradeNo,
+                'refund_amount' => $this->totalRefundMoney,
+                'remark' => $postData['remark'],
+            ]);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 解析线下打款时间
+     * @param mixed $paymentTime
+     * @return int|false
+     */
+    protected function parseOfflinePaymentTime($paymentTime)
+    {
+        if ($paymentTime === '' || $paymentTime === null) {
+            return false;
+        }
+        if (is_numeric($paymentTime)) {
+            $ts = intval($paymentTime);
+            return $ts > 0 ? $ts : false;
+        }
+        $ts = strtotime((string)$paymentTime);
+        return $ts !== false ? $ts : false;
+    }
+
+    /**
+     * 组装线下退款 remark（JSON）
+     */
+    protected function buildOfflineRefundRemark(array $postData, int $paymentTime, string $serialNo, string $voucherNo): string
+    {
+        $remark = [
+            'type' => 'offline_refund',
+            'payment_method' => trim((string)$postData['payment_method']),
+            'payment_time' => $paymentTime,
+            'payment_time_text' => date('Y-m-d H:i:s', $paymentTime),
+            'payment_amount' => number_format((float)$postData['payment_amount'], 2, '.', ''),
+            'receiver_account' => trim((string)$postData['receiver_account']),
+        ];
+        if ($serialNo !== '') {
+            $remark['payment_serial_no'] = $serialNo;
+        }
+        if ($voucherNo !== '') {
+            $remark['payment_voucher_no'] = $voucherNo;
+        }
+        if (!empty($postData['note'])) {
+            $remark['note'] = trim((string)$postData['note']);
+        }
+        return json_encode($remark, JSON_UNESCAPED_UNICODE);
+    }
+
+    /**
      * 发起订单退款
      * @param $postData
      * @return array|bool|string
@@ -502,8 +634,6 @@ class SaleOrdersClient extends ManagementClient
     public function exportSo($where, $hasCostPriceAuth = false)
     {
         $mIds = [];
-        $payTypeCase = $this->buildPayTypeCaseSql('pay_type');
-        $soPayTypeCase = $this->buildPayTypeCaseSql('so.pay_type');
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
@@ -548,7 +678,16 @@ class SaleOrdersClient extends ManagementClient
                         "未取商品"
                     END
                 ) refund_status,
-                ' . $payTypeCase . ' pay_type,
+                (CASE pay_type 
+                WHEN 1 THEN "微信支付" 
+                WHEN 2 THEN "支付宝支付" 
+                WHEN 3 THEN "" 
+                WHEN 4 THEN "京东收银" 
+                WHEN 5 THEN "会员支付" 
+                WHEN 6 THEN "丽呈线上支付" 
+                WHEN 7 THEN "机器人线上支付" 
+                WHEN 8 THEN "八达通COGOLINK" 
+                WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
                 FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time';
         if ($hasCostPriceAuth) $field .= ',cost_price';
@@ -604,21 +743,30 @@ class SaleOrdersClient extends ManagementClient
                     END
                 ) order_type,
                 IFNULL(NULLIF(so.pay_channel_name,""),(CASE so.pay_channel
-                    WHEN 1 THEN "微程小程序订单"
-                    WHEN 2 THEN "机械车小程序订单"
-                    WHEN 3 THEN "售卖机会员积分订单"
-                    WHEN 4 THEN "商场积分订单"
-                    WHEN 5 THEN "取货码订单"
-                    WHEN 6 THEN "余额支付订单"
-                    WHEN 7 THEN "微信支付"
-                    WHEN 8 THEN "支付宝支付"
-                    WHEN 9 THEN "POS/刷卡支付"
-                    WHEN 10 THEN "现金支付"
-                    WHEN 11 THEN "其他"
-                    ELSE "其他" END)) pay_channel,
-                ' . $soPayTypeCase . ' pay_type,
+                WHEN 1 THEN "微程小程序订单"
+                WHEN 2 THEN "机械车小程序订单"
+                WHEN 3 THEN "售卖机会员积分订单"
+                WHEN 4 THEN "商场积分订单"
+                WHEN 5 THEN "取货码订单"
+                WHEN 6 THEN "余额支付订单"
+                WHEN 7 THEN "微信支付"
+                WHEN 8 THEN "支付宝支付"
+                WHEN 9 THEN "POS/刷卡支付"
+                WHEN 10 THEN "现金支付"
+                WHEN 11 THEN "其他"
+                ELSE "其他" END)) pay_channel,
+                (CASE pay_type 
+                WHEN 1 THEN "微信支付" 
+                WHEN 2 THEN "支付宝支付" 
+                WHEN 3 THEN "" 
+                WHEN 4 THEN "京东收银" 
+                WHEN 5 THEN "会员支付" 
+                WHEN 6 THEN "丽呈线上支付" 
+                WHEN 7 THEN "机器人线上支付" 
+                WHEN 8 THEN "八达通COGOLINK" 
+                WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time';
-            if ($hasCostPriceAuth) $refundField .= ',so.cost_price';
+			if ($hasCostPriceAuth) $refundField .= ',so.cost_price';
             $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, $refundField, 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
             $title = [
@@ -657,8 +805,6 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportGoodsSo($where, $hasCostPriceAuth = false)
     {
-        $soPayTypeCase = $this->buildPayTypeCaseSql('so.pay_type');
-        $soPayMethodCase = $this->buildPayMethodCaseSql('so.pay_method');
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
@@ -687,8 +833,22 @@ class SaleOrdersClient extends ManagementClient
             WHEN 10 THEN '现金支付'
             WHEN 11 THEN '其他'
             ELSE '其他' END)) pay_channel,
-            {$soPayTypeCase} pay_type,
-            {$soPayMethodCase} pay_method,
+            (CASE so.pay_type 
+            WHEN 0 THEN '免支付' 
+            WHEN 1 THEN '微信' 
+            WHEN 2 THEN '支付宝'
+            WHEN 4 THEN '京东收银'
+            WHEN 5 THEN '会员支付'
+            WHEN 6 THEN '丽呈线上支付'
+            WHEN 7 THEN '机器人线上支付'
+            WHEN 8 THEN '八达通COGOLINK'
+            ELSE '' END) pay_type,
+            (CASE so.pay_method 
+            WHEN 0 THEN '免支付' 
+            WHEN 1 THEN '扫码支付' 
+            WHEN 41 THEN '扫码支付' 
+            WHEN 2 THEN '被扫支付'
+            ELSE '' END) pay_method,
             
             (CASE out_status 
                 WHEN 1 THEN 
@@ -741,8 +901,22 @@ class SaleOrdersClient extends ManagementClient
                         WHEN 10 THEN '现金支付'
                         WHEN 11 THEN '其他'
                         ELSE '其他' END)) pay_channel,
-                        {$soPayTypeCase} pay_type,
-                        {$soPayMethodCase} pay_method,
+                        (CASE so.pay_type 
+                        WHEN 0 THEN '免支付' 
+                        WHEN 1 THEN '微信' 
+                        WHEN 2 THEN '支付宝'
+                        WHEN 4 THEN '京东收银'
+                        WHEN 5 THEN '会员支付'
+                        WHEN 6 THEN '丽呈线上支付'
+                        WHEN 7 THEN '机器人线上支付'
+                        WHEN 8 THEN '八达通COGOLINK'
+                        ELSE '' END) pay_type,
+                        (CASE so.pay_method 
+                        WHEN 0 THEN '免支付' 
+                        WHEN 1 THEN '扫码支付' 
+                        WHEN 41 THEN '扫码支付' 
+                        WHEN 2 THEN '被扫支付'
+                        ELSE '' END) pay_method,
                         ('已退款') order_status,
                         FROM_UNIXTIME(sor.update_time,'%Y-%m-%d %H:%i:%s') pay_time,
                         FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
@@ -753,7 +927,6 @@ class SaleOrdersClient extends ManagementClient
                 $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
                     $refundField);
                 if ($refund) $list = array_merge($list, $refund->toArray());
-        $list = $this->normalizeUtf8Recursive($list);
                 $title = [
                     "machine_id" => "设备编号",
                     "machine_name" => "设备名称",
