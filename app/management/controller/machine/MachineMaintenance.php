@@ -89,10 +89,51 @@ class MachineMaintenance extends Common
             $where['machine_id'] = $postData['device_id'];
         }
         if (!empty($postData['records_code'])) $where['records_code'] = $postData['records_code'];
-        if (isset($postData['manager_id'])) $where['manager_id'] = $postData['manager_id'];
+        if (isset($postData['maintainer_id']) && $postData['maintainer_id'] !== '') {
+            $where['maintainer_id'] = $postData['maintainer_id'];
+        }
+        if (isset($postData['manager_id']) && $postData['manager_id'] !== '') {
+            $where['maintainer_id'] = $postData['manager_id'];
+        }
         if (isset($postData['page'])) $where['page'] = intval($postData['page']);
         if (isset($postData['pageNum'])) $where['pageNum'] = intval($postData['pageNum']);
         if (isset($postData['pageSize'])) $where['pageSize'] = intval($postData['pageSize']);
         return $this->app->machineMaintenance->getRecords($where);
+    }
+
+    /**
+     * 导出设备老化维护记录
+     */
+    public function exportRecords()
+    {
+        $postData = input();
+        $where = [];
+        if (!empty($postData['machine_id'])) {
+            $where['machine_id'] = $postData['machine_id'];
+        } elseif (!empty($postData['device_id'])) {
+            $where['machine_id'] = $postData['device_id'];
+        }
+        if (!empty($postData['records_code'])) {
+            $where['records_code'] = $postData['records_code'];
+        }
+        if (isset($postData['maintainer_id']) && $postData['maintainer_id'] !== '') {
+            $where['maintainer_id'] = $postData['maintainer_id'];
+        }
+        if (isset($postData['manager_id']) && $postData['manager_id'] !== '') {
+            $where['maintainer_id'] = $postData['manager_id'];
+        }
+        return $this->app->machineMaintenance->exportRecords($where);
+    }
+
+    /**
+     * 导出维护项目列表
+     */
+    public function exportItems()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData, false, [
+            'item_name' => 'like',
+        ]);
+        return $this->app->machineMaintenance->exportItems($where);
     }
 }

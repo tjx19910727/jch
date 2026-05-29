@@ -203,38 +203,14 @@ class MachineCheckListClient extends ManagementClient
                 $query->whereIn('cr.records_code', $codes);
             }
 
-            $list = $query->field('cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.parent_id,ci.item_level')
+            $list = $query
+                ->leftJoin('auth_manager am', 'am.manager_id = cr.manager_id')
+                ->field('cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.parent_id,ci.item_level,IFNULL(NULLIF(am.nickname,\'\'), cr.manager_id) as nickname')
                 ->order('cr.records_code desc,cr.id asc')
                 ->select()
                 ->toArray();
 
-            $grouped = [];
-            foreach ($list as $item) {
-                $code = $item['records_code'];
-                if (!isset($grouped[$code])) {
-                    $grouped[$code] = [
-                        'records_code' => $code,
-                        'machine_id' => $item['machine_id'],
-                        'manager_id' => $item['manager_id'],
-                        'check_time' => $item['check_time'],
-                        'records' => [],
-                    ];
-                }
-                $grouped[$code]['records'][] = [
-                    'id' => $item['id'],
-                    'item_id' => $item['item_id'],
-                    'item_name' => $item['item_name'],
-                    'check_status' => intval($item['check_status'] ?? 0),
-                    'parent_id' => $item['parent_id'],
-                    'item_level' => $item['item_level'],
-                    'manager_id' => $item['manager_id'],
-                    'check_time' => $item['check_time'],
-                    'notes' => $item['notes'],
-                    'created_at' => $item['created_at'],
-                ];
-            }
-
-            $result = array_values($grouped);
+            $result = $this->groupCheckListRecords($list);
             if ($pageSize > 0) {
                 return $this->rQ([
                     'list' => $result,
@@ -252,6 +228,157 @@ class MachineCheckListClient extends ManagementClient
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    /**
+     * 导出小蜜蜂维护记录
+     * @param array $where
+     * @return array|\think\response\Json
+     */
+    public function exportRecords($where = [])
+    {
+        try {
+            $where['page'] = 1;
+            $where['pageNum'] = 0;
+            $where['pageSize'] = 0;
+            $response = obj2arr($this->getRecords($where));
+            if (intval($response['state'] ?? 0) !== 200) {
+                return $response;
+            }
+            $groups = $response['data'] ?? [];
+            if (!$groups) {
+                return $this->rFail('暂无可导出数据');
+            }
+            $rows = $this->flattenCheckListRecordsForExport($groups);
+            $filename = '小蜜蜂维护记录_' . date('YmdHis');
+            $title = [
+                'records_code' => '记录编码',
+                'machine_id' => '设备编号',
+                'manager_id' => '维护人ID',
+                'nickname' => '维护人',
+                'check_time' => '维护时间',
+                'item_name' => '检查项目',
+                'check_status_text' => '维护状态',
+                'notes' => '备注',
+                'created_at' => '入库时间',
+            ];
+            return $this->sendToExport('设备管理-小蜜蜂维护记录', $filename, $title, $rows);
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 导出检查项列表（check_list_items）
+     * @param array $where
+     * @return array|\think\response\Json
+     */
+    public function exportItems($where = [])
+    {
+        try {
+            $query = Db::name('check_list_items')->where($where)->field('id,parent_id,item_name,item_level,description,sort_order,is_active,created_at,updated_at')->order('sort_order asc,id asc');
+            $list = $query->select()->toArray();
+            if (!$list) {
+                return $this->rFail('暂无可导出数据');
+            }
+            $rows = [];
+            foreach ($list as $item) {
+                $rows[] = [
+                    'id' => $item['id'] ?? '',
+                    'parent_id' => $item['parent_id'] ?? '',
+                    'item_name' => $item['item_name'] ?? '',
+                    'item_level' => $item['item_level'] ?? '',
+                    'description' => $item['description'] ?? '',
+                    'sort_order' => $item['sort_order'] ?? '',
+                    'is_active' => intval($item['is_active'] ?? 0) ? '启用' : '禁用',
+                    'created_at' => $item['created_at'] ?? '',
+                    'updated_at' => $item['updated_at'] ?? '',
+                ];
+            }
+
+            $filename = '检查项列表_' . date('YmdHis');
+            $title = [
+                'id' => 'ID',
+                'parent_id' => '父级ID',
+                'item_name' => '项目名称',
+                'item_level' => '层级',
+                'description' => '描述',
+                'sort_order' => '排序',
+                'is_active' => '状态',
+                'created_at' => '创建时间',
+                'updated_at' => '更新时间',
+            ];
+
+            return $this->sendToExport('设备管理-检查项', $filename, $title, $rows);
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 按 records_code 分组
+     */
+    protected function groupCheckListRecords(array $list): array
+    {
+        $grouped = [];
+        foreach ($list as $item) {
+            $code = $item['records_code'];
+            if (!isset($grouped[$code])) {
+                $grouped[$code] = [
+                    'records_code' => $code,
+                    'machine_id' => $item['machine_id'],
+                    'manager_id' => $item['manager_id'],
+                    'nickname' => $item['nickname'] ?? '',
+                    'check_time' => $item['check_time'],
+                    'records' => [],
+                ];
+            }
+            $grouped[$code]['records'][] = [
+                'id' => $item['id'],
+                'item_id' => $item['item_id'],
+                'item_name' => $item['item_name'],
+                'check_status' => intval($item['check_status'] ?? 0),
+                'parent_id' => $item['parent_id'],
+                'item_level' => $item['item_level'],
+                'manager_id' => $item['manager_id'],
+                'nickname' => $item['nickname'] ?? '',
+                'check_time' => $item['check_time'],
+                'notes' => $item['notes'],
+                'created_at' => $item['created_at'],
+            ];
+        }
+        return array_values($grouped);
+    }
+
+    protected function flattenCheckListRecordsForExport(array $groups): array
+    {
+        $rows = [];
+        foreach ($groups as $group) {
+            foreach ($group['records'] as $record) {
+                $rows[] = [
+                    'records_code' => $group['records_code'],
+                    'machine_id' => $group['machine_id'],
+                    'manager_id' => $group['manager_id'],
+                    'nickname' => $group['nickname'] ?? ($record['nickname'] ?? ''),
+                    'check_time' => $record['check_time'] ?: $group['check_time'],
+                    'item_name' => $record['item_name'] ?? '',
+                    'check_status_text' => $this->formatCheckStatusText($record['check_status'] ?? null),
+                    'notes' => $record['notes'] ?? '',
+                    'created_at' => $record['created_at'] ?? '',
+                ];
+            }
+        }
+        return $rows;
+    }
+
+    protected function formatCheckStatusText($status): string
+    {
+        if ($status === null || $status === '') {
+            return '';
+        }
+        return intval($status) === 1 ? '正常' : (intval($status) === 2 ? '异常' : strval($status));
     }
 
     /**

@@ -97,4 +97,38 @@ class MachineCheckList extends Common
         if (isset($postData['pageSize'])) $where['pageSize'] = intval($postData['pageSize']);
         return $this->app->machineCheckList->getRecords($where);
     }
+
+    /**
+     * 导出小蜜蜂维护记录
+     */
+    public function exportRecords()
+    {
+        $postData = input();
+        $where = [];
+        if (!empty($postData['machine_id'])) {
+            $where['machine_id'] = $postData['machine_id'];
+        }
+        if (!empty($postData['records_code'])) {
+            $where['records_code'] = $postData['records_code'];
+        }
+        if (isset($postData['maintainer_id']) && $postData['maintainer_id'] !== '') {
+            $where['maintainer_id'] = $postData['maintainer_id'];
+        }
+        if (isset($postData['manager_id']) && $postData['manager_id'] !== '') {
+            $where['manager_id'] = $postData['manager_id'];
+        }
+        return $this->app->machineCheckList->exportRecords($where);
+    }
+
+    /**
+     * 导出检查项列表（check_list_items）
+     */
+    public function exportItems()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData, false, [
+            'item_name' => 'like',
+        ]);
+        return $this->app->machineCheckList->exportItems($where);
+    }
 }
