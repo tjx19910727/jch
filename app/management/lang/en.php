@@ -617,6 +617,16 @@ return [
         "payee_config_no_json" => "Payee configuration information is not in JSON format",
 
         "free_can_not_refund" => "Free payment method cannot be refunded",
+        "offline_refund_pay_type_invalid" => "This payment type does not support offline refund",
+        "offline_refund_use_online" => "Please use the online refund API for this order",
+        "offline_refund_payment_no_require" => "Either payment serial no. or voucher no. is required",
+        "offline_refund_payment_time_invalid" => "Invalid payment time format",
+        "offline_refund_amount_mismatch" => "Refund amount does not match the system calculated amount",
+        "offline_refund_payment_method_require" => "Payment method is required",
+        "offline_refund_payment_time_require" => "Payment time is required",
+        "offline_refund_payment_amount_require" => "Refund amount is required",
+        "offline_refund_payment_amount_invalid" => "Invalid refund amount",
+        "offline_refund_receiver_account_require" => "Receiver account is required",
     ],
 
     "VSaleOrdersRefund" => [
@@ -750,5 +760,12 @@ return [
         "data_invalid" => "Device data is abnormal, invalid m_id exists",
         "data_assign_fail" => "Failed to assign devices",
         "title_require" => "Topic title cannot be empty",
+        "claim_goods_title_require" => "Pickup page copy cannot be empty",
+        "out_goods_title_require" => "Delivery page copy cannot be empty",
+        "deal_success_title_require" => "Transaction success title cannot be empty",
+        "deal_success_sub_title_require" => "Transaction success subtitle cannot be empty",
+        "deal_abnormal_pic_require" => "Transaction abnormal picture cannot be empty",
+        "deal_fail_title_require" => "Transaction failure title cannot be empty",
+        "deal_fail_sub_title_require" => "Transaction failure subtitle cannot be empty",
     ],
 ];

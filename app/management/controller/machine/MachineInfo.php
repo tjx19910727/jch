@@ -185,9 +185,14 @@ class MachineInfo extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
+        // 防御性读取参数，避免未定义数组索引导致的 PHP Notice/Warning
         $n = 0;
         $send = 0;
-        $machine_id = $postData['machine_id'];
+        $machine_id = isset($postData['machine_id']) ? $postData['machine_id'] : input('machine_id');
+        $mi_id = isset($postData['mi_id']) ? $postData['mi_id'] : input('mi_id');
+        // 若验证通过仍缺少必要参数，返回明确的错误信息
+        if (!$machine_id) return returnState(100, lang("VMachineInfo.machine_id_require"));
+        if (!$mi_id) return returnState(100, lang("VMachineInfo.mi_id_require"));
         $now = time();
         $overtime = 50;
         while(1){
@@ -204,7 +209,7 @@ class MachineInfo extends Common
                     return returnState(100, lang("VMachineInfo.get_computer_overtime"));
                 }
             } else {
-                return $this->app->machineInfo->getFind(['mi_id' => $postData['mi_id']], 'mi_id,cpu_utility,cpu_temperature,memory_usage,disk_occupancy');
+                return $this->app->machineInfo->getFind(['mi_id' => $mi_id], 'mi_id,cpu_utility,cpu_temperature,memory_usage,disk_occupancy');
             }
         }
         return returnState(100,lang("query_fail"));

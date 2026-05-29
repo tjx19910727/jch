@@ -54,12 +54,12 @@ trait SimSignalLogTrait
      */
     public function updateSimSignal()
     {
-        $machine = property_exists($this, 'machine') ? (array)($this->{'machine'} ?? []) : [];
-        $message = property_exists($this, 'message') ? (array)($this->{'message'} ?? []) : [];
+        $machine = $this->machine ?? [];
+        $message = $this->message ?? [];
         return $this->updateSimSignalWithData($machine, $message);
     }
 
-    public function updateSimSignalWithData(array $machine, array $message)
+    public function updateSimSignalWithData($machine, $message)
     {
         try {
             if (empty($machine['m_id']) || empty($machine['machine_id'])) {
@@ -67,17 +67,23 @@ trait SimSignalLogTrait
                 return 1;
             }
 
-            $iccid = trim($message['iccid'] ?? '');
+            $payload = $message;
+
+            $iccid = trim($payload['iccid'] ?? '');
             if (!$iccid) {
-                $iccid = SimCardInfoModel::getFieldValue(['m_id' => $machine['m_id']], 'iccid', 'id desc');
+                $iccid = SimCardInfoModel::getFieldValue(['machine_id' => $machine['machine_id']], 'iccid', 'id desc');
             }
             if (!$iccid) {
-                actionLog($message, 'updateSimSignal缺少iccid', 'DataUpload');
+                actionLog(['machine' => $machine, 'message' => $payload], 'updateSimSignal缺少iccid', 'DataUpload');
                 return 1;
             }
+            if(!isset($payload['sinr']) || !isset($payload['rsrp']) || $payload['sinr'] === '' || $payload['rsrp'] === ''){
+                actionLog(['machine' => $machine, 'message' => $payload], 'updateSimSignal缺少信号信息', 'DataUpload');
+                return 1;
+            }
+            $sinr = $payload['sinr'];
+            $rsrp = $payload['rsrp'];
 
-            $sinr = intval($message['sinr'] ?? 0);
-            $rsrp = intval($message['rsrp'] ?? 0);
 
             if ($sinr < 0) {
                 $sinrLevel = 1;

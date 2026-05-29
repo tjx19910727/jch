@@ -159,6 +159,10 @@ class MachineClient extends TimeTaskBase
         $nowSec = HourMinuteSec2int(date("H:i:s", $now));
         $slotStart = $today + intval(floor(($now - $today) / 7200)) * 7200;
         $slotEnd = min($slotStart + 7199, $today + 86399);
+        $recordDate = date("Y-m-d H:i:s", $today);
+        $collectTime = date("Y-m-d H:i:s", $now);
+        $slotStartTime = date("Y-m-d H:i:s", $slotStart);
+        $slotEndTime = date("Y-m-d H:i:s", $slotEnd);
 
         $where = [
             ['is_operating', '=', 1],
@@ -183,19 +187,19 @@ class MachineClient extends TimeTaskBase
                 'online' => $machine['online'],
                 'is_operating' => $machine['is_operating'],
                 'ckc_status' => $machine['ckc_status'] ?? 1,
-                'record_date' => $today,
-                'collect_time' => $now,
-                'slot_start_time' => $slotStart,
-                'slot_end_time' => $slotEnd,
-                'business_start_time' => $businessStart,
-                'business_end_time' => $businessEnd,
+                'record_date' => $recordDate,
+                'collect_time' => $collectTime,
+                'slot_start_time' => $slotStartTime,
+                'slot_end_time' => $slotEndTime,
+                'business_start_time' => date("Y-m-d H:i:s", $today + intval($businessStart)),
+                'business_end_time' => date("Y-m-d H:i:s", $today + intval($businessEnd)),
                 'ao_id' => $machine['ao_id'] ?? 0,
             ];
 
             $exists = $this->getMachineOnlineSnapshotFind([
                 'm_id' => $machine['m_id'],
-                'record_date' => $today,
-                'slot_start_time' => $slotStart,
+                'record_date' => $recordDate,
+                'slot_start_time' => $slotStartTime,
             ], 'mos_id');
             if ($exists) {
                 $saveData['mos_id'] = $exists['mos_id'];
@@ -254,6 +258,7 @@ class MachineClient extends TimeTaskBase
     public function checkOffline()
     {
         $details = $this->getMachineOnlineDetailsList(['offline_time' => 0, ['heart_time', '<', time() - env("machine.timeout",60)]], 0, 'mod_id,m_id,machine_name,machine_id,online_time,d_date');
+        $httpFlag = [];
         if ($details) {
             $flag[] = 1;
             $this->startTrans();
@@ -301,7 +306,7 @@ class MachineClient extends TimeTaskBase
                     $mqCount = Db::name('machine_mq_record')
                     ->where('m_id', $value['m_id'])
                     ->where('path', '/httpHeartbeat')
-                    ->where('create_time', '>', time() - 900)->count();
+                    ->where('create_time', '>=', time() - 900)->count();
                     if(!$mqCount){
                         $upData['http_online'] = 2;
                     }
@@ -345,6 +350,33 @@ class MachineClient extends TimeTaskBase
                 actionLog($e->getTrace(), 'tryCatchTrace','checkOffline');
             }
         }
+
+        try {
+            $httpList = Db::name('machine')
+                ->where('online', 2)
+                ->where('http_online', '<>', 2)
+                ->field('m_id,machine_id,http_online')
+                ->select()
+                ->toArray();
+            foreach ($httpList as $item) {
+                $mqCount = Db::name('machine_mq_record')
+                    ->where('m_id', $item['m_id'])
+                    ->where('path', '/httpHeartbeat')
+                    ->where('create_time', '>=', time() - 900)
+                    ->count();
+                if (!$mqCount) {
+                    $httpFlag[] = $this->updateMachine([
+                        'm_id' => $item['m_id'],
+                        'http_online' => 2,
+                    ]);
+                }
+            }
+            actionLog($httpFlag, '补偿处理HTTP在线状态', 'checkOffline');
+        } catch (\Exception $e) {
+            actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(), 'httpCheckTryCatchMessage', 'checkOffline');
+            actionLog($e->getTrace(), 'httpCheckTryCatchTrace', 'checkOffline');
+        }
+
         return "处理成功";
     }
 
@@ -398,7 +430,7 @@ class MachineClient extends TimeTaskBase
     }
 
     /**
-     * 定时任务-建议每5分钟执行一次，检查运营中设备是否在开机窗口内超过5分钟仍未开机
+     * 定时任务-建议每15分钟执行一次，检查运营中设备是否在开机窗口内超过15分钟仍未开机
      */
     public function checkOperatingStartup()
     {
@@ -408,8 +440,8 @@ class MachineClient extends TimeTaskBase
             $today = date('Y-m-d');
             $todayKey = date('Ymd');
             $ttl = strtotime(date('Y-m-d 23:59:59', $now)) - $now;//当前时间距离当天结束的秒数，用于设置缓存过期时间
-            $intervals = [480, 900, 1800, 3600, 7200];// 阶梯秒数：8、15、30、60、120分钟
-            $firstInterval = intval($intervals[0] ?? 480);
+            $intervals = [900, 1800, 3600, 5400, 7200];// 阶梯秒数：15、30、60、90、120分钟
+            $firstInterval = intval($intervals[0] ?? 900);// 首个阶段时间，默认15分钟
             // 每天22:00-次日06:00跳过，不执行查库
             if ($hour >= 22 || $hour < 6) {
                 actionLog(date('Y-m-d H:i:s', $now), '静默时段跳过未开机巡检', 'checkOperatingStartup');
@@ -485,7 +517,7 @@ class MachineClient extends TimeTaskBase
                     ], '无效营业时间配置(不支持跨天)，跳过巡检', 'checkOperatingStartup');
                     continue;
                 }
-                // 仅在开机窗口内进行检查，且开机后8分钟内不告警
+                // 仅在开机窗口内进行检查，且开机后15分钟内不告警
                 if ($now < $startupTimestamp || $now > $shutdownTimestamp) {
                     continue;
                 }
@@ -533,7 +565,6 @@ class MachineClient extends TimeTaskBase
                     'need_seconds' => $needSeconds,
                 ], '发送设备未开机提醒', 'checkOperatingStartup');
             }
-
             actionLog($flag, '处理运营中设备未开机提醒结果', 'checkOperatingStartup');
         } catch (\Exception $e) {
             actionException($e, 1, 'checkOperatingStartup');

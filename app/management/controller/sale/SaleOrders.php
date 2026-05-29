@@ -110,12 +110,16 @@ class SaleOrders extends Common
             }
             $where[] = ['sod.sod_id','in',$sod_id];
         }
+        if (isset($postData['supplier']) && $postData['supplier']) unset($where['ao_id']);
+        if($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0,1] )){
+            $where['so.ao_id'] = $this->manager['ao_id'];
+        }
 
         $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_channel,so.pay_channel_name,so.pay_time,so.out_time,so.create_time,so.out_status,so.refund_status,so.factory,so.inventory_location,
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,sod.cost_price,(sod.total_sod_points - sod.refund_points) total_sod_points,(sod.total_sod_cost_points - sod.refund_cost_points) total_sod_cost_points,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount,(SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name";
         // if ($postData['supplier']) unset($where['ao_id']);                                                                                                                                                                                                                                                                                                                                                                                                           
-        // $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.ao_id ='.$this->manager['ao_id'];
+        // $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
         return returnData($this->app->saleOrders->getDetailsList($where,($postData['pageNum'] ?? 0),$field,"sod_id desc",$postData['supplier'] ?? 'true'));
     }
 
@@ -169,6 +173,27 @@ class SaleOrders extends Common
         if ($check !== true) return returnState(100,$check);
         $postData['refund'] = json2arr($postData['refund']);
         return $this->app->saleOrders->refundOrder($postData);
+    }
+
+    /**
+     * 线下退款（人工打款，不调支付平台）
+     * @return array|bool|string
+     */
+    public function offlineRefund()
+    {
+        $postData = input();
+        actionLog($postData, '线下退款数据');
+        try {
+            $this->validate($postData, $this->validatePath . 'offlineRefund');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        $check = checkFrequency('offline_refund' . $postData['order_id'], 10);
+        if ($check !== true) {
+            return returnState(100, $check);
+        }
+        $postData['refund'] = json2arr($postData['refund']);
+        return $this->app->saleOrders->offlineRefundOrder($postData);
     }
 
     /**
@@ -392,6 +417,7 @@ class SaleOrders extends Common
         sum(totalRefundAmount) totalRefundAmount,
         SUM(totalRefundQuantity) totalRefundQuantity,
         SUM(totalPrice) totalPrice,
+    SUM(totalPrice - totalRefundAmount) totalSalePrice,
         SUM(totalDiscountPrice) totalDiscountPrice,
         SUM(totalQuantity) totalQuantity,
         SUM(giftQuantity) giftQuantity,
@@ -530,6 +556,7 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
+        $where = $this->formatAoIdWhereWithPrefix($where, 'so.');
         // 添加美驰图账号判断
         if ($this->manager['account'] != 'meichitu'){
             if (!isset($postData['m_id']) || !$postData['m_id']) {
@@ -553,7 +580,7 @@ class SaleOrders extends Common
         }
 
         $where['so.pay_status'] = 3;
-        // $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.ao_id ='.$this->manager['ao_id'];
+        //$where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
         actionLog($where,'查询条件');
         return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20);
     }
@@ -567,12 +594,13 @@ class SaleOrders extends Common
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
+        $where = $this->formatAoIdWhereWithPrefix($where, 'so.');
         if ($this->manager['pid'] > 0) {
             $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
         $where['so.pay_status'] = 3;
-        $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.ao_id ='.$this->manager['ao_id'];
+        $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
         return $this->app->saleOrders->exportSaleDataCollect($where);
     }
 

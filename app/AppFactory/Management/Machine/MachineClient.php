@@ -226,15 +226,32 @@ class MachineClient extends ManagementClient
         return $this->rAction(flag_check($flag));
     }
 
-    public function getMList($where,$pageNum = 0,$field = "",$order = "")
+    /**
+     * 与 Machine::getList -> getMList 一致的账号可见 m_id 范围
+     * @return int[]|null null 表示不限制（超管等）
+     */
+    public function resolvePermittedMachineIds(): ?array
     {
         if ($this->manager['pid'] > 0) {
-            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-            $createMIds = $this->getMachineColumn(['creator' => $this->manager['manager_id']],'m_id');
-            if ($createMIds && $mIds) $mIds = array_unique(array_merge($mIds,$createMIds));
-            $where[] = ['m_id', 'in', $mIds];
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+            $createMIds = $this->getMachineColumn(['creator' => $this->manager['manager_id']], 'm_id');
+            $mIds = array_values(array_unique(array_merge(
+                is_array($mIds) ? $mIds : [],
+                is_array($createMIds) ? $createMIds : []
+            )));
+            return array_values(array_unique(array_map('intval', $mIds)));
         }
-        $month = date('Y-m');
+
+        return null;
+    }
+
+    public function getMList($where,$pageNum = 0,$field = "",$order = "")
+    {
+        $permitted = $this->resolvePermittedMachineIds();
+        if ($permitted !== null) {
+            $where[] = ['m_id', 'in', $permitted];
+        }
+		$month = date('Y-m');
         $monthStart = strtotime($month . '-01 00:00:00');
         $monthEnd = strtotime(date('Y-m-t 23:59:59', $monthStart));
         $defaultSignal = ['rsrp' => -999, 'sinr' => -999, 'rsrp_level' => 0, 'sinr_level' => 0];
@@ -244,7 +261,40 @@ class MachineClient extends ManagementClient
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
             if (isset($item['regions_id']) && $item['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $item['regions_id']],'code,name,cname');
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
-            $item['machine_on_off'] = $this->getMachineOnOffFind(['m_id' => $item['m_id'],'status' => 1],'on_off_ckc,on_off_machine');
+            $machineOnOff = $this->getMachineOnOffFind(['m_id' => $item['m_id'],'status' => 1],'on_off_ckc,on_off_machine');
+            if (is_object($machineOnOff) && method_exists($machineOnOff, 'toArray')) {
+                $machineOnOff = $machineOnOff->toArray();
+            }
+            if (!is_array($machineOnOff)) {
+                $machineOnOff = json_encode([]);
+            }
+            if(!empty($machineOnOff['on_off_machine'])){
+                if(!is_array($machineOnOff['on_off_machine'])){
+                    $machineOnOff['on_off_machine'] = json_decode($machineOnOff['on_off_machine'], true);
+                }
+                if(is_array($machineOnOff['on_off_machine'])){
+                    foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
+                        if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
+                            continue;
+                        }
+                        $parts = explode(',', $timeRange);
+                        if (count($parts) !== 2) {
+                            continue;
+                        }
+                        $startTime = trim($parts[0]);
+                        $endTime = trim($parts[1]);
+                        if (
+                            preg_match('/^\d{2}:\d{2}$/', $startTime)
+                            && preg_match('/^\d{2}:\d{2}$/', $endTime)
+                            && strcmp($startTime, $endTime) > 0
+                        ) {
+                            $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                        }
+                    }
+                    $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE);
+                }
+            }
+            $item['machine_on_off'] = $machineOnOff;
             if(empty($item['simSignalLog'])){
                 $item['simSignalLog'] = $defaultSignal;
             }
@@ -252,9 +302,18 @@ class MachineClient extends ManagementClient
             $ratioWhere[] = ['status', '<>', 2];
             $totalCapacity = $this->getMachineChannelSum($ratioWhere, 'capacity');
             $totalStock = $this->getMachineChannelSum($ratioWhere, 'stock');
-            $item['stock_ratio'] = ($totalCapacity > 0)
-                ? (bcmul(bcdiv($totalStock, $totalCapacity, 4), '100', 2) . '%')
-                : "0%";
+            if ($totalCapacity > 0) {
+                $ratio = bcdiv($totalStock, $totalCapacity, 4);
+                if (bccomp($ratio, '1', 4) > 0) {
+                    $ratio = '1';
+                }
+                if (bccomp($ratio, '0', 4) < 0) {
+                    $ratio = '0';
+                }
+                $item['stock_ratio'] = bcmul($ratio, '100', 2) . '%';
+            } else {
+                $item['stock_ratio'] = "0%";
+            }
 
             $targetAmount = round((float) Db::name('machine_target_monthly')
                 ->where('m_id', intval($item['m_id']))
@@ -378,9 +437,18 @@ class MachineClient extends ManagementClient
         $ratioWhere[] = ['status', '<>', 2];
         $totalCapacity = $this->getMachineChannelSum($ratioWhere, 'capacity');
         $totalStock = $this->getMachineChannelSum($ratioWhere, 'stock');
-        $stock_ratio = ($totalCapacity > 0)
-            ? (bcmul(bcdiv($totalStock, $totalCapacity, 4), '100', 2) . '%')
-            : "0%";
+        if ($totalCapacity > 0) {
+            $ratio = bcdiv($totalStock, $totalCapacity, 4);
+            if (bccomp($ratio, '1', 4) > 0) {
+                $ratio = '1';
+            }
+            if (bccomp($ratio, '0', 4) < 0) {
+                $ratio = '0';
+            }
+            $stock_ratio = bcmul($ratio, '100', 2) . '%';
+        } else {
+            $stock_ratio = "0%";
+        }
         return $stock_ratio;
     }
 
