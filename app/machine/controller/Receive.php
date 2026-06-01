@@ -10,6 +10,7 @@
 namespace app\machine\controller;
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Traits\Machine\SimSignalLogTrait;
 use app\AppFactory\Machine\Application;
 use app\AppFactory\RabbitMq\MqProducer;
 use think\db\exception\DataNotFoundException;
@@ -24,6 +25,8 @@ use think\View;
  */
 class Receive extends Common
 {
+    use SimSignalLogTrait;
+
     protected $validatePath = 'app\machine\validate\VReceive.';
     protected $config;
     /**
@@ -1263,6 +1266,33 @@ class Receive extends Common
     {
         try {
             return $this->app->api->reportSimCardMachineUsage();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    
+    /**
+     * 设备通过 HTTP 上报物联卡信号
+     * @return array|string
+     */
+    public function reportSimSignal()
+    {
+        try {
+            $postData = input();
+            $postData = json2arr($postData);
+            $machineId = $postData['machine_id'] ?? '';
+            $cacheKey = 'reportSimSignal_limit_' . $machineId;
+            if ($machineId && cache($cacheKey)) {
+                return returnState(300, '同一台设备2分钟内只允许一条信号上报');
+            }
+            if ($machineId) {
+                cache($cacheKey, 1, 120);
+            }
+            $machine = $this->app->api->machine ?? [];
+            $this->updateSimSignalWithData($machine, $postData);
+            return returnState(200, lang('action_success'));
         } catch (\Exception $e) {
             actionException($e, 1);
             return returnTryCatch($e->getMessage());
