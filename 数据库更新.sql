@@ -1968,3 +1968,6 @@ VALUES(19, 3, '商品选购', 3, '模拟顾客选择商品，流程顺畅，界�
 INSERT INTO check_list_items
 (id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
 VALUES(20, 3, '支付测试', 3, '检查多种支付方式（如扫码、反扫等）是否正常，支付后能否顺利触发出货', 4, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:16');
+
+ALTER TABLE `machine`
+  ADD COLUMN `http_push_url` varchar(255) NOT NULL DEFAULT '' COMMENT 'device HTTP command receiver URL' AFTER `http_online`;

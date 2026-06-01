@@ -799,6 +799,20 @@ class Receive extends Common
     }
 
     /**
+     * HTTP直推截图后，设备回传截图结果
+     * @return array|string
+     */
+    public function reportHttpImg()
+    {
+        try {
+            return $this->app->api->reportHttpImg();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 设备主动获取出货信息
      * @return array|string
      */

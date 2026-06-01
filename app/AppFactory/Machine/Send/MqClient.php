@@ -162,6 +162,18 @@ class MqClient extends SendBaseClient
         return $this->dataSendRabbitMQ($data);
     }
 
-
+    /**
+     * 通过 HTTP 主动推送至设备，数据结构与 MQ 下发一致。
+     * @param string $msgType
+     * @param array $otherData
+     * @param string $url
+     * @return array|string
+     */
+    public function sendHttp($msgType, $otherData = [], $url = '')
+    {
+        $data = ['msgType' => $msgType];
+        if ($otherData) $data = array_merge($data, $otherData);
+        return $this->dataSendHttp($data, $url);
+    }
 
 }

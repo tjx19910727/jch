@@ -370,6 +370,76 @@ trait MachineTrait
     }
 
     /**
+     * 通过 HTTP 直接向设备推送指令，数据格式与 MQ 下发一致。
+     * @param array $machine
+     * @param string $msgType
+     * @param array $otherData
+     * @param string $pushUrl
+     * @return array|bool|string
+     */
+    public function sendHttpToMachine($machine, $msgType, $otherData = [], $pushUrl = '')
+    {
+        $m = $this->getMachineFind(['machine_id' => $machine['machine_id']]);
+        if (!$m) {
+            return false;
+        }
+        $m = $m->toArray();
+        if (in_array($msgType, $this->checkCurrentStatus) && ($m['current_status'] ?? '') != "normal") {
+            return $this->lang("current_status_not_normal");
+        }
+
+        $pushUrl = $this->getMachineHttpPushUrl($m, $pushUrl);
+        if (!$pushUrl) {
+            return 'machine_http_push_url_require';
+        }
+
+        $key = $m['signKey'] ?? "";
+        if (!$key) {
+            $key = env("api.md5Key");
+        }
+        if (!$key) {
+            return $this->lang("VReceive.signKey_require");
+        }
+
+        $config = [
+            "machine_id" => $m['machine_id'],
+            "key" => $key,
+            "mac" => $m['mac_address'] ?? "",
+        ];
+        actionLog(['config' => $config, 'url' => $pushUrl], 'HTTP下发命令配置');
+        $app = AppFactory::machine($config);
+        $result = $app->sendMq->sendHttp($msgType, $otherData, $pushUrl);
+        actionLog(@obj2arr($result), 'sendHttpToMachine结果');
+        return $result;
+    }
+
+    /**
+     * 获取设备 HTTP 指令接收地址。优先使用调用方传入，其次设备表 http_push_url，最后 .env 模板。
+     * 模板支持 {machine_id} 和 {mac} 占位符。
+     * @param array $machine
+     * @param string $pushUrl
+     * @return string
+     */
+    protected function getMachineHttpPushUrl($machine, $pushUrl = '')
+    {
+        $url = trim((string)$pushUrl);
+        if (!$url && !empty($machine['http_push_url'])) {
+            $url = trim((string)$machine['http_push_url']);
+        }
+        if (!$url) {
+            $url = trim((string)(env('machine.http_push_url') ?: env('machine.httpPushUrl')));
+        }
+        if (!$url) {
+            return '';
+        }
+        return str_replace(
+            ['{machine_id}', '{mac}'],
+            [$machine['machine_id'] ?? '', str_replace(':', '_', $machine['mac_address'] ?? '')],
+            $url
+        );
+    }
+
+    /**
      * 发送多设备触发数据
      * @param $machine
      * @param $msgType

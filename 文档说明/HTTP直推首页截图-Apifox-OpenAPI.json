@@ -1,0 +1,406 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "HTTP直推首页截图接口",
+    "description": "后台点击获取首页屏幕截图时，后台通过HTTP直接向设备推送一条与MQ格式一致的img指令；设备收到后截图，并调用后台HTTP接口回传截图路径。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.kiosk-uat.kalos-blocks.com",
+      "description": "后台服务地址，请按环境替换"
+    }
+  ],
+  "tags": [
+    {
+      "name": "后台触发"
+    },
+    {
+      "name": "设备接收"
+    },
+    {
+      "name": "设备回传"
+    }
+  ],
+  "paths": {
+    "/management/machine.machine_info/getImg": {
+      "post": {
+        "tags": [
+          "后台触发"
+        ],
+        "summary": "后台触发获取首页屏幕截图",
+        "description": "后台点击获取首页屏幕截图时调用。field=screen_img 时，后台会通过HTTP直推设备；设备收到指令后截图，再调用 /machine/receive/reportHttpImg 回传截图路径。本接口会等待截图结果，成功后返回图片路径。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "machine_id",
+                  "field"
+                ],
+                "properties": {
+                  "machine_id": {
+                    "type": "string",
+                    "description": "设备编号",
+                    "example": "JCHM-H2D-0033"
+                  },
+                  "field": {
+                    "type": "string",
+                    "description": "图片字段。本场景固定传 screen_img",
+                    "enum": [
+                      "screen_img"
+                    ],
+                    "example": "screen_img"
+                  },
+                  "http_push_url": {
+                    "type": "string",
+                    "description": "可选，设备HTTP指令接收地址。优先级最高；不传时使用设备表 machine.http_push_url 或 .env 中 machine.http_push_url 模板",
+                    "example": "http://192.168.1.10:18080/device/receive/command"
+                  },
+                  "device_url": {
+                    "type": "string",
+                    "description": "可选，http_push_url 的兼容别名",
+                    "example": "http://192.168.1.10:18080/device/receive/command"
+                  },
+                  "push_url": {
+                    "type": "string",
+                    "description": "可选，http_push_url 的兼容别名",
+                    "example": "http://192.168.1.10:18080/device/receive/command"
+                  }
+                }
+              },
+              "examples": {
+                "triggerScreenShot": {
+                  "summary": "触发首页截图",
+                  "value": {
+                    "machine_id": "JCHM-H2D-0033",
+                    "field": "screen_img",
+                    "http_push_url": "http://192.168.1.10:18080/device/receive/command"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "接口返回。state=200 表示获取成功，data 为截图路径；state=300 通常表示等待设备回传超时。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "获取成功",
+                    "value": {
+                      "state": 200,
+                      "msg": "查询成功",
+                      "data": "/uploads/screen/20260601/screen.jpg"
+                    }
+                  },
+                  "timeout": {
+                    "summary": "等待超时",
+                    "value": {
+                      "state": 300,
+                      "msg": "获取图片超时",
+                      "data": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/device/receive/command": {
+      "post": {
+        "tags": [
+          "设备接收"
+        ],
+        "summary": "设备接收后台HTTP直推指令",
+        "description": "该接口由设备端实现，后台会向配置的设备HTTP地址POST此格式数据。请求体与MQ下发格式一致：data 是 JSON 字符串，内部包含 msgType=img、field=screen_img、report_url。",
+        "servers": [
+          {
+            "url": "http://{device_host}:{device_port}",
+            "description": "设备HTTP服务地址",
+            "variables": {
+              "device_host": {
+                "default": "192.168.1.10"
+              },
+              "device_port": {
+                "default": "18080"
+              }
+            }
+          }
+        ],
+        "parameters": [
+          {
+            "name": "mac",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "设备MAC地址，后台会随请求头发送",
+            "example": "04:2B:58:12:15:00"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MqLikeHttpCommand"
+              },
+              "examples": {
+                "screenShotCommand": {
+                  "summary": "首页截图指令",
+                  "value": {
+                    "msg_id": "665d7a8a4f5b1",
+                    "timestamp": 1780308000,
+                    "machine_id": "JCHM-H2D-0033",
+                    "data": "{\"msgType\":\"img\",\"field\":\"screen_img\",\"report_url\":\"https://api.kiosk-uat.kalos-blocks.com/machine/receive/reportHttpImg\"}",
+                    "sign": "b6b6c57fb5a8f0d9e4c0f7e0b0c73d2a"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "设备收到指令后的同步响应。设备返回成功后，应异步或同步完成截图并调用 report_url 回传。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "example": {
+                  "state": 200,
+                  "msg": "success",
+                  "data": []
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/machine/receive/reportHttpImg": {
+      "post": {
+        "tags": [
+          "设备回传"
+        ],
+        "summary": "设备回传HTTP截图结果",
+        "description": "设备收到HTTP直推截图指令后，完成截图并上传图片，随后调用本接口提交图片路径。后台会写入 machine_info.screen_img，后台触发接口等待到该字段后返回。",
+        "parameters": [
+          {
+            "name": "mac",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "设备MAC地址，用于后台校验设备",
+            "example": "04:2B:58:12:15:00"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportHttpImgRequest"
+              },
+              "examples": {
+                "reportScreenShot": {
+                  "summary": "回传首页截图",
+                  "value": {
+                    "msg_id": "665d7a91a2c32",
+                    "machine_id": "JCHM-H2D-0033",
+                    "timestamp": 1780308005,
+                    "sign": "1ab2a7ad7f81ff0b21e927af2e1b17dd",
+                    "field": "screen_img",
+                    "path": "/uploads/screen/20260601/screen.jpg",
+                    "status": 3,
+                    "command_msg_id": "665d7a8a4f5b1"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "回传处理结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommonResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "回传成功",
+                    "value": {
+                      "state": 200,
+                      "msg": "success",
+                      "data": []
+                    }
+                  },
+                  "invalidField": {
+                    "summary": "字段错误",
+                    "value": {
+                      "state": 100,
+                      "msg": "图片字段名无效",
+                      "data": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CommonResponse": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "integer",
+            "description": "业务状态码。200成功，100业务失败，300异常或超时",
+            "example": 200
+          },
+          "msg": {
+            "type": "string",
+            "description": "提示信息",
+            "example": "success"
+          },
+          "data": {
+            "description": "业务数据。截图成功时可能为图片路径",
+            "oneOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "array"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "example": []
+          }
+        }
+      },
+      "MqLikeHttpCommand": {
+        "type": "object",
+        "required": [
+          "msg_id",
+          "timestamp",
+          "machine_id",
+          "data",
+          "sign"
+        ],
+        "properties": {
+          "msg_id": {
+            "type": "string",
+            "description": "后台生成的指令消息ID，设备回传时建议放入 command_msg_id",
+            "example": "665d7a8a4f5b1"
+          },
+          "timestamp": {
+            "type": "integer",
+            "description": "后台生成的Unix秒级时间戳",
+            "example": 1780308000
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号",
+            "example": "JCHM-H2D-0033"
+          },
+          "data": {
+            "type": "string",
+            "description": "JSON字符串。解析后为 {\"msgType\":\"img\",\"field\":\"screen_img\",\"report_url\":\"后台回传地址\"}",
+            "example": "{\"msgType\":\"img\",\"field\":\"screen_img\",\"report_url\":\"https://api.kiosk-uat.kalos-blocks.com/machine/receive/reportHttpImg\"}"
+          },
+          "sign": {
+            "type": "string",
+            "description": "后台按现有设备签名规则生成的签名",
+            "example": "b6b6c57fb5a8f0d9e4c0f7e0b0c73d2a"
+          }
+        }
+      },
+      "ReportHttpImgRequest": {
+        "type": "object",
+        "required": [
+          "msg_id",
+          "machine_id",
+          "timestamp",
+          "sign",
+          "field",
+          "path"
+        ],
+        "properties": {
+          "msg_id": {
+            "type": "string",
+            "description": "本次回传请求消息ID，需唯一",
+            "example": "665d7a91a2c32"
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号",
+            "example": "JCHM-H2D-0033"
+          },
+          "timestamp": {
+            "type": "integer",
+            "description": "Unix秒级时间戳",
+            "example": 1780308005
+          },
+          "sign": {
+            "type": "string",
+            "description": "按现有设备HTTP接口签名规则生成",
+            "example": "1ab2a7ad7f81ff0b21e927af2e1b17dd"
+          },
+          "field": {
+            "type": "string",
+            "description": "图片字段，本场景固定 screen_img",
+            "enum": [
+              "screen_img"
+            ],
+            "example": "screen_img"
+          },
+          "path": {
+            "type": "string",
+            "description": "截图上传后的图片路径。设备可先调用既有 /machine/receive/uploadMedia 上传文件获取路径",
+            "example": "/uploads/screen/20260601/screen.jpg"
+          },
+          "status": {
+            "type": "integer",
+            "description": "处理状态：3成功，4失败；不传时后台会根据 path 自动判断",
+            "enum": [
+              3,
+              4
+            ],
+            "example": 3
+          },
+          "command_msg_id": {
+            "type": "string",
+            "description": "后台HTTP直推指令中的 msg_id，用于标记原指令完成",
+            "example": "665d7a8a4f5b1"
+          },
+          "request_msg_id": {
+            "type": "string",
+            "description": "command_msg_id 的兼容别名",
+            "example": "665d7a8a4f5b1"
+          }
+        }
+      }
+    }
+  }
+}

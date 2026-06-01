@@ -90,6 +90,7 @@ class MachineInfo extends Common
         $field = input('field');
         $machine_id = input('machine_id');
         $sodId = intval(input('sod_id'));
+        $httpPushUrl = input('http_push_url') ?: (input('device_url') ?: input('push_url'));
         if (!in_array($field,["screen_img","camera_img","exchange_img","remote_refund_goods"])) return returnState(100,lang("query_out_range"));
         if (!$machine_id) return returnState(100,lang("VMachineInfo.machine_id_require"));
         $send = "";
@@ -139,6 +140,10 @@ class MachineInfo extends Common
             if (!$send) {
                 // 下发获取首页截屏、设备内部照片、出货箱照片
                 $content = ["field" => $field];
+                $host = rtrim((string)env('app.host'), '/');
+                if ($host) {
+                    $content['report_url'] = $host . '/machine/receive/reportHttpImg';
+                }
                 if ($field == "remote_refund_goods") {
                     if ($logId) {
                         $content['log_id'] = $logId;
@@ -147,7 +152,14 @@ class MachineInfo extends Common
                         $content['sod_id'] = $sodId;
                     }
                 }
-                $this->app->machine->sendToMachine(['machine_id' => $machine_id],"img",$content);
+                if ($field == "screen_img") {
+                    $result = $this->app->machine->sendHttpToMachine(['machine_id' => $machine_id], "img", $content, $httpPushUrl);
+                    if (!is_object($result)) {
+                        return $this->app->machine->rFail($result ?: $this->app->machine->lang("VMachine.machine_no_data"));
+                    }
+                } else {
+                    $this->app->machine->sendToMachine(['machine_id' => $machine_id],"img",$content);
+                }
                 $send = 1;
             }
             sleep(1);
