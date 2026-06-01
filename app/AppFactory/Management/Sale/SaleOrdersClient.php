@@ -639,6 +639,8 @@ class SaleOrdersClient extends ManagementClient
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
         $where['raw'] = "pay_status in ('3', '7')";
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $refundCostPriceField = $hasCostPriceAuth ? 'so.cost_price' : '0 cost_price';
         $field = 'order_id,machine_id,machine_name,pay_status,trade_no,mch_no,total_quantity,total_price,total_cost_points,total_points,discount_price,retail_price,factory,inventory_location,
             (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name,
                 (CASE order_type
@@ -689,8 +691,7 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 8 THEN "八达通COGOLINK" 
                 WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
-                FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time';
-        if ($hasCostPriceAuth) $field .= ',cost_price';
+                FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time,' . $costPriceField;
         $list = $this->getSaleOrdersList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
@@ -765,8 +766,7 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 7 THEN "机器人线上支付" 
                 WHEN 8 THEN "八达通COGOLINK" 
                 WHEN 0 THEN "免支付" END) pay_type,
-                FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time';
-			if ($hasCostPriceAuth) $refundField .= ',so.cost_price';
+                FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time,' . $refundCostPriceField;
             $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, $refundField, 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
             $title = [
@@ -805,6 +805,8 @@ class SaleOrdersClient extends ManagementClient
      */
     public function exportGoodsSo($where, $hasCostPriceAuth = false)
     {
+        $costPriceField = $hasCostPriceAuth ? 'sod.cost_price' : '0 cost_price';
+        $refundCostPriceField = $hasCostPriceAuth ? 'sod.cost_price' : '0 cost_price';
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
@@ -869,8 +871,7 @@ class SaleOrdersClient extends ManagementClient
             FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
             (sod.quantity) quantity,
             (sod.success_quantity) success_quantity,
-            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name";
-        if ($hasCostPriceAuth) $field .= ",sod.cost_price";
+            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name,{$costPriceField}";
         $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
@@ -922,8 +923,7 @@ class SaleOrdersClient extends ManagementClient
                         FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
                         (sor.refund_quantity) quantity,
                         (sod.success_quantity) success_quantity,
-                        (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name";
-                if ($hasCostPriceAuth) $refundField .= ",sod.cost_price";
+                        (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name,{$refundCostPriceField}";
                 $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0,
                     $refundField);
                 if ($refund) $list = array_merge($list, $refund->toArray());

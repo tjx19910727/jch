@@ -233,6 +233,21 @@ class Common extends AuthController
         return !empty(array_intersect($nodeIds, $authNodeIds));
     }
 
+    /**
+     * 根据成本价权限格式化查询字段：
+     * 有权限保持原字段；无权限将 cost_price 字段替换为 0 cost_price。
+     * @param string $field
+     * @param bool $hasCostPriceAuth
+     * @return string
+     */
+    public function getFieldWithCostPriceAuth($field, $hasCostPriceAuth)
+    {
+        if ($hasCostPriceAuth) {
+            return $field;
+        }
+        return str_replace('cost_price,', '0 cost_price,', $field);
+    }
+
     //获取架构的所有下级部门
     public function getChildsAoIds($ao_id){
         $sql = "WITH RECURSIVE cte AS (
