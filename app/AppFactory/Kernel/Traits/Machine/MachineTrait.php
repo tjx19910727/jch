@@ -467,14 +467,42 @@ trait MachineTrait
      * 设备远程出货
      * @return array|bool|string
      */
-    public function setRemoteOutGoods()
+    public function setRemoteOutGoods($postData = [])
     {
-        $sod_id = input('sod_id');
-        $machine_id = input('machine_id');
-        $channel_code = input('channel_code') ?? '';
-        $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
-        if (!$detail) return $this->r(100,"找不到订单记录");
-        $order = $this->getSaleOrdersFind(['order_id' => $detail['order_id']]);
+        $postData = $postData ?: input();
+        $trade_no = trim((string)($postData['trade_no'] ?? ''));
+        $sod_id = intval($postData['sod_id'] ?? 0);
+        $machine_id = trim((string)($postData['machine_id'] ?? ''));
+        $channel_code = trim((string)($postData['channel_code'] ?? ''));
+
+        if (!$trade_no) {
+            return $this->r(100, "trade_no不能为空");
+        }
+        $order = $this->getSaleOrdersFind(['trade_no' => $trade_no]);
+        if (!$order) {
+            return $this->r(100, "找不到订单记录");
+        }
+        $order = is_object($order) ? $order->toArray() : $order;
+        if ($machine_id && $machine_id != $order['machine_id']) {
+            return $this->r(100, "设备编号与订单不匹配");
+        }
+        $machine_id = $machine_id ?: $order['machine_id'];
+
+        if ($sod_id) {
+            $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id, 'order_id' => $order['order_id']]);
+            if (!$detail) {
+                return $this->r(100, "子订单与订单不匹配");
+            }
+            $detail = is_object($detail) ? $detail->toArray() : $detail;
+        } else {
+            if (!$channel_code) {
+                return $this->r(100, "未传sod_id时channel_code不能为空");
+            }
+            $detail = $this->getRemoteOutGoodsDetailByChannel($order, $channel_code);
+            if (!$detail) {
+                return $this->r(100, "货道商品与订单子订单不匹配");
+            }
+        }
         // 先不做判断
         // if (!$channel_code){
         //     if ($detail['fail_quantity'] == 0) return "出货失败商品数量为0，无需操作";
@@ -532,6 +560,60 @@ trait MachineTrait
         }
         
         return $result;
+    }
+
+    /**
+     * 未传 sod_id 时，根据货道当前商品匹配订单子订单。
+     * @param array $order
+     * @param string $channelCode
+     * @return array|null
+     * @throws \Exception
+     */
+    protected function getRemoteOutGoodsDetailByChannel($order, $channelCode)
+    {
+        $channel = $this->getMachineChannelFind(
+            ['machine_id' => $order['machine_id'], 'channel_code' => $channelCode],
+            'mc_id,channel_code,mg_id,g_id,sku,bar_code'
+        );
+        if (!$channel) {
+            return null;
+        }
+        $channel = is_object($channel) ? $channel->toArray() : $channel;
+
+        $details = $this->getSaleOrdersDetailsList(
+            ['order_id' => $order['order_id']],
+            0,
+            'sod_id,order_id,mc_id,channel_position,channel_code,mg_id,g_id,g_name,g_type,gmg_id,sku,bar_code,quantity,is_gift,out_port,fail_quantity,cost_price,retail_price,total_sod_price',
+            'sod_id asc'
+        );
+        $details = is_object($details) && method_exists($details, 'toArray') ? $details->toArray() : $details;
+        if (!$details) {
+            return null;
+        }
+
+        foreach ($details as $detail) {
+            $detail = is_object($detail) ? $detail->toArray() : $detail;
+            if (!empty($detail['mc_id']) && !empty($channel['mc_id']) && intval($detail['mc_id']) == intval($channel['mc_id'])) {
+                return $detail;
+            }
+            if (!empty($detail['channel_code']) && $detail['channel_code'] == $channelCode) {
+                return $detail;
+            }
+            if (!empty($detail['g_id']) && !empty($channel['g_id']) && intval($detail['g_id']) == intval($channel['g_id'])) {
+                return $detail;
+            }
+            if (!empty($detail['sku']) && !empty($channel['sku']) && $detail['sku'] == $channel['sku']) {
+                return $detail;
+            }
+            if (!empty($detail['bar_code']) && !empty($channel['bar_code']) && $detail['bar_code'] == $channel['bar_code']) {
+                return $detail;
+            }
+            if (!empty($detail['mg_id']) && !empty($channel['mg_id']) && intval($detail['mg_id']) == intval($channel['mg_id'])) {
+                return $detail;
+            }
+        }
+
+        return null;
     }
 
 
