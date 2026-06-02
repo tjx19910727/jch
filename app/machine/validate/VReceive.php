@@ -210,6 +210,7 @@ class VReceive extends VCommon
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
         "httpHeartbeat" => ["msg_id","machine_id","timestamp","sign"],
+        "reportScreenImg" => ["msg_id","machine_id","timestamp","sign"],
         "requireOutGoods" => ["msg_id","machine_id","timestamp","sign","trade_no"],
         "getOrderPayStatus" => ["msg_id","machine_id","timestamp","sign"],
         "setHttpOutStatus" => ["msg_id","machine_id","timestamp","sign","trade_no","http_out_status"],

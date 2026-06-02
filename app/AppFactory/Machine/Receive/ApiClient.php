@@ -1929,6 +1929,43 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * HTTP接收设备上传的首页截屏。
+     * 设备先上传文件拿到路径后，再通过该接口把截图路径写入 machine_info.screen_img。
+     * @return array|string
+     */
+    public function reportScreenImg()
+    {
+        $path = $this->data['path'] ?? ($this->data['screen_img'] ?? '');
+        if (!$path) {
+            return $this->rValidate('图片路径不能为空');
+        }
+
+        $this->message = [
+            'msgType' => 'img',
+            'field' => 'screen_img',
+            'path' => $path,
+        ];
+        $result = $this->img();
+        actionLog(['data' => $this->data, 'result' => $result], 'HTTP首页截屏回传结果', 'reportScreenImg');
+        if ($result === false) {
+            return $this->r(300, '首页截屏保存失败');
+        }
+
+        $commandMsgId = $this->data['command_msg_id'] ?? ($this->data['request_msg_id'] ?? '');
+        if ($commandMsgId) {
+            $this->updateMachineMqRecord(
+                ['status' => 4],
+                ['machine_id' => $this->machine['machine_id'], 'msg_id' => $commandMsgId],
+                ['status']
+            );
+        }
+
+        return $this->r(200, 'success', [
+            'screen_img' => $path,
+        ]);
+    }
+
+    /**
      * 获取最近指定时间内的重启指令
      * @param int $seconds
      * @return array|null
