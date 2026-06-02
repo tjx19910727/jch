@@ -302,7 +302,7 @@ class SaleOrders extends Common
         $timeWhere = $this->getWhere(['sor.update_time' => $update_time]);
         $where = $this->authNodeWhere();
         $where = $timeWhere + $where;
-        $this->formatAoIdWhereWithPrefix($where, 'sor.');
+        $where = $this->formatAoIdWhereWithPrefix($where, 'sor.');
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
             $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
             unset($postData['machine_group_id']);
@@ -352,6 +352,7 @@ class SaleOrders extends Common
         if (isset($postData['refund_no']) && $postData['refund_no']) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
         if (isset($postData['pay_type']) && $postData['pay_type']) $where['pay_type'] = $postData['pay_type'];
         if (isset($postData['pay_channel']) && $postData['pay_channel']) $where['so.pay_channel'] = $postData['pay_channel'];
+        $where = $this->formatAoIdWhereWithPrefix($where, 'sor.');
         return $this->app->saleOrders->exportRefund($where);
     }
 
