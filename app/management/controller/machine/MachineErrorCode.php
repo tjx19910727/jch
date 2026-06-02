@@ -123,6 +123,6 @@ class MachineErrorCode extends Common
         $where = $this->getWhere($postData, false, ['machine_id' => "like", "errorCode" => "like"]);
         $where['status'] = 1;
         $where['errorCode'] = 1200000;
-        return $this->app->machineErrorCode->getEcList($where, $pageNum, $this->videoField, 'create_time desc');
+        return $this->app->machineErrorCode->getEcVideoList($where, $pageNum, $this->videoField, 'create_time desc');
     }
 }
