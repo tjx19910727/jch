@@ -16,6 +16,8 @@ class MachineErrorCode extends Common
 
     protected $field = "me_id,m_id,machine_id,machine_name,address,error_position,errorCode,remark,msg,create_time";
 
+    protected $videoField = "me_id,m_id,machine_id,machine_name,address,error_position,errorCode,remark,msg,trade_no,transaction_video,create_time";
+
     public function getList()
     {
         $postData = input();
@@ -106,5 +108,21 @@ class MachineErrorCode extends Common
             'me_id' => intval($me_id),
         ];
         return $this->app->wxTemplateLog->getTemplateLogList($where, $pageNum, '*', 'create_time desc');
+    }
+
+    
+    /**
+     * 后台视频统一入口列表，新开接口，方便权限控制
+     * 当前仅支持营业逻辑中柜门打开（1200000）
+     * @return array|\think\response\Json
+     */
+    public function getVideoList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, ['machine_id' => "like", "errorCode" => "like"]);
+        $where['status'] = 1;
+        $where['errorCode'] = 1200000;
+        return $this->app->machineErrorCode->getEcList($where, $pageNum, $this->videoField, 'create_time desc');
     }
 }
