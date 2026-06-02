@@ -1909,13 +1909,17 @@ class ApiClient extends ReceiveBaseClient
 
         $restartCommand = $this->getRecentRestartCommand(300);
         if ($restartCommand) {
+            $restart = [
+                'msgType' => $restartCommand['msgType'],
+                'msg_id' => $restartCommand['msg_id'] ?? '',
+                'timestamp' => intval($restartCommand['timestamp'] ?? 0),
+            ];
+            if (!empty($restartCommand['field'])) {
+                $restart['field'] = $restartCommand['field'];
+            }
             return $this->r(200, 'success', [
                 'has_restart_command' => 1,
-                'restart' => [
-                    'msgType' => $restartCommand['msgType'],
-                    'msg_id' => $restartCommand['msg_id'] ?? '',
-                    'timestamp' => intval($restartCommand['timestamp'] ?? 0),
-                ],
+                'restart' => $restart,
             ]);
         }
 
@@ -1953,6 +1957,14 @@ class ApiClient extends ReceiveBaseClient
             $payload = json2arr($record['data'] ?? '');
             if (!$payload || !isset($payload['msgType'])) {
                 continue;
+            }
+            if ($payload['msgType'] === 'img' && ($payload['field'] ?? '') === 'screen_img') {
+                return [
+                    'msgType' => $payload['msgType'],
+                    'field' => $payload['field'],
+                    'msg_id' => $record['msg_id'] ?? ($row['msg_id'] ?? ''),
+                    'timestamp' => $record['timestamp'] ?? ($row['create_time'] ?? 0),
+                ];
             }
             if (in_array($payload['msgType'], $restartTypes, true)) {
                 return [
