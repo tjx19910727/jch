@@ -2015,6 +2015,48 @@ class ApiClient extends ReceiveBaseClient
         return null;
     }
 
+    /**
+     * HTTP 直推截图指令后，设备通过该接口回传截图结果。
+     * @return array|string
+     */
+    public function reportScreenImg()
+    {
+        $field = $this->data['field'] ?? '';
+        if (!in_array($field, ['screen_img', 'camera_img', 'exchange_img', 'remote_refund_goods'], true)) {
+            return $this->r(100, '图片字段名无效');
+        }
+
+        $path = $this->data['path'] ?? '';
+        if ($field !== 'remote_refund_goods' && !$path) {
+            return $this->r(100, '图片路径不能为空');
+        }
+
+        $this->message = [
+            'msgType' => 'img',
+            'field' => $field,
+            'path' => $path,
+            'status' => isset($this->data['status']) ? intval($this->data['status']) : ($path ? 3 : 4),
+            'log_id' => intval($this->data['log_id'] ?? 0),
+            'sod_id' => intval($this->data['sod_id'] ?? 0),
+        ];
+
+        $result = $this->img();
+        $commandMsgId = $this->data['command_msg_id'] ?? ($this->data['request_msg_id'] ?? '');
+        if ($commandMsgId) {
+            $this->updateMachineMqRecord(
+                ['status' => 4],
+                ['machine_id' => $this->machine['machine_id'], 'msg_id' => $commandMsgId],
+                ['status']
+            );
+        }
+        actionLog(['data' => $this->data, 'result' => $result], 'HTTP截图回传结果', 'reportHttpImg');
+        if ($result === false) {
+            return $this->r(300, '图片回传处理失败');
+        }
+
+        return $this->r(200, 'success');
+    }
+
     public function requireOutGoods()
     {
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
