@@ -2125,8 +2125,19 @@ class ApiClient extends ReceiveBaseClient
     /**
      * 微程实物商品(type=5)和组合商品(type=11)按本机实际货道出货。
      */
-    protected function resolveWcLocalOutGoodsItems(array $detail, array $mc): array
+    protected function resolveWcLocalOutGoodsItems($detail, array $mc): array
     {
+        // normalize $detail to array when an object or model is passed
+        if (is_object($detail)) {
+            $detail = method_exists($detail, 'toArray') ? $detail->toArray() : (array)$detail;
+        } elseif (!is_array($detail)) {
+            $detail = (array)$detail;
+        }
+
+        // ensure $mc is array
+        if (is_object($mc)) {
+            $mc = method_exists($mc, 'toArray') ? $mc->toArray() : (array)$mc;
+        }
         if (empty($mc['out_no'])) {
             return [];
         }
@@ -3020,16 +3031,16 @@ class ApiClient extends ReceiveBaseClient
     public function test()
     {
         $trade_no = $this->data['trade_no'] ?? '';
-        $this->refundTradeNo = $this->data['refund_trade_no'];
+        // $this->refundTradeNo = $this->data['refund_trade_no'];
         $order_id = $this->data['order_id'] ?? 0;
         $sod_id = $this->data['sod_id'] ?? 0;
         $this->order = $this->getSaleOrdersFind(['trade_no' => $trade_no])->toArray();;
-        $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
-        $this->refundSuccess();;
-        die();
-        $this->paymentSuccessful();
-        $this->addCardChangeLog();
-        // $this->outGoods();
+        // $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
+        // $this->refundSuccess();;
+        // die();
+        // $this->paymentSuccessful();
+        // $this->addCardChangeLog();
+        $this->outGoods();
         die();
         // $order = $this->outGoods();
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);

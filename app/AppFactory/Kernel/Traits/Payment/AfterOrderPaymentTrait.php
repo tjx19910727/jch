@@ -207,8 +207,19 @@ trait AfterOrderPaymentTrait
     /**
      * 微程实物商品(type=5)和组合商品(type=11)按本机实际货道出货。
      */
-    protected function resolveWcLocalOutGoodsItems(array $detail, array $mc): array
+    protected function resolveWcLocalOutGoodsItems($detail, array $mc): array
     {
+        // normalize $detail to array when an object or model is passed
+        if (is_object($detail)) {
+            $detail = method_exists($detail, 'toArray') ? $detail->toArray() : (array)$detail;
+        } elseif (!is_array($detail)) {
+            $detail = (array)$detail;
+        }
+
+        // ensure $mc is array
+        if (is_object($mc)) {
+            $mc = method_exists($mc, 'toArray') ? $mc->toArray() : (array)$mc;
+        }
         if (empty($mc['out_no'])) {
             return [];
         }
