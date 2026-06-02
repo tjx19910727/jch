@@ -566,94 +566,94 @@ class MachineClient extends TimeTaskBase
                 actionLog($flag, '处理运营中设备未开机提醒结果', 'checkOperatingStartup');
             }
             
-            // 新增：设备已开机但10分钟以上未进入首页发送模板通知
-            $homeFlag = [];
-            $homeTimeout = 600; // 10分钟
-            $homeRecordPath = 'currentStatus';
-            $homeSkipCacheKey = 'machine_startup_home_skip_list:' . $todayKey;
-            $homeSkipMIds = Cache::get($homeSkipCacheKey, []);
-            if (!is_array($homeSkipMIds)) {
-                $homeSkipMIds = [];
-            }
-            $onlineQuery = Db::name('machine')->alias('m');
-            if (env('CglPay.is_test')) {
-                // 测试环境仅查询特定设备，方便测试验证
-                $onlineQuery = $onlineQuery->where('m.machine_id', 'JCHM-H2D-0064')->where('m.online', 1);
-            } else {
-                // 仅查询当前在线的在营设备
-                $onlineQuery = $onlineQuery->where('m.online', 1)
-                    ->where('m.is_operating', 1);
-            }
+            // // 新增：设备已开机但10分钟以上未进入首页发送模板通知
+            // $homeFlag = [];
+            // $homeTimeout = 600; // 10分钟
+            // $homeRecordPath = 'currentStatus';
+            // $homeSkipCacheKey = 'machine_startup_home_skip_list:' . $todayKey;
+            // $homeSkipMIds = Cache::get($homeSkipCacheKey, []);
+            // if (!is_array($homeSkipMIds)) {
+            //     $homeSkipMIds = [];
+            // }
+            // $onlineQuery = Db::name('machine')->alias('m');
+            // if (env('CglPay.is_test')) {
+            //     // 测试环境仅查询特定设备，方便测试验证
+            //     $onlineQuery = $onlineQuery->where('m.machine_id', 'JCHM-H2D-0064')->where('m.online', 1);
+            // } else {
+            //     // 仅查询当前在线的在营设备
+            //     $onlineQuery = $onlineQuery->where('m.online', 1)
+            //         ->where('m.is_operating', 1);
+            // }
 
-            $onlineList = $onlineQuery
-                ->when($homeSkipMIds, function ($query) use ($homeSkipMIds) {
-                    $query->whereNotIn('m.m_id', $homeSkipMIds);
-                })
-                ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.last_online_time,m.ao_id')
-                ->order('m.m_id desc')
-                ->select();
-            if (count($onlineList) > 0) {
-                $onlineList = $onlineList->toArray();
-                foreach ($onlineList as $item) {
-                    $currentOnline = $this->getMachineOnlineDetailsFind([
-                        'm_id' => $item['m_id'],
-                        'offline_time' => 0,
-                        'd_date' => strtotime(date('Y-m-d')),
-                    ], 'mod_id,online_time', 'mod_id asc');
-                    if (!$currentOnline || empty($currentOnline['online_time'])) {
-                        continue;
-                    }
-                    $onlineTimestamp = intval($currentOnline['online_time']);
-                    $checkEnd = $onlineTimestamp + $homeTimeout;
+            // $onlineList = $onlineQuery
+            //     ->when($homeSkipMIds, function ($query) use ($homeSkipMIds) {
+            //         $query->whereNotIn('m.m_id', $homeSkipMIds);
+            //     })
+            //     ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.last_online_time,m.ao_id')
+            //     ->order('m.m_id desc')
+            //     ->select();
+            // if (count($onlineList) > 0) {
+            //     $onlineList = $onlineList->toArray();
+            //     foreach ($onlineList as $item) {
+            //         $currentOnline = $this->getMachineOnlineDetailsFind([
+            //             'm_id' => $item['m_id'],
+            //             'offline_time' => 0,
+            //             'd_date' => strtotime(date('Y-m-d')),
+            //         ], 'mod_id,online_time', 'mod_id asc');
+            //         if (!$currentOnline || empty($currentOnline['online_time'])) {
+            //             continue;
+            //         }
+            //         $onlineTimestamp = intval($currentOnline['online_time']);
+            //         $checkEnd = $onlineTimestamp + $homeTimeout;
                 
-                    // 当前在线会话上线不足10分钟，继续等待
-                    if ($now <= $checkEnd) {
-                        continue;
-                    }
+            //         // 当前在线会话上线不足10分钟，继续等待
+            //         if ($now <= $checkEnd) {
+            //             continue;
+            //         }
 
-                    $homeCount = Db::name('machine_mq_record')
-                        ->where('m_id', $item['m_id'])
-                        ->where('path', $homeRecordPath)
-                        ->whereLike('content', '%home%')
-                        ->where('create_time', '>=', $onlineTimestamp)
-                        ->where('create_time', '<=', $checkEnd)
-                        ->count();
-                    if ($homeCount > 0) {
-                        $homeSkipMIds[] = $item['m_id'];
-                        $homeSkipMIds = array_values(array_unique($homeSkipMIds));
-                        Cache::set($homeSkipCacheKey, $homeSkipMIds, $ttl > 0 ? $ttl : 60);
-                        continue;
-                    }
+            //         $homeCount = Db::name('machine_mq_record')
+            //             ->where('m_id', $item['m_id'])
+            //             ->where('path', $homeRecordPath)
+            //             ->whereLike('content', '%home%')
+            //             ->where('create_time', '>=', $onlineTimestamp)
+            //             ->where('create_time', '<=', $checkEnd)
+            //             ->count();
+            //         if ($homeCount > 0) {
+            //             $homeSkipMIds[] = $item['m_id'];
+            //             $homeSkipMIds = array_values(array_unique($homeSkipMIds));
+            //             Cache::set($homeSkipCacheKey, $homeSkipMIds, $ttl > 0 ? $ttl : 60);
+            //             continue;
+            //         }
 
-                    $item['errorCode'] = '设备已开机未进入首页' . $title;
-                    $item['date'] = date('Y年m月d日');
-                    $item['exceptionDeclaration'] = '设备已开机未进入首页';
-                    $item['error_code'] = '设备已开机未进入首页' . $title;
-                    $item['error_time'] = date('Y-m-d H:i:s');
-                    $item['error_info'] = 11102012; // 设备已开机未进入首页
-                    $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
+            //         $item['errorCode'] = '设备已开机未进入首页' . $title;
+            //         $item['date'] = date('Y年m月d日');
+            //         $item['exceptionDeclaration'] = '设备已开机未进入首页';
+            //         $item['error_code'] = '设备已开机未进入首页' . $title;
+            //         $item['error_time'] = date('Y-m-d H:i:s');
+            //         $item['error_info'] = 11102012; // 设备已开机未进入首页
+            //         $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
 
-                    $this->noticeSendData = [
-                        'ao_id' => $item['ao_id'],
-                        'm_id' => $item['m_id'],
-                        'templateType' => 'mFault',
-                        'replaceData' => $item,
-                    ];
+            //         $this->noticeSendData = [
+            //             'ao_id' => $item['ao_id'],
+            //             'm_id' => $item['m_id'],
+            //             'templateType' => 'mFault',
+            //             'replaceData' => $item,
+            //         ];
 
-                    $homeFlag[] = $this->noticeSend();
-                    $homeSkipMIds[] = $item['m_id'];
-                    $homeSkipMIds = array_values(array_unique($homeSkipMIds));
-                    Cache::set($homeSkipCacheKey, $homeSkipMIds, $ttl > 0 ? $ttl : 60);
-                    actionLog([
-                        'm_id' => $item['m_id'],
-                        'machine_id' => $item['machine_id'],
-                        'online_timestamp' => $onlineTimestamp,
-                        'check_end' => $checkEnd,
-                        'check_time' => $now,
-                    ], '发送设备已开机未进入首页提醒', 'checkOperatingStartup');
-                }
-            }
-            actionLog($homeFlag, '处理设备已开机未进入首页提醒结果', 'checkOperatingStartup');
+            //         $homeFlag[] = $this->noticeSend();
+            //         $homeSkipMIds[] = $item['m_id'];
+            //         $homeSkipMIds = array_values(array_unique($homeSkipMIds));
+            //         Cache::set($homeSkipCacheKey, $homeSkipMIds, $ttl > 0 ? $ttl : 60);
+            //         actionLog([
+            //             'm_id' => $item['m_id'],
+            //             'machine_id' => $item['machine_id'],
+            //             'online_timestamp' => $onlineTimestamp,
+            //             'check_end' => $checkEnd,
+            //             'check_time' => $now,
+            //         ], '发送设备已开机未进入首页提醒', 'checkOperatingStartup');
+            //     }
+            // }
+            // actionLog($homeFlag, '处理设备已开机未进入首页提醒结果', 'checkOperatingStartup');
         } catch (\Exception $e) {
             actionException($e, 1, 'checkOperatingStartup');
             return '处理异常';
