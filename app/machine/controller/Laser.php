@@ -167,7 +167,7 @@ class Laser extends BaseController
             $field = 'res_id,file_path,type,file_name,`desc`,length,width,size,order_id,trade_no,create_time';
             $data = $this->getLaserResourceFind(['trade_no' => $tradeNo], $field, 'res_id desc');
             if (!$data) {
-                return returnState(100, '用户未上传');
+                return returnState(200, 'fail', []);
             }
 
             return returnState(200, 'success', $data);
