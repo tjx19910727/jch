@@ -799,6 +799,20 @@ class Receive extends Common
     }
 
     /**
+     * 接收设备上传的首页截屏路径
+     * @return array|string
+     */
+    public function reportScreenImg()
+    {
+        try {
+            return $this->app->api->reportScreenImg();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 设备主动获取出货信息
      * @return array|string
      */

@@ -1909,18 +1909,59 @@ class ApiClient extends ReceiveBaseClient
 
         $restartCommand = $this->getRecentRestartCommand(300);
         if ($restartCommand) {
+            $restart = [
+                'msgType' => $restartCommand['msgType'],
+                'msg_id' => $restartCommand['msg_id'] ?? '',
+                'timestamp' => intval($restartCommand['timestamp'] ?? 0),
+            ];
+            if (!empty($restartCommand['field'])) {
+                $restart['field'] = $restartCommand['field'];
+            }
             return $this->r(200, 'success', [
                 'has_restart_command' => 1,
-                'restart' => [
-                    'msgType' => $restartCommand['msgType'],
-                    'msg_id' => $restartCommand['msg_id'] ?? '',
-                    'timestamp' => intval($restartCommand['timestamp'] ?? 0),
-                ],
+                'restart' => $restart,
             ]);
         }
 
         return $this->r(200, 'success', [
             'has_restart_command' => 0,
+        ]);
+    }
+
+    /**
+     * HTTP接收设备上传的首页截屏。
+     * 设备先上传文件拿到路径后，再通过该接口把截图路径写入 machine_info.screen_img。
+     * @return array|string
+     */
+    public function reportScreenImg()
+    {
+        $path = $this->data['path'] ?? ($this->data['screen_img'] ?? '');
+        if (!$path) {
+            return $this->rValidate('图片路径不能为空');
+        }
+
+        $this->message = [
+            'msgType' => 'img',
+            'field' => 'screen_img',
+            'path' => $path,
+        ];
+        $result = $this->img();
+        actionLog(['data' => $this->data, 'result' => $result], 'HTTP首页截屏回传结果', 'reportScreenImg');
+        if ($result === false) {
+            return $this->r(300, '首页截屏保存失败');
+        }
+
+        $commandMsgId = $this->data['command_msg_id'] ?? ($this->data['request_msg_id'] ?? '');
+        if ($commandMsgId) {
+            $this->updateMachineMqRecord(
+                ['status' => 4],
+                ['machine_id' => $this->machine['machine_id'], 'msg_id' => $commandMsgId],
+                ['status']
+            );
+        }
+
+        return $this->r(200, 'success', [
+            'screen_img' => $path,
         ]);
     }
 
@@ -1953,6 +1994,14 @@ class ApiClient extends ReceiveBaseClient
             $payload = json2arr($record['data'] ?? '');
             if (!$payload || !isset($payload['msgType'])) {
                 continue;
+            }
+            if ($payload['msgType'] === 'img' && ($payload['field'] ?? '') === 'screen_img') {
+                return [
+                    'msgType' => $payload['msgType'],
+                    'field' => $payload['field'],
+                    'msg_id' => $record['msg_id'] ?? ($row['msg_id'] ?? ''),
+                    'timestamp' => $record['timestamp'] ?? ($row['create_time'] ?? 0),
+                ];
             }
             if (in_array($payload['msgType'], $restartTypes, true)) {
                 return [
