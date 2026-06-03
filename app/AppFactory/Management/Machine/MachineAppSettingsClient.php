@@ -309,6 +309,7 @@ class MachineAppSettingsClient extends ManagementClient
             'purchase_voice_enabled',
             'dispense_voice_enabled',
             'pickup_voice_enabled',
+            'pay_voice_enabled',
             'ad_show_goods_enabled',
         ];
         if (in_array($key, $twoStateKeys, true)) {

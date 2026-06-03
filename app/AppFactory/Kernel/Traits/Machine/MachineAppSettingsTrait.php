@@ -60,6 +60,12 @@ trait MachineAppSettingsTrait
                     'default' => '2',
                     'desc' => '1开启，2关闭',
                 ],
+                'home_voice_img' => [
+                    'name' => '首页动画图片',
+                    'value_type' => 'string',
+                    'default' => '',
+                    'desc' => '首页动画图片',
+                ],
                 'home_anim_style' => [
                     'name' => '首页动画样式',
                     'value_type' => 'int',
@@ -197,6 +203,48 @@ trait MachineAppSettingsTrait
                     'value_type' => 'string',
                     'default' => '',
                     'desc' => '取货语音文件英文',
+                ],
+                'pay_voice_enabled' => [
+                    'name' => '支付页语音状态',
+                    'value_type' => 'int',
+                    'default' => '1',
+                    'desc' => '1开启，2关闭',
+                ],
+                'pay_voice_text' => [
+                    'name' => '支付页语音文字',
+                    'value_type' => 'string',
+                    'default' => '',
+                    'desc' => '支付页语音文字(简体)',
+                ],
+                'pay_voice_text_zh_hant' => [
+                    'name' => '支付页语音文字(繁体)',
+                    'value_type' => 'string',
+                    'default' => '',
+                    'desc' => '支付页语音文字繁体',
+                ],
+                'pay_voice_text_en' => [
+                    'name' => '支付页语音文字(英文)',
+                    'value_type' => 'string',
+                    'default' => '',
+                    'desc' => '支付页语音文字英文',
+                ],
+                'pay_voice_file_path' => [
+                    'name' => '支付页语音文件',
+                    'value_type' => 'string',
+                    'default' => '',
+                    'desc' => '支付页语音文件路径(简体)',
+                ],
+                'pay_voice_file_path_zh_hant' => [
+                    'name' => '支付页语音文件(繁体)',
+                    'value_type' => 'string',
+                    'default' => '',
+                    'desc' => '支付页语音文件路径繁体',
+                ],
+                'pay_voice_file_path_en' => [
+                    'name' => '支付页语音文件(英文)',
+                    'value_type' => 'string',
+                    'default' => '',
+                    'desc' => '支付页语音文件路径英文',
                 ],
                 'ad_show_goods_enabled' => [
                     'name' => '广告页是否显示商品',
