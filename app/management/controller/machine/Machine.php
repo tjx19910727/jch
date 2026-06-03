@@ -57,6 +57,9 @@ class Machine extends Common
             if ($sortName == 'id') {
                 $sortName = 'm_id';
             }
+            if ($sortName == 'machine_name') {
+                $sortName = 'machine_id';
+            }
 
             $normalSortFieldMap = [
                 'm_id' => 'm_id',
