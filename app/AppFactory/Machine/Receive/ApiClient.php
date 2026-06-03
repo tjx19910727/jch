@@ -41,6 +41,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineAppSettingsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineCalibrationConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
@@ -106,6 +107,7 @@ class ApiClient extends ReceiveBaseClient
         GoodsMultipleGoodsTrait,
         GoodsMultipleMachineTrait,
         MachineViewTrait,
+        MachineAppSettingsTrait,
         MachineCalibrationConfigTrait,
         MachineConfigTrait,
         MachineConfigLangTrait,
@@ -335,6 +337,77 @@ class ApiClient extends ReceiveBaseClient
             }
         }
         return $this->rQ($res);
+    }
+
+    /**
+     * 获取设备应用配置(type=1)
+     * @return array|\think\response\Json
+     */
+    public function machineAppSettings()
+    {
+        $mId = $this->machine['m_id'];
+        $machineData = $this->getMachineFind(['m_id' => $mId], 'machine_id');
+        $machineId = $machineData['machine_id'] ?? '';
+        $type = 1;
+        $fieldMap = $this->getMachineAppSettingsFieldMap($type);
+
+        $this->insertDefaultAppSettingsRows($fieldMap, $mId, $machineId, $type);
+
+        $list = $this->getMachineAppSettingsList(
+            ['m_id' => $mId, 'type' => $type],
+            0,
+            '`key`,`value`,value_type,updated_at',
+            'id asc'
+        );
+        $list = $list ? $list->toArray() : [];
+        $rowMap = [];
+        foreach ($list as $item) {
+            $rowMap[$item['key']] = $item;
+        }
+
+        $res = [
+            'type' => $type,
+        ];
+        foreach ($fieldMap as $key => $meta) {
+            $row = $rowMap[$key] ?? [];
+            $rawValue = $row['value'] ?? $meta['default'];
+            $valueType = $row['value_type'] ?? $meta['value_type'];
+            $res[$key] = $this->castAppSettingValueByType($rawValue, $valueType);
+        }
+
+        return $this->rQ($res);
+    }
+
+    protected function insertDefaultAppSettingsRows($fieldMap, $mId, $machineId, $type = 1)
+    {
+        foreach ($fieldMap as $key => $meta) {
+            $exists = $this->getMachineAppSettingsValue(
+                ['m_id' => $mId, 'type' => $type, 'key' => $key],
+                'id'
+            );
+            if ($exists) {
+                continue;
+            }
+            $this->addMachineAppSettings([
+                'm_id' => $mId,
+                'name' => $meta['name'],
+                'machine_id' => $machineId,
+                'type' => $type,
+                'key' => $key,
+                'value' => $meta['default'],
+                'value_type' => $meta['value_type'],
+                'desc' => $meta['desc'],
+                'manager_id' => 0,
+            ]);
+        }
+    }
+
+    protected function castAppSettingValueByType($value, $valueType)
+    {
+        if ($valueType === 'int') {
+            return is_numeric($value) ? $value + 0 : 0;
+        }
+        return (string)$value;
     }
 
     /**
