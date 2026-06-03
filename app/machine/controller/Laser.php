@@ -56,10 +56,10 @@ class Laser extends BaseController
             if(empty($signData['trade_no'])){
                 return returnState(100, Lang::get('VLaser.trade_no_require'));
             }
-            $order = SaleOrdersModel::where('trade_no', $signData['trade_no'])->field('order_id,trade_no')->find();
-            if (!$order) {
-                return returnState(100, Lang::get('VLaser.order_not_found'));
-            }
+            // $order = SaleOrdersModel::where('trade_no', $signData['trade_no'])->field('order_id,trade_no')->find();
+            // if (!$order) {
+            //     return returnState(100, Lang::get('VLaser.order_not_found'));
+            // }
             validate(VCommon::class)->scene('file')->check(['file' => $file]);
             validate(VCommon::class)
                 ->rule(['image' => 'fileSize:5242880'])
