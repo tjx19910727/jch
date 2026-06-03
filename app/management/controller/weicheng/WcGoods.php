@@ -74,9 +74,9 @@ class WcGoods extends Common
         $keyword = $postData['keyword'] ?? '';
         unset($postData['keyword']);
         // 这里不再透传 type like，避免与实物类型固定筛选冲突导致结果为空
-        $where = $this->getWhere($postData, false, ['name' => 'like', 'no' => 'like', 'out_no' => 'like']);
+        $where = $this->getWhere($postData, false, ['g_name' => 'like', 'no' => 'like', 'out_no' => 'like']);
         if ($keyword !== '') {
-            $where[] = ['name|no|out_no', 'like', "%{$keyword}%"];
+            $where[] = ['g_name|no|out_no', 'like', "%{$keyword}%"];
         }
         $where[] = ['type', 'in', [1, 2, 3, 4, 5]]; // 实物商品
         return $this->app->weicheng->getWcPhysicalGoodsLists($where, $pageNum);
