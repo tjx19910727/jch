@@ -565,6 +565,24 @@ class MachinePreReplenishmentClient extends ManagementClient
         return $result;
     }
 
+    /**
+     * 查询补货明细视频地址
+     * @param array $where
+     * @return array|null
+     */
+    public function getReplenishmentDetailVideo($where)
+    {
+        $order = PreReplenishmentOrderModel::getFind(['id' => $where['order_id']], 'id');
+        if (!$order) {
+            return null;
+        }
+        return PreReplenishmentDetailModel::getFind(
+            ['order_id' => $order['id'], 'machine_id' => $where['machine_id']],
+            'id,replenishment_video',
+            'id desc'
+        );
+    }
+
     public function reportLog($postData)
     {
         $recordNo = $postData['record_no'] ?? '';

@@ -9,6 +9,9 @@ use app\AppFactory\Kernel\Model\Machine\PreReplenishmentLogModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentOrderModel;
 use think\facade\Db;
 
+/**
+ * @property array $message
+ */
 trait MachinePreReplenishmentTrait
 {
     protected function normalizeDetails($details)
@@ -268,5 +271,48 @@ trait MachinePreReplenishmentTrait
         }
 
         return $this->appendPreReplenishmentLogAndSync($recordNo, $logData);
+    }
+
+    /**
+     * 查询预补货单据（给 getFind 走）
+     */
+    public function getMachinePreReplenishmentFind($where, $field = "*", $order = "")
+    {
+        return PreReplenishmentOrderModel::getFind($where, $field, $order);
+    }
+
+    /**
+     * 查询预补货明细（给控制器用）
+     */
+    public function getMachinePreReplenishmentDetailFind($where, $field = "*", $order = "")
+    {
+        return PreReplenishmentDetailModel::getFind($where, $field, $order);
+    }
+
+    /**
+     * MQ 回调：设备上报补货视频后保存地址
+     * msgType: replenishmentVideo
+     */
+    public function replenishmentVideo()
+    {
+        $recordNo  = $this->message['record_no'] ?? '';
+        $machineId = $this->message['machine_id'] ?? '';
+        $videoUrl  = $this->message['replenishment_video'] ?? '';
+
+        actionLog($this->message, "补货视频保存地址记录执行");
+
+        if (!$recordNo || !$machineId || !$videoUrl) {
+            return 1;
+        }
+
+        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id');
+        if (!$order) {
+            return 1;
+        }
+
+        return PreReplenishmentDetailModel::update(
+            ['replenishment_video' => $videoUrl],
+            ['order_id' => $order['id'], 'machine_id' => $machineId]
+        );
     }
 }
