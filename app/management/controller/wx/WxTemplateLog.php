@@ -21,8 +21,16 @@ class WxTemplateLog extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, []);
-        return $this->app->wxTemplateLog->getList($where,$pageNum,$this->field,'create_time desc');
+        $where = $this->getWhere($postData, false, [
+            'template_name' => 'like',
+            'nickname' => 'like',
+            'openid' => 'like',
+            'template_type' => 'like',
+            'error_code' => 'like',
+            'remark' => 'like',
+            'create_time' => 'between',
+        ]);
+        return $this->app->wxTemplateLog->getTemplateLogList($where,$pageNum,$this->field,'create_time desc');
     }
 
 }

@@ -218,4 +218,5 @@ class LoginClient extends WxBaseClient
             return $this->rTryCatch($e->getMessage());
         }
     }
+
 }

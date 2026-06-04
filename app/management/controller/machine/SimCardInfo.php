@@ -95,6 +95,18 @@ class SimCardInfo extends Common
     }
 
     /**
+     * 获取设备每日信号折线图（rsrp/sinr）
+     * 参数：m_id（必填，仅支持单条）、date（可选，格式 Y-m-d，默认当天）
+     * @return array|\think\response\Json
+     */
+    public function getSignalDayTrend()
+    {
+        $mId = input('m_id');
+        $date = input('date');
+        return $this->app->simCardInfo->getSignalDayTrendData($mId, $date);
+    }
+
+    /**
      * 获取流量池信息
      * @return array|\think\response\Json
      */

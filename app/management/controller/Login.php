@@ -105,6 +105,16 @@ class Login extends BaseController
     }
 
     /**
+     * 获取微信登录链接V2（公众号参数二维码）
+     * @return array|\think\response\Json
+     */
+    public function getWxLoginUrlV2()
+    {
+        $postData = input();
+        return AppFactory::management()->loginV2->getWxLoginUrlV2($postData);
+    }
+
+    /**
      * 监听微信登录状态
      * @return array|\think\response\Json
      */

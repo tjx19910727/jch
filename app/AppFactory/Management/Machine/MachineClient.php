@@ -251,8 +251,11 @@ class MachineClient extends ManagementClient
         if ($permitted !== null) {
             $where[] = ['m_id', 'in', $permitted];
         }
+		$month = date('Y-m');
+        $monthStart = strtotime($month . '-01 00:00:00');
+        $monthEnd = strtotime(date('Y-m-t 23:59:59', $monthStart));
         $defaultSignal = ['rsrp' => -999, 'sinr' => -999, 'rsrp_level' => 0, 'sinr_level' => 0];
-        return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) use ($defaultSignal) {
+        return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) use ($defaultSignal, $month, $monthStart, $monthEnd) {
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
             if (isset($item['state_id']) && $item['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $item['state_id']],'code,name,cname');
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
@@ -283,7 +286,6 @@ class MachineClient extends ManagementClient
                         if (
                             preg_match('/^\d{2}:\d{2}$/', $startTime)
                             && preg_match('/^\d{2}:\d{2}$/', $endTime)
-                            && strcmp($startTime, $endTime) > 0
                         ) {
                             $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
                         }
@@ -292,7 +294,7 @@ class MachineClient extends ManagementClient
                 }
             }
             $item['machine_on_off'] = $machineOnOff;
-            if(empty($item['simSignalLog'])){
+            if(empty($item['simSignalLog']) || ($item['online'] == 2 && $item['http_online'] == 2)){
                 $item['simSignalLog'] = $defaultSignal;
             }
             $ratioWhere[] = ['m_id', '=', $item['m_id']];
@@ -311,6 +313,29 @@ class MachineClient extends ManagementClient
             } else {
                 $item['stock_ratio'] = "0%";
             }
+
+            $targetAmount = round((float) Db::name('machine_target_monthly')
+                ->where('m_id', intval($item['m_id']))
+                ->where('month', $month)
+                ->sum('target_amount'), 2);
+
+            if ($targetAmount <= 0) {
+                $item['month_target_amount'] = 0;
+                $item['month_achieve_amount'] = 0;
+                $item['month_achieve_rate'] = 0;
+                return $item;
+            }
+
+            $achieveAmount = round((float) Db::name('sale_orders')
+                ->where('m_id', intval($item['m_id']))
+                ->where('pay_status', 3)
+                ->where('create_date', '>=', intval($monthStart))
+                ->where('create_date', '<=', intval($monthEnd))
+                ->value('IFNULL(SUM(total_price - refund_amount),0)'), 2);
+
+            $item['month_target_amount'] = $targetAmount;
+            $item['month_achieve_amount'] = $achieveAmount;
+            $item['month_achieve_rate'] = $targetAmount > 0 ? round($achieveAmount / $targetAmount * 100, 2) : 0;
             return $item;
         }));
     }

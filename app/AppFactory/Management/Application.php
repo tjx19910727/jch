@@ -43,6 +43,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
 /**
  * Class Application
  * @property Login\LoginClient                      $login                  登录
+ * @property Login\LoginV2Client                    $loginV2                登录V2
  *
  * @property Common\CityClient                      $city                   城市
  *

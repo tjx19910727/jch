@@ -1968,3 +1968,19 @@ VALUES(19, 3, '商品选购', 3, '模拟顾客选择商品，流程顺畅，界�
 INSERT INTO check_list_items
 (id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
 VALUES(20, 3, '支付测试', 3, '检查多种支付方式（如扫码、反扫等）是否正常，支付后能否顺利触发出货', 4, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:16');
+#20260428
+CREATE TABLE `laser_resource` (
+  `res_id` int NOT NULL AUTO_INCREMENT COMMENT '素材ID',
+  `file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '素材文件路径',
+  `type` tinyint(1) NOT NULL DEFAULT 1 COMMENT '素材类型（1：图片，2：视频）',
+  `file_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '原文件名',
+  `desc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '素材描述',
+  `length` int DEFAULT '0' COMMENT '高度',
+  `width` int DEFAULT '0' COMMENT '宽度',
+  `size` int DEFAULT '0' COMMENT '素材大小，B',
+  `order_id` int DEFAULT '0' COMMENT '归属订单ID',
+  `is_diy` tinyint(1) DEFAULT '2' COMMENT '是否是diy素材,1是 2否',
+  `create_time` bigint NOT NULL DEFAULT 0 COMMENT '创建时间',
+  PRIMARY KEY (`res_id`) USING BTREE,
+  KEY `order_id` (`order_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='镭射机素材表';

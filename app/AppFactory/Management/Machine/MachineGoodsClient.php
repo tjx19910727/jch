@@ -139,16 +139,17 @@ class MachineGoodsClient extends ManagementClient
         return $this->r(100, $this->lang("del_fail"));
     }
 
-    public function exportMg($where)
+    public function exportMg($where, $hasCostPriceAuth = true)
     {
-        $list = $this->getMachineGoodsList($where, 0, 'pic,g_name,sku,cost_price,market_price,retail_price,
-        (CASE is_shelf WHEN 1 THEN "已上架" ELSE "未上架" END) is_shelf, available_stock,disabled_stock,reserve_stock,standby_stock');
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = 'pic,g_name,sku,' . $costPriceField . ',market_price,retail_price,
+        (CASE is_shelf WHEN 1 THEN "已上架" ELSE "未上架" END) is_shelf, available_stock,disabled_stock,reserve_stock,standby_stock';
+        $list = $this->getMachineGoodsList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
             $title = [
                 "g_name" => "商品名称",
                 "sku" => "SKU",
-                "cost_price" => "成本价",
                 "market_price" => "市场价",
                 "retail_price" => "售卖价",
                 "is_shelf" => "已上架",
@@ -157,6 +158,14 @@ class MachineGoodsClient extends ManagementClient
                 "reserve_stock" => "预定量",
                 "standby_stock" => "备用库存",
             ];
+            if ($hasCostPriceAuth) {
+                $title['cost_price'] = "成本价";
+                // $title = array_merge(
+                //     array_slice($title, 0, 2, true),
+                //     ["cost_price" => "成本价"],
+                //     array_slice($title, 2, null, true)
+                // );
+            }
             $filename = "设备商品-" . date("Ymd");
             return $this->sendToExport("设备列表-设备商品", $filename, $title, $list);
         }

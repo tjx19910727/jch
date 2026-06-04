@@ -273,15 +273,17 @@ class GoodsClient extends ManagementClient
      * @param $where
      * @return array|string
      */
-    public function exportExcel($where)
+    public function exportExcel($where, $hasCostPriceAuth = true)
     {
-        $list = $this->getGoodsList($where, 0,
-            'g_id,g_name,gc_name,gift_points,cost_points,
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = 'g_id,g_name,gc_name,gift_points,cost_points,
             (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
             '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
             '" ELSE "' . $this->lang("export.g_type_unDefine") . '" END) g_type,
-            model,sku,bar_code,cost_price,market_price,retail_price');
+            model,sku,bar_code,' . $costPriceField . ',market_price,retail_price';
+        $list = $this->getGoodsList($where, 0,
+            $field);
         if ($list) {
             $list = $list->toArray();
             $title = [
@@ -292,12 +294,19 @@ class GoodsClient extends ManagementClient
                 'model' => $this->lang("export.model"),
                 'sku' => $this->lang("export.sku"),
                 'bar_code' => $this->lang("export.bar_code"),
-                'cost_price' => $this->lang("export.cost_price"),
                 'market_price' => $this->lang("export.market_price"),
                 'retail_price' => $this->lang("export.retail_price"),
                 'gift_points' => $this->lang("export.gift_points"),
                 'cost_points' => $this->lang("export.cost_points"),
             ];
+            if ($hasCostPriceAuth) {
+                $title['cost_price'] = $this->lang("export.cost_price");
+                // $title = array_merge(
+                //     array_slice($title, 0, 7, true),
+                //     ['cost_price' => $this->lang("export.cost_price")],
+                //     array_slice($title, 7, null, true)
+                // );
+            }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
             return $result;
@@ -310,18 +319,20 @@ class GoodsClient extends ManagementClient
      * @param $where
      * @return array|string
      */
-    public function exportAllGoodsToExcel($where)
+    public function exportAllGoodsToExcel($where, $hasCostPriceAuth = true)
     {
-        $list = $this->getGoodsList([], 0,
-            'g_id,g_name,gc_name,
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = 'g_id,g_name,gc_name,
             (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
-            '" WHEN 2 THEN "' . $this->lang("export.g_type2") .                                                                                                             
+            '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
             '" ELSE "' . $this->lang("export.g_type_unDefine") . '" END) g_type,
             (case status when 1 THEN "' . $this->lang("export.status1") .
-            '" WHEN 2 THEN "' . $this->lang("export.status2") .                                                                                                             
+            '" WHEN 2 THEN "' . $this->lang("export.status2") .
             '" END) status,
-            model,bar_code,sku,pic,cost_price,market_price,retail_price,manufacturer,service_phone,length,width,height');
+            model,bar_code,sku,pic,' . $costPriceField . ',market_price,retail_price,manufacturer,service_phone,length,width,height';
+        $list = $this->getGoodsList([], 0,
+            $field);
         if ($list) {
             $list = $list->toArray();
             $title = [
@@ -333,7 +344,6 @@ class GoodsClient extends ManagementClient
                 'bar_code' => $this->lang("export.bar_code"),
                 'sku' => $this->lang("export.sku"),
                 'pic' => $this->lang("export.pic"),
-                'cost_price' => $this->lang("export.cost_price"),
                 'market_price' => $this->lang("export.market_price"),
                 'retail_price' => $this->lang("export.retail_price"),
                 'status' => $this->lang("export.status"),
@@ -343,6 +353,14 @@ class GoodsClient extends ManagementClient
                 'width' => $this->lang("export.width"),
                 'height' => $this->lang("export.height"),
             ];
+            if ($hasCostPriceAuth) {
+                $title['cost_price'] = $this->lang("export.cost_price");
+                // $title = array_merge(
+                //     array_slice($title, 0, 8, true),
+                //     ['cost_price' => $this->lang("export.cost_price")],
+                //     array_slice($title, 8, null, true)
+                // );
+            }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
             return $result;
@@ -418,9 +436,11 @@ class GoodsClient extends ManagementClient
      * @param $where
      * @return array|string
      */
-    public function exportAbnormalBarCodeExcel($where)
+    public function exportAbnormalBarCodeExcel($where, $hasCostPriceAuth = true)
     {
-        $list = $this->getGoodsList($where, 0, 'g_id,g_name,bar_code');
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = 'g_id,g_name,bar_code,' . $costPriceField;
+        $list = $this->getGoodsList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
             $title = [
@@ -428,6 +448,7 @@ class GoodsClient extends ManagementClient
                 'g_name' => $this->lang("export.g_name"),
                 'bar_code' => $this->lang("export.bar_code"),
             ];
+            if ($hasCostPriceAuth) $title['cost_price'] = $this->lang("export.cost_price");
             $filename = '异常条形码商品列表-' . date("Ymd");
             return $this->sendToExport('商品管理-异常条形码商品列表', $filename, $title, $list);
         }

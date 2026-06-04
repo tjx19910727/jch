@@ -403,7 +403,8 @@ class VisualScreenService
         $orderIncrementWhere[] = ['m_id', 'in', $operatingScopeForQuery];
 
         $chartWhere = [['m_id', 'in', $operatingScopeForQuery]];
-        $this->appendTimeRangeToWhere($chartWhere, $timeRange['start'], $timeRange['end']);
+        $chartTimeRange = $this->salesTrendTimeRange($cycle, $timeRange);
+        $this->appendTimeRangeToWhere($chartWhere, $chartTimeRange['start'], $chartTimeRange['end']);
 
         $saleData = $this->app->saleOrders->getData($queryWhere);
         $screenCounts = $this->buildMachineScreenCountsByMIds($dashboardScope);
@@ -502,11 +503,9 @@ class VisualScreenService
             }
             return $out;
         }
-        $saleDataWhere = ['pay_status' => 3];
-        $saleDataWhere[] = ['m_id', 'in', $operatingScope];
-    $this->appendTimeRangeToWhere($saleDataWhere, $timeRange['start'], $timeRange['end']);
         $chartWhere = [['m_id', 'in', $operatingScope]];
-    $this->appendTimeRangeToWhere($chartWhere, $timeRange['start'], $timeRange['end']);
+        $chartTimeRange = $this->salesTrendTimeRange($cycle, $timeRange);
+        $this->appendTimeRangeToWhere($chartWhere, $chartTimeRange['start'], $chartTimeRange['end']);
         $chartType = $this->cycleToChartType($cycle);
         $chartResp = $this->app->saleOrders->getChartData($chartWhere, $chartType);
         $chartPayload = is_array($chartResp) ? $chartResp : obj2arr($chartResp);
@@ -719,6 +718,24 @@ class VisualScreenService
     }
 
     /**
+     * salesTrend 在 day 口径下展示含今日的最近 7 个自然日。
+     * @param array{start:?int,end:?int} $baseRange
+     * @return array{start:?int,end:?int}
+     */
+    protected function salesTrendTimeRange(string $cycle, array $baseRange): array
+    {
+        if ($this->normalizeCycleKeyword($cycle) !== 'day') {
+            return $baseRange;
+        }
+
+        $start = strtotime(date('Y-m-d', strtotime('-6 days')));
+        return [
+            'start' => $start === false ? ($baseRange['start'] ?? null) : $start,
+            'end' => time(),
+        ];
+    }
+
+    /**
      * 把 cycle 转为自义定查询起始时间戳（秒）
      * day => 当天 0 点
      * week => 最近 7 天
@@ -794,7 +811,36 @@ class VisualScreenService
                 $points[] = ['label' => $label, 'value' => $val];
             }
         }
+        if ($this->normalizeCycleKeyword($cycle) === 'day') {
+            return $this->fillRecentWeekDailyPoints($points);
+        }
         return $points;
+    }
+
+    /**
+     * @param array<int,array{label:string,value:float|int}> $points
+     * @return array<int,array{label:string,value:float|int}>
+     */
+    protected function fillRecentWeekDailyPoints(array $points): array
+    {
+        $values = [];
+        foreach ($points as $point) {
+            $label = (string) ($point['label'] ?? '');
+            if ($label === '') {
+                continue;
+            }
+            $values[$label] = ($values[$label] ?? 0) + (float) ($point['value'] ?? 0);
+        }
+
+        $out = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $label = date('m-d', strtotime('-' . $i . ' days'));
+            $out[] = [
+                'label' => $label,
+                'value' => $values[$label] ?? 0,
+            ];
+        }
+        return $out;
     }
 
     /**

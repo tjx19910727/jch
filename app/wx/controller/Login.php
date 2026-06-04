@@ -55,4 +55,5 @@ class Login
         $postData = input();
         return AppFactory::wx()->login->managerLogin($postData);
     }
+
 }

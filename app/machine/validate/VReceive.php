@@ -64,6 +64,7 @@ class VReceive extends VCommon
         "check_list" => "require|array",
     "maintainer_id" => "require",
         "status" => "integer",
+        "field" => "require",
         "date" => "require",
         "machine_usage" => "require",
         "file_content" => "require",
@@ -127,6 +128,7 @@ class VReceive extends VCommon
         "check_list.require" => "check_list不能为空",
         "check_list.array" => "check_list格式错误",
         "maintainer_id.require" => "maintainer_id不能为空",
+        "field.require" => "图片字段名不能为空",
     "file_content.require" => "file_content不能为空",
     "per_row.integer" => "per_row格式错误",
         "date.require" => "VReceive.date_require",
@@ -210,6 +212,7 @@ class VReceive extends VCommon
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
         "httpHeartbeat" => ["msg_id","machine_id","timestamp","sign"],
+        "reportScreenImg" => ["msg_id","machine_id","timestamp","sign"],
         "requireOutGoods" => ["msg_id","machine_id","timestamp","sign","trade_no"],
         "getOrderPayStatus" => ["msg_id","machine_id","timestamp","sign"],
         "setHttpOutStatus" => ["msg_id","machine_id","timestamp","sign","trade_no","http_out_status"],
