@@ -244,4 +244,13 @@ return [
             'tripData_required' => 'Ctrip\'s encryption tags for available room types cannot be empty',
             'roomPriceList_required' => 'The room price list cannot be empty',
         ],
+    "VLaser" => [
+        "upload_image_fail" => "Failed to upload image",
+        "file_require" => "Uploaded file cannot be empty",
+        "check_sign_fail" => "Signature verification failed",
+        "file_size" => "File is too large, exceeds the limit",
+        "file_ext" => "Unsupported file type for upload",
+        "get_image_info_fail" => "Failed to get image information, please ensure the uploaded file is an image",
+        "upload_image_success" => "Image uploaded successfully",
+    ],
 ];
