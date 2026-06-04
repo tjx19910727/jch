@@ -286,7 +286,6 @@ class MachineClient extends ManagementClient
                         if (
                             preg_match('/^\d{2}:\d{2}$/', $startTime)
                             && preg_match('/^\d{2}:\d{2}$/', $endTime)
-                            && strcmp($startTime, $endTime) > 0
                         ) {
                             $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
                         }
@@ -295,7 +294,7 @@ class MachineClient extends ManagementClient
                 }
             }
             $item['machine_on_off'] = $machineOnOff;
-            if(empty($item['simSignalLog'])){
+            if(empty($item['simSignalLog']) || ($item['online'] == 2 && $item['http_online'] == 2)){
                 $item['simSignalLog'] = $defaultSignal;
             }
             $ratioWhere[] = ['m_id', '=', $item['m_id']];
