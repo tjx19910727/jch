@@ -30,7 +30,8 @@ class ExportClient extends TimeTaskBase
                 $data['filename'] = $data['filename'] . date('His');
                 $result = Excel::exportExcel($data['list'], $data['title'], $data['filename'], 0,
                     $data['otherData']['startRow'] ?? 1,
-                    $data['otherData']['merge'] ?? []);
+                    $data['otherData']['merge'] ?? [],
+                    $data['otherData'] ?? []);
                 $updateEL["export_id"] = $data['export_id'];
                 $updateEL["file_name"] = $data['filename'];
                 $updateEL["file_path"] = $result;

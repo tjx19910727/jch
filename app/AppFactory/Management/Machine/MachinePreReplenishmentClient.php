@@ -410,20 +410,159 @@ class MachinePreReplenishmentClient extends ManagementClient
             return returnState(4001, '参数错误: order_ids不能为空');
         }
 
-        $now = date('Y-m-d H:i:s');
-        PreReplenishmentOrderModel::where([['id', 'in', $orderIds]])
-            ->update([
-                'export_status' => 1,
-                'export_time' => Db::raw("CASE WHEN export_time IS NULL THEN '{$now}' ELSE export_time END"),
-            ]);
+        $details = PreReplenishmentDetailModel::where([['order_id', 'in', $orderIds]])
+            ->field('id,order_id,m_id,machine_id,mc_id,channel_code,sku,plan_quantity,actual_quantity,compare_status')
+            ->order('id asc')
+            ->select()
+            ->toArray();
+        if (!$details) {
+            return returnState(4003, '单据不存在或无明细');
+        }
 
-        $exportNo = 'PREX' . date('YmdHis');
-        return returnState(200, '导出任务已创建', [
-            'export_id' => time(),
-            'export_no' => $exportNo,
-            'status' => 0,
-            'file_url' => null,
+        $orders = PreReplenishmentOrderModel::where([['id', 'in', $orderIds]])
+            ->field('id,record_no,export_status,creator_name,created_at')
+            ->select()
+            ->toArray();
+        if (!$orders) {
+            return returnState(4003, '单据不存在');
+        }
+        $orderMap = array_column($orders, null, 'id');
+
+        $mids = array_values(array_unique(array_column($details, 'm_id')));
+        $mcs = array_values(array_unique(array_column($details, 'mc_id')));
+        $channelMap = [];
+        if ($mids && $mcs) {
+            $channels = MachineChannelModel::where([
+                ['m_id', 'in', $mids],
+                ['mc_id', 'in', $mcs],
+            ])->field('m_id,mc_id,g_name,pic')->select()->toArray();
+            foreach ($channels as $channel) {
+                $channelMap[$channel['m_id'] . '_' . $channel['mc_id']] = $channel;
+            }
+        }
+
+        $groupRows = [];
+        foreach ($details as $row) {
+            $order = $orderMap[$row['order_id']] ?? [];
+            $channel = $channelMap[$row['m_id'] . '_' . $row['mc_id']] ?? [];
+            $groupKey = ($order['record_no'] ?? '') . '|' . ($row['sku'] ?? '');
+            if (!isset($groupRows[$groupKey])) {
+                $recordNo = trim((string)($order['record_no'] ?? ''));
+                $groupRows[$groupKey] = [
+                    'record_no' => $order['record_no'] ?? '',
+                    'order_bar_code_image' => $recordNo === '' ? '' : ('https://bwipjs-api.metafloor.com/?bcid=code128&includetext=true&scale=2&text=' . urlencode($recordNo)),
+                    'goods_name' => $channel['g_name'] ?? '',
+                    'goods_pic' => $channel['pic'] ?? '',
+                    'sku' => $row['sku'] ?? '',
+                    'plan_quantity' => 0,
+                    'actual_quantity' => 0,
+                    'actual_has_value' => false,
+                    'creator_name' => $order['creator_name'] ?? '',
+                    'created_at' => $order['created_at'] ?? '',
+                ];
+            }
+
+            if ($groupRows[$groupKey]['goods_name'] === '' && !empty($channel['g_name'])) {
+                $groupRows[$groupKey]['goods_name'] = $channel['g_name'];
+            }
+            if ($groupRows[$groupKey]['goods_pic'] === '' && !empty($channel['pic'])) {
+                $groupRows[$groupKey]['goods_pic'] = $channel['pic'];
+            }
+
+            $groupRows[$groupKey]['plan_quantity'] += (int)($row['plan_quantity'] ?? 0);
+            if ($row['actual_quantity'] !== null && $row['actual_quantity'] !== '') {
+                $groupRows[$groupKey]['actual_has_value'] = true;
+                $groupRows[$groupKey]['actual_quantity'] += (int)$row['actual_quantity'];
+            }
+        }
+
+        $recordNoForHeader = '';
+        $recordBarCodeImageForHeader = '';
+        $list = [];
+        foreach ($groupRows as $item) {
+            if ($recordNoForHeader === '') {
+                $recordNoForHeader = $item['record_no'] ?? '';
+            }
+            if ($recordBarCodeImageForHeader === '') {
+                $recordBarCodeImageForHeader = $item['order_bar_code_image'] ?? '';
+            }
+            $list[] = [
+                'col_a' => $item['goods_name'] ?? '',
+                'col_b' => $item['goods_pic'] ?? '',
+                'col_c' => $item['sku'] ?? '',
+                'col_d' => (int)($item['plan_quantity'] ?? 0),
+                'col_e' => $item['creator_name'] ?? '',
+                'col_f' => $item['created_at'] ?? '',
+            ];
+        }
+
+        // 第2行: 补货码数据与补货码图片
+        $title = [
+            'col_a' => $recordNoForHeader,
+            'col_b' => '',
+            'col_c' => '',
+            'col_d' => $recordBarCodeImageForHeader,
+            'col_e' => '',
+            'col_f' => '',
+        ];
+        // 第3行: 商品标题
+        array_unshift($list, [
+            'col_a' => '商品名称',
+            'col_b' => '商品图片',
+            'col_c' => 'SKU',
+            'col_d' => '领料数量',
+            'col_e' => '创建人',
+            'col_f' => '创建时间',
         ]);
+        $filename = '预补货领料表-' . date('YmdHis');
+
+        $result = $this->sendToExport('设备管理-预补货管理', $filename, $title, $list, [
+            'imageFields' => ['col_b', 'col_d'],
+            'imageWidth' => 220,
+            'imageHeight' => 70,
+            'startRow' => 2,
+            'merge' => [
+                [
+                    'merge' => 'A1:C1',
+                    'cell' => 'A1',
+                    'name' => '补货编号',
+                ],
+                [
+                    'merge' => 'D1:F1',
+                    'cell' => 'D1',
+                    'name' => '补货条形码',
+                ],
+                [
+                    'merge' => 'A2:C2',
+                    'cell' => 'A2',
+                    'name' => '',
+                ],
+                [
+                    'merge' => 'D2:F2',
+                    'cell' => 'D2',
+                    'name' => '',
+                ],
+            ],
+        ]);
+
+        $state = 0;
+        if (is_object($result) && method_exists($result, 'getData')) {
+            $data = $result->getData();
+            $state = (int)($data['state'] ?? 0);
+        } else {
+            $data = obj2arr($result);
+            $state = (int)($data['state'] ?? 0);
+        }
+        if ($state == 200) {
+            $now = date('Y-m-d H:i:s');
+            PreReplenishmentOrderModel::where([['id', 'in', $orderIds]])
+                ->update([
+                    'export_status' => 1,
+                    'export_time' => Db::raw("CASE WHEN export_time IS NULL THEN '{$now}' ELSE export_time END"),
+                ]);
+        }
+
+        return $result;
     }
 
     public function reportLog($postData)
