@@ -108,31 +108,32 @@ class MachineCheckListClient extends ManagementClient
     }
 
     /**
-     * 删除检查项
+     * 启用/禁用检查项
+     * @param array $postData
+     * @return array|\think\response\Json
      */
-    public function delItem($postData)
+    public function setActive($postData)
     {
         $id = $postData['id'] ?? '';
+        $isActive = intval($postData['is_active'] ?? -1);
         if (!$id) {
             return $this->rValidate('id不能为空');
+        }
+        if (!in_array($isActive, [0, 1], true)) {
+            return $this->rValidate('启用状态仅支持0或1');
         }
         $ids = is_array($id) ? $id : explode(',', strval($id));
         $ids = array_values(array_filter(array_map('intval', $ids)));
         if (!$ids) {
             return $this->rValidate('id不能为空');
         }
-
-        $childCount = Db::name('check_list_items')->where([['parent_id', 'in', $ids]])->count();
-        if ($childCount > 0) {
-            return $this->rValidate('存在子级检查项，无法删除');
+        $ids = $isActive === 1 ? $this->collectAncestorIds($ids) : $this->collectDescendantIds($ids);
+        $existsCount = Db::name('check_list_items')->where([['id', 'in', $ids]])->count();
+        if ($existsCount <= 0) {
+            return $this->rValidate('检查项不存在');
         }
-        $recordCount = Db::name('check_list_records')->where([['item_id', 'in', $ids]])->count();
-        if ($recordCount > 0) {
-            return $this->rValidate('存在检查记录，无法删除');
-        }
-
-        $result = Db::name('check_list_items')->where([['id', 'in', $ids]])->delete();
-        return $this->rD($result);
+        Db::name('check_list_items')->where([['id', 'in', $ids]])->update(['is_active' => $isActive]);
+        return $this->rU($existsCount);
     }
 
     /**
@@ -492,5 +493,60 @@ class MachineCheckListClient extends ManagementClient
         }
 
         return array_merge($result, $otherRoots);
+    }
+
+    /**
+     * 获取指定项目及全部下级项目ID
+     * @param int[] $ids
+     * @return int[]
+     */
+    protected function collectDescendantIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        $all = $ids;
+        $current = $ids;
+        while ($current) {
+            $children = Db::name('check_list_items')
+                ->where([['parent_id', 'in', $current]])
+                ->column('id');
+            $children = array_values(array_diff(
+                array_values(array_unique(array_map('intval', is_array($children) ? $children : []))),
+                $all
+            ));
+            if (!$children) {
+                break;
+            }
+            $all = array_merge($all, $children);
+            $current = $children;
+        }
+        return array_values(array_unique($all));
+    }
+
+    /**
+     * 获取指定项目及全部上级项目ID
+     * @param int[] $ids
+     * @return int[]
+     */
+    protected function collectAncestorIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        $all = $ids;
+        $current = $ids;
+        while ($current) {
+            $parents = Db::name('check_list_items')
+                ->where([['id', 'in', $current]])
+                ->where('parent_id', '>', 0)
+                ->column('parent_id');
+            $parents = array_values(array_diff(
+                array_values(array_unique(array_map('intval', is_array($parents) ? $parents : []))),
+                $all
+            ));
+            if (!$parents) {
+                break;
+            }
+            $all = array_merge($all, $parents);
+            $current = $parents;
+        }
+        return array_values(array_unique($all));
     }
 }

@@ -110,7 +110,7 @@ class Common extends AuthController
                 }
             }
         }
-        $where = $this->authNodeWhere($where);
+        $where = $this->authNodeWhere($where, $prefix);
         // 转为SQL语句格式
         if ($is_string && $where) {
             $this->where2Str($where,$prefix);
@@ -124,8 +124,10 @@ class Common extends AuthController
      * @param array $where
      * @return array
      */
-    public function authNodeWhere($where = [])
+    public function authNodeWhere($where = [], $prefix = "")
     {
+        $where = $this->applyManagerQueryStartTimeWhere($where, $prefix);
+
         // 数据权限
         if (isset($this->currentMenu['data_auth']) && $this->currentMenu['data_auth'] == 1 && isset($this->currentMenu['d_type']) && $this->currentMenu['d_type'] > 0) {
             $api = request()->baseUrl();
@@ -171,6 +173,65 @@ class Common extends AuthController
             }
         }
         return $where;
+    }
+
+    /**
+     * 账号级查询起始时间限制：当前接口命中配置时，自动追加 create_time > 起始时间。
+     * @param array $where
+     * @param string $prefix
+     * @return array
+     */
+    protected function applyManagerQueryStartTimeWhere($where = [], $prefix = "")
+    {
+        $startTime = intval($this->manager['query_start_time'] ?? 0);
+        if ($startTime <= 0) {
+            return $where;
+        }
+
+        $urls = $this->parseManagerQueryStartUrls($this->manager['query_start_urls'] ?? '');
+        if (!$urls) {
+            return $where;
+        }
+
+        $api = request()->baseUrl();
+        if (!in_array('*', $urls, true) && !in_array($api, $urls, true)) {
+            return $where;
+        }
+
+        $field = $prefix ? $prefix . 'create_time' : 'create_time';
+        $where[] = [$field, '>', $startTime];
+        return $where;
+    }
+
+    /**
+     * query_start_urls 支持 JSON 数组、逗号分隔、换行分隔。
+     * @param mixed $raw
+     * @return array
+     */
+    protected function parseManagerQueryStartUrls($raw)
+    {
+        if (is_array($raw)) {
+            $urls = $raw;
+        } else {
+            $raw = trim((string)$raw);
+            if ($raw === '') {
+                return [];
+            }
+            $json = json_decode($raw, true);
+            if (is_array($json)) {
+                $urls = $json;
+            } else {
+                $urls = preg_split('/[\r\n,]+/', $raw) ?: [];
+            }
+        }
+
+        $urls = array_map(function ($url) {
+            return trim((string)$url);
+        }, $urls);
+        $urls = array_filter($urls, function ($url) {
+            return $url !== '';
+        });
+        return array_values(array_unique($urls));
     }
 
     /**

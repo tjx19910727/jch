@@ -467,42 +467,45 @@ trait MachineTrait
      * 设备远程出货
      * @return array|bool|string
      */
-    public function setRemoteOutGoods($postData = [])
+    public function setRemoteOutGoods()
     {
-        $postData = $postData ?: input();
-        $trade_no = trim((string)($postData['trade_no'] ?? ''));
-        $sod_id = intval($postData['sod_id'] ?? 0);
-        $machine_id = trim((string)($postData['machine_id'] ?? ''));
-        $channel_code = trim((string)($postData['channel_code'] ?? ''));
+        $sod_id = input('sod_id');
+        $machine_id = input('machine_id');
+        $channel_code = input('channel_code') ?? '';
+        if (!$machine_id) {
+            return $this->r(100, $this->lang("VMachine.machine_id_require"));
+        }
 
-        if (!$trade_no) {
-            return $this->r(100, "trade_no不能为空");
+        if (!$sod_id) {
+            try {
+                $this->startTrans();
+                $payload = $this->buildRemoteOutGoodsPayload([
+                    'machine_id' => $machine_id,
+                    'order_id' => intval(input('order_id') ?? 0),
+                    'sod_id' => 0,
+                    'goods_id' => intval(input('goods_id') ?? input('g_id') ?? 0),
+                    'channel_code' => $channel_code,
+                    'trade_no' => input('trade_no') ?: '',
+                    'main' => input('main') ?? [],
+                    'outGoods' => input('outGoods') ?? [],
+                    'quantity' => intval(input('quantity') ?? 1),
+                    'channel_position' => intval(input('channel_position') ?? 1),
+                    'is_gift' => intval(input('is_gift') ?? 2),
+                    'out_port' => intval(input('out_port') ?? 1),
+                ]);
+                $result = $this->sendRemoteOutGoodsWithLog($machine_id, $payload);
+                $this->commitTrans();
+                return $result;
+            } catch (\Exception $e) {
+                $this->rollbackTrans();
+                actionLog($e, '远程出货无sod_id异常：');
+                return $e->getMessage();
+            }
         }
-        $order = $this->getSaleOrdersFind(['trade_no' => $trade_no]);
-        if (!$order) {
-            return $this->r(100, "找不到订单记录");
-        }
-        $order = is_object($order) ? $order->toArray() : $order;
-        if ($machine_id && $machine_id != $order['machine_id']) {
-            return $this->r(100, "设备编号与订单不匹配");
-        }
-        $machine_id = $machine_id ?: $order['machine_id'];
 
-        if ($sod_id) {
-            $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id, 'order_id' => $order['order_id']]);
-            if (!$detail) {
-                return $this->r(100, "子订单与订单不匹配");
-            }
-            $detail = is_object($detail) ? $detail->toArray() : $detail;
-        } else {
-            if (!$channel_code) {
-                return $this->r(100, "未传sod_id时channel_code不能为空");
-            }
-            $detail = $this->getRemoteOutGoodsDetailByChannel($order, $channel_code);
-            if (!$detail) {
-                return $this->r(100, "货道商品与订单子订单不匹配");
-            }
-        }
+        $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
+        if (!$detail) return $this->r(100,"找不到订单记录");
+        $order = $this->getSaleOrdersFind(['order_id' => $detail['order_id']]);
         // 先不做判断
         // if (!$channel_code){
         //     if ($detail['fail_quantity'] == 0) return "出货失败商品数量为0，无需操作";
@@ -529,25 +532,18 @@ trait MachineTrait
                 $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
                 $this->updateSaleOrdersDetails($updateSod);
             }
-            $logData['machine_id'] = $order['machine_id'];
-            $logData['type'] = "remoteOutGoods";
-            $logData['order_id'] = $detail["order_id"];
-            $logData['sod_id'] = $detail["sod_id"];
-            $logData['order_id'] = $detail["order_id"];
-            $logData['goods_id'] = $detail["g_id"];
-            $logData['channel_code'] = $channel_code ?: $detail['channel_code'];
-            $logData['status'] = 1;
-            $logData['manager_id'] = $this->manager['manager_id'];
-            $logData['operator_at'] = date('Y-m-d H:i:s');
-            $log_id = $this->addRALog($logData);
-            $content = [
-                "trade_no" => $order['trade_no'],
+            $payload = $this->buildRemoteOutGoodsPayload([
+                'machine_id' => $order['machine_id'],
+                'order_id' => $detail['order_id'],
                 'sod_id' => $detail['sod_id'],
-                "main" => $contentArr,
-                "outGoods" => $outArr,
-                "log_id" => $log_id,
-            ];
-            $result = $this->sendToMachine(['machine_id' => $machine_id], 'remoteOutGoods', $content);
+                'goods_id' => $detail['g_id'],
+                'channel_code' => $channel_code ?: $detail['channel_code'],
+                "trade_no" => $order['trade_no'],
+                'main' => $contentArr,
+                'outGoods' => $outArr,
+                'quantity' => 1,
+            ]);
+            $result = $this->sendRemoteOutGoodsWithLog($machine_id, $payload);
             // 远程出货发起时仅记录子订单远程出货状态，实际成功/失败结果由MQ回执处理
             $updateData['sod_id'] = $detail['sod_id'];
             $updateData['remote_out_goods_status'] = 1;
@@ -562,58 +558,74 @@ trait MachineTrait
         return $result;
     }
 
-    /**
-     * 未传 sod_id 时，根据货道当前商品匹配订单子订单。
-     * @param array $order
-     * @param string $channelCode
-     * @return array|null
-     * @throws \Exception
-     */
-    protected function getRemoteOutGoodsDetailByChannel($order, $channelCode)
+    protected function buildRemoteOutGoodsPayload(array $data): array
     {
-        $channel = $this->getMachineChannelFind(
-            ['machine_id' => $order['machine_id'], 'channel_code' => $channelCode],
-            'mc_id,channel_code,mg_id,g_id,sku,bar_code'
-        );
-        if (!$channel) {
-            return null;
-        }
-        $channel = is_object($channel) ? $channel->toArray() : $channel;
-
-        $details = $this->getSaleOrdersDetailsList(
-            ['order_id' => $order['order_id']],
-            0,
-            'sod_id,order_id,mc_id,channel_position,channel_code,mg_id,g_id,g_name,g_type,gmg_id,sku,bar_code,quantity,is_gift,out_port,fail_quantity,cost_price,retail_price,total_sod_price',
-            'sod_id asc'
-        );
-        $details = is_object($details) && method_exists($details, 'toArray') ? $details->toArray() : $details;
-        if (!$details) {
-            return null;
+        $channelCode = trim((string)($data['channel_code'] ?? ''));
+        $quantity = intval($data['quantity'] ?? 1);
+        if ($quantity <= 0) {
+            $quantity = 1;
         }
 
-        foreach ($details as $detail) {
-            $detail = is_object($detail) ? $detail->toArray() : $detail;
-            if (!empty($detail['mc_id']) && !empty($channel['mc_id']) && intval($detail['mc_id']) == intval($channel['mc_id'])) {
-                return $detail;
+        $outGoods = $data['outGoods'] ?? [];
+        if (!$outGoods && $channelCode !== '') {
+            $channelPosition = intval($data['channel_position'] ?? 1);
+            if ($channelPosition <= 0) {
+                $channelPosition = 1;
             }
-            if (!empty($detail['channel_code']) && $detail['channel_code'] == $channelCode) {
-                return $detail;
-            }
-            if (!empty($detail['g_id']) && !empty($channel['g_id']) && intval($detail['g_id']) == intval($channel['g_id'])) {
-                return $detail;
-            }
-            if (!empty($detail['sku']) && !empty($channel['sku']) && $detail['sku'] == $channel['sku']) {
-                return $detail;
-            }
-            if (!empty($detail['bar_code']) && !empty($channel['bar_code']) && $detail['bar_code'] == $channel['bar_code']) {
-                return $detail;
-            }
-            if (!empty($detail['mg_id']) && !empty($channel['mg_id']) && intval($detail['mg_id']) == intval($channel['mg_id'])) {
-                return $detail;
-            }
+            $outGoods[$channelPosition][] = [
+                'channel_code' => $channelCode,
+                'quantity' => $quantity,
+                'is_gift' => intval($data['is_gift'] ?? 2),
+                'out_port' => intval($data['out_port'] ?? 1),
+            ];
         }
 
-        return null;
+        return [
+            'machine_id' => $data['machine_id'] ?? '',
+            'order_id' => intval($data['order_id'] ?? 0),
+            'sod_id' => intval($data['sod_id'] ?? 0),
+            'goods_id' => intval($data['goods_id'] ?? 0),
+            'channel_code' => $channelCode,
+            'trade_no' => $data['trade_no'] ?? '',
+            'main' => $data['main'] ?? [],
+            'outGoods' => $outGoods,
+            'quantity' => $quantity,
+        ];
+    }
+
+    protected function sendRemoteOutGoodsWithLog(string $machineId, array $payload, array $logData = [])
+    {
+        $logData = array_merge([
+            'machine_id' => $payload['machine_id'] ?: $machineId,
+            'type' => 'remoteOutGoods',
+            'order_id' => $payload['order_id'],
+            'sod_id' => $payload['sod_id'],
+            'goods_id' => $payload['goods_id'],
+            'channel_code' => $payload['channel_code'],
+            'status' => 1,
+            'manager_id' => $this->manager['manager_id'] ?? 0,
+            'operator_at' => date('Y-m-d H:i:s'),
+        ], $logData);
+        $logId = $this->addRALog($logData);
+
+        $content = [
+            'trade_no' => $payload['trade_no'] ?: ('remote_out_goods_' . $logId),
+            'sod_id' => $payload['sod_id'],
+            'main' => $payload['main'],
+            'outGoods' => $payload['outGoods'],
+            'channel_code' => $payload['channel_code'],
+            'quantity' => $payload['quantity'],
+            'log_id' => $logId,
+        ];
+        $result = $this->sendToMachine(['machine_id' => $machineId], 'remoteOutGoods', $content);
+        if (!is_object($result)) {
+            $this->updateRALog(
+                ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
+                ['id' => $logId],
+                ['status', 'operator_at']
+            );
+        }
+        return $result;
     }
 
 
@@ -623,8 +635,15 @@ trait MachineTrait
         $sodId = intval($this->message['sod_id'] ?? 0);
         $logId = intval($this->message['log_id'] ?? 0);
         if (!$sodId) {
+            if ($logId) {
+                $this->updateRALog(
+                    ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')],
+                    ['id' => $logId],
+                    ['status', 'operator_at']
+                );
+            }
             actionLog($this->message, "远程出货缺少sod_id", "remoteOutGoods");
-            return false;
+            return true;
         }
 
         $detail = $this->getSaleOrdersDetailsFind(

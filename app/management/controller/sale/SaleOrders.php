@@ -26,6 +26,8 @@ class SaleOrders extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $machineIds = [];
+        $channelCode = trim((string)($postData['channel_code'] ?? ''));
+        unset($postData['channel_code']);
         if (!empty($postData['machine_group_id'])) {
             $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
             unset($postData['machine_group_id']);
@@ -45,6 +47,13 @@ class SaleOrders extends Common
                 array_push($order_id,$item['order_id']);
             }
             $where[] = ['order_id','in',$order_id];
+        }
+        if ($channelCode !== '') {
+            $orderIds = Db::name('sale_orders_details')
+                ->where('channel_code', 'like', '%' . $channelCode . '%')
+                ->column('order_id');
+            $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
+            $where[] = ['order_id', 'in', $orderIds ?: [0]];
         }
         $hasCostPriceAuth = $this->hasCostPriceAuth();
 
@@ -277,6 +286,8 @@ class SaleOrders extends Common
     {
         $postData = input();
         $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $channelCode = trim((string)($postData['channel_code'] ?? ''));
+        unset($postData['channel_code']);
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
             $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
             unset($postData['machine_group_id']);
@@ -284,6 +295,13 @@ class SaleOrders extends Common
         }
         $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in","pay_channel" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
         if (!empty($machineIds)) $where[] = ['machine_id', 'in', $machineIds];
+        if ($channelCode !== '') {
+            $orderIds = Db::name('sale_orders_details')
+                ->where('channel_code', 'like', '%' . $channelCode . '%')
+                ->column('order_id');
+            $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
+            $where[] = ['order_id', 'in', $orderIds ?: [0]];
+        }
         $where['ao_id'] = $this->manager['ao_id'];
         $machineIds = [];
         
