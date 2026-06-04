@@ -32,7 +32,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             ->toArray();
 
         if (!$machineList) {
-            return returnState(0, 'ok', ['machine_list' => []]);
+            return returnState(200, 'ok', ['machine_list' => []]);
         }
 
         $mIds = array_column($machineList, 'm_id');
@@ -69,7 +69,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             ];
         }
 
-        return returnState(0, 'ok', ['machine_list' => $result]);
+        return returnState(200, 'ok', ['machine_list' => $result]);
     }
 
     public function addOrder($postData)
@@ -115,7 +115,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
 
             Db::commit();
-            return returnState(0, '创建成功', [
+            return returnState(200, '创建成功', [
                 'id' => $orderId,
                 'record_no' => $recordNo,
                 'biz_status' => 1,
@@ -181,7 +181,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
 
             Db::commit();
-            return returnState(0, '修改成功', ['id' => $id]);
+            return returnState(200, '修改成功', ['id' => $id]);
         } catch (\Exception $e) {
             Db::rollback();
             actionException($e, 1);
@@ -218,7 +218,7 @@ class MachinePreReplenishmentClient extends ManagementClient
         $list = $listModel->items();
 
         if (!$list) {
-            return returnState(0, 'ok', [
+            return returnState(200, 'ok', [
                 'list' => [],
                 'total' => 0,
                 'page' => $page,
@@ -267,7 +267,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             ];
         }
 
-        return returnState(0, 'ok', [
+        return returnState(200, 'ok', [
             'list' => $result,
             'total' => $listModel->total(),
             'page' => $page,
@@ -380,7 +380,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             'actual_total' => $actualTotal,
         ];
 
-        return returnState(0, 'ok', [
+        return returnState(200, 'ok', [
             'base_info' => [
                 'id' => $order['id'],
                 'record_no' => $order['record_no'],
@@ -418,7 +418,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             ]);
 
         $exportNo = 'PREX' . date('YmdHis');
-        return returnState(0, '导出任务已创建', [
+        return returnState(200, '导出任务已创建', [
             'export_id' => time(),
             'export_no' => $exportNo,
             'status' => 0,
@@ -463,7 +463,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
 
             Db::commit();
-            return returnState(0, '上报成功', ['record_no' => $recordNo]);
+            return returnState(200, '上报成功', ['record_no' => $recordNo]);
         } catch (\Exception $e) {
             Db::rollback();
             actionException($e, 1);
