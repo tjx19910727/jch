@@ -6,31 +6,31 @@ use app\management\controller\Common;
 
 class MachinePreReplenishment extends Common
 {
+    public function getList()
+    {
+        $postData = input();
+        return $this->app->machinePreReplenishment->getOrderList($postData);
+    }
+
     public function getMachineChannels()
     {
         $postData = input();
         return $this->app->machinePreReplenishment->getMachineChannels($postData);
     }
 
-    public function addOrder()
+    public function add()
     {
         $postData = input();
         return $this->app->machinePreReplenishment->addOrder($postData);
     }
 
-    public function updateOrder()
+    public function update()
     {
         $postData = input();
         return $this->app->machinePreReplenishment->updateOrder($postData);
     }
 
-    public function getOrderList()
-    {
-        $postData = input();
-        return $this->app->machinePreReplenishment->getOrderList($postData);
-    }
-
-    public function getOrderDetail()
+    public function getDetail()
     {
         $postData = input();
         return $this->app->machinePreReplenishment->getOrderDetail($postData);
