@@ -1282,5 +1282,33 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+
+    /**
+     * 获取预补货详情（设备端）
+     * @return array|string
+     */
+    public function getPreReplenishmentDetail()
+    {
+        try {
+            return $this->app->api->getPreReplenishmentDetail();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 确认预补货（设备端）
+     * @return array|string
+     */
+    public function confirmPreReplenishment()
+    {
+        try {
+            return $this->app->api->confirmPreReplenishment();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
     
 }

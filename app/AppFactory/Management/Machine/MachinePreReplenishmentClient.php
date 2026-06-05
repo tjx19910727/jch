@@ -627,4 +627,22 @@ class MachinePreReplenishmentClient extends ManagementClient
             return returnState(5000, '系统错误');
         }
     }
+
+    /**
+     * 重置补货次数（order_count 置 0）
+     * @param $postData
+     * @return array
+     */
+    public function resetReplenishmentCount($postData)
+    {
+        $orderId = $postData['order_id'] ?? 0;
+        if (!$orderId) {
+            return returnState(4001, '参数错误: order_id不能为空');
+        }
+
+        $updated = PreReplenishmentDetailModel::where(['order_id' => $orderId])
+            ->update(['order_count' => 0]);
+
+        return returnState(200, '重置成功', ['affected' => $updated]);
+    }
 }

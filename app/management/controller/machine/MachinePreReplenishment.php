@@ -68,4 +68,13 @@ class MachinePreReplenishment extends Common
         }
         return returnState(200, '查询成功', $detail);
     }
+
+    /**
+     * 重置补货次数
+     */
+    public function resetReplenishmentCount()
+    {
+        $postData = input();
+        return $this->app->machinePreReplenishment->resetReplenishmentCount($postData);
+    }
 }
