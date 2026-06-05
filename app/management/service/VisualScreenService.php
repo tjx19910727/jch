@@ -1057,7 +1057,7 @@ class VisualScreenService
             ->when($since, function ($query) use ($since) {
                 $query->where('so.create_date', '>=', $since);
             })
-            ->field('so.machine_name as name, IFNULL(SUM(so.total_price),0) as value')
+            ->field('so.machine_name as name, IFNULL(SUM(so.total_price),0) as value, IFNULL(SUM(so.total_quantity),0) as quantity')
             ->group('so.m_id,so.machine_name')
             ->order('value', 'desc')
             ->limit(10)
@@ -1065,7 +1065,7 @@ class VisualScreenService
             ->toArray();
         $out = [];
         foreach ($rows as $r) {
-            $out[] = ['name' => (string) $r['name'], 'value' => round((float) ($r['value'] ?? 0), 2)];
+            $out[] = ['name' => (string) $r['name'], 'value' => round((float) ($r['value'] ?? 0), 2), 'quantity' => (int) round((float) ($r['quantity'] ?? 0))];
         }
         return $out;
     }
