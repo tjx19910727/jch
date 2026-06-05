@@ -522,6 +522,10 @@ class MachineClient extends TimeTaskBase
                     if ($now <= $startupTimestamp + $firstInterval) {
                         continue;
                     }
+                    // 离关机时间30分钟内不再发送提醒
+                    if ($shutdownTimestamp - $now <= 1800) {
+                        continue;
+                    }
 
                     $elapsed = $now - $startupTimestamp;//当前时间与开机时间的时间差
                     $stageCacheKey = 'machine_startup_exception_stage:' . $item['m_id'] . ':' . $todayKey;
