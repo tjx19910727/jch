@@ -115,7 +115,8 @@ class Goods extends Common
     {
         $postData = input();
         try { $this->validate($postData,$this->validatePath . 'update');} catch (\Exception $e) { return returnValidate($e->getMessage());}
-        $result = $this->app->goods->updateForEdit($postData);
+        //$result = $this->app->goods->updateForEdit($postData);
+        $result = $this->app->goods->update($postData);
         return $result;
     }
 
