@@ -141,10 +141,8 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        GoodsModel::disableQueuePushOnce();
         $result = $this->updateGoods($postData, ['g_id' => $gId]);
         if (!$result) {
-            GoodsModel::clearDisableQueuePushFlag();
             return $result;
         }
 
