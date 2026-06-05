@@ -95,6 +95,30 @@ class Login extends BaseController
     }
 
     /**
+     * 未登录状态下通过旧密码修改新密码
+     * @return array|\think\response\Json
+     */
+    public function changePassword()
+    {
+        try {
+            $postData = input();
+            $postData['old_password'] = $postData['old_password'] ?? ($postData['old_pwd'] ?? '');
+            $postData['new_password'] = $postData['new_password'] ?? ($postData['password'] ?? '');
+            $postData['confirm_password'] = $postData['confirm_password']
+                ?? ($postData['new_password_confirm'] ?? ($postData['confirm_new_password'] ?? ''));
+            try {
+                $this->validate($postData, $this->validatePath . 'changePassword');
+            } catch (\Exception $e) {
+                return returnValidate(Lang::get($e->getMessage()));
+            }
+            return AppFactory::management()->login->changePassword($postData);
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch(Lang::get($e->getMessage()));
+        }
+    }
+
+    /**
      * 获取微信登录链接
      * @return array|\think\response\Json
      */

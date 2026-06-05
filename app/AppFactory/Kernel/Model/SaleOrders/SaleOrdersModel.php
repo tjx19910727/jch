@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Model\SaleOrders;
 
 
 use app\AppFactory\Kernel\Model\BaseModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\Machine\MachineMqRecordModel;
 
 class SaleOrdersModel extends BaseModel
@@ -44,6 +45,12 @@ class SaleOrdersModel extends BaseModel
 //        "create_time" => "int",
 //        "sp_id" => "int",
 //    ];
+
+
+    public function machineData()
+    {
+        return $this->hasOne(MachineModel::class,"m_id","m_id");
+    }
 
     public function saleOrdersDetails()
     {

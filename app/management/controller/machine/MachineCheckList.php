@@ -62,15 +62,18 @@ class MachineCheckList extends Common
         return $this->app->machineCheckList->updateItem($postData);
     }
 
-    public function del()
+    /**
+     * 启用/禁用检查项
+     */
+    public function setActive()
     {
         $postData = input();
         try {
-            $this->validate($postData, 'app\\management\\validate\\Machine\\VMachineCheckList.del');
+            $this->validate($postData, 'app\\management\\validate\\Machine\\VMachineCheckList.setActive');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineCheckList->delItem($postData);
+        return $this->app->machineCheckList->setActive($postData);
     }
 
     /**

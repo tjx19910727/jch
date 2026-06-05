@@ -1909,59 +1909,18 @@ class ApiClient extends ReceiveBaseClient
 
         $restartCommand = $this->getRecentRestartCommand(300);
         if ($restartCommand) {
-            $restart = [
-                'msgType' => $restartCommand['msgType'],
-                'msg_id' => $restartCommand['msg_id'] ?? '',
-                'timestamp' => intval($restartCommand['timestamp'] ?? 0),
-            ];
-            if (!empty($restartCommand['field'])) {
-                $restart['field'] = $restartCommand['field'];
-            }
             return $this->r(200, 'success', [
                 'has_restart_command' => 1,
-                'restart' => $restart,
+                'restart' => [
+                    'msgType' => $restartCommand['msgType'],
+                    'msg_id' => $restartCommand['msg_id'] ?? '',
+                    'timestamp' => intval($restartCommand['timestamp'] ?? 0),
+                ],
             ]);
         }
 
         return $this->r(200, 'success', [
             'has_restart_command' => 0,
-        ]);
-    }
-
-    /**
-     * HTTP接收设备上传的首页截屏。
-     * 设备先上传文件拿到路径后，再通过该接口把截图路径写入 machine_info.screen_img。
-     * @return array|string
-     */
-    public function reportScreenImg()
-    {
-        $path = $this->data['path'] ?? ($this->data['screen_img'] ?? '');
-        if (!$path) {
-            return $this->rValidate('图片路径不能为空');
-        }
-
-        $this->message = [
-            'msgType' => 'img',
-            'field' => 'screen_img',
-            'path' => $path,
-        ];
-        $result = $this->img();
-        actionLog(['data' => $this->data, 'result' => $result], 'HTTP首页截屏回传结果', 'reportScreenImg');
-        if ($result === false) {
-            return $this->r(300, '首页截屏保存失败');
-        }
-
-        $commandMsgId = $this->data['command_msg_id'] ?? ($this->data['request_msg_id'] ?? '');
-        if ($commandMsgId) {
-            $this->updateMachineMqRecord(
-                ['status' => 4],
-                ['machine_id' => $this->machine['machine_id'], 'msg_id' => $commandMsgId],
-                ['status']
-            );
-        }
-
-        return $this->r(200, 'success', [
-            'screen_img' => $path,
         ]);
     }
 
@@ -1994,14 +1953,6 @@ class ApiClient extends ReceiveBaseClient
             $payload = json2arr($record['data'] ?? '');
             if (!$payload || !isset($payload['msgType'])) {
                 continue;
-            }
-            if ($payload['msgType'] === 'img' && ($payload['field'] ?? '') === 'screen_img') {
-                return [
-                    'msgType' => $payload['msgType'],
-                    'field' => $payload['field'],
-                    'msg_id' => $record['msg_id'] ?? ($row['msg_id'] ?? ''),
-                    'timestamp' => $record['timestamp'] ?? ($row['create_time'] ?? 0),
-                ];
             }
             if (in_array($payload['msgType'], $restartTypes, true)) {
                 return [
@@ -2087,7 +2038,6 @@ class ApiClient extends ReceiveBaseClient
             if ($mcModel) {
                 $mc = is_object($mcModel) ? (function_exists('obj2arr') ? obj2arr($mcModel) : (array)$mcModel) : $mcModel;
             }
-            $mc = is_array($mc) ? $mc : [];
 
             // compute points safely
             $rate_points = $this->getRateOrGiftPoints($mc);
@@ -2118,19 +2068,36 @@ class ApiClient extends ReceiveBaseClient
             // 普通出货项，构建出货列表
             if (($v['g_type'] ?? 0) == 1) {
                 $pos = $v['channel_position'] ?? 0;
-                $wcLocalOutGoods = $this->resolveWcLocalOutGoodsItems($v, $mc);
-                if ($wcLocalOutGoods) {
-                    foreach ($wcLocalOutGoods as $item) {
-                        $outArr[$pos][] = $item;
+                $outItem = [
+                    'channel_code' => $v['channel_code'] ?? '',
+                    'quantity' => $v['quantity'] ?? 1,
+                    'is_gift' => $v['is_gift'] ?? 2,
+                    'out_port' => $v['out_port'] ?? 1,
+                ];
+                $outArr[$pos][] = $outItem;
+
+                // 如果是微程组合商品（type==11），尝试解析子商品出货信息
+                if (!empty($mc['out_no'])) {
+                    $wcGoodsModel = $this->getWcGoodsFind(['no' => $mc['out_no']]);
+                    if ($wcGoodsModel) {
+                        $wcGoods = is_object($wcGoodsModel) ? (function_exists('obj2arr') ? obj2arr($wcGoodsModel) : (array)$wcGoodsModel) : $wcGoodsModel;
+                        if (($wcGoods['type'] ?? 0) == 11 && !empty($v['wc_goods_no'])) {
+                            $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
+                            if (is_array($wc_goods_no_arr)) {
+                                foreach ($wc_goods_no_arr as $wc_goods_no_v) {
+                                    $dc_local = [
+                                        'channel_code' => $wc_goods_no_v['real_channel_code'] ?? '',
+                                        'quantity' => 1,
+                                        'is_gift' => $v['is_gift'] ?? 2,
+                                        'out_port' => $v['out_port'] ?? 1,
+                                    ];
+                                    $outArr[$pos][] = $dc_local;
+                                }
+                            } else {
+                                actionLog(['sod_id' => $v['sod_id'] ?? 0, 'wc_goods_no' => $v['wc_goods_no']], 'wc_goods_no JSON parse failed');
+                            }
+                        }
                     }
-                } else {
-                    $outItem = [
-                        'channel_code' => $v['channel_code'] ?? '',
-                        'quantity' => $v['quantity'] ?? 1,
-                        'is_gift' => $v['is_gift'] ?? 2,
-                        'out_port' => $v['out_port'] ?? 1,
-                    ];
-                    $outArr[$pos][] = $outItem;
                 }
             }
 
@@ -2150,7 +2117,6 @@ class ApiClient extends ReceiveBaseClient
         if ($total_points) {
             $this->order['total_points'] = $total_points;
         }
-        $contentArr = $this->buildLegacyMainFromOutGoods($outArr);
 
         $content = [
             'msgType' => 'outGoods',
@@ -2169,136 +2135,6 @@ class ApiClient extends ReceiveBaseClient
         }
 
         return $this->r(200, 'success', $content);
-    }
-
-    /**
-     * 微程实物商品(type=5)和组合商品(type=11)按本机实际货道出货。
-     */
-    protected function resolveWcLocalOutGoodsItems($detail, array $mc): array
-    {
-        // normalize $detail to array when an object or model is passed
-        if (is_object($detail)) {
-            $detail = method_exists($detail, 'toArray') ? $detail->toArray() : (array)$detail;
-        } elseif (!is_array($detail)) {
-            $detail = (array)$detail;
-        }
-
-        // ensure $mc is array
-        if (is_object($mc)) {
-            $mc = method_exists($mc, 'toArray') ? $mc->toArray() : (array)$mc;
-        }
-        if (empty($mc['out_no'])) {
-            return [];
-        }
-
-        $wcGoodsModel = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-        if (!$wcGoodsModel) {
-            return [];
-        }
-        $wcGoods = is_object($wcGoodsModel) ? (function_exists('obj2arr') ? obj2arr($wcGoodsModel) : (array)$wcGoodsModel) : $wcGoodsModel;
-        $wcGoodsType = intval($wcGoods['type'] ?? 0);
-        if (!in_array($wcGoodsType, [5, 11], true)) {
-            return [];
-        }
-
-        $localGoods = [];
-        if (!empty($detail['wc_goods_no'])) {
-            $decoded = json_decode($detail['wc_goods_no'], true);
-            if (is_array($decoded)) {
-                $localGoods = array_values($decoded);
-            } else {
-                actionLog([
-                    'sod_id' => $detail['sod_id'] ?? 0,
-                    'wc_goods_no' => $detail['wc_goods_no'],
-                ], 'wc_goods_no JSON parse failed');
-            }
-        }
-
-        if (!$localGoods) {
-            $localWhere = ['out_no' => $mc['out_no']];
-            if ($wcGoodsType === 5) {
-                $detailGId = intval($detail['g_id'] ?? 0);
-                if ($detailGId > 0 && $detailGId !== 9999) {
-                    $localWhere['g_id'] = $detailGId;
-                } elseif (!empty($detail['sku'])) {
-                    $localWhere['sku'] = $detail['sku'];
-                } elseif (!empty($detail['bar_code'])) {
-                    $localWhere['bar_code'] = $detail['bar_code'];
-                }
-            }
-            $wcGoodsLocal = $this->getWcGoodsLocalList($localWhere);
-            if ($wcGoodsLocal) {
-                $localGoods = $wcGoodsLocal->toArray();
-            }
-            if ($wcGoodsType === 5 && count($localGoods) > 1) {
-                actionLog([
-                    'sod_id' => $detail['sod_id'] ?? 0,
-                    'out_no' => $mc['out_no'],
-                    'local_count' => count($localGoods),
-                ], '微程实物商品匹配到多个本地商品，已跳过实际货道兜底');
-                return [];
-            }
-        }
-
-        $items = [];
-        foreach ($localGoods as $local) {
-            $needLocalOutGoods = intval($local['need_local_out_goods'] ?? 1);
-            if ($needLocalOutGoods !== 1) {
-                continue;
-            }
-
-            $channelCode = trim((string)($local['real_channel_code'] ?? ''));
-            if ($channelCode === '' || $channelCode === 'Z10') {
-                $gId = intval($local['g_id'] ?? 0);
-                if ($gId > 0 && $gId !== 9999) {
-                    $machineChannel = $this->getMachineChannelFind([
-                        'g_id' => $gId,
-                        'm_id' => intval($this->order['m_id'] ?? 0),
-                    ], 'channel_code');
-                    if ($machineChannel) {
-                        $machineChannel = is_array($machineChannel) ? $machineChannel : obj2arr($machineChannel);
-                        $channelCode = trim((string)($machineChannel['channel_code'] ?? ''));
-                    }
-                }
-            }
-
-            if ($channelCode === '' || $channelCode === 'Z10') {
-                actionLog([
-                    'sod_id' => $detail['sod_id'] ?? 0,
-                    'out_no' => $mc['out_no'],
-                    'local_no' => $local['no'] ?? '',
-                    'g_id' => $local['g_id'] ?? 0,
-                ], '微程商品未匹配到实际货道');
-                continue;
-            }
-
-            $items[] = [
-                'channel_code' => $channelCode,
-                'quantity' => intval($local['quantity'] ?? ($detail['quantity'] ?? 1)),
-                'is_gift' => $detail['is_gift'] ?? 2,
-                'out_port' => $detail['out_port'] ?? 1,
-            ];
-        }
-
-        return $items;
-    }
-
-    protected function buildLegacyMainFromOutGoods(array $outArr): array
-    {
-        $main = [];
-        foreach ($outArr as $position => $items) {
-            foreach ($items as $item) {
-                $channelCode = $item['channel_code'] ?? '';
-                if ($channelCode === '') {
-                    continue;
-                }
-                $main[$position][] = [
-                    $channelCode,
-                    intval($item['quantity'] ?? 1),
-                ];
-            }
-        }
-        return $main;
     }
 
     /**
@@ -3080,16 +2916,16 @@ class ApiClient extends ReceiveBaseClient
     public function test()
     {
         $trade_no = $this->data['trade_no'] ?? '';
-        // $this->refundTradeNo = $this->data['refund_trade_no'];
+        $this->refundTradeNo = $this->data['refund_trade_no'];
         $order_id = $this->data['order_id'] ?? 0;
         $sod_id = $this->data['sod_id'] ?? 0;
         $this->order = $this->getSaleOrdersFind(['trade_no' => $trade_no])->toArray();;
-        // $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
-        // $this->refundSuccess();;
-        // die();
-        // $this->paymentSuccessful();
-        // $this->addCardChangeLog();
-        $this->outGoods();
+        $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
+        $this->refundSuccess();;
+        die();
+        $this->paymentSuccessful();
+        $this->addCardChangeLog();
+        // $this->outGoods();
         die();
         // $order = $this->outGoods();
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
@@ -3163,18 +2999,26 @@ class ApiClient extends ReceiveBaseClient
             $itemIds = array_values(array_map('intval', array_keys($submittedMap)));
             $itemRows = Db::name('maintenance_items')
                 ->where([['id', 'in', $itemIds]])
-                ->field('id,item_level')
+                ->field('id,item_level,is_active')
                 ->select()
                 ->toArray();
 
             $itemLevelMap = [];
+            $disabledItemIds = [];
             foreach ($itemRows as $itemRow) {
-                $itemLevelMap[intval($itemRow['id'])] = intval($itemRow['item_level'] ?? 0);
+                $rowId = intval($itemRow['id']);
+                $itemLevelMap[$rowId] = intval($itemRow['item_level'] ?? 0);
+                if (intval($itemRow['is_active'] ?? 0) !== 1) {
+                    $disabledItemIds[] = $rowId;
+                }
             }
 
             $missing = array_values(array_diff($itemIds, array_keys($itemLevelMap)));
             if ($missing) {
                 return $this->rFail('维护项目不存在:' . implode(',', $missing));
+            }
+            if ($disabledItemIds) {
+                return $this->rFail('维护项目已禁用:' . implode(',', array_values(array_unique($disabledItemIds))));
             }
 
             $invalidStatusIds = [];
@@ -3598,6 +3442,9 @@ class ApiClient extends ReceiveBaseClient
                     'notes' => $rowNotes,
                 ];
 
+                if (!isset($enabledMap[$itemId])) {
+                    continue;
+                }
                 $itemLevel = intval($enabledMap[$itemId]['item_level'] ?? 0);
                 if ($itemLevel !== 1 && !in_array($checkStatus, [1, 2], true)) {
                     $invalidStatusItems[$itemId] = [
@@ -3617,6 +3464,10 @@ class ApiClient extends ReceiveBaseClient
             $notExists = array_values(array_diff($submittedIds, $existSubmittedIds));
             if ($notExists) {
                 return $this->rFail('检查项不存在:' . implode(',', $notExists));
+            }
+            $disabledIds = array_values(array_diff($submittedIds, array_keys($enabledMap)));
+            if ($disabledIds) {
+                return $this->rFail('检查项已禁用:' . implode(',', $disabledIds));
             }
 
             $missingStatusItems = [];
