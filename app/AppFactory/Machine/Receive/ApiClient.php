@@ -4131,16 +4131,16 @@ class ApiClient extends ReceiveBaseClient
 
     /**
      * 设备确认预补货
-     * 记录补货日志、更新货道商品变化日志
+     * 记录补货日志、更新货道库存变化
      * @return array
      */
     public function confirmPreReplenishment()
     {
         $recordNo  = $this->data['record_no'] ?? '';
         $machineId = $this->data['machine_id'] ?? '';
-        $channels  = json2arr($this->data['channels'] ?? []); // [{channel_code, sku, quantity}]
+        $channel   = json2arr($this->data['channel'] ?? []); // [{mc_id, quantity}]
 
-        if (!$recordNo || !$machineId || !$channels) {
+        if (!$recordNo || !$machineId || !$channel) {
             return $this->rFail('参数错误');
         }
 
@@ -4149,7 +4149,6 @@ class ApiClient extends ReceiveBaseClient
             return $this->r(100, '单据不存在');
         }
 
-        // 检查是否已预补货
         $anyDetail = PreReplenishmentDetailModel::where([
             ['order_id', '=', $order['id']],
             ['machine_id', '=', $machineId],
@@ -4161,91 +4160,81 @@ class ApiClient extends ReceiveBaseClient
 
         $this->startTrans();
         try {
-            foreach ($channels as $item) {
-                $channelCode = $item['channel_code'] ?? '';
-                $sku         = $item['sku'] ?? '';
-                $quantity    = (int)($item['quantity'] ?? 0);
+            foreach ($channel as $item) {
+                $mcId     = (int)($item['mc_id'] ?? 0);
+                $quantity = (int)($item['quantity'] ?? 0);
 
-                if (!$channelCode || $sku === '' || $quantity <= 0) {
+                if (!$mcId || $quantity <= 0) {
                     $this->rollbackTrans();
                     return $this->rFail('明细参数不完整');
                 }
 
-                // 查预补货明细
                 $detail = PreReplenishmentDetailModel::where([
                     ['order_id', '=', $order['id']],
                     ['machine_id', '=', $machineId],
-                    ['channel_code', '=', $channelCode],
+                    ['mc_id', '=', $mcId],
                 ])->lock(true)->find();
 
                 if (!$detail) {
                     $this->rollbackTrans();
-                    return $this->rFail('货道 ' . $channelCode . ' 不在预补货范围内');
+                    return $this->rFail('mc_id ' . $mcId . ' 不在预补货范围内');
                 }
 
-                // 校验累计不能超过预补数量
                 $newActual = ($detail['actual_quantity'] ?? 0) + $quantity;
                 if ($newActual > $detail['plan_quantity']) {
                     $this->rollbackTrans();
-                    return $this->rFail('货道 ' . $channelCode . ' 补货数量超过预补数量');
+                    return $this->rFail('货道 mc_id ' . $mcId . ' 补货数量超过预补数量');
                 }
 
-                // 记录补货日志
-                $logData = [
-                    'm_id'          => $this->machine['m_id'] ?? 0,
-                    'machine_id'    => $machineId,
-                    'channel_code'  => $channelCode,
-                    'sku'           => $sku,
-                    'quantity'      => $quantity,
-                    'report_time'   => date('Y-m-d H:i:s'),
-                    'raw_payload'   => arr2json($this->data),
-                ];
-                PreReplenishmentLogModel::create(array_merge(['record_no' => $recordNo], $logData));
+                PreReplenishmentLogModel::create([
+                    'record_no'    => $recordNo,
+                    'm_id'         => $this->machine['m_id'] ?? 0,
+                    'machine_id'   => $machineId,
+                    'channel_code' => $detail['channel_code'],
+                    'sku'          => $detail['sku'],
+                    'quantity'     => $quantity,
+                    'report_time'  => date('Y-m-d H:i:s'),
+                    'raw_payload'  => arr2json($this->data),
+                ]);
 
-                // 更新货道库存变化
-                $mc = $this->getMachineChannelFind(['mc_id' => $detail['mc_id']]);
+                $mc = $this->getMachineChannelFind(['mc_id' => $mcId]);
                 if ($mc) {
                     $this->setMachineChannelInc(['mc_id' => $mc['mc_id']], 'stock', $quantity);
-
-                    // 记录货道商品变化日志
                     $this->addGoodsChange([
                         'm_id'         => $this->machine['m_id'],
                         'machine_id'   => $machineId,
                         'machine_name' => $this->machine['machine_name'] ?? '',
                         'mc_id'        => $mc['mc_id'],
-                        'channel_code' => $channelCode,
+                        'channel_code' => $mc['channel_code'],
                         'mg_id'        => $mc['mg_id'] ?? 0,
                         'g_id'         => $mc['g_id'],
                         'g_name'       => $mc['g_name'],
                         'gc_id'        => $mc['gc_id'],
                         'gc_name'      => $mc['gc_name'],
                         'pic'          => $mc['pic'],
-                        'sku'          => $sku,
+                        'sku'          => $detail['sku'],
                         'bar_code'     => $mc['bar_code'] ?? '',
                         'change_value' => $quantity,
                         'ao_id'        => $this->machine['ao_id'],
-                        'creator'      => $this->data['machine_id'] ?? '',
+                        'creator'      => $order['creator_id'] ?? '',
                         'desc'         => '预补货上架',
                         'position'     => 1,
                         'type'         => 2,
                     ]);
                 }
 
-                // 更新预补货明细
                 $compareStatus = $this->resolveCompareStatus($detail['plan_quantity'], $newActual);
                 PreReplenishmentDetailModel::update([
-                    'id'               => $detail['id'],
-                    'actual_quantity'  => $newActual,
-                    'actual_sku'       => $sku,
-                    'actual_channel_code' => $channelCode,
-                    'compare_status'   => $compareStatus,
-                    'order_count'      => Db::raw('order_count + 1'),
+                    'id'                  => $detail['id'],
+                    'actual_quantity'     => $newActual,
+                    'actual_sku'          => $detail['sku'],
+                    'actual_channel_code' => $detail['channel_code'],
+                    'compare_status'      => $compareStatus,
+                    'order_count'         => Db::raw('order_count + 1'),
                 ]);
             }
 
-            // 更新单据状态
             $this->refreshOrderBizStatus($order['id']);
-
             $this->commitTrans();
             return $this->r(200, '预补货确认成功');
         } catch (\Exception $e) {
