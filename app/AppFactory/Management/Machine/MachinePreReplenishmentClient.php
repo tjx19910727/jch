@@ -293,6 +293,35 @@ class MachinePreReplenishmentClient extends ManagementClient
         $details = PreReplenishmentDetailModel::where(['order_id' => $id])->order('id asc')->select()->toArray();
         $logs = PreReplenishmentLogModel::where(['record_no' => $order['record_no']])->order('id asc')->select()->toArray();
 
+        // 查询设备名称映射
+        $machineIds = array_values(array_unique(array_column($details, 'machine_id')));
+        $machineNameMap = [];
+        if ($machineIds) {
+            $machines = MachineModel::where([['machine_id', 'in', $machineIds]])
+                ->field('machine_id,machine_name')
+                ->select()
+                ->toArray();
+            foreach ($machines as $m) {
+                $machineNameMap[$m['machine_id']] = $m['machine_name'];
+            }
+        }
+
+        // 查询货道商品信息映射（用于 pick_summary）
+        $mIds = array_values(array_unique(array_column($details, 'm_id')));
+        $mcIds = array_values(array_unique(array_column($details, 'mc_id')));
+        $channelGoodsMap = [];
+        if ($mIds && $mcIds) {
+            $channels = MachineChannelModel::where([
+                ['m_id', 'in', $mIds],
+                ['mc_id', 'in', $mcIds],
+            ])->field('m_id,mc_id,sku,g_name,pic')
+                ->select()
+                ->toArray();
+            foreach ($channels as $ch) {
+                $channelGoodsMap[$ch['m_id'] . '_' . $ch['mc_id']] = $ch;
+            }
+        }
+
         $pickSummaryMap = [];
         $deviceProgressMap = [];
         $planTotal = 0;
@@ -301,9 +330,13 @@ class MachinePreReplenishmentClient extends ManagementClient
         foreach ($details as $detail) {
             $pickKey = $detail['sku'];
             if (!isset($pickSummaryMap[$pickKey])) {
+                $channelKey = $detail['m_id'] . '_' . $detail['mc_id'];
+                $goods = $channelGoodsMap[$channelKey] ?? [];
                 $pickSummaryMap[$pickKey] = [
                     'sku' => $detail['sku'],
                     'need_quantity' => 0,
+                    'g_name' => $goods['g_name'] ?? '',
+                    'pic' => $goods['pic'] ?? '',
                 ];
             }
             $pickSummaryMap[$pickKey]['need_quantity'] += $detail['plan_quantity'];
@@ -311,6 +344,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             if (!isset($deviceProgressMap[$detail['machine_id']])) {
                 $deviceProgressMap[$detail['machine_id']] = [
                     'machine_id' => $detail['machine_id'],
+                    'machine_name' => $machineNameMap[$detail['machine_id']] ?? '',
                     'biz_status' => 1,
                     'plan_total' => 0,
                     'actual_total' => 0,
