@@ -104,7 +104,7 @@ class SaleOrdersClient extends ManagementClient
                     if ($mIds) $where[] = ['m_id', 'in', $mIds];
                 }
             }
-            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, $supplier)->toArray();
+            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, $supplier, '', 0, ['machineData','machineData.machineLevelData'])->toArray();
             return $this->r(200, $this->lang("query_success"), $data);
         } catch (\Exception $e) {
             actionException($e, 1);
@@ -121,7 +121,7 @@ class SaleOrdersClient extends ManagementClient
                 if (!$orderIds) $orderIds = [0];
                 $where[] = ['order_id', 'in', $orderIds];
             }
-            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order)->toArray();
+            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, '', '', 0, ['machineData','machineData.machineLevelData'])->toArray();
 
             if ($detailAoId) {
                 $data = $this->filterSaleOrdersByDetailAoId($data, $detailAoId, $pageNum);
@@ -692,7 +692,7 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
                 FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time,' . $costPriceField;
-        $list = $this->getSaleOrdersList($where, 0, $field);
+        $list = $this->getSaleOrdersList($where, 0, $field, '', '', '', 0, ['machineData','machineData.machineLevelData']);
         if ($list) {
             $list = $list->toArray();
             $postData = input();
@@ -729,7 +729,7 @@ class SaleOrdersClient extends ManagementClient
                 $whereRefund[] = ['so.pay_time','between',[$pay_time1,$pay_time2]];
             }
 
-            $refundField = 'sor.order_id,sor.machine_id,sor.machine_name,COALESCE(sor.machine_level, so.machine_level) machine_level,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
+            $refundField = 'sor.order_id,sor.machine_id,sor.machine_name,COALESCE(so.machine_level,(SELECT m.machine_level FROM machine m WHERE m.m_id = so.m_id)) machine_level,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
             (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = so.ao_id) organization_name,
             sor.refund_quantity total_quantity,
              (0-sor.refund_amount) total_price,("-") total_cost_points,("-") total_points,("-") discount_price,("-") retail_price,
@@ -769,10 +769,23 @@ class SaleOrdersClient extends ManagementClient
                 FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time,' . $refundCostPriceField;
             $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, $refundField, 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
+            // 补充 machine_level_desc 字段
+            $machineLevels = array_values(array_unique(array_filter(array_map(function($it){ return isset($it['machine_level']) ? $it['machine_level'] : null; }, $list))));
+            $machineLevelMap = [];
+            if ($machineLevels) {
+                $machineLevelRows = \app\AppFactory\Kernel\Model\Machine\MachineLevelDescModel::whereIn('machine_level', $machineLevels)->column('name','machine_level');
+                if ($machineLevelRows) $machineLevelMap = $machineLevelRows;
+            }
+            foreach ($list as $k => $item) {
+                $ml = $item['machine_level'] ?? null;
+                $list[$k]['machine_level_desc'] = $ml && isset($machineLevelMap[$ml]) ? $machineLevelMap[$ml] : '';
+            }
+
             $title = [
                 "order_id" => "订单ID",
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
+                "machine_level_desc" => "设备等级",
                 "device_type" => "设备类型",
                 "trade_no" => "订单编号",
                 "mch_no" => "支付编号",

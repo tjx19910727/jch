@@ -488,6 +488,7 @@ class VisualScreenService
             'productSalesShare' => $this->buildProductSalesShare($queryWhere, $cycle),
             'machineSalesShare' => $this->buildMachineSalesShare($queryWhere, $cycle),
             'deviceSalesRank' => $this->buildDeviceSalesRank($queryWhere, $cycle),
+            'deviceRevenueRank' => $this->buildDeviceRevenueRank($queryWhere, $cycle),
             'goodsPopularityRank' => $this->buildGoodsPopularityRank($queryWhere, $cycle),
             'mapValues' => $this->buildMapValues($regionType, $regionName, $operatingScope),
             'salesTrend' => [
@@ -1037,6 +1038,34 @@ class VisualScreenService
         $out = [];
         foreach ($rows as $r) {
             $out[] = ['name' => (string) $r['name'], 'value' => (int) round((float) $r['value'])];
+        }
+        return $out;
+    }
+
+    /**
+     * 设备营业额排行榜（按销售金额）
+     * @param array $saleWhere
+     * @param string $cycle
+     * @return array<int,array{name:string,value:float}>
+     */
+    protected function buildDeviceRevenueRank(array $saleWhere, string $cycle = 'week'): array
+    {
+        $since = $this->cycleToSince($cycle, 'week');
+        $where = $this->saleWhereToQuery($saleWhere);
+        $rows = Db::name('sale_orders')->alias('so')
+            ->where($where)
+            ->when($since, function ($query) use ($since) {
+                $query->where('so.create_date', '>=', $since);
+            })
+            ->field('so.machine_name as name, IFNULL(SUM(so.total_price),0) as value')
+            ->group('so.m_id,so.machine_name')
+            ->order('value', 'desc')
+            ->limit(10)
+            ->select()
+            ->toArray();
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = ['name' => (string) $r['name'], 'value' => round((float) ($r['value'] ?? 0), 2)];
         }
         return $out;
     }
