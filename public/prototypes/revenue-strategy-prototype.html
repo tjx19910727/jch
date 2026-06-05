@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>分账策略后台原型</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --line: #d9e0ea;
+      --line-soft: #edf1f6;
+      --text: #182230;
+      --muted: #637083;
+      --soft: #eef6f3;
+      --primary: #176b5d;
+      --primary-dark: #0f564b;
+      --blue: #2368a2;
+      --amber: #a76810;
+      --red: #b42318;
+      --green: #087443;
+      --nav: #162236;
+      --nav-soft: #24324a;
+      --shadow: 0 12px 28px rgba(17, 27, 43, .08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-width: 1180px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Microsoft YaHei", Arial, sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 236px 1fr;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      background: var(--nav);
+      color: #d9e3ef;
+      padding: 18px 14px;
+    }
+
+    .brand {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 10px;
+      margin-bottom: 14px;
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .brand-mark {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      background: #55c2a7;
+      display: grid;
+      place-items: center;
+      color: #0c2d27;
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .nav-title {
+      color: #91a0b6;
+      font-size: 12px;
+      padding: 16px 10px 8px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 5px;
+    }
+
+    .nav a {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 38px;
+      color: #d9e3ef;
+      text-decoration: none;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 14px;
+    }
+
+    .nav a:hover,
+    .nav a.active {
+      background: var(--nav-soft);
+      color: #fff;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #55c2a7;
+      flex: 0 0 auto;
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+      background: rgba(255, 255, 255, .94);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .content {
+      padding: 24px 28px 48px;
+      display: grid;
+      gap: 20px;
+    }
+
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--line-soft);
+    }
+
+    .section-title {
+      display: grid;
+      gap: 4px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 17px;
+    }
+
+    .section-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .section-body {
+      padding: 20px;
+    }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .grid.cols-2 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .grid.cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .grid.cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: #fff;
+      display: grid;
+      gap: 8px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .metric strong {
+      font-size: 24px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px 16px;
+    }
+
+    .form-grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field.full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      color: #3a4758;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      min-height: 36px;
+      background: #fff;
+      color: var(--text);
+      padding: 8px 10px;
+      outline: none;
+    }
+
+    textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: #3c9687;
+      box-shadow: 0 0 0 3px rgba(23, 107, 93, .12);
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .filters input,
+    .filters select {
+      width: 150px;
+    }
+
+    .btn {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 7px 12px;
+      background: #fff;
+      color: var(--text);
+      cursor: default;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+
+    .btn.primary {
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn.primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .btn.ghost {
+      background: #f7f9fc;
+    }
+
+    .btn.link {
+      border-color: transparent;
+      background: transparent;
+      color: var(--blue);
+      padding: 5px 6px;
+    }
+
+    .btn.warn {
+      color: var(--amber);
+      border-color: #efd49d;
+      background: #fff8ea;
+    }
+
+    .table-wrap {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th,
+    td {
+      height: 42px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--line-soft);
+      text-align: left;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    th {
+      background: #f3f6fa;
+      color: #455367;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 6px;
+      padding: 2px 8px;
+      background: #edf4ff;
+      color: var(--blue);
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .tag.green {
+      background: #e9f7ef;
+      color: var(--green);
+    }
+
+    .tag.amber {
+      background: #fff3dc;
+      color: var(--amber);
+    }
+
+    .tag.red {
+      background: #fff0ee;
+      color: var(--red);
+    }
+
+    .split-layout {
+      display: grid;
+      grid-template-columns: 270px 1fr;
+      gap: 18px;
+    }
+
+    .steps {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      align-self: start;
+    }
+
+    .step {
+      border-radius: 6px;
+      padding: 11px 12px;
+      background: #fff;
+      border: 1px solid var(--line-soft);
+      display: grid;
+      gap: 4px;
+    }
+
+    .step.active {
+      border-color: #80c7b8;
+      background: var(--soft);
+    }
+
+    .step strong {
+      font-size: 14px;
+    }
+
+    .step span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .scenario {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+      background: #fff;
+      min-height: 140px;
+    }
+
+    .scenario.active {
+      border-color: #56ae9c;
+      box-shadow: 0 0 0 3px rgba(23, 107, 93, .12);
+    }
+
+    .scenario h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .scenario p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .rule-panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      background: #fff;
+      display: grid;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .rule-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .rule-title h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .ratio-bar {
+      height: 12px;
+      border-radius: 999px;
+      background: #e6ebf2;
+      overflow: hidden;
+      display: flex;
+    }
+
+    .ratio-a {
+      width: 20%;
+      background: #176b5d;
+    }
+
+    .ratio-b {
+      width: 30%;
+      background: #2368a2;
+    }
+
+    .ratio-rest {
+      flex: 1;
+      background: #d7dee8;
+    }
+
+    .drawer {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+      padding: 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .detail-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .detail {
+      border: 1px solid var(--line-soft);
+      border-radius: 6px;
+      background: #fff;
+      padding: 10px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .detail span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .detail strong {
+      font-size: 14px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .flow-item {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 13px 12px;
+      display: grid;
+      gap: 4px;
+      min-height: 84px;
+    }
+
+    .flow-item:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      right: -8px;
+      top: 50%;
+      width: 12px;
+      height: 2px;
+      background: #aab6c6;
+    }
+
+    .flow-item span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .modal-preview {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    .modal-head {
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--line-soft);
+      font-weight: 700;
+    }
+
+    .modal-body {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .modal-foot {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 16px;
+      border-top: 1px solid var(--line-soft);
+      background: #f7f9fc;
+    }
+
+    @media (max-width: 1280px) {
+      .grid.cols-4,
+      .scenario-grid,
+      .flow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">分</div>
+        <div>分账管理原型</div>
+      </div>
+      <div class="nav-title">配置中心</div>
+      <nav class="nav">
+        <a class="active" href="#overview"><span class="dot"></span>配置总览</a>
+        <a href="#accounts"><span class="dot"></span>分账账户</a>
+        <a href="#payee"><span class="dot"></span>收款策略</a>
+        <a href="#rules"><span class="dot"></span>分账策略</a>
+        <a href="#normal"><span class="dot"></span>普通分账</a>
+        <a href="#rental"><span class="dot"></span>设备出租</a>
+        <a href="#fixed"><span class="dot"></span>固定比例</a>
+        <a href="#tier"><span class="dot"></span>阶梯分账</a>
+        <a href="#binding"><span class="dot"></span>设备绑定</a>
+        <a href="#orders"><span class="dot"></span>分账订单</a>
+      </nav>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <h1>分账策略后台原型图</h1>
+        <div class="top-actions">
+          <button class="btn ghost">保存草稿</button>
+          <button class="btn primary">发布配置</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="section" id="overview">
+          <div class="section-head">
+            <div class="section-title">
+              <h2>配置总览</h2>
+              <p>从账户、收款策略、分账策略到设备绑定，形成完整配置链路。</p>
+            </div>
+          </div>
+          <div class="section-body grid">
+            <div class="grid cols-4">
+              <div class="metric"><span>分账账户</span><strong>18</strong><span>启用 16 个</span></div>
+              <div class="metric"><span>分账策略</span><strong>9</strong><span>普通、出租、固定、阶梯</span></div>
+              <div class="metric"><span>已绑定设备</span><strong>126</strong><span>本月新增 12 台</span></div>
+              <div class="metric"><span>本月分账金额</span><strong>86,420.50</strong><span>待结算 12,300.00</span></div>
+            </div>
+            <div class="flow">
+              <div class="flow-item"><strong>1. 分账账户</strong><span>组织、账户管理人、账户类型</span></div>
+              <div class="flow-item"><strong>2. 收款策略</strong><span>收款配置绑定默认账户</span></div>
+              <div class="flow-item"><strong>3. 分账策略</strong><span>选择普通、出租、固定、阶梯</span></div>
+              <div class="flow-item"><strong>4. 设备绑定</strong><span>设备启用对应分账规则</span></div>
+              <div class="flow-item"><strong>5. 订单分账</strong><span>支付前生成分账记录</span></div>
+              <div class="flow-item"><strong>6. 后台查询</strong><span>账户管理人查看明细</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="accounts">
+          <div class="section-head">
+            <div class="section-title">
+              <h2>分账账户管理</h2>
+              <p>每个可分账组织需要维护分账账户和账户管理人。</p>
+            </div>
+            <button class="btn primary">新增账户</button>
+          </div>
+          <div class="section-body">
+            <div class="toolbar">
+              <div class="filters">
+                <select><option>全部组织</option><option>组织A</option><option>组织B</option></select>
+                <select><option>全部账户类型</option><option>余额账户</option><option>京东分账账户</option></select>
+                <select><option>全部状态</option><option>启用</option><option>停用</option></select>
+                <input value="" placeholder="账户名称/管理人">
+                <button class="btn">查询</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>账户名称</th><th>所属组织</th><th>账户管理人</th><th>账户类型</th><th>分账账号</th><th>状态</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>A默认账户</td><td>组织A</td><td>张三</td><td>余额账户</td><td>AM_BALANCE_001</td><td><span class="tag green">启用</span></td><td><button class="btn link">编辑</button><button class="btn link">停用</button></td></tr>
+                  <tr><td>B商品分账账户</td><td>组织B</td><td>李四</td><td>京东分账账户</td><td>JD_B_1024</td><td><span class="tag green">启用</span></td><td><button class="btn link">编辑</button><button class="btn link">停用</button></td></tr>
+                  <tr><td>C平台招商账户</td><td>组织C</td><td>王五</td><td>银行卡</td><td>6222********8890</td><td><span class="tag amber">待完善</span></td><td><button class="btn link">编辑</button><button class="btn link">停用</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="payee">
+          <div class="section-head">
+            <div class="section-title">
+              <h2>收款策略配置增强</h2>
+              <p>收款策略保存时必须绑定默认分账账户和账户管理人。</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="split-layout">
+              <div class="steps">
+                <div class="step active"><strong>基础支付配置</strong><span>支付渠道、商户号、证书</span></div>
+                <div class="step active"><strong>默认分账账户</strong><span>收款组织默认归集账户</span></div>
+                <div class="step"><strong>绑定设备</strong><span>由设备策略页完成</span></div>
+              </div>
+              <div class="rule-panel">
+                <div class="form-grid">
+                  <div class="field"><label>策略名称</label><input value="组织A-京东收银"></div>
+                  <div class="field"><label>收款组织</label><select><option>组织A</option></select></div>
+                  <div class="field"><label>支付渠道</label><select><option>京东收银</option><option>微信支付</option><option>支付宝</option></select></div>
+                  <div class="field"><label>状态</label><select><option>启用</option><option>停用</option></select></div>
+                  <div class="field"><label>商户号</label><input value="MCH_A_2026"></div>
+                  <div class="field"><label>应用编号</label><input value="APP_A_001"></div>
+                  <div class="field"><label>默认分账账户</label><select><option>A默认账户</option></select></div>
+                  <div class="field"><label>账户管理人</label><input value="张三" readonly></div>
+                </div>
+                <div class="toolbar">
+                  <span class="tag green">已绑定有效分账账户</span>
+                  <div><button class="btn">取消</button> <button class="btn primary">保存收款策略</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="rules">
+          <div class="section-head">
+            <div class="section-title">
+              <h2>分账策略列表</h2>
+              <p>运营从这里选择不同场景的策略类型并维护配置。</p>
+            </div>
+            <button class="btn primary">新增策略</button>
+          </div>
+          <div class="section-body">
+            <div class="scenario-grid">
+              <div class="scenario active"><h3>普通分账</h3><p>设备只销售本组织商品，订单分账归属设备组织默认账户。</p><span class="tag green">默认场景</span></div>
+              <div class="scenario"><h3>设备出租</h3><p>A 设备销售 B 商品，A 代收后按商品金额全额分给 B。</p><span class="tag amber">跨组织商品</span></div>
+              <div class="scenario"><h3>固定比例</h3><p>按设备订单金额给多个组织或账户设置固定分账比例。</p><span class="tag">设备策略</span></div>
+              <div class="scenario"><h3>阶梯分账</h3><p>按设备当月营业额命中区间，动态切换账户分账比例。</p><span class="tag">月营业额</span></div>
+            </div>
+            <div class="table-wrap" style="margin-top:16px;">
+              <table>
+                <thead>
+                  <tr><th>策略名称</th><th>策略类型</th><th>收款组织</th><th>规则摘要</th><th>绑定设备</th><th>状态</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>A普通分账</td><td><span class="tag green">普通</span></td><td>组织A</td><td>组织A 默认账户 100%</td><td>42</td><td><span class="tag green">启用</span></td><td><button class="btn link">编辑</button><button class="btn link">绑定设备</button></td></tr>
+                  <tr><td>A代收B商品</td><td><span class="tag amber">出租</span></td><td>组织A</td><td>商品组织全额分账</td><td>18</td><td><span class="tag green">启用</span></td><td><button class="btn link">编辑</button><button class="btn link">绑定设备</button></td></tr>
+                  <tr><td>商场固定比例</td><td><span class="tag">固定比例</span></td><td>组织A</td><td>B 20%，C 30%</td><td>23</td><td><span class="tag green">启用</span></td><td><button class="btn link">编辑</button><button class="btn link">绑定设备</button></td></tr>
+                  <tr><td>月营业额阶梯</td><td><span class="tag">阶梯</span></td><td>组织A</td><td>A 20/25%，B 25/30%</td><td>12</td><td><span class="tag green">启用</span></td><td><button class="btn link">编辑</button><button class="btn link">试算</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="normal">
+          <div class="section-head"><div class="section-title"><h2>普通分账策略原型</h2><p>设备订单分账归属于收款组织默认账户。</p></div></div>
+          <div class="section-body">
+            <div class="rule-panel">
+              <div class="form-grid">
+                <div class="field"><label>策略名称</label><input value="组织A普通分账"></div>
+                <div class="field"><label>收款组织</label><select><option>组织A</option></select></div>
+                <div class="field"><label>默认接收账户</label><select><option>A默认账户</option></select></div>
+                <div class="field"><label>分账比例</label><input value="100%"></div>
+              </div>
+              <div class="toolbar">
+                <span class="tag green">适用于本组织商品销售</span>
+                <div><button class="btn">取消</button> <button class="btn primary">保存策略</button></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="rental">
+          <div class="section-head"><div class="section-title"><h2>设备出租分账策略原型</h2><p>A 组织设备销售 B 组织商品时，A 代收，B 按子订单金额全额分账。</p></div></div>
+          <div class="section-body">
+            <div class="rule-panel">
+              <div class="form-grid">
+                <div class="field"><label>策略名称</label><input value="A设备出租代收"></div>
+                <div class="field"><label>收款/代收组织</label><select><option>组织A</option></select></div>
+                <div class="field"><label>分账口径</label><select><option>按子订单商品组织全额分账</option></select></div>
+                <div class="field"><label>缺失账户处理</label><select><option>支付前拦截</option><option>生成异常单</option></select></div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>允许商品组织</th><th>分账账户</th><th>账户管理人</th><th>分账比例</th><th>操作</th></tr></thead>
+                  <tbody>
+                    <tr><td>组织B</td><td>B商品分账账户</td><td>李四</td><td>100%</td><td><button class="btn link">更换</button><button class="btn link">删除</button></td></tr>
+                    <tr><td>组织C</td><td>C平台招商账户</td><td>王五</td><td>100%</td><td><button class="btn link">更换</button><button class="btn link">删除</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="toolbar"><button class="btn">添加允许组织</button><button class="btn primary">保存策略</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="fixed">
+          <div class="section-head"><div class="section-title"><h2>固定比例设备分账策略原型</h2><p>设备订单按预设比例给多个账户分账。</p></div></div>
+          <div class="section-body">
+            <div class="rule-panel">
+              <div class="form-grid">
+                <div class="field"><label>策略名称</label><input value="商场设备固定比例"></div>
+                <div class="field"><label>收款组织</label><select><option>组织A</option></select></div>
+                <div class="field"><label>分账基数</label><select><option>订单总额</option><option>扣除出租商品后金额</option></select></div>
+                <div class="field"><label>状态</label><select><option>启用</option></select></div>
+              </div>
+              <div class="ratio-bar" aria-label="比例示意"><div class="ratio-a"></div><div class="ratio-b"></div><div class="ratio-rest"></div></div>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>接收组织</th><th>分账账户</th><th>账户管理人</th><th>比例</th><th>预计说明</th><th>操作</th></tr></thead>
+                  <tbody>
+                    <tr><td>组织B</td><td>B商品分账账户</td><td>李四</td><td><input value="20%" style="width:82px"></td><td>订单总额 x 20%</td><td><button class="btn link">删除</button></td></tr>
+                    <tr><td>组织C</td><td>C平台招商账户</td><td>王五</td><td><input value="30%" style="width:82px"></td><td>订单总额 x 30%</td><td><button class="btn link">删除</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="toolbar"><span class="tag green">当前合计 50%，剩余 50%</span><div><button class="btn">添加账户</button><button class="btn primary">保存策略</button></div></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="tier">
+          <div class="section-head"><div class="section-title"><h2>阶梯分账策略原型</h2><p>按设备当月营业额命中不同区间，给账户使用不同分账比例。</p></div><button class="btn warn">打开试算</button></div>
+          <div class="section-body">
+            <div class="rule-panel">
+              <div class="form-grid">
+                <div class="field"><label>策略名称</label><input value="设备月营业额阶梯分账"></div>
+                <div class="field"><label>收款组织</label><select><option>组织A</option></select></div>
+                <div class="field"><label>统计周期</label><select><option>自然月</option></select></div>
+                <div class="field"><label>营业额口径</label><select><option>净营业额</option><option>支付成功金额</option></select></div>
+                <div class="field"><label>命中方式</label><select><option>本单后累计整单命中</option><option>跨阶梯拆分</option></select></div>
+                <div class="field"><label>分账基数</label><select><option>订单总额</option><option>扣除出租商品后金额</option></select></div>
+              </div>
+            </div>
+
+            <div class="grid cols-2">
+              <div class="rule-panel">
+                <div class="rule-title"><h3>阶梯账户 A</h3><span class="tag green">组织A / A默认账户 / 张三</span></div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>营业额下限</th><th>营业额上限</th><th>分账比例</th><th>操作</th></tr></thead>
+                    <tbody>
+                      <tr><td><input value="0"></td><td><input value="5000"></td><td><input value="20%"></td><td><button class="btn link">删除</button></td></tr>
+                      <tr><td><input value="5000"></td><td><input value="不限"></td><td><input value="25%"></td><td><button class="btn link">删除</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <button class="btn">添加阶梯</button>
+              </div>
+
+              <div class="rule-panel">
+                <div class="rule-title"><h3>阶梯账户 B</h3><span class="tag">组织B / B分账账户 / 李四</span></div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>营业额下限</th><th>营业额上限</th><th>分账比例</th><th>操作</th></tr></thead>
+                    <tbody>
+                      <tr><td><input value="0"></td><td><input value="8000"></td><td><input value="25%"></td><td><button class="btn link">删除</button></td></tr>
+                      <tr><td><input value="8000"></td><td><input value="不限"></td><td><input value="30%"></td><td><button class="btn link">删除</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <button class="btn">添加阶梯</button>
+              </div>
+            </div>
+
+            <div class="modal-preview">
+              <div class="modal-head"><span>阶梯分账试算</span><span class="tag green">校验通过</span></div>
+              <div class="modal-body">
+                <div class="form-grid two">
+                  <div class="field"><label>设备当月已完成营业额</label><input value="4800.00"></div>
+                  <div class="field"><label>当前订单金额</label><input value="300.00"></div>
+                </div>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>账户</th><th>本单后累计</th><th>命中阶梯</th><th>比例</th><th>预计分账金额</th></tr></thead>
+                    <tbody>
+                      <tr><td>A默认账户</td><td>5100.00</td><td>5000 以上</td><td>25%</td><td>75.00</td></tr>
+                      <tr><td>B分账账户</td><td>5100.00</td><td>8000 之前</td><td>25%</td><td>75.00</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="modal-foot"><button class="btn">关闭</button><button class="btn primary">保存策略</button></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="binding">
+          <div class="section-head"><div class="section-title"><h2>设备分账绑定原型</h2><p>将设备绑定到具体分账策略，更换策略只影响新订单。</p></div><button class="btn primary">批量绑定</button></div>
+          <div class="section-body">
+            <div class="toolbar">
+              <div class="filters">
+                <input placeholder="设备编号">
+                <input placeholder="设备名称">
+                <select><option>全部组织</option><option>组织A</option></select>
+                <select><option>全部策略类型</option><option>阶梯分账</option></select>
+                <button class="btn">查询</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>设备编号</th><th>设备名称</th><th>所属组织</th><th>当前收款策略</th><th>当前分账策略</th><th>生效时间</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td>M001</td><td>1号售卖机</td><td>组织A</td><td>组织A-京东收银</td><td>设备月营业额阶梯分账</td><td>立即生效</td><td><button class="btn link">更换</button><button class="btn link">记录</button></td></tr>
+                  <tr><td>M002</td><td>2号售卖机</td><td>组织A</td><td>组织A-微信支付</td><td>商场设备固定比例</td><td>2026-06-01</td><td><button class="btn link">更换</button><button class="btn link">记录</button></td></tr>
+                  <tr><td>M003</td><td>酒店大堂机</td><td>组织A</td><td>组织A-支付宝</td><td>未绑定</td><td>-</td><td><button class="btn link">绑定</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="section" id="orders">
+          <div class="section-head"><div class="section-title"><h2>分账订单查询原型</h2><p>账户管理人后台查询自己管理账户对应的分账订单。</p></div><button class="btn primary">导出</button></div>
+          <div class="section-body grid">
+            <div class="toolbar">
+              <div class="filters">
+                <input placeholder="订单号">
+                <input placeholder="设备编号">
+                <select><option>全部分账模式</option><option>阶梯分账</option><option>设备出租</option></select>
+                <select><option>全部状态</option><option>待结算</option><option>已结算</option></select>
+                <select><option>全部周期</option><option>2026-06</option></select>
+                <button class="btn">查询</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>分账单号</th><th>订单号</th><th>设备</th><th>模式</th><th>接收组织</th><th>账户</th><th>比例</th><th>分账金额</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  <tr><td>10001</td><td>T20260604001</td><td>M001</td><td><span class="tag">阶梯</span></td><td>组织A</td><td>A默认账户</td><td>25%</td><td>75.00</td><td><span class="tag green">已结算</span></td><td><button class="btn link">详情</button></td></tr>
+                  <tr><td>10002</td><td>T20260604001</td><td>M001</td><td><span class="tag">阶梯</span></td><td>组织B</td><td>B分账账户</td><td>25%</td><td>75.00</td><td><span class="tag green">已结算</span></td><td><button class="btn link">详情</button></td></tr>
+                  <tr><td>10003</td><td>T20260604002</td><td>M002</td><td><span class="tag amber">出租</span></td><td>组织B</td><td>B分账账户</td><td>100%</td><td>40.00</td><td><span class="tag amber">待结算</span></td><td><button class="btn link">详情</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="drawer">
+              <div class="rule-title"><h3>分账订单详情</h3><span class="tag green">已结算</span></div>
+              <div class="detail-grid">
+                <div class="detail"><span>订单号</span><strong>T20260604001</strong></div>
+                <div class="detail"><span>设备</span><strong>M001 / 1号售卖机</strong></div>
+                <div class="detail"><span>收款组织</span><strong>组织A</strong></div>
+                <div class="detail"><span>分账模式</span><strong>阶梯分账</strong></div>
+                <div class="detail"><span>接收组织</span><strong>组织A</strong></div>
+                <div class="detail"><span>账户管理人</span><strong>张三</strong></div>
+                <div class="detail"><span>分账比例</span><strong>25%</strong></div>
+                <div class="detail"><span>分账金额</span><strong>75.00</strong></div>
+                <div class="detail"><span>退款金额</span><strong>0.00</strong></div>
+                <div class="detail"><span>统计周期</span><strong>2026-06</strong></div>
+                <div class="detail"><span>本单前累计</span><strong>4800.00</strong></div>
+                <div class="detail"><span>本单后累计</span><strong>5100.00</strong></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

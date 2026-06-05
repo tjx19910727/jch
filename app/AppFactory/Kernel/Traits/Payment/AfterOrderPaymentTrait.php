@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Support\Trip\Trip;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
+use think\facade\Db;
 
 trait AfterOrderPaymentTrait
 {
@@ -228,12 +229,12 @@ trait AfterOrderPaymentTrait
     {
         $flag[] = 1;
         $where['order_id'] = $this->order['order_id'];
-        $revenue = $this->getSaleOrdersRevenueList($where);
+        $revenue = Db::name('revenue_order')->where($where)->select()->toArray();
         if ($revenue) {
             foreach ($revenue as $key => $value) {
                 $currentStatus = intval($value['status'] ?? 0);
-                // 幂等：已结算不重复处理
-                if ($currentStatus === 1) {
+                // 幂等：只处理待支付/待结算记录，避免支付取消或失败后的分账单被重新结算。
+                if (!in_array($currentStatus, [0, 2], true)) {
                     continue;
                 }
 
@@ -244,23 +245,35 @@ trait AfterOrderPaymentTrait
                     $settleableAmount = '0';
                 }
 
-                $update['sor_id'] = $value['sor_id'];
-                $update['status'] = 1;
-                // 已分润状态，增加分润时间
-                // if ($update['status'] == 2 || $update['status'] == 3) $update['revenue_time'] = time();
-                // 电子钱包
-                if (in_array($value['revenue_type'], [1, 4]) && bccomp($settleableAmount, '0', 3) > 0) {
+                $update['status'] = $status ? intval($status) : 1;
+                $update['revenue_time'] = time();
+                $update['update_time'] = time();
+                if (($value['account_type'] ?? '') === 'balance' && bccomp($settleableAmount, '0', 3) > 0 && $update['status'] === 1) {
                     $result = $this->incAuthManager(['manager_id' => $value['manager_id']], 'balance', $settleableAmount);
                     actionLog($result, '增加账号余额结果');
                     actionLog($this->getLS(), '增加账号余额SQL');
                     $flag[] = $result;
                 }
-                $flag[] = $this->updateSaleOrdersRevenue($update);
+                $flag[] = Db::name('revenue_order')->where(['ro_id' => $value['ro_id']])->update($update);
                 actionLog($this->getLS(), '结算收益SQL');
             }
             actionLog($flag, '结算收益flag');
         }
         return flag_check($flag);
+    }
+
+    /**
+     * 取消待支付的新分账订单
+     * 只处理 status=0 的待支付记录，已结算/失败/已取消记录保持原样。
+     */
+    protected function cancelPendingRevenueOrders()
+    {
+        if (empty($this->order['order_id'])) return true;
+        Db::name('revenue_order')
+            ->where(['order_id' => $this->order['order_id'], 'status' => 0])
+            ->update(['status' => 4, 'update_time' => time()]);
+        actionLog($this->getLS(), '取消待支付新分账订单SQL');
+        return true;
     }
 
     /**
@@ -317,6 +330,7 @@ trait AfterOrderPaymentTrait
         $this->order['pay_status'] = 4;
         $this->order['pay_time'] = time();
         $this->handleHotel(2);
+        $this->cancelPendingRevenueOrders();
         $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'payFail', ['trade_no' => $this->order['trade_no']]);
         return $this->updateSaleOrders($this->order);
     }
@@ -330,6 +344,7 @@ trait AfterOrderPaymentTrait
         $this->order['pay_status'] = 4;
         $this->order['pay_time'] = time();
         $this->handleHotel(2);
+        $this->cancelPendingRevenueOrders();
         $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'payError', ['trade_no' => $this->order['trade_no']]);
         return $this->updateSaleOrders($this->order);
     }

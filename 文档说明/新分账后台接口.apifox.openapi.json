@@ -1,0 +1,511 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "嘉潮汇管理后台 - 新分账接口",
+    "description": "新分账后台配置、分账订单查询、配置自检与测试环境模拟支付成功接口。导入 Apifox 后，请在环境中配置 baseUrl 和 token。所有接口均为 POST，请在 Header 中携带 token: {{token}}。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}",
+      "description": "Apifox 环境变量 baseUrl，例如 https://your-domain.com"
+    }
+  ],
+  "security": [
+    {
+      "TokenAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "新分账-分账账户",
+      "description": "维护分账账户及账户管理人"
+    },
+    {
+      "name": "新分账-收款渠道",
+      "description": "配置哪些支付渠道需要参与新分账"
+    },
+    {
+      "name": "新分账-收款策略配置",
+      "description": "给收款策略配置默认分账账户及开关"
+    },
+    {
+      "name": "新分账-分账策略",
+      "description": "维护普通/设备出租/设备分账策略、明细、阶梯、设备绑定"
+    },
+    {
+      "name": "新分账-分账订单",
+      "description": "查询分账订单、导出、测试环境模拟支付成功"
+    }
+  ],
+  "paths": {
+    "/management/revenue.revenue_account/getList": {
+      "post": {
+        "tags": ["新分账-分账账户"],
+        "summary": "分账账户列表",
+        "description": "查询分账账户。account_name、account 支持模糊查询。",
+        "operationId": "revenueAccountGetList",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueAccountListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_account/getFind": {
+      "post": {
+        "tags": ["新分账-分账账户"],
+        "summary": "分账账户详情",
+        "description": "按条件查询单条分账账户，常用 ra_id。",
+        "operationId": "revenueAccountGetFind",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueAccountFindRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_account/add": {
+      "post": {
+        "tags": ["新分账-分账账户"],
+        "summary": "新增分账账户",
+        "description": "新增分账账户。账户管理人 manager_id 必须存在、启用，且所属组织必须与 ao_id 一致。",
+        "operationId": "revenueAccountAdd",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueAccountAddRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_account/update": {
+      "post": {
+        "tags": ["新分账-分账账户"],
+        "summary": "修改分账账户",
+        "description": "修改分账账户。除 ra_id 必填外，其余字段按需提交。",
+        "operationId": "revenueAccountUpdate",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueAccountUpdateRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_account/del": {
+      "post": {
+        "tags": ["新分账-分账账户"],
+        "summary": "删除分账账户",
+        "description": "按 ra_id 删除分账账户。",
+        "operationId": "revenueAccountDel",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueAccountDelRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_pay_channel/getList": {
+      "post": {
+        "tags": ["新分账-收款渠道"],
+        "summary": "分账收款渠道列表",
+        "description": "查询需要参与新分账的收款渠道配置。channel_name 支持模糊查询。",
+        "operationId": "revenuePayChannelGetList",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenuePayChannelListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_pay_channel/getFind": {
+      "post": {
+        "tags": ["新分账-收款渠道"],
+        "summary": "分账收款渠道详情",
+        "description": "按条件查询单条收款渠道配置，常用 rpc_id 或 pay_type。",
+        "operationId": "revenuePayChannelGetFind",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenuePayChannelFindRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_pay_channel/add": {
+      "post": {
+        "tags": ["新分账-收款渠道"],
+        "summary": "新增分账收款渠道",
+        "description": "配置某订单支付类型需要参与新分账。pay_type 唯一。",
+        "operationId": "revenuePayChannelAdd",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenuePayChannelAddRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_pay_channel/update": {
+      "post": {
+        "tags": ["新分账-收款渠道"],
+        "summary": "修改分账收款渠道",
+        "description": "修改收款渠道配置。除 rpc_id 必填外，其余字段按需提交。",
+        "operationId": "revenuePayChannelUpdate",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenuePayChannelUpdateRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_pay_channel/del": {
+      "post": {
+        "tags": ["新分账-收款渠道"],
+        "summary": "删除分账收款渠道",
+        "description": "按 rpc_id 删除收款渠道配置。",
+        "operationId": "revenuePayChannelDel",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenuePayChannelDelRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_payee_config/save": {
+      "post": {
+        "tags": ["新分账-收款策略配置"],
+        "summary": "保存收款策略新分账配置",
+        "description": "给收款策略配置默认分账账户及启用状态。若 sp_id 已存在则更新，否则新增。启用分账且支付渠道已开启时，default_ra_id 必填，且账户所属组织必须与收款策略组织一致。",
+        "operationId": "revenuePayeeConfigSave",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenuePayeeConfigSaveRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_payee_config/getList": {
+      "post": {
+        "tags": ["新分账-收款策略配置"],
+        "summary": "收款策略新分账配置列表",
+        "description": "查询收款策略新分账配置。",
+        "operationId": "revenuePayeeConfigGetList",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenuePayeeConfigListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_payee_config/getFind": {
+      "post": {
+        "tags": ["新分账-收款策略配置"],
+        "summary": "收款策略新分账配置详情",
+        "description": "按条件查询单条收款策略新分账配置，常用 rpcfg_id 或 sp_id。",
+        "operationId": "revenuePayeeConfigGetFind",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenuePayeeConfigFindRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_payee_config/checkConfig": {
+      "post": {
+        "tags": ["新分账-收款策略配置"],
+        "summary": "新分账配置自检",
+        "description": "检查启用渠道、未配置收款策略、默认账户异常、策略账户异常、出租策略异常、设备分账比例超限、阶梯异常等。",
+        "operationId": "revenuePayeeConfigCheckConfig",
+        "requestBody": {"$ref": "#/components/requestBodies/EmptyRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/getList": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "分账策略列表",
+        "description": "查询分账策略组。rule_name 支持模糊查询。",
+        "operationId": "revenueRuleGetList",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/getFind": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "分账策略详情",
+        "description": "按条件查询单条分账策略，常用 rr_id。",
+        "operationId": "revenueRuleGetFind",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleFindRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/add": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "新增分账策略",
+        "description": "新增策略组。rule_mode：1普通分账，2设备出租，3设备分账。",
+        "operationId": "revenueRuleAdd",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleAddRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/update": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "修改分账策略",
+        "description": "修改策略组。除 rr_id 必填外，其余字段按需提交。",
+        "operationId": "revenueRuleUpdate",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleUpdateRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/addItem": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "新增分账策略明细",
+        "description": "新增策略接收方明细。设备出租模式不支持阶梯分账；设备分账固定比例合计不能超过100%。",
+        "operationId": "revenueRuleAddItem",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleItemAddRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/updateItem": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "修改分账策略明细",
+        "description": "修改策略接收方明细。除 rri_id 必填外，其余字段按需提交。",
+        "operationId": "revenueRuleUpdateItem",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleItemUpdateRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/getItemList": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "分账策略明细列表",
+        "description": "查询策略明细，常用 rr_id。",
+        "operationId": "revenueRuleGetItemList",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleItemListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/delItem": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "删除分账策略明细",
+        "description": "按 rri_id 删除策略明细。",
+        "operationId": "revenueRuleDelItem",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleItemDelRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/addTier": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "新增阶梯分账明细",
+        "description": "给 calc_type=4 的策略明细配置阶梯。区间不能重叠，threshold_max 为空表示无上限。",
+        "operationId": "revenueRuleAddTier",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleTierAddRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/updateTier": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "修改阶梯分账明细",
+        "description": "修改阶梯区间。除 rrit_id 必填外，其余字段按需提交。",
+        "operationId": "revenueRuleUpdateTier",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleTierUpdateRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/getTierList": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "阶梯分账明细列表",
+        "description": "查询阶梯明细，常用 rri_id。",
+        "operationId": "revenueRuleGetTierList",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleTierListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/delTier": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "删除阶梯分账明细",
+        "description": "按 rrit_id 删除阶梯明细。",
+        "operationId": "revenueRuleDelTier",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleTierDelRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/bindMachine": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "绑定设备分账策略",
+        "description": "将策略绑定到设备。同一设备不能绑定多个同类型启用分账策略。",
+        "operationId": "revenueRuleBindMachine",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleBindMachineRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/getMachineList": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "设备策略绑定列表",
+        "description": "查询设备绑定的分账策略。",
+        "operationId": "revenueRuleGetMachineList",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleMachineListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_rule/unbindMachine": {
+      "post": {
+        "tags": ["新分账-分账策略"],
+        "summary": "解绑设备分账策略",
+        "description": "按 rrm_id 删除设备策略绑定。",
+        "operationId": "revenueRuleUnbindMachine",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueRuleUnbindMachineRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_order/getList": {
+      "post": {
+        "tags": ["新分账-分账订单"],
+        "summary": "分账订单列表",
+        "description": "查询分账订单。账户管理人仅可见自己 manager_id 的分账订单，审核权限账号可查看更大范围。",
+        "operationId": "revenueOrderGetList",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueOrderListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_order/getFind": {
+      "post": {
+        "tags": ["新分账-分账订单"],
+        "summary": "分账订单详情",
+        "description": "按条件查询单条分账订单，常用 ro_id 或 order_id。",
+        "operationId": "revenueOrderGetFind",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueOrderFindRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_order/getDetail": {
+      "post": {
+        "tags": ["新分账-分账订单"],
+        "summary": "分账订单聚合详情",
+        "description": "查询分账订单及关联销售订单、订单明细、同订单全部分账记录、退款记录。",
+        "operationId": "revenueOrderGetDetail",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueOrderFindRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_order/export": {
+      "post": {
+        "tags": ["新分账-分账订单"],
+        "summary": "导出分账订单",
+        "description": "按筛选条件导出分账订单报表。",
+        "operationId": "revenueOrderExport",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueOrderListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    },
+    "/management/revenue.revenue_order/mockPaySuccess": {
+      "post": {
+        "tags": ["新分账-分账订单"],
+        "summary": "测试环境模拟支付成功",
+        "description": "仅 env('CglPay.is_test') 为 true 时可用。用于绕过真实支付，触发新分账预计算、结算 status=0/2 的新分账单，并将订单置为 pay_status=3。不触发完整出货/MQ/通知。",
+        "operationId": "revenueOrderMockPaySuccess",
+        "requestBody": {"$ref": "#/components/requestBodies/RevenueOrderMockPaySuccessRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonSuccess"}}
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "TokenAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "token",
+        "description": "管理后台登录 token。Apifox 环境变量填写 {{token}}，请求头示例：token: {{token}}"
+      }
+    },
+    "requestBodies": {
+      "EmptyRequest": {"required": false, "content": {"application/json": {"schema": {"type": "object"}}}},
+      "RevenueAccountListRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueAccountListRequest"}, "example": {"pageNum": 20, "account_name": "默认", "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueAccountListRequest"}}}},
+      "RevenueAccountFindRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueAccountFindRequest"}, "example": {"ra_id": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueAccountFindRequest"}}}},
+      "RevenueAccountAddRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueAccountAddRequest"}, "example": {"ao_id": 1, "manager_id": 10, "account_name": "A组织默认余额账户", "account_type": "balance", "account": "A_BALANCE", "bill_account": "A_BALANCE", "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueAccountAddRequest"}}}},
+      "RevenueAccountUpdateRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueAccountUpdateRequest"}, "example": {"ra_id": 1, "account_name": "A组织默认余额账户-更新", "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueAccountUpdateRequest"}}}},
+      "RevenueAccountDelRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueAccountDelRequest"}, "example": {"ra_id": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueAccountDelRequest"}}}},
+      "RevenuePayChannelListRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenuePayChannelListRequest"}, "example": {"pageNum": 20, "channel_name": "微信", "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenuePayChannelListRequest"}}}},
+      "RevenuePayChannelFindRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenuePayChannelFindRequest"}, "example": {"rpc_id": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenuePayChannelFindRequest"}}}},
+      "RevenuePayChannelAddRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenuePayChannelAddRequest"}, "example": {"pay_type": 1, "payee_type": 1, "channel_name": "微信支付", "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenuePayChannelAddRequest"}}}},
+      "RevenuePayChannelUpdateRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenuePayChannelUpdateRequest"}, "example": {"rpc_id": 1, "channel_name": "微信支付", "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenuePayChannelUpdateRequest"}}}},
+      "RevenuePayChannelDelRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenuePayChannelDelRequest"}, "example": {"rpc_id": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenuePayChannelDelRequest"}}}},
+      "RevenuePayeeConfigSaveRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenuePayeeConfigSaveRequest"}, "example": {"sp_id": 100, "default_ra_id": 1, "enable_revenue": 1, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenuePayeeConfigSaveRequest"}}}},
+      "RevenuePayeeConfigListRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenuePayeeConfigListRequest"}, "example": {"pageNum": 20, "sp_id": 100, "enable_revenue": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenuePayeeConfigListRequest"}}}},
+      "RevenuePayeeConfigFindRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenuePayeeConfigFindRequest"}, "example": {"sp_id": 100}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenuePayeeConfigFindRequest"}}}},
+      "RevenueRuleListRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleListRequest"}, "example": {"pageNum": 20, "rule_name": "设备", "rule_mode": 3, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleListRequest"}}}},
+      "RevenueRuleFindRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleFindRequest"}, "example": {"rr_id": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleFindRequest"}}}},
+      "RevenueRuleAddRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleAddRequest"}, "example": {"rule_name": "设备固定比例分账", "rule_mode": 3, "base_type": 1, "turnover_type": 1, "tier_calc_mode": 1, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleAddRequest"}}}},
+      "RevenueRuleUpdateRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleUpdateRequest"}, "example": {"rr_id": 1, "rule_name": "设备固定比例分账-更新", "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleUpdateRequest"}}}},
+      "RevenueRuleItemAddRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleItemAddRequest"}, "example": {"rr_id": 1, "receiver_ao_id": 2, "ra_id": 2, "manager_id": 20, "calc_type": 1, "calc_value": 20, "sort": 1, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleItemAddRequest"}}}},
+      "RevenueRuleItemUpdateRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleItemUpdateRequest"}, "example": {"rri_id": 1, "calc_value": 25, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleItemUpdateRequest"}}}},
+      "RevenueRuleItemListRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleItemListRequest"}, "example": {"pageNum": 20, "rr_id": 1, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleItemListRequest"}}}},
+      "RevenueRuleItemDelRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleItemDelRequest"}, "example": {"rri_id": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleItemDelRequest"}}}},
+      "RevenueRuleTierAddRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleTierAddRequest"}, "example": {"rri_id": 1, "threshold_min": 5000, "threshold_max": 8000, "calc_value": 25, "sort": 1, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleTierAddRequest"}}}},
+      "RevenueRuleTierUpdateRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleTierUpdateRequest"}, "example": {"rrit_id": 1, "threshold_min": 8000, "threshold_max": null, "calc_value": 30, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleTierUpdateRequest"}}}},
+      "RevenueRuleTierListRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleTierListRequest"}, "example": {"pageNum": 20, "rri_id": 1, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleTierListRequest"}}}},
+      "RevenueRuleTierDelRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleTierDelRequest"}, "example": {"rrit_id": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleTierDelRequest"}}}},
+      "RevenueRuleBindMachineRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleBindMachineRequest"}, "example": {"rr_id": 1, "m_id": 100, "sort": 1, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleBindMachineRequest"}}}},
+      "RevenueRuleMachineListRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleMachineListRequest"}, "example": {"pageNum": 20, "m_id": 100, "rr_id": 1, "status": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleMachineListRequest"}}}},
+      "RevenueRuleUnbindMachineRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueRuleUnbindMachineRequest"}, "example": {"rrm_id": 1}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueRuleUnbindMachineRequest"}}}},
+      "RevenueOrderListRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueOrderListRequest"}, "example": {"pageNum": 20, "trade_no": "202606", "rule_mode": "2,3", "status": "0,1", "create_time": "2026-06-01~2026-06-30"}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueOrderListRequest"}}}},
+      "RevenueOrderFindRequest": {"required": false, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueOrderFindRequest"}, "example": {"order_id": 10001}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueOrderFindRequest"}}}},
+      "RevenueOrderMockPaySuccessRequest": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/RevenueOrderMockPaySuccessRequest"}, "example": {"trade_no": "CODEX_REV_TEST_10001", "pay_type": 1, "pay_method": 1, "sp_id": 100, "mch_no": "TEST_MCH", "out_trade_no": "MOCK_PAY_001"}}, "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/RevenueOrderMockPaySuccessRequest"}}}}
+    },
+    "responses": {
+      "CommonSuccess": {
+        "description": "业务处理结果。state=200 通常表示成功，state=100 通常表示业务失败或校验失败。",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/CommonResponse"},
+            "example": {"state": 200, "msg": "操作成功", "data": []}
+          }
+        }
+      }
+    },
+    "schemas": {
+      "CommonResponse": {
+        "type": "object",
+        "properties": {
+          "state": {"type": "integer", "description": "业务状态码，200成功，100失败", "example": 200},
+          "msg": {"type": "string", "description": "业务提示信息", "example": "操作成功"},
+          "data": {"description": "返回数据，可能为对象、数组、分页对象或导出任务信息"}
+        }
+      },
+      "PaginationFields": {
+        "type": "object",
+        "properties": {
+          "pageNum": {"type": "integer", "description": "每页数量；0或不传表示不分页", "example": 20},
+          "page": {"type": "integer", "description": "页码，分页时使用", "example": 1}
+        }
+      },
+      "RevenueAccountListRequest": {
+        "allOf": [
+          {"$ref": "#/components/schemas/PaginationFields"},
+          {"type": "object", "properties": {
+            "ra_id": {"type": "integer", "description": "分账账户ID，非必填"},
+            "ao_id": {"type": "integer", "description": "账户所属组织ID，非必填"},
+            "manager_id": {"type": "integer", "description": "账户管理人ID，非必填"},
+            "account_name": {"type": "string", "description": "账户名称，非必填，支持模糊查询"},
+            "account": {"type": "string", "description": "分账账户，非必填，支持模糊查询"},
+            "account_type": {"type": "string", "description": "账户类型，非必填：balance/bank/alipay/wechat/jd_account"},
+            "status": {"type": "integer", "description": "状态，非必填：1启用，2停用"}
+          }}
+        ]
+      },
+      "RevenueAccountFindRequest": {"type": "object", "properties": {"ra_id": {"type": "integer", "description": "分账账户ID，非必填但建议传"}, "manager_id": {"type": "integer", "description": "账户管理人ID，非必填"}, "ao_id": {"type": "integer", "description": "所属组织ID，非必填"}}},
+      "RevenueAccountAddRequest": {
+        "type": "object",
+        "required": ["ao_id", "manager_id", "account_name", "account_type"],
+        "properties": {
+          "ao_id": {"type": "integer", "description": "所属组织ID，必填"},
+          "manager_id": {"type": "integer", "description": "账户管理人ID，必填；必须存在、启用且属于 ao_id"},
+          "account_name": {"type": "string", "description": "账户名称，必填"},
+          "account_type": {"type": "string", "description": "账户类型，必填：balance/bank/alipay/wechat/jd_account", "example": "balance"},
+          "account": {"type": "string", "description": "分账账户，非必填；例如余额账号、银行账号、支付宝账号等"},
+          "bill_account": {"type": "string", "description": "账户展示账号，非必填"},
+          "status": {"type": "integer", "description": "状态，非必填：1启用，2停用；默认1", "default": 1}
+        }
+      },
+      "RevenueAccountUpdateRequest": {"type": "object", "required": ["ra_id"], "properties": {"ra_id": {"type": "integer", "description": "分账账户ID，必填"}, "ao_id": {"type": "integer", "description": "所属组织ID，非必填"}, "manager_id": {"type": "integer", "description": "账户管理人ID，非必填；提交时必须存在、启用且属于 ao_id"}, "account_name": {"type": "string", "description": "账户名称，非必填"}, "account_type": {"type": "string", "description": "账户类型，非必填：balance/bank/alipay/wechat/jd_account"}, "account": {"type": "string", "description": "分账账户，非必填"}, "bill_account": {"type": "string", "description": "账户展示账号，非必填"}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用"}}},
+      "RevenueAccountDelRequest": {"type": "object", "required": ["ra_id"], "properties": {"ra_id": {"type": "integer", "description": "分账账户ID，必填"}}},
+      "RevenuePayChannelListRequest": {"allOf": [{"$ref": "#/components/schemas/PaginationFields"}, {"type": "object", "properties": {"rpc_id": {"type": "integer", "description": "分账渠道配置ID，非必填"}, "pay_type": {"type": "integer", "description": "订单支付类型，非必填"}, "payee_type": {"type": "integer", "description": "收款策略支付类型，非必填"}, "channel_name": {"type": "string", "description": "渠道名称，非必填，支持模糊查询"}, "status": {"type": "integer", "description": "状态，非必填：1启用分账，2停用分账"}}}]},
+      "RevenuePayChannelFindRequest": {"type": "object", "properties": {"rpc_id": {"type": "integer", "description": "分账渠道配置ID，非必填但建议传"}, "pay_type": {"type": "integer", "description": "订单支付类型，非必填"}}},
+      "RevenuePayChannelAddRequest": {"type": "object", "required": ["pay_type", "channel_name"], "properties": {"pay_type": {"type": "integer", "description": "订单支付类型，必填且唯一；只有配置并启用的支付类型才生成新分账"}, "payee_type": {"type": "integer", "description": "收款策略支付类型，非必填；用于兼容按收款策略类型判断渠道"}, "channel_name": {"type": "string", "description": "渠道名称，必填"}, "status": {"type": "integer", "description": "状态，非必填：1启用分账，2停用分账；默认1", "default": 1}}},
+      "RevenuePayChannelUpdateRequest": {"type": "object", "required": ["rpc_id"], "properties": {"rpc_id": {"type": "integer", "description": "分账渠道配置ID，必填"}, "pay_type": {"type": "integer", "description": "订单支付类型，非必填；提交时必须大于0且唯一"}, "payee_type": {"type": "integer", "description": "收款策略支付类型，非必填；提交时必须大于0"}, "channel_name": {"type": "string", "description": "渠道名称，非必填"}, "status": {"type": "integer", "description": "状态，非必填：1启用分账，2停用分账"}}},
+      "RevenuePayChannelDelRequest": {"type": "object", "required": ["rpc_id"], "properties": {"rpc_id": {"type": "integer", "description": "分账渠道配置ID，必填"}}},
+      "RevenuePayeeConfigSaveRequest": {"type": "object", "required": ["sp_id"], "properties": {"sp_id": {"type": "integer", "description": "收款策略ID，必填"}, "default_ra_id": {"type": "integer", "description": "默认分账账户ID，条件必填；当收款渠道启用且 enable_revenue=1 时必填"}, "default_manager_id": {"type": "integer", "description": "默认账户管理人ID，非必填；系统按 default_ra_id 自动写入"}, "payee_type": {"type": "integer", "description": "收款策略支付类型，非必填；不传则按 strategy_payee 快照填充"}, "ao_id": {"type": "integer", "description": "收款策略所属组织ID，非必填；不传则按 strategy_payee 快照填充"}, "enable_revenue": {"type": "integer", "description": "是否启用新分账，非必填：1启用，2停用；默认1", "default": 1}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用；默认1", "default": 1}}},
+      "RevenuePayeeConfigListRequest": {"allOf": [{"$ref": "#/components/schemas/PaginationFields"}, {"type": "object", "properties": {"rpcfg_id": {"type": "integer", "description": "配置ID，非必填"}, "sp_id": {"type": "integer", "description": "收款策略ID，非必填"}, "payee_type": {"type": "integer", "description": "收款策略支付类型，非必填"}, "ao_id": {"type": "integer", "description": "收款策略组织ID，非必填"}, "default_ra_id": {"type": "integer", "description": "默认分账账户ID，非必填"}, "default_manager_id": {"type": "integer", "description": "默认账户管理人ID，非必填"}, "enable_revenue": {"type": "integer", "description": "是否启用新分账，非必填：1启用，2停用"}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用"}}}]},
+      "RevenuePayeeConfigFindRequest": {"type": "object", "properties": {"rpcfg_id": {"type": "integer", "description": "配置ID，非必填"}, "sp_id": {"type": "integer", "description": "收款策略ID，非必填但建议传"}}},
+      "RevenueRuleListRequest": {"allOf": [{"$ref": "#/components/schemas/PaginationFields"}, {"type": "object", "properties": {"rr_id": {"type": "integer", "description": "分账策略ID，非必填"}, "rule_name": {"type": "string", "description": "策略名称，非必填，支持模糊查询"}, "rule_mode": {"type": "integer", "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账"}, "payer_ao_id": {"type": "integer", "description": "收款/代收组织ID，非必填"}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用"}}}]},
+      "RevenueRuleFindRequest": {"type": "object", "properties": {"rr_id": {"type": "integer", "description": "分账策略ID，非必填但建议传"}, "rule_mode": {"type": "integer", "description": "策略模式，非必填"}}},
+      "RevenueRuleAddRequest": {"type": "object", "required": ["rule_name", "rule_mode"], "properties": {"rule_name": {"type": "string", "description": "分账策略名称，必填"}, "rule_mode": {"type": "integer", "description": "策略模式，必填：1普通分账，2设备出租，3设备分账", "enum": [1, 2, 3]}, "payer_ao_id": {"type": "integer", "description": "收款/代收组织ID，非必填"}, "base_type": {"type": "integer", "description": "设备分账基数，非必填：1订单总额，2扣除出租商品后金额；默认1", "default": 1}, "turnover_type": {"type": "integer", "description": "阶梯营业额口径，非必填：1净营业额，2支付成功金额；默认1", "default": 1}, "tier_calc_mode": {"type": "integer", "description": "阶梯命中模式，非必填：1本单后累计整单命中，2跨阶梯拆分；当前实现使用1", "default": 1}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用；默认1", "default": 1}}},
+      "RevenueRuleUpdateRequest": {"type": "object", "required": ["rr_id"], "properties": {"rr_id": {"type": "integer", "description": "分账策略ID，必填"}, "rule_name": {"type": "string", "description": "分账策略名称，非必填"}, "rule_mode": {"type": "integer", "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账", "enum": [1, 2, 3]}, "payer_ao_id": {"type": "integer", "description": "收款/代收组织ID，非必填"}, "base_type": {"type": "integer", "description": "设备分账基数，非必填：1订单总额，2扣除出租商品后金额"}, "turnover_type": {"type": "integer", "description": "阶梯营业额口径，非必填：1净营业额，2支付成功金额"}, "tier_calc_mode": {"type": "integer", "description": "阶梯命中模式，非必填：1本单后累计整单命中，2跨阶梯拆分；当前实现使用1"}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用"}}},
+      "RevenueRuleItemAddRequest": {"type": "object", "required": ["rr_id", "receiver_ao_id", "ra_id", "manager_id", "calc_type"], "properties": {"rr_id": {"type": "integer", "description": "分账策略ID，必填"}, "receiver_ao_id": {"type": "integer", "description": "分账接收组织ID，必填"}, "ra_id": {"type": "integer", "description": "分账账户ID，必填；账户必须启用且所属组织等于 receiver_ao_id"}, "manager_id": {"type": "integer", "description": "账户管理人ID，必填；必须与 ra_id 绑定管理人一致"}, "calc_type": {"type": "integer", "description": "计算方式，必填：1百分比，2固定金额，3全额，4阶梯百分比", "enum": [1, 2, 3, 4]}, "calc_value": {"type": "number", "description": "分账比例或固定金额；calc_type=1/2 时必填，百分比不能超过100；阶梯模式可为0"}, "sort": {"type": "integer", "description": "排序，非必填"}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用；默认1", "default": 1}}},
+      "RevenueRuleItemUpdateRequest": {"type": "object", "required": ["rri_id"], "properties": {"rri_id": {"type": "integer", "description": "分账策略明细ID，必填"}, "rr_id": {"type": "integer", "description": "分账策略ID，非必填"}, "receiver_ao_id": {"type": "integer", "description": "分账接收组织ID，非必填"}, "ra_id": {"type": "integer", "description": "分账账户ID，非必填；提交时账户必须启用且所属组织等于 receiver_ao_id"}, "manager_id": {"type": "integer", "description": "账户管理人ID，非必填；提交时必须与 ra_id 绑定管理人一致"}, "calc_type": {"type": "integer", "description": "计算方式，非必填：1百分比，2固定金额，3全额，4阶梯百分比", "enum": [1, 2, 3, 4]}, "calc_value": {"type": "number", "description": "分账比例或固定金额，非必填；calc_type=1/2 时需要提交，百分比不能超过100"}, "sort": {"type": "integer", "description": "排序，非必填"}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用"}}},
+      "RevenueRuleItemListRequest": {"allOf": [{"$ref": "#/components/schemas/PaginationFields"}, {"type": "object", "properties": {"rri_id": {"type": "integer", "description": "分账策略明细ID，非必填"}, "rr_id": {"type": "integer", "description": "分账策略ID，非必填"}, "receiver_ao_id": {"type": "integer", "description": "分账接收组织ID，非必填"}, "ra_id": {"type": "integer", "description": "分账账户ID，非必填"}, "manager_id": {"type": "integer", "description": "账户管理人ID，非必填"}, "calc_type": {"type": "integer", "description": "计算方式，非必填"}, "status": {"type": "integer", "description": "状态，非必填"}}}]},
+      "RevenueRuleItemDelRequest": {"type": "object", "required": ["rri_id"], "properties": {"rri_id": {"type": "integer", "description": "分账策略明细ID，必填"}}},
+      "RevenueRuleTierAddRequest": {"type": "object", "required": ["rri_id", "threshold_min", "calc_value"], "properties": {"rri_id": {"type": "integer", "description": "分账策略明细ID，必填；对应 calc_type=4 的明细"}, "threshold_min": {"type": "number", "description": "营业额下限，必填，包含该值，不能小于0"}, "threshold_max": {"type": "number", "nullable": true, "description": "营业额上限，非必填，不包含该值；为空表示无上限"}, "calc_value": {"type": "number", "description": "当前阶梯分账比例，必填，0到100"}, "sort": {"type": "integer", "description": "排序，非必填"}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用；默认1", "default": 1}}},
+      "RevenueRuleTierUpdateRequest": {"type": "object", "required": ["rrit_id"], "properties": {"rrit_id": {"type": "integer", "description": "阶梯分账明细ID，必填"}, "rri_id": {"type": "integer", "description": "分账策略明细ID，非必填；对应 calc_type=4 的明细"}, "threshold_min": {"type": "number", "description": "营业额下限，非必填，包含该值，不能小于0"}, "threshold_max": {"type": "number", "nullable": true, "description": "营业额上限，非必填，不包含该值；为空表示无上限"}, "calc_value": {"type": "number", "description": "当前阶梯分账比例，非必填，0到100"}, "sort": {"type": "integer", "description": "排序，非必填"}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用"}}},
+      "RevenueRuleTierListRequest": {"allOf": [{"$ref": "#/components/schemas/PaginationFields"}, {"type": "object", "properties": {"rrit_id": {"type": "integer", "description": "阶梯分账明细ID，非必填"}, "rri_id": {"type": "integer", "description": "分账策略明细ID，非必填"}, "status": {"type": "integer", "description": "状态，非必填"}}}]},
+      "RevenueRuleTierDelRequest": {"type": "object", "required": ["rrit_id"], "properties": {"rrit_id": {"type": "integer", "description": "阶梯分账明细ID，必填"}}},
+      "RevenueRuleBindMachineRequest": {"type": "object", "required": ["rr_id", "m_id"], "properties": {"rr_id": {"type": "integer", "description": "分账策略ID，必填；策略必须存在且启用"}, "m_id": {"type": "integer", "description": "设备ID，必填；设备必须存在"}, "ao_id": {"type": "integer", "description": "设备组织ID，非必填；不传则取设备所属组织"}, "sort": {"type": "integer", "description": "排序，非必填"}, "status": {"type": "integer", "description": "状态，非必填：1启用，2停用；默认1", "default": 1}}},
+      "RevenueRuleMachineListRequest": {"allOf": [{"$ref": "#/components/schemas/PaginationFields"}, {"type": "object", "properties": {"rrm_id": {"type": "integer", "description": "设备策略绑定ID，非必填"}, "rr_id": {"type": "integer", "description": "分账策略ID，非必填"}, "m_id": {"type": "integer", "description": "设备ID，非必填"}, "ao_id": {"type": "integer", "description": "设备组织ID，非必填"}, "status": {"type": "integer", "description": "状态，非必填"}}}]},
+      "RevenueRuleUnbindMachineRequest": {"type": "object", "required": ["rrm_id"], "properties": {"rrm_id": {"type": "integer", "description": "设备策略绑定ID，必填"}}},
+      "RevenueOrderListRequest": {"allOf": [{"$ref": "#/components/schemas/PaginationFields"}, {"type": "object", "properties": {"ro_id": {"type": "integer", "description": "分账订单ID，非必填"}, "order_id": {"type": "string", "description": "订单ID，非必填，支持模糊查询"}, "trade_no": {"type": "string", "description": "订单交易号，非必填，支持模糊查询"}, "sp_id": {"type": "string", "description": "收款策略ID，非必填，支持逗号分隔多选"}, "rule_mode": {"type": "string", "description": "分账模式，非必填，支持逗号分隔：1普通，2设备出租，3设备分账"}, "source": {"type": "string", "description": "分账来源，非必填，支持逗号分隔：normal/rental/device_rule/tier"}, "status": {"type": "string", "description": "分账状态，非必填，支持逗号分隔：0待支付，1已结算，2待结算，3失败，4已取消"}, "payer_ao_id": {"type": "string", "description": "收款/代收组织ID，非必填，支持逗号分隔"}, "receiver_ao_id": {"type": "string", "description": "分账接收组织ID，非必填，支持逗号分隔"}, "manager_id": {"type": "string", "description": "账户管理人ID，非必填，支持逗号分隔"}, "ra_id": {"type": "string", "description": "分账账户ID，非必填，支持逗号分隔"}, "machine_id": {"type": "string", "description": "设备编号，非必填，支持模糊查询"}, "machine_name": {"type": "string", "description": "设备名称，非必填，支持模糊查询"}, "period_key": {"type": "string", "description": "阶梯统计周期，非必填，例如 2026-06，支持模糊查询"}, "create_time": {"type": "string", "description": "创建时间范围，非必填，格式按后台 getWhere between 约定，例如 2026-06-01~2026-06-30"}, "revenue_time": {"type": "string", "description": "结算时间范围，非必填，格式按后台 getWhere between 约定，例如 2026-06-01~2026-06-30"}}}]},
+      "RevenueOrderFindRequest": {"type": "object", "properties": {"ro_id": {"type": "integer", "description": "分账订单ID，非必填"}, "order_id": {"type": "integer", "description": "订单ID，非必填但建议传"}, "trade_no": {"type": "string", "description": "订单交易号，非必填"}}},
+      "RevenueOrderMockPaySuccessRequest": {"type": "object", "anyOf": [{"required": ["trade_no"]}, {"required": ["order_id"]}], "properties": {"trade_no": {"type": "string", "description": "订单交易号，trade_no 与 order_id 二选一"}, "order_id": {"type": "integer", "description": "订单ID，trade_no 与 order_id 二选一"}, "pay_type": {"type": "integer", "description": "订单支付类型，非必填；传入时会覆盖订单 pay_type 用于测试"}, "pay_method": {"type": "integer", "description": "支付方式，非必填；传入时会覆盖订单 pay_method 用于测试"}, "sp_id": {"type": "integer", "description": "收款策略ID，非必填；传入时会覆盖订单 sp_id 用于测试"}, "mch_no": {"type": "string", "description": "商户号，非必填；测试回写订单字段"}, "out_trade_no": {"type": "string", "description": "外部支付交易号，非必填；测试回写订单字段"}, "pay_time": {"type": "integer", "description": "支付时间戳，非必填；不传则使用当前时间"}}}
+    }
+  }
+}

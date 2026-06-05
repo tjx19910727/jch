@@ -26,6 +26,7 @@ use app\AppFactory\Kernel\Providers\Management\LoginProvider;
 use app\AppFactory\Kernel\Providers\Management\MachineProvider;
 use app\AppFactory\Kernel\Providers\Management\MicroMallProvider;
 use app\AppFactory\Kernel\Providers\Management\ResourceProvider;
+use app\AppFactory\Kernel\Providers\Management\RevenueProvider;
 use app\AppFactory\Kernel\Providers\Management\SaleOrdersProvider;
 use app\AppFactory\Kernel\Providers\Management\StrategyProvider;
 use app\AppFactory\Kernel\Providers\Management\SuggestProvider;
@@ -134,6 +135,11 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property MicroMall\MicroMallMachineClient       $microMallMachine       微商城绑定设备
  *
  * @property Resource\ResourceClient                $resource  广告素材
+ * @property Revenue\RevenueAccountClient           $revenueAccount         分账账户
+ * @property Revenue\RevenueRuleClient              $revenueRule            分账策略
+ * @property Revenue\RevenueOrderClient             $revenueOrder           分账订单
+ * @property Revenue\RevenuePayChannelClient        $revenuePayChannel      分账收款渠道
+ * @property Revenue\RevenuePayeeConfigClient       $revenuePayeeConfig     收款策略新分账配置
  *
  * @property Template\TemplateClient                $template               模板
  * @property Template\TemplatePluginsClient         $templatePlugins        模板组件
@@ -187,6 +193,7 @@ class Application extends ServiceContainer
         MicroMallProvider::class,
         GoodsProvider::class,
         ResourceProvider::class,
+        RevenueProvider::class,
         SaleOrdersProvider::class,
         StrategyProvider::class,
         SuggestProvider::class,

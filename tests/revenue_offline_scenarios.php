@@ -1,0 +1,425 @@
+<?php
+
+/**
+ * 新分账离线自动化测试。
+ *
+ * 不连接数据库，不调用真实支付。用内存数据验证核心业务规则：
+ * 普通分账、设备出租、设备固定比例分账、阶梯分账、支付成功/取消状态流转。
+ */
+
+class OfflineRevenueCalculator
+{
+    private array $accounts;
+    private array $rules;
+    private array $machineRules;
+    private array $payeeConfigs;
+    private array $monthlyTurnover;
+    private float $rentalAmount = 0.0;
+
+    public function __construct(array $fixture)
+    {
+        $this->accounts = $fixture['accounts'];
+        $this->rules = $fixture['rules'];
+        $this->machineRules = $fixture['machine_rules'];
+        $this->payeeConfigs = $fixture['payee_configs'];
+        $this->monthlyTurnover = $fixture['monthly_turnover'];
+    }
+
+    public function calculate(array $order): array
+    {
+        $this->rentalAmount = 0.0;
+        $records = [];
+        $payeeConfig = $this->payeeConfigs[$order['sp_id']] ?? null;
+        if (!$payeeConfig || (int)$payeeConfig['enable_revenue'] !== 1) {
+            return [];
+        }
+
+        $records = array_merge($records, $this->calculateRental($order));
+        $deviceRecords = $this->calculateDeviceRule($order);
+        if ($deviceRecords) {
+            $records = array_merge($records, $deviceRecords);
+        } else {
+            $normalRecord = $this->normalRecord($order, $payeeConfig);
+            if ($normalRecord['income_amount'] >= 0.01) {
+                $records[] = $normalRecord;
+            }
+        }
+
+        $total = $this->sum($records, 'income_amount');
+        $this->assert($total <= $order['total_price'] + 0.0001, '分账总额不能超过订单金额');
+        return $records;
+    }
+
+    public function settle(array $records): array
+    {
+        foreach ($records as &$record) {
+            if (in_array((int)$record['status'], [0, 2], true)) {
+                $record['status'] = 1;
+                $record['revenue_time'] = 1780000000;
+            }
+        }
+        return $records;
+    }
+
+    public function cancel(array $records): array
+    {
+        foreach ($records as &$record) {
+            if ((int)$record['status'] === 0) {
+                $record['status'] = 4;
+            }
+        }
+        return $records;
+    }
+
+    private function calculateRental(array $order): array
+    {
+        $rule = $this->getMachineRule($order['m_id'], 2);
+        $records = [];
+        foreach ($order['details'] as $detail) {
+            if ((int)$detail['sod_ao_id'] === (int)$order['ao_id']) {
+                continue;
+            }
+            $this->assert($rule !== null, '设备出租分账策略未配置');
+            $item = $this->findRuleItem($rule, (int)$detail['sod_ao_id']);
+            $this->assert($item !== null, '商品组织未配置设备出租分账比例');
+
+            $amount = $this->calcAmount($detail['total_sod_price'], $item);
+            $this->rentalAmount += $amount;
+            $records[] = $this->record($order, $item, [
+                'sod_id' => $detail['sod_id'],
+                'sod_total_price' => $detail['total_sod_price'],
+                'rule_mode' => 2,
+                'source' => 'rental',
+                'income_amount' => $amount,
+            ]);
+        }
+        return $records;
+    }
+
+    private function calculateDeviceRule(array $order): array
+    {
+        $rule = $this->getMachineRule($order['m_id'], 3);
+        if (!$rule) {
+            return [];
+        }
+
+        $baseAmount = $order['total_price'];
+        if ((int)$rule['base_type'] === 2) {
+            $baseAmount -= $this->rentalAmount;
+        }
+        $periodKey = '2026-06';
+        $periodBefore = $this->monthlyTurnover[$order['m_id']][$periodKey] ?? 0.0;
+        $periodAfter = $periodBefore + $baseAmount;
+
+        $records = [];
+        foreach ($rule['items'] as $item) {
+            $amount = $this->calcAmount($baseAmount, $item, $periodAfter);
+            $records[] = $this->record($order, $item, [
+                'rule_mode' => 3,
+                'source' => (int)$item['calc_type'] === 4 ? 'tier' : 'device_rule',
+                'income_amount' => $amount,
+                'period_key' => $periodKey,
+                'period_amount_before' => $periodBefore,
+                'period_amount_after' => $periodAfter,
+                'income_value' => $item['_matched_value'] ?? $item['calc_value'],
+            ]);
+        }
+        return $records;
+    }
+
+    private function normalRecord(array $order, array $payeeConfig): array
+    {
+        $account = $this->accounts[$payeeConfig['default_ra_id']];
+        return $this->baseRecord($order, $account, [
+            'rule_mode' => 1,
+            'receiver_ao_id' => $account['ao_id'],
+            'ra_id' => $account['ra_id'],
+            'manager_id' => $account['manager_id'],
+            'calc_type' => 3,
+            'income_value' => 100.0,
+            'income_amount' => round($order['total_price'] - $this->rentalAmount, 2),
+            'source' => 'normal',
+        ]);
+    }
+
+    private function calcAmount(float $baseAmount, array &$item, float $periodAfter = 0.0): float
+    {
+        if ((int)$item['calc_type'] === 1) {
+            return round($baseAmount * $item['calc_value'] / 100, 2);
+        }
+        if ((int)$item['calc_type'] === 3) {
+            return round($baseAmount, 2);
+        }
+        if ((int)$item['calc_type'] === 4) {
+            foreach ($item['tiers'] as $tier) {
+                $max = $tier['threshold_max'];
+                if ($periodAfter >= $tier['threshold_min'] && ($max === null || $periodAfter < $max)) {
+                    $item['_matched_value'] = $tier['calc_value'];
+                    return round($baseAmount * $tier['calc_value'] / 100, 2);
+                }
+            }
+            throw new RuntimeException('阶梯区间未命中');
+        }
+        throw new RuntimeException('未知计算方式');
+    }
+
+    private function record(array $order, array $item, array $extra): array
+    {
+        $account = $this->accounts[$item['ra_id']];
+        return $this->baseRecord($order, $account, array_merge([
+            'receiver_ao_id' => $item['receiver_ao_id'],
+            'ra_id' => $item['ra_id'],
+            'manager_id' => $item['manager_id'],
+            'calc_type' => $item['calc_type'],
+            'income_value' => $item['calc_value'],
+        ], $extra));
+    }
+
+    private function baseRecord(array $order, array $account, array $extra): array
+    {
+        return array_merge([
+            'order_id' => $order['order_id'],
+            'trade_no' => $order['trade_no'],
+            'sp_id' => $order['sp_id'],
+            'm_id' => $order['m_id'],
+            'payer_ao_id' => $order['ao_id'],
+            'order_amount' => $order['total_price'],
+            'account_type' => $account['account_type'],
+            'account' => $account['account'],
+            'status' => 0,
+        ], $extra);
+    }
+
+    private function getMachineRule(int $mId, int $mode): ?array
+    {
+        foreach ($this->machineRules[$mId] ?? [] as $ruleId) {
+            $rule = $this->rules[$ruleId];
+            if ((int)$rule['rule_mode'] === $mode) {
+                return $rule;
+            }
+        }
+        return null;
+    }
+
+    private function findRuleItem(array $rule, int $receiverAoId): ?array
+    {
+        foreach ($rule['items'] as $item) {
+            if ((int)$item['receiver_ao_id'] === $receiverAoId) {
+                return $item;
+            }
+        }
+        return null;
+    }
+
+    private function sum(array $records, string $field): float
+    {
+        return array_reduce($records, fn($carry, $item) => $carry + (float)$item[$field], 0.0);
+    }
+
+    private function assert(bool $condition, string $message): void
+    {
+        if (!$condition) {
+            throw new RuntimeException($message);
+        }
+    }
+}
+
+function fixture(): array
+{
+    return [
+        'accounts' => [
+            101 => ['ra_id' => 101, 'ao_id' => 1, 'manager_id' => 1001, 'account_type' => 'balance', 'account' => 'A_BALANCE'],
+            102 => ['ra_id' => 102, 'ao_id' => 2, 'manager_id' => 1002, 'account_type' => 'balance', 'account' => 'B_BALANCE'],
+            103 => ['ra_id' => 103, 'ao_id' => 3, 'manager_id' => 1003, 'account_type' => 'balance', 'account' => 'C_BALANCE'],
+        ],
+        'payee_configs' => [
+            9001 => ['sp_id' => 9001, 'default_ra_id' => 101, 'default_manager_id' => 1001, 'enable_revenue' => 1],
+        ],
+        'rules' => [
+            201 => [
+                'rr_id' => 201,
+                'rule_mode' => 2,
+                'base_type' => 1,
+                'items' => [
+                    ['rri_id' => 301, 'receiver_ao_id' => 2, 'ra_id' => 102, 'manager_id' => 1002, 'calc_type' => 1, 'calc_value' => 100.0],
+                ],
+            ],
+            202 => [
+                'rr_id' => 202,
+                'rule_mode' => 3,
+                'base_type' => 1,
+                'items' => [
+                    ['rri_id' => 302, 'receiver_ao_id' => 2, 'ra_id' => 102, 'manager_id' => 1002, 'calc_type' => 1, 'calc_value' => 20.0],
+                    ['rri_id' => 303, 'receiver_ao_id' => 3, 'ra_id' => 103, 'manager_id' => 1003, 'calc_type' => 1, 'calc_value' => 30.0],
+                ],
+            ],
+            203 => [
+                'rr_id' => 203,
+                'rule_mode' => 3,
+                'base_type' => 1,
+                'items' => [
+                    [
+                        'rri_id' => 304,
+                        'receiver_ao_id' => 1,
+                        'ra_id' => 101,
+                        'manager_id' => 1001,
+                        'calc_type' => 4,
+                        'calc_value' => 0.0,
+                        'tiers' => [
+                            ['threshold_min' => 0.0, 'threshold_max' => 5000.0, 'calc_value' => 20.0],
+                            ['threshold_min' => 5000.0, 'threshold_max' => null, 'calc_value' => 25.0],
+                        ],
+                    ],
+                    [
+                        'rri_id' => 305,
+                        'receiver_ao_id' => 2,
+                        'ra_id' => 102,
+                        'manager_id' => 1002,
+                        'calc_type' => 4,
+                        'calc_value' => 0.0,
+                        'tiers' => [
+                            ['threshold_min' => 0.0, 'threshold_max' => 8000.0, 'calc_value' => 25.0],
+                            ['threshold_min' => 8000.0, 'threshold_max' => null, 'calc_value' => 30.0],
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        'machine_rules' => [
+            501 => [],
+            502 => [201],
+            503 => [202],
+            504 => [203],
+        ],
+        'monthly_turnover' => [
+            504 => ['2026-06' => 4900.0],
+        ],
+    ];
+}
+
+function orderFixture(int $orderId, int $mId, float $total, array $details): array
+{
+    return [
+        'order_id' => $orderId,
+        'trade_no' => 'CODEX_REV_TEST_' . $orderId,
+        'sp_id' => 9001,
+        'pay_type' => 1,
+        'pay_method' => 1,
+        'm_id' => $mId,
+        'machine_id' => 'CODEX-M-' . $mId,
+        'machine_name' => 'CODEX测试设备' . $mId,
+        'ao_id' => 1,
+        'total_price' => $total,
+        'details' => $details,
+    ];
+}
+
+function assertEquals($expected, $actual, string $message): void
+{
+    if ($expected != $actual) {
+        throw new RuntimeException($message . '，期望=' . json_encode($expected) . '，实际=' . json_encode($actual));
+    }
+}
+
+function assertMoney(float $expected, float $actual, string $message): void
+{
+    if (abs($expected - $actual) > 0.001) {
+        throw new RuntimeException($message . "，期望={$expected}，实际={$actual}");
+    }
+}
+
+$tests = [];
+
+$tests['普通分账：A设备销售A商品，A获得订单全额'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10001, 501, 100.0, [
+        ['sod_id' => 1, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(1, count($records), '应生成1条分账单');
+    assertEquals(1, $records[0]['rule_mode'], '应为普通分账');
+    assertMoney(100.0, $records[0]['income_amount'], '普通分账金额应为订单全额');
+};
+
+$tests['设备出租：A设备销售B商品，B按100%获得商品金额'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10002, 502, 80.0, [
+        ['sod_id' => 2, 'sod_ao_id' => 2, 'quantity' => 1, 'retail_price' => 80.0, 'total_sod_price' => 80.0],
+    ]));
+    assertEquals(1, count($records), '应生成1条出租分账单');
+    assertEquals('rental', $records[0]['source'], '应为出租分账');
+    assertEquals(2, $records[0]['receiver_ao_id'], '接收组织应为B');
+    assertMoney(80.0, $records[0]['income_amount'], 'B应获得商品金额100%');
+};
+
+$tests['设备固定比例分账：B 20%，C 30%'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10003, 503, 100.0, [
+        ['sod_id' => 3, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(2, count($records), '应生成2条设备分账单');
+    assertMoney(20.0, $records[0]['income_amount'], 'B应获得20%');
+    assertMoney(30.0, $records[1]['income_amount'], 'C应获得30%');
+    assertEquals('device_rule', $records[0]['source'], '应为设备策略分账');
+};
+
+$tests['阶梯分账：本单后累计达到5000以上但未到8000'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10004, 504, 200.0, [
+        ['sod_id' => 4, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 200.0, 'total_sod_price' => 200.0],
+    ]));
+    assertEquals(2, count($records), '应生成2条阶梯分账单');
+    assertMoney(25.0, $records[0]['income_value'], 'A应命中5000以上25%');
+    assertMoney(50.0, $records[0]['income_amount'], 'A分账金额应为50');
+    assertMoney(25.0, $records[1]['income_value'], 'B应命中8000以下25%');
+    assertMoney(50.0, $records[1]['income_amount'], 'B分账金额应为50');
+};
+
+$tests['阶梯分账：本单后累计达到8000以上，B命中30%'] = function () {
+    $fixture = fixture();
+    $fixture['monthly_turnover'][504]['2026-06'] = 7900.0;
+    $calc = new OfflineRevenueCalculator($fixture);
+    $records = $calc->calculate(orderFixture(10007, 504, 200.0, [
+        ['sod_id' => 7, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 200.0, 'total_sod_price' => 200.0],
+    ]));
+    assertEquals(2, count($records), '应生成2条阶梯分账单');
+    assertMoney(25.0, $records[0]['income_value'], 'A应命中5000以上25%');
+    assertMoney(50.0, $records[0]['income_amount'], 'A分账金额应为50');
+    assertMoney(30.0, $records[1]['income_value'], 'B应命中8000以上30%');
+    assertMoney(60.0, $records[1]['income_amount'], 'B分账金额应为60');
+};
+
+$tests['支付成功：待支付分账单变为已结算'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10005, 501, 60.0, [
+        ['sod_id' => 5, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 60.0, 'total_sod_price' => 60.0],
+    ]));
+    $records = $calc->settle($records);
+    assertEquals(1, $records[0]['status'], '支付成功后应为已结算');
+    assertEquals(1780000000, $records[0]['revenue_time'], '应写入结算时间');
+};
+
+$tests['支付取消：待支付分账单变为已取消'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10006, 501, 60.0, [
+        ['sod_id' => 6, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 60.0, 'total_sod_price' => 60.0],
+    ]));
+    $records = $calc->cancel($records);
+    assertEquals(4, $records[0]['status'], '支付取消后应为已取消');
+};
+
+$passed = 0;
+$failed = 0;
+
+foreach ($tests as $name => $test) {
+    try {
+        $test();
+        $passed++;
+        echo "[PASS] {$name}\n";
+    } catch (Throwable $e) {
+        $failed++;
+        echo "[FAIL] {$name}: {$e->getMessage()}\n";
+    }
+}
+
+echo "\nSummary: passed={$passed}, failed={$failed}\n";
+exit($failed > 0 ? 1 : 0);

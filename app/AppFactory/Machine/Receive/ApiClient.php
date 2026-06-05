@@ -57,9 +57,7 @@ use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelNightlyTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
-use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
-use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
@@ -130,10 +128,8 @@ class ApiClient extends ReceiveBaseClient
         BeforeOrderPaymentTrait,
         AfterOrderPaymentTrait,
         SaleOrdersTrait,
-        SaleOrdersRevenueTrait,
         SaleHotelTrait,
         SaleHotelNightlyTrait,
-        StrategyIncomeTrait,
         StrategyManagerTrait,
         StrategyPayeeTrait,
         StrategyMachineTrait,
