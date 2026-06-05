@@ -170,6 +170,18 @@ class MachineMaintenanceClient extends ManagementClient
             if (!$data) {
                 return $this->rValidate('无可更新字段');
             }
+            // 如果尝试禁用当前项目(is_active = 0)，则只有当其子集没有维护记录时才允许禁用
+            if (array_key_exists('is_active', $data) && intval($data['is_active']) === 0) {
+                // collectDescendantIds 返回包含自身的所有下级 id，这里排除自身，仅检查子集是否有数据
+                $allIds = $this->collectDescendantIds([$id]);
+                $childIds = array_values(array_diff($allIds, [$id]));
+                if ($childIds) {
+                    $exists = Db::name('maintenance_records')->where([['item_id', 'in', $childIds]])->count();
+                    if ($exists > 0) {
+                        return $this->rValidate('子集存在维护记录，无法禁用当前项目');
+                    }
+                }
+            }
             $result = Db::name('maintenance_items')->where(['id' => $id])->update($data);
             return $this->rU($result);
         } catch (\Exception $e) {

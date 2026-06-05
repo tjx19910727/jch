@@ -99,6 +99,17 @@ class MachineCheckListClient extends ManagementClient
             if (!$data) {
                 return $this->rValidate('无可更新字段');
             }
+            // 如果尝试禁用当前项目(is_active = 0)，则只有当其子集没有检查记录时才允许禁用
+            if (array_key_exists('is_active', $data) && intval($data['is_active']) === 0) {
+                $allIds = $this->collectDescendantIds([$id]);
+                $childIds = array_values(array_diff($allIds, [$id]));
+                if ($childIds) {
+                    $exists = Db::name('check_list_records')->where([['item_id', 'in', $childIds]])->count();
+                    if ($exists > 0) {
+                        return $this->rValidate('子集存在检查记录，无法禁用当前项目');
+                    }
+                }
+            }
             $result = Db::name('check_list_items')->where(['id' => $id])->update($data);
             return $this->rU($result);
         } catch (\Exception $e) {
