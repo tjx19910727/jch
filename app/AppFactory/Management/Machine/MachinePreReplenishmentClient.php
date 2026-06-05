@@ -372,6 +372,15 @@ class MachinePreReplenishmentClient extends ManagementClient
             $actualTotal += ($detail['actual_quantity'] ?? 0);
         }
 
+        // 从日志统计机台实际补货数量
+        $machineLogActualMap = [];
+        foreach ($logs as $log) {
+            if (!isset($machineLogActualMap[$log['machine_id']])) {
+                $machineLogActualMap[$log['machine_id']] = 0;
+            }
+            $machineLogActualMap[$log['machine_id']] += $log['quantity'];
+        }
+
         $deviceProgress = [];
         foreach ($deviceProgressMap as $item) {
             if ($item['has_more']) {
@@ -383,6 +392,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             } else {
                 $item['biz_status'] = 1;
             }
+            $item['log_actual_total'] = $machineLogActualMap[$item['machine_id']] ?? 0;
             unset($item['all_matched'], $item['has_less'], $item['has_more']);
             $deviceProgress[] = $item;
         }
@@ -416,6 +426,17 @@ class MachinePreReplenishmentClient extends ManagementClient
             'plan_total' => $planTotal,
             'actual_total' => $actualTotal,
         ];
+
+        // 为 details 补充商品名称、商品图片、可补库存
+        foreach ($details as &$detail) {
+            $channelKey = $detail['m_id'] . '_' . $detail['mc_id'];
+            $goods = $channelGoodsMap[$channelKey] ?? [];
+            $detail['goods_name'] = $goods['g_name'] ?? '';
+            $detail['goods_pic'] = $goods['pic'] ?? '';
+            $availableStock = ($detail['capacity'] ?? 0) - ($detail['before_stock'] ?? 0);
+            $detail['available_stock'] = $availableStock > 0 ? $availableStock : 0;
+        }
+        unset($detail);
 
         return returnState(200, 'ok', [
             'base_info' => [

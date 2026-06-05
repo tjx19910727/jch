@@ -4116,6 +4116,8 @@ class ApiClient extends ReceiveBaseClient
                 'g_id'             => $mc['g_id'] ?? 0,
                 'g_name'           => $mc['g_name'] ?? '',
                 'pic'              => $mc['pic'] ?? '',
+                'capacity'         => $mc['capacity'] ?? 0,
+                'stock'            => $mc['stock'] ?? 0,
                 'plan_quantity'    => $d['plan_quantity'],
                 'actual_quantity'  => $d['actual_quantity'] ?? 0,
                 'order_count'      => $d['order_count'] ?? 0,
