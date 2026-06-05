@@ -641,7 +641,7 @@ class SaleOrdersClient extends ManagementClient
         $where['raw'] = "pay_status in ('3', '7')";
         $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
         $refundCostPriceField = $hasCostPriceAuth ? 'so.cost_price' : '0 cost_price';
-        $field = 'order_id,machine_id,machine_name,pay_status,trade_no,mch_no,total_quantity,total_price,total_cost_points,total_points,discount_price,retail_price,factory,inventory_location,
+        $field = 'order_id,machine_id,machine_name,machine_level,pay_status,trade_no,mch_no,total_quantity,total_price,total_cost_points,total_points,discount_price,retail_price,factory,inventory_location,
             (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name,
                 (CASE order_type
                     WHEN 1 THEN "普通订单"
@@ -729,7 +729,7 @@ class SaleOrdersClient extends ManagementClient
                 $whereRefund[] = ['so.pay_time','between',[$pay_time1,$pay_time2]];
             }
 
-            $refundField = 'sor.order_id,sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
+            $refundField = 'sor.order_id,sor.machine_id,sor.machine_name,COALESCE(sor.machine_level, so.machine_level) machine_level,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
             (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = so.ao_id) organization_name,
             sor.refund_quantity total_quantity,
              (0-sor.refund_amount) total_price,("-") total_cost_points,("-") total_points,("-") discount_price,("-") retail_price,
@@ -773,6 +773,7 @@ class SaleOrdersClient extends ManagementClient
                 "order_id" => "订单ID",
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
+                "device_type" => "设备类型",
                 "trade_no" => "订单编号",
                 "mch_no" => "支付编号",
                 "total_quantity" => "订单总数",

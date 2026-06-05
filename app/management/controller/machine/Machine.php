@@ -77,6 +77,13 @@ class Machine extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
+        // 要求国家/省/市编码必传，regions_id 可选
+        foreach (['country_id', 'state_id', 'city_id'] as $f) {
+            if (empty($postData[$f]) && $postData[$f] !== 0) {
+                // 使用通用提示，若需要可在语言文件中添加专用提示键
+                return returnValidate(lang('VMachine.' . $f . '_require'));
+            }
+        }
         return $this->app->machine->addM($postData);
     }
 

@@ -10,7 +10,7 @@ namespace app\management\controller\sale;
 
 
 use app\management\controller\Common;
-use think\Facade\Db;
+use think\facade\Db;
 
 class SaleOrders extends Common
 {
@@ -58,7 +58,9 @@ class SaleOrders extends Common
         $hasCostPriceAuth = $this->hasCostPriceAuth();
 
         $costPriceField = $hasCostPriceAuth ? "cost_price" : "0 cost_price";
-        $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,pay_channel,pay_channel_name,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,machine_id,factory,inventory_location,has_hotel,refund_status,(total_price - refund_amount) total_price, (total_cost_points - refund_cost_points) total_cost_points, pay_code, mobile,{$costPriceField}";
+    $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,pay_channel,pay_channel_name,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,machine_id,machine_level,
+    (case device_type when 1 then '" . lang("vending_machine") . "' else '" . lang("store") . "' end) device_type,
+    factory,inventory_location,has_hotel,refund_status,(total_price - refund_amount) total_price, (total_cost_points - refund_cost_points) total_cost_points, pay_code, mobile,{$costPriceField}";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         if (isset($postData['supplier']) && $postData['supplier']) unset($where['ao_id']);
         if($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0,1] )){
