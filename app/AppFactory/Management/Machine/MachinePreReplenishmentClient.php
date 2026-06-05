@@ -293,167 +293,257 @@ class MachinePreReplenishmentClient extends ManagementClient
         $details = PreReplenishmentDetailModel::where(['order_id' => $id])->order('id asc')->select()->toArray();
         $logs = PreReplenishmentLogModel::where(['record_no' => $order['record_no']])->order('id asc')->select()->toArray();
 
-        // 查询设备名称映射
+        // 批量查询设备和货道信息
         $machineIds = array_values(array_unique(array_column($details, 'machine_id')));
-        $machineNameMap = [];
+        $machineMap = [];
         if ($machineIds) {
             $machines = MachineModel::where([['machine_id', 'in', $machineIds]])
-                ->field('machine_id,machine_name')
-                ->select()
-                ->toArray();
+                ->field('m_id,machine_id,machine_name')
+                ->select()->toArray();
             foreach ($machines as $m) {
-                $machineNameMap[$m['machine_id']] = $m['machine_name'];
+                $machineMap[$m['machine_id']] = $m;
             }
         }
 
-        // 查询货道商品信息映射（用于 pick_summary）
-        $mIds = array_values(array_unique(array_column($details, 'm_id')));
         $mcIds = array_values(array_unique(array_column($details, 'mc_id')));
-        $channelGoodsMap = [];
-        if ($mIds && $mcIds) {
-            $channels = MachineChannelModel::where([
-                ['m_id', 'in', $mIds],
-                ['mc_id', 'in', $mcIds],
-            ])->field('m_id,mc_id,sku,g_name,pic')
-                ->select()
-                ->toArray();
+        $channelMap = [];
+        if ($mcIds) {
+            $channels = MachineChannelModel::where([['mc_id', 'in', $mcIds]])
+                ->field('mc_id,m_id,machine_id,channel_code,sku,g_name,pic,g_id,bar_code')
+                ->select()->toArray();
             foreach ($channels as $ch) {
-                $channelGoodsMap[$ch['m_id'] . '_' . $ch['mc_id']] = $ch;
+                $channelMap[$ch['mc_id']] = $ch;
             }
         }
 
-        $pickSummaryMap = [];
+        // 日志按 device+machine 统计 reported_count
+        $logReportedMap = [];
+        foreach ($logs as $log) {
+            $key = $log['machine_id'];
+            if (!isset($logReportedMap[$key])) $logReportedMap[$key] = 0;
+            $logReportedMap[$key]++;
+        }
+
+        // 按机器聚合 device_progress
         $deviceProgressMap = [];
         $planTotal = 0;
         $actualTotal = 0;
+        $abnormalTotal = 0;
 
-        foreach ($details as $detail) {
-            $pickKey = $detail['sku'];
-            if (!isset($pickSummaryMap[$pickKey])) {
-                $channelKey = $detail['m_id'] . '_' . $detail['mc_id'];
-                $goods = $channelGoodsMap[$channelKey] ?? [];
-                $pickSummaryMap[$pickKey] = [
-                    'sku' => $detail['sku'],
-                    'need_quantity' => 0,
-                    'g_name' => $goods['g_name'] ?? '',
-                    'pic' => $goods['pic'] ?? '',
+        // 按 SKU 聚合 material_details
+        $materialMap = [];
+
+        // 补货对比明细 (按 machine_id 分组)
+        $compareGroups = [];
+
+        foreach ($details as $d) {
+            $mid     = $d['machine_id'];
+            $mcId    = $d['mc_id'];
+            $channel = $channelMap[$mcId] ?? [];
+            $machine = $machineMap[$mid] ?? [];
+            $planQty = (int)$d['plan_quantity'];
+            $actualQty = isset($d['actual_quantity']) ? (int)$d['actual_quantity'] : null;
+
+            // ---- device_progress ----
+            if (!isset($deviceProgressMap[$mid])) {
+                $deviceProgressMap[$mid] = [
+                    'm_id'          => $machine['m_id'] ?? 0,
+                    'machine_id'    => $mid,
+                    'machine_name'  => $machine['machine_name'] ?? $mid,
+                    'detail_count'  => 0,
+                    'plan_quantity'  => 0,
+                    'actual_quantity'=> 0,
+                    'abnormal_count' => 0,
                 ];
             }
-            $pickSummaryMap[$pickKey]['need_quantity'] += $detail['plan_quantity'];
+            $deviceProgressMap[$mid]['detail_count']++;
+            $deviceProgressMap[$mid]['plan_quantity'] += $planQty;
+            $deviceProgressMap[$mid]['actual_quantity'] += ($actualQty ?? 0);
 
-            if (!isset($deviceProgressMap[$detail['machine_id']])) {
-                $deviceProgressMap[$detail['machine_id']] = [
-                    'machine_id' => $detail['machine_id'],
-                    'machine_name' => $machineNameMap[$detail['machine_id']] ?? '',
-                    'biz_status' => 1,
-                    'plan_total' => 0,
-                    'actual_total' => 0,
-                    'all_matched' => true,
-                    'has_less' => false,
-                    'has_more' => false,
+            // ---- abnormal count ----
+            $isAbnormal = ($actualQty !== null && $actualQty !== $planQty)
+                || ($actualQty !== null && ($d['actual_sku'] ?? null) !== null && $d['actual_sku'] !== $d['sku'])
+                || ($actualQty !== null && ($d['actual_channel_code'] ?? null) !== null && $d['actual_channel_code'] !== $d['channel_code']);
+            if ($isAbnormal) {
+                $deviceProgressMap[$mid]['abnormal_count']++;
+                $abnormalTotal++;
+            }
+
+            // 找出最新的上报时间
+            $reportTime = null;
+            foreach ($logs as $log) {
+                if ($log['machine_id'] === $mid && ($log['channel_code'] ?? '') === ($d['channel_code'] ?? '')) {
+                    $reportTime = $log['report_time'];
+                }
+            }
+
+            // ---- compare_status 文本映射 ----
+            $availableStock = ($d['capacity'] ?? 0) - ($d['before_stock'] ?? 0);
+            if ($availableStock < 0) $availableStock = 0;
+
+            $compareStatusText = 'pending';
+            if ($actualQty !== null) {
+                if ($actualQty == $planQty) {
+                    $compareStatusText = 'matched';
+                } elseif ($actualQty < $planQty) {
+                    $compareStatusText = 'less';
+                } else {
+                    $compareStatusText = 'more';
+                }
+                if (($d['actual_sku'] ?? null) !== null && $d['actual_sku'] !== $d['sku']) {
+                    $compareStatusText = 'sku_error';
+                }
+                if (($d['actual_channel_code'] ?? null) !== null && $d['actual_channel_code'] !== $d['channel_code']) {
+                    $compareStatusText = 'channel_error';
+                }
+            }
+
+            // ---- replenishment_compare detail ----
+            $compareDetail = [
+                'id'                 => $d['id'],
+                'm_id'               => $machine['m_id'] ?? 0,
+                'mc_id'              => $mcId,
+                'machine_id'         => $mid,
+                'machine_name'       => $machine['machine_name'] ?? $mid,
+                'channel_code'       => $d['channel_code'],
+                'sku'                => $d['sku'],
+                'g_name'             => $channel['g_name'] ?? '',
+                'image_url'          => $channel['pic'] ?? '',
+                'bar_code'           => $channel['bar_code'] ?? '',
+                'model'              => '',
+                'before_stock'       => $d['before_stock'] ?? 0,
+                'capacity'           => $d['capacity'] ?? 0,
+                'available_stock'    => $availableStock,
+                'plan_quantity'      => $planQty,
+                'actual_quantity'    => $actualQty,
+                'actual_sku'         => $d['actual_sku'] ?? null,
+                'actual_channel_code'=> $d['actual_channel_code'] ?? null,
+                'report_time'        => $reportTime,
+                'compare_status'     => $compareStatusText,
+            ];
+
+            if (!isset($compareGroups[$mid])) {
+                $compareGroups[$mid] = [];
+            }
+            $compareGroups[$mid][] = $compareDetail;
+
+            // ---- material_details (按 SKU 聚合) ----
+            $sku = $d['sku'];
+            if (!isset($materialMap[$sku])) {
+                $materialMap[$sku] = [
+                    'sku'          => $sku,
+                    'g_name'       => $channel['g_name'] ?? '',
+                    'image_url'    => $channel['pic'] ?? '',
+                    'bar_code'     => $channel['bar_code'] ?? '',
+                    'model'        => '',
+                    'quantity'     => 0,
+                    'device_count' => 0,
+                    'channel_count'=> 0,
+                    '_device_ids'  => [],
                 ];
             }
+            $materialMap[$sku]['quantity'] += $planQty;
+            $materialMap[$sku]['channel_count']++;
+            $materialMap[$sku]['_device_ids'][$mid] = true;
 
-            $deviceProgressMap[$detail['machine_id']]['plan_total'] += $detail['plan_quantity'];
-            $deviceProgressMap[$detail['machine_id']]['actual_total'] += ($detail['actual_quantity'] ?? 0);
-
-            $compareStatus = (int)($detail['compare_status'] ?? 1);
-            if ($compareStatus !== 2) {
-                $deviceProgressMap[$detail['machine_id']]['all_matched'] = false;
-            }
-            if ($compareStatus === 3) {
-                $deviceProgressMap[$detail['machine_id']]['has_less'] = true;
-            }
-            if (($detail['actual_quantity'] ?? null) !== null && $detail['actual_quantity'] > $detail['plan_quantity']) {
-                $deviceProgressMap[$detail['machine_id']]['has_more'] = true;
-            }
-
-            $planTotal += $detail['plan_quantity'];
-            $actualTotal += ($detail['actual_quantity'] ?? 0);
+            $planTotal += $planQty;
+            $actualTotal += ($actualQty ?? 0);
         }
 
-        // 从日志统计机台实际补货数量
-        $machineLogActualMap = [];
-        foreach ($logs as $log) {
-            if (!isset($machineLogActualMap[$log['machine_id']])) {
-                $machineLogActualMap[$log['machine_id']] = 0;
-            }
-            $machineLogActualMap[$log['machine_id']] += $log['quantity'];
+        // material_details 最终 device_count
+        foreach ($materialMap as &$m) {
+            $m['device_count'] = count($m['_device_ids']);
+            unset($m['_device_ids']);
         }
+        unset($m);
 
+        // ---- device_progress 最终结果 ----
         $deviceProgress = [];
-        foreach ($deviceProgressMap as $item) {
-            if ($item['has_more']) {
-                $item['biz_status'] = 4;
-            } elseif ($item['has_less']) {
-                $item['biz_status'] = 3;
-            } elseif ($item['all_matched'] && $item['plan_total'] > 0) {
-                $item['biz_status'] = 2;
+        foreach ($deviceProgressMap as $mid => $dp) {
+            $reportedCount = $logReportedMap[$mid] ?? 0;
+            if ($dp['abnormal_count'] > 0) {
+                $result = 'abnormal';
+            } elseif ($dp['actual_quantity'] >= $dp['plan_quantity'] && $dp['actual_quantity'] > 0) {
+                $result = 'completed';
+            } elseif ($reportedCount > 0) {
+                $result = 'pending';
             } else {
-                $item['biz_status'] = 1;
+                $result = 'pending';
             }
-            $item['log_actual_total'] = $machineLogActualMap[$item['machine_id']] ?? 0;
-            unset($item['all_matched'], $item['has_less'], $item['has_more']);
-            $deviceProgress[] = $item;
-        }
+            // 更精确的判断: 如果没有数据上报且没有实际数量, 为 pending
+            if ($dp['actual_quantity'] == 0 && $reportedCount == 0) {
+                $result = 'pending';
+            } elseif ($dp['abnormal_count'] > 0) {
+                $result = 'abnormal';
+            } elseif ($dp['plan_quantity'] <= $dp['actual_quantity']) {
+                $result = 'completed';
+            }
 
-        $logsGroup = [];
-        foreach ($logs as $log) {
-            if (!isset($logsGroup[$log['machine_id']])) {
-                $logsGroup[$log['machine_id']] = [
-                    'm_id' => $log['m_id'],
-                    'machine_id' => $log['machine_id'],
-                    'log_count' => 0,
-                    'actual_total' => 0,
-                    'logs' => [],
-                ];
-            }
-            $logsGroup[$log['machine_id']]['log_count'] += 1;
-            $logsGroup[$log['machine_id']]['actual_total'] += $log['quantity'];
-            $logsGroup[$log['machine_id']]['logs'][] = [
-                'id' => $log['id'],
-                'm_id' => $log['m_id'],
-                'channel_code' => $log['channel_code'],
-                'sku' => $log['sku'],
-                'quantity' => $log['quantity'],
-                'report_time' => $log['report_time'],
+            $deviceProgress[] = [
+                'm_id'            => $dp['m_id'],
+                'machine_id'      => $dp['machine_id'],
+                'machine_name'    => $dp['machine_name'],
+                'detail_count'    => $dp['detail_count'],
+                'plan_quantity'   => $dp['plan_quantity'],
+                'actual_quantity' => $dp['actual_quantity'],
+                'abnormal_count'  => $dp['abnormal_count'],
+                'reported_count'  => $reportedCount,
+                'result'          => $result,
             ];
         }
 
+        // ---- replenishment_compare (补货对比) ----
+        $replenishmentCompare = [];
+        foreach ($compareGroups as $mid => $groupDetails) {
+            $dp = $deviceProgressMap[$mid];
+            $reportedCount = $logReportedMap[$mid] ?? 0;
+            if ($dp['abnormal_count'] > 0) {
+                $result = 'abnormal';
+            } elseif ($dp['actual_quantity'] >= $dp['plan_quantity']) {
+                $result = 'completed';
+            } else {
+                $result = 'pending';
+            }
+            $replenishmentCompare[] = [
+                'm_id'            => $dp['m_id'],
+                'machine_id'      => $dp['machine_id'],
+                'machine_name'    => $dp['machine_name'],
+                'detail_count'    => $dp['detail_count'],
+                'plan_quantity'   => $dp['plan_quantity'],
+                'actual_quantity' => $dp['actual_quantity'],
+                'abnormal_count'  => $dp['abnormal_count'],
+                'reported_count'  => $reportedCount,
+                'result'          => $result,
+                'details'         => $groupDetails,
+            ];
+        }
+
+        // ---- can_edit ----
+        $logCount = PreReplenishmentLogModel::getCount(['record_no' => $order['record_no']]);
+        $canEdit = ($logCount == 0);
+
+        // ---- summary ----
         $summary = [
-            'machine_count' => count($deviceProgress),
-            'sku_count' => count($pickSummaryMap),
-            'plan_total' => $planTotal,
-            'actual_total' => $actualTotal,
+            'device_count'   => count($deviceProgress),
+            'channel_count'  => count($details),
+            'plan_total'     => $planTotal,
+            'actual_total'   => $actualTotal,
+            'abnormal_count' => $abnormalTotal,
         ];
 
-        // 为 details 补充商品名称、商品图片、可补库存
-        foreach ($details as &$detail) {
-            $channelKey = $detail['m_id'] . '_' . $detail['mc_id'];
-            $goods = $channelGoodsMap[$channelKey] ?? [];
-            $detail['goods_name'] = $goods['g_name'] ?? '';
-            $detail['goods_pic'] = $goods['pic'] ?? '';
-            $availableStock = ($detail['capacity'] ?? 0) - ($detail['before_stock'] ?? 0);
-            $detail['available_stock'] = $availableStock > 0 ? $availableStock : 0;
-        }
-        unset($detail);
-
         return returnState(200, 'ok', [
-            'base_info' => [
-                'id' => $order['id'],
-                'record_no' => $order['record_no'],
-                'biz_status' => $order['biz_status'],
-                'export_status' => $order['export_status'],
-                'creator_name' => $order['creator_name'],
-                'remark' => $order['remark'],
-                'created_at' => $order['created_at'],
-                'export_time' => $order['export_time'],
-            ],
-            'summary' => $summary,
-            'pick_summary' => array_values($pickSummaryMap),
-            'device_progress' => array_values($deviceProgress),
-            'details' => $details,
-            'logs_group_by_machine' => array_values($logsGroup),
+            'id'                   => $order['id'],
+            'record_no'            => $order['record_no'],
+            'status'               => $order['biz_status'],
+            'creator'              => $order['creator_name'],
+            'create_time'          => $order['created_at'],
+            'export_time'          => $order['export_time'],
+            'remark'               => $order['remark'],
+            'can_edit'             => $canEdit,
+            'summary'              => $summary,
+            'device_progress'      => $deviceProgress,
+            'material_details'     => array_values($materialMap),
+            'replenishment_compare'=> $replenishmentCompare,
         ]);
     }
 
