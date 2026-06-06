@@ -11,6 +11,7 @@ class RevenueCalculator
     protected $records = [];
     protected $rentalAmount = '0';
     protected $payeeRevenueConfig = [];
+    protected $revenuePayChannel = [];
 
     public function calculate(array $order)
     {
@@ -18,6 +19,7 @@ class RevenueCalculator
         $this->records = [];
         $this->rentalAmount = '0';
         $this->payeeRevenueConfig = [];
+        $this->revenuePayChannel = [];
         if (!$this->shouldCalculateRevenue()) {
             $this->clearPendingRecords();
             return true;
@@ -216,6 +218,8 @@ class RevenueCalculator
             'manager_name' => $account['manager_name'] ?? '',
             'account_type' => $account['account_type'] ?? '',
             'account' => $account['account'] ?? ($account['bill_account'] ?? ''),
+            'settlement_type' => intval($this->revenuePayChannel['settlement_type'] ?? 1) ?: 1,
+            'settlement_days' => max(0, intval($this->revenuePayChannel['settlement_days'] ?? 0)),
             'status' => 0,
         ], $data);
     }
@@ -259,17 +263,17 @@ class RevenueCalculator
             if (!$payee) return false;
             $payeeType = intval($payee['payee_type'] ?? 0);
         }
-        $channelEnabled = false;
-        if ($payType > 0 && Db::name('revenue_pay_channel')->where(['pay_type' => $payType, 'status' => 1])->find()) {
-            $channelEnabled = true;
+        $channel = null;
+        if ($payType > 0 && ($channel = Db::name('revenue_pay_channel')->where(['pay_type' => $payType, 'status' => 1])->find())) {
+            $this->revenuePayChannel = $channel;
         }
-        if (!$channelEnabled && $payeeType > 0 && Db::name('revenue_pay_channel')->where(['pay_type' => $payeeType, 'status' => 1])->find()) {
-            $channelEnabled = true;
+        if (!$channel && $payeeType > 0 && ($channel = Db::name('revenue_pay_channel')->where(['pay_type' => $payeeType, 'status' => 1])->find())) {
+            $this->revenuePayChannel = $channel;
         }
-        if (!$channelEnabled && $payeeType > 0 && Db::name('revenue_pay_channel')->where(['payee_type' => $payeeType, 'status' => 1])->find()) {
-            $channelEnabled = true;
+        if (!$channel && $payeeType > 0 && ($channel = Db::name('revenue_pay_channel')->where(['payee_type' => $payeeType, 'status' => 1])->find())) {
+            $this->revenuePayChannel = $channel;
         }
-        if (!$channelEnabled) return false;
+        if (!$channel) return false;
         $config = Db::name('revenue_payee_config')->where(['sp_id' => $spId, 'status' => 1])->find();
         if (!$config) {
             throw new \Exception("收款策略未配置新分账配置");

@@ -87,6 +87,8 @@ CREATE TABLE IF NOT EXISTS `revenue_pay_channel` (
   `pay_type` int NOT NULL COMMENT '订单支付类型',
   `payee_type` int DEFAULT NULL COMMENT '收款策略支付类型',
   `channel_name` varchar(50) DEFAULT NULL COMMENT '渠道名称',
+  `settlement_type` tinyint(1) DEFAULT 1 COMMENT '分账时间类型：1即时分账，2 T+N分账',
+  `settlement_days` int DEFAULT 0 COMMENT 'T+N分账天数，即时分账为0',
   `status` tinyint(1) DEFAULT 1 COMMENT '状态：1启用分账，2停用分账',
   `creator` int DEFAULT NULL,
   `create_time` int DEFAULT NULL,
@@ -146,6 +148,9 @@ CREATE TABLE IF NOT EXISTS `revenue_order` (
   `period_amount_before` decimal(12,2) DEFAULT 0.00 COMMENT '本单前周期累计营业额',
   `period_amount_after` decimal(12,2) DEFAULT 0.00 COMMENT '本单后周期累计营业额',
   `source` varchar(50) DEFAULT NULL COMMENT '来源：normal/rental/device_rule/tier',
+  `settlement_type` tinyint(1) DEFAULT 1 COMMENT '分账时间类型快照：1即时分账，2 T+N分账',
+  `settlement_days` int DEFAULT 0 COMMENT 'T+N分账天数快照',
+  `planned_revenue_time` int DEFAULT NULL COMMENT '计划结算时间',
   `status` tinyint(1) DEFAULT 0 COMMENT '状态：0待支付，1已结算，2待结算，3失败，4已取消',
   `revenue_time` int DEFAULT NULL COMMENT '结算时间',
   `create_time` int DEFAULT NULL,
@@ -156,6 +161,7 @@ CREATE TABLE IF NOT EXISTS `revenue_order` (
   KEY `idx_machine_period` (`m_id`, `period_key`),
   KEY `idx_manager_status` (`manager_id`, `status`),
   KEY `idx_receiver_status` (`receiver_ao_id`, `status`),
+  KEY `idx_planned_revenue` (`status`, `planned_revenue_time`),
   KEY `idx_rule_mode` (`rule_mode`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='新分账订单表';
 
@@ -169,9 +175,9 @@ CREATE TABLE IF NOT EXISTS `revenue_order` (
 --   );
 
 -- 可选初始化：配置需要参与新分账的收款渠道。未配置或停用的渠道不会生成 revenue_order。
--- INSERT INTO revenue_pay_channel (pay_type, payee_type, channel_name, status, creator, create_time, update_time)
+-- INSERT INTO revenue_pay_channel (pay_type, payee_type, channel_name, settlement_type, settlement_days, status, creator, create_time, update_time)
 -- VALUES
--- (1, 1, '微信支付', 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
--- (2, 2, '支付宝支付', 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
--- (4, 4, '京东收银', 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
--- (20, 20, '余额支付', 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP());
+-- (1, 1, '微信支付', 1, 0, 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
+-- (2, 2, '支付宝支付', 2, 1, 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
+-- (4, 4, '京东收银', 1, 0, 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
+-- (20, 20, '余额支付', 1, 0, 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP());

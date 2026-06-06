@@ -16,6 +16,7 @@ class RevenueOrder extends Common
             'rule_mode' => 'in',
             'source' => 'in',
             'status' => 'in',
+            'settlement_type' => 'in',
             'payer_ao_id' => 'in',
             'receiver_ao_id' => 'in',
             'manager_id' => 'in',
@@ -24,6 +25,7 @@ class RevenueOrder extends Common
             'machine_name' => 'like',
             'period_key' => 'like',
             'create_time' => 'between',
+            'planned_revenue_time' => 'between',
             'revenue_time' => 'between',
         ]);
         $pageNum = $postData['pageNum'] ?? 0;
@@ -54,6 +56,7 @@ class RevenueOrder extends Common
             'rule_mode' => 'in',
             'source' => 'in',
             'status' => 'in',
+            'settlement_type' => 'in',
             'payer_ao_id' => 'in',
             'receiver_ao_id' => 'in',
             'manager_id' => 'in',
@@ -62,6 +65,7 @@ class RevenueOrder extends Common
             'machine_name' => 'like',
             'period_key' => 'like',
             'create_time' => 'between',
+            'planned_revenue_time' => 'between',
             'revenue_time' => 'between',
         ]);
         return $this->app->revenueOrder->export($where);

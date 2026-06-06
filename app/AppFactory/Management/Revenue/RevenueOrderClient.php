@@ -50,8 +50,10 @@ class RevenueOrderClient extends ManagementClient
         foreach ($list as &$item) {
             $item['rule_mode_text'] = $this->getRuleModeText($item['rule_mode'] ?? 0);
             $item['status_text'] = $this->getStatusText($item['status'] ?? 0);
+            $item['settlement_type_text'] = $this->getSettlementTypeText($item['settlement_type'] ?? 1, $item['settlement_days'] ?? 0);
             $item['settle_amount'] = bcsub($item['income_amount'] ?? 0, $item['refund_amount'] ?? 0, 2);
             $item['create_time_text'] = !empty($item['create_time']) ? date('Y-m-d H:i:s', $item['create_time']) : '';
+            $item['planned_revenue_time_text'] = !empty($item['planned_revenue_time']) ? date('Y-m-d H:i:s', $item['planned_revenue_time']) : '';
             $item['revenue_time_text'] = !empty($item['revenue_time']) ? date('Y-m-d H:i:s', $item['revenue_time']) : '';
         }
         $title = [
@@ -75,8 +77,10 @@ class RevenueOrderClient extends ManagementClient
             'period_key' => '阶梯周期',
             'period_amount_before' => '本单前累计',
             'period_amount_after' => '本单后累计',
+            'settlement_type_text' => '分账时间',
             'status_text' => '状态',
             'create_time_text' => '创建时间',
+            'planned_revenue_time_text' => '计划结算时间',
             'revenue_time_text' => '结算时间',
         ];
         return $this->sendToExport("分账订单-报表", "分账订单-" . date("YmdHis"), $title, $list);
@@ -164,6 +168,11 @@ class RevenueOrderClient extends ManagementClient
     {
         $map = [0 => '待支付', 1 => '已结算', 2 => '待结算', 3 => '失败', 4 => '已取消'];
         return $map[intval($status)] ?? '未知';
+    }
+
+    protected function getSettlementTypeText($type, $days)
+    {
+        return intval($type) === 2 ? 'T+' . max(1, intval($days)) : '即时分账';
     }
 
     protected function applyMockPayFields($data)

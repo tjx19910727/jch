@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Support\Trip\Trip;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
+use app\AppFactory\Kernel\Service\Revenue\RevenueSettlementService;
 use think\facade\Db;
 
 trait AfterOrderPaymentTrait
@@ -227,39 +228,11 @@ trait AfterOrderPaymentTrait
      */
     protected function settlementRevenue($status = '')
     {
-        $flag[] = 1;
-        $where['order_id'] = $this->order['order_id'];
-        $revenue = Db::name('revenue_order')->where($where)->select()->toArray();
-        if ($revenue) {
-            foreach ($revenue as $key => $value) {
-                $currentStatus = intval($value['status'] ?? 0);
-                // 幂等：只处理待支付/待结算记录，避免支付取消或失败后的分账单被重新结算。
-                if (!in_array($currentStatus, [0, 2], true)) {
-                    continue;
-                }
-
-                $incomeAmount = (string) (is_numeric($value['income_amount'] ?? null) ? $value['income_amount'] : 0);
-                $refundAmount = (string) (is_numeric($value['refund_amount'] ?? null) ? $value['refund_amount'] : 0);
-                $settleableAmount = bcsub($incomeAmount, $refundAmount, 3);
-                if (bccomp($settleableAmount, '0', 3) < 0) {
-                    $settleableAmount = '0';
-                }
-
-                $update['status'] = $status ? intval($status) : 1;
-                $update['revenue_time'] = time();
-                $update['update_time'] = time();
-                if (($value['account_type'] ?? '') === 'balance' && bccomp($settleableAmount, '0', 3) > 0 && $update['status'] === 1) {
-                    $result = $this->incAuthManager(['manager_id' => $value['manager_id']], 'balance', $settleableAmount);
-                    actionLog($result, '增加账号余额结果');
-                    actionLog($this->getLS(), '增加账号余额SQL');
-                    $flag[] = $result;
-                }
-                $flag[] = Db::name('revenue_order')->where(['ro_id' => $value['ro_id']])->update($update);
-                actionLog($this->getLS(), '结算收益SQL');
-            }
-            actionLog($flag, '结算收益flag');
+        $service = new RevenueSettlementService();
+        if ($status) {
+            return $service->markPaymentFailed($this->order['order_id']);
         }
-        return flag_check($flag);
+        return $service->handlePaymentSuccess($this->order['order_id'], $this->order['pay_time'] ?? time());
     }
 
     /**

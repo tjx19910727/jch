@@ -50,12 +50,28 @@ class OfflineRevenueCalculator
         return $records;
     }
 
-    public function settle(array $records): array
+    public function settle(array $records, int $payTime = 1780000000): array
     {
         foreach ($records as &$record) {
             if (in_array((int)$record['status'], [0, 2], true)) {
+                if ((int)($record['settlement_type'] ?? 1) === 2) {
+                    $record['status'] = 2;
+                    $record['planned_revenue_time'] = strtotime('+' . max(1, (int)($record['settlement_days'] ?? 0)) . ' day', strtotime(date('Y-m-d 00:00:00', $payTime)));
+                    continue;
+                }
                 $record['status'] = 1;
                 $record['revenue_time'] = 1780000000;
+            }
+        }
+        return $records;
+    }
+
+    public function settleDue(array $records, int $now): array
+    {
+        foreach ($records as &$record) {
+            if ((int)$record['status'] === 2 && (int)($record['planned_revenue_time'] ?? 0) <= $now) {
+                $record['status'] = 1;
+                $record['revenue_time'] = $now;
             }
         }
         return $records;
@@ -187,6 +203,8 @@ class OfflineRevenueCalculator
             'account_type' => $account['account_type'],
             'account' => $account['account'],
             'status' => 0,
+            'settlement_type' => $order['settlement_type'] ?? 1,
+            'settlement_days' => $order['settlement_days'] ?? 0,
         ], $extra);
     }
 
@@ -405,6 +423,21 @@ $tests['支付取消：待支付分账单变为已取消'] = function () {
     ]));
     $records = $calc->cancel($records);
     assertEquals(4, $records[0]['status'], '支付取消后应为已取消');
+};
+
+$tests['T+1分账：支付成功后待结算，到期后结算'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $order = orderFixture(10008, 501, 60.0, [
+        ['sod_id' => 8, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 60.0, 'total_sod_price' => 60.0],
+    ]);
+    $order['settlement_type'] = 2;
+    $order['settlement_days'] = 1;
+    $payTime = strtotime('2026-06-06 12:00:00');
+    $records = $calc->settle($calc->calculate($order), $payTime);
+    assertEquals(2, $records[0]['status'], 'T+1支付成功后应为待结算');
+    assertEquals(strtotime('2026-06-07 00:00:00'), $records[0]['planned_revenue_time'], 'T+1计划结算时间应为次日零点');
+    $records = $calc->settleDue($records, strtotime('2026-06-07 00:01:00'));
+    assertEquals(1, $records[0]['status'], 'T+1到期后应为已结算');
 };
 
 $passed = 0;

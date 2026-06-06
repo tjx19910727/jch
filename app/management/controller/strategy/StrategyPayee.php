@@ -10,7 +10,6 @@ namespace app\management\controller\strategy;
 
 
 use app\management\controller\Common;
-use think\facade\Db;
 
 class StrategyPayee extends Common
 {
@@ -47,25 +46,7 @@ class StrategyPayee extends Common
         $checkContent = $this->checkContent($postData);
         if ($checkContent !== true) return $checkContent;
         if (!isset($postData['ao_id'])) $postData['ao_id'] = $this->manager['ao_id'];
-        $revenueConfig = $this->pickRevenueConfig($postData);
-        Db::startTrans();
-        try {
-            $spId = $this->app->strategyPayee->add($postData, 0);
-            if ($spId && $revenueConfig) {
-                $revenueConfig['sp_id'] = $spId;
-                $saveConfig = $this->app->revenuePayeeConfig->saveByPayee($revenueConfig);
-                if (isset($saveConfig['code']) && intval($saveConfig['code']) !== 200) {
-                    Db::rollback();
-                    return $saveConfig;
-                }
-            }
-            Db::commit();
-            return $this->app->strategyPayee->rA($spId);
-        } catch (\Exception $e) {
-            Db::rollback();
-            actionException($e,1);
-            return returnTryCatch($e->getMessage());
-        }
+        return $this->app->strategyPayee->add($postData);
     }
 
     /**
@@ -80,22 +61,9 @@ class StrategyPayee extends Common
             $checkContent = $this->checkContent($postData);
             if ($checkContent !== true) return $checkContent;
         }
-        $revenueConfig = $this->pickRevenueConfig($postData);
-        Db::startTrans();
         try {
-            $result = $this->app->strategyPayee->update($postData, [], [], 0);
-            if ($result && $revenueConfig) {
-                $revenueConfig['sp_id'] = $postData['sp_id'];
-                $saveConfig = $this->app->revenuePayeeConfig->saveByPayee($revenueConfig);
-                if (isset($saveConfig['code']) && intval($saveConfig['code']) !== 200) {
-                    Db::rollback();
-                    return $saveConfig;
-                }
-            }
-            Db::commit();
-            return $this->app->strategyPayee->rU($result);
+            return $this->app->strategyPayee->update($postData);
         } catch (\Exception $e) {
-            Db::rollback();
             actionException($e,1);
             return returnTryCatch($e->getMessage());
         }
@@ -110,7 +78,7 @@ class StrategyPayee extends Common
         $postData = input();
         $where = $this->getWhere($postData,false,['app_id' => "like"]);
         $pageNum = $postData['pageNum'] ?? 0;
-        $field = "sp_id,sp_name,title,payee_type,app_id,mch_id,content,ico,status,ao_id,create_time,update_time";
+        $field = "sp_id,sp_name,title,payee_type,app_id,mch_id,content,ico,status,create_time,update_time";
         return $this->app->strategyPayee->getList($where,$pageNum,$field,"sp_id desc");
     }
 
@@ -156,38 +124,5 @@ class StrategyPayee extends Common
         $postData = input();
         $where = $this->getWhere($postData,false,['app_id' => "like"]);
         return $this->app->strategyPayee->exportPayee($where);
-    }
-
-    protected function pickRevenueConfig(&$postData)
-    {
-        $keys = ['default_ra_id', 'default_manager_id', 'enable_revenue'];
-        $hasConfig = false;
-        $config = [];
-        foreach ($keys as $key) {
-            if (array_key_exists($key, $postData)) {
-                $hasConfig = true;
-                $config[$key] = $postData[$key];
-                unset($postData[$key]);
-            }
-        }
-        if (!$hasConfig) return [];
-        if (isset($postData['payee_type'])) $config['payee_type'] = $postData['payee_type'];
-        if (isset($postData['ao_id'])) $config['ao_id'] = $postData['ao_id'];
-        if (!isset($config['enable_revenue'])) $config['enable_revenue'] = 1;
-        return $config;
-    }
-
-    public function saveRevenueConfig()
-    {
-        $postData = input();
-        if (empty($postData['sp_id'])) return returnState(100, '收款策略ID不能为空');
-        return $this->app->revenuePayeeConfig->saveByPayee($postData);
-    }
-
-    public function getRevenueConfig()
-    {
-        $spId = input('sp_id');
-        if (!$spId) return returnState(100, '收款策略ID不能为空');
-        return $this->app->revenuePayeeConfig->getFind(['sp_id' => $spId]);
     }
 }
