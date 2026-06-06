@@ -179,10 +179,24 @@ trait SaleOrdersTrait
 
         $detailsMap = [];
         $details = SaleOrdersDetailsModel::whereIn('order_id', $orderIds)->select();
+        $detailOrganizationIds = [];
         foreach ($details as $detail) {
             $detail['cost_price'] = round($detail['cost_price'], 2);
             $detail['retail_price'] = round($detail['retail_price'], 2);
             $detail['total_sod_price'] = round($detail['total_sod_price'], 2);
+            if (intval($detail['ao_id'] ?? 0) > 0) {
+                $detailOrganizationIds[] = intval($detail['ao_id']);
+            }
+        }
+        $detailOrganizationMap = [];
+        $detailOrganizationIds = array_values(array_unique($detailOrganizationIds));
+        if ($detailOrganizationIds) {
+            $detailOrganizationMap = Db::name('auth_organization')
+                ->whereIn('ao_id', $detailOrganizationIds)
+                ->column('organization_name', 'ao_id');
+        }
+        foreach ($details as $detail) {
+            $detail['organization_name'] = $detailOrganizationMap[intval($detail['ao_id'] ?? 0)] ?? null;
             $detailsMap[intval($detail['order_id'])][] = $detail;
         }
 
