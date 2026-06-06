@@ -12,6 +12,11 @@ namespace app\AppFactory\Kernel\Traits\SaleOrders;
 
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelNightlyModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersUnclaimedModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\Machine\MachineLevelDescModel;
 use app\AppFactory\Kernel\Support\Validate\Api\VV2;
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 use app\AppFactory\Kernel\Model\Auth\AuthOrgMachineChannelModel;
@@ -142,23 +147,111 @@ trait SaleOrdersTrait
     {
         $data = SaleOrdersModel::getListAndWith($where, $pageNum, $field, $order, $eachFn, $group, $limit, $with);
         actionLog($this->getLS(), '【SQL】订单列表主查询', 'sale_orders');
-        if ($pageNum)
-            $data = $data->each(function ($item) {
-                $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
-                if ($item['has_hotel'] == 1) {
-                    $item['hotel'] = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
-                    $item['hotel']['nightly'] = $this->getSaleHotelNightlyList(['sh_id' => $item['hotel']['sh_id']]);
-                    $item['retail_price'] = bcadd($item['retail_price'], $item['hotel']['pay_amount'], 2);
-                }
-                if ($item['out_status'] == 6) {
-                    $unclaimed = $this->getSaleOrdersUnclaimedList(['order_id' => $item['order_id']], 0, 'sod_id,g_name,channel_code,is_match,is_claim,is_out,is_close');
-                    if ($unclaimed) {
-                        $item['unclaimed_status'] = $unclaimed->toArray();
-                    }
-                }
-                return $item;
-            });
+        if ($pageNum) {
+            $data = $this->appendSaleOrderListRelations($data);
+        }
         return $data;
+    }
+
+    /**
+     * 批量装配订单列表关联数据，避免分页列表逐订单查询。
+     * @param \think\Paginator|\think\Collection $data
+     * @return \think\Paginator|\think\Collection
+     */
+    protected function appendSaleOrderListRelations($data)
+    {
+        $orderIds = [];
+        $hotelOrderIds = [];
+        $unclaimedOrderIds = [];
+        $machineIds = [];
+        $machineLevels = [];
+        foreach ($data as $item) {
+            $orderId = intval($item['order_id'] ?? 0);
+            if (!$orderId) continue;
+            $orderIds[] = $orderId;
+            if (intval($item['has_hotel'] ?? 0) === 1) $hotelOrderIds[] = $orderId;
+            if (intval($item['out_status'] ?? 0) === 6) $unclaimedOrderIds[] = $orderId;
+            if (intval($item['m_id'] ?? 0) > 0) $machineIds[] = intval($item['m_id']);
+            if (intval($item['machine_level'] ?? 0) > 0) $machineLevels[] = intval($item['machine_level']);
+        }
+        $orderIds = array_values(array_unique($orderIds));
+        if (!$orderIds) return $data;
+
+        $detailsMap = [];
+        $details = SaleOrdersDetailsModel::whereIn('order_id', $orderIds)->select();
+        foreach ($details as $detail) {
+            $detail['cost_price'] = round($detail['cost_price'], 2);
+            $detail['retail_price'] = round($detail['retail_price'], 2);
+            $detail['total_sod_price'] = round($detail['total_sod_price'], 2);
+            $detailsMap[intval($detail['order_id'])][] = $detail;
+        }
+
+        $hotelMap = [];
+        $nightlyMap = [];
+        if ($hotelOrderIds) {
+            $hotels = SaleHotelModel::whereIn('order_id', array_values(array_unique($hotelOrderIds)))->select();
+            $hotelIds = [];
+            foreach ($hotels as $hotel) {
+                $hotelMap[intval($hotel['order_id'])] = $hotel;
+                $hotelIds[] = intval($hotel['sh_id']);
+            }
+            if ($hotelIds) {
+                $nightlies = SaleHotelNightlyModel::whereIn('sh_id', array_values(array_unique($hotelIds)))->select();
+                foreach ($nightlies as $nightly) {
+                    $nightlyMap[intval($nightly['sh_id'])][] = $nightly;
+                }
+            }
+        }
+
+        $unclaimedMap = [];
+        if ($unclaimedOrderIds) {
+            $unclaimedList = SaleOrdersUnclaimedModel::whereIn('order_id', array_values(array_unique($unclaimedOrderIds)))
+                ->field('sod_id,order_id,g_name,channel_code,is_match,is_claim,is_out,is_close')
+                ->order('su_id desc')
+                ->select();
+            foreach ($unclaimedList as $unclaimed) {
+                $unclaimedMap[intval($unclaimed['order_id'])][] = $unclaimed;
+            }
+        }
+
+        $machineLevelByMachine = [];
+        if ($machineIds) {
+            $machineLevelByMachine = MachineModel::whereIn('m_id', array_values(array_unique($machineIds)))
+                ->column('machine_level', 'm_id');
+            $machineLevels = array_merge($machineLevels, array_map('intval', array_values($machineLevelByMachine)));
+        }
+        $machineLevelDescMap = [];
+        $machineLevels = array_values(array_unique(array_filter($machineLevels)));
+        if ($machineLevels) {
+            $machineLevelDescMap = MachineLevelDescModel::whereIn('machine_level', $machineLevels)
+                ->column('name', 'machine_level');
+        }
+
+        return $data->each(function ($item) use ($detailsMap, $hotelMap, $nightlyMap, $unclaimedMap, $machineLevelByMachine, $machineLevelDescMap) {
+            $orderId = intval($item['order_id']);
+            $item['details'] = $detailsMap[$orderId] ?? [];
+            $machineLevel = intval($item['machine_level'] ?? 0);
+            if (!$machineLevel) {
+                $machineLevel = intval($machineLevelByMachine[intval($item['m_id'] ?? 0)] ?? 0);
+                $item['machine_level'] = $machineLevel;
+            }
+            $item['machine_level_desc'] = $machineLevelDescMap[$machineLevel] ?? '';
+            if (intval($item['has_hotel'] ?? 0) === 1) {
+                $hotel = $hotelMap[$orderId] ?? null;
+                if ($hotel) {
+                    $hotel['nightly'] = $nightlyMap[intval($hotel['sh_id'])] ?? [];
+                    $item['hotel'] = $hotel;
+                    $item['retail_price'] = bcadd((string)$item['retail_price'], (string)$hotel['pay_amount'], 2);
+                } else {
+                    $item['hotel'] = [];
+                }
+            }
+            if (intval($item['out_status'] ?? 0) === 6 && isset($unclaimedMap[$orderId])) {
+                $item['unclaimed_status'] = $unclaimedMap[$orderId];
+            }
+            unset($item['m_id']);
+            return $item;
+        });
     }
 
     /**

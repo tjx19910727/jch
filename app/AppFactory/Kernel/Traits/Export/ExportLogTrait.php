@@ -127,7 +127,12 @@ trait ExportLogTrait
                 "list" => $list,
                 "otherData" => $otherData,
             ];
-            actionLog($data,'导出的数据');
+            actionLog([
+                'export_id' => $export_id,
+                'filename' => $filename,
+                'title_count' => count($title),
+                'row_count' => count($list),
+            ], '导出任务摘要');
             $result = MqProducer::export($data);
             if ($result != "OK") {
                 $this->updateExportLog(['export_id' => $export_id,'status' => 4]);
