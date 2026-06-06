@@ -104,7 +104,7 @@ class SaleOrdersClient extends ManagementClient
                     if ($mIds) $where[] = ['m_id', 'in', $mIds];
                 }
             }
-            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, $supplier, '', 0, ['machineData','machineData.machineLevelData'])->toArray();
+            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order)->toArray();
             return $this->r(200, $this->lang("query_success"), $data);
         } catch (\Exception $e) {
             actionException($e, 1);
@@ -121,7 +121,7 @@ class SaleOrdersClient extends ManagementClient
                 if (!$orderIds) $orderIds = [0];
                 $where[] = ['order_id', 'in', $orderIds];
             }
-            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, '', '', 0, ['machineData','machineData.machineLevelData'])->toArray();
+            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order)->toArray();
 
             if ($detailAoId) {
                 $data = $this->filterSaleOrdersByDetailAoId($data, $detailAoId, $pageNum);
@@ -641,7 +641,7 @@ class SaleOrdersClient extends ManagementClient
         $where['raw'] = "pay_status in ('3', '7')";
         $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
         $refundCostPriceField = $hasCostPriceAuth ? 'so.cost_price' : '0 cost_price';
-        $field = 'order_id,machine_id,machine_name,machine_level,pay_status,trade_no,mch_no,total_quantity,total_price,total_cost_points,total_points,discount_price,retail_price,factory,inventory_location,
+        $field = 'order_id,m_id,machine_id,machine_name,machine_level,pay_status,trade_no,mch_no,total_quantity,total_price,total_cost_points,total_points,discount_price,retail_price,factory,inventory_location,
             (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name,
                 (CASE order_type
                     WHEN 1 THEN "普通订单"
@@ -692,7 +692,7 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
                 FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time,' . $costPriceField;
-        $list = $this->getSaleOrdersList($where, 0, $field, '', '', '', 0, ['machineData','machineData.machineLevelData']);
+        $list = $this->getSaleOrdersList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
             $postData = input();
@@ -729,7 +729,7 @@ class SaleOrdersClient extends ManagementClient
                 $whereRefund[] = ['so.pay_time','between',[$pay_time1,$pay_time2]];
             }
 
-            $refundField = 'sor.order_id,sor.machine_id,sor.machine_name,COALESCE(so.machine_level,(SELECT m.machine_level FROM machine m WHERE m.m_id = so.m_id)) machine_level,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
+            $refundField = 'sor.order_id,so.m_id,sor.machine_id,sor.machine_name,so.machine_level,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
             (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = so.ao_id) organization_name,
             sor.refund_quantity total_quantity,
              (0-sor.refund_amount) total_price,("-") total_cost_points,("-") total_points,("-") discount_price,("-") retail_price,
@@ -769,7 +769,18 @@ class SaleOrdersClient extends ManagementClient
                 FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time,' . $refundCostPriceField;
             $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, $refundField, 'sor.update_time asc');
             if ($refund) $list = array_merge($list, $refund->toArray());
-            // 补充 machine_level_desc 字段
+            // 批量补充缺失的设备等级与等级名称，避免导出查询逐行执行子查询。
+            $machineIds = array_values(array_unique(array_filter(array_map(function($it){ return intval($it['m_id'] ?? 0); }, $list))));
+            $machineLevelByMachine = [];
+            if ($machineIds) {
+                $machineLevelByMachine = \app\AppFactory\Kernel\Model\Machine\MachineModel::whereIn('m_id', $machineIds)
+                    ->column('machine_level', 'm_id');
+            }
+            foreach ($list as $k => $item) {
+                if (empty($item['machine_level'])) {
+                    $list[$k]['machine_level'] = intval($machineLevelByMachine[intval($item['m_id'] ?? 0)] ?? 0);
+                }
+            }
             $machineLevels = array_values(array_unique(array_filter(array_map(function($it){ return isset($it['machine_level']) ? $it['machine_level'] : null; }, $list))));
             $machineLevelMap = [];
             if ($machineLevels) {

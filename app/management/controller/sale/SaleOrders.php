@@ -36,9 +36,10 @@ class SaleOrders extends Common
 
         $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in","pay_channel" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
         $where['raw'] = "pay_status in ('3', '7')";
-        if($this->authMchCannel()['status'] != 0){
+        $authMch = $this->authMchCannel();
+        if($authMch['status'] != 0){
             $orderIds = Db::name('sale_orders_details')
-            ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
+            ->whereIn('mc_id', $authMch['data']['mc_id'])
             ->field('order_id')
             ->select();
 
@@ -58,8 +59,7 @@ class SaleOrders extends Common
         $hasCostPriceAuth = $this->hasCostPriceAuth();
 
         $costPriceField = $hasCostPriceAuth ? "cost_price" : "0 cost_price";
-        $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,pay_channel,pay_channel_name,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,a.machine_id,COALESCE(a.machine_level,(SELECT m.machine_level FROM machine m WHERE m.m_id = a.m_id)) machine_level,
-        COALESCE((SELECT name FROM machine_level_desc mld WHERE mld.machine_level = a.machine_level),(SELECT name FROM machine_level_desc mld2 WHERE mld2.machine_level = (SELECT m.machine_level FROM machine m WHERE m.m_id = a.m_id))) machine_level_desc,
+        $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,pay_channel,pay_channel_name,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,a.m_id,a.machine_id,a.machine_level,
         factory,inventory_location,has_hotel,refund_status,(total_price - refund_amount) total_price, (total_cost_points - refund_cost_points) total_cost_points, pay_code, mobile,{$costPriceField}";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         if (isset($postData['supplier']) && $postData['supplier']) unset($where['ao_id']);
@@ -288,6 +288,7 @@ class SaleOrders extends Common
     {
         $postData = input();
         $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $machineIds = [];
         $channelCode = trim((string)($postData['channel_code'] ?? ''));
         unset($postData['channel_code']);
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
