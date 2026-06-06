@@ -697,6 +697,9 @@ class SaleOrdersClient extends ManagementClient
             $list = $list->toArray();
             $postData = input();
             $whereRefund['status'] = 2;
+            $exportOrderIds = array_values(array_unique(array_filter(array_map(function ($item) {
+                return intval($item['order_id'] ?? 0);
+            }, $list))));
             if ($mIds) $whereRefund[] = ['sor.m_id', 'in', $mIds];
             if (isset($postData['m_id']) && $postData['m_id']) {
                 $whereRefund['sor.m_id'] = $postData["m_id"];
@@ -767,8 +770,16 @@ class SaleOrdersClient extends ManagementClient
                 WHEN 8 THEN "八达通COGOLINK" 
                 WHEN 0 THEN "免支付" END) pay_type,
                 FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time,' . $refundCostPriceField;
-            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, $refundField, 'sor.update_time asc');
-            if ($refund) $list = array_merge($list, $refund->toArray());
+            foreach (array_chunk($exportOrderIds ?: [0], 1000) as $orderIdChunk) {
+                $chunkWhereRefund = $whereRefund;
+                $chunkWhereRefund[] = ['sor.order_id', 'in', $orderIdChunk];
+                $refund = $this->getSaleOrdersRefundListJoinSo($chunkWhereRefund, 0, $refundField, 'sor.update_time asc');
+                if ($refund) {
+                    foreach ($refund->toArray() as $refundItem) {
+                        $list[] = $refundItem;
+                    }
+                }
+            }
             // 批量补充缺失的设备等级与等级名称，避免导出查询逐行执行子查询。
             $machineIds = array_values(array_unique(array_filter(array_map(function($it){ return intval($it['m_id'] ?? 0); }, $list))));
             $machineLevelByMachine = [];
@@ -790,6 +801,7 @@ class SaleOrdersClient extends ManagementClient
             foreach ($list as $k => $item) {
                 $ml = $item['machine_level'] ?? null;
                 $list[$k]['machine_level_desc'] = $ml && isset($machineLevelMap[$ml]) ? $machineLevelMap[$ml] : '';
+                unset($list[$k]['m_id'], $list[$k]['machine_level']);
             }
 
             $title = [
