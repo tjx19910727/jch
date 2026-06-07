@@ -22,6 +22,7 @@ class MachineOnOffClient extends ManagementClient
     {
         $flag = [];
         $mIds = explode(",",$postData['m_id']);
+        actionLog($postData, '添加或修改的开关机数据日志数据');
         unset($postData['m_id']);
         if ($mIds) {
             foreach ($mIds as $m_id) {
@@ -32,10 +33,11 @@ class MachineOnOffClient extends ManagementClient
                     $check = $check->toArray();
                     $update = array_merge($check,$postData);
                     if($check['ao_id'] == 0) $update["ao_id"] = $this->manager['ao_id'];
-                    $result = $this->updateMachineOnOff($update);
+                    //$result = $this->updateMachineOnOff($update);
+                    $result = 0;
                     $flag[] = $result;
                     if ($result) {
-                        $this->sendToMachine(['machine_id' => $check['machine_id']], 'updateMachineOnOff');
+                        //$this->sendToMachine(['machine_id' => $check['machine_id']], 'updateMachineOnOff');
                     }
 //                    return $this->rFail($check['machine_id'] . ": " . $this->lang("VMachineOnOff.is_exists"));
                 } else {
@@ -44,10 +46,11 @@ class MachineOnOffClient extends ManagementClient
                     $machine = $machine->toArray();
                     $insert = array_merge($postData, $machine);
                     $insert["ao_id"] = $this->manager['ao_id'];
-                    $addOf = $this->addMachineOnOff($insert);
+                    //$addOf = $this->addMachineOnOff($insert);
+                    $addOf = 0;
                     if ($addOf) {
                         $flag[] = 1;
-                        $this->sendToMachine(['machine_id' => $machine['machine_id']], 'updateMachineOnOff');
+                        //$this->sendToMachine(['machine_id' => $machine['machine_id']], 'updateMachineOnOff');
                     }
                 }
             }
