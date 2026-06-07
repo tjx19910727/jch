@@ -274,6 +274,7 @@ class MachineClient extends ManagementClient
                 }
                 if(is_array($machineOnOff['on_off_machine'])){
                     foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
+                        $day = strval($day);
                         if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
                             continue;
                         }
@@ -290,7 +291,7 @@ class MachineClient extends ManagementClient
                             $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
                         }
                     }
-                    $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE);
+                    $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE | JSON_FORCE_OBJECT);
                 }
             }
             $item['machine_on_off'] = $machineOnOff;
