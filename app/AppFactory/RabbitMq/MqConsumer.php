@@ -197,8 +197,13 @@ class MqConsumer
         try {
             $data = $message->body;
             $data = json2arr($data);
-            actionLog($data, '消息处理', "export_message");
             $jobType = $data['job_type'] ?? 'export';
+            actionLog([
+                'job_type' => $jobType,
+                'export_id' => $data['export_id'] ?? 0,
+                'filename' => $data['filename'] ?? '',
+                'row_count' => isset($data['list']) && is_array($data['list']) ? count($data['list']) : 0,
+            ], '消息处理摘要', "export_message");
 
             if ($jobType == 'wc_goods_sync') {
                 $app = AppFactory::management();

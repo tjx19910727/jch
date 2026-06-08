@@ -17,6 +17,8 @@ class BaseModel extends Model
 {
     use ModelTrait;
 
+    protected static $tableFieldsCache = [];
+
     protected $createTime = "create_time";
     protected $updateTime = "update_time";
 
@@ -175,7 +177,7 @@ class BaseModel extends Model
             if(isset($where['ao_id']) && $where['ao_id'] < 2){
                 unset($where['ao_id']);
             }
-            $fields = array_column(Db::query("SHOW COLUMNS FROM " . self::getTable()), 'Field');
+            $fields = self::getCachedTableFields();
             if (in_array('creator', $fields) && (strpos($field,"*") !== false || strpos($field, "creator") !== false)) {
                 $field .= ", (SELECT nickname FROM auth_manager au WHERE au.manager_id = a.creator) creator_nickname";
             }
@@ -276,7 +278,7 @@ class BaseModel extends Model
             if(isset($where['ao_id']) && $where['ao_id'] < 2){
                 unset($where['ao_id']);
             }
-            $fields = array_column(Db::query("SHOW COLUMNS FROM " . self::getTable()), 'Field');
+            $fields = self::getCachedTableFields();
             if (in_array('creator', $fields) && (strpos($field,"*") !== false || strpos($field, "creator") !== false)) {
                 $field .= ", (SELECT nickname FROM auth_manager au WHERE au.manager_id = a.creator) creator_nickname";
             }
@@ -316,5 +318,14 @@ class BaseModel extends Model
                 $model = $model->each($eachFn);
             }
             return $model;
+    }
+
+    protected static function getCachedTableFields()
+    {
+        $table = self::getTable();
+        if (!isset(self::$tableFieldsCache[$table])) {
+            self::$tableFieldsCache[$table] = array_column(Db::query("SHOW COLUMNS FROM " . $table), 'Field');
+        }
+        return self::$tableFieldsCache[$table];
     }
 }
