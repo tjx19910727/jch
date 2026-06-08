@@ -33,13 +33,21 @@ class SimCardInfoClient extends ManagementClient
 
     public function getMachineListData($where, $pageNum = 0, $field = "a.*", $order = "a.id desc")
     {
-        $list = $this->getSimCardMachineListJoinMachine($where, $pageNum, $field, $order);
+        $list = $this->getSimCardMachineListJoinMachine($where, $pageNum, $field, $order,function (&$item){
+            if (isset($item['machine_usage'])) {
+                $item['machine_usage'] = bcdiv($item['machine_usage'], '1024', 0);
+            }
+        });
         return $this->rQ($list);
     }
 
     public function getMachineFindData($where, $field = "*")
     {
         $data = $this->getSimCardMachineFind($where, $field);
+        //除于1024
+        if (isset($data['machine_usage'])) {
+            $data['machine_usage'] = bcdiv($data['machine_usage'], '1024', 0);
+        }
         return $this->rQ($data);
     }
 
