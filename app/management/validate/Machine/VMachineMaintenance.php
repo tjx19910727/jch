@@ -38,6 +38,7 @@ class VMachineMaintenance extends VCommon
     protected $scene = [
         'add' => ['item_name', 'parent_id', 'cycle_days', 'description', 'sort_order', 'is_active'],
         'update' => ['id', 'item_name', 'parent_id', 'cycle_days', 'description', 'sort_order', 'is_active'],
+        'setActive' => ['id', 'is_active'],
         'del' => ['id'],
     ];
 }

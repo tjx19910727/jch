@@ -35,6 +35,6 @@ class VMachineCheckList extends VCommon
     protected $scene = [
         'add' => ['item_name', 'parent_id', 'description', 'sort_order', 'is_active'],
         'update' => ['id', 'item_name', 'parent_id', 'description', 'sort_order', 'is_active'],
-        'del' => ['id'],
+        'setActive' => ['id', 'is_active'],
     ];
 }
