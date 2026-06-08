@@ -192,8 +192,7 @@ class MqConsumer
      */
     public function export_message(AMQPMessage $message)
     {
-        //手动发送ack
-        $message->ack($message->getDeliveryTag());
+        $data = [];
         try {
             $data = $message->body;
             $data = json2arr($data);
@@ -229,13 +228,26 @@ class MqConsumer
                     $resultLog = json2arr($result->getContent());
                 }
                 actionLog($resultLog, '微程同步处理结果', "export_message_syncAll");
+            } elseif ($jobType == 'sale_orders_export') {
+                $app = AppFactory::timeTask();
+                if (!$app->export->makeSaleOrdersExcel($data)) {
+                    throw new \RuntimeException('销售订单导出Excel生成失败');
+                }
             } else {
                 $app = AppFactory::timeTask();
-                $app->export->makeExcel($data);
+                if (!$app->export->makeExcel($data)) {
+                    throw new \RuntimeException('导出Excel生成失败');
+                }
             }
-        } catch (\Exception $e) {
+            $message->ack($message->getDeliveryTag());
+        } catch (\Throwable $e) {
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"export_message");
             actionLog($e->getTrace(), 'tryCatchTrace',"export_message");
+            $exportId = is_array($data) ? intval($data['export_id'] ?? 0) : 0;
+            if ($exportId) {
+                AppFactory::timeTask()->export->updateExportLog(['export_id' => $exportId, 'status' => 4]);
+            }
+            $message->ack($message->getDeliveryTag());
         }
     }
 }
