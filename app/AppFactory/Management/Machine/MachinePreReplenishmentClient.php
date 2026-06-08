@@ -27,16 +27,19 @@ class MachinePreReplenishmentClient extends ManagementClient
             return returnState(4001, '参数错误: machine_ids不能为空');
         }
 
-        // 编辑场景：传入 order_id，需要把该单下已有的货道也包含进来
+        // 编辑场景：传入 order_id，需要把该单下已有的货道也包含进来，并返回 plan_quantity
         $orderId = $postData['order_id'] ?? 0;
         $orderMcIds = [];
+        $orderPlanQtyMap = [];
         if ($orderId) {
             $orderDetails = PreReplenishmentDetailModel::where(['order_id' => $orderId])
-                ->field('m_id,machine_id,mc_id')
+                ->field('m_id,machine_id,mc_id,plan_quantity')
                 ->select()
                 ->toArray();
             foreach ($orderDetails as $d) {
-                $orderMcIds[$d['m_id'] . '_' . $d['mc_id']] = true;
+                $mcKey = $d['m_id'] . '_' . $d['mc_id'];
+                $orderMcIds[$mcKey] = true;
+                $orderPlanQtyMap[$mcKey] = (int)$d['plan_quantity'];
             }
         }
 
@@ -78,6 +81,7 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'before_stock' => $channel['stock'],
                 'capacity' => $channel['capacity'],
                 'available_stock' => $availableStock,
+                'plan_quantity' => $orderPlanQtyMap[$mcKey] ?? 0,
             ];
         }
 
