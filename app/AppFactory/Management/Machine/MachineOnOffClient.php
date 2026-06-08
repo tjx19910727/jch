@@ -13,6 +13,8 @@ use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Cache;
+use think\facade\Db;
 
 class MachineOnOffClient extends ManagementClient
 {
@@ -52,6 +54,24 @@ class MachineOnOffClient extends ManagementClient
                         $flag[] = 1;
                         //$this->sendToMachine(['machine_id' => $machine['machine_id']], 'updateMachineOnOff');
                     }
+                }
+            }
+        }
+        //执行批量操作，给之前被覆盖的设备发送mq
+        if(!empty($postData['is_admin']) && $postData['is_admin'] == 'aaa_x6964455a'){
+            //查询所有在营且在线设备的machine_id
+            $machineIds = Db::name('machine')->where('online',1)->column('machine_id');
+            //$machineIds = $this->app->machine->getColumn(['status' => 1, 'online_status' => 1], 'machine_id');
+            if($machineIds){
+                actionLog($machineIds, '批量操作后需要发送mq的设备machine_id');
+                $cachePrefix = 'batch_update_on_off_mq:';
+                foreach ($machineIds as $machineId) {
+                    $cacheKey = $cachePrefix . $machineId;
+                    if (Cache::get($cacheKey)) {
+                        continue;
+                    }
+                    $this->sendToMachine(['machine_id' => $machineId], 'updateMachineOnOff');
+                    Cache::set($cacheKey, 1, 300);
                 }
             }
         }

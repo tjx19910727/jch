@@ -164,7 +164,10 @@ class Common extends AuthController
                 if (isset($where['ao_id'])) unset($where['ao_id']);
             }
             //添加一套逻辑， 如果登录账号为组织的管理员账号 此时查询内容为它的所以下级的数据集合
-            if ($this->manager['ao_id'] > 18 && $this->manager['level'] == 3 && $this->currentMenu['url'] == "/management/sale.sale_orders/getList") {
+            if ($this->manager['ao_id'] > 18 && $this->manager['level'] == 3 && in_array($this->currentMenu['url'], [
+                "/management/sale.sale_orders/getList",
+                "/management/sale.sale_orders/export",
+            ], true)) {
                 $childs = $this->getChildsAoIds($this->manager['ao_id']);
                 if (isset($where['ao_id'])) {
                     unset($where['ao_id']);
@@ -379,6 +382,10 @@ class Common extends AuthController
 
         if (validateDate($left, 'Y-m-d') && validateDate($right, 'Y-m-d')) {
             $where[] = [$prefix . $key, 'between', [strtotime($left . ' 00:00:00'), strtotime($right . ' 23:59:59')]];
+        }
+
+        if (validateDate($left, 'Y-m-d H:i:s') && validateDate($right, 'Y-m-d H:i:s')) {
+            $where[] = [$prefix . $key, 'between', [strtotime($left), strtotime($right)]];
         }
 
         if ((validateDate($left, 'H:i:s') && validateDate($right, 'H:i:s')) ||

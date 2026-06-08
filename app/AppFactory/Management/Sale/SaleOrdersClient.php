@@ -104,7 +104,7 @@ class SaleOrdersClient extends ManagementClient
                     if ($mIds) $where[] = ['m_id', 'in', $mIds];
                 }
             }
-            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, $supplier, '', 0, ['machineData','machineData.machineLevelData'])->toArray();
+            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order)->toArray();
             return $this->r(200, $this->lang("query_success"), $data);
         } catch (\Exception $e) {
             actionException($e, 1);
@@ -121,7 +121,7 @@ class SaleOrdersClient extends ManagementClient
                 if (!$orderIds) $orderIds = [0];
                 $where[] = ['order_id', 'in', $orderIds];
             }
-            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order, '', '', 0, ['machineData','machineData.machineLevelData'])->toArray();
+            $data = $this->getSaleOrdersList($where, $pageNum, $field, $order)->toArray();
 
             if ($detailAoId) {
                 $data = $this->filterSaleOrdersByDetailAoId($data, $detailAoId, $pageNum);
@@ -639,148 +639,11 @@ class SaleOrdersClient extends ManagementClient
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
         $where['raw'] = "pay_status in ('3', '7')";
-        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
-        $refundCostPriceField = $hasCostPriceAuth ? 'so.cost_price' : '0 cost_price';
-        $field = 'order_id,machine_id,machine_name,machine_level,pay_status,trade_no,mch_no,total_quantity,total_price,total_cost_points,total_points,discount_price,retail_price,factory,inventory_location,
-            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name,
-                (CASE order_type
-                    WHEN 1 THEN "普通订单"
-                    WHEN 2 THEN "优惠券订单"
-                    WHEN 3 THEN "取货码订单"
-                    WHEN 4 THEN "盲盒活动"
-                    WHEN 5 THEN "满减满送活动"
-                    WHEN 6 THEN "叠加营销活动"
-                    END
-                ) order_type,
-                IFNULL(NULLIF(pay_channel_name,""),(CASE pay_channel
-                    WHEN 1 THEN "微程小程序订单"
-                    WHEN 2 THEN "机械车小程序订单"
-                    WHEN 3 THEN "售卖机会员积分订单"
-                    WHEN 4 THEN "商场积分订单"
-                    WHEN 5 THEN "取货码订单"
-                    WHEN 6 THEN "余额支付订单"
-                    WHEN 7 THEN "微信支付"
-                    WHEN 8 THEN "支付宝支付"
-                    WHEN 9 THEN "POS/刷卡支付"
-                    WHEN 10 THEN "现金支付"
-                    WHEN 11 THEN "其他"
-                    ELSE "其他" END)) pay_channel,
-                (CASE out_status
-                    WHEN 1 THEN
-                        "正常"
-                    WHEN 2 THEN
-                        "已发出货命令"
-                    WHEN 3 THEN
-                        "设备已接收"
-                    WHEN 4 THEN
-                        (CASE refund_status WHEN 1 THEN "正常" WHEN 2 THEN "已退款" WHEN 3 THEN "退款失败" END)
-                    WHEN 5 THEN
-                        "出货失败"
-                    WHEN 6 THEN
-                        "未取商品"
-                    END
-                ) refund_status,
-                (CASE pay_type 
-                WHEN 1 THEN "微信支付" 
-                WHEN 2 THEN "支付宝支付" 
-                WHEN 3 THEN "" 
-                WHEN 4 THEN "京东收银" 
-                WHEN 5 THEN "会员支付" 
-                WHEN 6 THEN "丽呈线上支付" 
-                WHEN 7 THEN "机器人线上支付" 
-                WHEN 8 THEN "八达通COGOLINK" 
-                WHEN 0 THEN "免支付" END) pay_type,
-                FROM_UNIXTIME(pay_time,"%Y-%m-%d %H:%i:%s") pay_time,
-                FROM_UNIXTIME(out_time,"%Y-%m-%d %H:%i:%s") out_time,' . $costPriceField;
-        $list = $this->getSaleOrdersList($where, 0, $field, '', '', '', 0, ['machineData','machineData.machineLevelData']);
-        if ($list) {
-            $list = $list->toArray();
-            $postData = input();
-            $whereRefund['status'] = 2;
-            if ($mIds) $whereRefund[] = ['sor.m_id', 'in', $mIds];
-            if (isset($postData['m_id']) && $postData['m_id']) {
-                $whereRefund['sor.m_id'] = $postData["m_id"];
-            }
-            if (isset($postData['mch_no']) && $postData['mch_no']) {
-                $whereRefund[] = ['so.mch_no', "like", "%" . $postData['mch_no'] . "%"];
-            }
-            if (isset($postData['trade_no']) && $postData['trade_no']) {
-                $whereRefund[] = ['sor.trade_no', "like", "%" . $postData['trade_no'] . "%"];
-            }
-            if (isset($postData['pay_time']) && $postData['pay_time']) {
-                $time = explode("~", $postData['pay_time']);
-                $whereRefund[] = ['sor.update_time', 'between', [strtotime($time[0]), strtotime($time[1])]];
-            }
-            if (isset($postData['machine_name']) && $postData['machine_name'])
-                $whereRefund[] = ['sor.machine_name', 'like', "%" . $postData['machine_name'] . "%"];
-
-            // 添加时间链表查询条件
-            if (isset($postData['out_time']) && $postData['out_time']){
-                $out_time = explode('~',$postData['out_time']);
-                $out_time1 = strtotime($out_time[0]);
-                $out_time2 = strtotime($out_time[1]);
-                $whereRefund[] = ['so.out_time','between',[$out_time1,$out_time2]];
-            }
-
-            if (isset($postData['pay_time']) && $postData['pay_time']){
-                $pay_time = explode('~',$postData['pay_time']);
-                $pay_time1 = strtotime($pay_time[0]);
-                $pay_time2 = strtotime($pay_time[1]);
-                $whereRefund[] = ['so.pay_time','between',[$pay_time1,$pay_time2]];
-            }
-
-            $refundField = 'sor.order_id,sor.machine_id,sor.machine_name,COALESCE(so.machine_level,(SELECT m.machine_level FROM machine m WHERE m.m_id = so.m_id)) machine_level,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
-            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = so.ao_id) organization_name,
-            sor.refund_quantity total_quantity,
-             (0-sor.refund_amount) total_price,("-") total_cost_points,("-") total_points,("-") discount_price,("-") retail_price,
-             ("已退款") refund_status,
-                (CASE order_type
-                    WHEN 1 THEN "普通订单"
-                    WHEN 2 THEN "优惠券订单"
-                    WHEN 3 THEN "取货码订单"
-                    WHEN 4 THEN "盲盒活动"
-                    WHEN 5 THEN "满减满送活动"
-                    WHEN 6 THEN "叠加营销活动"
-                    END
-                ) order_type,
-                IFNULL(NULLIF(so.pay_channel_name,""),(CASE so.pay_channel
-                WHEN 1 THEN "微程小程序订单"
-                WHEN 2 THEN "机械车小程序订单"
-                WHEN 3 THEN "售卖机会员积分订单"
-                WHEN 4 THEN "商场积分订单"
-                WHEN 5 THEN "取货码订单"
-                WHEN 6 THEN "余额支付订单"
-                WHEN 7 THEN "微信支付"
-                WHEN 8 THEN "支付宝支付"
-                WHEN 9 THEN "POS/刷卡支付"
-                WHEN 10 THEN "现金支付"
-                WHEN 11 THEN "其他"
-                ELSE "其他" END)) pay_channel,
-                (CASE pay_type 
-                WHEN 1 THEN "微信支付" 
-                WHEN 2 THEN "支付宝支付" 
-                WHEN 3 THEN "" 
-                WHEN 4 THEN "京东收银" 
-                WHEN 5 THEN "会员支付" 
-                WHEN 6 THEN "丽呈线上支付" 
-                WHEN 7 THEN "机器人线上支付" 
-                WHEN 8 THEN "八达通COGOLINK" 
-                WHEN 0 THEN "免支付" END) pay_type,
-                FROM_UNIXTIME(sor.update_time,"%Y-%m-%d %H:%i:%s") pay_time,("-") out_time,' . $refundCostPriceField;
-            $refund = $this->getSaleOrdersRefundListJoinSo($whereRefund, 0, $refundField, 'sor.update_time asc');
-            if ($refund) $list = array_merge($list, $refund->toArray());
-            // 补充 machine_level_desc 字段
-            $machineLevels = array_values(array_unique(array_filter(array_map(function($it){ return isset($it['machine_level']) ? $it['machine_level'] : null; }, $list))));
-            $machineLevelMap = [];
-            if ($machineLevels) {
-                $machineLevelRows = \app\AppFactory\Kernel\Model\Machine\MachineLevelDescModel::whereIn('machine_level', $machineLevels)->column('name','machine_level');
-                if ($machineLevelRows) $machineLevelMap = $machineLevelRows;
-            }
-            foreach ($list as $k => $item) {
-                $ml = $item['machine_level'] ?? null;
-                $list[$k]['machine_level_desc'] = $ml && isset($machineLevelMap[$ml]) ? $machineLevelMap[$ml] : '';
-            }
-
+        $queryWhere = $where;
+        $whereRaw = $queryWhere['raw'];
+        unset($queryWhere['raw']);
+        $orderId = Db::name('sale_orders')->alias('a')->where($queryWhere)->whereRaw($whereRaw)->value('order_id');
+        if ($orderId) {
             $title = [
                 "order_id" => "订单ID",
                 "machine_id" => "设备编号",
@@ -807,7 +670,13 @@ class SaleOrdersClient extends ManagementClient
             ];
             if ($hasCostPriceAuth) $title['cost_price'] = "成本价";
             $filename = "订单交易-" . date("Ymd");
-            return $this->sendToExport("订单管理-销售订单", $filename, $title, $list);
+            return $this->sendToExportJob("订单管理-销售订单", $filename, $title, [
+                'job_type' => 'sale_orders_export',
+                'where' => $where,
+                'post_data' => input(),
+                'm_ids' => $mIds,
+                'has_cost_price_auth' => $hasCostPriceAuth,
+            ]);
         }
         return $this->rFail($this->lang("action_fail"));
     }
