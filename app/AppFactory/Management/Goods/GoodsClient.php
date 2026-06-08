@@ -223,6 +223,16 @@ class GoodsClient extends ManagementClient
             ->select()
             ->toArray();
 
+        foreach ($mgDiff as $key => $item) {
+            if ($latestRetail > $item['retail_price']) {
+                $mgDiff[$key]['goods_status'] = 1;
+            } elseif ($latestRetail < $item['retail_price']) {
+                $mgDiff[$key]['goods_status'] = 2;
+            } else {
+                $mgDiff[$key]['goods_status'] = 3;
+            }
+        }
+
         $mcDiff = Db::name('machine_channel')
             ->where('g_id', $gId)
             ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
@@ -234,6 +244,16 @@ class GoodsClient extends ManagementClient
             ->order('mc_id desc')
             ->select()
             ->toArray();
+
+        foreach ($mcDiff as $key => $item) {
+            if ($latestRetail > $item['retail_price']) {
+                $mcDiff[$key]['goods_status'] = 1;
+            } elseif ($latestRetail < $item['retail_price']) {
+                $mcDiff[$key]['goods_status'] = 2;
+            } else {
+                $mcDiff[$key]['goods_status'] = 3;
+            }
+        }
 
         return $this->r(200, 'success', [
             'mg_diff_list' => $mgDiff,
