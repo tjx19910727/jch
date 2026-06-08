@@ -161,7 +161,7 @@ class Excel
         foreach ($list as $row) {
             foreach ($indexKey as $key => $value){
                 //这里是设置单元格的内容
-                $objActSheet->setCellValueExplicit($header_arr[$key].$startRow,$row[$value],\PHPExcel_Cell_DataType::TYPE_STRING);
+                $objActSheet->setCellValueExplicit($header_arr[$key].$startRow,$row[$value] ?? '',\PHPExcel_Cell_DataType::TYPE_STRING);
             }
             $startRow++;
         }
@@ -169,7 +169,7 @@ class Excel
         $savePath = "/export/excel/" . date("Ymd");
         $path = root_path() . "public" . $savePath;
         if (!is_dir($path)) {
-            @mkdir($path);
+            @mkdir($path, 0777, true);
             @chmod($path,0777);
         }
         $path .= ("/" . $filename);

@@ -384,6 +384,10 @@ class Common extends AuthController
             $where[] = [$prefix . $key, 'between', [strtotime($left . ' 00:00:00'), strtotime($right . ' 23:59:59')]];
         }
 
+        if (validateDate($left, 'Y-m-d H:i:s') && validateDate($right, 'Y-m-d H:i:s')) {
+            $where[] = [$prefix . $key, 'between', [strtotime($left), strtotime($right)]];
+        }
+
         if ((validateDate($left, 'H:i:s') && validateDate($right, 'H:i:s')) ||
             (validateDate($left, 'H:i') && validateDate($right, 'H:i'))
         ) {
