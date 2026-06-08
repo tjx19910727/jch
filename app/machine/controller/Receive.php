@@ -104,7 +104,7 @@ class Receive extends Common
      * 微信登录
      * @return array|string
      */
-    public function wxLogin()
+    public function Logiwxn()
     {
         try {
             return $this->app->api->wxLoginQrCode();

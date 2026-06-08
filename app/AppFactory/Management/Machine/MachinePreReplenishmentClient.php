@@ -7,6 +7,7 @@ use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentDetailModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentLogModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentOrderModel;
+use app\AppFactory\Kernel\Model\Machine\PreReplenishmentVideoModel;
 use app\AppFactory\Kernel\Traits\Machine\MachinePreReplenishmentTrait;
 use app\AppFactory\Management\ManagementClient;
 use think\facade\Db;
@@ -24,6 +25,19 @@ class MachinePreReplenishmentClient extends ManagementClient
         $machineIds = array_values(array_filter($machineIds));
         if (!$machineIds) {
             return returnState(4001, '参数错误: machine_ids不能为空');
+        }
+
+        // 编辑场景：传入 order_id，需要把该单下已有的货道也包含进来
+        $orderId = $postData['order_id'] ?? 0;
+        $orderMcIds = [];
+        if ($orderId) {
+            $orderDetails = PreReplenishmentDetailModel::where(['order_id' => $orderId])
+                ->field('m_id,machine_id,mc_id')
+                ->select()
+                ->toArray();
+            foreach ($orderDetails as $d) {
+                $orderMcIds[$d['m_id'] . '_' . $d['mc_id']] = true;
+            }
         }
 
         $machineList = MachineModel::where([['machine_id', 'in', $machineIds]])
@@ -48,6 +62,13 @@ class MachinePreReplenishmentClient extends ManagementClient
             if ($availableStock < 0) {
                 $availableStock = 0;
             }
+
+            // 过滤：可补数量大于0 或者 属于该订单已有的货道
+            $mcKey = $channel['m_id'] . '_' . $channel['mc_id'];
+            if ($availableStock <= 0 && !isset($orderMcIds[$mcKey])) {
+                continue;
+            }
+
             $channelMap[$channel['m_id']][] = [
                 'mc_id' => $channel['mc_id'],
                 'channel_code' => $channel['channel_code'],
@@ -70,6 +91,11 @@ class MachinePreReplenishmentClient extends ManagementClient
         }
 
         return returnState(200, 'ok', ['machine_list' => $result]);
+    }
+
+    public function getOrderInfo($where, $field = '*')
+    {
+        return PreReplenishmentOrderModel::getFind($where, $field);
     }
 
     public function addOrder($postData)
@@ -724,7 +750,7 @@ class MachinePreReplenishmentClient extends ManagementClient
         if (!$order) {
             return null;
         }
-        return PreReplenishmentDetailModel::getFind(
+        return PreReplenishmentVideoModel::getFind(
             ['order_id' => $order['id'], 'machine_id' => $where['machine_id']],
             'id,replenishment_video',
             'id desc'

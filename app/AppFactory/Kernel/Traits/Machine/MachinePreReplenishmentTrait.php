@@ -7,6 +7,7 @@ use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentDetailModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentLogModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentOrderModel;
+use app\AppFactory\Kernel\Model\Machine\PreReplenishmentVideoModel;
 use think\facade\Db;
 
 /**
@@ -310,9 +311,20 @@ trait MachinePreReplenishmentTrait
             return 1;
         }
 
-        return PreReplenishmentDetailModel::update(
-            ['replenishment_video' => $videoUrl],
-            ['order_id' => $order['id'], 'machine_id' => $machineId]
-        );
+        $where = ['order_id' => $order['id'], 'machine_id' => $machineId];
+        $exists = PreReplenishmentVideoModel::getFind($where, 'id');
+
+        if ($exists) {
+            return PreReplenishmentVideoModel::update(
+                ['replenishment_video' => $videoUrl],
+                ['id' => $exists['id']]
+            );
+        }
+
+        return PreReplenishmentVideoModel::create([
+            'order_id' => $order['id'],
+            'machine_id' => $machineId,
+            'replenishment_video' => $videoUrl,
+        ]);
     }
 }
