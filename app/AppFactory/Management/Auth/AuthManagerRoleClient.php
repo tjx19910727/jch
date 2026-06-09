@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Traits\Auth\AuthManagerRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthNodeTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthRoleTemplateTrait;
 use app\AppFactory\Management\ManagementClient;
 use think\response\Json;
 
@@ -22,6 +23,29 @@ class AuthManagerRoleClient extends ManagementClient
     use AuthRoleNodeTrait;
     use AuthNodeTrait;
     use AuthOrganizationRoleTrait;
+    use AuthRoleTemplateTrait;
+
+    public function add($postData, $rA = 1)
+    {
+        $this->startTrans();
+        try {
+            $roleIds = array_filter(array_map('intval', explode(",", $postData['role_id'])));
+            foreach ($roleIds as $roleId) {
+                $this->applyAuthRoleTemplateToRole($roleId);
+            }
+            $result = $this->addAuthManagerRole($postData);
+            if (!$result) {
+                $this->rollbackTrans();
+                return $this->rFail("账号绑定角色失败");
+            }
+            $this->commitTrans();
+            return $rA ? $this->rA($result) : $result;
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
 
     protected $commonNode = [
         "/management/common/getSelfRoleNode",

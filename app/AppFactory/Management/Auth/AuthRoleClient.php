@@ -12,12 +12,48 @@ namespace app\AppFactory\Management\Auth;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleTrait;
+use app\AppFactory\Kernel\Traits\Auth\AuthRoleTemplateTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class AuthRoleClient extends ManagementClient
 {
     use AuthRoleTrait,AuthOrganizationRoleTrait;
     use AuthRoleNodeTrait;
+    use AuthRoleTemplateTrait;
+
+    public function add($postData, $rA = 1)
+    {
+        $this->startTrans();
+        try {
+            $roleId = $this->addAuthRole($postData);
+            if (!empty($postData['template_id'])) {
+                $this->applyAuthRoleTemplateToRole($roleId, intval($postData['template_id']));
+            }
+            $this->commitTrans();
+            return $rA ? $this->rA($roleId) : $roleId;
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    public function update($postData, $where = [], $field = [], $rU = 1)
+    {
+        $this->startTrans();
+        try {
+            $result = $this->updateAuthRole($postData, $where, $field);
+            if (array_key_exists('template_id', $postData) && intval($postData['template_id']) > 0) {
+                $this->applyAuthRoleTemplateToRole(intval($postData['role_id']), intval($postData['template_id']));
+            }
+            $this->commitTrans();
+            return $rU ? $this->rU($result) : $result;
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
 
     /**
      * 复制权限角色

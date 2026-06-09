@@ -23,6 +23,7 @@ class VAuth extends VCommon
         // auth_manager_role
         "mr_id" => 'require',
         "role_id" => 'require',
+        "art_id" => 'require',
 
         // auth_node
         "type" => "require",
@@ -57,6 +58,7 @@ class VAuth extends VCommon
         "status.in" => "VAuth.status_in",
         "mr_id.require" => "VAuth.mr_id_require",
         "role_id.require" => "VAuth.role_id_require",
+        "art_id.require" => "角色权限模板ID不能为空",
         "type.require" => "VAuth.type_require",
         "nodeList.require" => "VAuth.nodeList_require",
         "rn_id.require" => "VAuth.rn_id_require",
@@ -97,6 +99,11 @@ class VAuth extends VCommon
 
         "AuthRoleNodeAdd" => ["role_id","nodeList"],
         "AuthRoleNodeUpdate" => ["rn_id"],
+
+        "AuthRoleTemplateAdd" => ["name","status"],
+        "AuthRoleTemplateUpdate" => ["art_id"],
+        "AuthRoleTemplateNodes" => ["art_id","nodeList"],
+        "AuthRoleTemplateApply" => ["art_id","role_id"],
 
         "AuthOrganizationAdd" => ['pid','organization_name'],
         "AuthOrganizationUpdate" => ["or_id",'pid','organization_name'],

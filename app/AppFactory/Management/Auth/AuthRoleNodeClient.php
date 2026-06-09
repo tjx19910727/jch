@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Traits\Auth\AuthNodeTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Db;
 
 class AuthRoleNodeClient extends ManagementClient
 {
@@ -28,6 +29,10 @@ class AuthRoleNodeClient extends ManagementClient
      */
     public function bind($data)
     {
+        $role = Db::name('auth_role')->where(['role_id' => intval($data['role_id'])])->field('template_id')->find();
+        if ($role && intval($role['template_id'] ?? 0) > 0) {
+            return $this->rFail("该角色已关联权限模板，请通过角色权限模板维护节点");
+        }
         $flag = [];$roleNode = [];
         $data['nodeList'] = json2arr($data['nodeList']);
         $nodeIds = array_keys($data['nodeList']);
