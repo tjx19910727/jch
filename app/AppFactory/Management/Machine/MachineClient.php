@@ -319,12 +319,12 @@ class MachineClient extends ManagementClient
                 ->where('month', $month)
                 ->sum('target_amount'), 2);
 
-            if ($targetAmount <= 0) {
-                $item['month_target_amount'] = 0;
-                $item['month_achieve_amount'] = 0;
-                $item['month_achieve_rate'] = 0;
-                return $item;
-            }
+            // if ($targetAmount <= 0) {
+            //     $item['month_target_amount'] = 0;
+            //     $item['month_achieve_amount'] = 0;
+            //     $item['month_achieve_rate'] = 0;
+            //     return $item;
+            // }
 
             $achieveAmount = round((float) Db::name('sale_orders')
                 ->where('m_id', intval($item['m_id']))
@@ -333,7 +333,7 @@ class MachineClient extends ManagementClient
                 ->where('create_date', '<=', intval($monthEnd))
                 ->value('IFNULL(SUM(total_price - refund_amount),0)'), 2);
 
-            $item['month_target_amount'] = $targetAmount;
+            $item['month_target_amount'] = $targetAmount < 0 ? 0 : $targetAmount;
             $item['month_achieve_amount'] = $achieveAmount;
             $item['month_achieve_rate'] = $targetAmount > 0 ? round($achieveAmount / $targetAmount * 100, 2) : 0;
             return $item;
