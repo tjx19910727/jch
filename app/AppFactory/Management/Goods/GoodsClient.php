@@ -220,6 +220,7 @@ class GoodsClient extends ManagementClient
             })
             ->field('mg_id,m_id,machine_id,g_id,g_name,cost_price,market_price,retail_price')
             ->order('mg_id desc')
+            ->limit(200)
             ->select()
             ->toArray();
 
@@ -240,8 +241,9 @@ class GoodsClient extends ManagementClient
                     ->whereOr('market_price', '<>', $latestMarket)
                     ->whereOr('retail_price', '<>', $latestRetail);
             })
-            ->field('mc_id,m_id,machine_id,channel_code,g_id,g_name,cost_price,market_price,retail_price')
+            ->field('mc_id,m_id,machine_id,channel_code,g_id,g_name,cost_price,market_price,retail_price,update_price as update_status')
             ->order('mc_id desc')
+            ->limit(200)
             ->select()
             ->toArray();
 
