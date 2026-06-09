@@ -159,35 +159,19 @@ trait AfterOrderPaymentTrait
                         actionLog($this->getLS(), '减固定组合商品酒店库存');
                     }
                     if ($v['g_type'] == 1) {
-                        $dc = [
-                            "channel_code" => $v['channel_code'],
-                            "quantity" => $v['quantity'],
-                            "is_gift" => $v['is_gift'] ?? 2,
-                            "out_port" => $v['out_port'] ?? 1,
-                        ];
-                        $outArr[$v['channel_position']][] = $dc;
-                        //判断此微程商品是否为组合商品
-                        if (!empty($mc) && !empty($mc['out_no'])) {
-                            $wc_goods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
-                            if ($wc_goods) {
-                                $wc_goods = $wc_goods->toArray();
-                                if (isset($wc_goods['type']) && $wc_goods['type'] == 11) { // 组合商品
-                                    if (!empty($v['wc_goods_no'])) {
-                                        $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
-                                        if (is_array($wc_goods_no_arr)) {
-                                            foreach ($wc_goods_no_arr as $wc_goods_no_v) {
-                                                $dc_local = [
-                                                    "channel_code" => $wc_goods_no_v['real_channel_code'],
-                                                    "quantity" => 1,
-                                                    "is_gift" => $v['is_gift'] ?? 2,
-                                                    "out_port" => $v['out_port'] ?? 1,
-                                                ];
-                                                $outArr[$v['channel_position']][] = $dc_local;
-                                            }
-                                        }
-                                    }
-                                }
+                        $wcLocalOutGoods = $this->resolveWcLocalOutGoodsItems($v, $mc);
+                        if ($wcLocalOutGoods) {
+                            foreach ($wcLocalOutGoods as $item) {
+                                $outArr[$v['channel_position']][] = $item;
                             }
+                        } else {
+                            $dc = [
+                                "channel_code" => $v['channel_code'],
+                                "quantity" => $v['quantity'],
+                                "is_gift" => $v['is_gift'] ?? 2,
+                                "out_port" => $v['out_port'] ?? 1,
+                            ];
+                            $outArr[$v['channel_position']][] = $dc;
                         }
                     }
                     if ($v['g_type'] == 3) {
@@ -203,6 +187,7 @@ trait AfterOrderPaymentTrait
                 // 因为存在不同子订单   不同积分兑换比例情况，order表不做intergral_rate的记录，只记录到自订单表
                 // $this->order['intergral_rate'] = $final_intergral_rate;  
             }
+            $contentArr = $this->buildLegacyMainFromOutGoods($outArr);
 
             $content = [
                 "msgType" => "outGoods",
@@ -217,6 +202,136 @@ trait AfterOrderPaymentTrait
             return true;
         }
         return $this->r(100, $this->lang("VOutGoods.details_no_data"));
+    }
+
+    /**
+     * 微程实物商品(type=5)和组合商品(type=11)按本机实际货道出货。
+     */
+    protected function resolveWcLocalOutGoodsItems($detail, array $mc): array
+    {
+        // normalize $detail to array when an object or model is passed
+        if (is_object($detail)) {
+            $detail = method_exists($detail, 'toArray') ? $detail->toArray() : (array)$detail;
+        } elseif (!is_array($detail)) {
+            $detail = (array)$detail;
+        }
+
+        // ensure $mc is array
+        if (is_object($mc)) {
+            $mc = method_exists($mc, 'toArray') ? $mc->toArray() : (array)$mc;
+        }
+        if (empty($mc['out_no'])) {
+            return [];
+        }
+
+        $wcGoods = $this->getWcGoodsFind(['no' => $mc['out_no']]);
+        if (!$wcGoods) {
+            return [];
+        }
+        $wcGoods = is_array($wcGoods) ? $wcGoods : obj2arr($wcGoods);
+        $wcGoodsType = intval($wcGoods['type'] ?? 0);
+        if (!in_array($wcGoodsType, [5, 11], true)) {
+            return [];
+        }
+
+        $localGoods = [];
+        if (!empty($detail['wc_goods_no'])) {
+            $decoded = json_decode($detail['wc_goods_no'], true);
+            if (is_array($decoded)) {
+                $localGoods = array_values($decoded);
+            } else {
+                actionLog([
+                    'sod_id' => $detail['sod_id'] ?? 0,
+                    'wc_goods_no' => $detail['wc_goods_no'],
+                ], 'wc_goods_no JSON parse failed');
+            }
+        }
+
+        if (!$localGoods) {
+            $localWhere = ['out_no' => $mc['out_no']];
+            if ($wcGoodsType === 5) {
+                $detailGId = intval($detail['g_id'] ?? 0);
+                if ($detailGId > 0 && $detailGId !== 9999) {
+                    $localWhere['g_id'] = $detailGId;
+                } elseif (!empty($detail['sku'])) {
+                    $localWhere['sku'] = $detail['sku'];
+                } elseif (!empty($detail['bar_code'])) {
+                    $localWhere['bar_code'] = $detail['bar_code'];
+                }
+            }
+            $wcGoodsLocal = $this->getWcGoodsLocalList($localWhere);
+            if ($wcGoodsLocal) {
+                $localGoods = $wcGoodsLocal->toArray();
+            }
+            if ($wcGoodsType === 5 && count($localGoods) > 1) {
+                actionLog([
+                    'sod_id' => $detail['sod_id'] ?? 0,
+                    'out_no' => $mc['out_no'],
+                    'local_count' => count($localGoods),
+                ], '微程实物商品匹配到多个本地商品，已跳过实际货道兜底');
+                return [];
+            }
+        }
+
+        $items = [];
+        foreach ($localGoods as $local) {
+            $needLocalOutGoods = intval($local['need_local_out_goods'] ?? 1);
+            if ($needLocalOutGoods !== 1) {
+                continue;
+            }
+
+            $channelCode = trim((string)($local['real_channel_code'] ?? ''));
+            if ($channelCode === '' || $channelCode === 'Z10') {
+                $gId = intval($local['g_id'] ?? 0);
+                if ($gId > 0 && $gId !== 9999) {
+                    $machineChannel = $this->getMachineChannelFind([
+                        'g_id' => $gId,
+                        'm_id' => intval($this->order['m_id'] ?? 0),
+                    ], 'channel_code');
+                    if ($machineChannel) {
+                        $machineChannel = is_array($machineChannel) ? $machineChannel : obj2arr($machineChannel);
+                        $channelCode = trim((string)($machineChannel['channel_code'] ?? ''));
+                    }
+                }
+            }
+
+            if ($channelCode === '' || $channelCode === 'Z10') {
+                actionLog([
+                    'sod_id' => $detail['sod_id'] ?? 0,
+                    'out_no' => $mc['out_no'],
+                    'local_no' => $local['no'] ?? '',
+                    'g_id' => $local['g_id'] ?? 0,
+                ], '微程商品未匹配到实际货道');
+                continue;
+            }
+
+            $items[] = [
+                "channel_code" => $channelCode,
+                "quantity" => intval($local['quantity'] ?? ($detail['quantity'] ?? 1)),
+                "is_gift" => $detail['is_gift'] ?? 2,
+                "out_port" => $detail['out_port'] ?? 1,
+            ];
+        }
+
+        return $items;
+    }
+
+    protected function buildLegacyMainFromOutGoods(array $outArr): array
+    {
+        $main = [];
+        foreach ($outArr as $position => $items) {
+            foreach ($items as $item) {
+                $channelCode = $item['channel_code'] ?? '';
+                if ($channelCode === '') {
+                    continue;
+                }
+                $main[$position][] = [
+                    $channelCode,
+                    intval($item['quantity'] ?? 1),
+                ];
+            }
+        }
+        return $main;
     }
 
     /**

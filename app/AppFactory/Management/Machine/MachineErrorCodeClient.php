@@ -85,6 +85,37 @@ class MachineErrorCodeClient extends ManagementClient
     }
 
     /**
+     * 视频统一入口列表
+     * 不做错误码分类翻译，返回 v_type 供前端识别视频类型
+     * @param $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @param string $group
+     * @return array|\think\response\Json
+     */
+    public function getEcVideoList($where, $pageNum = 0, $field = "*", $order = "", $group = "")
+    {
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            }
+        }
+
+        $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, function ($item) {
+            $item['v_type'] = 0;
+            if (isset($item['errorCode']) && $item['errorCode'] == 1200000) {
+                $item['v_type'] = 1;
+            }
+            return $item;
+        }, $group);
+
+        actionLog($this->getLS(),'【SQL】查询视频统一入口列表');
+        return $this->rQ($data);
+    }
+
+    /**
      * 导出系统日志
      * @param $where
      * @param string $field

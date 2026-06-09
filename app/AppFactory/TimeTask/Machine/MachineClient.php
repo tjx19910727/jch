@@ -472,100 +472,192 @@ class MachineClient extends TimeTaskBase
                     ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.last_online_time,m.ao_id,moo.on_off_machine')
                     ->order('m.m_id desc')
                     ->select();
-            if(count($list) == 0){
-                return '无需处理';
-            }
-            $list = $list->toArray();
-            $flag = [];
-            foreach ($list as $item) {
-                $onOffMachine = $item['on_off_machine'];
-                if (is_string($onOffMachine)) {
-                    $onOffMachine = json_decode($onOffMachine, true);
-                }
-                if (!is_array($onOffMachine)) {
-                    continue;
-                }
+            if(count($list) > 0){
+                $list = $list->toArray();
+                $flag = [];
+                foreach ($list as $item) {
+                    $onOffMachine = $item['on_off_machine'];
+                    if (is_string($onOffMachine)) {
+                        $onOffMachine = json_decode($onOffMachine, true);
+                    }
+                    if (!is_array($onOffMachine)) {
+                        continue;
+                    }
 
-                $weekKey = (string)$week;
-                if (empty($onOffMachine[$weekKey])) {
-                    continue;
-                }
+                    $weekKey = (string)$week;
+                    if (empty($onOffMachine[$weekKey])) {
+                        continue;
+                    }
 
-                $onOffTime = explode(',', $onOffMachine[$weekKey]);
-                if (!isset($onOffTime[0]) || !isset($onOffTime[1])) {
-                    continue;
-                }
-                $shutdownTime = trim($onOffTime[0]);
-                $startupTime = trim($onOffTime[1]);
-                if (!$shutdownTime || !$startupTime || $shutdownTime === 'null' || $startupTime === 'null') {
-                    continue;
-                }
+                    $onOffTime = explode(',', $onOffMachine[$weekKey]);
+                    if (!isset($onOffTime[0]) || !isset($onOffTime[1])) {
+                        continue;
+                    }
+                    $shutdownTime = trim($onOffTime[0]);
+                    $startupTime = trim($onOffTime[1]);
+                    if (!$shutdownTime || !$startupTime || $shutdownTime === 'null' || $startupTime === 'null') {
+                        continue;
+                    }
 
-                $startupTimestamp = strtotime($today . ' ' . $startupTime.':00');
-                $shutdownTimestamp = strtotime($today . ' ' . $shutdownTime.':00');
-                if (!$startupTimestamp || !$shutdownTimestamp) {
-                    continue;
-                }
+                    $startupTimestamp = strtotime($today . ' ' . $startupTime.':00');
+                    $shutdownTimestamp = strtotime($today . ' ' . $shutdownTime.':00');
+                    if (!$startupTimestamp || !$shutdownTimestamp) {
+                        continue;
+                    }
 
-                // 仅支持当日营业窗口：关机时间必须晚于开机时间
-                if ($shutdownTimestamp < $startupTimestamp) {
+                    // 仅支持当日营业窗口：关机时间必须晚于开机时间
+                    if ($shutdownTimestamp < $startupTimestamp) {
+                        actionLog([
+                            'm_id' => $item['m_id'],
+                            'machine_id' => $item['machine_id'],
+                            'startup_time' => $startupTime,
+                            'shutdown_time' => $shutdownTime,
+                        ], '无效营业时间配置(不支持跨天)，跳过巡检', 'checkOperatingStartup');
+                        continue;
+                    }
+                    // 仅在开机窗口内进行检查，且开机后15分钟内不告警
+                    if ($now < $startupTimestamp || $now > $shutdownTimestamp) {
+                        continue;
+                    }
+                    if ($now <= $startupTimestamp + $firstInterval) {
+                        continue;
+                    }
+                    // 离关机时间30分钟内不再发送提醒
+                    if ($shutdownTimestamp - $now <= 1800) {
+                        continue;
+                    }
+
+                    $elapsed = $now - $startupTimestamp;//当前时间与开机时间的时间差
+                    $stageCacheKey = 'machine_startup_exception_stage:' . $item['m_id'] . ':' . $todayKey;
+                    $sentStage = intval(Cache::get($stageCacheKey, 0));
+                    $nextStage = $sentStage + 1;
+                    //如果已发送阶段超过设定的阶梯数，则不再发送
+                    if ($nextStage > count($intervals)) {
+                        continue;
+                    }
+                    $needSeconds = intval($intervals[$nextStage - 1]);
+                    if ($elapsed < $needSeconds) {//未达到下一个阶段的时间要求，继续等待
+                        continue;
+                    }
+                    $currentStage = $nextStage;
+
+                    $item['errorCode'] = '在营设备未开机'.$title;
+                    $item['date'] = date("Y年m月d日");
+                    $item['exceptionDeclaration'] = '在营设备未开机';
+                    $item['error_code'] = '在营设备未开机'.$title;
+                    $item['error_time'] = date('Y-m-d H:i:s');
+                    $item['error_info'] = 11102011; // 在营设备未开机
+                    $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
+
+                    $this->noticeSendData = [
+                        "ao_id" => $item['ao_id'],
+                        "m_id" => $item['m_id'],
+                        "templateType" => "mFault",
+                        "replaceData" => $item,
+                    ];
+
+                    $flag[] = $this->noticeSend();
+                    //当前阶段的通知发送成功后，更新已发送阶段数缓存，过期时间为当天23:59:59
+                    Cache::set($stageCacheKey, $currentStage, $ttl > 0 ? $ttl : 60);
                     actionLog([
                         'm_id' => $item['m_id'],
                         'machine_id' => $item['machine_id'],
-                        'startup_time' => $startupTime,
-                        'shutdown_time' => $shutdownTime,
-                    ], '无效营业时间配置(不支持跨天)，跳过巡检', 'checkOperatingStartup');
-                    continue;
+                        'stage' => $currentStage,
+                        'elapsed' => $elapsed,
+                        'need_seconds' => $needSeconds,
+                    ], '发送设备未开机提醒', 'checkOperatingStartup');
                 }
-                // 仅在开机窗口内进行检查，且开机后15分钟内不告警
-                if ($now < $startupTimestamp || $now > $shutdownTimestamp) {
-                    continue;
-                }
-                if ($now <= $startupTimestamp + $firstInterval) {
-                    continue;
-                }
-
-                $elapsed = $now - $startupTimestamp;//当前时间与开机时间的时间差
-                $stageCacheKey = 'machine_startup_exception_stage:' . $item['m_id'] . ':' . $todayKey;
-                $sentStage = intval(Cache::get($stageCacheKey, 0));
-                $nextStage = $sentStage + 1;
-                //如果已发送阶段超过设定的阶梯数，则不再发送
-                if ($nextStage > count($intervals)) {
-                    continue;
-                }
-                $needSeconds = intval($intervals[$nextStage - 1]);
-                if ($elapsed < $needSeconds) {//未达到下一个阶段的时间要求，继续等待
-                    continue;
-                }
-                $currentStage = $nextStage;
-
-                $item['errorCode'] = '在营设备未开机'.$title;
-                $item['date'] = date("Y年m月d日");
-                $item['exceptionDeclaration'] = '在营设备未开机';
-                $item['error_code'] = '在营设备未开机'.$title;
-                $item['error_time'] = date('Y-m-d H:i:s');
-                $item['error_info'] = 11102011; // 在营设备未开机
-                $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
-
-                $this->noticeSendData = [
-                    "ao_id" => $item['ao_id'],
-                    "m_id" => $item['m_id'],
-                    "templateType" => "mFault",
-                    "replaceData" => $item,
-                ];
-
-                $flag[] = $this->noticeSend();
-                //当前阶段的通知发送成功后，更新已发送阶段数缓存，过期时间为当天23:59:59
-                Cache::set($stageCacheKey, $currentStage, $ttl > 0 ? $ttl : 60);
-                actionLog([
-                    'm_id' => $item['m_id'],
-                    'machine_id' => $item['machine_id'],
-                    'stage' => $currentStage,
-                    'elapsed' => $elapsed,
-                    'need_seconds' => $needSeconds,
-                ], '发送设备未开机提醒', 'checkOperatingStartup');
+                actionLog($flag, '处理运营中设备未开机提醒结果', 'checkOperatingStartup');
             }
-            actionLog($flag, '处理运营中设备未开机提醒结果', 'checkOperatingStartup');
+            
+            // // 新增：设备已开机但10分钟以上未进入首页发送模板通知
+            // $homeFlag = [];
+            // $homeTimeout = 600; // 10分钟
+            // $homeRecordPath = 'currentStatus';
+            // $homeSkipCacheKey = 'machine_startup_home_skip_list:' . $todayKey;
+            // $homeSkipMIds = Cache::get($homeSkipCacheKey, []);
+            // if (!is_array($homeSkipMIds)) {
+            //     $homeSkipMIds = [];
+            // }
+            // $onlineQuery = Db::name('machine')->alias('m');
+            // if (env('CglPay.is_test')) {
+            //     // 测试环境仅查询特定设备，方便测试验证
+            //     $onlineQuery = $onlineQuery->where('m.machine_id', 'JCHM-H2D-0064')->where('m.online', 1);
+            // } else {
+            //     // 仅查询当前在线的在营设备
+            //     $onlineQuery = $onlineQuery->where('m.online', 1)
+            //         ->where('m.is_operating', 1);
+            // }
+
+            // $onlineList = $onlineQuery
+            //     ->when($homeSkipMIds, function ($query) use ($homeSkipMIds) {
+            //         $query->whereNotIn('m.m_id', $homeSkipMIds);
+            //     })
+            //     ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.last_online_time,m.ao_id')
+            //     ->order('m.m_id desc')
+            //     ->select();
+            // if (count($onlineList) > 0) {
+            //     $onlineList = $onlineList->toArray();
+            //     foreach ($onlineList as $item) {
+            //         $currentOnline = $this->getMachineOnlineDetailsFind([
+            //             'm_id' => $item['m_id'],
+            //             'offline_time' => 0,
+            //             'd_date' => strtotime(date('Y-m-d')),
+            //         ], 'mod_id,online_time', 'mod_id asc');
+            //         if (!$currentOnline || empty($currentOnline['online_time'])) {
+            //             continue;
+            //         }
+            //         $onlineTimestamp = intval($currentOnline['online_time']);
+            //         $checkEnd = $onlineTimestamp + $homeTimeout;
+                
+            //         // 当前在线会话上线不足10分钟，继续等待
+            //         if ($now <= $checkEnd) {
+            //             continue;
+            //         }
+
+            //         $homeCount = Db::name('machine_mq_record')
+            //             ->where('m_id', $item['m_id'])
+            //             ->where('path', $homeRecordPath)
+            //             ->whereLike('content', '%home%')
+            //             ->where('create_time', '>=', $onlineTimestamp)
+            //             ->where('create_time', '<=', $checkEnd)
+            //             ->count();
+            //         if ($homeCount > 0) {
+            //             $homeSkipMIds[] = $item['m_id'];
+            //             $homeSkipMIds = array_values(array_unique($homeSkipMIds));
+            //             Cache::set($homeSkipCacheKey, $homeSkipMIds, $ttl > 0 ? $ttl : 60);
+            //             continue;
+            //         }
+
+            //         $item['errorCode'] = '设备已开机未进入首页' . $title;
+            //         $item['date'] = date('Y年m月d日');
+            //         $item['exceptionDeclaration'] = '设备已开机未进入首页';
+            //         $item['error_code'] = '设备已开机未进入首页' . $title;
+            //         $item['error_time'] = date('Y-m-d H:i:s');
+            //         $item['error_info'] = 11102012; // 设备已开机未进入首页
+            //         $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
+
+            //         $this->noticeSendData = [
+            //             'ao_id' => $item['ao_id'],
+            //             'm_id' => $item['m_id'],
+            //             'templateType' => 'mFault',
+            //             'replaceData' => $item,
+            //         ];
+
+            //         $homeFlag[] = $this->noticeSend();
+            //         $homeSkipMIds[] = $item['m_id'];
+            //         $homeSkipMIds = array_values(array_unique($homeSkipMIds));
+            //         Cache::set($homeSkipCacheKey, $homeSkipMIds, $ttl > 0 ? $ttl : 60);
+            //         actionLog([
+            //             'm_id' => $item['m_id'],
+            //             'machine_id' => $item['machine_id'],
+            //             'online_timestamp' => $onlineTimestamp,
+            //             'check_end' => $checkEnd,
+            //             'check_time' => $now,
+            //         ], '发送设备已开机未进入首页提醒', 'checkOperatingStartup');
+            //     }
+            // }
+            // actionLog($homeFlag, '处理设备已开机未进入首页提醒结果', 'checkOperatingStartup');
         } catch (\Exception $e) {
             actionException($e, 1, 'checkOperatingStartup');
             return '处理异常';

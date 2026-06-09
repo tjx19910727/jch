@@ -26,9 +26,11 @@ class MachineGoods extends Common
     public function getList()
     {
         $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["g_name" => "like",'sku' => "like"]);
-        return $this->app->machineGoods->getMgList($where, $pageNum, $this->field);
+        return $this->app->machineGoods->getMgList($where, $pageNum, $field);
     }
 
     public function getFind()
@@ -132,8 +134,9 @@ class MachineGoods extends Common
     public function exportMg()
     {
         $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
         $where = $this->getWhere($postData, false, ["g_name" => "like",'sku' => "like"]);
-        return $this->app->machineGoods->exportMg($where);
+        return $this->app->machineGoods->exportMg($where, $hasCostPriceAuth);
     }
 
     /**

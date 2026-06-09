@@ -61,7 +61,7 @@ class AuthManagerClient extends ManagementClient
             $config = $this->getWxOfficialFind($where,'*','id desc');
             if (!$config) {
                 actionLog($this->getLS(),'查询配置SQL');
-                return $this->r(100, $this->lang("VWxOfficial.official_no_data"));
+                return $this->r(100, $this->lang("VWxOfficial.official_no_data"));   
             }
             $config = $config->toArray();
             $qrScene = $config['id'] . "_2_" . $manager_id;

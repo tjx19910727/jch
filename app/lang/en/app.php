@@ -65,6 +65,8 @@ return [
             "1000103" => 'The product falls off during pickup',
             "1000104" => 'Delivery of goods to the discharge box failed',
             "1000105" => "The secondary cabinet door opening failed.",
+            "1200001" => "There are goods in the pickup box in the business logic",
+            "11102012" => "The device is turned on but has not entered the homepage",
             "1100000" => 'Camera call error',
             "1100100" => "Head camera call error",
             "1100200" => "Discharge port camera call error",

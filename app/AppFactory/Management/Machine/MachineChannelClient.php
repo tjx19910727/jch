@@ -545,9 +545,10 @@ class MachineChannelClient extends ManagementClient
      * @param $m_id
      * @return mixed
      */
-    public function exportMcSku($m_id)
+    public function exportMcSku($m_id, $hasCostPriceAuth = true)
     {
-        $field = "machine_id,sku,g_name,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock,cost_price,retail_price";
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = "machine_id,sku,g_name,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock,retail_price,{$costPriceField}";
         $list = $this->getMachineChannelList(['m_id' => $m_id],0,$field,"","","sku");
         if ($list) {
             $list = $list->toArray();
@@ -571,8 +572,8 @@ class MachineChannelClient extends ManagementClient
                     "stock" => "当前数量",
                     "frozen_stock" => "预定数量",
                     "retail_price" => "售价",
-                    "cost_price" => "成本价",
                 ];
+                if ($hasCostPriceAuth) $title["cost_price"] = "成本价";
                 $filename = "按SKU铺货计划-" . date("YmdHis");
                 return $this->sendToExport("设备管理-设备货架", $filename, $title, $list);
             }
@@ -585,9 +586,10 @@ class MachineChannelClient extends ManagementClient
      * @param $m_id
      * @return array|\think\response\Json
      */
-    public function exportMc($m_id)
+    public function exportMc($m_id, $hasCostPriceAuth = true)
     {
-        $field = "machine_id,channel_code,sku,g_name,capacity,stock,frozen_stock,cost_price,retail_price";
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = "machine_id,channel_code,sku,g_name,capacity,stock,frozen_stock,retail_price,{$costPriceField}";
         $list = $this->getMachineChannelList(['m_id' => $m_id],0,$field);
         if ($list) {
             $list = $list->toArray();
@@ -608,8 +610,8 @@ class MachineChannelClient extends ManagementClient
                     "stock" => "当前数量",
                     "frozen_stock" => "预定数量",
                     "retail_price" => "售价",
-                    "cost_price" => "成本价",
                 ];
+                if ($hasCostPriceAuth) $title["cost_price"] = "成本价";
                 $filename =  "货架铺货计划-" . date("YmdHis");
                 return $this->sendToExport("设备管理-设备货架", $filename, $title, $list);
             }
@@ -633,11 +635,20 @@ class MachineChannelClient extends ManagementClient
         return $this->r(100,$this->lang('action_fail'));
     }
 
-    public function getMChannelList($where,$pageNum = 0,$field = "",$order = "")
+    public function getMChannelList($where,$pageNum = 0,$field = "",$order = "",$hasCostPriceAuth = true)
     {
         //先查询设备详情
         $machine = $this->getMachineFind($where,'m_id,machine_id,machine_name,ao_id,vending_machine_type');
         if (!$machine) return $this->r(100,$this->lang("VMachine.machine_no_data"));
+        if (!$hasCostPriceAuth) {
+            if ($field === '' || $field === '*') {
+                $field = '*,0 cost_price';
+            } elseif (strpos($field, 'cost_price') !== false) {
+                $field = str_replace('cost_price', '0 cost_price', $field);
+            } else {
+                $field .= ',0 cost_price';
+            }
+        }
         //把货道的channel_position设置成设备相同的vending_machine_type
         $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
         $list = $list->toArray();
