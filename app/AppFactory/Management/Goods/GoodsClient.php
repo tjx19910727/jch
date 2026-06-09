@@ -120,12 +120,12 @@ class GoodsClient extends ManagementClient
     {
         $gId = $postData['g_id'] ?? 0;
         if (!$gId) {
-            return false;
+            return $this->r(100, '参数有误');
         }
 
         $oldGoods = $this->getGoodsFind(['g_id' => $gId], 'g_id,cost_price,market_price,retail_price');
         if (!$oldGoods) {
-            return false;
+            return $this->r(100, '商品不存在');
         }
         $oldGoods = $oldGoods->toArray();
 
@@ -143,7 +143,7 @@ class GoodsClient extends ManagementClient
 
         $result = $this->updateGoods($postData, ['g_id' => $gId]);
         if (!$result) {
-            return $result;
+            return $this->r(100, '更新失败');
         }
 
         if ($priceChanged) {
@@ -186,7 +186,7 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        return $result;
+        return $this->r(200, 'success', $result);
     }
 
     /**
