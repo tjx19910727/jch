@@ -223,6 +223,8 @@ class TopicPageClient extends ManagementClient
             'shipping_url' => $item['shipping_url'] ?? '',
             'pickup_qrcode_1' => $item['pickup_qrcode_1'] ?? '',
             'pickup_qrcode_2' => $item['pickup_qrcode_2'] ?? '',
+            'claim_goods_title' => $item['claim_goods_title'] ?? '',
+            'out_goods_title' => $item['out_goods_title'] ?? '',
         ];
 
         $item['pay'] = [
@@ -230,6 +232,12 @@ class TopicPageClient extends ManagementClient
             'scan_url' => $item['scan_url'] ?? '',
             'balance_url' => $item['balance_url'] ?? '',
             'card_url' => $item['card_url'] ?? '',
+            'deal_success_title' => $item['deal_success_title'] ?? '',
+            'deal_success_sub_title' => $item['deal_success_sub_title'] ?? '',
+            'deal_abnormal_pic' => $item['deal_abnormal_pic'] ?? '',
+            'deal_fail_title' => $item['deal_fail_title'] ?? '',
+            'deal_fail_sub_title' => $item['deal_fail_sub_title'] ?? '',
+            'is_service_phone' => $item['is_service_phone'] ?? 2,
         ];
 
         return $item;

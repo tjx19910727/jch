@@ -293,4 +293,13 @@ return [
         "tripData_required" => "携程可售房型加密标签不能为空",
         "roomPriceList_required" => "房间价格列表不能为空",
     ],
+    "VLaser" => [
+        "upload_image_fail" => "上传图片失败",
+        "file_require" => "上传文件不能为空",
+        "check_sign_fail" => "验签失败",
+        "file_size" => "文件太大，超过限制",
+        "file_ext" => "不支持的上传文件类型",
+        "get_image_info_fail" => "获取图片信息失败，请确认上传的文件为图片类型",
+        "upload_image_success" => "上传图片成功",
+    ],
 ];

@@ -9,6 +9,7 @@
 namespace app\AppFactory\Pay\SaleOrders;
 
 
+use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 use app\AppFactory\Kernel\Support\AuthCode;
 use app\AppFactory\Kernel\Traits\Activity\ActivityFdUsedTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
@@ -124,80 +125,97 @@ class PaymentClient extends PayBaseClient
      */
     public function orderPay()
     {
-        $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
-        if (!$this->order) {
-            return $this->rFail($this->lang("VOrderPay.order_no_data"));
-        }
-        $this->order = $this->order->toArray();
-        actionLog($this->order,'发起支付订单数据');
-        $this->machine = $this->getMachineFind(['m_id' => $this->order['m_id']]);
-        if (!$this->machine) {
-            return $this->rFail($this->lang("VOrderPay.machine_no_data"));
-        }
-        actionLog($this->machine,'发起支付设备数据');
-        $paymentType = 1;
-
-        // 反扫支付二维码
-        if (isset($this->data['authCode']) && $this->order['pay_method'] == 2) {
-            $this->data['authCode'] = str_replace("Num Lock",'',$this->data['authCode']);
-            $paymentType = AuthCode::getCodePayee($this->data['authCode']);
-            if (!$paymentType) return $this->rFail($this->lang("VOrderPay.unKnow_auth_code"));
-            if (in_array($this->order['pay_type'], [1, 2, 11, 12, 21, 22], true)) {
-                $expectPayType = $this->order['pay_type'];
-                if (in_array($expectPayType, [11, 12], true)) $expectPayType = 1;
-                if (in_array($expectPayType, [21, 22], true)) $expectPayType = 2;
-                if ($paymentType != $expectPayType) {
-                    return $this->rFail($this->lang("VOrderPay.auth_code_not_match_pay_type"));
-                }
+        try{
+            $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
+            if (!$this->order) {
+                return $this->rFail($this->lang("VOrderPay.order_no_data"));
             }
-            $this->order['pay_code'] = $this->data['authCode'];
-        }
-        //余额支付
-        if ($this->order['pay_type'] == 20 && !empty($this->data['card_no'])) {
-            $this->order['pay_code'] = $this->data['card_no'];
-        }
+            $this->order = $this->order->toArray();
+            actionLog($this->order,'发起支付订单数据');
+            $this->machine = $this->getMachineFind(['m_id' => $this->order['m_id']]);
+            if (!$this->machine) {
+                return $this->rFail($this->lang("VOrderPay.machine_no_data"));
+            }
+            // throw new \Exception('测试支付异常'); // ← 临时加这行
+            actionLog($this->machine,'发起支付设备数据');
+            $paymentType = 1;
+
+            // 反扫支付二维码
+            if (isset($this->data['authCode']) && $this->order['pay_method'] == 2) {
+                $this->data['authCode'] = str_replace("Num Lock",'',$this->data['authCode']);
+                $paymentType = AuthCode::getCodePayee($this->data['authCode']);
+                if (!$paymentType) return $this->rFail($this->lang("VOrderPay.unKnow_auth_code"));
+                if (in_array($this->order['pay_type'], [1, 2, 11, 12, 21, 22], true)) {
+                    $expectPayType = $this->order['pay_type'];
+                    if (in_array($expectPayType, [11, 12], true)) $expectPayType = 1;
+                    if (in_array($expectPayType, [21, 22], true)) $expectPayType = 2;
+                    if ($paymentType != $expectPayType) {
+                        return $this->rFail($this->lang("VOrderPay.auth_code_not_match_pay_type"));
+                    }
+                }
+                $this->order['pay_code'] = $this->data['authCode'];
+            }
+            //余额支付
+            if ($this->order['pay_type'] == 20 && !empty($this->data['card_no'])) {
+                $this->order['pay_code'] = $this->data['card_no'];
+            }
 
 
-        $where['sm.s_type'] = 1;
-        $where['sp.status'] = 1;
-        $where['sp.payee_type'] = $this->order['pay_type'];
-        $where['sm.m_id'] = $this->order['m_id'];
-        if($this->machine['ao_id'] > 18){
-            $where['sm.ao_id'] = $this->machine['ao_id'];
-        }
-        $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');
-        if ((!is_array($this->strategyPayee) || !$this->strategyPayee) && in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
-            $where['sp.payee_type'] = $this->getCompatiblePayeeType($this->order['pay_type']);
+            $where['sm.s_type'] = 1;
+            $where['sp.status'] = 1;
+            $where['sp.payee_type'] = $this->order['pay_type'];
+            $where['sm.m_id'] = $this->order['m_id'];
+            if($this->machine['ao_id'] > 18){
+                $where['sm.ao_id'] = $this->machine['ao_id'];
+            }
             $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');
-        }
-        if (!is_array($this->strategyPayee)) return $this->strategyPayee;
-        if (!in_array($this->strategyPayee['payee_type'],array_keys($this->paymentType))) {
-            return $this->rFail($this->lang("VOrderPay.unKnow_pay_type"));
-        }
-        if ($this->strategyPayee['payee_type'] == 3) $this->payType = $this->tlPayType[$paymentType];
-        if ($this->strategyPayee['payee_type'] == 4) $this->payType = $this->jdPayType[$paymentType];
-        actionLog($this->strategyPayee,'收款配置数据');
+            if ((!is_array($this->strategyPayee) || !$this->strategyPayee) && in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
+                $where['sp.payee_type'] = $this->getCompatiblePayeeType($this->order['pay_type']);
+                $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');
+            }
+            if (!is_array($this->strategyPayee)) return $this->strategyPayee;
+            if (!in_array($this->strategyPayee['payee_type'],array_keys($this->paymentType))) {
+                return $this->rFail($this->lang("VOrderPay.unKnow_pay_type"));
+            }
+            if ($this->strategyPayee['payee_type'] == 3) $this->payType = $this->tlPayType[$paymentType];
+            if ($this->strategyPayee['payee_type'] == 4) $this->payType = $this->jdPayType[$paymentType];
+            actionLog($this->strategyPayee,'收款配置数据');
 
 
 
-        if (!in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
-            $this->order['pay_type'] = $this->strategyPayee['payee_type'];
-        }
-        $this->order['sp_id'] = $this->strategyPayee['sp_id'];
+            if (!in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
+                $this->order['pay_type'] = $this->strategyPayee['payee_type'];
+            }
+            $this->order['sp_id'] = $this->strategyPayee['sp_id'];
 
-        // 分润须在 sp_id、pay_type 与本次收款策略确定之后执行，保证 sale_orders_revenue.sp_id 与当笔支付一致
-        if ($this->order['total_price'] > 0) {
-            $this->countIncome();
-        }
+            // 分润须在 sp_id、pay_type 与本次收款策略确定之后执行，保证 sale_orders_revenue.sp_id 与当笔支付一致
+            if ($this->order['total_price'] > 0) {
+                $this->countIncome();
+            }
 
-        $uOrder = $this->updateSaleOrders($this->order,[],['pay_code',"pay_method",'pay_type','sp_id']);
-        if ($uOrder) {
-            actionLog($this->getLS(), '修改订单支付状态信息');
-            $func_name = $this->paymentType[$this->strategyPayee['payee_type']];
-            $result = $this->$func_name();
-            return $result;
+            $uOrder = $this->updateSaleOrders($this->order,[],['pay_code',"pay_method",'pay_type','sp_id']);
+            if ($uOrder) {
+                actionLog($this->getLS(), '修改订单支付状态信息');
+                $func_name = $this->paymentType[$this->strategyPayee['payee_type']];
+                actionLog([
+                    'order_id' => $this->order['order_id'] ?? null,
+                    'pay_type' => $this->order['pay_type'] ?? null,
+                    'pay_method' => $this->order['pay_method'] ?? null,
+                    'sp_id' => $this->order['sp_id'] ?? null,
+                    'payee_type' => $this->strategyPayee['payee_type'] ?? null,
+                    'dispatch_method' => $func_name,
+                ], '支付方法路由分派');
+                $result = $this->$func_name();
+                return $result;
+            }
+            return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
+        } catch (\Exception $e) {
+            actionLog($e->getMessage(), '支付异常');
+            if (isset($this->machine)) {
+                $this->recordPayError('拉取支付异常，请排查支付配置');
+            }
+            return $this->rFail($this->lang("VOrderPay.pay_exception"));
         }
-        return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
     }
 
     /**
@@ -300,4 +318,50 @@ class PaymentClient extends PayBaseClient
             return $this->rTryCatch($e->getMessage());
         }
     }
+
+    /**
+     * 记录支付异常错误码并发送通知
+     * @param string $msg 异常信息
+     */
+    protected function recordPayError($msg)
+    {
+        try {
+            $machineName = mb_substr($this->machine['machine_name'] ?? '', 0, 20, 'UTF-8');
+            $errorMsg = mb_substr($msg, 0, 20, 'UTF-8');
+
+            $insert = [
+                "m_id" => $this->machine['m_id'] ?? 0,
+                "machine_id" => $this->machine['machine_id'] ?? '',
+                "machine_name" => $machineName,
+                "address" => $this->machine['address'] ?? '',
+                "error_position" => 4,
+                "errorCode" => "2100021",
+                "remark" => $errorMsg,
+                "msg" => $msg,
+                "ao_id" => $this->machine['ao_id'] ?? 0,
+            ];
+            $meId = MachineErrorCodeModel::create($insert)->me_id;
+
+            $this->noticeSendData = [
+                "ao_id" => $this->machine['ao_id'] ?? 0,
+                "m_id" => $this->machine['m_id'] ?? 0,
+                "me_id" => $meId,
+                "templateType" => "mFault",
+                "replaceData" => [
+                    "machine_id" => $this->machine['machine_id'] ?? '',
+                    "machine_name" => $machineName,
+                    "errorCode" => "2100021",
+                    "date" => date("Y年m月d日"),
+                    "exceptionDeclaration" => $errorMsg,
+                    "error_code" => $errorMsg,
+                    "error_time" => date('Y-m-d H:i:s'),
+                    "error_info" => "2100021",
+                ],
+            ];
+            actionLog($this->noticeSendData, '发送支付异常通知');
+            @$this->noticeSend();
+        } catch (\Exception $e) {
+            actionException($e);
+        }
+    }  
 }

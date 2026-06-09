@@ -60,9 +60,15 @@ class VReceive extends VCommon
         "gm_id" => "require",
         "gmg_id" => "require",
         "trade_no" => "require",
+        "item_ids" => "require",
+        "check_list" => "require|array",
+    "maintainer_id" => "require",
         "status" => "integer",
+        "field" => "require",
         "date" => "require",
         "machine_usage" => "require",
+        "file_content" => "require",
+        "per_row" => "integer",
     ];
 
     protected $message = [
@@ -118,6 +124,13 @@ class VReceive extends VCommon
         "gmg_id.require" => "VSubGoodsMultipleOrder.gmg_id_require",
 
         "trade_no.require" => "VReceive.trade_no_require",
+        "item_ids.require" => "item_ids不能为空",
+        "check_list.require" => "check_list不能为空",
+        "check_list.array" => "check_list格式错误",
+        "maintainer_id.require" => "maintainer_id不能为空",
+        "field.require" => "图片字段名不能为空",
+    "file_content.require" => "file_content不能为空",
+    "per_row.integer" => "per_row格式错误",
         "date.require" => "VReceive.date_require",
         "machine_usage.require" => "VReceive.machine_usage_require",
 
@@ -199,6 +212,7 @@ class VReceive extends VCommon
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
         "httpHeartbeat" => ["msg_id","machine_id","timestamp","sign"],
+        "reportScreenImg" => ["msg_id","machine_id","timestamp","sign"],
         "requireOutGoods" => ["msg_id","machine_id","timestamp","sign","trade_no"],
         "getOrderPayStatus" => ["msg_id","machine_id","timestamp","sign"],
         "setHttpOutStatus" => ["msg_id","machine_id","timestamp","sign","trade_no","http_out_status"],
@@ -228,6 +242,18 @@ class VReceive extends VCommon
 
         "searchWCGoods" => ["msg_id","machine_id","timestamp","name"],
         "sendError" => ["msg_id","machine_id","timestamp","sign","errorCode"],
+
+        "getMaintenanceItems" => ["msg_id","machine_id","timestamp","sign"],
+    "submitMaintenanceRecord" => ["msg_id","machine_id","timestamp","sign","maintainer_id","check_list"],
+        "getMaintenanceRecords" => ["msg_id","machine_id","timestamp","sign"],
+
+    // 导入维护记录
+    "importMaintenanceRecords" => ["msg_id","machine_id","timestamp","sign","file_content","per_row"],
+
+        "getCheckListItems" => ["msg_id","machine_id","timestamp","sign"],
+        "submitCheckListRecord" => ["msg_id","machine_id","timestamp","sign","manager_id","check_list"],
+        "getCheckListRecords" => ["msg_id","machine_id","timestamp","sign"],
+    "importCheckListRecords" => ["msg_id","machine_id","timestamp","sign","file_content","per_row"],
 
         "testUploadInfoMq" => ["msg_id","machine_id","timestamp"],
     ];

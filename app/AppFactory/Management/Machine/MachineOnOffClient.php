@@ -13,6 +13,8 @@ use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Cache;
+use think\facade\Db;
 
 class MachineOnOffClient extends ManagementClient
 {
@@ -22,6 +24,7 @@ class MachineOnOffClient extends ManagementClient
     {
         $flag = [];
         $mIds = explode(",",$postData['m_id']);
+        actionLog($postData, '添加或修改的开关机数据日志数据');
         unset($postData['m_id']);
         if ($mIds) {
             foreach ($mIds as $m_id) {
@@ -32,10 +35,11 @@ class MachineOnOffClient extends ManagementClient
                     $check = $check->toArray();
                     $update = array_merge($check,$postData);
                     if($check['ao_id'] == 0) $update["ao_id"] = $this->manager['ao_id'];
-                    $result = $this->updateMachineOnOff($update);
+                    //$result = $this->updateMachineOnOff($update);
+                    $result = 0;
                     $flag[] = $result;
                     if ($result) {
-                        $this->sendToMachine(['machine_id' => $check['machine_id']], 'updateMachineOnOff');
+                        //$this->sendToMachine(['machine_id' => $check['machine_id']], 'updateMachineOnOff');
                     }
 //                    return $this->rFail($check['machine_id'] . ": " . $this->lang("VMachineOnOff.is_exists"));
                 } else {
@@ -44,11 +48,30 @@ class MachineOnOffClient extends ManagementClient
                     $machine = $machine->toArray();
                     $insert = array_merge($postData, $machine);
                     $insert["ao_id"] = $this->manager['ao_id'];
-                    $addOf = $this->addMachineOnOff($insert);
+                    //$addOf = $this->addMachineOnOff($insert);
+                    $addOf = 0;
                     if ($addOf) {
                         $flag[] = 1;
-                        $this->sendToMachine(['machine_id' => $machine['machine_id']], 'updateMachineOnOff');
+                        //$this->sendToMachine(['machine_id' => $machine['machine_id']], 'updateMachineOnOff');
                     }
+                }
+            }
+        }
+        //执行批量操作，给之前被覆盖的设备发送mq
+        if(!empty($postData['is_admin']) && $postData['is_admin'] == 'aaa_x6964455a'){
+            //查询所有在营且在线设备的machine_id
+            $machineIds = Db::name('machine')->where('online',1)->column('machine_id');
+            //$machineIds = $this->app->machine->getColumn(['status' => 1, 'online_status' => 1], 'machine_id');
+            if($machineIds){
+                actionLog($machineIds, '批量操作后需要发送mq的设备machine_id');
+                $cachePrefix = 'batch_update_on_off_mq:';
+                foreach ($machineIds as $machineId) {
+                    $cacheKey = $cachePrefix . $machineId;
+                    if (Cache::get($cacheKey)) {
+                        continue;
+                    }
+                    $this->sendToMachine(['machine_id' => $machineId], 'updateMachineOnOff');
+                    Cache::set($cacheKey, 1, 300);
                 }
             }
         }

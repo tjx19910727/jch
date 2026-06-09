@@ -260,6 +260,13 @@ trait WcBaseTrait
                 $combindSetData['daysInfo'] = '';
                 if(($wc_goods['type'] == 3 ||$wc_goods['type'] == 11) && $combindSetData['g_id'] == 9999){
                     $combindSetData['daysInfo'] = $wc_goods['daysInfo'];
+                    //对daysInfo处理一下，stock=surplus_stock
+                    $daysInfo = json_decode($combindSetData['daysInfo'], true);
+                    if (isset($daysInfo['stock'])) {
+                        $daysInfo['surplus_stock'] = $daysInfo['stock'];
+                        unset($daysInfo['stock']);
+                        $combindSetData['daysInfo'] = json_encode($daysInfo);
+                    }
                 }
                 $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $combindSetData['no'], 'out_no' => $no]);
                 if (!$wc_goods_local) {
@@ -358,6 +365,8 @@ trait WcBaseTrait
                 'link_remark' => '',
                 'trip_date' => date('Y-m-d'),
                 'distributor_id' => $this->config['distributor_id'],
+                'machine_id' => $order['machine_id'] ?? '',
+                'dispensing_status' => $wc_order_no['real_channel_code'] == 'Z10' ? 2 : 1,
             ];
             if(!empty($buy_date_range)) $data['buy_date_range'] = json_encode($buy_date_range);
             actionLog($data, "子订单同步数据");

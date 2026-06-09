@@ -151,8 +151,9 @@ class MachineModel extends BaseModel
 
     public function simSignalLog()
     {
+        $time = date('Y-m-d H:i:s', time()-1800);
         return $this->hasOne(SimSignalLogModel::class, "m_id", "m_id")
-            ->whereTime('created_at', 'today')
+            ->where('created_at', '>=', $time)
             ->order('id desc');
     }
 }

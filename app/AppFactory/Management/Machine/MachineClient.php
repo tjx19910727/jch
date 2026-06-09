@@ -226,28 +226,116 @@ class MachineClient extends ManagementClient
         return $this->rAction(flag_check($flag));
     }
 
-    public function getMList($where,$pageNum = 0,$field = "",$order = "")
+    /**
+     * 与 Machine::getList -> getMList 一致的账号可见 m_id 范围
+     * @return int[]|null null 表示不限制（超管等）
+     */
+    public function resolvePermittedMachineIds(): ?array
     {
         if ($this->manager['pid'] > 0) {
-            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
-            $createMIds = $this->getMachineColumn(['creator' => $this->manager['manager_id']],'m_id');
-            if ($createMIds && $mIds) $mIds = array_unique(array_merge($mIds,$createMIds));
-            $where[] = ['m_id', 'in', $mIds];
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+            $createMIds = $this->getMachineColumn(['creator' => $this->manager['manager_id']], 'm_id');
+            $mIds = array_values(array_unique(array_merge(
+                is_array($mIds) ? $mIds : [],
+                is_array($createMIds) ? $createMIds : []
+            )));
+            return array_values(array_unique(array_map('intval', $mIds)));
         }
-        return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) {
+
+        return null;
+    }
+
+    public function getMList($where,$pageNum = 0,$field = "",$order = "")
+    {
+        $permitted = $this->resolvePermittedMachineIds();
+        if ($permitted !== null) {
+            $where[] = ['m_id', 'in', $permitted];
+        }
+		$month = date('Y-m');
+        $monthStart = strtotime($month . '-01 00:00:00');
+        $monthEnd = strtotime(date('Y-m-t 23:59:59', $monthStart));
+        $defaultSignal = ['rsrp' => -999, 'sinr' => -999, 'rsrp_level' => 0, 'sinr_level' => 0];
+        return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) use ($defaultSignal, $month, $monthStart, $monthEnd) {
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
             if (isset($item['state_id']) && $item['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $item['state_id']],'code,name,cname');
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
             if (isset($item['regions_id']) && $item['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $item['regions_id']],'code,name,cname');
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
-            $item['machine_on_off'] = $this->getMachineOnOffFind(['m_id' => $item['m_id'],'status' => 1],'on_off_ckc,on_off_machine');
+            $machineOnOff = $this->getMachineOnOffFind(['m_id' => $item['m_id'],'status' => 1],'on_off_ckc,on_off_machine');
+            if (is_object($machineOnOff) && method_exists($machineOnOff, 'toArray')) {
+                $machineOnOff = $machineOnOff->toArray();
+            }
+            if (!is_array($machineOnOff)) {
+                $machineOnOff = json_encode([]);
+            }
+            if(!empty($machineOnOff['on_off_machine'])){
+                if(!is_array($machineOnOff['on_off_machine'])){
+                    $machineOnOff['on_off_machine'] = json_decode($machineOnOff['on_off_machine'], true);
+                }
+                if(is_array($machineOnOff['on_off_machine'])){
+                    foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
+                        if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
+                            continue;
+                        }
+                        $parts = explode(',', $timeRange);
+                        if (count($parts) !== 2) {
+                            continue;
+                        }
+                        $startTime = trim($parts[0]);
+                        $endTime = trim($parts[1]);
+                        if (
+                            preg_match('/^\d{2}:\d{2}$/', $startTime)
+                            && preg_match('/^\d{2}:\d{2}$/', $endTime)
+                        ) {
+                            $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                        }
+                    }
+                    $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE);
+                }
+            }
+            $item['machine_on_off'] = $machineOnOff;
+            if(empty($item['simSignalLog']) || ($item['online'] == 2 && $item['http_online'] == 2)){
+                $item['simSignalLog'] = $defaultSignal;
+            }
             $ratioWhere[] = ['m_id', '=', $item['m_id']];
             $ratioWhere[] = ['status', '<>', 2];
             $totalCapacity = $this->getMachineChannelSum($ratioWhere, 'capacity');
             $totalStock = $this->getMachineChannelSum($ratioWhere, 'stock');
-            $item['stock_ratio'] = ($totalCapacity > 0)
-                ? (bcmul(bcdiv($totalStock, $totalCapacity, 4), '100', 2) . '%')
-                : "0%";
+            if ($totalCapacity > 0) {
+                $ratio = bcdiv($totalStock, $totalCapacity, 4);
+                if (bccomp($ratio, '1', 4) > 0) {
+                    $ratio = '1';
+                }
+                if (bccomp($ratio, '0', 4) < 0) {
+                    $ratio = '0';
+                }
+                $item['stock_ratio'] = bcmul($ratio, '100', 2) . '%';
+            } else {
+                $item['stock_ratio'] = "0%";
+            }
+
+            $targetAmount = round((float) Db::name('machine_target_monthly')
+                ->where('m_id', intval($item['m_id']))
+                ->where('month', $month)
+                ->sum('target_amount'), 2);
+
+            if ($targetAmount <= 0) {
+                $item['month_target_amount'] = 0;
+                $item['month_achieve_amount'] = 0;
+                $item['month_achieve_rate'] = 0;
+                return $item;
+            }
+
+            $achieveAmount = round((float) Db::name('sale_orders')
+                ->where('m_id', intval($item['m_id']))
+                ->where('pay_status', 3)
+                ->where('create_date', '>=', intval($monthStart))
+                ->where('create_date', '<=', intval($monthEnd))
+                ->value('IFNULL(SUM(total_price - refund_amount),0)'), 2);
+
+            $item['month_target_amount'] = $targetAmount;
+            $item['month_achieve_amount'] = $achieveAmount;
+            $item['month_achieve_rate'] = $targetAmount > 0 ? round($achieveAmount / $targetAmount * 100, 2) : 0;
             return $item;
         }));
     }
@@ -348,9 +436,18 @@ class MachineClient extends ManagementClient
         $ratioWhere[] = ['status', '<>', 2];
         $totalCapacity = $this->getMachineChannelSum($ratioWhere, 'capacity');
         $totalStock = $this->getMachineChannelSum($ratioWhere, 'stock');
-        $stock_ratio = ($totalCapacity > 0)
-            ? (bcmul(bcdiv($totalStock, $totalCapacity, 4), '100', 2) . '%')
-            : "0%";
+        if ($totalCapacity > 0) {
+            $ratio = bcdiv($totalStock, $totalCapacity, 4);
+            if (bccomp($ratio, '1', 4) > 0) {
+                $ratio = '1';
+            }
+            if (bccomp($ratio, '0', 4) < 0) {
+                $ratio = '0';
+            }
+            $stock_ratio = bcmul($ratio, '100', 2) . '%';
+        } else {
+            $stock_ratio = "0%";
+        }
         return $stock_ratio;
     }
 
@@ -1584,5 +1681,268 @@ class MachineClient extends ManagementClient
                 continue;
             }
         }
+    }
+
+    /**
+     * 根据设备 street 回填空的 country_id/state_id/city_id/regions_id。
+     * 支持参数：dry_run=1 只预览，limit 限制条数，m_id/machine_id 指定设备。
+     * @param array $postData
+     * @return array|string
+     */
+    public function repairAddressAreaIds(array $postData)
+    {
+        $dryRun = intval($postData['dry_run'] ?? 0) === 1;
+        $limit = intval($postData['limit'] ?? 200);
+        if ($limit <= 0 || $limit > 1000) {
+            $limit = 200;
+        }
+
+        $query = Db::name('machine')
+            ->whereRaw("IFNULL(street, '') <> ''")
+            ->whereRaw('(IFNULL(country_id, 0) = 0 OR IFNULL(state_id, 0) = 0 OR IFNULL(city_id, 0) = 0 OR IFNULL(regions_id, 0) = 0)')
+            ->field('m_id,machine_id,machine_name,country_id,state_id,city_id,regions_id,street')
+            ->order('m_id asc')
+            ->limit($limit);
+
+        if (!empty($postData['m_id'])) {
+            $mIds = is_array($postData['m_id']) ? $postData['m_id'] : explode(',', (string)$postData['m_id']);
+            $mIds = array_values(array_filter(array_map('intval', $mIds)));
+            if ($mIds) {
+                $query->whereIn('m_id', $mIds);
+            }
+        }
+        if (!empty($postData['machine_id'])) {
+            $machineIds = is_array($postData['machine_id']) ? $postData['machine_id'] : explode(',', (string)$postData['machine_id']);
+            $machineIds = array_values(array_filter(array_map('trim', $machineIds)));
+            if ($machineIds) {
+                $query->whereIn('machine_id', $machineIds);
+            }
+        }
+
+        $machines = $query->select();
+        if (!$machines || $machines->isEmpty()) {
+            return $this->r(200, $this->lang('query_success'), [
+                'dry_run' => $dryRun ? 1 : 0,
+                'total' => 0,
+                'matched' => 0,
+                'updated' => 0,
+                'list' => [],
+            ]);
+        }
+
+        $areaData = $this->loadAddressAreaData();
+        $list = [];
+        $updated = 0;
+        $matched = 0;
+
+        foreach ($machines as $machine) {
+            $machine = is_object($machine) ? $machine->toArray() : $machine;
+            $match = $this->matchMachineStreetArea($machine, $areaData);
+            if (!$match['update']) {
+                $list[] = $match['result'];
+                continue;
+            }
+
+            $matched++;
+            if (!$dryRun) {
+                $res = Db::name('machine')->where('m_id', $machine['m_id'])->update($match['update']);
+                if ($res !== false) {
+                    $updated++;
+                }
+            }
+            $list[] = $match['result'];
+        }
+
+        return $this->r(200, $this->lang('query_success'), [
+            'dry_run' => $dryRun ? 1 : 0,
+            'total' => count($machines),
+            'matched' => $matched,
+            'updated' => $dryRun ? 0 : $updated,
+            'list' => $list,
+        ]);
+    }
+
+    private function loadAddressAreaData(): array
+    {
+        $country = Db::name('earth_countries')
+            ->where('cname', '=', '中国')
+            ->whereOr('name', '=', 'China')
+            ->field('id,cname,name')
+            ->find();
+        $countryId = intval($country['id'] ?? 44);
+
+        $states = Db::name('earth_states')
+            ->where('country_id', '=', $countryId)
+            ->field('id,country_id,cname,name')
+            ->select()
+            ->toArray();
+        $stateIds = array_values(array_filter(array_map('intval', array_column($states, 'id'))));
+        $cities = Db::name('earth_cities')
+            ->whereIn('state_id', $stateIds ?: [0])
+            ->field('id,state_id,cname,name')
+            ->select()
+            ->toArray();
+        $cityIds = array_values(array_filter(array_map('intval', array_column($cities, 'id'))));
+        $regions = Db::name('earth_regions')
+            ->whereIn('city_id', $cityIds ?: [0])
+            ->field('id,city_id,cname,name')
+            ->select()
+            ->toArray();
+
+        $stateMap = [];
+        foreach ($states as $state) {
+            $stateMap[intval($state['id'])] = $state;
+        }
+        $cityMap = [];
+        foreach ($cities as $city) {
+            $cityMap[intval($city['id'])] = $city;
+        }
+
+        return [
+            'country_id' => $countryId,
+            'states' => $this->prepareAddressCandidates($states, 'country_id'),
+            'cities' => $this->prepareAddressCandidates($cities, 'state_id'),
+            'regions' => $this->prepareAddressCandidates($regions, 'city_id'),
+            'state_map' => $stateMap,
+            'city_map' => $cityMap,
+        ];
+    }
+
+    private function prepareAddressCandidates(array $rows, string $parentField): array
+    {
+        $list = [];
+        foreach ($rows as $row) {
+            $names = [];
+            foreach (['cname', 'name'] as $field) {
+                $name = trim((string)($row[$field] ?? ''));
+                if ($name === '') {
+                    continue;
+                }
+                $names[] = $name;
+                $short = $this->shortAddressName($name);
+                if ($short !== '' && $short !== $name) {
+                    $names[] = $short;
+                }
+            }
+            $names = array_values(array_unique($names));
+            if (!$names) {
+                continue;
+            }
+            $row['parent_id'] = intval($row[$parentField] ?? 0);
+            $row['names'] = $names;
+            $list[] = $row;
+        }
+        return $list;
+    }
+
+    private function shortAddressName(string $name): string
+    {
+        $suffixes = ['特别行政区', '维吾尔自治区', '壮族自治区', '回族自治区', '自治区', '省', '市', '地区', '盟', '县', '区'];
+        foreach ($suffixes as $suffix) {
+            if (mb_substr($name, -mb_strlen($suffix)) === $suffix) {
+                return mb_substr($name, 0, mb_strlen($name) - mb_strlen($suffix));
+            }
+        }
+        return $name;
+    }
+
+    private function matchMachineStreetArea(array $machine, array $areaData): array
+    {
+        $street = trim((string)($machine['street'] ?? ''));
+        $countryId = intval($machine['country_id'] ?? 0);
+        $stateId = intval($machine['state_id'] ?? 0);
+        $cityId = intval($machine['city_id'] ?? 0);
+        $regionId = intval($machine['regions_id'] ?? 0);
+
+        $state = $stateId > 0 ? ($areaData['state_map'][$stateId] ?? null) : $this->findAddressCandidate($street, $areaData['states']);
+        $stateIdForMatch = intval($stateId ?: ($state['id'] ?? 0));
+
+        $city = $cityId > 0 ? ($areaData['city_map'][$cityId] ?? null) : $this->findAddressCandidate($street, $areaData['cities'], $stateIdForMatch);
+        if (!$city && $stateIdForMatch <= 0) {
+            $city = $this->findAddressCandidate($street, $areaData['cities']);
+        }
+        $cityIdForMatch = intval($cityId ?: ($city['id'] ?? 0));
+
+        $region = $regionId > 0 ? null : $this->findAddressCandidate($street, $areaData['regions'], $cityIdForMatch);
+        if (!$region && $cityIdForMatch <= 0) {
+            $region = $this->findAddressCandidate($street, $areaData['regions']);
+        }
+
+        if ($region && $cityIdForMatch <= 0) {
+            $cityIdForMatch = intval($region['parent_id'] ?? 0);
+            $city = $areaData['city_map'][$cityIdForMatch] ?? $city;
+        }
+        if ($city && $stateIdForMatch <= 0) {
+            $stateIdForMatch = intval($city['parent_id'] ?? 0);
+            $state = $areaData['state_map'][$stateIdForMatch] ?? $state;
+        }
+
+        $update = [];
+        if ($countryId <= 0 && ($stateIdForMatch > 0 || $cityIdForMatch > 0 || $region)) {
+            $update['country_id'] = $areaData['country_id'];
+        }
+        if ($stateId <= 0 && $stateIdForMatch > 0) {
+            $update['state_id'] = $stateIdForMatch;
+        }
+        if ($cityId <= 0 && $cityIdForMatch > 0) {
+            $update['city_id'] = $cityIdForMatch;
+        }
+        if ($regionId <= 0 && $region) {
+            $update['regions_id'] = intval($region['id']);
+        }
+
+        return [
+            'update' => $update,
+            'result' => [
+                'm_id' => intval($machine['m_id'] ?? 0),
+                'machine_id' => $machine['machine_id'] ?? '',
+                'machine_name' => $machine['machine_name'] ?? '',
+                'street' => $street,
+                'old' => [
+                    'country_id' => $countryId,
+                    'state_id' => $stateId,
+                    'city_id' => $cityId,
+                    'regions_id' => $regionId,
+                ],
+                'match' => [
+                    'country_id' => $areaData['country_id'],
+                    'state_id' => $stateIdForMatch,
+                    'state_name' => $state['cname'] ?? ($state['name'] ?? ''),
+                    'city_id' => $cityIdForMatch,
+                    'city_name' => $city['cname'] ?? ($city['name'] ?? ''),
+                    'regions_id' => intval($region['id'] ?? 0),
+                    'regions_name' => $region['cname'] ?? ($region['name'] ?? ''),
+                ],
+                'update' => $update,
+            ],
+        ];
+    }
+
+    private function findAddressCandidate(string $street, array $candidates, int $parentId = 0)
+    {
+        $best = null;
+        $bestPos = null;
+        $bestLen = 0;
+        foreach ($candidates as $candidate) {
+            if ($parentId > 0 && intval($candidate['parent_id'] ?? 0) !== $parentId) {
+                continue;
+            }
+            foreach ($candidate['names'] as $name) {
+                $len = mb_strlen($name);
+                if ($len <= 1) {
+                    continue;
+                }
+                $pos = mb_strpos($street, $name);
+                if ($pos === false) {
+                    continue;
+                }
+                if ($best === null || $pos < $bestPos || ($pos === $bestPos && $len > $bestLen)) {
+                    $best = $candidate;
+                    $bestPos = $pos;
+                    $bestLen = $len;
+                }
+            }
+        }
+        return $best;
     }
 }
