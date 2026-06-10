@@ -3003,8 +3003,8 @@ class ApiClient extends ReceiveBaseClient
         $where['machine_id'] = $this->data['machine_id'];
         $wcMachineChannelLists = $this->getWcMachineChannelList($where, $pageNum, "*", 'sort asc');
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
-        $wcMachineChannelLists = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
-        foreach ($wcMachineChannelLists as &$v) {
+        $wcMachineChannelData = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
+        foreach ($wcMachineChannelData as &$v) {
             $wc_goods = $this->getWcGoodsFind(['no' => $v['out_no']]);
             $v['desc'] = $wc_goods['description'] ?? '';
             if ($v['gc_id'] == 11) {
@@ -3016,6 +3016,8 @@ class ApiClient extends ReceiveBaseClient
                 $item['desc'] .= $wc_goods['description'] ?? '';
             }
         }
+        unset($v, $item);
+        if ($pageNum) $wcMachineChannelLists['data'] = $wcMachineChannelData;
         return $this->r(200, "SUCCESS", $wcMachineChannelLists);
     }
 
