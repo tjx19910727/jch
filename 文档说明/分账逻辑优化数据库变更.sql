@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS `revenue_rule` (
   `base_type` tinyint(1) DEFAULT 1 COMMENT '分账基数：1订单总额，2扣除出租商品后金额',
   `turnover_type` tinyint(1) DEFAULT 1 COMMENT '阶梯营业额口径：1净营业额，2支付成功金额',
   `tier_calc_mode` tinyint(1) DEFAULT 1 COMMENT '阶梯命中：1本单后累计整单命中，2跨阶梯拆分',
+  `settlement_type` tinyint(1) DEFAULT 1 COMMENT '分账时间类型：1即时分账，2 T+N分账',
+  `settlement_days` int DEFAULT 0 COMMENT 'T+N分账天数，即时分账为0',
   `status` tinyint(1) DEFAULT 1 COMMENT '状态：1启用，2停用',
   `creator` int DEFAULT NULL,
   `create_time` int DEFAULT NULL,
@@ -97,26 +99,6 @@ CREATE TABLE IF NOT EXISTS `revenue_pay_channel` (
   UNIQUE KEY `uk_pay_type` (`pay_type`),
   KEY `idx_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='需要分账的收款渠道配置表';
-
-CREATE TABLE IF NOT EXISTS `revenue_payee_config` (
-  `rpcfg_id` int NOT NULL AUTO_INCREMENT COMMENT '收款策略新分账配置ID',
-  `sp_id` int NOT NULL COMMENT '收款策略ID',
-  `payee_type` int DEFAULT NULL COMMENT '收款策略支付类型快照',
-  `ao_id` int DEFAULT NULL COMMENT '收款策略所属组织快照',
-  `default_ra_id` int DEFAULT NULL COMMENT '默认分账账户ID',
-  `default_manager_id` int DEFAULT NULL COMMENT '默认账户管理人ID',
-  `enable_revenue` tinyint(1) DEFAULT 1 COMMENT '是否启用新分账：1启用，2停用',
-  `settlement_type` tinyint(1) DEFAULT 1 COMMENT '分账时间类型：1即时分账，2 T+N分账',
-  `settlement_days` int DEFAULT 0 COMMENT 'T+N分账天数，即时分账为0',
-  `status` tinyint(1) DEFAULT 1 COMMENT '状态：1启用，2停用',
-  `creator` int DEFAULT NULL,
-  `create_time` int DEFAULT NULL,
-  `update_time` int DEFAULT NULL,
-  PRIMARY KEY (`rpcfg_id`),
-  UNIQUE KEY `uk_sp_id` (`sp_id`),
-  KEY `idx_ra_manager` (`default_ra_id`, `default_manager_id`),
-  KEY `idx_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='收款策略新分账配置表';
 
 CREATE TABLE IF NOT EXISTS `revenue_order` (
   `ro_id` int NOT NULL AUTO_INCREMENT COMMENT '新分账订单ID',

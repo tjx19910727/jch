@@ -7,7 +7,6 @@ use app\AppFactory\Kernel\ServiceProviderInterface;
 use app\AppFactory\Management\Revenue\RevenueAccountClient;
 use app\AppFactory\Management\Revenue\RevenueOrderClient;
 use app\AppFactory\Management\Revenue\RevenuePayChannelClient;
-use app\AppFactory\Management\Revenue\RevenuePayeeConfigClient;
 use app\AppFactory\Management\Revenue\RevenueRuleClient;
 
 class RevenueProvider implements ServiceProviderInterface
@@ -25,9 +24,6 @@ class RevenueProvider implements ServiceProviderInterface
         };
         $app['revenuePayChannel'] = function ($app) {
             return new RevenuePayChannelClient($app);
-        };
-        $app['revenuePayeeConfig'] = function ($app) {
-            return new RevenuePayeeConfigClient($app);
         };
     }
 }

@@ -12,66 +12,62 @@ FROM revenue_pay_channel
 WHERE status = 1
 ORDER BY rpc_id DESC;
 
--- 1.1 分账时间配置不合法的收款策略新分账配置
+-- 1.1 分账时间配置不合法的分账规则
 SELECT *
-FROM revenue_payee_config
+FROM revenue_rule
 WHERE settlement_type NOT IN (1, 2)
    OR settlement_days < 0
    OR (settlement_type = 1 AND settlement_days <> 0)
    OR (settlement_type = 2 AND settlement_days < 1);
 
--- 2. 启用渠道对应但缺少新分账配置的收款策略
+-- 2. 未绑定普通分账规则的设备
 SELECT
-  sp.sp_id,
-  sp.sp_name,
-  sp.payee_type,
-  sp.ao_id
-FROM strategy_payee sp
-JOIN revenue_pay_channel rpc
-  ON rpc.status = 1
- AND (rpc.pay_type = sp.payee_type OR rpc.payee_type = sp.payee_type)
-LEFT JOIN revenue_payee_config rpcfg
-  ON rpcfg.sp_id = sp.sp_id
- AND rpcfg.status = 1
-WHERE sp.status = 1
-  AND rpcfg.rpcfg_id IS NULL
-ORDER BY sp.sp_id DESC;
+  m.m_id,
+  m.machine_id,
+  m.machine_name,
+  m.ao_id
+FROM machine m
+LEFT JOIN revenue_rule_machine rrm
+  ON rrm.m_id = m.m_id
+ AND rrm.status = 1
+LEFT JOIN revenue_rule rr
+  ON rr.rr_id = rrm.rr_id
+ AND rr.status = 1
+ AND rr.rule_mode = 1
+WHERE rr.rr_id IS NULL
+ORDER BY m.m_id DESC;
 
--- 3. 启用新分账但缺少默认分账账户的收款策略配置
+-- 3. 启用但没有有效明细的分账规则
 SELECT
-  rpcfg.rpcfg_id,
-  rpcfg.sp_id,
-  sp.sp_name,
-  rpcfg.payee_type,
-  rpcfg.ao_id,
-  rpcfg.default_ra_id,
-  rpcfg.default_manager_id,
-  rpcfg.enable_revenue
-FROM revenue_payee_config rpcfg
-LEFT JOIN strategy_payee sp ON sp.sp_id = rpcfg.sp_id
-WHERE rpcfg.status = 1
-  AND rpcfg.enable_revenue = 1
-  AND (rpcfg.default_ra_id IS NULL OR rpcfg.default_ra_id = 0);
+  rr.rr_id,
+  rr.rule_name,
+  rr.rule_mode
+FROM revenue_rule rr
+LEFT JOIN revenue_rule_item rri
+  ON rri.rr_id = rr.rr_id
+ AND rri.status = 1
+WHERE rr.status = 1
+GROUP BY rr.rr_id, rr.rule_name, rr.rule_mode
+HAVING COUNT(rri.rri_id) = 0;
 
--- 4. 默认分账账户不存在、停用，或组织不一致的收款策略配置
+-- 4. 普通分账规则无法完整覆盖订单剩余金额的配置
 SELECT
-  rpcfg.rpcfg_id,
-  rpcfg.sp_id,
-  sp.sp_name,
-  rpcfg.ao_id payee_ao_id,
-  rpcfg.default_ra_id,
-  ra.ao_id account_ao_id,
-  ra.status account_status
-FROM revenue_payee_config rpcfg
-LEFT JOIN strategy_payee sp ON sp.sp_id = rpcfg.sp_id
-LEFT JOIN revenue_account ra ON ra.ra_id = rpcfg.default_ra_id
-WHERE rpcfg.status = 1
-  AND rpcfg.enable_revenue = 1
-  AND (
-    ra.ra_id IS NULL
-    OR ra.status <> 1
-    OR ra.ao_id <> rpcfg.ao_id
-  );
+  rr.rr_id,
+  rr.rule_name,
+  GROUP_CONCAT(CONCAT(rri.rri_id, ':', rri.calc_type, ':', rri.calc_value) ORDER BY rri.sort, rri.rri_id) items
+FROM revenue_rule rr
+JOIN revenue_rule_item rri ON rri.rr_id = rr.rr_id AND rri.status = 1
+WHERE rr.status = 1
+  AND rr.rule_mode = 1
+GROUP BY rr.rr_id, rr.rule_name
+HAVING NOT (
+  (COUNT(*) = 1 AND SUM(CASE WHEN rri.calc_type = 3 THEN 1 ELSE 0 END) = 1)
+  OR
+  (
+    SUM(CASE WHEN rri.calc_type = 1 THEN 1 ELSE 0 END) = COUNT(*)
+    AND SUM(rri.calc_value) = 100
+  )
+);
 
 -- 5. 启用策略明细中账户不存在、停用，或账户组织与接收组织不一致
 SELECT

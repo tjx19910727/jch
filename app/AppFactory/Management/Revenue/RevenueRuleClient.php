@@ -18,6 +18,8 @@ class RevenueRuleClient extends ManagementClient
     {
         $check = $this->checkRuleData($postData);
         if ($check !== true) return $check;
+        if (!isset($postData['settlement_type'])) $postData['settlement_type'] = 1;
+        if (!isset($postData['settlement_days'])) $postData['settlement_days'] = 0;
         if (!isset($postData['status'])) $postData['status'] = 1;
         return $this->rA($this->addRevenueRule($postData));
     }
@@ -133,7 +135,7 @@ class RevenueRuleClient extends ManagementClient
         return $this->rD($this->delRevenueRuleMachine(['rrm_id' => $rrmId]));
     }
 
-    protected function checkRuleData($data, $isUpdate = false)
+    protected function checkRuleData(&$data, $isUpdate = false)
     {
         if (!$isUpdate || isset($data['rule_name'])) {
             if (empty($data['rule_name'])) return $this->rFail("分账策略名称不能为空");
@@ -142,6 +144,21 @@ class RevenueRuleClient extends ManagementClient
             if (empty($data['rule_mode']) || !in_array(intval($data['rule_mode']), [1, 2, 3, 4], true)) {
                 return $this->rFail("分账策略模式不合法");
             }
+        }
+        $current = [];
+        if ($isUpdate && !empty($data['rr_id'])) {
+            $current = $this->getRevenueRuleFind(['rr_id' => $data['rr_id']], 'rr_id,settlement_type,settlement_days');
+            if (!$current) return $this->rFail("分账策略不存在");
+            if (!is_array($current)) $current = $current->toArray();
+        }
+        $settlementData = array_merge($current, $data);
+        $settlementType = intval($settlementData['settlement_type'] ?? 1);
+        $settlementDays = intval($settlementData['settlement_days'] ?? 0);
+        if (!in_array($settlementType, [1, 2], true)) return $this->rFail("分账时间类型不合法");
+        if ($settlementDays < 0) return $this->rFail("T+N 天数不能小于0");
+        if ($settlementType === 2 && $settlementDays < 1) return $this->rFail("T+N 分账天数必须大于0");
+        if ($settlementType === 1 && (isset($data['settlement_type']) || isset($data['settlement_days']))) {
+            $data['settlement_days'] = 0;
         }
         return true;
     }
@@ -197,6 +214,13 @@ class RevenueRuleClient extends ManagementClient
             if (in_array($calcType, [1, 2], true) && floatval($data['calc_value'] ?? 0) <= 0) {
                 return $this->rFail("设备出租分账比例或金额必须大于0");
             }
+        }
+        if ($rule && intval($rule['rule_mode']) === 1) {
+            if (!in_array($calcType, [1, 3], true)) {
+                return $this->rFail("普通分账仅支持按比例或全额分账");
+            }
+            $percentCheck = $this->checkRulePercentLimit($data, $oldItem, $calcType);
+            if ($percentCheck !== true) return $percentCheck;
         }
         if ($rule && intval($rule['rule_mode']) === 3) {
             $percentCheck = $this->checkRulePercentLimit($data, $oldItem, $calcType);
@@ -254,7 +278,7 @@ class RevenueRuleClient extends ManagementClient
             $total += floatval($data['calc_value'] ?? ($oldItem['calc_value'] ?? 0));
         }
         if ($total > 100) {
-            return $this->rFail("设备分账策略固定比例合计不能超过100%");
+            return $this->rFail("分账策略固定比例合计不能超过100%");
         }
         return true;
     }

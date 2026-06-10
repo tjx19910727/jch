@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "嘉潮汇管理后台 - 新分账接口",
-        "description": "新分账后台配置、分账订单查询、配置自检与测试环境模拟支付成功接口。本接口文档不包含、也不修改旧收款策略接口。revenue_pay_channel 仅控制哪些订单支付类型允许触发新分账；具体收款策略是否参与分账、默认账户及即时/T+N结算周期统一由 revenue_payee_config 配置；revenue_order 保存生成时的结算快照。导入 Apifox 后，请在环境中配置 baseUrl 和 token。所有接口均为 POST，并显式携带必传 Header token: {{token}}。",
+        "description": "新分账后台配置、分账订单查询与测试环境模拟支付成功接口。revenue_pay_channel 仅控制哪些订单支付类型允许触发新分账；普通分账、设备出租、设备分账和设备商品分账均由 revenue_rule/revenue_rule_item 配置；每条规则独立配置即时或 T+N 结算周期，revenue_order 保存生成时的结算快照。导入 Apifox 后，请在环境中配置 baseUrl 和 token。所有接口均为 POST，并显式携带必传 Header token: {{token}}。",
         "version": "1.5.0"
     },
     "servers": [
@@ -261,98 +261,6 @@
                 ],
                 "requestBody": {
                     "$ref": "#/components/requestBodies/RevenuePayChannelDelRequest"
-                },
-                "responses": {
-                    "200": {
-                        "$ref": "#/components/responses/CommonSuccess"
-                    }
-                }
-            }
-        },
-        "/management/revenue.revenue_payee_config/save": {
-            "post": {
-                "tags": [
-                    "新分账-收款策略配置"
-                ],
-                "summary": "保存收款策略新分账配置",
-                "description": "给具体收款策略配置是否参与新分账、默认账户及即时/T+N结算周期。若 sp_id 已存在则局部更新，否则新增。启用分账且支付渠道已开启时，default_ra_id 必填，且账户所属组织必须与收款策略组织一致。",
-                "operationId": "revenuePayeeConfigSave",
-                "parameters": [
-                    {
-                        "$ref": "#/components/parameters/TokenHeader"
-                    }
-                ],
-                "requestBody": {
-                    "$ref": "#/components/requestBodies/RevenuePayeeConfigSaveRequest"
-                },
-                "responses": {
-                    "200": {
-                        "$ref": "#/components/responses/CommonSuccess"
-                    }
-                }
-            }
-        },
-        "/management/revenue.revenue_payee_config/getList": {
-            "post": {
-                "tags": [
-                    "新分账-收款策略配置"
-                ],
-                "summary": "收款策略新分账配置列表",
-                "description": "查询收款策略新分账配置。",
-                "operationId": "revenuePayeeConfigGetList",
-                "parameters": [
-                    {
-                        "$ref": "#/components/parameters/TokenHeader"
-                    }
-                ],
-                "requestBody": {
-                    "$ref": "#/components/requestBodies/RevenuePayeeConfigListRequest"
-                },
-                "responses": {
-                    "200": {
-                        "$ref": "#/components/responses/CommonSuccess"
-                    }
-                }
-            }
-        },
-        "/management/revenue.revenue_payee_config/getFind": {
-            "post": {
-                "tags": [
-                    "新分账-收款策略配置"
-                ],
-                "summary": "收款策略新分账配置详情",
-                "description": "按条件查询单条收款策略新分账配置，常用 rpcfg_id 或 sp_id。",
-                "operationId": "revenuePayeeConfigGetFind",
-                "parameters": [
-                    {
-                        "$ref": "#/components/parameters/TokenHeader"
-                    }
-                ],
-                "requestBody": {
-                    "$ref": "#/components/requestBodies/RevenuePayeeConfigFindRequest"
-                },
-                "responses": {
-                    "200": {
-                        "$ref": "#/components/responses/CommonSuccess"
-                    }
-                }
-            }
-        },
-        "/management/revenue.revenue_payee_config/checkConfig": {
-            "post": {
-                "tags": [
-                    "新分账-收款策略配置"
-                ],
-                "summary": "新分账配置自检",
-                "description": "检查启用渠道、结算周期异常、默认账户异常、策略账户异常、出租策略异常、设备分账比例超限、阶梯异常等。payee_without_config 仅表示可配置但尚未参与新分账的候选收款策略，不计入 has_error。",
-                "operationId": "revenuePayeeConfigCheckConfig",
-                "parameters": [
-                    {
-                        "$ref": "#/components/parameters/TokenHeader"
-                    }
-                ],
-                "requestBody": {
-                    "$ref": "#/components/requestBodies/EmptyRequest"
                 },
                 "responses": {
                     "200": {
@@ -1254,125 +1162,6 @@
                     "application/x-www-form-urlencoded": {
                         "schema": {
                             "$ref": "#/components/schemas/RevenuePayChannelDelRequest"
-                        }
-                    }
-                }
-            },
-            "RevenuePayeeConfigSaveRequest": {
-                "required": true,
-                "content": {
-                    "application/json": {
-                        "schema": {
-                            "$ref": "#/components/schemas/RevenuePayeeConfigSaveRequest"
-                        },
-                        "examples": {
-                            "启用普通分账": {
-                                "summary": "为收款策略100配置默认分账账户",
-                                "value": {
-                                    "sp_id": 100,
-                                    "default_ra_id": 1,
-                                    "enable_revenue": 1,
-                                    "settlement_type": 1,
-                                    "settlement_days": 0,
-                                    "status": 1
-                                }
-                            },
-                            "切换默认账户": {
-                                "summary": "切换到同组织其他账户",
-                                "value": {
-                                    "sp_id": 100,
-                                    "default_ra_id": 5,
-                                    "enable_revenue": 1,
-                                    "settlement_type": 2,
-                                    "settlement_days": 1,
-                                    "status": 1
-                                }
-                            },
-                            "停用新分账": {
-                                "summary": "原收款策略继续使用，仅停止新分账",
-                                "value": {
-                                    "sp_id": 100,
-                                    "enable_revenue": 2,
-                                    "status": 1
-                                }
-                            }
-                        }
-                    },
-                    "application/x-www-form-urlencoded": {
-                        "schema": {
-                            "$ref": "#/components/schemas/RevenuePayeeConfigSaveRequest"
-                        }
-                    }
-                }
-            },
-            "RevenuePayeeConfigListRequest": {
-                "required": false,
-                "content": {
-                    "application/json": {
-                        "schema": {
-                            "$ref": "#/components/schemas/RevenuePayeeConfigListRequest"
-                        },
-                        "examples": {
-                            "查询启用配置": {
-                                "summary": "查询已启用配置",
-                                "value": {
-                                    "page": 1,
-                                    "pageNum": 20,
-                                    "enable_revenue": 1,
-                                    "status": 1
-                                }
-                            },
-                            "按收款策略查询": {
-                                "summary": "查询收款策略100配置",
-                                "value": {
-                                    "page": 1,
-                                    "pageNum": 20,
-                                    "sp_id": 100
-                                }
-                            },
-                            "按组织查询": {
-                                "summary": "查询A组织配置",
-                                "value": {
-                                    "page": 1,
-                                    "pageNum": 20,
-                                    "ao_id": 1,
-                                    "status": 1
-                                }
-                            }
-                        }
-                    },
-                    "application/x-www-form-urlencoded": {
-                        "schema": {
-                            "$ref": "#/components/schemas/RevenuePayeeConfigListRequest"
-                        }
-                    }
-                }
-            },
-            "RevenuePayeeConfigFindRequest": {
-                "required": false,
-                "content": {
-                    "application/json": {
-                        "schema": {
-                            "$ref": "#/components/schemas/RevenuePayeeConfigFindRequest"
-                        },
-                        "examples": {
-                            "按收款策略": {
-                                "summary": "查询收款策略100配置",
-                                "value": {
-                                    "sp_id": 100
-                                }
-                            },
-                            "按配置ID": {
-                                "summary": "按配置ID查询",
-                                "value": {
-                                    "rpcfg_id": 1
-                                }
-                            }
-                        }
-                    },
-                    "application/x-www-form-urlencoded": {
-                        "schema": {
-                            "$ref": "#/components/schemas/RevenuePayeeConfigFindRequest"
                         }
                     }
                 }
@@ -2504,116 +2293,6 @@
                     }
                 }
             },
-            "RevenuePayeeConfigSaveRequest": {
-                "type": "object",
-                "required": [
-                    "sp_id"
-                ],
-                "properties": {
-                    "sp_id": {
-                        "type": "integer",
-                        "description": "收款策略ID，必填；仅作为订单实际收款策略关联标识，不修改原收款策略"
-                    },
-                    "default_ra_id": {
-                        "type": "integer",
-                        "description": "默认分账账户ID，条件必填；当分账触发渠道启用且 enable_revenue=1 时必填"
-                    },
-                    "default_manager_id": {
-                        "type": "integer",
-                        "description": "默认账户管理人ID，非必填；系统按 default_ra_id 自动写入"
-                    },
-                    "payee_type": {
-                        "type": "integer",
-                        "description": "收款策略支付类型快照，非必填；不传则只读 strategy_payee 后填充，不修改原收款策略"
-                    },
-                    "ao_id": {
-                        "type": "integer",
-                        "description": "收款策略所属组织ID快照，非必填；不传则只读 strategy_payee 后填充，不修改原收款策略"
-                    },
-                    "enable_revenue": {
-                        "type": "integer",
-                        "description": "是否启用新分账，非必填：1启用，2停用；默认1",
-                        "default": 1
-                    },
-                    "settlement_type": {
-                        "type": "integer",
-                        "description": "该收款策略的分账时间类型，非必填：1即时分账，2 T+N分账；新增默认1",
-                        "enum": [
-                            1,
-                            2
-                        ],
-                        "default": 1
-                    },
-                    "settlement_days": {
-                        "type": "integer",
-                        "description": "该收款策略的 T+N 天数；settlement_type=2 时必须大于等于1，即时分账固定为0",
-                        "minimum": 0,
-                        "default": 0
-                    },
-                    "status": {
-                        "type": "integer",
-                        "description": "状态，非必填：1启用，2停用；默认1",
-                        "default": 1
-                    }
-                }
-            },
-            "RevenuePayeeConfigListRequest": {
-                "allOf": [
-                    {
-                        "$ref": "#/components/schemas/PaginationFields"
-                    },
-                    {
-                        "type": "object",
-                        "properties": {
-                            "rpcfg_id": {
-                                "type": "integer",
-                                "description": "配置ID，非必填"
-                            },
-                            "sp_id": {
-                                "type": "integer",
-                                "description": "收款策略ID，非必填"
-                            },
-                            "payee_type": {
-                                "type": "integer",
-                                "description": "收款策略支付类型，非必填"
-                            },
-                            "ao_id": {
-                                "type": "integer",
-                                "description": "收款策略组织ID，非必填"
-                            },
-                            "default_ra_id": {
-                                "type": "integer",
-                                "description": "默认分账账户ID，非必填"
-                            },
-                            "default_manager_id": {
-                                "type": "integer",
-                                "description": "默认账户管理人ID，非必填"
-                            },
-                            "enable_revenue": {
-                                "type": "integer",
-                                "description": "是否启用新分账，非必填：1启用，2停用"
-                            },
-                            "status": {
-                                "type": "integer",
-                                "description": "状态，非必填：1启用，2停用"
-                            }
-                        }
-                    }
-                ]
-            },
-            "RevenuePayeeConfigFindRequest": {
-                "type": "object",
-                "properties": {
-                    "rpcfg_id": {
-                        "type": "integer",
-                        "description": "配置ID，非必填"
-                    },
-                    "sp_id": {
-                        "type": "integer",
-                        "description": "收款策略ID，非必填但建议传"
-                    }
-                }
-            },
             "RevenueRuleListRequest": {
                 "allOf": [
                     {
@@ -2703,6 +2382,21 @@
                         "type": "integer",
                         "description": "状态，非必填：1启用，2停用；默认1",
                         "default": 1
+                    },
+                    "settlement_type": {
+                        "type": "integer",
+                        "description": "分账时间类型，非必填：1即时分账，2 T+N分账；默认1",
+                        "enum": [
+                            1,
+                            2
+                        ],
+                        "default": 1
+                    },
+                    "settlement_days": {
+                        "type": "integer",
+                        "description": "T+N分账天数，非必填；即时分账固定为0，T+N必须大于0",
+                        "minimum": 0,
+                        "default": 0
                     }
                 }
             },
@@ -2749,6 +2443,21 @@
                     "status": {
                         "type": "integer",
                         "description": "状态，非必填：1启用，2停用"
+                    },
+                    "settlement_type": {
+                        "type": "integer",
+                        "description": "分账时间类型，非必填：1即时分账，2 T+N分账",
+                        "enum": [
+                            1,
+                            2
+                        ],
+                        "default": 1
+                    },
+                    "settlement_days": {
+                        "type": "integer",
+                        "description": "T+N分账天数，非必填；即时分账固定为0，T+N必须大于0",
+                        "minimum": 0,
+                        "default": 0
                     }
                 }
             },
@@ -3257,11 +2966,13 @@
     "x-scenario-guides": [
         {
             "name": "普通分账",
-            "description": "创建A组织余额账户、启用支付类型和收款策略新分账配置；设备无设备分账策略时，订单剩余金额100%归属A",
+            "description": "创建分账账户、启用支付渠道，并为设备绑定 rule_mode=1 普通分账规则；订单剩余金额按普通规则明细分配",
             "steps": [
                 "revenueAccountAdd",
                 "revenuePayChannelAdd",
-                "revenuePayeeConfigSave",
+                "revenueRuleAdd",
+                "revenueRuleAddItem",
+                "revenueRuleBindMachine",
                 "revenueOrderMockPaySuccess",
                 "revenueOrderGetList"
             ]
@@ -3304,10 +3015,11 @@
         },
         {
             "name": "T+N延期分账",
-            "description": "在具体收款策略新分账配置中设置 settlement_type=2 和 settlement_days=N；支付成功后进入待结算，到期由定时任务结算",
+            "description": "在实际分账规则中设置 settlement_type=2 和 settlement_days=N；支付成功后进入待结算，到期由定时任务结算",
             "steps": [
                 "revenuePayChannelAdd",
-                "revenuePayeeConfigSave",
+                "revenueRuleAdd",
+                "revenueRuleBindMachine",
                 "revenueOrderMockPaySuccess",
                 "revenueOrderGetList"
             ]

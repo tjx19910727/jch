@@ -312,16 +312,11 @@ SET @ra_c_id := (
 );
 
 -- ============================================================
--- 4. 场景一：普通分账配置，并启用目标设备实际收款类型的新分账触发配置
--- 注意：如果该 pay_type 已存在，本语句会启用并改为即时分账。
--- 注意：如果该 sp_id 已存在新分账配置，会切换到本脚本创建的A测试账户。
--- 普通分账由 revenue_payee_config 的默认账户表示，不创建 revenue_rule。
--- 当设备没有启用的设备分账策略，且订单没有命中出租商品策略时，
--- 订单剩余金额将以 source=normal、income_value=100 分给A默认账户。
+-- 4. 场景一：普通分账规则，并启用目标设备实际收款类型的新分账触发配置
+-- 普通分账由 rule_mode=1 规则表示，订单剩余金额按规则明细分配。
 -- ============================================================
--- 导入前请保存以下查询结果，测试完成后可据此恢复原新分账配置：
+-- 导入前请保存以下查询结果，测试完成后可据此恢复原渠道配置：
 SELECT * FROM revenue_pay_channel WHERE pay_type = @pay_type;
-SELECT * FROM revenue_payee_config WHERE sp_id = @sp_id;
 
 INSERT INTO revenue_pay_channel
   (pay_type, payee_type, channel_name, status, creator, create_time, update_time)
@@ -339,27 +334,15 @@ ON DUPLICATE KEY UPDATE
   status = 1,
   update_time = VALUES(update_time);
 
--- 普通分账配置检查：default_ra_id/default_manager_id 应为本脚本创建的A账户。
+INSERT INTO revenue_rule
+  (rule_name, rule_mode, payer_ao_id, base_type, turnover_type,
+   tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
 SELECT
-  rpcfg.*,
-  ra.account_name,
-  ra.account,
-  am.nickname AS manager_name
-FROM revenue_payee_config rpcfg
-LEFT JOIN revenue_account ra ON ra.ra_id = rpcfg.default_ra_id
-LEFT JOIN auth_manager am ON am.manager_id = rpcfg.default_manager_id
-WHERE rpcfg.sp_id = @sp_id;
-
--- 原收款策略只作为关联标识读取；新配置写入独立 revenue_payee_config。
-INSERT INTO revenue_payee_config
-  (sp_id, payee_type, ao_id, default_ra_id, default_manager_id,
-   enable_revenue, settlement_type, settlement_days, status, creator, create_time, update_time)
-SELECT
-  @sp_id,
-  @pay_type,
+  CONCAT(@test_prefix, '_普通剩余金额_A100'),
+  1,
   @payer_ao_id,
-  @ra_a_id,
-  @manager_a_id,
+  1,
+  1,
   1,
   1,
   0,
@@ -367,17 +350,30 @@ SELECT
   0,
   @now,
   @now
-WHERE @sp_id IS NOT NULL
-ON DUPLICATE KEY UPDATE
-  payee_type = VALUES(payee_type),
-  ao_id = VALUES(ao_id),
-  default_ra_id = VALUES(default_ra_id),
-  default_manager_id = VALUES(default_manager_id),
-  enable_revenue = 1,
-  settlement_type = 1,
-  settlement_days = 0,
-  status = 1,
-  update_time = VALUES(update_time);
+WHERE NOT EXISTS (
+  SELECT 1 FROM revenue_rule
+  WHERE rule_name = CONCAT(@test_prefix, '_普通剩余金额_A100')
+);
+
+SET @rr_normal_id := (
+  SELECT rr_id FROM revenue_rule
+  WHERE rule_name = CONCAT(@test_prefix, '_普通剩余金额_A100')
+  ORDER BY rr_id DESC LIMIT 1
+);
+
+INSERT INTO revenue_rule_item
+  (rr_id, receiver_ao_id, ra_id, manager_id, calc_type, calc_value,
+   sort, status, create_time, update_time)
+SELECT @rr_normal_id, @payer_ao_id, @ra_a_id, @manager_a_id, 3, 100.000, 1, 1, @now, @now
+WHERE NOT EXISTS (
+  SELECT 1 FROM revenue_rule_item WHERE rr_id = @rr_normal_id
+);
+
+INSERT INTO revenue_rule_machine
+  (rr_id, m_id, ao_id, sort, status, create_time, update_time)
+SELECT @rr_normal_id, @m_id, @payer_ao_id, 1, 1, @now, @now
+WHERE @m_id IS NOT NULL
+ON DUPLICATE KEY UPDATE status = 1, update_time = VALUES(update_time);
 
 -- ============================================================
 -- 5. 场景二：设备出租策略，B组织获得其商品金额100%
@@ -667,6 +663,7 @@ SELECT
   @ra_c_id AS ra_c_id,
   @sp_id AS sp_id,
   @pay_type AS pay_type,
+  @rr_normal_id AS rr_normal_id,
   @rr_rental_id AS rr_rental_id,
   @rr_fixed_id AS rr_fixed_id,
   @rr_tier_id AS rr_tier_id;
@@ -684,7 +681,7 @@ ORDER BY rr.rr_id;
 SELECT rri.*, rrit.threshold_min, rrit.threshold_max, rrit.calc_value AS tier_calc_value
 FROM revenue_rule_item rri
 LEFT JOIN revenue_rule_item_tier rrit ON rrit.rri_id = rri.rri_id
-WHERE rri.rr_id IN (@rr_rental_id, @rr_fixed_id, @rr_tier_id)
+WHERE rri.rr_id IN (@rr_normal_id, @rr_rental_id, @rr_fixed_id, @rr_tier_id)
 ORDER BY rri.rr_id, rri.sort, rrit.sort;
 
 -- ============================================================
@@ -781,7 +778,10 @@ ORDER BY rrm.rrm_id;
 -- UPDATE revenue_rule_machine
 -- SET status = 2, update_time = UNIX_TIMESTAMP()
 -- WHERE m_id = @m_id;
--- SELECT '普通分账' AS active_scene, COUNT(*) AS active_device_rule_count
+-- UPDATE revenue_rule_machine
+-- SET status = 1, update_time = UNIX_TIMESTAMP()
+-- WHERE m_id = @m_id AND rr_id = @rr_normal_id;
+-- SELECT '普通分账' AS active_scene, COUNT(*) AS active_rule_count
 -- FROM revenue_rule_machine
 -- WHERE m_id = @m_id AND status = 1;
 
@@ -795,7 +795,7 @@ ORDER BY rrm.rrm_id;
 -- WHERE m_id = @m_id;
 -- UPDATE revenue_rule_machine
 -- SET status = 1, update_time = UNIX_TIMESTAMP()
--- WHERE m_id = @m_id AND rr_id = @rr_rental_id;
+-- WHERE m_id = @m_id AND rr_id IN (@rr_normal_id, @rr_rental_id);
 -- SELECT '设备出租' AS active_scene, rr.rule_name, rr.rule_mode, rrm.status
 -- FROM revenue_rule_machine rrm
 -- JOIN revenue_rule rr ON rr.rr_id = rrm.rr_id
@@ -814,7 +814,7 @@ ORDER BY rrm.rrm_id;
 -- WHERE m_id = @m_id;
 -- UPDATE revenue_rule_machine
 -- SET status = 1, update_time = UNIX_TIMESTAMP()
--- WHERE m_id = @m_id AND rr_id = @rr_fixed_id;
+-- WHERE m_id = @m_id AND rr_id IN (@rr_normal_id, @rr_fixed_id);
 -- SELECT '设备固定比例' AS active_scene, rr.rule_name, rr.rule_mode, rrm.status
 -- FROM revenue_rule_machine rrm
 -- JOIN revenue_rule rr ON rr.rr_id = rrm.rr_id
@@ -830,7 +830,7 @@ ORDER BY rrm.rrm_id;
 -- WHERE m_id = @m_id;
 -- UPDATE revenue_rule_machine
 -- SET status = 1, update_time = UNIX_TIMESTAMP()
--- WHERE m_id = @m_id AND rr_id = @rr_tier_id;
+-- WHERE m_id = @m_id AND rr_id IN (@rr_normal_id, @rr_tier_id);
 -- SELECT '设备阶梯分账' AS active_scene, rr.rule_name, rr.rule_mode, rrm.status
 -- FROM revenue_rule_machine rrm
 -- JOIN revenue_rule rr ON rr.rr_id = rrm.rr_id
@@ -841,20 +841,20 @@ ORDER BY rrm.rrm_id;
 -- 可与普通/出租/固定/阶梯任一计算场景组合。
 -- 预期：支付成功后 revenue_order.status=2，planned_revenue_time有值。
 -- ------------------------------------------------------------
--- UPDATE revenue_payee_config
+-- UPDATE revenue_rule
 -- SET settlement_type = 2,
 --     settlement_days = 1,
 --     status = 1,
 --     update_time = UNIX_TIMESTAMP()
--- WHERE sp_id = @sp_id;
+-- WHERE rr_id = @rr_normal_id;
 
 -- 恢复即时结算：
--- UPDATE revenue_payee_config
+-- UPDATE revenue_rule
 -- SET settlement_type = 1,
 --     settlement_days = 0,
 --     status = 1,
 --     update_time = UNIX_TIMESTAMP()
--- WHERE sp_id = @sp_id;
+-- WHERE rr_id = @rr_normal_id;
 
 -- ============================================================
 -- 11. 测试订单结果查询与场景验收
@@ -943,7 +943,7 @@ ORDER BY manager_id;
 -- 默认注释，确认测试订单及分账记录不再需要后再手工执行。
 -- 清理顺序必须从依赖表到主表。
 -- 注意：
--- 1. revenue_pay_channel、revenue_payee_config 可能在测试前已存在，不应直接删除。
+-- 1. revenue_pay_channel 可能在测试前已存在，不应直接删除。
 -- 2. 请使用第4节导入前保存的查询结果恢复原值。
 -- 3. 如果测试前确认两表均无对应记录，才可执行下方标注的可选删除语句。
 -- 4. 还需恢复出租测试商品原始 ao_id，以及设备原有 revenue_rule_machine 绑定状态。
@@ -952,17 +952,15 @@ ORDER BY manager_id;
 -- DELETE FROM revenue_order
 -- WHERE machine_id = @machine_code
 --   AND (
---     rr_id IN (@rr_rental_id, @rr_fixed_id, @rr_tier_id)
+--     rr_id IN (@rr_normal_id, @rr_rental_id, @rr_fixed_id, @rr_tier_id)
 --     OR ra_id IN (@ra_a_id, @ra_b_id, @ra_c_id)
 --   );
--- DELETE FROM revenue_rule_machine WHERE rr_id IN (@rr_rental_id, @rr_fixed_id, @rr_tier_id);
+-- DELETE FROM revenue_rule_machine WHERE rr_id IN (@rr_normal_id, @rr_rental_id, @rr_fixed_id, @rr_tier_id);
 -- DELETE FROM revenue_rule_item_tier WHERE rri_id IN (
---   SELECT rri_id FROM revenue_rule_item WHERE rr_id IN (@rr_rental_id, @rr_fixed_id, @rr_tier_id)
+--   SELECT rri_id FROM revenue_rule_item WHERE rr_id IN (@rr_normal_id, @rr_rental_id, @rr_fixed_id, @rr_tier_id)
 -- );
--- DELETE FROM revenue_rule_item WHERE rr_id IN (@rr_rental_id, @rr_fixed_id, @rr_tier_id);
--- DELETE FROM revenue_rule WHERE rr_id IN (@rr_rental_id, @rr_fixed_id, @rr_tier_id);
--- 仅当测试前 revenue_payee_config 不存在对应 sp_id 时执行：
--- DELETE FROM revenue_payee_config WHERE sp_id = @sp_id;
+-- DELETE FROM revenue_rule_item WHERE rr_id IN (@rr_normal_id, @rr_rental_id, @rr_fixed_id, @rr_tier_id);
+-- DELETE FROM revenue_rule WHERE rr_id IN (@rr_normal_id, @rr_rental_id, @rr_fixed_id, @rr_tier_id);
 -- 仅当测试前 revenue_pay_channel 不存在对应 pay_type 时执行：
 -- DELETE FROM revenue_pay_channel WHERE pay_type = @pay_type;
 -- DELETE FROM revenue_account WHERE ra_id IN (@ra_a_id, @ra_b_id, @ra_c_id);

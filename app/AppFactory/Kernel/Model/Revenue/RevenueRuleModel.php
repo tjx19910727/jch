@@ -17,6 +17,8 @@ class RevenueRuleModel extends BaseModel
         "base_type" => "int",
         "turnover_type" => "int",
         "tier_calc_mode" => "int",
+        "settlement_type" => "int",
+        "settlement_days" => "int",
         "status" => "int",
         "creator" => "int",
         "create_time" => "int",

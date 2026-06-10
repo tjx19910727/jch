@@ -12,7 +12,7 @@ class OfflineRevenueCalculator
     private array $accounts;
     private array $rules;
     private array $machineRules;
-    private array $payeeConfigs;
+    private array $enabledPayTypes;
     private array $monthlyTurnover;
     private float $rentalAmount = 0.0;
     private float $productAmount = 0.0;
@@ -23,7 +23,7 @@ class OfflineRevenueCalculator
         $this->accounts = $fixture['accounts'];
         $this->rules = $fixture['rules'];
         $this->machineRules = $fixture['machine_rules'];
-        $this->payeeConfigs = $fixture['payee_configs'];
+        $this->enabledPayTypes = $fixture['enabled_pay_types'];
         $this->monthlyTurnover = $fixture['monthly_turnover'];
     }
 
@@ -33,8 +33,7 @@ class OfflineRevenueCalculator
         $this->productAmount = 0.0;
         $this->rentalAmountsBySod = [];
         $records = [];
-        $payeeConfig = $this->payeeConfigs[$order['sp_id']] ?? null;
-        if (!$payeeConfig || (int)$payeeConfig['enable_revenue'] !== 1) {
+        if (!in_array((int)$order['pay_type'], $this->enabledPayTypes, true)) {
             return [];
         }
 
@@ -43,15 +42,11 @@ class OfflineRevenueCalculator
         $deviceRecords = $productRecords ? [] : $this->calculateDeviceRule($order);
         if ($productRecords) {
             $records = array_merge($records, $productRecords);
-            $normalRecord = $this->normalRecord($order, $payeeConfig);
-            if ($normalRecord['income_amount'] >= 0.01) $records[] = $normalRecord;
+            $records = array_merge($records, $this->normalRecords($order));
         } elseif ($deviceRecords) {
             $records = array_merge($records, $deviceRecords);
         } else {
-            $normalRecord = $this->normalRecord($order, $payeeConfig);
-            if ($normalRecord['income_amount'] >= 0.01) {
-                $records[] = $normalRecord;
-            }
+            $records = array_merge($records, $this->normalRecords($order));
         }
 
         $total = $this->sum($records, 'income_amount');
@@ -117,7 +112,7 @@ class OfflineRevenueCalculator
                 'rule_mode' => 2,
                 'source' => 'rental',
                 'income_amount' => $amount,
-            ]);
+            ], $rule);
         }
         return $records;
     }
@@ -143,7 +138,7 @@ class OfflineRevenueCalculator
                     'rule_mode' => 4,
                     'source' => 'product_rule',
                     'income_amount' => $amount,
-                ]);
+                ], $rule);
             }
         }
         return $records;
@@ -175,24 +170,28 @@ class OfflineRevenueCalculator
                 'period_amount_before' => $periodBefore,
                 'period_amount_after' => $periodAfter,
                 'income_value' => $item['_matched_value'] ?? $item['calc_value'],
-            ]);
+            ], $rule);
         }
         return $records;
     }
 
-    private function normalRecord(array $order, array $payeeConfig): array
+    private function normalRecords(array $order): array
     {
-        $account = $this->accounts[$payeeConfig['default_ra_id']];
-        return $this->baseRecord($order, $account, [
-            'rule_mode' => 1,
-            'receiver_ao_id' => $account['ao_id'],
-            'ra_id' => $account['ra_id'],
-            'manager_id' => $account['manager_id'],
-            'calc_type' => 3,
-            'income_value' => 100.0,
-            'income_amount' => round($order['total_price'] - $this->rentalAmount - $this->productAmount, 2),
-            'source' => 'normal',
-        ]);
+        $normalAmount = round($order['total_price'] - $this->rentalAmount - $this->productAmount, 2);
+        if ($normalAmount < 0.01) return [];
+        $rule = $this->getMachineRule($order['m_id'], 1);
+        $this->assert($rule !== null, '设备未配置普通分账策略');
+        $records = [];
+        foreach ($rule['items'] as $item) {
+            $amount = $this->calcAmount($normalAmount, $item);
+            if ($amount < 0.01) continue;
+            $records[] = $this->record($order, $item, [
+                'rule_mode' => 1,
+                'source' => 'normal',
+                'income_amount' => $amount,
+            ], $rule);
+        }
+        return $records;
     }
 
     private function calcAmount(float $baseAmount, array &$item, float $periodAfter = 0.0): float
@@ -219,7 +218,7 @@ class OfflineRevenueCalculator
         throw new RuntimeException('未知计算方式');
     }
 
-    private function record(array $order, array $item, array $extra): array
+    private function record(array $order, array $item, array $extra, array $rule): array
     {
         $account = $this->accounts[$item['ra_id']];
         return $this->baseRecord($order, $account, array_merge([
@@ -228,6 +227,8 @@ class OfflineRevenueCalculator
             'manager_id' => $item['manager_id'],
             'calc_type' => $item['calc_type'],
             'income_value' => $item['calc_value'],
+            'settlement_type' => $rule['settlement_type'] ?? 1,
+            'settlement_days' => $rule['settlement_days'] ?? 0,
         ], $extra));
     }
 
@@ -243,8 +244,6 @@ class OfflineRevenueCalculator
             'account_type' => $account['account_type'],
             'account' => $account['account'],
             'status' => 0,
-            'settlement_type' => $order['settlement_type'] ?? 1,
-            'settlement_days' => $order['settlement_days'] ?? 0,
         ], $extra);
     }
 
@@ -290,10 +289,17 @@ function fixture(): array
             102 => ['ra_id' => 102, 'ao_id' => 2, 'manager_id' => 1002, 'account_type' => 'balance', 'account' => 'B_BALANCE'],
             103 => ['ra_id' => 103, 'ao_id' => 3, 'manager_id' => 1003, 'account_type' => 'balance', 'account' => 'C_BALANCE'],
         ],
-        'payee_configs' => [
-            9001 => ['sp_id' => 9001, 'default_ra_id' => 101, 'default_manager_id' => 1001, 'enable_revenue' => 1],
-        ],
+        'enabled_pay_types' => [1],
         'rules' => [
+            200 => [
+                'rr_id' => 200,
+                'rule_mode' => 1,
+                'settlement_type' => 1,
+                'settlement_days' => 0,
+                'items' => [
+                    ['rri_id' => 300, 'receiver_ao_id' => 1, 'ra_id' => 101, 'manager_id' => 1001, 'calc_type' => 3, 'calc_value' => 100.0],
+                ],
+            ],
             201 => [
                 'rr_id' => 201,
                 'rule_mode' => 2,
@@ -358,14 +364,24 @@ function fixture(): array
                     ['rri_id' => 307, 'g_id' => 700, 'receiver_ao_id' => 2, 'ra_id' => 102, 'manager_id' => 1002, 'calc_type' => 2, 'calc_value' => 3.0],
                 ],
             ],
+            206 => [
+                'rr_id' => 206,
+                'rule_mode' => 1,
+                'settlement_type' => 2,
+                'settlement_days' => 1,
+                'items' => [
+                    ['rri_id' => 308, 'receiver_ao_id' => 1, 'ra_id' => 101, 'manager_id' => 1001, 'calc_type' => 3, 'calc_value' => 100.0],
+                ],
+            ],
         ],
         'machine_rules' => [
-            501 => [],
-            502 => [201],
+            501 => [200],
+            502 => [200, 201],
             503 => [202],
             504 => [203],
-            505 => [204],
-            506 => [205],
+            505 => [200, 204],
+            506 => [200, 205],
+            507 => [206],
         ],
         'monthly_turnover' => [
             504 => ['2026-06' => 4900.0],
@@ -416,6 +432,30 @@ $tests['普通分账：A设备销售A商品，A获得订单全额'] = function (
     assertMoney(100.0, $records[0]['income_amount'], '普通分账金额应为订单全额');
 };
 
+$tests['渠道关闭：不生成分账单'] = function () {
+    $fixture = fixture();
+    $fixture['enabled_pay_types'] = [];
+    $calc = new OfflineRevenueCalculator($fixture);
+    $records = $calc->calculate(orderFixture(10011, 501, 100.0, [
+        ['sod_id' => 11, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(0, count($records), '渠道关闭时不应生成分账单');
+};
+
+$tests['缺少普通规则：存在剩余金额时明确报错'] = function () {
+    $fixture = fixture();
+    $fixture['machine_rules'][501] = [];
+    $calc = new OfflineRevenueCalculator($fixture);
+    try {
+        $calc->calculate(orderFixture(10012, 501, 100.0, [
+            ['sod_id' => 12, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+        ]));
+        throw new RuntimeException('缺少普通规则时没有报错');
+    } catch (RuntimeException $e) {
+        assertEquals('设备未配置普通分账策略', $e->getMessage(), '缺少普通规则应返回明确错误');
+    }
+};
+
 $tests['设备出租：A设备销售B商品，B按100%获得商品金额'] = function () {
     $calc = new OfflineRevenueCalculator(fixture());
     $records = $calc->calculate(orderFixture(10002, 502, 80.0, [
@@ -447,6 +487,20 @@ $tests['同一商品不同设备：设备505按商品金额10%分账'] = functio
     assertEquals('product_rule', $records[0]['source'], '应为设备商品分账');
     assertMoney(10.0, $records[0]['income_amount'], '设备505商品应按10%分账');
     assertMoney(90.0, $records[1]['income_amount'], '剩余金额应走普通分账');
+};
+
+$tests['同一订单不同规则：分别写入各自结算周期'] = function () {
+    $fixture = fixture();
+    $fixture['rules'][204]['settlement_type'] = 2;
+    $fixture['rules'][204]['settlement_days'] = 2;
+    $calc = new OfflineRevenueCalculator($fixture);
+    $records = $calc->calculate(orderFixture(10013, 505, 100.0, [
+        ['sod_id' => 13, 'mg_id' => 9003, 'g_id' => 700, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(2, $records[0]['settlement_type'], '商品规则应写入T+N结算类型');
+    assertEquals(2, $records[0]['settlement_days'], '商品规则应写入T+2');
+    assertEquals(1, $records[1]['settlement_type'], '普通规则应保持即时结算');
+    assertEquals(0, $records[1]['settlement_days'], '普通规则即时结算天数应为0');
 };
 
 $tests['同一商品不同设备：设备506按每件3元分账'] = function () {
@@ -507,11 +561,9 @@ $tests['支付取消：待支付分账单变为已取消'] = function () {
 
 $tests['T+1分账：支付成功后待结算，到期后结算'] = function () {
     $calc = new OfflineRevenueCalculator(fixture());
-    $order = orderFixture(10008, 501, 60.0, [
+    $order = orderFixture(10008, 507, 60.0, [
         ['sod_id' => 8, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 60.0, 'total_sod_price' => 60.0],
     ]);
-    $order['settlement_type'] = 2;
-    $order['settlement_days'] = 1;
     $payTime = strtotime('2026-06-06 12:00:00');
     $records = $calc->settle($calc->calculate($order), $payTime);
     assertEquals(2, $records[0]['status'], 'T+1支付成功后应为待结算');

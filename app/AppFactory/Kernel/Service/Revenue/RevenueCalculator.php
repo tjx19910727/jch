@@ -12,7 +12,6 @@ class RevenueCalculator
     protected $rentalAmount = '0';
     protected $productAmount = '0';
     protected $rentalAmountsBySod = [];
-    protected $payeeRevenueConfig = [];
     protected $revenuePayChannel = [];
 
     public function calculate(array $order)
@@ -22,7 +21,6 @@ class RevenueCalculator
         $this->rentalAmount = '0';
         $this->productAmount = '0';
         $this->rentalAmountsBySod = [];
-        $this->payeeRevenueConfig = [];
         $this->revenuePayChannel = [];
         if (!$this->shouldCalculateRevenue()) {
             $this->clearPendingRecords();
@@ -94,7 +92,7 @@ class RevenueCalculator
                 'income_value' => $calc['income_value'],
                 'income_amount' => $calc['income_amount'],
                 'source' => 'rental',
-            ], $account);
+            ], $account, $rentalRule);
         }
     }
 
@@ -146,7 +144,7 @@ class RevenueCalculator
                     'income_value' => $calc['income_value'],
                     'income_amount' => $calc['income_amount'],
                     'source' => 'product_rule',
-                ], $account);
+                ], $account, $rule);
             }
         }
         return true;
@@ -199,7 +197,7 @@ class RevenueCalculator
                 'period_amount_before' => $periodBefore,
                 'period_amount_after' => $periodAfter,
                 'source' => intval($item['calc_type']) === 4 ? 'tier' : 'device_rule',
-            ], $account);
+            ], $account, $rule);
         }
 
         return true;
@@ -213,19 +211,44 @@ class RevenueCalculator
         if (bccomp($normalAmount, '0.01', 2) < 0) {
             return true;
         }
-        $account = $this->getPayeeDefaultAccount();
-        if (!$account) {
-            throw new \Exception("收款策略未配置有效默认分账账户");
+        $rule = $this->getRuleByMode(1);
+        if (!$rule) {
+            throw new \Exception("设备未配置普通分账策略");
         }
-        $this->records[] = $this->buildRecord([
-            'rule_mode' => 1,
-            'payer_ao_id' => $payerAoId,
-            'receiver_ao_id' => intval($account['ao_id']),
-            'calc_type' => 3,
-            'income_value' => 100,
-            'income_amount' => $normalAmount,
-            'source' => 'normal',
-        ], $account);
+        $items = Db::name('revenue_rule_item')
+            ->where(['rr_id' => $rule['rr_id'], 'status' => 1])
+            ->order('sort asc,rri_id asc')
+            ->select()
+            ->toArray();
+        if (!$items) {
+            throw new \Exception("普通分账策略{$rule['rr_id']}未配置分账明细");
+        }
+        $normalAllocatedAmount = '0.00';
+        foreach ($items as $item) {
+            $account = $this->getAccountById(intval($item['ra_id']));
+            if (!$account) {
+                throw new \Exception("普通分账策略明细{$item['rri_id']}未配置有效分账账户");
+            }
+            $calc = $this->calculateRuleItemAmount($item, $normalAmount, '0');
+            if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) {
+                continue;
+            }
+            $normalAllocatedAmount = bcadd($normalAllocatedAmount, $calc['income_amount'], 2);
+            $this->records[] = $this->buildRecord([
+                'rule_mode' => 1,
+                'rr_id' => $rule['rr_id'],
+                'rri_id' => $item['rri_id'],
+                'payer_ao_id' => $payerAoId,
+                'receiver_ao_id' => intval($item['receiver_ao_id']),
+                'calc_type' => intval($item['calc_type']),
+                'income_value' => $calc['income_value'],
+                'income_amount' => $calc['income_amount'],
+                'source' => 'normal',
+            ], $account, $rule);
+        }
+        if (bccomp($normalAllocatedAmount, $normalAmount, 2) !== 0) {
+            throw new \Exception("普通分账策略{$rule['rr_id']}未完整分配订单剩余金额");
+        }
         return true;
     }
 
@@ -283,7 +306,7 @@ class RevenueCalculator
         return null;
     }
 
-    protected function buildRecord(array $data, array $account)
+    protected function buildRecord(array $data, array $account, array $rule)
     {
         return array_merge([
             'order_id' => $this->order['order_id'] ?? 0,
@@ -298,8 +321,8 @@ class RevenueCalculator
             'manager_name' => $account['manager_name'] ?? '',
             'account_type' => $account['account_type'] ?? '',
             'account' => $account['account'] ?? ($account['bill_account'] ?? ''),
-            'settlement_type' => intval($this->payeeRevenueConfig['settlement_type'] ?? 1) ?: 1,
-            'settlement_days' => max(0, intval($this->payeeRevenueConfig['settlement_days'] ?? 0)),
+            'settlement_type' => intval($rule['settlement_type'] ?? 1) ?: 1,
+            'settlement_days' => max(0, intval($rule['settlement_days'] ?? 0)),
             'status' => 0,
         ], $data);
     }
@@ -354,11 +377,6 @@ class RevenueCalculator
             $this->revenuePayChannel = $channel;
         }
         if (!$channel) return false;
-        $config = Db::name('revenue_payee_config')->where(['sp_id' => $spId, 'status' => 1])->find();
-        // 渠道配置只控制是否允许进入新分账；未单独配置的收款策略不参与分账，也不阻断支付。
-        if (!$config) return false;
-        if (intval($config['enable_revenue'] ?? 1) !== 1) return false;
-        $this->payeeRevenueConfig = $config;
         return true;
     }
 
@@ -427,30 +445,6 @@ class RevenueCalculator
             return $this->money(bcsub($orderAmount, $this->rentalAmount, 2));
         }
         return $orderAmount;
-    }
-
-    protected function getPayeeDefaultAccount()
-    {
-        $spId = intval($this->order['sp_id'] ?? 0);
-        if ($spId <= 0) {
-            return null;
-        }
-        $config = $this->payeeRevenueConfig ?: Db::name('revenue_payee_config')->where(['sp_id' => $spId, 'status' => 1])->find();
-        if (!$config || empty($config['default_ra_id'])) {
-            return null;
-        }
-        return $this->getAccountById(intval($config['default_ra_id']));
-    }
-
-    protected function getDefaultAccountByAoId($aoId)
-    {
-        return Db::name('revenue_account')
-            ->alias('ra')
-            ->leftJoin('auth_manager am', 'am.manager_id = ra.manager_id')
-            ->where(['ra.ao_id' => $aoId, 'ra.status' => 1])
-            ->field('ra.*,am.nickname manager_name')
-            ->order('ra.ra_id desc')
-            ->find();
     }
 
     protected function getAccountById($raId)

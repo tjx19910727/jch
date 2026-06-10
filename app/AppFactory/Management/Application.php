@@ -139,7 +139,6 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Revenue\RevenueRuleClient              $revenueRule            分账策略
  * @property Revenue\RevenueOrderClient             $revenueOrder           分账订单
  * @property Revenue\RevenuePayChannelClient        $revenuePayChannel      分账收款渠道
- * @property Revenue\RevenuePayeeConfigClient       $revenuePayeeConfig     收款策略新分账配置
  *
  * @property Template\TemplateClient                $template               模板
  * @property Template\TemplatePluginsClient         $templatePlugins        模板组件

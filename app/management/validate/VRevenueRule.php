@@ -18,6 +18,8 @@ class VRevenueRule extends VCommon
         "calc_value" => "number",
         "threshold_min" => "require|number",
         "threshold_max" => "number",
+        "settlement_type" => "in:1,2",
+        "settlement_days" => "number",
         "status" => "require",
     ];
 
@@ -38,6 +40,8 @@ class VRevenueRule extends VCommon
         "threshold_min.require" => "营业额下限不能为空",
         "threshold_min.number" => "营业额下限必须为数字",
         "threshold_max.number" => "营业额上限必须为数字",
+        "settlement_type.in" => "分账时间类型不合法",
+        "settlement_days.number" => "T+N分账天数必须为数字",
         "status.require" => "状态不能为空",
     ];
 
