@@ -46,12 +46,6 @@ class AuthRoleTemplateClient extends ManagementClient
         $this->startTrans();
         try {
             $this->replaceAuthRoleTemplateNodes(intval($data['art_id']), $nodeList);
-            $roleIds = Db::name('auth_role')
-                ->where(['template_id' => intval($data['art_id'])])
-                ->column('role_id');
-            foreach ($roleIds as $roleId) {
-                $this->applyAuthRoleTemplateToRole($roleId, intval($data['art_id']));
-            }
             return $this->checkTrans(true);
         } catch (\Exception $e) {
             $this->rollbackTrans();
@@ -78,8 +72,11 @@ class AuthRoleTemplateClient extends ManagementClient
     public function apply($data)
     {
         try {
-            $this->assertTemplateManaged(intval($data['art_id']));
-            $this->assertRoleManaged(intval($data['role_id']));
+            $template = $this->assertTemplateManaged(intval($data['art_id']));
+            $role = $this->assertRoleManaged(intval($data['role_id']));
+            if (intval($role['ao_id']) > 1 && intval($template['ao_id']) !== intval($role['ao_id'])) {
+                throw new \Exception("角色与权限模板所属组织不一致");
+            }
         } catch (\Exception $e) {
             return $this->rTryCatch($e->getMessage());
         }
@@ -92,7 +89,6 @@ class AuthRoleTemplateClient extends ManagementClient
                 'update_id' => $this->manager['manager_id'],
                 'update_time' => time(),
             ]);
-            $this->applyAuthRoleTemplateToRole($roleId, $templateId);
             return $this->checkTrans(true);
         } catch (\Exception $e) {
             $this->rollbackTrans();

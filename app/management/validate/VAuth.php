@@ -23,6 +23,8 @@ class VAuth extends VCommon
         // auth_manager_role
         "mr_id" => 'require',
         "role_id" => 'require',
+        "manager_ids" => 'require',
+        "use_role_template" => 'in:1,2',
         "art_id" => 'require',
 
         // auth_node
@@ -58,6 +60,8 @@ class VAuth extends VCommon
         "status.in" => "VAuth.status_in",
         "mr_id.require" => "VAuth.mr_id_require",
         "role_id.require" => "VAuth.role_id_require",
+        "manager_ids.require" => "账号ID列表不能为空",
+        "use_role_template.in" => "是否使用角色权限模板仅支持1或2",
         "art_id.require" => "角色权限模板ID不能为空",
         "type.require" => "VAuth.type_require",
         "nodeList.require" => "VAuth.nodeList_require",
@@ -78,8 +82,8 @@ class VAuth extends VCommon
     ];
 
     protected $scene = [
-        "AuthManagerAdd" => ["account","password","status"],
-        "AuthManagerUpdate" => ["manager_id","status"],
+        "AuthManagerAdd" => ["account","password","status","use_role_template"],
+        "AuthManagerUpdate" => ["manager_id","status","use_role_template"],
         "UpdatePassword" => ["manager_id","password"],
         "UpdateSelfPwd" => ["old_pwd","password"],
 
@@ -90,6 +94,7 @@ class VAuth extends VCommon
 
         "AuthManagerRoleAdd" => ["manager_id","role_id"],
         "AuthManagerRoleUpdate" => ["mr_id"],
+        "AuthManagerRoleBatchSet" => ["role_id"],
 
         "AuthNodeAdd" => ["name","type"],
         "AuthNodeUpdate" => ["node_id"],

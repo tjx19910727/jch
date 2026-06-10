@@ -40,7 +40,7 @@ class AuthManager extends Common
         }
         $field = "au.manager_id,au.nickname,au.account,au.pid,au.openid,au.audit_status,
         au.bill_account,au.real_name,au.level,au.sex,au.pic,au.status,au.creator,au.ao_id,au.wx_notice,au.email_notice,au.email,au.openid,
-        au.query_start_time,au.query_start_urls,au.create_time,ao.organization_name";
+        au.query_start_time,au.query_start_urls,au.use_role_template,au.create_time,ao.organization_name";
         $result = $this->app->authManager->getList($where,$pageNum,$field);
         return $result;
     }

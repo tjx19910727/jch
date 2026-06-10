@@ -243,7 +243,7 @@
       "post": {
         "tags": ["角色权限模板"],
         "summary": "将权限模板应用到角色",
-        "description": "关联模板并立即覆盖目标角色当前节点权限。",
+        "description": "将模板关联到角色，不覆盖历史角色节点；仅对开启模板的账号生效。",
         "operationId": "authRoleTemplateApply",
         "parameters": [
           {"$ref": "#/components/parameters/TokenHeader"}
@@ -260,6 +260,36 @@
         "responses": {
           "200": {
             "description": "应用结果",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ActionResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_manager_role/setRoleManagers": {
+      "post": {
+        "tags": ["账号角色"],
+        "summary": "角色批量设置账号",
+        "description": "以 manager_ids 替换角色当前绑定账号集合，空数组表示清空。",
+        "operationId": "authManagerRoleSetRoleManagers",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/RoleManagersRequest"},
+              "example": {"role_id": 10, "manager_ids": [101, 102, 103]}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "设置结果",
             "content": {
               "application/json": {
                 "schema": {"$ref": "#/components/schemas/ActionResponse"}
@@ -351,6 +381,18 @@
         "properties": {
           "art_id": {"type": "integer", "description": "角色权限模板 ID"},
           "role_id": {"type": "integer", "description": "目标权限角色 ID"}
+        }
+      },
+      "RoleManagersRequest": {
+        "type": "object",
+        "required": ["role_id", "manager_ids"],
+        "properties": {
+          "role_id": {"type": "integer", "description": "权限角色 ID"},
+          "manager_ids": {
+            "type": "array",
+            "description": "角色最终绑定的账号 ID 集合，空数组表示清空",
+            "items": {"type": "integer"}
+          }
         }
       },
       "Template": {

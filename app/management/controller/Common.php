@@ -286,9 +286,7 @@ class Common extends AuthController
         $nodeIds = $this->app->authNode->getAuthNodeColumn(['url' => $url], 'node_id');
         if (!$nodeIds) return false;
 
-        $whereArn[] = ['role_id', 'in', $roleIds];
-        $whereArn['is_del'] = 2;
-        $authNodeIds = $this->app->authRoleNode->getAuthRoleNodeColumn($whereArn, 'node_id');
+        $authNodeIds = $this->app->authManagerRole->resolveManagerRoleNodeIds($this->manager, $roleIds);
         if (!$authNodeIds) return false;
 
         return !empty(array_intersect($nodeIds, $authNodeIds));
@@ -476,9 +474,11 @@ class Common extends AuthController
     public function getSelfRoleNode()
     {
         if ($this->manager['pid'] > 0) {
-            $whereArn[] = ['role_id', 'in', $this->app->authManagerRole->getAuthManagerRoleColumn(['manager_id' => $this->manager['manager_id'], 'is_del' => 2], 'role_id')];
-            $whereArn['is_del'] = 2;
-            $where[] = ['node_id', 'in', $this->app->authRoleNode->getAuthRoleNodeColumn($whereArn, 'node_id')];
+            $roleIds = $this->app->authManagerRole->getAuthManagerRoleColumn([
+                'manager_id' => $this->manager['manager_id'],
+                'is_del' => 2,
+            ], 'role_id');
+            $where[] = ['node_id', 'in', $this->app->authManagerRole->resolveManagerRoleNodeIds($this->manager, $roleIds)];
         }
         $where['status'] = 1;
         $data = $this->app->authNode->getAuthNodeList($where, 0, 'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status', 'sort asc');

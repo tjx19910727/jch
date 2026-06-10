@@ -75,55 +75,23 @@ trait AuthRoleTemplateTrait
         return true;
     }
 
-    public function applyAuthRoleTemplateToRole($roleId, $templateId = 0)
+    public function assertRoleTemplateAssociation($roleId, $templateId, $roleAoId = 0)
     {
-        $role = Db::name('auth_role')->where(['role_id' => intval($roleId)])->find();
-        if (!$role) throw new \Exception("权限角色不存在");
-        $templateId = intval($templateId ?: ($role['template_id'] ?? 0));
+        $templateId = intval($templateId);
         if ($templateId <= 0) return true;
-
+        if (!$roleAoId && $roleId) {
+            $roleAoId = intval(Db::name('auth_role')->where('role_id', intval($roleId))->value('ao_id'));
+        }
         $template = Db::name('auth_role_template')->where([
             'art_id' => $templateId,
             'status' => 1,
             'is_del' => 2,
         ])->find();
         if (!$template) throw new \Exception("角色权限模板不存在或未启用");
-        if (intval($role['ao_id']) > 1 && intval($template['ao_id']) !== intval($role['ao_id'])) {
+        if (intval($roleAoId) > 1 && intval($template['ao_id']) !== intval($roleAoId)) {
             throw new \Exception("角色与权限模板所属组织不一致");
-        }
-
-        $nodes = Db::name('auth_role_template_node')
-            ->where(['art_id' => $templateId, 'is_del' => 2])
-            ->order('artn_id asc')
-            ->select()
-            ->toArray();
-        $managerId = intval($this->manager['manager_id']);
-        Db::name('auth_role_node')->where(['role_id' => $roleId, 'is_del' => 2])->update([
-            'is_del' => 1,
-            'update_id' => $managerId,
-            'update_time' => time(),
-        ]);
-        foreach ($nodes as $node) {
-            $exists = Db::name('auth_role_node')
-                ->where(['role_id' => $roleId, 'node_id' => $node['node_id']])
-                ->order('rn_id desc')
-                ->find();
-            $data = [
-                'd_type' => intval($node['d_type']),
-                'is_del' => 2,
-                'update_id' => $managerId,
-                'update_time' => time(),
-            ];
-            if ($exists) {
-                Db::name('auth_role_node')->where(['rn_id' => $exists['rn_id']])->update($data);
-                continue;
-            }
-            $data['role_id'] = $roleId;
-            $data['node_id'] = intval($node['node_id']);
-            $data['creator'] = $managerId;
-            $data['create_time'] = time();
-            Db::name('auth_role_node')->insert($data);
         }
         return true;
     }
+
 }

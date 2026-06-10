@@ -13,8 +13,8 @@ use app\AppFactory\Kernel\Traits\Auth\AuthManagerRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthNodeTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
-use app\AppFactory\Kernel\Traits\Auth\AuthRoleTemplateTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Db;
 use think\response\Json;
 
 class AuthManagerRoleClient extends ManagementClient
@@ -23,16 +23,11 @@ class AuthManagerRoleClient extends ManagementClient
     use AuthRoleNodeTrait;
     use AuthNodeTrait;
     use AuthOrganizationRoleTrait;
-    use AuthRoleTemplateTrait;
 
     public function add($postData, $rA = 1)
     {
         $this->startTrans();
         try {
-            $roleIds = array_filter(array_map('intval', explode(",", $postData['role_id'])));
-            foreach ($roleIds as $roleId) {
-                $this->applyAuthRoleTemplateToRole($roleId);
-            }
             $result = $this->addAuthManagerRole($postData);
             if (!$result) {
                 $this->rollbackTrans();
@@ -45,6 +40,72 @@ class AuthManagerRoleClient extends ManagementClient
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    public function setRoleManagers($postData)
+    {
+        $roleId = intval($postData['role_id'] ?? 0);
+        $managerIds = $this->normalizeManagerIds($postData['manager_ids'] ?? []);
+        $role = Db::name('auth_role')->where('role_id', $roleId)->find();
+        if (!$role) return $this->rFail("权限角色不存在");
+        if (intval($this->manager['ao_id']) > 1 && intval($role['ao_id']) !== intval($this->manager['ao_id'])) {
+            return $this->rFail("无权操作其他组织的权限角色");
+        }
+        if ($managerIds) {
+            $validManagerIds = Db::name('auth_manager')
+                ->where('manager_id', 'in', $managerIds)
+                ->where('ao_id', intval($role['ao_id']))
+                ->column('manager_id');
+            if (count($validManagerIds) !== count($managerIds)) {
+                return $this->rFail("账号不存在或与角色所属组织不一致");
+            }
+        }
+
+        $this->startTrans();
+        try {
+            $activeIds = Db::name('auth_manager_role')
+                ->where(['role_id' => $roleId, 'is_del' => 2])
+                ->column('manager_id');
+            $removeIds = array_diff(array_map('intval', $activeIds), $managerIds);
+            $addIds = array_diff($managerIds, array_map('intval', $activeIds));
+            if ($removeIds) {
+                Db::name('auth_manager_role')
+                    ->where(['role_id' => $roleId, 'is_del' => 2])
+                    ->where('manager_id', 'in', $removeIds)
+                    ->update(['is_del' => 1, 'update_id' => $this->manager['manager_id'], 'update_time' => time()]);
+            }
+            foreach ($addIds as $managerId) {
+                $exists = Db::name('auth_manager_role')
+                    ->where(['role_id' => $roleId, 'manager_id' => $managerId])
+                    ->order('mr_id desc')
+                    ->find();
+                if ($exists) {
+                    Db::name('auth_manager_role')->where('mr_id', $exists['mr_id'])->update([
+                        'is_del' => 2, 'update_id' => $this->manager['manager_id'], 'update_time' => time(),
+                    ]);
+                } else {
+                    Db::name('auth_manager_role')->insert([
+                        'role_id' => $roleId, 'manager_id' => $managerId, 'is_del' => 2,
+                        'creator' => $this->manager['manager_id'], 'create_time' => time(),
+                    ]);
+                }
+            }
+            return $this->checkTrans(true);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    protected function normalizeManagerIds($managerIds)
+    {
+        if (is_string($managerIds)) {
+            $decoded = json_decode($managerIds, true);
+            $managerIds = is_array($decoded) ? $decoded : explode(',', $managerIds);
+        }
+        if (!is_array($managerIds)) return [];
+        return array_values(array_unique(array_filter(array_map('intval', $managerIds))));
     }
 
     protected $commonNode = [
@@ -86,9 +147,9 @@ class AuthManagerRoleClient extends ManagementClient
         if (!$role) return $this->rFail("您暂未被授予权限角色，无法使用系统");
 
 
-        $roleNode = $this->getAuthRoleNodeFind([["role_id","in",$role],'node_id' => $authNode['node_id'],'is_del' => 2],'rn_id,d_type','d_type asc,rn_id desc');
-        if (!$roleNode) return $this->r(100,"您无权限操作【" . $authNode['name']. "】");
-        $authNode['d_type'] = $roleNode['d_type'];
+        $roleNodes = $this->resolveManagerRoleNodes($this->manager, $role, intval($authNode['node_id']));
+        if (!$roleNodes) return $this->r(100,"您无权限操作【" . $authNode['name']. "】");
+        $authNode['d_type'] = $roleNodes[0]['d_type'];
         return $authNode;
     }
 

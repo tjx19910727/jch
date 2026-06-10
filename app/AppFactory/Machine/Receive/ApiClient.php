@@ -181,7 +181,7 @@ class ApiClient extends ReceiveBaseClient
         if (!$manager_id) {
             return $this->rFail($this->lang("VLogin.not_manager"));
         }
-        $manager = $this->getAuthManagerFind(['manager_id' => $manager_id], 'manager_id,pid,nickname,account,pic,password,status,ao_id');
+        $manager = $this->getAuthManagerFind(['manager_id' => $manager_id], 'manager_id,pid,nickname,account,pic,password,status,ao_id,use_role_template');
         if (!$manager) return $this->rFail($this->lang("VLogin.account_pwd_error"));
         $manager = $manager->toArray();
         if ($manager['password'] != md5($this->data['password'] . config("app.salt")))

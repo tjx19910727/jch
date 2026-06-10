@@ -25,10 +25,8 @@ class AuthRoleClient extends ManagementClient
     {
         $this->startTrans();
         try {
+            $this->assertRoleTemplateAssociation(0, intval($postData['template_id'] ?? 0), intval($postData['ao_id'] ?? 0));
             $roleId = $this->addAuthRole($postData);
-            if (!empty($postData['template_id'])) {
-                $this->applyAuthRoleTemplateToRole($roleId, intval($postData['template_id']));
-            }
             $this->commitTrans();
             return $rA ? $this->rA($roleId) : $roleId;
         } catch (\Exception $e) {
@@ -42,10 +40,11 @@ class AuthRoleClient extends ManagementClient
     {
         $this->startTrans();
         try {
+            $this->assertRoleTemplateAssociation(
+                intval($postData['role_id'] ?? 0),
+                intval($postData['template_id'] ?? 0)
+            );
             $result = $this->updateAuthRole($postData, $where, $field);
-            if (array_key_exists('template_id', $postData) && intval($postData['template_id']) > 0) {
-                $this->applyAuthRoleTemplateToRole(intval($postData['role_id']), intval($postData['template_id']));
-            }
             $this->commitTrans();
             return $rU ? $this->rU($result) : $result;
         } catch (\Exception $e) {

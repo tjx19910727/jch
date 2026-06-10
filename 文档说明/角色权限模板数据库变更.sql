@@ -35,6 +35,10 @@ ALTER TABLE `auth_role`
   ADD COLUMN `template_id` int DEFAULT NULL COMMENT '角色权限模板ID' AFTER `ao_id`,
   ADD INDEX `idx_template_id` (`template_id`);
 
+ALTER TABLE `auth_manager`
+  ADD COLUMN `use_role_template` tinyint(1) NOT NULL DEFAULT 2 COMMENT '是否使用角色权限模板：1是，2否（走历史逻辑）' AFTER `status`,
+  ADD INDEX `idx_use_role_template` (`use_role_template`);
+
 -- 注册角色权限模板接口节点，与“权限角色”接口放在同一菜单下。
 INSERT INTO auth_node (pid, name, url, `desc`, sort, type, is_auth, is_button, data_auth, status, create_time, update_time)
 SELECT pid, '角色权限模板列表', '/management/auth.auth_role_template/getList', '查询角色权限模板列表', sort, type, 1, 1, 1, 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
@@ -90,4 +94,11 @@ SELECT pid, '应用角色权限模板', '/management/auth.auth_role_template/app
 FROM auth_node
 WHERE url = '/management/auth.auth_role/getList'
   AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = '/management/auth.auth_role_template/apply')
+LIMIT 1;
+
+INSERT INTO auth_node (pid, name, url, `desc`, sort, type, is_auth, is_button, data_auth, status, create_time, update_time)
+SELECT pid, '角色批量设置账号', '/management/auth.auth_manager_role/setRoleManagers', '替换设置角色绑定的账号集合', sort, type, 1, 1, 1, 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+FROM auth_node
+WHERE url = '/management/auth.auth_manager_role/getList'
+  AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = '/management/auth.auth_manager_role/setRoleManagers')
 LIMIT 1;
