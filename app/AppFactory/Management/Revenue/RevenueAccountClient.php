@@ -11,7 +11,7 @@ class RevenueAccountClient extends ManagementClient
     use RevenueAccountTrait;
     use AuthManagerTrait;
 
-    public function add($postData)
+    public function addData($postData = [])
     {
         $check = $this->checkAccountData($postData);
         if ($check !== true) return $check;
@@ -19,7 +19,7 @@ class RevenueAccountClient extends ManagementClient
         return $this->rA($this->addRevenueAccount($postData));
     }
 
-    public function update($postData)
+    public function updateData($postData = [])
     {
         if (empty($postData['ra_id'])) return $this->rFail("分账账户ID不能为空");
         $check = $this->checkAccountData($postData, true);
@@ -27,19 +27,29 @@ class RevenueAccountClient extends ManagementClient
         return $this->rU($this->updateRevenueAccount($postData, [], ['ra_id']));
     }
 
-    public function getList($where, $pageNum = 0, $field = "*", $order = "ra_id desc")
+    public function getList($where = [], $pageNum = 0, $field = "*", $order = "ra_id desc", $rQ = 1)
     {
-        return $this->rQ($this->getRevenueAccountList($where, $pageNum, $field, $order));
+        $data = $this->getRevenueAccountList($where, $pageNum, $field, $order);
+        if ($rQ) return $this->rQ($data);
+        return $data;
     }
 
-    public function getFind($where, $field = "*", $order = "ra_id desc")
+    public function getFind($where = [], $field = "*", $order = "ra_id desc", $rQ = 1)
     {
-        return $this->rQ($this->getRevenueAccountFind($where, $field, $order));
+        $data = $this->getRevenueAccountFind($where, $field, $order);
+        if ($rQ) return $this->rQ($data);
+        return $data;
     }
 
-    public function del($raId)
+    public function delData($where, $rD = 1)
     {
-        return $this->rD($this->delRevenueAccount(['ra_id' => $raId]));
+        // allow passing a single id as before
+        if (is_int($where) || (is_string($where) && ctype_digit($where))) {
+            $where = ['ra_id' => intval($where)];
+        }
+        $result = $this->delRevenueAccount($where);
+        if ($rD) return $this->rD($result);
+        return $result;
     }
 
     protected function checkAccountData($data, $isUpdate = false)

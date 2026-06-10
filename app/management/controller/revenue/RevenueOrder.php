@@ -29,7 +29,7 @@ class RevenueOrder extends Common
             'revenue_time' => 'between',
         ]);
         $pageNum = $postData['pageNum'] ?? 0;
-        return $this->app->revenueOrder->getList($where, $pageNum, "*", "ro_id desc");
+        return $this->app->revenueOrder->getList($where, $pageNum, "*", "ro_id desc",$rQ = '');
     }
 
     public function getFind()

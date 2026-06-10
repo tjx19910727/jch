@@ -27,20 +27,20 @@ class RevenueAccount extends Common
     {
         $postData = input();
         try { $this->validate($postData, $this->validatePath . 'add'); } catch (\Exception $e) { return returnValidate($e->getMessage()); }
-        return $this->app->revenueAccount->add($postData);
+        return $this->app->revenueAccount->addData($postData);
     }
 
     public function update()
     {
         $postData = input();
         try { $this->validate($postData, $this->validatePath . 'update'); } catch (\Exception $e) { return returnValidate($e->getMessage()); }
-        return $this->app->revenueAccount->update($postData);
+        return $this->app->revenueAccount->updateData($postData);
     }
 
     public function del()
     {
         $raId = input('ra_id');
         if (!$raId) return returnState(100, '分账账户ID不能为空');
-        return $this->app->revenueAccount->del($raId);
+        return $this->app->revenueAccount->delData($raId);
     }
 }

@@ -16,13 +16,13 @@ class RevenueOrderClient extends ManagementClient
     use BeforeOrderPaymentTrait;
     use AfterOrderPaymentTrait;
 
-    public function getList($where, $pageNum = 0, $field = "*", $order = "ro_id desc")
+    public function getList($where = [], $pageNum = 0, $field = "*", $order = "ro_id desc", $rQ = '')
     {
         $where = $this->filterByManager($where);
         return $this->rQ($this->getRevenueOrderList($where, $pageNum, $field, $order));
     }
 
-    public function getFind($where, $field = "*", $order = "ro_id desc")
+    public function getFind($where = [], $field = "*", $order = "ro_id desc",$rQ = '')
     {
         $where = $this->filterByManager($where);
         return $this->rQ($this->getRevenueOrderFind($where, $field, $order));

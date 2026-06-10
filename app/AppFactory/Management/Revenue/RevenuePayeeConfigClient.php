@@ -29,12 +29,11 @@ class RevenuePayeeConfigClient extends ManagementClient
         return $this->rA($this->addRevenuePayeeConfig($postData));
     }
 
-    public function getList($where, $pageNum = 0, $field = "*", $order = "rpcfg_id desc")
+    public function getList($where= [], $pageNum = 0, $field = "*", $order = "rpcfg_id desc",$rQ = 1)
     {
         return $this->rQ($this->getRevenuePayeeConfigList($where, $pageNum, $field, $order));
     }
-
-    public function getFind($where, $field = "*", $order = "rpcfg_id desc")
+    public function getFind($where = [], $field = "*", $order = "rpcfg_id desc",$rQ = 1)
     {
         return $this->rQ($this->getRevenuePayeeConfigFind($where, $field, $order));
     }

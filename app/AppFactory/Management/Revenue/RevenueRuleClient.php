@@ -14,7 +14,7 @@ class RevenueRuleClient extends ManagementClient
     use RevenueAccountTrait;
     use MachineTrait;
 
-    public function add($postData)
+    public function addData($postData)
     {
         $check = $this->checkRuleData($postData);
         if ($check !== true) return $check;
@@ -22,7 +22,7 @@ class RevenueRuleClient extends ManagementClient
         return $this->rA($this->addRevenueRule($postData));
     }
 
-    public function update($postData)
+    public function updateData($postData)
     {
         if (empty($postData['rr_id'])) return $this->rFail("分账策略ID不能为空");
         $check = $this->checkRuleData($postData, true);
@@ -30,12 +30,12 @@ class RevenueRuleClient extends ManagementClient
         return $this->rU($this->updateRevenueRule($postData, [], ['rr_id']));
     }
 
-    public function getList($where, $pageNum = 0, $field = "*", $order = "rr_id desc")
+    public function getList($where= [], $pageNum = 0, $field = "*", $order = "rr_id desc",$rQ = 1)
     {
         return $this->rQ($this->getRevenueRuleList($where, $pageNum, $field, $order));
     }
 
-    public function getFind($where, $field = "*", $order = "rr_id desc")
+    public function getFind($where = [], $field = "*", $order = "rr_id desc",$rQ = 1)
     {
         return $this->rQ($this->getRevenueRuleFind($where, $field, $order));
     }

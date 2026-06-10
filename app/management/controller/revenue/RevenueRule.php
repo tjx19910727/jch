@@ -27,14 +27,14 @@ class RevenueRule extends Common
     {
         $postData = input();
         try { $this->validate($postData, $this->validatePath . 'add'); } catch (\Exception $e) { return returnValidate($e->getMessage()); }
-        return $this->app->revenueRule->add($postData);
+        return $this->app->revenueRule->addData($postData);
     }
 
     public function update()
     {
         $postData = input();
         try { $this->validate($postData, $this->validatePath . 'update'); } catch (\Exception $e) { return returnValidate($e->getMessage()); }
-        return $this->app->revenueRule->update($postData);
+        return $this->app->revenueRule->updateData($postData);
     }
 
     public function addItem()
