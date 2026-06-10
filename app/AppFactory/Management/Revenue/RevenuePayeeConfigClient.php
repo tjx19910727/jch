@@ -18,9 +18,16 @@ class RevenuePayeeConfigClient extends ManagementClient
 
     public function saveByPayee($postData)
     {
+        $exists = null;
+        if (!empty($postData['sp_id'])) {
+            $exists = $this->getRevenuePayeeConfigFind(['sp_id' => $postData['sp_id']]);
+        }
+        if (!$exists) {
+            if (!isset($postData['settlement_type'])) $postData['settlement_type'] = 1;
+            if (!isset($postData['settlement_days'])) $postData['settlement_days'] = 0;
+        }
         $check = $this->checkData($postData);
         if ($check !== true) return $check;
-        $exists = $this->getRevenuePayeeConfigFind(['sp_id' => $postData['sp_id']], 'rpcfg_id');
         if ($exists) {
             $postData['rpcfg_id'] = $exists['rpcfg_id'];
             return $this->rU($this->updateRevenuePayeeConfig($postData, [], ['rpcfg_id']));
@@ -68,6 +75,21 @@ class RevenuePayeeConfigClient extends ManagementClient
         $data['payee_type'] = $data['payee_type'] ?? $payee['payee_type'];
         $data['ao_id'] = $data['ao_id'] ?? $payee['ao_id'];
         if (!isset($data['enable_revenue'])) $data['enable_revenue'] = 1;
+        $settlementData = $data;
+        if (!empty($data['sp_id']) && (!isset($data['settlement_type']) || !isset($data['settlement_days']))) {
+            $current = $this->getRevenuePayeeConfigFind(['sp_id' => $data['sp_id']]);
+            if ($current) {
+                $settlementData = array_merge(is_array($current) ? $current : $current->toArray(), $data);
+            }
+        }
+        $settlementType = intval($settlementData['settlement_type'] ?? 1);
+        $settlementDays = intval($settlementData['settlement_days'] ?? 0);
+        if (!in_array($settlementType, [1, 2], true)) return $this->rFail("分账时间类型不合法");
+        if ($settlementDays < 0) return $this->rFail("T+N 天数不能小于0");
+        if ($settlementType === 2 && $settlementDays < 1) return $this->rFail("T+N 分账天数必须大于0");
+        if ($settlementType === 1 && (isset($data['settlement_type']) || isset($data['settlement_days']))) {
+            $data['settlement_days'] = 0;
+        }
         if (!$this->shouldEnableRevenue($data)) {
             if (empty($data['default_ra_id'])) $data['default_manager_id'] = 0;
             return true;

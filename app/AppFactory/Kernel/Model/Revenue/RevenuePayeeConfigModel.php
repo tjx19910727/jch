@@ -17,6 +17,8 @@ class RevenuePayeeConfigModel extends BaseModel
         "default_ra_id" => "int",
         "default_manager_id" => "int",
         "enable_revenue" => "int",
+        "settlement_type" => "int",
+        "settlement_days" => "int",
         "status" => "int",
         "creator" => "int",
         "create_time" => "int",

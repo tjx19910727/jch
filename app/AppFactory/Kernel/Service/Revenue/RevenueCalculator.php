@@ -298,8 +298,8 @@ class RevenueCalculator
             'manager_name' => $account['manager_name'] ?? '',
             'account_type' => $account['account_type'] ?? '',
             'account' => $account['account'] ?? ($account['bill_account'] ?? ''),
-            'settlement_type' => intval($this->revenuePayChannel['settlement_type'] ?? 1) ?: 1,
-            'settlement_days' => max(0, intval($this->revenuePayChannel['settlement_days'] ?? 0)),
+            'settlement_type' => intval($this->payeeRevenueConfig['settlement_type'] ?? 1) ?: 1,
+            'settlement_days' => max(0, intval($this->payeeRevenueConfig['settlement_days'] ?? 0)),
             'status' => 0,
         ], $data);
     }
@@ -355,9 +355,8 @@ class RevenueCalculator
         }
         if (!$channel) return false;
         $config = Db::name('revenue_payee_config')->where(['sp_id' => $spId, 'status' => 1])->find();
-        if (!$config) {
-            throw new \Exception("收款策略未配置新分账配置");
-        }
+        // 渠道配置只控制是否允许进入新分账；未单独配置的收款策略不参与分账，也不阻断支付。
+        if (!$config) return false;
         if (intval($config['enable_revenue'] ?? 1) !== 1) return false;
         $this->payeeRevenueConfig = $config;
         return true;

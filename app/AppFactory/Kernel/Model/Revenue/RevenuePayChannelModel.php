@@ -14,8 +14,6 @@ class RevenuePayChannelModel extends BaseModel
         "pay_type" => "int",
         "payee_type" => "int",
         "channel_name" => "string",
-        "settlement_type" => "int",
-        "settlement_days" => "int",
         "status" => "int",
         "creator" => "int",
         "create_time" => "int",
