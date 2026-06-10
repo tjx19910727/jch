@@ -23,12 +23,12 @@ INSERT INTO revenue_account
 VALUES(3, 1, 64, '3号分账账号', '33445566', 'balance', 'C_BALANCE', 1, 1, 1780971556, 1780971556);
 
 INSERT INTO revenue_pay_channel
-(rpc_id, pay_type, payee_type, channel_name, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(1, 1, 1, '微信支付-即时分账', 1, 0, 1, 1, 1780975448, 1780975594);
+(rpc_id, pay_type, payee_type, channel_name, status, creator, create_time, update_time)
+VALUES(1, 1, 1, '微信支付', 1, 1, 1780975448, 1780975594);
 
 INSERT INTO revenue_payee_config
-(rpcfg_id, sp_id, payee_type, ao_id, default_ra_id, default_manager_id, enable_revenue, status, creator, create_time, update_time)
-VALUES(1, 5, 1, 1, 1, 62, 1, 1, 1, 1780990272, 1780990272);
+(rpcfg_id, sp_id, payee_type, ao_id, default_ra_id, default_manager_id, enable_revenue, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(1, 5, 1, 1, 1, 62, 1, 1, 0, 1, 1, 1780990272, 1780990272);
 
 INSERT INTO revenue_rule
 (rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, status, creator, create_time, update_time)

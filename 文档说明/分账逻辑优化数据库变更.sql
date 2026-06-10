@@ -89,8 +89,6 @@ CREATE TABLE IF NOT EXISTS `revenue_pay_channel` (
   `pay_type` int NOT NULL COMMENT '订单支付类型',
   `payee_type` int DEFAULT NULL COMMENT '收款策略支付类型',
   `channel_name` varchar(50) DEFAULT NULL COMMENT '渠道名称',
-  `settlement_type` tinyint(1) DEFAULT 1 COMMENT '分账时间类型：1即时分账，2 T+N分账',
-  `settlement_days` int DEFAULT 0 COMMENT 'T+N分账天数，即时分账为0',
   `status` tinyint(1) DEFAULT 1 COMMENT '状态：1启用分账，2停用分账',
   `creator` int DEFAULT NULL,
   `create_time` int DEFAULT NULL,
@@ -108,6 +106,8 @@ CREATE TABLE IF NOT EXISTS `revenue_payee_config` (
   `default_ra_id` int DEFAULT NULL COMMENT '默认分账账户ID',
   `default_manager_id` int DEFAULT NULL COMMENT '默认账户管理人ID',
   `enable_revenue` tinyint(1) DEFAULT 1 COMMENT '是否启用新分账：1启用，2停用',
+  `settlement_type` tinyint(1) DEFAULT 1 COMMENT '分账时间类型：1即时分账，2 T+N分账',
+  `settlement_days` int DEFAULT 0 COMMENT 'T+N分账天数，即时分账为0',
   `status` tinyint(1) DEFAULT 1 COMMENT '状态：1启用，2停用',
   `creator` int DEFAULT NULL,
   `create_time` int DEFAULT NULL,
@@ -180,9 +180,9 @@ CREATE TABLE IF NOT EXISTS `revenue_order` (
 --   );
 
 -- 可选初始化：配置需要参与新分账的收款渠道。未配置或停用的渠道不会生成 revenue_order。
--- INSERT INTO revenue_pay_channel (pay_type, payee_type, channel_name, settlement_type, settlement_days, status, creator, create_time, update_time)
+-- INSERT INTO revenue_pay_channel (pay_type, payee_type, channel_name, status, creator, create_time, update_time)
 -- VALUES
--- (1, 1, '微信支付', 1, 0, 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
--- (2, 2, '支付宝支付', 2, 1, 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
--- (4, 4, '京东收银', 1, 0, 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
--- (20, 20, '余额支付', 1, 0, 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP());
+-- (1, 1, '微信支付', 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
+-- (2, 2, '支付宝支付', 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
+-- (4, 4, '京东收银', 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()),
+-- (20, 20, '余额支付', 1, 0, UNIX_TIMESTAMP(), UNIX_TIMESTAMP());

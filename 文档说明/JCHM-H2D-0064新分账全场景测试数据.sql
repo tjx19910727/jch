@@ -324,14 +324,11 @@ SELECT * FROM revenue_pay_channel WHERE pay_type = @pay_type;
 SELECT * FROM revenue_payee_config WHERE sp_id = @sp_id;
 
 INSERT INTO revenue_pay_channel
-  (pay_type, payee_type, channel_name, settlement_type, settlement_days,
-   status, creator, create_time, update_time)
+  (pay_type, payee_type, channel_name, status, creator, create_time, update_time)
 SELECT
   @pay_type,
   NULL,
-  CONCAT(@test_prefix, '_即时分账触发'),
-  1,
-  0,
+  CONCAT(@test_prefix, '_分账触发'),
   1,
   0,
   @now,
@@ -339,8 +336,6 @@ SELECT
 WHERE @pay_type IS NOT NULL
 ON DUPLICATE KEY UPDATE
   channel_name = VALUES(channel_name),
-  settlement_type = 1,
-  settlement_days = 0,
   status = 1,
   update_time = VALUES(update_time);
 
@@ -358,7 +353,7 @@ WHERE rpcfg.sp_id = @sp_id;
 -- 原收款策略只作为关联标识读取；新配置写入独立 revenue_payee_config。
 INSERT INTO revenue_payee_config
   (sp_id, payee_type, ao_id, default_ra_id, default_manager_id,
-   enable_revenue, status, creator, create_time, update_time)
+   enable_revenue, settlement_type, settlement_days, status, creator, create_time, update_time)
 SELECT
   @sp_id,
   @pay_type,
@@ -366,6 +361,8 @@ SELECT
   @ra_a_id,
   @manager_a_id,
   1,
+  1,
+  0,
   1,
   0,
   @now,
@@ -377,6 +374,8 @@ ON DUPLICATE KEY UPDATE
   default_ra_id = VALUES(default_ra_id),
   default_manager_id = VALUES(default_manager_id),
   enable_revenue = 1,
+  settlement_type = 1,
+  settlement_days = 0,
   status = 1,
   update_time = VALUES(update_time);
 
@@ -842,20 +841,20 @@ ORDER BY rrm.rrm_id;
 -- 可与普通/出租/固定/阶梯任一计算场景组合。
 -- 预期：支付成功后 revenue_order.status=2，planned_revenue_time有值。
 -- ------------------------------------------------------------
--- UPDATE revenue_pay_channel
+-- UPDATE revenue_payee_config
 -- SET settlement_type = 2,
 --     settlement_days = 1,
 --     status = 1,
 --     update_time = UNIX_TIMESTAMP()
--- WHERE pay_type = @pay_type;
+-- WHERE sp_id = @sp_id;
 
 -- 恢复即时结算：
--- UPDATE revenue_pay_channel
+-- UPDATE revenue_payee_config
 -- SET settlement_type = 1,
 --     settlement_days = 0,
 --     status = 1,
 --     update_time = UNIX_TIMESTAMP()
--- WHERE pay_type = @pay_type;
+-- WHERE sp_id = @sp_id;
 
 -- ============================================================
 -- 11. 测试订单结果查询与场景验收

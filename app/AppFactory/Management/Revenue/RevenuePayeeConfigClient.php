@@ -51,6 +51,7 @@ class RevenuePayeeConfigClient extends ManagementClient
             'enabled_channels' => Db::name('revenue_pay_channel')->where(['status' => 1])->order('rpc_id desc')->select()->toArray(),
             'payee_without_config' => $this->getPayeeWithoutConfig(),
             'payee_without_default_account' => $this->getPayeeWithoutDefaultAccount(),
+            'invalid_settlement_config' => $this->getInvalidSettlementConfig(),
             'invalid_default_account' => $this->getInvalidDefaultAccount(),
             'invalid_rule_account' => $this->getInvalidRuleAccount(),
             'invalid_rental_item' => $this->getInvalidRentalItem(),
@@ -58,8 +59,9 @@ class RevenuePayeeConfigClient extends ManagementClient
             'invalid_tier' => $this->getInvalidTier(),
         ];
         $result['has_error'] = false;
+        $informationalKeys = ['enabled_channels', 'payee_without_config', 'has_error'];
         foreach ($result as $key => $value) {
-            if ($key !== 'enabled_channels' && $key !== 'has_error' && !empty($value)) {
+            if (!in_array($key, $informationalKeys, true) && !empty($value)) {
                 $result['has_error'] = true;
                 break;
             }
@@ -74,14 +76,13 @@ class RevenuePayeeConfigClient extends ManagementClient
         if (!$payee) return $this->rFail("收款策略不存在");
         $data['payee_type'] = $data['payee_type'] ?? $payee['payee_type'];
         $data['ao_id'] = $data['ao_id'] ?? $payee['ao_id'];
-        if (!isset($data['enable_revenue'])) $data['enable_revenue'] = 1;
-        $settlementData = $data;
-        if (!empty($data['sp_id']) && (!isset($data['settlement_type']) || !isset($data['settlement_days']))) {
+        $current = null;
+        if (!empty($data['sp_id'])) {
             $current = $this->getRevenuePayeeConfigFind(['sp_id' => $data['sp_id']]);
-            if ($current) {
-                $settlementData = array_merge(is_array($current) ? $current : $current->toArray(), $data);
-            }
+            if ($current && !is_array($current)) $current = $current->toArray();
         }
+        if (!isset($data['enable_revenue']) && !$current) $data['enable_revenue'] = 1;
+        $settlementData = array_merge($current ?: [], $data);
         $settlementType = intval($settlementData['settlement_type'] ?? 1);
         $settlementDays = intval($settlementData['settlement_days'] ?? 0);
         if (!in_array($settlementType, [1, 2], true)) return $this->rFail("分账时间类型不合法");
@@ -90,12 +91,15 @@ class RevenuePayeeConfigClient extends ManagementClient
         if ($settlementType === 1 && (isset($data['settlement_type']) || isset($data['settlement_days']))) {
             $data['settlement_days'] = 0;
         }
-        if (!$this->shouldEnableRevenue($data)) {
-            if (empty($data['default_ra_id'])) $data['default_manager_id'] = 0;
+        if (!$this->shouldEnableRevenue($settlementData)) {
+            if (array_key_exists('default_ra_id', $data) && empty($data['default_ra_id'])) {
+                $data['default_manager_id'] = 0;
+            }
             return true;
         }
-        if (empty($data['default_ra_id'])) return $this->rFail("当前收款渠道已启用分账，默认分账账户不能为空");
-        $account = $this->getRevenueAccountFind(['ra_id' => $data['default_ra_id'], 'status' => 1]);
+        $defaultRaId = intval($settlementData['default_ra_id'] ?? 0);
+        if ($defaultRaId <= 0) return $this->rFail("当前收款渠道已启用分账，默认分账账户不能为空");
+        $account = $this->getRevenueAccountFind(['ra_id' => $defaultRaId, 'status' => 1]);
         if (!$account) return $this->rFail("默认分账账户不存在或未启用");
         if (intval($account['ao_id']) !== intval($data['ao_id'])) {
             return $this->rFail("默认分账账户所属组织与收款策略组织不一致");
@@ -106,6 +110,7 @@ class RevenuePayeeConfigClient extends ManagementClient
 
     protected function shouldEnableRevenue($data)
     {
+        if (isset($data['status']) && intval($data['status']) !== 1) return false;
         if (intval($data['enable_revenue'] ?? 1) !== 1) return false;
         $payeeType = intval($data['payee_type'] ?? 0);
         if ($payeeType <= 0) return false;
@@ -138,6 +143,16 @@ class RevenuePayeeConfigClient extends ManagementClient
                 $query->whereNull('rpcfg.default_ra_id')->whereOr('rpcfg.default_ra_id', 0);
             })
             ->field('rpcfg.rpcfg_id,rpcfg.sp_id,sp.sp_name,rpcfg.payee_type,rpcfg.ao_id,rpcfg.default_ra_id,rpcfg.default_manager_id,rpcfg.enable_revenue')
+            ->select()
+            ->toArray();
+    }
+
+    protected function getInvalidSettlementConfig()
+    {
+        return Db::name('revenue_payee_config')
+            ->whereRaw('settlement_type IS NULL OR settlement_type NOT IN (1,2) OR settlement_days IS NULL OR settlement_days < 0 OR (settlement_type = 1 AND settlement_days <> 0) OR (settlement_type = 2 AND settlement_days < 1)')
+            ->field('rpcfg_id,sp_id,payee_type,settlement_type,settlement_days,status')
+            ->order('rpcfg_id desc')
             ->select()
             ->toArray();
     }

@@ -7,16 +7,14 @@ SELECT
   pay_type,
   payee_type,
   channel_name,
-  settlement_type,
-  settlement_days,
   status
 FROM revenue_pay_channel
 WHERE status = 1
 ORDER BY rpc_id DESC;
 
--- 1.1 分账时间配置不合法的渠道
+-- 1.1 分账时间配置不合法的收款策略新分账配置
 SELECT *
-FROM revenue_pay_channel
+FROM revenue_payee_config
 WHERE settlement_type NOT IN (1, 2)
    OR settlement_days < 0
    OR (settlement_type = 1 AND settlement_days <> 0)
