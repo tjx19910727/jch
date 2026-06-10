@@ -12,14 +12,14 @@ class RevenuePayChannel extends Common
     {
         $postData = input();
         try { $this->validate($postData, $this->validatePath . 'add'); } catch (\Exception $e) { return returnValidate($e->getMessage()); }
-        return $this->app->revenuePayChannel->add($postData);
+        return $this->app->revenuePayChannel->addData($postData);
     }
 
     public function update()
     {
         $postData = input();
         try { $this->validate($postData, $this->validatePath . 'update'); } catch (\Exception $e) { return returnValidate($e->getMessage()); }
-        return $this->app->revenuePayChannel->update($postData);
+        return $this->app->revenuePayChannel->updateData($postData);
     }
 
     public function getList()
@@ -41,6 +41,6 @@ class RevenuePayChannel extends Common
     {
         $rpcId = input('rpc_id');
         if (!$rpcId) return returnState(100, '分账渠道配置ID不能为空');
-        return $this->app->revenuePayChannel->del($rpcId);
+        return $this->app->revenuePayChannel->delData($rpcId);
     }
 }

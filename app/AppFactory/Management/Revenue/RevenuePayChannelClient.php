@@ -9,7 +9,7 @@ class RevenuePayChannelClient extends ManagementClient
 {
     use RevenuePayChannelTrait;
 
-    public function add($postData)
+    public function addData($postData)
     {
         $check = $this->checkData($postData);
         if ($check !== true) return $check;
@@ -19,7 +19,7 @@ class RevenuePayChannelClient extends ManagementClient
         return $this->rA($this->addRevenuePayChannel($postData));
     }
 
-    public function update($postData)
+    public function updateData($postData)
     {
         if (empty($postData['rpc_id'])) return $this->rFail("分账渠道配置ID不能为空");
         $check = $this->checkData($postData, true);
@@ -27,17 +27,17 @@ class RevenuePayChannelClient extends ManagementClient
         return $this->rU($this->updateRevenuePayChannel($postData, [], ['rpc_id']));
     }
 
-    public function getList($where, $pageNum = 0, $field = "*", $order = "rpc_id desc")
+    public function getList($where= [], $pageNum = 0, $field = "*", $order = "rpc_id desc",$rQ = 1)
     {
         return $this->rQ($this->getRevenuePayChannelList($where, $pageNum, $field, $order));
     }
 
-    public function getFind($where, $field = "*", $order = "rpc_id desc")
+    public function getFind($where= [], $field = "*", $order = "rpc_id desc",$rQ = 1)
     {
         return $this->rQ($this->getRevenuePayChannelFind($where, $field, $order));
     }
 
-    public function del($rpcId)
+    public function delData($rpcId)
     {
         return $this->rD($this->delRevenuePayChannel(['rpc_id' => $rpcId]));
     }
