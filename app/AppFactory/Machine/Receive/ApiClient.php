@@ -3187,34 +3187,44 @@ class ApiClient extends ReceiveBaseClient
             $itemIds = array_values(array_map('intval', array_keys($submittedMap)));
             $itemRows = Db::name('maintenance_items')
                 ->where([['id', 'in', $itemIds]])
-                ->field('id,item_level,is_active')
+                ->field('id,parent_id,item_level')
                 ->select()
                 ->toArray();
 
-            $itemLevelMap = [];
-            $disabledItemIds = [];
+            $itemMap = [];
             foreach ($itemRows as $itemRow) {
-                $rowId = intval($itemRow['id']);
-                $itemLevelMap[$rowId] = intval($itemRow['item_level'] ?? 0);
-                if (intval($itemRow['is_active'] ?? 0) !== 1) {
-                    $disabledItemIds[] = $rowId;
-                }
+                $itemMap[intval($itemRow['id'])] = [
+                    'parent_id' => intval($itemRow['parent_id'] ?? 0),
+                    'item_level' => intval($itemRow['item_level'] ?? 0),
+                ];
             }
 
-            $missing = array_values(array_diff($itemIds, array_keys($itemLevelMap)));
+            $missing = array_values(array_diff($itemIds, array_keys($itemMap)));
             if ($missing) {
                 return $this->rFail('维护项目不存在:' . implode(',', $missing));
             }
-            if ($disabledItemIds) {
-                return $this->rFail('维护项目已禁用:' . implode(',', array_values(array_unique($disabledItemIds))));
-            }
 
-            $invalidStatusIds = [];
-            foreach ($submittedMap as $itemId => $submittedRow) {
-                $itemLevel = intval($itemLevelMap[$itemId] ?? 0);
-                if ($itemLevel === 1) {
+            $submittedChildIds = [];
+            $parentIds = [];
+            foreach ($itemIds as $itemId) {
+                $item = $itemMap[$itemId] ?? [];
+                if (intval($item['item_level'] ?? 0) === 1) {
                     continue;
                 }
+                $parentId = intval($item['parent_id'] ?? 0);
+                if ($parentId <= 0) {
+                    continue;
+                }
+                $submittedChildIds[] = intval($itemId);
+                $parentIds[] = $parentId;
+            }
+
+            $submittedChildIds = array_values(array_unique($submittedChildIds));
+            $parentIds = array_values(array_unique($parentIds));
+
+            $invalidStatusIds = [];
+            foreach ($submittedChildIds as $itemId) {
+                $submittedRow = $submittedMap[$itemId] ?? [];
                 $checkStatus = intval($submittedRow['check_status'] ?? 0);
                 if (!in_array($checkStatus, [1, 2], true)) {
                     $invalidStatusIds[] = intval($itemId);
@@ -3233,18 +3243,44 @@ class ApiClient extends ReceiveBaseClient
             $defaultNotes = trim(strval($this->data['notes'] ?? ''));
             $maintenanceTime = date('Y-m-d H:i:s');
 
+            if (!$parentIds) {
+                return $this->r(200, 'SUCCESS', [
+                    'records_code' => $recordsCode,
+                    'machine_id' => $this->machine['machine_id'],
+                    'count' => 0,
+                ]);
+            }
+
+            $recordItemIds = Db::name('maintenance_items')
+                ->where([['parent_id', 'in', $parentIds]])
+                ->where(['is_active' => 1])
+                ->where('item_level', '<>', 1)
+                ->order('sort_order asc,id asc')
+                ->column('id');
+            $recordItemIds = array_values(array_unique(array_map('intval', $recordItemIds)));
+
             $insertAll = [];
-            foreach ($itemIds as $itemId) {
+            foreach ($recordItemIds as $itemId) {
                 $rowNotes = strval($submittedMap[$itemId]['notes'] ?? '');
                 $insertAll[] = [
                     'records_code' => $recordsCode,
                     'item_id' => $itemId,
                     'machine_id' => $this->machine['machine_id'],
                     'maintainer_id' => $maintainerId,
-                    'check_status' => intval($submittedMap[$itemId]['check_status'] ?? 0),
+                    'check_status' => isset($submittedMap[$itemId])
+                        ? intval($submittedMap[$itemId]['check_status'] ?? 0)
+                        : 2,
                     'maintenance_time' => $maintenanceTime,
                     'notes' => $rowNotes !== '' ? $rowNotes : $defaultNotes,
                 ];
+            }
+
+            if (!$insertAll) {
+                return $this->r(200, 'SUCCESS', [
+                    'records_code' => $recordsCode,
+                    'machine_id' => $this->machine['machine_id'],
+                    'count' => 0,
+                ]);
             }
 
             Db::startTrans();
