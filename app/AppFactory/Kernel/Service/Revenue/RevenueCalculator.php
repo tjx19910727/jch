@@ -10,6 +10,8 @@ class RevenueCalculator
     protected $details = [];
     protected $records = [];
     protected $rentalAmount = '0';
+    protected $productAmount = '0';
+    protected $rentalAmountsBySod = [];
     protected $payeeRevenueConfig = [];
     protected $revenuePayChannel = [];
 
@@ -18,6 +20,8 @@ class RevenueCalculator
         $this->order = $order;
         $this->records = [];
         $this->rentalAmount = '0';
+        $this->productAmount = '0';
+        $this->rentalAmountsBySod = [];
         $this->payeeRevenueConfig = [];
         $this->revenuePayChannel = [];
         if (!$this->shouldCalculateRevenue()) {
@@ -33,9 +37,12 @@ class RevenueCalculator
         }
 
         $this->calculateRental();
-        $hasDeviceRule = $this->calculateDeviceRule();
+        $hasProductRule = $this->calculateProductRule();
+        $hasDeviceRule = $hasProductRule ? false : $this->calculateDeviceRule();
 
-        if (!$hasDeviceRule) {
+        if (!$hasProductRule && !$hasDeviceRule) {
+            $this->calculateNormal();
+        } elseif ($hasProductRule) {
             $this->calculateNormal();
         }
 
@@ -71,6 +78,8 @@ class RevenueCalculator
                 continue;
             }
             $this->rentalAmount = bcadd($this->rentalAmount, $calc['income_amount'], 2);
+            $sodId = intval($detail['sod_id'] ?? 0);
+            $this->rentalAmountsBySod[$sodId] = bcadd($this->rentalAmountsBySod[$sodId] ?? '0', $calc['income_amount'], 2);
             $this->records[] = $this->buildRecord([
                 'sod_id' => $detail['sod_id'] ?? 0,
                 'sod_amount' => $detail['retail_price'] ?? 0,
@@ -87,6 +96,60 @@ class RevenueCalculator
                 'source' => 'rental',
             ], $account);
         }
+    }
+
+    protected function calculateProductRule()
+    {
+        $rule = $this->getRuleByMode(4);
+        if (!$rule) {
+            return false;
+        }
+        $items = Db::name('revenue_rule_item')
+            ->where(['rr_id' => $rule['rr_id'], 'status' => 1])
+            ->order('sort asc,rri_id asc')
+            ->select()
+            ->toArray();
+        if (!$items) {
+            throw new \Exception("设备商品分账策略{$rule['rr_id']}未配置分账明细");
+        }
+
+        foreach ($this->details as $detail) {
+            $gId = intval($detail['g_id'] ?? 0);
+            $sodId = intval($detail['sod_id'] ?? 0);
+            $detailAmount = $this->money($detail['total_sod_price'] ?? 0);
+            $baseAmount = $this->money(bcsub($detailAmount, $this->rentalAmountsBySod[$sodId] ?? '0', 2));
+            if ($gId <= 0 || bccomp($baseAmount, '0.01', 2) < 0) {
+                continue;
+            }
+            foreach ($items as $item) {
+                if (intval($item['g_id'] ?? 0) !== $gId) continue;
+                $account = $this->getAccountById(intval($item['ra_id']));
+                if (!$account) {
+                    throw new \Exception("商品{$gId}分账明细{$item['rri_id']}未配置有效分账账户");
+                }
+                $calc = $this->calculateProductRuleItemAmount($item, $baseAmount, intval($detail['quantity'] ?? 0));
+                if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) continue;
+                $this->productAmount = bcadd($this->productAmount, $calc['income_amount'], 2);
+                $this->records[] = $this->buildRecord([
+                    'sod_id' => $sodId,
+                    'g_id' => $gId,
+                    'mg_id' => intval($detail['mg_id'] ?? 0),
+                    'sod_amount' => $detail['retail_price'] ?? 0,
+                    'sod_quantity' => intval($detail['quantity'] ?? 0),
+                    'sod_total_price' => $detailAmount,
+                    'rule_mode' => 4,
+                    'rr_id' => $rule['rr_id'],
+                    'rri_id' => $item['rri_id'],
+                    'payer_ao_id' => intval($this->order['ao_id'] ?? 0),
+                    'receiver_ao_id' => intval($item['receiver_ao_id']),
+                    'calc_type' => intval($item['calc_type']),
+                    'income_value' => $calc['income_value'],
+                    'income_amount' => $calc['income_amount'],
+                    'source' => 'product_rule',
+                ], $account);
+            }
+        }
+        return true;
     }
 
     protected function calculateDeviceRule()
@@ -145,7 +208,8 @@ class RevenueCalculator
     protected function calculateNormal()
     {
         $payerAoId = intval($this->order['ao_id'] ?? 0);
-        $normalAmount = $this->money(bcsub($this->money($this->order['total_price'] ?? 0), $this->rentalAmount, 2));
+        $allocatedAmount = bcadd($this->rentalAmount, $this->productAmount, 2);
+        $normalAmount = $this->money(bcsub($this->money($this->order['total_price'] ?? 0), $allocatedAmount, 2));
         if (bccomp($normalAmount, '0.01', 2) < 0) {
             return true;
         }
@@ -198,6 +262,22 @@ class RevenueCalculator
                 'rrit_id' => $tier['rrit_id'],
                 'income_value' => $value,
                 'income_amount' => $this->percent($baseAmount, $value),
+            ];
+        }
+        return null;
+    }
+
+    protected function calculateProductRuleItemAmount(array $item, $baseAmount, $quantity)
+    {
+        $calcType = intval($item['calc_type']);
+        if ($calcType === 1) {
+            return $this->calculateRuleItemAmount($item, $baseAmount, '0');
+        }
+        if ($calcType === 2) {
+            $value = $this->money($item['calc_value'] ?? 0);
+            return [
+                'income_value' => $value,
+                'income_amount' => $this->money(bcmul($value, (string)max(0, intval($quantity)), 2)),
             ];
         }
         return null;
@@ -319,7 +399,7 @@ class RevenueCalculator
         foreach ($this->records as $record) {
             $amount = $this->money($record['income_amount'] ?? 0);
             $total = bcadd($total, $amount, 2);
-            if (intval($record['rule_mode'] ?? 0) === 2 && !empty($record['sod_id'])) {
+            if (in_array(intval($record['rule_mode'] ?? 0), [2, 4], true) && !empty($record['sod_id'])) {
                 $sodId = intval($record['sod_id']);
                 if (!isset($sodTotals[$sodId])) {
                     $sodTotals[$sodId] = [
@@ -335,7 +415,7 @@ class RevenueCalculator
         }
         foreach ($sodTotals as $sodId => $item) {
             if (bccomp($item['total'], $item['limit'], 2) > 0) {
-                throw new \Exception("子订单{$sodId}出租分账金额不能超过子订单金额");
+                    throw new \Exception("子订单{$sodId}分账金额不能超过子订单金额");
             }
         }
         return true;

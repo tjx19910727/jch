@@ -140,3 +140,41 @@ WHERE rrit.status = 1
     OR rrit.calc_value < 0
     OR rrit.calc_value > 100
   );
+
+-- 9. 设备商品分账明细基础合法性检查
+SELECT
+  rr.rr_id,
+  rr.rule_name,
+  rri.rri_id,
+  rri.g_id,
+  rri.receiver_ao_id,
+  rri.calc_type,
+  rri.calc_value
+FROM revenue_rule rr
+JOIN revenue_rule_item rri ON rri.rr_id = rr.rr_id AND rri.status = 1
+LEFT JOIN goods g ON g.g_id = rri.g_id
+WHERE rr.status = 1
+  AND rr.rule_mode = 4
+  AND (
+    rri.g_id IS NULL
+    OR g.g_id IS NULL
+    OR rri.calc_type NOT IN (1, 2)
+    OR rri.calc_value <= 0
+    OR (rri.calc_type = 1 AND rri.calc_value > 100)
+  );
+
+-- 10. 同一设备商品策略中，同一商品固定比例合计超过 100%
+SELECT
+  rr.rr_id,
+  rr.rule_name,
+  rri.g_id,
+  SUM(rri.calc_value) total_percent
+FROM revenue_rule rr
+JOIN revenue_rule_item rri
+  ON rri.rr_id = rr.rr_id
+ AND rri.status = 1
+ AND rri.calc_type = 1
+WHERE rr.status = 1
+  AND rr.rule_mode = 4
+GROUP BY rr.rr_id, rr.rule_name, rri.g_id
+HAVING total_percent > 100;

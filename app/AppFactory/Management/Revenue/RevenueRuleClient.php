@@ -48,6 +48,11 @@ class RevenueRuleClient extends ManagementClient
         return $this->rA($this->addRevenueRuleItem($postData));
     }
 
+    public function addProductItem($postData)
+    {
+        return $this->addItem($postData);
+    }
+
     public function updateItem($postData)
     {
         if (empty($postData['rri_id'])) return $this->rFail("分账策略明细ID不能为空");
@@ -134,7 +139,7 @@ class RevenueRuleClient extends ManagementClient
             if (empty($data['rule_name'])) return $this->rFail("分账策略名称不能为空");
         }
         if (!$isUpdate || isset($data['rule_mode'])) {
-            if (empty($data['rule_mode']) || !in_array(intval($data['rule_mode']), [1, 2, 3], true)) {
+            if (empty($data['rule_mode']) || !in_array(intval($data['rule_mode']), [1, 2, 3, 4], true)) {
                 return $this->rFail("分账策略模式不合法");
             }
         }
@@ -150,7 +155,7 @@ class RevenueRuleClient extends ManagementClient
             $rule = $this->getRevenueRuleFind(['rr_id' => $data['rr_id']], 'rr_id,rule_mode');
             if (!$rule) return $this->rFail("分账策略不存在");
         } elseif (!empty($data['rri_id'])) {
-            $oldItem = $this->getRevenueRuleItemFind(['rri_id' => $data['rri_id']], 'rri_id,rr_id,calc_type,calc_value,status');
+            $oldItem = $this->getRevenueRuleItemFind(['rri_id' => $data['rri_id']], 'rri_id,rr_id,g_id,calc_type,calc_value,status');
             if ($oldItem) {
                 $rule = $this->getRevenueRuleFind(['rr_id' => $oldItem['rr_id']], 'rr_id,rule_mode');
             }
@@ -196,6 +201,40 @@ class RevenueRuleClient extends ManagementClient
         if ($rule && intval($rule['rule_mode']) === 3) {
             $percentCheck = $this->checkRulePercentLimit($data, $oldItem, $calcType);
             if ($percentCheck !== true) return $percentCheck;
+        }
+        if ($rule && intval($rule['rule_mode']) === 4) {
+            $productCheck = $this->checkProductItemData($data, $oldItem, $calcType);
+            if ($productCheck !== true) return $productCheck;
+        }
+        return true;
+    }
+
+    protected function checkProductItemData($data, $oldItem, $calcType)
+    {
+        $gId = intval($data['g_id'] ?? ($oldItem['g_id'] ?? 0));
+        if ($gId <= 0) return $this->rFail("设备商品分账必须配置商品");
+        if (!Db::name('goods')->where(['g_id' => $gId])->find()) {
+            return $this->rFail("商品不存在");
+        }
+        if (!in_array(intval($calcType), [1, 2], true)) {
+            return $this->rFail("设备商品分账仅支持按比例或按件固定金额");
+        }
+        if (floatval($data['calc_value'] ?? ($oldItem['calc_value'] ?? 0)) <= 0) {
+            return $this->rFail("设备商品分账比例或金额必须大于0");
+        }
+        if (intval($calcType) === 1) {
+            $rrId = intval($data['rr_id'] ?? ($oldItem['rr_id'] ?? 0));
+            $query = Db::name('revenue_rule_item')->where([
+                'rr_id' => $rrId,
+                'g_id' => $gId,
+                'status' => 1,
+                'calc_type' => 1,
+            ]);
+            if (!empty($data['rri_id'])) {
+                $query->where('rri_id', '<>', intval($data['rri_id']));
+            }
+            $total = floatval($query->sum('calc_value')) + floatval($data['calc_value'] ?? ($oldItem['calc_value'] ?? 0));
+            if ($total > 100) return $this->rFail("同一商品固定比例分账合计不能超过100%");
         }
         return true;
     }

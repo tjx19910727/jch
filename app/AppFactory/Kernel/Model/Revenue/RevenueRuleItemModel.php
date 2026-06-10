@@ -12,6 +12,7 @@ class RevenueRuleItemModel extends BaseModel
     protected $schema = [
         "rri_id" => "int",
         "rr_id" => "int",
+        "g_id" => "int",
         "receiver_ao_id" => "int",
         "ra_id" => "int",
         "manager_id" => "int",

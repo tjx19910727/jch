@@ -44,6 +44,13 @@ class RevenueRule extends Common
         return $this->app->revenueRule->addItem($postData);
     }
 
+    public function addProductItem()
+    {
+        $postData = input();
+        try { $this->validate($postData, $this->validatePath . 'addProductItem'); } catch (\Exception $e) { return returnValidate($e->getMessage()); }
+        return $this->app->revenueRule->addProductItem($postData);
+    }
+
     public function updateItem()
     {
         $postData = input();

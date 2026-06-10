@@ -24,7 +24,7 @@ check(($tokenHeader['name'] ?? '') === 'token', 'TokenHeader 参数名必须为 
 check(($tokenHeader['in'] ?? '') === 'header', 'TokenHeader 必须位于 Header', $failures);
 check(($tokenHeader['required'] ?? false) === true, 'TokenHeader 必须为必传参数', $failures);
 check(($tokenHeader['example'] ?? '') === '{{token}}', 'TokenHeader 参数值必须为 {{token}}', $failures);
-check(count($paths) === 34, '新分账接口数量应为 34', $failures);
+check(count($paths) === 35, '新分账接口数量应为 35', $failures);
 check(count($scenarioGuides) >= 5, '必须提供普通、出租、固定比例、阶梯、T+N等场景索引', $failures);
 
 foreach ($paths as $path => $pathItem) {
@@ -75,7 +75,7 @@ if ($failures) {
 }
 
 echo "[PASS] OpenAPI JSON 有效\n";
-echo "[PASS] 34 个接口均属于独立新分账模块并使用 POST\n";
+echo "[PASS] 35 个接口均属于独立新分账模块并使用 POST\n";
 echo "[PASS] 所有接口均显式携带必传 Header token: {{token}}\n";
 echo "[PASS] 全部接口均提供命名场景请求示例，核心接口具备多场景参数\n";
 echo "[PASS] 请求体引用、必填字段和字段说明校验通过\n";

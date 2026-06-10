@@ -3,7 +3,7 @@
   "info": {
     "title": "嘉潮汇管理后台 - 新分账接口",
     "description": "新分账后台配置、分账订单查询、配置自检与测试环境模拟支付成功接口。本接口文档不包含、也不修改旧收款策略接口。分账触发渠道是新分账独立配置，仅用于判断订单支付类型是否触发分账，不是原业务收款渠道。每个接口均提供字段说明及可直接用于 Apifox 调试的场景请求示例。导入 Apifox 后，请在环境中配置 baseUrl 和 token。所有接口均为 POST，并显式携带必传 Header token: {{token}}。",
-    "version": "1.3.0"
+    "version": "1.4.0"
   },
   "servers": [
     {
@@ -413,7 +413,7 @@
           "新分账-分账策略"
         ],
         "summary": "新增分账策略",
-        "description": "新增策略组。rule_mode：1普通分账，2设备出租，3设备分账。",
+        "description": "新增策略组。rule_mode：1普通分账，2设备出租，3设备分账，4设备商品分账。",
         "operationId": "revenueRuleAdd",
         "parameters": [
           {
@@ -491,6 +491,29 @@
         ],
         "requestBody": {
           "$ref": "#/components/requestBodies/RevenueRuleItemUpdateRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CommonSuccess"
+          }
+        }
+      }
+    },
+    "/management/revenue.revenue_rule/addProductItem": {
+      "post": {
+        "tags": [
+          "新分账-分账策略"
+        ],
+        "summary": "新增设备商品分账明细",
+        "description": "仅用于 rule_mode=4。g_id 必填；calc_type=1 按商品明细总金额比例分账，calc_type=2 按每件商品固定金额分账。",
+        "operationId": "revenueRuleAddProductItem",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/RevenueRuleItemAddRequest"
         },
         "responses": {
           "200": {
@@ -1585,6 +1608,34 @@
                   "sort": 1,
                   "status": 1
                 }
+              },
+              "设备商品比例": {
+                "summary": "指定设备上的商品按明细金额比例分账",
+                "value": {
+                  "rr_id": 4,
+                  "g_id": 700,
+                  "receiver_ao_id": 2,
+                  "ra_id": 2,
+                  "manager_id": 20,
+                  "calc_type": 1,
+                  "calc_value": 10,
+                  "sort": 1,
+                  "status": 1
+                }
+              },
+              "设备商品按件金额": {
+                "summary": "指定设备上的商品按每件固定金额分账",
+                "value": {
+                  "rr_id": 4,
+                  "g_id": 700,
+                  "receiver_ao_id": 2,
+                  "ra_id": 2,
+                  "manager_id": 20,
+                  "calc_type": 2,
+                  "calc_value": 3,
+                  "sort": 1,
+                  "status": 1
+                }
               }
             }
           },
@@ -2631,7 +2682,7 @@
               },
               "rule_mode": {
                 "type": "integer",
-                "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账"
+                "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账，4设备商品分账"
               },
               "payer_ao_id": {
                 "type": "integer",
@@ -2671,11 +2722,12 @@
           },
           "rule_mode": {
             "type": "integer",
-            "description": "策略模式，必填：1普通分账，2设备出租，3设备分账",
+            "description": "策略模式，必填：1普通分账，2设备出租，3设备分账，4设备商品分账",
             "enum": [
               1,
               2,
-              3
+              3,
+              4
             ]
           },
           "payer_ao_id": {
@@ -2720,11 +2772,12 @@
           },
           "rule_mode": {
             "type": "integer",
-            "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账",
+            "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账，4设备商品分账",
             "enum": [
               1,
               2,
-              3
+              3,
+              4
             ]
           },
           "payer_ao_id": {
@@ -2762,6 +2815,10 @@
           "rr_id": {
             "type": "integer",
             "description": "分账策略ID，必填"
+          },
+          "g_id": {
+            "type": "integer",
+            "description": "商品ID；rule_mode=4 设备商品分账时必填"
           },
           "receiver_ao_id": {
             "type": "integer",
@@ -2813,6 +2870,10 @@
           "rr_id": {
             "type": "integer",
             "description": "分账策略ID，非必填"
+          },
+          "g_id": {
+            "type": "integer",
+            "description": "商品ID；设备商品分账明细使用"
           },
           "receiver_ao_id": {
             "type": "integer",

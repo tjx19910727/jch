@@ -13,6 +13,8 @@ class RevenueOrderModel extends BaseModel
         "ro_id" => "int",
         "order_id" => "int",
         "sod_id" => "int",
+        "g_id" => "int",
+        "mg_id" => "int",
         "trade_no" => "string",
         "sp_id" => "int",
         "m_id" => "int",

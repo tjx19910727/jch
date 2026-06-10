@@ -59,6 +59,9 @@ class RevenueOrderClient extends ManagementClient
         $title = [
             'ro_id' => '分账单ID',
             'order_id' => '订单ID',
+            'sod_id' => '子订单ID',
+            'g_id' => '商品ID',
+            'mg_id' => '设备商品ID',
             'trade_no' => '订单号',
             'sp_id' => '收款策略ID',
             'machine_id' => '设备编号',
@@ -160,7 +163,7 @@ class RevenueOrderClient extends ManagementClient
 
     protected function getRuleModeText($mode)
     {
-        $map = [1 => '普通分账', 2 => '设备出租', 3 => '设备分账'];
+        $map = [1 => '普通分账', 2 => '设备出租', 3 => '设备分账', 4 => '设备商品分账'];
         return $map[intval($mode)] ?? '未知';
     }
 

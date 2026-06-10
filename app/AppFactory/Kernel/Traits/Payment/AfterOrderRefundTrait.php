@@ -114,6 +114,18 @@ trait AfterOrderRefundTrait
     protected function calcAfterRevenueRefundAmount(array $revenue, $incomeValue, $incomeAmount)
     {
         if ($incomeAmount <= 0) return 0;
+        // 商品按件固定金额分账应按退款数量回退，避免折扣影响退款分账金额。
+        if (intval($revenue['rule_mode'] ?? 0) === 4
+            && intval($revenue['calc_type'] ?? 0) === 2
+            && intval($revenue['sod_id'] ?? 0) === intval($this->refund['sod_id'] ?? 0)
+            && floatval($revenue['sod_quantity'] ?? 0) > 0
+            && floatval($this->refund['refund_quantity'] ?? 0) > 0) {
+            return bcmul(
+                bcdiv($this->refund['refund_quantity'], $revenue['sod_quantity'], 6),
+                $incomeAmount,
+                3
+            );
+        }
         if (intval($revenue['sod_id'] ?? 0) === intval($this->refund['sod_id'])
             && !empty($revenue['sod_total_price'])
             && $revenue['sod_total_price'] > 0) {

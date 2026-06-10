@@ -15,6 +15,8 @@ class OfflineRevenueCalculator
     private array $payeeConfigs;
     private array $monthlyTurnover;
     private float $rentalAmount = 0.0;
+    private float $productAmount = 0.0;
+    private array $rentalAmountsBySod = [];
 
     public function __construct(array $fixture)
     {
@@ -28,6 +30,8 @@ class OfflineRevenueCalculator
     public function calculate(array $order): array
     {
         $this->rentalAmount = 0.0;
+        $this->productAmount = 0.0;
+        $this->rentalAmountsBySod = [];
         $records = [];
         $payeeConfig = $this->payeeConfigs[$order['sp_id']] ?? null;
         if (!$payeeConfig || (int)$payeeConfig['enable_revenue'] !== 1) {
@@ -35,8 +39,13 @@ class OfflineRevenueCalculator
         }
 
         $records = array_merge($records, $this->calculateRental($order));
-        $deviceRecords = $this->calculateDeviceRule($order);
-        if ($deviceRecords) {
+        $productRecords = $this->calculateProductRule($order);
+        $deviceRecords = $productRecords ? [] : $this->calculateDeviceRule($order);
+        if ($productRecords) {
+            $records = array_merge($records, $productRecords);
+            $normalRecord = $this->normalRecord($order, $payeeConfig);
+            if ($normalRecord['income_amount'] >= 0.01) $records[] = $normalRecord;
+        } elseif ($deviceRecords) {
             $records = array_merge($records, $deviceRecords);
         } else {
             $normalRecord = $this->normalRecord($order, $payeeConfig);
@@ -101,6 +110,7 @@ class OfflineRevenueCalculator
 
             $amount = $this->calcAmount($detail['total_sod_price'], $item);
             $this->rentalAmount += $amount;
+            $this->rentalAmountsBySod[$detail['sod_id']] = ($this->rentalAmountsBySod[$detail['sod_id']] ?? 0.0) + $amount;
             $records[] = $this->record($order, $item, [
                 'sod_id' => $detail['sod_id'],
                 'sod_total_price' => $detail['total_sod_price'],
@@ -108,6 +118,33 @@ class OfflineRevenueCalculator
                 'source' => 'rental',
                 'income_amount' => $amount,
             ]);
+        }
+        return $records;
+    }
+
+    private function calculateProductRule(array $order): array
+    {
+        $rule = $this->getMachineRule($order['m_id'], 4);
+        if (!$rule) return [];
+        $records = [];
+        foreach ($order['details'] as $detail) {
+            $baseAmount = $detail['total_sod_price'] - ($this->rentalAmountsBySod[$detail['sod_id']] ?? 0.0);
+            foreach ($rule['items'] as $item) {
+                if ((int)($item['g_id'] ?? 0) !== (int)($detail['g_id'] ?? 0)) continue;
+                $amount = (int)$item['calc_type'] === 2
+                    ? round($item['calc_value'] * $detail['quantity'], 2)
+                    : $this->calcAmount($baseAmount, $item);
+                $this->productAmount += $amount;
+                $records[] = $this->record($order, $item, [
+                    'sod_id' => $detail['sod_id'],
+                    'g_id' => $detail['g_id'],
+                    'mg_id' => $detail['mg_id'] ?? 0,
+                    'sod_total_price' => $detail['total_sod_price'],
+                    'rule_mode' => 4,
+                    'source' => 'product_rule',
+                    'income_amount' => $amount,
+                ]);
+            }
         }
         return $records;
     }
@@ -153,7 +190,7 @@ class OfflineRevenueCalculator
             'manager_id' => $account['manager_id'],
             'calc_type' => 3,
             'income_value' => 100.0,
-            'income_amount' => round($order['total_price'] - $this->rentalAmount, 2),
+            'income_amount' => round($order['total_price'] - $this->rentalAmount - $this->productAmount, 2),
             'source' => 'normal',
         ]);
     }
@@ -162,6 +199,9 @@ class OfflineRevenueCalculator
     {
         if ((int)$item['calc_type'] === 1) {
             return round($baseAmount * $item['calc_value'] / 100, 2);
+        }
+        if ((int)$item['calc_type'] === 2) {
+            return round($item['calc_value'], 2);
         }
         if ((int)$item['calc_type'] === 3) {
             return round($baseAmount, 2);
@@ -302,12 +342,30 @@ function fixture(): array
                     ],
                 ],
             ],
+            204 => [
+                'rr_id' => 204,
+                'rule_mode' => 4,
+                'base_type' => 1,
+                'items' => [
+                    ['rri_id' => 306, 'g_id' => 700, 'receiver_ao_id' => 2, 'ra_id' => 102, 'manager_id' => 1002, 'calc_type' => 1, 'calc_value' => 10.0],
+                ],
+            ],
+            205 => [
+                'rr_id' => 205,
+                'rule_mode' => 4,
+                'base_type' => 1,
+                'items' => [
+                    ['rri_id' => 307, 'g_id' => 700, 'receiver_ao_id' => 2, 'ra_id' => 102, 'manager_id' => 1002, 'calc_type' => 2, 'calc_value' => 3.0],
+                ],
+            ],
         ],
         'machine_rules' => [
             501 => [],
             502 => [201],
             503 => [202],
             504 => [203],
+            505 => [204],
+            506 => [205],
         ],
         'monthly_turnover' => [
             504 => ['2026-06' => 4900.0],
@@ -378,6 +436,28 @@ $tests['设备固定比例分账：B 20%，C 30%'] = function () {
     assertMoney(20.0, $records[0]['income_amount'], 'B应获得20%');
     assertMoney(30.0, $records[1]['income_amount'], 'C应获得30%');
     assertEquals('device_rule', $records[0]['source'], '应为设备策略分账');
+};
+
+$tests['同一商品不同设备：设备505按商品金额10%分账'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10009, 505, 100.0, [
+        ['sod_id' => 9, 'mg_id' => 9001, 'g_id' => 700, 'sod_ao_id' => 1, 'quantity' => 2, 'retail_price' => 50.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(2, count($records), '应生成商品分账和普通剩余分账');
+    assertEquals('product_rule', $records[0]['source'], '应为设备商品分账');
+    assertMoney(10.0, $records[0]['income_amount'], '设备505商品应按10%分账');
+    assertMoney(90.0, $records[1]['income_amount'], '剩余金额应走普通分账');
+};
+
+$tests['同一商品不同设备：设备506按每件3元分账'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10010, 506, 100.0, [
+        ['sod_id' => 10, 'mg_id' => 9002, 'g_id' => 700, 'sod_ao_id' => 1, 'quantity' => 2, 'retail_price' => 50.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(2, count($records), '应生成商品分账和普通剩余分账');
+    assertEquals(2, $records[0]['calc_type'], '应为固定金额分账');
+    assertMoney(6.0, $records[0]['income_amount'], '设备506商品应按每件3元、两件共6元分账');
+    assertMoney(94.0, $records[1]['income_amount'], '剩余金额应走普通分账');
 };
 
 $tests['阶梯分账：本单后累计达到5000以上但未到8000'] = function () {
