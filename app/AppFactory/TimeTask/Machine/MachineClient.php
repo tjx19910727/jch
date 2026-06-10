@@ -776,8 +776,13 @@ class MachineClient extends TimeTaskBase
                 } else {
                     $insertInfoRows[] = $infoData;
                 }
-
-                $totalUsage = $card['current_period_usage'] ?? 0;
+                actionLog($card, '物联卡信息', 'updateSimCardUsage');
+                $totalUsage = $card['package'][0]['current_period_usage'] ?? 0;
+                actionLog([
+                    'iccid' => $iccid,
+                    'total_usage' => $totalUsage,
+                    'prev_total' => $prevMap[$iccid] ?? 0,
+                ], '物联卡流量数据', 'updateSimCardUsage');
                 $compositeKey = $item['m_id'] . '|' . $item['machine_id'] . '|' . $iccid . '|' . $date;
                 if (!isset($existTodayMap[$compositeKey])) {
                     $prevTotal = $prevMap[$iccid] ?? 0;

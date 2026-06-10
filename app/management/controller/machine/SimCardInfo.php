@@ -53,7 +53,7 @@ class SimCardInfo extends Common
             'remark' => 'like',
         ],'a.');
         $where = $this->formatAoIdWhereWithPrefix($where,'m.');
-        return $this->app->simCardInfo->getMachineListData($where, $pageNum, $this->field, 'a.id desc');
+        return $this->app->simCardInfo->getMachineListData($where, $pageNum, $this->field, 'a.date desc');
     }
 
     /**
