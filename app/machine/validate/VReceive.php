@@ -67,6 +67,8 @@ class VReceive extends VCommon
         "field" => "require",
         "date" => "require",
         "machine_usage" => "require",
+        "rsrp" => "require",
+        "sinr" => "require",
         "file_content" => "require",
         "per_row" => "integer",
     ];
@@ -133,6 +135,8 @@ class VReceive extends VCommon
     "per_row.integer" => "per_row格式错误",
         "date.require" => "VReceive.date_require",
         "machine_usage.require" => "VReceive.machine_usage_require",
+        "rsrp.require" => "信号强度不能为空",
+        "sinr.require" => "信噪比不能为空",
 
     ];
 
@@ -239,6 +243,7 @@ class VReceive extends VCommon
         "getMachineRentOrgLists" => ["msg_id","machine_id","timestamp","sign"],
         "getRentOrgGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
         "reportSimCardMachineUsage" => ["msg_id","machine_id","timestamp","sign","date","machine_usage"],
+        "reportSimSignal" => ["msg_id","machine_id","timestamp","sign","rsrp","sinr"],
 
         "searchWCGoods" => ["msg_id","machine_id","timestamp","name"],
         "sendError" => ["msg_id","machine_id","timestamp","sign","errorCode"],

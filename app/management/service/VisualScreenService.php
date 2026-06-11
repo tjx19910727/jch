@@ -202,7 +202,7 @@ class VisualScreenService
     }
 
     /**
-     * 统一在营设备作用域（主柜 + is_operating=1）
+     * 统一在营设备作用域（主柜 + 在营/外售组织口径）
      * @param int[]|null $mScope
      * @return int[]
      */
@@ -214,8 +214,13 @@ class VisualScreenService
         $finalScope = $this->intersectMachineScopes($mScope, $accountScope);
 
         $q = Db::name('machine')
-            ->where('vending_machine_type', 1)
-            ->where('is_operating', 1);
+            ->where('vending_machine_type', 1);
+        $aoId = (int) ($this->manager['ao_id'] ?? 0);
+        if (in_array($aoId, [1, 17], true)) {
+            $q->where('is_operating', 1);
+        } else {
+            $q->whereIn('is_operating', [1, 3]);
+        }
         if ($finalScope !== null) {
             if ($finalScope === []) {
                 return [];
@@ -403,8 +408,26 @@ class VisualScreenService
         $orderIncrementWhere[] = ['m_id', 'in', $operatingScopeForQuery];
 
         $chartWhere = [['m_id', 'in', $operatingScopeForQuery]];
-        $chartTimeRange = $this->salesTrendTimeRange($cycle, $timeRange);
+        // 当入参 cycle 为 day 时，salesTrend 希望展示最近 7 天的数据（包含今日），
+        // 只调整用于图表查询的时间窗，不影响其它基于 $timeRange 的统计口径。
+        $chartTimeRange = $timeRange;
+        if ($this->normalizeCycleKeyword($cycle) === 'day') {
+            // 与 parseCycleRange('week') 保持一致，使用最近 7 天作为起始点
+            $chartTimeRange['start'] = strtotime('-7 days');
+            $chartTimeRange['end'] = time();
+        }
         $this->appendTimeRangeToWhere($chartWhere, $chartTimeRange['start'], $chartTimeRange['end']);
+
+        $saleData = $this->app->saleOrders->getData($queryWhere);
+        $screenCounts = $this->buildMachineScreenCountsByMIds($dashboardScope);
+        $cargo = $this->app->machineChannel->getDataV2ByMIds($operatingScopeForQuery);
+
+        // 纯实时增量口径：不受 cycle 时间窗限制，仅保留设备范围与支付状态
+        $orderIncrementWhere = ['pay_status' => 3];
+        $orderIncrementWhere[] = ['m_id', 'in', $operatingScopeForQuery];
+
+        $chartWhere = [['m_id', 'in', $operatingScopeForQuery]];
+        $this->appendTimeRangeToWhere($chartWhere, $timeRange['start'], $timeRange['end']);
 
         $saleData = $this->app->saleOrders->getData($queryWhere);
         $screenCounts = $this->buildMachineScreenCountsByMIds($dashboardScope);
@@ -503,8 +526,16 @@ class VisualScreenService
             }
             return $out;
         }
+        $saleDataWhere = ['pay_status' => 3];
+        $saleDataWhere[] = ['m_id', 'in', $operatingScope];
+        $this->appendTimeRangeToWhere($saleDataWhere, $timeRange['start'], $timeRange['end']);
         $chartWhere = [['m_id', 'in', $operatingScope]];
-        $chartTimeRange = $this->salesTrendTimeRange($cycle, $timeRange);
+        // 当 cycle 为 day 时，希望 salesTrend 返回最近 7 天的点，因此单独扩展图表查询时间窗
+        $chartTimeRange = $timeRange;
+        if ($this->normalizeCycleKeyword($cycle) === 'day') {
+            $chartTimeRange['start'] = strtotime('-7 days');
+            $chartTimeRange['end'] = time();
+        }
         $this->appendTimeRangeToWhere($chartWhere, $chartTimeRange['start'], $chartTimeRange['end']);
         $chartType = $this->cycleToChartType($cycle);
         $chartResp = $this->app->saleOrders->getChartData($chartWhere, $chartType);
@@ -1044,7 +1075,7 @@ class VisualScreenService
             ->when($since, function ($query) use ($since) {
                 $query->where('so.create_date', '>=', $since);
             })
-            ->field('so.machine_name as name, IFNULL(SUM(so.total_quantity),0) as value')
+            ->field('so.machine_name as name, IFNULL(SUM(so.total_quantity),0) as quantity, IFNULL(SUM(so.total_price),0) as value')
             ->group('so.m_id,so.machine_name')
             ->order('value', 'desc')
             ->limit(10)
@@ -1052,7 +1083,39 @@ class VisualScreenService
             ->toArray();
         $out = [];
         foreach ($rows as $r) {
-            $out[] = ['name' => (string) $r['name'], 'value' => (int) round((float) $r['value'])];
+            $out[] = [
+                'name' => (string) $r['name'],
+                'value' => (int) round((float) ($r['value'] ?? 0)),
+                'quantity' => round((float) ($r['quantity'] ?? 0), 2),
+            ];
+        }
+        return $out;
+    }
+
+    /**
+     * 设备营业额排行榜（按销售金额）
+     * @param array $saleWhere
+     * @param string $cycle
+     * @return array<int,array{name:string,value:float}>
+     */
+    protected function buildDeviceRevenueRank(array $saleWhere, string $cycle = 'week'): array
+    {
+        $since = $this->cycleToSince($cycle, 'week');
+        $where = $this->saleWhereToQuery($saleWhere);
+        $rows = Db::name('sale_orders')->alias('so')
+            ->where($where)
+            ->when($since, function ($query) use ($since) {
+                $query->where('so.create_date', '>=', $since);
+            })
+            ->field('so.machine_name as name, IFNULL(SUM(so.total_price),0) as value, IFNULL(SUM(so.total_quantity),0) as quantity')
+            ->group('so.m_id,so.machine_name')
+            ->order('value', 'desc')
+            ->limit(10)
+            ->select()
+            ->toArray();
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = ['name' => (string) $r['name'], 'value' => round((float) ($r['value'] ?? 0), 2), 'quantity' => (int) round((float) ($r['quantity'] ?? 0))];
         }
         return $out;
     }

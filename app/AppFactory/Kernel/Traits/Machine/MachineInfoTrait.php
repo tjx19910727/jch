@@ -43,11 +43,17 @@ trait MachineInfoTrait
             $info = $info->toArray();
             //$count = $this->getMachineMainRelationCount(['main_mc_id' => $info['m_id']],'*');
             //直接查询边柜货道数量，数量大于0则有边柜
-            $count = $this->getMachineChannelCount(['m_id' => $info['m_id'],'channel_position' => 3]);
-            $info['sub_cabinet_2'] = $count > 0 ? 1 : 2;
-            //查询此设备挂接的副柜
-            $subCabinet = $this->getMachineAuxiliaryList(['main_m_id' => $info['m_id']]);
-            $info['sub_cabinet_list'] = $subCabinet ? $subCabinet->toArray() : [];
+            $info['sub_cabinet_2'] = 2;//默认没有边柜
+            $info['sub_cabinet_list'] = [];
+            //有些地方调用此方法没有查询m_id字段，所以加个判断，避免报错
+            if(!empty($info['m_id'])){
+                $count = $this->getMachineChannelCount(['m_id' => $info['m_id'],'channel_position' => 3]);
+                $info['sub_cabinet_2'] = $count > 0 ? 1 : 2;
+                //查询此设备挂接的副柜
+                $subCabinet = $this->getMachineAuxiliaryList(['main_m_id' => $info['m_id']]);
+                $info['sub_cabinet_list'] = $subCabinet ? $subCabinet->toArray() : [];
+            }
+
         }
         return $info;
     }

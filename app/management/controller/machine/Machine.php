@@ -77,7 +77,7 @@ class Machine extends Common
             $specialSortAlias = $this->appendSpecialSortField($sortName, $field);
             if ($specialSortAlias) {
                 $orderList[] = "{$specialSortAlias} {$sortOrder}";
-                if ($sortName == 'month_achieve_rate' || $sortName == 'month_achieve_rate') {
+                if ($sortName == 'month_achieve_rate') {
                     $this->appendSpecialSortField('month_achieve_amount', $field);
                     $orderList[] = "month_achieve_amount_sort {$sortOrder}";
                 }
@@ -118,16 +118,15 @@ class Machine extends Common
         if ($sortName == 'month_achieve_amount') {
             $monthStart = strtotime(date('Y-m-01 00:00:00'));
             $monthEnd = strtotime(date('Y-m-t 23:59:59'));
-            $month = date('Y-m');
             $this->appendSelectField(
                 $field,
                 'month_achieve_amount_sort',
-                "(IF((SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}') > 0, (SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd}), 0))"
+                "(SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd})"
             );
             return 'month_achieve_amount_sort';
         }
 
-        if ($sortName == 'month_achieve_rate' || $sortName == 'month_achieve_rate') {
+        if ($sortName == 'month_achieve_rate') {
             $month = date('Y-m');
             $monthStart = strtotime(date('Y-m-01 00:00:00'));
             $monthEnd = strtotime(date('Y-m-t 23:59:59'));
@@ -186,6 +185,13 @@ class Machine extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
+        // 要求国家/省/市编码必传，regions_id 可选
+        foreach (['country_id', 'state_id', 'city_id'] as $f) {
+            if (empty($postData[$f]) && $postData[$f] !== 0) {
+                // 使用通用提示，若需要可在语言文件中添加专用提示键
+                return returnValidate(lang('VMachine.' . $f . '_require'));
+            }
+        }
         return $this->app->machine->addM($postData);
     }
 
@@ -196,6 +202,13 @@ class Machine extends Common
             $this->validate($postData, $this->validatePath . '.update');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
+        }
+        // 要求国家/省/市编码必传，regions_id 可选
+        foreach (['country_id', 'state_id', 'city_id'] as $f) {
+            if (empty($postData[$f]) && $postData[$f] !== 0) {
+                // 使用通用提示，若需要可在语言文件中添加专用提示键
+                return returnValidate(lang('VMachine.' . $f . '_require'));
+            }
         }
         return $this->app->machine->updateM($postData);
     }
@@ -554,5 +567,15 @@ class Machine extends Common
             return returnValidate(lang("VMachine.machine_id_require"));
         }
         return $this->app->machineChannel->exportStockRatioByMachine($mId);
+    }
+
+    /**
+     * 根据 street 回填设备省市区编码
+     * @return array|string
+     */
+    public function repairAddressAreaIds()
+    {
+        $postData = input();
+        return $this->app->machine->repairAddressAreaIds($postData);
     }
 }

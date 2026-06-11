@@ -200,7 +200,7 @@ class Excel
         $savePath = "/export/excel/" . date("Ymd");
         $path = root_path() . "public" . $savePath;
         if (!is_dir($path)) {
-            @mkdir($path);
+            @mkdir($path, 0777, true);
             @chmod($path,0777);
         }
         $path .= ("/" . $filename);

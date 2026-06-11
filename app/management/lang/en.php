@@ -61,6 +61,9 @@ return [
     "VLogin" => [
         "account_require" => "Account cannot be empty",
         "password_require" => "Password cannot be empty",
+        "old_password_require" => "Old password cannot be empty",
+        "new_password_require" => "New password cannot be empty",
+        "confirm_password_require" => "Confirm password cannot be empty",
         "code_require" => "Captcha cannot be empty",
         "uniqid_require" => "Captcha UUID cannot be empty",
 
@@ -70,6 +73,7 @@ return [
         "account_not_exist" => "The account does not exist!",
         "account_pwd_incorrect" => "Incorrect account or password, please try again",
         "pwd_incorrect" => "Incorrect password, please try again",
+        "password_not_match" => "New password and confirm password do not match",
         "pass_the_verification" => "Verification passed",
         "account_disabled" => "This account has been disabled",
         "login_success" => "Login successful, redirecting",
