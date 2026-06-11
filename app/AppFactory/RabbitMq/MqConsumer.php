@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use PhpAmqpLib\Channel\AMQPChannel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
+use think\facade\Db;
 use think\facade\Log;
 
 class MqConsumer
@@ -234,22 +235,29 @@ class MqConsumer
                     throw new \RuntimeException('销售订单导出Excel生成失败');
                 }
             } elseif ($jobType == 'goods_update') {
-                $app = AppFactory::management();
                 $gId = $data['g_id'] ?? 0;
                 if ($gId) {
-                    $mgList = $app->goods->getMachineGoodsList([['g_id', '=', $gId]], 0, 'mg_id,machine_id');
-                    if ($mgList) {
-                        $mgList = $mgList->toArray();
-                        foreach ($mgList as $mg) {
-                            $app->goods->sendToMachine(['machine_id' => $mg['machine_id']], 'updateMg', ['mg_id' => $mg['mg_id']]);
+                    $mgList = Db::name('machine_goods')->where('g_id', $gId)->field('mg_id,machine_id')->select()->toArray();
+                    foreach ($mgList as $mg) {
+                        $machine = Db::name('machine')->where('machine_id', $mg['machine_id'])->field('machine_id,mac_address,signKey,online')->find();
+                        if ($machine && $machine['online'] == 1) {
+                            $key = $machine['signKey'] ?: env('api.md5Key');
+                            if ($key) {
+                                $app = AppFactory::machine(['machine_id' => $machine['machine_id'], 'key' => $key, 'mac' => $machine['mac_address'] ?? '']);
+                                $app->sendMq->sendMq('updateMg', ['mg_id' => $mg['mg_id']]);
+                            }
                         }
                     }
 
-                    $mcList = $app->goods->getMachineChannelList([['g_id', '=', $gId]], 0, 'mc_id,machine_id');
-                    if ($mcList) {
-                        $mcList = $mcList->toArray();
-                        foreach ($mcList as $mc) {
-                            $app->goods->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => $mc['mc_id']]);
+                    $mcList = Db::name('machine_channel')->where('g_id', $gId)->field('mc_id,machine_id')->select()->toArray();
+                    foreach ($mcList as $mc) {
+                        $machine = Db::name('machine')->where('machine_id', $mc['machine_id'])->field('machine_id,mac_address,signKey,online')->find();
+                        if ($machine && $machine['online'] == 1) {
+                            $key = $machine['signKey'] ?: env('api.md5Key');
+                            if ($key) {
+                                $app = AppFactory::machine(['machine_id' => $machine['machine_id'], 'key' => $key, 'mac' => $machine['mac_address'] ?? '']);
+                                $app->sendMq->sendMq('updateMc', ['mc_id' => $mc['mc_id']]);
+                            }
                         }
                     }
                 }
