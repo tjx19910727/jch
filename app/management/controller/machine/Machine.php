@@ -35,17 +35,24 @@ class Machine extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $field = $this->field;
         $order = $this->buildMachineListOrder($postData, $field);
-        unset($postData['version_sort'],$postData['stock_ratio'],$postData['sort_name'],$postData['sort_order']);
+        $isOnOff = $postData['is_on_off'] ?? 0;
+        unset($postData['version_sort'],$postData['stock_ratio'],$postData['sort_name'],$postData['sort_order'],$postData['is_on_off']);
         // 提取 online 参数，单独处理：1=在线(http_online或online为1)，2=离线(http_online和online都为2)
         $onlineValue = null;
         if (isset($postData['online']) && $postData['online'] !== '') {
             $onlineValue = $postData['online'];
             unset($postData['online']);
         }
-        $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
+        $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];//vending_machine_type字段已废弃，入库默认值为1，代码层面涉及此字段的不用管
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
+
+        // 处理 is_on_off 筛选：1=当前时间在营业时间内，2=当前时间不在营业时间内
+        if ($isOnOff) {
+            $where[] = $this->buildIsOnOffWhere($isOnOff);
+        }
+
         // 处理 online 筛选条件
         if ($onlineValue !== null) {
             if ($onlineValue == 1) {
@@ -185,6 +192,78 @@ class Machine extends Common
             return $direction;
         }
         return '';
+    }
+
+    /**
+     * 根据 is_on_off 参数生成设备 m_id 筛选条件
+     * @param int $isOnOff 1=在营业时间内，2=不在营业时间内
+     * @return array
+     */
+    private function buildIsOnOffWhere($isOnOff)
+    {
+        $weekDay = date('N') - 1; // 0=周一, 6=周日
+        $currentTime = date('H:i');
+
+        $onOffList = $this->app->machine->getMachineOnOffList(['status' => 1], 0, 'm_id,on_off_machine');
+        $allScheduleIds = [];
+        $matchIds = [];
+
+        if ($onOffList) {
+            foreach ($onOffList as $item) {
+                $allScheduleIds[] = $item['m_id'];
+
+                $onOffMachine = $item['on_off_machine'];
+                if (is_string($onOffMachine)) {
+                    $onOffMachine = json_decode($onOffMachine, true);
+                }
+                if (!is_array($onOffMachine)) continue;
+
+                $dayKey = (string)$weekDay;
+                if (!isset($onOffMachine[$dayKey]) || empty($onOffMachine[$dayKey])) continue;
+                if ($onOffMachine[$dayKey] === 'null' || $onOffMachine[$dayKey] === '{}') continue;
+
+                $timeRange = explode(',', $onOffMachine[$dayKey]);
+                if (count($timeRange) !== 2) continue;
+
+                // 数据库存的顺序是反的（关机时间,开机时间），这里反转后按正常顺序处理
+                $timeRange = array_reverse($timeRange);
+                $startupTime = trim($timeRange[0]); // 开机时间
+                $shutdownTime = trim($timeRange[1]); // 关机时间
+
+                if (!$startupTime || !$shutdownTime || $startupTime === 'null' || $shutdownTime === 'null') continue;
+
+                // 判断当前时间是否在营业范围内
+                if ($shutdownTime > $startupTime) {
+                    // 同天（如反转后07:00,22:00）：营业时间为开机时间~关机时间（07:00~22:00）
+                    $isInRange = ($currentTime >= $startupTime && $currentTime <= $shutdownTime);
+                } else {
+                    // 跨天（如反转后07:00,02:00）：营业时间为开机时间~关机时间，跨次日凌晨（07:00~02:00）
+                    $isInRange = ($currentTime >= $startupTime || $currentTime <= $shutdownTime);
+                }
+
+                if ($isInRange) {
+                    $matchIds[] = $item['m_id'];
+                }
+            }
+        }
+
+        $matchIds = array_unique($matchIds);
+        $allScheduleIds = array_unique($allScheduleIds);
+
+        if ($isOnOff == 1) {
+            // 查询当前时间在营业时间范围内的设备
+            if (empty($matchIds)) {
+                return ['m_id', '=', 0];
+            }
+            return ['m_id', 'in', $matchIds];
+        }
+
+        // isOnOff == 2：查询当前时间不在营业时间范围内的设备（取有配置但不在范围内的差集）
+        $notInRangeIds = array_diff($allScheduleIds, $matchIds);
+        if (empty($notInRangeIds)) {
+            return ['m_id', '=', 0];
+        }
+        return ['m_id', 'in', $notInRangeIds];
     }
 
     public function getFind()
