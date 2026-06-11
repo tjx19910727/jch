@@ -36,10 +36,27 @@ class Machine extends Common
         $field = $this->field;
         $order = $this->buildMachineListOrder($postData, $field);
         unset($postData['version_sort'],$postData['stock_ratio'],$postData['sort_name'],$postData['sort_order']);
+        // 提取 online 参数，单独处理：1=在线(http_online或online为1)，2=离线(http_online和online都为2)
+        $onlineValue = null;
+        if (isset($postData['online']) && $postData['online'] !== '') {
+            $onlineValue = $postData['online'];
+            unset($postData['online']);
+        }
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];//vending_machine_type字段已废弃，入库默认值为1，代码层面涉及此字段的不用管
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
+        // 处理 online 筛选条件
+        if ($onlineValue !== null) {
+            if ($onlineValue == 1) {
+                // online=1: http_online=1 或 online=1
+                $where['raw'] = (isset($where['raw']) ? $where['raw'] . ' AND ' : '') . '(a.http_online = 1 OR a.online = 1)';
+            } else {
+                // online=2: http_online=2 且 online=2
+                $where[] = ['http_online', '=', 2];
+                $where[] = ['online', '=', 2];
+            }
+        }
         return $this->app->machine->getMList($where,$pageNum,$field,$order);
     }
 
