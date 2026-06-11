@@ -233,6 +233,27 @@ class MqConsumer
                 if (!$app->export->makeSaleOrdersExcel($data)) {
                     throw new \RuntimeException('销售订单导出Excel生成失败');
                 }
+            } elseif ($jobType == 'goods_update') {
+                $app = AppFactory::management();
+                $gId = $data['g_id'] ?? 0;
+                if ($gId) {
+                    $mgList = $app->goods->getMachineGoodsList([['g_id', '=', $gId]], 0, 'mg_id,machine_id');
+                    if ($mgList) {
+                        $mgList = $mgList->toArray();
+                        foreach ($mgList as $mg) {
+                            $app->goods->sendToMachine(['machine_id' => $mg['machine_id']], 'updateMg', ['mg_id' => $mg['mg_id']]);
+                        }
+                    }
+
+                    $mcList = $app->goods->getMachineChannelList([['g_id', '=', $gId]], 0, 'mc_id,machine_id');
+                    if ($mcList) {
+                        $mcList = $mcList->toArray();
+                        foreach ($mcList as $mc) {
+                            $app->goods->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => $mc['mc_id']]);
+                        }
+                    }
+                }
+                actionLog(['g_id' => $gId], '商品更新-下发设备同步完成', 'export_message_goods_update');
             } else {
                 $app = AppFactory::timeTask();
                 if (!$app->export->makeExcel($data)) {

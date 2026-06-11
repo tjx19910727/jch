@@ -20,6 +20,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
+use app\AppFactory\RabbitMq\MqProducer;
 use app\management\validate\VGoods;
 use think\facade\Db;
 
@@ -170,21 +171,12 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        $mgList = $this->getMachineGoodsList([['g_id', '=', $gId]], 0, 'mg_id,machine_id');
-        if ($mgList) {
-            $mgList = $mgList->toArray();
-            foreach ($mgList as $mg) {
-                $this->sendToMachine(['machine_id' => $mg['machine_id']], 'updateMg', ['mg_id' => $mg['mg_id']]);
-            }
-        }
-
-        $mcList = $this->getMachineChannelList([['g_id', '=', $gId]], 0, 'mc_id,machine_id');
-        if ($mcList) {
-            $mcList = $mcList->toArray();
-            foreach ($mcList as $mc) {
-                $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => $mc['mc_id']]);
-            }
-        }
+        MqProducer::export([
+            'job_type' => 'goods_update',
+            'g_id' => $gId,
+            'request_time' => date('Y-m-d H:i:s'),
+            'manager_id' => $this->manager['manager_id'] ?? 0,
+        ]);
 
         return $this->r(200, 'success', $result);
     }
