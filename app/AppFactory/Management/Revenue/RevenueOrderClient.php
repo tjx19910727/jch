@@ -112,6 +112,7 @@ class RevenueOrderClient extends ManagementClient
         }
 
         $this->applyMockPayFields($data);
+        $this->order['pay_time'] = intval($data['pay_time'] ?? 0) ?: time();
 
         $this->startTrans();
         try {
@@ -129,7 +130,6 @@ class RevenueOrderClient extends ManagementClient
 
             $flag[] = $this->settlementRevenue();
             $this->order['pay_status'] = 3;
-            $this->order['pay_time'] = intval($data['pay_time'] ?? 0) ?: time();
             $flag[] = $this->updateSaleOrders($this->order, [], [
                 'pay_status',
                 'pay_time',

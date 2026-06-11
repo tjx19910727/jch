@@ -111,6 +111,7 @@ class RevenueCalculator
             throw new \Exception("设备商品分账策略{$rule['rr_id']}未配置分账明细");
         }
 
+        $hasMatchedRuleItem = false;
         foreach ($this->details as $detail) {
             $gId = intval($detail['g_id'] ?? 0);
             $sodId = intval($detail['sod_id'] ?? 0);
@@ -121,6 +122,7 @@ class RevenueCalculator
             }
             foreach ($items as $item) {
                 if (intval($item['g_id'] ?? 0) !== $gId) continue;
+                $hasMatchedRuleItem = true;
                 $account = $this->getAccountById(intval($item['ra_id']));
                 if (!$account) {
                     throw new \Exception("商品{$gId}分账明细{$item['rri_id']}未配置有效分账账户");
@@ -147,7 +149,7 @@ class RevenueCalculator
                 ], $account, $rule);
             }
         }
-        return true;
+        return $hasMatchedRuleItem;
     }
 
     protected function calculateDeviceRule()
@@ -179,7 +181,11 @@ class RevenueCalculator
             if (!$account) {
                 throw new \Exception("分账策略明细{$item['rri_id']}未配置有效分账账户");
             }
-            $calc = $this->calculateRuleItemAmount($item, $baseAmount, $periodAfter);
+            if (intval($item['calc_type']) === 4 && intval($rule['tier_calc_mode'] ?? 1) === 2) {
+                $calc = $this->calculateTierSplitAmount($item, $baseAmount, $periodBefore, $periodAfter);
+            } else {
+                $calc = $this->calculateRuleItemAmount($item, $baseAmount, $periodAfter);
+            }
             if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) {
                 continue;
             }
@@ -304,6 +310,46 @@ class RevenueCalculator
             ];
         }
         return null;
+    }
+
+    protected function calculateTierSplitAmount(array $item, $baseAmount, $periodBefore, $periodAfter)
+    {
+        $tiers = Db::name('revenue_rule_item_tier')
+            ->where(['rri_id' => intval($item['rri_id']), 'status' => 1])
+            ->order('threshold_min asc,rrit_id asc')
+            ->select()
+            ->toArray();
+        if (!$tiers) {
+            throw new \Exception("分账策略明细{$item['rri_id']}未配置阶梯区间");
+        }
+        $coveredAmount = '0.00';
+        $incomeAmount = '0.00';
+        foreach ($tiers as $tier) {
+            $min = $this->money($tier['threshold_min'] ?? 0);
+            $max = $tier['threshold_max'] === null || $tier['threshold_max'] === ''
+                ? null
+                : $this->money($tier['threshold_max']);
+            $overlapStart = bccomp($periodBefore, $min, 2) > 0 ? $periodBefore : $min;
+            $overlapEnd = $max === null || bccomp($periodAfter, $max, 2) < 0 ? $periodAfter : $max;
+            if (bccomp($overlapEnd, $overlapStart, 2) <= 0) continue;
+            $overlapAmount = $this->money(bcsub($overlapEnd, $overlapStart, 2));
+            $coveredAmount = bcadd($coveredAmount, $overlapAmount, 2);
+            $incomeAmount = bcadd(
+                $incomeAmount,
+                $this->percent($overlapAmount, $this->money($tier['calc_value'] ?? 0, 3)),
+                2
+            );
+        }
+        if (bccomp($coveredAmount, $baseAmount, 2) !== 0) {
+            throw new \Exception("分账策略明细{$item['rri_id']}阶梯区间未完整覆盖本单金额");
+        }
+        $effectivePercent = bccomp($baseAmount, '0', 2) > 0
+            ? $this->money(bcmul(bcdiv($incomeAmount, $baseAmount, 6), '100', 6), 3)
+            : '0.000';
+        return [
+            'income_value' => $effectivePercent,
+            'income_amount' => $this->money($incomeAmount),
+        ];
     }
 
     protected function buildRecord(array $data, array $account, array $rule)

@@ -24,7 +24,9 @@ class RevenuePayChannelClient extends ManagementClient
         if (empty($postData['rpc_id'])) return $this->rFail("分账渠道配置ID不能为空");
         $check = $this->checkData($postData, true);
         if ($check !== true) return $check;
-        return $this->rU($this->updateRevenuePayChannel($postData, [], ['rpc_id']));
+        $rpcId = intval($postData['rpc_id']);
+        unset($postData['rpc_id']);
+        return $this->rU($this->updateRevenuePayChannel($postData, ['rpc_id' => $rpcId]));
     }
 
     public function getList($where= [], $pageNum = 0, $field = "*", $order = "rpc_id desc",$rQ = 1)

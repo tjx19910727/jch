@@ -105,6 +105,7 @@ class RevenueRule extends Common
     public function bindMachine()
     {
         $postData = input();
+        try { $this->validate($postData, $this->validatePath . 'bindMachine'); } catch (\Exception $e) { return returnValidate($e->getMessage()); }
         return $this->app->revenueRule->bindMachine($postData);
     }
 

@@ -2375,7 +2375,11 @@
                     },
                     "tier_calc_mode": {
                         "type": "integer",
-                        "description": "阶梯命中模式，非必填：1本单后累计整单命中，2跨阶梯拆分；当前实现使用1",
+                        "description": "阶梯命中模式，非必填：1本单后累计整单命中，2跨阶梯拆分",
+                        "enum": [
+                            1,
+                            2
+                        ],
                         "default": 1
                     },
                     "status": {
@@ -2438,7 +2442,11 @@
                     },
                     "tier_calc_mode": {
                         "type": "integer",
-                        "description": "阶梯命中模式，非必填：1本单后累计整单命中，2跨阶梯拆分；当前实现使用1"
+                        "description": "阶梯命中模式，非必填：1本单后累计整单命中，2跨阶梯拆分",
+                        "enum": [
+                            1,
+                            2
+                        ]
                     },
                     "status": {
                         "type": "integer",
@@ -2467,7 +2475,6 @@
                     "rr_id",
                     "receiver_ao_id",
                     "ra_id",
-                    "manager_id",
                     "calc_type"
                 ],
                 "properties": {
@@ -2489,7 +2496,7 @@
                     },
                     "manager_id": {
                         "type": "integer",
-                        "description": "账户管理人ID，必填；必须与 ra_id 绑定管理人一致"
+                        "description": "账户管理人ID，非必填；服务端根据 ra_id 自动补全，传入时必须与账户绑定管理人一致"
                     },
                     "calc_type": {
                         "type": "integer",
@@ -2748,7 +2755,7 @@
                     },
                     "ao_id": {
                         "type": "integer",
-                        "description": "设备组织ID，非必填；不传则取设备所属组织"
+                        "description": "兼容字段，服务端忽略传值并始终使用设备真实所属组织"
                     },
                     "sort": {
                         "type": "integer",

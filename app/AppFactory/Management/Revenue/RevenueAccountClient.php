@@ -24,7 +24,9 @@ class RevenueAccountClient extends ManagementClient
         if (empty($postData['ra_id'])) return $this->rFail("分账账户ID不能为空");
         $check = $this->checkAccountData($postData, true);
         if ($check !== true) return $check;
-        return $this->rU($this->updateRevenueAccount($postData, [], ['ra_id']));
+        $raId = intval($postData['ra_id']);
+        unset($postData['ra_id']);
+        return $this->rU($this->updateRevenueAccount($postData, ['ra_id' => $raId]));
     }
 
     public function getList($where = [], $pageNum = 0, $field = "*", $order = "ra_id desc", $rQ = 1)

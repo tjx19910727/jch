@@ -21,6 +21,11 @@ class VRevenueRule extends VCommon
         "settlement_type" => "in:1,2",
         "settlement_days" => "number",
         "status" => "require",
+        "m_id" => "require|number",
+        "sort" => "number",
+        "base_type" => "in:1,2",
+        "turnover_type" => "in:1,2",
+        "tier_calc_mode" => "in:1,2",
     ];
 
     protected $message = [
@@ -43,15 +48,22 @@ class VRevenueRule extends VCommon
         "settlement_type.in" => "分账时间类型不合法",
         "settlement_days.number" => "T+N分账天数必须为数字",
         "status.require" => "状态不能为空",
+        "m_id.require" => "设备ID不能为空",
+        "m_id.number" => "设备ID必须为数字",
+        "sort.number" => "排序必须为数字",
+        "base_type.in" => "分账基数类型不合法",
+        "turnover_type.in" => "阶梯营业额口径不合法",
+        "tier_calc_mode.in" => "阶梯计算模式不合法",
     ];
 
     protected $scene = [
         "add" => ["rule_name", "rule_mode"],
         "update" => ["rr_id"],
-        "addItem" => ["rr_id", "receiver_ao_id", "ra_id", "manager_id", "calc_type"],
+        "addItem" => ["rr_id", "receiver_ao_id", "ra_id", "calc_type"],
         "updateItem" => ["rri_id"],
-        "addProductItem" => ["rr_id", "g_id", "receiver_ao_id", "ra_id", "manager_id", "calc_type", "calc_value"],
+        "addProductItem" => ["rr_id", "g_id", "receiver_ao_id", "ra_id", "calc_type", "calc_value"],
         "addTier" => ["rri_id", "threshold_min", "calc_value"],
         "updateTier" => ["rrit_id"],
+        "bindMachine" => ["rr_id", "m_id"],
     ];
 }

@@ -161,7 +161,9 @@ class OfflineRevenueCalculator
 
         $records = [];
         foreach ($rule['items'] as $item) {
-            $amount = $this->calcAmount($baseAmount, $item, $periodAfter);
+            $amount = (int)$item['calc_type'] === 4 && (int)($rule['tier_calc_mode'] ?? 1) === 2
+                ? $this->calcTierSplitAmount($baseAmount, $periodBefore, $periodAfter, $item)
+                : $this->calcAmount($baseAmount, $item, $periodAfter);
             $records[] = $this->record($order, $item, [
                 'rule_mode' => 3,
                 'source' => (int)$item['calc_type'] === 4 ? 'tier' : 'device_rule',
@@ -173,6 +175,25 @@ class OfflineRevenueCalculator
             ], $rule);
         }
         return $records;
+    }
+
+    private function calcTierSplitAmount(float $baseAmount, float $periodBefore, float $periodAfter, array &$item): float
+    {
+        $covered = 0.0;
+        $income = 0.0;
+        foreach ($item['tiers'] as $tier) {
+            $start = max($periodBefore, (float)$tier['threshold_min']);
+            $end = $tier['threshold_max'] === null
+                ? $periodAfter
+                : min($periodAfter, (float)$tier['threshold_max']);
+            if ($end <= $start) continue;
+            $part = $end - $start;
+            $covered += $part;
+            $income += $part * (float)$tier['calc_value'] / 100;
+        }
+        $this->assert(abs($covered - $baseAmount) < 0.001, '阶梯区间未完整覆盖本单金额');
+        $item['_matched_value'] = $baseAmount > 0 ? round($income / $baseAmount * 100, 3) : 0;
+        return round($income, 2);
     }
 
     private function normalRecords(array $order): array
@@ -373,6 +394,88 @@ function fixture(): array
                     ['rri_id' => 308, 'receiver_ao_id' => 1, 'ra_id' => 101, 'manager_id' => 1001, 'calc_type' => 3, 'calc_value' => 100.0],
                 ],
             ],
+            207 => [
+                'rr_id' => 207,
+                'rule_mode' => 2,
+                'base_type' => 1,
+                'items' => [
+                    ['rri_id' => 309, 'receiver_ao_id' => 2, 'ra_id' => 102, 'manager_id' => 1002, 'calc_type' => 2, 'calc_value' => 5.0],
+                ],
+            ],
+            208 => [
+                'rr_id' => 208,
+                'rule_mode' => 2,
+                'base_type' => 1,
+                'items' => [
+                    ['rri_id' => 310, 'receiver_ao_id' => 2, 'ra_id' => 102, 'manager_id' => 1002, 'calc_type' => 3, 'calc_value' => 100.0],
+                ],
+            ],
+            209 => [
+                'rr_id' => 209,
+                'rule_mode' => 3,
+                'base_type' => 1,
+                'items' => [
+                    ['rri_id' => 311, 'receiver_ao_id' => 2, 'ra_id' => 102, 'manager_id' => 1002, 'calc_type' => 2, 'calc_value' => 5.0],
+                ],
+            ],
+            210 => [
+                'rr_id' => 210,
+                'rule_mode' => 3,
+                'base_type' => 1,
+                'items' => [
+                    ['rri_id' => 312, 'receiver_ao_id' => 2, 'ra_id' => 102, 'manager_id' => 1002, 'calc_type' => 3, 'calc_value' => 100.0],
+                ],
+            ],
+            211 => [
+                'rr_id' => 211,
+                'rule_mode' => 3,
+                'base_type' => 2,
+                'items' => [
+                    ['rri_id' => 313, 'receiver_ao_id' => 1, 'ra_id' => 101, 'manager_id' => 1001, 'calc_type' => 3, 'calc_value' => 100.0],
+                ],
+            ],
+            212 => [
+                'rr_id' => 212,
+                'rule_mode' => 3,
+                'base_type' => 1,
+                'tier_calc_mode' => 2,
+                'items' => [
+                    [
+                        'rri_id' => 314,
+                        'receiver_ao_id' => 2,
+                        'ra_id' => 102,
+                        'manager_id' => 1002,
+                        'calc_type' => 4,
+                        'calc_value' => 0.0,
+                        'tiers' => [
+                            ['threshold_min' => 0.0, 'threshold_max' => 5000.0, 'calc_value' => 10.0],
+                            ['threshold_min' => 5000.0, 'threshold_max' => 8000.0, 'calc_value' => 20.0],
+                            ['threshold_min' => 8000.0, 'threshold_max' => null, 'calc_value' => 30.0],
+                        ],
+                    ],
+                ],
+            ],
+            213 => [
+                'rr_id' => 213,
+                'rule_mode' => 3,
+                'base_type' => 1,
+                'turnover_type' => 2,
+                'tier_calc_mode' => 1,
+                'items' => [
+                    [
+                        'rri_id' => 315,
+                        'receiver_ao_id' => 2,
+                        'ra_id' => 102,
+                        'manager_id' => 1002,
+                        'calc_type' => 4,
+                        'calc_value' => 0.0,
+                        'tiers' => [
+                            ['threshold_min' => 0.0, 'threshold_max' => 8000.0, 'calc_value' => 20.0],
+                            ['threshold_min' => 8000.0, 'threshold_max' => null, 'calc_value' => 30.0],
+                        ],
+                    ],
+                ],
+            ],
         ],
         'machine_rules' => [
             501 => [200],
@@ -382,9 +485,19 @@ function fixture(): array
             505 => [200, 204],
             506 => [200, 205],
             507 => [206],
+            508 => [200, 202, 204],
+            509 => [200, 207],
+            510 => [200, 208],
+            511 => [209],
+            512 => [210],
+            513 => [201, 211],
+            514 => [212],
+            515 => [213],
         ],
         'monthly_turnover' => [
             504 => ['2026-06' => 4900.0],
+            514 => ['2026-06' => 4900.0],
+            515 => ['2026-06' => 7900.0],
         ],
     ];
 }
@@ -512,6 +625,86 @@ $tests['同一商品不同设备：设备506按每件3元分账'] = function () 
     assertEquals(2, $records[0]['calc_type'], '应为固定金额分账');
     assertMoney(6.0, $records[0]['income_amount'], '设备506商品应按每件3元、两件共6元分账');
     assertMoney(94.0, $records[1]['income_amount'], '剩余金额应走普通分账');
+};
+
+$tests['商品规则未命中：回退设备固定比例分账'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10014, 508, 100.0, [
+        ['sod_id' => 14, 'mg_id' => 9004, 'g_id' => 701, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(2, count($records), '商品规则未命中时应生成设备固定比例分账');
+    assertEquals('device_rule', $records[0]['source'], '商品规则未命中时应回退设备规则');
+    assertMoney(20.0, $records[0]['income_amount'], '回退设备规则后B应获得20%');
+    assertMoney(30.0, $records[1]['income_amount'], '回退设备规则后C应获得30%');
+};
+
+$tests['设备出租固定金额：每条出租商品分账5元'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10015, 509, 80.0, [
+        ['sod_id' => 15, 'sod_ao_id' => 2, 'quantity' => 1, 'retail_price' => 80.0, 'total_sod_price' => 80.0],
+    ]));
+    assertEquals(2, count($records), '出租固定金额后剩余金额应走普通分账');
+    assertMoney(5.0, $records[0]['income_amount'], '出租固定金额应为5元');
+    assertMoney(75.0, $records[1]['income_amount'], '剩余75元应走普通分账');
+};
+
+$tests['设备出租全额：出租组织获得商品全额'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10016, 510, 80.0, [
+        ['sod_id' => 16, 'sod_ao_id' => 2, 'quantity' => 1, 'retail_price' => 80.0, 'total_sod_price' => 80.0],
+    ]));
+    assertEquals(1, count($records), '出租全额后不应再生成普通分账');
+    assertMoney(80.0, $records[0]['income_amount'], '出租组织应获得商品全额');
+};
+
+$tests['设备固定金额：设备策略分账5元'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10017, 511, 100.0, [
+        ['sod_id' => 17, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(1, count($records), '设备固定金额应生成1条分账');
+    assertMoney(5.0, $records[0]['income_amount'], '设备固定金额应为5元');
+};
+
+$tests['设备全额：设备策略分账订单全额'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10018, 512, 100.0, [
+        ['sod_id' => 18, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(1, count($records), '设备全额应生成1条分账');
+    assertMoney(100.0, $records[0]['income_amount'], '设备策略应获得订单全额');
+};
+
+$tests['设备分账扣除出租基数：出租50%后设备分剩余全额'] = function () {
+    $fixture = fixture();
+    $fixture['rules'][201]['items'][0]['calc_value'] = 50.0;
+    $calc = new OfflineRevenueCalculator($fixture);
+    $records = $calc->calculate(orderFixture(10019, 513, 80.0, [
+        ['sod_id' => 19, 'sod_ao_id' => 2, 'quantity' => 1, 'retail_price' => 80.0, 'total_sod_price' => 80.0],
+    ]));
+    assertEquals(2, count($records), '应生成出租分账和设备剩余基数分账');
+    assertMoney(40.0, $records[0]['income_amount'], '出租组织应获得50%');
+    assertMoney(40.0, $records[1]['income_amount'], '设备规则应按扣除出租后的40元计算');
+};
+
+$tests['设备跨阶梯拆分：本单跨越5000按两档分别计算'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10020, 514, 200.0, [
+        ['sod_id' => 20, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 200.0, 'total_sod_price' => 200.0],
+    ]));
+    assertEquals(1, count($records), '跨阶梯拆分应生成1条聚合分账记录');
+    assertMoney(15.0, $records[0]['income_value'], '前100元10%、后100元20%，有效比例应为15%');
+    assertMoney(30.0, $records[0]['income_amount'], '跨阶梯拆分金额应为30元');
+};
+
+$tests['设备阶梯支付成功金额口径：累计达到8000命中30%'] = function () {
+    $calc = new OfflineRevenueCalculator(fixture());
+    $records = $calc->calculate(orderFixture(10021, 515, 200.0, [
+        ['sod_id' => 21, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 200.0, 'total_sod_price' => 200.0],
+    ]));
+    assertEquals(1, count($records), '支付成功金额口径阶梯应生成1条分账');
+    assertMoney(30.0, $records[0]['income_value'], '累计达到8000应命中30%');
+    assertMoney(60.0, $records[0]['income_amount'], '支付成功金额口径分账应为60元');
 };
 
 $tests['阶梯分账：本单后累计达到5000以上但未到8000'] = function () {
