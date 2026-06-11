@@ -692,6 +692,9 @@ class MachineChannelClient extends ManagementClient
         if(isset($postData['stock_warning'])){
             $updateData['stock_warning'] = $postData['stock_warning'] < 0 ? 0 : $postData['stock_warning'];
         }
+        if(isset($postData['expire_time'])){
+            $updateData['expire_time'] = $postData['expire_time'];
+        }
         if (!$updateData) return $this->r(100, $this->lang("action_fail"));
 
         try {
