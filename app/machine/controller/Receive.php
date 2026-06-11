@@ -1152,6 +1152,20 @@ class Receive extends Common
     }
 
     /**
+     * 提交客户退货日志
+     * @return array|string
+     */
+    public function submitRefundGoodsLog()
+    {
+        try {
+            return $this->app->api->submitRefundGoodsLog();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 获取检查清单项目（按层级）
      * @return array|string
      */
