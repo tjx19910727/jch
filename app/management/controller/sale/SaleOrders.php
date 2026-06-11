@@ -908,7 +908,7 @@ class SaleOrders extends Common
         $query = Db::name('sale_orders')->where($where);
         if ($raw) $query->whereRaw($raw);
 
-        $list = $query->field('pay_type, SUM(total_price - refund_amount) total_amount')
+        $list = $query->field('pay_type, SUM(GREATEST(total_price - refund_amount, 0)) total_amount')
             ->group('pay_type')
             ->select()
             ->toArray();
