@@ -47,13 +47,41 @@ class SimCardInfo extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
+        $sortName  = input('sort_name', '');
+        $sortOrder = input('sort_order', '');
+        unset($postData['sort_name'], $postData['sort_order']);
         $where = $this->getWhere($postData, false, [
             'machine_id' => 'like',
             'iccid' => 'like',
             'remark' => 'like',
         ],'a.');
         $where = $this->formatAoIdWhereWithPrefix($where,'m.');
-        return $this->app->simCardInfo->getMachineListData($where, $pageNum, $this->field, 'a.date desc');
+        $order = $this->buildOrder($sortName, $sortOrder);
+        return $this->app->simCardInfo->getMachineListData($where, $pageNum, $this->field, $order);
+    }
+
+    
+    /**
+     * 构建排序字符串
+     * sort_name: machine_name / date / usage / machine_usage
+     * sort_order: desc / asc
+     * 默认按 date desc，传入排序时相等情况按 id desc
+     */
+    private function buildOrder($sortName, $sortOrder)
+    {
+        $allowedSorts = [
+            'machine_name'  => 'm.machine_name',
+            'date'          => 'a.date',
+            'usage'         => 'a.usage',
+            'machine_usage' => 'a.machine_usage',
+        ];
+
+        if ($sortName && isset($allowedSorts[$sortName])) {
+            $orderDir = strtolower($sortOrder) === 'asc' ? 'asc' : 'desc';
+            return $allowedSorts[$sortName] . ' ' . $orderDir . ', a.id desc';
+        }
+
+        return 'a.date desc';
     }
 
     /**
