@@ -40,7 +40,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             $orderIds = array_column($existingDetails, 'order_id');
             $hasUnfinished = PreReplenishmentOrderModel::where([
                 ['id', 'in', $orderIds],
-                ['biz_status', '>', 1],
+                ['biz_status', '=', 1],
             ])->count();
             if ($hasUnfinished) {
                 return returnState(4002, '已存在未补货的补货单');
