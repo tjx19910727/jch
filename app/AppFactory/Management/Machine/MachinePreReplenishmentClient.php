@@ -29,6 +29,23 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         // 编辑场景：传入 order_id，需要把该单下已有的货道也包含进来，并返回 plan_quantity
         $orderId = $postData['order_id'] ?? 0;
+
+        // 检查是否存在未补货的补货单
+        $existingQuery = PreReplenishmentDetailModel::where([['machine_id', 'in', $machineIds]]);
+        if ($orderId) {
+            $existingQuery = $existingQuery->where('order_id', '<>', $orderId);
+        }
+        $existingDetails = $existingQuery->field('order_id')->group('order_id')->select()->toArray();
+        if ($existingDetails) {
+            $orderIds = array_column($existingDetails, 'order_id');
+            $hasUnfinished = PreReplenishmentOrderModel::where([
+                ['id', 'in', $orderIds],
+                ['biz_status', '>', 1],
+            ])->count();
+            if ($hasUnfinished) {
+                return returnState(4002, '已存在未补货的补货单');
+            }
+        }
         $orderMcIds = [];
         $orderPlanQtyMap = [];
         if ($orderId) {
@@ -822,5 +839,39 @@ class MachinePreReplenishmentClient extends ManagementClient
             ->update(['order_count' => 0]);
 
         return returnState(200, '重置成功', ['affected' => $updated]);
+    }
+
+    /**
+     * 删除补货单（仅允许删除未补货的单据）
+     * @param $postData
+     * @return array
+     */
+    public function deleteOrder($postData)
+    {
+        $id = $postData['id'] ?? 0;
+        if (!$id) {
+            return returnState(4001, '参数错误: id不能为空');
+        }
+
+        $order = PreReplenishmentOrderModel::getFind(['id' => $id], 'id,record_no,biz_status');
+        if (!$order) {
+            return returnState(4003, '单据不存在');
+        }
+
+        if ($order['biz_status'] != 1) {
+            return returnState(4004, '只有未补货的单据才能删除');
+        }
+
+        Db::startTrans();
+        try {
+            PreReplenishmentDetailModel::whereDel(['order_id' => $id]);
+            PreReplenishmentOrderModel::whereDel(['id' => $id]);
+            Db::commit();
+            return returnState(200, '删除成功');
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1);
+            return returnState(5000, '系统错误');
+        }
     }
 }

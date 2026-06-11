@@ -80,4 +80,13 @@ class MachinePreReplenishment extends Common
         $postData = input();
         return $this->app->machinePreReplenishment->resetReplenishmentCount($postData);
     }
+
+    /**
+     * 删除补货单
+     */
+    public function delete()
+    {
+        $postData = input();
+        return $this->app->machinePreReplenishment->deleteOrder($postData);
+    }
 }
