@@ -1028,7 +1028,7 @@ class ApiClient extends ReceiveBaseClient
                 [['g.ao_id', 'in', $aoIds]],
                 $this->data['pageNum'] ?? 0,
                 $this->goodsField,
-                'g.update_time desc',
+                'g.g_id desc',
                 $this->machine['m_id']
             );
             if (is_string($goodsList)) return $this->rFail($goodsList);
