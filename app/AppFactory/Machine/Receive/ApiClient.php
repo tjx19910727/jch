@@ -4126,6 +4126,7 @@ class ApiClient extends ReceiveBaseClient
                 ->field('order_id,trade_no')
                 ->order('order_id desc')
                 ->find();
+            if (!$order) return $this->r(300, '未找到订单号后四位匹配的当前设备订单');
         }
 
         $verifyStatus = ($isSpecialCode || $order) ? 1 : 2;
