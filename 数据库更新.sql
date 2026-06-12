@@ -1984,3 +1984,30 @@ CREATE TABLE `laser_resource` (
   PRIMARY KEY (`res_id`) USING BTREE,
   KEY `order_id` (`order_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='镭射机素材表';
+
+#20260612
+ALTER TABLE `auth_node`
+  ADD COLUMN `permission_action` varchar(16) NOT NULL DEFAULT 'manage' COMMENT '权限动作：menu/query/export/manage' AFTER `data_auth`,
+  ADD INDEX `idx_permission_action` (`permission_action`);
+
+UPDATE `auth_node` SET `permission_action` = 'menu' WHERE `is_button` = 2;
+UPDATE `auth_node` SET `permission_action` = 'export'
+WHERE `is_button` = 1 AND (`url` LIKE '%/export%' OR `url` LIKE '%Export%');
+UPDATE `auth_node` SET `permission_action` = 'query'
+WHERE `is_button` = 1
+  AND (`url` LIKE '%/get%' OR `url` LIKE '%/query%' OR `url` LIKE '%/find%' OR `url` LIKE '%/check%')
+  AND `permission_action` = 'manage';
+
+INSERT INTO auth_node (pid, name, url, `desc`, sort, type, is_auth, is_button, data_auth, permission_action, status, create_time, update_time)
+SELECT pid, '查询模板顶级导航权限树', '/management/auth.auth_role_template/getTopNavigationNodes', '查询角色权限模板顶级导航组合权限树', sort, type, 1, 1, 1, 'query', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+FROM auth_node
+WHERE url = '/management/auth.auth_role_template/getNodes'
+  AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = '/management/auth.auth_role_template/getTopNavigationNodes')
+LIMIT 1;
+
+INSERT INTO auth_node (pid, name, url, `desc`, sort, type, is_auth, is_button, data_auth, permission_action, status, create_time, update_time)
+SELECT pid, '保存模板顶级导航组合权限', '/management/auth.auth_role_template/saveTopNavigationNodes', '递归展开并保存查询、导出或全部权限', sort, type, 1, 1, 1, 'manage', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+FROM auth_node
+WHERE url = '/management/auth.auth_role_template/saveNodes'
+  AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = '/management/auth.auth_role_template/saveTopNavigationNodes')
+LIMIT 1;

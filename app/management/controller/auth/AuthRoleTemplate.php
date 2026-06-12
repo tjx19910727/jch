@@ -3,6 +3,7 @@
 namespace app\management\controller\auth;
 
 use app\management\controller\Common;
+use think\facade\Db;
 
 class AuthRoleTemplate extends Common
 {
@@ -60,11 +61,47 @@ class AuthRoleTemplate extends Common
         return $this->app->authRoleTemplate->saveNodes($postData);
     }
 
+    public function getTopNavigationNodes()
+    {
+        return $this->app->authRoleTemplate->getTopNavigationNodes($this->getExcludedTemplateNodeIds());
+    }
+
+    public function saveTopNavigationNodes()
+    {
+        $postData = json2arr(input());
+        try { $this->validate($postData, $this->validatePath . 'AuthRoleTemplateTopNavigationNodes'); }
+        catch (\Exception $e) { return returnValidate($e->getMessage()); }
+        return $this->app->authRoleTemplate->saveTopNavigationNodes($postData, $this->getExcludedTemplateNodeIds());
+    }
+
     public function apply()
     {
         $postData = input();
         try { $this->validate($postData, $this->validatePath . 'AuthRoleTemplateApply'); }
         catch (\Exception $e) { return returnValidate($e->getMessage()); }
         return $this->app->authRoleTemplate->apply($postData);
+    }
+
+    protected function getExcludedTemplateNodeIds()
+    {
+        if (!in_array($this->manager['ao_id'], $this->getTopOrgIds())) return [];
+        $topNodeIds = Db::name('auth_node')
+            ->where(['pid' => 0])
+            ->whereRaw("name like '%系统管理%' or name like '%更新日志%'")
+            ->column('node_id');
+        if (!$topNodeIds) return [];
+
+        $excluded = array_map('intval', $topNodeIds);
+        $nodes = Db::name('auth_node')->field('node_id,pid')->select()->toArray();
+        do {
+            $count = count($excluded);
+            foreach ($nodes as $node) {
+                if (in_array(intval($node['pid']), $excluded, true)) {
+                    $excluded[] = intval($node['node_id']);
+                }
+            }
+            $excluded = array_values(array_unique($excluded));
+        } while (count($excluded) > $count);
+        return $excluded;
     }
 }

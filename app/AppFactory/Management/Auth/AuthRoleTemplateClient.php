@@ -10,6 +10,8 @@ class AuthRoleTemplateClient extends ManagementClient
 {
     use AuthRoleTemplateTrait;
 
+    private const PERMISSION_ACTIONS = ['menu', 'query', 'export', 'manage'];
+
     public function update($postData, $where = [], $field = [], $rU = 1)
     {
         try {
@@ -67,6 +69,58 @@ class AuthRoleTemplateClient extends ManagementClient
             'artn_id,art_id,node_id,d_type',
             'artn_id asc'
         ));
+    }
+
+    public function getTopNavigationNodes(array $excludedNodeIds = [])
+    {
+        $query = Db::name('auth_node')
+            ->where(['status' => 1])
+            ->field('node_id,pid,name,url,sort,type,is_button,permission_action');
+        if ($excludedNodeIds) $query->where('node_id', 'not in', $excludedNodeIds);
+        $nodes = $query
+            ->order('sort asc,node_id asc')
+            ->select()
+            ->toArray();
+        return $this->r(200, '查询成功', $this->buildPermissionNodeTree($nodes));
+    }
+
+    public function saveTopNavigationNodes($data, array $excludedNodeIds = [])
+    {
+        try {
+            $this->assertTemplateManaged(intval($data['art_id']));
+            $dType = intval($data['d_type'] ?? 0);
+            if (!in_array($dType, [0, 1, 2, 3, 4, 5], true)) {
+                return $this->rFail("数据权限类型不合法");
+            }
+            if (!array_key_exists('top_navigation_list', $data)) {
+                return $this->rFail("顶级导航权限列表不能为空");
+            }
+            $topNavigationList = json2arr($data['top_navigation_list'] ?? []);
+            if (!is_array($topNavigationList)) return $this->rFail("顶级导航权限格式不正确");
+
+            $query = Db::name('auth_node')
+                ->where(['status' => 1])
+                ->field('node_id,pid,name,url,permission_action');
+            if ($excludedNodeIds) $query->where('node_id', 'not in', $excludedNodeIds);
+            $nodes = $query
+                ->order('sort asc,node_id asc')
+                ->select()
+                ->toArray();
+            $expanded = $this->expandTopNavigationPermissions($topNavigationList, $nodes, $dType);
+        } catch (\Exception $e) {
+            return $this->rTryCatch($e->getMessage());
+        }
+
+        $this->startTrans();
+        try {
+            $this->replaceAuthRoleTemplateNodes(intval($data['art_id']), $expanded['node_list']);
+            $this->commitTrans();
+            return $this->r(200, '保存成功', $expanded);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 
     public function apply($data)
@@ -131,5 +185,87 @@ class AuthRoleTemplateClient extends ManagementClient
             throw new \Exception("无权操作其他组织的权限角色");
         }
         return $role;
+    }
+
+    protected function expandTopNavigationPermissions(array $topNavigationList, array $nodes, $dType)
+    {
+        $nodeMap = [];
+        $childrenMap = [];
+        foreach ($nodes as $node) {
+            $nodeId = intval($node['node_id']);
+            $node['permission_action'] = in_array($node['permission_action'] ?? '', self::PERMISSION_ACTIONS, true)
+                ? $node['permission_action']
+                : 'manage';
+            $nodeMap[$nodeId] = $node;
+            $childrenMap[intval($node['pid'])][] = $nodeId;
+        }
+        foreach ($childrenMap as $parentId => $childIds) {
+            if ($parentId > 0 && isset($nodeMap[$parentId])) {
+                $nodeMap[$parentId]['permission_action'] = 'menu';
+            }
+        }
+
+        $nodeList = [];
+        $selected = [];
+        foreach ($topNavigationList as $setting) {
+            if (!is_array($setting)) throw new \Exception("顶级导航权限格式不正确");
+            $topNodeId = intval($setting['node_id'] ?? 0);
+            if (!isset($nodeMap[$topNodeId]) || intval($nodeMap[$topNodeId]['pid']) !== 0) {
+                throw new \Exception("只能配置启用的顶级导航节点");
+            }
+            if (isset($selected[$topNodeId])) throw new \Exception("顶级导航不能重复配置");
+            $allEnabled = intval($setting['all_enabled'] ?? 0) === 1;
+            $queryEnabled = intval($setting['query_enabled'] ?? 0) === 1;
+            $exportEnabled = intval($setting['export_enabled'] ?? 0) === 1;
+            if (!$allEnabled && !$queryEnabled && !$exportEnabled) {
+                throw new \Exception("每个顶级导航至少选择查询、导出或所有权限");
+            }
+
+            $selected[$topNodeId] = [
+                'node_id' => $topNodeId,
+                'query_enabled' => !$allEnabled && $queryEnabled ? 1 : 0,
+                'export_enabled' => !$allEnabled && $exportEnabled ? 1 : 0,
+                'all_enabled' => $allEnabled ? 1 : 0,
+            ];
+            $descendantIds = $this->collectPermissionDescendantIds($topNodeId, $childrenMap);
+            $nodeList[$topNodeId] = $dType;
+            foreach (array_merge([$topNodeId], $descendantIds) as $nodeId) {
+                $action = $nodeMap[$nodeId]['permission_action'];
+                if ($action === 'menu' || $allEnabled || ($queryEnabled && $action === 'query') || ($exportEnabled && $action === 'export')) {
+                    $nodeList[$nodeId] = $dType;
+                }
+            }
+        }
+
+        ksort($nodeList);
+        return [
+            'top_navigation_list' => array_values($selected),
+            'node_list' => $nodeList,
+            'node_count' => count($nodeList),
+        ];
+    }
+
+    protected function collectPermissionDescendantIds($nodeId, array $childrenMap)
+    {
+        $result = [];
+        foreach ($childrenMap[intval($nodeId)] ?? [] as $childId) {
+            $result[] = $childId;
+            $result = array_merge($result, $this->collectPermissionDescendantIds($childId, $childrenMap));
+        }
+        return $result;
+    }
+
+    protected function buildPermissionNodeTree(array $nodes, $pid = 0)
+    {
+        $tree = [];
+        foreach ($nodes as $node) {
+            if (intval($node['pid']) !== intval($pid)) continue;
+            $node['permission_action'] = in_array($node['permission_action'] ?? '', self::PERMISSION_ACTIONS, true)
+                ? $node['permission_action']
+                : 'manage';
+            $node['children'] = $this->buildPermissionNodeTree($nodes, intval($node['node_id']));
+            $tree[] = $node;
+        }
+        return $tree;
     }
 }

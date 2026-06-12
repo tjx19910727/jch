@@ -26,9 +26,11 @@ class VAuth extends VCommon
         "manager_ids" => 'require',
         "use_role_template" => 'in:1,2',
         "art_id" => 'require',
+        "d_type" => 'require|in:0,1,2,3,4,5',
 
         // auth_node
         "type" => "require",
+        "permission_action" => "in:menu,query,export,manage",
 
         // auth_role_node
         "nodeList" => "require",
@@ -63,7 +65,10 @@ class VAuth extends VCommon
         "manager_ids.require" => "账号ID列表不能为空",
         "use_role_template.in" => "是否使用角色权限模板仅支持1或2",
         "art_id.require" => "角色权限模板ID不能为空",
+        "d_type.require" => "数据权限类型不能为空",
+        "d_type.in" => "数据权限类型不合法",
         "type.require" => "VAuth.type_require",
+        "permission_action.in" => "权限动作仅支持menu/query/export/manage",
         "nodeList.require" => "VAuth.nodeList_require",
         "rn_id.require" => "VAuth.rn_id_require",
 
@@ -96,8 +101,8 @@ class VAuth extends VCommon
         "AuthManagerRoleUpdate" => ["mr_id"],
         "AuthManagerRoleBatchSet" => ["role_id"],
 
-        "AuthNodeAdd" => ["name","type"],
-        "AuthNodeUpdate" => ["node_id"],
+        "AuthNodeAdd" => ["name","type","permission_action"],
+        "AuthNodeUpdate" => ["node_id","permission_action"],
 
         "AuthRoleAdd" => ["name","status"],
         "AuthRoleUpdate" => ["role_id"],
@@ -108,6 +113,7 @@ class VAuth extends VCommon
         "AuthRoleTemplateAdd" => ["name","status"],
         "AuthRoleTemplateUpdate" => ["art_id"],
         "AuthRoleTemplateNodes" => ["art_id","nodeList"],
+        "AuthRoleTemplateTopNavigationNodes" => ["art_id","d_type"],
         "AuthRoleTemplateApply" => ["art_id","role_id"],
 
         "AuthOrganizationAdd" => ['pid','organization_name'],
