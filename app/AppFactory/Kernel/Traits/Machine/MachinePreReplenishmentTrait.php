@@ -302,7 +302,7 @@ trait MachinePreReplenishmentTrait
 
         actionLog($this->message, "补货视频保存地址记录执行");
 
-        if (!$recordNo || !$machineId || !$videoUrl) {
+        if (!$recordNo || !$machineId || !$videoUrl || $videoUrl === 'no_data') {
             return 1;
         }
 
@@ -316,15 +316,19 @@ trait MachinePreReplenishmentTrait
 
         if ($exists) {
             return PreReplenishmentVideoModel::update(
-                ['replenishment_video' => $videoUrl],
+                ['replenishment_video' => $videoUrl, 'updated_at' => date('Y-m-d H:i:s')],
                 ['id' => $exists['id']]
             );
         }
 
         return PreReplenishmentVideoModel::create([
             'order_id' => $order['id'],
+            'record_no' => $recordNo,
             'machine_id' => $machineId,
+            'm_id' => $this->machine['m_id'] ?? 0,
             'replenishment_video' => $videoUrl,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s'),
         ]);
     }
 }
