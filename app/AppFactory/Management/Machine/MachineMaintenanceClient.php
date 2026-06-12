@@ -170,6 +170,18 @@ class MachineMaintenanceClient extends ManagementClient
             if (!$data) {
                 return $this->rValidate('无可更新字段');
             }
+            // 如果尝试禁用当前项目(is_active = 0)，则只有当其子集没有维护记录时才允许禁用
+            if (array_key_exists('is_active', $data) && intval($data['is_active']) === 0) {
+                // collectDescendantIds 返回包含自身的所有下级 id，这里排除自身，仅检查子集是否有数据
+                $allIds = $this->collectDescendantIds([$id]);
+                $childIds = array_values(array_diff($allIds, [$id]));
+                if ($childIds) {
+                    $exists = Db::name('maintenance_records')->where([['item_id', 'in', $childIds]])->count();
+                    if ($exists > 0) {
+                        return $this->rValidate('子集存在维护记录，无法禁用当前项目');
+                    }
+                }
+            }
             $result = Db::name('maintenance_items')->where(['id' => $id])->update($data);
             return $this->rU($result);
         } catch (\Exception $e) {
@@ -195,17 +207,42 @@ class MachineMaintenanceClient extends ManagementClient
             return $this->rValidate('id不能为空');
         }
 
-        $childCount = Db::name('maintenance_items')->where([['parent_id', 'in', $ids]])->count();
-        if ($childCount > 0) {
-            return $this->rValidate('存在子级维护项目，无法删除');
+        $ids = $this->collectDescendantIds($ids);
+        $existsCount = Db::name('maintenance_items')->where([['id', 'in', $ids]])->count();
+        if ($existsCount <= 0) {
+            return $this->rValidate('维护项目不存在');
         }
-        $recordCount = Db::name('maintenance_records')->where([['item_id', 'in', $ids]])->count();
-        if ($recordCount > 0) {
-            return $this->rValidate('存在维护记录，无法删除');
-        }
+        Db::name('maintenance_items')->where([['id', 'in', $ids]])->update(['is_active' => 0]);
+        return $this->rD($existsCount);
+    }
 
-        $result = Db::name('maintenance_items')->where([['id', 'in', $ids]])->delete();
-        return $this->rD($result);
+    /**
+     * 启用/禁用维护项目
+     * @param array $postData
+     * @return array|\think\response\Json
+     */
+    public function setActive($postData)
+    {
+        $id = $postData['id'] ?? '';
+        $isActive = intval($postData['is_active'] ?? -1);
+        if (!$id) {
+            return $this->rValidate('id不能为空');
+        }
+        if (!in_array($isActive, [0, 1], true)) {
+            return $this->rValidate('启用状态仅支持0或1');
+        }
+        $ids = is_array($id) ? $id : explode(',', strval($id));
+        $ids = array_values(array_filter(array_map('intval', $ids)));
+        if (!$ids) {
+            return $this->rValidate('id不能为空');
+        }
+        $ids = $isActive === 1 ? $this->collectAncestorIds($ids) : $this->collectDescendantIds($ids);
+        $existsCount = Db::name('maintenance_items')->where([['id', 'in', $ids]])->count();
+        if ($existsCount <= 0) {
+            return $this->rValidate('维护项目不存在');
+        }
+        Db::name('maintenance_items')->where([['id', 'in', $ids]])->update(['is_active' => $isActive]);
+        return $this->rU($existsCount);
     }
 
     /**
@@ -530,5 +567,60 @@ class MachineMaintenanceClient extends ManagementClient
             }
         }
         return $tree;
+    }
+
+    /**
+     * 获取指定项目及全部下级项目ID
+     * @param int[] $ids
+     * @return int[]
+     */
+    protected function collectDescendantIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        $all = $ids;
+        $current = $ids;
+        while ($current) {
+            $children = Db::name('maintenance_items')
+                ->where([['parent_id', 'in', $current]])
+                ->column('id');
+            $children = array_values(array_diff(
+                array_values(array_unique(array_map('intval', is_array($children) ? $children : []))),
+                $all
+            ));
+            if (!$children) {
+                break;
+            }
+            $all = array_merge($all, $children);
+            $current = $children;
+        }
+        return array_values(array_unique($all));
+    }
+
+    /**
+     * 获取指定项目及全部上级项目ID
+     * @param int[] $ids
+     * @return int[]
+     */
+    protected function collectAncestorIds(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        $all = $ids;
+        $current = $ids;
+        while ($current) {
+            $parents = Db::name('maintenance_items')
+                ->where([['id', 'in', $current]])
+                ->where('parent_id', '>', 0)
+                ->column('parent_id');
+            $parents = array_values(array_diff(
+                array_values(array_unique(array_map('intval', is_array($parents) ? $parents : []))),
+                $all
+            ));
+            if (!$parents) {
+                break;
+            }
+            $all = array_merge($all, $parents);
+            $current = $parents;
+        }
+        return array_values(array_unique($all));
     }
 }

@@ -2131,6 +2131,29 @@ class ApiClient extends ReceiveBaseClient
                         'out_port' => $v['out_port'] ?? 1,
                     ];
                     $outArr[$pos][] = $outItem;
+                    // 如果是微程组合商品（type==11），尝试解析子商品出货信息
+                    if (!empty($mc['out_no'])) {
+                        $wcGoodsModel = $this->getWcGoodsFind(['no' => $mc['out_no']]);
+                        if ($wcGoodsModel) {
+                            $wcGoods = is_object($wcGoodsModel) ? (function_exists('obj2arr') ? obj2arr($wcGoodsModel) : (array)$wcGoodsModel) : $wcGoodsModel;
+                            if (($wcGoods['type'] ?? 0) == 11 && !empty($v['wc_goods_no'])) {
+                                $wc_goods_no_arr = json_decode($v['wc_goods_no'], true);
+                                if (is_array($wc_goods_no_arr)) {
+                                    foreach ($wc_goods_no_arr as $wc_goods_no_v) {
+                                        $dc_local = [
+                                            'channel_code' => $wc_goods_no_v['real_channel_code'] ?? '',
+                                            'quantity' => 1,
+                                            'is_gift' => $v['is_gift'] ?? 2,
+                                            'out_port' => $v['out_port'] ?? 1,
+                                        ];
+                                        $outArr[$pos][] = $dc_local;
+                                    }
+                                } else {
+                                    actionLog(['sod_id' => $v['sod_id'] ?? 0, 'wc_goods_no' => $v['wc_goods_no']], 'wc_goods_no JSON parse failed');
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -2150,6 +2173,7 @@ class ApiClient extends ReceiveBaseClient
         if ($total_points) {
             $this->order['total_points'] = $total_points;
         }
+
         $contentArr = $this->buildLegacyMainFromOutGoods($outArr);
 
         $content = [
@@ -2300,7 +2324,7 @@ class ApiClient extends ReceiveBaseClient
         }
         return $main;
     }
-
+    
     /**
      * HTTP触发出货结果闭环：将出货回执投递到MQ，触发 OutGoodsTrait::outGoods
      * 适用：仅调用 requireOutGoods 后，设备未通过MQ回传出货结果的场景
@@ -2979,8 +3003,8 @@ class ApiClient extends ReceiveBaseClient
         $where['machine_id'] = $this->data['machine_id'];
         $wcMachineChannelLists = $this->getWcMachineChannelList($where, $pageNum, "*", 'sort asc');
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
-        $wcMachineChannelLists = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
-        foreach ($wcMachineChannelLists as &$v) {
+        $wcMachineChannelData = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
+        foreach ($wcMachineChannelData as &$v) {
             $wc_goods = $this->getWcGoodsFind(['no' => $v['out_no']]);
             $v['desc'] = $wc_goods['description'] ?? '';
             if ($v['gc_id'] == 11) {
@@ -2992,6 +3016,8 @@ class ApiClient extends ReceiveBaseClient
                 $item['desc'] .= $wc_goods['description'] ?? '';
             }
         }
+        unset($v, $item);
+        if ($pageNum) $wcMachineChannelLists['data'] = $wcMachineChannelData;
         return $this->r(200, "SUCCESS", $wcMachineChannelLists);
     }
 
@@ -3080,16 +3106,16 @@ class ApiClient extends ReceiveBaseClient
     public function test()
     {
         $trade_no = $this->data['trade_no'] ?? '';
-        // $this->refundTradeNo = $this->data['refund_trade_no'];
+        $this->refundTradeNo = $this->data['refund_trade_no'];
         $order_id = $this->data['order_id'] ?? 0;
         $sod_id = $this->data['sod_id'] ?? 0;
         $this->order = $this->getSaleOrdersFind(['trade_no' => $trade_no])->toArray();;
-        // $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
-        // $this->refundSuccess();;
-        // die();
-        // $this->paymentSuccessful();
-        // $this->addCardChangeLog();
-        $this->outGoods();
+        $this->refund = $this->getSaleOrdersRefundFind(['trade_no' => $trade_no]);
+        $this->refundSuccess();;
+        die();
+        $this->paymentSuccessful();
+        $this->addCardChangeLog();
+        // $this->outGoods();
         die();
         // $order = $this->outGoods();
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
@@ -3163,18 +3189,26 @@ class ApiClient extends ReceiveBaseClient
             $itemIds = array_values(array_map('intval', array_keys($submittedMap)));
             $itemRows = Db::name('maintenance_items')
                 ->where([['id', 'in', $itemIds]])
-                ->field('id,item_level')
+                ->field('id,item_level,is_active')
                 ->select()
                 ->toArray();
 
             $itemLevelMap = [];
+            $disabledItemIds = [];
             foreach ($itemRows as $itemRow) {
-                $itemLevelMap[intval($itemRow['id'])] = intval($itemRow['item_level'] ?? 0);
+                $rowId = intval($itemRow['id']);
+                $itemLevelMap[$rowId] = intval($itemRow['item_level'] ?? 0);
+                if (intval($itemRow['is_active'] ?? 0) !== 1) {
+                    $disabledItemIds[] = $rowId;
+                }
             }
 
             $missing = array_values(array_diff($itemIds, array_keys($itemLevelMap)));
             if ($missing) {
                 return $this->rFail('维护项目不存在:' . implode(',', $missing));
+            }
+            if ($disabledItemIds) {
+                return $this->rFail('维护项目已禁用:' . implode(',', array_values(array_unique($disabledItemIds))));
             }
 
             $invalidStatusIds = [];
@@ -3598,6 +3632,9 @@ class ApiClient extends ReceiveBaseClient
                     'notes' => $rowNotes,
                 ];
 
+                if (!isset($enabledMap[$itemId])) {
+                    continue;
+                }
                 $itemLevel = intval($enabledMap[$itemId]['item_level'] ?? 0);
                 if ($itemLevel !== 1 && !in_array($checkStatus, [1, 2], true)) {
                     $invalidStatusItems[$itemId] = [
@@ -3617,6 +3654,10 @@ class ApiClient extends ReceiveBaseClient
             $notExists = array_values(array_diff($submittedIds, $existSubmittedIds));
             if ($notExists) {
                 return $this->rFail('检查项不存在:' . implode(',', $notExists));
+            }
+            $disabledIds = array_values(array_diff($submittedIds, array_keys($enabledMap)));
+            if ($disabledIds) {
+                return $this->rFail('检查项已禁用:' . implode(',', $disabledIds));
             }
 
             $missingStatusItems = [];

@@ -38,7 +38,7 @@ class Common extends AuthController
         "/management/auth.auth_node/getList",
     ];
 
-    public $originAoIds = ['0','17','19'];
+    public $originAoIds = ['0', '17', '19'];
 
 
     protected function initialize()
@@ -65,7 +65,7 @@ class Common extends AuthController
      * @param string $prefix
      * @return array
      */
-    public function getWhere($params,$is_string = false,$condition = [],$prefix = "")
+    public function getWhere($params, $is_string = false, $condition = [], $prefix = "")
     {
         $where = [];
         $conData = array_keys($condition);
@@ -73,20 +73,20 @@ class Common extends AuthController
             if ($value == "") continue;
             if ($key == "page" || $key == "pageNum" || $key == "token") continue;
             // 有特定的字段筛选项
-            if ($condition && in_array($key,$conData)) {
+            if ($condition && in_array($key, $conData)) {
                 // like
                 if ($condition[$key] == "like") {
-                    $where[] = [$prefix . $key,'like',"%$value%"];
+                    $where[] = [$prefix . $key, 'like', "%$value%"];
                     continue;
                 }
                 // in
-                if (strpos($value,",") || $condition[$key] == "in") {
-                    $where[] = [$prefix . $key,'in',$value];
+                if (strpos($value, ",") || $condition[$key] == "in") {
+                    $where[] = [$prefix . $key, 'in', $value];
                     continue;
                 }
                 // between
-                if (strpos($value,"~") && $condition[$key] == "between") {
-                    $this->between($key,$value,$where,$prefix);
+                if (strpos($value, "~") && $condition[$key] == "between") {
+                    $this->between($key, $value, $where, $prefix);
                     continue;
                 }
             } else {
@@ -96,7 +96,7 @@ class Common extends AuthController
                 }
                 if (is_string($value)) { // 字符串
                     if (strpos($value, "~") !== false) { //  ~ 隔开的时间段，用BETWEEN
-                        $this->between($key,$value,$where,$prefix);
+                        $this->between($key, $value, $where, $prefix);
                         continue;
                     }
                     // ,隔开的字符串，用IN
@@ -110,10 +110,10 @@ class Common extends AuthController
                 }
             }
         }
-        $where = $this->authNodeWhere($where);
+        $where = $this->authNodeWhere($where, $prefix);
         // 转为SQL语句格式
         if ($is_string && $where) {
-            $this->where2Str($where,$prefix);
+            $this->where2Str($where, $prefix);
         }
         if ($is_string && !$where) $where = "";
         return $where;
@@ -124,8 +124,10 @@ class Common extends AuthController
      * @param array $where
      * @return array
      */
-    public function authNodeWhere($where = [])
+    public function authNodeWhere($where = [], $prefix = "")
     {
+        $where = $this->applyManagerQueryStartTimeWhere($where, $prefix);
+
         // 数据权限
         if (isset($this->currentMenu['data_auth']) && $this->currentMenu['data_auth'] == 1 && isset($this->currentMenu['d_type']) && $this->currentMenu['d_type'] > 0) {
             $api = request()->baseUrl();
@@ -134,7 +136,7 @@ class Common extends AuthController
             // 查数据权限区域内的账号ID，根据不同的接口字段名附加账号ID筛选条件
             if ($this->currentMenu['d_type'] == 2 && $this->manager['ao_id'] > 0) {
                 if (isset($where['creator'])) unset($where['creator']);
-                if (!in_array($api,$this->commonApi)) $where["ao_id"] = $this->manager['ao_id'];
+                if (!in_array($api, $this->commonApi)) $where["ao_id"] = $this->manager['ao_id'];
             }
             if ($this->currentMenu['d_type'] >= 3) {
                 $ids[] = $this->manager['manager_id'];
@@ -144,33 +146,95 @@ class Common extends AuthController
                     $ids = $this->app->authManager->getChildIdList($this->manager['manager_id'], $ids, $this->manager['level'], $maxLevel);
                 }
                 $field = $this->app->authNode->getAuthDataFieldByUrl(request()->baseUrl());
-                if ($field) $where[] = [$field,'in', $ids];
+                if ($field) $where[] = [$field, 'in', $ids];
             }
             $top_org_ids = $this->getTopOrgIds();
-            if ( (in_array($this->manager['ao_id'], $top_org_ids) || in_array($this->manager['pid'], $top_org_ids)) && $this->currentMenu['url'] == "/management/auth.auth_organization/getList") {
+            if ((in_array($this->manager['ao_id'], $top_org_ids) || in_array($this->manager['pid'], $top_org_ids)) && $this->currentMenu['url'] == "/management/auth.auth_organization/getList") {
                 if (isset($where['creator'])) unset($where['creator']);
-                if (!in_array($api,$this->commonApi)) {
+                if (!in_array($api, $this->commonApi)) {
                     $childsAoIds = $this->getChildsAoIds($this->manager['ao_id']);
                     $childsAoIds[] = $this->manager['ao_id'];
-                    if($where['ao_id']) unset($where['ao_id']);
+                    if ($where['ao_id']) unset($where['ao_id']);
                     $where[] =  ['ao_id', 'in', $childsAoIds];
                 }
             }
 
             //对超管来说，不需要区分组织
-            if($this->manager['ao_id'] == 0 || $this->manager['ao_id'] == 1){
-                if(isset($where['ao_id'])) unset($where['ao_id']);
+            if ($this->manager['ao_id'] == 0 || $this->manager['ao_id'] == 1) {
+                if (isset($where['ao_id'])) unset($where['ao_id']);
             }
             //添加一套逻辑， 如果登录账号为组织的管理员账号 此时查询内容为它的所以下级的数据集合
-            if($this->manager['ao_id'] > 18 && $this->manager['level'] == 3 && $this->currentMenu['url'] == "/management/sale.sale_orders/getList"){
+            if ($this->manager['ao_id'] > 18 && $this->manager['level'] == 3 && in_array($this->currentMenu['url'], [
+                "/management/sale.sale_orders/getList",
+                "/management/sale.sale_orders/export",
+            ], true)) {
                 $childs = $this->getChildsAoIds($this->manager['ao_id']);
-                if(isset($where['ao_id'])) {
+                if (isset($where['ao_id'])) {
                     unset($where['ao_id']);
                     $where[] = ['ao_id', 'in', $childs];
                 }
             }
         }
         return $where;
+    }
+
+    /**
+     * 账号级查询起始时间限制：当前接口命中配置时，自动追加 create_time > 起始时间。
+     * @param array $where
+     * @param string $prefix
+     * @return array
+     */
+    protected function applyManagerQueryStartTimeWhere($where = [], $prefix = "")
+    {
+        $startTime = intval($this->manager['query_start_time'] ?? 0);
+        if ($startTime <= 0) {
+            return $where;
+        }
+
+        $urls = $this->parseManagerQueryStartUrls($this->manager['query_start_urls'] ?? '');
+        if (!$urls) {
+            return $where;
+        }
+
+        $api = request()->baseUrl();
+        if (!in_array('*', $urls, true) && !in_array($api, $urls, true)) {
+            return $where;
+        }
+
+        $field = $prefix ? $prefix . 'create_time' : 'create_time';
+        $where[] = [$field, '>', $startTime];
+        return $where;
+    }
+
+    /**
+     * query_start_urls 支持 JSON 数组、逗号分隔、换行分隔。
+     * @param mixed $raw
+     * @return array
+     */
+    protected function parseManagerQueryStartUrls($raw)
+    {
+        if (is_array($raw)) {
+            $urls = $raw;
+        } else {
+            $raw = trim((string)$raw);
+            if ($raw === '') {
+                return [];
+            }
+            $json = json_decode($raw, true);
+            if (is_array($json)) {
+                $urls = $json;
+            } else {
+                $urls = preg_split('/[\r\n,]+/', $raw) ?: [];
+            }
+        }
+
+        $urls = array_map(function ($url) {
+            return trim((string)$url);
+        }, $urls);
+        $urls = array_filter($urls, function ($url) {
+            return $url !== '';
+        });
+        return array_values(array_unique($urls));
     }
 
     /**
@@ -182,7 +246,7 @@ class Common extends AuthController
      * @param $prefix 例如 so. / sod. / sor.
      * @return array
      */
-    public function formatAoIdWhereWithPrefix($where,$prefix)
+    public function formatAoIdWhereWithPrefix($where, $prefix)
     {
         if ($prefix === '' || strpos($prefix, '.') === false) {
             return $where;
@@ -263,7 +327,7 @@ class Common extends AuthController
     //获取当前登录账号的顶级组织
     public function getOriginAoId($ao_id){
         $top_ao_id = $this->getTopOrgIds();
-        while(!in_array($ao_id, $top_ao_id)) {
+        while (!in_array($ao_id, $top_ao_id)) {
             $pidArr = Db::name('auth_organization')
                 ->where(['ao_id' => $ao_id])
                 ->field('pid')->select()->toArray();
@@ -274,19 +338,19 @@ class Common extends AuthController
 
     public function getTopOrgIds(){
         $top_org_ids_arr = Db::name('auth_organization')
-                ->where(['pid' => 1])
-                ->field('ao_id')->select()->toArray();
+            ->where(['pid' => 1])
+            ->field('ao_id')->select()->toArray();
         return array_column($top_org_ids_arr, 'ao_id');
     }
 
     //获得某一个节点的所有下级节点
     public function getChildAuthNode($node_ids){
         $count = count(array_unique($node_ids));
-        $children = []; 
-        $childs = Db::name('auth_node')->where([['pid','in', $node_ids]])->field('node_id')->select()->toArray();
+        $children = [];
+        $childs = Db::name('auth_node')->where([['pid', 'in', $node_ids]])->field('node_id')->select()->toArray();
         $children = array_column($childs, 'node_id');
         $new_count = count(array_unique($children));
-        while($count == $new_count){
+        while ($count == $new_count) {
             $children = array_merge($children, $this->getChildAuthNode($children));
         }
         return $children;
@@ -299,20 +363,35 @@ class Common extends AuthController
      * @param array $where
      * @param string $prefix
      */
-    public function between($key,$value,&$where = [],$prefix = "")
+    public function between($key, $value, &$where = [], $prefix = "")
     {
-        $value = explode("~", $value);
-        if($value[0] == $value[1]) {
-            $value[0] = $value[0]. ' 00:00:00';
-            $value[1] = $value[1]. ' 23:59:59';
+        $parts = explode("~", $value);
+        if (count($parts) < 2) return;
+        $left = trim($parts[0]);
+        $right = trim($parts[1]);
+
+        // 如果传参是同一天（仅日期格式相同），扩展为整天范围
+        if ((
+                (validateDate($left, 'Y-m-d') && validateDate($right, 'Y-m-d')) ||
+                (validateDate($left, 'Y-m-d H:i:s') && validateDate($right, 'Y-m-d H:i:s'))
+            ) && $left === $right
+        ) {
+            $where[] = [$prefix . $key, 'between', [strtotime($left . ' 00:00:00'), strtotime($right . ' 23:59:59')]];
+            return;
         }
-        if ((validateDate($value[0], 'Y-m-d') && validateDate($value[1], 'Y-m-d')) ||
-            (validateDate($value[0], 'Y-m-d H:i:s') && validateDate($value[1], 'Y-m-d H:i:s'))) {
-            $where[] = [$prefix . $key, 'between', [strtotime($value[0]), strtotime($value[1])]];
+
+        if (validateDate($left, 'Y-m-d') && validateDate($right, 'Y-m-d')) {
+            $where[] = [$prefix . $key, 'between', [strtotime($left . ' 00:00:00'), strtotime($right . ' 23:59:59')]];
         }
-        if ((validateDate($value[0], 'H:i:s') && validateDate($value[1], 'H:i:s')) ||
-            (validateDate($value[0], 'H:i') && validateDate($value[1], 'H:i'))) {
-            $where[] = [$prefix . $key, 'between', [HourMinuteSec2int($value[0]), HourMinuteSec2int($value[1])]];
+
+        if (validateDate($left, 'Y-m-d H:i:s') && validateDate($right, 'Y-m-d H:i:s')) {
+            $where[] = [$prefix . $key, 'between', [strtotime($left), strtotime($right)]];
+        }
+
+        if ((validateDate($left, 'H:i:s') && validateDate($right, 'H:i:s')) ||
+            (validateDate($left, 'H:i') && validateDate($right, 'H:i'))
+        ) {
+            $where[] = [$prefix . $key, 'between', [HourMinuteSec2int($left), HourMinuteSec2int($right)]];
         }
     }
 
@@ -321,7 +400,7 @@ class Common extends AuthController
      * @param $where
      * @param string $prefix
      */
-    public function where2Str(&$where,$prefix = "")
+    public function where2Str(&$where, $prefix = "")
     {
         if (is_array($where)) {
             $strArr = [];
@@ -359,7 +438,7 @@ class Common extends AuthController
     public function getMineInfo()
     {
         if (isset($this->manager['password'])) unset($this->manager['password']);
-        return returnState(200,"查询成功",$this->manager);
+        return returnState(200, "查询成功", $this->manager);
     }
 
     /**
@@ -382,17 +461,17 @@ class Common extends AuthController
             validate(VCommon::class)->scene("file")->check(['file' => $file]);
             $extension = $file->getOriginalExtension();
             $path = "";
-            if (in_array($extension,['jpg','jpeg','gif','png'])) {
+            if (in_array($extension, ['jpg', 'jpeg', 'gif', 'png'])) {
                 validate(VCommon::class)->rule(['image' => 'fileSize:' . env("fileSystem.maxImageSize")])->scene("uploadImage")->check(['image' => $file]);
-//                $path = env("APP.host");
+                //                $path = env("APP.host");
             }
-            $diskName = env("fileSystem.diskName");// 上传本地
+            $diskName = env("fileSystem.diskName"); // 上传本地
             //            $diskName = "aliyun";    // 上传OSS服务器
             $saveName = Filesystem::disk($diskName)->putFile($folder, $file);
             $path .= Filesystem::getDiskConfig($diskName, 'url') . str_replace('\\', '/', $saveName);
             return returnState(200, '上传成功', $path);
         } catch (\Exception $e) {
-            actionException($e,1);
+            actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
     }
@@ -406,14 +485,14 @@ class Common extends AuthController
         if ($this->manager['pid'] > 0) {
             $whereArn[] = ['role_id', 'in', $this->app->authManagerRole->getAuthManagerRoleColumn(['manager_id' => $this->manager['manager_id'], 'is_del' => 2], 'role_id')];
             $whereArn['is_del'] = 2;
-            $where[] = ['node_id', 'in',$this->app->authRoleNode->getAuthRoleNodeColumn($whereArn,'node_id')];
+            $where[] = ['node_id', 'in', $this->app->authRoleNode->getAuthRoleNodeColumn($whereArn, 'node_id')];
         }
         $where['status'] = 1;
-        $data = $this->app->authNode->getAuthNodeList($where,0,'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status','sort asc');
-        
+        $data = $this->app->authNode->getAuthNodeList($where, 0, 'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status', 'sort asc');
+
         $data = obj2arr($data);
-        if ($data) return returnState(200,lang("query_success"),$data);
-        return returnState(100,lang("getSelfRoleNode.no_data"));
+        if ($data) return returnState(200, lang("query_success"), $data);
+        return returnState(100, lang("getSelfRoleNode.no_data"));
     }
 
     /**
@@ -424,10 +503,10 @@ class Common extends AuthController
     {
         $postData = input();
         $pwd = $postData['pwd'] ?? '';
-        if (!$pwd) return returnState(100,lang("VLogin.password_require"));
-        if (md5($pwd.config("app.salt")) !=  $this->manager['password'])
-            return returnState(100,lang("VLogin.pwd_incorrect"));
-        return returnState(200,lang("pass_the_verification"));
+        if (!$pwd) return returnState(100, lang("VLogin.password_require"));
+        if (md5($pwd . config("app.salt")) !=  $this->manager['password'])
+            return returnState(100, lang("VLogin.pwd_incorrect"));
+        return returnState(200, lang("pass_the_verification"));
     }
 
     /**
@@ -435,23 +514,23 @@ class Common extends AuthController
      * @return array
      */
     public function authMchCannel(){
-        if($this->manager['account'] == 'meichitu'){
+        if ($this->manager['account'] == 'meichitu') {
             // $ao = Db::name('auth_organization')->where(['ao_id'=>$this->manager['ao_id']])->field('organization_name')->find();
             $mc = Db::name('machine_channel')
-            ->alias('mc')
-            ->join('goods g','mc.g_id=g.g_id')
-            ->where('g.gc_name','like','%美驰图%')
-            ->field('mc_id')
-            ->select();
+                ->alias('mc')
+                ->join('goods g', 'mc.g_id=g.g_id')
+                ->where('g.gc_name', 'like', '%美驰图%')
+                ->field('mc_id')
+                ->select();
 
-            if(empty($mc)) return ['status'=>0,'data'=>true];
+            if (empty($mc)) return ['status' => 0, 'data' => true];
 
             $mcIds['mc_id'] = [];
-            foreach($mc as $item){
-                array_push($mcIds['mc_id'],$item['mc_id']);
+            foreach ($mc as $item) {
+                array_push($mcIds['mc_id'], $item['mc_id']);
             }
-            return ['status'=>1,'data'=>$mcIds];
+            return ['status' => 1, 'data' => $mcIds];
         }
-        return ['status'=>0,'data'=>true];
+        return ['status' => 0, 'data' => true];
     }
 }

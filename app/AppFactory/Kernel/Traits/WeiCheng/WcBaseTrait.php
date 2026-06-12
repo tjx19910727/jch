@@ -365,6 +365,8 @@ trait WcBaseTrait
                 'link_remark' => '',
                 'trip_date' => date('Y-m-d'),
                 'distributor_id' => $this->config['distributor_id'],
+                'machine_id' => $order['machine_id'] ?? '',
+                'dispensing_status' => $wc_order_no['real_channel_code'] == 'Z10' ? 2 : 1,
             ];
             if(!empty($buy_date_range)) $data['buy_date_range'] = json_encode($buy_date_range);
             actionLog($data, "子订单同步数据");
