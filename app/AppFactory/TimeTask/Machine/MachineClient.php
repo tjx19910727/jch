@@ -72,7 +72,7 @@ class MachineClient extends TimeTaskBase
                                     "online_time" => $onlineTime,
                                     "heart_time" => $onlineTime,
                                     "d_date" => strtotime(date("Y-m-d")),
-                                    "ao_id" => $machine['ao_id'],
+                                    "ao_id" => $value['ao_id'] ?? 0,
                                 ];
                                 $flag[] = $this->addMachineOnlineDetails($insert);
                                 actionLog($this->getLS(), '【SQL】生成以当天0点为上线时间的记录', 'countOnline');

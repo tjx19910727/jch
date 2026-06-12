@@ -297,8 +297,8 @@ trait MachinePreReplenishmentTrait
     public function replenishmentVideo()
     {
         $recordNo  = $this->message['record_no'] ?? '';
-        $machineId = $this->message['machine_id'] ?? '';
-        $videoUrl  = $this->message['replenishment_video'] ?? '';
+        $machineId = $this->machine['machine_id'] ?? '';
+        $videoUrl  = $this->message['path'] ?? '';
 
         actionLog($this->message, "补货视频保存地址记录执行");
 

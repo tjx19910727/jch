@@ -108,7 +108,7 @@ class VReport extends SupportValidate
         "pickUpDoorClose" => ["msgType"],//关闭出料箱门回执
         "updateSimSignal" => ["msgType", "rsrp", "sinr"],//物联卡信号上报
 
-        "replenishmentVideo" => ["msgType","record_no","machine_id","replenishment_video"],
+        "replenishmentVideo" => ["msgType","record_no","path"],
 
     ];
 }
