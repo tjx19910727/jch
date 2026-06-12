@@ -509,17 +509,21 @@ class WeiChengClient extends ManagementClient
 
             // 写入日志主表
             $log_id = $this->addWcMcSortLog($log_data);
+            actionLog(['log_id' => $log_id, 'log_data' => $log_data], '排序日志主表写入', 'wc_sort_log');
+
             // 写入日志明细，关联 log_id
             foreach ($log_details as &$detail) {
                 $detail['log_id'] = $log_id;
             }
             unset($detail);
-            $this->addWcMcSortLogDetailMore($log_details);
+            $detailResult = $this->addWcMcSortLogDetailMore($log_details);
+            actionLog(['log_id' => $log_id, 'detail_count' => count($log_details), 'result_type' => gettype($detailResult)], '排序日志明细写入', 'wc_sort_log');
 
             $this->commitTrans();
             return $this->rA('虚拟货道微程商品上架完成', ['log_id' => $log_id]);
         } catch (\Throwable $e) {
             $this->rollbackTrans();
+            actionLog(['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()], '排序日志写入异常', 'wc_sort_log');
             return $this->r(100, $e->getMessage());
         }
     }
