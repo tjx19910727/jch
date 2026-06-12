@@ -594,7 +594,11 @@ class WeiChengClient extends ManagementClient
      */
     public function getMcSortLogList($where, $pageNum = 0)
     {
-        return $this->rQ($this->getWcMcSortLogList($where, $pageNum, '*', 'id desc'));
+        $eachFn = function ($item) {
+            $item['create_time'] = $item['create_time'] ? date('Y-m-d H:i:s', $item['create_time']) : '';
+            return $item;
+        };
+        return $this->rQ($this->getWcMcSortLogList($where, $pageNum, '*', 'id desc', $eachFn));
     }
 
     /**
