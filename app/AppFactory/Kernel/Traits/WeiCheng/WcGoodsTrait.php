@@ -15,6 +15,8 @@ use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcUserAddressesModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineChannelModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcMachineGoodsModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcMcSortLogModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcMcSortLogDetailModel;
 
 trait WcGoodsTrait
 {
@@ -246,6 +248,38 @@ trait WcGoodsTrait
     public function delWcUserAddresses($where)
     {
         return WcUserAddressesModel::whereDel($where);
+    }
+
+    // ========== wc_mc_sort_log ==========
+
+    public function getWcMcSortLogList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return WcMcSortLogModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
+    }
+
+    public function getWcMcSortLogFind($where, $field = "*", $order = "")
+    {
+        return WcMcSortLogModel::getFind($where, $field, $order);
+    }
+
+    public function addWcMcSortLog($insert)
+    {
+        $data = WcMcSortLogModel::create($insert);
+        $pk = $data->getPk();
+        return $data->$pk;
+    }
+
+    // ========== wc_mc_sort_log_detail ==========
+
+    public function getWcMcSortLogDetailList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
+    {
+        return WcMcSortLogDetailModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
+    }
+
+    public function addWcMcSortLogDetailMore($insertAll)
+    {
+        $model = new WcMcSortLogDetailModel();
+        return $model->saveAll($insertAll);
     }
 
     public function test(){

@@ -426,6 +426,8 @@ class WeiChengClient extends ManagementClient
 
         $sort_map = array_flip($out_nos);
         $insert_all = [];
+        $log_details = [];
+        $combo_out_nos = [];
         foreach ($m_ids as $id) {
             $machine = $machine_maps[$id];
             foreach ($out_nos as $out_no) {
@@ -434,7 +436,14 @@ class WeiChengClient extends ManagementClient
                 $resourcesArray = $wc_goods['resourcesArray'] ? json_decode($wc_goods['resourcesArray'], true) : [];
                 $pic = '';
                 if (isset($resourcesArray[0]['url'])) $pic = ($wc_goods['resourceDomain'] ?? '') . $resourcesArray[0]['url'];
-                $insert_all[] = [
+
+                $is_combo = (!empty($wc_goods['type']) && $wc_goods['type'] == 11)
+                    || !empty($wc_goods['combination_goods']) ? 1 : 0;
+                if ($is_combo && !in_array($out_no, $combo_out_nos)) {
+                    $combo_out_nos[] = $out_no;
+                }
+
+                $row = [
                     'm_id' => $id,
                     'machine_id' => $machine['machine_id'],
                     'channel_code' => 'Z10',
@@ -450,9 +459,43 @@ class WeiChengClient extends ManagementClient
                     'gift_points' => $wc_goods['gift_points'] ?? 0,
                     'sort' => isset($sort_map[$out_no]) ? $sort_map[$out_no] + 1 : 0,
                 ];
+                $insert_all[] = $row;
+
+                $log_details[] = [
+                    'm_id'         => $row['m_id'],
+                    'machine_id'   => $row['machine_id'],
+                    'out_no'       => $row['out_no'],
+                    'g_id'         => $row['g_id'],
+                    'g_name'       => $row['g_name'],
+                    'gc_id'        => $row['gc_id'],
+                    'gc_name'      => $row['gc_name'],
+                    'pic'          => $row['pic'],
+                    'sku'          => $row['sku'],
+                    'bar_code'     => $row['bar_code'],
+                    'retail_price' => $row['retail_price'],
+                    'gift_points'  => $row['gift_points'],
+                    'sort'         => $row['sort'],
+                    'is_combo'     => $is_combo,
+                ];
             }
         }
         if (empty($insert_all)) return $this->r(100, '上架失败，找不到微程商品信息');
+
+        $machine_ids_arr = array_column($machine_maps, 'machine_id');
+        $operator = $this->manager ?? [];
+        $log_data = [
+            'm_ids'           => implode(',', $m_ids),
+            'machine_ids'     => implode(',', $machine_ids_arr),
+            'out_nos'         => implode(',', $out_nos),
+            'total_machines'  => count($m_ids),
+            'total_goods'     => count($out_nos),
+            'combo_count'     => count($combo_out_nos),
+            'combo_out_nos'   => json_encode($combo_out_nos, JSON_UNESCAPED_UNICODE),
+            'operator_id'     => $operator['manager_id'] ?? 0,
+            'operator_name'   => $operator['nickname'] ?? '',
+            'create_time'     => time(),
+            'update_time'     => time(),
+        ];
 
         $this->startTrans();
         try {
@@ -463,8 +506,18 @@ class WeiChengClient extends ManagementClient
                 $this->rollbackTrans();
                 return $this->rA('上架失败');
             }
+
+            // 写入日志主表
+            $log_id = $this->addWcMcSortLog($log_data);
+            // 写入日志明细，关联 log_id
+            foreach ($log_details as &$detail) {
+                $detail['log_id'] = $log_id;
+            }
+            unset($detail);
+            $this->addWcMcSortLogDetailMore($log_details);
+
             $this->commitTrans();
-            return $this->rA('虚拟货道微程商品上架完成');
+            return $this->rA('虚拟货道微程商品上架完成', ['log_id' => $log_id]);
         } catch (\Throwable $e) {
             $this->rollbackTrans();
             return $this->r(100, $e->getMessage());
@@ -530,6 +583,100 @@ class WeiChengClient extends ManagementClient
             }
         }
         return  $this->rQ($list);
+    }
+
+    /**
+     * 获取虚拟货道排序日志列表
+     */
+    public function getMcSortLogList($where, $pageNum = 0)
+    {
+        return $this->rQ($this->getWcMcSortLogList($where, $pageNum, '*', 'id desc'));
+    }
+
+    /**
+     * 获取虚拟货道排序日志详情
+     * 返回4个数据结构：设备列表、单品数据、组合商品数据、排序好的数据列表
+     */
+    public function getMcSortLogDetail($log_id)
+    {
+        $log = $this->getWcMcSortLogFind(['id' => $log_id]);
+        if (!$log) return $this->r(100, '日志记录不存在');
+        $log = $log->toArray();
+
+        // 所有明细（已按sort排序）
+        $details = $this->getWcMcSortLogDetailList(['log_id' => $log_id], 0, '*', 'sort asc')->toArray();
+
+        // 1. 设备列表（去重），用于设备下拉框选中
+        $machine_list = [];
+        $seen_m_ids = [];
+        foreach ($details as $row) {
+            $mid = $row['m_id'];
+            if (in_array($mid, $seen_m_ids)) continue;
+            $seen_m_ids[] = $mid;
+            $machine = $this->getMachineFind(['m_id' => $mid]);
+            $machine_list[] = [
+                'm_id'       => $mid,
+                'machine_id' => $row['machine_id'],
+                'machine_name'=> $machine ? $machine['machine_name'] : '',
+            ];
+        }
+
+        // 2 & 3. 按 is_combo 拆分：单品 + 组合商品
+        $out_nos_arr = $log['out_nos'] ? explode(',', $log['out_nos']) : [];
+        $wc_goods_all = [];
+        if (!empty($out_nos_arr)) {
+            $wc_goods_all = $this->getWcGoodsList([['no', 'in', $out_nos_arr]])->toArray();
+        }
+        // 构建 out_no => goods 映射
+        $goods_map = [];
+        foreach ($wc_goods_all as $g) {
+            $no = $g['no'] ?? '';
+            if ($no !== '' && !isset($goods_map[$no])) {
+                $goods_map[$no] = $g;
+            }
+        }
+
+        $single_goods = [];  // 单品
+        $combo_goods = [];   // 组合商品
+        $seen_out_nos = [];
+        foreach ($details as $row) {
+            $out_no = $row['out_no'];
+            if (in_array($out_no, $seen_out_nos)) continue;
+            $seen_out_nos[] = $out_no;
+
+            $goods_info = $goods_map[$out_no] ?? [];
+            $resourcesArray = isset($goods_info['resourcesArray']) ? (is_string($goods_info['resourcesArray']) ? json_decode($goods_info['resourcesArray'], true) : $goods_info['resourcesArray']) : [];
+            $pic = '';
+            if (!empty($resourcesArray[0]['url'])) {
+                $pic = ($goods_info['resourceDomain'] ?? '') . $resourcesArray[0]['url'];
+            }
+
+            $item = [
+                'out_no'       => $out_no,
+                'g_name'       => $row['g_name'],
+                'gc_name'      => $row['gc_name'],
+                'pic'          => $pic ?: $row['pic'],
+                'retail_price' => $row['retail_price'],
+                'sku'          => $row['sku'],
+            ];
+
+            if ($row['is_combo'] == 1) {
+                $combo_goods[] = $item;
+            } else {
+                $single_goods[] = $item;
+            }
+        }
+
+        // 4. 排序好的数据列表（明细原样返回，前端可直接用于排序展示）
+        $sorted_list = $details;
+
+        return $this->rQ([
+            'log'          => $log,
+            'machine_list' => $machine_list,
+            'single_goods' => $single_goods,
+            'combo_goods'  => $combo_goods,
+            'sorted_list'  => $sorted_list,
+        ]);
     }
 
     public function syncUserRights($token)
