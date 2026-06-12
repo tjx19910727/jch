@@ -62,7 +62,7 @@ check(($tokenHeader['in'] ?? '') === 'header', 'TokenHeader 必须位于 Header'
 check(($tokenHeader['required'] ?? false) === true, 'TokenHeader 必须为必传参数', $failures);
 check(($tokenHeader['example'] ?? '') === '{{token}}', 'TokenHeader 参数值必须为 {{token}}', $failures);
 check(count($paths) === 32, '新分账接口数量应为 32', $failures);
-check(($json['info']['version'] ?? '') === '2.1.0', '重新生成的 OpenAPI 版本必须为 2.1.0', $failures);
+check(($json['info']['version'] ?? '') === '2.1.1', '重新生成的 OpenAPI 版本必须为 2.1.1', $failures);
 check(($json['x-generated-at'] ?? '') === '2026-06-12', 'OpenAPI 必须记录本次重新生成日期', $failures);
 check(count($tagNames) === 4, '新分账接口应只保留4个实际模块标签', $failures);
 check(!in_array('新分账-收款策略配置', $tagNames, true), '不得保留已删除的收款策略配置标签', $failures);

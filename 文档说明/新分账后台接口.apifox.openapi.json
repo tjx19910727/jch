@@ -3,7 +3,7 @@
     "info": {
         "title": "嘉潮汇管理后台 - 新分账接口",
         "description": "新分账后台配置、分账订单查询与测试环境模拟支付成功接口。revenue_pay_channel 仅控制哪些订单支付类型允许触发新分账；普通分账、设备出租、设备分账和设备商品分账均由 revenue_rule/revenue_rule_item 配置；每条规则独立配置即时或 T+N 结算周期，revenue_order 保存生成时的结算快照。导入 Apifox 后，请在环境中配置 baseUrl 和 token。所有接口均为 POST，并显式携带必传 Header token: {{token}}。",
-        "version": "2.1.0"
+        "version": "2.1.1"
     },
     "x-generated-at": "2026-06-12",
     "x-generated-from": [
@@ -596,7 +596,35 @@
                     }
                 ],
                 "requestBody": {
-                    "$ref": "#/components/requestBodies/RevenueRuleBindMachineRequest"
+                    "required": true,
+                    "description": "批量绑定参数。新接口必须传 m_ids 数组；m_id 仅用于兼容旧版单设备调用。",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RevenueRuleBindMachineRequest"
+                            },
+                            "example": {
+                                "rr_id": 2,
+                                "m_ids": [
+                                    100,
+                                    101
+                                ],
+                                "sort": 1,
+                                "status": 1
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RevenueRuleBindMachineRequest"
+                            },
+                            "encoding": {
+                                "m_ids": {
+                                    "style": "form",
+                                    "explode": true
+                                }
+                            }
+                        }
+                    }
                 },
                 "responses": {
                     "200": {
@@ -2811,6 +2839,15 @@
                 "rr_id",
                 "m_ids"
                 ],
+                "example": {
+                    "rr_id": 2,
+                    "m_ids": [
+                        100,
+                        101
+                    ],
+                    "sort": 1,
+                    "status": 1
+                },
                 "properties": {
                     "rr_id": {
                         "type": "integer",
