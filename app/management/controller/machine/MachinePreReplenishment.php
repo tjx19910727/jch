@@ -59,11 +59,16 @@ class MachinePreReplenishment extends Common
         $status = input('status', 0);
         $order = $this->app->machinePreReplenishment->getOrderInfo(['id' => $order_id], 'record_no');
         if (!$order) return returnState(100, '未找到补货记录');
-
         $where = ['order_id' => $order_id, 'machine_id' => $machine_id];
         $video = $this->app->machinePreReplenishment->getReplenishmentDetailVideo($where);
 
         if (!$video || empty($video['replenishment_video']) || $status == 1) {
+            //加上频率限制，避免重复下发，300s内同一订单同一设备只能下发一次
+            $cacheKey = "replenishment_video_{$order_id}_{$machine_id}";
+            if (cache($cacheKey)) {
+                return returnState(200, '5分钟内，同一订单同一设备只能下发一次');
+            }
+            cache($cacheKey, true, 300);
             $otherData = ['record_no' => $order['record_no']];
             $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], 'replenishmentVideo', $otherData);
             return is_object($result) ? returnState(200, '正在从机器端获取补货视频，请稍做等待后下载', $result) :
