@@ -4187,7 +4187,7 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail('参数错误');
         }
 
-        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no');
+        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no,creator_id');
         if (!$order) {
             return $this->r(100, '单据不存在');
         }
@@ -4242,6 +4242,11 @@ class ApiClient extends ReceiveBaseClient
 
                 $mc = $this->getMachineChannelFind(['mc_id' => $mcId]);
                 if ($mc) {
+                    $newStock = ($mc['stock'] ?? 0) + $quantity;
+                    if ($newStock > ($mc['capacity'] ?? 0)) {
+                        $this->rollbackTrans();
+                        return $this->rFail('货道 mc_id ' . $mcId . ' 补货后库存超过容量限制(' . $mc['capacity'] . ')');
+                    }
                     $this->setMachineChannelInc(['mc_id' => $mc['mc_id']], 'stock', $quantity);
                     $this->addGoodsChange([
                         'm_id'         => $this->machine['m_id'],
@@ -4263,6 +4268,29 @@ class ApiClient extends ReceiveBaseClient
                         'desc'         => '预补货上架',
                         'position'     => 1,
                         'type'         => 2,
+                    ]);
+                    $this->addMachineChannelReplenishment([
+                        'm_id'         => $this->machine['m_id'],
+                        'machine_id'   => $machineId,
+                        'machine_name' => $this->machine['machine_name'] ?? '',
+                        'mc_id'        => $mc['mc_id'],
+                        'channel_code' => $mc['channel_code'],
+                        'mg_id'        => $mc['mg_id'] ?? 0,
+                        'g_id'         => $mc['g_id'],
+                        'g_name'       => $mc['g_name'],
+                        'gc_id'        => $mc['gc_id'],
+                        'gc_name'      => $mc['gc_name'],
+                        'pic'          => $mc['pic'],
+                        'sku'          => $detail['sku'],
+                        'bar_code'     => $mc['bar_code'] ?? '',
+                        'batch_number' => $mc['batch_number'] ?? '',
+                        'before'       => $mc['stock'] ?? 0,
+                        'quantity'     => $quantity,
+                        'after'        => $newStock,
+                        'rep_type'     => 1,//上架补货
+                        'creator'      => $order['creator_id'] ?? 0,
+                        'ao_id'        => $this->machine['ao_id'] ?? 0,
+                        'create_time'  => time(),
                     ]);
                 }
 
