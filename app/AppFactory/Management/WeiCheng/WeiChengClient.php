@@ -642,6 +642,7 @@ class WeiChengClient extends ManagementClient
 
         $single_goods = [];  // 单品
         $combo_goods = [];   // 组合商品
+        $sorted_list = [];   // 按out_no去重排序列表
         $seen_out_nos = [];
         foreach ($details as $row) {
             $out_no = $row['out_no'];
@@ -669,10 +670,8 @@ class WeiChengClient extends ManagementClient
             } else {
                 $single_goods[] = $item;
             }
+            $sorted_list[] = $row;
         }
-
-        // 4. 排序好的数据列表（明细原样返回，前端可直接用于排序展示）
-        $sorted_list = $details;
 
         return $this->rQ([
             'log'          => $log,
