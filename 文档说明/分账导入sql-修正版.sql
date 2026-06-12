@@ -27,20 +27,20 @@ INSERT INTO revenue_pay_channel
 VALUES(1, 1, 1, '微信支付', 1, 1, 1780975448, 1780975594);
 
 INSERT INTO revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(5, '普通剩余金额全额分账', 1, 1, 1, 1, 1, 1, 0, 1, 1, 1780984800, 1780984800);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(5, '普通剩余金额全额分账', 1, 1, 1, 1, 1, 0, 1, 1, 1780984800, 1780984800);
 
 INSERT INTO revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(6, '设备出租方全额分账', 2, 1, 1, 1, 1, 1, 0, 1, 1, 1780984852, 1780984852);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(6, '设备出租方全额分账', 2, 1, 1, 1, 1, 0, 1, 1, 1780984852, 1780984852);
 
 INSERT INTO revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(7, '设备固定比例分账-B20-C30', 3, 1, 1, 1, 1, 1, 0, 1, 1, 1780984869, 1780984869);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(7, '设备固定比例分账-B20-C30', 3, 1, 1, 1, 1, 0, 1, 1, 1780984869, 1780984869);
 
 INSERT INTO revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(8, '设备月营业额阶梯分账-A', 3, 1, 1, 1, 1, 1, 0, 1, 1, 1780984883, 1780984883);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(8, '设备月营业额阶梯分账-A', 3, 1, 1, 1, 1, 0, 1, 1, 1780984883, 1780984883);
 
 INSERT INTO revenue_rule_item
 (rri_id, rr_id, receiver_ao_id, ra_id, manager_id, calc_type, calc_value, sort, status, create_time, update_time)

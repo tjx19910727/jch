@@ -38,32 +38,32 @@ VALUES(6, 4, 4, '京东收银', 1, 1, 1781089614, 1781089614);
 
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(1, '设备固定比例分账-更新', 2, 1, 1, 1, 1, 1, 0, 1, 0, 1780923909, 1781074946);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(1, '设备固定比例分账-更新', 2, 1, 1, 1, 1, 0, 1, 0, 1780923909, 1781074946);
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(2, 'REVNEW_JCHM_H2D_0064_设备固定比例_B20_C30', 3, 1, 1, 1, 1, 1, 0, 2, 0, 1780923909, 1780923909);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(2, 'REVNEW_JCHM_H2D_0064_设备固定比例_B20_C30', 3, 1, 1, 1, 1, 0, 2, 0, 1780923909, 1780923909);
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(3, 'REVNEW_JCHM_H2D_0064_设备阶梯_A_B', 3, 1, 1, 1, 1, 1, 0, 2, 0, 1780923909, 1780923909);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(3, 'REVNEW_JCHM_H2D_0064_设备阶梯_A_B', 3, 1, 1, 1, 1, 0, 2, 0, 1780923909, 1780923909);
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(4, '普通订单分账', 1, 1, 1, 1, 1, 1, 0, 2, 1, 1780978464, 1780978464);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(4, '普通订单分账', 1, 1, 1, 1, 1, 0, 2, 1, 1780978464, 1780978464);
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(5, '普通订单分账', 1, 1, 1, 1, 1, 1, 0, 2, 1, 1780984793, 1780984793);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(5, '普通订单分账', 1, 1, 1, 1, 1, 0, 2, 1, 1780984793, 1780984793);
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(6, '设备出租方全额分账', 2, 1, 1, 1, 1, 1, 0, 2, 1, 1780984852, 1780984852);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(6, '设备出租方全额分账', 2, 1, 1, 1, 1, 0, 2, 1, 1780984852, 1780984852);
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(7, '设备固定比例分账', 3, 1, 1, 1, 1, 1, 0, 2, 1, 1780984869, 1780984869);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(7, '设备固定比例分账', 3, 1, 1, 1, 1, 0, 2, 1, 1780984869, 1780984869);
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(8, '设备月营业额阶梯分账', 3, 1, 1, 1, 1, 1, 0, 2, 1, 1780984883, 1780984883);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(8, '设备月营业额阶梯分账', 3, 1, 1, 1, 1, 0, 2, 1, 1780984883, 1780984883);
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(9, '设备月营业额阶梯分账', 3, 1, 1, 1, 1, 1, 0, 2, 1, 1781074907, 1781074907);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(9, '设备月营业额阶梯分账', 3, 1, 1, 1, 1, 0, 2, 1, 1781074907, 1781074907);
 
 
 
@@ -85,32 +85,32 @@ VALUES(3, 3, 8000.00, NULL, 30.000, 3, 1, 1780991511, 1780991511);
 
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900001, 'JCHM-H2D-0064_普通全额即时分账', 1, 1, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900001, 'JCHM-H2D-0064_普通全额即时分账', 1, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900002, 'JCHM-H2D-0064_普通比例A40_B60_T1', 1, 1, 1, 1, 1, 2, 1, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900002, 'JCHM-H2D-0064_普通比例A40_B60_T1', 1, 1, 1, 1, 2, 1, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900003, 'JCHM-H2D-0064_设备出租组织35全额分账', 2, 1, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900003, 'JCHM-H2D-0064_设备出租组织35全额分账', 2, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900004, 'JCHM-H2D-0064_设备固定比例A20_B30', 3, 1, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900004, 'JCHM-H2D-0064_设备固定比例A20_B30', 3, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900005, 'JCHM-H2D-0064_设备月营业额阶梯', 3, 1, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900005, 'JCHM-H2D-0064_设备月营业额阶梯', 3, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900006, 'JCHM-H2D-0064_设备商品比例10', 4, 1, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900006, 'JCHM-H2D-0064_设备商品比例10', 4, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900007, 'JCHM-H2D-0064_设备商品每件3元_T1', 4, 1, 1, 1, 1, 2, 1, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900007, 'JCHM-H2D-0064_设备商品每件3元_T1', 4, 1, 1, 1, 2, 1, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule_item
 (rri_id, rr_id, g_id, receiver_ao_id, ra_id, manager_id, calc_type, calc_value, sort, status, create_time, update_time)
@@ -189,32 +189,32 @@ INSERT INTO kiosk.revenue_rule_machine
 VALUES(900007, 900007, 127, 1, 2, 2, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900008, 'JCHM-H2D-0064_设备出租固定金额5元', 2, 1, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900008, 'JCHM-H2D-0064_设备出租固定金额5元', 2, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900009, 'JCHM-H2D-0064_设备出租全额', 2, 1, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900009, 'JCHM-H2D-0064_设备出租全额', 2, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900010, 'JCHM-H2D-0064_设备固定金额5元', 3, 1, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900010, 'JCHM-H2D-0064_设备固定金额5元', 3, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900011, 'JCHM-H2D-0064_设备全额分账', 3, 1, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900011, 'JCHM-H2D-0064_设备全额分账', 3, 1, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900012, 'JCHM-H2D-0064_设备分账扣除出租基数', 3, 1, 2, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900012, 'JCHM-H2D-0064_设备分账扣除出租基数', 3, 2, 1, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900013, 'JCHM-H2D-0064_设备阶梯支付成功金额口径', 3, 1, 1, 2, 1, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900013, 'JCHM-H2D-0064_设备阶梯支付成功金额口径', 3, 1, 2, 1, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule
-(rr_id, rule_name, rule_mode, payer_ao_id, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
-VALUES(900014, 'JCHM-H2D-0064_设备跨阶梯拆分', 3, 1, 1, 1, 2, 1, 0, 1, 1, 1781136000, 1781136000);
+(rr_id, rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+VALUES(900014, 'JCHM-H2D-0064_设备跨阶梯拆分', 3, 1, 1, 2, 1, 0, 1, 1, 1781136000, 1781136000);
 
 INSERT INTO kiosk.revenue_rule_item
 (rri_id, rr_id, g_id, receiver_ao_id, ra_id, manager_id, calc_type, calc_value, sort, status, create_time, update_time)

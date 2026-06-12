@@ -13,9 +13,11 @@ class RevenueRuleClient extends ManagementClient
     use RevenueRuleTrait;
     use RevenueAccountTrait;
     use MachineTrait;
+    use RevenueOrganizationNameTrait;
 
     public function addData($postData)
     {
+        unset($postData['payer_ao_id']);
         $check = $this->checkRuleData($postData);
         if ($check !== true) return $check;
         if (!isset($postData['settlement_type'])) $postData['settlement_type'] = 1;
@@ -26,6 +28,7 @@ class RevenueRuleClient extends ManagementClient
 
     public function updateData($postData)
     {
+        unset($postData['payer_ao_id']);
         if (empty($postData['rr_id'])) return $this->rFail("分账策略ID不能为空");
         $check = $this->checkRuleData($postData, true);
         if ($check !== true) return $check;
@@ -33,7 +36,6 @@ class RevenueRuleClient extends ManagementClient
         $update = array_intersect_key($postData, array_flip([
             'rule_name',
             'rule_mode',
-            'payer_ao_id',
             'base_type',
             'turnover_type',
             'tier_calc_mode',
@@ -51,12 +53,16 @@ class RevenueRuleClient extends ManagementClient
 
     public function getList($where= [], $pageNum = 0, $field = "*", $order = "rr_id desc",$rQ = 1)
     {
-        return $this->rQ($this->getRevenueRuleList($where, $pageNum, $field, $order));
+        return $this->rQ($this->appendRevenueOrganizationNames(
+            $this->getRevenueRuleList($where, $pageNum, $field, $order)
+        ));
     }
 
     public function getFind($where = [], $field = "*", $order = "rr_id desc",$rQ = 1)
     {
-        return $this->rQ($this->getRevenueRuleFind($where, $field, $order));
+        return $this->rQ($this->appendRevenueOrganizationNames(
+            $this->getRevenueRuleFind($where, $field, $order)
+        ));
     }
 
     public function addItem($postData)
@@ -84,7 +90,9 @@ class RevenueRuleClient extends ManagementClient
 
     public function getItemList($where, $pageNum = 0, $field = "*", $order = "sort asc,rri_id asc")
     {
-        return $this->rQ($this->getRevenueRuleItemList($where, $pageNum, $field, $order));
+        return $this->rQ($this->appendRevenueOrganizationNames(
+            $this->getRevenueRuleItemList($where, $pageNum, $field, $order)
+        ));
     }
 
     public function delItem($rriId)
@@ -153,7 +161,9 @@ class RevenueRuleClient extends ManagementClient
 
     public function getMachineList($where, $pageNum = 0, $field = "*", $order = "rrm_id desc")
     {
-        return $this->rQ($this->getRevenueRuleMachineList($where, $pageNum, $field, $order));
+        return $this->rQ($this->appendRevenueOrganizationNames(
+            $this->getRevenueRuleMachineList($where, $pageNum, $field, $order)
+        ));
     }
 
     public function unbindMachine($rrmId)

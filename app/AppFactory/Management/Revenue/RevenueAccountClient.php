@@ -5,11 +5,13 @@ namespace app\AppFactory\Management\Revenue;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 use app\AppFactory\Kernel\Traits\Revenue\RevenueAccountTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Db;
 
 class RevenueAccountClient extends ManagementClient
 {
     use RevenueAccountTrait;
     use AuthManagerTrait;
+    use RevenueOrganizationNameTrait;
 
     public function addData($postData = [])
     {
@@ -31,14 +33,18 @@ class RevenueAccountClient extends ManagementClient
 
     public function getList($where = [], $pageNum = 0, $field = "*", $order = "ra_id desc", $rQ = 1)
     {
-        $data = $this->getRevenueAccountList($where, $pageNum, $field, $order);
+        $data = $this->appendRevenueOrganizationNames(
+            $this->getRevenueAccountList($where, $pageNum, $field, $order)
+        );
         if ($rQ) return $this->rQ($data);
         return $data;
     }
 
     public function getFind($where = [], $field = "*", $order = "ra_id desc", $rQ = 1)
     {
-        $data = $this->getRevenueAccountFind($where, $field, $order);
+        $data = $this->appendRevenueOrganizationNames(
+            $this->getRevenueAccountFind($where, $field, $order)
+        );
         if ($rQ) return $this->rQ($data);
         return $data;
     }
@@ -56,22 +62,44 @@ class RevenueAccountClient extends ManagementClient
 
     protected function checkAccountData($data, $isUpdate = false)
     {
-        if (!$isUpdate || isset($data['ao_id'])) {
-            if (empty($data['ao_id'])) return $this->rFail("所属组织不能为空");
+        $current = [];
+        if ($isUpdate) {
+            $current = $this->getRevenueAccountFind(
+                ['ra_id' => intval($data['ra_id'] ?? 0)],
+                'ra_id,ao_id,manager_id,account_type'
+            );
+            if (!$current) return $this->rFail("分账账户不存在");
+            if (!is_array($current)) $current = $current->toArray();
         }
-        if (!$isUpdate || isset($data['manager_id'])) {
-            if (empty($data['manager_id'])) return $this->rFail("账户管理人不能为空");
-            $manager = $this->getAuthManagerFind(['manager_id' => $data['manager_id']], 'manager_id,ao_id,status');
-            if (!$manager) return $this->rFail("账户管理人不存在");
-            if (isset($data['ao_id']) && intval($manager['ao_id']) !== intval($data['ao_id'])) {
-                return $this->rFail("账户管理人所属组织与分账账户组织不一致");
-            }
-            if (isset($manager['status']) && intval($manager['status']) !== 1) {
-                return $this->rFail("账户管理人未启用");
-            }
+        $accountData = array_merge($current, $data);
+        if (empty($accountData['ao_id'])) return $this->rFail("所属组织不能为空");
+        if (empty($accountData['manager_id'])) return $this->rFail("账户管理人不能为空");
+
+        $manager = $this->getAuthManagerFind(
+            ['manager_id' => $accountData['manager_id']],
+            'manager_id,ao_id,status'
+        );
+        if (!$manager) return $this->rFail("账户管理人不存在");
+        if (intval($manager['ao_id']) !== intval($accountData['ao_id'])) {
+            return $this->rFail("账户管理人所属组织与分账账户组织不一致");
         }
-        if (!$isUpdate || isset($data['account_type'])) {
-            if (empty($data['account_type'])) return $this->rFail("账户类型不能为空");
+        $managerChanged = !$isUpdate
+            || intval($accountData['manager_id']) !== intval($current['manager_id'] ?? 0);
+        $enablingAccount = isset($data['status']) && intval($data['status']) === 1;
+        if (($managerChanged || $enablingAccount)
+            && isset($manager['status'])
+            && intval($manager['status']) !== 1) {
+            return $this->rFail("账户管理人未启用");
+        }
+        if (empty($accountData['account_type'])) return $this->rFail("账户类型不能为空");
+
+        if ($isUpdate) {
+            $ownershipChanged = intval($accountData['ao_id']) !== intval($current['ao_id'])
+                || intval($accountData['manager_id']) !== intval($current['manager_id']);
+            if ($ownershipChanged
+                && Db::name('revenue_rule_item')->where(['ra_id' => intval($current['ra_id'])])->count()) {
+                return $this->rFail("分账账户已被规则明细引用，不允许修改所属组织或账户管理人");
+            }
         }
         return true;
     }

@@ -5,6 +5,14 @@
         "description": "新分账后台配置、分账订单查询与测试环境模拟支付成功接口。revenue_pay_channel 仅控制哪些订单支付类型允许触发新分账；普通分账、设备出租、设备分账和设备商品分账均由 revenue_rule/revenue_rule_item 配置；每条规则独立配置即时或 T+N 结算周期，revenue_order 保存生成时的结算快照。导入 Apifox 后，请在环境中配置 baseUrl 和 token。所有接口均为 POST，并显式携带必传 Header token: {{token}}。",
         "version": "1.5.0"
     },
+    "x-response-organization-fields": {
+        "description": "新分账后台查询接口返回 revenue_ 表数据时，只要记录中存在组织ID，就同步返回组织名称，供页面直接展示。列表、单条详情、嵌套 revenue_orders 和模拟支付结果均遵循此约定。",
+        "fields": {
+            "ao_id": "organization_name",
+            "payer_ao_id": "payer_organization_name",
+            "receiver_ao_id": "receiver_organization_name"
+        }
+    },
     "servers": [
         {
             "url": "{{baseUrl}}",
@@ -955,7 +963,7 @@
                                 }
                             },
                             "更换管理人": {
-                                "summary": "更换为同组织管理人",
+                                "summary": "未被规则引用时更换为同组织管理人",
                                 "value": {
                                     "ra_id": 1,
                                     "ao_id": 1,
@@ -1192,13 +1200,12 @@
                                     "status": 1
                                 }
                             },
-                            "按收款组织": {
-                                "summary": "查询A组织策略",
+                            "停用规则": {
+                                "summary": "查询停用的备用规则",
                                 "value": {
                                     "page": 1,
                                     "pageNum": 20,
-                                    "payer_ao_id": 1,
-                                    "status": 1
+                                    "status": 2
                                 }
                             }
                         }
@@ -1252,7 +1259,6 @@
                                 "value": {
                                     "rule_name": "普通订单分账",
                                     "rule_mode": 1,
-                                    "payer_ao_id": 1,
                                     "status": 1
                                 }
                             },
@@ -1261,7 +1267,6 @@
                                 "value": {
                                     "rule_name": "设备出租方全额分账",
                                     "rule_mode": 2,
-                                    "payer_ao_id": 1,
                                     "status": 1
                                 }
                             },
@@ -1270,7 +1275,6 @@
                                 "value": {
                                     "rule_name": "设备固定比例分账",
                                     "rule_mode": 3,
-                                    "payer_ao_id": 1,
                                     "base_type": 1,
                                     "status": 1
                                 }
@@ -1280,7 +1284,6 @@
                                 "value": {
                                     "rule_name": "设备月营业额阶梯分账",
                                     "rule_mode": 3,
-                                    "payer_ao_id": 1,
                                     "base_type": 1,
                                     "turnover_type": 1,
                                     "tier_calc_mode": 1,
@@ -2124,11 +2127,11 @@
                     },
                     "ao_id": {
                         "type": "integer",
-                        "description": "所属组织ID，非必填"
+                        "description": "所属组织ID，非必填；账户未被规则明细引用时才允许修改，且必须与最终账户管理人所属组织一致"
                     },
                     "manager_id": {
                         "type": "integer",
-                        "description": "账户管理人ID，非必填；提交时必须存在、启用且属于 ao_id"
+                        "description": "账户管理人ID，非必填；必须存在、启用且属于账户最终所属组织，账户被规则明细引用后不允许修改"
                     },
                     "account_name": {
                         "type": "string",
@@ -2313,10 +2316,6 @@
                                 "type": "integer",
                                 "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账，4设备商品分账"
                             },
-                            "payer_ao_id": {
-                                "type": "integer",
-                                "description": "收款/代收组织ID，非必填"
-                            },
                             "status": {
                                 "type": "integer",
                                 "description": "状态，非必填：1启用，2停用"
@@ -2358,10 +2357,6 @@
                             3,
                             4
                         ]
-                    },
-                    "payer_ao_id": {
-                        "type": "integer",
-                        "description": "收款/代收组织ID，非必填"
                     },
                     "base_type": {
                         "type": "integer",
@@ -2427,10 +2422,6 @@
                             3,
                             4
                         ]
-                    },
-                    "payer_ao_id": {
-                        "type": "integer",
-                        "description": "收款/代收组织ID，非必填"
                     },
                     "base_type": {
                         "type": "integer",
@@ -2968,6 +2959,12 @@
                     }
                 }
             }
+        }
+    },
+    "x-response-pay-type-fields": {
+        "description": "新分账后台接口返回 pay_type 时，同时返回 pay_type_desc；说明值来自 config/payment.php 的 pay_type_map，未知类型返回 支付类型#值。",
+        "fields": {
+            "pay_type": "pay_type_desc"
         }
     },
     "x-scenario-guides": [

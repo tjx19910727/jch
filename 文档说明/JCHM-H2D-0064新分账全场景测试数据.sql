@@ -335,12 +335,10 @@ ON DUPLICATE KEY UPDATE
   update_time = VALUES(update_time);
 
 INSERT INTO revenue_rule
-  (rule_name, rule_mode, payer_ao_id, base_type, turnover_type,
-   tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
+  (rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, settlement_type, settlement_days, status, creator, create_time, update_time)
 SELECT
   CONCAT(@test_prefix, '_普通剩余金额_A100'),
   1,
-  @payer_ao_id,
   1,
   1,
   1,
@@ -379,12 +377,10 @@ ON DUPLICATE KEY UPDATE status = 1, update_time = VALUES(update_time);
 -- 5. 场景二：设备出租策略，B组织获得其商品金额100%
 -- ============================================================
 INSERT INTO revenue_rule
-  (rule_name, rule_mode, payer_ao_id, base_type, turnover_type,
-   tier_calc_mode, status, creator, create_time, update_time)
+  (rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, status, creator, create_time, update_time)
 SELECT
   CONCAT(@test_prefix, '_设备出租_B100'),
   2,
-  @payer_ao_id,
   1,
   1,
   1,
@@ -443,12 +439,10 @@ ON DUPLICATE KEY UPDATE
 -- 6. 场景三：设备固定比例，B 20%，C 30%
 -- ============================================================
 INSERT INTO revenue_rule
-  (rule_name, rule_mode, payer_ao_id, base_type, turnover_type,
-   tier_calc_mode, status, creator, create_time, update_time)
+  (rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, status, creator, create_time, update_time)
 SELECT
   CONCAT(@test_prefix, '_设备固定比例_B20_C30'),
   3,
-  @payer_ao_id,
   1,
   1,
   1,
@@ -501,12 +495,10 @@ ON DUPLICATE KEY UPDATE
 -- B：[0,8000) 25%，[8000,+∞) 30%
 -- ============================================================
 INSERT INTO revenue_rule
-  (rule_name, rule_mode, payer_ao_id, base_type, turnover_type,
-   tier_calc_mode, status, creator, create_time, update_time)
+  (rule_name, rule_mode, base_type, turnover_type, tier_calc_mode, status, creator, create_time, update_time)
 SELECT
   CONCAT(@test_prefix, '_设备阶梯_A_B'),
   3,
-  @payer_ao_id,
   1,
   1,
   1,

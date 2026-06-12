@@ -23,7 +23,6 @@ CREATE TABLE IF NOT EXISTS `revenue_rule` (
   `rr_id` int NOT NULL AUTO_INCREMENT COMMENT '分账策略组ID',
   `rule_name` varchar(100) NOT NULL COMMENT '策略名称',
   `rule_mode` tinyint(1) NOT NULL COMMENT '模式：1普通分账，2设备出租，3设备分账，4设备商品分账',
-  `payer_ao_id` int DEFAULT NULL COMMENT '收款/代收组织ID',
   `base_type` tinyint(1) DEFAULT 1 COMMENT '分账基数：1订单总额，2扣除出租商品后金额',
   `turnover_type` tinyint(1) DEFAULT 1 COMMENT '阶梯营业额口径：1净营业额，2支付成功金额',
   `tier_calc_mode` tinyint(1) DEFAULT 1 COMMENT '阶梯命中：1本单后累计整单命中，2跨阶梯拆分',

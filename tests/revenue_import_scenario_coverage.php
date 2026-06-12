@@ -44,14 +44,18 @@ foreach ([
     "VALUES(900006, 'JCHM-H2D-0064_设备商品比例10', 4",
     'VALUES(900008, 900006, 123, 1, 2, 63, 1, 10.000',
     'VALUES(900009, 900007, 123, 1, 3, 64, 2, 3.000',
-    "VALUES(900012, 'JCHM-H2D-0064_设备分账扣除出租基数', 3, 1, 2",
-    "VALUES(900013, 'JCHM-H2D-0064_设备阶梯支付成功金额口径', 3, 1, 1, 2",
-    "VALUES(900014, 'JCHM-H2D-0064_设备跨阶梯拆分', 3, 1, 1, 1, 2",
+    "VALUES(900012, 'JCHM-H2D-0064_设备分账扣除出租基数', 3, 2, 1",
+    "VALUES(900013, 'JCHM-H2D-0064_设备阶梯支付成功金额口径', 3, 1, 2",
+    "VALUES(900014, 'JCHM-H2D-0064_设备跨阶梯拆分', 3, 1, 1, 2",
     'VALUES(3, 3, NULL, 1, 4, 62, 4, 0.000',
 ] as $requiredSql) {
     if (strpos($supplement, $requiredSql) === false) {
         $failures[] = "补全 SQL 缺少关键配置：{$requiredSql}";
     }
+}
+
+if (preg_match('/INSERT\s+INTO\s+(?:kiosk\.)?revenue_rule\s*\([^)]*payer_ao_id/is', $supplement)) {
+    $failures[] = '全场景补全 SQL 的 revenue_rule INSERT 不应继续包含 payer_ao_id';
 }
 
 preg_match_all('/VALUES\\(9\\d{5}, 9\\d{5}, 127, 1, \\d+, ([12]),/u', $supplement, $bindings);

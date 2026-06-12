@@ -6,6 +6,7 @@
 
 $root = dirname(__DIR__);
 $client = file_get_contents($root . '/app/AppFactory/Management/Revenue/RevenueRuleClient.php');
+$ruleModel = file_get_contents($root . '/app/AppFactory/Kernel/Model/Revenue/RevenueRuleModel.php');
 $validator = file_get_contents($root . '/app/management/validate/VRevenueRule.php');
 $controller = file_get_contents($root . '/app/management/controller/revenue/RevenueRule.php');
 $orderClient = file_get_contents($root . '/app/AppFactory/Management/Revenue/RevenueOrderClient.php');
@@ -16,12 +17,14 @@ $failures = [];
 if (strpos($client, "unset(\$postData['rr_id']);") === false
     && strpos($client, "\$this->updateRevenueRule(\$update, ['rr_id' => \$rrId])") === false
     || strpos($client, "updateRevenueRule(\$postData, [], ['rr_id'])") !== false) {
-    $failures[] = '规则更新接口仍把主键误当作允许更新字段，payer_ao_id 等字段无法保存';
+    $failures[] = '规则更新接口仍把主键误当作允许更新字段，其他规则字段无法保存';
 }
-if (strpos($client, "'payer_ao_id',") === false
+if (substr_count($client, "unset(\$postData['payer_ao_id']);") < 2
+    || strpos($client, "'payer_ao_id',") !== false
+    || strpos($ruleModel, '"payer_ao_id"') !== false
     || strpos($client, 'protected function verifyRuleUpdate($rrId, array $update)') === false
     || strpos($client, '分账策略更新后数据校验失败') === false) {
-    $failures[] = '规则更新接口没有显式允许 payer_ao_id 或缺少写后校验';
+    $failures[] = '规则接口仍保留 payer_ao_id，或缺少旧请求兼容清理和写后校验';
 }
 if (strpos($client, "unset(\$postData['rri_id']);") === false
     || strpos($client, "unset(\$postData['rrit_id']);") === false
@@ -77,7 +80,7 @@ if ($failures) {
 }
 
 echo "[PASS] 规则明细更新执行完整账户一致性校验\n";
-echo "[PASS] 规则 payer_ao_id 及其他更新字段可以保存\n";
+echo "[PASS] 规则 payer_ao_id 已删除且旧请求参数会被忽略\n";
 echo "[PASS] 规则更新使用明确字段白名单并执行写后校验\n";
 echo "[PASS] 新分账更新接口不会把主键误当作字段白名单\n";
 echo "[PASS] 自动补全的账户管理人可以写入数据库\n";

@@ -8,6 +8,7 @@ use app\AppFactory\Management\ManagementClient;
 class RevenuePayChannelClient extends ManagementClient
 {
     use RevenuePayChannelTrait;
+    use RevenuePayTypeDescTrait;
 
     public function addData($postData)
     {
@@ -31,12 +32,16 @@ class RevenuePayChannelClient extends ManagementClient
 
     public function getList($where= [], $pageNum = 0, $field = "*", $order = "rpc_id desc",$rQ = 1)
     {
-        return $this->rQ($this->getRevenuePayChannelList($where, $pageNum, $field, $order));
+        return $this->rQ($this->appendRevenuePayTypeDesc(
+            $this->getRevenuePayChannelList($where, $pageNum, $field, $order)
+        ));
     }
 
     public function getFind($where= [], $field = "*", $order = "rpc_id desc",$rQ = 1)
     {
-        return $this->rQ($this->getRevenuePayChannelFind($where, $field, $order));
+        return $this->rQ($this->appendRevenuePayTypeDesc(
+            $this->getRevenuePayChannelFind($where, $field, $order)
+        ));
     }
 
     public function delData($rpcId)

@@ -13,6 +13,8 @@ $requestBodies = $json['components']['requestBodies'] ?? [];
 $security = $json['components']['securitySchemes']['TokenAuth'] ?? [];
 $tokenHeader = $json['components']['parameters']['TokenHeader'] ?? [];
 $scenarioGuides = $json['x-scenario-guides'] ?? [];
+$organizationFields = $json['x-response-organization-fields']['fields'] ?? [];
+$payTypeFields = $json['x-response-pay-type-fields']['fields'] ?? [];
 
 check(($json['openapi'] ?? '') === '3.0.3', 'OpenAPI 版本必须为 3.0.3', $failures);
 check(($security['type'] ?? '') === 'apiKey', 'TokenAuth 必须为 apiKey', $failures);
@@ -26,6 +28,14 @@ check(($tokenHeader['required'] ?? false) === true, 'TokenHeader 必须为必传
 check(($tokenHeader['example'] ?? '') === '{{token}}', 'TokenHeader 参数值必须为 {{token}}', $failures);
 check(count($paths) === 31, '新分账接口数量应为 31', $failures);
 check(count($scenarioGuides) >= 5, '必须提供普通、出租、固定比例、阶梯、T+N等场景索引', $failures);
+check(($organizationFields['ao_id'] ?? '') === 'organization_name', 'ao_id 返回字段必须补充 organization_name', $failures);
+check(($organizationFields['payer_ao_id'] ?? '') === 'payer_organization_name', 'payer_ao_id 返回字段必须补充 payer_organization_name', $failures);
+check(($organizationFields['receiver_ao_id'] ?? '') === 'receiver_organization_name', 'receiver_ao_id 返回字段必须补充 receiver_organization_name', $failures);
+check(($payTypeFields['pay_type'] ?? '') === 'pay_type_desc', 'pay_type 返回字段必须补充 pay_type_desc', $failures);
+foreach (['RevenueRuleListRequest', 'RevenueRuleAddRequest', 'RevenueRuleUpdateRequest'] as $name) {
+    check(strpos(json_encode($schemas[$name] ?? []), 'payer_ao_id') === false, "{$name} 不得继续暴露 payer_ao_id", $failures);
+}
+check(strpos(json_encode($schemas['RevenueOrderListRequest'] ?? []), 'payer_ao_id') !== false, 'RevenueOrderListRequest 必须保留订单收款组织筛选', $failures);
 
 foreach ($paths as $path => $pathItem) {
     check(strpos($path, '/management/revenue.') === 0, "接口不属于独立新分账模块：{$path}", $failures);
@@ -78,7 +88,9 @@ echo "[PASS] 31 个接口均属于独立新分账模块并使用 POST\n";
 echo "[PASS] 所有接口均显式携带必传 Header token: {{token}}\n";
 echo "[PASS] 全部接口均提供命名场景请求示例，核心接口具备多场景参数\n";
 echo "[PASS] 请求体引用、必填字段和字段说明校验通过\n";
-echo "\nSummary: passed=5, failed=0\n";
+echo "[PASS] 组织ID与组织名称返回字段约定完整\n";
+echo "[PASS] 支付类型与支付类型说明返回字段约定完整\n";
+echo "\nSummary: passed=7, failed=0\n";
 
 function validateSchema(string $name, array $schema, array $schemas, array &$failures): void
 {

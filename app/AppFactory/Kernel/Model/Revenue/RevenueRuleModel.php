@@ -13,7 +13,6 @@ class RevenueRuleModel extends BaseModel
         "rr_id" => "int",
         "rule_name" => "string",
         "rule_mode" => "int",
-        "payer_ao_id" => "int",
         "base_type" => "int",
         "turnover_type" => "int",
         "tier_calc_mode" => "int",

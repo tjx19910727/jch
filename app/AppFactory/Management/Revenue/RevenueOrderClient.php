@@ -15,17 +15,27 @@ class RevenueOrderClient extends ManagementClient
     use SaleOrdersTrait;
     use BeforeOrderPaymentTrait;
     use AfterOrderPaymentTrait;
+    use RevenueOrganizationNameTrait;
+    use RevenuePayTypeDescTrait;
 
     public function getList($where = [], $pageNum = 0, $field = "*", $order = "ro_id desc", $rQ = '')
     {
         $where = $this->filterByManager($where);
-        return $this->rQ($this->getRevenueOrderList($where, $pageNum, $field, $order));
+        return $this->rQ($this->appendRevenuePayTypeDesc(
+            $this->appendRevenueOrganizationNames(
+                $this->getRevenueOrderList($where, $pageNum, $field, $order)
+            )
+        ));
     }
 
     public function getFind($where = [], $field = "*", $order = "ro_id desc",$rQ = '')
     {
         $where = $this->filterByManager($where);
-        return $this->rQ($this->getRevenueOrderFind($where, $field, $order));
+        return $this->rQ($this->appendRevenuePayTypeDesc(
+            $this->appendRevenueOrganizationNames(
+                $this->getRevenueOrderFind($where, $field, $order)
+            )
+        ));
     }
 
     public function getDetail($where)
@@ -38,7 +48,9 @@ class RevenueOrderClient extends ManagementClient
         $order['sale_details'] = Db::name('sale_orders_details')->where(['order_id' => $order['order_id']])->select()->toArray();
         $order['revenue_orders'] = Db::name('revenue_order')->where(['order_id' => $order['order_id']])->order('ro_id asc')->select()->toArray();
         $order['refund_orders'] = Db::name('sale_orders_refund')->where(['order_id' => $order['order_id']])->order('sor_id desc')->select()->toArray();
-        return $this->rQ($order);
+        return $this->rQ($this->appendRevenuePayTypeDesc(
+            $this->appendRevenueOrganizationNames($order)
+        ));
     }
 
     public function export($where)
@@ -46,7 +58,7 @@ class RevenueOrderClient extends ManagementClient
         $where = $this->filterByManager($where);
         $list = $this->getRevenueOrderList($where, 0, "*", "ro_id desc");
         if (!$list || $list->isEmpty()) return $this->rFail("没有数据可导出");
-        $list = $list->toArray();
+        $list = $this->appendRevenueOrganizationNames($list);
         foreach ($list as &$item) {
             $item['rule_mode_text'] = $this->getRuleModeText($item['rule_mode'] ?? 0);
             $item['status_text'] = $this->getStatusText($item['status'] ?? 0);
@@ -69,7 +81,9 @@ class RevenueOrderClient extends ManagementClient
             'rule_mode_text' => '分账模式',
             'source' => '分账来源',
             'payer_ao_id' => '收款组织',
+            'payer_organization_name' => '收款组织名称',
             'receiver_ao_id' => '接收组织',
+            'receiver_organization_name' => '接收组织名称',
             'manager_name' => '账户管理人',
             'account_type' => '账户类型',
             'account' => '分账账户',
@@ -145,7 +159,9 @@ class RevenueOrderClient extends ManagementClient
             }
 
             $this->commitTrans();
-            return $this->rQ($this->buildMockPayResult());
+            return $this->rQ($this->appendRevenuePayTypeDesc(
+                $this->appendRevenueOrganizationNames($this->buildMockPayResult())
+            ));
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);
