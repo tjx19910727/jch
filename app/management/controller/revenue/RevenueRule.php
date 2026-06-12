@@ -117,6 +117,13 @@ class RevenueRule extends Common
         return $this->app->revenueRule->getMachineList($where, $pageNum);
     }
 
+    public function getBoundMachineList()
+    {
+        $postData = input();
+        try { $this->validate($postData, $this->validatePath . 'getBoundMachineList'); } catch (\Exception $e) { return returnValidate($e->getMessage()); }
+        return $this->app->revenueRule->getBoundMachineList($postData);
+    }
+
     public function unbindMachine()
     {
         $rrmId = input('rrm_id');

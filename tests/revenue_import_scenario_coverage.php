@@ -5,7 +5,7 @@
  */
 
 $root = dirname(__DIR__);
-$supplement = file_get_contents($root . '/文档说明/revenue_rule全场景补全INSERT.sql');
+$supplement = file_get_contents($root . '/文档说明/新分账全场景配置数据.sql');
 $importPath = $argv[1] ?? '';
 $imported = $importPath && is_file($importPath) ? file_get_contents($importPath) : '';
 $failures = [];

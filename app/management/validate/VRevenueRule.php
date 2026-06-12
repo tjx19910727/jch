@@ -64,6 +64,7 @@ class VRevenueRule extends VCommon
         "addProductItem" => ["rr_id", "g_id", "receiver_ao_id", "ra_id", "calc_type", "calc_value"],
         "addTier" => ["rri_id", "threshold_min", "calc_value"],
         "updateTier" => ["rrit_id"],
-        "bindMachine" => ["rr_id", "m_id"],
+        "bindMachine" => ["rr_id"],
+        "getBoundMachineList" => ["rr_id"],
     ];
 }

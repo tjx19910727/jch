@@ -131,32 +131,67 @@ class RevenueRuleClient extends ManagementClient
     public function bindMachine($postData)
     {
         if (empty($postData['rr_id'])) return $this->rFail("分账策略ID不能为空");
-        if (empty($postData['m_id'])) return $this->rFail("设备ID不能为空");
+        $machineIds = $this->normalizeMachineIds($postData['m_ids'] ?? ($postData['m_id'] ?? []));
+        if (!$machineIds) return $this->rFail("设备ID列表不能为空");
         $status = intval($postData['status'] ?? 1);
         if (!in_array($status, [1, 2], true)) return $this->rFail("设备分账策略绑定状态不合法");
-        $rule = $this->getRevenueRuleFind(['rr_id' => $postData['rr_id'], 'status' => 1], 'rr_id,rule_mode');
+        $rrId = intval($postData['rr_id']);
+        $rule = $this->getRevenueRuleFind(['rr_id' => $rrId, 'status' => 1], 'rr_id,rule_mode');
         if (!$rule) return $this->rFail("分账策略不存在或未启用");
-        $machine = $this->getMachineFind(['m_id' => $postData['m_id']], 'm_id,ao_id');
-        if (!$machine) return $this->rFail("设备不存在");
-        $exists = $this->getRevenueRuleMachineFind(['rr_id' => $postData['rr_id'], 'm_id' => $postData['m_id']], 'rrm_id');
-        if ($exists) return $this->rFail("该设备已绑定当前分账策略");
-        if ($status === 1) {
-            $modeExists = Db::name('revenue_rule_machine')
-                ->alias('rrm')
-                ->join('revenue_rule rr', 'rr.rr_id = rrm.rr_id')
-                ->where([
-                    'rrm.m_id' => $postData['m_id'],
-                    'rrm.status' => 1,
-                    'rr.status' => 1,
-                    'rr.rule_mode' => intval($rule['rule_mode']),
-                ])
-                ->find();
-            if ($modeExists) return $this->rFail("该设备已绑定同类型启用分账策略");
+
+        $this->startTrans();
+        try {
+            $machineMap = Db::name('machine')
+                ->where('m_id', 'in', $machineIds)
+                ->lock(true)
+                ->column('ao_id', 'm_id');
+            $validMachineIds = array_map('intval', array_keys($machineMap));
+            $missingMachineIds = array_values(array_diff($machineIds, $validMachineIds));
+            if ($missingMachineIds) {
+                throw new \Exception("设备不存在：" . implode(',', $missingMachineIds));
+            }
+
+            $existsMachineIds = Db::name('revenue_rule_machine')
+                ->where('rr_id', $rrId)
+                ->where('m_id', 'in', $machineIds)
+                ->column('m_id');
+            if ($existsMachineIds) {
+                throw new \Exception("设备已绑定当前分账策略：" . implode(',', array_unique($existsMachineIds)));
+            }
+
+            if ($status === 1) {
+                $modeExistsMachineIds = Db::name('revenue_rule_machine')
+                    ->alias('rrm')
+                    ->join('revenue_rule rr', 'rr.rr_id = rrm.rr_id')
+                    ->where('rrm.m_id', 'in', $machineIds)
+                    ->where([
+                        'rrm.status' => 1,
+                        'rr.status' => 1,
+                        'rr.rule_mode' => intval($rule['rule_mode']),
+                    ])
+                    ->column('rrm.m_id');
+                if ($modeExistsMachineIds) {
+                    throw new \Exception("设备已绑定同类型启用分账策略：" . implode(',', array_unique($modeExistsMachineIds)));
+                }
+            }
+
+            $rrmIds = [];
+            foreach ($machineIds as $machineId) {
+                $rrmIds[] = $this->addRevenueRuleMachine([
+                    'rr_id' => $rrId,
+                    'm_id' => $machineId,
+                    'ao_id' => $machineMap[$machineId],
+                    'sort' => max(0, intval($postData['sort'] ?? 0)),
+                    'status' => $status,
+                ]);
+            }
+            $this->commitTrans();
+            return $this->rA(['rrm_ids' => $rrmIds, 'm_ids' => $machineIds]);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
         }
-        $postData['ao_id'] = $machine['ao_id'];
-        $postData['sort'] = max(0, intval($postData['sort'] ?? 0));
-        $postData['status'] = $status;
-        return $this->rA($this->addRevenueRuleMachine($postData));
     }
 
     public function getMachineList($where, $pageNum = 0, $field = "*", $order = "rrm_id desc")
@@ -166,9 +201,57 @@ class RevenueRuleClient extends ManagementClient
         ));
     }
 
+    public function getBoundMachineList($postData)
+    {
+        $rrId = intval($postData['rr_id'] ?? 0);
+        if ($rrId <= 0) return $this->rFail("分账策略ID不能为空");
+        if (!$this->getRevenueRuleFind(['rr_id' => $rrId], 'rr_id')) {
+            return $this->rFail("分账策略不存在");
+        }
+
+        $query = Db::name('revenue_rule_machine')
+            ->alias('rrm')
+            ->join('machine m', 'm.m_id = rrm.m_id')
+            ->where('rrm.rr_id', $rrId);
+        if (isset($postData['status']) && $postData['status'] !== '') {
+            $query->where('rrm.status', intval($postData['status']));
+        }
+        if (!empty($postData['m_id'])) {
+            $query->where('rrm.m_id', intval($postData['m_id']));
+        }
+        if (!empty($postData['machine_id'])) {
+            $query->whereLike('m.machine_id', '%' . trim($postData['machine_id']) . '%');
+        }
+        if (!empty($postData['machine_name'])) {
+            $query->whereLike('m.machine_name', '%' . trim($postData['machine_name']) . '%');
+        }
+        $query->field(
+            'rrm.rrm_id,rrm.rr_id,rrm.m_id,rrm.ao_id,rrm.sort,rrm.status,'
+            . 'rrm.create_time,rrm.update_time,m.machine_id,m.machine_name'
+        )->order('rrm.sort asc,rrm.rrm_id desc');
+
+        $pageNum = intval($postData['pageNum'] ?? 0);
+        $result = $pageNum > 0
+            ? $query->paginate($pageNum, false, ['query' => request()->param()])
+            : $query->select();
+        return $this->rQ($this->appendRevenueOrganizationNames($result));
+    }
+
     public function unbindMachine($rrmId)
     {
         return $this->rD($this->delRevenueRuleMachine(['rrm_id' => $rrmId]));
+    }
+
+    protected function normalizeMachineIds($machineIds)
+    {
+        if (is_string($machineIds)) {
+            $decoded = json_decode($machineIds, true);
+            $machineIds = is_array($decoded) ? $decoded : explode(',', $machineIds);
+        }
+        if (!is_array($machineIds)) {
+            $machineIds = [$machineIds];
+        }
+        return array_values(array_unique(array_filter(array_map('intval', $machineIds))));
     }
 
     protected function checkRuleData(&$data, $isUpdate = false)

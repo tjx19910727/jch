@@ -3,8 +3,18 @@
     "info": {
         "title": "嘉潮汇管理后台 - 新分账接口",
         "description": "新分账后台配置、分账订单查询与测试环境模拟支付成功接口。revenue_pay_channel 仅控制哪些订单支付类型允许触发新分账；普通分账、设备出租、设备分账和设备商品分账均由 revenue_rule/revenue_rule_item 配置；每条规则独立配置即时或 T+N 结算周期，revenue_order 保存生成时的结算快照。导入 Apifox 后，请在环境中配置 baseUrl 和 token。所有接口均为 POST，并显式携带必传 Header token: {{token}}。",
-        "version": "1.5.0"
+        "version": "2.1.0"
     },
+    "x-generated-at": "2026-06-12",
+    "x-generated-from": [
+        "app/management/controller/Revenue/RevenueAccount.php",
+        "app/management/controller/Revenue/RevenuePayChannel.php",
+        "app/management/controller/Revenue/RevenueRule.php",
+        "app/management/controller/Revenue/RevenueOrder.php",
+        "app/management/validate/VRevenueAccount.php",
+        "app/management/validate/VRevenuePayChannel.php",
+        "app/management/validate/VRevenueRule.php"
+    ],
     "x-response-organization-fields": {
         "description": "新分账后台查询接口返回 revenue_ 表数据时，只要记录中存在组织ID，就同步返回组织名称，供页面直接展示。列表、单条详情、嵌套 revenue_orders 和模拟支付结果均遵循此约定。",
         "fields": {
@@ -32,10 +42,6 @@
         {
             "name": "新分账-分账触发渠道",
             "description": "新分账独立配置：按订单支付类型控制是否触发分账，不修改原业务收款渠道或收款策略"
-        },
-        {
-            "name": "新分账-收款策略配置",
-            "description": "给具体收款策略配置是否参与新分账、默认账户及即时/T+N结算周期"
         },
         {
             "name": "新分账-分账策略",
@@ -581,8 +587,8 @@
                 "tags": [
                     "新分账-分账策略"
                 ],
-                "summary": "绑定设备分账策略",
-                "description": "将策略绑定到设备。同一设备不能绑定多个同类型启用分账策略。",
+                "summary": "批量绑定设备分账策略",
+                "description": "将一个启用的分账策略批量绑定到多台设备。整批设备会先完成存在性、重复绑定和同类型启用策略冲突检查，任意设备校验失败则整批不写入。同一设备不能绑定多个同类型启用分账策略；兼容旧参数 m_id。",
                 "operationId": "revenueRuleBindMachine",
                 "parameters": [
                     {
@@ -614,6 +620,29 @@
                 ],
                 "requestBody": {
                     "$ref": "#/components/requestBodies/RevenueRuleMachineListRequest"
+                },
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/CommonSuccess"
+                    }
+                }
+            }
+        },
+        "/management/revenue.revenue_rule/getBoundMachineList": {
+            "post": {
+                "tags": [
+                    "新分账-分账策略"
+                ],
+                "summary": "查询策略已绑定设备",
+                "description": "必须传入 rr_id，查询指定分账策略已绑定的设备。返回绑定ID、绑定状态、设备ID、设备编号、设备名称、设备组织ID和组织名称，支持分页及设备编号、名称模糊搜索。",
+                "operationId": "revenueRuleGetBoundMachineList",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TokenHeader"
+                    }
+                ],
+                "requestBody": {
+                    "$ref": "#/components/requestBodies/RevenueRuleBoundMachineListRequest"
                 },
                 "responses": {
                     "200": {
@@ -1681,36 +1710,43 @@
                             "$ref": "#/components/schemas/RevenueRuleBindMachineRequest"
                         },
                         "examples": {
-                            "绑定出租策略": {
-                                "summary": "将出租策略2绑定设备100",
-                                "value": {
-                                    "rr_id": 2,
-                                    "m_id": 100,
-                                    "ao_id": 1,
-                                    "sort": 1,
-                                    "status": 1
-                                }
-                            },
-                            "绑定固定比例策略": {
-                                "summary": "将固定比例策略3绑定设备100",
-                                "value": {
-                                    "rr_id": 3,
-                                    "m_id": 100,
-                                    "ao_id": 1,
-                                    "sort": 2,
-                                    "status": 1
-                                }
-                            },
-                            "绑定阶梯策略": {
-                                "summary": "将阶梯策略4绑定设备101",
-                                "value": {
-                                    "rr_id": 4,
-                                    "m_id": 101,
-                                    "ao_id": 1,
-                                    "sort": 1,
-                                    "status": 1
-                                }
-                            }
+                "批量绑定出租策略": {
+                    "summary": "将出租策略2批量绑定设备100和101",
+                    "value": {
+                        "rr_id": 2,
+                        "m_ids": [
+                            100,
+                            101
+                        ],
+                        "sort": 1,
+                        "status": 1
+                    }
+                },
+                "批量绑定固定比例策略": {
+                    "summary": "将固定比例策略3批量绑定三台设备",
+                    "value": {
+                        "rr_id": 3,
+                        "m_ids": [
+                            100,
+                            101,
+                            102
+                        ],
+                        "sort": 2,
+                        "status": 1
+                    }
+                },
+                "批量绑定停用备用策略": {
+                    "summary": "批量创建停用状态的备用绑定",
+                    "value": {
+                        "rr_id": 4,
+                        "m_ids": [
+                            100,
+                            101
+                        ],
+                        "sort": 1,
+                        "status": 2
+                    }
+                }
                         }
                     },
                     "application/x-www-form-urlencoded": {
@@ -1760,6 +1796,46 @@
                     "application/x-www-form-urlencoded": {
                         "schema": {
                             "$ref": "#/components/schemas/RevenueRuleMachineListRequest"
+                        }
+                    }
+                }
+            },
+            "RevenueRuleBoundMachineListRequest": {
+                "required": true,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/RevenueRuleBoundMachineListRequest"
+                        },
+                        "examples": {
+                            "查询策略全部绑定设备": {
+                                "summary": "查询策略3绑定的全部设备",
+                                "value": {
+                                    "rr_id": 3,
+                                    "pageNum": 20
+                                }
+                            },
+                            "查询启用绑定": {
+                                "summary": "查询策略3启用中的设备绑定",
+                                "value": {
+                                    "rr_id": 3,
+                                    "status": 1,
+                                    "pageNum": 20
+                                }
+                            },
+                            "按设备名称搜索": {
+                                "summary": "在策略3绑定设备中搜索名称",
+                                "value": {
+                                    "rr_id": 3,
+                                    "machine_name": "测试设备",
+                                    "pageNum": 20
+                                }
+                            }
+                        }
+                    },
+                    "application/x-www-form-urlencoded": {
+                        "schema": {
+                            "$ref": "#/components/schemas/RevenueRuleBoundMachineListRequest"
                         }
                     }
                 }
@@ -2732,17 +2808,25 @@
             "RevenueRuleBindMachineRequest": {
                 "type": "object",
                 "required": [
-                    "rr_id",
-                    "m_id"
+                "rr_id",
+                "m_ids"
                 ],
                 "properties": {
                     "rr_id": {
                         "type": "integer",
                         "description": "分账策略ID，必填；策略必须存在且启用"
                     },
+                    "m_ids": {
+                        "type": "array",
+                        "description": "设备ID列表，必填；自动去重，所有设备必须存在且整批校验通过后才写入",
+                        "minItems": 1,
+                        "items": {
+                            "type": "integer"
+                        }
+                    },
                     "m_id": {
                         "type": "integer",
-                        "description": "设备ID，必填；设备必须存在"
+                        "description": "兼容旧版单设备绑定参数；新调用请使用 m_ids"
                     },
                     "ao_id": {
                         "type": "integer",
@@ -2786,6 +2870,41 @@
                             "status": {
                                 "type": "integer",
                                 "description": "状态，非必填"
+                            }
+                        }
+                    }
+                ]
+            },
+            "RevenueRuleBoundMachineListRequest": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/PaginationFields"
+                    },
+                    {
+                        "type": "object",
+                        "required": [
+                            "rr_id"
+                        ],
+                        "properties": {
+                            "rr_id": {
+                                "type": "integer",
+                                "description": "分账策略ID，必填"
+                            },
+                            "m_id": {
+                                "type": "integer",
+                                "description": "设备主键ID，非必填"
+                            },
+                            "machine_id": {
+                                "type": "string",
+                                "description": "设备编号，非必填，支持模糊搜索"
+                            },
+                            "machine_name": {
+                                "type": "string",
+                                "description": "设备名称，非必填，支持模糊搜索"
+                            },
+                            "status": {
+                                "type": "integer",
+                                "description": "绑定状态，非必填：1启用，2停用"
                             }
                         }
                     }

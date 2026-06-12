@@ -13,7 +13,7 @@ $channelClient = file_get_contents($root . '/app/AppFactory/Management/Revenue/R
 $channelModel = file_get_contents($root . '/app/AppFactory/Kernel/Model/Revenue/RevenuePayChannelModel.php');
 $ruleClient = file_get_contents($root . '/app/AppFactory/Management/Revenue/RevenueRuleClient.php');
 $ruleModel = file_get_contents($root . '/app/AppFactory/Kernel/Model/Revenue/RevenueRuleModel.php');
-$databaseChange = file_get_contents($root . '/文档说明/分账逻辑优化数据库变更.sql');
+$databaseChange = file_get_contents($root . '/文档说明/新分账数据库初始化.sql');
 $failures = [];
 
 if (strpos($calculator, "\$rule['settlement_type']") === false

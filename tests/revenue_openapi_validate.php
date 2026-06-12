@@ -15,6 +15,41 @@ $tokenHeader = $json['components']['parameters']['TokenHeader'] ?? [];
 $scenarioGuides = $json['x-scenario-guides'] ?? [];
 $organizationFields = $json['x-response-organization-fields']['fields'] ?? [];
 $payTypeFields = $json['x-response-pay-type-fields']['fields'] ?? [];
+$tagNames = array_column($json['tags'] ?? [], 'name');
+$actualPaths = [
+    '/management/revenue.revenue_account/getList',
+    '/management/revenue.revenue_account/getFind',
+    '/management/revenue.revenue_account/add',
+    '/management/revenue.revenue_account/update',
+    '/management/revenue.revenue_account/del',
+    '/management/revenue.revenue_pay_channel/getList',
+    '/management/revenue.revenue_pay_channel/getFind',
+    '/management/revenue.revenue_pay_channel/add',
+    '/management/revenue.revenue_pay_channel/update',
+    '/management/revenue.revenue_pay_channel/del',
+    '/management/revenue.revenue_rule/getList',
+    '/management/revenue.revenue_rule/getFind',
+    '/management/revenue.revenue_rule/add',
+    '/management/revenue.revenue_rule/update',
+    '/management/revenue.revenue_rule/addItem',
+    '/management/revenue.revenue_rule/updateItem',
+    '/management/revenue.revenue_rule/addProductItem',
+    '/management/revenue.revenue_rule/getItemList',
+    '/management/revenue.revenue_rule/delItem',
+    '/management/revenue.revenue_rule/addTier',
+    '/management/revenue.revenue_rule/updateTier',
+    '/management/revenue.revenue_rule/getTierList',
+    '/management/revenue.revenue_rule/delTier',
+    '/management/revenue.revenue_rule/bindMachine',
+    '/management/revenue.revenue_rule/getMachineList',
+    '/management/revenue.revenue_rule/getBoundMachineList',
+    '/management/revenue.revenue_rule/unbindMachine',
+    '/management/revenue.revenue_order/getList',
+    '/management/revenue.revenue_order/getFind',
+    '/management/revenue.revenue_order/getDetail',
+    '/management/revenue.revenue_order/export',
+    '/management/revenue.revenue_order/mockPaySuccess',
+];
 
 check(($json['openapi'] ?? '') === '3.0.3', 'OpenAPI 版本必须为 3.0.3', $failures);
 check(($security['type'] ?? '') === 'apiKey', 'TokenAuth 必须为 apiKey', $failures);
@@ -26,7 +61,12 @@ check(($tokenHeader['name'] ?? '') === 'token', 'TokenHeader 参数名必须为 
 check(($tokenHeader['in'] ?? '') === 'header', 'TokenHeader 必须位于 Header', $failures);
 check(($tokenHeader['required'] ?? false) === true, 'TokenHeader 必须为必传参数', $failures);
 check(($tokenHeader['example'] ?? '') === '{{token}}', 'TokenHeader 参数值必须为 {{token}}', $failures);
-check(count($paths) === 31, '新分账接口数量应为 31', $failures);
+check(count($paths) === 32, '新分账接口数量应为 32', $failures);
+check(($json['info']['version'] ?? '') === '2.1.0', '重新生成的 OpenAPI 版本必须为 2.1.0', $failures);
+check(($json['x-generated-at'] ?? '') === '2026-06-12', 'OpenAPI 必须记录本次重新生成日期', $failures);
+check(count($tagNames) === 4, '新分账接口应只保留4个实际模块标签', $failures);
+check(!in_array('新分账-收款策略配置', $tagNames, true), '不得保留已删除的收款策略配置标签', $failures);
+check(array_keys($paths) === $actualPaths, 'OpenAPI 路径必须与当前 Revenue 控制器完全一致', $failures);
 check(count($scenarioGuides) >= 5, '必须提供普通、出租、固定比例、阶梯、T+N等场景索引', $failures);
 check(($organizationFields['ao_id'] ?? '') === 'organization_name', 'ao_id 返回字段必须补充 organization_name', $failures);
 check(($organizationFields['payer_ao_id'] ?? '') === 'payer_organization_name', 'payer_ao_id 返回字段必须补充 payer_organization_name', $failures);
@@ -84,13 +124,14 @@ if ($failures) {
 }
 
 echo "[PASS] OpenAPI JSON 有效\n";
-echo "[PASS] 31 个接口均属于独立新分账模块并使用 POST\n";
+echo "[PASS] 32 个接口均属于独立新分账模块并使用 POST\n";
 echo "[PASS] 所有接口均显式携带必传 Header token: {{token}}\n";
 echo "[PASS] 全部接口均提供命名场景请求示例，核心接口具备多场景参数\n";
 echo "[PASS] 请求体引用、必填字段和字段说明校验通过\n";
 echo "[PASS] 组织ID与组织名称返回字段约定完整\n";
 echo "[PASS] 支付类型与支付类型说明返回字段约定完整\n";
-echo "\nSummary: passed=7, failed=0\n";
+echo "[PASS] 文档已按当前 Revenue 控制器重新生成，无失效模块或接口\n";
+echo "\nSummary: passed=8, failed=0\n";
 
 function validateSchema(string $name, array $schema, array $schemas, array &$failures): void
 {

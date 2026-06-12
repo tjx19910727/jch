@@ -10,7 +10,7 @@ $failures = [];
 $ruleModel = file_get_contents($root . '/app/AppFactory/Kernel/Model/Revenue/RevenueRuleModel.php');
 $ruleClient = file_get_contents($root . '/app/AppFactory/Management/Revenue/RevenueRuleClient.php');
 $orderModel = file_get_contents($root . '/app/AppFactory/Kernel/Model/Revenue/RevenueOrderModel.php');
-$databaseChange = file_get_contents($root . '/文档说明/分账逻辑优化数据库变更.sql');
+$databaseChange = file_get_contents($root . '/文档说明/新分账数据库初始化.sql');
 $migration = file_get_contents($root . '/文档说明/删除revenue_rule.payer_ao_id.sql');
 $openApi = json_decode(file_get_contents($root . '/文档说明/新分账后台接口.apifox.openapi.json'), true);
 
@@ -42,9 +42,7 @@ if (strpos($orderModel, '"payer_ao_id"') === false
     $failures[] = '订单收款组织快照或订单查询筛选被误删';
 }
 foreach ([
-    '分账导入sql-修正版.sql',
-    'revenue_rule全场景补全INSERT.sql',
-    'JCHM-H2D-0064新分账全场景测试数据.sql',
+    '新分账全场景配置数据.sql',
 ] as $file) {
     $sql = file_get_contents($root . '/文档说明/' . $file);
     if (preg_match('/INSERT\s+INTO\s+(?:kiosk\.)?revenue_rule\s*\([^)]*payer_ao_id/is', $sql)) {

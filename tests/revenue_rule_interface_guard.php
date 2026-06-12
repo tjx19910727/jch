@@ -56,11 +56,14 @@ if (strpos($client, '$tierData = array_merge($oldTier, $data);') === false
     $failures[] = '更新阶梯区间时没有使用完整旧值检查重叠';
 }
 if (strpos($client, 'if ($status === 1) {') === false
-    || strpos($client, "\$postData['ao_id'] = \$machine['ao_id'];") === false) {
-    $failures[] = '设备绑定接口没有支持停用备用场景或没有锁定设备真实组织';
+    || strpos($client, "'ao_id' => \$machineMap[\$machineId]") === false) {
+    $failures[] = '设备批量绑定接口没有支持停用备用场景或没有锁定设备真实组织';
 }
 if (strpos($controller, "\$this->validate(\$postData, \$this->validatePath . 'bindMachine')") === false
-    || strpos($validator, '"bindMachine" => ["rr_id", "m_id"]') === false) {
+    || strpos($validator, '"bindMachine" => ["rr_id"]') === false
+    || strpos($client, 'protected function normalizeMachineIds($machineIds)') === false
+    || strpos($client, "->lock(true)") === false
+    || strpos($client, "'rrm_ids' => \$rrmIds, 'm_ids' => \$machineIds") === false) {
     $failures[] = '设备绑定接口缺少请求参数验证';
 }
 if (strpos($client, '全额分账明细必须是策略内唯一启用明细') === false
@@ -86,6 +89,6 @@ echo "[PASS] 新分账更新接口不会把主键误当作字段白名单\n";
 echo "[PASS] 自动补全的账户管理人可以写入数据库\n";
 echo "[PASS] 阶梯接口仅允许操作设备阶梯分账明细\n";
 echo "[PASS] 阶梯局部更新使用完整区间检查重叠\n";
-echo "[PASS] 设备绑定支持停用备用场景并锁定真实设备组织\n";
+echo "[PASS] 设备批量绑定支持事务预检、停用备用场景并锁定真实设备组织\n";
 echo "[PASS] 全额明细唯一性、规则模式变更和模拟支付时间受到保护\n";
 echo "\nSummary: passed=9, failed=0\n";

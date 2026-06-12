@@ -25,7 +25,7 @@ $revenuePaths = [
     'app/AppFactory/Kernel/Model/Revenue',
     'app/AppFactory/Kernel/Traits/Revenue',
     'app/AppFactory/Kernel/Service/Revenue',
-    '文档说明/分账逻辑优化数据库变更.sql',
+    '文档说明/新分账数据库初始化.sql',
 ];
 
 $legacyForbidden = [

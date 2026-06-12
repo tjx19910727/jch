@@ -7,7 +7,7 @@
 $root = dirname(__DIR__);
 $calculator = file_get_contents($root . '/app/AppFactory/Kernel/Service/Revenue/RevenueCalculator.php');
 $provider = file_get_contents($root . '/app/AppFactory/Kernel/Providers/Management/RevenueProvider.php');
-$databaseChange = file_get_contents($root . '/文档说明/分账逻辑优化数据库变更.sql');
+$databaseChange = file_get_contents($root . '/文档说明/新分账数据库初始化.sql');
 $failures = [];
 
 foreach ([$calculator, $provider, $databaseChange] as $content) {
