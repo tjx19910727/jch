@@ -1984,3 +1984,29 @@ CREATE TABLE `laser_resource` (
   PRIMARY KEY (`res_id`) USING BTREE,
   KEY `order_id` (`order_id`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='镭射机素材表';
+
+#20260612
+CREATE TABLE `wc_user_login_info` (
+  `wuli_id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '微程用户登录信息ID',
+  `m_id` int NOT NULL DEFAULT 0 COMMENT '设备ID',
+  `machine_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '设备编号',
+  `ao_id` int NOT NULL DEFAULT 0 COMMENT '设备所属组织ID',
+  `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '用户手机号',
+  `login_data` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '最终登录用户信息JSON',
+  `mq_status` tinyint NOT NULL DEFAULT 0 COMMENT 'MQ下发状态：0待发送，1成功，2失败',
+  `mq_result` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'MQ下发结果或异常信息',
+  `create_time` bigint NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` bigint NOT NULL DEFAULT 0 COMMENT '更新时间',
+  PRIMARY KEY (`wuli_id`) USING BTREE,
+  KEY `idx_machine_time` (`machine_id`,`create_time`) USING BTREE,
+  KEY `idx_phone_time` (`phone`,`create_time`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='微程用户设备登录信息';
+
+#20260612
+ALTER TABLE `machine_channel`
+  ADD COLUMN `is_hidden` tinyint(1) NOT NULL DEFAULT 2 COMMENT '是否隐藏：1是，2否',
+  ADD INDEX `idx_mid_hidden` (`m_id`, `is_hidden`);
+
+ALTER TABLE `wc_machine_channel`
+  ADD COLUMN `is_hidden` tinyint(1) NOT NULL DEFAULT 2 COMMENT '是否隐藏：1是，2否',
+  ADD INDEX `idx_machine_hidden` (`machine_id`, `is_hidden`);

@@ -948,6 +948,20 @@ class Receive extends Common
     }
 
     /**
+     * 获取当前设备最近两分钟内最后一条微程登录信息
+     * @return array|\think\response\Json
+     */
+    public function getWcLatestLoginInfo()
+    {
+        try {
+            return $this->app->api->getWcLatestLoginInfo();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
     * 会员同步积分
     * @return array|\think\response\Json
     */

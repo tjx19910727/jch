@@ -71,6 +71,7 @@ class VReceive extends VCommon
         "sinr" => "require",
         "file_content" => "require",
         "per_row" => "integer",
+        "last_login_info_id" => "integer",
     ];
 
     protected $message = [
@@ -228,6 +229,7 @@ class VReceive extends VCommon
 
         "getWcSmSCode" => ["msg_id","machine_id","timestamp","phone"],
         "wcLoginUser" => ["msg_id","machine_id","timestamp","phone","code"],
+        "getWcLatestLoginInfo" => ["msg_id","machine_id","timestamp","sign","last_login_info_id"],
         "wcUserAddPoints" => ["msg_id","machine_id","timestamp","token","trade_no"],
         "wcPointsQrcode" => ["msg_id","machine_id","timestamp","token","trade_no"],
 
