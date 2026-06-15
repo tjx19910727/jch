@@ -508,6 +508,39 @@ class MachineClient extends ManagementClient
             if($item['online'] == 1 || $item['http_online'] == 1){
                 $item['online_all'] = 1;
             }
+            $machineOnOff = $this->getMachineOnOffFind(['m_id' => $item['m_id'],'status' => 1],'on_off_ckc,on_off_machine');
+            if (is_object($machineOnOff) && method_exists($machineOnOff, 'toArray')) {
+                $machineOnOff = $machineOnOff->toArray();
+            }
+            if (!is_array($machineOnOff)) {
+                $machineOnOff = json_encode([]);
+            }
+            if(!empty($machineOnOff['on_off_machine'])){
+                if(!is_array($machineOnOff['on_off_machine'])){
+                    $machineOnOff['on_off_machine'] = json_decode($machineOnOff['on_off_machine'], true);
+                }
+                if(is_array($machineOnOff['on_off_machine'])){
+                    foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
+                        if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
+                            continue;
+                        }
+                        $parts = explode(',', $timeRange);
+                        if (count($parts) !== 2) {
+                            continue;
+                        }
+                        $startTime = trim($parts[0]);
+                        $endTime = trim($parts[1]);
+                        if (
+                            preg_match('/^\d{2}:\d{2}$/', $startTime)
+                            && preg_match('/^\d{2}:\d{2}$/', $endTime)
+                        ) {
+                            $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                        }
+                    }
+                    $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE);
+                }
+            }
+            $item['machine_on_off'] = $machineOnOff;
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
             if (isset($item['state_id']) && $item['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $item['state_id']],'code,name,cname');
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
