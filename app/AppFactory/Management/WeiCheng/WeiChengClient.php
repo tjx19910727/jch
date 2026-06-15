@@ -478,6 +478,56 @@ class WeiChengClient extends ManagementClient
         $list = !$pageNum ? $list : $list['data'];
         foreach ($list as &$v) {
             $v['goods_list'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
+
+            if (!empty($v['goods_list'])) {
+                $need_pic = empty($v['pic']);
+                $need_price = (float)($v['retail_price'] ?? 0) == 0;
+                $physical_total = 0;
+                $days_price = 0;
+                $today = date('Y-m-d');
+                foreach ($v['goods_list'] as $item) {
+                    $is_virtual = ($item['g_id'] ?? 0) == 9999;
+
+                    // 图片处理：外层 pic 为空时，取首个非实物商品(g_id=9999)图片
+                    if ($need_pic && $is_virtual && !empty($item['pic'])) {
+                        $v['pic'] = $item['pic'];
+                        $need_pic = false;
+                    }
+
+                    // 价格处理：外层 retail_price 为 0 时计算（实物累加 + 当日 daysInfo）
+                    if ($need_price) {
+                        if (!$is_virtual) {
+                            $physical_total = bcadd($physical_total, $item['retail_price'] ?? 0, 2);
+                            continue;
+                        }
+
+                        if (empty($item['daysInfo'])) {
+                            $days_price = $item['retail_price'] ?? 0;
+                            continue;
+                        } else {
+                            $daysInfo = json_decode($item['daysInfo'], true);
+                            $matched_today_price = false;
+                            if (is_array($daysInfo)) {
+                                foreach ($daysInfo as $day) {
+                                    if (isset($day['date']) && $day['date'] == $today) {
+                                        $days_price = $day['price'] ?? 0;
+                                        $matched_today_price = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!$matched_today_price) {
+                                $days_price = $item['retail_price'] ?? 0;
+                            }
+                        }
+                    }
+                }
+
+                if ($need_price) {
+                    $v['retail_price'] = bcadd($physical_total, $days_price, 2);
+                    $v['retail_price'] = round($v['retail_price'], 2);
+                }
+            }
         }
         return  $this->rQ($list);
     }

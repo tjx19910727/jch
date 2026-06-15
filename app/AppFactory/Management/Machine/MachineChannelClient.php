@@ -52,6 +52,7 @@ class MachineChannelClient extends ManagementClient
 
             $whereStockOut = $where;
             $whereStockOut['stock'] = 0;
+            $whereStockOut[] = ['g_id', '>', 0];
             $stockOut = $this->getMachineChannelCount($whereStockOut);
         }
         $data = [
@@ -60,6 +61,43 @@ class MachineChannelClient extends ManagementClient
             "stockOut" => $stockOut,
         ];
         return $data;
+    }
+
+    /**
+     * 按 m_id 列表统计空槽/BAD/空货（大屏等场景，与账号设备权限范围一致）
+     *
+     * @param int[] $mIds
+     * @return array{empty:int,bad:int,stockOut:int}
+     */
+    public function getDataV2ByMIds(array $mIds): array
+    {
+        $mIds = array_values(array_unique(array_filter(array_map('intval', $mIds))));
+        if ($mIds === []) {
+            return ['empty' => 0, 'bad' => 0, 'stockOut' => 0];
+        }
+
+        $where = [
+            ['m_id', 'in', $mIds],
+            'raw' => 'EXISTS(SELECT 1 FROM machine m WHERE m.m_id = a.m_id AND m.is_operating = 1)',
+        ];
+
+        $whereEmpty = $where;
+        $whereEmpty['g_id'] = 0;
+        $empty = $this->getMachineChannelCountV2($whereEmpty);
+
+        $whereBad = $where;
+        $whereBad['status'] = 3;
+        $bad = $this->getMachineChannelCountV2($whereBad);
+
+        $whereStockOut = $where;
+        $whereStockOut['stock'] = 0;
+        $stockOut = $this->getMachineChannelCountV2($whereStockOut);
+
+        return [
+            'empty' => (int) $empty,
+            'bad' => (int) $bad,
+            'stockOut' => (int) $stockOut,
+        ];
     }
 
         /**
@@ -86,6 +124,7 @@ class MachineChannelClient extends ManagementClient
 
             $whereStockOut = $where;
             $whereStockOut['stock'] = 0;
+            $whereStockOut[] = ['g_id', '>', 0];
             $stockOut = $this->getMachineChannelCountV2($whereStockOut);
         }
         $data = [
@@ -629,7 +668,8 @@ class MachineChannelClient extends ManagementClient
             "machine_name" => "设备名称",
             "total_channel" => "总货道数",
             "stock_out_num" => "空货数",
-            "stock_out_channel" => "空货槽位",
+            "stock_out_channel" => "基础机组空货槽位",
+            "stock_out_channel_arc" => "弧柜空货槽位",
             "stock_out_ratio" => "空货占比",
         ];
         $filename = "首页-空货列表-" . date("YmdHis");
@@ -769,6 +809,7 @@ class MachineChannelClient extends ManagementClient
             $where[] = ['m_id', 'in', $mIds];
         }
         $where['stock'] = 0;
+        $where[] = ['g_id', '>', 0];
         $expr = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
         $exprOperating = "EXISTS(SELECT 1 FROM machine m WHERE m.m_id = a.m_id AND m.is_operating = 1)";
         if (!empty($where['raw'])) {
@@ -783,15 +824,23 @@ class MachineChannelClient extends ManagementClient
 
         $list = $list->toArray();
         foreach ($list as $key => $value) {
-            $whereStockOut = [];
+            $whereTotal = [];
             $sub_cabinet = $this->getMachineInfoValue(['m_id' => $value['m_id']], 'sub_cabinet');
-            if (!$sub_cabinet || $sub_cabinet == 2) $whereStockOut['channel_position'] = 1;
+            if (!$sub_cabinet || $sub_cabinet == 2) $whereTotal['channel_position'] = 1;
 
-            $whereStockOut['m_id'] = $value['m_id'];
-            $value['total_channel'] = $this->getMachineChannelCount($whereStockOut);
-            $whereStockOut['stock'] = 0;
-            $stockOutList = $this->getMachineChannelColumn($whereStockOut, 'channel_code');
+            $whereTotal['m_id'] = $value['m_id'];
+            $value['total_channel'] = $this->getMachineChannelCount($whereTotal);
+
+            $whereStockOutBase = ['m_id' => $value['m_id'], 'channel_position' => 1, 'stock' => 0];
+            $whereStockOutBase[] = ['g_id', '>', 0];
+            $stockOutList = $this->getMachineChannelColumn($whereStockOutBase, 'channel_code');
             $value['stock_out_channel'] = implode(",", $stockOutList ?? []);
+
+            $whereStockOutArc = ['m_id' => $value['m_id'], 'channel_position' => 2, 'stock' => 0];
+            $whereStockOutArc[] = ['g_id', '>', 0];
+            $stockOutArcList = $this->getMachineChannelColumnV2($whereStockOutArc, 'channel_code');
+            $value['stock_out_channel_arc'] = implode(",", $stockOutArcList ?? []);
+
             $value['stock_out_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['stock_out_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
             $list[$key] = $value;
         }
@@ -938,9 +987,10 @@ class MachineChannelClient extends ManagementClient
      * @param $m_id
      * @return mixed
      */
-    public function exportMcSku($m_id)
+    public function exportMcSku($m_id, $hasCostPriceAuth = true)
     {
-        $field = "machine_id,sku,g_name,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock,cost_price,retail_price";
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = "machine_id,sku,g_name,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock,retail_price,{$costPriceField}";
         $list = $this->getMachineChannelList(['m_id' => $m_id],0,$field,"","","sku");
         if ($list) {
             $list = $list->toArray();
@@ -964,8 +1014,8 @@ class MachineChannelClient extends ManagementClient
                     "stock" => "当前数量",
                     "frozen_stock" => "预定数量",
                     "retail_price" => "售价",
-                    "cost_price" => "成本价",
                 ];
+                if ($hasCostPriceAuth) $title["cost_price"] = "成本价";
                 $filename = "按SKU铺货计划-" . date("YmdHis");
                 return $this->sendToExport("设备管理-设备货架", $filename, $title, $list);
             }
@@ -978,9 +1028,10 @@ class MachineChannelClient extends ManagementClient
      * @param $m_id
      * @return array|\think\response\Json
      */
-    public function exportMc($m_id)
+    public function exportMc($m_id, $hasCostPriceAuth = true)
     {
-        $field = "machine_id,channel_code,sku,g_name,capacity,stock,frozen_stock,cost_price,retail_price";
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = "machine_id,channel_code,sku,g_name,capacity,stock,frozen_stock,retail_price,{$costPriceField}";
         $list = $this->getMachineChannelList(['m_id' => $m_id],0,$field);
         if ($list) {
             $list = $list->toArray();
@@ -1001,8 +1052,8 @@ class MachineChannelClient extends ManagementClient
                     "stock" => "当前数量",
                     "frozen_stock" => "预定数量",
                     "retail_price" => "售价",
-                    "cost_price" => "成本价",
                 ];
+                if ($hasCostPriceAuth) $title["cost_price"] = "成本价";
                 $filename =  "货架铺货计划-" . date("YmdHis");
                 return $this->sendToExport("设备管理-设备货架", $filename, $title, $list);
             }
@@ -1026,11 +1077,20 @@ class MachineChannelClient extends ManagementClient
         return $this->r(100,$this->lang('action_fail'));
     }
 
-    public function getMChannelList($where,$pageNum = 0,$field = "",$order = "")
+    public function getMChannelList($where,$pageNum = 0,$field = "",$order = "",$hasCostPriceAuth = true)
     {
         //先查询设备详情
         $machine = $this->getMachineFind($where,'m_id,machine_id,machine_name,ao_id,vending_machine_type');
         if (!$machine) return $this->r(100,$this->lang("VMachine.machine_no_data"));
+        if (!$hasCostPriceAuth) {
+            if ($field === '' || $field === '*') {
+                $field = '*,0 cost_price';
+            } elseif (strpos($field, 'cost_price') !== false) {
+                $field = str_replace('cost_price', '0 cost_price', $field);
+            } else {
+                $field .= ',0 cost_price';
+            }
+        }
         //把货道的channel_position设置成设备相同的vending_machine_type
         $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
         $list = $list->toArray();

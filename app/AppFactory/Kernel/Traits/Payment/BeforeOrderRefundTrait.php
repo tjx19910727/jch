@@ -19,6 +19,60 @@ trait BeforeOrderRefundTrait
     public $billList;
 
     /**
+     * 按子单与数量计算本次应退金额（与 createSor 逻辑一致，不修改内存中的 sod）
+     * @param array $refund ['sod_id' => int, 'quantity' => int]
+     * @return array|float amount 为应退金额；失败返回 rFail 结构
+     */
+    protected function calcSodRefundAmount(array $refund)
+    {
+        try {
+            validate(VSaleOrdersRefund::class)->scene('refund')->check($refund);
+        } catch (\Exception $e) {
+            return $this->rValidate($e->getMessage());
+        }
+        $sod = $this->getSaleOrdersDetailsFind(['sod_id' => $refund['sod_id']]);
+        $sod = obj2arr($sod);
+        if (!$sod) {
+            return $this->rFail("查无购买的商品信息");
+        }
+        if ($sod['is_gift'] == 1) {
+            return $this->rFail("赠品不允许退款");
+        }
+        if (intval($sod['order_id']) !== intval($this->order['order_id'])) {
+            return $this->rFail("子订单不属于当前订单");
+        }
+        $refundQuantity = intval($refund['quantity']);
+        if ($refundQuantity <= 0) {
+            return $this->rFail("退款数量必须大于0");
+        }
+        if ($sod['refund_quantity'] + $refundQuantity > $sod['quantity']) {
+            return $this->rFail("退款数量大于当前订单详情数量");
+        }
+        $sodRefundAmount = null;
+        if ($sod['quantity'] == $refundQuantity) {
+            $sodRefundAmount = $sod['total_sod_price'];
+        }
+        if (!$sodRefundAmount) {
+            $sodRefundAmount = bcmul(bcdiv($sod['total_sod_price'], $sod['quantity'], 2), $refundQuantity, 3);
+        }
+        $refundAmount = bcsub($this->order['total_price'], $this->order['refund_amount'], 3);
+        if (bccomp((string)$sodRefundAmount, (string)$refundAmount, 3) > 0) {
+            $sodRefundAmount = $refundAmount;
+        }
+        $amountRefunded = $this->getSaleOrdersRefundSum(['order_id' => $sod['order_id'], 'status' => 2], 'refund_amount');
+        $lastRefundAmount = bcsub($this->order['total_price'], $amountRefunded, 2);
+        if ($this->order['total_quantity'] == $this->order['refund_quantity'] + $refundQuantity
+            && bccomp((string)$sodRefundAmount, (string)$lastRefundAmount, 3) < 0) {
+            $sodRefundAmount = $lastRefundAmount;
+        }
+        $saleAmount = $this->getSaleOrdersValue(['order_id' => $sod['order_id']], 'total_price');
+        if (bcadd($amountRefunded, $sodRefundAmount, 3) > $saleAmount) {
+            return $this->rFail("总退款金额超出订单总金额");
+        }
+        return ['amount' => round((float)$sodRefundAmount, 2), 'sod' => $sod];
+    }
+
+    /**
      * 生成退款记录
      * @return array|string
      */
@@ -27,48 +81,15 @@ trait BeforeOrderRefundTrait
         $this->totalRefundMoney = 0;
         $this->refundTradeNo = $this->getRefundNo();
         $flag = [];
-        try {
-            validate(VSaleOrdersRefund::class)->scene('refund')->check($this->postData['refund']);
-        } catch (\Exception $e) {
-            return $this->rValidate($e->getMessage());
+        $calc = $this->calcSodRefundAmount($this->postData['refund']);
+        if (!is_array($calc) || !isset($calc['amount'])) {
+            return $calc;
         }
-        $this->sod = $this->getSaleOrdersDetailsFind(['sod_id' => $this->postData['refund']['sod_id']]);
-        $this->sod = obj2arr($this->sod);
-        if (!$this->sod) {
-            return $this->rFail("查无购买的商品信息");
-        }
-        if ($this->sod['is_gift'] == 1)
-            return $this->rFail("赠品不允许退款");
-        if ($this->sod['quantity'] == $this->postData['refund']['quantity']) $this->sodRefundAmount = $this->sod['total_sod_price'];
-        if ($this->sod['refund_quantity'] + $this->postData['refund']['quantity'] > $this->sod['quantity']) {
-            return $this->rFail("退款数量大于当前订单详情数量");
-        }
-        // 本次退款总金额
-        if (!$this->sodRefundAmount)
-            $this->sodRefundAmount = bcmul(bcdiv($this->sod['total_sod_price'],$this->sod['quantity'],2) , $this->postData['refund']['quantity'],3);
-        actionLog($this->sodRefundAmount,'本次退款总金额');
-        // 当前退款金额大于可退金额时，重置为剩余可退金额bcdiv($this->sod['total_sod_price'],$this->sod['quantity'],2)
-        $refundAmount = bcsub($this->order['total_price'], $this->order['refund_amount'], 3);
-        if ($this->sodRefundAmount > $refundAmount) {
-            $this->sodRefundAmount = $refundAmount;
-            actionLog($this->sodRefundAmount, "本次退款总金额【重置后】");
-        }
-
-        $this->sod['refund_quantity'] = bcadd($this->sod['refund_quantity'],$this->postData['refund']['quantity']);
-        $this->sod['refund_amount'] = bcadd($this->sod['refund_amount'],$this->sodRefundAmount,3);
-        $amountRefunded = $this->getSaleOrdersRefundSum(['order_id' => $this->sod['order_id'],'status' => 2],'refund_amount');
-        actionLog($amountRefunded,'已退款总金额');
-        // 最后一次退款，并且退款金额小于可退金额。
-        $lastRefundAmount = bcsub($this->order['total_price'],$amountRefunded,2);
-        if ($this->order['total_quantity'] == $this->order['refund_quantity'] + $this->postData['refund']['quantity'] && $this->sodRefundAmount < $lastRefundAmount) {
-            $this->sodRefundAmount = $lastRefundAmount;
-            actionLog($this->sodRefundAmount,'本次退款总金额【重置后】-最后退款金额小于可退金额');
-        }
-        $saleAmount = $this->getSaleOrdersValue(['order_id' => $this->sod['order_id']],'total_price');
-        actionLog($saleAmount,'订单销售金额');
-        if (bcadd($amountRefunded , $this->sodRefundAmount,3) > $saleAmount) {
-            return $this->rFail("总退款金额超出订单总金额");
-        }
+        $this->sod = $calc['sod'];
+        $this->sodRefundAmount = $calc['amount'];
+        actionLog($this->sodRefundAmount, '本次退款总金额');
+        $this->sod['refund_quantity'] = bcadd($this->sod['refund_quantity'], $this->postData['refund']['quantity']);
+        $this->sod['refund_amount'] = bcadd($this->sod['refund_amount'], $this->sodRefundAmount, 3);
         $this->handleSorData();
         $flag[] = $this->revenueRefund();
         $systemRefund = $this->systemRefund();

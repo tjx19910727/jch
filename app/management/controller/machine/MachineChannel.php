@@ -23,10 +23,11 @@ class MachineChannel extends Common
     public function getList()
     {
         $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
         //return $this->app->machineChannel->getList($where,$pageNum,$this->field);
-        return $this->app->machineChannel->getMChannelList($where,$pageNum,$this->field);
+        return $this->app->machineChannel->getMChannelList($where,$pageNum,$this->field,'',$hasCostPriceAuth);
     }
 
     public function getFind()
@@ -86,7 +87,8 @@ class MachineChannel extends Common
     public function exportSku()
     {
         $m_id = input("m_id");
-        return $this->app->machineChannel->exportMcSku($m_id);
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        return $this->app->machineChannel->exportMcSku($m_id, $hasCostPriceAuth);
     }
 
     /**
@@ -96,7 +98,8 @@ class MachineChannel extends Common
     public function export()
     {
         $m_id = input("m_id");
-        return $this->app->machineChannel->exportMc($m_id);
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        return $this->app->machineChannel->exportMc($m_id, $hasCostPriceAuth);
     }
 
     /**

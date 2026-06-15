@@ -33,11 +33,141 @@ class Machine extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
         $pageNum = $postData['pageNum'] ?? 0;
+        $field = $this->field;
+        $order = $this->buildMachineListOrder($postData, $field);
+        unset($postData['version_sort'],$postData['stock_ratio'],$postData['sort_name'],$postData['sort_order']);
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];//vending_machine_type字段已废弃，入库默认值为1，代码层面涉及此字段的不用管
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
-        return $this->app->machine->getMList($where,$pageNum,$this->field,"online asc, m_id desc");
+        return $this->app->machine->getMList($where,$pageNum,$field,$order);
+    }
+
+    private function buildMachineListOrder($postData, &$field)
+    {
+        $orderList = [];
+
+        $sortName = strtolower(trim((string)($postData['sort_name'] ?? '')));
+        $sortOrder = $this->normalizeSortDirection($postData['sort_order'] ?? '');
+
+        if ($sortName) {
+            if (!$sortOrder) {
+                $sortOrder = 'desc';
+            }
+            if ($sortName == 'id') {
+                $sortName = 'm_id';
+            }
+            if ($sortName == 'machine_name') {
+                $sortName = 'machine_id';
+            }
+
+            $normalSortFieldMap = [
+                'm_id' => 'm_id',
+                'machine_id' => 'machine_id',
+                'machine_name' => 'machine_name',
+                'online' => 'online',
+                'last_online_time' => 'last_online_time',
+                'version' => 'version',
+                'is_operating' => 'is_operating',
+                'status' => 'status',
+                'factory' => 'factory',
+                'inventory_location' => 'inventory_location',
+            ];
+
+            $specialSortAlias = $this->appendSpecialSortField($sortName, $field);
+            if ($specialSortAlias) {
+                $orderList[] = "{$specialSortAlias} {$sortOrder}";
+                if ($sortName == 'month_achieve_rate') {
+                    $this->appendSpecialSortField('month_achieve_amount', $field);
+                    $orderList[] = "month_achieve_amount_sort {$sortOrder}";
+                }
+            } elseif (isset($normalSortFieldMap[$sortName])) {
+                $orderList[] = "{$normalSortFieldMap[$sortName]} {$sortOrder}";
+            }
+        }
+
+        // 兼容旧参数逻辑：即使 sort_name 有值，也继续追加到后面
+        if (!empty($postData['version_sort'])) {
+            $versionDirection = $postData['version_sort'] == 1 ? 'asc' : 'desc';
+            $orderList[] = "version {$versionDirection}";
+        }
+        if (!empty($postData['stock_ratio'])) {
+            $stockRatioDirection = $postData['stock_ratio'] == 1 ? 'asc' : 'desc';
+            $this->appendSelectField($field, 'stock_ratio_sort', "(SELECT IF(SUM(capacity) > 0, LEAST(GREATEST(SUM(stock) / SUM(capacity), 0), 1), 0) FROM machine_channel WHERE m_id = a.m_id AND status <> 2)");
+            $orderList[] = "stock_ratio_sort {$stockRatioDirection}";
+        }
+
+        $orderList[] = 'online asc';
+        $orderList[] = 'm_id desc';
+        return implode(', ', $orderList);
+    }
+
+    private function appendSpecialSortField($sortName, &$field)
+    {
+        if ($sortName == 'stock_ratio') {
+            $this->appendSelectField($field, 'stock_ratio_sort', "(SELECT IF(SUM(capacity) > 0, LEAST(GREATEST(SUM(stock) / SUM(capacity), 0), 1), 0) FROM machine_channel WHERE m_id = a.m_id AND status <> 2)");
+            return 'stock_ratio_sort';
+        }
+
+        if ($sortName == 'month_target_amount') {
+            $month = date('Y-m');
+            $this->appendSelectField($field, 'month_target_amount_sort', "(SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}')");
+            return 'month_target_amount_sort';
+        }
+
+        if ($sortName == 'month_achieve_amount') {
+            $monthStart = strtotime(date('Y-m-01 00:00:00'));
+            $monthEnd = strtotime(date('Y-m-t 23:59:59'));
+            $this->appendSelectField(
+                $field,
+                'month_achieve_amount_sort',
+                "(SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd})"
+            );
+            return 'month_achieve_amount_sort';
+        }
+
+        if ($sortName == 'month_achieve_rate') {
+            $month = date('Y-m');
+            $monthStart = strtotime(date('Y-m-01 00:00:00'));
+            $monthEnd = strtotime(date('Y-m-t 23:59:59'));
+            $this->appendSelectField(
+                $field,
+                'month_achieve_rate_sort',
+                "(IF((SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}') > 0, ((SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd}) / (SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}') * 100), 0))"
+            );
+            return 'month_achieve_rate_sort';
+        }
+
+        if ($sortName == 'rsrp') {
+            $todayStart = date('Y-m-d 00:00:00');
+            $todayEnd = date('Y-m-d 23:59:59');
+            $this->appendSelectField($field, 'rsrp_sort', "(SELECT IFNULL(rsrp, -999) FROM sim_signal_log WHERE m_id = a.m_id AND created_at >= '{$todayStart}' AND created_at <= '{$todayEnd}' ORDER BY id DESC LIMIT 1)");
+            return 'rsrp_sort';
+        }
+
+        if ($sortName == 'machine_on_off') {
+            $this->appendSelectField($field, 'machine_on_off_sort', "(SELECT IFNULL(on_off_machine, '') FROM machine_on_off WHERE m_id = a.m_id AND status = 1 LIMIT 1)");
+            return 'machine_on_off_sort';
+        }
+
+        return '';
+    }
+
+    private function appendSelectField(&$field, $alias, $expression)
+    {
+        if (strpos($field, " {$alias}") !== false) {
+            return;
+        }
+        $field .= ", {$expression} {$alias}";
+    }
+
+    private function normalizeSortDirection($direction)
+    {
+        $direction = strtolower(trim((string)$direction));
+        if ($direction == 'asc' || $direction == 'desc') {
+            return $direction;
+        }
+        return '';
     }
 
     public function getFind()
@@ -55,6 +185,13 @@ class Machine extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
+        // 要求国家/省/市编码必传，regions_id 可选
+        foreach (['country_id', 'state_id', 'city_id'] as $f) {
+            if (empty($postData[$f]) && $postData[$f] !== 0) {
+                // 使用通用提示，若需要可在语言文件中添加专用提示键
+                return returnValidate(lang('VMachine.' . $f . '_require'));
+            }
+        }
         return $this->app->machine->addM($postData);
     }
 
@@ -65,6 +202,13 @@ class Machine extends Common
             $this->validate($postData, $this->validatePath . '.update');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
+        }
+        // 要求国家/省/市编码必传，regions_id 可选
+        foreach (['country_id', 'state_id', 'city_id'] as $f) {
+            if (empty($postData[$f]) && $postData[$f] !== 0) {
+                // 使用通用提示，若需要可在语言文件中添加专用提示键
+                return returnValidate(lang('VMachine.' . $f . '_require'));
+            }
         }
         return $this->app->machine->updateM($postData);
     }
@@ -136,7 +280,7 @@ class Machine extends Common
         FROM_UNIXTIME(last_online_time) last_online_time,
         (case device_type when 1 then '" . lang("vending_machine") . "' else '" . lang("store") . "' end) device_type,
         (case machine_level when 1 then '" . lang("simplified_version") . "' else '" . lang("luxury_edition") . "' END) machine_level,
-    (case is_operating when 1 then '在营' else '停营' END) is_operating,
+    (case is_operating when 1 then '在营' when 2 then '在库' when 3 then '停营' END) is_operating,
         (case status when 1 then '" . lang("normal") . "' when 2 then '" . lang("disable") . "' when 3 then '" . lang("maintenance") . "' end) status";
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];
@@ -423,5 +567,15 @@ class Machine extends Common
             return returnValidate(lang("VMachine.machine_id_require"));
         }
         return $this->app->machineChannel->exportStockRatioByMachine($mId);
+    }
+
+    /**
+     * 根据 street 回填设备省市区编码
+     * @return array|string
+     */
+    public function repairAddressAreaIds()
+    {
+        $postData = input();
+        return $this->app->machine->repairAddressAreaIds($postData);
     }
 }

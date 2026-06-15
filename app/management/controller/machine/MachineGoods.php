@@ -18,7 +18,7 @@ class MachineGoods extends Common
     protected $field = "mg_id,m_id,g_id,g_name,gc_id,gc_name,gc_sort,pic,sku,cost_price,market_price,retail_price,intergral_rate,gift_points,
     (SELECT sum(mc.stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.status = 1 AND mc.mg_id = a.mg_id) available_stock,
     (SELECT sum(mc.stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.status > 1 AND mc.mg_id = a.mg_id) disabled_stock,
-    (SELECT sum(mc.frozen_stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.mg_id = a.mg_id) reserve_stock,
+    (SELECT sum(mc.frozen_stock) FROM machine_channel mc where mc.m_id = a.m_id AND mc.mg_id = a.mg_id) reserve_stock,auto_refund,
     standby_stock,machine_id,is_shelf,
     (select machine_name FROM machine m WHERE m.m_id = a.m_id) machine_name";
     protected $validatePath = VMachineGoods::class;
@@ -26,9 +26,11 @@ class MachineGoods extends Common
     public function getList()
     {
         $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["g_name" => "like",'sku' => "like"]);
-        return $this->app->machineGoods->getMgList($where, $pageNum, $this->field);
+        return $this->app->machineGoods->getMgList($where, $pageNum, $field);
     }
 
     public function getFind()
@@ -132,8 +134,9 @@ class MachineGoods extends Common
     public function exportMg()
     {
         $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
         $where = $this->getWhere($postData, false, ["g_name" => "like",'sku' => "like"]);
-        return $this->app->machineGoods->exportMg($where);
+        return $this->app->machineGoods->exportMg($where, $hasCostPriceAuth);
     }
 
     /**

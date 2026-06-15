@@ -34,17 +34,44 @@ trait AliPayTrait
     public function aliPay()
     {
 
+        actionLog([
+            'order_id' => $this->order['order_id'] ?? null,
+            'trade_no' => $this->order['trade_no'] ?? null,
+            'pay_method' => $this->order['pay_method'] ?? null,
+            'sp_id' => $this->strategyPayee['sp_id'] ?? null,
+        ], '支付宝入口-开始分派');
+
         if (!in_array($this->order['pay_method'],array_keys($this->aliPaymentMethod)))
             return $this->rFail($this->lang("pay_type_not_in_scope"));
         try {
             validate(VAliPay::class)->scene('ali')->check($this->strategyPayee);
         } catch (\Exception $e) {
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+                'pay_method' => $this->order['pay_method'] ?? null,
+                'error' => $e->getMessage(),
+            ], '支付宝入口-配置校验失败');
             return $this->rValidate($this->lang($e->getMessage()));
         }
 
-        $this->strategyPayee['ali_public_key_path'] = root_path() . "public" . $this->strategyPayee['ali_public_key_path'];
-        $this->strategyPayee['ali_root_cert_path'] = root_path() . "public" . $this->strategyPayee['ali_root_cert_path'];
-        $this->strategyPayee['app_public_key_path'] = root_path() . "public" . $this->strategyPayee['app_public_key_path'];
+        $publicRoot = rtrim((string) root_path(), "\\/") . DIRECTORY_SEPARATOR . 'public';
+        $toPublicAbsPath = static function ($path) use ($publicRoot) {
+            $raw = (string) $path;
+            if ($raw === '') {
+                return $raw;
+            }
+            // 已是绝对路径则直接使用
+            if (preg_match('/^[a-zA-Z]:[\\\\\/]|^\//', $raw)) {
+                return $raw;
+            }
+            return $publicRoot . DIRECTORY_SEPARATOR . ltrim($raw, "\\/");
+        };
+
+        // 统一修正证书/私钥路径，避免拼接成 .../publiccert/... 导致请求前即失败
+        $this->strategyPayee['private_key_path'] = $toPublicAbsPath($this->strategyPayee['private_key_path'] ?? '');
+        $this->strategyPayee['ali_public_key_path'] = $toPublicAbsPath($this->strategyPayee['ali_public_key_path'] ?? '');
+        $this->strategyPayee['ali_root_cert_path'] = $toPublicAbsPath($this->strategyPayee['ali_root_cert_path'] ?? '');
+        $this->strategyPayee['app_public_key_path'] = $toPublicAbsPath($this->strategyPayee['app_public_key_path'] ?? '');
         $this->strategyPayee['isObject'] = false;
         $url = $this->getUrl('/pay/notify.ali/paymentNotify');
         $this->strategyPayee['notifyUrl'] = $url;
@@ -52,7 +79,12 @@ trait AliPayTrait
         $this->aliApp = Factory::trade($this->strategyPayee);
         $this->order['sp_id'] = $this->strategyPayee['sp_id'];
         $func_name = $this->aliPaymentMethod[$this->order['pay_method']];
-        return $this->$func_name();
+        actionLog([
+            'order_id' => $this->order['order_id'] ?? null,
+            'pay_method' => $this->order['pay_method'] ?? null,
+            'dispatch_method' => $func_name,
+        ], '支付宝入口-分派子方法');
+        return $this->$func_name();        
 
     }
 
@@ -90,10 +122,30 @@ trait AliPayTrait
         ];
         actionLog($data, '请求支付宝反扫支付参数');
         if ($data['total_amount'] == 0) return $this->rFail('支付金额不能等于0');
-        $result = $this->aliApp->trade->pay($data);
+        try {
+            $result = $this->aliApp->trade->pay($data);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+                'trade_no' => $this->order['trade_no'] ?? null,
+                'error' => $e->getMessage(),
+                'error_type' => get_class($e),
+            ], '请求支付宝反扫支付异常');
+            return $this->r(100, '请求支付异常：' . $e->getMessage());
+        }
+
         actionLog($result, '请求支付宝反扫支付结果');
-        $return = $this->r(99, "请求支付异常", $result);
-        if (isset($result['code'])) {
+        if (!is_array($result) || empty($result)) {
+            return $this->r(100, '请求支付异常：支付宝接口无有效响应', is_array($result) ? $result : []);
+        }
+
+        $code = (string) ($result['code'] ?? '');
+        $msg = (string) ($result['msg'] ?? '');
+        $subMsg = (string) ($result['sub_msg'] ?? '');
+        $return = $this->r(99, '请求支付异常：' . trim($msg . ' ' . $subMsg), $result);
+
+        if ($code !== '') {
             if (isset($result['buyer_user_id']) && $result['buyer_user_id']) {
                 $user = $this->getUserFind(['openid' => $result['buyer_user_id']]);
                 if ($user) {
@@ -106,7 +158,7 @@ trait AliPayTrait
                 }
             }
 
-            if ($result['code'] == 10000) {
+            if ($code == '10000') {
                 return $this->r(200,$this->lang("init_payment_success"));
 //                $this->startTrans();
 //                try {// 结算分润收益
@@ -120,23 +172,27 @@ trait AliPayTrait
 //                    actionException($e,1);
 //                    $return = $this->rTryCatch($e->getMessage());
 //                }
-            } else if ($result['code'] == 10003) { // 队列轮询
+            } else if ($code == '10003') { // 队列轮询
                 $return = $this->r(201, '等待您的支付，超时时间30秒');
                 $redisExpire = (env("Payment.microPayOverTime") ?? 0) + 60;
                 $redis = new \Redis();
                 $config = config("redis");
                 $redis->connect($config['host'], $config['port'],$config['timeout'],$config['reserved'],$config['retry_interval']);
                 if (isset($config['password']) && $config['password']) $redis->auth($config['password']);
-                $redis->lPush("microPay", json_encode(['order_id' => $this->order['order_id'],'time' => time(),'pay_type' => "wx"], 256 + 64));
+                $redis->lPush("microPay", json_encode(['order_id' => $this->order['order_id'],'time' => time(),'pay_type' => "ali"], 256 + 64));
                 $redis->expire("microPay", $redisExpire);
                 $redis->close();
-            } else if ($result['code'] == 40004) {
+            } else if ($code == '40004') {
                 $this->paymentFailed();
                 $return = $this->r(100, '支付失败，请重新支付');
-            } else if ($result['code'] == 20000) {
+            } else if ($code == '20000') {
                 $this->updateSaleOrders($this->order);
                 $return = $this->r(100, '支付异常，请重新支付');
+            } else {
+                $return = $this->r(100, '请求支付异常：' . trim($msg . ' ' . $subMsg), $result);
             }
+        } else {
+            $return = $this->r(100, '请求支付异常：支付宝返回缺少 code', $result);
         }
         return $return;
     }
@@ -153,11 +209,29 @@ trait AliPayTrait
                 'total_amount' => round($this->order['total_price'],2),
                 'subject' => $this->order['machine_id'] . '购买支付',
             ];
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+                'trade_no' => $data['out_trade_no'],
+                'total_amount' => $data['total_amount'],
+                'subject' => $data['subject'],
+                'private_key_path' => $this->strategyPayee['private_key_path'] ?? null,
+                'ali_public_key_path' => $this->strategyPayee['ali_public_key_path'] ?? null,
+                'ali_root_cert_path' => $this->strategyPayee['ali_root_cert_path'] ?? null,
+                'app_public_key_path' => $this->strategyPayee['app_public_key_path'] ?? null,
+            ], '支付宝预下单-请求参数');
             $result = $this->aliApp->trade->preCreate($data);
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+                'code' => $result['code'] ?? null,
+                'msg' => $result['msg'] ?? null,
+                'sub_msg' => $result['sub_msg'] ?? null,
+                'has_qr_code' => !empty($result['qr_code']),
+            ], '支付宝预下单-返回结果');
             if ($result) {
                 if ($result['code'] == 10000) {
                     $this->returnData['order'] = $this->order;
                     $this->returnData['paymentUrlLink'] = $result['qr_code'];
+                    $this->returnData['qrCodeLink'] = $result['qr_code'];
                     $this->returnData['result'] = $result;
                     return $this->r(200, $result['msg'], $this->returnData);
                 } else {
@@ -166,8 +240,20 @@ trait AliPayTrait
                     return $this->r(100, $this->lang("init_payment_fail") . '：' . $msg, $result);
                 }
             }
-        } catch (\Exception $e) {
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+            ], '支付宝预下单-空响应');
+            return $this->r(100, $this->lang("init_payment_fail") . '：支付宝预下单无响应', [
+                'order_id' => $this->order['order_id'] ?? null,
+                'trade_no' => $data['out_trade_no'] ?? null,
+            ]);
+        } catch (\Throwable $e) {
             actionException($e,1);
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? null,
+                'error' => $e->getMessage(),
+                'error_type' => get_class($e),
+            ], '支付宝预下单-异常');
             return $this->rValidate($e->getMessage());
         }
     }

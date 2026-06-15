@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Providers\Management;
 
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
+use app\AppFactory\Management\Login\LoginV2Client;
 use app\AppFactory\Management\Login\LoginClient;
 
 class LoginProvider implements ServiceProviderInterface
@@ -20,6 +21,9 @@ class LoginProvider implements ServiceProviderInterface
         // TODO: Implement register() method.
         $app['login'] = function ($app) {
             return new LoginClient($app);
+        };
+        $app['loginV2'] = function ($app) {
+            return new LoginV2Client($app);
         };
     }
 }

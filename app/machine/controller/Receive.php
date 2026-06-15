@@ -10,6 +10,7 @@
 namespace app\machine\controller;
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Traits\Machine\SimSignalLogTrait;
 use app\AppFactory\Machine\Application;
 use app\AppFactory\RabbitMq\MqProducer;
 use think\db\exception\DataNotFoundException;
@@ -24,6 +25,8 @@ use think\View;
  */
 class Receive extends Common
 {
+    use SimSignalLogTrait;
+
     protected $validatePath = 'app\machine\validate\VReceive.';
     protected $config;
     /**
@@ -799,6 +802,20 @@ class Receive extends Common
     }
 
     /**
+     * 接收设备上传的首页截屏路径
+     * @return array|string
+     */
+    public function reportScreenImg()
+    {
+        try {
+            return $this->app->api->reportScreenImg();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 设备主动获取出货信息
      * @return array|string
      */
@@ -1064,6 +1081,118 @@ class Receive extends Common
         }
     }
 
+    /**
+     * 获取维护项目（按层级）
+     * @return array|string
+     */
+    public function getMaintenanceItems()
+    {
+        try {
+            return $this->app->api->getMaintenanceItems();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 提交维护记录
+     * @return array|string
+     */
+    public function submitMaintenanceRecord()
+    {
+        try {
+            return $this->app->api->submitMaintenanceRecord();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 从上传的文件内容生成 maintenance_records 的 INSERT SQL
+     * @return array|string
+     */
+    public function importMaintenanceRecords()
+    {
+        try {
+            return $this->app->api->importMaintenanceRecordsFromFile();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 从上传的文件内容生成并插入 check_list_records
+     * @return array|string
+     */
+    public function importCheckListRecords()
+    {
+        try {
+            return $this->app->api->importCheckListRecordsFromFile();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 查询维护记录（按records_code归类）
+     * @return array|string
+     */
+    public function getMaintenanceRecords()
+    {
+        try {
+            return $this->app->api->getMaintenanceRecords();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取检查清单项目（按层级）
+     * @return array|string
+     */
+    public function getCheckListItems()
+    {
+        try {
+            return $this->app->api->getCheckListItems();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 提交检查清单记录
+     * @return array|string
+     */
+    public function submitCheckListRecord()
+    {
+        try {
+            return $this->app->api->submitCheckListRecord();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 查询检查清单记录（按records_code归类）
+     * @return array|string
+     */
+    public function getCheckListRecords()
+    {
+        try {
+            return $this->app->api->getCheckListRecords();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
     public function test()
     {
         $this->app->api->test();
@@ -1151,6 +1280,33 @@ class Receive extends Common
     {
         try {
             return $this->app->api->reportSimCardMachineUsage();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    
+    /**
+     * 设备通过 HTTP 上报物联卡信号
+     * @return array|string
+     */
+    public function reportSimSignal()
+    {
+        try {
+            $postData = input();
+            $postData = json2arr($postData);
+            $machineId = $postData['machine_id'] ?? '';
+            $cacheKey = 'reportSimSignal_limit_' . $machineId;
+            if ($machineId && cache($cacheKey)) {
+                return returnState(300, '同一台设备2分钟内只允许一条信号上报');
+            }
+            if ($machineId) {
+                cache($cacheKey, 1, 120);
+            }
+            $machine = $this->app->api->machine ?? [];
+            $this->updateSimSignalWithData($machine, $postData);
+            return returnState(200, lang('action_success'));
         } catch (\Exception $e) {
             actionException($e, 1);
             return returnTryCatch($e->getMessage());

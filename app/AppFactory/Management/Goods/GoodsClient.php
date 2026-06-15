@@ -12,10 +12,12 @@ namespace app\AppFactory\Management\Goods;
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
+use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Traits\Goods\GoodsLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
 use app\management\validate\VGoods;
@@ -26,7 +28,9 @@ class GoodsClient extends ManagementClient
     use GoodsTrait, GoodsLangTrait;
     use AuthManagerTrait;
     use SaleOrdersGoodsCountTrait;
-    use MachineTrait,MachineChannelTrait;
+    use MachineTrait,MachineChannelTrait,MachineGoodsTrait;
+
+    protected $priceFields = ['cost_price', 'market_price', 'retail_price'];
 
     public function addG($postData)
     {
@@ -104,6 +108,153 @@ class GoodsClient extends ManagementClient
         $where[] = ['g_id','in',$g_id];
         $result = $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
         return $result;
+    }
+
+    /**
+     * 商品编辑：主表价格正常更新，设备商品/货道价格仅按传入的 mg_id、mc_id 覆盖
+     * 不走通用 update 入口，控制器直接调用本方法。
+     * @param array $postData
+     * @return mixed
+     */
+    public function updateForEdit($postData)
+    {
+        $gId = $postData['g_id'] ?? 0;
+        if (!$gId) {
+            return false;
+        }
+
+        $oldGoods = $this->getGoodsFind(['g_id' => $gId], 'g_id,cost_price,market_price,retail_price');
+        if (!$oldGoods) {
+            return false;
+        }
+        $oldGoods = $oldGoods->toArray();
+
+        $selectedMgIds = $this->parseIds($postData['mg_id'] ?? []);
+        $selectedMcIds = $this->parseIds($postData['mc_id'] ?? []);
+        unset($postData['mg_id'], $postData['mc_id']);
+
+        $priceChanged = false;
+        foreach ($this->priceFields as $fieldName) {
+            if (array_key_exists($fieldName, $postData) && (string)$postData[$fieldName] !== (string)$oldGoods[$fieldName]) {
+                $priceChanged = true;
+                break;
+            }
+        }
+
+        $result = $this->updateGoods($postData, ['g_id' => $gId]);
+        if (!$result) {
+            return $result;
+        }
+
+        if ($priceChanged) {
+            $priceUpdate = [];
+            foreach ($this->priceFields as $fieldName) {
+                if (array_key_exists($fieldName, $postData)) {
+                    $priceUpdate[$fieldName] = $postData[$fieldName];
+                }
+            }
+
+            if ($priceUpdate) {
+                if ($selectedMgIds) {
+                    $whereMg = [];
+                    $whereMg[] = ['g_id', '=', $gId];
+                    $whereMg[] = ['mg_id', 'in', $selectedMgIds];
+                    $this->updateMachineGoods($priceUpdate, $whereMg, array_keys($priceUpdate));
+                }
+                if ($selectedMcIds) {
+                    $whereMc = [];
+                    $whereMc[] = ['g_id', '=', $gId];
+                    $whereMc[] = ['mc_id', 'in', $selectedMcIds];
+                    $this->updateMachineChannel($priceUpdate, $whereMc, array_keys($priceUpdate));
+                }
+            }
+        }
+
+        $mgList = $this->getMachineGoodsList([['g_id', '=', $gId]], 0, 'mg_id,machine_id');
+        if ($mgList) {
+            $mgList = $mgList->toArray();
+            foreach ($mgList as $mg) {
+                $this->sendToMachine(['machine_id' => $mg['machine_id']], 'updateMg', ['mg_id' => $mg['mg_id']]);
+            }
+        }
+
+        $mcList = $this->getMachineChannelList([['g_id', '=', $gId]], 0, 'mc_id,machine_id');
+        if ($mcList) {
+            $mcList = $mcList->toArray();
+            foreach ($mcList as $mc) {
+                $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => $mc['mc_id']]);
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * 查询与最新输入价格不同的设备商品、货道列表
+     * @param array $postData
+     * @return array|\think\response\Json
+     */
+    public function getPriceDiff($postData)
+    {
+        $gId = $postData['g_id'] ?? 0;
+        if (!$gId) {
+            return $this->rFail($this->lang('VGoods.g_id_require'));
+        }
+
+        $goods = $this->getGoodsFind(['g_id' => $gId], 'g_id,cost_price,market_price,retail_price');
+        if (!$goods) {
+            return $this->rFail($this->lang('goods_no_data'));
+        }
+        $goods = $goods->toArray();
+
+        $latestCost = $postData['cost_price'] ?? $goods['cost_price'];
+        $latestMarket = $postData['market_price'] ?? $goods['market_price'];
+        $latestRetail = $postData['retail_price'] ?? $goods['retail_price'];
+
+        $mgDiff = Db::name('machine_goods')
+            ->where('g_id', $gId)
+            ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
+                $query->where('cost_price', '<>', $latestCost)
+                    ->whereOr('market_price', '<>', $latestMarket)
+                    ->whereOr('retail_price', '<>', $latestRetail);
+            })
+            ->field('mg_id,m_id,machine_id,g_id,g_name,cost_price,market_price,retail_price')
+            ->order('mg_id desc')
+            ->select()
+            ->toArray();
+
+        $mcDiff = Db::name('machine_channel')
+            ->where('g_id', $gId)
+            ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
+                $query->where('cost_price', '<>', $latestCost)
+                    ->whereOr('market_price', '<>', $latestMarket)
+                    ->whereOr('retail_price', '<>', $latestRetail);
+            })
+            ->field('mc_id,m_id,machine_id,channel_code,g_id,g_name,cost_price,market_price,retail_price')
+            ->order('mc_id desc')
+            ->select()
+            ->toArray();
+
+        return $this->r(200, 'success', [
+            'mg_diff_list' => $mgDiff,
+            'mc_diff_list' => $mcDiff,
+            'mg_diff_count' => count($mgDiff),
+            'mc_diff_count' => count($mcDiff),
+        ]);
+    }
+
+    protected function parseIds($ids)
+    {
+        if (is_array($ids)) {
+            $idList = $ids;
+        } else {
+            $idList = explode(',', (string)$ids);
+        }
+        $idList = array_map('trim', $idList);
+        $idList = array_filter($idList, function ($item) {
+            return $item !== '';
+        });
+        return array_values(array_unique($idList));
     }
 
     public function exportRankingList($where)
@@ -273,15 +424,17 @@ class GoodsClient extends ManagementClient
      * @param $where
      * @return array|string
      */
-    public function exportExcel($where)
+    public function exportExcel($where, $hasCostPriceAuth = true)
     {
-        $list = $this->getGoodsList($where, 0,
-            'g_id,g_name,gc_name,gift_points,cost_points,
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = 'g_id,g_name,gc_name,gift_points,cost_points,
             (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
             '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
             '" ELSE "' . $this->lang("export.g_type_unDefine") . '" END) g_type,
-            model,sku,bar_code,cost_price,market_price,retail_price');
+            model,sku,bar_code,' . $costPriceField . ',market_price,retail_price';
+        $list = $this->getGoodsList($where, 0,
+            $field);
         if ($list) {
             $list = $list->toArray();
             $title = [
@@ -292,12 +445,19 @@ class GoodsClient extends ManagementClient
                 'model' => $this->lang("export.model"),
                 'sku' => $this->lang("export.sku"),
                 'bar_code' => $this->lang("export.bar_code"),
-                'cost_price' => $this->lang("export.cost_price"),
                 'market_price' => $this->lang("export.market_price"),
                 'retail_price' => $this->lang("export.retail_price"),
                 'gift_points' => $this->lang("export.gift_points"),
                 'cost_points' => $this->lang("export.cost_points"),
             ];
+            if ($hasCostPriceAuth) {
+                $title['cost_price'] = $this->lang("export.cost_price");
+                // $title = array_merge(
+                //     array_slice($title, 0, 7, true),
+                //     ['cost_price' => $this->lang("export.cost_price")],
+                //     array_slice($title, 7, null, true)
+                // );
+            }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
             return $result;
@@ -310,18 +470,20 @@ class GoodsClient extends ManagementClient
      * @param $where
      * @return array|string
      */
-    public function exportAllGoodsToExcel($where)
+    public function exportAllGoodsToExcel($where, $hasCostPriceAuth = true)
     {
-        $list = $this->getGoodsList([], 0,
-            'g_id,g_name,gc_name,
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = 'g_id,g_name,gc_name,
             (case g_type when 1 THEN "' . $this->lang("export.g_type1") .
-            '" WHEN 2 THEN "' . $this->lang("export.g_type2") .                                                                                                             
+            '" WHEN 2 THEN "' . $this->lang("export.g_type2") .
             '" WHEN 3 THEN "' . $this->lang("export.g_type3") .
             '" ELSE "' . $this->lang("export.g_type_unDefine") . '" END) g_type,
             (case status when 1 THEN "' . $this->lang("export.status1") .
-            '" WHEN 2 THEN "' . $this->lang("export.status2") .                                                                                                             
+            '" WHEN 2 THEN "' . $this->lang("export.status2") .
             '" END) status,
-            model,bar_code,sku,pic,cost_price,market_price,retail_price,manufacturer,service_phone,length,width,height');
+            model,bar_code,sku,pic,' . $costPriceField . ',market_price,retail_price,manufacturer,service_phone,length,width,height';
+        $list = $this->getGoodsList([], 0,
+            $field);
         if ($list) {
             $list = $list->toArray();
             $title = [
@@ -333,7 +495,6 @@ class GoodsClient extends ManagementClient
                 'bar_code' => $this->lang("export.bar_code"),
                 'sku' => $this->lang("export.sku"),
                 'pic' => $this->lang("export.pic"),
-                'cost_price' => $this->lang("export.cost_price"),
                 'market_price' => $this->lang("export.market_price"),
                 'retail_price' => $this->lang("export.retail_price"),
                 'status' => $this->lang("export.status"),
@@ -343,6 +504,14 @@ class GoodsClient extends ManagementClient
                 'width' => $this->lang("export.width"),
                 'height' => $this->lang("export.height"),
             ];
+            if ($hasCostPriceAuth) {
+                $title['cost_price'] = $this->lang("export.cost_price");
+                // $title = array_merge(
+                //     array_slice($title, 0, 8, true),
+                //     ['cost_price' => $this->lang("export.cost_price")],
+                //     array_slice($title, 8, null, true)
+                // );
+            }
             $filename =  $this->lang("export.goods_list") . "-" . date("Ymd");
             $result = $this->sendToExport($this->lang("menu.goods_management") . "-" . $this->lang("export.goods_list"), $filename, $title, $list);
             return $result;
@@ -418,9 +587,11 @@ class GoodsClient extends ManagementClient
      * @param $where
      * @return array|string
      */
-    public function exportAbnormalBarCodeExcel($where)
+    public function exportAbnormalBarCodeExcel($where, $hasCostPriceAuth = true)
     {
-        $list = $this->getGoodsList($where, 0, 'g_id,g_name,bar_code');
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = 'g_id,g_name,bar_code,' . $costPriceField;
+        $list = $this->getGoodsList($where, 0, $field);
         if ($list) {
             $list = $list->toArray();
             $title = [
@@ -428,6 +599,7 @@ class GoodsClient extends ManagementClient
                 'g_name' => $this->lang("export.g_name"),
                 'bar_code' => $this->lang("export.bar_code"),
             ];
+            if ($hasCostPriceAuth) $title['cost_price'] = $this->lang("export.cost_price");
             $filename = '异常条形码商品列表-' . date("Ymd");
             return $this->sendToExport('商品管理-异常条形码商品列表', $filename, $title, $list);
         }
