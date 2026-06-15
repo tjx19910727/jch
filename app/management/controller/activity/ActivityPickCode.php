@@ -127,6 +127,11 @@ class ActivityPickCode extends Common
     public function exportCode()
     {
         $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'export');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
         return $this->app->activityPickCode->exportCode($postData);
     }
 
@@ -137,6 +142,11 @@ class ActivityPickCode extends Common
     public function exportUsedList()
     {
         $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'export');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
         return $this->app->activityPickCode->exportUsedList($postData);
     }
 

@@ -38,6 +38,7 @@ class VActivityPickCode extends VCommon
         "add" => ["id","quantity"],
         "update" => ["apc_id"],
         "del" => ["apc_id"],
+        "export" => ["id"],
         "usePickCode" => ['pick_code','m_id'],
     ];
 }

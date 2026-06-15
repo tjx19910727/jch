@@ -49,6 +49,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineHelpTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineRefundGoodsLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\SimCardInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
@@ -117,6 +118,7 @@ class ApiClient extends ReceiveBaseClient
         MachineGoodsTrait,
         MachineHelpTrait,
         MachineOnOffTrait,
+        MachineRefundGoodsLogTrait,
         SimCardInfoTrait,
         MachineTrait,
         TopicPageTrait,
@@ -1028,7 +1030,7 @@ class ApiClient extends ReceiveBaseClient
                 [['g.ao_id', 'in', $aoIds]],
                 $this->data['pageNum'] ?? 0,
                 $this->goodsField,
-                'g.update_time desc',
+                'g.g_id desc',
                 $this->machine['m_id']
             );
             if (is_string($goodsList)) return $this->rFail($goodsList);
@@ -4138,5 +4140,61 @@ class ApiClient extends ReceiveBaseClient
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+	/**
+     * 设备提交客户退货日志。
+     * 普通编码匹配当前设备订单号后四位；特殊编码仅跳过订单校验，不触发实际退款。
+     */
+    public function submitRefundGoodsLog()
+    {
+        $inputCode = trim((string)$this->data['input_code']);
+        $specialCode = trim((string)config('refund_goods.special_code'));
+        $isSpecialCode = $specialCode !== ''
+            && preg_match('/^\d{4}$/', $specialCode)
+            && hash_equals($specialCode, $inputCode);
+
+        $order = null;
+        if (!$isSpecialCode) {
+            $order = Db::name('sale_orders')
+                ->where('m_id', intval($this->machine['m_id']))
+                ->whereLike('trade_no', '%' . $inputCode)
+                ->field('order_id,trade_no')
+                ->order('order_id desc')
+                ->find();
+            if (!$order) return $this->r(300, '未找到订单号后四位匹配的当前设备订单');
+        }
+
+        $verifyStatus = ($isSpecialCode || $order) ? 1 : 2;
+        $insert = [
+            'm_id' => intval($this->machine['m_id']),
+            'machine_id' => $this->machine['machine_id'],
+            'ao_id' => intval($this->machine['ao_id']),
+            'order_id' => intval($order['order_id'] ?? 0),
+            'trade_no' => $order['trade_no'] ?? '',
+            'mobile' => trim((string)$this->data['mobile']),
+            'input_code' => $inputCode,
+            'verify_type' => $isSpecialCode ? 2 : 1,
+            'verify_status' => $verifyStatus,
+            'pic_out_goods_box' => trim((string)$this->data['pic_out_goods_box']),
+            'video_out_goods_box' => trim((string)$this->data['video_out_goods_box']),
+            'video_refund_goods' => trim((string)$this->data['video_refund_goods']),
+        ];
+        $logId = $this->addMachineRefundGoodsLog($insert);
+
+        $result = [
+            'mrgl_id' => intval($logId),
+            'verify_type' => $insert['verify_type'],
+            'verify_status' => $verifyStatus,
+            'order_id' => $insert['order_id'],
+            'trade_no' => $insert['trade_no'],
+        ];
+        if (!$logId) {
+            return $this->r(300, '退货日志记录失败', $result);
+        }
+        if (!$isSpecialCode && !$order) {
+            return $this->r(300, '未找到订单号后四位匹配的当前设备订单', $result);
+        }
+        return $this->r(200, '退货日志记录成功', $result);
     }
 }

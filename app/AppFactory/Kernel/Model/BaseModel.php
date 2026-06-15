@@ -23,7 +23,7 @@ class BaseModel extends Model
     protected $updateTime = "update_time";
 
     public static $singlePathFieldList = ["path","pic","button_pic","bg_pic","file_path","icon","ico","gm_pic","qr_code","receipt_code1","receipt_code2","receipt_code3"
-        ,"discount_pic","screen_img","camera_img","exchange_img","transaction_video"];
+        ,"discount_pic","screen_img","camera_img","exchange_img","transaction_video","pic_out_goods_box","video_out_goods_box","video_refund_goods"];
     public static $morePathFieldList = [
         ['field' => "banner","separator" => ";"],
         ['field' => "details_pic","separator" => ";"],
