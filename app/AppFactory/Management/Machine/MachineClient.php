@@ -185,6 +185,7 @@ class MachineClient extends ManagementClient
             'is_operating' => intval($postData['is_operating']),
         ]);
         if ($result) {
+            $this->addOperatingLog($machine['m_id'], $machine['machine_id'], intval($postData['is_operating']));
             $this->sendToMachine($machine, 'updateMachine');
         }
         return $this->rU($result);
@@ -219,10 +220,14 @@ class MachineClient extends ManagementClient
 
         $flag = [];
         foreach ($machines as $machine) {
-            $flag[] = $this->updateMachine([
+            $updateResult = $this->updateMachine([
                 'm_id' => $machine['m_id'],
                 'is_operating' => intval($postData['is_operating']),
             ]);
+            $flag[] = $updateResult;
+            if ($updateResult) {
+                $this->addOperatingLog($machine['m_id'], $machine['machine_id'], intval($postData['is_operating']));
+            }
         }
         return $this->rAction(flag_check($flag));
     }
@@ -257,6 +262,10 @@ class MachineClient extends ManagementClient
         $monthEnd = strtotime(date('Y-m-t 23:59:59', $monthStart));
         $defaultSignal = ['rsrp' => -999, 'sinr' => -999, 'rsrp_level' => 0, 'sinr_level' => 0];
         return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) use ($defaultSignal, $month, $monthStart, $monthEnd) {
+            $item['last_operating_time'] = Db::name('machine_operating_log')
+                ->where('m_id', intval($item['m_id']))
+                ->order('id', 'desc')
+                ->value('created_at') ?? '';
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
             if (isset($item['state_id']) && $item['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $item['state_id']],'code,name,cname');
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
@@ -491,6 +500,10 @@ class MachineClient extends ManagementClient
         $item = $this->getMachineFind($where,$field, "", $with);
         if ($item) {
             $item = $item->toArray();
+            $item['last_operating_time'] = Db::name('machine_operating_log')
+                ->where('m_id', intval($item['m_id']))
+                ->order('id', 'desc')
+                ->value('created_at') ?? '';
             $item['online_all'] = 2;
             if($item['online'] == 1 || $item['http_online'] == 1){
                 $item['online_all'] = 1;
@@ -1961,5 +1974,21 @@ class MachineClient extends ManagementClient
             }
         }
         return $best;
+    }
+
+    /**
+     * 记录在营状态变更日志
+     * @param int $mId
+     * @param string $machineId
+     * @param int $isOperating
+     */
+    private function addOperatingLog($mId, $machineId, $isOperating)
+    {
+        Db::name('machine_operating_log')->insert([
+            'm_id' => $mId,
+            'machine_id' => $machineId,
+            'is_operating' => $isOperating,
+            'manager_id' => $this->manager['manager_id'] ?? 0,
+        ]);
     }
 }

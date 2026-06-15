@@ -439,6 +439,8 @@ class Machine extends Common
         if (!$ckc_status) return returnValidate(lang("VMachine.ckc_status_require"));
         $otherData  = ["ckc_status" => $ckc_status];
         $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "machineCkcOnOff", $otherData);
+        //延时2s返回，等待mq上报状态
+        sleep(2);
         return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
     }
 
