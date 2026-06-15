@@ -786,6 +786,9 @@ class MachineClient extends TimeTaskBase
                 $compositeKey = $item['m_id'] . '|' . $item['machine_id'] . '|' . $iccid . '|' . $date;
                 if (!isset($existTodayMap[$compositeKey])) {
                     $prevTotal = $prevMap[$iccid] ?? 0;
+                    if($prevTotal == 0){
+                        $prevTotal = $totalUsage;
+                    }
                     $usage = bcsub($totalUsage, $prevTotal, 2);
                     if ($usage < 0) {
                         $usage = 0;

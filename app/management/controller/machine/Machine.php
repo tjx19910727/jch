@@ -77,7 +77,7 @@ class Machine extends Common
             $specialSortAlias = $this->appendSpecialSortField($sortName, $field);
             if ($specialSortAlias) {
                 $orderList[] = "{$specialSortAlias} {$sortOrder}";
-                if ($sortName == 'month_achieve_rate' || $sortName == 'month_achieve_rate') {
+                if ($sortName == 'month_achieve_rate') {
                     $this->appendSpecialSortField('month_achieve_amount', $field);
                     $orderList[] = "month_achieve_amount_sort {$sortOrder}";
                 }
@@ -118,16 +118,15 @@ class Machine extends Common
         if ($sortName == 'month_achieve_amount') {
             $monthStart = strtotime(date('Y-m-01 00:00:00'));
             $monthEnd = strtotime(date('Y-m-t 23:59:59'));
-            $month = date('Y-m');
             $this->appendSelectField(
                 $field,
                 'month_achieve_amount_sort',
-                "(IF((SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}') > 0, (SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd}), 0))"
+                "(SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd})"
             );
             return 'month_achieve_amount_sort';
         }
 
-        if ($sortName == 'month_achieve_rate' || $sortName == 'month_achieve_rate') {
+        if ($sortName == 'month_achieve_rate') {
             $month = date('Y-m');
             $monthStart = strtotime(date('Y-m-01 00:00:00'));
             $monthEnd = strtotime(date('Y-m-t 23:59:59'));

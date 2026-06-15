@@ -396,7 +396,7 @@ class MachineChannelClient extends ManagementClient
 
             $whereStockOutArc = ['m_id' => $value['m_id'], 'channel_position' => 2, 'stock' => 0];
             $whereStockOutArc[] = ['g_id', '>', 0];
-            $stockOutArcList = $this->getMachineChannelColumn($whereStockOutArc, 'channel_code');
+            $stockOutArcList = $this->getMachineChannelColumnV2($whereStockOutArc, 'channel_code');
             $value['stock_out_channel_arc'] = implode(",", $stockOutArcList ?? []);
 
             $value['stock_out_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['stock_out_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
