@@ -25,6 +25,7 @@ class RevenuePayChannel extends Common
     public function getList()
     {
         $postData = input();
+        unset($postData['payee_type']);
         $where = $this->getWhere($postData, false, ['channel_name' => 'like']);
         $pageNum = $postData['pageNum'] ?? 0;
         return $this->app->revenuePayChannel->getList($where, $pageNum, "*", "rpc_id desc");
@@ -33,6 +34,7 @@ class RevenuePayChannel extends Common
     public function getFind()
     {
         $postData = input();
+        unset($postData['payee_type']);
         $where = $this->getWhere($postData);
         return $this->app->revenuePayChannel->getFind($where, "*", "rpc_id desc");
     }

@@ -11,6 +11,8 @@ $root = dirname(__DIR__);
 $calculator = file_get_contents($root . '/app/AppFactory/Kernel/Service/Revenue/RevenueCalculator.php');
 $channelClient = file_get_contents($root . '/app/AppFactory/Management/Revenue/RevenuePayChannelClient.php');
 $channelModel = file_get_contents($root . '/app/AppFactory/Kernel/Model/Revenue/RevenuePayChannelModel.php');
+$channelValidator = file_get_contents($root . '/app/management/validate/VRevenuePayChannel.php');
+$channelController = file_get_contents($root . '/app/management/controller/revenue/RevenuePayChannel.php');
 $ruleClient = file_get_contents($root . '/app/AppFactory/Management/Revenue/RevenueRuleClient.php');
 $ruleModel = file_get_contents($root . '/app/AppFactory/Kernel/Model/Revenue/RevenueRuleModel.php');
 $databaseChange = file_get_contents($root . '/文档说明/新分账数据库初始化.sql');
@@ -27,8 +29,17 @@ if (strpos($calculator, 'payeeRevenueConfig') !== false
 if (strpos($channelModel, 'settlement_type') !== false) {
     $failures[] = '渠道模型仍包含结算时间配置';
 }
-if (strpos($channelClient, "unset(\$postData['settlement_type'], \$postData['settlement_days'])") === false) {
-    $failures[] = '渠道接口没有忽略误传的结算时间字段';
+if (strpos($channelModel, 'payee_type') !== false) {
+    $failures[] = '渠道模型仍包含已删除的 payee_type';
+}
+if (strpos($channelValidator, 'payee_type') !== false) {
+    $failures[] = '渠道验证器仍包含已删除的 payee_type';
+}
+if (substr_count($channelController, "unset(\$postData['payee_type']);") < 2) {
+    $failures[] = '渠道查询接口没有忽略旧前端误传的 payee_type';
+}
+if (strpos($channelClient, "unset(\$postData['payee_type'], \$postData['settlement_type'], \$postData['settlement_days'])") === false) {
+    $failures[] = '渠道接口没有忽略误传的旧字段或结算时间字段';
 }
 if (strpos($ruleClient, 'T+N 分账天数必须大于0') === false
     || strpos($ruleModel, 'settlement_type') === false) {
@@ -39,6 +50,9 @@ preg_match('/CREATE TABLE IF NOT EXISTS `revenue_pay_channel` \\((.*?)\\) ENGINE
 preg_match('/CREATE TABLE IF NOT EXISTS `revenue_rule` \\((.*?)\\) ENGINE=/s', $databaseChange, $ruleTable);
 if (strpos($channelTable[1] ?? '', '`settlement_type`') !== false) {
     $failures[] = '初始化 SQL 的 revenue_pay_channel 仍包含结算时间字段';
+}
+if (strpos($channelTable[1] ?? '', '`payee_type`') !== false) {
+    $failures[] = '初始化 SQL 的 revenue_pay_channel 仍包含已删除的 payee_type';
 }
 if (strpos($ruleTable[1] ?? '', '`settlement_type`') === false
     || strpos($ruleTable[1] ?? '', '`settlement_days`') === false) {

@@ -5,7 +5,6 @@
 SELECT
   rpc_id,
   pay_type,
-  payee_type,
   channel_name,
   status
 FROM revenue_pay_channel

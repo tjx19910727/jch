@@ -404,25 +404,14 @@ class RevenueCalculator
 
     protected function shouldCalculateRevenue()
     {
-        $spId = intval($this->order['sp_id'] ?? 0);
         $payType = intval($this->order['pay_type'] ?? 0);
-        $payeeType = 0;
-        if ($spId > 0) {
-            $payee = Db::name('strategy_payee')->where(['sp_id' => $spId])->field('payee_type')->find();
-            if (!$payee) return false;
-            $payeeType = intval($payee['payee_type'] ?? 0);
-        }
-        $channel = null;
-        if ($payType > 0 && ($channel = Db::name('revenue_pay_channel')->where(['pay_type' => $payType, 'status' => 1])->find())) {
-            $this->revenuePayChannel = $channel;
-        }
-        if (!$channel && $payeeType > 0 && ($channel = Db::name('revenue_pay_channel')->where(['pay_type' => $payeeType, 'status' => 1])->find())) {
-            $this->revenuePayChannel = $channel;
-        }
-        if (!$channel && $payeeType > 0 && ($channel = Db::name('revenue_pay_channel')->where(['payee_type' => $payeeType, 'status' => 1])->find())) {
-            $this->revenuePayChannel = $channel;
-        }
+        if ($payType <= 0) return false;
+
+        $channel = Db::name('revenue_pay_channel')
+            ->where(['pay_type' => $payType, 'status' => 1])
+            ->find();
         if (!$channel) return false;
+        $this->revenuePayChannel = $channel;
         return true;
     }
 

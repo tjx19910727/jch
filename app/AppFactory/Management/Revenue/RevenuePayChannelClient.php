@@ -12,7 +12,7 @@ class RevenuePayChannelClient extends ManagementClient
 
     public function addData($postData)
     {
-        unset($postData['settlement_type'], $postData['settlement_days']);
+        unset($postData['payee_type'], $postData['settlement_type'], $postData['settlement_days']);
         $check = $this->checkData($postData);
         if ($check !== true) return $check;
         if (!isset($postData['status'])) $postData['status'] = 1;
@@ -21,7 +21,7 @@ class RevenuePayChannelClient extends ManagementClient
 
     public function updateData($postData)
     {
-        unset($postData['settlement_type'], $postData['settlement_days']);
+        unset($postData['payee_type'], $postData['settlement_type'], $postData['settlement_days']);
         if (empty($postData['rpc_id'])) return $this->rFail("分账渠道配置ID不能为空");
         $check = $this->checkData($postData, true);
         if ($check !== true) return $check;
@@ -60,9 +60,6 @@ class RevenuePayChannelClient extends ManagementClient
             if ($exists && (!$isUpdate || intval($exists['rpc_id']) !== intval($data['rpc_id'] ?? 0))) {
                 return $this->rFail("该支付类型已配置分账渠道");
             }
-        }
-        if (isset($data['payee_type']) && $data['payee_type'] !== '' && intval($data['payee_type']) <= 0) {
-            return $this->rFail("收款策略类型不合法");
         }
         if (isset($data['status']) && !in_array(intval($data['status']), [1, 2], true)) {
             return $this->rFail("状态不合法");

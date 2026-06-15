@@ -3,9 +3,9 @@
     "info": {
         "title": "嘉潮汇管理后台 - 新分账接口",
         "description": "新分账后台配置、分账订单查询与测试环境模拟支付成功接口。revenue_pay_channel 仅控制哪些订单支付类型允许触发新分账；普通分账、设备出租、设备分账和设备商品分账均由 revenue_rule/revenue_rule_item 配置；每条规则独立配置即时或 T+N 结算周期，revenue_order 保存生成时的结算快照。导入 Apifox 后，请在环境中配置 baseUrl 和 token。所有接口均为 POST，并显式携带必传 Header token: {{token}}。",
-        "version": "2.1.1"
+        "version": "2.1.2"
     },
-    "x-generated-at": "2026-06-12",
+    "x-generated-at": "2026-06-15",
     "x-generated-from": [
         "app/management/controller/Revenue/RevenueAccount.php",
         "app/management/controller/Revenue/RevenuePayChannel.php",
@@ -21,6 +21,12 @@
             "ao_id": "organization_name",
             "payer_ao_id": "payer_organization_name",
             "receiver_ao_id": "receiver_organization_name"
+        }
+    },
+    "x-response-rule-fields": {
+        "description": "分账策略列表返回时补充关联设备统计字段。",
+        "fields": {
+            "machine_num": "当前分账策略关联的设备总数，包含启用和停用的设备绑定；无关联设备时返回0"
         }
     },
     "servers": [
@@ -2288,10 +2294,6 @@
                                 "type": "integer",
                                 "description": "订单支付类型，可选；新配置应以此字段作为触发依据"
                             },
-                            "payee_type": {
-                                "type": "integer",
-                                "description": "历史兼容筛选字段，可选；不建议新功能使用"
-                            },
                             "channel_name": {
                                 "type": "string",
                                 "description": "分账触发配置名称，可选，支持模糊查询"
@@ -2334,11 +2336,6 @@
                         "type": "integer",
                         "description": "订单支付类型，必填且唯一；只有配置并启用的订单支付类型才生成新分账"
                     },
-                    "payee_type": {
-                        "type": "integer",
-                        "deprecated": true,
-                        "description": "历史兼容字段，可选；新配置请勿提交，统一使用订单 pay_type 判断是否触发分账"
-                    },
                     "channel_name": {
                         "type": "string",
                         "description": "分账触发配置名称，必填，仅用于后台识别"
@@ -2368,11 +2365,6 @@
                     "pay_type": {
                         "type": "integer",
                         "description": "订单支付类型，可选；提交时必须大于0且唯一"
-                    },
-                    "payee_type": {
-                        "type": "integer",
-                        "deprecated": true,
-                        "description": "历史兼容字段，可选；新配置请勿提交，统一使用订单 pay_type 判断是否触发分账"
                     },
                     "channel_name": {
                         "type": "string",

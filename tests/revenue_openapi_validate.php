@@ -62,8 +62,8 @@ check(($tokenHeader['in'] ?? '') === 'header', 'TokenHeader 必须位于 Header'
 check(($tokenHeader['required'] ?? false) === true, 'TokenHeader 必须为必传参数', $failures);
 check(($tokenHeader['example'] ?? '') === '{{token}}', 'TokenHeader 参数值必须为 {{token}}', $failures);
 check(count($paths) === 32, '新分账接口数量应为 32', $failures);
-check(($json['info']['version'] ?? '') === '2.1.1', '重新生成的 OpenAPI 版本必须为 2.1.1', $failures);
-check(($json['x-generated-at'] ?? '') === '2026-06-12', 'OpenAPI 必须记录本次重新生成日期', $failures);
+check(($json['info']['version'] ?? '') === '2.1.2', '重新生成的 OpenAPI 版本必须为 2.1.2', $failures);
+check(($json['x-generated-at'] ?? '') === '2026-06-15', 'OpenAPI 必须记录本次重新生成日期', $failures);
 check(count($tagNames) === 4, '新分账接口应只保留4个实际模块标签', $failures);
 check(!in_array('新分账-收款策略配置', $tagNames, true), '不得保留已删除的收款策略配置标签', $failures);
 check(array_keys($paths) === $actualPaths, 'OpenAPI 路径必须与当前 Revenue 控制器完全一致', $failures);
@@ -76,6 +76,9 @@ foreach (['RevenueRuleListRequest', 'RevenueRuleAddRequest', 'RevenueRuleUpdateR
     check(strpos(json_encode($schemas[$name] ?? []), 'payer_ao_id') === false, "{$name} 不得继续暴露 payer_ao_id", $failures);
 }
 check(strpos(json_encode($schemas['RevenueOrderListRequest'] ?? []), 'payer_ao_id') !== false, 'RevenueOrderListRequest 必须保留订单收款组织筛选', $failures);
+foreach (['RevenuePayChannelListRequest', 'RevenuePayChannelFindRequest', 'RevenuePayChannelAddRequest', 'RevenuePayChannelUpdateRequest'] as $name) {
+    check(strpos(json_encode($schemas[$name] ?? []), 'payee_type') === false, "{$name} 不得继续暴露已删除的 payee_type", $failures);
+}
 
 foreach ($paths as $path => $pathItem) {
     check(strpos($path, '/management/revenue.') === 0, "接口不属于独立新分账模块：{$path}", $failures);

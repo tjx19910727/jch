@@ -70,11 +70,11 @@ if ($imported !== '') {
         'VALUES(3, 1, 64',
         'VALUES(4, 1, 62',
         'VALUES(6, 35, 59',
-        'VALUES(2, 11, 1',
-        'VALUES(3, 12, 1',
-        'VALUES(4, 22, 2',
-        'VALUES(5, 21, 2',
-        'VALUES(6, 4, 4',
+        "VALUES(2, 11, '微信掃碼'",
+        "VALUES(3, 12, '微信反掃'",
+        "VALUES(4, 22, '支付宝反掃'",
+        "VALUES(5, 21, '支付宝掃碼'",
+        "VALUES(6, 4, '京东收银'",
     ] as $requiredImport) {
         if (strpos($imported, $requiredImport) === false) {
             $failures[] = "实际导入文件缺少前置数据：{$requiredImport}";

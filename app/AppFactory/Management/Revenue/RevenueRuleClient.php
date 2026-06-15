@@ -54,7 +54,9 @@ class RevenueRuleClient extends ManagementClient
     public function getList($where= [], $pageNum = 0, $field = "*", $order = "rr_id desc",$rQ = 1)
     {
         return $this->rQ($this->appendRevenueOrganizationNames(
-            $this->getRevenueRuleList($where, $pageNum, $field, $order)
+            $this->appendRevenueRuleMachineNums(
+                $this->getRevenueRuleList($where, $pageNum, $field, $order)
+            )
         ));
     }
 
@@ -235,6 +237,61 @@ class RevenueRuleClient extends ManagementClient
             ? $query->paginate($pageNum, false, ['query' => request()->param()])
             : $query->select();
         return $this->rQ($this->appendRevenueOrganizationNames($result));
+    }
+
+    protected function appendRevenueRuleMachineNums($data)
+    {
+        if (is_object($data) && method_exists($data, 'toArray')) {
+            $data = $data->toArray();
+        }
+        if (!is_array($data)) {
+            return $data;
+        }
+
+        $ruleIds = [];
+        $this->collectRevenueRuleIds($data, $ruleIds);
+        if (!$ruleIds) {
+            return $data;
+        }
+
+        $rows = Db::name('revenue_rule_machine')
+            ->whereIn('rr_id', array_keys($ruleIds))
+            ->field('rr_id,COUNT(DISTINCT m_id) machine_num')
+            ->group('rr_id')
+            ->select()
+            ->toArray();
+        $machineNums = [];
+        foreach ($rows as $row) {
+            $machineNums[intval($row['rr_id'])] = intval($row['machine_num']);
+        }
+
+        return $this->fillRevenueRuleMachineNums($data, $machineNums);
+    }
+
+    protected function collectRevenueRuleIds(array $data, array &$ruleIds)
+    {
+        foreach ($data as $field => $value) {
+            if ($field === 'rr_id' && intval($value) > 0) {
+                $ruleIds[intval($value)] = true;
+            }
+            if (is_array($value)) {
+                $this->collectRevenueRuleIds($value, $ruleIds);
+            }
+        }
+    }
+
+    protected function fillRevenueRuleMachineNums(array $data, array $machineNums)
+    {
+        if (isset($data['rr_id'])) {
+            $data['machine_num'] = $machineNums[intval($data['rr_id'])] ?? 0;
+        }
+        foreach ($data as &$value) {
+            if (is_array($value)) {
+                $value = $this->fillRevenueRuleMachineNums($value, $machineNums);
+            }
+        }
+        unset($value);
+        return $data;
     }
 
     public function unbindMachine($rrmId)

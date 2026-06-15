@@ -22,6 +22,10 @@ foreach ([$calculator, $provider, $databaseChange] as $content) {
 if (strpos($calculator, "Db::name('revenue_pay_channel')") === false) {
     $failures[] = '分账入口没有读取渠道开关';
 }
+if (strpos($calculator, "where(['payee_type'") !== false
+    || strpos($calculator, "field('payee_type')") !== false) {
+    $failures[] = '分账入口仍依赖 payee_type 回退匹配';
+}
 if (strpos($calculator, 'getRuleByMode(1)') === false
     || strpos($calculator, '设备未配置普通分账策略') === false) {
     $failures[] = '普通分账没有完整迁移到 rule_mode=1';
