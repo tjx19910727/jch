@@ -21,6 +21,10 @@ class ExportLog extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ["export_position" => "like"]);
+        if (!empty($postData['keyword'])) {
+            $keyword = $postData['keyword'];
+            $where['raw'] = "a.creator IN (SELECT manager_id FROM auth_manager WHERE nickname LIKE '%{$keyword}%' OR account LIKE '%{$keyword}%')";
+        }
         return $this->app->exportLog->getList($where,$pageNum,$this->field,'create_time desc');
     }
 }
