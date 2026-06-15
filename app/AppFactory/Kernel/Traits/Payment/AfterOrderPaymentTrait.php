@@ -285,7 +285,8 @@ trait AfterOrderPaymentTrait
             // ];
             
             //交易成功通知
-            if($this->order['total_price'] > 0.01){
+            $checkPrice = round(round($this->order['total_price'], 2) * 100);
+            if($checkPrice > 1){
                 $this->noticeSendData = [
                     "ao_id" => $this->machine['ao_id'],
                     "m_id" => $this->machine['m_id'],
