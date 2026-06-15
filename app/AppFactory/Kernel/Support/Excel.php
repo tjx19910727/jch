@@ -126,11 +126,12 @@ class Excel
      * @param int $isDown
      * @param int $startRow
      * @param array $mergeCells
+     * @param array $otherData 可选扩展：imageFields/ imageWidth / imageHeight
      * @return bool|string
      * @throws \PHPExcel_Exception
      * @throws \PHPExcel_Writer_Exception
      */
-    public static function exportExcel($list,$title,$filename,$isDown = 0,$startRow = 1,$mergeCells = [])
+    public static function exportExcel($list,$title,$filename,$isDown = 0,$startRow = 1,$mergeCells = [],$otherData = [])
     {
         if(empty($filename)) return false;
         if(!is_array($title)) return false;
@@ -145,6 +146,18 @@ class Excel
         foreach ($title as $k=>$v){
             $indexKey[] = $k;
         }
+
+        $imageFields = $otherData['imageFields'] ?? [];
+        $imageWidth  = (int)($otherData['imageWidth'] ?? 220);
+        $imageHeight = (int)($otherData['imageHeight'] ?? 70);
+        $tempDir = null;
+        if ($imageFields) {
+            $tempDir = root_path() . 'public/uploads/excel_img/' . date('Ymd') . '/';
+            if (!is_dir($tempDir)) {
+                @mkdir($tempDir, 0777, true);
+            }
+        }
+
         //接下来就是写数据到表格里面去
         $objActSheet = $objPHPExcel->getActiveSheet();
         if ($mergeCells) {
@@ -153,15 +166,33 @@ class Excel
                 if (isset($mv['cell']) && isset($mv['name']))$objActSheet->setCellValueExplicit($mv["cell"],$mv["name"],\PHPExcel_Cell_DataType::TYPE_STRING);
             }
         }
-        $styleArray = array(
-            'alignment' => array(
-                'wrap' => true, // 设置自动换行
-            ),
-        );
         foreach ($list as $row) {
+            $rowHasImage = false;
             foreach ($indexKey as $key => $value){
-                //这里是设置单元格的内容
-                $objActSheet->setCellValueExplicit($header_arr[$key].$startRow,$row[$value] ?? '',\PHPExcel_Cell_DataType::TYPE_STRING);
+                $cellValue = $row[$value] ?? '';
+                $colLetter = $header_arr[$key];
+                // 图片列且值是http(s) URL → 嵌入图片本体
+                if ($imageFields && in_array($value, $imageFields, true) && preg_match('#^https?://#i', (string)$cellValue)) {
+                    $localPath = self::resolveExportImage((string)$cellValue, $tempDir);
+                    if ($localPath) {
+                        $objActSheet->setCellValue($colLetter . $startRow, '');
+                        $drawing = new \PHPExcel_Worksheet_Drawing();
+                        $drawing->setPath($localPath);
+                        $drawing->setCoordinates($colLetter . $startRow);
+                        $drawing->setWidth($imageWidth);
+                        $drawing->setHeight($imageHeight);
+                        $drawing->setOffsetX(3);
+                        $drawing->setOffsetY(3);
+                        $drawing->setWorksheet($objActSheet);
+                        $rowHasImage = true;
+                        continue;
+                    }
+                }
+                // 普通文本
+                $objActSheet->setCellValueExplicit($colLetter.$startRow, $cellValue, \PHPExcel_Cell_DataType::TYPE_STRING);
+            }
+            if ($rowHasImage) {
+                $objActSheet->getRowDimension($startRow)->setRowHeight(max(20, $imageHeight * 0.75));
             }
             $startRow++;
         }
@@ -180,6 +211,35 @@ class Excel
             $objWriter->save("php://output");
         }
         return $savePath . "/" . $filename;
+    }
+
+    /**
+     * 下载远程图片并校验有效性，返回本地路径
+     * @param string $url
+     * @param string $dir
+     * @return string|false
+     */
+    private static function resolveExportImage($url, $dir)
+    {
+        $contents = @file_get_contents($url);
+        if ($contents === false || $contents === '') {
+            return false;
+        }
+        $ext = 'png';
+        if (function_exists('getimagesizefromstring')) {
+            $info = @getimagesizefromstring($contents);
+            if (!$info || empty($info['mime']) || strpos($info['mime'], 'image/') !== 0) {
+                return false;
+            }
+            if ($info['mime'] === 'image/jpeg') {
+                $ext = 'jpg';
+            }
+        }
+        $filename = $dir . md5($url) . '.' . $ext;
+        if (@file_put_contents($filename, $contents)) {
+            return $filename;
+        }
+        return false;
     }
 
     /**

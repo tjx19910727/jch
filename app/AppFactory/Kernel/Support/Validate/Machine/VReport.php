@@ -26,6 +26,9 @@ class VReport extends SupportValidate
         "g_id" => "require",
 
         "transaction_video" => "require",
+        "replenishment_video" => "require",
+
+        "record_no" => "require",
 
         "field" => "require",
         "path" => "require",
@@ -54,6 +57,9 @@ class VReport extends SupportValidate
         "g_id.require" => "商品ID不能为空",
 
         "transaction_video.require" => "交易视频路径不能为空",
+        "replenishment_video.require" => "补货视频路径不能为空",
+
+        "record_no.require" => "补货单号不能为空",
 
         "field.require" => "图片字段名不能为空",
         "path.require" => "图片路径不能为空",
@@ -101,6 +107,8 @@ class VReport extends SupportValidate
         "pickUpDoorOpen" => ["msgType"],//打开出料箱门回执
         "pickUpDoorClose" => ["msgType"],//关闭出料箱门回执
         "updateSimSignal" => ["msgType", "rsrp", "sinr"],//物联卡信号上报
+
+        "replenishmentVideo" => ["msgType","record_no","path"],
 
     ];
 }

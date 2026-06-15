@@ -37,6 +37,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachinePreReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\SimSignalLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineServiceLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
@@ -62,6 +63,7 @@ class MqClient extends ReceiveBaseClient
     use ActivityLotteryTrait,ActivityLotteryConfigTrait,ActivityLotteryContentTrait,ActivityLotteryUsedTrait,ActivityLotteryUsedGoodsTrait;
     use EarthCitiesTrait,EarthRegionsTrait,EarthCountriesTrait,EarthStatesTrait;
     use MachineServiceLogTrait;
+    use MachinePreReplenishmentTrait;
 
     protected $order;
     public function __construct(ServiceContainer $app)

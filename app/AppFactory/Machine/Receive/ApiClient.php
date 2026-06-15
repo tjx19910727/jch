@@ -80,6 +80,9 @@ use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcUserLoginInfoTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
+use app\AppFactory\Kernel\Model\Machine\PreReplenishmentDetailModel;
+use app\AppFactory\Kernel\Model\Machine\PreReplenishmentLogModel;
+use app\AppFactory\Kernel\Model\Machine\PreReplenishmentOrderModel;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -4174,6 +4177,214 @@ class ApiClient extends ReceiveBaseClient
                 'camera_usage' => $cameraUsage,
             ]);
         } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取设备预补货详情（按 record_no + machine_id）
+     * @return array
+     */
+    public function getPreReplenishmentDetail()
+    {
+        $recordNo  = $this->data['record_no'] ?? '';
+        $machineId = $this->data['machine_id'] ?? '';
+
+        if (!$recordNo || !$machineId) {
+            return $this->rFail('参数错误');
+        }
+
+        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no');
+        if (!$order) {
+            return $this->r(100, '单据不存在');
+        }
+
+        $details = PreReplenishmentDetailModel::where([
+            ['order_id', '=', $order['id']],
+            ['machine_id', '=', $machineId],
+        ])->order('id asc')->select()->toArray();
+
+        if (!$details) {
+            return $this->r(100, '未找到预补货数据');
+        }
+
+        // 收集 mc_id 批量查货道获取商品信息
+        $mcIds = array_unique(array_column($details, 'mc_id'));
+        $channelRows = $this->getMachineChannelList([['mc_id', 'in', $mcIds]]);
+        $channelMap = [];
+        foreach ($channelRows as $cr) {
+            $channelMap[$cr['mc_id']] = $cr;
+        }
+
+        // 检查是否已经确认预补货
+        $confirmed = false;
+        $channels = [];
+        foreach ($details as $d) {
+            if (($d['order_count'] ?? 0) >= 1) {
+                $confirmed = true;
+            }
+            $mc = $channelMap[$d['mc_id']] ?? [];
+            $channels[] = [
+                'mc_id'            => $d['mc_id'],
+                'channel_code'     => $d['channel_code'],
+                'sku'              => $d['sku'],
+                'g_id'             => $mc['g_id'] ?? 0,
+                'g_name'           => $mc['g_name'] ?? '',
+                'pic'              => $mc['pic'] ?? '',
+                'capacity'         => $mc['capacity'] ?? 0,
+                'stock'            => $mc['stock'] ?? 0,
+                'plan_quantity'    => $d['plan_quantity'],
+                'actual_quantity'  => $d['actual_quantity'] ?? 0,
+                'order_count'      => $d['order_count'] ?? 0,
+            ];
+        }
+
+        if ($confirmed) {
+            return $this->r(100, '您已经预补货了，如需重新补货联系客服处理');
+        }
+
+        return $this->r(200, $this->lang("query_success"), ['channels' => $channels]);
+    }
+
+    /**
+     * 设备确认预补货
+     * 记录补货日志、更新货道库存变化
+     * @return array
+     */
+    public function confirmPreReplenishment()
+    {
+        $recordNo  = $this->data['record_no'] ?? '';
+        $machineId = $this->data['machine_id'] ?? '';
+        $channel   = json2arr($this->data['channel'] ?? []); // [{mc_id, quantity}]
+
+        if (!$recordNo || !$machineId || !$channel) {
+            return $this->rFail('参数错误');
+        }
+
+        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no,creator_id');
+        if (!$order) {
+            return $this->r(100, '单据不存在');
+        }
+
+        $anyDetail = PreReplenishmentDetailModel::where([
+            ['order_id', '=', $order['id']],
+            ['machine_id', '=', $machineId],
+            ['order_count', '>=', 1],
+        ])->find();
+        if ($anyDetail) {
+            return $this->r(100, '您已经预补货了，如需重新补货联系客服处理');
+        }
+
+        $this->startTrans();
+        try {
+            foreach ($channel as $item) {
+                $mcId     = (int)($item['mc_id'] ?? 0);
+                $quantity = (int)($item['quantity'] ?? 0);
+
+                if (!$mcId || $quantity <= 0) {
+                    $this->rollbackTrans();
+                    return $this->rFail('明细参数不完整');
+                }
+
+                $detail = PreReplenishmentDetailModel::where([
+                    ['order_id', '=', $order['id']],
+                    ['machine_id', '=', $machineId],
+                    ['mc_id', '=', $mcId],
+                ])->lock(true)->find();
+
+                if (!$detail) {
+                    $this->rollbackTrans();
+                    return $this->rFail('mc_id ' . $mcId . ' 不在预补货范围内');
+                }
+
+                $newActual = ($detail['actual_quantity'] ?? 0) + $quantity;
+                if ($newActual > $detail['plan_quantity']) {
+                    $this->rollbackTrans();
+                    return $this->rFail('货道 mc_id ' . $mcId . ' 补货数量超过预补数量');
+                }
+
+                PreReplenishmentLogModel::create([
+                    'record_no'    => $recordNo,
+                    'm_id'         => $this->machine['m_id'] ?? 0,
+                    'machine_id'   => $machineId,
+                    'channel_code' => $detail['channel_code'],
+                    'sku'          => $detail['sku'],
+                    'quantity'     => $quantity,
+                    'report_time'  => date('Y-m-d H:i:s'),
+                    'raw_payload'  => arr2json($this->data),
+                ]);
+
+                $mc = $this->getMachineChannelFind(['mc_id' => $mcId]);
+                if ($mc) {
+                    $newStock = ($mc['stock'] ?? 0) + $quantity;
+                    if ($newStock > ($mc['capacity'] ?? 0)) {
+                        $this->rollbackTrans();
+                        return $this->rFail('货道 mc_id ' . $mcId . ' 补货后库存超过容量限制(' . $mc['capacity'] . ')');
+                    }
+                    $this->setMachineChannelInc(['mc_id' => $mc['mc_id']], 'stock', $quantity);
+                    $this->addGoodsChange([
+                        'm_id'         => $this->machine['m_id'],
+                        'machine_id'   => $machineId,
+                        'machine_name' => $this->machine['machine_name'] ?? '',
+                        'mc_id'        => $mc['mc_id'],
+                        'channel_code' => $mc['channel_code'],
+                        'mg_id'        => $mc['mg_id'] ?? 0,
+                        'g_id'         => $mc['g_id'],
+                        'g_name'       => $mc['g_name'],
+                        'gc_id'        => $mc['gc_id'],
+                        'gc_name'      => $mc['gc_name'],
+                        'pic'          => $mc['pic'],
+                        'sku'          => $detail['sku'],
+                        'bar_code'     => $mc['bar_code'] ?? '',
+                        'change_value' => $quantity,
+                        'ao_id'        => $this->machine['ao_id'],
+                        'creator'      => $order['creator_id'] ?? '',
+                        'desc'         => '预补货上架',
+                        'position'     => 1,
+                        'type'         => 2,
+                    ]);
+                    $this->addMachineChannelReplenishment([
+                        'm_id'         => $this->machine['m_id'],
+                        'machine_id'   => $machineId,
+                        'machine_name' => $this->machine['machine_name'] ?? '',
+                        'mc_id'        => $mc['mc_id'],
+                        'channel_code' => $mc['channel_code'],
+                        'mg_id'        => $mc['mg_id'] ?? 0,
+                        'g_id'         => $mc['g_id'],
+                        'g_name'       => $mc['g_name'],
+                        'gc_id'        => $mc['gc_id'],
+                        'gc_name'      => $mc['gc_name'],
+                        'pic'          => $mc['pic'],
+                        'sku'          => $detail['sku'],
+                        'bar_code'     => $mc['bar_code'] ?? '',
+                        'batch_number' => $mc['batch_number'] ?? '',
+                        'before'       => $mc['stock'] ?? 0,
+                        'quantity'     => $quantity,
+                        'after'        => $newStock,
+                        'rep_type'     => 1,//上架补货
+                        'creator'      => $order['creator_id'] ?? 0,
+                        'ao_id'        => $this->machine['ao_id'] ?? 0,
+                        'create_time'  => time(),
+                    ]);
+                }
+
+                $compareStatus = $this->resolveCompareStatus($detail['plan_quantity'], $newActual);
+                PreReplenishmentDetailModel::update([
+                    'id'                  => $detail['id'],
+                    'actual_quantity'     => $newActual,
+                    'actual_sku'          => $detail['sku'],
+                    'actual_channel_code' => $detail['channel_code'],
+                    'compare_status'      => $compareStatus,
+                    'order_count'         => Db::raw('order_count + 1'),
+                ]);
+            }
+
+            $this->refreshOrderBizStatus($order['id']);
+            $this->commitTrans();
+            return $this->r(200, '预补货确认成功');
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
