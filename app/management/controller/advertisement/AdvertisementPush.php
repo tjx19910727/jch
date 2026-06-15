@@ -40,7 +40,9 @@ class AdvertisementPush extends Common
         $pageNum = input('pageNum',0);
         $where = $this->getWhere([]);
         $where[] = ['status',"<",3];
-        if ($m_id) $where['m_id'] = $m_id;
+        if ($m_id) {
+            strpos($m_id,",") === false ? $where['m_id'] = $m_id : $where[] = ['m_id','in',explode(',',$m_id)];
+        }
         $where['push_type'] = 1;
         // 机器分组
         if ($groupType == 1) {
