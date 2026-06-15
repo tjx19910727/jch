@@ -113,6 +113,11 @@ class MqClient extends SendBaseClient
      */
 
     /**
+     * 通知设备返回首页  backHome
+     * @return array|string
+     */
+
+    /**
      * 通知设备远程开门 doorOpen
      * @return array|string
      */

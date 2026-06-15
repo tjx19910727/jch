@@ -77,6 +77,7 @@ use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
+use app\AppFactory\Kernel\Traits\WeiCheng\WcUserLoginInfoTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 
@@ -145,6 +146,7 @@ class ApiClient extends ReceiveBaseClient
         CardTrait,
         WcBaseTrait,
         WcGoodsTrait,
+        WcUserLoginInfoTrait,
         AuthOrgMachineChannelTrait,
         SaleOrdersRefundTrait;
 
@@ -578,6 +580,7 @@ class ApiClient extends ReceiveBaseClient
     public function machineChannel()
     {
         $where['m_id'] = $this->machine['m_id'];
+        $where['is_hidden'] = 2;
         if (isset($this->data['mc_id']) && $this->data['mc_id']) $where['mc_id'] = $this->data['mc_id'];
         $channelField = "mc_id,m_id,machine_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,length,width,width2,height,height2,
         cost_price,market_price,retail_price,gift_points,x_axis,y_axis,shelf_way,cost_points,
@@ -2859,6 +2862,39 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 获取当前设备最近两分钟内最后一条微程登录信息。
+     */
+    public function getWcLatestLoginInfo()
+    {
+        $where = [
+            ['machine_id', '=', $this->machine['machine_id']],
+            ['create_time', '>=', time() - 120],
+        ];
+        $lastLoginInfoId = intval($this->data['last_login_info_id'] ?? 0);
+        if ($lastLoginInfoId > 0) {
+            $where[] = ['wuli_id', '>', $lastLoginInfoId];
+        }
+        $loginInfo = $this->getWcUserLoginInfoFind(
+            $where,
+            'wuli_id,phone,login_data,mq_status,create_time',
+            'create_time desc,wuli_id desc'
+        );
+
+        if (!$loginInfo) {
+            return $this->r(200, '暂无两分钟内的新登录信息', []);
+        }
+        $loginInfo = obj2arr($loginInfo);
+        $data = json_decode($loginInfo['login_data'] ?? '', true);
+        if (!is_array($data)) {
+            return $this->r(300, '登录信息格式错误');
+        }
+        $data['login_info_id'] = intval($loginInfo['wuli_id']);
+        $data['login_time'] = intval($loginInfo['create_time']);
+        $data['mq_status'] = intval($loginInfo['mq_status']);
+        return $this->r(200, 'success', $data);
+    }
+
+    /**
      * 微程会员同步积分
      * 微程会员在售卖机登录后，
      * @return array|\think\response\Json
@@ -3003,6 +3039,7 @@ class ApiClient extends ReceiveBaseClient
         $pageNum = $this->data['pageNum'] ?? 15;
         if (isset($this->data['m_id'])) $where['m_id'] = $this->data['m_id'];
         $where['machine_id'] = $this->data['machine_id'];
+        $where['is_hidden'] = 2;
         $wcMachineChannelLists = $this->getWcMachineChannelList($where, $pageNum, "*", 'sort asc');
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
         $wcMachineChannelData = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
