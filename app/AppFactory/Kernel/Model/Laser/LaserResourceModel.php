@@ -26,5 +26,6 @@ class LaserResourceModel extends BaseModel
         "size" => 'int',
         "order_id" => 'int',
         "create_time" => 'int',
+        "trade_no" => 'string',
     ];
 }

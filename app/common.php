@@ -74,6 +74,23 @@ function returnState($state, $msg = "", $data = [], $isJson = true)
     return $return;
 }
 
+/**
+ * 返回数据格式
+ * @param $state
+ * @param string $msg
+ * @param array $data
+ * @param bool $isJson
+ * @return array|\think\response\Json
+ */
+function returnStateV2($state, $msg = "", $data = [], $isJson = true)
+{
+    $return = ["state" => $state, "msg" => $msg, "data" => $data];
+    if ($isJson) {
+        $return = json($return);
+    }
+    return $return;
+}
+
 
 /**
  * emoji表情转换字符
