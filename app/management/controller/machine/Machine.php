@@ -297,7 +297,7 @@ class Machine extends Common
             $postData = input();
             $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             if (isset($postData['msgType']) && is_int($postData['msgType'])) {
-                $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update", 6=> "powerWakeUp", 7=>"initialization"];
+                $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update", 6=> "powerWakeUp", 7=>"initialization",8=>'backHome'];
                 $postData['msgType'] = $typeList[$postData['msgType']];
             }
             if(!empty($postData['powerTime'])) {
