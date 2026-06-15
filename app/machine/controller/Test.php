@@ -685,4 +685,29 @@ class Test extends BaseController
         echo $content;
         die();
     }
+
+    
+    /**
+     * 测试环境手动触发：运营中设备未开机阶梯提醒
+     * 访问示例：/machine/test/triggerCheckOperatingStartup?secret=你的api.md5Key
+     */
+    public function triggerCheckOperatingStartup()
+    {
+        die;
+        try {
+            $secret = trim(input('secret'));
+            if (!$secret || $secret !== '123dd4567890abcdef1234567890abcdef') {
+                return returnState(100, 'secret校验失败');
+            }
+
+            $result = AppFactory::timeTask()->machine->checkOperatingStartup();
+            return returnState(200, '触发成功', [
+                'result' => $result,
+                'trigger_time' => date('Y-m-d H:i:s'),
+            ]);
+        } catch (\Exception $e) {
+            actionException($e, 1, 'triggerCheckOperatingStartup');
+            return returnState(300, $e->getMessage());
+        }
+    }
 }

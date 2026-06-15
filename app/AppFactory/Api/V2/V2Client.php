@@ -165,7 +165,8 @@ class V2Client extends V2BaseClient
                         sum(totalQuantity) totalQuantity,sum(totalRefundQuantity) totalRefundQuantity",
                     '',
                     'machine_id');
-                $machine['sale_income'] = ($sdc['totalPrice'] ?? 0) - ($sdc['totalRefundMoney'] ?? 0) - ($sdc['totalDiscountPrice'] ?? 0);
+                // totalPrice 为订单实付(已扣优惠)，实际销售额 = 实付 - 退款，不可再减 totalDiscountPrice
+                $machine['sale_income'] = ($sdc['totalPrice'] ?? 0) - ($sdc['totalRefundMoney'] ?? 0);
                 $machine['sale_count'] = ($sdc['totalQuantity'] ?? 0) - ($sdc['totalRefundQuantity'] ?? 0);
                 unset($machine['country_id'], $machine['state_id'], $machine['city_id'], $machine['regions_id'], $machine['scene_id']);
 

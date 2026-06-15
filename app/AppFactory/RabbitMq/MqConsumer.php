@@ -192,18 +192,62 @@ class MqConsumer
      */
     public function export_message(AMQPMessage $message)
     {
-        //手动发送ack
-        $message->ack($message->getDeliveryTag());
+        $data = [];
         try {
             $data = $message->body;
             $data = json2arr($data);
-            actionLog($data, '消息处理', "export_message");
+            $jobType = $data['job_type'] ?? 'export';
+            actionLog([
+                'job_type' => $jobType,
+                'export_id' => $data['export_id'] ?? 0,
+                'filename' => $data['filename'] ?? '',
+                'row_count' => isset($data['list']) && is_array($data['list']) ? count($data['list']) : 0,
+            ], '消息处理摘要', "export_message");
 
-            $app = AppFactory::timeTask();
-            $app->export->makeExcel($data);
-        } catch (\Exception $e) {
+            if ($jobType == 'wc_goods_sync') {
+                $app = AppFactory::management();
+                $goods_type = $data['goods_type'] ?? '';
+                if ($goods_type) {
+                    $syncRes = $app->weicheng->synchronizeGoodsTypes($goods_type);
+                } else {
+                    $syncRes = $app->weicheng->synchronizeGoodsTypesAll();
+                }
+                $syncResLog = $syncRes;
+                if (is_object($syncRes) && method_exists($syncRes, 'getData')) {
+                    $syncResLog = $syncRes->getData();
+                } elseif (is_object($syncRes) && method_exists($syncRes, 'getContent')) {
+                    $syncResLog = json2arr($syncRes->getContent());
+                }
+                actionLog($syncResLog, '微程分类同步结果', "export_message_sync");
+
+                $result = $app->weicheng->synchronizeGoodsAll();
+                $resultLog = $result;
+                if (is_object($result) && method_exists($result, 'getData')) {
+                    $resultLog = $result->getData();
+                } elseif (is_object($result) && method_exists($result, 'getContent')) {
+                    $resultLog = json2arr($result->getContent());
+                }
+                actionLog($resultLog, '微程同步处理结果', "export_message_syncAll");
+            } elseif ($jobType == 'sale_orders_export') {
+                $app = AppFactory::timeTask();
+                if (!$app->export->makeSaleOrdersExcel($data)) {
+                    throw new \RuntimeException('销售订单导出Excel生成失败');
+                }
+            } else {
+                $app = AppFactory::timeTask();
+                if (!$app->export->makeExcel($data)) {
+                    throw new \RuntimeException('导出Excel生成失败');
+                }
+            }
+            $message->ack($message->getDeliveryTag());
+        } catch (\Throwable $e) {
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"export_message");
             actionLog($e->getTrace(), 'tryCatchTrace',"export_message");
+            $exportId = is_array($data) ? intval($data['export_id'] ?? 0) : 0;
+            if ($exportId) {
+                AppFactory::timeTask()->export->updateExportLog(['export_id' => $exportId, 'status' => 4]);
+            }
+            $message->ack($message->getDeliveryTag());
         }
     }
 }

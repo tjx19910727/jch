@@ -169,4 +169,161 @@ class Index extends Common
         $where[] = ['countDate','>=',strtotime("-7 days")];
         return $this->app->goods->exportRankingList($where);
     }
+
+    /**
+     * 获取设备排行榜（V2）
+     * 支持时间范围、设备编号（多选）、设备分组、国家/省/市筛选、pageNum分页
+     * @return array|string
+     */
+    public function getMachineTopList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 15;
+        $topType = $postData['top_type'] ?? 1;
+        if (!in_array($topType, [1, 2], true)) {
+            $topType = 1;
+        }
+        $where = $this->buildRankingWhereV2($postData, true);
+        return $this->app->machine->getRankingList($where, $pageNum, $topType);
+    }
+
+    /**
+     * 获取商品排行榜（V2）
+     * 支持时间范围、设备编号（多选）、设备分组、国家/省/市筛选、pageNum分页
+     * @return array|string
+     */
+    public function getGoodsTopList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 15;
+        $topType = $postData['top_type'] ?? 1;
+        if (!in_array($topType, [1, 2], true)) {
+            $topType = 1;
+        }
+        $where = $this->buildRankingWhereV2($postData, false);
+        return $this->app->goods->getRankingList($where, $pageNum, $topType);
+    }
+
+    /**
+     * 导出设备排行榜（V2）
+     * 筛选条件与 getMachineTopList 一致
+     * @return array|\think\response\Json
+     */
+    public function exportMachineListV2()
+    {
+        $postData = input();
+        $topType = $postData['top_type'] ?? 1;
+        if (!in_array($topType, [1, 2], true)) {
+            $topType = 1;
+        }
+        $where = $this->buildRankingWhereV2($postData, true);
+        return $this->app->machine->exportRankingListV2($where, $topType);
+    }
+
+    /**
+     * 导出商品排行榜（V2）
+     * 筛选条件与 getGoodsTopList 一致
+     * @return array|\think\response\Json
+     */
+    public function exportGoodsListV2()
+    {
+        $postData = input();
+        $topType = intval($postData['top_type'] ?? 1);
+        if (!in_array($topType, [1, 2], true)) {
+            $topType = 1;
+        }
+        $where = $this->buildRankingWhereV2($postData, false);
+        return $this->app->goods->exportRankingListV2($where, $topType);
+    }
+
+    /**
+     * 组装V2排行榜筛选条件
+     * @param array $postData
+     * @param bool $forMachine 是否设备排行榜
+     * @return array
+     */
+    private function buildRankingWhereV2($postData, $forMachine = true)
+    {
+        $where = $this->getWhere([]);
+
+        $dateRange = '';
+        if (isset($postData['countDate']) && $postData['countDate']) {
+            $dateRange = $postData['countDate'];
+        }
+
+        if ($dateRange) {
+            $parts = explode('~', $dateRange);
+            if (isset($parts[0]) && isset($parts[1])) {
+                $startTime = strtotime(trim($parts[0]));
+                $endTime = strtotime(trim($parts[1]));
+                if ($startTime !== false && $endTime !== false) {
+                    $where[] = ['countDate', 'between', [$startTime, $endTime]];
+                }
+            }
+        }
+
+        $mIds = $this->resolveRankingMIds($postData);
+        if ($mIds !== null) {
+            if (!$mIds) {
+                $where[] = ['m_id', '=', 0];
+                return $where;
+            }
+            $where[] = ['m_id', 'in', $mIds];
+        }
+
+        return $where;
+    }
+
+    /**
+     * 根据设备编号/分组/国家省市解析设备ID列表
+     * @param array $postData
+     * @return array|null null表示没有设备相关筛选
+     */
+    private function resolveRankingMIds($postData)
+    {
+        $machineWhere = [];
+        $hasMachineFilter = false;
+
+        if (isset($postData['m_id']) && $postData['m_id'] !== '') {
+            $mIdValue = $postData['m_id'];
+            if (!is_array($mIdValue)) {
+                $mIdValue = explode(',', (string)$mIdValue);
+            }
+            $mIdValue = array_values(array_filter(array_map('intval', $mIdValue), function ($v) {
+                return $v > 0;
+            }));
+            if ($mIdValue) {
+                $machineWhere[] = ['m_id', 'in', $mIdValue];
+                $hasMachineFilter = true;
+            }
+        }
+
+        if (isset($postData['machine_group_id']) && $postData['machine_group_id'] !== '') {
+            $groupMIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']], 'm_id');
+            if ($groupMIds) {
+                $machineWhere[] = ['m_id', 'in', $groupMIds];
+                $hasMachineFilter = true;
+            }
+
+        }
+
+        foreach (['country_id', 'state_id', 'city_id'] as $addressField) {
+            if (!isset($postData[$addressField]) || empty($postData[$addressField])) {
+                continue;
+            }
+            $value = $postData[$addressField];
+            $machineWhere[] = [$addressField, '=', $value];
+            $hasMachineFilter = true;
+        }
+
+        if (!$hasMachineFilter) {
+            return null;
+        }
+
+        $mIds = $this->app->machine->getMachineColumn($machineWhere, 'm_id');
+        if (!$mIds) {
+            return [];
+        }
+        return array_values(array_unique($mIds));
+    }
 }

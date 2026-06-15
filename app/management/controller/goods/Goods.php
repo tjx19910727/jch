@@ -18,6 +18,7 @@ class Goods extends Common
     banner,pic,cost_price,market_price,retail_price,intergral_rate,manufacturer,service_phone,performance,sell_channel,exter_url,expire_notice,
     is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,status,ao_id,creator,create_time,update_time";
     protected $validatePath = 'app\management\validate\VGoods.';
+
     /**
      * 查询一条商品列表
      * @return array|string
@@ -38,13 +39,22 @@ class Goods extends Common
     public function getList()
     {
         $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['g_name' => "like",'sku' => "like"]);
+        if (isset($postData['bar_code'])) {
+            if ((string)$postData['bar_code'] == 1) {
+                $where[] = ['bar_code','not like','69%'];
+            } elseif ((string)$postData['bar_code'] == 2) {
+                $where[] = ['bar_code','like','69%'];
+            }
+        }
         if(!empty($postData['machine_id'])||!empty($postData['sale_check'])){
-            $result = $this->app->goods->getAuthList($where,$pageNum,$this->field,'g_id desc',$postData);
+            $result = $this->app->goods->getAuthList($where,$pageNum,$field,'g_id desc',$postData);
             return $result;
         }
-        $result = $this->app->goods->getList($where,$pageNum,$this->field,'g_id desc');
+        $result = $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
         return $result;
     }
 
@@ -57,6 +67,8 @@ class Goods extends Common
     public function getMcList()
     {
         $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $field = $this->getFieldWithCostPriceAuth($this->field, $hasCostPriceAuth);
         $pageNum = $postData['pageNum'] ?? 0;
 
         $mIds = $postData['m_id'] ?? [];
@@ -80,7 +92,7 @@ class Goods extends Common
             }
         }
 
-        return $this->app->goods->getList($where,$pageNum,$this->field,'g_id desc');
+        return $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
     }
 
     /**
@@ -103,8 +115,19 @@ class Goods extends Common
     {
         $postData = input();
         try { $this->validate($postData,$this->validatePath . 'update');} catch (\Exception $e) { return returnValidate($e->getMessage());}
+        //$result = $this->app->goods->updateForEdit($postData);
         $result = $this->app->goods->update($postData);
         return $result;
+    }
+
+    /**
+     * 获取价格差异的设备商品和货道列表
+     * @return mixed
+     */
+    public function getPriceDiff()
+    {
+        $postData = input();
+        return $this->app->goods->getPriceDiff($postData);
     }
 
     /**
@@ -133,7 +156,7 @@ class Goods extends Common
     public function importExcel()
     {
         $postData = input();
-        return $this->app->goods->importExcel($postData);
+        return $this->app->goods->importExcelV2($postData);
     }
 
     /**
@@ -143,8 +166,16 @@ class Goods extends Common
     public function exportExcel()
     {
         $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
         $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
-        return $this->app->goods->exportExcel($where);
+        if (isset($postData['bar_code'])) {
+            if ((string)$postData['bar_code'] == 1) {
+                $where[] = ['bar_code','not like','69%'];
+            } elseif ((string)$postData['bar_code'] == 2) {
+                $where[] = ['bar_code','like','69%'];
+            }
+        }
+        return $this->app->goods->exportExcel($where, $hasCostPriceAuth);
     }
 
     /**
@@ -154,8 +185,33 @@ class Goods extends Common
     public function exportAllGoodsToExcel()
     {
         $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
         $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
-        return $this->app->goods->exportAllGoodsToExcel($where);
+        return $this->app->goods->exportAllGoodsToExcel($where, $hasCostPriceAuth);
+    }
+
+    
+    /**
+     * 导出异常条形码商品Excel
+     * @return array|string
+     */
+    public function exportAbnormalBarCode()
+    {
+        $postData = input();
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $where = $this->getWhere($postData,false,["g_id" => "in","g_name" => "like","gc_name" => "like","sku" => "like","manufacturer" => "like"]);
+        $where[] = ['bar_code','not like','69%'];
+        return $this->app->goods->exportAbnormalBarCodeExcel($where, $hasCostPriceAuth);
+    }
+
+    /**
+     * 导入商品条形码
+     * @return array|string
+     */
+    public function importBarCode()
+    {
+        $postData = input();
+        return $this->app->goods->importBarCode($postData);
     }
 
 }

@@ -40,7 +40,7 @@ class AuthManager extends Common
         }
         $field = "au.manager_id,au.nickname,au.account,au.pid,au.openid,au.audit_status,
         au.bill_account,au.real_name,au.level,au.sex,au.pic,au.status,au.creator,au.ao_id,au.wx_notice,au.email_notice,au.email,au.openid,
-        au.create_time,ao.organization_name";
+        au.query_start_time,au.query_start_urls,au.create_time,ao.organization_name";
         $result = $this->app->authManager->getList($where,$pageNum,$field);
         return $result;
     }
@@ -53,6 +53,7 @@ class AuthManager extends Common
     {
         $postData = input();
         $postData['ao_id'] = $this->manager['ao_id'];
+        $postData = $this->normalizeQueryStartConfig($postData);
         try { $this->validate($postData,'app\management\validate\VAuth.AuthManagerAdd');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->authManager->add($postData);
         return $result;
@@ -65,9 +66,37 @@ class AuthManager extends Common
     public function update()
     {
         $postData = input();
+        $postData = $this->normalizeQueryStartConfig($postData);
         try { $this->validate($postData,'app\management\validate\VAuth.AuthManagerUpdate');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->authManager->update($postData);
         return $result;
+    }
+
+    protected function normalizeQueryStartConfig(array $postData): array
+    {
+        if (isset($postData['query_start_time'])) {
+            if ($postData['query_start_time'] === '') {
+                $postData['query_start_time'] = 0;
+            } elseif (!is_numeric($postData['query_start_time'])) {
+                $postData['query_start_time'] = strtotime($postData['query_start_time']) ?: 0;
+            } else {
+                $postData['query_start_time'] = intval($postData['query_start_time']);
+            }
+        }
+
+        if (isset($postData['query_start_urls'])) {
+            if (is_array($postData['query_start_urls'])) {
+                $urls = array_map('trim', $postData['query_start_urls']);
+                $urls = array_values(array_filter($urls, function ($url) {
+                    return $url !== '';
+                }));
+                $postData['query_start_urls'] = implode(',', array_unique($urls));
+            } else {
+                $postData['query_start_urls'] = trim((string)$postData['query_start_urls']);
+            }
+        }
+
+        return $postData;
     }
 
     /**
@@ -290,5 +319,32 @@ class AuthManager extends Common
         }
         $csv = implode("\n", $lines);
         return returnState(200, 'success', ['csv' => $csv]);
+    }
+
+    /**
+     * 获取账号通知配置（故障模板）
+     */
+    public function getNoticeConfig()
+    {
+        $postData = input();
+        $managerId = intval($postData['manager_id'] ?? 0);
+        $noticeType = strval($postData['notice_type'] ?? 'mFault');
+        if ($managerId <= 0) {
+            return returnState(100, 'manager_id不能为空');
+        }
+        return $this->app->authManager->getNoticeConfig($managerId, $noticeType);
+    }
+
+    /**
+     * 保存账号通知配置（故障模板）
+     */
+    public function saveNoticeConfig()
+    {
+        $postData = input();
+        $managerId = intval($postData['manager_id'] ?? 0);
+        if ($managerId <= 0) {
+            return returnState(100, 'manager_id不能为空');
+        }
+        return $this->app->authManager->saveNoticeConfig($postData);
     }
 }

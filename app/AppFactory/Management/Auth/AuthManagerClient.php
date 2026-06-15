@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Management\ManagementClient;
 use app\AppFactory\Kernel\Traits\Auth\AuthWithdrawRequestTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgRevenueTrait;
+use think\facade\Db;
 
 class AuthManagerClient extends ManagementClient
 {
@@ -60,7 +61,7 @@ class AuthManagerClient extends ManagementClient
             $config = $this->getWxOfficialFind($where,'*','id desc');
             if (!$config) {
                 actionLog($this->getLS(),'查询配置SQL');
-                return $this->r(100, $this->lang("VWxOfficial.official_no_data"));
+                return $this->r(100, $this->lang("VWxOfficial.official_no_data"));   
             }
             $config = $config->toArray();
             $qrScene = $config['id'] . "_2_" . $manager_id;
@@ -116,6 +117,78 @@ class AuthManagerClient extends ManagementClient
             // TODO: 通过后执行实际打款/记录流水（此处只记录状态，具体出款留给业务侧）
         }
         return $res;
+    }
+
+    /**
+     * 获取账号通知配置（故障模板）
+     */
+    public function getNoticeConfig($managerId, $noticeType = 'mFault')
+    {
+        $data = Db::name('auth_manager_notice_config')
+            ->where([
+                'manager_id' => intval($managerId),
+                'notice_type' => $noticeType,
+            ])
+            ->order('id desc')
+            ->find();
+        if (!$data) {
+            $data = [
+                'manager_id' => $managerId,
+                'notice_type' => $noticeType,
+                'interval_minutes' => 0,
+                'day_count' => 0,
+                'status' => 1,
+                'is_default' => 1,
+            ];
+        }
+        return $this->r(200, 'success', $data);
+    }
+
+    /**
+     * 保存账号通知配置（故障模板）
+     */
+    public function saveNoticeConfig($postData)
+    {
+        $managerId = intval($postData['manager_id'] ?? 0);
+        $noticeType = strval($postData['notice_type'] ?? 'mFault');
+        $intervalMinutes = intval($postData['interval_minutes'] ?? 0);
+        $dayCount = intval($postData['day_count'] ?? 0);
+        $is_default = isset($postData['is_default']) ? intval($postData['is_default']) : 1;
+        $exists = Db::name('auth_manager_notice_config')
+            ->where([
+                'manager_id' => $managerId,
+                'notice_type' => $noticeType,
+            ])
+            ->find();
+
+        if($is_default == 2){
+            //频率最小为1，次数最大为50
+            if($intervalMinutes < 1){
+                return $this->rFail('通知频率最小为1分钟');
+            }
+            if($dayCount > 50){
+                return $this->rFail('每天通知次数最大为50次');
+            }
+        }
+        if ($exists) {
+            $update = [
+                'interval_minutes' => $intervalMinutes,
+                'day_count' => $dayCount,
+                'is_default' => $is_default,
+            ];
+            $result = Db::name('auth_manager_notice_config')->where('id', $exists['id'])->update($update);
+            return $this->rU($result);
+        }
+        
+        $insert = [
+            'manager_id' => $managerId,
+            'notice_type' => $noticeType,
+            'interval_minutes' => $intervalMinutes,
+            'day_count' => $dayCount,
+            'is_default' => $is_default,
+        ];
+        $id = Db::name('auth_manager_notice_config')->insertGetId($insert);
+        return $this->rA($id);
     }
 
 }

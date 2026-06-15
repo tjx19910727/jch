@@ -32,6 +32,7 @@ return  [
         "unKnow_pay_type" => "未定义的支付类型",
         "update_order_pay_info_fail" => "下单失败",
         "pay_status3" => "订单已支付成功",
+        "pay_exception" => "支付异常",
         "auth_code_not_match_pay_type" => "付款码与订单支付类型不匹配",
         'mall_no_data' => '查无有效的商场信息',
         'mall_machine_no_data' => '查无商场与设备关联信息',

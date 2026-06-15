@@ -49,7 +49,10 @@ return [
         "goods_list" => "商品列表",
 
         "goodsRankingFileName" => "首页-人气商品排行榜（最近7天）",
-
+        "goodsTopList" => "人气商品排行榜-",
+        "goodsTopRankFileName" => "首页-人气商品排行榜",
+        "gift_points" => "赠送积分",
+        "cost_points" => "消费积分",
     ],
 
     "getSelfRoleNode" => [
@@ -59,6 +62,9 @@ return [
     "VLogin" => [
         "account_require" => "账号不能为空",
         "password_require" => "密码不能为空",
+        "old_password_require" => "旧密码不能为空",
+        "new_password_require" => "新密码不能为空",
+        "confirm_password_require" => "确认密码不能为空",
         "code_require" => "验证码不能为空",
         "uniqid_require" => "验证码UUID不能为空",
 
@@ -68,6 +74,7 @@ return [
         "account_not_exist" => "登录的账号不存在!",
         "account_pwd_incorrect" => "账号或密码错误，请重新输入",
         "pwd_incorrect" => "密码错误，请重新输入",
+        "password_not_match" => "两次输入的密码不一致",
         "pass_the_verification" => "验证通过",
         "account_disabled" => "该账号已被禁用",
         "login_success" => "登录成功，正在跳转",
@@ -409,6 +416,8 @@ return [
         "machine_offline" => "设备离线",
         "ckc_status_require" => "营业状态不能为空",
         "x_y_axis_require" => "x，y轴至少需要定义一个偏移量",
+        "get_recycle_box_overtime" => "获取回收箱容量数据超时",
+        "pick_up_door_overtime" => "获取出料箱门操作结果超时",
     ],
 
     "VMachineLang" => [
@@ -472,6 +481,8 @@ return [
         "content_require" => "内容不能为空",
         "lang_require" => "语言类型不能为空",
         "get_computer_overtime" => "获取中控电脑数据超时",
+        "get_img_overtime" => "获取图片数据超时",
+        "overtime_message" => "请求超时，请重试",
     ],
 
     "VMachineHelp" => [
@@ -614,6 +625,16 @@ return [
         "payee_config_no_json" => "收款方配置信息不是JSON方式",
 
         "free_can_not_refund" => "免支付方式不能退款",
+        "offline_refund_pay_type_invalid" => "该订单支付类型不支持线下退款",
+        "offline_refund_use_online" => "该订单请使用在线退款接口",
+        "offline_refund_payment_no_require" => "打款流水号与打款凭证号至少填写一项",
+        "offline_refund_payment_time_invalid" => "打款时间格式无效",
+        "offline_refund_amount_mismatch" => "退款金额与系统计算金额不一致",
+        "offline_refund_payment_method_require" => "打款方式不能为空",
+        "offline_refund_payment_time_require" => "打款时间不能为空",
+        "offline_refund_payment_amount_require" => "退款金额不能为空",
+        "offline_refund_payment_amount_invalid" => "退款金额格式无效",
+        "offline_refund_receiver_account_require" => "收款账号不能为空",
     ],
 
     "VSaleOrdersRefund" => [
@@ -747,6 +768,13 @@ return [
         "data_assigned" => "主题已分配设备，不能删除",
         "data_invalid" => "设备数据异常，存在无效m_id",
         "data_assign_fail" => "分配设备失败",
-        "title_require" => "主题标题不能为空"
+        "title_require" => "主题标题不能为空",
+        "claim_goods_title_require" => "取货页文案不能为空",
+        "out_goods_title_require" => "出货页文案不能为空",
+        "deal_success_title_require" => "交易成功标题不能为空",
+        "deal_success_sub_title_require" => "交易成功副标题不能为空",
+        "deal_abnormal_pic_require" => "交易异常图片不能为空",
+        "deal_fail_title_require" => "交易失败标题不能为空",
+        "deal_fail_sub_title_require" => "交易失败副标题不能为空",
     ],
 ]; 

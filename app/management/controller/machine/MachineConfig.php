@@ -52,7 +52,7 @@ class MachineConfig extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        return $this->app->machineConfig->updateMc($postData);
+        return $this->app->machineConfig->updateMcV2($postData);
     }
 
     public function updateMoreMc()

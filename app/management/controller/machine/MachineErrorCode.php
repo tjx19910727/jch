@@ -16,6 +16,8 @@ class MachineErrorCode extends Common
 
     protected $field = "me_id,m_id,machine_id,machine_name,address,error_position,errorCode,remark,msg,create_time";
 
+    protected $videoField = "me_id,m_id,machine_id,machine_name,address,error_position,errorCode,remark,msg,trade_no,transaction_video,create_time";
+
     public function getList()
     {
         $postData = input();
@@ -89,5 +91,38 @@ class MachineErrorCode extends Common
         $where = $this->getWhere($postData, false, ['machine_id' => "like","errorCode" => "like"]);
         if (!isset($postData['create_time']) || !$postData['create_time']) $where[] = ['create_time','>=',strtotime("-1 month")];
         return $this->app->machineErrorCode->exportEc($where,$this->field,'create_time desc');
+    }
+
+    /**
+     * 根据故障记录ID查询模板消息通知日志
+     * wx_template_log.me_id = 传入me_id
+     * @return array|\think\response\Json
+     */
+    public function getTemplateNoticeList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $me_id = $postData['me_id'] ?? 0;
+        if (!$me_id) return returnValidate(lang("VMachineErrorCode.me_id_require"));
+        $where = [
+            'me_id' => intval($me_id),
+        ];
+        return $this->app->wxTemplateLog->getTemplateLogList($where, $pageNum, '*', 'create_time desc');
+    }
+
+    
+    /**
+     * 后台视频统一入口列表，新开接口，方便权限控制
+     * 当前仅支持营业逻辑中柜门打开（1200000）
+     * @return array|\think\response\Json
+     */
+    public function getVideoList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, ['machine_id' => "like", "errorCode" => "like"]);
+        $where['status'] = 1;
+        $where['errorCode'] = 1200000;
+        return $this->app->machineErrorCode->getEcVideoList($where, $pageNum, $this->videoField, 'create_time desc');
     }
 }

@@ -14,9 +14,9 @@ use app\AppFactory\Kernel\Model\Wx\WxTemplateLogModel;
 trait WxTemplateLogTrait
 {
 
-    public function getWxTemplateLogList($where,$pageNum = 0, $field = "",$order = "")
+    public function getWxTemplateLogList($where,$pageNum = 0, $field = "",$order = "", $eachFn = "")
     {
-        return WxTemplateLogModel::getList($where,$pageNum,$field,$order);
+        return WxTemplateLogModel::getList($where,$pageNum,$field,$order,$eachFn);
     }
 
     public function getWxTemplateLogFind($where,$field = "*", $order = "")

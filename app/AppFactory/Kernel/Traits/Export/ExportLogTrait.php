@@ -127,7 +127,47 @@ trait ExportLogTrait
                 "list" => $list,
                 "otherData" => $otherData,
             ];
-            actionLog($data,'导出的数据');
+            actionLog([
+                'export_id' => $export_id,
+                'filename' => $filename,
+                'title_count' => count($title),
+                'row_count' => count($list),
+            ], '导出任务摘要');
+            $result = MqProducer::export($data);
+            if ($result != "OK") {
+                $this->updateExportLog(['export_id' => $export_id,'status' => 4]);
+                return $this->rFail($result);
+            }
+            return $this->r(200,$this->lang("export.exporting"));
+        }
+        return $this->rFail($this->lang("export.export_log_create_fail"));
+    }
+
+    public function sendToExportJob($position, $filename, $title, $jobData = [], $otherData = [])
+    {
+        $insert = [
+            "request_time" => time(),
+            "export_position" => $position,
+            "file_name" => $filename,
+            "status" => 1,
+            "ao_id" => $this->manager['ao_id'],
+            "creator" => $this->manager['manager_id'],
+            "create_time" => time(),
+        ];
+        $export_id = $this->addExportLog($insert);
+        if ($export_id) {
+            $data = array_merge($jobData, [
+                "export_id" => $export_id,
+                "filename" => $filename,
+                "title" => $title,
+                "otherData" => $otherData,
+            ]);
+            actionLog([
+                'export_id' => $export_id,
+                'filename' => $filename,
+                'job_type' => $data['job_type'] ?? '',
+                'title_count' => count($title),
+            ], '导出任务摘要');
             $result = MqProducer::export($data);
             if ($result != "OK") {
                 $this->updateExportLog(['export_id' => $export_id,'status' => 4]);

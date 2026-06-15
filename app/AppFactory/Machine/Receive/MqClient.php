@@ -37,8 +37,11 @@ use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
+use app\AppFactory\Kernel\Traits\Machine\SimSignalLogTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineServiceLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Mq\OutGoodsTrait;
+use app\AppFactory\Kernel\Traits\RemoteActionLog\RemoteActionLogTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
@@ -46,7 +49,9 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 class MqClient extends ReceiveBaseClient
 {
     use SaleOrdersTrait,OutGoodsTrait;
+    use RemoteActionLogTrait;
     use MachineInfoTrait,MachineGoodsTrait,MachineChannelTrait,MachineVersionPlanTrait,MachineConfigTrait;
+    use SimSignalLogTrait;
     use MachineErrorCodeTrait;
     use GoodsTrait,GoodsHitTrait,GoodsChangeTrait;
     use StrategyPayeeTrait,StrategyMachineTrait;
@@ -56,6 +61,7 @@ class MqClient extends ReceiveBaseClient
     use ActivityPickTrait,ActivityPickCodeTrait;
     use ActivityLotteryTrait,ActivityLotteryConfigTrait,ActivityLotteryContentTrait,ActivityLotteryUsedTrait,ActivityLotteryUsedGoodsTrait;
     use EarthCitiesTrait,EarthRegionsTrait,EarthCountriesTrait,EarthStatesTrait;
+    use MachineServiceLogTrait;
 
     protected $order;
     public function __construct(ServiceContainer $app)
@@ -83,7 +89,7 @@ class MqClient extends ReceiveBaseClient
      * 处理设备上报
      * msgType: outGoods、heartbeat、updateComplete、goodsHit、transactionVideo、img、channelImg、
      *          light、volume、errorCode、uploadInfo、machineCkcOnOff
-     *          doorOpen、powerWakeUp、initialization、axisOffset
+    *          doorOpen、powerWakeUp、initialization、axisOffset、updateSimSignal
      * 远程退货动作组：remoteOutGoods、checkRecycleBox、pickUpDoorOpen、pickUpDoorClose、takePhotos、recycGoods
      * @return int
      */
@@ -104,6 +110,98 @@ class MqClient extends ReceiveBaseClient
                 actionLog($this->message,'没有对应的消息类型');
             }
             return 1;
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return 1;
+        }
+    }
+
+    /**
+     * 处理回收箱容量上报（设备对 checkRecycleBox 的响应）
+     * 期望设备上报字段：recycle_box_remain_capacity, recycle_box_total_capacity
+     * 如果收到这些字段，则写入 machine_info 表（通过 updateMachineInfo）
+     * @return int 0 成功, 1 失败
+     */
+    public function checkRecycleBox()
+    {
+        try {
+            $update = [];
+            if (isset($this->message['recycle_box_remain_capacity'])) {
+                $update['recycle_box_remain_capacity'] = (int)$this->message['recycle_box_remain_capacity'];
+            }
+            if (isset($this->message['recycle_box_total_capacity'])) {
+                $update['recycle_box_total_capacity'] = (int)$this->message['recycle_box_total_capacity'];
+            }
+            if (empty($update)) {
+                actionLog($this->message, 'checkRecycleBox 接收数据为空或无效字段');
+                return 1;
+            }
+            // 使用 m_id 进行更新，保持与 uploadInfo 一致的更新方式
+            $result = $this->updateMachineInfo($update, ['m_id' => $this->machine['m_id']]);
+            actionLog($this->getLS(), '【SQL】更新回收箱容量', 'checkRecycleBox');
+            actionLog($result, '更新回收箱容量结果', 'checkRecycleBox');
+            return 0;
+        } catch (\Exception $e) {
+            actionException($e,1);
+            return 1;
+        }
+    }
+
+    /**
+     * 处理打开出料箱门回执。
+     * @return int
+     */
+    public function pickUpDoorOpen()
+    {
+        return $this->updateRemoteActionLogStatus('pickUpDoorOpen');
+    }
+
+    /**
+     * 处理关闭出料箱门回执。
+     * @return int
+     */
+    public function pickUpDoorClose()
+    {
+        return $this->updateRemoteActionLogStatus('pickUpDoorClose');
+    }
+
+    /**
+     * 根据设备回执更新远程动作日志状态。
+     * 优先按 log_id 更新；旧设备未回传 log_id 时，回退到该设备该动作最近一条待处理日志。
+     * @param string $msgType
+     * @return int
+     */
+    protected function updateRemoteActionLogStatus($msgType)
+    {
+        try {
+            $status = intval($this->message['status'] ?? 3);
+            if (!in_array($status, [2, 3, 4], true)) {
+                $status = 3;
+            }
+
+            $logId = intval($this->message['log_id'] ?? 0);
+            if ($logId) {
+                $log = $this->getRALogsFind(['id' => $logId], 'id,status');
+            } else {
+                $log = $this->getRALogsFind([
+                    'machine_id' => $this->machine['machine_id'],
+                    'type' => $msgType,
+                    ['status', 'in', [1, 2]],
+                ], 'id,status', 'id desc');
+            }
+            if (!$log) {
+                actionLog($this->message, $msgType . ' 未匹配到远程动作日志');
+                return 1;
+            }
+            $log = is_object($log) ? $log->toArray() : $log;
+
+            $result = $this->updateRALog(
+                ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')],
+                ['id' => $log['id']],
+                ['status', 'operator_at']
+            );
+            actionLog($result, $msgType . ' 更新远程动作日志结果');
+            return 0;
         } catch (\Exception $e) {
             actionException($e,1);
             return 1;

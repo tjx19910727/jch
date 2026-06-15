@@ -12,6 +12,11 @@ namespace app\AppFactory\Kernel\Traits\SaleOrders;
 
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelNightlyModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersUnclaimedModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\Machine\MachineLevelDescModel;
 use app\AppFactory\Kernel\Support\Validate\Api\VV2;
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 use app\AppFactory\Kernel\Model\Auth\AuthOrgMachineChannelModel;
@@ -19,6 +24,74 @@ use think\facade\Db;
 
 trait SaleOrdersTrait
 {
+    public function getPayTypeNameMap()
+    {
+        return config('payment.pay_type_map') ?: [];
+    }
+
+    public function getPayMethodNameMap()
+    {
+        return config('payment.pay_method_map') ?: [];
+    }
+
+    public function getStrategyPayeeTypeNameMap()
+    {
+        return config('payment.strategy_payee_type_map') ?: [];
+    }
+
+    public function getPayChannelNameMap()
+    {
+        return config('payment.pay_channel_map') ?: [];
+    }
+
+    public function formatPayType($payType, $defaultPrefix = '支付类型#')
+    {
+        $payType = intval($payType);
+        $map = $this->getPayTypeNameMap();
+        return $map[$payType] ?? ($defaultPrefix . $payType);
+    }
+
+    public function formatPayMethod($payMethod, $defaultPrefix = '支付方式#')
+    {
+        $payMethod = intval($payMethod);
+        $map = $this->getPayMethodNameMap();
+        return $map[$payMethod] ?? ($defaultPrefix . $payMethod);
+    }
+
+    public function getPayTypeOptions($values = [])
+    {
+        $map = $this->getPayTypeNameMap();
+        if ($values) {
+            $map = array_intersect_key($map, array_flip(array_map('intval', $values)));
+        }
+
+        $data = [];
+        foreach ($map as $value => $label) {
+            $data[] = [
+                'value' => intval($value),
+                'label' => $label,
+            ];
+        }
+        return $data;
+    }
+
+    public function getPayMethodOptions($values = [])
+    {
+        $map = $this->getPayMethodNameMap();
+        if ($values) {
+            $map = array_intersect_key($map, array_flip(array_map('intval', $values)));
+        }
+
+        $data = [];
+        foreach ($map as $value => $label) {
+            $data[] = [
+                'value' => intval($value),
+                'label' => $label,
+            ];
+        }
+        return $data;
+    }
+
     public function getSaleOrdersValue($where, $value)
     {
         return SaleOrdersModel::getFieldValue($where, $value);
@@ -70,26 +143,129 @@ trait SaleOrdersTrait
      * @return SaleOrdersModel|SaleOrdersModel[]|array|\think\Collection|\think\Paginator
      * @throws \Exception
      */
-    public function getSaleOrdersList($where, $pageNum = 0, $field = "*", $order = "", $eachFn = '', $group = '', $limit = 0)
+    public function getSaleOrdersList($where, $pageNum = 0, $field = "*", $order = "", $eachFn = '', $group = '', $limit = 0, $with = [])
     {
-        $data = SaleOrdersModel::getList($where, $pageNum, $field, $order, $eachFn, $group, $limit);
-        if ($pageNum)
-            $data = $data->each(function ($item) {
-                $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
-                if ($item['has_hotel'] == 1) {
-                    $item['hotel'] = $this->getSaleHotelFind(['order_id' => $item['order_id']]);
-                    $item['hotel']['nightly'] = $this->getSaleHotelNightlyList(['sh_id' => $item['hotel']['sh_id']]);
-                    $item['retail_price'] = bcadd($item['retail_price'], $item['hotel']['pay_amount'], 2);
-                }
-                if ($item['out_status'] == 6) {
-                    $unclaimed = $this->getSaleOrdersUnclaimedList(['order_id' => $item['order_id']], 0, 'sod_id,g_name,channel_code,is_match,is_claim,is_out,is_close');
-                    if ($unclaimed) {
-                        $item['unclaimed_status'] = $unclaimed->toArray();
-                    }
-                }
-                return $item;
-            });
+        $data = SaleOrdersModel::getListAndWith($where, $pageNum, $field, $order, $eachFn, $group, $limit, $with);
+        actionLog($this->getLS(), '【SQL】订单列表主查询', 'sale_orders');
+        if ($pageNum) {
+            $data = $this->appendSaleOrderListRelations($data);
+        }
         return $data;
+    }
+
+    /**
+     * 批量装配订单列表关联数据，避免分页列表逐订单查询。
+     * @param \think\Paginator|\think\Collection $data
+     * @return \think\Paginator|\think\Collection
+     */
+    protected function appendSaleOrderListRelations($data)
+    {
+        $orderIds = [];
+        $hotelOrderIds = [];
+        $unclaimedOrderIds = [];
+        $machineIds = [];
+        $machineLevels = [];
+        foreach ($data as $item) {
+            $orderId = intval($item['order_id'] ?? 0);
+            if (!$orderId) continue;
+            $orderIds[] = $orderId;
+            if (intval($item['has_hotel'] ?? 0) === 1) $hotelOrderIds[] = $orderId;
+            if (intval($item['out_status'] ?? 0) === 6) $unclaimedOrderIds[] = $orderId;
+            if (intval($item['m_id'] ?? 0) > 0) $machineIds[] = intval($item['m_id']);
+            if (intval($item['machine_level'] ?? 0) > 0) $machineLevels[] = intval($item['machine_level']);
+        }
+        $orderIds = array_values(array_unique($orderIds));
+        if (!$orderIds) return $data;
+
+        $detailsMap = [];
+        $details = SaleOrdersDetailsModel::whereIn('order_id', $orderIds)->select();
+        $detailOrganizationIds = [];
+        foreach ($details as $detail) {
+            $detail['cost_price'] = round($detail['cost_price'], 2);
+            $detail['retail_price'] = round($detail['retail_price'], 2);
+            $detail['total_sod_price'] = round($detail['total_sod_price'], 2);
+            if (intval($detail['ao_id'] ?? 0) > 0) {
+                $detailOrganizationIds[] = intval($detail['ao_id']);
+            }
+        }
+        $detailOrganizationMap = [];
+        $detailOrganizationIds = array_values(array_unique($detailOrganizationIds));
+        if ($detailOrganizationIds) {
+            $detailOrganizationMap = Db::name('auth_organization')
+                ->whereIn('ao_id', $detailOrganizationIds)
+                ->column('organization_name', 'ao_id');
+        }
+        foreach ($details as $detail) {
+            $detail['organization_name'] = $detailOrganizationMap[intval($detail['ao_id'] ?? 0)] ?? null;
+            $detailsMap[intval($detail['order_id'])][] = $detail;
+        }
+
+        $hotelMap = [];
+        $nightlyMap = [];
+        if ($hotelOrderIds) {
+            $hotels = SaleHotelModel::whereIn('order_id', array_values(array_unique($hotelOrderIds)))->select();
+            $hotelIds = [];
+            foreach ($hotels as $hotel) {
+                $hotelMap[intval($hotel['order_id'])] = $hotel;
+                $hotelIds[] = intval($hotel['sh_id']);
+            }
+            if ($hotelIds) {
+                $nightlies = SaleHotelNightlyModel::whereIn('sh_id', array_values(array_unique($hotelIds)))->select();
+                foreach ($nightlies as $nightly) {
+                    $nightlyMap[intval($nightly['sh_id'])][] = $nightly;
+                }
+            }
+        }
+
+        $unclaimedMap = [];
+        if ($unclaimedOrderIds) {
+            $unclaimedList = SaleOrdersUnclaimedModel::whereIn('order_id', array_values(array_unique($unclaimedOrderIds)))
+                ->field('sod_id,order_id,g_name,channel_code,is_match,is_claim,is_out,is_close')
+                ->order('su_id desc')
+                ->select();
+            foreach ($unclaimedList as $unclaimed) {
+                $unclaimedMap[intval($unclaimed['order_id'])][] = $unclaimed;
+            }
+        }
+
+        $machineLevelByMachine = [];
+        if ($machineIds) {
+            $machineLevelByMachine = MachineModel::whereIn('m_id', array_values(array_unique($machineIds)))
+                ->column('machine_level', 'm_id');
+            $machineLevels = array_merge($machineLevels, array_map('intval', array_values($machineLevelByMachine)));
+        }
+        $machineLevelDescMap = [];
+        $machineLevels = array_values(array_unique(array_filter($machineLevels)));
+        if ($machineLevels) {
+            $machineLevelDescMap = MachineLevelDescModel::whereIn('machine_level', $machineLevels)
+                ->column('name', 'machine_level');
+        }
+
+        return $data->each(function ($item) use ($detailsMap, $hotelMap, $nightlyMap, $unclaimedMap, $machineLevelByMachine, $machineLevelDescMap) {
+            $orderId = intval($item['order_id']);
+            $item['details'] = $detailsMap[$orderId] ?? [];
+            $machineLevel = intval($item['machine_level'] ?? 0);
+            if (!$machineLevel) {
+                $machineLevel = intval($machineLevelByMachine[intval($item['m_id'] ?? 0)] ?? 0);
+                $item['machine_level'] = $machineLevel;
+            }
+            $item['machine_level_desc'] = $machineLevelDescMap[$machineLevel] ?? '';
+            if (intval($item['has_hotel'] ?? 0) === 1) {
+                $hotel = $hotelMap[$orderId] ?? null;
+                if ($hotel) {
+                    $hotel['nightly'] = $nightlyMap[intval($hotel['sh_id'])] ?? [];
+                    $item['hotel'] = $hotel;
+                    $item['retail_price'] = bcadd((string)$item['retail_price'], (string)$hotel['pay_amount'], 2);
+                } else {
+                    $item['hotel'] = [];
+                }
+            }
+            if (intval($item['out_status'] ?? 0) === 6 && isset($unclaimedMap[$orderId])) {
+                $item['unclaimed_status'] = $unclaimedMap[$orderId];
+            }
+            unset($item['m_id']);
+            return $item;
+        });
     }
 
     /**
@@ -99,6 +275,7 @@ trait SaleOrdersTrait
      */
     public function addSaleOrders($insert)
     {
+        $insert = $this->appendOrderPayChannel($insert);
         $order = SaleOrdersModel::create($insert);
         actionLog($this->getLS(), '生成订单SQL');
         actionLog($order, '生成订单结果');
@@ -114,7 +291,279 @@ trait SaleOrdersTrait
      */
     public function updateSaleOrders($update, $where = [], $field = [])
     {
+        $update = $this->appendOrderPayChannelForUpdate($update, $where, $field);
         return SaleOrdersModel::update($update, $where, $field);
+    }
+
+    /**
+     * 自动补全订单分类（创建时）
+     * @param array $order
+     * @return array
+     */
+    protected function appendOrderPayChannel($order)
+    {
+        if (is_object($order)) {
+            $order = method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
+        }
+        if (!is_array($order)) {
+            return $order;
+        }
+        if (isset($order['pay_channel']) && intval($order['pay_channel']) > 0) {
+            if (empty($order['pay_channel_name'])) {
+                $order['pay_channel_name'] = $this->getPayChannelName(intval($order['pay_channel']));
+            }
+            return $order;
+        }
+        $result = $this->buildOrderPayChannel($order);
+        $order['pay_channel'] = $result['pay_channel'];
+        $order['pay_channel_name'] = $result['pay_channel_name'];
+        return $order;
+    }
+
+    /**
+     * 自动补全订单分类（更新时）
+     * @param array $update
+     * @param array $where
+     * @param array $field
+     * @return array
+     */
+    protected function appendOrderPayChannelForUpdate($update, array &$where, array &$field)
+    {
+        if (is_object($update)) {
+            $update = method_exists($update, 'toArray') ? $update->toArray() : (array)$update;
+        }
+        if (!is_array($update)) {
+            return $update;
+        }
+
+        $refreshPayChannel = intval($update['refresh_pay_channel'] ?? 0);
+        unset($update['refresh_pay_channel']);
+
+        // 显式传入 pay_channel 时，仅兜底补 pay_channel_name
+        if (isset($update['pay_channel']) && intval($update['pay_channel']) > 0) {
+            if (empty($update['pay_channel_name'])) {
+                $update['pay_channel_name'] = $this->getPayChannelName(intval($update['pay_channel']));
+                if ($field && !in_array('pay_channel_name', $field, true)) {
+                    $field[] = 'pay_channel_name';
+                }
+            }
+            unset($update['has_wc_order_no']);
+            return $update;
+        }
+
+        if (!$refreshPayChannel) {
+            unset($update['has_wc_order_no']);
+            return $update;
+        }
+
+        $orderId = intval($update['order_id'] ?? 0);
+        if ($orderId <= 0 && isset($where['order_id'])) {
+            $orderId = intval($where['order_id']);
+        }
+        if ($orderId <= 0 && !empty($update['trade_no'])) {
+            $orderId = intval($this->getSaleOrdersValue(['trade_no' => $update['trade_no']], 'order_id'));
+        }
+        if ($orderId <= 0 && !empty($where['trade_no'])) {
+            $orderId = intval($this->getSaleOrdersValue(['trade_no' => $where['trade_no']], 'order_id'));
+        }
+        if ($orderId <= 0) {
+            unset($update['has_wc_order_no']);
+            return $update;
+        }
+
+        $order = $this->getSaleOrdersFind(
+            ['order_id' => $orderId],
+            'order_id,order_type,pay_type,pay_method,total_cost_points,gift_points,total_points,acp_id,pay_channel,pay_channel_name'
+        );
+        if (!$order) {
+            unset($update['has_wc_order_no']);
+            return $update;
+        }
+
+        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+        $snapshot = array_merge($order, $update);
+        $snapshot['order_id'] = $orderId;
+        if (!array_key_exists('has_wc_order_no', $snapshot)) {
+            $snapshot['has_wc_order_no'] = $this->hasWcOrderNo($orderId) ? 1 : 0;
+        }
+
+        $result = $this->buildOrderPayChannel($snapshot);
+        $update['pay_channel'] = $result['pay_channel'];
+        $update['pay_channel_name'] = $result['pay_channel_name'];
+        unset($update['has_wc_order_no']);
+        if ($field) {
+            if (!in_array('pay_channel', $field, true)) {
+                $field[] = 'pay_channel';
+            }
+            if (!in_array('pay_channel_name', $field, true)) {
+                $field[] = 'pay_channel_name';
+            }
+        }
+        return $update;
+    }
+
+    /**
+     * 订单分类统一判定
+     * @param array $order
+     * @return array
+     */
+    public function buildOrderPayChannel(array $order)
+    {
+        $payType = intval($order['pay_type'] ?? 0);
+        $payMethod = intval($order['pay_method'] ?? 0);
+        $orderType = intval($order['order_type'] ?? 0);
+        $acpId = intval($order['acp_id'] ?? 0);
+        $totalCostPoints = floatval($order['total_cost_points'] ?? 0);
+        $giftPoints = floatval($order['gift_points'] ?? 0);
+        if ($giftPoints <= 0) {
+            $giftPoints = floatval($order['total_points'] ?? 0);
+        }
+
+        if ($payType === 20) {
+            return $this->formatPayChannel(6);
+        }
+        if ($totalCostPoints > 0) {
+            return $this->formatPayChannel(4);
+        }
+
+        $hasWcOrderNo = intval($order['has_wc_order_no'] ?? -1);
+        if ($hasWcOrderNo < 0) {
+            $orderId = intval($order['order_id'] ?? 0);
+            $hasWcOrderNo = $this->hasWcOrderNo($orderId) ? 1 : 0;
+        }
+
+        if ($giftPoints > 0 && !$hasWcOrderNo) {
+            return $this->formatPayChannel(3);
+        }
+        if ($hasWcOrderNo) {
+            return $this->formatPayChannel(1);
+        }
+        if ($payType === 7) {
+            return $this->formatPayChannel(2);
+        }
+        if ($orderType === 3 && $acpId > 0) {
+            return $this->formatPayChannel(5);
+        }
+        if (in_array($payType, [1, 11, 12], true)) {
+            return $this->formatPayChannel(7);
+        }
+        if (in_array($payType, [2, 21, 22], true)) {
+            return $this->formatPayChannel(8);
+        }
+        if (in_array($payMethod, [3, 4, 5], true) || in_array($payType, [4, 10, 33, 34, 35], true)) {
+            return $this->formatPayChannel(9);
+        }
+        if (in_array($payMethod, [6, 7], true) || in_array($payType, [36, 37], true)) {
+            return $this->formatPayChannel(10);
+        }
+        return $this->formatPayChannel(11);
+    }
+
+    /**
+     * 是否存在非空微程订单号
+     * @param int $orderId
+     * @return bool
+     */
+    protected function hasWcOrderNo($orderId)
+    {
+        if ($orderId <= 0) {
+            return false;
+        }
+        try {
+            $wcOrderNoList = Db::name('sale_orders_details')
+                ->where(['order_id' => $orderId])
+                ->column('wc_order_no');
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return false;
+        }
+
+        if (!$wcOrderNoList) {
+            return false;
+        }
+        foreach ($wcOrderNoList as $wcOrderNo) {
+            if (!$this->isEmptyWcOrderNo($wcOrderNo)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 批量计算订单是否存在有效 wc_order_no
+     * @param array $orderIds
+     * @return array
+     */
+    protected function buildOrderHasWcOrderNoMap($orderIds = [])
+    {
+        $map = [];
+        if (!$orderIds) {
+            return $map;
+        }
+
+        $rows = Db::name('sale_orders_details')
+            ->whereIn('order_id', $orderIds)
+            ->field('order_id,wc_order_no')
+            ->select()
+            ->toArray();
+        if (!$rows) {
+            return $map;
+        }
+
+        foreach ($rows as $row) {
+            $orderId = intval($row['order_id'] ?? 0);
+            if ($orderId <= 0) {
+                continue;
+            }
+            if (!isset($map[$orderId])) {
+                $map[$orderId] = 0;
+            }
+            if (!$this->isEmptyWcOrderNo($row['wc_order_no'] ?? null)) {
+                $map[$orderId] = 1;
+            }
+        }
+        return $map;
+    }
+
+    /**
+     * 判断 wc_order_no 是否为空
+     * @param mixed $value
+     * @return bool
+     */
+    protected function isEmptyWcOrderNo($value)
+    {
+        if ($value === null) {
+            return true;
+        }
+        if (is_array($value)) {
+            return empty($value);
+        }
+        return trim((string)$value) === '';
+    }
+
+    /**
+     * 获取分类名称
+     * @param int $payChannel
+     * @return string
+     */
+    protected function getPayChannelName($payChannel)
+    {
+        $map = $this->getPayChannelNameMap();
+        return $map[intval($payChannel)] ?? '其他';
+    }
+
+    /**
+     * 格式化分类结果
+     * @param int $payChannel
+     * @return array
+     */
+    protected function formatPayChannel($payChannel)
+    {
+        $payChannel = intval($payChannel);
+        return [
+            'pay_channel' => $payChannel,
+            'pay_channel_name' => $this->getPayChannelName($payChannel),
+        ];
     }
 
     public function joinSoSodColumn($where, $column, $group = "")
@@ -557,7 +1006,6 @@ trait SaleOrdersTrait
             $item['manager_account'] = $item['manager_account'] ?: '';
             $item['manager_nickname'] = $item['manager_nickname'] ?: '';
             $item['exception_create_time'] = !empty($item['exception_create_time']) ? date('Y-m-d H:i:s', $item['exception_create_time']) : '';
-            $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
             $item['details'] = $this->getSaleOrdersDetailsList(['order_id' => $item['order_id']], 0);
             if (($item['has_hotel'] ?? 0) == 1) {
                 $hotel = $this->getSaleHotelFind(['order_id' => $item['order_id']]);

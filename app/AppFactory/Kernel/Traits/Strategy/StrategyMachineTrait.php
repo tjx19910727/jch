@@ -34,7 +34,10 @@ trait StrategyMachineTrait
     {
         $data = StrategyMachineModel::getList($where,$pageNum,$field,$order,function ($item) {
             if (isset($item['m_id'])) {
-                $item['machine_id'] = $this->getMachineValue(['m_id' => $item['m_id']],'machine_id');
+                //$item['machine_id'] = $this->getMachineValue(['m_id' => $item['m_id']],'machine_id');
+                $machineData = $this->getMachineFind(['m_id' => $item['m_id']],'machine_id,machine_name');
+                $item['machine_id'] = $machineData['machine_id'] ?? '';
+                $item['machine_name'] = $machineData['machine_name'] ?? '';
             }
             if (isset($item['s_id']) && isset($item['s_type'])) {
                 switch ($item['s_type']) {

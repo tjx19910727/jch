@@ -33,11 +33,141 @@ class Machine extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
         $pageNum = $postData['pageNum'] ?? 0;
+        $field = $this->field;
+        $order = $this->buildMachineListOrder($postData, $field);
+        unset($postData['version_sort'],$postData['stock_ratio'],$postData['sort_name'],$postData['sort_order']);
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
         //只取vending_machine_type为1的设备，即主柜设备
-        $where[] = ['vending_machine_type', '=', 1];
+        $where[] = ['vending_machine_type', '=', 1];//vending_machine_type字段已废弃，入库默认值为1，代码层面涉及此字段的不用管
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
-        return $this->app->machine->getMList($where,$pageNum,$this->field,"online asc, m_id desc");
+        return $this->app->machine->getMList($where,$pageNum,$field,$order);
+    }
+
+    private function buildMachineListOrder($postData, &$field)
+    {
+        $orderList = [];
+
+        $sortName = strtolower(trim((string)($postData['sort_name'] ?? '')));
+        $sortOrder = $this->normalizeSortDirection($postData['sort_order'] ?? '');
+
+        if ($sortName) {
+            if (!$sortOrder) {
+                $sortOrder = 'desc';
+            }
+            if ($sortName == 'id') {
+                $sortName = 'm_id';
+            }
+            if ($sortName == 'machine_name') {
+                $sortName = 'machine_id';
+            }
+
+            $normalSortFieldMap = [
+                'm_id' => 'm_id',
+                'machine_id' => 'machine_id',
+                'machine_name' => 'machine_name',
+                'online' => 'online',
+                'last_online_time' => 'last_online_time',
+                'version' => 'version',
+                'is_operating' => 'is_operating',
+                'status' => 'status',
+                'factory' => 'factory',
+                'inventory_location' => 'inventory_location',
+            ];
+
+            $specialSortAlias = $this->appendSpecialSortField($sortName, $field);
+            if ($specialSortAlias) {
+                $orderList[] = "{$specialSortAlias} {$sortOrder}";
+                if ($sortName == 'month_achieve_rate') {
+                    $this->appendSpecialSortField('month_achieve_amount', $field);
+                    $orderList[] = "month_achieve_amount_sort {$sortOrder}";
+                }
+            } elseif (isset($normalSortFieldMap[$sortName])) {
+                $orderList[] = "{$normalSortFieldMap[$sortName]} {$sortOrder}";
+            }
+        }
+
+        // 兼容旧参数逻辑：即使 sort_name 有值，也继续追加到后面
+        if (!empty($postData['version_sort'])) {
+            $versionDirection = $postData['version_sort'] == 1 ? 'asc' : 'desc';
+            $orderList[] = "version {$versionDirection}";
+        }
+        if (!empty($postData['stock_ratio'])) {
+            $stockRatioDirection = $postData['stock_ratio'] == 1 ? 'asc' : 'desc';
+            $this->appendSelectField($field, 'stock_ratio_sort', "(SELECT IF(SUM(capacity) > 0, LEAST(GREATEST(SUM(stock) / SUM(capacity), 0), 1), 0) FROM machine_channel WHERE m_id = a.m_id AND status <> 2)");
+            $orderList[] = "stock_ratio_sort {$stockRatioDirection}";
+        }
+
+        $orderList[] = 'online asc';
+        $orderList[] = 'm_id desc';
+        return implode(', ', $orderList);
+    }
+
+    private function appendSpecialSortField($sortName, &$field)
+    {
+        if ($sortName == 'stock_ratio') {
+            $this->appendSelectField($field, 'stock_ratio_sort', "(SELECT IF(SUM(capacity) > 0, LEAST(GREATEST(SUM(stock) / SUM(capacity), 0), 1), 0) FROM machine_channel WHERE m_id = a.m_id AND status <> 2)");
+            return 'stock_ratio_sort';
+        }
+
+        if ($sortName == 'month_target_amount') {
+            $month = date('Y-m');
+            $this->appendSelectField($field, 'month_target_amount_sort', "(SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}')");
+            return 'month_target_amount_sort';
+        }
+
+        if ($sortName == 'month_achieve_amount') {
+            $monthStart = strtotime(date('Y-m-01 00:00:00'));
+            $monthEnd = strtotime(date('Y-m-t 23:59:59'));
+            $this->appendSelectField(
+                $field,
+                'month_achieve_amount_sort',
+                "(SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd})"
+            );
+            return 'month_achieve_amount_sort';
+        }
+
+        if ($sortName == 'month_achieve_rate') {
+            $month = date('Y-m');
+            $monthStart = strtotime(date('Y-m-01 00:00:00'));
+            $monthEnd = strtotime(date('Y-m-t 23:59:59'));
+            $this->appendSelectField(
+                $field,
+                'month_achieve_rate_sort',
+                "(IF((SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}') > 0, ((SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd}) / (SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}') * 100), 0))"
+            );
+            return 'month_achieve_rate_sort';
+        }
+
+        if ($sortName == 'rsrp') {
+            $todayStart = date('Y-m-d 00:00:00');
+            $todayEnd = date('Y-m-d 23:59:59');
+            $this->appendSelectField($field, 'rsrp_sort', "(SELECT IFNULL(rsrp, -999) FROM sim_signal_log WHERE m_id = a.m_id AND created_at >= '{$todayStart}' AND created_at <= '{$todayEnd}' ORDER BY id DESC LIMIT 1)");
+            return 'rsrp_sort';
+        }
+
+        if ($sortName == 'machine_on_off') {
+            $this->appendSelectField($field, 'machine_on_off_sort', "(SELECT IFNULL(on_off_machine, '') FROM machine_on_off WHERE m_id = a.m_id AND status = 1 LIMIT 1)");
+            return 'machine_on_off_sort';
+        }
+
+        return '';
+    }
+
+    private function appendSelectField(&$field, $alias, $expression)
+    {
+        if (strpos($field, " {$alias}") !== false) {
+            return;
+        }
+        $field .= ", {$expression} {$alias}";
+    }
+
+    private function normalizeSortDirection($direction)
+    {
+        $direction = strtolower(trim((string)$direction));
+        if ($direction == 'asc' || $direction == 'desc') {
+            return $direction;
+        }
+        return '';
     }
 
     public function getFind()
@@ -55,6 +185,13 @@ class Machine extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
+        // 要求国家/省/市编码必传，regions_id 可选
+        foreach (['country_id', 'state_id', 'city_id'] as $f) {
+            if (empty($postData[$f]) && $postData[$f] !== 0) {
+                // 使用通用提示，若需要可在语言文件中添加专用提示键
+                return returnValidate(lang('VMachine.' . $f . '_require'));
+            }
+        }
         return $this->app->machine->addM($postData);
     }
 
@@ -65,6 +202,13 @@ class Machine extends Common
             $this->validate($postData, $this->validatePath . '.update');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
+        }
+        // 要求国家/省/市编码必传，regions_id 可选
+        foreach (['country_id', 'state_id', 'city_id'] as $f) {
+            if (empty($postData[$f]) && $postData[$f] !== 0) {
+                // 使用通用提示，若需要可在语言文件中添加专用提示键
+                return returnValidate(lang('VMachine.' . $f . '_require'));
+            }
         }
         return $this->app->machine->updateM($postData);
     }
@@ -130,12 +274,13 @@ class Machine extends Common
         }
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
         if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
-        $field = "m_id,machine_id,machine_name,country_id,state_id,city_id,regions_id,street,floor,version,factory,inventory_location,
+        $field = "m_id,machine_id,machine_name,ao_id,country_id,state_id,city_id,regions_id,street,floor,version,factory,inventory_location,
+        IFNULL((SELECT GROUP_CONCAT(DISTINCT mg.mg_name ORDER BY mg.id SEPARATOR ',') FROM machine_group_mg mg WHERE mg.m_id = a.m_id),'') machine_group_name,
         (case online when 1 then '" . lang("online") . "' else '" . lang("offline"). "' END) online,
         FROM_UNIXTIME(last_online_time) last_online_time,
         (case device_type when 1 then '" . lang("vending_machine") . "' else '" . lang("store") . "' end) device_type,
         (case machine_level when 1 then '" . lang("simplified_version") . "' else '" . lang("luxury_edition") . "' END) machine_level,
-    (case is_operating when 1 then '在营' else '停营' END) is_operating,
+    (case is_operating when 1 then '在营' when 2 then '在库' when 3 then '停营' END) is_operating,
         (case status when 1 then '" . lang("normal") . "' when 2 then '" . lang("disable") . "' when 3 then '" . lang("maintenance") . "' end) status";
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];
@@ -292,26 +437,38 @@ class Machine extends Common
      */
     public function getRecycleBoxInfo(){
         $machine_id = input("machine_id");
-        $machine = $this->app->machine->getMachineFind(['machine_id' => $machine_id],'*');
-        if(!$machine) return $this->app->machine->rFail($this->app->machine->lang("VMachine.machine_not_exist"));
-        if ($machine['recycle_box_total_capacity'] == 0) {
-            $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "checkRecycleBox", []);
-            return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+        if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
+        $send = 0;
+        $n = 0;
+        while (1) {
+            $machine = $this->app->machine->getMachineFind(
+                ['machine_id' => $machine_id],
+                'machine_id,recycle_box_total_capacity,recycle_box_remain_capacity'
+            );
+            if (!$machine) return $this->app->machine->rFail($this->app->machine->lang("VMachine.machine_no_data"));
+            if ($machine['recycle_box_remain_capacity'] != '-1') {
+                return returnState(200, lang("query_success"), $machine);
+            }
+            if (!$send) {
+                $this->app->machine->sendToMachine(['machine_id' => $machine_id], "checkRecycleBox", []);
+                $send = 1;
+            }
+            sleep(1);
+            $n++;
+            if ($n >= 20) {
+                return returnState(300, lang("VMachine.get_recycle_box_overtime"));
+            }
         }
-        return $machine;
-        
     }
 
     public function setPickUpDoorOpen(){
         $machine_id = input("machine_id");
-        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "pickUpDoorOpen", []);
-        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+        return $this->waitRemoteActionLogResult($machine_id, "pickUpDoorOpen");
     }
 
     public function setPickUpDoorClose(){
         $machine_id = input("machine_id");
-        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "pickUpDoorClose", []);
-        return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
+        return $this->waitRemoteActionLogResult($machine_id, "pickUpDoorClose");
     }
 
     // public function remoteTakePhotos(){
@@ -333,6 +490,55 @@ class Machine extends Common
         $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "recycGoods", ['sod_id' => $sod_id]);
         return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
     }
+
+    /**
+     * 通过 remote_action_log 等待设备动作回执。
+     * 下发前先创建日志，设备回执后按 log_id 更新 status，再轮询该日志状态返回结果。
+     * @param string $machine_id
+     * @param string $msgType
+     * @return array|string
+     */
+    protected function waitRemoteActionLogResult($machine_id, $msgType)
+    {
+        if (!$machine_id) return returnValidate(lang("VMachine.machine_id_require"));
+        $logId = $this->app->machine->addRALog([
+            'machine_id' => $machine_id,
+            'type' => $msgType,
+            'status' => 1,
+            'manager_id' => $this->manager['manager_id'] ?? 0,
+            'operator_at' => date('Y-m-d H:i:s'),
+        ]);
+        $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], $msgType, ['log_id' => $logId]);
+        if (!is_object($result)) {
+            $this->app->machine->updateRALog(
+                ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
+                ['id' => $logId],
+                ['status', 'operator_at']
+            );
+            $msg = $result ? $this->app->machine->lang("VMachine." . $result) : $this->app->machine->lang("VMachine.machine_no_data");
+            return $this->app->machine->rFail($msg);
+        }
+
+        $n = 0;
+        $overtime = 20;
+        while (1) {
+            $log = $this->app->machine->getRALogsFind(['id' => $logId], 'id,machine_id,type,status,operator_at');
+            if ($log) {
+                $log = is_object($log) ? $log->toArray() : $log;
+                if (intval($log['status']) === 3) {
+                    return returnState(200, lang("query_success"), $log);
+                }
+                if (intval($log['status']) === 4) {
+                    return returnState(100, lang("action_fail"), $log);
+                }
+            }
+            sleep(1);
+            $n++;
+            if ($n >= $overtime) {
+                return returnState(300, lang("VMachine.pick_up_door_overtime"), ['log_id' => $logId]);
+            }
+        }
+    }
     
     public function exportEmptyChannel(){
         $postData = input();
@@ -348,5 +554,28 @@ class Machine extends Common
         $postData = input();
         $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
         return $this->app->machineChannel->exportStockOutList($where);
+    }
+
+    /**
+     * 导出设备货道库存明细
+     * @return array|string
+     */
+    public function exportStockRatio()
+    {
+        $mId = input('m_id');
+        if (!$mId) {
+            return returnValidate(lang("VMachine.machine_id_require"));
+        }
+        return $this->app->machineChannel->exportStockRatioByMachine($mId);
+    }
+
+    /**
+     * 根据 street 回填设备省市区编码
+     * @return array|string
+     */
+    public function repairAddressAreaIds()
+    {
+        $postData = input();
+        return $this->app->machine->repairAddressAreaIds($postData);
     }
 }

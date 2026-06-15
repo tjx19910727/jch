@@ -16,6 +16,7 @@ define("SIMIOT_QUERY_CARD", "https://iot.simiot.com/api/client/v1");
 /**
  * Class Simiot
  * @method static queryCard($iccid, $cycles = 12)  查询卡信息
+ * @method static queryCardBatch($iccids = [], $batchSize = 90) 批量查询卡信息
  * @method static queryPool()  查询流量池信息
  * @method static checkWarning()  查询是否需要预警
  * @package app\AppFactory\Kernel\Support\SimiotService
@@ -139,6 +140,53 @@ class Simiot
 			];
 		}
 		return $result;
+	}
+
+	/**
+	 * 批量查询卡信息（单次最多100，这里默认90）
+	 * @param array|string $iccids
+	 * @param int $batchSize
+	 * @return array
+	 */
+	public function _queryCardBatch($iccids = [], $batchSize = 90)
+	{
+		if (is_string($iccids)) {
+			$iccids = explode(',', $iccids);
+		}
+		if (!$iccids) {
+			return ['code' => 0, 'message' => 'ok', 'result' => [], 'failed' => []];
+		}
+
+		$batchSize = intval($batchSize);
+		if ($batchSize <= 0 || $batchSize > 100) {
+			$batchSize = 90;
+		}
+
+		$all = [];
+		$failed = [];
+		$chunks = array_chunk($iccids, $batchSize);
+		foreach ($chunks as $chunk) {
+			$res = $this->_queryCard(implode(',', $chunk));
+			if (!is_array($res) || empty($res['result'])) {
+				$failed[] = [
+					'iccids' => $chunk,
+					'res' => $res,
+				];
+				continue;
+			}
+			$list = $res['result'] ?? [];
+			if (!is_array($list)) {
+				$list = [];
+			}
+			$all = array_merge($all, $list);
+		}
+
+		return [
+			'code' => 0,
+			'message' => 'ok',
+			'result' => $all,
+			'failed' => $failed,
+		];
 	}
 
 	/**

@@ -69,7 +69,7 @@ class StrategyPayeeClient extends ManagementClient
             return $this->rFail("没有数据可导出");
 
         }
-        $payType = [1 => "微信支付", 2 => "支付宝支付", 3 => "通联支付",4 => "京东收银",5 => "丽呈小程序支付","9" => "商城积分支付"];
+        $payType = config('payment.strategy_payee_type_map') ?: [];
         $list = $list->toArray();
         foreach ($list as &$item) {
             $item['content'] = json2arr($item['content']);

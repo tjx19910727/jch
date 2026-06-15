@@ -63,11 +63,11 @@ trait MachineErrorCodeTrait
             "ao_id" => $this->machine['ao_id'] ?? 0,
         ];
         $result = $this->addMachineErrorCode($insert);
-        if ($result) {
-            //不需要发送模板消息的错误码：1100000、1000001
-            if (!$lastEc && !in_array($this->message['errorCode'], ['1100000', '1000001'])) {
+        if ($result && !in_array($this->message['errorCode'], ['1100000', '1000001'])) {
+            //if (!$lastEc) {
                 $machine = $this->machine;
                 if (!is_array($this->machine)) $machine = $this->machine->toArray();
+                $machine['machine_name'] = mb_substr($machine['machine_name'], 0, 20, 'UTF-8');
                 $errorMsg = $this->lang("deviceErrorCode." . $this->message['errorCode']);
                 $machine['errorCode'] = $errorMsg == "deviceErrorCode." . $this->message['errorCode'] ? $this->message['errorCode'] : $errorMsg;
                 $machine['date'] = date("Y年m月d日");
@@ -78,12 +78,13 @@ trait MachineErrorCodeTrait
                 $this->noticeSendData = [
                     "ao_id" => $this->machine['ao_id'],
                     "m_id" => $this->machine['m_id'],
+                    "me_id" => $result,
                     "templateType" => "mFault",
                     "replaceData" => $machine,
                 ];
                 actionLog($this->noticeSendData, '发送设备故障通知');
                 @$this->noticeSend();
-            }
+            //}
         }
         return 1;
     }

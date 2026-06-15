@@ -8,6 +8,8 @@
 
 namespace app\AppFactory\Kernel\Traits\Mq;
 
+use think\facade\Db;
+
 
 trait OutGoodsTrait
 {
@@ -18,98 +20,31 @@ trait OutGoodsTrait
      */
     public function outGoods()
     {
-        actionLog($this->message,'出货完成','OutGoods');
-        $this->order = $this->getSaleOrdersFind(['trade_no' => $this->message['trade_no']]);
-        if (!$this->order) {
-            actionLog($this->getLS(),'查无订单数据','OutGoods');
-            return $this->rFail("查无订单数据");
-        }
-        $this->order = $this->order->toArray();
-
-        // 使用 Redis 分布式锁：防止同一 trade_no 被并发处理（例如 HTTP 兜底触发 + MQ 消费同时到达）
-        $tradeNo = $this->message['trade_no'] ?? '';
-        $lockKey = $tradeNo ? "outGoods_lock_" . $tradeNo : null;
-        /** @var \Redis|null $redis */
-        $redis = null;
-        $lockVal = null;
-        $lockTtl = 60; // seconds, safety TTL in Redis
-        $lockAcquired = false;
-
-        if ($lockKey) {
-            try {
-                $redisConfig = config('redis') ?: [];
-                $host = $redisConfig['host'] ?? '127.0.0.1';
-                $port = $redisConfig['port'] ?? 6379;
-                $timeout = $redisConfig['timeout'] ?? 0;
-                if (!class_exists('Redis')) {
-                    throw new \Exception('phpredis extension not installed');
-                }
-                $redis = new \Redis();
-                // suppress warnings - connection errors will be handled by catch
-                $redis->connect($host, $port, $timeout);
-                if (!empty($redisConfig['password'])) {
-                    try { $redis->auth($redisConfig['password']); } catch (\Throwable $__e) { /* ignore auth failure here */ }
-                }
-
-                // unique token for this lock owner
-                $lockVal = uniqid('', true) . mt_rand(1000, 9999);
-                // try atomic SET NX EX first (phpredis supports options array), fallback to setnx+expire
-                $setResult = false;
-                try {
-                    // phpredis >=5: set($key, $val, ['nx', 'ex' => $ttl])
-                    $setResult = $redis->set($lockKey, $lockVal, ['nx', 'ex' => $lockTtl]);
-                } catch (\Throwable $e) {
-                    // fallback to setnx + expire
-                    try {
-                        if ($redis->setnx($lockKey, $lockVal)) {
-                            $redis->expire($lockKey, $lockTtl);
-                            $setResult = true;
-                        }
-                    } catch (\Throwable $__e) {
-                        $setResult = false;
-                    }
-                }
-
-                if ($setResult) {
-                    $lockAcquired = true;
-                    // 在脚本结束时尽量释放锁（若进程正常退出或发生可捕获的致命错误，shutdown handler 会运行）
-                    try {
-                        $r = $redis;
-                        $k = $lockKey;
-                        $v = $lockVal;
-                        register_shutdown_function(function() use ($r, $k, $v) {
-                            try {
-                                if ($r && $k && $v) {
-                                    $script = 'if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end';
-                                    $r->eval($script, [$k, $v], 1);
-                                }
-                            } catch (\Throwable $__e) {
-                                // 忽略释放失败，TTL 保证最终会过期
-                            }
-                        });
-                    } catch (\Throwable $__e) {
-                        // ignore register failures
-                    }
-                } else {
-                    actionLog($this->message, 'outGoods Redis 锁已存在，跳过重复处理', 'OutGoods');
-                    return $this->rFail("订单正在处理中");
-                }
-            } catch (\Throwable $e) {
-                // 无法使用 Redis 时回退到 cache()，以防锁机制不可用导致重复处理
-                actionLog($e->getMessage(), '获取 Redis 锁失败，回退到 cache 锁', 'OutGoods');
-                if (cache($lockKey)) {
-                    actionLog($this->message, 'outGoods 已有 cache 锁，跳过重复处理', 'OutGoods');
-                    return $this->rFail("订单正在处理中");
-                }
-                cache($lockKey, 1);
-            }
+        $tradeNo = trim((string)($this->message['trade_no'] ?? ''));
+        if ($tradeNo === '') {
+            actionLog($this->message, 'trade_no为空，拒绝处理', 'OutGoods');
+            return $this->rFail("trade_no不能为空");
         }
 
+        Db::startTrans();
         try {
-            // 设备状态上报映射：status=2->out_status=3，status=3->out_status=4，status=4->out_status=5
+            actionLog($this->message,'出货完成','OutGoods');
+            // 使用行锁保证同一trade_no并发时串行处理
+            $this->order = Db::name('sale_orders')->where(['trade_no' => $tradeNo])->lock(true)->find();
+            if (!$this->order) {
+                actionLog($this->getLS(),'查无订单数据','OutGoods');
+                Db::rollback();
+                return $this->rFail("查无订单数据");
+            }
+
+            $originOutStatus = (int)$this->order['out_status'];
+
             $status = isset($this->message['status']) ? (int)$this->message['status'] : 0;
             $statusMap = [
+                1 => 2,
                 2 => 3,
+                20 => 3,
+                21 => 3,
                 3 => 4,
                 4 => 5,
             ];
@@ -118,87 +53,83 @@ trait OutGoodsTrait
                 if ($statusMap[$status] >= (int)$this->order['out_status']) {
                     $this->order['out_status'] = $statusMap[$status];
                 }
-                if (in_array($status, [3, 4])) {
+                if (in_array($status, [3, 4], true)) {
                     $this->order['out_time'] = time();
                 }
                 $this->order['remark'] = "接收到出货状态上报,status=" . $status;
             }
 
-            // status=2 表示设备已接收指令，直接更新订单状态即可
-            if ($status === 2) {
+            // 幂等短路：已处理过的结果回调直接成功返回，避免重复扣减/回调
+            if ((!empty($this->message['main']) || in_array($status, [21, 3, 4])) 
+                && $originOutStatus >= 4 && $originOutStatus != 6) {
+                actionLog($this->order, '订单已处理过，本次按幂等成功返回', 'OutGoods');
+                Db::commit();
+                return $this->rAction(true);
+            }
+
+            // status=1/2/20 仅更新订单状态，不触发出货结果处理
+            if (in_array($status, [1, 2, 20], true)) {
                 $result = $this->updateSaleOrders($this->order);
-                actionLog($this->order, '收到status=2，更新订单出货状态', 'OutGoods');
-                actionLog($this->getLS(), '【SQL】修改订单(status=2回执)', 'OutGoods');
+                actionLog($this->order, '收到状态回执，更新订单出货状态', 'OutGoods');
+                actionLog($this->getLS(), '【SQL】修改订单(状态回执)', 'OutGoods');
+                Db::commit();
                 return $this->rAction($result);
             }
 
-            // 仅状态回执（无main）
-            if (empty($this->message['main']) && in_array($status, [3, 4])) {
+            // 仅状态回执（无main）：status=21 仅更新到“处理中”；status=3/4 需带main，否则拒绝完结
+            if (empty($this->message['main']) && $status === 21) {
                 $result = $this->updateSaleOrders($this->order);
                 actionLog($this->order, '仅状态回执，更新订单出货状态', 'OutGoods');
                 actionLog($this->getLS(), '【SQL】修改订单(仅状态回执)', 'OutGoods');
+                Db::commit();
                 return $this->rAction($result);
             }
 
-            if ($this->order['out_status'] >= 4 && $this->order['out_status'] != 6) {
-                actionLog($this->order,'订单已处理过了','OutGoods');
-                return $this->rFail("订单已处理过了");
+            if (empty($this->message['main']) && in_array($status, [3, 4], true)) {
+                actionLog($this->message, 'status=3/4缺少main主体数据，拒绝完结', 'OutGoods');
+                Db::rollback();
+                return $this->rFail("主体数据不能为空");
+            }
+
+            if ($originOutStatus >= 4 && $originOutStatus != 6) {
+                actionLog($this->order,'订单已处理过了(幂等)','OutGoods');
+                Db::commit();
+                return $this->rAction(true);
             }
             if (empty($this->message['main'])) {
                 actionLog($this->message, '缺少main主体数据', 'OutGoods');
+                Db::rollback();
                 return $this->rFail("主体数据不能为空");
             }
-//        $this->startTrans();
-            try {// 处理修改订单及货道数据
-                $flag = $this->handleData();
-                if ($this->order['coupon_id']) {
-                    $this->handleCoupon();
-                }
-                if ($this->order['apc_id']) {
-                    $this->handlePick();
-                }
-                if ($this->order['lottery_id']) {
-                    $this->handleLottery();
-                }
-                if ($this->order['fd_id']) {
-                    $this->handleFd();
-                }
-                $result = $this->checkFlag($flag);
-                if ($result) {
-//                $this->commitTrans();
-                    $this->handleTripPayCallback();
-                }
-//            else
-//                $this->rollbackTrans();
-                return $this->rAction($result);
-            } catch (\Exception $e) {
-//            $this->rollbackTrans();
-                actionException($e,1,'OutGoods');
-                return $this->rTryCatch($e->getMessage());
+
+            // 处理修改订单及货道数据
+            $flag = $this->handleData();
+            if ($this->order['coupon_id']) {
+                $this->handleCoupon();
             }
-        } finally {
-            if ($lockKey) {
-                // 释放锁：优先使用 Redis 原子比对删除（仅当 value 匹配时释放），否则回退到 cache()
-                try {
-                    if (!empty($redis) && $lockAcquired && $lockVal) {
-                        try {
-                            $script = 'if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end';
-                            // EVAL script with 1 key
-                            $redis->eval($script, [$lockKey, $lockVal], 1);
-                        } catch (\Throwable $__e) {
-                            // 尝试直接 del（不安全，但作为最后手段）
-                            try { $redis->del($lockKey); } catch (\Throwable $__ee) { /* ignore */ }
-                        }
-                    } else {
-                        // 回退到 cache 清理
-                        try { cache($lockKey, null); } catch (\Throwable $__e) { /* ignore */ }
-                    }
-                } catch (\Exception $e) {
-                    // 即便释放锁失败也不应影响业务流程，记录异常
-                    actionLog($e->getMessage(), '释放 outGoods 锁失败', 'OutGoods');
-                }
+            if ($this->order['apc_id']) {
+                $this->handlePick();
             }
+            if ($this->order['lottery_id']) {
+                $this->handleLottery();
+            }
+            if ($this->order['fd_id']) {
+                $this->handleFd();
+            }
+            $result = $this->checkFlag($flag);
+            if ($result) {
+                $this->handleTripPayCallback();
+                Db::commit();
+            } else {
+                Db::rollback();
+            }
+            return $this->rAction($result);
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e,1,'OutGoods');
+            return $this->rTryCatch($e->getMessage());
         }
+
     }
 
     /**
@@ -207,6 +138,7 @@ trait OutGoodsTrait
      */
     protected function handleData()
     {
+        $flag = [];
         $status = isset($this->message['status']) ? (int)$this->message['status'] : 0;
         if ($this->order['out_status'] != 6) {
             if ($status == 4) {
@@ -215,8 +147,10 @@ trait OutGoodsTrait
                 $this->order['out_status'] = 4;
             }
         }
-        $this->order['out_time'] = time();
-        $this->order['remark'] = "接收到出货结果";
+        if ($status != 21) {
+            $this->order['out_time'] = time();
+        }
+        $this->order['remark'] = $status == 21 ? "接收到出货结果并扣减库存,status=21" : "接收到出货结果";
 
         $insertGChange = [
             "m_id" => $this->machine['m_id'],
@@ -224,12 +158,13 @@ trait OutGoodsTrait
             "machine_name" => $this->machine['machine_name'],
             "ao_id" => $this->machine['ao_id'],
         ];
+
         foreach ($this->message['main'] as $key => $value) {
             $position = $key;
             foreach ($value as $vv) {
-                $channel_code = $vv["channel_code"];
-                $success = $vv["success_quantity"];
-                $fail = $vv["fail_quantity"];
+                $channel_code = $vv["channel_code"] ?? '';
+                $success = intval($vv["success_quantity"] ?? 0);
+                $fail = intval($vv["fail_quantity"] ?? 0);
                 $deliver_pics = $vv["deliver_pics"] ?? "";
                 $out_sequence = $vv["out_sequence"] ?? 1;
 
@@ -262,7 +197,11 @@ trait OutGoodsTrait
                 $whereMc['m_id'] = $this->machine['m_id'];
                 $whereMc['channel_position'] = $position;
                 $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,frozen_stock,stock,stock_warning');
-                if ($success > 0) {
+                if (!$mc) {
+                    actionLog($whereMc, '未找到货道，跳过货道库存处理', 'OutGoods');
+                    continue;
+                }
+                if ($success > 0 && (in_array($status, [21, 3]) || $this->message['main'])) {
                     // 外部预订提货码订单，减冻结库存
                     if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);
@@ -426,6 +365,9 @@ trait OutGoodsTrait
             // 网上预售的订单，出货成功需要发至商城或第三方平台核销
             if ($pickCode['pick_type'] == 3) {
                 $advance = $this->getApiAdvanceFind(['apc_id' => $pickCode['apc_id']]);
+                if (!$advance) {
+                    actionLog($pickCode, '未找到API预订记录，跳过核销回调', 'DataUpload');
+                } else {
                 $flag[] = $this->updateApiAdvance(['status' => $aaStatus,"pick_time" => date("Y-m-d H:i:s")],['apc_id' => $pickCode['apc_id']]);
                 actionLog($this->getLS(),'【SQL】修改API预订商品记录',"DataUpload");
                 $details = $this->getSaleOrdersDetailsList(['order_id' => $advance['order_id']],0,'g_id product_id,success_quantity,fail_quantity');
@@ -452,10 +394,6 @@ trait OutGoodsTrait
                 ];
                 $ac_id = $this->addApiCallback($insertCallback);
                 $ac = $this->getApiCallbackFind(['ac_id' => $ac_id]);
-                if ($ac) {
-                    $cb = cache("callback0");
-                    $cb[] = $ac->toArray();
-                    cache("callback0",$cb,60);
                 }
             }
             $flag[] = $this->updateActivityPickCode($update);
@@ -542,11 +480,6 @@ trait OutGoodsTrait
                 actionLog($this->getLS(),'添加出货回调通知记录',"OutGoods");
                 $ac = $this->getApiCallbackFind(['ac_id' => $ac_id]);
                 actionLog($ac,'查询刚添加的出货回调通知记录',"OutGoods");
-                if ($ac) {
-                    $cb = cache("callback0");
-                    $cb[] = $ac->toArray();
-                    cache("callback0",$cb,60);
-                }
             }
         }
     }

@@ -10,14 +10,28 @@
 namespace app\management\controller\weicheng;
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\RabbitMq\MqProducer;
 use app\management\controller\Common;
+use think\facade\Cache;
 
 class WcGoods extends Common
 {
 
     public function syncAll()
     {
-        return $this->app->weicheng->synchronizeGoodsAll();
+        $cacheKey = 'wc_goods_sync_all_lock';
+        if (Cache::get($cacheKey)) return returnState(100, '10分钟内只能请求一次，请稍后重试');
+
+        $goods_type = input('goods_type') ?? '';
+        $res = MqProducer::export([
+            'job_type' => 'wc_goods_sync',
+            'request_time' => date('Y-m-d H:i:s'),
+            'manager_id' => input('manager_id') ?? 0,
+            'goods_type' => $goods_type,
+        ]);
+        if ($res != 'OK') return returnState(100, '同步请求提交失败：' . $res);
+        Cache::set($cacheKey, 1, 600);
+        return returnState(200, 'success', '同步请求已提交，请10分钟后再刷新页面');
     }
 
     public function sync()
@@ -57,8 +71,13 @@ class WcGoods extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
+        $keyword = $postData['keyword'] ?? '';
+        unset($postData['keyword']);
         // 这里不再透传 type like，避免与实物类型固定筛选冲突导致结果为空
-        $where = $this->getWhere($postData, false, ['name' => 'like', 'no' => 'like']);
+        $where = $this->getWhere($postData, false, ['g_name' => 'like', 'no' => 'like', 'out_no' => 'like']);
+        if ($keyword !== '') {
+            $where[] = ['g_name|no|out_no', 'like', "%{$keyword}%"];
+        }
         $where[] = ['type', 'in', [1, 2, 3, 4, 5]]; // 实物商品
         return $this->app->weicheng->getWcPhysicalGoodsLists($where, $pageNum);
     }

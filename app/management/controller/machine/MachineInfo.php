@@ -9,15 +9,12 @@
 namespace app\management\controller\machine;
 
 
-use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Support\SimiotService\Simiot;
 use app\management\controller\Common;
 use app\management\validate\Machine\VMachineInfo;
-use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 
 class MachineInfo extends Common
 {
-    use SaleOrdersTrait;
-
     protected $field = "*";
     protected $validatePath = VMachineInfo::class;
 
@@ -33,7 +30,16 @@ class MachineInfo extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineInfo->getFind($where);
+        $info = $this->app->machineInfo->getFind($where);
+        if (is_object($info) && method_exists($info, 'getData')) {
+            $payload = $info->getData();
+            $machineInfo = $payload['data'] ?? [];
+            // 获取流量池数据进行覆盖
+            $pool_result = Simiot::queryPool();
+            $machineInfo['remain_flow'] = $pool_result['result'][0]['traffic_left'] ?? 0;
+            return returnState($payload['state'] ?? 200, $payload['msg'] ?? lang('query_success'), $machineInfo);
+        }
+        return $info;
     }
 
     public function add()
@@ -75,7 +81,7 @@ class MachineInfo extends Common
         return $this->app->machineInfo->del($postData);
     }
 
-    /**
+    /** 
      * 获取设备实时图片
      * @return array|string
      */
@@ -83,17 +89,45 @@ class MachineInfo extends Common
     {
         $field = input('field');
         $machine_id = input('machine_id');
+        $sodId = intval(input('sod_id'));
         if (!in_array($field,["screen_img","camera_img","exchange_img","remote_refund_goods"])) return returnState(100,lang("query_out_range"));
         if (!$machine_id) return returnState(100,lang("VMachineInfo.machine_id_require"));
         $send = "";
         $n = 0;
-        while(1) {
+        if($field == "remote_refund_goods"){
+            $logId = $this->app->machine->addRALog([
+                'machine_id' => $machine_id,
+                'type' => 'remote_refund_goods_img',
+                'status' => 1,
+                'manager_id' => $this->manager['manager_id'] ?? 0,
+                'operator_at' => date('Y-m-d H:i:s'),
+            ]);
+            $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], 'img', ['log_id' => $logId, 'field' => $field]);
+            if (!is_object($result)) {
+                $this->app->machine->updateRALog(
+                    ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
+                    ['id' => $logId],
+                    ['status', 'operator_at']
+                );
+                $msg = $result ? $this->app->machine->lang("VMachine." . $result) : $this->app->machine->lang("VMachine.machine_no_data");
+                return $this->app->machine->rFail($msg);
+            }
+            // 已经下发过一次获取远程退货图片的指令，标记为已发送，避免在循环里再次下发
+            $send = 1;
+        }
+        
+        while(1) {  
             //远程退货图片
             if($field == "remote_refund_goods"){
-                $sod_id = input('sod_id') ?? '';
-                $sod = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id])->toArray();
-                if ($sod['refund_photo']) {
-                    return returnState(200,lang("query_success"),$sod['refund_photo']);
+                $log = $this->app->machine->getRALogsFind(['id' => $logId], 'id,machine_id,type,status,field,operator_at');
+                if ($log) {
+                    $log = is_object($log) ? $log->toArray() : $log;
+                    if (intval($log['status']) == 3 || !empty($log['field'])) {
+                        return returnState(200, lang("query_success"), $log);
+                    }
+                    if (intval($log['status']) == 4) {
+                        return returnState(100, lang("action_fail"), $log);
+                    }
                 }
             }else{
                 $shotImg = $this->app->machineInfo->getMachineInfoValue(['machine_id' => $machine_id],$field);
@@ -104,13 +138,22 @@ class MachineInfo extends Common
             }
             if (!$send) {
                 // 下发获取首页截屏、设备内部照片、出货箱照片
-                $this->app->machine->sendToMachine(['machine_id' => $machine_id],"img",["field" => $field]);
+                $content = ["field" => $field];
+                if ($field == "remote_refund_goods") {
+                    if ($logId) {
+                        $content['log_id'] = $logId;
+                    }
+                    if ($sodId) {
+                        $content['sod_id'] = $sodId;
+                    }
+                }
+                $this->app->machine->sendToMachine(['machine_id' => $machine_id],"img",$content);
                 $send = 1;
             }
             sleep(1);
             $n++;
-            if ($n >= 50) {
-                return returnState(300,lang("action_machine_overtime"));
+            if ($n >= 20) {
+                return returnState(300,lang("VMachineInfo.get_img_overtime"));
             }
         }
     }
@@ -142,9 +185,14 @@ class MachineInfo extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
+        // 防御性读取参数，避免未定义数组索引导致的 PHP Notice/Warning
         $n = 0;
         $send = 0;
-        $machine_id = $postData['machine_id'];
+        $machine_id = isset($postData['machine_id']) ? $postData['machine_id'] : input('machine_id');
+        $mi_id = isset($postData['mi_id']) ? $postData['mi_id'] : input('mi_id');
+        // 若验证通过仍缺少必要参数，返回明确的错误信息
+        if (!$machine_id) return returnState(100, lang("VMachineInfo.machine_id_require"));
+        if (!$mi_id) return returnState(100, lang("VMachineInfo.mi_id_require"));
         $now = time();
         $overtime = 50;
         while(1){
@@ -161,7 +209,7 @@ class MachineInfo extends Common
                     return returnState(100, lang("VMachineInfo.get_computer_overtime"));
                 }
             } else {
-                return $this->app->machineInfo->getFind(['mi_id' => $postData['mi_id']], 'mi_id,cpu_utility,cpu_temperature,memory_usage,disk_occupancy');
+                return $this->app->machineInfo->getFind(['mi_id' => $mi_id], 'mi_id,cpu_utility,cpu_temperature,memory_usage,disk_occupancy');
             }
         }
         return returnState(100,lang("query_fail"));

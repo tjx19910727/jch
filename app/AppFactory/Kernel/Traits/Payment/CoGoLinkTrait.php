@@ -38,7 +38,7 @@ trait CoGoLinkTrait
             "transaction" => [
                 "transactionNo" => $this->order['mch_no'],
                 "merchantSerialNo" => $this->refundTradeNo,
-                "amount" => "$this->totalRefundMoney",
+                "amount" => $this->totalRefundMoney,
                 "externalAdditionalData" => json_encode(['refundNo' => $this->refundData['remark'], 'order_id' => 111])
             ],
         ];

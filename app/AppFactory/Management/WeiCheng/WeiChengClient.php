@@ -196,7 +196,7 @@ class WeiChengClient extends ManagementClient
 
     public function synchronizeGoodsAll()
     {
-        $wc_goods = $this->getWcGoodsList([['id', '>', '0']])->toArray();
+        $wc_goods = $this->getWcGoodsList([['id', '>', '0'],['is_pub', '=', '1']])->toArray();
         foreach ($wc_goods as $v) {
             $res = $this->synchronizeGoods($v['no'], $v['type']);
             if (!$res['status']) continue;
@@ -239,7 +239,7 @@ class WeiChengClient extends ManagementClient
 
     public function wcGoodsWriteLocal()
     {
-        $wc_goods = $this->getWcGoodsList([['id', '>', '0']])->toArray();
+        $wc_goods = $this->getWcGoodsList([['id', '>', '0'],['is_pub', '=', '1']])->toArray();
         // $wc_goods = $this->getWcGoodsList(['no'=>'VC2601071001'])->toArray();
         foreach ($wc_goods as $wc_good) {
             $res = $this->setWcGoodsLocal($wc_good['no'], $wc_good['type']);
@@ -380,6 +380,97 @@ class WeiChengClient extends ManagementClient
         return $this->rA('上架失败');
     }
 
+    //设置虚拟货道商品排序
+    public function setWcMachineChannelListsV2($m_id, $out_nos)
+    {
+        $m_ids = is_array($m_id) ? $m_id : explode(',', (string)$m_id);
+        $m_ids = array_values(array_unique($m_ids));
+        if (empty($m_ids)) return $this->r(100, '请选择设备');
+
+        $out_nos = is_array($out_nos) ? $out_nos : explode(',', (string)$out_nos);
+        $out_nos = array_values(array_unique($out_nos));
+        if (empty($out_nos)) return $this->r(100, '请选择微程商品');
+
+        $machine_maps = [];
+        foreach ($m_ids as $id) {
+            $machine = $this->getMachineFind(['m_id' => $id]);
+            if (!$machine) continue;
+            $machine_maps[$id] = $machine->toArray();
+        }
+        if (count($m_ids) !== count($machine_maps)) return $this->r(100, '选中的设备存在异常的设备');
+
+        $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
+        $wc_goods_type_arr = array_column($wc_goods_type, 'name', 'id');
+
+        $wc_goods_lists = $this->getWcGoodsList([['no', 'in', $out_nos]])->toArray();
+        if (empty($wc_goods_lists)) return $this->r(100, '上架失败，找不到微程商品信息');
+
+        $goods_map = [];
+        foreach ($wc_goods_lists as $wc_goods) {
+            $no = $wc_goods['no'] ?? '';
+            if ($no === '') continue;
+            if (!isset($goods_map[$no])) {
+                $goods_map[$no] = $wc_goods;
+            }
+        }
+
+        $missing_out_nos = [];
+        foreach ($out_nos as $out_no) {
+            if (!isset($goods_map[$out_no])) {
+                $missing_out_nos[] = $out_no;
+            }
+        }
+        if (!empty($missing_out_nos)) {
+            return $this->r(100, '上架失败，以下微程商品不存在商品库信息：' . implode(',', $missing_out_nos));
+        }
+
+        $sort_map = array_flip($out_nos);
+        $insert_all = [];
+        foreach ($m_ids as $id) {
+            $machine = $machine_maps[$id];
+            foreach ($out_nos as $out_no) {
+                if (!isset($goods_map[$out_no])) continue;
+                $wc_goods = $goods_map[$out_no];
+                $resourcesArray = $wc_goods['resourcesArray'] ? json_decode($wc_goods['resourcesArray'], true) : [];
+                $pic = '';
+                if (isset($resourcesArray[0]['url'])) $pic = ($wc_goods['resourceDomain'] ?? '') . $resourcesArray[0]['url'];
+                $insert_all[] = [
+                    'm_id' => $id,
+                    'machine_id' => $machine['machine_id'],
+                    'channel_code' => 'Z10',
+                    'g_id' => $wc_goods['g_id'] ?? 0,
+                    'out_no' => $wc_goods['no'] ?? '',
+                    'g_name' => $wc_goods['name'] ?? '',
+                    'gc_id' => $wc_goods['type'] ?? 0,
+                    'gc_name' => $wc_goods_type_arr[$wc_goods['type']] ?? '',
+                    'pic' => $pic,
+                    'sku' => $wc_goods['sku'] ?? '',
+                    'bar_code' => $wc_goods['sku'] ?? '',
+                    'retail_price' => $wc_goods['price'] ?? 0,
+                    'gift_points' => $wc_goods['gift_points'] ?? 0,
+                    'sort' => isset($sort_map[$out_no]) ? $sort_map[$out_no] + 1 : 0,
+                ];
+            }
+        }
+        if (empty($insert_all)) return $this->r(100, '上架失败，找不到微程商品信息');
+
+        $this->startTrans();
+        try {
+            // 先清理目标设备历史数据，再批量入库新排序
+            $this->delWcMachineChannelInfo([['m_id', 'in', $m_ids]]);
+            $result = $this->addWcMachineChannelMore($insert_all);
+            if (!$result) {
+                $this->rollbackTrans();
+                return $this->rA('上架失败');
+            }
+            $this->commitTrans();
+            return $this->rA('虚拟货道微程商品上架完成');
+        } catch (\Throwable $e) {
+            $this->rollbackTrans();
+            return $this->r(100, $e->getMessage());
+        }
+    }
+
 
     public function getWcMachineChannelLists($where, $pageNum = 0)
     {
@@ -387,6 +478,56 @@ class WeiChengClient extends ManagementClient
         $list = !$pageNum ? $list : $list['data'];
         foreach ($list as &$v) {
             $v['goods_list'] = $this->getWcGoodsLocalList(['out_no' => $v['out_no']])->toArray();
+
+            if (!empty($v['goods_list'])) {
+                $need_pic = empty($v['pic']);
+                $need_price = (float)($v['retail_price'] ?? 0) == 0;
+                $physical_total = 0;
+                $days_price = 0;
+                $today = date('Y-m-d');
+                foreach ($v['goods_list'] as $item) {
+                    $is_virtual = ($item['g_id'] ?? 0) == 9999;
+
+                    // 图片处理：外层 pic 为空时，取首个非实物商品(g_id=9999)图片
+                    if ($need_pic && $is_virtual && !empty($item['pic'])) {
+                        $v['pic'] = $item['pic'];
+                        $need_pic = false;
+                    }
+
+                    // 价格处理：外层 retail_price 为 0 时计算（实物累加 + 当日 daysInfo）
+                    if ($need_price) {
+                        if (!$is_virtual) {
+                            $physical_total = bcadd($physical_total, $item['retail_price'] ?? 0, 2);
+                            continue;
+                        }
+
+                        if (empty($item['daysInfo'])) {
+                            $days_price = $item['retail_price'] ?? 0;
+                            continue;
+                        } else {
+                            $daysInfo = json_decode($item['daysInfo'], true);
+                            $matched_today_price = false;
+                            if (is_array($daysInfo)) {
+                                foreach ($daysInfo as $day) {
+                                    if (isset($day['date']) && $day['date'] == $today) {
+                                        $days_price = $day['price'] ?? 0;
+                                        $matched_today_price = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!$matched_today_price) {
+                                $days_price = $item['retail_price'] ?? 0;
+                            }
+                        }
+                    }
+                }
+
+                if ($need_price) {
+                    $v['retail_price'] = bcadd($physical_total, $days_price, 2);
+                    $v['retail_price'] = round($v['retail_price'], 2);
+                }
+            }
         }
         return  $this->rQ($list);
     }

@@ -86,6 +86,7 @@ class MachineModel extends BaseModel
         MachineOnOffModel::whereDel($where);
         MachineOnlineModel::whereDel($where);
         MachineOnlineDetailsModel::whereDel($where);
+        MachineOnlineSnapshotModel::whereDel($where);
         MachineVersionPlanModel::whereDel($where);
         MachineViewModel::whereDel($where);
 
@@ -146,5 +147,13 @@ class MachineModel extends BaseModel
     public function machineLevelData()
     {
         return $this->hasOne(MachineLevelDescModel::class,"machine_level","machine_level");
+    }
+
+    public function simSignalLog()
+    {
+        $time = date('Y-m-d H:i:s', time()-1800);
+        return $this->hasOne(SimSignalLogModel::class, "m_id", "m_id")
+            ->where('created_at', '>=', $time)
+            ->order('id desc');
     }
 }
