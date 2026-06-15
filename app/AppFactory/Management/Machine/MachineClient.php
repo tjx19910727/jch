@@ -9,6 +9,7 @@
 namespace app\AppFactory\Management\Machine;
 
 use app\AppFactory\Kernel\Model\Machine\MachineMainRelationModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationTrait;
 use app\AppFactory\Kernel\Traits\Earth\EarthCitiesTrait;
@@ -261,6 +262,10 @@ class MachineClient extends ManagementClient
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
             if (isset($item['regions_id']) && $item['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $item['regions_id']],'code,name,cname');
             if (isset($item['ao_id']) && $item['ao_id']) $item['ao_id_desc'] = $this->getAuthOrganizationColumn(['ao_id' => $item['ao_id']],'organization_name')[0] ?? '';
+            $item['online_all'] = 2;
+            if($item['online'] == 1 || $item['http_online'] == 1){
+                $item['online_all'] = 1;
+            }
             $machineOnOff = $this->getMachineOnOffFind(['m_id' => $item['m_id'],'status' => 1],'on_off_ckc,on_off_machine');
             if (is_object($machineOnOff) && method_exists($machineOnOff, 'toArray')) {
                 $machineOnOff = $machineOnOff->toArray();
@@ -274,6 +279,7 @@ class MachineClient extends ManagementClient
                 }
                 if(is_array($machineOnOff['on_off_machine'])){
                     foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
+                        $day = strval($day);
                         if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
                             continue;
                         }
@@ -290,7 +296,7 @@ class MachineClient extends ManagementClient
                             $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
                         }
                     }
-                    $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE);
+                    $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE | JSON_FORCE_OBJECT);
                 }
             }
             $item['machine_on_off'] = $machineOnOff;
@@ -485,6 +491,10 @@ class MachineClient extends ManagementClient
         $item = $this->getMachineFind($where,$field, "", $with);
         if ($item) {
             $item = $item->toArray();
+            $item['online_all'] = 2;
+            if($item['online'] == 1 || $item['http_online'] == 1){
+                $item['online_all'] = 1;
+            }
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
             if (isset($item['state_id']) && $item['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $item['state_id']],'code,name,cname');
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
@@ -514,10 +524,17 @@ class MachineClient extends ManagementClient
         $maintain = $this->getMachineCount($where);
         $where['status'] = 1;
         $normal = $this->getMachineCount($where);
-        $where['online'] = 1;
-        $online = $this->getMachineCount($where);
-        $where['online'] = 2;
-        $offline = $this->getMachineCount($where);
+        // 在线: status=1 且 (http_online=1 或 online=1)
+        $onlineWhere = $where;
+        $online = MachineModel::where($onlineWhere)
+            ->where(function ($query) {
+                $query->where('http_online', '=', 1)->whereOr('online', '=', 1);
+            })->count();
+        // 离线: status=1 且 http_online=2 且 online=2
+        $offlineWhere = $where;
+        $offlineWhere['http_online'] = 2;
+        $offlineWhere['online'] = 2;
+        $offline = $this->getMachineCount($offlineWhere);
         $data = [
             "total" => $total,
             "normal" => $normal,
