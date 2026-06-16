@@ -487,7 +487,7 @@ class VisualScreenService
             'tradeMetrics' => $tradeMetrics,
             'productSalesShare' => $this->buildProductSalesShare($queryWhere, $cycle),
             'machineSalesShare' => $this->buildMachineSalesShare($queryWhere, $cycle),
-            'deviceSalesRank' => $this->buildDeviceSalesRank($queryWhere, $cycle),
+            'deviceRevenueRank' => $this->buildDeviceSalesRank($queryWhere, $cycle),
             'goodsPopularityRank' => $this->buildGoodsPopularityRank($queryWhere, $cycle),
             'mapValues' => $this->buildMapValues($regionType, $regionName, $operatingScope),
             'salesTrend' => [
