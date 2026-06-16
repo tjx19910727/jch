@@ -666,6 +666,11 @@ class MachineChannelClient extends ManagementClient
         //把货道的channel_position设置成设备相同的vending_machine_type
         $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
         $list = $list->toArray();
+        foreach ($list as $key => $value) {
+            $value['manufacture_time'] = $value['manufacture_time'] ? date("Y-m-d", $value['manufacture_time']) : '';
+            $value['gift_points'] = round($value['gift_points']);
+            $list[$key] = $value;
+        }
         // foreach ($list as $key => &$value) {
         //     if (!isset($value['channel_code'])) {
         //         continue;
