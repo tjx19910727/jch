@@ -294,10 +294,10 @@ class MachineClient extends ManagementClient
                         $timeRange = $machineOnOff['on_off_machine'][$n_week];
                         $parts = explode(',', $timeRange);
                         if (count($parts) === 2) {
-                            $startTime = trim($parts[0]);
-                            $endTime = trim($parts[1]);
+                            $startTime = trim($parts[1]);
+                            $endTime = trim($parts[0]);
                             // 反转时间段
-                            $machineOnOff['on_off_machine'][$n_week] = $endTime . ',' . $startTime;
+                            $machineOnOff['on_off_machine'][$n_week] = $startTime . ',' . $endTime;
                             //判断当前时间是否在营业时间段内
                             $currentTime = date('H:i');
                             if ($endTime > $startTime) {
@@ -550,10 +550,10 @@ class MachineClient extends ManagementClient
                         $timeRange = $machineOnOff['on_off_machine'][$n_week];
                         $parts = explode(',', $timeRange);
                         if (count($parts) === 2) {
-                            $startTime = trim($parts[0]);
-                            $endTime = trim($parts[1]);
+                            $startTime = trim($parts[1]);
+                            $endTime = trim($parts[0]);
                             // 反转时间段
-                            $machineOnOff['on_off_machine'][$n_week] = $endTime . ',' . $startTime;
+                            $machineOnOff['on_off_machine'][$n_week] = $startTime . ',' . $endTime;
                             //判断当前时间是否在营业时间段内
                             $currentTime = date('H:i');
                             if ($endTime > $startTime) {
