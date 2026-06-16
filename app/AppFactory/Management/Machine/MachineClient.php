@@ -282,29 +282,52 @@ class MachineClient extends ManagementClient
             if (!is_array($machineOnOff)) {
                 $machineOnOff = json_encode([]);
             }
+            $item['is_on_off'] = 2;
             if(!empty($machineOnOff['on_off_machine'])){
                 if(!is_array($machineOnOff['on_off_machine'])){
                     $machineOnOff['on_off_machine'] = json_decode($machineOnOff['on_off_machine'], true);
                 }
                 if(is_array($machineOnOff['on_off_machine'])){
-                    foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
-                        $day = strval($day);
-                        if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
-                            continue;
-                        }
+                    //只需反转当前星期几的时间段，其他保持不变
+                    $n_week = date('N') - 1; // 获取当前星期几，转换为0-6
+                    if (isset($machineOnOff['on_off_machine'][$n_week])) {
+                        $timeRange = $machineOnOff['on_off_machine'][$n_week];
                         $parts = explode(',', $timeRange);
-                        if (count($parts) !== 2) {
-                            continue;
-                        }
-                        $startTime = trim($parts[0]);
-                        $endTime = trim($parts[1]);
-                        if (
-                            preg_match('/^\d{2}:\d{2}$/', $startTime)
-                            && preg_match('/^\d{2}:\d{2}$/', $endTime)
-                        ) {
-                            $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                        if (count($parts) === 2) {
+                            $startTime = trim($parts[1]);
+                            $endTime = trim($parts[0]);
+                            // 反转时间段
+                            $machineOnOff['on_off_machine'][$n_week] = $startTime . ',' . $endTime;
+                            //判断当前时间是否在营业时间段内
+                            $currentTime = date('H:i');
+                            if ($endTime > $startTime) {
+                                // 同天营业（如开机07:00,关机22:00）
+                                $isInRange = ($currentTime >= $startTime && $currentTime <= $endTime);
+                            } else {
+                                // 跨天营业（如开机07:00,关机02:00）
+                                $isInRange = ($currentTime >= $startTime || $currentTime <= $endTime);
+                            }
+                            $item['is_on_off'] = $isInRange ? 1 : 2;
                         }
                     }
+                    // foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
+                    //     $day = strval($day);
+                    //     if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
+                    //         continue;
+                    //     }
+                    //     $parts = explode(',', $timeRange);
+                    //     if (count($parts) !== 2) {
+                    //         continue;
+                    //     }
+                    //     $startTime = trim($parts[0]);
+                    //     $endTime = trim($parts[1]);
+                    //     if (
+                    //         preg_match('/^\d{2}:\d{2}$/', $startTime)
+                    //         && preg_match('/^\d{2}:\d{2}$/', $endTime)
+                    //     ) {
+                    //         $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                    //     }
+                    // }
                     $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE | JSON_FORCE_OBJECT);
                 }
             }
@@ -515,28 +538,51 @@ class MachineClient extends ManagementClient
             if (!is_array($machineOnOff)) {
                 $machineOnOff = json_encode([]);
             }
+            $item['is_on_off'] = 2;
             if(!empty($machineOnOff['on_off_machine'])){
                 if(!is_array($machineOnOff['on_off_machine'])){
                     $machineOnOff['on_off_machine'] = json_decode($machineOnOff['on_off_machine'], true);
                 }
                 if(is_array($machineOnOff['on_off_machine'])){
-                    foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
-                        if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
-                            continue;
-                        }
+                    //只需反转当前星期几的时间段，其他保持不变
+                    $n_week = date('N') - 1; // 获取当前星期几，转换为0-6
+                    if (isset($machineOnOff['on_off_machine'][$n_week])) {
+                        $timeRange = $machineOnOff['on_off_machine'][$n_week];
                         $parts = explode(',', $timeRange);
-                        if (count($parts) !== 2) {
-                            continue;
-                        }
-                        $startTime = trim($parts[0]);
-                        $endTime = trim($parts[1]);
-                        if (
-                            preg_match('/^\d{2}:\d{2}$/', $startTime)
-                            && preg_match('/^\d{2}:\d{2}$/', $endTime)
-                        ) {
-                            $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                        if (count($parts) === 2) {
+                            $startTime = trim($parts[1]);
+                            $endTime = trim($parts[0]);
+                            // 反转时间段
+                            $machineOnOff['on_off_machine'][$n_week] = $startTime . ',' . $endTime;
+                            //判断当前时间是否在营业时间段内
+                            $currentTime = date('H:i');
+                            if ($endTime > $startTime) {
+                                // 同天营业（如开机07:00,关机22:00）
+                                $isInRange = ($currentTime >= $startTime && $currentTime <= $endTime);
+                            } else {
+                                // 跨天营业（如开机07:00,关机02:00）
+                                $isInRange = ($currentTime >= $startTime || $currentTime <= $endTime);
+                            }
+                            $item['is_on_off'] = $isInRange ? 1 : 2;
                         }
                     }
+                    // foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
+                    //     if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
+                    //         continue;
+                    //     }
+                    //     $parts = explode(',', $timeRange);
+                    //     if (count($parts) !== 2) {
+                    //         continue;
+                    //     }
+                    //     $startTime = trim($parts[0]);
+                    //     $endTime = trim($parts[1]);
+                    //     if (
+                    //         preg_match('/^\d{2}:\d{2}$/', $startTime)
+                    //         && preg_match('/^\d{2}:\d{2}$/', $endTime)
+                    //     ) {
+                    //         $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                    //     }
+                    // }
                     $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE);
                 }
             }
