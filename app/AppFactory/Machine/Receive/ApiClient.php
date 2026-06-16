@@ -1798,6 +1798,8 @@ class ApiClient extends ReceiveBaseClient
         if (strpos($this->machine['logo'], 'http') === false) {
             $this->machine['logo'] = $systemInfo['domain_name'] . $this->machine['logo'];
         }
+        $mConfig['receipt_code1'] = empty($mConfig['receipt_code1']) ? config('receipt.receipt_code1') : $mConfig['receipt_code1'];
+        $mConfig['receipt_code2'] = empty($mConfig['receipt_code2']) ? config('receipt.receipt_code2') : $mConfig['receipt_code2'];
         if ($mConfig['receipt_code1'] && strpos($mConfig['receipt_code1'], 'http') === false) {
             $mConfig['receipt_code1'] = $systemInfo['domain_name'] . $mConfig['receipt_code1'];
         }
