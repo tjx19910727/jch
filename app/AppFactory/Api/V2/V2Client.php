@@ -68,7 +68,12 @@ class V2Client extends V2BaseClient
             if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->params['product_id'];
             // $where['status'] = 1;
             $where['ao_id'] = 17;
-            $data = $this->getGoodsList($where, $this->params['pageNum'] ?? 1,  $field, 'product_id desc');
+            $data = $this->getGoodsList(
+                $where,
+                ['list_rows' => $this->params['pageNum'] ?? 1, 'page' => $this->params['page'] ?? 1],
+                $field,
+                'product_id desc'
+            );
 
             actionLog($this->getLS(),'【SQL】查询主体商品');
             if ($data) {
