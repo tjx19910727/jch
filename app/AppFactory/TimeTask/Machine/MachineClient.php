@@ -72,7 +72,7 @@ class MachineClient extends TimeTaskBase
                                     "online_time" => $onlineTime,
                                     "heart_time" => $onlineTime,
                                     "d_date" => strtotime(date("Y-m-d")),
-                                    "ao_id" => $machine['ao_id'],
+                                    "ao_id" => $value['ao_id'] ?? 0,
                                 ];
                                 $flag[] = $this->addMachineOnlineDetails($insert);
                                 actionLog($this->getLS(), '【SQL】生成以当天0点为上线时间的记录', 'countOnline');
@@ -440,8 +440,8 @@ class MachineClient extends TimeTaskBase
             $today = date('Y-m-d');
             $todayKey = date('Ymd');
             $ttl = strtotime(date('Y-m-d 23:59:59', $now)) - $now;//当前时间距离当天结束的秒数，用于设置缓存过期时间
-            $intervals = [900, 1800, 3600, 5400, 7200];// 阶梯秒数：15、30、60、90、120分钟
-            $firstInterval = intval($intervals[0] ?? 900);// 首个阶段时间，默认15分钟
+            $intervals = [1800, 2700, 3600, 5400, 7200];// 阶梯秒数：30、45、60、90、120分钟
+            $firstInterval = intval($intervals[0] ?? 1800);// 首个阶段时间，默认30分钟
             // 每天22:00-次日06:00跳过，不执行查库
             if ($hour >= 22 || $hour < 6) {
                 actionLog(date('Y-m-d H:i:s', $now), '静默时段跳过未开机巡检', 'checkOperatingStartup');
@@ -515,7 +515,7 @@ class MachineClient extends TimeTaskBase
                         ], '无效营业时间配置(不支持跨天)，跳过巡检', 'checkOperatingStartup');
                         continue;
                     }
-                    // 仅在开机窗口内进行检查，且开机后15分钟内不告警
+                    // 仅在开机窗口内进行检查，且开机后30分钟内不告警
                     if ($now < $startupTimestamp || $now > $shutdownTimestamp) {
                         continue;
                     }
@@ -786,6 +786,9 @@ class MachineClient extends TimeTaskBase
                 $compositeKey = $item['m_id'] . '|' . $item['machine_id'] . '|' . $iccid . '|' . $date;
                 if (!isset($existTodayMap[$compositeKey])) {
                     $prevTotal = $prevMap[$iccid] ?? 0;
+                    if($prevTotal == 0){
+                        $prevTotal = $totalUsage;
+                    }
                     $usage = bcsub($totalUsage, $prevTotal, 2);
                     if ($usage < 0) {
                         $usage = 0;

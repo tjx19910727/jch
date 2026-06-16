@@ -73,8 +73,27 @@ class GoodsModel extends BaseModel
                 ->field($field)
                 ->order($order);
             if ($pageNum) {
-                $data = $data->paginate($pageNum, false, ["query" => request()->param()])->each(function ($item) {
-                    $item['lang'] = GoodsLangModel::getList(['g_id' => $item['g_id']],0,'*','update_time desc');
+                $data = $data->paginate($pageNum, false, ["query" => request()->param()]);
+                $gIds = [];
+                foreach ($data as $item) {
+                    $gIds[] = intval($item['g_id']);
+                }
+
+                $langMap = [];
+                if ($gIds) {
+                    $langList = GoodsLangModel::getList(
+                        [['g_id', 'in', array_values(array_unique($gIds))]],
+                        0,
+                        '*',
+                        'update_time desc'
+                    );
+                    foreach ($langList as $lang) {
+                        $langMap[intval($lang['g_id'])][] = $lang;
+                    }
+                }
+
+                $data->each(function ($item) use ($langMap) {
+                    $item['lang'] = $langMap[intval($item['g_id'])] ?? [];
                     return $item;
                 });
                 return $data;

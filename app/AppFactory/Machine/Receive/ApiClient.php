@@ -49,6 +49,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineHelpTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineRefundGoodsLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\SimCardInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
@@ -76,8 +77,12 @@ use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
+use app\AppFactory\Kernel\Traits\WeiCheng\WcUserLoginInfoTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
+use app\AppFactory\Kernel\Model\Machine\PreReplenishmentDetailModel;
+use app\AppFactory\Kernel\Model\Machine\PreReplenishmentLogModel;
+use app\AppFactory\Kernel\Model\Machine\PreReplenishmentOrderModel;
 
 class ApiClient extends ReceiveBaseClient
 {
@@ -117,6 +122,7 @@ class ApiClient extends ReceiveBaseClient
         MachineGoodsTrait,
         MachineHelpTrait,
         MachineOnOffTrait,
+        MachineRefundGoodsLogTrait,
         SimCardInfoTrait,
         MachineTrait,
         TopicPageTrait,
@@ -143,6 +149,7 @@ class ApiClient extends ReceiveBaseClient
         CardTrait,
         WcBaseTrait,
         WcGoodsTrait,
+        WcUserLoginInfoTrait,
         AuthOrgMachineChannelTrait,
         SaleOrdersRefundTrait;
 
@@ -576,6 +583,7 @@ class ApiClient extends ReceiveBaseClient
     public function machineChannel()
     {
         $where['m_id'] = $this->machine['m_id'];
+        $where['is_hidden'] = 2;
         if (isset($this->data['mc_id']) && $this->data['mc_id']) $where['mc_id'] = $this->data['mc_id'];
         $channelField = "mc_id,m_id,machine_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,length,width,width2,height,height2,
         cost_price,market_price,retail_price,gift_points,x_axis,y_axis,shelf_way,cost_points,
@@ -1028,7 +1036,7 @@ class ApiClient extends ReceiveBaseClient
                 [['g.ao_id', 'in', $aoIds]],
                 $this->data['pageNum'] ?? 0,
                 $this->goodsField,
-                'g.update_time desc',
+                'g.g_id desc',
                 $this->machine['m_id']
             );
             if (is_string($goodsList)) return $this->rFail($goodsList);
@@ -2857,6 +2865,39 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 获取当前设备最近两分钟内最后一条微程登录信息。
+     */
+    public function getWcLatestLoginInfo()
+    {
+        $where = [
+            ['machine_id', '=', $this->machine['machine_id']],
+            ['create_time', '>=', time() - 120],
+        ];
+        $lastLoginInfoId = intval($this->data['last_login_info_id'] ?? 0);
+        if ($lastLoginInfoId > 0) {
+            $where[] = ['wuli_id', '>', $lastLoginInfoId];
+        }
+        $loginInfo = $this->getWcUserLoginInfoFind(
+            $where,
+            'wuli_id,phone,login_data,mq_status,create_time',
+            'create_time desc,wuli_id desc'
+        );
+
+        if (!$loginInfo) {
+            return $this->r(200, '暂无两分钟内的新登录信息', []);
+        }
+        $loginInfo = obj2arr($loginInfo);
+        $data = json_decode($loginInfo['login_data'] ?? '', true);
+        if (!is_array($data)) {
+            return $this->r(300, '登录信息格式错误');
+        }
+        $data['login_info_id'] = intval($loginInfo['wuli_id']);
+        $data['login_time'] = intval($loginInfo['create_time']);
+        $data['mq_status'] = intval($loginInfo['mq_status']);
+        return $this->r(200, 'success', $data);
+    }
+
+    /**
      * 微程会员同步积分
      * 微程会员在售卖机登录后，
      * @return array|\think\response\Json
@@ -3001,10 +3042,11 @@ class ApiClient extends ReceiveBaseClient
         $pageNum = $this->data['pageNum'] ?? 15;
         if (isset($this->data['m_id'])) $where['m_id'] = $this->data['m_id'];
         $where['machine_id'] = $this->data['machine_id'];
+        $where['is_hidden'] = 2;
         $wcMachineChannelLists = $this->getWcMachineChannelList($where, $pageNum, "*", 'sort asc');
         if ($wcMachineChannelLists) $wcMachineChannelLists = $wcMachineChannelLists->toArray();
-        $wcMachineChannelLists = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
-        foreach ($wcMachineChannelLists as &$v) {
+        $wcMachineChannelData = $pageNum ? $wcMachineChannelLists['data'] : $wcMachineChannelLists;
+        foreach ($wcMachineChannelData as &$v) {
             $wc_goods = $this->getWcGoodsFind(['no' => $v['out_no']]);
             $v['desc'] = $wc_goods['description'] ?? '';
             if ($v['gc_id'] == 11) {
@@ -3016,6 +3058,8 @@ class ApiClient extends ReceiveBaseClient
                 $item['desc'] .= $wc_goods['description'] ?? '';
             }
         }
+        unset($v, $item);
+        if ($pageNum) $wcMachineChannelLists['data'] = $wcMachineChannelData;
         return $this->r(200, "SUCCESS", $wcMachineChannelLists);
     }
 
@@ -3187,34 +3231,44 @@ class ApiClient extends ReceiveBaseClient
             $itemIds = array_values(array_map('intval', array_keys($submittedMap)));
             $itemRows = Db::name('maintenance_items')
                 ->where([['id', 'in', $itemIds]])
-                ->field('id,item_level,is_active')
+                ->field('id,parent_id,item_level')
                 ->select()
                 ->toArray();
 
-            $itemLevelMap = [];
-            $disabledItemIds = [];
+            $itemMap = [];
             foreach ($itemRows as $itemRow) {
-                $rowId = intval($itemRow['id']);
-                $itemLevelMap[$rowId] = intval($itemRow['item_level'] ?? 0);
-                if (intval($itemRow['is_active'] ?? 0) !== 1) {
-                    $disabledItemIds[] = $rowId;
-                }
+                $itemMap[intval($itemRow['id'])] = [
+                    'parent_id' => intval($itemRow['parent_id'] ?? 0),
+                    'item_level' => intval($itemRow['item_level'] ?? 0),
+                ];
             }
 
-            $missing = array_values(array_diff($itemIds, array_keys($itemLevelMap)));
+            $missing = array_values(array_diff($itemIds, array_keys($itemMap)));
             if ($missing) {
                 return $this->rFail('维护项目不存在:' . implode(',', $missing));
             }
-            if ($disabledItemIds) {
-                return $this->rFail('维护项目已禁用:' . implode(',', array_values(array_unique($disabledItemIds))));
-            }
 
-            $invalidStatusIds = [];
-            foreach ($submittedMap as $itemId => $submittedRow) {
-                $itemLevel = intval($itemLevelMap[$itemId] ?? 0);
-                if ($itemLevel === 1) {
+            $submittedChildIds = [];
+            $parentIds = [];
+            foreach ($itemIds as $itemId) {
+                $item = $itemMap[$itemId] ?? [];
+                if (intval($item['item_level'] ?? 0) === 1) {
                     continue;
                 }
+                $parentId = intval($item['parent_id'] ?? 0);
+                if ($parentId <= 0) {
+                    continue;
+                }
+                $submittedChildIds[] = intval($itemId);
+                $parentIds[] = $parentId;
+            }
+
+            $submittedChildIds = array_values(array_unique($submittedChildIds));
+            $parentIds = array_values(array_unique($parentIds));
+
+            $invalidStatusIds = [];
+            foreach ($submittedChildIds as $itemId) {
+                $submittedRow = $submittedMap[$itemId] ?? [];
                 $checkStatus = intval($submittedRow['check_status'] ?? 0);
                 if (!in_array($checkStatus, [1, 2], true)) {
                     $invalidStatusIds[] = intval($itemId);
@@ -3233,18 +3287,44 @@ class ApiClient extends ReceiveBaseClient
             $defaultNotes = trim(strval($this->data['notes'] ?? ''));
             $maintenanceTime = date('Y-m-d H:i:s');
 
+            if (!$parentIds) {
+                return $this->r(200, 'SUCCESS', [
+                    'records_code' => $recordsCode,
+                    'machine_id' => $this->machine['machine_id'],
+                    'count' => 0,
+                ]);
+            }
+
+            $recordItemIds = Db::name('maintenance_items')
+                ->where([['parent_id', 'in', $parentIds]])
+                ->where(['is_active' => 1])
+                ->where('item_level', '<>', 1)
+                ->order('sort_order asc,id asc')
+                ->column('id');
+            $recordItemIds = array_values(array_unique(array_map('intval', $recordItemIds)));
+
             $insertAll = [];
-            foreach ($itemIds as $itemId) {
+            foreach ($recordItemIds as $itemId) {
                 $rowNotes = strval($submittedMap[$itemId]['notes'] ?? '');
                 $insertAll[] = [
                     'records_code' => $recordsCode,
                     'item_id' => $itemId,
                     'machine_id' => $this->machine['machine_id'],
                     'maintainer_id' => $maintainerId,
-                    'check_status' => intval($submittedMap[$itemId]['check_status'] ?? 0),
+                    'check_status' => isset($submittedMap[$itemId])
+                        ? intval($submittedMap[$itemId]['check_status'] ?? 0)
+                        : 2,
                     'maintenance_time' => $maintenanceTime,
                     'notes' => $rowNotes !== '' ? $rowNotes : $defaultNotes,
                 ];
+            }
+
+            if (!$insertAll) {
+                return $this->r(200, 'SUCCESS', [
+                    'records_code' => $recordsCode,
+                    'machine_id' => $this->machine['machine_id'],
+                    'count' => 0,
+                ]);
             }
 
             Db::startTrans();
@@ -4100,5 +4180,269 @@ class ApiClient extends ReceiveBaseClient
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    /**
+     * 获取设备预补货详情（按 record_no + machine_id）
+     * @return array
+     */
+    public function getPreReplenishmentDetail()
+    {
+        $recordNo  = $this->data['record_no'] ?? '';
+        $machineId = $this->data['machine_id'] ?? '';
+
+        if (!$recordNo || !$machineId) {
+            return $this->rFail('参数错误');
+        }
+
+        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no');
+        if (!$order) {
+            return $this->r(100, '单据不存在');
+        }
+
+        $details = PreReplenishmentDetailModel::where([
+            ['order_id', '=', $order['id']],
+            ['machine_id', '=', $machineId],
+        ])->order('id asc')->select()->toArray();
+
+        if (!$details) {
+            return $this->r(100, '未找到预补货数据');
+        }
+
+        // 收集 mc_id 批量查货道获取商品信息
+        $mcIds = array_unique(array_column($details, 'mc_id'));
+        $channelRows = $this->getMachineChannelList([['mc_id', 'in', $mcIds]]);
+        $channelMap = [];
+        foreach ($channelRows as $cr) {
+            $channelMap[$cr['mc_id']] = $cr;
+        }
+
+        // 检查是否已经确认预补货
+        $confirmed = false;
+        $channels = [];
+        foreach ($details as $d) {
+            if (($d['order_count'] ?? 0) >= 1) {
+                $confirmed = true;
+            }
+            $mc = $channelMap[$d['mc_id']] ?? [];
+            $channels[] = [
+                'mc_id'            => $d['mc_id'],
+                'channel_code'     => $d['channel_code'],
+                'sku'              => $d['sku'],
+                'g_id'             => $mc['g_id'] ?? 0,
+                'g_name'           => $mc['g_name'] ?? '',
+                'pic'              => $mc['pic'] ?? '',
+                'capacity'         => $mc['capacity'] ?? 0,
+                'stock'            => $mc['stock'] ?? 0,
+                'plan_quantity'    => $d['plan_quantity'],
+                'actual_quantity'  => $d['actual_quantity'] ?? 0,
+                'order_count'      => $d['order_count'] ?? 0,
+            ];
+        }
+
+        if ($confirmed) {
+            return $this->r(100, '您已经预补货了，如需重新补货联系客服处理');
+        }
+
+        return $this->r(200, $this->lang("query_success"), ['channels' => $channels]);
+    }
+
+    /**
+     * 设备确认预补货
+     * 记录补货日志、更新货道库存变化
+     * @return array
+     */
+    public function confirmPreReplenishment()
+    {
+        $recordNo  = $this->data['record_no'] ?? '';
+        $machineId = $this->data['machine_id'] ?? '';
+        $channel   = json2arr($this->data['channel'] ?? []); // [{mc_id, quantity}]
+
+        if (!$recordNo || !$machineId || !$channel) {
+            return $this->rFail('参数错误');
+        }
+
+        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no,creator_id');
+        if (!$order) {
+            return $this->r(100, '单据不存在');
+        }
+
+        $anyDetail = PreReplenishmentDetailModel::where([
+            ['order_id', '=', $order['id']],
+            ['machine_id', '=', $machineId],
+            ['order_count', '>=', 1],
+        ])->find();
+        if ($anyDetail) {
+            return $this->r(100, '您已经预补货了，如需重新补货联系客服处理');
+        }
+
+        $this->startTrans();
+        try {
+            foreach ($channel as $item) {
+                $mcId     = (int)($item['mc_id'] ?? 0);
+                $quantity = (int)($item['quantity'] ?? 0);
+
+                if (!$mcId || $quantity <= 0) {
+                    $this->rollbackTrans();
+                    return $this->rFail('明细参数不完整');
+                }
+
+                $detail = PreReplenishmentDetailModel::where([
+                    ['order_id', '=', $order['id']],
+                    ['machine_id', '=', $machineId],
+                    ['mc_id', '=', $mcId],
+                ])->lock(true)->find();
+
+                if (!$detail) {
+                    $this->rollbackTrans();
+                    return $this->rFail('mc_id ' . $mcId . ' 不在预补货范围内');
+                }
+
+                $newActual = ($detail['actual_quantity'] ?? 0) + $quantity;
+                if ($newActual > $detail['plan_quantity']) {
+                    $this->rollbackTrans();
+                    return $this->rFail('货道 mc_id ' . $mcId . ' 补货数量超过预补数量');
+                }
+
+                PreReplenishmentLogModel::create([
+                    'record_no'    => $recordNo,
+                    'm_id'         => $this->machine['m_id'] ?? 0,
+                    'machine_id'   => $machineId,
+                    'channel_code' => $detail['channel_code'],
+                    'sku'          => $detail['sku'],
+                    'quantity'     => $quantity,
+                    'report_time'  => date('Y-m-d H:i:s'),
+                    'raw_payload'  => arr2json($this->data),
+                ]);
+
+                $mc = $this->getMachineChannelFind(['mc_id' => $mcId]);
+                if ($mc) {
+                    $newStock = ($mc['stock'] ?? 0) + $quantity;
+                    if ($newStock > ($mc['capacity'] ?? 0)) {
+                        $this->rollbackTrans();
+                        return $this->rFail('货道 mc_id ' . $mcId . ' 补货后库存超过容量限制(' . $mc['capacity'] . ')');
+                    }
+                    $this->setMachineChannelInc(['mc_id' => $mc['mc_id']], 'stock', $quantity);
+                    $this->addGoodsChange([
+                        'm_id'         => $this->machine['m_id'],
+                        'machine_id'   => $machineId,
+                        'machine_name' => $this->machine['machine_name'] ?? '',
+                        'mc_id'        => $mc['mc_id'],
+                        'channel_code' => $mc['channel_code'],
+                        'mg_id'        => $mc['mg_id'] ?? 0,
+                        'g_id'         => $mc['g_id'],
+                        'g_name'       => $mc['g_name'],
+                        'gc_id'        => $mc['gc_id'],
+                        'gc_name'      => $mc['gc_name'],
+                        'pic'          => $mc['pic'],
+                        'sku'          => $detail['sku'],
+                        'bar_code'     => $mc['bar_code'] ?? '',
+                        'change_value' => $quantity,
+                        'ao_id'        => $this->machine['ao_id'],
+                        'creator'      => $order['creator_id'] ?? '',
+                        'desc'         => '预补货上架',
+                        'position'     => 1,
+                        'type'         => 2,
+                    ]);
+                    $this->addMachineChannelReplenishment([
+                        'm_id'         => $this->machine['m_id'],
+                        'machine_id'   => $machineId,
+                        'machine_name' => $this->machine['machine_name'] ?? '',
+                        'mc_id'        => $mc['mc_id'],
+                        'channel_code' => $mc['channel_code'],
+                        'mg_id'        => $mc['mg_id'] ?? 0,
+                        'g_id'         => $mc['g_id'],
+                        'g_name'       => $mc['g_name'],
+                        'gc_id'        => $mc['gc_id'],
+                        'gc_name'      => $mc['gc_name'],
+                        'pic'          => $mc['pic'],
+                        'sku'          => $detail['sku'],
+                        'bar_code'     => $mc['bar_code'] ?? '',
+                        'batch_number' => $mc['batch_number'] ?? '',
+                        'before'       => $mc['stock'] ?? 0,
+                        'quantity'     => $quantity,
+                        'after'        => $newStock,
+                        'rep_type'     => 1,//上架补货
+                        'creator'      => $order['creator_id'] ?? 0,
+                        'ao_id'        => $this->machine['ao_id'] ?? 0,
+                        'create_time'  => time(),
+                    ]);
+                }
+
+                $compareStatus = $this->resolveCompareStatus($detail['plan_quantity'], $newActual);
+                PreReplenishmentDetailModel::update([
+                    'id'                  => $detail['id'],
+                    'actual_quantity'     => $newActual,
+                    'actual_sku'          => $detail['sku'],
+                    'actual_channel_code' => $detail['channel_code'],
+                    'compare_status'      => $compareStatus,
+                    'order_count'         => Db::raw('order_count + 1'),
+                ]);
+            }
+
+            $this->refreshOrderBizStatus($order['id']);
+            $this->commitTrans();
+            return $this->r(200, '预补货确认成功');
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+	/**
+     * 设备提交客户退货日志。
+     * 普通编码匹配当前设备订单号后四位；特殊编码仅跳过订单校验，不触发实际退款。
+     */
+    public function submitRefundGoodsLog()
+    {
+        $inputCode = trim((string)$this->data['input_code']);
+        $specialCode = trim((string)config('refund_goods.special_code'));
+        $isSpecialCode = $specialCode !== ''
+            && preg_match('/^\d{4}$/', $specialCode)
+            && hash_equals($specialCode, $inputCode);
+
+        $order = null;
+        if (!$isSpecialCode) {
+            $order = Db::name('sale_orders')
+                ->where('m_id', intval($this->machine['m_id']))
+                ->whereLike('trade_no', '%' . $inputCode)
+                ->field('order_id,trade_no')
+                ->order('order_id desc')
+                ->find();
+            if (!$order) return $this->r(300, '未找到订单号后四位匹配的当前设备订单');
+        }
+
+        $verifyStatus = ($isSpecialCode || $order) ? 1 : 2;
+        $insert = [
+            'm_id' => intval($this->machine['m_id']),
+            'machine_id' => $this->machine['machine_id'],
+            'ao_id' => intval($this->machine['ao_id']),
+            'order_id' => intval($order['order_id'] ?? 0),
+            'trade_no' => $order['trade_no'] ?? '',
+            'mobile' => trim((string)$this->data['mobile']),
+            'input_code' => $inputCode,
+            'verify_type' => $isSpecialCode ? 2 : 1,
+            'verify_status' => $verifyStatus,
+            'pic_out_goods_box' => trim((string)$this->data['pic_out_goods_box']),
+            'video_out_goods_box' => trim((string)$this->data['video_out_goods_box']),
+            'video_refund_goods' => trim((string)$this->data['video_refund_goods']),
+        ];
+        $logId = $this->addMachineRefundGoodsLog($insert);
+
+        $result = [
+            'mrgl_id' => intval($logId),
+            'verify_type' => $insert['verify_type'],
+            'verify_status' => $verifyStatus,
+            'order_id' => $insert['order_id'],
+            'trade_no' => $insert['trade_no'],
+        ];
+        if (!$logId) {
+            return $this->r(300, '退货日志记录失败', $result);
+        }
+        if (!$isSpecialCode && !$order) {
+            return $this->r(300, '未找到订单号后四位匹配的当前设备订单', $result);
+        }
+        return $this->r(200, '退货日志记录成功', $result);
     }
 }

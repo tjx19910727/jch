@@ -107,7 +107,7 @@ class Receive extends Common
      * 微信登录
      * @return array|string
      */
-    public function wxLogin()
+    public function Logiwxn()
     {
         try {
             return $this->app->api->wxLoginQrCode();
@@ -948,6 +948,20 @@ class Receive extends Common
     }
 
     /**
+     * 获取当前设备最近两分钟内最后一条微程登录信息
+     * @return array|\think\response\Json
+     */
+    public function getWcLatestLoginInfo()
+    {
+        try {
+            return $this->app->api->getWcLatestLoginInfo();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
     * 会员同步积分
     * @return array|\think\response\Json
     */
@@ -1152,6 +1166,20 @@ class Receive extends Common
     }
 
     /**
+     * 提交客户退货日志
+     * @return array|string
+     */
+    public function submitRefundGoodsLog()
+    {
+        try {
+            return $this->app->api->submitRefundGoodsLog();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 获取检查清单项目（按层级）
      * @return array|string
      */
@@ -1307,6 +1335,34 @@ class Receive extends Common
             $machine = $this->app->api->machine ?? [];
             $this->updateSimSignalWithData($machine, $postData);
             return returnState(200, lang('action_success'));
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取预补货详情（设备端）
+     * @return array|string
+     */
+    public function getPreReplenishmentDetail()
+    {
+        try {
+            return $this->app->api->getPreReplenishmentDetail();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 确认预补货（设备端）
+     * @return array|string
+     */
+    public function confirmPreReplenishment()
+    {
+        try {
+            return $this->app->api->confirmPreReplenishment();
         } catch (\Exception $e) {
             actionException($e, 1);
             return returnTryCatch($e->getMessage());

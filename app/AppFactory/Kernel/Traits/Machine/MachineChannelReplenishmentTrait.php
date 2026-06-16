@@ -17,6 +17,8 @@ use app\AppFactory\Kernel\Support\Validate\Machine\VChannelReplenishment;
 
 trait MachineChannelReplenishmentTrait
 {
+    use MachinePreReplenishmentTrait;
+
     public function getMachineChannelReplenishmentFind($where, $field = "*", $order = "")
     {
         return MachineChannelReplenishmentModel::getFind($where, $field, $order);
@@ -207,6 +209,17 @@ trait MachineChannelReplenishmentTrait
                     $repData = $this->handleRepData($mc, $value['quantity']);
                     $repRows[] = $repData;
                     $mc['stock'] += $value['quantity'];
+                }
+
+                $recordNo = $this->data['record_no'] ?? '';
+                if ($recordNo) {
+                    $syncQuantity = $value['quantity'];
+                    if (isset($value['standby_quantity'])) {
+                        $syncQuantity += $value['standby_quantity'];
+                    }
+                    if ($syncQuantity != 0) {
+                        $flag[] = $this->syncByTerminalReplenishmentRecordNo($recordNo, $mc, $syncQuantity, $this->data);
+                    }
                 }
 
                 $flag[] = $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $mc['stock']]);

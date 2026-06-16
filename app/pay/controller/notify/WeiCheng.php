@@ -10,7 +10,9 @@ namespace app\pay\controller\notify;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Card\CardModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcUserLoginInfoModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcUserAddressesModel;
+use think\facade\Db;
 
 class WeiCheng
 {
@@ -19,10 +21,11 @@ class WeiCheng
         //用户信息入库等。{"phone":"13714759235","integral":2088,"couponlist": [],"addressList":[],"machine code":"JcHM-H2D-0064"}
         $postData = input();
         $postData = json2arr($postData);
-        actionLog($postData, '微程退款推送数据');
-        $phone = $postData['phone'] ?? '';
+        actionLog($postData, '微程登录推送数据');
+        $phone = trim((string)($postData['phone'] ?? ''));
         if (!$phone) {
-            return returnState(200, 'failed', ['success' => false, 'message' => '手机号不能为空']);
+            actionLog($postData, 'scanNotify手机号为空，拒绝本次推送');
+            return $this->textResponse('phone_required', 422);
         }
 
         $cardLists = CardModel::getList(['bind_id' => $phone]);
@@ -57,46 +60,73 @@ class WeiCheng
         ];
 
         // 完成后的数据通过MQ下发给设备（兼容微程字段 machine_id / machine_code / machine code）
-        $machineId = trim($postData['machine_id'] ?? ($postData['machine_code'] ?? ($postData['machine_code'] ?? '')));
-        if ($machineId) {
-            try {
-                $mqPayload = [
-                    'data' => $response,
-                ];
-                $mqResult = AppFactory::machine(['machine_id' => $machineId])->sendMq->sendMq('scanNotify', $mqPayload);
-                $mqResultArr = obj2arr($mqResult);
-                actionLog([
-                    'machine_id' => $machineId,
-                    'msgType' => 'scanNotify',
-                    'mq_payload' => $mqPayload,
-                    'mq_result' => $mqResultArr,
-                ], 'scanNotify结果MQ下发');
-
-                // 下发失败时显式返回，避免接口看起来成功但设备实际未收到
-                if (!is_array($mqResultArr) || !isset($mqResultArr['state']) || intval($mqResultArr['state']) !== 200) {
-                    return returnState(100, 'mq_send_fail', [
-                        'success' => false,
-                        'machine_id' => $machineId,
-                        'mq_result' => $mqResultArr,
-                    ]);
-                }
-            } catch (\Exception $e) {
-                actionException($e, 1);
-                return returnState(100, 'mq_send_exception', [
-                    'success' => false,
-                    'machine_id' => $machineId,
-                    'message' => $e->getMessage(),
-                ]);
-            }
-        } else {
-            actionLog($postData, 'scanNotify缺少设备编号，未下发MQ');
-            return returnState(100, 'machine_id_require', [
-                'success' => false,
-                'message' => '缺少设备编号(machine_id/machine_code/machine code)',
-            ]);
+        $machineId = trim($postData['machine_id'] ?? ($postData['machine_code'] ?? ($postData['machine code'] ?? '')));
+        if (!$machineId) {
+            actionLog($postData, 'scanNotify缺少设备编号，拒绝本次推送');
+            return $this->textResponse('machine_id_required', 422);
         }
 
-        // return returnState(200, 'success', $response);
+        $machine = Db::name('machine')->where('machine_id', $machineId)->field('m_id,ao_id')->find();
+        if (!$machine) {
+            actionLog($postData, 'scanNotify设备不存在，拒绝本次推送');
+            return $this->textResponse('machine_not_found', 422);
+        }
+
+        $loginInfo = WcUserLoginInfoModel::create([
+            'm_id' => intval($machine['m_id']),
+            'machine_id' => $machineId,
+            'ao_id' => intval($machine['ao_id']),
+            'phone' => $phone,
+            'login_data' => json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'mq_status' => 0,
+            'mq_result' => '',
+        ]);
+        try {
+            $mqPayload = [
+                'data' => $response,
+            ];
+            $mqResult = AppFactory::machine(['machine_id' => $machineId])->sendMq->sendMq('scanNotify', $mqPayload);
+            $mqResultArr = obj2arr($mqResult);
+            actionLog([
+                'machine_id' => $machineId,
+                'msgType' => 'scanNotify',
+                'mq_payload' => $mqPayload,
+                'mq_result' => $mqResultArr,
+            ], 'scanNotify结果MQ下发');
+
+            if (!is_array($mqResultArr) || !isset($mqResultArr['state']) || intval($mqResultArr['state']) !== 200) {
+                $this->updateLoginInfoMqStatus($loginInfo->wuli_id, 2, $mqResultArr);
+                actionLog($mqResultArr, 'scanNotify MQ下发失败，等待设备HTTP主动获取');
+            }
+            if (is_array($mqResultArr) && isset($mqResultArr['state']) && intval($mqResultArr['state']) === 200) {
+                $this->updateLoginInfoMqStatus($loginInfo->wuli_id, 1, $mqResultArr);
+            }
+        } catch (\Throwable $e) {
+            $this->updateLoginInfoMqStatus($loginInfo->wuli_id, 2, $e->getMessage());
+            actionException($e, 1);
+        }
+
+        return $this->textResponse('ok');
+    }
+
+    protected function updateLoginInfoMqStatus($loginInfoId, $mqStatus, $mqResult)
+    {
+        try {
+            if (!is_string($mqResult)) {
+                $mqResult = json_encode($mqResult, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+            WcUserLoginInfoModel::update([
+                'mq_status' => intval($mqStatus),
+                'mq_result' => $mqResult,
+            ], ['wuli_id' => intval($loginInfoId)]);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+        }
+    }
+
+    protected function textResponse($content, $statusCode = 200)
+    {
+        return response($content, $statusCode, ['Content-Type' => 'text/plain; charset=utf-8']);
     }
     
     //最新商品信息同步
