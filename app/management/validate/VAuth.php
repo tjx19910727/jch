@@ -68,7 +68,7 @@ class VAuth extends VCommon
         "d_type.require" => "数据权限类型不能为空",
         "d_type.in" => "数据权限类型不合法",
         "type.require" => "VAuth.type_require",
-        "permission_action.in" => "权限动作仅支持menu/create/delete/update/query及历史兼容值",
+        "permission_action.in" => "权限动作仅支持menu/create/delete/update/query/export及历史兼容值",
         "nodeList.require" => "VAuth.nodeList_require",
         "rn_id.require" => "VAuth.rn_id_require",
 

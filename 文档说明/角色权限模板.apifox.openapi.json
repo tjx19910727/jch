@@ -272,8 +272,8 @@
     "/management/auth.auth_role_template/saveTopNavigationNodes": {
       "post": {
         "tags": ["角色权限模板"],
-        "summary": "保存顶级导航增删改查权限",
-        "description": "每个顶级导航独立提交查询范围和增删改查权限，后端递归展开对应操作节点，并覆盖保存模板节点。",
+        "summary": "保存导航增删改查权限",
+        "description": "每个顶级导航独立提交查询范围和增删改查权限，children 可提交子导航覆盖配置；后端递归展开对应操作节点，并覆盖保存模板节点。",
         "operationId": "authRoleTemplateSaveTopNavigationNodes",
         "parameters": [
           {"$ref": "#/components/parameters/TokenHeader"}
@@ -286,8 +286,18 @@
               "example": {
                 "art_id": 1,
                 "top_navigation_list": [
-                  {"node_id": 100, "data_scope": "organization", "create_enabled": 0, "delete_enabled": 0, "update_enabled": 1, "query_enabled": 1},
-                  {"node_id": 200, "data_scope": "all", "create_enabled": 1, "delete_enabled": 1, "update_enabled": 1, "query_enabled": 1}
+                  {
+                    "node_id": 69,
+                    "data_scope": "all",
+                    "create_enabled": 1,
+                    "delete_enabled": 1,
+                    "update_enabled": 1,
+                    "query_enabled": 1,
+                    "children": [
+                      {"node_id": 72, "create_enabled": 1, "delete_enabled": 1, "update_enabled": 1, "query_enabled": 1},
+                      {"node_id": 73, "create_enabled": 0, "delete_enabled": 0, "update_enabled": 0, "query_enabled": 1}
+                    ]
+                  }
                 ]
               }
             }
@@ -448,19 +458,25 @@
           "art_id": {"type": "integer", "description": "角色权限模板 ID"},
           "top_navigation_list": {
             "type": "array",
-            "description": "选中的顶级导航、独立查询范围及增删改查权限。",
-            "items": {
-              "type": "object",
-              "required": ["node_id", "data_scope"],
-              "properties": {
-                "node_id": {"type": "integer", "description": "pid=0 的顶级导航节点 ID"},
-                "data_scope": {"type": "string", "enum": ["organization", "all"], "description": "查询范围：账号所属组织或全部"},
-                "create_enabled": {"type": "integer", "enum": [0, 1], "default": 0},
-                "delete_enabled": {"type": "integer", "enum": [0, 1], "default": 0},
-                "update_enabled": {"type": "integer", "enum": [0, 1], "default": 0},
-                "query_enabled": {"type": "integer", "enum": [0, 1], "default": 0}
-              }
-            }
+            "description": "选中的顶级导航、默认查询范围及增删改查权限；children 中仅提交需要覆盖父配置的子导航。",
+            "items": {"$ref": "#/components/schemas/TemplateNavigationSetting"}
+          }
+        }
+      },
+      "TemplateNavigationSetting": {
+        "type": "object",
+        "required": ["node_id"],
+        "properties": {
+          "node_id": {"type": "integer", "description": "导航节点 ID；top_navigation_list 第一层必须是 pid=0 的顶级导航，children 必须属于父级顶级导航"},
+          "data_scope": {"type": "string", "enum": ["organization", "all"], "default": "organization", "description": "查询范围：默认继承父级；无父级时默认账号所属组织；仅传 all 时查全部"},
+          "create_enabled": {"type": "integer", "enum": [0, 1], "default": 0, "description": "是否授权新增；子导航未传时继承父级"},
+          "delete_enabled": {"type": "integer", "enum": [0, 1], "default": 0, "description": "是否授权删除；子导航未传时继承父级"},
+          "update_enabled": {"type": "integer", "enum": [0, 1], "default": 0, "description": "是否授权修改；子导航未传时继承父级"},
+          "query_enabled": {"type": "integer", "enum": [0, 1], "default": 0, "description": "是否授权查询；子导航未传时继承父级，传 1 时同时授权导出"},
+          "children": {
+            "type": "array",
+            "description": "子导航覆盖配置；不传则完全继承父级配置",
+            "items": {"$ref": "#/components/schemas/TemplateNavigationSetting"}
           }
         }
       },
