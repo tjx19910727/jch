@@ -12,12 +12,15 @@ namespace app\AppFactory\Management\Goods;
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
+use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Traits\Goods\GoodsLangTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
+use app\AppFactory\RabbitMq\MqProducer;
 use app\management\validate\VGoods;
 use think\facade\Db;
 
@@ -26,7 +29,9 @@ class GoodsClient extends ManagementClient
     use GoodsTrait, GoodsLangTrait;
     use AuthManagerTrait;
     use SaleOrdersGoodsCountTrait;
-    use MachineTrait,MachineChannelTrait;
+    use MachineTrait,MachineChannelTrait,MachineGoodsTrait;
+
+    protected $priceFields = ['cost_price', 'market_price', 'retail_price'];
 
     public function addG($postData)
     {
@@ -104,6 +109,166 @@ class GoodsClient extends ManagementClient
         $where[] = ['g_id','in',$g_id];
         $result = $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
         return $result;
+    }
+
+    /**
+     * 商品编辑：主表价格正常更新，设备商品/货道价格仅按传入的 mg_id、mc_id 覆盖
+     * 不走通用 update 入口，控制器直接调用本方法。
+     * @param array $postData
+     * @return mixed
+     */
+    public function updateForEdit($postData)
+    {
+        $gId = $postData['g_id'] ?? 0;
+        if (!$gId) {
+            return $this->r(100, '参数有误');
+        }
+
+        $oldGoods = $this->getGoodsFind(['g_id' => $gId], 'g_id,cost_price,market_price,retail_price');
+        if (!$oldGoods) {
+            return $this->r(100, '商品不存在');
+        }
+        $oldGoods = $oldGoods->toArray();
+
+        $selectedMgIds = $this->parseIds($postData['mg_id'] ?? []);
+        $selectedMcIds = $this->parseIds($postData['mc_id'] ?? []);
+        unset($postData['mg_id'], $postData['mc_id']);
+
+        $priceChanged = false;
+        foreach ($this->priceFields as $fieldName) {
+            if (array_key_exists($fieldName, $postData) && (string)$postData[$fieldName] !== (string)$oldGoods[$fieldName]) {
+                $priceChanged = true;
+                break;
+            }
+        }
+
+        $result = $this->updateGoods($postData, ['g_id' => $gId]);
+        if (!$result) {
+            return $this->r(100, '更新失败');
+        }
+
+        if ($priceChanged) {
+            $priceUpdate = [];
+            foreach ($this->priceFields as $fieldName) {
+                if (array_key_exists($fieldName, $postData)) {
+                    $priceUpdate[$fieldName] = $postData[$fieldName];
+                }
+            }
+
+            if ($priceUpdate) {
+                if ($selectedMgIds) {
+                    $whereMg = [];
+                    $whereMg[] = ['g_id', '=', $gId];
+                    $whereMg[] = ['mg_id', 'in', $selectedMgIds];
+                    $this->updateMachineGoods($priceUpdate, $whereMg, array_keys($priceUpdate));
+                }
+                if ($selectedMcIds) {
+                    $whereMc = [];
+                    $whereMc[] = ['g_id', '=', $gId];
+                    $whereMc[] = ['mc_id', 'in', $selectedMcIds];
+                    $this->updateMachineChannel($priceUpdate, $whereMc, array_keys($priceUpdate));
+                }
+            }
+        }
+
+        MqProducer::export([
+            'job_type' => 'goods_update',
+            'g_id' => $gId,
+            'request_time' => date('Y-m-d H:i:s'),
+            'manager_id' => $this->manager['manager_id'] ?? 0,
+        ]);
+
+        return $this->r(200, 'success', $result);
+    }
+
+    /**
+     * 查询与最新输入价格不同的设备商品、货道列表
+     * @param array $postData
+     * @return array|\think\response\Json
+     */
+    public function getPriceDiff($postData)
+    {
+        $gId = $postData['g_id'] ?? 0;
+        if (!$gId) {
+            return $this->rFail($this->lang('VGoods.g_id_require'));
+        }
+
+        $goods = $this->getGoodsFind(['g_id' => $gId], 'g_id,cost_price,market_price,retail_price');
+        if (!$goods) {
+            return $this->rFail($this->lang('goods_no_data'));
+        }
+        $goods = $goods->toArray();
+
+        $latestCost = $postData['cost_price'] ?? $goods['cost_price'];
+        $latestMarket = $postData['market_price'] ?? $goods['market_price'];
+        $latestRetail = $postData['retail_price'] ?? $goods['retail_price'];
+
+        $mgDiff = Db::name('machine_goods')
+            ->where('g_id', $gId)
+            ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
+                $query->where('cost_price', '<>', $latestCost)
+                    ->whereOr('market_price', '<>', $latestMarket)
+                    ->whereOr('retail_price', '<>', $latestRetail);
+            })
+            ->field('mg_id,m_id,machine_id,g_id,g_name,cost_price,market_price,retail_price')
+            ->order('mg_id desc')
+            ->limit(200)
+            ->select()
+            ->toArray();
+
+        foreach ($mgDiff as $key => $item) {
+            if ($latestRetail > $item['retail_price']) {
+                $mgDiff[$key]['goods_status'] = 1;
+            } elseif ($latestRetail < $item['retail_price']) {
+                $mgDiff[$key]['goods_status'] = 2;
+            } else {
+                $mgDiff[$key]['goods_status'] = 3;
+            }
+        }
+
+        $mcDiff = Db::name('machine_channel')
+            ->where('g_id', $gId)
+            ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
+                $query->where('cost_price', '<>', $latestCost)
+                    ->whereOr('market_price', '<>', $latestMarket)
+                    ->whereOr('retail_price', '<>', $latestRetail);
+            })
+            ->field('mc_id,m_id,machine_id,channel_code,g_id,g_name,cost_price,market_price,retail_price,update_price as update_status')
+            ->order('mc_id desc')
+            ->limit(200)
+            ->select()
+            ->toArray();
+
+        foreach ($mcDiff as $key => $item) {
+            if ($latestRetail > $item['retail_price']) {
+                $mcDiff[$key]['goods_status'] = 1;
+            } elseif ($latestRetail < $item['retail_price']) {
+                $mcDiff[$key]['goods_status'] = 2;
+            } else {
+                $mcDiff[$key]['goods_status'] = 3;
+            }
+        }
+
+        return $this->r(200, 'success', [
+            'mg_diff_list' => $mgDiff,
+            'mc_diff_list' => $mcDiff,
+            'mg_diff_count' => count($mgDiff),
+            'mc_diff_count' => count($mcDiff),
+        ]);
+    }
+
+    protected function parseIds($ids)
+    {
+        if (is_array($ids)) {
+            $idList = $ids;
+        } else {
+            $idList = explode(',', (string)$ids);
+        }
+        $idList = array_map('trim', $idList);
+        $idList = array_filter($idList, function ($item) {
+            return $item !== '';
+        });
+        return array_values(array_unique($idList));
     }
 
     public function exportRankingList($where)

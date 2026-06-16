@@ -10,7 +10,7 @@ namespace app\management\controller\sale;
 
 
 use app\management\controller\Common;
-use think\Facade\Db;
+use think\facade\Db;
 
 class SaleOrders extends Common
 {
@@ -26,6 +26,10 @@ class SaleOrders extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $machineIds = [];
+        $channelCode = trim((string)($postData['channel_code'] ?? ''));
+        $supplier = $postData['supplier'] ?? null;
+        unset($postData['channel_code']);
+        unset($postData['supplier']);
         if (!empty($postData['machine_group_id'])) {
             $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
             unset($postData['machine_group_id']);
@@ -34,28 +38,32 @@ class SaleOrders extends Common
 
         $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in","pay_channel" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
         $where['raw'] = "pay_status in ('3', '7')";
-        if($this->authMchCannel()['status'] != 0){
+        $authMch = $this->authMchCannel();
+        if($authMch['status'] != 0){
             $orderIds = Db::name('sale_orders_details')
-            ->whereIn('mc_id', $this->authMchCannel()['data']['mc_id'])
-            ->field('order_id')
-            ->select();
-
-            $order_id = [];
-            foreach($orderIds as $item){
-                array_push($order_id,$item['order_id']);
-            }
-            $where[] = ['order_id','in',$order_id];
+                ->whereIn('mc_id', $authMch['data']['mc_id'])
+                ->column('order_id');
+            $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
+            $where[] = ['order_id', 'in', $orderIds ?: [0]];
+        }
+        if ($channelCode !== '') {
+            $orderIds = Db::name('sale_orders_details')
+                ->where('channel_code', 'like', '%' . $channelCode . '%')
+                ->column('order_id');
+            $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
+            $where[] = ['order_id', 'in', $orderIds ?: [0]];
         }
         $hasCostPriceAuth = $this->hasCostPriceAuth();
 
         $costPriceField = $hasCostPriceAuth ? "cost_price" : "0 cost_price";
-        $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,pay_channel,pay_channel_name,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,machine_id,factory,inventory_location,has_hotel,refund_status,(total_price - refund_amount) total_price, (total_cost_points - refund_cost_points) total_cost_points, pay_code, mobile,{$costPriceField}";
+        $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,pay_channel,pay_channel_name,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,a.m_id,a.machine_id,a.machine_level,
+        factory,inventory_location,has_hotel,refund_status,(total_price - refund_amount) total_price, (total_cost_points - refund_cost_points) total_cost_points, pay_code, mobile,{$costPriceField}";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
-        if (isset($postData['supplier']) && $postData['supplier']) unset($where['ao_id']);
+        if ($supplier) unset($where['ao_id']);
         if($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0,1] )){
             $where['ao_id'] = $this->manager['ao_id'];
         }
-        return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc",$postData['supplier'] ?? true);
+        return $this->app->saleOrders->getSoList($where,$pageNum,$field,"order_id desc",$supplier ?? true);
     }
 
     /**
@@ -277,15 +285,37 @@ class SaleOrders extends Common
     {
         $postData = input();
         $hasCostPriceAuth = $this->hasCostPriceAuth();
+        $machineIds = [];
+        $channelCode = trim((string)($postData['channel_code'] ?? ''));
+        $supplier = $postData['supplier'] ?? null;
+        unset($postData['channel_code']);
+        unset($postData['supplier']);
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
             $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']],'machine_id');
             unset($postData['machine_group_id']);
             if (!$machineIds) return $this->app->machine->rNoData();
         }
         $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in","pay_channel" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
+        $authMch = $this->authMchCannel();
+        if ($authMch['status'] != 0) {
+            $orderIds = Db::name('sale_orders_details')
+                ->whereIn('mc_id', $authMch['data']['mc_id'])
+                ->column('order_id');
+            $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
+            $where[] = ['order_id', 'in', $orderIds ?: [0]];
+        }
         if (!empty($machineIds)) $where[] = ['machine_id', 'in', $machineIds];
-        $where['ao_id'] = $this->manager['ao_id'];
-        $machineIds = [];
+        if ($channelCode !== '') {
+            $orderIds = Db::name('sale_orders_details')
+                ->where('channel_code', 'like', '%' . $channelCode . '%')
+                ->column('order_id');
+            $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
+            $where[] = ['order_id', 'in', $orderIds ?: [0]];
+        }
+        if ($supplier) unset($where['ao_id']);
+        if($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0,1] )){
+            $where['ao_id'] = $this->manager['ao_id'];
+        }
         
         return $this->app->saleOrders->exportSo($where, $hasCostPriceAuth);
     }
@@ -827,5 +857,85 @@ class SaleOrders extends Common
     public function remoteRecycleSodDetail()
     {
         return $this->app->saleOrders->getRemoteRecycleSodDetail(input());
+    }
+
+    
+    /**
+     * 支付方式统计
+     * 统计各支付方式实收总额（total_price - refund_amount）
+     * where条件与订单列表接口一致
+     * @return array|string
+     */
+    public function payTypeStatistics()
+    {
+        $postData = input();
+        $machineIds = [];
+        $channelCode = trim((string)($postData['channel_code'] ?? ''));
+        $supplier = $postData['supplier'] ?? null;
+        unset($postData['channel_code']);
+        unset($postData['supplier']);
+        if (!empty($postData['machine_group_id'])) {
+            $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']], 'machine_id');
+            unset($postData['machine_group_id']);
+            if (!$machineIds) return $this->app->machine->rNoData();
+        }
+
+        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", "pay_channel" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in']);
+        $where['raw'] = "pay_status in ('3', '7')";
+        $authMch = $this->authMchCannel();
+        if ($authMch['status'] != 0) {
+            $orderIds = Db::name('sale_orders_details')
+                ->whereIn('mc_id', $authMch['data']['mc_id'])
+                ->column('order_id');
+            $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
+            $where[] = ['order_id', 'in', $orderIds ?: [0]];
+        }
+        if ($channelCode !== '') {
+            $orderIds = Db::name('sale_orders_details')
+                ->where('channel_code', 'like', '%' . $channelCode . '%')
+                ->column('order_id');
+            $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
+            $where[] = ['order_id', 'in', $orderIds ?: [0]];
+        }
+        if (!empty($machineIds)) $where[] = ['machine_id', 'in', $machineIds];
+        if ($supplier) unset($where['ao_id']);
+        if ($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0, 1])) {
+            $where['ao_id'] = $this->manager['ao_id'];
+        }
+
+        $raw = $where['raw'] ?? '';
+        unset($where['raw']);
+        $query = Db::name('sale_orders')->where($where);
+        if ($raw) $query->whereRaw($raw);
+
+        $list = $query->field('pay_type, SUM(GREATEST(total_price - refund_amount, 0)) total_amount')
+            ->group('pay_type')
+            ->select()
+            ->toArray();
+
+        $amounts = [];
+        foreach ($list as $item) {
+            $amounts[$item['pay_type']] = round($item['total_amount'], 2);
+        }
+
+        $result = [
+            'wechat_scan'       => $amounts[11] ?? 0,    // 微信扫码支付
+            'wechat_reverse'    => $amounts[12] ?? 0,    // 微信反扫支付
+            'alipay_scan'       => $amounts[21] ?? 0,    // 支付宝扫码支付
+            'alipay_reverse'    => $amounts[22] ?? 0,    // 支付宝反扫支付
+            'unionpay_intl'     => $amounts[33] ?? 0,    // 国际银联
+            'octopus'           => ($amounts[10] ?? 0) + ($amounts[34] ?? 0), // 八达通(10+34)
+            'unionpay_card'     => $amounts[35] ?? 0,    // 银联卡
+            'cash'              => $amounts[36] ?? 0,    // 纸币
+            'coin'              => $amounts[37] ?? 0,    // 硬币
+            'points'            => $amounts[9] ?? 0,     // 积分(商场积分支付)
+            'balance'           => $amounts[20] ?? 0,    // 余额支付
+            'jd_pay'            => $amounts[4] ?? 0,     // 京东支付
+            'member_pay'        => $amounts[5] ?? 0,     // 会员支付
+            'licheng_online'    => $amounts[6] ?? 0,     // 丽呈线上支付
+            'robot_online'      => $amounts[7] ?? 0,     // 机器人线上支付
+        ];
+
+        return returnData($result);
     }
 }

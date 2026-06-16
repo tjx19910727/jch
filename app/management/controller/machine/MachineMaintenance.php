@@ -75,6 +75,20 @@ class MachineMaintenance extends Common
     }
 
     /**
+     * 启用/禁用维护项目
+     */
+    public function setActive()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, VMachineMaintenance::class . '.setActive');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineMaintenance->setActive($postData);
+    }
+
+    /**
      * 管理端：查询维护记录（支持 machine_id / records_code / maintainer_id）
      * 返回结构与设备端 `/machine/receive/getMaintenanceRecords` 保持一致（按 records_code 分组）
      */

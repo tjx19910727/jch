@@ -33,6 +33,29 @@ class LoginClient extends ManagementClient
     }
 
     /**
+     * 未登录状态下通过旧密码修改新密码
+     * @param array $data
+     * @return array|\think\response\Json
+     */
+    public function changePassword($data)
+    {
+        $manager = $this->getAuthManagerFind(['account' => $data['account']]);
+        if (!$manager) return $this->rFail($this->lang("VLogin.account_not_exist"));
+        if ($manager['password'] != md5($data['old_password'] . $this->salt)) {
+            return returnState(100, $this->lang("VLogin.pwd_incorrect"));
+        }
+        if ($data['new_password'] !== $data['confirm_password']) {
+            return returnState(100, $this->lang("VLogin.password_not_match"));
+        }
+        if ($manager['status'] == 2) return returnState(100, $this->lang("VLogin.account_disabled"));
+        $this->manager = $manager;
+        return $this->rU($this->updateAuthManager([
+            'manager_id' => $manager['manager_id'],
+            'password' => $data['new_password'],
+        ]));
+    }
+
+    /**
      *  1-1. 保存当前登录用户信息，生成Token
      * @return array|string
      */

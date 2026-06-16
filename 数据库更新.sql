@@ -1968,3 +1968,67 @@ VALUES(19, 3, '商品选购', 3, '模拟顾客选择商品，流程顺畅，界�
 INSERT INTO check_list_items
 (id, parent_id, item_name, item_level, description, sort_order, is_active, created_at, updated_at)
 VALUES(20, 3, '支付测试', 3, '检查多种支付方式（如扫码、反扫等）是否正常，支付后能否顺利触发出货', 4, 1, '2026-05-15 16:04:30', '2026-05-15 20:28:16');
+#20260428
+CREATE TABLE `laser_resource` (
+  `res_id` int NOT NULL AUTO_INCREMENT COMMENT '素材ID',
+  `file_path` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '素材文件路径',
+  `type` tinyint(1) NOT NULL DEFAULT 1 COMMENT '素材类型（1：图片，2：视频）',
+  `file_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '原文件名',
+  `desc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '素材描述',
+  `length` int DEFAULT '0' COMMENT '高度',
+  `width` int DEFAULT '0' COMMENT '宽度',
+  `size` int DEFAULT '0' COMMENT '素材大小，B',
+  `order_id` int DEFAULT '0' COMMENT '归属订单ID',
+  `is_diy` tinyint(1) DEFAULT '2' COMMENT '是否是diy素材,1是 2否',
+  `create_time` bigint NOT NULL DEFAULT 0 COMMENT '创建时间',
+  PRIMARY KEY (`res_id`) USING BTREE,
+  KEY `order_id` (`order_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='镭射机素材表';
+
+#20260611
+CREATE TABLE `machine_refund_goods_log` (
+  `mrgl_id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '客户退货日志ID',
+  `m_id` int NOT NULL DEFAULT 0 COMMENT '设备ID',
+  `machine_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '设备编号',
+  `ao_id` int NOT NULL DEFAULT 0 COMMENT '设备所属组织ID',
+  `order_id` bigint NOT NULL DEFAULT 0 COMMENT '匹配订单ID，特殊编码或匹配失败时为0',
+  `trade_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '匹配订单号',
+  `mobile` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '客户手机号',
+  `input_code` char(4) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '用户输入四位数字编码',
+  `verify_type` tinyint NOT NULL DEFAULT 1 COMMENT '校验类型：1订单号后四位，2特殊编码跳过订单校验',
+  `verify_status` tinyint NOT NULL DEFAULT 1 COMMENT '校验状态：1成功，2失败',
+  `pic_out_goods_box` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '出料箱图片',
+  `video_out_goods_box` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '出料箱视频',
+  `video_refund_goods` varchar(1000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '全局退货视频',
+  `create_time` bigint NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` bigint NOT NULL DEFAULT 0 COMMENT '更新时间',
+  PRIMARY KEY (`mrgl_id`) USING BTREE,
+  KEY `idx_machine_time` (`m_id`,`create_time`) USING BTREE,
+  KEY `idx_trade_no` (`trade_no`) USING BTREE,
+  KEY `idx_mobile_time` (`mobile`,`create_time`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='设备端客户退货日志';
+#20260612
+CREATE TABLE `wc_user_login_info` (
+  `wuli_id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT '微程用户登录信息ID',
+  `m_id` int NOT NULL DEFAULT 0 COMMENT '设备ID',
+  `machine_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '设备编号',
+  `ao_id` int NOT NULL DEFAULT 0 COMMENT '设备所属组织ID',
+  `phone` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '用户手机号',
+  `login_data` mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '最终登录用户信息JSON',
+  `mq_status` tinyint NOT NULL DEFAULT 0 COMMENT 'MQ下发状态：0待发送，1成功，2失败',
+  `mq_result` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'MQ下发结果或异常信息',
+  `create_time` bigint NOT NULL DEFAULT 0 COMMENT '创建时间',
+  `update_time` bigint NOT NULL DEFAULT 0 COMMENT '更新时间',
+  PRIMARY KEY (`wuli_id`) USING BTREE,
+  KEY `idx_machine_time` (`machine_id`,`create_time`) USING BTREE,
+  KEY `idx_phone_time` (`phone`,`create_time`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci ROW_FORMAT=DYNAMIC COMMENT='微程用户设备登录信息';
+
+#20260612
+ALTER TABLE `machine_channel`
+  ADD COLUMN `is_hidden` tinyint(1) NOT NULL DEFAULT 2 COMMENT '是否隐藏：1是，2否',
+  ADD INDEX `idx_mid_hidden` (`m_id`, `is_hidden`);
+
+ALTER TABLE `wc_machine_channel`
+  ADD COLUMN `is_hidden` tinyint(1) NOT NULL DEFAULT 2 COMMENT '是否隐藏：1是，2否',
+  ADD INDEX `idx_machine_hidden` (`machine_id`, `is_hidden`);

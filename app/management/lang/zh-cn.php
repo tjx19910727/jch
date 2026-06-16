@@ -62,6 +62,9 @@ return [
     "VLogin" => [
         "account_require" => "账号不能为空",
         "password_require" => "密码不能为空",
+        "old_password_require" => "旧密码不能为空",
+        "new_password_require" => "新密码不能为空",
+        "confirm_password_require" => "确认密码不能为空",
         "code_require" => "验证码不能为空",
         "uniqid_require" => "验证码UUID不能为空",
 
@@ -71,6 +74,7 @@ return [
         "account_not_exist" => "登录的账号不存在!",
         "account_pwd_incorrect" => "账号或密码错误，请重新输入",
         "pwd_incorrect" => "密码错误，请重新输入",
+        "password_not_match" => "两次输入的密码不一致",
         "pass_the_verification" => "验证通过",
         "account_disabled" => "该账号已被禁用",
         "login_success" => "登录成功，正在跳转",

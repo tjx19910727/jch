@@ -101,6 +101,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineChannelStockClient      $machineChannelStock    库存报表-分时段,暂时废弃
  * @property Machine\MachineChannelStockReportClient      $machineChannelStockReport    库存报表-实时
  * @property Machine\MachineChannelReplenishmentClient     $machineChannelReplenishment         设备货道补货
+ * @property Machine\MachinePreReplenishmentClient   $machinePreReplenishment  预补货管理
  * @property Machine\MachineCheckStockClient        $machineCheckStock      库存盘点详情
  * @property Machine\MachineCheckStockCountClient   $machineCheckStockCount      库存盘点汇总
  * @property Machine\MachineClient                  $machine                设备基础信息

@@ -60,14 +60,23 @@ class VReceive extends VCommon
         "gm_id" => "require",
         "gmg_id" => "require",
         "trade_no" => "require",
+        "mobile" => "require|max:32",
+        "input_code" => "require|regex:/^\d{4}$/",
+        "pic_out_goods_box" => "require|max:1000",
+        "video_out_goods_box" => "require|max:1000",
+        "video_refund_goods" => "require|max:1000",
         "item_ids" => "require",
         "check_list" => "require|array",
     "maintainer_id" => "require",
         "status" => "integer",
+        "field" => "require",
         "date" => "require",
         "machine_usage" => "require",
+        "rsrp" => "require",
+        "sinr" => "require",
         "file_content" => "require",
         "per_row" => "integer",
+        "last_login_info_id" => "integer",
     ];
 
     protected $message = [
@@ -123,14 +132,27 @@ class VReceive extends VCommon
         "gmg_id.require" => "VSubGoodsMultipleOrder.gmg_id_require",
 
         "trade_no.require" => "VReceive.trade_no_require",
+        "mobile.require" => "VReceive.mobile_require",
+        "mobile.max" => "手机号长度不能超过32个字符",
+        "input_code.require" => "四位数字编码不能为空",
+        "input_code.regex" => "编码必须是四位数字",
+        "pic_out_goods_box.require" => "出料箱图片不能为空",
+        "pic_out_goods_box.max" => "出料箱图片地址长度不能超过1000个字符",
+        "video_out_goods_box.require" => "出料箱视频不能为空",
+        "video_out_goods_box.max" => "出料箱视频地址长度不能超过1000个字符",
+        "video_refund_goods.require" => "全局退货视频不能为空",
+        "video_refund_goods.max" => "全局退货视频地址长度不能超过1000个字符",
         "item_ids.require" => "item_ids不能为空",
         "check_list.require" => "check_list不能为空",
         "check_list.array" => "check_list格式错误",
         "maintainer_id.require" => "maintainer_id不能为空",
+        "field.require" => "图片字段名不能为空",
     "file_content.require" => "file_content不能为空",
     "per_row.integer" => "per_row格式错误",
         "date.require" => "VReceive.date_require",
         "machine_usage.require" => "VReceive.machine_usage_require",
+        "rsrp.require" => "信号强度不能为空",
+        "sinr.require" => "信噪比不能为空",
 
     ];
 
@@ -159,6 +181,7 @@ class VReceive extends VCommon
         "reportMachineVersionDownload" => ["msg_id","machine_id","timestamp","sign","mvp_id","download_progress"],
 
         "getGoods" => ["msg_id","machine_id","timestamp","sign"],
+        "submitRefundGoodsLog" => ["msg_id","machine_id","timestamp","sign","mobile","input_code","pic_out_goods_box","video_out_goods_box","video_refund_goods"],
         "getAdv" => ["msg_id","machine_id","timestamp","sign"],
         "playAdv" => ["msg_id","machine_id","timestamp","sign","adv_id","play_time"],
         "reportAdvDownload" => ["msg_id","machine_id","timestamp","sign","adv_id","download_progress"],
@@ -211,6 +234,7 @@ class VReceive extends VCommon
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
         "httpHeartbeat" => ["msg_id","machine_id","timestamp","sign"],
+        "reportScreenImg" => ["msg_id","machine_id","timestamp","sign"],
         "requireOutGoods" => ["msg_id","machine_id","timestamp","sign","trade_no"],
         "getOrderPayStatus" => ["msg_id","machine_id","timestamp","sign"],
         "setHttpOutStatus" => ["msg_id","machine_id","timestamp","sign","trade_no","http_out_status"],
@@ -222,6 +246,7 @@ class VReceive extends VCommon
 
         "getWcSmSCode" => ["msg_id","machine_id","timestamp","phone"],
         "wcLoginUser" => ["msg_id","machine_id","timestamp","phone","code"],
+        "getWcLatestLoginInfo" => ["msg_id","machine_id","timestamp","sign","last_login_info_id"],
         "wcUserAddPoints" => ["msg_id","machine_id","timestamp","token","trade_no"],
         "wcPointsQrcode" => ["msg_id","machine_id","timestamp","token","trade_no"],
 
@@ -237,6 +262,7 @@ class VReceive extends VCommon
         "getMachineRentOrgLists" => ["msg_id","machine_id","timestamp","sign"],
         "getRentOrgGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
         "reportSimCardMachineUsage" => ["msg_id","machine_id","timestamp","sign","date","machine_usage"],
+        "reportSimSignal" => ["msg_id","machine_id","timestamp","sign","rsrp","sinr"],
 
         "searchWCGoods" => ["msg_id","machine_id","timestamp","name"],
         "sendError" => ["msg_id","machine_id","timestamp","sign","errorCode"],

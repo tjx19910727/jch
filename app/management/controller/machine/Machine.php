@@ -34,32 +34,236 @@ class Machine extends Common
         }
         $pageNum = $postData['pageNum'] ?? 0;
         $field = $this->field;
-        if (!empty($postData['stock_ratio'])) {
-            $field .= ", (SELECT IF(SUM(capacity) > 0, LEAST(GREATEST(SUM(stock) / SUM(capacity), 0), 1), 0) FROM machine_channel WHERE m_id = a.m_id AND status <> 2) stock_ratio_sort";
+        $order = $this->buildMachineListOrder($postData, $field);
+        $isOnOff = $postData['is_on_off'] ?? 0;
+        unset($postData['version_sort'],$postData['stock_ratio'],$postData['sort_name'],$postData['sort_order'],$postData['is_on_off']);
+        // 提取 online 参数，单独处理：1=在线(http_online或online为1)，2=离线(http_online和online都为2)
+        $onlineValue = null;
+        if (isset($postData['online']) && $postData['online'] !== '') {
+            $onlineValue = $postData['online'];
+            unset($postData['online']);
         }
-        $order = $this->buildMachineListOrder($postData);
-        unset($postData['version_sort'],$postData['stock_ratio']);
-        $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
+        $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];//vending_machine_type字段已废弃，入库默认值为1，代码层面涉及此字段的不用管
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
+
+        // 处理 is_on_off 筛选：1=当前时间在营业时间内，2=当前时间不在营业时间内
+        if ($isOnOff) {
+            $where[] = $this->buildIsOnOffWhere($isOnOff);
+        }
+
+        // 处理 online 筛选条件
+        if ($onlineValue !== null) {
+            if ($onlineValue == 1) {
+                // online=1: http_online=1 或 online=1
+                $where['raw'] = (isset($where['raw']) ? $where['raw'] . ' AND ' : '') . '(a.http_online = 1 OR a.online = 1)';
+            } else {
+                // online=2: http_online=2 且 online=2
+                $where[] = ['http_online', '=', 2];
+                $where[] = ['online', '=', 2];
+            }
+        }
         return $this->app->machine->getMList($where,$pageNum,$field,$order);
     }
 
-    private function buildMachineListOrder($postData)
+    private function buildMachineListOrder($postData, &$field)
     {
         $orderList = [];
+
+        $sortName = strtolower(trim((string)($postData['sort_name'] ?? '')));
+        $sortOrder = $this->normalizeSortDirection($postData['sort_order'] ?? '');
+
+        if ($sortName) {
+            if (!$sortOrder) {
+                $sortOrder = 'desc';
+            }
+            if ($sortName == 'id') {
+                $sortName = 'm_id';
+            }
+            if ($sortName == 'machine_name') {
+                $sortName = 'machine_id';
+            }
+
+            $normalSortFieldMap = [
+                'm_id' => 'm_id',
+                'machine_id' => 'machine_id',
+                'machine_name' => 'machine_name',
+                'online' => 'online',
+                'last_online_time' => 'last_online_time',
+                'version' => 'version',
+                'is_operating' => 'is_operating',
+                'status' => 'status',
+                'factory' => 'factory',
+                'inventory_location' => 'inventory_location',
+            ];
+
+            $specialSortAlias = $this->appendSpecialSortField($sortName, $field);
+            if ($specialSortAlias) {
+                $orderList[] = "{$specialSortAlias} {$sortOrder}";
+                if ($sortName == 'month_achieve_rate') {
+                    $this->appendSpecialSortField('month_achieve_amount', $field);
+                    $orderList[] = "month_achieve_amount_sort {$sortOrder}";
+                }
+            } elseif (isset($normalSortFieldMap[$sortName])) {
+                $orderList[] = "{$normalSortFieldMap[$sortName]} {$sortOrder}";
+            }
+        }
+
+        // 兼容旧参数逻辑：即使 sort_name 有值，也继续追加到后面
         if (!empty($postData['version_sort'])) {
             $versionDirection = $postData['version_sort'] == 1 ? 'asc' : 'desc';
             $orderList[] = "version {$versionDirection}";
         }
         if (!empty($postData['stock_ratio'])) {
             $stockRatioDirection = $postData['stock_ratio'] == 1 ? 'asc' : 'desc';
+            $this->appendSelectField($field, 'stock_ratio_sort', "(SELECT IF(SUM(capacity) > 0, LEAST(GREATEST(SUM(stock) / SUM(capacity), 0), 1), 0) FROM machine_channel WHERE m_id = a.m_id AND status <> 2)");
             $orderList[] = "stock_ratio_sort {$stockRatioDirection}";
         }
+
         $orderList[] = 'online asc';
         $orderList[] = 'm_id desc';
         return implode(', ', $orderList);
+    }
+
+    private function appendSpecialSortField($sortName, &$field)
+    {
+        if ($sortName == 'stock_ratio') {
+            $this->appendSelectField($field, 'stock_ratio_sort', "(SELECT IF(SUM(capacity) > 0, LEAST(GREATEST(SUM(stock) / SUM(capacity), 0), 1), 0) FROM machine_channel WHERE m_id = a.m_id AND status <> 2)");
+            return 'stock_ratio_sort';
+        }
+
+        if ($sortName == 'month_target_amount') {
+            $month = date('Y-m');
+            $this->appendSelectField($field, 'month_target_amount_sort', "(SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}')");
+            return 'month_target_amount_sort';
+        }
+
+        if ($sortName == 'month_achieve_amount') {
+            $monthStart = strtotime(date('Y-m-01 00:00:00'));
+            $monthEnd = strtotime(date('Y-m-t 23:59:59'));
+            $this->appendSelectField(
+                $field,
+                'month_achieve_amount_sort',
+                "(SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd})"
+            );
+            return 'month_achieve_amount_sort';
+        }
+
+        if ($sortName == 'month_achieve_rate') {
+            $month = date('Y-m');
+            $monthStart = strtotime(date('Y-m-01 00:00:00'));
+            $monthEnd = strtotime(date('Y-m-t 23:59:59'));
+            $this->appendSelectField(
+                $field,
+                'month_achieve_rate_sort',
+                "(IF((SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}') > 0, ((SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd}) / (SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}') * 100), 0))"
+            );
+            return 'month_achieve_rate_sort';
+        }
+
+        if ($sortName == 'rsrp') {
+            $todayStart = date('Y-m-d 00:00:00');
+            $todayEnd = date('Y-m-d 23:59:59');
+            $this->appendSelectField($field, 'rsrp_sort', "(SELECT IFNULL(rsrp, -999) FROM sim_signal_log WHERE m_id = a.m_id AND created_at >= '{$todayStart}' AND created_at <= '{$todayEnd}' ORDER BY id DESC LIMIT 1)");
+            return 'rsrp_sort';
+        }
+
+        if ($sortName == 'machine_on_off') {
+            $this->appendSelectField($field, 'machine_on_off_sort', "(SELECT IFNULL(on_off_machine, '') FROM machine_on_off WHERE m_id = a.m_id AND status = 1 LIMIT 1)");
+            return 'machine_on_off_sort';
+        }
+
+        return '';
+    }
+
+    private function appendSelectField(&$field, $alias, $expression)
+    {
+        if (strpos($field, " {$alias}") !== false) {
+            return;
+        }
+        $field .= ", {$expression} {$alias}";
+    }
+
+    private function normalizeSortDirection($direction)
+    {
+        $direction = strtolower(trim((string)$direction));
+        if ($direction == 'asc' || $direction == 'desc') {
+            return $direction;
+        }
+        return '';
+    }
+
+    /**
+     * 根据 is_on_off 参数生成设备 m_id 筛选条件
+     * @param int $isOnOff 1=在营业时间内，2=不在营业时间内
+     * @return array
+     */
+    private function buildIsOnOffWhere($isOnOff)
+    {
+        $weekDay = date('N') - 1; // 0=周一, 6=周日
+        $currentTime = date('H:i');
+
+        $onOffList = $this->app->machine->getMachineOnOffList(['status' => 1], 0, 'm_id,on_off_machine');
+        $allScheduleIds = [];
+        $matchIds = [];
+
+        if ($onOffList) {
+            foreach ($onOffList as $item) {
+                $allScheduleIds[] = $item['m_id'];
+
+                $onOffMachine = $item['on_off_machine'];
+                if (is_string($onOffMachine)) {
+                    $onOffMachine = json_decode($onOffMachine, true);
+                }
+                if (!is_array($onOffMachine)) continue;
+
+                $dayKey = (string)$weekDay;
+                if (!isset($onOffMachine[$dayKey]) || empty($onOffMachine[$dayKey])) continue;
+                if ($onOffMachine[$dayKey] === 'null' || $onOffMachine[$dayKey] === '{}') continue;
+
+                $timeRange = explode(',', $onOffMachine[$dayKey]);
+                if (count($timeRange) !== 2) continue;
+
+                // 数据库存的顺序是反的（关机时间,开机时间），这里反转后按正常顺序处理
+                $timeRange = array_reverse($timeRange);
+                $startupTime = trim($timeRange[0]); // 开机时间
+                $shutdownTime = trim($timeRange[1]); // 关机时间
+
+                if (!$startupTime || !$shutdownTime || $startupTime === 'null' || $shutdownTime === 'null') continue;
+
+                // 判断当前时间是否在营业范围内
+                if ($shutdownTime > $startupTime) {
+                    // 同天（如反转后07:00,22:00）：营业时间为开机时间~关机时间（07:00~22:00）
+                    $isInRange = ($currentTime >= $startupTime && $currentTime <= $shutdownTime);
+                } else {
+                    // 跨天（如反转后07:00,02:00）：营业时间为开机时间~关机时间，跨次日凌晨（07:00~02:00）
+                    $isInRange = ($currentTime >= $startupTime || $currentTime <= $shutdownTime);
+                }
+
+                if ($isInRange) {
+                    $matchIds[] = $item['m_id'];
+                }
+            }
+        }
+
+        $matchIds = array_unique($matchIds);
+        $allScheduleIds = array_unique($allScheduleIds);
+
+        if ($isOnOff == 1) {
+            // 查询当前时间在营业时间范围内的设备
+            if (empty($matchIds)) {
+                return ['m_id', '=', 0];
+            }
+            return ['m_id', 'in', $matchIds];
+        }
+
+        // isOnOff == 2：查询当前时间不在营业时间范围内的设备（取有配置但不在范围内的差集）
+        $notInRangeIds = array_diff($allScheduleIds, $matchIds);
+        if (empty($notInRangeIds)) {
+            return ['m_id', '=', 0];
+        }
+        return ['m_id', 'in', $notInRangeIds];
     }
 
     public function getFind()
@@ -77,6 +281,13 @@ class Machine extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
+        // 要求国家/省/市编码必传，regions_id 可选
+        foreach (['country_id', 'state_id', 'city_id'] as $f) {
+            if (empty($postData[$f]) && $postData[$f] !== 0) {
+                // 使用通用提示，若需要可在语言文件中添加专用提示键
+                return returnValidate(lang('VMachine.' . $f . '_require'));
+            }
+        }
         return $this->app->machine->addM($postData);
     }
 
@@ -87,6 +298,13 @@ class Machine extends Common
             $this->validate($postData, $this->validatePath . '.update');
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
+        }
+        // 要求国家/省/市编码必传，regions_id 可选
+        foreach (['country_id', 'state_id', 'city_id'] as $f) {
+            if (empty($postData[$f]) && $postData[$f] !== 0) {
+                // 使用通用提示，若需要可在语言文件中添加专用提示键
+                return returnValidate(lang('VMachine.' . $f . '_require'));
+            }
         }
         return $this->app->machine->updateM($postData);
     }
@@ -175,7 +393,7 @@ class Machine extends Common
             $postData = input();
             $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             if (isset($postData['msgType']) && is_int($postData['msgType'])) {
-                $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update", 6=> "powerWakeUp", 7=>"initialization"];
+                $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update", 6=> "powerWakeUp", 7=>"initialization",8=>'backHome'];
                 $postData['msgType'] = $typeList[$postData['msgType']];
             }
             if(!empty($postData['powerTime'])) {
@@ -221,6 +439,8 @@ class Machine extends Common
         if (!$ckc_status) return returnValidate(lang("VMachine.ckc_status_require"));
         $otherData  = ["ckc_status" => $ckc_status];
         $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], "machineCkcOnOff", $otherData);
+        //延时2s返回，等待mq上报状态
+        sleep(2);
         return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
     }
 
@@ -445,5 +665,15 @@ class Machine extends Common
             return returnValidate(lang("VMachine.machine_id_require"));
         }
         return $this->app->machineChannel->exportStockRatioByMachine($mId);
+    }
+
+    /**
+     * 根据 street 回填设备省市区编码
+     * @return array|string
+     */
+    public function repairAddressAreaIds()
+    {
+        $postData = input();
+        return $this->app->machine->repairAddressAreaIds($postData);
     }
 }

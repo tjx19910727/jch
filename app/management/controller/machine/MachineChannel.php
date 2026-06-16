@@ -159,6 +159,28 @@ class MachineChannel extends Common
     }
 
     /**
+     * 虚拟货道排序操作日志列表
+     */
+    public function getSortLogList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $where = $this->getWhere($postData, false, ['m_ids' => 'like', 'operator_name' => 'like']);
+        return $this->app->weicheng->getMcSortLogList($where, $pageNum);
+    }
+
+    /**
+     * 虚拟货道排序操作日志详情
+     * 返回：设备列表、单品数据、组合商品数据、排序好的数据列表
+     */
+    public function getSortLogDetail()
+    {
+        $log_id = input('log_id');
+        if (!$log_id) return returnState(100, 'log_id不能为空');
+        return $this->app->weicheng->getMcSortLogDetail($log_id);
+    }
+
+    /**
      * 批量修改货道信息
      * @return array|\think\response\Json
      */

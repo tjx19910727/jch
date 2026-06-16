@@ -10,6 +10,7 @@
 namespace app\machine\controller;
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Traits\Machine\SimSignalLogTrait;
 use app\AppFactory\Machine\Application;
 use app\AppFactory\RabbitMq\MqProducer;
 use think\db\exception\DataNotFoundException;
@@ -24,6 +25,8 @@ use think\View;
  */
 class Receive extends Common
 {
+    use SimSignalLogTrait;
+
     protected $validatePath = 'app\machine\validate\VReceive.';
     protected $config;
     /**
@@ -799,6 +802,20 @@ class Receive extends Common
     }
 
     /**
+     * 接收设备上传的首页截屏路径
+     * @return array|string
+     */
+    public function reportScreenImg()
+    {
+        try {
+            return $this->app->api->reportScreenImg();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 设备主动获取出货信息
      * @return array|string
      */
@@ -924,6 +941,20 @@ class Receive extends Common
     {
         try {
             return $this->app->api->getWcLoginUser();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 获取当前设备最近两分钟内最后一条微程登录信息
+     * @return array|\think\response\Json
+     */
+    public function getWcLatestLoginInfo()
+    {
+        try {
+            return $this->app->api->getWcLatestLoginInfo();
         } catch (\Exception $e) {
             actionException($e, 1);
             return returnTryCatch($e->getMessage());
@@ -1135,6 +1166,20 @@ class Receive extends Common
     }
 
     /**
+     * 提交客户退货日志
+     * @return array|string
+     */
+    public function submitRefundGoodsLog()
+    {
+        try {
+            return $this->app->api->submitRefundGoodsLog();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 获取检查清单项目（按层级）
      * @return array|string
      */
@@ -1268,7 +1313,59 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+    /**
+     * 设备通过 HTTP 上报物联卡信号
+     * @return array|string
+     */
+    public function reportSimSignal()
+    {
+        try {
+            $postData = input();
+            $postData = json2arr($postData);
+            $machineId = $postData['machine_id'] ?? '';
+            $cacheKey = 'reportSimSignal_limit_' . $machineId;
+            if ($machineId && cache($cacheKey)) {
+                return returnState(300, '同一台设备2分钟内只允许一条信号上报');
+            }
+            if ($machineId) {
+                cache($cacheKey, 1, 120);
+            }
+            $machine = $this->app->api->machine ?? [];
+            $this->updateSimSignalWithData($machine, $postData);
+            return returnState(200, lang('action_success'));
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
 
+    /**
+     * 获取预补货详情（设备端）
+     * @return array|string
+     */
+    public function getPreReplenishmentDetail()
+    {
+        try {
+            return $this->app->api->getPreReplenishmentDetail();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 确认预补货（设备端）
+     * @return array|string
+     */
+    public function confirmPreReplenishment()
+    {
+        try {
+            return $this->app->api->confirmPreReplenishment();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
     /**
      * 获取设备应用配置(type=1)
      * @return array|string
@@ -1282,6 +1379,4 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
-
-    
 }

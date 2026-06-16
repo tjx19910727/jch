@@ -36,6 +36,7 @@ use app\AppFactory\Management\Machine\MachineMaintenanceClient;
 use app\AppFactory\Management\Machine\MachineOnlineClient;
 use app\AppFactory\Management\Machine\MachineOnlineDetailsClient;
 use app\AppFactory\Management\Machine\MachineOnOffClient;
+use app\AppFactory\Management\Machine\MachinePreReplenishmentClient;
 use app\AppFactory\Management\Machine\MachineVersionClient;
 use app\AppFactory\Management\Machine\MachineVersionPlanClient;
 use app\AppFactory\Management\Machine\MachineViewClient;
@@ -49,6 +50,9 @@ class MachineProvider implements ServiceProviderInterface
         // TODO: Implement register() method.
         $app['machineChannelReplenishment'] = function ($app) {
             return new MachineChannelReplenishmentClient($app);
+        };
+        $app['machinePreReplenishment'] = function ($app) {
+            return new MachinePreReplenishmentClient($app);
         };
         $app['machineChannel'] = function ($app) {
             return new MachineChannelClient($app);

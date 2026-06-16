@@ -256,7 +256,13 @@ trait MachineTrait
     public function currentStatus()
     {
         if ($this->message['current_status'] != $this->machine['current_status']) {
-            $result = $this->updateMachine(['m_id' => $this->machine['m_id'],'current_status' => $this->message['current_status']]);
+            $update = ['m_id' => $this->machine['m_id'],'current_status' => $this->message['current_status']];
+            if($this->message['current_status'] == 'maintenance'){
+                $update['ckc_status'] = 2;
+            }elseif($this->message['current_status'] == 'normal'){
+                $update['ckc_status'] = 1;
+            }
+            $result = $this->updateMachine($update);
             actionLog($this->getLS(),'【SQL】修改设备当前状态值');
             return $result;
         }
@@ -472,6 +478,38 @@ trait MachineTrait
         $sod_id = input('sod_id');
         $machine_id = input('machine_id');
         $channel_code = input('channel_code') ?? '';
+        if (!$machine_id) {
+            return $this->r(100, $this->lang("VMachine.machine_id_require"));
+        }
+
+        if (!$sod_id) {
+            try {
+                $this->startTrans();
+                $nowStr = date("YmdHis");
+                $payload = $this->buildRemoteOutGoodsPayload([
+                    'machine_id' => $machine_id,
+                    'order_id' => $nowStr,
+                    'sod_id' => $nowStr,
+                    'goods_id' => intval(input('goods_id') ?? input('g_id') ?? 0),
+                    'channel_code' => $channel_code,
+                    'trade_no' => input('trade_no') ?: '',
+                    'main' => input('main') ?? [],
+                    'outGoods' => input('outGoods') ?? [],
+                    'quantity' => intval(input('quantity') ?? 1),
+                    'channel_position' => intval(input('channel_position') ?? 1),
+                    'is_gift' => intval(input('is_gift') ?? 2),
+                    'out_port' => intval(input('out_port') ?? 1),
+                ]);
+                $result = $this->sendRemoteOutGoodsWithLog($machine_id, $payload);
+                $this->commitTrans();
+                return $result;
+            } catch (\Exception $e) {
+                $this->rollbackTrans();
+                actionLog($e, '远程出货无sod_id异常：');
+                return $e->getMessage();
+            }
+        }
+
         $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
         if (!$detail) return $this->r(100,"找不到订单记录");
         $order = $this->getSaleOrdersFind(['order_id' => $detail['order_id']]);
@@ -501,25 +539,18 @@ trait MachineTrait
                 $updateSod['checkOff_code'] = $this->getDetailsCheckOffCode();
                 $this->updateSaleOrdersDetails($updateSod);
             }
-            $logData['machine_id'] = $order['machine_id'];
-            $logData['type'] = "remoteOutGoods";
-            $logData['order_id'] = $detail["order_id"];
-            $logData['sod_id'] = $detail["sod_id"];
-            $logData['order_id'] = $detail["order_id"];
-            $logData['goods_id'] = $detail["g_id"];
-            $logData['channel_code'] = $channel_code ?: $detail['channel_code'];
-            $logData['status'] = 1;
-            $logData['manager_id'] = $this->manager['manager_id'];
-            $logData['operator_at'] = date('Y-m-d H:i:s');
-            $log_id = $this->addRALog($logData);
-            $content = [
-                "trade_no" => $order['trade_no'],
+            $payload = $this->buildRemoteOutGoodsPayload([
+                'machine_id' => $order['machine_id'],
+                'order_id' => $detail['order_id'],
                 'sod_id' => $detail['sod_id'],
-                "main" => $contentArr,
-                "outGoods" => $outArr,
-                "log_id" => $log_id,
-            ];
-            $result = $this->sendToMachine(['machine_id' => $machine_id], 'remoteOutGoods', $content);
+                'goods_id' => $detail['g_id'],
+                'channel_code' => $channel_code ?: $detail['channel_code'],
+                "trade_no" => $order['trade_no'],
+                'main' => $contentArr,
+                'outGoods' => $outArr,
+                'quantity' => 1,
+            ]);
+            $result = $this->sendRemoteOutGoodsWithLog($machine_id, $payload);
             // 远程出货发起时仅记录子订单远程出货状态，实际成功/失败结果由MQ回执处理
             $updateData['sod_id'] = $detail['sod_id'];
             $updateData['remote_out_goods_status'] = 1;
@@ -534,6 +565,76 @@ trait MachineTrait
         return $result;
     }
 
+    protected function buildRemoteOutGoodsPayload(array $data): array
+    {
+        $channelCode = trim((string)($data['channel_code'] ?? ''));
+        $quantity = intval($data['quantity'] ?? 1);
+        if ($quantity <= 0) {
+            $quantity = 1;
+        }
+
+        $outGoods = $data['outGoods'] ?? [];
+        if (!$outGoods && $channelCode !== '') {
+            $channelPosition = intval($data['channel_position'] ?? 1);
+            if ($channelPosition <= 0) {
+                $channelPosition = 1;
+            }
+            $outGoods[$channelPosition][] = [
+                'channel_code' => $channelCode,
+                'quantity' => $quantity,
+                'is_gift' => intval($data['is_gift'] ?? 2),
+                'out_port' => intval($data['out_port'] ?? 1),
+            ];
+        }
+
+        return [
+            'machine_id' => $data['machine_id'] ?? '',
+            'order_id' => intval($data['order_id'] ?? 0),
+            'sod_id' => intval($data['sod_id'] ?? 0),
+            'goods_id' => intval($data['goods_id'] ?? 0),
+            'channel_code' => $channelCode,
+            'trade_no' => $data['trade_no'] ?? '',
+            'main' => $data['main'] ?? [],
+            'outGoods' => $outGoods,
+            'quantity' => $quantity,
+        ];
+    }
+
+    protected function sendRemoteOutGoodsWithLog(string $machineId, array $payload, array $logData = [])
+    {
+        $logData = array_merge([
+            'machine_id' => $payload['machine_id'] ?: $machineId,
+            'type' => 'remoteOutGoods',
+            'order_id' => $payload['order_id'],
+            'sod_id' => $payload['sod_id'],
+            'goods_id' => $payload['goods_id'],
+            'channel_code' => $payload['channel_code'],
+            'status' => 1,
+            'manager_id' => $this->manager['manager_id'] ?? 0,
+            'operator_at' => date('Y-m-d H:i:s'),
+        ], $logData);
+        $logId = $this->addRALog($logData);
+
+        $content = [
+            'trade_no' => $payload['trade_no'] ?: ('remote_out_goods_' . $logId),
+            'sod_id' => $payload['sod_id'],
+            'main' => $payload['main'],
+            'outGoods' => $payload['outGoods'],
+            'channel_code' => $payload['channel_code'],
+            'quantity' => $payload['quantity'],
+            'log_id' => $logId,
+        ];
+        $result = $this->sendToMachine(['machine_id' => $machineId], 'remoteOutGoods', $content);
+        if (!is_object($result)) {
+            $this->updateRALog(
+                ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
+                ['id' => $logId],
+                ['status', 'operator_at']
+            );
+        }
+        return $result;
+    }
+
 
     public function remoteOutGoods(){
         actionLog($this->message, "远程出货接收mq");
@@ -541,8 +642,15 @@ trait MachineTrait
         $sodId = intval($this->message['sod_id'] ?? 0);
         $logId = intval($this->message['log_id'] ?? 0);
         if (!$sodId) {
+            if ($logId) {
+                $this->updateRALog(
+                    ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')],
+                    ['id' => $logId],
+                    ['status', 'operator_at']
+                );
+            }
             actionLog($this->message, "远程出货缺少sod_id", "remoteOutGoods");
-            return false;
+            return true;
         }
 
         $detail = $this->getSaleOrdersDetailsFind(
@@ -775,17 +883,18 @@ trait MachineTrait
         try {
             $now = time();
             $checkKey = 'machine.updateVersionPlan.check.' . $this->machine['machine_id'];
-            $checkCoolDown = 120;
+            $checkCoolDown = 180;
 
-            // 心跳兜底时限频检查，避免每次心跳都查数据库。
+            // 心跳兜底时限频检查，避免每次心跳都查数据库。偶发文件缓存读取失败导致的漏发问题
             $lastCheckTime = cache($checkKey);
             if ($lastCheckTime && ($now - $lastCheckTime < $checkCoolDown)) {
-                return;
+                 return;
             }
-            cache($checkKey, $now, $checkCoolDown);
+             cache($checkKey, $now, $checkCoolDown);
             //create_time大于此功能上线的时间，避免历史数据上线时被补发。2026-04-15
             $plan = Db::name('machine_version_plan')->where([
                 'machine_id' => $this->machine['machine_id'],
+                'download_progress' => 0,
                 'status' => 1,
             ])->where('publish_time', '<=', $now)
             ->where('create_time', '>', 1776219898)
