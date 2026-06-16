@@ -4401,7 +4401,7 @@ class ApiClient extends ReceiveBaseClient
     public function submitRefundGoodsLog()
     {
         $inputCode = trim((string)$this->data['input_code']);
-        $specialCode = trim((string)config('refund_goods.special_code'));
+        $specialCode = trim((string)config('refund_goods.special_code')) ?? '0000';
         $isSpecialCode = $specialCode !== ''
             && preg_match('/^\d{4}$/', $specialCode)
             && hash_equals($specialCode, $inputCode);
