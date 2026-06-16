@@ -20,6 +20,9 @@ use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
+use app\AppFactory\Kernel\Support\ApiOutStatusNotify;
+use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
+use app\AppFactory\Kernel\Traits\Api\ApiOutStatusNotifyTrait;
 use app\AppFactory\Kernel\Traits\CurlTrait;
 use app\AppFactory\Kernel\Util\SignUtil;
 use app\AppFactory\RabbitMq\MachineConsumer;
@@ -34,10 +37,76 @@ use think\facade\Request;
 
 class Test extends BaseController
 {
-    use CurlTrait;
+    use CurlTrait, ApiAdvanceTrait, ApiOutStatusNotifyTrait;
     protected $order;
     public $machine;
     public $mqQueue;
+
+    /**
+     * 测试订单出货状态通知，只生成 api_callback 记录，不主动请求外部地址。
+     * /machine/test/testOrderOutStatusNotify?trade_no=xxx&event=ready&out_status=2
+     */
+    public function testOrderOutStatusNotify()
+    {
+        $tradeNo = trim((string)input('trade_no', ''));
+        if (!$tradeNo) {
+            return returnState(100, 'trade_no不能为空');
+        }
+
+        $event = trim((string)input('event', 'ready'));
+        if (!in_array($event, ['ready', 'success', 'fail'], true)) {
+            return returnState(100, 'event仅支持ready,success,fail');
+        }
+
+        $order = SaleOrdersModel::getFind(['trade_no' => $tradeNo]);
+        if (!$order) {
+            return returnState(100, '订单不存在');
+        }
+        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+
+        $outStatus = input('out_status', null);
+        if ($outStatus !== null && $outStatus !== '') {
+            $order['out_status'] = intval($outStatus);
+        }
+
+        if (empty($order['machine_level'])) {
+            $machineWhere = [];
+            if (!empty($order['machine_id'])) {
+                $machineWhere['machine_id'] = $order['machine_id'];
+            } elseif (!empty($order['m_id'])) {
+                $machineWhere['m_id'] = $order['m_id'];
+            }
+            if ($machineWhere) {
+                $machine = MachineModel::getFind($machineWhere, 'machine_level');
+                if ($machine) {
+                    $machine = is_object($machine) ? (method_exists($machine, 'toArray') ? $machine->toArray() : (array)$machine) : $machine;
+                    $order['machine_level'] = intval($machine['machine_level'] ?? 0);
+                }
+            }
+        }
+
+        $acId = $this->addOrderOutStatusCallback($event, $order);
+        if (!$acId) {
+            return returnState(100, '未生成通知记录，可能不是machine_level=5移动售卖机订单', [
+                'trade_no' => $tradeNo,
+                'machine_id' => $order['machine_id'] ?? '',
+                'machine_level' => $order['machine_level'] ?? null,
+                'mobile_vending_machine_levels' => ApiOutStatusNotify::MOBILE_VENDING_MACHINE_LEVELS,
+            ]);
+        }
+
+        return returnState(200, '生成通知记录成功', [
+            'ac_id' => $acId,
+            'callback_type' => 10,
+            'notify_url' => ApiOutStatusNotify::getOrderOutStatusNotifyUrl(),
+            'event' => $event,
+            'order_id' => intval($order['order_id'] ?? 0),
+            'trade_no' => $order['trade_no'],
+            'out_status' => intval($order['out_status'] ?? 0),
+            'machine_id' => $order['machine_id'] ?? '',
+            'machine_level' => $order['machine_level'] ?? null,
+        ]);
+    }
 
     public function testOutPort()
     {
