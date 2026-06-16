@@ -854,4 +854,13 @@ class MachineChannelClient extends ManagementClient
             'channel_code' => $mc['channel_code'],
         ]);
     }
+
+    public function getMcFind($where,$field = '*')
+    {
+        $mc = $this->getMachineChannelFind($where,$field);
+        if (!$mc) return $this->r(100,$this->lang("VMachineChannel.mc_no_data"));
+        $mc['manufacture_time'] = $mc['manufacture_time'] ? date("Y-m-d",$mc['manufacture_time']) : '';
+        $mc['gift_points'] = round($mc['gift_points'] ?? 0);
+        return $this->r(200,'success',$mc);
+    }
 }
