@@ -3,6 +3,7 @@
 namespace app\AppFactory\Kernel\Traits\Auth;
 
 use app\AppFactory\Kernel\Model\Auth\AuthRoleTemplateModel;
+use app\AppFactory\Kernel\Model\Auth\AuthRoleTemplateNavigationModel;
 use app\AppFactory\Kernel\Model\Auth\AuthRoleTemplateNodeModel;
 use think\facade\Db;
 
@@ -41,6 +42,12 @@ trait AuthRoleTemplateTrait
         return AuthRoleTemplateNodeModel::getList($where, $pageNum, $field, $order);
     }
 
+    public function getAuthRoleTemplateNavigationList($where, $pageNum = 0, $field = "*", $order = "artnavi_id asc")
+    {
+        $where['is_del'] = 2;
+        return AuthRoleTemplateNavigationModel::getList($where, $pageNum, $field, $order);
+    }
+
     public function replaceAuthRoleTemplateNodes($artId, array $nodeList)
     {
         $managerId = intval($this->manager['manager_id']);
@@ -49,7 +56,7 @@ trait AuthRoleTemplateTrait
             'update_id' => $managerId,
             'update_time' => time(),
         ]);
-        foreach ($nodeList as $nodeId => $dType) {
+        foreach ($nodeList as $nodeId => $permission) {
             $nodeId = intval($nodeId);
             if ($nodeId <= 0) continue;
             $exists = Db::name('auth_role_template_node')
@@ -57,11 +64,15 @@ trait AuthRoleTemplateTrait
                 ->order('artn_id desc')
                 ->find();
             $data = [
-                'd_type' => intval($dType),
                 'is_del' => 2,
                 'update_id' => $managerId,
                 'update_time' => time(),
             ];
+            if (is_array($permission)) {
+                $data['data_scope'] = $permission['data_scope'] ?? '';
+            } else {
+                $data['d_type'] = intval($permission);
+            }
             if ($exists) {
                 Db::name('auth_role_template_node')->where(['artn_id' => $exists['artn_id']])->update($data);
                 continue;
@@ -71,6 +82,44 @@ trait AuthRoleTemplateTrait
             $data['creator'] = $managerId;
             $data['create_time'] = time();
             Db::name('auth_role_template_node')->insert($data);
+        }
+        return true;
+    }
+
+    public function replaceAuthRoleTemplateNavigations($artId, array $navigationList)
+    {
+        $managerId = intval($this->manager['manager_id']);
+        Db::name('auth_role_template_navigation')->where(['art_id' => $artId, 'is_del' => 2])->update([
+            'is_del' => 1,
+            'update_id' => $managerId,
+            'update_time' => time(),
+        ]);
+        foreach ($navigationList as $setting) {
+            $nodeId = intval($setting['node_id'] ?? 0);
+            if ($nodeId <= 0) continue;
+            $exists = Db::name('auth_role_template_navigation')
+                ->where(['art_id' => $artId, 'node_id' => $nodeId])
+                ->order('artnavi_id desc')
+                ->find();
+            $data = [
+                'data_scope' => $setting['data_scope'],
+                'create_enabled' => intval($setting['create_enabled']),
+                'delete_enabled' => intval($setting['delete_enabled']),
+                'update_enabled' => intval($setting['update_enabled']),
+                'query_enabled' => intval($setting['query_enabled']),
+                'is_del' => 2,
+                'update_id' => $managerId,
+                'update_time' => time(),
+            ];
+            if ($exists) {
+                Db::name('auth_role_template_navigation')->where(['artnavi_id' => $exists['artnavi_id']])->update($data);
+                continue;
+            }
+            $data['art_id'] = $artId;
+            $data['node_id'] = $nodeId;
+            $data['creator'] = $managerId;
+            $data['create_time'] = time();
+            Db::name('auth_role_template_navigation')->insert($data);
         }
         return true;
     }

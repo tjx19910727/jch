@@ -15,6 +15,7 @@ $templateTrait = file_get_contents($root . '/app/AppFactory/Kernel/Traits/Auth/A
 $templateClient = file_get_contents($root . '/app/AppFactory/Management/Auth/AuthRoleTemplateClient.php');
 $provider = file_get_contents($root . '/app/AppFactory/Kernel/Providers/Management/AuthProvider.php');
 $migration = file_get_contents($root . '/文档说明/角色权限模板数据库变更.sql');
+$newMigration = file_get_contents($root . '/文档说明/角色权限模板新版数据库升级.sql');
 
 checkTemplate(strpos($managerRoleTrait, "use_role_template") !== false, '鉴权未按账号开关选择权限来源', $failures);
 checkTemplate(strpos($managerRoleTrait, "Db::name('auth_role_template_node')") !== false, '开启模板的账号未读取模板节点', $failures);
@@ -31,6 +32,13 @@ checkTemplate(strpos($migration, 'auth_role_template_node') !== false, '数据�
 checkTemplate(strpos($migration, 'template_id') !== false, '数据库变更缺少角色模板字段', $failures);
 checkTemplate(strpos($migration, 'use_role_template') !== false, '数据库变更缺少账号模板开关字段', $failures);
 checkTemplate(strpos($migration, 'setRoleManagers') !== false, '数据库变更缺少角色批量设置账号接口节点', $failures);
+checkTemplate(strpos($newMigration, 'auth_role_template_navigation') !== false, '新版数据库升级缺少模板导航配置表', $failures);
+checkTemplate(strpos($newMigration, 'data_scope') !== false, '新版数据库升级缺少语义化查询范围', $failures);
+checkTemplate(strpos($templateClient, "private const DATA_SCOPES = ['organization', 'all']") !== false, '新版模板未限制查询范围枚举', $failures);
+checkTemplate(strpos($templateClient, 'create_enabled') !== false && strpos($templateClient, 'delete_enabled') !== false
+    && strpos($templateClient, 'update_enabled') !== false && strpos($templateClient, 'query_enabled') !== false,
+    '新版模板未实现增删改查独立权限', $failures);
+checkTemplate(strpos($managerRoleTrait, 'artn.data_scope') !== false, '模板鉴权未读取新版查询范围', $failures);
 
 if ($failures) {
     foreach ($failures as $failure) echo "[FAIL] {$failure}\n";
@@ -43,4 +51,5 @@ echo "[PASS] 模板维护不覆盖历史角色节点\n";
 echo "[PASS] 角色支持批量替换账号集合\n";
 echo "[PASS] 模板写操作包含组织权限校验且客户端已注册\n";
 echo "[PASS] 数据库变更包含账号模板开关及批量设置接口节点\n";
-echo "\nSummary: passed=5, failed=0\n";
+echo "[PASS] 新模板使用逐导航 data_scope 和增删改查独立权限\n";
+echo "\nSummary: passed=6, failed=0\n";

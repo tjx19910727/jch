@@ -243,11 +243,20 @@
       "post": {
         "tags": ["角色权限模板"],
         "summary": "查询模板顶级导航权限树",
-        "description": "返回全部启用的顶级导航、子导航和操作节点，并包含 permission_action 分类。",
+        "description": "返回全部启用的顶级导航、子导航和操作节点，并包含 permission_action 分类。传 art_id 时，顶级导航同时返回 template_setting 当前配置。",
         "operationId": "authRoleTemplateGetTopNavigationNodes",
         "parameters": [
           {"$ref": "#/components/parameters/TokenHeader"}
         ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateNodesRequest"},
+              "example": {"art_id": 1}
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "查询成功",
@@ -263,8 +272,8 @@
     "/management/auth.auth_role_template/saveTopNavigationNodes": {
       "post": {
         "tags": ["角色权限模板"],
-        "summary": "保存顶级导航组合权限",
-        "description": "前台只提交顶级导航。查询和导出可同时选择，后端递归展开全部子导航及对应操作节点，并覆盖保存模板节点。",
+        "summary": "保存顶级导航增删改查权限",
+        "description": "每个顶级导航独立提交查询范围和增删改查权限，后端递归展开对应操作节点，并覆盖保存模板节点。",
         "operationId": "authRoleTemplateSaveTopNavigationNodes",
         "parameters": [
           {"$ref": "#/components/parameters/TokenHeader"}
@@ -276,10 +285,9 @@
               "schema": {"$ref": "#/components/schemas/TemplateSaveTopNavigationNodesRequest"},
               "example": {
                 "art_id": 1,
-                "d_type": 0,
                 "top_navigation_list": [
-                  {"node_id": 100, "query_enabled": 1, "export_enabled": 1, "all_enabled": 0},
-                  {"node_id": 200, "query_enabled": 0, "export_enabled": 0, "all_enabled": 1}
+                  {"node_id": 100, "data_scope": "organization", "create_enabled": 0, "delete_enabled": 0, "update_enabled": 1, "query_enabled": 1},
+                  {"node_id": 200, "data_scope": "all", "create_enabled": 1, "delete_enabled": 1, "update_enabled": 1, "query_enabled": 1}
                 ]
               }
             }
@@ -435,21 +443,22 @@
       },
       "TemplateSaveTopNavigationNodesRequest": {
         "type": "object",
-        "required": ["art_id", "d_type", "top_navigation_list"],
+        "required": ["art_id", "top_navigation_list"],
         "properties": {
           "art_id": {"type": "integer", "description": "角色权限模板 ID"},
-          "d_type": {"type": "integer", "description": "本次展开节点统一使用的数据权限类型", "enum": [0, 1, 2, 3, 4, 5]},
           "top_navigation_list": {
             "type": "array",
-            "description": "选中的顶级导航及组合权限。query_enabled 与 export_enabled 可同时为 1；all_enabled=1 时包含全部权限。",
+            "description": "选中的顶级导航、独立查询范围及增删改查权限。",
             "items": {
               "type": "object",
-              "required": ["node_id"],
+              "required": ["node_id", "data_scope"],
               "properties": {
                 "node_id": {"type": "integer", "description": "pid=0 的顶级导航节点 ID"},
-                "query_enabled": {"type": "integer", "enum": [0, 1], "default": 0},
-                "export_enabled": {"type": "integer", "enum": [0, 1], "default": 0},
-                "all_enabled": {"type": "integer", "enum": [0, 1], "default": 0}
+                "data_scope": {"type": "string", "enum": ["organization", "all"], "description": "查询范围：账号所属组织或全部"},
+                "create_enabled": {"type": "integer", "enum": [0, 1], "default": 0},
+                "delete_enabled": {"type": "integer", "enum": [0, 1], "default": 0},
+                "update_enabled": {"type": "integer", "enum": [0, 1], "default": 0},
+                "query_enabled": {"type": "integer", "enum": [0, 1], "default": 0}
               }
             }
           }
@@ -496,7 +505,7 @@
           "artn_id": {"type": "integer", "description": "模板节点关系 ID"},
           "art_id": {"type": "integer", "description": "角色权限模板 ID"},
           "node_id": {"type": "integer", "description": "权限节点 ID"},
-          "d_type": {"type": "integer", "description": "数据权限类型", "enum": [0, 1, 2, 3, 4, 5]}
+          "data_scope": {"type": "string", "description": "新模板查询范围；空值表示历史兼容数据", "enum": ["", "organization", "all"]}
         }
       },
       "ActionResponse": {

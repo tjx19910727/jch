@@ -74,7 +74,7 @@ trait AuthManagerRoleTrait
                 ->where('role_id', 'in', $historyRoleIds)
                 ->where('is_del', 2);
             if ($nodeId > 0) $query->where('node_id', intval($nodeId));
-            $nodes = $query->field('node_id,d_type')->select()->toArray();
+            $nodes = $query->field("node_id,d_type,'' data_scope")->select()->toArray();
         }
         if ($templateRoleIds) {
             $query = Db::name('auth_role_template_node')
@@ -83,17 +83,30 @@ trait AuthManagerRoleTrait
                 ->where('ar.role_id', 'in', $templateRoleIds)
                 ->where('artn.is_del', 2);
             if ($nodeId > 0) $query->where('artn.node_id', intval($nodeId));
-            $nodes = array_merge($nodes, $query->field('artn.node_id,artn.d_type')->select()->toArray());
+            $nodes = array_merge($nodes, $query->field('artn.node_id,artn.data_scope,artn.d_type')->select()->toArray());
         }
 
         $result = [];
         foreach ($nodes as $node) {
             $id = intval($node['node_id']);
             $dType = intval($node['d_type']);
-            if (!isset($result[$id]) || $dType < $result[$id]['d_type']) {
-                $result[$id] = ['node_id' => $id, 'd_type' => $dType];
+            $dataScope = strval($node['data_scope'] ?? '');
+            if ($dataScope === 'all') {
+                $candidate = ['node_id' => $id, 'data_scope' => 'all', 'd_type' => 1, '_scope_rank' => 0];
+            } elseif ($dataScope === 'organization') {
+                $candidate = ['node_id' => $id, 'data_scope' => 'organization', 'd_type' => 2, '_scope_rank' => 1];
+            } else {
+                // 历史 d_type 数值越小权限范围越宽；0/1 都不增加普通组织过滤。
+                $candidate = ['node_id' => $id, 'data_scope' => '', 'd_type' => $dType, '_scope_rank' => max(0, $dType - 1)];
+            }
+            if (!isset($result[$id]) || $candidate['_scope_rank'] < $result[$id]['_scope_rank']) {
+                $result[$id] = $candidate;
             }
         }
+        foreach ($result as &$node) {
+            unset($node['_scope_rank']);
+        }
+        unset($node);
         return array_values($result);
     }
 

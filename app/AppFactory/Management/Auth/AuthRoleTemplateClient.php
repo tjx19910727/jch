@@ -10,7 +10,8 @@ class AuthRoleTemplateClient extends ManagementClient
 {
     use AuthRoleTemplateTrait;
 
-    private const PERMISSION_ACTIONS = ['menu', 'query', 'export', 'manage'];
+    private const PERMISSION_ACTIONS = ['menu', 'create', 'delete', 'update', 'query'];
+    private const DATA_SCOPES = ['organization', 'all'];
 
     public function update($postData, $where = [], $field = [], $rU = 1)
     {
@@ -48,6 +49,7 @@ class AuthRoleTemplateClient extends ManagementClient
         $this->startTrans();
         try {
             $this->replaceAuthRoleTemplateNodes(intval($data['art_id']), $nodeList);
+            $this->replaceAuthRoleTemplateNavigations(intval($data['art_id']), []);
             return $this->checkTrans(true);
         } catch (\Exception $e) {
             $this->rollbackTrans();
@@ -66,13 +68,27 @@ class AuthRoleTemplateClient extends ManagementClient
         return $this->rQ($this->getAuthRoleTemplateNodeList(
             $where,
             $pageNum,
-            'artn_id,art_id,node_id,d_type',
+            'artn_id,art_id,node_id,data_scope',
             'artn_id asc'
         ));
     }
 
-    public function getTopNavigationNodes(array $excludedNodeIds = [])
+    public function getTopNavigationNodes(array $excludedNodeIds = [], $artId = 0)
     {
+        $settings = [];
+        if ($artId > 0) {
+            try {
+                $this->assertTemplateManaged($artId);
+            } catch (\Exception $e) {
+                return $this->rTryCatch($e->getMessage());
+            }
+            $settings = $this->getAuthRoleTemplateNavigationList(
+                ['art_id' => $artId],
+                0,
+                'node_id,data_scope,create_enabled,delete_enabled,update_enabled,query_enabled'
+            )->toArray();
+            $settings = array_column($settings, null, 'node_id');
+        }
         $query = Db::name('auth_node')
             ->where(['status' => 1])
             ->field('node_id,pid,name,url,sort,type,is_button,permission_action');
@@ -81,17 +97,13 @@ class AuthRoleTemplateClient extends ManagementClient
             ->order('sort asc,node_id asc')
             ->select()
             ->toArray();
-        return $this->r(200, '查询成功', $this->buildPermissionNodeTree($nodes));
+        return $this->r(200, '查询成功', $this->buildPermissionNodeTree($nodes, 0, $settings));
     }
 
     public function saveTopNavigationNodes($data, array $excludedNodeIds = [])
     {
         try {
             $this->assertTemplateManaged(intval($data['art_id']));
-            $dType = intval($data['d_type'] ?? 0);
-            if (!in_array($dType, [0, 1, 2, 3, 4, 5], true)) {
-                return $this->rFail("数据权限类型不合法");
-            }
             if (!array_key_exists('top_navigation_list', $data)) {
                 return $this->rFail("顶级导航权限列表不能为空");
             }
@@ -106,7 +118,7 @@ class AuthRoleTemplateClient extends ManagementClient
                 ->order('sort asc,node_id asc')
                 ->select()
                 ->toArray();
-            $expanded = $this->expandTopNavigationPermissions($topNavigationList, $nodes, $dType);
+            $expanded = $this->expandTopNavigationPermissions($topNavigationList, $nodes);
         } catch (\Exception $e) {
             return $this->rTryCatch($e->getMessage());
         }
@@ -114,6 +126,7 @@ class AuthRoleTemplateClient extends ManagementClient
         $this->startTrans();
         try {
             $this->replaceAuthRoleTemplateNodes(intval($data['art_id']), $expanded['node_list']);
+            $this->replaceAuthRoleTemplateNavigations(intval($data['art_id']), $expanded['top_navigation_list']);
             $this->commitTrans();
             return $this->r(200, '保存成功', $expanded);
         } catch (\Exception $e) {
@@ -187,7 +200,7 @@ class AuthRoleTemplateClient extends ManagementClient
         return $role;
     }
 
-    protected function expandTopNavigationPermissions(array $topNavigationList, array $nodes, $dType)
+    protected function expandTopNavigationPermissions(array $topNavigationList, array $nodes)
     {
         $nodeMap = [];
         $childrenMap = [];
@@ -195,7 +208,7 @@ class AuthRoleTemplateClient extends ManagementClient
             $nodeId = intval($node['node_id']);
             $node['permission_action'] = in_array($node['permission_action'] ?? '', self::PERMISSION_ACTIONS, true)
                 ? $node['permission_action']
-                : 'manage';
+                : 'unclassified';
             $nodeMap[$nodeId] = $node;
             $childrenMap[intval($node['pid'])][] = $nodeId;
         }
@@ -214,25 +227,30 @@ class AuthRoleTemplateClient extends ManagementClient
                 throw new \Exception("只能配置启用的顶级导航节点");
             }
             if (isset($selected[$topNodeId])) throw new \Exception("顶级导航不能重复配置");
-            $allEnabled = intval($setting['all_enabled'] ?? 0) === 1;
-            $queryEnabled = intval($setting['query_enabled'] ?? 0) === 1;
-            $exportEnabled = intval($setting['export_enabled'] ?? 0) === 1;
-            if (!$allEnabled && !$queryEnabled && !$exportEnabled) {
-                throw new \Exception("每个顶级导航至少选择查询、导出或所有权限");
+            $dataScope = strval($setting['data_scope'] ?? '');
+            if (!in_array($dataScope, self::DATA_SCOPES, true)) {
+                throw new \Exception("每个顶级导航必须选择查账号所属组织或查全部");
             }
+            $enabledActions = [];
+            foreach (['create', 'delete', 'update', 'query'] as $action) {
+                if (intval($setting[$action . '_enabled'] ?? 0) === 1) $enabledActions[] = $action;
+            }
+            if (!$enabledActions) throw new \Exception("每个顶级导航至少选择一种接口权限");
 
             $selected[$topNodeId] = [
                 'node_id' => $topNodeId,
-                'query_enabled' => !$allEnabled && $queryEnabled ? 1 : 0,
-                'export_enabled' => !$allEnabled && $exportEnabled ? 1 : 0,
-                'all_enabled' => $allEnabled ? 1 : 0,
+                'data_scope' => $dataScope,
+                'create_enabled' => in_array('create', $enabledActions, true) ? 1 : 0,
+                'delete_enabled' => in_array('delete', $enabledActions, true) ? 1 : 0,
+                'update_enabled' => in_array('update', $enabledActions, true) ? 1 : 0,
+                'query_enabled' => in_array('query', $enabledActions, true) ? 1 : 0,
             ];
             $descendantIds = $this->collectPermissionDescendantIds($topNodeId, $childrenMap);
-            $nodeList[$topNodeId] = $dType;
+            $nodeList[$topNodeId] = ['data_scope' => $dataScope];
             foreach (array_merge([$topNodeId], $descendantIds) as $nodeId) {
                 $action = $nodeMap[$nodeId]['permission_action'];
-                if ($action === 'menu' || $allEnabled || ($queryEnabled && $action === 'query') || ($exportEnabled && $action === 'export')) {
-                    $nodeList[$nodeId] = $dType;
+                if ($action === 'menu' || in_array($action, $enabledActions, true)) {
+                    $nodeList[$nodeId] = ['data_scope' => $dataScope];
                 }
             }
         }
@@ -255,15 +273,18 @@ class AuthRoleTemplateClient extends ManagementClient
         return $result;
     }
 
-    protected function buildPermissionNodeTree(array $nodes, $pid = 0)
+    protected function buildPermissionNodeTree(array $nodes, $pid = 0, array $settings = [])
     {
         $tree = [];
         foreach ($nodes as $node) {
             if (intval($node['pid']) !== intval($pid)) continue;
             $node['permission_action'] = in_array($node['permission_action'] ?? '', self::PERMISSION_ACTIONS, true)
                 ? $node['permission_action']
-                : 'manage';
-            $node['children'] = $this->buildPermissionNodeTree($nodes, intval($node['node_id']));
+                : 'unclassified';
+            if (intval($pid) === 0) {
+                $node['template_setting'] = $settings[intval($node['node_id'])] ?? null;
+            }
+            $node['children'] = $this->buildPermissionNodeTree($nodes, intval($node['node_id']), $settings);
             $tree[] = $node;
         }
         return $tree;

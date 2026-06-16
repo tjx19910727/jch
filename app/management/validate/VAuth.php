@@ -30,7 +30,7 @@ class VAuth extends VCommon
 
         // auth_node
         "type" => "require",
-        "permission_action" => "in:menu,query,export,manage",
+        "permission_action" => "in:menu,create,delete,update,query,export,manage",
 
         // auth_role_node
         "nodeList" => "require",
@@ -68,7 +68,7 @@ class VAuth extends VCommon
         "d_type.require" => "数据权限类型不能为空",
         "d_type.in" => "数据权限类型不合法",
         "type.require" => "VAuth.type_require",
-        "permission_action.in" => "权限动作仅支持menu/query/export/manage",
+        "permission_action.in" => "权限动作仅支持menu/create/delete/update/query及历史兼容值",
         "nodeList.require" => "VAuth.nodeList_require",
         "rn_id.require" => "VAuth.rn_id_require",
 
@@ -113,7 +113,7 @@ class VAuth extends VCommon
         "AuthRoleTemplateAdd" => ["name","status"],
         "AuthRoleTemplateUpdate" => ["art_id"],
         "AuthRoleTemplateNodes" => ["art_id","nodeList"],
-        "AuthRoleTemplateTopNavigationNodes" => ["art_id","d_type"],
+        "AuthRoleTemplateTopNavigationNodes" => ["art_id"],
         "AuthRoleTemplateApply" => ["art_id","role_id"],
 
         "AuthOrganizationAdd" => ['pid','organization_name'],

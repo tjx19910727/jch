@@ -63,7 +63,11 @@ class AuthRoleTemplate extends Common
 
     public function getTopNavigationNodes()
     {
-        return $this->app->authRoleTemplate->getTopNavigationNodes($this->getExcludedTemplateNodeIds());
+        $postData = input();
+        return $this->app->authRoleTemplate->getTopNavigationNodes(
+            $this->getExcludedTemplateNodeIds(),
+            intval($postData['art_id'] ?? 0)
+        );
     }
 
     public function saveTopNavigationNodes()

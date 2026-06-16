@@ -134,6 +134,7 @@ class AuthManagerRoleClient extends ManagementClient
         if (!$authNode) return $this->r(100,"该功能尚未开放");
 
         $authNode['d_type'] = 0;
+        $authNode['data_scope'] = '';
         if ($authNode['status'] == 2) return $this->rFail("该功能已被禁用");
         // 不需要绝对校验
         if ($authNode['is_auth'] == 2) return $authNode;
@@ -150,6 +151,7 @@ class AuthManagerRoleClient extends ManagementClient
         $roleNodes = $this->resolveManagerRoleNodes($this->manager, $role, intval($authNode['node_id']));
         if (!$roleNodes) return $this->r(100,"您无权限操作【" . $authNode['name']. "】");
         $authNode['d_type'] = $roleNodes[0]['d_type'];
+        $authNode['data_scope'] = $roleNodes[0]['data_scope'] ?? '';
         return $authNode;
     }
 
