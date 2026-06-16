@@ -193,13 +193,14 @@ class ActivityPickCodeClient extends ManagementClient
      */
     public function exportCode($postData)
     {
-        $ap = $this->getActivityPickFind(['id' => $postData['id']], "pick_name");
-        if (!$ap) return $this->r(100, '查无提货码活动信息');
-        $list = $this->getActivityPickCodeList(['ap_id' => $postData['id'], 'status' => 1], 0, 'code');
-        if ($list) {
-            $list = $list->toArray();
-            $title = ["code" => "提货码"];
-            $filename = "【" . $ap['pick_name'] . "】提货码-" . date("YmdHis");
+        $activities = $this->getExportActivities($postData['id'] ?? '');
+        if (!$activities) return $this->r(100, '查无提货码活动信息');
+        $activityIds = array_keys($activities);
+        $list = $this->getActivityPickCodeList([['ap_id', 'in', $activityIds], 'status' => 1], 0, 'ap_id,code');
+        if ($list && !$list->isEmpty()) {
+            $list = $this->appendActivityNames($list->toArray(), $activities);
+            $title = ["pick_name" => "活动名称", "code" => "提货码"];
+            $filename = $this->getExportFilename($activities, "提货码", "YmdHis");
             return $this->sendToExport("营销活动-取货码活动", $filename, $title, $list);
         }
         return $this->rFail("查无提货码");
@@ -212,10 +213,11 @@ class ActivityPickCodeClient extends ManagementClient
      */
     public function exportUsedList($postData)
     {
-        $ap = $this->getActivityPickFind(['id' => $postData['id']], "pick_name,`desc`");
-        $list = $this->getActivityPickCodeList(['ap_id' => $postData['id']], 0,
-            '("' . $ap['pick_name'] . '") pick_name,("' . $ap['desc'] . '") `desc`,machine_id,machine_name,
-                code,trade_no,
+        $activities = $this->getExportActivities($postData['id'] ?? '');
+        if (!$activities) return $this->r(100, '查无提货码活动信息');
+        $activityIds = array_keys($activities);
+        $list = $this->getActivityPickCodeList([['ap_id', 'in', $activityIds]], 0,
+            'ap_id,machine_id,machine_name,code,trade_no,
                 (CASE status 
                 WHEN 1 THEN "未使用" 
                 WHEN 2 THEN "已使用"
@@ -223,9 +225,10 @@ class ActivityPickCodeClient extends ManagementClient
                 WHEN 4 THEN "已作废" 
                 WHEN 5 THEN "使用中" END ) `status`,
                 DATE_FORMAT(FROM_UNIXTIME(used_time), "%Y-%m-%d %H:%i:%s") AS used_time');
-        if ($list) {
-            $list = $list->toArray();
+        if ($list && !$list->isEmpty()) {
+            $list = $this->appendActivityNames($list->toArray(), $activities);
             $title = [
+                "pick_name" => "活动名称",
                 "code" => "提货码",
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
@@ -233,10 +236,42 @@ class ActivityPickCodeClient extends ManagementClient
                 "status" => "激活状态",
                 "used_time" => "使用时间",
             ];
-            $filename = "【" . $ap['pick_name'] . "】使用报表-" . date("Ymd");
+            $filename = $this->getExportFilename($activities, "使用报表", "Ymd");
             return $this->sendToExport("营销活动-取货码活动", $filename, $title, $list);
         }
         return $this->rFail("查无使用报表信息");
+    }
+
+    protected function getExportActivities($ids)
+    {
+        if (!is_array($ids)) $ids = explode(',', (string)$ids);
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (!$ids) return [];
+        $list = $this->getActivityPickList([['id', 'in', $ids]], 0, 'id,pick_name');
+        if (!$list || $list->isEmpty()) return [];
+        $activities = [];
+        foreach ($list->toArray() as $item) {
+            $activities[intval($item['id'])] = $item;
+        }
+        return $activities;
+    }
+
+    protected function appendActivityNames(array $list, array $activities)
+    {
+        foreach ($list as &$item) {
+            $item['pick_name'] = $activities[intval($item['ap_id'] ?? 0)]['pick_name'] ?? '';
+        }
+        unset($item);
+        return $list;
+    }
+
+    protected function getExportFilename(array $activities, $suffix, $dateFormat)
+    {
+        if (count($activities) === 1) {
+            $activity = reset($activities);
+            return "【" . $activity['pick_name'] . "】{$suffix}-" . date($dateFormat);
+        }
+        return "取货码活动批量{$suffix}-" . date($dateFormat);
     }
 
     /**

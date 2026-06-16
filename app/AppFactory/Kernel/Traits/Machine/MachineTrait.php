@@ -256,7 +256,13 @@ trait MachineTrait
     public function currentStatus()
     {
         if ($this->message['current_status'] != $this->machine['current_status']) {
-            $result = $this->updateMachine(['m_id' => $this->machine['m_id'],'current_status' => $this->message['current_status']]);
+            $update = ['m_id' => $this->machine['m_id'],'current_status' => $this->message['current_status']];
+            if($this->message['current_status'] == 'maintenance'){
+                $update['ckc_status'] = 2;
+            }elseif($this->message['current_status'] == 'normal'){
+                $update['ckc_status'] = 1;
+            }
+            $result = $this->updateMachine($update);
             actionLog($this->getLS(),'【SQL】修改设备当前状态值');
             return $result;
         }

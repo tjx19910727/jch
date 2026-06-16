@@ -20,6 +20,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
+use app\AppFactory\RabbitMq\MqProducer;
 use app\management\validate\VGoods;
 use think\facade\Db;
 
@@ -120,12 +121,12 @@ class GoodsClient extends ManagementClient
     {
         $gId = $postData['g_id'] ?? 0;
         if (!$gId) {
-            return false;
+            return $this->r(100, '参数有误');
         }
 
         $oldGoods = $this->getGoodsFind(['g_id' => $gId], 'g_id,cost_price,market_price,retail_price');
         if (!$oldGoods) {
-            return false;
+            return $this->r(100, '商品不存在');
         }
         $oldGoods = $oldGoods->toArray();
 
@@ -143,7 +144,7 @@ class GoodsClient extends ManagementClient
 
         $result = $this->updateGoods($postData, ['g_id' => $gId]);
         if (!$result) {
-            return $result;
+            return $this->r(100, '更新失败');
         }
 
         if ($priceChanged) {
@@ -170,23 +171,14 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        $mgList = $this->getMachineGoodsList([['g_id', '=', $gId]], 0, 'mg_id,machine_id');
-        if ($mgList) {
-            $mgList = $mgList->toArray();
-            foreach ($mgList as $mg) {
-                $this->sendToMachine(['machine_id' => $mg['machine_id']], 'updateMg', ['mg_id' => $mg['mg_id']]);
-            }
-        }
+        MqProducer::export([
+            'job_type' => 'goods_update',
+            'g_id' => $gId,
+            'request_time' => date('Y-m-d H:i:s'),
+            'manager_id' => $this->manager['manager_id'] ?? 0,
+        ]);
 
-        $mcList = $this->getMachineChannelList([['g_id', '=', $gId]], 0, 'mc_id,machine_id');
-        if ($mcList) {
-            $mcList = $mcList->toArray();
-            foreach ($mcList as $mc) {
-                $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => $mc['mc_id']]);
-            }
-        }
-
-        return $result;
+        return $this->r(200, 'success', $result);
     }
 
     /**
@@ -220,8 +212,19 @@ class GoodsClient extends ManagementClient
             })
             ->field('mg_id,m_id,machine_id,g_id,g_name,cost_price,market_price,retail_price')
             ->order('mg_id desc')
+            ->limit(200)
             ->select()
             ->toArray();
+
+        foreach ($mgDiff as $key => $item) {
+            if ($latestRetail > $item['retail_price']) {
+                $mgDiff[$key]['goods_status'] = 1;
+            } elseif ($latestRetail < $item['retail_price']) {
+                $mgDiff[$key]['goods_status'] = 2;
+            } else {
+                $mgDiff[$key]['goods_status'] = 3;
+            }
+        }
 
         $mcDiff = Db::name('machine_channel')
             ->where('g_id', $gId)
@@ -230,10 +233,21 @@ class GoodsClient extends ManagementClient
                     ->whereOr('market_price', '<>', $latestMarket)
                     ->whereOr('retail_price', '<>', $latestRetail);
             })
-            ->field('mc_id,m_id,machine_id,channel_code,g_id,g_name,cost_price,market_price,retail_price')
+            ->field('mc_id,m_id,machine_id,channel_code,g_id,g_name,cost_price,market_price,retail_price,update_price as update_status')
             ->order('mc_id desc')
+            ->limit(200)
             ->select()
             ->toArray();
+
+        foreach ($mcDiff as $key => $item) {
+            if ($latestRetail > $item['retail_price']) {
+                $mcDiff[$key]['goods_status'] = 1;
+            } elseif ($latestRetail < $item['retail_price']) {
+                $mcDiff[$key]['goods_status'] = 2;
+            } else {
+                $mcDiff[$key]['goods_status'] = 3;
+            }
+        }
 
         return $this->r(200, 'success', [
             'mg_diff_list' => $mgDiff,

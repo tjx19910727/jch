@@ -400,20 +400,26 @@ trait AfterOrderPaymentTrait
             // ];
             
             //交易成功通知
-            $this->noticeSendData = [
-                "ao_id" => $this->machine['ao_id'],
-                "m_id" => $this->machine['m_id'],
-                "templateType" => "payment_success",
-                "replaceData" => [
-                    "machine_id" => $this->machine['machine_id'],
-                    "machine_name" => mb_substr($this->machine['machine_name'], 0, 20, 'UTF-8'),
-                    "trade_no" => $this->order['trade_no'],
-                    "total_price" => number_format($this->order['total_price'], 2, '.', ','),
-                    "pay_time" => $this->order['pay_time'] ? date('Y-m-d H:i:s', $this->order['pay_time']) : date('Y-m-d H:i:s'),
-                ]
-            ];
-            $result = @$this->noticeSend();
-            actionLog($result, '发送销售通知结果');
+            $checkPrice = round(round($this->order['total_price'], 2) * 100);
+            if($checkPrice > 1){
+                $this->noticeSendData = [
+                    "ao_id" => $this->machine['ao_id'],
+                    "m_id" => $this->machine['m_id'],
+                    "templateType" => "payment_success",
+                    "replaceData" => [
+                        "machine_id" => $this->machine['machine_id'],
+                        "machine_name" => mb_substr($this->machine['machine_name'], 0, 20, 'UTF-8'),
+                        "trade_no" => $this->order['trade_no'],
+                        "total_price" => number_format($this->order['total_price'], 2, '.', ','),
+                        "pay_time" => $this->order['pay_time'] ? date('Y-m-d H:i:s', $this->order['pay_time']) : date('Y-m-d H:i:s'),
+                    ]
+                ];
+                $result = @$this->noticeSend();
+                actionLog($result, '发送销售通知结果');
+            }else{
+                actionLog([], '测试数据不发送销售通知');
+            }
+
         } catch (\Exception $e) {
             actionLog("发送销售通知异常");
             actionException($e, 1);
