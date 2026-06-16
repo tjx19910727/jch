@@ -494,14 +494,15 @@ class MachineChannelClient extends ManagementClient
             }
         }
         if (!empty($postData['manufacture_time'])) {
-            $postData['manufacture_time'] = strtotime(date('Y-m-d 23:59:59', strtotime($postData['manufacture_time'])));
+            $exp_arr = explode(" ",$postData['manufacture_time']);
+            $postData['manufacture_time'] = strtotime($exp_arr[0] . ' 23:59:59');
         }
         //如果有传入生产日期，expire_time根据生产日期和商品表的保质期自动计算得出
         if (isset($postData['manufacture_time']) && $postData['manufacture_time'] > 0 && isset($postData['g_id']) && $postData['g_id'] > 0) {
             $shelfLife = $this->getGoodsValue(['g_id' => $postData['g_id']], 'sell_by_date');
             if ($shelfLife) {
-                $postData['expire_time'] = strtotime(date('Y-m-d 23:59:59', $shelfLife * 24 * 3600 + $postData['manufacture_time']));
-            }else{
+                $postData['expire_time'] = $postData['manufacture_time'] + $shelfLife * 86400;
+            } else {
                 $postData['expire_time'] = 0;
             }
         }
@@ -706,7 +707,8 @@ class MachineChannelClient extends ManagementClient
             $updateData['stock_warning'] = $postData['stock_warning'] < 0 ? 0 : $postData['stock_warning'];
         }
         if(!empty($postData['expire_time'])){
-            $updateData['expire_time'] = date('Y-m-d 23:59:59', strtotime($postData['expire_time']));
+            $exp_arr = explode(" ",$postData['expire_time']);
+            $updateData['expire_time'] = strtotime($exp_arr[0] . ' 23:59:59');
         }
         if (!$updateData) return $this->r(100, $this->lang("action_fail"));
 
