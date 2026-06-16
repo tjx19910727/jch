@@ -156,6 +156,8 @@ class ApiClient extends ReceiveBaseClient
 
     public $card_retail_price = 0.01;
     public $card_default_pwd = '123456';
+    public $receipt_code1 = "/uploads/adv/20250618/41da4aa9c2e34fb84b123c8d39eba214.png";
+    public $receipt_code2 = "/uploads/adv/20251022/0e543e3d6e1861bd59fed97194fd3f3f.jpg";
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
@@ -1798,8 +1800,8 @@ class ApiClient extends ReceiveBaseClient
         if (strpos($this->machine['logo'], 'http') === false) {
             $this->machine['logo'] = $systemInfo['domain_name'] . $this->machine['logo'];
         }
-        $mConfig['receipt_code1'] = empty($mConfig['receipt_code1']) ? config('receipt.receipt_code1') : $mConfig['receipt_code1'];
-        $mConfig['receipt_code2'] = empty($mConfig['receipt_code2']) ? config('receipt.receipt_code2') : $mConfig['receipt_code2'];
+        $mConfig['receipt_code1'] = empty($mConfig['receipt_code1']) ? $this->receipt_code1 : $mConfig['receipt_code1'];
+        $mConfig['receipt_code2'] = empty($mConfig['receipt_code2']) ? $this->receipt_code2 : $mConfig['receipt_code2'];
         if ($mConfig['receipt_code1'] && strpos($mConfig['receipt_code1'], 'http') === false) {
             $mConfig['receipt_code1'] = $systemInfo['domain_name'] . $mConfig['receipt_code1'];
         }
