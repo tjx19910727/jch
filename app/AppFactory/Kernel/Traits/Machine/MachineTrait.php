@@ -641,16 +641,14 @@ trait MachineTrait
         $status = intval($this->message['status'] ?? 0);
         $sodId = intval($this->message['sod_id'] ?? 0);
         $logId = intval($this->message['log_id'] ?? 0);
+        $log = null;
+        if ($logId) {
+            $log = RemoteActionLogModel::getFind(['id' => $logId], 'id,machine_id,channel_code,status');
+            $log = is_object($log) ? $log->toArray() : $log;
+        }
         if (!$sodId) {
-            if ($logId) {
-                $this->updateRALog(
-                    ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')],
-                    ['id' => $logId],
-                    ['status', 'operator_at']
-                );
-            }
             actionLog($this->message, "远程出货缺少sod_id", "remoteOutGoods");
-            return true;
+            return $this->handleRemoteOutGoodsWithoutOrder($status, $logId, $log);
         }
 
         $detail = $this->getSaleOrdersDetailsFind(
@@ -659,19 +657,14 @@ trait MachineTrait
         );
         if (!$detail) {
             actionLog(['sod_id' => $sodId], "远程出货未找到子订单", "remoteOutGoods");
-            return false;
+            return $this->handleRemoteOutGoodsWithoutOrder($status, $logId, $log);
         }
         $detail = is_object($detail) ? $detail->toArray() : $detail;
-
-        $log = null;
-        if ($logId) {
-            $log = RemoteActionLogModel::getFind(['id' => $logId], 'id,machine_id,channel_code,status');
-            $log = is_object($log) ? $log->toArray() : $log;
-        }
 
         try {
             $this->startTrans();
 
+            $previousStatus = intval($detail['remote_out_goods_status'] ?? 0);
             if ($logId) {
                 $this->updateRALog(
                     ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')],
@@ -686,16 +679,12 @@ trait MachineTrait
             ];
             $updateFields = ['remote_out_goods_status'];
             $flag = [];
+            $understockNotice = null;
 
             // remoteOutGoods 状态定义：
             // 1-已发指令 2-设备已接收 20-不减库存 21-扣减库存 3-出货成功 4-出货失败
-            // status=21/3 都允许处理子订单附表及货道，但仅执行一次；status=20/4 不处理库存，不修改 out_status
-            if (in_array($status, [21, 3], true) && !in_array(intval($detail['remote_out_goods_status'] ?? 0), [21, 3, 4], true)) {
-                $updateSod['success_quantity'] = intval($detail['success_quantity'] ?? 0) + 1;
-                $updateSod['fail_quantity'] = max(0, intval($detail['fail_quantity'] ?? 0) - 1);
-                $updateFields[] = 'success_quantity';
-                $updateFields[] = 'fail_quantity';
-
+            // status=21/3/4 首次处理库存；status=4 正常扣库存，不恢复库存。
+            if (in_array($status, [21, 3, 4], true) && !in_array($previousStatus, [21, 3, 4], true)) {
                 $channelCode = $this->message['channel_code'] ?? ($log['channel_code'] ?? $detail['channel_code']);
                 $machineMId = $this->machine['m_id'] ?? 0;
                 if (!$machineMId && !empty($log['machine_id'])) {
@@ -711,7 +700,7 @@ trait MachineTrait
 
                 $mc = $this->getMachineChannelFind(
                     ['m_id' => $machineMId, 'channel_code' => $channelCode],
-                    'mc_id,channel_code,channel_position,stock'
+                    'mc_id,m_id,channel_code,channel_position,stock,stock_warning'
                 );
                 if (!$mc) {
                     actionLog(['m_id' => $machineMId, 'channel_code' => $channelCode], '远程出货未找到对应货道', 'remoteOutGoods');
@@ -724,11 +713,22 @@ trait MachineTrait
                 $updateFields[] = 'channel_code';
                 $updateFields[] = 'channel_position';
 
+                if (in_array($status, [21, 3], true)) {
+                    $updateSod['success_quantity'] = intval($detail['success_quantity'] ?? 0) + 1;
+                    $updateSod['fail_quantity'] = max(0, intval($detail['fail_quantity'] ?? 0) - 1);
+                    $updateFields[] = 'success_quantity';
+                    $updateFields[] = 'fail_quantity';
+                }
+
+                $newStock = max(0, intval($mc['stock']) - 1);
                 $flag[] = $this->updateMachineChannel([
                     'mc_id' => $mc['mc_id'],
-                    'stock' => bcsub($mc['stock'], 1),
+                    'stock' => $newStock,
                 ]);
-                actionLog($this->getLS(), '【SQL】远程出货(status=21/3)修改货道', 'remoteOutGoods');
+                if ($newStock === 0) {
+                    $understockNotice = [$this->machine ?? [], $mc, $newStock];
+                }
+                actionLog($this->getLS(), '【SQL】远程出货(status=21/3/4)修改货道', 'remoteOutGoods');
             }
 
             $flag[] = $this->updateSaleOrdersDetails($updateSod, [], $updateFields);
@@ -741,11 +741,136 @@ trait MachineTrait
             }
 
             $this->commitTrans();
+            if ($understockNotice) {
+                $this->sendRemoteOutGoodsUnderstockNotice($understockNotice[0], $understockNotice[1], $understockNotice[2]);
+            }
             return true;
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1, 'remoteOutGoods');
             return false;
+        }
+    }
+
+    protected function handleRemoteOutGoodsWithoutOrder($status, $logId, $log)
+    {
+        if (!$logId || !$log) {
+            actionLog(['log_id' => $logId, 'status' => $status], '远程出货无订单且缺少日志，跳过库存处理', 'remoteOutGoods');
+            return true;
+        }
+
+        try {
+            $this->startTrans();
+
+            $previousStatus = intval($log['status'] ?? 0);
+            $flag = [];
+            $understockNotice = null;
+            $flag[] = $this->updateRALog(
+                ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')],
+                ['id' => $logId],
+                ['status', 'operator_at']
+            );
+
+            if (in_array($status, [21, 3, 4], true) && !in_array($previousStatus, [21, 3, 4], true)) {
+                $channelCode = $this->message['channel_code'] ?? ($log['channel_code'] ?? '');
+                $machineMId = $this->machine['m_id'] ?? 0;
+                if (!$machineMId && !empty($log['machine_id'])) {
+                    $machineInfo = $this->getMachineFind(['machine_id' => $log['machine_id']], 'm_id');
+                    $machineMId = intval($machineInfo['m_id'] ?? 0);
+                }
+
+                if (!$channelCode || !$machineMId) {
+                    actionLog(['m_id' => $machineMId, 'channel_code' => $channelCode], '无订单远程出货缺少货道定位信息', 'remoteOutGoods');
+                    $this->rollbackTrans();
+                    return false;
+                }
+
+                $mc = $this->getMachineChannelFind(
+                    ['m_id' => $machineMId, 'channel_code' => $channelCode],
+                    'mc_id,m_id,channel_code,stock,stock_warning'
+                );
+                if (!$mc) {
+                    actionLog(['m_id' => $machineMId, 'channel_code' => $channelCode], '无订单远程出货未找到对应货道', 'remoteOutGoods');
+                    $this->rollbackTrans();
+                    return false;
+                }
+                $mc = is_object($mc) ? $mc->toArray() : $mc;
+
+                $newStock = max(0, intval($mc['stock']) - 1);
+                $flag[] = $this->updateMachineChannel([
+                    'mc_id' => $mc['mc_id'],
+                    'stock' => $newStock,
+                ]);
+                if ($newStock === 0) {
+                    $understockNotice = [$this->machine ?? [], $mc, $newStock];
+                }
+                actionLog($this->getLS(), '【SQL】无订单远程出货修改货道', 'remoteOutGoods');
+            }
+
+            $result = $this->checkFlag($flag);
+            if (!$result) {
+                $this->rollbackTrans();
+                return false;
+            }
+
+            $this->commitTrans();
+            if ($understockNotice) {
+                $this->sendRemoteOutGoodsUnderstockNotice($understockNotice[0], $understockNotice[1], $understockNotice[2]);
+            }
+            return true;
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1, 'remoteOutGoods');
+            return false;
+        }
+    }
+
+    protected function sendRemoteOutGoodsUnderstockNotice($machine, $mc, $stock)
+    {
+        if (intval($stock) !== 0) {
+            return;
+        }
+
+        try {
+            $machine = is_object($machine) ? $machine->toArray() : (array) $machine;
+            $mc = is_object($mc) ? $mc->toArray() : (array) $mc;
+            $machineMId = intval($machine['m_id'] ?? ($mc['m_id'] ?? 0));
+            if (!$machineMId) {
+                actionLog(['machine' => $machine, 'mc' => $mc], '远程出货库存为0缺少设备信息，跳过商品不足公众号通知', 'remoteOutGoods');
+                return;
+            }
+
+            if (empty($machine['ao_id']) || empty($machine['machine_id']) || empty($machine['machine_name'])) {
+                $machineInfo = $this->getMachineFind(['m_id' => $machineMId], 'm_id,ao_id,machine_id,machine_name');
+                $machine = is_object($machineInfo) ? $machineInfo->toArray() : (array) $machineInfo;
+            }
+            if (empty($machine['ao_id'])) {
+                actionLog(['m_id' => $machineMId], '远程出货库存为0缺少组织信息，跳过商品不足公众号通知', 'remoteOutGoods');
+                return;
+            }
+
+            $errorCode = "1000101";
+            $noticeData = [
+                "ao_id" => $machine['ao_id'],
+                "m_id" => $machineMId,
+                "sendType" => 1,
+                "templateType" => "understock",
+                "replaceData" => [
+                    "machine_id" => $machine['machine_id'] ?? '',
+                    "machine_name" => $machine['machine_name'] ?? '',
+                    "stock" => intval($stock),
+                    "channel_code" => $mc['channel_code'] ?? '',
+                    "stock_warning" => $mc['stock_warning'] ?? 0,
+                    "error_code" => $this->lang("deviceErrorCode.".$errorCode),
+                    "error_time" => date('Y-m-d H:i:s'),
+                    "error_info" => $mc['channel_code'] ?? '',
+                ],
+            ];
+            actionLog($noticeData, '远程出货库存为0发送商品不足公众号通知', 'remoteOutGoods');
+            $result = AppFactory::notice($noticeData)->weChat->send();
+            actionLog($result, '远程出货库存为0发送商品不足公众号通知结果', 'remoteOutGoods');
+        } catch (\Exception $e) {
+            actionException($e, 1, 'remoteOutGoods');
         }
     }
 
