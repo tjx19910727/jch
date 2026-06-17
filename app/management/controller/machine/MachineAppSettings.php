@@ -44,4 +44,36 @@ class MachineAppSettings extends Common
         $postData = input();
         return $this->app->machineAppSettings->updateSettings($postData);
     }
+
+    /**
+     * 新增配置（支持多设备，m_id格式: 127,188,199）
+     * @return array|\think\response\Json
+     */
+    public function add()
+    {
+        $postData = input();
+        return $this->app->machineAppSettings->addSettings($postData);
+    }
+
+    /**
+     * 新增表单：返回空数据的默认字段数组
+     * @return array|\think\response\Json
+     */
+    public function getAddForm()
+    {
+        return $this->app->machineAppSettings->getAddForm();
+    }
+
+    /**
+     * 讯飞文字转语音
+     * 传入国家编码和文字，调用讯飞TTS接口返回语音文件URL
+     * @return array|\think\response\Json
+     */
+    public function textToSpeech()
+    {
+        $postData = input();
+        return $this->app->machineAppSettings->textToSpeech($postData);
+    }
+
+    
 }
