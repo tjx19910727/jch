@@ -4112,6 +4112,42 @@ class ApiClient extends ReceiveBaseClient
         return array_merge($result, $otherRoots);
     }
 
+    /**
+     * 校验巡检人员账号是否存在。
+     * @return array|\think\response\Json
+     */
+    public function checkInspectionStaffCode()
+    {
+        $staffCode = trim((string)($this->data['staff_code'] ?? ''));
+        if ($staffCode === '') {
+            return $this->r(100, '巡检账号不能为空', [
+                'exists' => 0,
+                'staff_code' => $staffCode,
+            ]);
+        }
+
+        $staff = Db::name('inspection_staff')
+            ->where(['staff_code' => $staffCode])
+            ->field('staff_id,staff_code,account_name,status,expire_time')
+            ->find();
+
+        if (!$staff) {
+            return $this->r(100, '账户不存在', [
+                'exists' => 0,
+                'staff_code' => $staffCode,
+            ]);
+        }
+
+        return $this->r(200, '账户存在', [
+            'exists' => 1,
+            'staff_id' => intval($staff['staff_id']),
+            'staff_code' => $staff['staff_code'],
+            'account_name' => $staff['account_name'] ?? '',
+            'status' => intval($staff['status'] ?? 0),
+            'expire_time' => intval($staff['expire_time'] ?? 0),
+        ]);
+    }
+
     protected function getEnabledInspectionStaff($staffId)
     {
         $staffId = intval($staffId);

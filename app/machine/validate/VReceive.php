@@ -77,6 +77,7 @@ class VReceive extends VCommon
         "file_content" => "require",
         "per_row" => "integer",
         "last_login_info_id" => "integer",
+        "staff_code" => "require|regex:/^[1-9][0-9]{5}$/",
     ];
 
     protected $message = [
@@ -149,6 +150,8 @@ class VReceive extends VCommon
         "field.require" => "图片字段名不能为空",
     "file_content.require" => "file_content不能为空",
     "per_row.integer" => "per_row格式错误",
+        "staff_code.require" => "巡检账号不能为空",
+        "staff_code.regex" => "巡检账号必须为首位非0的6位数字",
         "date.require" => "VReceive.date_require",
         "machine_usage.require" => "VReceive.machine_usage_require",
         "rsrp.require" => "信号强度不能为空",
@@ -274,6 +277,7 @@ class VReceive extends VCommon
     "importMaintenanceRecords" => ["msg_id","machine_id","timestamp","sign","file_content","per_row"],
 
         "getCheckListItems" => ["msg_id","machine_id","timestamp","sign"],
+        "checkInspectionStaffCode" => ["msg_id","machine_id","timestamp","sign","staff_code"],
         "submitCheckListRecord" => ["msg_id","machine_id","timestamp","sign","manager_id","check_list"],
         "getCheckListRecords" => ["msg_id","machine_id","timestamp","sign"],
     "importCheckListRecords" => ["msg_id","machine_id","timestamp","sign","file_content","per_row"],
