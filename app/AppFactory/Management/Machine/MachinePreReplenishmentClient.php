@@ -769,11 +769,10 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         $deviceTitle = [
             'col_a' => '商品名称',
-            'col_b' => '商品图片',
-            'col_c' => 'SKU',
-            'col_d' => '领料数量',
-            'col_e' => '创建人',
-            'col_f' => '创建时间',
+            'col_b' => 'SKU',
+            'col_c' => '领料数量',
+            'col_d' => '创建人',
+            'col_e' => '创建时间',
         ];
 
         foreach ($machineIdGroups as $machineId => $rows) {
@@ -783,11 +782,10 @@ class MachinePreReplenishmentClient extends ManagementClient
                 $channel = $channelMap[$row['m_id'] . '_' . $row['mc_id']] ?? [];
                 $deviceList[] = [
                     'col_a' => $channel['g_name'] ?? '',
-                    'col_b' => $channel['pic'] ?? '',
-                    'col_c' => $row['sku'] ?? '',
-                    'col_d' => (int)($row['plan_quantity'] ?? 0),
-                    'col_e' => $order['creator_name'] ?? '',
-                    'col_f' => $order['created_at'] ?? '',
+                    'col_b' => $row['sku'] ?? '',
+                    'col_c' => (int)($row['plan_quantity'] ?? 0),
+                    'col_d' => $order['creator_name'] ?? '',
+                    'col_e' => $order['created_at'] ?? '',
                 ];
             }
             $sheetName = $machineId;
@@ -795,11 +793,6 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'sheetName' => $sheetName,
                 'title' => $deviceTitle,
                 'list' => $deviceList,
-                'otherData' => [
-                    'imageFields' => ['col_b'],
-                    'imageWidth' => 220,
-                    'imageHeight' => 70,
-                ],
             ];
         }
 
