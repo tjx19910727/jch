@@ -214,6 +214,135 @@ class Excel
     }
 
     /**
+     * 多Sheet导出
+     * @param array $sheets [['sheetName' => '汇总', 'title' => [...], 'list' => [...], 'merge' => [...], 'imageFields' => [...], 'startRow' => 2], ...]
+     * @param string $filename
+     * @return bool|string
+     * @throws \PHPExcel_Exception
+     * @throws \PHPExcel_Writer_Exception
+     */
+    public static function exportMultiSheetExcel($sheets, $filename)
+    {
+        if (empty($filename)) return false;
+        if (!is_array($sheets) || !$sheets) return false;
+
+        require_once root_path() . '/extend/PHPExcel/PHPExcel.php';
+        require_once root_path() . '/extend/PHPExcel/PHPExcel/Writer/Excel2007.php';
+
+        $objPHPExcel = new \PHPExcel();
+        $objWriter = new \PHPExcel_Writer_Excel2007($objPHPExcel);
+        $filename = $filename . '.xlsx';
+
+        $firstSheet = true;
+        foreach ($sheets as $index => $sheet) {
+            $sheetName = $sheet['sheetName'] ?? ('Sheet' . ($index + 1));
+            $list = $sheet['list'] ?? [];
+            $title = $sheet['title'] ?? [];
+            $mergeCells = $sheet['merge'] ?? [];
+            $otherData = $sheet['otherData'] ?? [];
+            $startRow = (int)($otherData['startRow'] ?? $sheet['startRow'] ?? 1);
+            $imageFields = $otherData['imageFields'] ?? $sheet['imageFields'] ?? [];
+
+            if (!$title || !$list) {
+                continue;
+            }
+
+            if ($firstSheet) {
+                $objActSheet = $objPHPExcel->getActiveSheet();
+                $firstSheet = false;
+            } else {
+                $objActSheet = $objPHPExcel->createSheet();
+            }
+            $objActSheet->setTitle($sheetName);
+
+            self::writeSheetData($objActSheet, $list, $title, $startRow, $mergeCells, $imageFields, $otherData);
+        }
+
+        if ($firstSheet) {
+            // no sheet was written
+            return false;
+        }
+
+        $savePath = "/export/excel/" . date("Ymd");
+        $path = root_path() . "public" . $savePath;
+        if (!is_dir($path)) {
+            @mkdir($path, 0777, true);
+            @chmod($path, 0777);
+        }
+        $path .= ("/" . $filename);
+        $objWriter->save($path);
+
+        return $savePath . "/" . $filename;
+    }
+
+    /**
+     * 写入单个Sheet的数据
+     * @param \PHPExcel_Worksheet $objActSheet
+     * @param array $list
+     * @param array $title
+     * @param int $startRow
+     * @param array $mergeCells
+     * @param array $imageFields
+     * @param array $otherData
+     */
+    private static function writeSheetData($objActSheet, $list, $title, $startRow, $mergeCells, $imageFields, $otherData)
+    {
+        $header_arr = ['A','B','C','D','E','F','G','H','I','J','K','L','M', 'N','O','P','Q','R','S','T','U','V','W','X','Y','Z','AA','AB','AC','AD','AE','AF','AG','AH','AI','AJ','AK','AL','AM', 'AN','AO','AP','AQ','AR','AS','AT','AU','AV','AW','AX','AY','AZ'];
+
+        array_unshift($list, $title);
+        $indexKey = [];
+        foreach ($title as $k => $v) {
+            $indexKey[] = $k;
+        }
+
+        $imageWidth  = (int)($otherData['imageWidth'] ?? 220);
+        $imageHeight = (int)($otherData['imageHeight'] ?? 70);
+        $tempDir = null;
+        if ($imageFields) {
+            $tempDir = root_path() . 'public/uploads/excel_img/' . date('Ymd') . '/';
+            if (!is_dir($tempDir)) {
+                @mkdir($tempDir, 0777, true);
+            }
+        }
+
+        if ($mergeCells) {
+            foreach ($mergeCells as $mv) {
+                if (strpos($mv['merge'], ":") !== false) $objActSheet->mergeCells($mv['merge']);
+                if (isset($mv['cell']) && isset($mv['name'])) $objActSheet->setCellValueExplicit($mv["cell"], $mv["name"], \PHPExcel_Cell_DataType::TYPE_STRING);
+            }
+        }
+
+        foreach ($list as $row) {
+            $rowHasImage = false;
+            foreach ($indexKey as $key => $value) {
+                $cellValue = $row[$value] ?? '';
+                $colLetter = $header_arr[$key];
+                if ($imageFields && in_array($value, $imageFields, true) && preg_match('#^https?://#i', (string)$cellValue)) {
+                    $localPath = self::resolveExportImage((string)$cellValue, $tempDir);
+                    if ($localPath) {
+                        $objActSheet->setCellValue($colLetter . $startRow, '');
+                        $drawing = new \PHPExcel_Worksheet_Drawing();
+                        $drawing->setPath($localPath);
+                        $drawing->setCoordinates($colLetter . $startRow);
+                        $drawing->setWidth($imageWidth);
+                        $drawing->setHeight($imageHeight);
+                        $drawing->setOffsetX(3);
+                        $drawing->setOffsetY(3);
+                        $drawing->setWorksheet($objActSheet);
+                        $rowHasImage = true;
+                        continue;
+                    }
+                }
+                $objActSheet->setCellValueExplicit($colLetter . $startRow, $cellValue, \PHPExcel_Cell_DataType::TYPE_STRING);
+            }
+            if ($rowHasImage) {
+                $objActSheet->getRowDimension($startRow)->setRowHeight(max(20, $imageHeight * 0.75));
+            }
+            $startRow++;
+        }
+    }
+
+    /**
      * 下载远程图片并校验有效性，返回本地路径
      * @param string $url
      * @param string $dir

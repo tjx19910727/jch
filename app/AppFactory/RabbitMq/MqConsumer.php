@@ -262,6 +262,11 @@ class MqConsumer
                     }
                 }
                 actionLog(['g_id' => $gId], '商品更新-下发设备同步完成', 'export_message_goods_update');
+            } elseif ($jobType == 'multi_sheet_export') {
+                $app = AppFactory::timeTask();
+                if (!$app->export->makeMultiSheetExcel($data)) {
+                    throw new \RuntimeException('多Sheet导出Excel生成失败');
+                }
             } else {
                 $app = AppFactory::timeTask();
                 if (!$app->export->makeExcel($data)) {

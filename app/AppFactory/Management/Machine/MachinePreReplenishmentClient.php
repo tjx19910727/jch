@@ -711,34 +711,99 @@ class MachinePreReplenishmentClient extends ManagementClient
         ]);
         $filename = '预补货领料表-' . date('YmdHis');
 
-        $result = $this->sendToExport('设备管理-预补货管理', $filename, $title, $list, [
-            'imageFields' => ['col_b', 'col_d'],
-            'imageWidth' => 220,
-            'imageHeight' => 70,
-            'startRow' => 2,
-            'merge' => [
-                [
-                    'merge' => 'A1:C1',
-                    'cell' => 'A1',
-                    'name' => '补货编号',
+        // Sheet 1: 汇总数据（保持现有格式）
+        $sheets = [
+            [
+                'sheetName' => '领料汇总',
+                'title' => $title,
+                'list' => $list,
+                'merge' => [
+                    [
+                        'merge' => 'A1:C1',
+                        'cell' => 'A1',
+                        'name' => '补货编号',
+                    ],
+                    [
+                        'merge' => 'D1:F1',
+                        'cell' => 'D1',
+                        'name' => '补货条形码',
+                    ],
+                    [
+                        'merge' => 'A2:C2',
+                        'cell' => 'A2',
+                        'name' => '',
+                    ],
+                    [
+                        'merge' => 'D2:F2',
+                        'cell' => 'D2',
+                        'name' => '',
+                    ],
                 ],
-                [
-                    'merge' => 'D1:F1',
-                    'cell' => 'D1',
-                    'name' => '补货条形码',
-                ],
-                [
-                    'merge' => 'A2:C2',
-                    'cell' => 'A2',
-                    'name' => '',
-                ],
-                [
-                    'merge' => 'D2:F2',
-                    'cell' => 'D2',
-                    'name' => '',
+                'otherData' => [
+                    'imageFields' => ['col_b', 'col_d'],
+                    'imageWidth' => 220,
+                    'imageHeight' => 70,
+                    'startRow' => 2,
                 ],
             ],
-        ]);
+        ];
+
+        // Sheet 2+: 按设备分组，每设备一个Sheet
+        $machineIdGroups = [];
+        foreach ($details as $row) {
+            $machineId = $row['machine_id'] ?? '';
+            if ($machineId === '') continue;
+            $machineIdGroups[$machineId][] = $row;
+        }
+
+        // 获取设备名称映射
+        $machineNames = [];
+        if ($machineIdGroups) {
+            $machines = MachineModel::where([['machine_id', 'in', array_keys($machineIdGroups)]])
+                ->field('machine_id,machine_name')
+                ->select()->toArray();
+            foreach ($machines as $m) {
+                $machineNames[$m['machine_id']] = $m['machine_name'];
+            }
+        }
+
+        $deviceTitle = [
+            'col_a' => '商品名称',
+            'col_b' => '商品图片',
+            'col_c' => 'SKU',
+            'col_d' => '领料数量',
+            'col_e' => '创建人',
+            'col_f' => '创建时间',
+        ];
+
+        foreach ($machineIdGroups as $machineId => $rows) {
+            $deviceList = [];
+            foreach ($rows as $row) {
+                $order = $orderMap[$row['order_id']] ?? [];
+                $channel = $channelMap[$row['m_id'] . '_' . $row['mc_id']] ?? [];
+                $deviceList[] = [
+                    'col_a' => $channel['g_name'] ?? '',
+                    'col_b' => $channel['pic'] ?? '',
+                    'col_c' => $row['sku'] ?? '',
+                    'col_d' => (int)($row['plan_quantity'] ?? 0),
+                    'col_e' => $order['creator_name'] ?? '',
+                    'col_f' => $order['created_at'] ?? '',
+                ];
+            }
+            $sheetName = $machineId;
+            $sheets[] = [
+                'sheetName' => $sheetName,
+                'title' => $deviceTitle,
+                'list' => $deviceList,
+                'otherData' => [
+                    'imageFields' => ['col_b'],
+                    'imageWidth' => 220,
+                    'imageHeight' => 70,
+                ],
+            ];
+        }
+
+        $result = $this->sendToExportMultiSheet('设备管理-预补货管理', $filename, $sheets);
 
         $state = 0;
         if (is_object($result) && method_exists($result, 'getData')) {
