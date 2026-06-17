@@ -869,7 +869,7 @@ trait MachineTrait
             actionLog($noticeData, '远程出货库存为0发送商品不足公众号通知', 'remoteOutGoods');
             $result = AppFactory::notice($noticeData)->weChat->send();
             actionLog($result, '远程出货库存为0发送商品不足公众号通知结果', 'remoteOutGoods');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             actionException($e, 1, 'remoteOutGoods');
         }
     }
