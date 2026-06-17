@@ -71,12 +71,13 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         $mIds = array_column($machineList, 'm_id');
         $channelList = MachineChannelModel::where([['m_id', 'in', $mIds]])
-            ->field('m_id,mc_id,channel_code,stock,capacity,sku,g_name,pic')
+            ->field('m_id,mc_id,channel_code,stock,capacity,sku,g_name,pic,g_id')
             ->order('mc_id asc')
             ->select()
             ->toArray();
 
         $channelMap = [];
+        $salesCache = [];
         foreach ($channelList as $channel) {
             $availableStock = $channel['capacity'] - $channel['stock'];
             if ($availableStock < 0) {
@@ -89,8 +90,11 @@ class MachinePreReplenishmentClient extends ManagementClient
                 continue;
             }
 
+            $gId = $channel['g_id'] ?? 0;
+            $mcId = $channel['mc_id'];
+
             $channelMap[$channel['m_id']][] = [
-                'mc_id' => $channel['mc_id'],
+                'mc_id' => $mcId,
                 'channel_code' => $channel['channel_code'],
                 'sku' => $channel['sku'],
                 'g_name' => $channel['g_name'],
@@ -99,15 +103,41 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'capacity' => $channel['capacity'],
                 'available_stock' => $availableStock,
                 'plan_quantity' => $orderPlanQtyMap[$mcKey] ?? 0,
+                'g_id' => $gId,
             ];
         }
 
         $result = [];
         foreach ($machineList as $machine) {
+            $mId = $machine['m_id'];
+            $machineId = $machine['machine_id'];
+            // 库存比
+            $totalCapacity = MachineChannelModel::where('m_id', $mId)->where('status', '<>', 2)->sum('capacity');
+            $totalStock = MachineChannelModel::where('m_id', $mId)->where('status', '<>', 2)->sum('stock');
+            $stockRatio = '0%';
+            if ($totalCapacity > 0) {
+                $ratio = bcdiv((string)$totalStock, (string)$totalCapacity, 4);
+                if (bccomp($ratio, '1', 4) > 0) $ratio = '1';
+                if (bccomp($ratio, '0', 4) < 0) $ratio = '0';
+                $stockRatio = bcmul($ratio, '100', 2) . '%';
+            }
+            // 货道近30天销售额
+            $channels = $channelMap[$mId] ?? [];
+            foreach ($channels as &$ch) {
+                $gId = $ch['g_id'] ?? 0;
+                $mcId = $ch['mc_id'] ?? 0;
+                $salesKey = $machineId . '_' . $mcId . '_' . $gId;
+                if (!isset($salesCache[$salesKey])) {
+                    $salesCache[$salesKey] = ($gId && $mcId) ? $this->getSalesAmount($machineId, $gId, 30, $mcId) : 0;
+                }
+                $ch['sales_30_days'] = $salesCache[$salesKey];
+            }
+            unset($ch);
             $result[] = [
-                'machine_id' => $machine['machine_id'],
+                'machine_id' => $machineId,
                 'machine_name' => $machine['machine_name'],
-                'channels' => $channelMap[$machine['m_id']] ?? [],
+                'stock_ratio' => $stockRatio,
+                'channels' => $channels,
             ];
         }
 
