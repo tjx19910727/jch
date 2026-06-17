@@ -382,6 +382,7 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         // 补货对比明细 (按 machine_id 分组)
         $compareGroups = [];
+        $salesCache = [];
 
         foreach ($details as $d) {
             $mid     = $d['machine_id'];
@@ -446,6 +447,11 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
 
             // ---- replenishment_compare detail ----
+            $gId = $channel['g_id'] ?? 0;
+            $salesKey = $mid . '_' . $mcId . '_' . $gId;
+            if (!isset($salesCache[$salesKey])) {
+                $salesCache[$salesKey] = ($gId && $mcId) ? $this->getSalesAmount($mid, $gId, 30, $mcId) : 0;
+            }
             $compareDetail = [
                 'id'                 => $d['id'],
                 'm_id'               => $machine['m_id'] ?? 0,
@@ -467,6 +473,7 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'actual_channel_code'=> $d['actual_channel_code'] ?? null,
                 'report_time'        => $reportTime,
                 'compare_status'     => $compareStatusText,
+                'sales_30_days'      => $salesCache[$salesKey],
             ];
 
             if (!isset($compareGroups[$mid])) {
@@ -552,6 +559,17 @@ class MachinePreReplenishmentClient extends ManagementClient
             } else {
                 $result = 'pending';
             }
+            // 库存比
+            $mId = $dp['m_id'] ?? 0;
+            $totalCapacity = MachineChannelModel::where('m_id', $mId)->where('status', '<>', 2)->sum('capacity');
+            $totalStock = MachineChannelModel::where('m_id', $mId)->where('status', '<>', 2)->sum('stock');
+            $stockRatio = '0%';
+            if ($totalCapacity > 0) {
+                $ratio = bcdiv((string)$totalStock, (string)$totalCapacity, 4);
+                if (bccomp($ratio, '1', 4) > 0) $ratio = '1';
+                if (bccomp($ratio, '0', 4) < 0) $ratio = '0';
+                $stockRatio = bcmul($ratio, '100', 2) . '%';
+            }
             $replenishmentCompare[] = [
                 'm_id'            => $dp['m_id'],
                 'machine_id'      => $dp['machine_id'],
@@ -562,6 +580,7 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'abnormal_count'  => $dp['abnormal_count'],
                 'reported_count'  => $reportedCount,
                 'result'          => $result,
+                'stock_ratio'     => $stockRatio,
                 'details'         => $groupDetails,
             ];
         }
@@ -788,7 +807,7 @@ class MachinePreReplenishmentClient extends ManagementClient
                 $gIdKey = $gId ? (string)$gId : ($row['sku'] ?? '');
                 // 查询近30天销售额，仅在首次遇到该g_id时查询
                 if (!isset($goodsMap[$gIdKey])) {
-                    $sales30Days = $gId ? $this->getSales30Days($machineId, $gId) : 0;
+                    $sales30Days = $gId ? $this->getSalesAmount($machineId, $gId) : 0;
                     $goodsMap[$gIdKey] = [
                         'g_name' => $channel['g_name'] ?? '',
                         'sku' => $row['sku'] ?? '',
@@ -960,21 +979,26 @@ class MachinePreReplenishmentClient extends ManagementClient
     }
 
     /**
-     * 查询某设备某商品近30天销售额（已扣除退款）
+     * 查询销售额（已扣除退款）
      * @param string $machineId
      * @param int $gId
+     * @param int $days 统计天数，默认30
+     * @param int $mcId 货道ID，传0则不过滤货道
      * @return float
      */
-    private function getSales30Days($machineId, $gId)
+    private function getSalesAmount($machineId, $gId, $days = 30, $mcId = 0)
     {
-        $thirtyDaysAgo = strtotime('-30 days');
-        $result = Db::name('sale_orders_details')->alias('sod')
+        $daysAgo = strtotime("-{$days} days");
+        $query = Db::name('sale_orders_details')->alias('sod')
             ->join('sale_orders so', 'so.order_id = sod.order_id')
             ->where('so.machine_id', $machineId)
             ->where('sod.g_id', $gId)
             ->where('so.pay_status', 3)
-            ->where('so.pay_time', '>=', $thirtyDaysAgo)
-            ->field('COALESCE(SUM(sod.total_sod_price), 0) - COALESCE(SUM(sod.refund_amount), 0) AS sales_amount')
+            ->where('so.pay_time', '>=', $daysAgo);
+        if ($mcId) {
+            $query->where('sod.mc_id', $mcId);
+        }
+        $result = $query->field('COALESCE(SUM(sod.total_sod_price), 0) - COALESCE(SUM(sod.refund_amount), 0) AS sales_amount')
             ->find();
         return round((float)($result['sales_amount'] ?? 0), 2);
     }
