@@ -337,9 +337,9 @@ class RevenueRuleClient extends ManagementClient
         }
         $settlementData = array_merge($current, $data);
         foreach ([
-            'base_type' => [1, 2, '分账基数类型不合法'],
-            'turnover_type' => [1, 2, '阶梯营业额口径不合法'],
-            'tier_calc_mode' => [1, 2, '阶梯计算模式不合法'],
+            'base_type' => [[1, 2], '分账基数类型不合法'],
+            'turnover_type' => [[1, 2], '阶梯营业额口径不合法'],
+            'tier_calc_mode' => [[1, 2], '阶梯计算模式不合法'],
         ] as $field => $config) {
             $value = intval($settlementData[$field] ?? 1);
             if (!in_array($value, $config[0], true)) return $this->rFail($config[1]);
