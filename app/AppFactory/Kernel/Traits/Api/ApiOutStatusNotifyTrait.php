@@ -157,4 +157,100 @@ trait ApiOutStatusNotifyTrait
         ];
         return $map[$event] ?? '出货状态变更';
     }
+
+    /**
+     * 对外同步设备开关机时间。
+     * 日志表：api_callback，兼作发送队列、发送结果、重试记录。
+     * 接收地址由 ApiOutStatusNotify::GET_MACHINE_ONOFF_CKC_TIME 拼接，不放入 config。
+     */
+    protected function addMachineOnOffCkcTimeCallback(array $machineOnOff, $event = 'update', array $changedFields = [])
+    {
+        try {
+            return $this->doAddMachineOnOffCkcTimeCallback($machineOnOff, $event, $changedFields);
+        } catch (\Throwable $e) {
+            try {
+                actionLog([
+                    'event' => $event,
+                    'moo_id' => $machineOnOff['moo_id'] ?? 0,
+                    'm_id' => $machineOnOff['m_id'] ?? 0,
+                    'machine_id' => $machineOnOff['machine_id'] ?? '',
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+            ], '设备开关机时间同步异常，已忽略不影响后台流程', 'OutStatusNotify');
+            } catch (\Throwable $logException) {
+            }
+            return false;
+        }
+    }
+
+    protected function doAddMachineOnOffCkcTimeCallback(array $machineOnOff, $event = 'update', array $changedFields = [])
+    {
+        if (!$machineOnOff || (empty($machineOnOff['machine_id']) && empty($machineOnOff['m_id']))) {
+            actionLog($machineOnOff, '设备开关机时间同步缺少设备数据', 'OutStatusNotify');
+            return false;
+        }
+        if (!$this->isMobileVendingMachineOrder($machineOnOff)) {
+            actionLog([
+                'moo_id' => $machineOnOff['moo_id'] ?? 0,
+                'm_id' => $machineOnOff['m_id'] ?? 0,
+                'machine_id' => $machineOnOff['machine_id'] ?? '',
+                'machine_level' => $machineOnOff['machine_level'] ?? ($this->machine['machine_level'] ?? null),
+            ], '非移动售卖机设备，跳过设备开关机时间同步', 'OutStatusNotify');
+            return false;
+        }
+
+        $message = [
+            'event' => $event,
+            'event_desc' => $this->getMachineOnOffCkcTimeEventDesc($event),
+            'changed_fields' => array_values(array_unique($changedFields)),
+            'moo_id' => intval($machineOnOff['moo_id'] ?? 0),
+            'm_id' => intval($machineOnOff['m_id'] ?? 0),
+            'machine_id' => $machineOnOff['machine_id'] ?? '',
+            'machine_name' => $machineOnOff['machine_name'] ?? '',
+            'machine_level' => intval($machineOnOff['machine_level'] ?? 0),
+            'ao_id' => intval($machineOnOff['ao_id'] ?? 0),
+            'status' => intval($machineOnOff['status'] ?? 0),
+            'on_off_machine' => $machineOnOff['on_off_machine'] ?? '',
+            'on_off_machine_list' => $this->normalizeMachineOnOffTimeList($machineOnOff['on_off_machine'] ?? ''),
+            'notify_time' => date('Y-m-d H:i:s'),
+        ];
+
+        $insertCallback = [
+            'aa_id' => 0,
+            'notify_url' => ApiOutStatusNotify::getMachineOnOffCkcTimeUrl(),
+            'callback_type' => 11,
+            'message' => json_encode($message, 320),
+        ];
+        $acId = $this->addApiCallback($insertCallback);
+        actionLog([
+            'ac_id' => $acId,
+            'log_table' => 'api_callback',
+            'callback' => $insertCallback,
+        ], '添加设备开关机时间同步记录', 'OutStatusNotify');
+        return $acId;
+    }
+
+    protected function normalizeMachineOnOffTimeList($value): array
+    {
+        if (is_array($value)) {
+            return $value;
+        }
+        $value = trim((string)$value);
+        if ($value === '') {
+            return [];
+        }
+        $decoded = json_decode($value, true);
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    protected function getMachineOnOffCkcTimeEventDesc($event): string
+    {
+        $map = [
+            'add' => '新增设备开关机营业时间',
+            'update' => '修改设备开关机时间',
+            'import_on_off' => '导入设备开关机时间',
+        ];
+        return $map[$event] ?? '设备开关机时间变更';
+    }
 }

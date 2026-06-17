@@ -10,6 +10,7 @@ namespace app\AppFactory\Management\Machine;
 
 
 use app\AppFactory\Kernel\Support\Excel;
+use app\AppFactory\Kernel\Traits\Api\ApiOutStatusNotifyTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
@@ -18,7 +19,7 @@ use think\facade\Db;
 
 class MachineOnOffClient extends ManagementClient
 {
-    use MachineOnOffTrait, MachineTrait;
+    use MachineOnOffTrait, MachineTrait, ApiOutStatusNotifyTrait;
 
     public function addOf($postData)
     {
@@ -81,10 +82,15 @@ class MachineOnOffClient extends ManagementClient
 
     public function updateOf($postData)
     {
+        $old = $this->getMachineOnOffRowByMooId($postData['moo_id'] ?? 0);
+        $changedFields = $this->getMachineOnOffTimeChangedFields($old, $postData);
         $result = $this->updateMachineOnOff($postData);
         if ($result) {
             $machine = $this->getMachineOnOffFind(['moo_id' => $postData['moo_id']],'machine_id')->toArray();
             $this->sendToMachine($machine,'updateMachineOnOff');
+            if ($changedFields) {
+                $this->notifyMachineOnOffCkcTimeByMooId($postData['moo_id'], 'update', $changedFields);
+            }
         }
         return $this->rU($result);
     }
@@ -132,9 +138,11 @@ class MachineOnOffClient extends ManagementClient
                                 $moo_id = $this->getMachineOnOffValue(['m_id' => $m['m_id']], 'moo_id');
                                 if (!$moo_id) {
                                     $insert = array_merge($m, $other, ['on_off_ckc' => $ckc]);
-                                    $flag[] = $this->addMachineOnOff($insert);
+                                    $newMooId = $this->addMachineOnOff($insert);
+                                    $flag[] = $newMooId;
                                 } else {
-                                    $flag[] = $this->updateMachineOnOff(['moo_id' => $moo_id, 'on_off_ckc' => $ckc]);
+                                    $updateResult = $this->updateMachineOnOff(['moo_id' => $moo_id, 'on_off_ckc' => $ckc]);
+                                    $flag[] = $updateResult;
                                 }
                             }
                         }
@@ -168,8 +176,10 @@ class MachineOnOffClient extends ManagementClient
             actionLog($moo, '导入的营业数据');
             if ($moo) {
                 $flag = [];
+                $changedMooIds = [];
                 foreach ($moo as $k => $v) {
                     $m = $this->getMachineFind(['machine_id' => $v['machine_id']], 'm_id,machine_id,machine_name');
+                    if (!$m) continue;
                     $onOff = json_encode([
                         $v['off0'] . "," . $v['on0'],
                         $v['off1'] . "," . $v['on1'],
@@ -182,13 +192,26 @@ class MachineOnOffClient extends ManagementClient
                     $moo_id = $this->getMachineOnOffValue(['m_id' => $m['m_id']], 'moo_id');
                     if (!$moo_id) {
                         $insert = array_merge($m->toArray(), $other, ['on_off_machine' => $onOff]);
-                        $flag[] = $this->addMachineOnOff($insert);
+                        $newMooId = $this->addMachineOnOff($insert);
+                        $flag[] = $newMooId;
+                        if ($newMooId) $changedMooIds[] = $newMooId;
                     } else {
-                        $flag[] = $this->updateMachineOnOff(['moo_id' => $moo_id, 'on_off_machine' => $onOff]);
+                        $old = $this->getMachineOnOffRowByMooId($moo_id);
+                        $updateResult = $this->updateMachineOnOff(['moo_id' => $moo_id, 'on_off_machine' => $onOff]);
+                        $flag[] = $updateResult;
+                        if ($updateResult && $this->getMachineOnOffTimeChangedFields($old, ['on_off_machine' => $onOff])) {
+                            $changedMooIds[] = $moo_id;
+                        }
                     }
                 }
                 $result = flag_check($flag);
-                return $this->checkTrans($result);
+                $response = $this->checkTrans($result);
+                if ($result) {
+                    foreach (array_unique($changedMooIds) as $mooId) {
+                        $this->notifyMachineOnOffCkcTimeByMooId($mooId, 'import_on_off', ['on_off_machine']);
+                    }
+                }
+                return $response;
             }
             $this->rollbackTrans();
             return $this->r(100, '获取不到Excel文档中的数据');
@@ -283,6 +306,67 @@ class MachineOnOffClient extends ManagementClient
 //                return $this->rAction(Excel::exportExcel($list, $title, $filename, 0, 2, $merge));
         }
         return $this->rFail($this->lang("query_fail"));
+    }
+
+    protected function getMachineOnOffRowByMooId($mooId): array
+    {
+        $mooId = intval($mooId);
+        if ($mooId <= 0) return [];
+        $row = $this->getMachineOnOffFind(['moo_id' => $mooId], 'moo_id,m_id,machine_id,machine_name,ao_id,status,on_off_ckc,on_off_machine');
+        if (!$row) return [];
+        $row = is_object($row) && method_exists($row, 'toArray') ? $row->toArray() : (array)$row;
+        if (!isset($row['machine_level'])) {
+            $machineWhere = [];
+            if (!empty($row['m_id'])) {
+                $machineWhere['m_id'] = $row['m_id'];
+            } elseif (!empty($row['machine_id'])) {
+                $machineWhere['machine_id'] = $row['machine_id'];
+            }
+            if ($machineWhere) {
+                $machine = $this->getMachineFind($machineWhere, 'machine_level');
+                if ($machine) {
+                    $machine = is_object($machine) && method_exists($machine, 'toArray') ? $machine->toArray() : (array)$machine;
+                    $row['machine_level'] = intval($machine['machine_level'] ?? 0);
+                }
+            }
+        }
+        return $row;
+    }
+
+    protected function notifyMachineOnOffCkcTimeByMooId($mooId, $event, array $changedFields = [])
+    {
+        $row = $this->getMachineOnOffRowByMooId($mooId);
+        if (!$row) return false;
+        return $this->addMachineOnOffCkcTimeCallback($row, $event, $changedFields);
+    }
+
+    protected function getMachineOnOffTimeChangedFields(array $old, array $new): array
+    {
+        $fields = ['on_off_machine'];
+        $changed = [];
+        foreach ($fields as $field) {
+            if (!array_key_exists($field, $new)) continue;
+            if ($this->normalizeMachineOnOffConfigValue($old[$field] ?? '') !== $this->normalizeMachineOnOffConfigValue($new[$field] ?? '')) {
+                $changed[] = $field;
+            }
+        }
+        return $changed;
+    }
+
+    protected function normalizeMachineOnOffConfigValue($value): string
+    {
+        if (is_array($value)) {
+            ksort($value);
+            return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        $value = trim((string)$value);
+        if ($value === '') return '';
+        $decoded = json_decode($value, true);
+        if (is_array($decoded)) {
+            ksort($decoded);
+            return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        return $value;
     }
 
 }
