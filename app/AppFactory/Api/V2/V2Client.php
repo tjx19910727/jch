@@ -671,8 +671,7 @@ class V2Client extends V2BaseClient
         $check = $this->checkFlag($flag);
         if ($check) {
             if (isset($updateOrder['out_status']) && (int)$updateOrder['out_status'] === 4) {
-                // 第三方接口未更新，暂不触发移动售卖机门店直核销出货状态同步。
-                // $this->addOrderOutStatusCallback('success', array_merge($this->order, $updateOrder));
+                $this->addOrderOutStatusCallback('success', array_merge($this->order, $updateOrder));
             }
             $this->commitTrans();
             return $this->returnData(0,$this->lang("msg.0"));

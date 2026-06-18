@@ -89,8 +89,7 @@ class MachineOnOffClient extends ManagementClient
             $machine = $this->getMachineOnOffFind(['moo_id' => $postData['moo_id']],'machine_id')->toArray();
             $this->sendToMachine($machine,'updateMachineOnOff');
             if ($changedFields) {
-                // 第三方接口未更新，暂不触发移动售卖机设备开关机时间同步。
-                // $this->notifyMachineOnOffCkcTimeByMooId($postData['moo_id'], 'update', $changedFields);
+                $this->notifyMachineOnOffCkcTimeByMooId($postData['moo_id'], 'update', $changedFields);
             }
         }
         return $this->rU($result);
@@ -209,8 +208,7 @@ class MachineOnOffClient extends ManagementClient
                 $response = $this->checkTrans($result);
                 if ($result) {
                     foreach (array_unique($changedMooIds) as $mooId) {
-                        // 第三方接口未更新，暂不触发移动售卖机导入开关机时间同步。
-                        // $this->notifyMachineOnOffCkcTimeByMooId($mooId, 'import_on_off', ['on_off_machine']);
+                        $this->notifyMachineOnOffCkcTimeByMooId($mooId, 'import_on_off', ['on_off_machine']);
                     }
                 }
                 return $response;

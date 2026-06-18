@@ -795,7 +795,7 @@ trait MachineTrait
 
                 $mc = $this->getMachineChannelFind(
                     ['m_id' => $machineMId, 'channel_code' => $channelCode],
-                    'mc_id,m_id,channel_code,channel_position,stock,stock_warning'
+                    'mc_id,m_id,machine_id,channel_code,channel_position,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,stock_warning'
                 );
                 if (!$mc) {
                     actionLog(['m_id' => $machineMId, 'channel_code' => $channelCode], '远程出货未找到对应货道', 'remoteOutGoods');
@@ -815,11 +815,13 @@ trait MachineTrait
                     $updateFields[] = 'fail_quantity';
                 }
 
+                $changeValue = min(1, max(0, intval($mc['stock'])));
                 $newStock = max(0, intval($mc['stock']) - 1);
                 $flag[] = $this->updateMachineChannel([
                     'mc_id' => $mc['mc_id'],
                     'stock' => $newStock,
                 ]);
+                $this->addRemoteOutGoodsChange($mc, $changeValue);
                 if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
                 }
@@ -924,7 +926,7 @@ trait MachineTrait
 
                 $mc = $this->getMachineChannelFind(
                     ['m_id' => $machineMId, 'channel_code' => $channelCode],
-                    'mc_id,m_id,channel_code,stock,stock_warning'
+                    'mc_id,m_id,machine_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,stock_warning'
                 );
                 if (!$mc) {
                     actionLog(['m_id' => $machineMId, 'channel_code' => $channelCode], '无订单远程出货未找到对应货道', 'remoteOutGoods');
@@ -933,11 +935,13 @@ trait MachineTrait
                 }
                 $mc = is_object($mc) ? $mc->toArray() : $mc;
 
+                $changeValue = min(1, max(0, intval($mc['stock'])));
                 $newStock = max(0, intval($mc['stock']) - 1);
                 $flag[] = $this->updateMachineChannel([
                     'mc_id' => $mc['mc_id'],
                     'stock' => $newStock,
                 ]);
+                $this->addRemoteOutGoodsChange($mc, $changeValue);
                 if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
                 }
@@ -1017,6 +1021,55 @@ trait MachineTrait
         } catch (\Throwable $e) {
             actionException($e, 1, 'remoteOutGoods');
         }
+    }
+
+    protected function addRemoteOutGoodsChange(array $mc, $changeValue)
+    {
+        $changeValue = intval($changeValue);
+        if ($changeValue <= 0) {
+            return false;
+        }
+        if (!method_exists($this, 'addGoodsChange')) {
+            actionLog($mc, '远程出货缺少商品变化记录方法，跳过商品变化记录', 'remoteOutGoods');
+            return false;
+        }
+
+        $machine = $this->machine ?? [];
+        $machine = is_object($machine) ? $machine->toArray() : (array)$machine;
+        $machineMId = intval($machine['m_id'] ?? ($mc['m_id'] ?? 0));
+        if ($machineMId && (empty($machine['machine_id']) || empty($machine['machine_name']) || empty($machine['ao_id']))) {
+            $machineInfo = $this->getMachineFind(['m_id' => $machineMId], 'm_id,ao_id,machine_id,machine_name');
+            $machineInfo = is_object($machineInfo) ? $machineInfo->toArray() : (array)$machineInfo;
+            foreach ($machineInfo as $key => $value) {
+                if (!isset($machine[$key]) || $machine[$key] === '' || $machine[$key] === 0) {
+                    $machine[$key] = $value;
+                }
+            }
+        }
+
+        $insertGChange = [
+            "m_id" => $machineMId,
+            "machine_id" => $machine['machine_id'] ?? ($mc['machine_id'] ?? ''),
+            "machine_name" => $machine['machine_name'] ?? '',
+            "mc_id" => $mc['mc_id'],
+            "channel_code" => $mc['channel_code'],
+            "mg_id" => $mc['mg_id'] ?? 0,
+            "g_id" => $mc['g_id'] ?? 0,
+            "g_name" => $mc['g_name'] ?? "",
+            "gc_id" => $mc['gc_id'] ?? 0,
+            "gc_name" => $mc['gc_name'] ?? "",
+            "pic" => $mc['pic'] ?? "",
+            "sku" => $mc['sku'] ?? "",
+            "bar_code" => $mc['bar_code'] ?? "",
+            "ao_id" => $machine['ao_id'] ?? 0,
+            "change_value" => $changeValue,
+            "desc" => $this->lang("goodsChange.terminal_sale_dec_stock"),
+            "position" => 1,
+            "type" => 3,
+        ];
+        $changeId = $this->addGoodsChange($insertGChange);
+        actionLog(['change_id' => $changeId, 'data' => $insertGChange], '【SQL】远程出货添加商品变化数据', 'remoteOutGoods');
+        return $changeId;
     }
 
     protected function shouldSendRemoteOutGoodsUnderstockNotice($mc, $stock): bool
