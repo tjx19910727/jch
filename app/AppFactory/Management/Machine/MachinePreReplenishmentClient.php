@@ -112,8 +112,8 @@ class MachinePreReplenishmentClient extends ManagementClient
             $mId = $machine['m_id'];
             $machineId = $machine['machine_id'];
             // 库存比
-            $totalCapacity = MachineChannelModel::where('m_id', $mId)->where('status', '<>', 2)->sum('capacity');
-            $totalStock = MachineChannelModel::where('m_id', $mId)->where('status', '<>', 2)->sum('stock');
+            $totalCapacity = MachineChannelModel::where('m_id', $mId)->where('g_id', '>', 0)->where('status', '<>', 2)->sum('capacity');
+            $totalStock = MachineChannelModel::where('m_id', $mId)->where('g_id', '>', 0)->where('status', '<>', 2)->sum('stock');
             $stockRatio = '0%';
             if ($totalCapacity > 0) {
                 $ratio = bcdiv((string)$totalStock, (string)$totalCapacity, 4);
@@ -137,6 +137,8 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'machine_id' => $machineId,
                 'machine_name' => $machine['machine_name'],
                 'stock_ratio' => $stockRatio,
+                'total_capacity' => $totalCapacity,
+                'total_stock' => $totalStock,
                 'channels' => $channels,
             ];
         }
