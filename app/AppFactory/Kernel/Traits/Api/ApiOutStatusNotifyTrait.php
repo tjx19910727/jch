@@ -250,6 +250,7 @@ trait ApiOutStatusNotifyTrait
             'add' => '新增设备开关机营业时间',
             'update' => '修改设备开关机时间',
             'import_on_off' => '导入设备开关机时间',
+            'test' => '测试设备开关机时间同步',
         ];
         return $map[$event] ?? '设备开关机时间变更';
     }

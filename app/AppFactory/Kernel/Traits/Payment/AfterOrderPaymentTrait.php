@@ -200,7 +200,8 @@ trait AfterOrderPaymentTrait
             $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
             actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
-            $this->addOrderOutStatusCallback('ready');
+            // 第三方接口未更新，暂不触发移动售卖机订单出货状态同步。
+            // $this->addOrderOutStatusCallback('ready');
             return true;
         }
         return $this->r(100, $this->lang("VOutGoods.details_no_data"));

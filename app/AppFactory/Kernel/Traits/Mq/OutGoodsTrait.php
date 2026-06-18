@@ -490,10 +490,14 @@ trait OutGoodsTrait
     protected function handleOrderOutStatusCallback()
     {
         if ((int)$this->order['out_status'] === 4) {
-            return $this->addOrderOutStatusCallback('success');
+            // 第三方接口未更新，暂不触发移动售卖机订单出货成功同步。
+            // return $this->addOrderOutStatusCallback('success');
+            return false;
         }
         if ((int)$this->order['out_status'] === 5) {
-            return $this->addOrderOutStatusCallback('fail');
+            // 第三方接口未更新，暂不触发移动售卖机订单出货失败同步。
+            // return $this->addOrderOutStatusCallback('fail');
+            return false;
         }
         return false;
     }

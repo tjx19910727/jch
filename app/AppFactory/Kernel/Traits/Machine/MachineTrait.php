@@ -486,19 +486,33 @@ trait MachineTrait
             try {
                 $this->startTrans();
                 $nowStr = date("YmdHis");
+                $main = input('main') ?? [];
+                $outGoods = input('outGoods') ?? [];
+                $remoteOutGoodsItem = $this->extractFirstRemoteOutGoodsItem([
+                    'channel_code' => $channel_code,
+                    'channel_position' => input('channel_position') ?? 1,
+                    'quantity' => input('quantity') ?? 1,
+                    'is_gift' => input('is_gift') ?? 2,
+                    'out_port' => input('out_port') ?? 1,
+                    'main' => $main,
+                    'outGoods' => $outGoods,
+                ]);
+                if (!$channel_code) {
+                    $channel_code = $remoteOutGoodsItem['channel_code'] ?? '';
+                }
                 $payload = $this->buildRemoteOutGoodsPayload([
                     'machine_id' => $machine_id,
                     'order_id' => $nowStr,
-                    'sod_id' => $nowStr,
+                    'sod_id' => 0,
                     'goods_id' => intval(input('goods_id') ?? input('g_id') ?? 0),
                     'channel_code' => $channel_code,
                     'trade_no' => input('trade_no') ?: '',
-                    'main' => input('main') ?? [],
-                    'outGoods' => input('outGoods') ?? [],
-                    'quantity' => intval(input('quantity') ?? 1),
-                    'channel_position' => intval(input('channel_position') ?? 1),
-                    'is_gift' => intval(input('is_gift') ?? 2),
-                    'out_port' => intval(input('out_port') ?? 1),
+                    'main' => $main,
+                    'outGoods' => $outGoods,
+                    'quantity' => intval($remoteOutGoodsItem['quantity'] ?? input('quantity') ?? 1),
+                    'channel_position' => intval($remoteOutGoodsItem['channel_position'] ?? input('channel_position') ?? 1),
+                    'is_gift' => intval($remoteOutGoodsItem['is_gift'] ?? input('is_gift') ?? 2),
+                    'out_port' => intval($remoteOutGoodsItem['out_port'] ?? input('out_port') ?? 1),
                 ]);
                 $result = $this->sendRemoteOutGoodsWithLog($machine_id, $payload);
                 $this->commitTrans();
@@ -568,22 +582,29 @@ trait MachineTrait
     protected function buildRemoteOutGoodsPayload(array $data): array
     {
         $channelCode = trim((string)($data['channel_code'] ?? ''));
+        $remoteOutGoodsItem = $this->extractFirstRemoteOutGoodsItem($data);
+        if ($channelCode === '' && !empty($remoteOutGoodsItem['channel_code'])) {
+            $channelCode = $remoteOutGoodsItem['channel_code'];
+        }
         $quantity = intval($data['quantity'] ?? 1);
+        if ($quantity <= 0 && isset($remoteOutGoodsItem['quantity'])) {
+            $quantity = intval($remoteOutGoodsItem['quantity']);
+        }
         if ($quantity <= 0) {
             $quantity = 1;
         }
 
-        $outGoods = $data['outGoods'] ?? [];
+        $outGoods = $this->normalizeRemoteOutGoodsPayload($data['outGoods'] ?? []);
         if (!$outGoods && $channelCode !== '') {
-            $channelPosition = intval($data['channel_position'] ?? 1);
+            $channelPosition = intval($remoteOutGoodsItem['channel_position'] ?? $data['channel_position'] ?? 1);
             if ($channelPosition <= 0) {
                 $channelPosition = 1;
             }
             $outGoods[$channelPosition][] = [
                 'channel_code' => $channelCode,
                 'quantity' => $quantity,
-                'is_gift' => intval($data['is_gift'] ?? 2),
-                'out_port' => intval($data['out_port'] ?? 1),
+                'is_gift' => intval($remoteOutGoodsItem['is_gift'] ?? $data['is_gift'] ?? 2),
+                'out_port' => intval($remoteOutGoodsItem['out_port'] ?? $data['out_port'] ?? 1),
             ];
         }
 
@@ -597,6 +618,80 @@ trait MachineTrait
             'main' => $data['main'] ?? [],
             'outGoods' => $outGoods,
             'quantity' => $quantity,
+        ];
+    }
+
+    protected function normalizeRemoteOutGoodsPayload($value): array
+    {
+        if (is_string($value) && $value !== '') {
+            $value = json2arr($value);
+        }
+        if (!is_array($value)) {
+            return [];
+        }
+        return $value;
+    }
+
+    protected function extractFirstRemoteOutGoodsItem(array $data): array
+    {
+        $channelCode = trim((string)($data['channel_code'] ?? ''));
+        $channelPosition = intval($data['channel_position'] ?? 0);
+        $quantity = intval($data['quantity'] ?? 0);
+        $isGift = intval($data['is_gift'] ?? 0);
+        $outPort = intval($data['out_port'] ?? 0);
+
+        foreach (['outGoods', 'main'] as $field) {
+            $payload = $this->normalizeRemoteOutGoodsPayload($data[$field] ?? []);
+            if (isset($payload['channel_code'])) {
+                $payload = [intval($data['channel_position'] ?? 1) => [$payload]];
+            } elseif (isset($payload[0]) && is_array($payload[0]) && (isset($payload[0]['channel_code']) || isset($payload[0][0]))) {
+                $payload = [intval($data['channel_position'] ?? 1) => $payload];
+            }
+            foreach ($payload as $position => $items) {
+                if (!is_array($items)) {
+                    continue;
+                }
+                if (isset($items['channel_code']) || isset($items[0])) {
+                    $items = [$items];
+                }
+                foreach ($items as $item) {
+                    if (!is_array($item)) {
+                        continue;
+                    }
+                    if (!$channelPosition) {
+                        $channelPosition = intval($position);
+                    }
+                    if ($channelCode === '') {
+                        $channelCode = trim((string)($item['channel_code'] ?? ($item[0] ?? '')));
+                    }
+                    if ($quantity <= 0) {
+                        $quantity = intval($item['quantity'] ?? ($item['success_quantity'] ?? ($item[1] ?? 0)));
+                    }
+                    if ($isGift <= 0 && isset($item['is_gift'])) {
+                        $isGift = intval($item['is_gift']);
+                    }
+                    if ($outPort <= 0 && isset($item['out_port'])) {
+                        $outPort = intval($item['out_port']);
+                    }
+                    if ($channelCode !== '') {
+                        return [
+                            'channel_code' => $channelCode,
+                            'channel_position' => $channelPosition > 0 ? $channelPosition : 1,
+                            'quantity' => $quantity > 0 ? $quantity : 1,
+                            'is_gift' => $isGift > 0 ? $isGift : 2,
+                            'out_port' => $outPort > 0 ? $outPort : 1,
+                        ];
+                    }
+                }
+            }
+        }
+
+        return [
+            'channel_code' => $channelCode,
+            'channel_position' => $channelPosition > 0 ? $channelPosition : 1,
+            'quantity' => $quantity > 0 ? $quantity : 1,
+            'is_gift' => $isGift > 0 ? $isGift : 2,
+            'out_port' => $outPort > 0 ? $outPort : 1,
         ];
     }
 
@@ -641,11 +736,7 @@ trait MachineTrait
         $status = intval($this->message['status'] ?? 0);
         $sodId = intval($this->message['sod_id'] ?? 0);
         $logId = intval($this->message['log_id'] ?? 0);
-        $log = null;
-        if ($logId) {
-            $log = RemoteActionLogModel::getFind(['id' => $logId], 'id,machine_id,channel_code,status');
-            $log = is_object($log) ? $log->toArray() : $log;
-        }
+        [$logId, $log] = $this->resolveRemoteOutGoodsLog($logId, $sodId);
         if (!$sodId) {
             actionLog($this->message, "远程出货缺少sod_id", "remoteOutGoods");
             return $this->handleRemoteOutGoodsWithoutOrder($status, $logId, $log);
@@ -685,7 +776,11 @@ trait MachineTrait
             // 1-已发指令 2-设备已接收 20-不减库存 21-扣减库存 3-出货成功 4-出货失败
             // status=21/3/4 首次处理库存；status=4 正常扣库存，不恢复库存。
             if (in_array($status, [21, 3, 4], true) && !in_array($previousStatus, [21, 3, 4], true)) {
+                $remoteOutGoodsItem = $this->extractFirstRemoteOutGoodsItem($this->message);
                 $channelCode = $this->message['channel_code'] ?? ($log['channel_code'] ?? $detail['channel_code']);
+                if (!$channelCode) {
+                    $channelCode = $remoteOutGoodsItem['channel_code'] ?? '';
+                }
                 $machineMId = $this->machine['m_id'] ?? 0;
                 if (!$machineMId && !empty($log['machine_id'])) {
                     $machineInfo = $this->getMachineFind(['machine_id' => $log['machine_id']], 'm_id');
@@ -752,6 +847,43 @@ trait MachineTrait
         }
     }
 
+    protected function resolveRemoteOutGoodsLog($logId, $sodId): array
+    {
+        $logId = intval($logId);
+        $sodId = intval($sodId);
+        if (!$logId) {
+            $tradeNo = trim((string)($this->message['trade_no'] ?? ''));
+            if (strpos($tradeNo, 'remote_out_goods_') === 0) {
+                $logId = intval(str_replace('remote_out_goods_', '', $tradeNo));
+            }
+        }
+
+        $log = null;
+        if ($logId) {
+            $log = RemoteActionLogModel::getFind(['id' => $logId], 'id,machine_id,channel_code,status,sod_id');
+            $log = is_object($log) ? $log->toArray() : $log;
+        }
+
+        if (!$log && $sodId) {
+            $where = [
+                'type' => 'remoteOutGoods',
+                'sod_id' => $sodId,
+            ];
+            if (!empty($this->message['machine_id'])) {
+                $where['machine_id'] = $this->message['machine_id'];
+            } elseif (!empty($this->machine['machine_id'])) {
+                $where['machine_id'] = $this->machine['machine_id'];
+            }
+            $log = RemoteActionLogModel::getFind($where, 'id,machine_id,channel_code,status,sod_id', 'id desc');
+            $log = is_object($log) ? $log->toArray() : $log;
+            if ($log) {
+                $logId = intval($log['id'] ?? 0);
+            }
+        }
+
+        return [$logId, $log ?: null];
+    }
+
     protected function handleRemoteOutGoodsWithoutOrder($status, $logId, $log)
     {
         if (!$logId || !$log) {
@@ -765,14 +897,19 @@ trait MachineTrait
             $previousStatus = intval($log['status'] ?? 0);
             $flag = [];
             $understockNotice = null;
-            $flag[] = $this->updateRALog(
-                ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')],
-                ['id' => $logId],
-                ['status', 'operator_at']
-            );
+            $updateLog = ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')];
+            $updateLogFields = ['status', 'operator_at'];
 
             if (in_array($status, [21, 3, 4], true) && !in_array($previousStatus, [21, 3, 4], true)) {
+                $remoteOutGoodsItem = $this->extractFirstRemoteOutGoodsItem($this->message);
                 $channelCode = $this->message['channel_code'] ?? ($log['channel_code'] ?? '');
+                if (!$channelCode) {
+                    $channelCode = $remoteOutGoodsItem['channel_code'] ?? '';
+                }
+                if ($channelCode && empty($log['channel_code'])) {
+                    $updateLog['channel_code'] = $channelCode;
+                    $updateLogFields[] = 'channel_code';
+                }
                 $machineMId = $this->machine['m_id'] ?? 0;
                 if (!$machineMId && !empty($log['machine_id'])) {
                     $machineInfo = $this->getMachineFind(['machine_id' => $log['machine_id']], 'm_id');
@@ -806,6 +943,12 @@ trait MachineTrait
                 }
                 actionLog($this->getLS(), '【SQL】无订单远程出货修改货道', 'remoteOutGoods');
             }
+
+            $flag[] = $this->updateRALog(
+                $updateLog,
+                ['id' => $logId],
+                $updateLogFields
+            );
 
             $result = $this->checkFlag($flag);
             if (!$result) {
