@@ -12,13 +12,14 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 
 use app\AppFactory\Kernel\Support\Trip\Trip;
+use app\AppFactory\Kernel\Traits\Api\ApiOutStatusNotifyTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
 
 trait AfterOrderPaymentTrait
 {
-    use MachineChannelTrait,AuthManagerTrait, WcBaseTrait;
+    use MachineChannelTrait,AuthManagerTrait, WcBaseTrait, ApiOutStatusNotifyTrait;
 
     /**
      * 处理支付成功
@@ -199,6 +200,7 @@ trait AfterOrderPaymentTrait
             $result = $this->sendToMachine(['machine_id' => $this->order['machine_id']], 'outGoods', $content);
             actionLog(@obj2arr($result), 'AfterOrderPaymentTrait下发数据结果');
             $this->order['out_status'] = 2;
+            $this->addOrderOutStatusCallback('ready');
             return true;
         }
         return $this->r(100, $this->lang("VOutGoods.details_no_data"));

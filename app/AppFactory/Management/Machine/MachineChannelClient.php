@@ -561,18 +561,16 @@ class MachineChannelClient extends ManagementClient
      */
     public function exportMcSku($m_id, $hasCostPriceAuth = true)
     {
+        if (!$m_id) return $this->r(100,$this->lang("VMachineChannel.m_id_require"));
         $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
-        $field = "machine_id,sku,g_name,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock,retail_price,{$costPriceField}";
+        $field = "machine_id,sku,g_name,GROUP_CONCAT(channel_code ORDER BY channel_code SEPARATOR ',') channel_code,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock,retail_price,{$costPriceField}";
         $list = $this->getMachineChannelList(['m_id' => $m_id],0,$field,"","","sku");
         if ($list) {
             $list = $list->toArray();
             if ($list) {
-                $sku = array_column($list,'sku');
-                $machine_name = "";
+                $machine_name = $this->getMachineValue(['m_id' => $m_id],'machine_name');
                 foreach ($list as $key => $value) {
-                    if (!$machine_name) $machine_name = $this->getMachineValue(['m_id' => $m_id],'machine_name');
                     $value['machine_name'] = $machine_name;
-                    $value['channel_code'] = $this->getMachineChannelValue(['m_id' => $m_id,'sku' => $sku],'channel_code');
                     $list[$key] = $value;
                 }
                 $title = [
