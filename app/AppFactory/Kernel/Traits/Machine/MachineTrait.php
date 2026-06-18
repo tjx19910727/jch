@@ -820,7 +820,7 @@ trait MachineTrait
                     'mc_id' => $mc['mc_id'],
                     'stock' => $newStock,
                 ]);
-                if ($newStock === 0) {
+                if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
                 }
                 actionLog($this->getLS(), '【SQL】远程出货(status=21/3/4)修改货道', 'remoteOutGoods');
@@ -938,7 +938,7 @@ trait MachineTrait
                     'mc_id' => $mc['mc_id'],
                     'stock' => $newStock,
                 ]);
-                if ($newStock === 0) {
+                if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
                 }
                 actionLog($this->getLS(), '【SQL】无订单远程出货修改货道', 'remoteOutGoods');
@@ -970,16 +970,18 @@ trait MachineTrait
 
     protected function sendRemoteOutGoodsUnderstockNotice($machine, $mc, $stock)
     {
-        if (intval($stock) !== 0) {
+        $machine = is_object($machine) ? $machine->toArray() : (array) $machine;
+        $mc = is_object($mc) ? $mc->toArray() : (array) $mc;
+        $stock = intval($stock);
+        $stockWarning = intval($mc['stock_warning'] ?? 0);
+        if ($stock > $stockWarning) {
             return;
         }
 
         try {
-            $machine = is_object($machine) ? $machine->toArray() : (array) $machine;
-            $mc = is_object($mc) ? $mc->toArray() : (array) $mc;
             $machineMId = intval($machine['m_id'] ?? ($mc['m_id'] ?? 0));
             if (!$machineMId) {
-                actionLog(['machine' => $machine, 'mc' => $mc], '远程出货库存为0缺少设备信息，跳过商品不足公众号通知', 'remoteOutGoods');
+                actionLog(['machine' => $machine, 'mc' => $mc], '远程出货库存达到预警缺少设备信息，跳过商品不足公众号通知', 'remoteOutGoods');
                 return;
             }
 
@@ -988,7 +990,7 @@ trait MachineTrait
                 $machine = is_object($machineInfo) ? $machineInfo->toArray() : (array) $machineInfo;
             }
             if (empty($machine['ao_id'])) {
-                actionLog(['m_id' => $machineMId], '远程出货库存为0缺少组织信息，跳过商品不足公众号通知', 'remoteOutGoods');
+                actionLog(['m_id' => $machineMId], '远程出货库存达到预警缺少组织信息，跳过商品不足公众号通知', 'remoteOutGoods');
                 return;
             }
 
@@ -1001,20 +1003,26 @@ trait MachineTrait
                 "replaceData" => [
                     "machine_id" => $machine['machine_id'] ?? '',
                     "machine_name" => $machine['machine_name'] ?? '',
-                    "stock" => intval($stock),
+                    "stock" => $stock,
                     "channel_code" => $mc['channel_code'] ?? '',
-                    "stock_warning" => $mc['stock_warning'] ?? 0,
+                    "stock_warning" => $stockWarning,
                     "error_code" => $this->lang("deviceErrorCode.".$errorCode),
                     "error_time" => date('Y-m-d H:i:s'),
                     "error_info" => $mc['channel_code'] ?? '',
                 ],
             ];
-            actionLog($noticeData, '远程出货库存为0发送商品不足公众号通知', 'remoteOutGoods');
+            actionLog($noticeData, '远程出货库存达到预警发送商品不足公众号通知', 'remoteOutGoods');
             $result = AppFactory::notice($noticeData)->weChat->send();
-            actionLog($result, '远程出货库存为0发送商品不足公众号通知结果', 'remoteOutGoods');
+            actionLog($result, '远程出货库存达到预警发送商品不足公众号通知结果', 'remoteOutGoods');
         } catch (\Throwable $e) {
             actionException($e, 1, 'remoteOutGoods');
         }
+    }
+
+    protected function shouldSendRemoteOutGoodsUnderstockNotice($mc, $stock): bool
+    {
+        $mc = is_object($mc) ? $mc->toArray() : (array) $mc;
+        return intval($stock) <= intval($mc['stock_warning'] ?? 0);
     }
 
     /**
