@@ -17,6 +17,8 @@ use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\TimeTask\TimeTaskBase;
+use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
+use think\facade\Cache;
 
 class GoodsClient extends TimeTaskBase
 {
@@ -245,5 +247,86 @@ class GoodsClient extends TimeTaskBase
                 actionLog($result,$value['machine_id'] . "货架【" . $value['mc_id'] . '】更新发送数据结果','synchronizationMachineChannel');
             }
         }
+    }
+
+    /**
+     * 检查货道商品过期/快到期提醒
+     * 每天执行一次，每个货道每天只发一次通知
+     * php think time_task goods checkGoodsExpiry
+     */
+    public function checkGoodsExpiry()
+    {
+        $today = date('Ymd');
+        $now = time();
+        $tomorrowStart = strtotime('tomorrow');
+
+        // 货道表连商品表，筛选 expire_time>0 且 goods.expire_notice>0 的货道
+        $expireList = MachineChannelModel::alias('mc')
+            ->join('goods g', 'g.g_id = mc.g_id', 'left')
+            ->where('mc.expire_time', '>', 0)
+            ->where('mc.g_id', '>', 0)
+            ->where('g.expire_notice', '>', 0)
+            ->field('mc.mc_id,mc.m_id,mc.machine_id,mc.channel_code,mc.g_id,mc.g_name,mc.expire_time,g.expire_notice')
+            ->select();
+
+        if (!$expireList || count($expireList) === 0) {
+            return '无过期时间数据';
+        }
+        $expireList = $expireList->toArray();
+
+        $sendCount = 0;
+        foreach ($expireList as $mc) {
+            $cacheKey = 'goods_expiry_notice:' . $mc['mc_id'] . ':' . $today;
+            if (Cache::get($cacheKey)) {
+                continue;
+            }
+
+            $isExpired = $mc['expire_time'] < $now;
+            $isNearExpiry = !$isExpired && ($mc['expire_time'] - $mc['expire_notice'] * 86400) < $now;
+
+            if (!$isExpired && !$isNearExpiry) {
+                continue;
+            }
+
+            $machineName = $this->getMachineValue(['m_id' => $mc['m_id']], 'machine_name') ?? $mc['machine_id'];
+            $aoId = $this->getMachineValue(['m_id' => $mc['m_id']], 'ao_id') ?? 0;
+
+            if ($isExpired) {
+                $errorCode = '货道商品已过期';
+                $errorInfo = 11102012;
+                $exceptionDeclaration = '货道商品已过期，请及时处理';
+            } else {
+                $remainDays = ceil(($mc['expire_time'] - $now) / 86400);
+                $errorCode = '货道商品即将过期';
+                $errorInfo = 11102013;
+                $exceptionDeclaration = "货道商品将于{$remainDays}天后过期";
+            }
+
+            $this->noticeSendData = [
+                'ao_id'        => $aoId,
+                'm_id'         => $mc['m_id'],
+                'templateType' => 'mFault',
+                'replaceData'  => [
+                    'errorCode'             => $errorCode,
+                    'error_code'            => $errorCode,
+                    'error_time'            => date('Y-m-d H:i:s'),
+                    'error_info'            => $errorInfo,
+                    'date'                  => date('Y年m月d日'),
+                    'exceptionDeclaration'  => $exceptionDeclaration,
+                    'machine_id'            => $mc['machine_id'],
+                    'machine_name'          => mb_substr($machineName, 0, 20, 'UTF-8'),
+                    'channel_code'          => $mc['channel_code'],
+                    'g_name'                => $mc['g_name'],
+                ],
+            ];
+
+            $this->noticeSend();
+            Cache::set($cacheKey, 1, $tomorrowStart - $now);
+            $sendCount++;
+
+            actionLog($mc, $isExpired ? '发送过期通知' : '发送快到期通知', 'checkGoodsExpiry');
+        }
+
+        return "处理完成，发送通知数：{$sendCount}";
     }
 }

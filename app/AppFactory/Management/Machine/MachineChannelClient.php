@@ -493,6 +493,20 @@ class MachineChannelClient extends ManagementClient
                 $this->addGoodsChange($insertGc);
             }
         }
+        if (!empty($postData['manufacture_time'])) {
+            $exp_arr = explode(" ",$postData['manufacture_time']);
+            $postData['manufacture_time'] = strtotime($exp_arr[0] . ' 23:59:59');
+        }
+        //如果有传入生产日期，expire_time根据生产日期和商品表的保质期自动计算得出
+        if (isset($postData['manufacture_time']) && $postData['manufacture_time'] > 0 && isset($postData['g_id']) && $postData['g_id'] > 0) {
+            $shelfLife = $this->getGoodsValue(['g_id' => $postData['g_id']], 'sell_by_date');
+            if ($shelfLife) {
+                $postData['expire_time'] = $postData['manufacture_time'] + $shelfLife * 86400;
+            } else {
+                $postData['expire_time'] = 0;
+            }
+        }
+
         $result = $this->updateMachineChannel($postData);
         if ($result) {
             // 发送触发货道更新数据,如果是边柜货道不发送
@@ -652,6 +666,11 @@ class MachineChannelClient extends ManagementClient
         //把货道的channel_position设置成设备相同的vending_machine_type
         $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
         $list = $list->toArray();
+        foreach ($list as $key => $value) {
+            $value['manufacture_time'] = $value['manufacture_time'] ? date("Y-m-d", $value['manufacture_time']) : '';
+            $value['gift_points'] = round($value['gift_points']);
+            $list[$key] = $value;
+        }
         // foreach ($list as $key => &$value) {
         //     if (!isset($value['channel_code'])) {
         //         continue;
@@ -691,6 +710,10 @@ class MachineChannelClient extends ManagementClient
         }
         if(isset($postData['stock_warning'])){
             $updateData['stock_warning'] = $postData['stock_warning'] < 0 ? 0 : $postData['stock_warning'];
+        }
+        if(!empty($postData['expire_time'])){
+            $exp_arr = explode(" ",$postData['expire_time']);
+            $updateData['expire_time'] = strtotime($exp_arr[0] . ' 23:59:59');
         }
         if (!$updateData) return $this->r(100, $this->lang("action_fail"));
 
@@ -835,5 +858,14 @@ class MachineChannelClient extends ManagementClient
             'mc_id' => intval($mc['mc_id']),
             'channel_code' => $mc['channel_code'],
         ]);
+    }
+
+    public function getMcFind($where,$field = '*')
+    {
+        $mc = $this->getMachineChannelFind($where,$field);
+        if (!$mc) return $this->r(100,$this->lang("VMachineChannel.mc_no_data"));
+        $mc['manufacture_time'] = $mc['manufacture_time'] ? date("Y-m-d",$mc['manufacture_time']) : '';
+        $mc['gift_points'] = round($mc['gift_points'] ?? 0);
+        return $this->r(200,'success',$mc);
     }
 }

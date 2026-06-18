@@ -810,8 +810,8 @@ class ApiClient extends ReceiveBaseClient
             }
             if (!$this->data['g_id']) {
                 $mc['batch_number'] = "";
-                $mc['manufacture_time'] = "";
-                $mc['sell_by_date'] = "";
+                $mc['manufacture_time'] = 0;
+                $mc['sell_by_date'] = 0;
                 $mc['frozen_stock'] = 0;
                 $mc['update_price'] = 2;
             }
