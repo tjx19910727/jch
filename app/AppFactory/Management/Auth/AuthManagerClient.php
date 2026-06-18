@@ -14,6 +14,8 @@ use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Management\ManagementClient;
 use app\AppFactory\Kernel\Traits\Auth\AuthWithdrawRequestTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgRevenueTrait;
+use app\AppFactory\Kernel\Model\Auth\AuthManagerRoleModel;
+use app\AppFactory\Kernel\Model\Auth\AuthManagerMachineModel;
 use think\facade\Db;
 
 class AuthManagerClient extends ManagementClient
@@ -117,6 +119,121 @@ class AuthManagerClient extends ManagementClient
             // TODO: 通过后执行实际打款/记录流水（此处只记录状态，具体出款留给业务侧）
         }
         return $res;
+    }
+
+    /**
+     * 导出账户列表（队列方式）
+     * @param array $where 查询条件
+     * @return array
+     */
+    public function exportAccount($where)
+    {
+        $field = "au.manager_id,au.nickname,au.account,au.pid,au.openid,au.bill_account,au.real_name,au.sex,au.status,au.ao_id,au.wx_notice,au.email_notice,au.email,ao.organization_name";
+        $list = $this->getAuthManagerList($where, 0, $field, '');
+        if ($list) {
+            $list = $list->toArray();
+        } else {
+            $list = [];
+        }
+        if (empty($list)) {
+            return $this->rFail('没有需要导出的数据');
+        }
+
+        $managerIds = array_column($list, 'manager_id');
+        $pids = array_unique(array_filter(array_column($list, 'pid')));
+
+        // 批量查询归属上级昵称
+        $parentNames = [];
+        if ($pids) {
+            $parents = $this->getAuthManagerList([['manager_id', 'in', $pids]], 0, 'manager_id,nickname');
+            if ($parents) {
+                foreach ($parents as $p) {
+                    $parentNames[$p['manager_id']] = $p['nickname'];
+                }
+            }
+        }
+
+        // 批量查询角色名称
+        $roleNameMap = [];
+        if ($managerIds) {
+            $roleRows = AuthManagerRoleModel::getJoinRoleList([['mr.manager_id', 'in', $managerIds], 'is_del' => 2], 0, 'mr.manager_id,ar.name');
+            if ($roleRows) {
+                foreach ($roleRows as $r) {
+                    $roleNameMap[$r['manager_id']][] = $r['name'];
+                }
+            }
+        }
+
+        // 批量查询管理的设备数
+        $machineCountMap = [];
+        if ($managerIds) {
+            $machineRows = AuthManagerMachineModel::where('manager_id', 'in', $managerIds)
+                ->field('manager_id,count(*) as cnt')
+                ->group('manager_id')
+                ->select();
+            if ($machineRows) {
+                foreach ($machineRows as $m) {
+                    $machineCountMap[$m['manager_id']] = $m['cnt'];
+                }
+            }
+        }
+
+        $sexMap = [1 => '保密', 2 => '男', 3 => '女'];
+        $statusMap = [1 => '启用', 2 => '禁用'];
+        $noticeTypeMap = [
+            'online'     => '上线通知',
+            'offline'    => '离线通知',
+            'fault'      => '故障通知',
+            'understock' => '库存不足通知',
+            'sale'       => '销售通知',
+            'tException' => '交易异常',
+            'mFault'     => '机械故障',
+        ];
+
+        $title = ['账户名称', '登录账户', '真实姓名', '管理的设备数', '用户微信', '归属上级', '用户性别', '分润账户', '状态', '归属组织', '所属权限', '邮箱地址', '微信通知', '邮件通知'];
+        $rows = [];
+        foreach ($list as $row) {
+            $rows[] = [
+                $row['nickname'] ?? '',
+                $row['account'] ?? '',
+                $row['real_name'] ?? '',
+                $machineCountMap[$row['manager_id']] ?? 0,
+                $row['openid'] ?? '',
+                $parentNames[$row['pid']] ?? '',
+                $sexMap[$row['sex']] ?? '保密',
+                $row['bill_account'] ?? '',
+                $statusMap[$row['status']] ?? '禁用',
+                $row['organization_name'] ?? '',
+                isset($roleNameMap[$row['manager_id']]) ? implode(',', $roleNameMap[$row['manager_id']]) : '',
+                $row['email'] ?? '',
+                $this->formatNoticeTypes($row['wx_notice'] ?? '', $noticeTypeMap),
+                $this->formatNoticeTypes($row['email_notice'] ?? '', $noticeTypeMap),
+            ];
+        }
+
+        return $this->sendToExport('management', '账户列表_' . date('YmdHis'), $title, $rows);
+    }
+
+    /**
+     * 将通知类型编码转为中文名称
+     * @param string $noticeStr 逗号分隔的编码，如 "online,offline"
+     * @param array $map 编码到中文的映射
+     * @return string
+     */
+    private function formatNoticeTypes($noticeStr, $map)
+    {
+        if ($noticeStr === '') {
+            return '';
+        }
+        $codes = explode(',', $noticeStr);
+        $names = [];
+        foreach ($codes as $code) {
+            $code = trim($code);
+            if (isset($map[$code])) {
+                $names[] = $map[$code];
+            }
+        }
+        return implode(',', $names);
     }
 
     /**
