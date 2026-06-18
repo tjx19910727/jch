@@ -1,0 +1,662 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "巡检人员后台接口",
+    "version": "1.0.0",
+    "description": "巡检人员后台增删改查与导出接口。巡检账号 staff_code 支持手动输入首位非0的6位数字；新增时不传 staff_code 则由系统自动生成。"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}",
+      "description": "Apifox 环境变量 baseUrl"
+    }
+  ],
+  "tags": [
+    {
+      "name": "巡检人员管理",
+      "description": "后台巡检人员账号资料维护"
+    }
+  ],
+  "paths": {
+    "/management/inspection.inspection_staff/getList": {
+      "post": {
+        "tags": [
+          "巡检人员管理"
+        ],
+        "summary": "查询巡检人员列表",
+        "operationId": "getInspectionStaffList",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectionStaffListRequest"
+              },
+              "examples": {
+                "search": {
+                  "summary": "按账号、姓名、手机号筛选",
+                  "value": {
+                    "pageNum": 20,
+                    "staff_code": "123",
+                    "account_name": "张三",
+                    "mobile": "138",
+                    "status": 1,
+                    "expire_time": "2026-06-01 00:00:00~2026-12-31 23:59:59"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedInspectionStaffResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/inspection.inspection_staff/getFind": {
+      "post": {
+        "tags": [
+          "巡检人员管理"
+        ],
+        "summary": "查询单个巡检人员",
+        "operationId": "getInspectionStaffFind",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectionStaffFindRequest"
+              },
+              "example": {
+                "staff_id": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InspectionStaffDetailResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/inspection.inspection_staff/add": {
+      "post": {
+        "tags": [
+          "巡检人员管理"
+        ],
+        "summary": "新增巡检人员",
+        "description": "staff_code 可不传；不传或传空时系统自动生成首位非0的6位数字。手动传入时必须为首位非0的6位数字，且全局唯一。",
+        "operationId": "addInspectionStaff",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectionStaffAddRequest"
+              },
+              "examples": {
+                "auto_code": {
+                  "summary": "系统自动生成巡检账号",
+                  "value": {
+                    "account_name": "张三",
+                    "mobile": "13800138000",
+                    "contact_address": "广东省深圳市南山区",
+                    "expire_time": "2026-12-31 23:59:59",
+                    "ao_id": 1,
+                    "status": 1,
+                    "remark": "夜间巡检"
+                  }
+                },
+                "manual_code": {
+                  "summary": "手动指定巡检账号",
+                  "value": {
+                    "staff_code": "123456",
+                    "account_name": "李四",
+                    "mobile": "13900139000",
+                    "contact_address": "广东省广州市天河区",
+                    "expire_time": 1798732799,
+                    "status": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新增成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/inspection.inspection_staff/update": {
+      "post": {
+        "tags": [
+          "巡检人员管理"
+        ],
+        "summary": "修改巡检人员",
+        "operationId": "updateInspectionStaff",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectionStaffUpdateRequest"
+              },
+              "example": {
+                "staff_id": 1,
+                "staff_code": "234567",
+                "account_name": "张三",
+                "mobile": "13800138000",
+                "contact_address": "广东省深圳市福田区",
+                "expire_time": "2027-12-31 23:59:59",
+                "status": 1,
+                "remark": "巡检范围调整"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "修改成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/inspection.inspection_staff/del": {
+      "post": {
+        "tags": [
+          "巡检人员管理"
+        ],
+        "summary": "删除巡检人员",
+        "operationId": "deleteInspectionStaff",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectionStaffDeleteRequest"
+              },
+              "example": {
+                "staff_id": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/inspection.inspection_staff/export": {
+      "post": {
+        "tags": [
+          "巡检人员管理"
+        ],
+        "summary": "导出巡检人员列表",
+        "description": "筛选条件与列表接口一致。提交成功后生成导出任务，前端到导出记录中查看文件。",
+        "operationId": "exportInspectionStaff",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InspectionStaffListRequest"
+              },
+              "example": {
+                "account_name": "张三",
+                "status": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "导出任务已提交",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                },
+                "example": {
+                  "state": 200,
+                  "msg": "数据导出中",
+                  "data": []
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "TokenHeader": {
+        "name": "token",
+        "in": "header",
+        "required": true,
+        "description": "后台登录令牌",
+        "schema": {
+          "type": "string"
+        },
+        "example": "{{token}}"
+      }
+    },
+    "schemas": {
+      "InspectionStaffListRequest": {
+        "type": "object",
+        "properties": {
+          "pageNum": {
+            "type": "integer",
+            "description": "分页条数；不传或0表示不分页",
+            "example": 20
+          },
+          "staff_id": {
+            "type": "integer",
+            "description": "巡检人员ID"
+          },
+          "staff_code": {
+            "type": "string",
+            "description": "巡检账号，支持模糊查询"
+          },
+          "account_name": {
+            "type": "string",
+            "description": "账户名，支持模糊查询"
+          },
+          "mobile": {
+            "type": "string",
+            "description": "手机号，支持模糊查询"
+          },
+          "contact_address": {
+            "type": "string",
+            "description": "联系地址，支持模糊查询"
+          },
+          "ao_id": {
+            "type": "integer",
+            "description": "所属组织ID"
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态：1启用，2禁用",
+            "enum": [
+              1,
+              2
+            ]
+          },
+          "expire_time": {
+            "type": "string",
+            "description": "过期时间范围，格式：开始时间~结束时间",
+            "example": "2026-06-01 00:00:00~2026-12-31 23:59:59"
+          }
+        }
+      },
+      "InspectionStaffFindRequest": {
+        "type": "object",
+        "required": [
+          "staff_id"
+        ],
+        "properties": {
+          "staff_id": {
+            "type": "integer",
+            "description": "巡检人员ID",
+            "example": 1
+          }
+        }
+      },
+      "InspectionStaffAddRequest": {
+        "type": "object",
+        "required": [
+          "account_name",
+          "expire_time"
+        ],
+        "properties": {
+          "staff_code": {
+            "type": "string",
+            "description": "巡检账号，首位非0的6位数字；不传或空字符串时系统自动生成",
+            "pattern": "^[1-9][0-9]{5}$",
+            "example": "123456"
+          },
+          "account_name": {
+            "type": "string",
+            "description": "账户名",
+            "example": "张三"
+          },
+          "mobile": {
+            "type": "string",
+            "description": "手机号",
+            "example": "13800138000"
+          },
+          "contact_address": {
+            "type": "string",
+            "description": "联系地址",
+            "example": "广东省深圳市南山区"
+          },
+          "expire_time": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "过期时间，支持时间戳或可被 strtotime 解析的时间字符串",
+            "example": "2026-12-31 23:59:59"
+          },
+          "ao_id": {
+            "type": "integer",
+            "description": "所属组织ID；不传默认当前登录账号所属组织",
+            "example": 1
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态：1启用，2禁用；不传默认1",
+            "enum": [
+              1,
+              2
+            ],
+            "example": 1
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注",
+            "example": "夜间巡检"
+          }
+        }
+      },
+      "InspectionStaffUpdateRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/InspectionStaffAddRequest"
+          },
+          {
+            "type": "object",
+            "required": [
+              "staff_id"
+            ],
+            "properties": {
+              "staff_id": {
+                "type": "integer",
+                "description": "巡检人员ID",
+                "example": 1
+              }
+            }
+          }
+        ]
+      },
+      "InspectionStaffDeleteRequest": {
+        "type": "object",
+        "required": [
+          "staff_id"
+        ],
+        "properties": {
+          "staff_id": {
+            "type": "integer",
+            "description": "巡检人员ID",
+            "example": 1
+          }
+        }
+      },
+      "InspectionStaff": {
+        "type": "object",
+        "properties": {
+          "staff_id": {
+            "type": "integer",
+            "description": "巡检人员ID",
+            "example": 1
+          },
+          "staff_code": {
+            "type": "string",
+            "description": "巡检账号",
+            "example": "123456"
+          },
+          "account_name": {
+            "type": "string",
+            "description": "账户名",
+            "example": "张三"
+          },
+          "mobile": {
+            "type": "string",
+            "description": "手机号",
+            "example": "13800138000"
+          },
+          "contact_address": {
+            "type": "string",
+            "description": "联系地址",
+            "example": "广东省深圳市南山区"
+          },
+          "expire_time": {
+            "type": "integer",
+            "description": "过期时间戳",
+            "example": 1798732799
+          },
+          "expire_time_text": {
+            "type": "string",
+            "description": "过期时间文本",
+            "example": "2026-12-31 23:59:59"
+          },
+          "ao_id": {
+            "type": "integer",
+            "description": "所属组织ID",
+            "example": 1
+          },
+          "organization_name": {
+            "type": "string",
+            "description": "所属组织名称"
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态：1启用，2禁用",
+            "example": 1
+          },
+          "status_text": {
+            "type": "string",
+            "description": "状态文本",
+            "example": "启用"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注"
+          },
+          "creator": {
+            "type": "integer",
+            "description": "创建人ID"
+          },
+          "creator_nickname": {
+            "type": "string",
+            "description": "创建人昵称"
+          },
+          "update_id": {
+            "type": "integer",
+            "description": "更新人ID"
+          },
+          "create_time": {
+            "type": "integer",
+            "description": "创建时间戳"
+          },
+          "create_time_text": {
+            "type": "string",
+            "description": "创建时间文本"
+          },
+          "update_time": {
+            "type": "integer",
+            "description": "更新时间戳"
+          },
+          "update_time_text": {
+            "type": "string",
+            "description": "更新时间文本"
+          }
+        }
+      },
+      "BaseResponse": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "integer",
+            "example": 200
+          },
+          "msg": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "description": "业务数据",
+            "nullable": true
+          }
+        }
+      },
+      "IdResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "integer",
+                "description": "新增巡检人员ID",
+                "example": 1
+              }
+            }
+          }
+        ]
+      },
+      "InspectionStaffDetailResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/InspectionStaff"
+              }
+            }
+          }
+        ]
+      },
+      "PaginatedInspectionStaffResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BaseResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "oneOf": [
+                  {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/InspectionStaff"
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/InspectionStaff"
+                        }
+                      },
+                      "total": {
+                        "type": "integer",
+                        "description": "总数"
+                      },
+                      "per_page": {
+                        "type": "integer",
+                        "description": "每页条数"
+                      },
+                      "current_page": {
+                        "type": "integer",
+                        "description": "当前页"
+                      },
+                      "last_page": {
+                        "type": "integer",
+                        "description": "总页数"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

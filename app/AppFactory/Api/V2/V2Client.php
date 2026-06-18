@@ -670,6 +670,9 @@ class V2Client extends V2BaseClient
         actionLog($flag,'事务处理');
         $check = $this->checkFlag($flag);
         if ($check) {
+            if (isset($updateOrder['out_status']) && (int)$updateOrder['out_status'] === 4) {
+                $this->addOrderOutStatusCallback('success', array_merge($this->order, $updateOrder));
+            }
             $this->commitTrans();
             return $this->returnData(0,$this->lang("msg.0"));
         }

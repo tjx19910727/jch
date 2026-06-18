@@ -22,6 +22,7 @@ use app\AppFactory\Kernel\Providers\Management\ExportProvider;
 use app\AppFactory\Kernel\Providers\Management\GoodsProvider;
 use app\AppFactory\Kernel\Providers\Management\HotelProvider;
 use app\AppFactory\Kernel\Providers\Management\IndexProvider;
+use app\AppFactory\Kernel\Providers\Management\InspectionProvider;
 use app\AppFactory\Kernel\Providers\Management\LoginProvider;
 use app\AppFactory\Kernel\Providers\Management\MachineProvider;
 use app\AppFactory\Kernel\Providers\Management\MicroMallProvider;
@@ -96,6 +97,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Goods\GoodsMultipleClient              $goodsMultiple          组合商品
  *
  * @property Hotel\HotelClient                      $hotel                  携程酒店
+ * @property Inspection\InspectionStaffClient       $inspectionStaff        巡检人员
  *
  * @property Machine\MachineChannelClient           $machineChannel         设备货道
  * @property Machine\MachineChannelStockClient      $machineChannelStock    库存报表-分时段,暂时废弃
@@ -184,6 +186,7 @@ class Application extends ServiceContainer
         ExportProvider::class,
         LoginProvider::class,
         HotelProvider::class,
+        InspectionProvider::class,
         MachineProvider::class,
         MicroMallProvider::class,
         GoodsProvider::class,

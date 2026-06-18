@@ -1194,6 +1194,20 @@ class Receive extends Common
     }
 
     /**
+     * 校验巡检人员账号是否存在
+     * @return array|string
+     */
+    public function checkInspectionStaffCode()
+    {
+        try {
+            return $this->app->api->checkInspectionStaffCode();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 提交检查清单记录
      * @return array|string
      */

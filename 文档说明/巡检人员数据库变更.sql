@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS `inspection_staff` (
+  `staff_id` int NOT NULL AUTO_INCREMENT COMMENT '巡检人员ID',
+  `staff_code` char(6) NOT NULL COMMENT '巡检账号，6位数字且首位非0',
+  `account_name` varchar(100) NOT NULL COMMENT '账户名',
+  `mobile` varchar(20) DEFAULT NULL COMMENT '手机号',
+  `contact_address` varchar(255) DEFAULT NULL COMMENT '联系地址',
+  `expire_time` int NOT NULL DEFAULT 0 COMMENT '过期时间',
+  `ao_id` int NOT NULL DEFAULT 0 COMMENT '所属组织ID',
+  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态：1启用，2禁用',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `creator` int NOT NULL DEFAULT 0 COMMENT '创建人',
+  `update_id` int NOT NULL DEFAULT 0 COMMENT '更新人',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  `update_time` int DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`staff_id`),
+  UNIQUE KEY `uk_staff_code` (`staff_code`),
+  KEY `idx_mobile` (`mobile`),
+  KEY `idx_ao_status` (`ao_id`, `status`),
+  KEY `idx_expire_time` (`expire_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='巡检人员表';
