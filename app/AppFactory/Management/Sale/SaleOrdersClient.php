@@ -1549,6 +1549,7 @@ class SaleOrdersClient extends ManagementClient
         );
         if (!$mc) return $this->rFail('未找到对应货道');
         $mc = is_object($mc) ? $mc->toArray() : $mc;
+        if (intval($mc['stock']) <= 0) return $this->rFail('货道库存不足');
 
         $quantity = intval($sod['quantity']);
         if ($quantity <= 0) $quantity = 1;
