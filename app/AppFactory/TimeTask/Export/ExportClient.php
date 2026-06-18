@@ -64,6 +64,51 @@ class ExportClient extends TimeTaskBase
     }
 
     /**
+     * 多Sheet导出Excel
+     * @param $data
+     * @return bool
+     */
+    public function makeMultiSheetExcel($data)
+    {
+        $exportId = 0;
+        try {
+            $data = json2arr($data);
+            if ($data) {
+                $exportId = intval($data['export_id'] ?? 0);
+                $sheets = $data['sheets'] ?? [];
+                $sheetCount = is_array($sheets) ? count($sheets) : 0;
+                actionLog([
+                    'export_id' => $exportId,
+                    'filename' => $data['filename'] ?? '',
+                    'sheet_count' => $sheetCount,
+                ], '多Sheet导出Excel的数据摘要');
+                $data['filename'] = $data['filename'] . date('His');
+                $result = Excel::exportMultiSheetExcel($sheets, $data['filename']);
+                $updateEL = [
+                    'export_id' => $exportId,
+                    'file_name' => $data['filename'],
+                    'file_path' => $result,
+                    'export_time' => time(),
+                    'status' => 2,
+                ];
+                $this->updateExportLog($updateEL);
+                return true;
+            }
+        } catch (\PHPExcel_Writer_Exception $e) {
+            actionException($e, 1);
+            if ($exportId) $this->updateExportLog(['export_id' => $exportId, 'status' => 4]);
+        } catch (\PHPExcel_Exception $e) {
+            actionException($e, 1);
+            if ($exportId) $this->updateExportLog(['export_id' => $exportId, 'status' => 4]);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            if ($exportId) $this->updateExportLog(['export_id' => $exportId, 'status' => 4]);
+        }
+        @actionLog($this->getLS(), "【SQL】修改导出记录");
+        return false;
+    }
+
+    /**
      * 根据筛选条件生成销售订单Excel，避免接口侧查询全量数据和传递超大MQ消息。
      * @param $data
      * @return bool

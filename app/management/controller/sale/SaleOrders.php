@@ -938,4 +938,15 @@ class SaleOrders extends Common
 
         return returnData($result);
     }
+
+    /**
+     * 手动扣库存
+     * 传入sod_id，校验条件后手动扣减货道库存并更新子订单success_quantity=1
+     * @return array|string
+     */
+    public function stockDeduction()
+    {
+        return $this->app->saleOrders->manualDeductStock(input());
+    }
+
 }

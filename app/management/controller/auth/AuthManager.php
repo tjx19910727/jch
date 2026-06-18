@@ -322,6 +322,20 @@ class AuthManager extends Common
     }
 
     /**
+     * 导出账户列表（返回CSV字符串，前端可以下载）
+     */
+    public function exportAccount()
+    {
+        $postData = input();
+        $where = $this->getWhere($postData, false, ['nickname' => "like"], 'au.');
+        if (isset($where['ao_id'])) {
+            $where['au.ao_id'] = $where['ao_id'];
+            unset($where['ao_id']);
+        }
+        return $this->app->authManager->exportAccount($where);
+    }
+
+    /**
      * 获取账号通知配置（故障模板）
      */
     public function getNoticeConfig()

@@ -810,8 +810,8 @@ class ApiClient extends ReceiveBaseClient
             }
             if (!$this->data['g_id']) {
                 $mc['batch_number'] = "";
-                $mc['manufacture_time'] = "";
-                $mc['sell_by_date'] = "";
+                $mc['manufacture_time'] = 0;
+                $mc['sell_by_date'] = 0;
                 $mc['frozen_stock'] = 0;
                 $mc['update_price'] = 2;
             }
@@ -1093,10 +1093,14 @@ class ApiClient extends ReceiveBaseClient
     public function playAdv()
     {
         $where['adv_id'] = $this->data['adv_id'];
-        $field = "adv_id,adv_title,res_id,res_title,type,type,duration_time,total_times,play_times,remain_times,m_id,machine_id,push_type,position,screen,screen_full,ao_id";
+        $field = "adv_id,adv_title,res_id,res_title,type,type,duration_time,total_times,play_times,remain_times,m_id,machine_id,push_type,position,screen,screen_full,ao_id,download_progress";
         $adv = $this->getAdvertisementPushFind($where, $field);
         if (!$adv) return $this->rFail($this->lang("VAdvertisement.adv_no_data"));
         $adv = $adv->toArray();
+        // 兜底：能请求此方法说明广告已能正常播放，若下载进度非100%则直接修正为100
+        if (isset($adv['download_progress']) && $adv['download_progress'] != 100) {
+            $adv['download_progress'] = 100;
+        }
         if ($adv['total_times'] > 0) {
             if ($adv['remain_times'] > 0)
                 $adv['remain_times']--;  // 剩余次数减1

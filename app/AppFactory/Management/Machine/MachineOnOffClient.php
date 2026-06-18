@@ -27,6 +27,8 @@ class MachineOnOffClient extends ManagementClient
         actionLog($postData, '添加或修改的开关机数据日志数据');
         unset($postData['m_id']);
         if ($mIds) {
+            //一次性操作只能10台设备，超过报错
+            if(count($mIds) > 10) return $this->rFail("一次性操作不能超过10台设备");
             foreach ($mIds as $m_id) {
                 $m_id = trim($m_id);
                 if (!$m_id) continue;
@@ -35,11 +37,10 @@ class MachineOnOffClient extends ManagementClient
                     $check = $check->toArray();
                     $update = array_merge($check,$postData);
                     if($check['ao_id'] == 0) $update["ao_id"] = $this->manager['ao_id'];
-                    //$result = $this->updateMachineOnOff($update);
-                    $result = 0;
+                    $result = $this->updateMachineOnOff($update);
                     $flag[] = $result;
                     if ($result) {
-                        //$this->sendToMachine(['machine_id' => $check['machine_id']], 'updateMachineOnOff');
+                        $this->sendToMachine(['machine_id' => $check['machine_id']], 'updateMachineOnOff');
                     }
 //                    return $this->rFail($check['machine_id'] . ": " . $this->lang("VMachineOnOff.is_exists"));
                 } else {
@@ -48,33 +49,32 @@ class MachineOnOffClient extends ManagementClient
                     $machine = $machine->toArray();
                     $insert = array_merge($postData, $machine);
                     $insert["ao_id"] = $this->manager['ao_id'];
-                    //$addOf = $this->addMachineOnOff($insert);
-                    $addOf = 0;
+                    $addOf = $this->addMachineOnOff($insert);
                     if ($addOf) {
                         $flag[] = 1;
-                        //$this->sendToMachine(['machine_id' => $machine['machine_id']], 'updateMachineOnOff');
+                        $this->sendToMachine(['machine_id' => $machine['machine_id']], 'updateMachineOnOff');
                     }
                 }
             }
         }
-        //执行批量操作，给之前被覆盖的设备发送mq
-        if(!empty($postData['is_admin']) && $postData['is_admin'] == 'aaa_x6964455a'){
-            //查询所有在营且在线设备的machine_id
-            $machineIds = Db::name('machine')->where('online',1)->column('machine_id');
-            //$machineIds = $this->app->machine->getColumn(['status' => 1, 'online_status' => 1], 'machine_id');
-            if($machineIds){
-                actionLog($machineIds, '批量操作后需要发送mq的设备machine_id');
-                $cachePrefix = 'batch_update_on_off_mq:';
-                foreach ($machineIds as $machineId) {
-                    $cacheKey = $cachePrefix . $machineId;
-                    if (Cache::get($cacheKey)) {
-                        continue;
-                    }
-                    $this->sendToMachine(['machine_id' => $machineId], 'updateMachineOnOff');
-                    Cache::set($cacheKey, 1, 300);
-                }
-            }
-        }
+        //执行批量操作，给之前被覆盖的设备发送mq,已执行完毕，注释掉批量操作后发送mq的代码
+        // if(!empty($postData['is_admin']) && $postData['is_admin'] == 'aaa_x6964455a'){
+        //     //查询所有在营且在线设备的machine_id
+        //     $machineIds = Db::name('machine')->where('online',1)->column('machine_id');
+        //     //$machineIds = $this->app->machine->getColumn(['status' => 1, 'online_status' => 1], 'machine_id');
+        //     if($machineIds){
+        //         actionLog($machineIds, '批量操作后需要发送mq的设备machine_id');
+        //         $cachePrefix = 'batch_update_on_off_mq:';
+        //         foreach ($machineIds as $machineId) {
+        //             $cacheKey = $cachePrefix . $machineId;
+        //             if (Cache::get($cacheKey)) {
+        //                 continue;
+        //             }
+        //             $this->sendToMachine(['machine_id' => $machineId], 'updateMachineOnOff');
+        //             Cache::set($cacheKey, 1, 300);
+        //         }
+        //     }
+        // }
         $result = $this->checkFlag($flag);
         return $this->rA($result);
     }

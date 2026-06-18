@@ -26,7 +26,8 @@ class VGoods extends VCommon
         "length" => "require",
         "width" => "require",
         "height" => "require",
-        "exter_url" => "requireIf:sell_channel,2"
+        "exter_url" => "requireIf:sell_channel,2",
+        "sell_by_date" => "integer|>=:0",
     ];
 
     protected $message = [
@@ -46,14 +47,14 @@ class VGoods extends VCommon
     ];
 
     protected $scene = [
-        "add" => ["g_name","sku","sku2","model","bar_code","banner","pic","manufacturer", "service_phone","release_time","length","width","height"],
+        "add" => ["g_name","sku","sku2","model","bar_code","banner","pic","manufacturer", "service_phone","release_time","length","width","height","sell_by_date"],
         "importExcel" => ["g_name","banner","pic","manufacturer", "service_phone","length","width","height"],
         "del" => ['g_id'],
     ];
 
     public function sceneUpdate()
     {
-        return self::only(["g_id","g_name","sku","sku2","model","bar_code","pic","manufacturer", "service_phone","length","width","height"])
+        return self::only(["g_id","g_name","sku","sku2","model","bar_code","pic","manufacturer", "service_phone","length","width","height","sell_by_date"])
             ->remove("g_name","require")
             ->remove("sku","unique")
             ;
