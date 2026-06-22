@@ -685,7 +685,11 @@ class GoodsClient extends ManagementClient
                 "totalRefundQuantity" => "退款数量",
                 "retail_price" => $this->lang("export.retail_price"),
             ];
-            $filename = $this->lang("export.goodsTopList") . date("Ymd");
+            $topTitle = "销售额-";
+            if($topType === 2){
+                $topTitle = "销量-";
+            }
+            $filename = $topTitle . $this->lang("export.goodsTopList") . date("Ymd");
             $result = $this->sendToExport($this->lang("export.goodsTopRankFileName"), $filename, $title, $list);
             return $result;
         }
@@ -726,6 +730,8 @@ class GoodsClient extends ManagementClient
                 'ROUND(SUM(sod.discount_price),2)' => 'totalDiscountPrice',
             ])
             ->group('sod.g_id')
+            ->having('totalPrice > 0')
+            ->having('totalQuantity > 0')
             ->orderRaw($order);
 
         $this->applyGoodsRankingWhere($query, $where);
