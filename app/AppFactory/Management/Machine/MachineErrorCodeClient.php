@@ -110,7 +110,7 @@ class MachineErrorCodeClient extends ManagementClient
         $creatorIds = array_unique(array_filter($creatorIds));
         $creatorNames = [];
         if ($creatorIds) {
-            $creatorNames = AuthManagerModel::getColumn(['manager_id' => ['in', $creatorIds]], 'nickname', 'manager_id');
+            $creatorNames = AuthManagerModel::getColumn([['manager_id','in', $creatorIds]], 'nickname', 'manager_id');
         }
         $openArr = ['1200000' =>'1', '1200010' => '2', '1200020' => '3']; //开门方式
         $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, function ($item) use ($creatorNames, $openArr) {
@@ -120,7 +120,7 @@ class MachineErrorCodeClient extends ManagementClient
             }
             $item['open_type'] = $openArr[$item['errorCode']] ?? 1;
             $item['creator_name'] = $creatorNames[$item['creator_id']] ?? '';
-            $item['create_time'] =  date("Y-m-d H:i:s", $item['create_time']);
+            $item['create_time_text'] =  date("Y-m-d H:i:s", $item['create_time']);
             return $item;
         }, $group);
 

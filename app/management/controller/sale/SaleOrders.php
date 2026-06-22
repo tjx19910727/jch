@@ -226,7 +226,7 @@ class SaleOrders extends Common
         }
         else{
             if(input('status')=='getOpenDoor'){
-                $mec = $this->app->machineErrorCode->getMachineErrorCodeFind(['me_id' => input('me_id')],'transaction_video,machine_id','',0);
+                $mec = $this->app->machineErrorCode->getMachineErrorCodeFind(['me_id' => input('me_id')],'transaction_video,machine_id,errorCode','',0);
                 if (!$mec) return returnState(100,lang("VSaleOrders.order_no_data"));
                 if (!$mec['trade_no']) $this->app->machineErrorCode->updateMachineErrorCode(['trade_no' => $trade_no],['me_id' => input('me_id')]);
                 if (!$mec['transaction_video']) {
