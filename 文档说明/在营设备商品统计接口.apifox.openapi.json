@@ -1,0 +1,753 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "在营设备商品统计接口",
+    "version": "1.0.0",
+    "description": "后台商品维度统计接口：统计所有在营设备上架商品、商品名称 SKU、在营库存、在营设备数量与列表、对应设备货道数量与明细、周期内销售数量，并支持按相同筛选条件导出 Excel。统计实时基于 machine_channel、machine、sale_orders_details、sale_orders，不依赖 sale_orders_goods_count 等汇总表。"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}",
+      "description": "Apifox 环境变量 baseUrl，例如 http://localhost:8000"
+    }
+  ],
+  "tags": [
+    {
+      "name": "商品统计",
+      "description": "商品维度的在营设备、货道库存与周期销量统计"
+    }
+  ],
+  "paths": {
+    "/management/goods.goods/getOperatingGoodsList": {
+      "post": {
+        "tags": [
+          "商品统计"
+        ],
+        "summary": "查询在营设备商品统计列表",
+        "description": "从商品维度统计当前后台账号可见的在营设备上架商品。接口返回商品基础信息、在营库存、在营设备数量、在营设备列表、对应设备货道数量、货道明细、周期内销售数量。若 pageNum 不传或为 0，返回全部列表；传 pageNum 时返回分页结构。",
+        "operationId": "getOperatingGoodsList",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatingGoodsListRequest"
+              },
+              "examples": {
+                "pageSearch": {
+                  "summary": "分页查询并按库存倒序",
+                  "value": {
+                    "page": 1,
+                    "pageNum": 20,
+                    "g_name": "可乐",
+                    "sku": "SKU",
+                    "create_time": "2026-06-01~2026-06-22",
+                    "sort_by": "operating_stock",
+                    "sort_order": "desc"
+                  }
+                },
+                "machineSearch": {
+                  "summary": "按设备和商品筛选",
+                  "value": {
+                    "page": 1,
+                    "pageNum": 20,
+                    "g_id": "147,2088",
+                    "m_id": "895",
+                    "machine_id": "JCHM-H5D-0003",
+                    "start_time": "2026-06-01 00:00:00",
+                    "end_time": "2026-06-22 23:59:59"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatingGoodsListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperatingGoodsListResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "分页成功响应",
+                    "value": {
+                      "state": 200,
+                      "msg": "查询成功",
+                      "data": {
+                        "total": 62,
+                        "per_page": 20,
+                        "current_page": 1,
+                        "last_page": 4,
+                        "data": [
+                          {
+                            "g_id": 2088,
+                            "g_name": "飞龙守护神",
+                            "sku": "0N0KB-KB35108-01",
+                            "gc_name": "JCH",
+                            "pic": "/uploads/excel_img/20250930/0142d192d3aaffd45fb9f5842e636f5c.png",
+                            "operating_stock": 4,
+                            "operating_machine_count": 1,
+                            "operating_channel_count": 1,
+                            "operating_machine_ids": [
+                              895
+                            ],
+                            "operating_machine_list": [
+                              {
+                                "m_id": 895,
+                                "machine_id": "JCHM-H5D-0003",
+                                "machine_name": "拓展A座一楼售卖机展厅-立式机",
+                                "ao_id": 17,
+                                "channel_count": 1,
+                                "channel_stock": 4,
+                                "channel_list": [
+                                  {
+                                    "mc_id": 40465,
+                                    "mg_id": 16778,
+                                    "m_id": 895,
+                                    "machine_id": "JCHM-H5D-0003",
+                                    "machine_name": "拓展A座一楼售卖机展厅-立式机",
+                                    "channel_code": "A1",
+                                    "channel_name": "",
+                                    "stock": 4,
+                                    "capacity": 5,
+                                    "frozen_stock": 0,
+                                    "sku": "0N0KB-KB35108-01"
+                                  }
+                                ]
+                              }
+                            ],
+                            "operating_channel_list": [
+                              {
+                                "mc_id": 40465,
+                                "mg_id": 16778,
+                                "m_id": 895,
+                                "machine_id": "JCHM-H5D-0003",
+                                "machine_name": "拓展A座一楼售卖机展厅-立式机",
+                                "channel_code": "A1",
+                                "channel_name": "",
+                                "stock": 4,
+                                "capacity": 5,
+                                "frozen_stock": 0,
+                                "sku": "0N0KB-KB35108-01"
+                              }
+                            ],
+                            "period_sale_quantity": 0,
+                            "period_refund_quantity": 0,
+                            "period_net_sale_quantity": 0
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "noData": {
+                    "summary": "无匹配数据",
+                    "value": {
+                      "state": 200,
+                      "msg": "查询失败",
+                      "data": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "98": {
+            "description": "Token 缺失、无效或过期",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                },
+                "example": {
+                  "state": 98,
+                  "msg": "请登录"
+                }
+              }
+            }
+          },
+          "100": {
+            "description": "功能未开放或权限不足",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                },
+                "example": {
+                  "state": 100,
+                  "msg": "该功能尚未开放"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/goods.goods/exportOperatingGoodsList": {
+      "post": {
+        "tags": [
+          "商品统计"
+        ],
+        "summary": "导出在营设备商品统计列表",
+        "description": "按与查询接口一致的筛选条件导出 Excel。导出为商品一行，设备列表和货道信息以分号拼接到单元格中。导出字段包括商品 ID、商品名称、SKU、商品分类、在营库存、在营设备数量、在营设备列表、对应设备货道数量、对应设备货道信息、周期内销售数量、周期内退款数量、周期内净销售数量。",
+        "operationId": "exportOperatingGoodsList",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatingGoodsListRequest"
+              },
+              "examples": {
+                "exportByPeriod": {
+                  "summary": "按周期导出",
+                  "value": {
+                    "g_name": "可乐",
+                    "sku": "SKU",
+                    "create_time": "2026-06-01~2026-06-22",
+                    "sort_by": "operating_stock",
+                    "sort_order": "desc"
+                  }
+                },
+                "exportByMachine": {
+                  "summary": "按设备导出",
+                  "value": {
+                    "g_id": "147,2088",
+                    "m_id": "895",
+                    "machine_id": "JCHM-H5D-0003",
+                    "start_time": "2026-06-01 00:00:00",
+                    "end_time": "2026-06-22 23:59:59"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/OperatingGoodsListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "导出任务已创建",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExportResponse"
+                },
+                "examples": {
+                  "exporting": {
+                    "summary": "导出中",
+                    "value": {
+                      "state": 200,
+                      "msg": "导出中",
+                      "data": []
+                    }
+                  },
+                  "noData": {
+                    "summary": "无数据可导出",
+                    "value": {
+                      "state": 100,
+                      "msg": "查询失败",
+                      "data": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "98": {
+            "description": "Token 缺失、无效或过期",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                },
+                "example": {
+                  "state": 98,
+                  "msg": "请登录"
+                }
+              }
+            }
+          },
+          "100": {
+            "description": "功能未开放、权限不足或无数据可导出",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponse"
+                },
+                "examples": {
+                  "notOpen": {
+                    "summary": "权限节点未开放",
+                    "value": {
+                      "state": 100,
+                      "msg": "该功能尚未开放"
+                    }
+                  },
+                  "noData": {
+                    "summary": "无数据",
+                    "value": {
+                      "state": 100,
+                      "msg": "查询失败",
+                      "data": []
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "TokenHeader": {
+        "name": "token",
+        "in": "header",
+        "required": true,
+        "description": "后台登录令牌。Apifox 环境变量示例：{{token}}",
+        "schema": {
+          "type": "string"
+        },
+        "example": "{{token}}"
+      }
+    },
+    "schemas": {
+      "OperatingGoodsListRequest": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "description": "当前页，分页时使用",
+            "example": 1
+          },
+          "pageNum": {
+            "type": "integer",
+            "description": "每页条数。不传或为 0 时返回全部数据",
+            "example": 20
+          },
+          "g_id": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "description": "商品 ID，支持单个、逗号分隔字符串或数组",
+            "example": "147,2088"
+          },
+          "g_name": {
+            "type": "string",
+            "description": "商品名称，模糊查询",
+            "example": "可乐"
+          },
+          "sku": {
+            "type": "string",
+            "description": "商品 SKU，模糊查询",
+            "example": "SKU001"
+          },
+          "m_id": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "integer"
+                }
+              }
+            ],
+            "description": "设备自增 ID，支持单个、逗号分隔字符串或数组",
+            "example": "895,896"
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号。多个设备编号用逗号分隔时按 IN 查询，单个值按模糊查询",
+            "example": "JCHM-H5D-0003"
+          },
+          "ao_id": {
+            "type": "integer",
+            "description": "组织 ID",
+            "example": 17
+          },
+          "start_time": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "销售周期开始时间，支持时间戳、YYYY-MM-DD、YYYY-MM-DD HH:mm:ss",
+            "example": "2026-06-01 00:00:00"
+          },
+          "end_time": {
+            "oneOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "description": "销售周期结束时间，支持时间戳、YYYY-MM-DD、YYYY-MM-DD HH:mm:ss",
+            "example": "2026-06-22 23:59:59"
+          },
+          "create_time": {
+            "type": "string",
+            "description": "销售周期快捷参数，格式：开始时间~结束时间。可替代 start_time/end_time",
+            "example": "2026-06-01~2026-06-22"
+          },
+          "sort_by": {
+            "type": "string",
+            "description": "排序字段",
+            "enum": [
+              "g_id",
+              "operating_stock",
+              "operating_machine_count",
+              "operating_channel_count"
+            ],
+            "default": "g_id",
+            "example": "operating_stock"
+          },
+          "sort_order": {
+            "type": "string",
+            "description": "排序方向",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "desc",
+            "example": "desc"
+          }
+        },
+        "additionalProperties": false
+      },
+      "OperatingGoodsListResponse": {
+        "type": "object",
+        "required": [
+          "state",
+          "msg",
+          "data"
+        ],
+        "properties": {
+          "state": {
+            "type": "integer",
+            "description": "业务状态码，200 表示成功",
+            "example": 200
+          },
+          "msg": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "查询成功"
+          },
+          "data": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OperatingGoodsPage"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/OperatingGoodsItem"
+                }
+              }
+            ],
+            "description": "分页查询时为分页对象；非分页查询时为列表数组"
+          }
+        }
+      },
+      "OperatingGoodsPage": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "总条数",
+            "example": 62
+          },
+          "per_page": {
+            "type": "integer",
+            "description": "每页条数",
+            "example": 20
+          },
+          "current_page": {
+            "type": "integer",
+            "description": "当前页",
+            "example": 1
+          },
+          "last_page": {
+            "type": "integer",
+            "description": "最后一页",
+            "example": 4
+          },
+          "data": {
+            "type": "array",
+            "description": "统计列表",
+            "items": {
+              "$ref": "#/components/schemas/OperatingGoodsItem"
+            }
+          }
+        }
+      },
+      "OperatingGoodsItem": {
+        "type": "object",
+        "properties": {
+          "g_id": {
+            "type": "integer",
+            "description": "商品 ID",
+            "example": 2088
+          },
+          "g_name": {
+            "type": "string",
+            "description": "商品名称",
+            "example": "飞龙守护神"
+          },
+          "sku": {
+            "type": "string",
+            "description": "商品 SKU",
+            "example": "0N0KB-KB35108-01"
+          },
+          "gc_name": {
+            "type": "string",
+            "description": "商品分类名称",
+            "example": "JCH"
+          },
+          "pic": {
+            "type": "string",
+            "description": "商品图片",
+            "example": "/uploads/excel_img/20250930/0142d192d3aaffd45fb9f5842e636f5c.png"
+          },
+          "operating_stock": {
+            "type": "integer",
+            "description": "在营库存，对应在营设备有效货道 stock 汇总",
+            "example": 4
+          },
+          "operating_machine_count": {
+            "type": "integer",
+            "description": "在营设备数量",
+            "example": 1
+          },
+          "operating_channel_count": {
+            "type": "integer",
+            "description": "对应设备货道数量",
+            "example": 1
+          },
+          "operating_machine_ids": {
+            "type": "array",
+            "description": "在营设备 m_id 列表",
+            "items": {
+              "type": "integer"
+            },
+            "example": [
+              895
+            ]
+          },
+          "operating_machine_list": {
+            "type": "array",
+            "description": "在营设备列表，含该商品在设备上的货道统计与明细",
+            "items": {
+              "$ref": "#/components/schemas/OperatingMachineItem"
+            }
+          },
+          "operating_channel_list": {
+            "type": "array",
+            "description": "该商品对应的全部在营设备货道明细",
+            "items": {
+              "$ref": "#/components/schemas/OperatingChannelItem"
+            }
+          },
+          "period_sale_quantity": {
+            "type": "integer",
+            "description": "周期内销售数量，SUM(sale_orders_details.quantity)",
+            "example": 0
+          },
+          "period_refund_quantity": {
+            "type": "integer",
+            "description": "周期内退款数量，SUM(sale_orders_details.refund_quantity)",
+            "example": 0
+          },
+          "period_net_sale_quantity": {
+            "type": "integer",
+            "description": "周期内净销售数量，销售数量减退款数量",
+            "example": 0
+          }
+        }
+      },
+      "OperatingMachineItem": {
+        "type": "object",
+        "properties": {
+          "m_id": {
+            "type": "integer",
+            "description": "设备自增 ID",
+            "example": 895
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号",
+            "example": "JCHM-H5D-0003"
+          },
+          "machine_name": {
+            "type": "string",
+            "description": "设备名称",
+            "example": "拓展A座一楼售卖机展厅-立式机"
+          },
+          "ao_id": {
+            "type": "integer",
+            "description": "设备所属组织 ID",
+            "example": 17
+          },
+          "channel_count": {
+            "type": "integer",
+            "description": "该商品在当前设备上的货道数量",
+            "example": 1
+          },
+          "channel_stock": {
+            "type": "integer",
+            "description": "该商品在当前设备上的货道库存合计",
+            "example": 4
+          },
+          "channel_list": {
+            "type": "array",
+            "description": "该商品在当前设备上的货道明细",
+            "items": {
+              "$ref": "#/components/schemas/OperatingChannelItem"
+            }
+          }
+        }
+      },
+      "OperatingChannelItem": {
+        "type": "object",
+        "properties": {
+          "mc_id": {
+            "type": "integer",
+            "description": "货道 ID",
+            "example": 40465
+          },
+          "mg_id": {
+            "type": "integer",
+            "description": "设备商品 ID",
+            "example": 16778
+          },
+          "m_id": {
+            "type": "integer",
+            "description": "设备自增 ID",
+            "example": 895
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号",
+            "example": "JCHM-H5D-0003"
+          },
+          "machine_name": {
+            "type": "string",
+            "description": "设备名称",
+            "example": "拓展A座一楼售卖机展厅-立式机"
+          },
+          "channel_code": {
+            "type": "string",
+            "description": "货道编码",
+            "example": "A1"
+          },
+          "channel_name": {
+            "type": "string",
+            "description": "货道名称",
+            "example": ""
+          },
+          "stock": {
+            "type": "integer",
+            "description": "货道库存",
+            "example": 4
+          },
+          "capacity": {
+            "type": "integer",
+            "description": "货道容量",
+            "example": 5
+          },
+          "frozen_stock": {
+            "type": "integer",
+            "description": "冻结库存",
+            "example": 0
+          },
+          "sku": {
+            "type": "string",
+            "description": "货道商品 SKU",
+            "example": "0N0KB-KB35108-01"
+          }
+        }
+      },
+      "ExportResponse": {
+        "type": "object",
+        "required": [
+          "state",
+          "msg"
+        ],
+        "properties": {
+          "state": {
+            "type": "integer",
+            "description": "业务状态码，200 表示导出任务已创建",
+            "example": 200
+          },
+          "msg": {
+            "type": "string",
+            "description": "响应消息。通常为导出中，具体文案取系统语言包 export.exporting",
+            "example": "导出中"
+          },
+          "data": {
+            "description": "响应数据，导出接口通常为空数组",
+            "example": []
+          }
+        }
+      },
+      "BaseResponse": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "integer",
+            "description": "业务状态码"
+          },
+          "msg": {
+            "type": "string",
+            "description": "响应消息"
+          },
+          "data": {
+            "description": "响应数据"
+          }
+        }
+      }
+    }
+  },
+  "x-apifox-folder": "商品统计"
+}
