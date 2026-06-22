@@ -16,7 +16,7 @@ class MachineErrorCode extends Common
 
     protected $field = "me_id,m_id,machine_id,machine_name,address,error_position,errorCode,remark,msg,create_time";
 
-    protected $videoField = "me_id,m_id,machine_id,machine_name,address,error_position,errorCode,remark,msg,trade_no,transaction_video,create_time";
+    protected $videoField = "me_id,m_id,machine_id,machine_name,address,error_position,errorCode,remark,msg,trade_no,transaction_video,create_time,creator_id";
 
     public function getList()
     {
