@@ -730,16 +730,18 @@ class GoodsClient extends ManagementClient
                 'ROUND(SUM(sod.discount_price),2)' => 'totalDiscountPrice',
             ])
             ->group('sod.g_id')
-            ->having('SUM(sod.total_sod_price) > 0')
-            ->having('SUM(sod.quantity) > 0')
+            ->having('ROUND(SUM(sod.total_sod_price), 2) > 0 AND SUM(sod.quantity) > 0')
             ->orderRaw($order);
 
         $this->applyGoodsRankingWhere($query, $where);
 
         if ($pageNum) {
-            return $query->paginate($pageNum, false, ["query" => request()->param()]);
+            $res = $query->paginate($pageNum, false, ["query" => request()->param()]);
+        }else{
+            $res = $query->select();
         }
-        return $query->select();
+        
+        return $res;
     }
 
     /**
