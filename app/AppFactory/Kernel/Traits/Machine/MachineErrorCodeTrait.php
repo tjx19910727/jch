@@ -62,6 +62,9 @@ trait MachineErrorCodeTrait
             "msg" => $this->message['msg'] ?? "",
             "ao_id" => $this->machine['ao_id'] ?? 0,
         ];
+        if (in_array($this->message['errorCode'], ['1200010', '1200020']) && !empty($this->message['creator_id'])) {
+            $insert['creator_id'] = $this->message['creator_id'];
+        }
         $result = $this->addMachineErrorCode($insert);
         if ($result && !in_array($this->message['errorCode'], ['1100000', '1000001'])) {
             //if (!$lastEc) {

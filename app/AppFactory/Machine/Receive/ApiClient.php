@@ -635,6 +635,7 @@ class ApiClient extends ReceiveBaseClient
                 "errorCode" => $this->data['errorCode'] ?? "",
                 "msg" => $this->data['msg'] ?? "",
                 "error_position" => $this->data['error_position'] ?? "",
+                "creator_id" => $this->data['creator_id'] ?? 0,
             ];
             $this->errorCode();
             return $this->r(200, $this->lang("action_success"));

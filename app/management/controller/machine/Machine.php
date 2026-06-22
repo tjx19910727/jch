@@ -517,6 +517,9 @@ class Machine extends Common
         if ($type == 'axisOffset'){
             if(!$otherData['x_axis'] && !$otherData['y_axis']) return returnValidate(lang("VMachine.x_y_axis_require"));
         }
+        if($type == 'doorOpen'){
+            $otherData['creator_id'] = $this->manager['manager_id'] ?? 0;
+        }
         $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], $type, $otherData);
         return is_object($result) ? $result : $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
     }
