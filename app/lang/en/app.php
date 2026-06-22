@@ -76,6 +76,7 @@ return [
             "1200000" => 'Open the cabinet door in the business logic',
             "1200010" => "Open cabinet door from device end",
             "1200020" => "Open cabinet door remotely",
+            "1002201" => "The number of playable advertisements is 0",
             "100104900" => 'LED light control fault (03 xx] - Return command - Analysis',
             "100104901" => 'Equipment cabinet door opening fault (05 01] - Return command - Analysis',
             "100104902" => 'Fault of the equipment cabinet door opening reminder relay (0400/0401) - Return Instruction - Analysis',

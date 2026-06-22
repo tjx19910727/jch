@@ -1084,7 +1084,34 @@ class ApiClient extends ReceiveBaseClient
         $where[] = ['start_date', '<=', time()];
         $field = "adv_id,adv_title,res_id,res_title,file_path,type,duration_time,total_times,play_times,remain_times,start_date,end_date,start_time,end_time,push_type,position,screen,screen_full,status";
         $advList = $this->getAdvertisementPushList($where, $this->data['pageNum'] ?? 0, $field);
+        // 有效广告数为空时，发送微信模板消息（每天每设备限一次）
+        if ($advList->isEmpty()) {
+            $this->sendAdvEmptyNotice();
+        }
         return $this->rQ($advList);
+    }
+
+    /**
+     * 有效广告数为0时发送微信模板消息（复用mFault故障通知，错误码1002201）
+     * 使用缓存限制每天每设备仅发送一次
+     */
+    private function sendAdvEmptyNotice()
+    {
+        $cacheKey = 'adv_empty_notice_' . $this->machine['m_id'];
+        if (cache($cacheKey)) {
+            return;
+        }
+        cache($cacheKey, 1, 7200);
+        try {
+            $this->message = [
+                "errorCode" => '1002201',
+                "msg" => '',
+                "error_position" => '',
+            ];
+            $this->errorCode();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+        }
     }
 
     /**
