@@ -1749,8 +1749,8 @@ class MachineClient extends ManagementClient
                 'COUNT((SELECT acu.cu_id FROM activity_coupon_used acu WHERE acu.order_id = so.order_id AND acu.status = 2))' => 'coupon_used',
             ])
             ->group('so.m_id')
-            ->having('totalPrice > 0')
-            ->having('totalQuantity > 0')
+            ->having('SUM(so.total_price) > 0')
+            ->having('SUM(so.total_quantity) > 0')
             ->orderRaw($order);
 
         $this->applyMachineRankingWhere($query, $where);
