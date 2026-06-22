@@ -113,7 +113,7 @@ class MachineErrorCode extends Common
     
     /**
      * 后台视频统一入口列表，新开接口，方便权限控制
-     * 当前仅支持营业逻辑中柜门打开（1200000）
+     * 当前仅支持营业逻辑中柜门打开（1200000、1200010、1200020）
      * @return array|\think\response\Json
      */
     public function getVideoList()
@@ -122,7 +122,7 @@ class MachineErrorCode extends Common
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, ['machine_id' => "like", "errorCode" => "like"]);
         $where['status'] = 1;
-        $where['errorCode'] = 1200000;
+        $where[] = ['errorCode', 'in', [1200000, 1200010, 1200020]]; // 营业逻辑中柜门打开的错误码
         return $this->app->machineErrorCode->getEcVideoList($where, $pageNum, $this->videoField, 'create_time desc');
     }
 }
