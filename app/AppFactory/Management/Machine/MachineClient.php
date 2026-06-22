@@ -587,6 +587,10 @@ class MachineClient extends ManagementClient
                 }
             }
             $item['machine_on_off'] = $machineOnOff;
+            $item['sleep_status'] = 1;
+            if(!empty($item['current_status']) && $item['current_status'] == 'sleep'){ {
+                $item['sleep_status'] = 2;
+            }
             if (isset($item['country_id']) && $item['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $item['country_id']],'code,name,cname');
             if (isset($item['state_id']) && $item['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $item['state_id']],'code,name,cname');
             if (isset($item['city_id']) && $item['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $item['city_id']],'code,name,cname');
