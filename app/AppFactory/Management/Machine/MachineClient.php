@@ -688,17 +688,19 @@ class MachineClient extends ManagementClient
             $list = $list->toArray();
             foreach ($list as $key => $item) {
                 $item['address'] = "";
-                $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id,street");
                 if ($m['country_id']) $item['address'] = $this->getEarthCountriesValue(['id' => $m['country_id']], 'name');
                 if ($m['state_id']) $item['address'] .= "-" . $this->getEarthStatesValue(['id' => $m['state_id']], 'name');
                 if ($m['city_id']) $item['address'] .= "-" . $this->getEarthCitiesValue(['id' => $m['city_id']], 'name');
                 if ($m['regions_id']) $item['address'] .= "-" . $this->getEarthRegionsValue(['id' => $m['regions_id']], 'name');
+                if ($m['street']) $item['street'] = $m['street'];
                 $list[$key] = $item;
             }
             $title = [
                 "machine_id" => "机器ID",
                 "machine_name" => "机器名称",
-                "address" => "机器位置",
+                // "address" => "机器位置",
+                "street" => "机器位置",
                 "totalPrice" => "销售额",
                 "totalQuantity" => "销量",
                 "totalDiscountPrice" => "优惠金额",
@@ -1699,12 +1701,15 @@ class MachineClient extends ManagementClient
                 if ($m['state_id']) $item['address'] .= "-" . $this->getEarthStatesValue(['id' => $m['state_id']], 'name');
                 if ($m['city_id']) $item['address'] .= "-" . $this->getEarthCitiesValue(['id' => $m['city_id']], 'name');
                 if ($m['regions_id']) $item['address'] .= "-" . $this->getEarthRegionsValue(['id' => $m['regions_id']], 'name');
+                if ($m['street']) $item['street'] = $m['street'];
+
                 $list[$key] = $item;
             }
             $title = [
                 "machine_id" => "机器ID",
                 "machine_name" => "机器名称",
-                "address" => "机器位置",
+                // "address" => "机器位置",
+                "street" => "机器位置",
                 "totalPrice" => "销售额",
                 "coupon_used" => "优惠券",
             ];
