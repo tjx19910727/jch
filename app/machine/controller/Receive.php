@@ -1426,5 +1426,19 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+
+    /**
+     * 上报OTA固件更新状态
+     * @return array|\think\response\Json
+     */
+    public function reportOtaVersionStatus()
+    {
+        try {
+            return $this->app->api->otaVersionStatus();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
     
 }

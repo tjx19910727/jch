@@ -1459,7 +1459,10 @@ class ApiClient extends ReceiveBaseClient
      */
     public function otaVersionDownload()
     {
-        $update['ovp_id'] = $this->data['ovp_id'];
+        $otaVersionPlan = $this->getOtaVersionPlanFind(['ovp_id' => $this->data['ovp_id']]);
+        if (!$otaVersionPlan) {
+            return $this->rFail();
+        }
         $update['download_progress'] = $this->data['download_progress'];
         $ota_status = $this->data['ota_status'] ?? 0;
         if ($ota_status == 1) {
@@ -1470,7 +1473,41 @@ class ApiClient extends ReceiveBaseClient
         }
         $this->startTrans();
         try {
-            $flag[] = $this->updateOtaVersionPlan($update);
+            $flag[] = $this->updateOtaVersionPlan($update, ['ovp_id' => $this->data['ovp_id']]);
+            if ($ota_status == 1 && !empty($this->data['version'])) {
+                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['version']]);
+            }
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result) ? $this->rU($result) : $this->rFail();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 上报OTA固件更新状态
+     * @return array|\think\response\Json
+     */
+    public function otaVersionStatus()
+    {
+        //先查询version_plan表中是否有此条记录  
+        $otaVersionPlan = $this->getOtaVersionPlanFind(['ovp_id' => $this->data['ovp_id']]);
+        if (!$otaVersionPlan) {
+            return $this->rFail();
+        }
+        $statusArr = ["1" =>3, "2" => 4];
+        $ota_status = $this->data['ota_status'] ?? 2;
+        $update['status'] = $statusArr[$ota_status] ?? 2;
+        if ($ota_status == 1) {
+            if ($this->data['download_progress'] != 100) {
+                $update['download_progress'] = 100;
+            }
+        }
+        $this->startTrans();
+        try {
+            $flag[] = $this->updateOtaVersionPlan($update,['ovp_id' => $this->data['ovp_id']]);
             if ($ota_status == 1 && !empty($this->data['version'])) {
                 $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['version']]);
             }
