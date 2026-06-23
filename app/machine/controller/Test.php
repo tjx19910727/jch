@@ -19,7 +19,11 @@ use app\AppFactory\Kernel\Model\Auth\AuthOrganizationModel;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\Machine\MachineOnOffModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
+use app\AppFactory\Kernel\Support\ApiOutStatusNotify;
+use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
+use app\AppFactory\Kernel\Traits\Api\ApiOutStatusNotifyTrait;
 use app\AppFactory\Kernel\Traits\CurlTrait;
 use app\AppFactory\Kernel\Util\SignUtil;
 use app\AppFactory\RabbitMq\MachineConsumer;
@@ -34,10 +38,167 @@ use think\facade\Request;
 
 class Test extends BaseController
 {
-    use CurlTrait;
+    use CurlTrait, ApiAdvanceTrait, ApiOutStatusNotifyTrait;
     protected $order;
     public $machine;
     public $mqQueue;
+
+    /**
+     * 测试订单出货状态通知，只生成 api_callback 记录，不主动请求外部地址。
+     * /machine/test/testOrderOutStatusNotify?trade_no=xxx&event=ready&out_status=2
+     */
+    public function testOrderOutStatusNotify()
+    {
+        $tradeNo = trim((string)input('trade_no', ''));
+        if (!$tradeNo) {
+            return returnState(100, 'trade_no不能为空');
+        }
+
+        $event = trim((string)input('event', 'ready'));
+        if (!in_array($event, ['ready', 'success', 'fail'], true)) {
+            return returnState(100, 'event仅支持ready,success,fail');
+        }
+
+        $order = SaleOrdersModel::getFind(['trade_no' => $tradeNo]);
+        if (!$order) {
+            return returnState(100, '订单不存在');
+        }
+        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
+
+        $outStatus = input('out_status', null);
+        if ($outStatus !== null && $outStatus !== '') {
+            $order['out_status'] = intval($outStatus);
+        }
+
+        if (empty($order['machine_level'])) {
+            $machineWhere = [];
+            if (!empty($order['machine_id'])) {
+                $machineWhere['machine_id'] = $order['machine_id'];
+            } elseif (!empty($order['m_id'])) {
+                $machineWhere['m_id'] = $order['m_id'];
+            }
+            if ($machineWhere) {
+                $machine = MachineModel::getFind($machineWhere, 'machine_level');
+                if ($machine) {
+                    $machine = is_object($machine) ? (method_exists($machine, 'toArray') ? $machine->toArray() : (array)$machine) : $machine;
+                    $order['machine_level'] = intval($machine['machine_level'] ?? 0);
+                }
+            }
+        }
+
+        $acId = $this->addOrderOutStatusCallback($event, $order);
+        if (!$acId) {
+            return returnState(100, '未生成通知记录，可能不是machine_level=5移动售卖机订单', [
+                'trade_no' => $tradeNo,
+                'machine_id' => $order['machine_id'] ?? '',
+                'machine_level' => $order['machine_level'] ?? null,
+                'mobile_vending_machine_levels' => ApiOutStatusNotify::MOBILE_VENDING_MACHINE_LEVELS,
+            ]);
+        }
+
+        return returnState(200, '生成通知记录成功', [
+            'ac_id' => $acId,
+            'callback_type' => 10,
+            'notify_url' => ApiOutStatusNotify::getOrderOutStatusNotifyUrl(),
+            'event' => $event,
+            'order_id' => intval($order['order_id'] ?? 0),
+            'trade_no' => $order['trade_no'],
+            'out_status' => intval($order['out_status'] ?? 0),
+            'machine_id' => $order['machine_id'] ?? '',
+            'machine_level' => $order['machine_level'] ?? null,
+        ]);
+    }
+
+    /**
+     * 测试设备开关机时间同步，只生成 api_callback 记录，不主动请求外部地址。
+     * /machine/test/testMachineOnOffCkcTimeNotify?moo_id=xxx
+     * /machine/test/testMachineOnOffCkcTimeNotify?machine_id=xxx&on_off_machine={"0":"23:00,08:00"}
+     */
+    public function testMachineOnOffCkcTimeNotify()
+    {
+        $where = [];
+        $mooId = intval(input('moo_id', 0));
+        $machineId = trim((string)input('machine_id', ''));
+        $mId = intval(input('m_id', 0));
+        if ($mooId > 0) {
+            $where['moo_id'] = $mooId;
+        } elseif ($machineId !== '') {
+            $where['machine_id'] = $machineId;
+        } elseif ($mId > 0) {
+            $where['m_id'] = $mId;
+        } else {
+            return returnState(100, 'moo_id、machine_id、m_id至少传一个');
+        }
+
+        $machineOnOff = MachineOnOffModel::getFind($where, 'moo_id,m_id,machine_id,machine_name,ao_id,status,on_off_ckc,on_off_machine');
+        if (!$machineOnOff) {
+            return returnState(100, '设备开关机配置不存在');
+        }
+        $machineOnOff = is_object($machineOnOff) ? (method_exists($machineOnOff, 'toArray') ? $machineOnOff->toArray() : (array)$machineOnOff) : $machineOnOff;
+
+        $machineWhere = [];
+        if (!empty($machineOnOff['m_id'])) {
+            $machineWhere['m_id'] = $machineOnOff['m_id'];
+        } elseif (!empty($machineOnOff['machine_id'])) {
+            $machineWhere['machine_id'] = $machineOnOff['machine_id'];
+        }
+        if ($machineWhere) {
+            $machine = MachineModel::getFind($machineWhere, 'm_id,machine_id,machine_name,machine_level,ao_id');
+            if ($machine) {
+                $machine = is_object($machine) ? (method_exists($machine, 'toArray') ? $machine->toArray() : (array)$machine) : $machine;
+                $machineOnOff['m_id'] = intval($machineOnOff['m_id'] ?: ($machine['m_id'] ?? 0));
+                $machineOnOff['machine_id'] = $machineOnOff['machine_id'] ?: ($machine['machine_id'] ?? '');
+                $machineOnOff['machine_name'] = $machineOnOff['machine_name'] ?: ($machine['machine_name'] ?? '');
+                $machineOnOff['machine_level'] = intval($machine['machine_level'] ?? 0);
+                $machineOnOff['ao_id'] = intval($machineOnOff['ao_id'] ?: ($machine['ao_id'] ?? 0));
+            }
+        }
+
+        $onOffMachine = input('on_off_machine', null);
+        if ($onOffMachine !== null && $onOffMachine !== '') {
+            $machineOnOff['on_off_machine'] = is_array($onOffMachine) ? json_encode($onOffMachine, 320) : (string)$onOffMachine;
+        }
+
+        $event = trim((string)input('event', 'test'));
+        if (!in_array($event, ['test', 'update', 'import_on_off'], true)) {
+            return returnState(100, 'event仅支持test,update,import_on_off');
+        }
+
+        $changedFields = input('changed_fields', 'on_off_machine');
+        if (is_string($changedFields)) {
+            $changedFields = array_filter(array_map('trim', explode(',', $changedFields)));
+        }
+        if (!is_array($changedFields) || !$changedFields) {
+            $changedFields = ['on_off_machine'];
+        }
+
+        $acId = $this->addMachineOnOffCkcTimeCallback($machineOnOff, $event, $changedFields);
+        if (!$acId) {
+            return returnState(100, '未生成通知记录，可能不是machine_level=5移动售卖机设备', [
+                'moo_id' => intval($machineOnOff['moo_id'] ?? 0),
+                'm_id' => intval($machineOnOff['m_id'] ?? 0),
+                'machine_id' => $machineOnOff['machine_id'] ?? '',
+                'machine_level' => $machineOnOff['machine_level'] ?? null,
+                'mobile_vending_machine_levels' => ApiOutStatusNotify::MOBILE_VENDING_MACHINE_LEVELS,
+            ]);
+        }
+
+        $callback = $this->getApiCallbackFind(['ac_id' => $acId], 'ac_id,notify_url,callback_type,callback_status,message,create_time');
+        $callback = $callback ? (is_object($callback) ? (method_exists($callback, 'toArray') ? $callback->toArray() : (array)$callback) : $callback) : [];
+
+        return returnState(200, '生成设备开关机时间同步记录成功', [
+            'ac_id' => $acId,
+            'callback_type' => 11,
+            'callback_status' => $callback['callback_status'] ?? 'send',
+            'notify_url' => ApiOutStatusNotify::getMachineOnOffCkcTimeUrl(),
+            'event' => $event,
+            'moo_id' => intval($machineOnOff['moo_id'] ?? 0),
+            'm_id' => intval($machineOnOff['m_id'] ?? 0),
+            'machine_id' => $machineOnOff['machine_id'] ?? '',
+            'machine_level' => $machineOnOff['machine_level'] ?? null,
+            'message' => isset($callback['message']) ? json_decode($callback['message'], true) : [],
+        ]);
+    }
 
     public function testOutPort()
     {

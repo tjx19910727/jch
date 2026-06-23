@@ -2032,3 +2032,104 @@ ALTER TABLE `machine_channel`
 ALTER TABLE `wc_machine_channel`
   ADD COLUMN `is_hidden` tinyint(1) NOT NULL DEFAULT 2 COMMENT '是否隐藏：1是，2否',
   ADD INDEX `idx_machine_hidden` (`machine_id`, `is_hidden`);
+
+
+#20260622
+CREATE TABLE `auth_role_template` (
+  `art_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '角色权限模板ID',
+  `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '模板名称',
+  `desc` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '模板说明',
+  `ao_id` int(11) DEFAULT '0' COMMENT '所属组织ID',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态：1启用，2停用',
+  `is_del` tinyint(1) NOT NULL DEFAULT '2' COMMENT '删除状态：1已删除，2未删除',
+  `creator` int(11) DEFAULT NULL COMMENT '创建人ID',
+  `create_time` int(11) DEFAULT NULL COMMENT '创建时间',
+  `update_id` int(11) DEFAULT NULL COMMENT '修改人ID',
+  `update_time` int(11) DEFAULT NULL COMMENT '修改时间',
+  PRIMARY KEY (`art_id`) USING BTREE,
+  KEY `idx_ao_status` (`ao_id`,`status`,`is_del`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限模板表';
+
+CREATE TABLE `auth_role_template_node` (
+  `artn_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '角色权限模板节点ID',
+  `art_id` int(11) NOT NULL COMMENT '角色权限模板ID',
+  `node_id` int(11) NOT NULL COMMENT '权限节点ID',
+  `d_type` tinyint(1) DEFAULT '0' COMMENT '历史数据权限类型；新版模板不再写入',
+  `data_scope` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '查询范围：organization/all；空值表示历史d_type逻辑',
+  `is_del` tinyint(1) NOT NULL DEFAULT '2' COMMENT '删除状态：1已删除，2未删除',
+  `creator` int(11) DEFAULT NULL COMMENT '创建人ID',
+  `create_time` int(11) DEFAULT NULL COMMENT '创建时间',
+  `update_id` int(11) DEFAULT NULL COMMENT '修改人ID',
+  `update_time` int(11) DEFAULT NULL COMMENT '修改时间',
+  PRIMARY KEY (`artn_id`) USING BTREE,
+  UNIQUE KEY `uk_template_node` (`art_id`,`node_id`) USING BTREE,
+  KEY `idx_node` (`node_id`) USING BTREE,
+  KEY `idx_template_active` (`art_id`,`is_del`) USING BTREE,
+  KEY `idx_data_scope` (`data_scope`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限模板最终节点表';
+
+CREATE TABLE `auth_role_template_navigation` (
+  `artnavi_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '模板导航配置ID',
+  `art_id` int(11) NOT NULL COMMENT '角色权限模板ID',
+  `node_id` int(11) NOT NULL COMMENT '顶级导航节点ID',
+  `data_scope` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'organization' COMMENT '查询范围：organization/all',
+  `create_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否授权新增接口',
+  `delete_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否授权删除接口',
+  `update_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否授权修改接口',
+  `query_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT '是否授权查询接口',
+  `is_del` tinyint(1) NOT NULL DEFAULT '2' COMMENT '删除状态：1已删除，2未删除',
+  `creator` int(11) DEFAULT NULL COMMENT '创建人ID',
+  `create_time` int(11) DEFAULT NULL COMMENT '创建时间',
+  `update_id` int(11) DEFAULT NULL COMMENT '修改人ID',
+  `update_time` int(11) DEFAULT NULL COMMENT '修改时间',
+  PRIMARY KEY (`artnavi_id`) USING BTREE,
+  UNIQUE KEY `uk_art_node` (`art_id`,`node_id`) USING BTREE,
+  KEY `idx_art_active` (`art_id`,`is_del`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限模板顶级导航配置表';
+
+
+ALTER TABLE `auth_role`
+  ADD COLUMN `template_id` int(11) DEFAULT NULL COMMENT '角色权限模板ID' AFTER `ao_id`,
+  ADD INDEX `idx_template_id` (`template_id`);
+
+ALTER TABLE `auth_manager`
+  ADD COLUMN `use_role_template` tinyint(1) NOT NULL DEFAULT '2' COMMENT '是否使用角色权限模板：1是，2否（历史逻辑）' AFTER `status`,
+  ADD INDEX `idx_use_role_template` (`use_role_template`);
+
+ALTER TABLE `auth_node`
+  ADD COLUMN `permission_action` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'unclassified'
+    COMMENT '权限动作：menu/create/delete/update/query/unclassified' AFTER `data_auth`,
+  ADD INDEX `idx_permission_action` (`permission_action`);
+
+
+-- 有子节点的节点，以及 type=1 的页面节点，统一视为导航。
+UPDATE `auth_node` n
+LEFT JOIN `auth_node` c ON c.`pid` = n.`node_id`
+SET n.`permission_action` = 'menu'
+WHERE n.`type` = 1
+   OR c.`node_id` IS NOT NULL;
+
+-- 仅对尚未分类的叶子接口节点按 URL 最后一段分类。
+UPDATE `auth_node`
+SET `permission_action` = 'query'
+WHERE `permission_action` = 'unclassified'
+  AND LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(`url`, '?', 1), '/', -1))
+      REGEXP '^(get|query|find|check|list|search|export|refresh|bind|config|List|help|stats|detail|Detail|upload|saleData|http|login)';
+
+UPDATE `auth_node`
+SET `permission_action` = 'create'
+WHERE `permission_action` = 'unclassified'
+  AND LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(`url`, '?', 1), '/', -1))
+      REGEXP '^(add|create|insert|upload|import|send|push|sync||)';
+
+UPDATE `auth_node`
+SET `permission_action` = 'delete'
+WHERE `permission_action` = 'unclassified'
+  AND LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(`url`, '?', 1), '/', -1))
+      REGEXP '^(del|delete|remove|lock)';
+
+UPDATE `auth_node`
+SET `permission_action` = 'update'
+WHERE `permission_action` = 'unclassified'
+  AND LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(`url`, '?', 1), '/', -1))
+      REGEXP '^(refund|trigger|Refund|update|edit|save|bind|apply|set|copy|push|sync|import|reset|enable|disable|reset|change|move|sort|config|bind|fix|change|remote|Update|cancel|audit|Handle|assign|takeDown|unbind|operation|upDown|usePickCode|sendMainControl|Update)';

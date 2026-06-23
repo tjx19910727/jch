@@ -935,6 +935,20 @@ class MachineChannelClient extends ManagementClient
                 $this->addGoodsChange($insertGc);
             }
         }
+        if (!empty($postData['manufacture_time'])) {
+            $exp_arr = explode(" ",$postData['manufacture_time']);
+            $postData['manufacture_time'] = strtotime($exp_arr[0] . ' 23:59:59');
+        }
+        //如果有传入生产日期，expire_time根据生产日期和商品表的保质期自动计算得出
+        if (isset($postData['manufacture_time']) && $postData['manufacture_time'] > 0 && isset($postData['g_id']) && $postData['g_id'] > 0) {
+            $shelfLife = $this->getGoodsValue(['g_id' => $postData['g_id']], 'sell_by_date');
+            if ($shelfLife) {
+                $postData['expire_time'] = $postData['manufacture_time'] + $shelfLife * 86400;
+            } else {
+                $postData['expire_time'] = 0;
+            }
+        }
+
         $result = $this->updateMachineChannel($postData);
         if ($result) {
             // 发送触发货道更新数据,如果是边柜货道不发送
@@ -989,18 +1003,16 @@ class MachineChannelClient extends ManagementClient
      */
     public function exportMcSku($m_id, $hasCostPriceAuth = true)
     {
+        if (!$m_id) return $this->r(100,$this->lang("VMachineChannel.m_id_require"));
         $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
-        $field = "machine_id,sku,g_name,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock,retail_price,{$costPriceField}";
+        $field = "machine_id,sku,g_name,GROUP_CONCAT(channel_code ORDER BY channel_code SEPARATOR ',') channel_code,count(mc_id) channel_num,sum(capacity) capacity,sum(stock) stock,sum(frozen_stock) frozen_stock,retail_price,{$costPriceField}";
         $list = $this->getMachineChannelList(['m_id' => $m_id],0,$field,"","","sku");
         if ($list) {
             $list = $list->toArray();
             if ($list) {
-                $sku = array_column($list,'sku');
-                $machine_name = "";
+                $machine_name = $this->getMachineValue(['m_id' => $m_id],'machine_name');
                 foreach ($list as $key => $value) {
-                    if (!$machine_name) $machine_name = $this->getMachineValue(['m_id' => $m_id],'machine_name');
                     $value['machine_name'] = $machine_name;
-                    $value['channel_code'] = $this->getMachineChannelValue(['m_id' => $m_id,'sku' => $sku],'channel_code');
                     $list[$key] = $value;
                 }
                 $title = [
@@ -1094,6 +1106,11 @@ class MachineChannelClient extends ManagementClient
         //把货道的channel_position设置成设备相同的vending_machine_type
         $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
         $list = $list->toArray();
+        foreach ($list as $key => $value) {
+            $value['manufacture_time'] = $value['manufacture_time'] ? date("Y-m-d", $value['manufacture_time']) : '';
+            $value['gift_points'] = round($value['gift_points']);
+            $list[$key] = $value;
+        }
         // foreach ($list as $key => &$value) {
         //     if (!isset($value['channel_code'])) {
         //         continue;
@@ -1133,6 +1150,10 @@ class MachineChannelClient extends ManagementClient
         }
         if(isset($postData['stock_warning'])){
             $updateData['stock_warning'] = $postData['stock_warning'] < 0 ? 0 : $postData['stock_warning'];
+        }
+        if(!empty($postData['expire_time'])){
+            $exp_arr = explode(" ",$postData['expire_time']);
+            $updateData['expire_time'] = strtotime($exp_arr[0] . ' 23:59:59');
         }
         if (!$updateData) return $this->r(100, $this->lang("action_fail"));
 
@@ -1277,5 +1298,14 @@ class MachineChannelClient extends ManagementClient
             'mc_id' => intval($mc['mc_id']),
             'channel_code' => $mc['channel_code'],
         ]);
+    }
+
+    public function getMcFind($where,$field = '*')
+    {
+        $mc = $this->getMachineChannelFind($where,$field);
+        if (!$mc) return $this->r(100,$this->lang("VMachineChannel.mc_no_data"));
+        $mc['manufacture_time'] = $mc['manufacture_time'] ? date("Y-m-d",$mc['manufacture_time']) : '';
+        $mc['gift_points'] = round($mc['gift_points'] ?? 0);
+        return $this->r(200,'success',$mc);
     }
 }

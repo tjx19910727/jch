@@ -53,6 +53,7 @@ class TimeTask extends Command
      *      goods：
      *          updateGoodsSynchronization  同步商品信息，守护进程触发命令
      *          updateMgSynchronization     同步设备商品库信息，守护进程触发命令
+     *          checkGoodsExpiry            检查货道商品过期/快到期，发送mFault通知，每天执行一次
      *      export：
      *          clearExcel                  清除超过3天的Excel
      *      coupon：

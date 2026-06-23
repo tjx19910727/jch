@@ -216,8 +216,8 @@ class MachineCheckListClient extends ManagementClient
             }
 
             $list = $query
-                ->leftJoin('auth_manager am', 'am.manager_id = cr.manager_id')
-                ->field('cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.parent_id,ci.item_level,IFNULL(NULLIF(am.nickname,\'\'), cr.manager_id) as nickname')
+                ->leftJoin('inspection_staff ist', 'ist.staff_id = cr.manager_id')
+                ->field('cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.parent_id,ci.item_level,IFNULL(NULLIF(ist.account_name,\'\'), cr.manager_id) as account_name')
                 ->order('cr.records_code desc,cr.id asc')
                 ->select()
                 ->toArray();
@@ -266,8 +266,8 @@ class MachineCheckListClient extends ManagementClient
             $title = [
                 'records_code' => '记录编码',
                 'machine_id' => '设备编号',
-                'manager_id' => '维护人ID',
-                'nickname' => '维护人',
+                'manager_id' => '巡检人员ID',
+                'account_name' => '巡检人员',
                 'check_time' => '维护时间',
                 'item_name' => '检查项目',
                 'check_status_text' => '维护状态',
@@ -339,12 +339,13 @@ class MachineCheckListClient extends ManagementClient
             $code = $item['records_code'];
             if (!isset($grouped[$code])) {
                 $grouped[$code] = [
-                    'records_code' => $code,
-                    'machine_id' => $item['machine_id'],
-                    'manager_id' => $item['manager_id'],
-                    'nickname' => $item['nickname'] ?? '',
-                    'check_time' => $item['check_time'],
-                    'records' => [],
+                        'records_code' => $code,
+                        'machine_id' => $item['machine_id'],
+                        'manager_id' => $item['manager_id'],
+                        'account_name' => $item['account_name'] ?? '',
+                        'nickname' => $item['account_name'] ?? '',
+                        'check_time' => $item['check_time'],
+                        'records' => [],
                 ];
             }
             $grouped[$code]['records'][] = [
@@ -355,7 +356,8 @@ class MachineCheckListClient extends ManagementClient
                 'parent_id' => $item['parent_id'],
                 'item_level' => $item['item_level'],
                 'manager_id' => $item['manager_id'],
-                'nickname' => $item['nickname'] ?? '',
+                'account_name' => $item['account_name'] ?? '',
+                'nickname' => $item['account_name'] ?? '',
                 'check_time' => $item['check_time'],
                 'notes' => $item['notes'],
                 'created_at' => $item['created_at'],
@@ -373,7 +375,7 @@ class MachineCheckListClient extends ManagementClient
                     'records_code' => $group['records_code'],
                     'machine_id' => $group['machine_id'],
                     'manager_id' => $group['manager_id'],
-                    'nickname' => $group['nickname'] ?? ($record['nickname'] ?? ''),
+                    'account_name' => $group['account_name'] ?? ($record['account_name'] ?? ''),
                     'check_time' => $record['check_time'] ?: $group['check_time'],
                     'item_name' => $record['item_name'] ?? '',
                     'check_status_text' => $this->formatCheckStatusText($record['check_status'] ?? null),

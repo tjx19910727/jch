@@ -15,7 +15,7 @@ use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 class Goods extends Common
 {
     protected $field = "g_id,g_name,gc_id,gc_name,g_type,`model`,bar_code,`sku`,`sku2`,
-    banner,pic,cost_price,market_price,retail_price,intergral_rate,manufacturer,service_phone,performance,sell_channel,exter_url,expire_notice,
+    banner,pic,cost_price,market_price,retail_price,intergral_rate,manufacturer,service_phone,performance,sell_channel,exter_url,expire_notice,sell_by_date,
     is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,status,ao_id,creator,create_time,update_time";
     protected $validatePath = 'app\management\validate\VGoods.';
 
@@ -93,6 +93,26 @@ class Goods extends Common
         }
 
         return $this->app->goods->getList($where,$pageNum,$field,'g_id desc');
+    }
+
+    /**
+     * 按商品维度统计在营设备上架、货道库存与周期销量
+     * @return mixed
+     */
+    public function getOperatingGoodsList()
+    {
+        $postData = input();
+        return $this->app->goods->getOperatingGoodsList($postData);
+    }
+
+    /**
+     * 导出商品维度在营设备上架、货道库存与周期销量
+     * @return mixed
+     */
+    public function exportOperatingGoodsList()
+    {
+        $postData = input();
+        return $this->app->goods->exportOperatingGoodsList($postData);
     }
 
     /**

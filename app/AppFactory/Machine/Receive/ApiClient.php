@@ -156,6 +156,8 @@ class ApiClient extends ReceiveBaseClient
 
     public $card_retail_price = 0.01;
     public $card_default_pwd = '123456';
+    public $receipt_code1 = "/uploads/adv/20250618/41da4aa9c2e34fb84b123c8d39eba214.png";
+    public $receipt_code2 = "/uploads/adv/20251022/0e543e3d6e1861bd59fed97194fd3f3f.jpg";
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
@@ -188,7 +190,7 @@ class ApiClient extends ReceiveBaseClient
         if (!$manager_id) {
             return $this->rFail($this->lang("VLogin.not_manager"));
         }
-        $manager = $this->getAuthManagerFind(['manager_id' => $manager_id], 'manager_id,pid,nickname,account,pic,password,status,ao_id');
+        $manager = $this->getAuthManagerFind(['manager_id' => $manager_id], 'manager_id,pid,nickname,account,pic,password,status,ao_id,use_role_template');
         if (!$manager) return $this->rFail($this->lang("VLogin.account_pwd_error"));
         $manager = $manager->toArray();
         if ($manager['password'] != md5($this->data['password'] . config("app.salt")))
@@ -808,8 +810,8 @@ class ApiClient extends ReceiveBaseClient
             }
             if (!$this->data['g_id']) {
                 $mc['batch_number'] = "";
-                $mc['manufacture_time'] = "";
-                $mc['sell_by_date'] = "";
+                $mc['manufacture_time'] = 0;
+                $mc['sell_by_date'] = 0;
                 $mc['frozen_stock'] = 0;
                 $mc['update_price'] = 2;
             }
@@ -1091,10 +1093,14 @@ class ApiClient extends ReceiveBaseClient
     public function playAdv()
     {
         $where['adv_id'] = $this->data['adv_id'];
-        $field = "adv_id,adv_title,res_id,res_title,type,type,duration_time,total_times,play_times,remain_times,m_id,machine_id,push_type,position,screen,screen_full,ao_id";
+        $field = "adv_id,adv_title,res_id,res_title,type,type,duration_time,total_times,play_times,remain_times,m_id,machine_id,push_type,position,screen,screen_full,ao_id,download_progress";
         $adv = $this->getAdvertisementPushFind($where, $field);
         if (!$adv) return $this->rFail($this->lang("VAdvertisement.adv_no_data"));
         $adv = $adv->toArray();
+        // 兜底：能请求此方法说明广告已能正常播放，若下载进度非100%则直接修正为100
+        if (isset($adv['download_progress']) && $adv['download_progress'] != 100) {
+            $adv['download_progress'] = 100;
+        }
         if ($adv['total_times'] > 0) {
             if ($adv['remain_times'] > 0)
                 $adv['remain_times']--;  // 剩余次数减1
@@ -1798,6 +1804,8 @@ class ApiClient extends ReceiveBaseClient
         if (strpos($this->machine['logo'], 'http') === false) {
             $this->machine['logo'] = $systemInfo['domain_name'] . $this->machine['logo'];
         }
+        $mConfig['receipt_code1'] = empty($mConfig['receipt_code1']) ? $this->receipt_code1 : $mConfig['receipt_code1'];
+        $mConfig['receipt_code2'] = empty($mConfig['receipt_code2']) ? $this->receipt_code2 : $mConfig['receipt_code2'];
         if ($mConfig['receipt_code1'] && strpos($mConfig['receipt_code1'], 'http') === false) {
             $mConfig['receipt_code1'] = $systemInfo['domain_name'] . $mConfig['receipt_code1'];
         }
@@ -3760,6 +3768,10 @@ class ApiClient extends ReceiveBaseClient
 
             $recordsCode = date('YmdHi');
             $managerId = trim($this->data['manager_id'] ?? '');
+            $inspectionStaff = $this->getEnabledInspectionStaff($managerId);
+            if (!$inspectionStaff) {
+                return $this->rFail('巡检人员不存在或已禁用');
+            }
             $notes = trim(strval($this->data['notes'] ?? ''));
             $checkTime = date('Y-m-d H:i:s');
 
@@ -3870,9 +3882,9 @@ class ApiClient extends ReceiveBaseClient
             $list = Db::name('check_list_records')
                 ->alias('cr')
                 ->leftJoin('check_list_items ci', 'ci.id = cr.item_id')
-                ->leftJoin('auth_manager am', 'am.manager_id = cr.manager_id')
+                ->leftJoin('inspection_staff ist', 'ist.staff_id = cr.manager_id')
                 ->where($where)
-                ->field("cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.description,ci.parent_id,ci.item_level,IFNULL(NULLIF(am.nickname,''), cr.manager_id) as nickname")
+                ->field("cr.id,cr.records_code,cr.item_id,cr.machine_id,cr.manager_id,cr.check_status,cr.check_time,cr.notes,cr.created_at,ci.item_name,ci.description,ci.parent_id,ci.item_level,IFNULL(NULLIF(ist.account_name,''), cr.manager_id) as account_name")
                 ->order('cr.records_code desc,cr.id asc')
                 ->select()
                 ->toArray();
@@ -3885,7 +3897,8 @@ class ApiClient extends ReceiveBaseClient
                         'records_code' => $code,
                         'machine_id' => $item['machine_id'],
                         'manager_id' => $item['manager_id'],
-                        'nickname' => $item['nickname'] ?? '',
+                        'account_name' => $item['account_name'] ?? '',
+                        'nickname' => $item['account_name'] ?? '',
                         'check_time' => $item['check_time'],
                         'records' => [],
                     ];
@@ -3899,7 +3912,8 @@ class ApiClient extends ReceiveBaseClient
                     'parent_id' => $item['parent_id'],
                     'item_level' => $item['item_level'],
                     'manager_id' => $item['manager_id'],
-                    'nickname' => $item['nickname'] ?? '',
+                    'account_name' => $item['account_name'] ?? '',
+                    'nickname' => $item['account_name'] ?? '',
                     'notes' => $item['notes'],
                     'created_at' => $item['created_at'],
                 ];
@@ -3964,6 +3978,11 @@ class ApiClient extends ReceiveBaseClient
             $statusCol = trim($match[2]);
             $itemCol = trim($match[3]);
             $maintainerId = trim($match[4]);
+            $inspectionStaff = $this->getEnabledInspectionStaff($maintainerId);
+            if (!$inspectionStaff) {
+                $errors[] = "巡检人员不存在或已禁用: {$maintainerId}";
+                continue;
+            }
 
             $ts = strtotime($checkTimeRaw);
             if ($ts === false) {
@@ -4099,6 +4118,60 @@ class ApiClient extends ReceiveBaseClient
         }
 
         return array_merge($result, $otherRoots);
+    }
+
+    /**
+     * 校验巡检人员账号是否存在。
+     * @return array|\think\response\Json
+     */
+    public function checkInspectionStaffCode()
+    {
+        $staffCode = trim((string)($this->data['staff_code'] ?? ''));
+        if ($staffCode === '') {
+            return $this->r(100, '巡检账号不能为空', [
+                'exists' => 0,
+                'staff_code' => $staffCode,
+            ]);
+        }
+
+        $staff = Db::name('inspection_staff')
+            ->where(['staff_code' => $staffCode])
+            ->field('staff_id,staff_code,account_name,status,expire_time')
+            ->find();
+
+        if (!$staff) {
+            return $this->r(100, '账户不存在', [
+                'exists' => 0,
+                'staff_code' => $staffCode,
+            ]);
+        }
+
+        return $this->r(200, '账户存在', [
+            'exists' => 1,
+            'staff_id' => intval($staff['staff_id']),
+            'staff_code' => $staff['staff_code'],
+            'account_name' => $staff['account_name'] ?? '',
+            'status' => intval($staff['status'] ?? 0),
+            'expire_time' => intval($staff['expire_time'] ?? 0),
+        ]);
+    }
+
+    protected function getEnabledInspectionStaff($staffId)
+    {
+        $staffId = intval($staffId);
+        if ($staffId <= 0) {
+            return [];
+        }
+
+        $staff = Db::name('inspection_staff')
+            ->where([
+                'staff_id' => $staffId,
+                'status' => 1,
+            ])
+            ->field('staff_id,account_name')
+            ->find();
+
+        return $staff ?: [];
     }
 
     /**
@@ -4397,7 +4470,7 @@ class ApiClient extends ReceiveBaseClient
     public function submitRefundGoodsLog()
     {
         $inputCode = trim((string)$this->data['input_code']);
-        $specialCode = trim((string)config('refund_goods.special_code'));
+        $specialCode = trim((string)config('refund_goods.special_code')) ?? '0000';
         $isSpecialCode = $specialCode !== ''
             && preg_match('/^\d{4}$/', $specialCode)
             && hash_equals($specialCode, $inputCode);

@@ -141,12 +141,17 @@ class SaleOrders extends Common
     {
         $postData = input();
         $hasCostPriceAuth = $this->hasCostPriceAuth();
-        $m_id = 0;
+        $mIds = [];
+        $machineIds = [];
         $sku = '';
         $g_name = '';
         if (isset($postData['m_id']) && $postData['m_id']) {
-            $m_id = $postData['m_id'];
+            $mIds = $this->parseExportGoodsListIds($postData['m_id']);
             unset($postData['m_id']);
+        }
+        if (isset($postData['machine_id']) && $postData['machine_id']) {
+            $machineIds = $this->parseExportGoodsListIds($postData['machine_id']);
+            if (count($machineIds) > 1) unset($postData['machine_id']);
         }
         if(!empty($postData['sku'])) {
             $sku = $postData['sku'];
@@ -163,10 +168,27 @@ class SaleOrders extends Common
         //     unset($where['ao_id']);
         // }
         $where['so.pay_status'] = 3;
-        if ($m_id) $where['so.m_id'] = $m_id;
+        if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
+        if (count($machineIds) > 1) $where[] = ['so.machine_id', 'in', $machineIds];
         if ($sku) $where[] = ['sod.sku', 'like', '%'.$sku.'%'];
         if ($g_name) $where[] = ['sod.g_name', 'like', '%'.$g_name.'%'];
         return $this->app->saleOrders->exportGoodsSo($where, $hasCostPriceAuth);
+    }
+
+    protected function parseExportGoodsListIds($value)
+    {
+        if (is_array($value)) {
+            $ids = $value;
+        } else {
+            $ids = explode(',', (string)$value);
+        }
+        $ids = array_map(function ($id) {
+            return trim((string)$id);
+        }, $ids);
+        $ids = array_filter($ids, function ($id) {
+            return $id !== '';
+        });
+        return array_values(array_unique($ids));
     }
 
     /**
@@ -938,4 +960,15 @@ class SaleOrders extends Common
 
         return returnData($result);
     }
+
+    /**
+     * 手动扣库存
+     * 传入sod_id，校验条件后手动扣减货道库存并更新子订单success_quantity=1
+     * @return array|string
+     */
+    public function stockDeduction()
+    {
+        return $this->app->saleOrders->manualDeductStock(input());
+    }
+
 }

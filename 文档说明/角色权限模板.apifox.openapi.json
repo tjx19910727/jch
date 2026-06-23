@@ -1,0 +1,583 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "角色权限模板接口",
+    "description": "自定义角色权限模板、模板节点配置及角色应用接口。所有接口均需在 Header 中传递 token。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}",
+      "description": "Apifox 环境地址"
+    }
+  ],
+  "tags": [
+    {
+      "name": "角色权限模板",
+      "description": "角色权限模板管理"
+    }
+  ],
+  "paths": {
+    "/management/auth.auth_role_template/getList": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "查询角色权限模板列表",
+        "operationId": "authRoleTemplateGetList",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateListRequest"},
+              "example": {"name": "运营角色", "status": 1, "pageNum": 20}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/TemplateListResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_role_template/getFind": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "查询角色权限模板详情",
+        "operationId": "authRoleTemplateGetFind",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateIdRequest"},
+              "example": {"art_id": 1}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/TemplateResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_role_template/add": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "新增角色权限模板",
+        "operationId": "authRoleTemplateAdd",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateAddRequest"},
+              "example": {
+                "name": "运营人员权限模板",
+                "desc": "用于运营人员账号授权",
+                "status": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "新增成功",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ActionResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_role_template/update": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "修改角色权限模板",
+        "operationId": "authRoleTemplateUpdate",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateUpdateRequest"},
+              "example": {
+                "art_id": 1,
+                "name": "运营人员权限模板",
+                "desc": "更新后的模板说明",
+                "status": 1
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "修改成功",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ActionResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_role_template/del": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "删除角色权限模板",
+        "description": "已被角色使用的模板不能删除。",
+        "operationId": "authRoleTemplateDelete",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateIdRequest"},
+              "example": {"art_id": 1}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "删除结果",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ActionResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_role_template/getNodes": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "查询角色权限模板节点",
+        "operationId": "authRoleTemplateGetNodes",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateNodesRequest"},
+              "example": {"art_id": 1, "pageNum": 0}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/TemplateNodesResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_role_template/saveNodes": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "覆盖保存角色权限模板节点",
+        "description": "保存后会同步覆盖所有关联角色的节点权限。nodeList 的 Key 为节点 ID，Value 为数据权限类型 d_type。",
+        "operationId": "authRoleTemplateSaveNodes",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateSaveNodesRequest"},
+              "example": {
+                "art_id": 1,
+                "nodeList": {
+                  "101": 1,
+                  "102": 2,
+                  "103": 3
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存结果",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ActionResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_role_template/getTopNavigationNodes": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "查询模板顶级导航权限树",
+        "description": "返回全部启用的顶级导航、子导航和操作节点，并包含 permission_action 分类。传 art_id 时，顶级导航同时返回 template_setting 当前配置。",
+        "operationId": "authRoleTemplateGetTopNavigationNodes",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateNodesRequest"},
+              "example": {"art_id": 1}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ActionResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_role_template/saveTopNavigationNodes": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "保存导航增删改查权限",
+        "description": "每个顶级导航独立提交查询范围和增删改查权限，children 可提交子导航覆盖配置；后端递归展开对应操作节点，并覆盖保存模板节点。",
+        "operationId": "authRoleTemplateSaveTopNavigationNodes",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateSaveTopNavigationNodesRequest"},
+              "example": {
+                "art_id": 1,
+                "top_navigation_list": [
+                  {
+                    "node_id": 69,
+                    "data_scope": "all",
+                    "create_enabled": 1,
+                    "delete_enabled": 1,
+                    "update_enabled": 1,
+                    "query_enabled": 1,
+                    "children": [
+                      {"node_id": 72, "create_enabled": 1, "delete_enabled": 1, "update_enabled": 1, "query_enabled": 1},
+                      {"node_id": 73, "create_enabled": 0, "delete_enabled": 0, "update_enabled": 0, "query_enabled": 1}
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "保存结果及最终展开节点",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ActionResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_role_template/apply": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "将权限模板应用到角色",
+        "description": "将模板关联到角色，不覆盖历史角色节点；仅对开启模板的账号生效。",
+        "operationId": "authRoleTemplateApply",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateApplyRequest"},
+              "example": {"art_id": 1, "role_id": 10}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "应用结果",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ActionResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_manager_role/setRoleManagers": {
+      "post": {
+        "tags": ["账号角色"],
+        "summary": "角色批量设置账号",
+        "description": "以 manager_ids 替换角色当前绑定账号集合，空数组表示清空。",
+        "operationId": "authManagerRoleSetRoleManagers",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/RoleManagersRequest"},
+              "example": {"role_id": 10, "manager_ids": [101, 102, 103]}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "设置结果",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/ActionResponse"}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "TokenHeader": {
+        "name": "token",
+        "in": "header",
+        "description": "后台登录 Token，使用 Apifox 环境变量",
+        "required": true,
+        "example": "{{token}}",
+        "schema": {
+          "type": "string",
+          "default": "{{token}}"
+        }
+      }
+    },
+    "schemas": {
+      "TemplateIdRequest": {
+        "type": "object",
+        "required": ["art_id"],
+        "properties": {
+          "art_id": {"type": "integer", "description": "角色权限模板 ID", "example": 1}
+        }
+      },
+      "TemplateListRequest": {
+        "type": "object",
+        "properties": {
+          "name": {"type": "string", "description": "模板名称，模糊查询"},
+          "status": {"type": "integer", "description": "状态：1启用，2停用", "enum": [1, 2]},
+          "pageNum": {"type": "integer", "description": "每页数量；0 或不传时返回全部", "default": 0}
+        }
+      },
+      "TemplateAddRequest": {
+        "type": "object",
+        "required": ["name", "status"],
+        "properties": {
+          "name": {"type": "string", "description": "模板名称"},
+          "desc": {"type": "string", "description": "模板说明"},
+          "status": {"type": "integer", "description": "状态：1启用，2停用", "enum": [1, 2]}
+        }
+      },
+      "TemplateUpdateRequest": {
+        "allOf": [
+          {"$ref": "#/components/schemas/TemplateIdRequest"},
+          {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string", "description": "模板名称"},
+              "desc": {"type": "string", "description": "模板说明"},
+              "status": {"type": "integer", "description": "状态：1启用，2停用", "enum": [1, 2]}
+            }
+          }
+        ]
+      },
+      "TemplateNodesRequest": {
+        "type": "object",
+        "required": ["art_id"],
+        "properties": {
+          "art_id": {"type": "integer", "description": "角色权限模板 ID"},
+          "pageNum": {"type": "integer", "description": "每页数量；0 或不传时返回全部", "default": 0}
+        }
+      },
+      "TemplateSaveNodesRequest": {
+        "type": "object",
+        "required": ["art_id", "nodeList"],
+        "properties": {
+          "art_id": {"type": "integer", "description": "角色权限模板 ID"},
+          "nodeList": {
+            "type": "object",
+            "description": "节点权限映射；Key 为 node_id，Value 为 d_type。d_type：0不校验数据范围，1全部，2部门，3本人，4所有下属，5直接下属。",
+            "additionalProperties": {
+              "type": "integer",
+              "enum": [0, 1, 2, 3, 4, 5]
+            }
+          }
+        }
+      },
+      "TemplateSaveTopNavigationNodesRequest": {
+        "type": "object",
+        "required": ["art_id", "top_navigation_list"],
+        "properties": {
+          "art_id": {"type": "integer", "description": "角色权限模板 ID"},
+          "top_navigation_list": {
+            "type": "array",
+            "description": "选中的顶级导航、默认查询范围及增删改查权限；children 中仅提交需要覆盖父配置的子导航。",
+            "items": {"$ref": "#/components/schemas/TemplateNavigationSetting"}
+          }
+        }
+      },
+      "TemplateNavigationSetting": {
+        "type": "object",
+        "required": ["node_id"],
+        "properties": {
+          "node_id": {"type": "integer", "description": "导航节点 ID；top_navigation_list 第一层必须是 pid=0 的顶级导航，children 必须属于父级顶级导航"},
+          "data_scope": {"type": "string", "enum": ["organization", "all"], "default": "organization", "description": "查询范围：默认继承父级；无父级时默认账号所属组织；仅传 all 时查全部"},
+          "create_enabled": {"type": "integer", "enum": [0, 1], "default": 0, "description": "是否授权新增；子导航未传时继承父级"},
+          "delete_enabled": {"type": "integer", "enum": [0, 1], "default": 0, "description": "是否授权删除；子导航未传时继承父级"},
+          "update_enabled": {"type": "integer", "enum": [0, 1], "default": 0, "description": "是否授权修改；子导航未传时继承父级"},
+          "query_enabled": {"type": "integer", "enum": [0, 1], "default": 0, "description": "是否授权查询；子导航未传时继承父级，传 1 时同时授权导出"},
+          "children": {
+            "type": "array",
+            "description": "子导航覆盖配置；不传则完全继承父级配置",
+            "items": {"$ref": "#/components/schemas/TemplateNavigationSetting"}
+          }
+        }
+      },
+      "TemplateApplyRequest": {
+        "type": "object",
+        "required": ["art_id", "role_id"],
+        "properties": {
+          "art_id": {"type": "integer", "description": "角色权限模板 ID"},
+          "role_id": {"type": "integer", "description": "目标权限角色 ID"}
+        }
+      },
+      "RoleManagersRequest": {
+        "type": "object",
+        "required": ["role_id", "manager_ids"],
+        "properties": {
+          "role_id": {"type": "integer", "description": "权限角色 ID"},
+          "manager_ids": {
+            "type": "array",
+            "description": "角色最终绑定的账号 ID 集合，空数组表示清空",
+            "items": {"type": "integer"}
+          }
+        }
+      },
+      "Template": {
+        "type": "object",
+        "properties": {
+          "art_id": {"type": "integer", "description": "角色权限模板 ID"},
+          "name": {"type": "string", "description": "模板名称"},
+          "desc": {"type": "string", "nullable": true, "description": "模板说明"},
+          "ao_id": {"type": "integer", "description": "所属组织 ID"},
+          "status": {"type": "integer", "description": "状态：1启用，2停用"},
+          "is_del": {"type": "integer", "description": "删除状态：1已删除，2未删除"},
+          "creator": {"type": "integer", "description": "创建人 ID"},
+          "create_time": {"type": "integer", "description": "创建时间戳"},
+          "update_id": {"type": "integer", "nullable": true, "description": "更新人 ID"},
+          "update_time": {"type": "integer", "description": "更新时间戳"}
+        }
+      },
+      "TemplateNode": {
+        "type": "object",
+        "properties": {
+          "artn_id": {"type": "integer", "description": "模板节点关系 ID"},
+          "art_id": {"type": "integer", "description": "角色权限模板 ID"},
+          "node_id": {"type": "integer", "description": "权限节点 ID"},
+          "data_scope": {"type": "string", "description": "新模板查询范围；空值表示历史兼容数据", "enum": ["", "organization", "all"]}
+        }
+      },
+      "ActionResponse": {
+        "type": "object",
+        "properties": {
+          "state": {"type": "integer", "description": "业务状态码", "example": 200},
+          "msg": {"type": "string", "description": "业务提示", "example": "操作成功"},
+          "data": {"nullable": true, "description": "返回数据"}
+        }
+      },
+      "TemplateResponse": {
+        "type": "object",
+        "properties": {
+          "state": {"type": "integer", "example": 200},
+          "msg": {"type": "string", "example": "查询成功"},
+          "data": {"$ref": "#/components/schemas/Template"}
+        }
+      },
+      "TemplateListResponse": {
+        "type": "object",
+        "properties": {
+          "state": {"type": "integer", "example": 200},
+          "msg": {"type": "string", "example": "查询成功"},
+          "data": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {"$ref": "#/components/schemas/Template"}
+              },
+              {
+                "type": "object",
+                "description": "分页结果"
+              }
+            ]
+          }
+        }
+      },
+      "TemplateNodesResponse": {
+        "type": "object",
+        "properties": {
+          "state": {"type": "integer", "example": 200},
+          "msg": {"type": "string", "example": "查询成功"},
+          "data": {
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {"$ref": "#/components/schemas/TemplateNode"}
+              },
+              {
+                "type": "object",
+                "description": "分页结果"
+              }
+            ]
+          }
+        }
+      }
+    }
+  }
+}
