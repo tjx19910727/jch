@@ -48,8 +48,9 @@ trait AuthManagerRoleTrait
      * 按账号配置解析角色节点。未开启模板时完整保留历史 auth_role_node 逻辑。
      * 开启模板后，已关联模板的角色读取模板节点，未关联模板的角色仍读取历史节点。
      */
-    public function resolveManagerRoleNodes(array $manager, array $roleIds, $nodeId = 0)
+    public function resolveManagerRoleNodes($manager, array $roleIds, $nodeId = 0)
     {
+        $manager = $this->normalizeManagerRoleData($manager);
         $roleIds = array_values(array_unique(array_filter(array_map('intval', $roleIds))));
         if (!$roleIds) return [];
 
@@ -110,9 +111,17 @@ trait AuthManagerRoleTrait
         return array_values($result);
     }
 
-    public function resolveManagerRoleNodeIds(array $manager, array $roleIds)
+    public function resolveManagerRoleNodeIds($manager, array $roleIds)
     {
         return array_column($this->resolveManagerRoleNodes($manager, $roleIds), 'node_id');
+    }
+
+    protected function normalizeManagerRoleData($manager)
+    {
+        if (is_object($manager) && method_exists($manager, 'toArray')) {
+            $manager = $manager->toArray();
+        }
+        return is_array($manager) ? $manager : [];
     }
 
     public function updateAuthManagerRole($update,$where = [],$field = [])
