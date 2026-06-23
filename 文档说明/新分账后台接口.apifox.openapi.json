@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "嘉潮汇管理后台 - 新分账接口",
-        "description": "新分账后台配置、分账订单查询与测试环境模拟支付成功接口。revenue_pay_channel 仅控制哪些订单支付类型允许触发新分账；普通分账、设备出租、设备分账和设备商品分账均由 revenue_rule/revenue_rule_item 配置；每条规则独立配置即时或 T+N 结算周期，revenue_order 保存生成时的结算快照。导入 Apifox 后，请在环境中配置 baseUrl 和 token。所有接口均为 POST，并显式携带必传 Header token: {{token}}。",
+        "description": "新分账后台配置、分账订单查询与测试环境模拟支付成功接口。revenue_pay_channel 仅控制哪些订单支付渠道允许触发新分账；普通分账、设备出租、设备分账和设备商品分账均由 revenue_rule/revenue_rule_item 配置；每条规则独立配置即时或 T+N 结算周期，revenue_order 保存生成时的结算快照。导入 Apifox 后，请在环境中配置 baseUrl 和 token。所有接口均为 POST，并显式携带必传 Header token: {{token}}。",
         "version": "2.1.2"
     },
     "x-generated-at": "2026-06-15",
@@ -180,7 +180,7 @@
                     "新分账-分账触发渠道"
                 ],
                 "summary": "分账触发渠道配置列表",
-                "description": "查询哪些订单支付类型会触发新分账。数据来自新分账独立配置，不是原业务收款渠道列表。channel_name 支持模糊查询。",
+                "description": "查询哪些订单支付渠道会触发新分账。数据来自新分账独立配置，不是原业务收款渠道列表。channel_name 支持模糊查询。",
                 "operationId": "revenuePayChannelGetList",
                 "parameters": [
                     {
@@ -203,7 +203,7 @@
                     "新分账-分账触发渠道"
                 ],
                 "summary": "分账触发渠道配置详情",
-                "description": "按条件查询单条新分账触发配置，常用 rpc_id 或订单 pay_type。",
+                "description": "按条件查询单条新分账触发配置，常用 rpc_id 或订单 pay_channel。",
                 "operationId": "revenuePayChannelGetFind",
                 "parameters": [
                     {
@@ -226,7 +226,7 @@
                     "新分账-分账触发渠道"
                 ],
                 "summary": "新增分账触发渠道配置",
-                "description": "配置某订单支付类型是否需要参与新分账。pay_type 唯一；不会新增或修改原业务收款渠道。",
+                "description": "配置某订单支付渠道是否需要参与新分账。pay_channel 唯一；不会新增或修改原业务收款渠道。",
                 "operationId": "revenuePayChannelAdd",
                 "parameters": [
                     {
@@ -1112,9 +1112,9 @@
                                 }
                             },
                             "按支付类型": {
-                                "summary": "查询订单支付类型1",
+                                "summary": "查询订单支付渠道（sale_orders.pay_channel）1",
                                 "value": {
-                                    "pay_type": 1
+                                    "pay_channel": 1
                                 }
                             }
                         }
@@ -1137,7 +1137,7 @@
                             "微信支付": {
                                 "summary": "新增微信支付分账触发配置",
                                 "value": {
-                                    "pay_type": 1,
+                                    "pay_channel": 7,
                                     "channel_name": "微信支付",
                                     "status": 1
                                 }
@@ -1145,7 +1145,7 @@
                             "支付宝支付": {
                                 "summary": "新增支付宝分账触发配置",
                                 "value": {
-                                    "pay_type": 2,
+                                    "pay_channel": 8,
                                     "channel_name": "支付宝支付",
                                     "status": 1
                                 }
@@ -1153,16 +1153,16 @@
                             "余额支付": {
                                 "summary": "新增余额支付分账触发配置",
                                 "value": {
-                                    "pay_type": 20,
-                                    "channel_name": "余额支付",
+                                    "pay_channel": 6,
+                                    "channel_name": "余额支付订单",
                                     "status": 1
                                 }
                             },
                             "停用渠道": {
                                 "summary": "新增但停用的分账触发配置",
                                 "value": {
-                                    "pay_type": 4,
-                                    "channel_name": "暂不参与分账",
+                                    "pay_channel": 9,
+                                    "channel_name": "POS/刷卡支付",
                                     "status": 2
                                 }
                             }
@@ -1744,43 +1744,43 @@
                             "$ref": "#/components/schemas/RevenueRuleBindMachineRequest"
                         },
                         "examples": {
-                "批量绑定出租策略": {
-                    "summary": "将出租策略2批量绑定设备100和101",
-                    "value": {
-                        "rr_id": 2,
-                        "m_ids": [
-                            100,
-                            101
-                        ],
-                        "sort": 1,
-                        "status": 1
-                    }
-                },
-                "批量绑定固定比例策略": {
-                    "summary": "将固定比例策略3批量绑定三台设备",
-                    "value": {
-                        "rr_id": 3,
-                        "m_ids": [
-                            100,
-                            101,
-                            102
-                        ],
-                        "sort": 2,
-                        "status": 1
-                    }
-                },
-                "批量绑定停用备用策略": {
-                    "summary": "批量创建停用状态的备用绑定",
-                    "value": {
-                        "rr_id": 4,
-                        "m_ids": [
-                            100,
-                            101
-                        ],
-                        "sort": 1,
-                        "status": 2
-                    }
-                }
+                            "批量绑定出租策略": {
+                                "summary": "将出租策略2批量绑定设备100和101",
+                                "value": {
+                                    "rr_id": 2,
+                                    "m_ids": [
+                                        100,
+                                        101
+                                    ],
+                                    "sort": 1,
+                                    "status": 1
+                                }
+                            },
+                            "批量绑定固定比例策略": {
+                                "summary": "将固定比例策略3批量绑定三台设备",
+                                "value": {
+                                    "rr_id": 3,
+                                    "m_ids": [
+                                        100,
+                                        101,
+                                        102
+                                    ],
+                                    "sort": 2,
+                                    "status": 1
+                                }
+                            },
+                            "批量绑定停用备用策略": {
+                                "summary": "批量创建停用状态的备用绑定",
+                                "value": {
+                                    "rr_id": 4,
+                                    "m_ids": [
+                                        100,
+                                        101
+                                    ],
+                                    "sort": 1,
+                                    "status": 2
+                                }
+                            }
                         }
                     },
                     "application/x-www-form-urlencoded": {
@@ -2009,7 +2009,8 @@
                                     "sp_id": 100,
                                     "mch_no": "TEST_MCH_A",
                                     "out_trade_no": "MOCK_NORMAL_001",
-                                    "pay_time": 1780732800
+                                    "pay_time": 1780732800,
+                                    "pay_channel": 7
                                 }
                             },
                             "出租100分账": {
@@ -2021,7 +2022,8 @@
                                     "sp_id": 100,
                                     "mch_no": "TEST_MCH_A",
                                     "out_trade_no": "MOCK_RENTAL_001",
-                                    "pay_time": 1780732800
+                                    "pay_time": 1780732800,
+                                    "pay_channel": 7
                                 }
                             },
                             "设备固定比例": {
@@ -2033,7 +2035,8 @@
                                     "sp_id": 100,
                                     "mch_no": "TEST_MCH_A",
                                     "out_trade_no": "MOCK_DEVICE_001",
-                                    "pay_time": 1780732800
+                                    "pay_time": 1780732800,
+                                    "pay_channel": 7
                                 }
                             },
                             "设备阶梯分账": {
@@ -2045,7 +2048,8 @@
                                     "sp_id": 100,
                                     "mch_no": "TEST_MCH_A",
                                     "out_trade_no": "MOCK_TIER_001",
-                                    "pay_time": 1780732800
+                                    "pay_time": 1780732800,
+                                    "pay_channel": 7
                                 }
                             },
                             "T加1延期分账": {
@@ -2057,7 +2061,8 @@
                                     "sp_id": 101,
                                     "mch_no": "TEST_MCH_A",
                                     "out_trade_no": "MOCK_T1_001",
-                                    "pay_time": 1780732800
+                                    "pay_time": 1780732800,
+                                    "pay_channel": 8
                                 }
                             },
                             "按订单ID最小参数": {
@@ -2290,9 +2295,9 @@
                                 "type": "integer",
                                 "description": "分账触发配置ID，可选"
                             },
-                            "pay_type": {
+                            "pay_channel": {
                                 "type": "integer",
-                                "description": "订单支付类型，可选；新配置应以此字段作为触发依据"
+                                "description": "订单支付渠道（sale_orders.pay_channel），可选；新配置应以此字段作为触发依据"
                             },
                             "channel_name": {
                                 "type": "string",
@@ -2318,9 +2323,9 @@
                         "type": "integer",
                         "description": "分账触发配置ID，可选但建议传"
                     },
-                    "pay_type": {
+                    "pay_channel": {
                         "type": "integer",
-                        "description": "订单支付类型，可选"
+                        "description": "订单支付渠道（sale_orders.pay_channel），可选"
                     }
                 }
             },
@@ -2328,13 +2333,13 @@
                 "type": "object",
                 "description": "新增新分账独立触发配置，不新增或修改原业务收款渠道。",
                 "required": [
-                    "pay_type",
+                    "pay_channel",
                     "channel_name"
                 ],
                 "properties": {
-                    "pay_type": {
+                    "pay_channel": {
                         "type": "integer",
-                        "description": "订单支付类型，必填且唯一；只有配置并启用的订单支付类型才生成新分账"
+                        "description": "订单支付渠道（sale_orders.pay_channel），必填且唯一；只有配置并启用的订单支付渠道（sale_orders.pay_channel）才生成新分账"
                     },
                     "channel_name": {
                         "type": "string",
@@ -2362,9 +2367,9 @@
                         "type": "integer",
                         "description": "分账触发配置ID，必填"
                     },
-                    "pay_type": {
+                    "pay_channel": {
                         "type": "integer",
-                        "description": "订单支付类型，可选；提交时必须大于0且唯一"
+                        "description": "订单支付渠道（sale_orders.pay_channel），可选；提交时必须大于0且唯一"
                     },
                     "channel_name": {
                         "type": "string",
@@ -2828,8 +2833,8 @@
             "RevenueRuleBindMachineRequest": {
                 "type": "object",
                 "required": [
-                "rr_id",
-                "m_ids"
+                    "rr_id",
+                    "m_ids"
                 ],
                 "example": {
                     "rr_id": 2,
@@ -3104,15 +3109,20 @@
                     "pay_time": {
                         "type": "integer",
                         "description": "支付时间戳，非必填；不传则使用当前时间"
+                    },
+                    "pay_channel": {
+                        "type": "integer",
+                        "description": "订单支付渠道，非必填；传入时会覆盖订单 pay_channel 用于测试，也是新分账渠道触发判断字段"
                     }
                 }
             }
         }
     },
     "x-response-pay-type-fields": {
-        "description": "新分账后台接口返回 pay_type 时，同时返回 pay_type_desc；说明值来自 config/payment.php 的 pay_type_map，未知类型返回 支付类型#值。",
+        "description": "新分账后台接口返回 pay_type 时同步返回 pay_type_desc，说明值来自 config/payment.php 的 pay_type_map；分账支付通道接口返回 pay_channel 时同步返回 pay_channel_desc，说明值来自 config/payment.php 的 pay_channel_map。未知类型返回 支付类型#值 或 支付渠道#值。",
         "fields": {
-            "pay_type": "pay_type_desc"
+            "pay_type": "pay_type_desc",
+            "pay_channel": "pay_channel_desc"
         }
     },
     "x-scenario-guides": [

@@ -14,10 +14,14 @@ trait RevenuePayTypeDescTrait
             return $data;
         }
 
-        return $this->fillRevenuePayTypeDesc($data, config('payment.pay_type_map') ?: []);
+        return $this->fillRevenuePayTypeDesc(
+            $data,
+            config('payment.pay_type_map') ?: [],
+            config('payment.pay_channel_map') ?: []
+        );
     }
 
-    protected function fillRevenuePayTypeDesc(array $data, array $payTypeMap)
+    protected function fillRevenuePayTypeDesc(array $data, array $payTypeMap, array $payChannelMap)
     {
         foreach ($data as $field => &$value) {
             if ($field === 'pay_type' && $value !== '' && $value !== null) {
@@ -25,8 +29,13 @@ trait RevenuePayTypeDescTrait
                 $data['pay_type_desc'] = $payTypeMap[$payType] ?? ('支付类型#' . $payType);
             }
 
+            if ($field === 'pay_channel' && $value !== '' && $value !== null) {
+                $payChannel = intval($value);
+                $data['pay_channel_desc'] = $payChannelMap[$payChannel] ?? ('支付渠道#' . $payChannel);
+            }
+
             if (is_array($value)) {
-                $value = $this->fillRevenuePayTypeDesc($value, $payTypeMap);
+                $value = $this->fillRevenuePayTypeDesc($value, $payTypeMap, $payChannelMap);
             }
         }
         unset($value);

@@ -51,14 +51,14 @@ class RevenuePayChannelClient extends ManagementClient
 
     protected function checkData(&$data, $isUpdate = false)
     {
-        if (!$isUpdate || isset($data['pay_type'])) {
-            if (!isset($data['pay_type']) || intval($data['pay_type']) <= 0) {
-                return $this->rFail("订单支付类型不能为空");
+        if (!$isUpdate || isset($data['pay_channel'])) {
+            if (!isset($data['pay_channel']) || intval($data['pay_channel']) <= 0) {
+                return $this->rFail("分账支付渠道不能为空");
             }
-            $where = ['pay_type' => intval($data['pay_type'])];
+            $where = ['pay_channel' => intval($data['pay_channel'])];
             $exists = $this->getRevenuePayChannelFind($where, 'rpc_id');
             if ($exists && (!$isUpdate || intval($exists['rpc_id']) !== intval($data['rpc_id'] ?? 0))) {
-                return $this->rFail("该支付类型已配置分账渠道");
+                return $this->rFail("该支付渠道已配置分账渠道");
             }
         }
         if (isset($data['status']) && !in_array(intval($data['status']), [1, 2], true)) {

@@ -51,17 +51,17 @@ class RevenueCalculator
     {
         $payerAoId = intval($this->order['ao_id'] ?? 0);
         $rentalRule = $this->getRuleByMode(2);
+        if (!$rentalRule) {
+            return true;
+        }
         foreach ($this->details as $detail) {
             $receiverAoId = intval($detail['sod_ao_id'] ?? 0);
             if ($receiverAoId <= 0 || $receiverAoId === $payerAoId) {
                 continue;
             }
-            if (!$rentalRule) {
-                throw new \Exception("设备出租分账策略未配置");
-            }
             $item = $this->getRentalRuleItem(intval($rentalRule['rr_id']), $receiverAoId);
             if (!$item) {
-                throw new \Exception("商品组织{$receiverAoId}未配置设备出租分账比例");
+                continue;
             }
             $amount = $this->money($detail['total_sod_price'] ?? 0);
             if (bccomp($amount, '0.01', 2) < 0) {
@@ -69,11 +69,14 @@ class RevenueCalculator
             }
             $account = $this->getAccountById(intval($item['ra_id']));
             if (!$account) {
-                throw new \Exception("商品组织{$receiverAoId}未配置有效分账账户");
+                continue;
             }
             $calc = $this->calculateRuleItemAmount($item, $amount, '0');
             if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) {
                 continue;
+            }
+            if (bccomp($calc['income_amount'], $amount, 2) > 0) {
+                throw new \Exception("商品组织{$receiverAoId}设备出租分账金额不能超过商品金额");
             }
             $this->rentalAmount = bcadd($this->rentalAmount, $calc['income_amount'], 2);
             $sodId = intval($detail['sod_id'] ?? 0);
@@ -108,7 +111,7 @@ class RevenueCalculator
             ->select()
             ->toArray();
         if (!$items) {
-            throw new \Exception("设备商品分账策略{$rule['rr_id']}未配置分账明细");
+            return false;
         }
 
         $hasMatchedRuleItem = false;
@@ -120,15 +123,20 @@ class RevenueCalculator
             if ($gId <= 0 || bccomp($baseAmount, '0.01', 2) < 0) {
                 continue;
             }
+            $detailAllocatedAmount = '0.00';
             foreach ($items as $item) {
                 if (intval($item['g_id'] ?? 0) !== $gId) continue;
                 $hasMatchedRuleItem = true;
                 $account = $this->getAccountById(intval($item['ra_id']));
                 if (!$account) {
-                    throw new \Exception("商品{$gId}分账明细{$item['rri_id']}未配置有效分账账户");
+                    continue;
                 }
                 $calc = $this->calculateProductRuleItemAmount($item, $baseAmount, intval($detail['quantity'] ?? 0));
                 if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) continue;
+                $detailAllocatedAmount = bcadd($detailAllocatedAmount, $calc['income_amount'], 2);
+                if (bccomp($detailAllocatedAmount, $baseAmount, 2) > 0) {
+                    throw new \Exception("商品{$gId}设备商品分账金额不能超过商品可分金额");
+                }
                 $this->productAmount = bcadd($this->productAmount, $calc['income_amount'], 2);
                 $this->records[] = $this->buildRecord([
                     'sod_id' => $sodId,
@@ -164,7 +172,7 @@ class RevenueCalculator
             ->select()
             ->toArray();
         if (!$items) {
-            throw new \Exception("设备分账策略{$rule['rr_id']}未配置分账明细");
+            return false;
         }
 
         $baseAmount = $this->getDeviceRuleBaseAmount($rule);
@@ -175,11 +183,12 @@ class RevenueCalculator
         $periodKey = date('Y-m', intval($this->order['pay_time'] ?? 0) ?: time());
         $periodBefore = $this->getMachineMonthlyTurnover(intval($this->order['m_id'] ?? 0), $periodKey, intval($rule['turnover_type'] ?? 1));
         $periodAfter = bcadd($periodBefore, $baseAmount, 2);
+        $deviceAllocatedAmount = '0.00';
 
         foreach ($items as $item) {
             $account = $this->getAccountById(intval($item['ra_id']));
             if (!$account) {
-                throw new \Exception("分账策略明细{$item['rri_id']}未配置有效分账账户");
+                continue;
             }
             if (intval($item['calc_type']) === 4 && intval($rule['tier_calc_mode'] ?? 1) === 2) {
                 $calc = $this->calculateTierSplitAmount($item, $baseAmount, $periodBefore, $periodAfter);
@@ -188,6 +197,10 @@ class RevenueCalculator
             }
             if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) {
                 continue;
+            }
+            $deviceAllocatedAmount = bcadd($deviceAllocatedAmount, $calc['income_amount'], 2);
+            if (bccomp($deviceAllocatedAmount, $baseAmount, 2) > 0) {
+                throw new \Exception("设备分账策略{$rule['rr_id']}分账金额不能超过设备规则可分金额");
             }
             $this->records[] = $this->buildRecord([
                 'rule_mode' => 3,
@@ -219,7 +232,7 @@ class RevenueCalculator
         }
         $rule = $this->getRuleByMode(1);
         if (!$rule) {
-            throw new \Exception("设备未配置普通分账策略");
+            return true;
         }
         $items = Db::name('revenue_rule_item')
             ->where(['rr_id' => $rule['rr_id'], 'status' => 1])
@@ -227,19 +240,22 @@ class RevenueCalculator
             ->select()
             ->toArray();
         if (!$items) {
-            throw new \Exception("普通分账策略{$rule['rr_id']}未配置分账明细");
+            return true;
         }
         $normalAllocatedAmount = '0.00';
         foreach ($items as $item) {
             $account = $this->getAccountById(intval($item['ra_id']));
             if (!$account) {
-                throw new \Exception("普通分账策略明细{$item['rri_id']}未配置有效分账账户");
+                continue;
             }
             $calc = $this->calculateRuleItemAmount($item, $normalAmount, '0');
             if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) {
                 continue;
             }
             $normalAllocatedAmount = bcadd($normalAllocatedAmount, $calc['income_amount'], 2);
+            if (bccomp($normalAllocatedAmount, $normalAmount, 2) > 0) {
+                throw new \Exception("普通分账策略{$rule['rr_id']}分账金额不能超过订单剩余金额");
+            }
             $this->records[] = $this->buildRecord([
                 'rule_mode' => 1,
                 'rr_id' => $rule['rr_id'],
@@ -251,9 +267,6 @@ class RevenueCalculator
                 'income_amount' => $calc['income_amount'],
                 'source' => 'normal',
             ], $account, $rule);
-        }
-        if (bccomp($normalAllocatedAmount, $normalAmount, 2) !== 0) {
-            throw new \Exception("普通分账策略{$rule['rr_id']}未完整分配订单剩余金额");
         }
         return true;
     }
@@ -284,7 +297,11 @@ class RevenueCalculator
         if ($calcType === 4) {
             $tier = $this->getMatchedTier(intval($item['rri_id']), $periodAfter);
             if (!$tier) {
-                throw new \Exception("分账策略明细{$item['rri_id']}未命中阶梯区间");
+                return [
+                    'rrit_id' => null,
+                    'income_value' => '0.000',
+                    'income_amount' => '0.00',
+                ];
             }
             $value = $this->money($tier['calc_value'] ?? 0, 3);
             return [
@@ -322,7 +339,6 @@ class RevenueCalculator
         if (!$tiers) {
             throw new \Exception("分账策略明细{$item['rri_id']}未配置阶梯区间");
         }
-        $coveredAmount = '0.00';
         $incomeAmount = '0.00';
         foreach ($tiers as $tier) {
             $min = $this->money($tier['threshold_min'] ?? 0);
@@ -333,15 +349,11 @@ class RevenueCalculator
             $overlapEnd = $max === null || bccomp($periodAfter, $max, 2) < 0 ? $periodAfter : $max;
             if (bccomp($overlapEnd, $overlapStart, 2) <= 0) continue;
             $overlapAmount = $this->money(bcsub($overlapEnd, $overlapStart, 2));
-            $coveredAmount = bcadd($coveredAmount, $overlapAmount, 2);
             $incomeAmount = bcadd(
                 $incomeAmount,
                 $this->percent($overlapAmount, $this->money($tier['calc_value'] ?? 0, 3)),
                 2
             );
-        }
-        if (bccomp($coveredAmount, $baseAmount, 2) !== 0) {
-            throw new \Exception("分账策略明细{$item['rri_id']}阶梯区间未完整覆盖本单金额");
         }
         $effectivePercent = bccomp($baseAmount, '0', 2) > 0
             ? $this->money(bcmul(bcdiv($incomeAmount, $baseAmount, 6), '100', 6), 3)
@@ -404,11 +416,11 @@ class RevenueCalculator
 
     protected function shouldCalculateRevenue()
     {
-        $payType = intval($this->order['pay_type'] ?? 0);
-        if ($payType <= 0) return false;
+        $payChannel = intval($this->order['pay_channel'] ?? 0);
+        if ($payChannel <= 0) return false;
 
         $channel = Db::name('revenue_pay_channel')
-            ->where(['pay_type' => $payType, 'status' => 1])
+            ->where(['pay_channel' => $payChannel, 'status' => 1])
             ->find();
         if (!$channel) return false;
         $this->revenuePayChannel = $channel;

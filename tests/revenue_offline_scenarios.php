@@ -12,7 +12,7 @@ class OfflineRevenueCalculator
     private array $accounts;
     private array $rules;
     private array $machineRules;
-    private array $enabledPayTypes;
+    private array $enabledPayChannels;
     private array $monthlyTurnover;
     private float $rentalAmount = 0.0;
     private float $productAmount = 0.0;
@@ -23,7 +23,7 @@ class OfflineRevenueCalculator
         $this->accounts = $fixture['accounts'];
         $this->rules = $fixture['rules'];
         $this->machineRules = $fixture['machine_rules'];
-        $this->enabledPayTypes = $fixture['enabled_pay_types'];
+        $this->enabledPayChannels = $fixture['enabled_pay_channels'];
         $this->monthlyTurnover = $fixture['monthly_turnover'];
     }
 
@@ -33,7 +33,7 @@ class OfflineRevenueCalculator
         $this->productAmount = 0.0;
         $this->rentalAmountsBySod = [];
         $records = [];
-        if (!in_array((int)$order['pay_type'], $this->enabledPayTypes, true)) {
+        if (!in_array((int)$order['pay_channel'], $this->enabledPayChannels, true)) {
             return [];
         }
 
@@ -94,16 +94,19 @@ class OfflineRevenueCalculator
     private function calculateRental(array $order): array
     {
         $rule = $this->getMachineRule($order['m_id'], 2);
+        if ($rule === null) return [];
         $records = [];
         foreach ($order['details'] as $detail) {
             if ((int)$detail['sod_ao_id'] === (int)$order['ao_id']) {
                 continue;
             }
-            $this->assert($rule !== null, '设备出租分账策略未配置');
             $item = $this->findRuleItem($rule, (int)$detail['sod_ao_id']);
-            $this->assert($item !== null, '商品组织未配置设备出租分账比例');
+            if ($item === null || !isset($this->accounts[$item['ra_id']])) {
+                continue;
+            }
 
             $amount = $this->calcAmount($detail['total_sod_price'], $item);
+            $this->assert($amount <= $detail['total_sod_price'] + 0.0001, '设备出租分账金额不能超过商品金额');
             $this->rentalAmount += $amount;
             $this->rentalAmountsBySod[$detail['sod_id']] = ($this->rentalAmountsBySod[$detail['sod_id']] ?? 0.0) + $amount;
             $records[] = $this->record($order, $item, [
@@ -121,14 +124,19 @@ class OfflineRevenueCalculator
     {
         $rule = $this->getMachineRule($order['m_id'], 4);
         if (!$rule) return [];
+        if (empty($rule['items'])) return [];
         $records = [];
         foreach ($order['details'] as $detail) {
             $baseAmount = $detail['total_sod_price'] - ($this->rentalAmountsBySod[$detail['sod_id']] ?? 0.0);
+            $detailAllocatedAmount = 0.0;
             foreach ($rule['items'] as $item) {
                 if ((int)($item['g_id'] ?? 0) !== (int)($detail['g_id'] ?? 0)) continue;
+                if (!isset($this->accounts[$item['ra_id']])) continue;
                 $amount = (int)$item['calc_type'] === 2
                     ? round($item['calc_value'] * $detail['quantity'], 2)
                     : $this->calcAmount($baseAmount, $item);
+                $detailAllocatedAmount += $amount;
+                $this->assert($detailAllocatedAmount <= $baseAmount + 0.0001, '设备商品分账金额不能超过商品可分金额');
                 $this->productAmount += $amount;
                 $records[] = $this->record($order, $item, [
                     'sod_id' => $detail['sod_id'],
@@ -150,6 +158,9 @@ class OfflineRevenueCalculator
         if (!$rule) {
             return [];
         }
+        if (empty($rule['items'])) {
+            return [];
+        }
 
         $baseAmount = $order['total_price'];
         if ((int)$rule['base_type'] === 2) {
@@ -160,10 +171,14 @@ class OfflineRevenueCalculator
         $periodAfter = $periodBefore + $baseAmount;
 
         $records = [];
+        $deviceAllocatedAmount = 0.0;
         foreach ($rule['items'] as $item) {
+            if (!isset($this->accounts[$item['ra_id']])) continue;
             $amount = (int)$item['calc_type'] === 4 && (int)($rule['tier_calc_mode'] ?? 1) === 2
                 ? $this->calcTierSplitAmount($baseAmount, $periodBefore, $periodAfter, $item)
                 : $this->calcAmount($baseAmount, $item, $periodAfter);
+            $deviceAllocatedAmount += $amount;
+            $this->assert($deviceAllocatedAmount <= $baseAmount + 0.0001, '设备分账金额不能超过设备规则可分金额');
             $records[] = $this->record($order, $item, [
                 'rule_mode' => 3,
                 'source' => (int)$item['calc_type'] === 4 ? 'tier' : 'device_rule',
@@ -179,7 +194,6 @@ class OfflineRevenueCalculator
 
     private function calcTierSplitAmount(float $baseAmount, float $periodBefore, float $periodAfter, array &$item): float
     {
-        $covered = 0.0;
         $income = 0.0;
         foreach ($item['tiers'] as $tier) {
             $start = max($periodBefore, (float)$tier['threshold_min']);
@@ -188,10 +202,8 @@ class OfflineRevenueCalculator
                 : min($periodAfter, (float)$tier['threshold_max']);
             if ($end <= $start) continue;
             $part = $end - $start;
-            $covered += $part;
             $income += $part * (float)$tier['calc_value'] / 100;
         }
-        $this->assert(abs($covered - $baseAmount) < 0.001, '阶梯区间未完整覆盖本单金额');
         $item['_matched_value'] = $baseAmount > 0 ? round($income / $baseAmount * 100, 3) : 0;
         return round($income, 2);
     }
@@ -201,11 +213,16 @@ class OfflineRevenueCalculator
         $normalAmount = round($order['total_price'] - $this->rentalAmount - $this->productAmount, 2);
         if ($normalAmount < 0.01) return [];
         $rule = $this->getMachineRule($order['m_id'], 1);
-        $this->assert($rule !== null, '设备未配置普通分账策略');
+        if ($rule === null) return [];
+        if (empty($rule['items'])) return [];
         $records = [];
+        $normalAllocatedAmount = 0.0;
         foreach ($rule['items'] as $item) {
+            if (!isset($this->accounts[$item['ra_id']])) continue;
             $amount = $this->calcAmount($normalAmount, $item);
             if ($amount < 0.01) continue;
+            $normalAllocatedAmount += $amount;
+            $this->assert($normalAllocatedAmount <= $normalAmount + 0.0001, '普通分账金额不能超过订单剩余金额');
             $records[] = $this->record($order, $item, [
                 'rule_mode' => 1,
                 'source' => 'normal',
@@ -234,7 +251,8 @@ class OfflineRevenueCalculator
                     return round($baseAmount * $tier['calc_value'] / 100, 2);
                 }
             }
-            throw new RuntimeException('阶梯区间未命中');
+            $item['_matched_value'] = 0.0;
+            return 0.0;
         }
         throw new RuntimeException('未知计算方式');
     }
@@ -310,7 +328,7 @@ function fixture(): array
             102 => ['ra_id' => 102, 'ao_id' => 2, 'manager_id' => 1002, 'account_type' => 'balance', 'account' => 'B_BALANCE'],
             103 => ['ra_id' => 103, 'ao_id' => 3, 'manager_id' => 1003, 'account_type' => 'balance', 'account' => 'C_BALANCE'],
         ],
-        'enabled_pay_types' => [1],
+        'enabled_pay_channels' => [11],
         'rules' => [
             200 => [
                 'rr_id' => 200,
@@ -509,6 +527,7 @@ function orderFixture(int $orderId, int $mId, float $total, array $details): arr
         'trade_no' => 'CODEX_REV_TEST_' . $orderId,
         'sp_id' => 9001,
         'pay_type' => 1,
+        'pay_channel' => 11,
         'pay_method' => 1,
         'm_id' => $mId,
         'machine_id' => 'CODEX-M-' . $mId,
@@ -547,7 +566,7 @@ $tests['普通分账：A设备销售A商品，A获得订单全额'] = function (
 
 $tests['渠道关闭：不生成分账单'] = function () {
     $fixture = fixture();
-    $fixture['enabled_pay_types'] = [];
+    $fixture['enabled_pay_channels'] = [];
     $calc = new OfflineRevenueCalculator($fixture);
     $records = $calc->calculate(orderFixture(10011, 501, 100.0, [
         ['sod_id' => 11, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
@@ -555,18 +574,66 @@ $tests['渠道关闭：不生成分账单'] = function () {
     assertEquals(0, count($records), '渠道关闭时不应生成分账单');
 };
 
-$tests['缺少普通规则：存在剩余金额时明确报错'] = function () {
+$tests['渠道判断：读取订单pay_channel而非pay_type'] = function () {
+    $fixture = fixture();
+    $fixture['enabled_pay_channels'] = [12];
+    $calc = new OfflineRevenueCalculator($fixture);
+    $order = orderFixture(10028, 501, 100.0, [
+        ['sod_id' => 28, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+    ]);
+    $order['pay_type'] = 1;
+    $order['pay_channel'] = 11;
+    $records = $calc->calculate($order);
+    assertEquals(0, count($records), 'pay_type命中但pay_channel未命中时不应触发分账');
+};
+
+$tests['缺少普通规则：存在剩余金额时不生成普通分账'] = function () {
     $fixture = fixture();
     $fixture['machine_rules'][501] = [];
     $calc = new OfflineRevenueCalculator($fixture);
-    try {
-        $calc->calculate(orderFixture(10012, 501, 100.0, [
-            ['sod_id' => 12, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
-        ]));
-        throw new RuntimeException('缺少普通规则时没有报错');
-    } catch (RuntimeException $e) {
-        assertEquals('设备未配置普通分账策略', $e->getMessage(), '缺少普通规则应返回明确错误');
-    }
+    $records = $calc->calculate(orderFixture(10012, 501, 100.0, [
+        ['sod_id' => 12, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(0, count($records), '缺少普通规则时应允许未分配金额留在收款账户');
+};
+
+$tests['仅配置支付渠道：未配置任何分账策略不应中断'] = function () {
+    $fixture = fixture();
+    $fixture['machine_rules'][599] = [];
+    $calc = new OfflineRevenueCalculator($fixture);
+    $records = $calc->calculate(orderFixture(10029, 599, 80.0, [
+        ['sod_id' => 29, 'sod_ao_id' => 2, 'quantity' => 1, 'retail_price' => 80.0, 'total_sod_price' => 80.0],
+    ]));
+    assertEquals(0, count($records), '只开启支付渠道但没有分账策略时应跳过分账');
+};
+
+$tests['缺少出租规则：出租商品不应中断支付流程'] = function () {
+    $fixture = fixture();
+    $fixture['machine_rules'][501] = [200];
+    $calc = new OfflineRevenueCalculator($fixture);
+    $records = $calc->calculate(orderFixture(10030, 501, 80.0, [
+        ['sod_id' => 30, 'sod_ao_id' => 2, 'quantity' => 1, 'retail_price' => 80.0, 'total_sod_price' => 80.0],
+    ]));
+    assertEquals(1, count($records), '缺少出租规则时应跳过出租分账并继续普通分账');
+    assertEquals('normal', $records[0]['source'], '剩余金额应继续按普通规则处理');
+};
+
+$tests['分账策略配置不完整：缺少明细或账户时不应中断'] = function () {
+    $fixture = fixture();
+    $fixture['rules'][220] = ['rr_id' => 220, 'rule_mode' => 3, 'base_type' => 1, 'items' => []];
+    $fixture['rules'][221] = [
+        'rr_id' => 221,
+        'rule_mode' => 1,
+        'items' => [
+            ['rri_id' => 320, 'receiver_ao_id' => 1, 'ra_id' => 999, 'manager_id' => 1001, 'calc_type' => 1, 'calc_value' => 50.0],
+        ],
+    ];
+    $fixture['machine_rules'][599] = [220, 221];
+    $calc = new OfflineRevenueCalculator($fixture);
+    $records = $calc->calculate(orderFixture(10031, 599, 80.0, [
+        ['sod_id' => 31, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 80.0, 'total_sod_price' => 80.0],
+    ]));
+    assertEquals(0, count($records), '策略缺少明细或有效账户时应跳过分账');
 };
 
 $tests['设备出租：A设备销售B商品，B按100%获得商品金额'] = function () {
@@ -589,6 +656,36 @@ $tests['设备固定比例分账：B 20%，C 30%'] = function () {
     assertMoney(20.0, $records[0]['income_amount'], 'B应获得20%');
     assertMoney(30.0, $records[1]['income_amount'], 'C应获得30%');
     assertEquals('device_rule', $records[0]['source'], '应为设备策略分账');
+};
+
+$tests['普通分账少分或全分：只按配置生成应分账金额'] = function () {
+    $fixture = fixture();
+    $fixture['rules'][200]['items'] = [
+        ['rri_id' => 300, 'receiver_ao_id' => 1, 'ra_id' => 101, 'manager_id' => 1001, 'calc_type' => 1, 'calc_value' => 40.0],
+    ];
+    $calc = new OfflineRevenueCalculator($fixture);
+    $records = $calc->calculate(orderFixture(10022, 501, 100.0, [
+        ['sod_id' => 22, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+    ]));
+    assertEquals(1, count($records), '普通分账少分或全分时都应生成配置金额');
+    assertMoney(40.0, $records[0]['income_amount'], '普通分账应只生成40元');
+};
+
+$tests['普通分账超分：应拦截'] = function () {
+    $fixture = fixture();
+    $fixture['rules'][200]['items'] = [
+        ['rri_id' => 300, 'receiver_ao_id' => 1, 'ra_id' => 101, 'manager_id' => 1001, 'calc_type' => 1, 'calc_value' => 60.0],
+        ['rri_id' => 301, 'receiver_ao_id' => 2, 'ra_id' => 102, 'manager_id' => 1002, 'calc_type' => 1, 'calc_value' => 60.0],
+    ];
+    $calc = new OfflineRevenueCalculator($fixture);
+    try {
+        $calc->calculate(orderFixture(10023, 501, 100.0, [
+            ['sod_id' => 23, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+        ]));
+        throw new RuntimeException('普通分账超分时没有报错');
+    } catch (RuntimeException $e) {
+        assertEquals('普通分账金额不能超过订单剩余金额', $e->getMessage(), '普通分账超分应返回明确错误');
+    }
 };
 
 $tests['同一商品不同设备：设备505按商品金额10%分账'] = function () {
@@ -648,6 +745,20 @@ $tests['设备出租固定金额：每条出租商品分账5元'] = function () 
     assertMoney(75.0, $records[1]['income_amount'], '剩余75元应走普通分账');
 };
 
+$tests['设备出租固定金额超分：应拦截'] = function () {
+    $fixture = fixture();
+    $fixture['rules'][207]['items'][0]['calc_value'] = 120.0;
+    $calc = new OfflineRevenueCalculator($fixture);
+    try {
+        $calc->calculate(orderFixture(10027, 509, 80.0, [
+            ['sod_id' => 27, 'sod_ao_id' => 2, 'quantity' => 1, 'retail_price' => 80.0, 'total_sod_price' => 80.0],
+        ]));
+        throw new RuntimeException('设备出租分账超分时没有报错');
+    } catch (RuntimeException $e) {
+        assertEquals('设备出租分账金额不能超过商品金额', $e->getMessage(), '设备出租分账超分应返回明确错误');
+    }
+};
+
 $tests['设备出租全额：出租组织获得商品全额'] = function () {
     $calc = new OfflineRevenueCalculator(fixture());
     $records = $calc->calculate(orderFixture(10016, 510, 80.0, [
@@ -664,6 +775,20 @@ $tests['设备固定金额：设备策略分账5元'] = function () {
     ]));
     assertEquals(1, count($records), '设备固定金额应生成1条分账');
     assertMoney(5.0, $records[0]['income_amount'], '设备固定金额应为5元');
+};
+
+$tests['设备固定金额超分：应拦截'] = function () {
+    $fixture = fixture();
+    $fixture['rules'][209]['items'][0]['calc_value'] = 120.0;
+    $calc = new OfflineRevenueCalculator($fixture);
+    try {
+        $calc->calculate(orderFixture(10024, 511, 100.0, [
+            ['sod_id' => 24, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
+        ]));
+        throw new RuntimeException('设备分账超分时没有报错');
+    } catch (RuntimeException $e) {
+        assertEquals('设备分账金额不能超过设备规则可分金额', $e->getMessage(), '设备分账超分应返回明确错误');
+    }
 };
 
 $tests['设备全额：设备策略分账订单全额'] = function () {
@@ -705,6 +830,33 @@ $tests['设备阶梯支付成功金额口径：累计达到8000命中30%'] = fun
     assertEquals(1, count($records), '支付成功金额口径阶梯应生成1条分账');
     assertMoney(30.0, $records[0]['income_value'], '累计达到8000应命中30%');
     assertMoney(60.0, $records[0]['income_amount'], '支付成功金额口径分账应为60元');
+};
+
+$tests['设备阶梯区间未覆盖：未命中部分不分'] = function () {
+    $fixture = fixture();
+    $fixture['rules'][212]['items'][0]['tiers'] = [
+        ['threshold_min' => 5000.0, 'threshold_max' => 5050.0, 'calc_value' => 20.0],
+    ];
+    $calc = new OfflineRevenueCalculator($fixture);
+    $records = $calc->calculate(orderFixture(10025, 514, 200.0, [
+        ['sod_id' => 25, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 200.0, 'total_sod_price' => 200.0],
+    ]));
+    assertEquals(1, count($records), '阶梯只覆盖部分金额时仍应生成命中部分');
+    assertMoney(10.0, $records[0]['income_amount'], '只有5000到5050的50元按20%分账');
+};
+
+$tests['设备商品按件固定金额超分：应拦截'] = function () {
+    $fixture = fixture();
+    $fixture['rules'][205]['items'][0]['calc_value'] = 60.0;
+    $calc = new OfflineRevenueCalculator($fixture);
+    try {
+        $calc->calculate(orderFixture(10026, 506, 100.0, [
+            ['sod_id' => 26, 'mg_id' => 9005, 'g_id' => 700, 'sod_ao_id' => 1, 'quantity' => 2, 'retail_price' => 50.0, 'total_sod_price' => 100.0],
+        ]));
+        throw new RuntimeException('设备商品分账超分时没有报错');
+    } catch (RuntimeException $e) {
+        assertEquals('设备商品分账金额不能超过商品可分金额', $e->getMessage(), '设备商品分账超分应返回明确错误');
+    }
 };
 
 $tests['阶梯分账：本单后累计达到5000以上但未到8000'] = function () {

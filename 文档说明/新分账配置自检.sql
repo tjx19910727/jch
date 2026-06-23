@@ -4,7 +4,7 @@
 -- 1. 已启用的分账收款渠道
 SELECT
   rpc_id,
-  pay_type,
+  pay_channel,
   channel_name,
   status
 FROM revenue_pay_channel

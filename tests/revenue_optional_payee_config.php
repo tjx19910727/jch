@@ -22,12 +22,16 @@ foreach ([$calculator, $provider, $databaseChange] as $content) {
 if (strpos($calculator, "Db::name('revenue_pay_channel')") === false) {
     $failures[] = '分账入口没有读取渠道开关';
 }
+if (strpos($calculator, "\$this->order['pay_channel']") === false
+    || strpos($calculator, "'pay_channel' => \$payChannel") === false) {
+    $failures[] = '分账入口没有使用 sale_order.pay_channel 匹配 revenue_pay_channel.pay_channel';
+}
 if (strpos($calculator, "where(['payee_type'") !== false
     || strpos($calculator, "field('payee_type')") !== false) {
     $failures[] = '分账入口仍依赖 payee_type 回退匹配';
 }
 if (strpos($calculator, 'getRuleByMode(1)') === false
-    || strpos($calculator, '设备未配置普通分账策略') === false) {
+    || strpos($calculator, '普通分账策略') === false) {
     $failures[] = '普通分账没有完整迁移到 rule_mode=1';
 }
 

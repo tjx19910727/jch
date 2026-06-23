@@ -72,12 +72,15 @@ check(($organizationFields['ao_id'] ?? '') === 'organization_name', 'ao_id 返�
 check(($organizationFields['payer_ao_id'] ?? '') === 'payer_organization_name', 'payer_ao_id 返回字段必须补充 payer_organization_name', $failures);
 check(($organizationFields['receiver_ao_id'] ?? '') === 'receiver_organization_name', 'receiver_ao_id 返回字段必须补充 receiver_organization_name', $failures);
 check(($payTypeFields['pay_type'] ?? '') === 'pay_type_desc', 'pay_type 返回字段必须补充 pay_type_desc', $failures);
+check(($payTypeFields['pay_channel'] ?? '') === 'pay_channel_desc', 'pay_channel 返回字段必须补充 pay_channel_desc', $failures);
 foreach (['RevenueRuleListRequest', 'RevenueRuleAddRequest', 'RevenueRuleUpdateRequest'] as $name) {
     check(strpos(json_encode($schemas[$name] ?? []), 'payer_ao_id') === false, "{$name} 不得继续暴露 payer_ao_id", $failures);
 }
 check(strpos(json_encode($schemas['RevenueOrderListRequest'] ?? []), 'payer_ao_id') !== false, 'RevenueOrderListRequest 必须保留订单收款组织筛选', $failures);
 foreach (['RevenuePayChannelListRequest', 'RevenuePayChannelFindRequest', 'RevenuePayChannelAddRequest', 'RevenuePayChannelUpdateRequest'] as $name) {
     check(strpos(json_encode($schemas[$name] ?? []), 'payee_type') === false, "{$name} 不得继续暴露已删除的 payee_type", $failures);
+    check(strpos(json_encode($schemas[$name] ?? []), 'pay_type') === false, "{$name} 不得继续暴露旧字段 pay_type", $failures);
+    check(strpos(json_encode($schemas[$name] ?? []), 'pay_channel') !== false, "{$name} 必须使用 pay_channel", $failures);
 }
 
 foreach ($paths as $path => $pathItem) {
@@ -132,7 +135,7 @@ echo "[PASS] 所有接口均显式携带必传 Header token: {{token}}\n";
 echo "[PASS] 全部接口均提供命名场景请求示例，核心接口具备多场景参数\n";
 echo "[PASS] 请求体引用、必填字段和字段说明校验通过\n";
 echo "[PASS] 组织ID与组织名称返回字段约定完整\n";
-echo "[PASS] 支付类型与支付类型说明返回字段约定完整\n";
+echo "[PASS] 支付类型/渠道与说明返回字段约定完整\n";
 echo "[PASS] 文档已按当前 Revenue 控制器重新生成，无失效模块或接口\n";
 echo "\nSummary: passed=8, failed=0\n";
 
