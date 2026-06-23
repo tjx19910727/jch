@@ -52,6 +52,9 @@ class RevenueCalculator
         $payerAoId = intval($this->order['ao_id'] ?? 0);
         $rentalRule = $this->getRuleByMode(2);
         if (!$rentalRule) {
+            $this->logRevenueConfig('设备出租规则明细查询', [
+                'found_rule' => 0,
+            ]);
             return true;
         }
         foreach ($this->details as $detail) {
@@ -60,6 +63,13 @@ class RevenueCalculator
                 continue;
             }
             $item = $this->getRentalRuleItem(intval($rentalRule['rr_id']), $receiverAoId);
+            $this->logRevenueConfig('设备出租规则明细查询', [
+                'rr_id' => intval($rentalRule['rr_id']),
+                'sod_id' => intval($detail['sod_id'] ?? 0),
+                'receiver_ao_id' => $receiverAoId,
+                'found_item' => $item ? 1 : 0,
+                'rri_id' => $item ? intval($item['rri_id']) : 0,
+            ]);
             if (!$item) {
                 continue;
             }
@@ -69,6 +79,11 @@ class RevenueCalculator
             }
             $account = $this->getAccountById(intval($item['ra_id']));
             if (!$account) {
+                $this->logRevenueConfig('分账账户查询', [
+                    'source' => 'rental',
+                    'ra_id' => intval($item['ra_id']),
+                    'found_account' => 0,
+                ]);
                 continue;
             }
             $calc = $this->calculateRuleItemAmount($item, $amount, '0');
@@ -110,6 +125,11 @@ class RevenueCalculator
             ->order('sort asc,rri_id asc')
             ->select()
             ->toArray();
+        $this->logRevenueConfig('设备商品分账规则明细查询', [
+            'rr_id' => intval($rule['rr_id']),
+            'item_count' => count($items),
+            'g_ids' => $this->collectColumnValues($items, 'g_id'),
+        ]);
         if (!$items) {
             return false;
         }
@@ -124,11 +144,22 @@ class RevenueCalculator
                 continue;
             }
             $detailAllocatedAmount = '0.00';
+            $matchedItemCount = 0;
+            $matchedRriIds = [];
             foreach ($items as $item) {
                 if (intval($item['g_id'] ?? 0) !== $gId) continue;
                 $hasMatchedRuleItem = true;
+                $matchedItemCount++;
+                $matchedRriIds[] = intval($item['rri_id']);
                 $account = $this->getAccountById(intval($item['ra_id']));
                 if (!$account) {
+                    $this->logRevenueConfig('分账账户查询', [
+                        'source' => 'product_rule',
+                        'ra_id' => intval($item['ra_id']),
+                        'rri_id' => intval($item['rri_id']),
+                        'g_id' => $gId,
+                        'found_account' => 0,
+                    ]);
                     continue;
                 }
                 $calc = $this->calculateProductRuleItemAmount($item, $baseAmount, intval($detail['quantity'] ?? 0));
@@ -156,6 +187,15 @@ class RevenueCalculator
                     'source' => 'product_rule',
                 ], $account, $rule);
             }
+            $this->logRevenueConfig('设备商品分账商品匹配', [
+                'rr_id' => intval($rule['rr_id']),
+                'sod_id' => $sodId,
+                'g_id' => $gId,
+                'mg_id' => intval($detail['mg_id'] ?? 0),
+                'base_amount' => $baseAmount,
+                'matched_item_count' => $matchedItemCount,
+                'matched_rri_ids' => $matchedRriIds,
+            ]);
         }
         return $hasMatchedRuleItem;
     }
@@ -171,6 +211,11 @@ class RevenueCalculator
             ->order('sort asc,rri_id asc')
             ->select()
             ->toArray();
+        $this->logRevenueConfig('设备分账规则明细查询', [
+            'rr_id' => intval($rule['rr_id']),
+            'item_count' => count($items),
+            'rri_ids' => $this->collectColumnValues($items, 'rri_id'),
+        ]);
         if (!$items) {
             return false;
         }
@@ -184,10 +229,25 @@ class RevenueCalculator
         $periodBefore = $this->getMachineMonthlyTurnover(intval($this->order['m_id'] ?? 0), $periodKey, intval($rule['turnover_type'] ?? 1));
         $periodAfter = bcadd($periodBefore, $baseAmount, 2);
         $deviceAllocatedAmount = '0.00';
+        $this->logRevenueConfig('设备分账计算基数', [
+            'rr_id' => intval($rule['rr_id']),
+            'base_amount' => $baseAmount,
+            'period_key' => $periodKey,
+            'period_amount_before' => $periodBefore,
+            'period_amount_after' => $periodAfter,
+            'turnover_type' => intval($rule['turnover_type'] ?? 1),
+            'tier_calc_mode' => intval($rule['tier_calc_mode'] ?? 1),
+        ]);
 
         foreach ($items as $item) {
             $account = $this->getAccountById(intval($item['ra_id']));
             if (!$account) {
+                $this->logRevenueConfig('分账账户查询', [
+                    'source' => 'device_rule',
+                    'ra_id' => intval($item['ra_id']),
+                    'rri_id' => intval($item['rri_id']),
+                    'found_account' => 0,
+                ]);
                 continue;
             }
             if (intval($item['calc_type']) === 4 && intval($rule['tier_calc_mode'] ?? 1) === 2) {
@@ -239,6 +299,13 @@ class RevenueCalculator
             ->order('sort asc,rri_id asc')
             ->select()
             ->toArray();
+        $this->logRevenueConfig('普通分账规则明细查询', [
+            'rr_id' => intval($rule['rr_id']),
+            'normal_amount' => $normalAmount,
+            'allocated_amount' => $allocatedAmount,
+            'item_count' => count($items),
+            'rri_ids' => $this->collectColumnValues($items, 'rri_id'),
+        ]);
         if (!$items) {
             return true;
         }
@@ -246,6 +313,12 @@ class RevenueCalculator
         foreach ($items as $item) {
             $account = $this->getAccountById(intval($item['ra_id']));
             if (!$account) {
+                $this->logRevenueConfig('分账账户查询', [
+                    'source' => 'normal',
+                    'ra_id' => intval($item['ra_id']),
+                    'rri_id' => intval($item['rri_id']),
+                    'found_account' => 0,
+                ]);
                 continue;
             }
             $calc = $this->calculateRuleItemAmount($item, $normalAmount, '0');
@@ -407,6 +480,38 @@ class RevenueCalculator
         return true;
     }
 
+
+    protected function logRevenueConfig($stage, array $data = [])
+    {
+        try {
+            $base = [
+                'order_id' => intval($this->order['order_id'] ?? 0),
+                'trade_no' => $this->order['trade_no'] ?? '',
+                'sp_id' => intval($this->order['sp_id'] ?? 0),
+                'm_id' => intval($this->order['m_id'] ?? 0),
+                'machine_id' => $this->order['machine_id'] ?? '',
+            ];
+            actionLog(array_merge($base, $data), '新分账配置-' . $stage, 'RevenueCalculator');
+        } catch (\Exception $e) {
+            // 日志失败不影响订单分账主流程。
+        }
+    }
+
+    protected function collectColumnValues(array $rows, $column)
+    {
+        $values = [];
+        foreach ($rows as $row) {
+            if (!isset($row[$column]) || $row[$column] === '') {
+                continue;
+            }
+            $value = intval($row[$column]);
+            if (!in_array($value, $values, true)) {
+                $values[] = $value;
+            }
+        }
+        return $values;
+    }
+
     protected function clearPendingRecords()
     {
         if (empty($this->order['order_id'])) return true;
@@ -417,11 +522,23 @@ class RevenueCalculator
     protected function shouldCalculateRevenue()
     {
         $payChannel = intval($this->order['pay_channel'] ?? 0);
-        if ($payChannel <= 0) return false;
+        if ($payChannel <= 0) {
+            $this->logRevenueConfig('支付渠道查询', [
+                'pay_channel' => $payChannel,
+                'found_channel' => 0,
+                'skip_reason' => 'empty_pay_channel',
+            ]);
+            return false;
+        }
 
         $channel = Db::name('revenue_pay_channel')
             ->where(['pay_channel' => $payChannel, 'status' => 1])
             ->find();
+        $this->logRevenueConfig('支付渠道查询', [
+            'pay_channel' => $payChannel,
+            'found_channel' => $channel ? 1 : 0,
+            'rpc_id' => $channel ? intval($channel['rpc_id'] ?? 0) : 0,
+        ]);
         if (!$channel) return false;
         $this->revenuePayChannel = $channel;
         return true;
@@ -429,7 +546,7 @@ class RevenueCalculator
 
     protected function getRuleByMode($mode)
     {
-        return Db::name('revenue_rule_machine')
+        $rule = Db::name('revenue_rule_machine')
             ->alias('rrm')
             ->join('revenue_rule rr', 'rr.rr_id = rrm.rr_id')
             ->where([
@@ -441,6 +558,13 @@ class RevenueCalculator
             ->field('rr.*')
             ->order('rrm.sort asc,rrm.rrm_id desc')
             ->find();
+        $this->logRevenueConfig('分账规则查询', [
+            'rule_mode' => intval($mode),
+            'found_rule' => $rule ? 1 : 0,
+            'rr_id' => $rule ? intval($rule['rr_id']) : 0,
+            'rule_name' => $rule ? ($rule['rule_name'] ?? '') : '',
+        ]);
+        return $rule;
     }
 
     protected function getRentalRuleItem($rrId, $receiverAoId)
