@@ -508,6 +508,16 @@ return [
         "desc_max" => "Version description exceeds limit",
     ],
 
+    "VOtaVersion" => [
+        "ov_id_require" => "OTA firmware ID cannot be empty",
+        "version_no_require" => "Version number cannot be empty",
+        "version_no_max" => "Version number exceeds length limit",
+        "path_require" => "Firmware path cannot be empty",
+        "path_max" => "Firmware path exceeds length limit",
+        "size_require" => "File size cannot be empty",
+        "desc_max" => "Version description exceeds limit",
+    ],
+
     "VTripMultiple" => [
         "delHotel_notEmpty" => "Please select hotels to delete",
         "delGoods_notEmpty" => "Please select products to delete",

@@ -52,6 +52,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineRefundGoodsLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\SimCardInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
+use app\AppFactory\Kernel\Traits\Machine\OtaVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
@@ -119,6 +120,7 @@ class ApiClient extends ReceiveBaseClient
         MachineChannelTrait,
         MachineChannelReplenishmentTrait,
         MachineVersionPlanTrait,
+        OtaVersionPlanTrait,
         MachineGoodsTrait,
         MachineHelpTrait,
         MachineOnOffTrait,
@@ -1430,6 +1432,36 @@ class ApiClient extends ReceiveBaseClient
         $update['mvp_id'] = $this->data['mvp_id'];
         $update['download_progress'] = $this->data['download_progress'];
         $result = $this->updateMachineVersionPlan($update);
+        return $this->rU($result);
+    }
+
+    /**
+     * 获取最新一条OTA固件更新计划
+     * @return array|string
+     */
+    public function otaVersionPlan()
+    {
+        $where['m_id'] = $this->machine['m_id'];
+        $where[] = ['publish_time', '<', time()];
+        $result = $this->getOtaVersionPlanFind($where, 'ovp_id,ov_id,version_no,path,`desc`,size,update_time,status', 'ovp_id desc');
+        actionLog($result, '查询OTA固件更新计划');
+        actionLog($this->getLS(), '【SQL】查询OTA固件更新计划');
+        if (!$result) {
+            return $this->rNoData();
+        }
+        if ($result['status'] != 1) return $this->rFail();
+        return $this->rQ($result);
+    }
+
+    /**
+     * 上报OTA固件更新下载进度
+     * @return array|\think\response\Json
+     */
+    public function otaVersionDownload()
+    {
+        $update['ovp_id'] = $this->data['ovp_id'];
+        $update['download_progress'] = $this->data['download_progress'];
+        $result = $this->updateOtaVersionPlan($update);
         return $this->rU($result);
     }
 

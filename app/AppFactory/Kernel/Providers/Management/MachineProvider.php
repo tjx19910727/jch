@@ -38,6 +38,8 @@ use app\AppFactory\Management\Machine\MachineOnOffClient;
 use app\AppFactory\Management\Machine\MachinePreReplenishmentClient;
 use app\AppFactory\Management\Machine\MachineVersionClient;
 use app\AppFactory\Management\Machine\MachineVersionPlanClient;
+use app\AppFactory\Management\Machine\OtaVersionClient;
+use app\AppFactory\Management\Machine\OtaVersionPlanClient;
 use app\AppFactory\Management\Machine\MachineViewClient;
 use app\AppFactory\Management\Machine\SimCardInfoClient;
 use app\AppFactory\Management\Machine\MachineServiceLogClient;
@@ -130,6 +132,12 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['machineVersionPlan'] = function ($app) {
             return new MachineVersionPlanClient($app);
+        };
+        $app['otaVersion'] = function ($app) {
+            return new OtaVersionClient($app);
+        };
+        $app['otaVersionPlan'] = function ($app) {
+            return new OtaVersionPlanClient($app);
         };
         $app['machineServiceLog'] = function ($app) {
             return new MachineServiceLogClient($app);

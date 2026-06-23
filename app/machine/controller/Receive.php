@@ -1382,5 +1382,34 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+
+    
+    /**
+     * 获取最新一条OTA固件更新信息
+     * @return array|string
+     */
+    public function getOtaVersionPlan()
+    {
+        try {
+            return $this->app->api->otaVersionPlan();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 上报OTA固件更新下载进度
+     * @return array|\think\response\Json
+     */
+    public function reportOtaVersionDownload()
+    {
+        try {
+            return $this->app->api->otaVersionDownload();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
     
 }

@@ -510,6 +510,16 @@ return [
         "desc_max" => "版本说明超限制",
     ],
 
+    "VOtaVersion" => [
+        "ov_id_require" => "OTA固件ID不能为空",
+        "version_no_require" => "版本号不能为空",
+        "version_no_max" => "版本号长度超限制",
+        "path_require" => "固件包路径不能为空",
+        "path_max" => "固件包路径长度超限制",
+        "size_require" => "文件大小不能为空",
+        "desc_max" => "版本说明超限制",
+    ],
+
     "VTripMultiple" => [
         "delHotel_notEmpty" => "请选择需要删除的酒店",
         "delGoods_notEmpty" => "请选择需要删除的商品",
