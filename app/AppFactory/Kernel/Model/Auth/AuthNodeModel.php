@@ -28,6 +28,7 @@ class AuthNodeModel extends BaseModel
         "is_auth" => "int",
         "is_button" => "int",
         "data_auth" => "int",
+        "permission_action" => "string",
         "status" => "int",
         "create_time" => "int",
         "update_time" => "int",
