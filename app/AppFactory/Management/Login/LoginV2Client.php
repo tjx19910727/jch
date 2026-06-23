@@ -93,11 +93,12 @@ class LoginV2Client extends ManagementClient
         }
         $ticket = "/wx/login/scanLogin/login_id/$id/time/" . time();
         $loginUrl = $this->getUrl($ticket);
+        $loginUrl = $loginUrl.'?ticket='.md5($ticket);
         $this->updateWxOfficialLogin(['id' => $id, "login_url" => $loginUrl]);
         return $this->r(200, $this->lang("action_success"), [
             "id"        => $id,
             "login_url" => $loginUrl,
-            "ticket" =>$ticket
+            "ticket" =>md5($ticket)
         ]);
     }
 
@@ -120,14 +121,14 @@ class LoginV2Client extends ManagementClient
             return $this->r(100,'ticket无效或登录记录不存在');
         }
         $loginFind = $loginFind->toArray();
-        if ($loginFind['create_time'] + 120 <= time()) {
+        if ($loginFind['create_time'] + 60 <= time()) {
             return $this->r(100,'二维码已过期，请刷新二维码重试');
         }
         $postData['id'] = $loginFind['id'];
         $login = $this->getWxOfficialLoginFind(['id' => $postData['id']], 'id,login_token,status,create_time');
         if (!$login) return $this->r(100,$this->lang("query_fail"));
         $login = $login->toArray();
-        if ($login['create_time'] + 120 <= time()) {
+        if ($login['create_time'] + 60 <= time()) {
             return $this->r(100,'二维码已过期，请刷新二维码重试');
         }
         if ($login['status'] == 3) {
