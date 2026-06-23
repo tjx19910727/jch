@@ -1461,8 +1461,26 @@ class ApiClient extends ReceiveBaseClient
     {
         $update['ovp_id'] = $this->data['ovp_id'];
         $update['download_progress'] = $this->data['download_progress'];
-        $result = $this->updateOtaVersionPlan($update);
-        return $this->rU($result);
+        $ota_status = $this->data['ota_status'] ?? 0;
+        if ($ota_status == 1) {
+            $update['status'] = 3;
+            if ($this->data['download_progress'] != 100) {
+                $update['download_progress'] = 100;
+            }
+        }
+        $this->startTrans();
+        try {
+            $flag[] = $this->updateOtaVersionPlan($update);
+            if ($ota_status == 1 && !empty($this->data['version'])) {
+                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['version']]);
+            }
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result) ? $this->rU($result) : $this->rFail();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 
     /**
