@@ -20,6 +20,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
 use app\AppFactory\Kernel\Traits\RemoteRemovalLog\RemoteRemovalLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Db;
 
 class MachineChannelClient extends ManagementClient
 {
@@ -165,6 +166,447 @@ class MachineChannelClient extends ManagementClient
     {
         $list = $this->buildStockOutListData($where);
         return $this->rQ($list);
+    }
+
+    /**
+     * 商品滞销设备列表
+     * 筛选时间范围内，统计每台设备销量小于等于 sale_count 的货道数量
+     * @param array $postData
+     * @return array|string
+     */
+    public function getSlowMovingGoodsList($postData = [])
+    {
+        $pageNum = $postData['pageNum'] ?? 15;
+        if (!is_numeric($pageNum) || $pageNum <= 0) {
+            $pageNum = 15;
+        }
+        $pageNum = intval($pageNum);
+
+        $page = $postData['page'] ?? 1;
+        if (!is_numeric($page) || $page <= 0) {
+            $page = 1;
+        }
+        $page = intval($page);
+
+        $context = $this->buildSlowMovingQueryContext($postData);
+        if ($context['empty']) {
+            return $this->rQ([
+                'total' => 0,
+                'per_page' => $pageNum,
+                'current_page' => $page,
+                'last_page' => 1,
+                'data' => [],
+            ]);
+        }
+
+        $saleByMcSubQuery = $context['sale_sub_mc_query'];
+        $saleCount = $context['sale_count'];
+        $queryMIds = $context['query_m_ids'];
+        $soWhere = $context['so_where'];
+
+        $saleNumExpr = 'IFNULL(sm.sale_num,0)';
+        $slowCountExpr = 'sum(case when mc.g_id > 0 and (' . $saleNumExpr . ') <= ' . $saleCount . ' then 1 else 0 end)';
+
+        $query = Db::name('machine_channel')
+            ->alias('mc')
+            ->join('machine m', 'm.m_id = mc.m_id', 'left')
+            ->leftJoin([$saleByMcSubQuery => 'sm'], 'sm.sale_m_id = mc.m_id and sm.mc_id = mc.mc_id')
+            ->where('m.is_operating', 1)
+            ->where('mc.status', '<>', 2)
+            ->whereRaw('(mc.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = mc.m_id AND mi.sub_cabinet = 1))')
+            ->field('mc.m_id,m.machine_id,m.machine_name,' . $slowCountExpr . ' channel_count,sum(case when mc.g_id = 0 OR mc.stock = 0 then 1 else 0 end) empty_channel')
+            ->group('mc.m_id,m.machine_id,m.machine_name')
+            ->having($slowCountExpr . ' > 0')
+            ->order('channel_count desc,m.machine_id asc');
+
+        if ($queryMIds !== null) {
+            $query->whereIn('mc.m_id', $queryMIds);
+        }
+
+        $debugQuery = clone $query;
+        $mainSql = $debugQuery->fetchSql(true)->select();
+        actionLog('[slow_moving] sale_sub_mc_sql: ' . $saleByMcSubQuery);
+        actionLog('[slow_moving] main_sql: ' . $mainSql);
+        actionLog('[slow_moving] so_where: ' . json_encode($soWhere, JSON_UNESCAPED_UNICODE));
+        actionLog('[slow_moving] filter_m_ids: ' . json_encode($queryMIds, JSON_UNESCAPED_UNICODE));
+
+        $pageData = $query->paginate($pageNum, false, ['page' => $page, 'query' => request()->param()])->toArray();
+        return $this->rQ($pageData);
+    }
+
+    /**
+     * 导出商品滞销设备列表
+     * @param array $postData
+     * @return array|\think\response\Json
+     */
+    public function exportSlowMovingGoodsList($postData = [])
+    {
+        $context = $this->buildSlowMovingQueryContext($postData);
+        if ($context['empty']) {
+            return $this->rNoData();
+        }
+
+        $saleByMcSubQuery = $context['sale_sub_mc_query'];
+        $saleCount = $context['sale_count'];
+        $queryMIds = $context['query_m_ids'];
+
+        $saleNumExpr = 'IFNULL(sm.sale_num,0)';
+        $slowCountExpr = 'sum(case when mc.g_id > 0 and (' . $saleNumExpr . ') <= ' . $saleCount . ' then 1 else 0 end)';
+
+        $query = Db::name('machine_channel')
+            ->alias('mc')
+            ->join('machine m', 'm.m_id = mc.m_id', 'left')
+            ->leftJoin([$saleByMcSubQuery => 'sm'], 'sm.sale_m_id = mc.m_id and sm.mc_id = mc.mc_id')
+            ->where('mc.status', '<>', 2)
+            ->where('m.is_operating', 1)
+            ->whereRaw('(mc.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = mc.m_id AND mi.sub_cabinet = 1))')
+            ->field('mc.m_id,m.machine_id,m.machine_name,' . $slowCountExpr . ' channel_count,sum(case when mc.g_id = 0 OR mc.stock = 0 then 1 else 0 end) empty_channel')
+            ->group('mc.m_id,m.machine_id,m.machine_name')
+            ->having($slowCountExpr . ' > 0')
+            ->order('channel_count desc,m.machine_id asc');
+
+        if ($queryMIds !== null) {
+            $query->whereIn('mc.m_id', $queryMIds);
+        }
+
+        $list = $query->select();
+        if (!$list) {
+            return $this->rNoData();
+        }
+
+        $list = $list->toArray();
+        $title = [
+            'machine_id' => '设备编号',
+            'machine_name' => '设备名称',
+            'channel_count' => '滞销货道数',
+            'empty_channel' => '空货道数',
+        ];
+        $filename = '商品滞销设备列表-' . date('YmdHis');
+        return $this->sendToExport('首页-商品滞销设备列表', $filename, $title, $list);
+    }
+
+    /**
+     * 商品滞销设备货道详情
+     * 传入 m_id，返回满足筛选条件的滞销货道和空货货道
+     * @param array $postData
+     * @return array|string
+     */
+    public function getSlowMovingGoodsDetail($postData = [])
+    {
+        if (empty($postData['m_id'])) {
+            return $this->r(100, 'm_id不能为空');
+        }
+
+        $context = $this->buildSlowMovingQueryContext($postData);
+        if ($context['empty']) {
+            return $this->rQ([]);
+        }
+
+        $detailMId = $postData['m_id'];
+        if (is_array($detailMId)) {
+            $detailMId = reset($detailMId);
+        }
+        $detailMId = trim((string)$detailMId);
+        if (strpos($detailMId, ',') !== false) {
+            $detailMId = trim(explode(',', $detailMId)[0]);
+        }
+        if ($detailMId === '' || $detailMId === '0') {
+            return $this->r(100, 'm_id不能为空');
+        }
+
+        if ($context['query_m_ids'] !== null && !in_array($detailMId, array_map('strval', $context['query_m_ids']), true)) {
+            return $this->rQ([]);
+        }
+
+        $saleByMcSubQuery = $context['sale_sub_mc_query'];
+
+        $saleCount = $context['sale_count'];
+
+        $saleNumExpr = 'IFNULL(sm.sale_num,0)';
+        $isSlowExpr = '(mc.g_id > 0 and (' . $saleNumExpr . ') <= ' . $saleCount . ')';
+        $isEmptyExpr = '(mc.g_id = 0 OR mc.stock = 0)';
+
+        $query = Db::name('machine_channel')
+            ->alias('mc')
+            ->join('machine m', 'm.m_id = mc.m_id', 'left')
+            ->leftJoin([$saleByMcSubQuery => 'sm'], 'sm.sale_m_id = mc.m_id and sm.mc_id = mc.mc_id')
+            ->where('mc.status', '<>', 2)
+            ->where('mc.m_id', '=', $detailMId)
+            ->whereRaw('(mc.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = mc.m_id AND mi.sub_cabinet = 1))')
+            ->whereRaw('(' . $isSlowExpr . ' OR ' . $isEmptyExpr . ')')
+            ->field('mc.m_id,m.machine_id,m.machine_name,mc.mc_id,mc.channel_code,mc.g_id,mc.g_name,mc.stock,' . $saleNumExpr . ' sale_num,case when ' . $isSlowExpr . ' then 1 else 0 end is_slow,case when ' . $isEmptyExpr . ' then 1 else 0 end is_empty')
+            ->order('mc.channel_code asc');
+
+        $list = $query->select();
+        $rows = $list ? $list->toArray() : [];
+
+        $machineInfo = [
+            'm_id' => $detailMId,
+            'machine_id' => '',
+            'machine_name' => '',
+        ];
+        if ($rows) {
+            $machineInfo['m_id'] = $rows[0]['m_id'] ?? $detailMId;
+            $machineInfo['machine_id'] = $rows[0]['machine_id'] ?? '';
+            $machineInfo['machine_name'] = $rows[0]['machine_name'] ?? '';
+        }
+
+        $slowChannelList = [];
+        $emptyChannelList = [];
+        foreach ($rows as $item) {
+            $channelItem = [
+                'mc_id' => $item['mc_id'] ?? 0,
+                'channel_code' => $item['channel_code'] ?? '',
+                'g_id' => $item['g_id'] ?? 0,
+                'g_name' => $item['g_name'] ?? '',
+                'stock' => $item['stock'] ?? 0,
+                'sale_num' => $item['sale_num'] ?? 0,
+            ];
+
+            if (!empty($item['is_slow'])) {
+                $slowChannelList[] = $channelItem;
+            }
+            if (!empty($item['is_empty'])) {
+                $emptyChannelList[] = $channelItem;
+            }
+        }
+
+        return $this->rQ([
+            'm_id' => $machineInfo['m_id'],
+            'machine_id' => $machineInfo['machine_id'],
+            'machine_name' => $machineInfo['machine_name'],
+            'slow_channel_list' => $slowChannelList,
+            'empty_channel_list' => $emptyChannelList,
+        ]);
+    }
+
+    /**
+     * 商品滞销汇总（最近15天销量为0）
+     * 滞销货道数：沿用滞销货道口径（mc_id维度，销量<=0）
+     * 滞销商品数：在营设备货道上的商品ID中，最近15天销量为0的商品数
+     * @param array $postData
+     * @return array|string
+     */
+    public function getSlowMovingGoodsSummary($postData = [])
+    {
+        $postData['sale_count'] = 0;
+        $postData['countDate'] = '';
+
+        $context = $this->buildSlowMovingQueryContext($postData);
+        if ($context['empty']) {
+            return $this->rQ([
+                'slow_goods_count' => 0,
+                'slow_channel_count' => 0,
+            ]);
+        }
+
+        $queryMIds = $context['query_m_ids'];
+        $saleWhere = $context['sale_where'];
+        $saleByMcSubQuery = $context['sale_sub_mc_query'];
+
+        $slowChannelCount = Db::name('machine_channel')
+            ->alias('mc')
+            ->join('machine m', 'm.m_id = mc.m_id', 'left')
+            ->leftJoin([$saleByMcSubQuery => 'sm'], 'sm.sale_m_id = mc.m_id and sm.mc_id = mc.mc_id')
+            ->where('m.is_operating', 1)
+            ->where('mc.status', '<>', 2)
+            ->where('mc.g_id', '>', 0)
+            ->whereRaw('(mc.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = mc.m_id AND mi.sub_cabinet = 1))')
+            ->whereRaw('IFNULL(sm.sale_num,0) <= 0');
+        if ($queryMIds !== null) {
+            $slowChannelCount->whereIn('mc.m_id', $queryMIds);
+        }
+        $slowChannelCount = $slowChannelCount->count();
+
+        $saleGoodsExpr = 'IFNULL(NULLIF(sod.g_id,0),IFNULL(sod.g_id,0))';
+        $saleByGoodsSubQuery = Db::name('sale_orders_details')
+            ->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id', 'left')
+            ->where($saleWhere)
+            ->field($saleGoodsExpr . ' sale_g_id,sum(sod.quantity) sale_num')
+            ->whereRaw($saleGoodsExpr . ' > 0')
+            ->group($saleGoodsExpr)
+            ->buildSql();
+
+        $slowGoodsCount = Db::name('machine_channel')
+            ->alias('mc')
+            ->join('machine m', 'm.m_id = mc.m_id', 'left')
+            ->leftJoin([$saleByGoodsSubQuery => 'sg'], 'sg.sale_g_id = mc.g_id')
+            ->where('m.is_operating', 1)
+            ->where('mc.status', '<>', 2)
+            ->where('mc.g_id', '>', 0)
+            ->whereRaw('(mc.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = mc.m_id AND mi.sub_cabinet = 1))')
+            ->whereRaw('IFNULL(sg.sale_num,0) <= 0');
+        if ($queryMIds !== null) {
+            $slowGoodsCount->whereIn('mc.m_id', $queryMIds);
+        }
+        $slowGoodsCount = $slowGoodsCount->count('distinct mc.g_id');
+
+        return $this->rQ([
+            'slow_goods_count' => $slowGoodsCount,
+            'slow_channel_count' => $slowChannelCount,
+        ]);
+    }
+
+    /**
+     * 构建滞销查询上下文
+     * @param array $postData
+     * @return array
+     */
+    private function buildSlowMovingQueryContext($postData = [])
+    {
+        $saleCount = $postData['sale_count'] ?? 0;
+        if ($saleCount === '' || !is_numeric($saleCount)) {
+            $saleCount = 0;
+        }
+
+        $soWhere = $postData['so_where'] ?? [];
+        list($startDate, $endDate) = $this->resolveSlowMovingDateRange($postData['countDate'] ?? '');
+        $filterMIds = $this->resolveSlowMovingMIds($postData);
+
+        $queryMIds = null;
+        if ($filterMIds !== null) {
+            if (!$filterMIds) {
+                return [
+                    'empty' => true,
+                    'sale_count' => $saleCount,
+                    'so_where' => $soWhere,
+                    'query_m_ids' => [],
+                    'sale_sub_query' => '',
+                ];
+            }
+            $queryMIds = $filterMIds;
+        }
+
+        $saleWhere = [
+            ['so.pay_status', '=', 3],
+            ['so.create_date', 'between', [$startDate, $endDate]],
+        ];
+        if ($soWhere) {
+            $saleWhere = array_merge($saleWhere, $soWhere);
+        }
+        if ($queryMIds !== null) {
+            $saleWhere[] = ['so.m_id', 'in', $queryMIds];
+        }
+
+        $saleByMcSubQuery = Db::name('sale_orders_details')
+            ->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id', 'left')
+            ->where($saleWhere)
+            ->where('sod.mc_id', '>', 0)
+            ->field('so.m_id sale_m_id,sod.mc_id,sum(sod.quantity) sale_num')
+            ->group('so.m_id,sod.mc_id')
+            ->buildSql();
+
+        return [
+            'empty' => false,
+            'sale_count' => $saleCount,
+            'so_where' => $soWhere,
+            'sale_where' => $saleWhere,
+            'query_m_ids' => $queryMIds,
+            'sale_sub_mc_query' => $saleByMcSubQuery,
+        ];
+    }
+
+    /**
+     * 组装滞销列表分页结构
+     * @param array $list
+     * @param int $pageNum
+     * @param int $page
+     * @return array
+     */
+    // private function buildSlowMovingPageData($list, $pageNum, $page)
+    // {
+    //     $total = count($list);
+    //     $lastPage = $total > 0 ? intval(ceil($total / $pageNum)) : 1;
+    //     if ($page > $lastPage) {
+    //         $page = $lastPage;
+    //     }
+    //     if ($page < 1) {
+    //         $page = 1;
+    //     }
+
+    //     $offset = ($page - 1) * $pageNum;
+    //     $pageList = array_slice($list, $offset, $pageNum);
+
+    //     return [
+    //         'total' => $total,
+    //         'per_page' => $pageNum,
+    //         'current_page' => $page,
+    //         'last_page' => $lastPage,
+    //         'data' => array_values($pageList),
+    //     ];
+    // }
+
+    /**
+     * 解析滞销筛选时间，默认最近15天（含今天）
+     * @param string $dateRange
+     * @return array
+     */
+    private function resolveSlowMovingDateRange($dateRange = '')
+    {
+        $startDate = strtotime(date('Y-m-d', strtotime('-14 days')));
+        $endDate = strtotime(date('Y-m-d 23:59:59'));
+
+        if (!$dateRange) {
+            return [$startDate, $endDate];
+        }
+
+        $parts = explode('~', $dateRange);
+        if (!isset($parts[0]) || !isset($parts[1])) {
+            return [$startDate, $endDate];
+        }
+
+        $startTime = strtotime(trim($parts[0]));
+        $endTime = strtotime(trim($parts[1]));
+        if ($startTime === false || $endTime === false) {
+            return [$startDate, $endDate];
+        }
+        return [$startTime, $endTime];
+    }
+
+    /**
+     * 解析设备筛选（m_id / machine_group_id）
+     * @param array $postData
+     * @return array|null null表示无设备筛选
+     */
+    private function resolveSlowMovingMIds($postData)
+    {
+        $machineWhere = [];
+        $hasMachineFilter = false;
+
+        if (isset($postData['m_id']) && $postData['m_id'] !== '') {
+            $mIdValue = $postData['m_id'];
+            if (!is_array($mIdValue)) {
+                $mIdValue = explode(',', (string)$mIdValue);
+            }
+            $mIdValue = array_values(array_filter(array_map('trim', $mIdValue), function ($value) {
+                return $value !== '' && $value !== '0';
+            }));
+            if ($mIdValue) {
+                $machineWhere[] = ['m_id', 'in', $mIdValue];
+                $hasMachineFilter = true;
+            }
+        }
+
+        if (isset($postData['machine_group_id']) && $postData['machine_group_id'] !== '' && $postData['machine_group_id'] != 0) {
+            $groupMIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']], 'm_id');
+            if (!$groupMIds) {
+                return [];
+            }
+            $machineWhere[] = ['m_id', 'in', $groupMIds];
+            $hasMachineFilter = true;
+        }
+
+        if (!$hasMachineFilter) {
+            return null;
+        }
+
+        $mIds = $this->getMachineColumn($machineWhere, 'm_id');
+        if (!$mIds) {
+            return [];
+        }
+        return array_values(array_unique($mIds));
     }
 
     /**
