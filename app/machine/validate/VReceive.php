@@ -298,7 +298,9 @@ class VReceive extends VCommon
         // 非uploadMedia的场景才需要验证时间戳
         if ($scene != "uploadMedia") {
             if (!$item) return "时间戳不能为空";
-            if (time() - $item > 120) return "VReceive.timestamp_checkTimestamp_overdue";
+            $tolerance = intval(config('rabbit_mq.machine_receive_timestamp_tolerance') ?: 180);
+            if ($tolerance < 120) $tolerance = 120;
+            if (time() - intval($item) > $tolerance) return "VReceive.timestamp_checkTimestamp_overdue";
         }
         return true;
     }

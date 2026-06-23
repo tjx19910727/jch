@@ -96,6 +96,26 @@ class Goods extends Common
     }
 
     /**
+     * 按商品维度统计在营设备上架、货道库存与周期销量
+     * @return mixed
+     */
+    public function getOperatingGoodsList()
+    {
+        $postData = input();
+        return $this->app->goods->getOperatingGoodsList($postData);
+    }
+
+    /**
+     * 导出商品维度在营设备上架、货道库存与周期销量
+     * @return mixed
+     */
+    public function exportOperatingGoodsList()
+    {
+        $postData = input();
+        return $this->app->goods->exportOperatingGoodsList($postData);
+    }
+
+    /**
      * 添加商品
      * @return array|mixed|string
      */

@@ -53,6 +53,7 @@ return [
         "goodsTopRankFileName" => "首页-人气商品排行榜",
         "gift_points" => "赠送积分",
         "cost_points" => "消费积分",
+        "totalPrice" => "销售总额",
     ],
 
     "getSelfRoleNode" => [

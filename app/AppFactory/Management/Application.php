@@ -69,6 +69,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Auth\AuthNodeClient                    $authNode               权限节点
  * @property Auth\AuthRoleClient                    $authRole               权限角色
  * @property Auth\AuthRoleNodeClient                $authRoleNode           权限角色绑定权限节点
+ * @property Auth\AuthRoleTemplateClient            $authRoleTemplate       角色权限模板
  * @property Auth\AuthOrganizationClient            $authOrganization       组织架构
  * @property Auth\AuthOrganizationRoleClient        $authOrganizationRole   组织架构关联权限角色
  *
