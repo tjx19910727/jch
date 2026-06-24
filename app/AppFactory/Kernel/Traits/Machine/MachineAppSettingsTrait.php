@@ -90,18 +90,6 @@ trait MachineAppSettingsTrait
                     'default' => '',
                     'desc' => '购买语音自定义文字',
                 ],
-                'purchase_voice_text_zh_hant' => [
-                    'name' => '购买语音自定义文字(繁体)',
-                    'value_type' => 'string',
-                    'default' => '',
-                    'desc' => '购买语音自定义文字繁体',
-                ],
-                'purchase_voice_text_en' => [
-                    'name' => '购买语音自定义文字(英文)',
-                    'value_type' => 'string',
-                    'default' => '',
-                    'desc' => '购买语音自定义文字英文',
-                ],
                 'purchase_voice_file_path' => [
                     'name' => '购买语音文件',
                     'value_type' => 'string',
@@ -131,18 +119,6 @@ trait MachineAppSettingsTrait
                     'value_type' => 'string',
                     'default' => '',
                     'desc' => '出货语音自定义文字',
-                ],
-                'dispense_voice_text_zh_hant' => [
-                    'name' => '出货语音自定义文字(繁体)',
-                    'value_type' => 'string',
-                    'default' => '',
-                    'desc' => '出货语音自定义文字繁体',
-                ],
-                'dispense_voice_text_en' => [
-                    'name' => '出货语音自定义文字(英文)',
-                    'value_type' => 'string',
-                    'default' => '',
-                    'desc' => '出货语音自定义文字英文',
                 ],
                 'dispense_voice_file_path' => [
                     'name' => '出货语音文件',
@@ -174,18 +150,6 @@ trait MachineAppSettingsTrait
                     'default' => '',
                     'desc' => '取货语音自定义文字',
                 ],
-                'pickup_voice_text_zh_hant' => [
-                    'name' => '取货语音自定义文字(繁体)',
-                    'value_type' => 'string',
-                    'default' => '',
-                    'desc' => '取货语音自定义文字繁体',
-                ],
-                'pickup_voice_text_en' => [
-                    'name' => '取货语音自定义文字(英文)',
-                    'value_type' => 'string',
-                    'default' => '',
-                    'desc' => '取货语音自定义文字英文',
-                ],
                 'pickup_voice_file_path' => [
                     'name' => '取货语音文件',
                     'value_type' => 'string',
@@ -215,18 +179,6 @@ trait MachineAppSettingsTrait
                     'value_type' => 'string',
                     'default' => '',
                     'desc' => '支付页语音文字(简体)',
-                ],
-                'pay_voice_text_zh_hant' => [
-                    'name' => '支付页语音文字(繁体)',
-                    'value_type' => 'string',
-                    'default' => '',
-                    'desc' => '支付页语音文字繁体',
-                ],
-                'pay_voice_text_en' => [
-                    'name' => '支付页语音文字(英文)',
-                    'value_type' => 'string',
-                    'default' => '',
-                    'desc' => '支付页语音文字英文',
                 ],
                 'pay_voice_file_path' => [
                     'name' => '支付页语音文件',

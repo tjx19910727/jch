@@ -144,6 +144,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Template\TemplateLayoutClient          $templateLayout         模板布局
  * @property Template\TemplateViewClient            $templateView           模板视图
  * @property Template\TopicPageClient               $topicPage              主题页
+ * @property Template\MachineVoiceTemplateClient    $machineVoiceTemplate   语音模板
  *
  * @property Trip\TripMultipleClient                $tripMultiple           携程套餐
  * @property Trip\TripMultipleGoodsClient           $tripMultipleGoods      携程套餐商品
