@@ -65,6 +65,7 @@ use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
+use app\AppFactory\Kernel\Traits\Template\MachineVoiceTemplateTrait;
 use app\AppFactory\Kernel\Traits\Template\TopicPageTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
@@ -128,6 +129,7 @@ class ApiClient extends ReceiveBaseClient
         SimCardInfoTrait,
         MachineTrait,
         TopicPageTrait,
+        MachineVoiceTemplateTrait,
         TemplateViewTrait,
 
         EarthCountriesTrait,
@@ -349,42 +351,31 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
-     * 获取设备应用配置(type=1)
+     * 获取设备当前语音模板配置
      * @return array|\think\response\Json
      */
     public function machineAppSettings()
     {
-        $mId = $this->machine['m_id'];
-        $machineData = $this->getMachineFind(['m_id' => $mId], 'machine_id');
-        $machineId = $machineData['machine_id'] ?? '';
-        $type = 1;
-        $fieldMap = $this->getMachineAppSettingsFieldMap($type);
-
-        $this->insertDefaultAppSettingsRows($fieldMap, $mId, $machineId, $type);
-
-        $list = $this->getMachineAppSettingsList(
-            ['m_id' => $mId, 'type' => $type],
-            0,
-            '`key`,`value`,value_type,updated_at',
-            'id asc'
-        );
-        $list = $list ? $list->toArray() : [];
-        $rowMap = [];
-        foreach ($list as $item) {
-            $rowMap[$item['key']] = $item;
+        $voiceIds = $this->getVoiceDetailColumn(['machine_id' => $this->machine['machine_id']], 'voice_id');
+        if (!$voiceIds) {
+            return $this->rQ(new \stdClass());
         }
 
-        $res = [
-            'type' => $type,
-        ];
-        foreach ($fieldMap as $key => $meta) {
-            $row = $rowMap[$key] ?? [];
-            $rawValue = $row['value'] ?? $meta['default'];
-            $valueType = $row['value_type'] ?? $meta['value_type'];
-            $res[$key] = $this->castAppSettingValueByType($rawValue, $valueType);
+        $voiceIds = array_values(array_unique(array_filter($voiceIds)));
+        if (!$voiceIds) {
+            return $this->rQ(new \stdClass());
         }
 
-        return $this->rQ($res);
+        $voice = $this->getVoiceTemplateFind([
+            ['id', 'in', $voiceIds],
+            ['status', '=', 1],
+        ], '*', 'id desc');
+
+        if (!$voice) {
+            return $this->rQ(new \stdClass());
+        }
+
+        return $this->rQ($voice->toArray());
     }
 
     protected function insertDefaultAppSettingsRows($fieldMap, $mId, $machineId, $type = 1)
