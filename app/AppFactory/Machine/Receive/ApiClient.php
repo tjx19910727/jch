@@ -1474,8 +1474,8 @@ class ApiClient extends ReceiveBaseClient
         $this->startTrans();
         try {
             $flag[] = $this->updateOtaVersionPlan($update, ['ovp_id' => $this->data['ovp_id']]);
-            if ($ota_status == 1 && !empty($this->data['version'])) {
-                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['version']]);
+            if ($ota_status == 1 && !empty($this->data['ota_version'])) {
+                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['ota_version']]);
             }
             $result = $this->checkFlag($flag);
             return $this->checkTrans($result) ? $this->rU($result) : $this->rFail();
@@ -1508,8 +1508,8 @@ class ApiClient extends ReceiveBaseClient
         $this->startTrans();
         try {
             $flag[] = $this->updateOtaVersionPlan($update,['ovp_id' => $this->data['ovp_id']]);
-            if ($ota_status == 1 && !empty($this->data['version'])) {
-                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['version']]);
+            if ($ota_status == 1 && !empty($this->data['ota_version'])) {
+                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['ota_version']]);
             }
             $result = $this->checkFlag($flag);
             return $this->checkTrans($result) ? $this->rU($result) : $this->rFail();
