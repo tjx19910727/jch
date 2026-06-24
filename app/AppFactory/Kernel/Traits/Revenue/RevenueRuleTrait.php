@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Kernel\Traits\Revenue;
 
+use app\AppFactory\Kernel\Service\Revenue\RevenueCouponService;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemTierModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleMachineModel;
@@ -149,11 +150,12 @@ trait RevenueRuleTrait
 
     public function existsRevenueRuleCouponCode($couponCode, $excludeRrcId = 0)
     {
-        $query = RevenueRuleCouponModel::where(['coupon_code' => $couponCode]);
-        if (intval($excludeRrcId) > 0) {
-            $query->where('rrc_id', '<>', intval($excludeRrcId));
-        }
-        return $query->find() ? true : false;
+        return RevenueCouponService::existsRevenueCouponCode($couponCode, $excludeRrcId);
+    }
+
+    public function getEnabledRevenueRuleCouponByCode($couponCode, $field = 'rrc.*,rr.rule_name,rr.rule_mode')
+    {
+        return RevenueCouponService::findEnabledCouponByCode($couponCode, $field);
     }
 
     public function getRevenueRuleCouponScopeFind($where, $field = "*", $order = "")

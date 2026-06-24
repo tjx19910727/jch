@@ -10,6 +10,8 @@ namespace app\AppFactory\Machine\Receive;
 
 
 use app\AppFactory\Kernel\ServiceContainer;
+use app\AppFactory\Kernel\Model\Revenue\RevenueOrderModel;
+use app\AppFactory\Kernel\Service\Revenue\RevenueCouponService;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityFdContentTrait;
@@ -121,7 +123,12 @@ class ActivityClient extends ReceiveBaseClient
         // 有优惠券码，重新处理订单数据
         if (isset($this->data['coupon_code'])) {
             try {
-                $result = $this->orderUseCoupon();
+                $couponCode = trim(strval($this->data['coupon_code']));
+                if (RevenueCouponService::hasActivityCouponCode($couponCode)) {
+                    $result = $this->orderUseCoupon();
+                } else {
+                    $result = $this->orderUseRevenueCoupon($couponCode);
+                }
                 if ($result !== true) {
                     return $result;
                 }
@@ -132,6 +139,96 @@ class ActivityClient extends ReceiveBaseClient
             }
         }
         return $this->r(200,"操作成功",$this->order);
+    }
+
+    protected function orderUseRevenueCoupon($couponCode)
+    {
+        if (!preg_match('/^[1-9][0-9]{5}$/', $couponCode)) {
+            return $this->rFail($this->lang("VActivityCoupon.check_no_code"));
+        }
+
+        $coupon = RevenueCouponService::findEnabledCouponByCode($couponCode, 'rrc.*,rr.rule_name,rr.rule_mode');
+        if (!$coupon) {
+            return $this->rFail($this->lang("VActivityCoupon.check_no_code"));
+        }
+        if (!is_array($coupon)) $coupon = $coupon->toArray();
+
+        $usable = RevenueCouponService::checkUsable($coupon);
+        if (!$usable['usable']) {
+            return $this->rFail($usable['message']);
+        }
+
+        $matched = RevenueCouponService::matchScope($coupon, $this->getRevenueCouponOrderArray(), $this->getOrderDetailsForRevenueCouponScope());
+        if (!$matched['matched']) {
+            return $this->rFail("优惠券不适用于当前设备或订单商品");
+        }
+
+        $usedCode = trim(strval($this->order['revenue_coupon_code'] ?? ''));
+        if ($usedCode !== '' && $usedCode !== $couponCode) {
+            return $this->rFail("订单已使用其他分账优惠券");
+        }
+        if ($usedCode === $couponCode) {
+            actionLog(['order_id' => $this->order['order_id'], 'coupon_code' => $couponCode], '分账优惠券已绑定订单');
+            return true;
+        }
+
+        $updateOrder = [
+            'order_id' => $this->order['order_id'],
+            'revenue_coupon_code' => $couponCode,
+        ];
+        $this->updateSaleOrders($updateOrder, [], ['order_id', 'revenue_coupon_code']);
+        actionLog($this->getLS(), '绑定分账优惠券到订单');
+        actionLog([
+            'order_id' => $this->order['order_id'],
+            'coupon_code' => $couponCode,
+            'rrc_id' => intval($coupon['rrc_id']),
+            'rr_id' => intval($coupon['rr_id']),
+        ], '分账优惠券使用信息');
+
+        $this->order['revenue_coupon_code'] = $couponCode;
+        $refreshResult = $this->refreshPendingRevenueAfterRevenueCoupon();
+        if ($refreshResult !== true) {
+            return $refreshResult;
+        }
+        return true;
+    }
+
+    protected function getRevenueCouponOrderArray()
+    {
+        if (is_object($this->order) && method_exists($this->order, 'toArray')) {
+            return $this->order->toArray();
+        }
+        return is_array($this->order) ? $this->order : [];
+    }
+
+    protected function refreshPendingRevenueAfterRevenueCoupon()
+    {
+        $order = $this->getRevenueCouponOrderArray();
+        if (empty($order['order_id']) || floatval($order['total_price'] ?? 0) <= 0 || intval($order['pay_channel'] ?? 0) <= 0) {
+            return true;
+        }
+        $pendingCount = RevenueOrderModel::where(['order_id' => intval($order['order_id']), 'status' => 0])->count();
+        if (!$pendingCount) {
+            return true;
+        }
+        $this->order['details'] = $this->getOrderDetailsForRevenueCouponScope();
+        $result = $this->countIncome();
+        if (!$result) {
+            return $this->rFail($this->revenueError ?: "重新生成分账订单失败");
+        }
+        return true;
+    }
+
+    protected function getOrderDetailsForRevenueCouponScope()
+    {
+        if (isset($this->order['details']) && $this->order['details']) {
+            $details = $this->order['details'];
+            if (!is_array($details)) $details = $details->toArray();
+            return $details;
+        }
+        $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']], 0, 'sod_id,g_id,mg_id,total_sod_price,quantity');
+        if (!$details) return [];
+        return is_array($details) ? $details : $details->toArray();
     }
 
     /**

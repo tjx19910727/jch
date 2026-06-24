@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Management\Revenue;
 
+use app\AppFactory\Kernel\Service\Revenue\RevenueCouponService;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
@@ -533,11 +534,18 @@ class RevenueRuleClient extends ManagementClient
             return $this->rFail("只有优惠券分账策略才能配置优惠券");
         }
         $couponCode = trim($couponData['coupon_code'] ?? '');
+        if ($couponCode === '') {
+            try {
+                $couponCode = RevenueCouponService::generateUniqueCouponCode();
+            } catch (\Exception $e) {
+                return $this->rFail($e->getMessage());
+            }
+        }
         if (!preg_match('/^[1-9][0-9]{5}$/', $couponCode)) {
             return $this->rFail("优惠券编码必须为非0开头的6位数字");
         }
-        if ($this->existsRevenueRuleCouponCode($couponCode, $isUpdate ? intval($couponData['rrc_id']) : 0)) {
-            return $this->rFail("优惠券编码已存在");
+        if (!RevenueCouponService::isCouponCodeUnique($couponCode, $isUpdate ? intval($couponData['rrc_id']) : 0)) {
+            return $this->rFail("优惠券编码已存在或已被活动优惠券使用");
         }
         $useLimit = intval($couponData['use_limit'] ?? 0);
         if ($useLimit < 0) return $this->rFail("优惠券使用次数不能小于0");

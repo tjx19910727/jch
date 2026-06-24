@@ -5,8 +5,6 @@ namespace app\AppFactory\Kernel\Service\Revenue;
 use app\AppFactory\Kernel\Model\Revenue\RevenueOrderModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueAccountModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenuePayChannelModel;
-use app\AppFactory\Kernel\Model\Revenue\RevenueRuleCouponModel;
-use app\AppFactory\Kernel\Model\Revenue\RevenueRuleCouponScopeModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemTierModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleMachineModel;
@@ -231,16 +229,7 @@ class RevenueCalculator
             return false;
         }
 
-        $coupon = RevenueRuleCouponModel::alias('rrc')
-            ->join('revenue_rule rr', 'rr.rr_id = rrc.rr_id')
-            ->where([
-                'rrc.coupon_code' => $couponCode,
-                'rrc.status' => 1,
-                'rr.status' => 1,
-                'rr.rule_mode' => 5,
-            ])
-            ->field('rrc.*,rr.rule_name,rr.rule_mode,rr.settlement_type,rr.settlement_days')
-            ->find();
+        $coupon = RevenueCouponService::findEnabledCouponByCode($couponCode);
         if ($coupon && !is_array($coupon)) {
             $coupon = $coupon->toArray();
         }
@@ -250,11 +239,24 @@ class RevenueCalculator
             'rrc_id' => $coupon ? intval($coupon['rrc_id']) : 0,
             'rr_id' => $coupon ? intval($coupon['rr_id']) : 0,
         ]);
-        if (!$coupon || !$this->isCouponUsable($coupon)) {
+        if (!$coupon) {
             return false;
         }
 
-        $matched = $this->matchCouponScope($coupon);
+        $usable = RevenueCouponService::checkUsable($coupon);
+        $this->logRevenueConfig('优惠券分账可用性校验', [
+            'rrc_id' => intval($coupon['rrc_id'] ?? 0),
+            'coupon_code' => $coupon['coupon_code'] ?? '',
+            'usable' => $usable['usable'] ? 1 : 0,
+            'remain_count' => intval($coupon['remain_count'] ?? 0),
+            'expire_time' => intval($coupon['expire_time'] ?? 0),
+            'skip_reason' => $usable['reason'],
+        ]);
+        if (!$usable['usable']) {
+            return false;
+        }
+
+        $matched = RevenueCouponService::matchScope($coupon, $this->order, $this->details, $this->rentalAmountsBySod, $this->rentalAmount);
         $this->logRevenueConfig('优惠券分账范围匹配', [
             'coupon_code' => $couponCode,
             'rrc_id' => intval($coupon['rrc_id']),
@@ -544,112 +546,6 @@ class RevenueCalculator
             ];
         }
         return null;
-    }
-
-    protected function isCouponUsable(array $coupon)
-    {
-        $remainCount = intval($coupon['remain_count'] ?? 0);
-        if ($remainCount <= 0) {
-            $this->logRevenueConfig('优惠券分账可用性校验', [
-                'rrc_id' => intval($coupon['rrc_id'] ?? 0),
-                'coupon_code' => $coupon['coupon_code'] ?? '',
-                'usable' => 0,
-                'skip_reason' => 'remain_count_empty',
-            ]);
-            return false;
-        }
-        $expireTime = intval($coupon['expire_time'] ?? 0);
-        if ($expireTime > 0 && $expireTime <= time()) {
-            $this->logRevenueConfig('优惠券分账可用性校验', [
-                'rrc_id' => intval($coupon['rrc_id'] ?? 0),
-                'coupon_code' => $coupon['coupon_code'] ?? '',
-                'usable' => 0,
-                'expire_time' => $expireTime,
-                'skip_reason' => 'expired',
-            ]);
-            return false;
-        }
-        $this->logRevenueConfig('优惠券分账可用性校验', [
-            'rrc_id' => intval($coupon['rrc_id'] ?? 0),
-            'coupon_code' => $coupon['coupon_code'] ?? '',
-            'usable' => 1,
-            'remain_count' => $remainCount,
-            'expire_time' => $expireTime,
-        ]);
-        return true;
-    }
-
-    protected function matchCouponScope(array $coupon)
-    {
-        $scopes = RevenueRuleCouponScopeModel::where(['rrc_id' => intval($coupon['rrc_id']), 'status' => 1])
-            ->order('rrcs_id asc')
-            ->select()
-            ->toArray();
-        $mId = intval($this->order['m_id'] ?? 0);
-        $orderAmount = $this->money(bcsub($this->money($this->order['total_price'] ?? 0), $this->rentalAmount, 2));
-        $matchedAmount = '0.00';
-        $scopeType = '';
-        $scopeIds = [];
-
-        foreach ($scopes as $scope) {
-            $scopeMId = intval($scope['m_id'] ?? 0);
-            $scopeGId = intval($scope['g_id'] ?? 0);
-            if ($scopeMId > 0 && $scopeGId <= 0) {
-                if ($scopeMId === $mId) {
-                    $matchedAmount = $orderAmount;
-                    $scopeType = 'machine';
-                    $scopeIds[] = intval($scope['rrcs_id']);
-                }
-                continue;
-            }
-            if ($scopeMId <= 0 && $scopeGId > 0) {
-                $amount = $this->sumCouponScopeGoodsAmount($scopeGId, 0);
-                if (bccomp($amount, '0.01', 2) >= 0) {
-                    $matchedAmount = bcadd($matchedAmount, $amount, 2);
-                    $scopeType = $scopeType ?: 'goods';
-                    $scopeIds[] = intval($scope['rrcs_id']);
-                }
-                continue;
-            }
-            if ($scopeMId > 0 && $scopeGId > 0) {
-                if ($scopeMId !== $mId) {
-                    continue;
-                }
-                $amount = $this->sumCouponScopeGoodsAmount($scopeGId, intval($scope['mg_id'] ?? 0));
-                if (bccomp($amount, '0.01', 2) >= 0) {
-                    $matchedAmount = bcadd($matchedAmount, $amount, 2);
-                    $scopeType = $scopeType ?: 'machine_goods';
-                    $scopeIds[] = intval($scope['rrcs_id']);
-                }
-            }
-        }
-
-        return [
-            'matched' => bccomp($matchedAmount, '0.01', 2) >= 0,
-            'base_amount' => $this->money($matchedAmount),
-            'scope_type' => $scopeType,
-            'scope_ids' => $scopeIds,
-        ];
-    }
-
-    protected function sumCouponScopeGoodsAmount($gId, $mgId = 0)
-    {
-        $amount = '0.00';
-        foreach ($this->details as $detail) {
-            if (intval($detail['g_id'] ?? 0) !== intval($gId)) {
-                continue;
-            }
-            if ($mgId > 0 && intval($detail['mg_id'] ?? 0) !== intval($mgId)) {
-                continue;
-            }
-            $sodId = intval($detail['sod_id'] ?? 0);
-            $detailAmount = $this->money($detail['total_sod_price'] ?? 0);
-            $baseAmount = $this->money(bcsub($detailAmount, $this->rentalAmountsBySod[$sodId] ?? '0', 2));
-            if (bccomp($baseAmount, '0.01', 2) >= 0) {
-                $amount = bcadd($amount, $baseAmount, 2);
-            }
-        }
-        return $this->money($amount);
     }
 
     protected function calculateTierSplitAmount(array $item, $baseAmount, $periodBefore, $periodAfter)
