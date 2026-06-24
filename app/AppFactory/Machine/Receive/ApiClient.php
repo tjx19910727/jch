@@ -1501,7 +1501,7 @@ class ApiClient extends ReceiveBaseClient
         $ota_status = $this->data['ota_status'] ?? 2;
         $update['status'] = $statusArr[$ota_status] ?? 2;
         if ($ota_status == 1) {
-            if ($this->data['download_progress'] != 100) {
+            if ($otaVersionPlan['download_progress'] != 100) {
                 $update['download_progress'] = 100;
             }
         }
