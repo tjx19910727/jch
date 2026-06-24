@@ -97,7 +97,7 @@ class CallbackClient extends ApiBaseClient
                     $value['callback_time'] = date("Y-m-d H:i:s");
                     $value['result'] = is_string($curl) ? $curl : json_encode($curl,320);
                     // 返回成功
-                    if ($curl == "success") {
+                    if ($this->isCallbackSuccess($curl)) {
                         $value['callback_status'] = "success";
                         $this->updateApiCallback($value);
                     } else {
@@ -122,5 +122,38 @@ class CallbackClient extends ApiBaseClient
             }
             cache("callback" . $this->frequency,$this->callbackData);
         }
+    }
+
+    /**
+     * 判断外部回调是否成功。
+     * 历史接口返回纯文本 success，新接口可能返回 JSON：{"status":200,"data":"success","ok":true}。
+     * @param mixed $result
+     * @return bool
+     */
+    protected function isCallbackSuccess($result)
+    {
+        if (is_string($result)) {
+            $result = trim($result);
+            if ($result === "success") return true;
+            $json = json_decode($result, true);
+            if (json_last_error() !== JSON_ERROR_NONE) return false;
+            $result = $json;
+        }
+
+        if (!is_array($result)) return false;
+
+        if (isset($result['content']) && is_string($result['content'])) {
+            if ($this->isCallbackSuccess($result['content'])) return true;
+        }
+
+        if (isset($result['data']) && is_string($result['data']) && trim($result['data']) === "success") return true;
+        if (isset($result['msg']) && is_string($result['msg']) && trim($result['msg']) === "success") return true;
+        if (isset($result['ok']) && $result['ok'] === true) return true;
+
+        foreach (['status', 'state', 'code', 'http_code'] as $field) {
+            if (isset($result[$field]) && intval($result[$field]) === 200) return true;
+        }
+
+        return false;
     }
 }
