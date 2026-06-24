@@ -34,7 +34,7 @@ class MachineChannel extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineChannel->getFind($where,$this->field);
+        return $this->app->machineChannel->getMcFind($where,$this->field);
     }
 
     public function add()

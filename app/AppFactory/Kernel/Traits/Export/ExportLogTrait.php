@@ -177,4 +177,52 @@ trait ExportLogTrait
         }
         return $this->rFail($this->lang("export.export_log_create_fail"));
     }
+
+    /**
+     * 多Sheet导出入队
+     * @param string $position 导出位置描述
+     * @param string $filename 文件名
+     * @param array $sheets [['sheetName' => '汇总', 'title' => [...], 'list' => [...], 'merge' => [...], 'otherData' => [...]], ...]
+     * @param array $otherData 额外参数
+     * @return array
+     */
+    public function sendToExportMultiSheet($position, $filename, $sheets, $otherData = [])
+    {
+        $insert = [
+            "request_time" => time(),
+            "export_position" => $position,
+            "file_name" => $filename,
+            "status" => 1,
+            "ao_id" => $this->manager['ao_id'],
+            "creator" => $this->manager['manager_id'],
+            "create_time" => time(),
+        ];
+        $export_id = $this->addExportLog($insert);
+        if ($export_id) {
+            $data = [
+                "export_id" => $export_id,
+                "filename" => $filename,
+                "job_type" => "multi_sheet_export",
+                "sheets" => $sheets,
+                "otherData" => $otherData,
+            ];
+            $totalRows = 0;
+            foreach ($sheets as $sheet) {
+                $totalRows += isset($sheet['list']) && is_array($sheet['list']) ? count($sheet['list']) : 0;
+            }
+            actionLog([
+                'export_id' => $export_id,
+                'filename' => $filename,
+                'sheet_count' => count($sheets),
+                'total_rows' => $totalRows,
+            ], '多Sheet导出任务摘要');
+            $result = MqProducer::export($data);
+            if ($result != "OK") {
+                $this->updateExportLog(['export_id' => $export_id, 'status' => 4]);
+                return $this->rFail($result);
+            }
+            return $this->r(200, $this->lang("export.exporting"));
+        }
+        return $this->rFail($this->lang("export.export_log_create_fail"));
+    }
 }

@@ -32,6 +32,10 @@ class Machine extends Common
             unset($postData['machine_group_id']);
             if (!$machineIds) return $this->app->machine->rNoData();
         }
+        if(isset($postData['online_all'])){
+             $postData['online'] = $postData['online_all'];
+            unset($postData['online_all']);
+        }
         $pageNum = $postData['pageNum'] ?? 0;
         $field = $this->field;
         $order = $this->buildMachineListOrder($postData, $field);

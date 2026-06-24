@@ -128,21 +128,24 @@ class Common extends AuthController
     {
         $where = $this->applyManagerQueryStartTimeWhere($where, $prefix);
 
-        // 数据权限
-        if (isset($this->currentMenu['data_auth']) && $this->currentMenu['data_auth'] == 1 && isset($this->currentMenu['d_type']) && $this->currentMenu['d_type'] > 0) {
+        $dataScope = strval($this->currentMenu['data_scope'] ?? '');
+        $legacyDType = intval($this->currentMenu['d_type'] ?? 0);
+        // 新模板优先使用 data_scope，历史角色继续兼容 d_type。
+        if (isset($this->currentMenu['data_auth']) && $this->currentMenu['data_auth'] == 1
+            && (in_array($dataScope, ['organization', 'all'], true) || $legacyDType > 0)) {
             $api = request()->baseUrl();
             // 数据权限，1：查所有，2：查部门，3：查本人，4：查所有下属，5：查直接下属，默认0，0为不开启数据权限验证
             // 优先级高的覆盖低的，优先级：1. 查所有 > 2. 查部门 > 3. 查本人 > 4. 查所有下属 > 5. 查直接下属
             // 查数据权限区域内的账号ID，根据不同的接口字段名附加账号ID筛选条件
-            if ($this->currentMenu['d_type'] == 2 && $this->manager['ao_id'] > 0) {
+            if (($dataScope === 'organization' || ($dataScope === '' && $legacyDType == 2)) && $this->manager['ao_id'] > 0) {
                 if (isset($where['creator'])) unset($where['creator']);
                 if (!in_array($api, $this->commonApi)) $where["ao_id"] = $this->manager['ao_id'];
             }
-            if ($this->currentMenu['d_type'] >= 3) {
+            if ($dataScope === '' && $legacyDType >= 3) {
                 $ids[] = $this->manager['manager_id'];
                 $maxLevel = 999;
-                if ($this->currentMenu['d_type'] == 5) $maxLevel = $this->manager['level'] + 1;
-                if ($this->currentMenu['d_type'] > 3) {
+                if ($legacyDType == 5) $maxLevel = $this->manager['level'] + 1;
+                if ($legacyDType > 3) {
                     $ids = $this->app->authManager->getChildIdList($this->manager['manager_id'], $ids, $this->manager['level'], $maxLevel);
                 }
                 $field = $this->app->authNode->getAuthDataFieldByUrl(request()->baseUrl());
@@ -289,9 +292,7 @@ class Common extends AuthController
         $nodeIds = $this->app->authNode->getAuthNodeColumn(['url' => $url], 'node_id');
         if (!$nodeIds) return false;
 
-        $whereArn[] = ['role_id', 'in', $roleIds];
-        $whereArn['is_del'] = 2;
-        $authNodeIds = $this->app->authRoleNode->getAuthRoleNodeColumn($whereArn, 'node_id');
+        $authNodeIds = $this->app->authManagerRole->resolveManagerRoleNodeIds($this->manager, $roleIds);
         if (!$authNodeIds) return false;
 
         return !empty(array_intersect($nodeIds, $authNodeIds));
@@ -483,9 +484,11 @@ class Common extends AuthController
     public function getSelfRoleNode()
     {
         if ($this->manager['pid'] > 0) {
-            $whereArn[] = ['role_id', 'in', $this->app->authManagerRole->getAuthManagerRoleColumn(['manager_id' => $this->manager['manager_id'], 'is_del' => 2], 'role_id')];
-            $whereArn['is_del'] = 2;
-            $where[] = ['node_id', 'in', $this->app->authRoleNode->getAuthRoleNodeColumn($whereArn, 'node_id')];
+            $roleIds = $this->app->authManagerRole->getAuthManagerRoleColumn([
+                'manager_id' => $this->manager['manager_id'],
+                'is_del' => 2,
+            ], 'role_id');
+            $where[] = ['node_id', 'in', $this->app->authManagerRole->resolveManagerRoleNodeIds($this->manager, $roleIds)];
         }
         $where['status'] = 1;
         $data = $this->app->authNode->getAuthNodeList($where, 0, 'node_id,pid,name,icon,url,desc,sort,type,is_auth,is_button,status', 'sort asc');

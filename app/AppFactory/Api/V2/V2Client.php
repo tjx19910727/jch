@@ -68,7 +68,12 @@ class V2Client extends V2BaseClient
             if (isset($this->params['product_id']) && $this->params['product_id']) $where['g_id'] = $this->params['product_id'];
             // $where['status'] = 1;
             $where['ao_id'] = 17;
-            $data = $this->getGoodsList($where, $this->params['pageNum'] ?? 1,  $field, 'product_id desc');
+            $data = $this->getGoodsList(
+                $where,
+                ['list_rows' => $this->params['pageNum'] ?? 1, 'page' => $this->params['page'] ?? 1],
+                $field,
+                'product_id desc'
+            );
 
             actionLog($this->getLS(),'【SQL】查询主体商品');
             if ($data) {
@@ -665,6 +670,9 @@ class V2Client extends V2BaseClient
         actionLog($flag,'事务处理');
         $check = $this->checkFlag($flag);
         if ($check) {
+            if (isset($updateOrder['out_status']) && (int)$updateOrder['out_status'] === 4) {
+                $this->addOrderOutStatusCallback('success', array_merge($this->order, $updateOrder));
+            }
             $this->commitTrans();
             return $this->returnData(0,$this->lang("msg.0"));
         }

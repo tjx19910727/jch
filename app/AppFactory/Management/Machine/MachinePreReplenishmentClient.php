@@ -71,12 +71,13 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         $mIds = array_column($machineList, 'm_id');
         $channelList = MachineChannelModel::where([['m_id', 'in', $mIds]])
-            ->field('m_id,mc_id,channel_code,stock,capacity,sku,g_name,pic')
+            ->field('m_id,mc_id,channel_code,stock,capacity,sku,g_name,pic,g_id')
             ->order('mc_id asc')
             ->select()
             ->toArray();
 
         $channelMap = [];
+        $salesCache = [];
         foreach ($channelList as $channel) {
             $availableStock = $channel['capacity'] - $channel['stock'];
             if ($availableStock < 0) {
@@ -89,8 +90,11 @@ class MachinePreReplenishmentClient extends ManagementClient
                 continue;
             }
 
+            $gId = $channel['g_id'] ?? 0;
+            $mcId = $channel['mc_id'];
+
             $channelMap[$channel['m_id']][] = [
-                'mc_id' => $channel['mc_id'],
+                'mc_id' => $mcId,
                 'channel_code' => $channel['channel_code'],
                 'sku' => $channel['sku'],
                 'g_name' => $channel['g_name'],
@@ -99,15 +103,43 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'capacity' => $channel['capacity'],
                 'available_stock' => $availableStock,
                 'plan_quantity' => $orderPlanQtyMap[$mcKey] ?? 0,
+                'g_id' => $gId,
             ];
         }
 
         $result = [];
         foreach ($machineList as $machine) {
+            $mId = $machine['m_id'];
+            $machineId = $machine['machine_id'];
+            // 库存比
+            $totalCapacity = MachineChannelModel::where('m_id', $mId)->where('g_id', '>', 0)->where('status', '<>', 2)->sum('capacity');
+            $totalStock = MachineChannelModel::where('m_id', $mId)->where('g_id', '>', 0)->where('status', '<>', 2)->sum('stock');
+            $stockRatio = '0%';
+            if ($totalCapacity > 0) {
+                $ratio = bcdiv((string)$totalStock, (string)$totalCapacity, 4);
+                if (bccomp($ratio, '1', 4) > 0) $ratio = '1';
+                if (bccomp($ratio, '0', 4) < 0) $ratio = '0';
+                $stockRatio = bcmul($ratio, '100', 2) . '%';
+            }
+            // 货道近30天销售额
+            $channels = $channelMap[$mId] ?? [];
+            foreach ($channels as &$ch) {
+                $gId = $ch['g_id'] ?? 0;
+                $mcId = $ch['mc_id'] ?? 0;
+                $salesKey = $machineId . '_' . $mcId . '_' . $gId;
+                if (!isset($salesCache[$salesKey])) {
+                    $salesCache[$salesKey] = ($gId && $mcId) ? $this->getSalesAmount($machineId, $gId, 30, $mcId) : 0;
+                }
+                $ch['sales_30_days'] = $salesCache[$salesKey];
+            }
+            unset($ch);
             $result[] = [
-                'machine_id' => $machine['machine_id'],
+                'machine_id' => $machineId,
                 'machine_name' => $machine['machine_name'],
-                'channels' => $channelMap[$machine['m_id']] ?? [],
+                'stock_ratio' => $stockRatio,
+                'total_capacity' => $totalCapacity,
+                'total_stock' => $totalStock,
+                'channels' => $channels,
             ];
         }
 
@@ -382,6 +414,7 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         // 补货对比明细 (按 machine_id 分组)
         $compareGroups = [];
+        $salesCache = [];
 
         foreach ($details as $d) {
             $mid     = $d['machine_id'];
@@ -446,6 +479,11 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
 
             // ---- replenishment_compare detail ----
+            $gId = $channel['g_id'] ?? 0;
+            $salesKey = $mid . '_' . $mcId . '_' . $gId;
+            if (!isset($salesCache[$salesKey])) {
+                $salesCache[$salesKey] = ($gId && $mcId) ? $this->getSalesAmount($mid, $gId, 30, $mcId) : 0;
+            }
             $compareDetail = [
                 'id'                 => $d['id'],
                 'm_id'               => $machine['m_id'] ?? 0,
@@ -467,6 +505,7 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'actual_channel_code'=> $d['actual_channel_code'] ?? null,
                 'report_time'        => $reportTime,
                 'compare_status'     => $compareStatusText,
+                'sales_30_days'      => $salesCache[$salesKey],
             ];
 
             if (!isset($compareGroups[$mid])) {
@@ -474,11 +513,12 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
             $compareGroups[$mid][] = $compareDetail;
 
-            // ---- material_details (按 SKU 聚合) ----
-            $sku = $d['sku'];
-            if (!isset($materialMap[$sku])) {
-                $materialMap[$sku] = [
-                    'sku'          => $sku,
+            // ---- material_details (按 g_id 聚合) ----
+            $gId = $channel['g_id'] ?? 0;
+            $gIdKey = $gId ? (string)$gId : ($d['sku'] ?? '');
+            if (!isset($materialMap[$gIdKey])) {
+                $materialMap[$gIdKey] = [
+                    'sku'          => $channel['sku'] ?? $d['sku'] ?? '',
                     'g_name'       => $channel['g_name'] ?? '',
                     'image_url'    => $channel['pic'] ?? '',
                     'bar_code'     => $channel['bar_code'] ?? '',
@@ -489,9 +529,9 @@ class MachinePreReplenishmentClient extends ManagementClient
                     '_device_ids'  => [],
                 ];
             }
-            $materialMap[$sku]['quantity'] += $planQty;
-            $materialMap[$sku]['channel_count']++;
-            $materialMap[$sku]['_device_ids'][$mid] = true;
+            $materialMap[$gIdKey]['quantity'] += $planQty;
+            $materialMap[$gIdKey]['channel_count']++;
+            $materialMap[$gIdKey]['_device_ids'][$mid] = true;
 
             $planTotal += $planQty;
             $actualTotal += ($actualQty ?? 0);
@@ -551,6 +591,17 @@ class MachinePreReplenishmentClient extends ManagementClient
             } else {
                 $result = 'pending';
             }
+            // 库存比
+            $mId = $dp['m_id'] ?? 0;
+            $totalCapacity = MachineChannelModel::where('m_id', $mId)->where('status', '<>', 2)->sum('capacity');
+            $totalStock = MachineChannelModel::where('m_id', $mId)->where('status', '<>', 2)->sum('stock');
+            $stockRatio = '0%';
+            if ($totalCapacity > 0) {
+                $ratio = bcdiv((string)$totalStock, (string)$totalCapacity, 4);
+                if (bccomp($ratio, '1', 4) > 0) $ratio = '1';
+                if (bccomp($ratio, '0', 4) < 0) $ratio = '0';
+                $stockRatio = bcmul($ratio, '100', 2) . '%';
+            }
             $replenishmentCompare[] = [
                 'm_id'            => $dp['m_id'],
                 'machine_id'      => $dp['machine_id'],
@@ -561,6 +612,7 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'abnormal_count'  => $dp['abnormal_count'],
                 'reported_count'  => $reportedCount,
                 'result'          => $result,
+                'stock_ratio'     => $stockRatio,
                 'details'         => $groupDetails,
             ];
         }
@@ -630,7 +682,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             $channels = MachineChannelModel::where([
                 ['m_id', 'in', $mids],
                 ['mc_id', 'in', $mcs],
-            ])->field('m_id,mc_id,g_name,pic')->select()->toArray();
+            ])->field('m_id,mc_id,g_name,pic,g_id')->select()->toArray();
             foreach ($channels as $channel) {
                 $channelMap[$channel['m_id'] . '_' . $channel['mc_id']] = $channel;
             }
@@ -640,7 +692,8 @@ class MachinePreReplenishmentClient extends ManagementClient
         foreach ($details as $row) {
             $order = $orderMap[$row['order_id']] ?? [];
             $channel = $channelMap[$row['m_id'] . '_' . $row['mc_id']] ?? [];
-            $groupKey = ($order['record_no'] ?? '') . '|' . ($row['sku'] ?? '');
+            $gId = $channel['g_id'] ?? 0;
+            $groupKey = ($order['record_no'] ?? '') . '|' . $gId;
             if (!isset($groupRows[$groupKey])) {
                 $recordNo = trim((string)($order['record_no'] ?? ''));
                 $groupRows[$groupKey] = [
@@ -711,34 +764,116 @@ class MachinePreReplenishmentClient extends ManagementClient
         ]);
         $filename = '预补货领料表-' . date('YmdHis');
 
-        $result = $this->sendToExport('设备管理-预补货管理', $filename, $title, $list, [
-            'imageFields' => ['col_b', 'col_d'],
-            'imageWidth' => 220,
-            'imageHeight' => 70,
-            'startRow' => 2,
-            'merge' => [
-                [
-                    'merge' => 'A1:C1',
-                    'cell' => 'A1',
-                    'name' => '补货编号',
+        // Sheet 1: 汇总数据（保持现有格式）
+        $sheets = [
+            [
+                'sheetName' => '领料汇总',
+                'title' => $title,
+                'list' => $list,
+                'merge' => [
+                    [
+                        'merge' => 'A1:C1',
+                        'cell' => 'A1',
+                        'name' => '补货编号',
+                    ],
+                    [
+                        'merge' => 'D1:F1',
+                        'cell' => 'D1',
+                        'name' => '补货条形码',
+                    ],
+                    [
+                        'merge' => 'A2:C2',
+                        'cell' => 'A2',
+                        'name' => '',
+                    ],
+                    [
+                        'merge' => 'D2:F2',
+                        'cell' => 'D2',
+                        'name' => '',
+                    ],
                 ],
-                [
-                    'merge' => 'D1:F1',
-                    'cell' => 'D1',
-                    'name' => '补货条形码',
-                ],
-                [
-                    'merge' => 'A2:C2',
-                    'cell' => 'A2',
-                    'name' => '',
-                ],
-                [
-                    'merge' => 'D2:F2',
-                    'cell' => 'D2',
-                    'name' => '',
+                'otherData' => [
+                    'imageFields' => ['col_b', 'col_d'],
+                    'imageWidth' => 220,
+                    'imageHeight' => 70,
+                    'startRow' => 2,
                 ],
             ],
-        ]);
+        ];
+
+        // Sheet 2+: 按设备分组，每设备一个Sheet
+        $machineIdGroups = [];
+        foreach ($details as $row) {
+            $machineId = $row['machine_id'] ?? '';
+            if ($machineId === '') continue;
+            $machineIdGroups[$machineId][] = $row;
+        }
+
+        // 获取设备名称映射
+        $machineNames = [];
+        if ($machineIdGroups) {
+            $machines = MachineModel::where([['machine_id', 'in', array_keys($machineIdGroups)]])
+                ->field('machine_id,machine_name')
+                ->select()->toArray();
+            foreach ($machines as $m) {
+                $machineNames[$m['machine_id']] = $m['machine_name'];
+            }
+        }
+
+        $deviceTitle = [
+            'col_a' => '商品名称',
+            'col_b' => 'SKU',
+            'col_c' => '领料数量',
+            'col_d' => '创建人',
+            'col_e' => '创建时间',
+            'col_f' => '近30天销售额',
+        ];
+
+        foreach ($machineIdGroups as $machineId => $rows) {
+            // 同设备同g_id跨货道合并，数量累加
+            $goodsMap = [];
+            foreach ($rows as $row) {
+                $order = $orderMap[$row['order_id']] ?? [];
+                $channel = $channelMap[$row['m_id'] . '_' . $row['mc_id']] ?? [];
+                $gId = $channel['g_id'] ?? 0;
+                $gIdKey = $gId ? (string)$gId : ($row['sku'] ?? '');
+                // 查询近30天销售额，仅在首次遇到该g_id时查询
+                if (!isset($goodsMap[$gIdKey])) {
+                    $sales30Days = $gId ? $this->getSalesAmount($machineId, $gId) : 0;
+                    $goodsMap[$gIdKey] = [
+                        'g_name' => $channel['g_name'] ?? '',
+                        'sku' => $row['sku'] ?? '',
+                        'plan_quantity' => 0,
+                        'creator_name' => $order['creator_name'] ?? '',
+                        'created_at' => $order['created_at'] ?? '',
+                        'sales_30_days' => $sales30Days,
+                    ];
+                }
+                $goodsMap[$gIdKey]['plan_quantity'] += (int)($row['plan_quantity'] ?? 0);
+                if (empty($goodsMap[$gIdKey]['g_name']) && !empty($channel['g_name'])) {
+                    $goodsMap[$gIdKey]['g_name'] = $channel['g_name'];
+                }
+            }
+            $deviceList = [];
+            foreach ($goodsMap as $item) {
+                $deviceList[] = [
+                    'col_a' => $item['g_name'],
+                    'col_b' => $item['sku'],
+                    'col_c' => $item['plan_quantity'],
+                    'col_d' => $item['creator_name'],
+                    'col_e' => $item['created_at'],
+                    'col_f' => $item['sales_30_days'] ?? 0,
+                ];
+            }
+            $sheetName = $machineId;
+            $sheets[] = [
+                'sheetName' => $sheetName,
+                'title' => $deviceTitle,
+                'list' => $deviceList,
+            ];
+        }
+
+        $result = $this->sendToExportMultiSheet('设备管理-预补货管理', $filename, $sheets);
 
         $state = 0;
         if (is_object($result) && method_exists($result, 'getData')) {
@@ -873,5 +1008,30 @@ class MachinePreReplenishmentClient extends ManagementClient
             actionException($e, 1);
             return returnState(5000, '系统错误');
         }
+    }
+
+    /**
+     * 查询销售额（已扣除退款）
+     * @param string $machineId
+     * @param int $gId
+     * @param int $days 统计天数，默认30
+     * @param int $mcId 货道ID，传0则不过滤货道
+     * @return float
+     */
+    private function getSalesAmount($machineId, $gId, $days = 30, $mcId = 0)
+    {
+        $daysAgo = strtotime("-{$days} days");
+        $query = Db::name('sale_orders_details')->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id')
+            ->where('so.machine_id', $machineId)
+            ->where('sod.g_id', $gId)
+            ->where('so.pay_status', 3)
+            ->where('so.pay_time', '>=', $daysAgo);
+        if ($mcId) {
+            $query->where('sod.mc_id', $mcId);
+        }
+        $result = $query->field('COALESCE(SUM(sod.total_sod_price), 0) - COALESCE(SUM(sod.refund_amount), 0) AS sales_amount')
+            ->find();
+        return round((float)($result['sales_amount'] ?? 0), 2);
     }
 }

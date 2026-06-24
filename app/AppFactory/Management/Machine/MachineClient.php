@@ -282,29 +282,52 @@ class MachineClient extends ManagementClient
             if (!is_array($machineOnOff)) {
                 $machineOnOff = json_encode([]);
             }
+            $item['is_on_off'] = 2;
             if(!empty($machineOnOff['on_off_machine'])){
                 if(!is_array($machineOnOff['on_off_machine'])){
                     $machineOnOff['on_off_machine'] = json_decode($machineOnOff['on_off_machine'], true);
                 }
                 if(is_array($machineOnOff['on_off_machine'])){
-                    foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
-                        $day = strval($day);
-                        if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
-                            continue;
-                        }
+                    //只需反转当前星期几的时间段，其他保持不变
+                    $n_week = date('N') - 1; // 获取当前星期几，转换为0-6
+                    if (isset($machineOnOff['on_off_machine'][$n_week])) {
+                        $timeRange = $machineOnOff['on_off_machine'][$n_week];
                         $parts = explode(',', $timeRange);
-                        if (count($parts) !== 2) {
-                            continue;
-                        }
-                        $startTime = trim($parts[0]);
-                        $endTime = trim($parts[1]);
-                        if (
-                            preg_match('/^\d{2}:\d{2}$/', $startTime)
-                            && preg_match('/^\d{2}:\d{2}$/', $endTime)
-                        ) {
-                            $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                        if (count($parts) === 2) {
+                            $startTime = trim($parts[1]);
+                            $endTime = trim($parts[0]);
+                            // 反转时间段
+                            $machineOnOff['on_off_machine'][$n_week] = $startTime . ',' . $endTime;
+                            //判断当前时间是否在营业时间段内
+                            $currentTime = date('H:i');
+                            if ($endTime > $startTime) {
+                                // 同天营业（如开机07:00,关机22:00）
+                                $isInRange = ($currentTime >= $startTime && $currentTime <= $endTime);
+                            } else {
+                                // 跨天营业（如开机07:00,关机02:00）
+                                $isInRange = ($currentTime >= $startTime || $currentTime <= $endTime);
+                            }
+                            $item['is_on_off'] = $isInRange ? 1 : 2;
                         }
                     }
+                    // foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
+                    //     $day = strval($day);
+                    //     if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
+                    //         continue;
+                    //     }
+                    //     $parts = explode(',', $timeRange);
+                    //     if (count($parts) !== 2) {
+                    //         continue;
+                    //     }
+                    //     $startTime = trim($parts[0]);
+                    //     $endTime = trim($parts[1]);
+                    //     if (
+                    //         preg_match('/^\d{2}:\d{2}$/', $startTime)
+                    //         && preg_match('/^\d{2}:\d{2}$/', $endTime)
+                    //     ) {
+                    //         $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                    //     }
+                    // }
                     $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE | JSON_FORCE_OBJECT);
                 }
             }
@@ -515,28 +538,51 @@ class MachineClient extends ManagementClient
             if (!is_array($machineOnOff)) {
                 $machineOnOff = json_encode([]);
             }
+            $item['is_on_off'] = 2;
             if(!empty($machineOnOff['on_off_machine'])){
                 if(!is_array($machineOnOff['on_off_machine'])){
                     $machineOnOff['on_off_machine'] = json_decode($machineOnOff['on_off_machine'], true);
                 }
                 if(is_array($machineOnOff['on_off_machine'])){
-                    foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
-                        if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
-                            continue;
-                        }
+                    //只需反转当前星期几的时间段，其他保持不变
+                    $n_week = date('N') - 1; // 获取当前星期几，转换为0-6
+                    if (isset($machineOnOff['on_off_machine'][$n_week])) {
+                        $timeRange = $machineOnOff['on_off_machine'][$n_week];
                         $parts = explode(',', $timeRange);
-                        if (count($parts) !== 2) {
-                            continue;
-                        }
-                        $startTime = trim($parts[0]);
-                        $endTime = trim($parts[1]);
-                        if (
-                            preg_match('/^\d{2}:\d{2}$/', $startTime)
-                            && preg_match('/^\d{2}:\d{2}$/', $endTime)
-                        ) {
-                            $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                        if (count($parts) === 2) {
+                            $startTime = trim($parts[1]);
+                            $endTime = trim($parts[0]);
+                            // 反转时间段
+                            $machineOnOff['on_off_machine'][$n_week] = $startTime . ',' . $endTime;
+                            //判断当前时间是否在营业时间段内
+                            $currentTime = date('H:i');
+                            if ($endTime > $startTime) {
+                                // 同天营业（如开机07:00,关机22:00）
+                                $isInRange = ($currentTime >= $startTime && $currentTime <= $endTime);
+                            } else {
+                                // 跨天营业（如开机07:00,关机02:00）
+                                $isInRange = ($currentTime >= $startTime || $currentTime <= $endTime);
+                            }
+                            $item['is_on_off'] = $isInRange ? 1 : 2;
                         }
                     }
+                    // foreach ($machineOnOff['on_off_machine'] as $day => $timeRange) {
+                    //     if (!is_string($timeRange) || strpos($timeRange, ',') === false) {
+                    //         continue;
+                    //     }
+                    //     $parts = explode(',', $timeRange);
+                    //     if (count($parts) !== 2) {
+                    //         continue;
+                    //     }
+                    //     $startTime = trim($parts[0]);
+                    //     $endTime = trim($parts[1]);
+                    //     if (
+                    //         preg_match('/^\d{2}:\d{2}$/', $startTime)
+                    //         && preg_match('/^\d{2}:\d{2}$/', $endTime)
+                    //     ) {
+                    //         $machineOnOff['on_off_machine'][$day] = $endTime . ',' . $startTime;
+                    //     }
+                    // }
                     $machineOnOff['on_off_machine'] = json_encode($machineOnOff['on_off_machine'], JSON_UNESCAPED_UNICODE);
                 }
             }
@@ -642,17 +688,19 @@ class MachineClient extends ManagementClient
             $list = $list->toArray();
             foreach ($list as $key => $item) {
                 $item['address'] = "";
-                $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id,street");
                 if ($m['country_id']) $item['address'] = $this->getEarthCountriesValue(['id' => $m['country_id']], 'name');
                 if ($m['state_id']) $item['address'] .= "-" . $this->getEarthStatesValue(['id' => $m['state_id']], 'name');
                 if ($m['city_id']) $item['address'] .= "-" . $this->getEarthCitiesValue(['id' => $m['city_id']], 'name');
                 if ($m['regions_id']) $item['address'] .= "-" . $this->getEarthRegionsValue(['id' => $m['regions_id']], 'name');
+                if ($m['street']) $item['street'] = $m['street'];
                 $list[$key] = $item;
             }
             $title = [
                 "machine_id" => "机器ID",
                 "machine_name" => "机器名称",
-                "address" => "机器位置",
+                // "address" => "机器位置",
+                "street" => "机器位置",
                 "totalPrice" => "销售额",
                 "totalQuantity" => "销量",
                 "totalDiscountPrice" => "优惠金额",
@@ -1648,21 +1696,29 @@ class MachineClient extends ManagementClient
             $list = $list->toArray();
             foreach ($list as $key => $item) {
                 $item['address'] = "";
-                $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id,street");
                 if ($m['country_id']) $item['address'] = $this->getEarthCountriesValue(['id' => $m['country_id']], 'name');
                 if ($m['state_id']) $item['address'] .= "-" . $this->getEarthStatesValue(['id' => $m['state_id']], 'name');
                 if ($m['city_id']) $item['address'] .= "-" . $this->getEarthCitiesValue(['id' => $m['city_id']], 'name');
                 if ($m['regions_id']) $item['address'] .= "-" . $this->getEarthRegionsValue(['id' => $m['regions_id']], 'name');
+                if ($m['street']) $item['street'] = $m['street'];
+
                 $list[$key] = $item;
             }
             $title = [
                 "machine_id" => "机器ID",
                 "machine_name" => "机器名称",
-                "address" => "机器位置",
+                // "address" => "机器位置",
+                "street" => "机器位置",
                 "totalPrice" => "销售额",
+                "totalQuantity" => "销量",
                 "coupon_used" => "优惠券",
             ];
-            $filename = "设备排行榜-" . date("YmdHis");
+            $topTitle = "销售额-";
+            if($topType === 2){
+                $topTitle = "销量-";
+            }
+            $filename = $topTitle . "设备排行榜-" . date("YmdHis");
             $result = $this->sendToExport("首页-设备排行榜", $filename, $title, $list);
             return $result;
         }
@@ -1693,6 +1749,7 @@ class MachineClient extends ManagementClient
                 'COUNT((SELECT acu.cu_id FROM activity_coupon_used acu WHERE acu.order_id = so.order_id AND acu.status = 2))' => 'coupon_used',
             ])
             ->group('so.m_id')
+            ->having('ROUND(SUM(so.total_price), 2) > 0 AND SUM(so.total_quantity) > 0')
             ->orderRaw($order);
 
         $this->applyMachineRankingWhere($query, $where);

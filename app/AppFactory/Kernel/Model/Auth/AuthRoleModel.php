@@ -23,6 +23,7 @@ class AuthRoleModel extends BaseModel
         "sort" => "int",
         "status" => "int",
         'ao_id' => 'int',
+        "template_id" => "int",
         "creator" => "int",
         "create_time" => "int",
         "update_id" => "int",
