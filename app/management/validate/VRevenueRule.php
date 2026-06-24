@@ -9,7 +9,7 @@ class VRevenueRule extends VCommon
         "rri_id" => "require",
         "rrit_id" => "require",
         "rule_name" => "require",
-        "rule_mode" => "require|in:1,2,3,4",
+        "rule_mode" => "require|in:1,2,3,4,5",
         "g_id" => "require",
         "receiver_ao_id" => "require",
         "ra_id" => "require",
@@ -26,6 +26,7 @@ class VRevenueRule extends VCommon
         "base_type" => "in:1,2",
         "turnover_type" => "in:1,2",
         "tier_calc_mode" => "in:1,2",
+        "coupon_code" => "require|regex:/^[1-9][0-9]{5}$/",
     ];
 
     protected $message = [
@@ -54,6 +55,8 @@ class VRevenueRule extends VCommon
         "base_type.in" => "分账基数类型不合法",
         "turnover_type.in" => "阶梯营业额口径不合法",
         "tier_calc_mode.in" => "阶梯计算模式不合法",
+        "coupon_code.require" => "优惠券编码不能为空",
+        "coupon_code.regex" => "优惠券编码必须为非0开头的6位数字",
     ];
 
     protected $scene = [
@@ -62,6 +65,7 @@ class VRevenueRule extends VCommon
         "addItem" => ["rr_id", "receiver_ao_id", "ra_id", "calc_type"],
         "updateItem" => ["rri_id"],
         "addProductItem" => ["rr_id", "g_id", "receiver_ao_id", "ra_id", "calc_type", "calc_value"],
+        "saveCouponConfig" => ["rr_id", "coupon_code"],
         "addTier" => ["rri_id", "threshold_min", "calc_value"],
         "updateTier" => ["rrit_id"],
         "bindMachine" => ["rr_id"],

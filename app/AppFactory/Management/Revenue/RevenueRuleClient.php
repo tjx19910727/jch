@@ -3,10 +3,14 @@
 namespace app\AppFactory\Management\Revenue;
 
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Model\Goods\GoodsModel;
+use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleMachineModel;
 use app\AppFactory\Kernel\Traits\Revenue\RevenueAccountTrait;
 use app\AppFactory\Kernel\Traits\Revenue\RevenueRuleTrait;
 use app\AppFactory\Management\ManagementClient;
-use think\facade\Db;
 
 class RevenueRuleClient extends ManagementClient
 {
@@ -23,7 +27,22 @@ class RevenueRuleClient extends ManagementClient
         if (!isset($postData['settlement_type'])) $postData['settlement_type'] = 1;
         if (!isset($postData['settlement_days'])) $postData['settlement_days'] = 0;
         if (!isset($postData['status'])) $postData['status'] = 1;
-        return $this->rA($this->addRevenueRule($postData));
+        if (intval($postData['rule_mode']) !== 5) {
+            return $this->rA($this->addRevenueRule($postData));
+        }
+
+        $this->startTrans();
+        try {
+            $rrId = $this->addRevenueRule($postData);
+            $postData['rr_id'] = $rrId;
+            $rrcId = $this->saveCouponConfigData($postData);
+            $this->commitTrans();
+            return $this->rA(['rr_id' => $rrId, 'rrc_id' => $rrcId]);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
     }
 
     public function updateData($postData)
@@ -45,6 +64,17 @@ class RevenueRuleClient extends ManagementClient
         ]));
         if (!$update) return $this->rFail("没有可更新的分账策略字段");
         $result = $this->updateRevenueRule($update, ['rr_id' => $rrId]);
+        if (intval($postData['rule_mode'] ?? 0) === 5 || isset($postData['coupon_code'])) {
+            $postData['rr_id'] = $rrId;
+            $couponCheck = $this->checkCouponConfigData($postData, !empty($postData['rrc_id']));
+            if ($couponCheck !== true) return $couponCheck;
+            try {
+                $this->saveCouponConfigData($postData);
+            } catch (\Exception $e) {
+                actionException($e, 1);
+                return $this->rTryCatch($e->getMessage());
+            }
+        }
         if (!$this->verifyRuleUpdate($rrId, $update)) {
             return $this->rFail("分账策略更新后数据校验失败，请检查服务版本或数据库状态");
         }
@@ -78,6 +108,35 @@ class RevenueRuleClient extends ManagementClient
     public function addProductItem($postData)
     {
         return $this->addItem($postData);
+    }
+
+    public function saveCouponConfig($postData)
+    {
+        $check = $this->checkCouponConfigData($postData, !empty($postData['rrc_id']));
+        if ($check !== true) return $check;
+        $this->startTrans();
+        try {
+            $rrcId = $this->saveCouponConfigData($postData);
+            $this->commitTrans();
+            return $this->rA(['rrc_id' => $rrcId]);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    public function getCouponConfig($postData)
+    {
+        $rrId = intval($postData['rr_id'] ?? 0);
+        $rrcId = intval($postData['rrc_id'] ?? 0);
+        if ($rrId <= 0 && $rrcId <= 0) return $this->rFail("分账策略ID或优惠券配置ID不能为空");
+        $where = $rrcId > 0 ? ['rrc_id' => $rrcId] : ['rr_id' => $rrId];
+        $coupon = $this->getRevenueRuleCouponFind($where, "*", "rrc_id desc");
+        if (!$coupon) return $this->rNoData();
+        $coupon = is_array($coupon) ? $coupon : $coupon->toArray();
+        $coupon['scopes'] = $this->getRevenueRuleCouponScopeList(['rrc_id' => intval($coupon['rrc_id'])], 0, "*", "rrcs_id asc")->toArray();
+        return $this->rQ($coupon);
     }
 
     public function updateItem($postData)
@@ -143,8 +202,7 @@ class RevenueRuleClient extends ManagementClient
 
         $this->startTrans();
         try {
-            $machineMap = Db::name('machine')
-                ->where('m_id', 'in', $machineIds)
+            $machineMap = MachineModel::where('m_id', 'in', $machineIds)
                 ->lock(true)
                 ->column('ao_id', 'm_id');
             $validMachineIds = array_map('intval', array_keys($machineMap));
@@ -153,8 +211,7 @@ class RevenueRuleClient extends ManagementClient
                 throw new \Exception("设备不存在：" . implode(',', $missingMachineIds));
             }
 
-            $existsMachineIds = Db::name('revenue_rule_machine')
-                ->where('rr_id', $rrId)
+            $existsMachineIds = RevenueRuleMachineModel::where('rr_id', $rrId)
                 ->where('m_id', 'in', $machineIds)
                 ->column('m_id');
             if ($existsMachineIds) {
@@ -162,8 +219,7 @@ class RevenueRuleClient extends ManagementClient
             }
 
             if ($status === 1) {
-                $modeExistsMachineIds = Db::name('revenue_rule_machine')
-                    ->alias('rrm')
+                $modeExistsMachineIds = RevenueRuleMachineModel::alias('rrm')
                     ->join('revenue_rule rr', 'rr.rr_id = rrm.rr_id')
                     ->where('rrm.m_id', 'in', $machineIds)
                     ->where([
@@ -211,8 +267,7 @@ class RevenueRuleClient extends ManagementClient
             return $this->rFail("分账策略不存在");
         }
 
-        $query = Db::name('revenue_rule_machine')
-            ->alias('rrm')
+        $query = RevenueRuleMachineModel::alias('rrm')
             ->join('machine m', 'm.m_id = rrm.m_id')
             ->where('rrm.rr_id', $rrId);
         if (isset($postData['status']) && $postData['status'] !== '') {
@@ -254,8 +309,7 @@ class RevenueRuleClient extends ManagementClient
             return $data;
         }
 
-        $rows = Db::name('revenue_rule_machine')
-            ->whereIn('rr_id', array_keys($ruleIds))
+        $rows = RevenueRuleMachineModel::whereIn('rr_id', array_keys($ruleIds))
             ->field('rr_id,COUNT(DISTINCT m_id) machine_num')
             ->group('rr_id')
             ->select()
@@ -317,7 +371,7 @@ class RevenueRuleClient extends ManagementClient
             if (empty($data['rule_name'])) return $this->rFail("分账策略名称不能为空");
         }
         if (!$isUpdate || isset($data['rule_mode'])) {
-            if (empty($data['rule_mode']) || !in_array(intval($data['rule_mode']), [1, 2, 3, 4], true)) {
+            if (empty($data['rule_mode']) || !in_array(intval($data['rule_mode']), [1, 2, 3, 4, 5], true)) {
                 return $this->rFail("分账策略模式不合法");
             }
         }
@@ -331,7 +385,7 @@ class RevenueRuleClient extends ManagementClient
             if (!is_array($current)) $current = $current->toArray();
             if (isset($data['rule_mode'])
                 && intval($data['rule_mode']) !== intval($current['rule_mode'])
-                && Db::name('revenue_rule_item')->where(['rr_id' => intval($data['rr_id'])])->count()) {
+                && RevenueRuleItemModel::where(['rr_id' => intval($data['rr_id'])])->count()) {
                 return $this->rFail("分账策略已有明细，不允许修改分账模式");
             }
         }
@@ -445,14 +499,174 @@ class RevenueRuleClient extends ManagementClient
             $productCheck = $this->checkProductItemData($itemData, $oldItem, $calcType);
             if ($productCheck !== true) return $productCheck;
         }
+        if ($rule && intval($rule['rule_mode']) === 5) {
+            if (!in_array($calcType, [1, 2], true)) {
+                return $this->rFail("优惠券分账仅支持按比例或每笔订单固定金额");
+            }
+            if (floatval($itemData['calc_value'] ?? 0) <= 0) {
+                return $this->rFail("优惠券分账比例或金额必须大于0");
+            }
+            if ($calcType === 1) {
+                $percentCheck = $this->checkRulePercentLimit($data, $oldItem, $calcType);
+                if ($percentCheck !== true) return $percentCheck;
+            }
+        }
         return true;
+    }
+
+    protected function checkCouponConfigData(&$data, $isUpdate = false)
+    {
+        $oldCoupon = [];
+        if ($isUpdate) {
+            $oldCoupon = $this->getRevenueRuleCouponFind(['rrc_id' => intval($data['rrc_id'] ?? 0)]);
+            if (!$oldCoupon) return $this->rFail("优惠券分账配置不存在");
+            if (!is_array($oldCoupon)) $oldCoupon = $oldCoupon->toArray();
+            if ($this->isCouponConfigExpired($oldCoupon)) {
+                return $this->rFail("优惠券分账已过期，禁止修改，请新增策略调整");
+            }
+        }
+        $couponData = array_merge($oldCoupon, $data);
+        $rrId = intval($couponData['rr_id'] ?? 0);
+        if ($rrId <= 0) return $this->rFail("分账策略ID不能为空");
+        $rule = $this->getRevenueRuleFind(['rr_id' => $rrId], 'rr_id,rule_mode');
+        if (!$rule || intval($rule['rule_mode']) !== 5) {
+            return $this->rFail("只有优惠券分账策略才能配置优惠券");
+        }
+        $couponCode = trim($couponData['coupon_code'] ?? '');
+        if (!preg_match('/^[1-9][0-9]{5}$/', $couponCode)) {
+            return $this->rFail("优惠券编码必须为非0开头的6位数字");
+        }
+        if ($this->existsRevenueRuleCouponCode($couponCode, $isUpdate ? intval($couponData['rrc_id']) : 0)) {
+            return $this->rFail("优惠券编码已存在");
+        }
+        $useLimit = intval($couponData['use_limit'] ?? 0);
+        if ($useLimit < 0) return $this->rFail("优惠券使用次数不能小于0");
+        if (!$isUpdate && $useLimit <= 0) return $this->rFail("优惠券使用次数必须大于0");
+        $expireTime = intval($couponData['expire_time'] ?? 0);
+        if ($expireTime > 0 && $expireTime <= time()) {
+            return $this->rFail("优惠券过期时间必须大于当前时间");
+        }
+        $scopes = $this->normalizeCouponScopes($couponData['scopes'] ?? []);
+        if (!$scopes && !$isUpdate) return $this->rFail("优惠券分账适用范围不能为空");
+        if ($scopes) {
+            $scopeCheck = $this->checkCouponScopes($scopes);
+            if ($scopeCheck !== true) return $scopeCheck;
+            $data['scopes'] = $scopes;
+        }
+        $data['coupon_code'] = $couponCode;
+        return true;
+    }
+
+    protected function saveCouponConfigData($postData)
+    {
+        $check = $this->checkCouponConfigData($postData, !empty($postData['rrc_id']));
+        if ($check !== true) {
+            throw new \Exception(is_array($check) ? json_encode($check, JSON_UNESCAPED_UNICODE) : '优惠券分账配置不合法');
+        }
+        $rrcId = intval($postData['rrc_id'] ?? 0);
+        $insertOrUpdate = array_intersect_key($postData, array_flip([
+            'rr_id',
+            'coupon_code',
+            'use_limit',
+            'expire_time',
+            'status',
+        ]));
+        if (!isset($insertOrUpdate['status'])) $insertOrUpdate['status'] = 1;
+        if (!$rrcId) {
+            $insertOrUpdate['used_count'] = 0;
+            $insertOrUpdate['remain_count'] = intval($insertOrUpdate['use_limit'] ?? 0);
+            $rrcId = $this->addRevenueRuleCoupon($insertOrUpdate);
+        } else {
+            $current = $this->getRevenueRuleCouponFind(['rrc_id' => $rrcId], 'rrc_id,use_limit,used_count,remain_count,expire_time,status');
+            if (!$current) throw new \Exception("优惠券分账配置不存在");
+            if (!is_array($current)) $current = $current->toArray();
+            if (isset($insertOrUpdate['use_limit'])) {
+                $usedCount = intval($current['used_count'] ?? 0);
+                $useLimit = intval($insertOrUpdate['use_limit']);
+                if ($useLimit < $usedCount) {
+                    throw new \Exception("优惠券使用次数不能小于已使用次数");
+                }
+                $insertOrUpdate['remain_count'] = $useLimit - $usedCount;
+            }
+            $this->updateRevenueRuleCoupon($insertOrUpdate, ['rrc_id' => $rrcId]);
+        }
+
+        if (isset($postData['scopes'])) {
+            $this->delRevenueRuleCouponScope(['rrc_id' => $rrcId]);
+            foreach ($postData['scopes'] as $scope) {
+                $scope['rrc_id'] = $rrcId;
+                if (!isset($scope['status'])) $scope['status'] = 1;
+                $this->addRevenueRuleCouponScope($scope);
+            }
+        }
+        return $rrcId;
+    }
+
+    protected function normalizeCouponScopes($scopes)
+    {
+        if (is_string($scopes)) {
+            $decoded = json_decode($scopes, true);
+            $scopes = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($scopes)) {
+            return [];
+        }
+        $result = [];
+        foreach ($scopes as $scope) {
+            if (!is_array($scope)) continue;
+            $mId = intval($scope['m_id'] ?? 0);
+            $gId = intval($scope['g_id'] ?? 0);
+            $mgId = intval($scope['mg_id'] ?? 0);
+            $machineId = trim($scope['machine_id'] ?? '');
+            $result[] = [
+                'm_id' => $mId,
+                'machine_id' => $machineId,
+                'g_id' => $gId,
+                'mg_id' => $mgId,
+                'status' => intval($scope['status'] ?? 1) ?: 1,
+            ];
+        }
+        return $result;
+    }
+
+    protected function checkCouponScopes(array $scopes)
+    {
+        foreach ($scopes as $scope) {
+            $mId = intval($scope['m_id'] ?? 0);
+            $gId = intval($scope['g_id'] ?? 0);
+            $mgId = intval($scope['mg_id'] ?? 0);
+            if ($mId <= 0 && $gId <= 0) {
+                return $this->rFail("优惠券分账适用范围必须配置设备或商品");
+            }
+            if ($mId > 0 && !MachineModel::getFind(['m_id' => $mId], 'm_id')) {
+                return $this->rFail("优惠券分账适用设备不存在：" . $mId);
+            }
+            if ($gId > 0 && !GoodsModel::getFind(['g_id' => $gId], 'g_id')) {
+                return $this->rFail("优惠券分账适用商品不存在：" . $gId);
+            }
+            if ($mgId > 0) {
+                $where = ['mg_id' => $mgId];
+                if ($mId > 0) $where['m_id'] = $mId;
+                if ($gId > 0) $where['g_id'] = $gId;
+                if (!MachineGoodsModel::getFind($where, 'mg_id')) {
+                    return $this->rFail("优惠券分账适用设备商品不存在：" . $mgId);
+                }
+            }
+        }
+        return true;
+    }
+
+    protected function isCouponConfigExpired(array $coupon)
+    {
+        $expireTime = intval($coupon['expire_time'] ?? 0);
+        return $expireTime > 0 && $expireTime <= time();
     }
 
     protected function checkProductItemData($data, $oldItem, $calcType)
     {
         $gId = intval($data['g_id'] ?? ($oldItem['g_id'] ?? 0));
         if ($gId <= 0) return $this->rFail("设备商品分账必须配置商品");
-        if (!Db::name('goods')->where(['g_id' => $gId])->find()) {
+        if (!GoodsModel::getFind(['g_id' => $gId], 'g_id')) {
             return $this->rFail("商品不存在");
         }
         if (!in_array(intval($calcType), [1, 2], true)) {
@@ -463,7 +677,7 @@ class RevenueRuleClient extends ManagementClient
         }
         if (intval($calcType) === 1) {
             $rrId = intval($data['rr_id'] ?? ($oldItem['rr_id'] ?? 0));
-            $query = Db::name('revenue_rule_item')->where([
+            $query = RevenueRuleItemModel::where([
                 'rr_id' => $rrId,
                 'g_id' => $gId,
                 'status' => 1,
@@ -483,19 +697,19 @@ class RevenueRuleClient extends ManagementClient
         $rrId = intval($data['rr_id'] ?? ($oldItem['rr_id'] ?? 0));
         if ($rrId <= 0) return true;
         $status = intval($data['status'] ?? ($oldItem['status'] ?? 1));
-        $allItems = Db::name('revenue_rule_item')->where(['rr_id' => $rrId, 'status' => 1]);
+        $allItems = RevenueRuleItemModel::where(['rr_id' => $rrId, 'status' => 1]);
         if (!empty($data['rri_id'])) {
             $allItems->where('rri_id', '<>', intval($data['rri_id']));
         }
         $otherItemCount = intval($allItems->count());
-        $fullItems = Db::name('revenue_rule_item')->where(['rr_id' => $rrId, 'status' => 1, 'calc_type' => 3]);
+        $fullItems = RevenueRuleItemModel::where(['rr_id' => $rrId, 'status' => 1, 'calc_type' => 3]);
         if (!empty($data['rri_id'])) {
             $fullItems->where('rri_id', '<>', intval($data['rri_id']));
         }
         if ($status === 1 && (intval($calcType) === 3 ? $otherItemCount > 0 : intval($fullItems->count()) > 0)) {
             return $this->rFail("全额分账明细必须是策略内唯一启用明细");
         }
-        $query = Db::name('revenue_rule_item')->where(['rr_id' => $rrId, 'status' => 1, 'calc_type' => 1]);
+        $query = RevenueRuleItemModel::where(['rr_id' => $rrId, 'status' => 1, 'calc_type' => 1]);
         if (!empty($data['rri_id'])) {
             $query->where('rri_id', '<>', intval($data['rri_id']));
         }
@@ -523,8 +737,7 @@ class RevenueRuleClient extends ManagementClient
         }
         $tierData = array_merge($oldTier, $data);
         if (empty($tierData['rri_id'])) return $this->rFail("分账策略明细ID不能为空");
-        $ruleItem = Db::name('revenue_rule_item')
-            ->alias('rri')
+        $ruleItem = RevenueRuleItemModel::alias('rri')
             ->join('revenue_rule rr', 'rr.rr_id = rri.rr_id')
             ->where([
                 'rri.rri_id' => intval($tierData['rri_id']),

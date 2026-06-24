@@ -28,9 +28,7 @@ class SaleOrdersClient extends MachineBaseClient
         $this->data = json2arr($this->config['data']);
         $this->machine['last_online_time'] = time();
         $this->machine['online'] = 1;
-        if (!isset($this->data['msgType']) || (isset($this->data['msgType']) && $this->data['msgType'] != "heartbeat")) {
-            $this->heartbeat();
-        }
+        $this->heartbeat();
         $this->newRecord();
     }
 

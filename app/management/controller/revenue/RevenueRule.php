@@ -51,6 +51,19 @@ class RevenueRule extends Common
         return $this->app->revenueRule->addProductItem($postData);
     }
 
+    public function saveCouponConfig()
+    {
+        $postData = input();
+        try { $this->validate($postData, $this->validatePath . 'saveCouponConfig'); } catch (\Exception $e) { return returnValidate($e->getMessage()); }
+        return $this->app->revenueRule->saveCouponConfig($postData);
+    }
+
+    public function getCouponConfig()
+    {
+        $postData = input();
+        return $this->app->revenueRule->getCouponConfig($postData);
+    }
+
     public function updateItem()
     {
         $postData = input();

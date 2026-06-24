@@ -50,9 +50,7 @@ class ReceiveBaseClient extends MachineBaseClient
             die();
         }
 
-        if (!isset($this->data['msgType']) || (isset($this->data['msgType']) && $this->data['msgType'] != "heartbeat")) {
-            $this->heartbeat();
-        }
+        $this->heartbeat();
 
         $this->newRecord();
 

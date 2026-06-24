@@ -2,6 +2,16 @@
 
 namespace app\AppFactory\Kernel\Service\Revenue;
 
+use app\AppFactory\Kernel\Model\Revenue\RevenueOrderModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueAccountModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenuePayChannelModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleCouponModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleCouponScopeModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemTierModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleMachineModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
 use think\facade\Db;
 
 class RevenueCalculator
@@ -11,6 +21,7 @@ class RevenueCalculator
     protected $records = [];
     protected $rentalAmount = '0';
     protected $productAmount = '0';
+    protected $couponAmount = '0';
     protected $rentalAmountsBySod = [];
     protected $revenuePayChannel = [];
 
@@ -20,6 +31,7 @@ class RevenueCalculator
         $this->records = [];
         $this->rentalAmount = '0';
         $this->productAmount = '0';
+        $this->couponAmount = '0';
         $this->rentalAmountsBySod = [];
         $this->revenuePayChannel = [];
         if (!$this->shouldCalculateRevenue()) {
@@ -28,19 +40,21 @@ class RevenueCalculator
         }
         $this->details = $order['details'] ?? $order['detail'] ?? [];
         if (!$this->details && !empty($order['order_id'])) {
-            $this->details = Db::name('sale_orders_details')->where(['order_id' => $order['order_id']])->select()->toArray();
+            $this->details = SaleOrdersDetailsModel::where(['order_id' => $order['order_id']])->select()->toArray();
         }
         if (!$this->details) {
             return true;
         }
 
         $this->calculateRental();
-        $hasProductRule = $this->calculateProductRule();
-        $hasDeviceRule = $hasProductRule ? false : $this->calculateDeviceRule();
+        $hasCouponCode = $this->hasRevenueCouponCode();
+        $hasCouponRule = $this->calculateCouponRule();
+        $hasProductRule = $hasCouponCode ? false : $this->calculateProductRule();
+        $hasDeviceRule = ($hasCouponCode || $hasProductRule) ? false : $this->calculateDeviceRule();
 
-        if (!$hasProductRule && !$hasDeviceRule) {
+        if (!$hasCouponCode && !$hasProductRule && !$hasDeviceRule) {
             $this->calculateNormal();
-        } elseif ($hasProductRule) {
+        } elseif ($hasCouponRule || $hasProductRule) {
             $this->calculateNormal();
         }
 
@@ -120,8 +134,7 @@ class RevenueCalculator
         if (!$rule) {
             return false;
         }
-        $items = Db::name('revenue_rule_item')
-            ->where(['rr_id' => $rule['rr_id'], 'status' => 1])
+        $items = RevenueRuleItemModel::where(['rr_id' => $rule['rr_id'], 'status' => 1])
             ->order('sort asc,rri_id asc')
             ->select()
             ->toArray();
@@ -200,14 +213,130 @@ class RevenueCalculator
         return $hasMatchedRuleItem;
     }
 
+    protected function calculateCouponRule()
+    {
+        $couponCode = trim($this->order['revenue_coupon_code'] ?? '');
+        if ($couponCode === '') {
+            $this->logRevenueConfig('优惠券分账编码查询', [
+                'found_code' => 0,
+            ]);
+            return false;
+        }
+        if (!preg_match('/^[1-9][0-9]{5}$/', $couponCode)) {
+            $this->logRevenueConfig('优惠券分账编码查询', [
+                'coupon_code' => $couponCode,
+                'found_code' => 0,
+                'skip_reason' => 'invalid_coupon_code',
+            ]);
+            return false;
+        }
+
+        $coupon = RevenueRuleCouponModel::alias('rrc')
+            ->join('revenue_rule rr', 'rr.rr_id = rrc.rr_id')
+            ->where([
+                'rrc.coupon_code' => $couponCode,
+                'rrc.status' => 1,
+                'rr.status' => 1,
+                'rr.rule_mode' => 5,
+            ])
+            ->field('rrc.*,rr.rule_name,rr.rule_mode,rr.settlement_type,rr.settlement_days')
+            ->find();
+        if ($coupon && !is_array($coupon)) {
+            $coupon = $coupon->toArray();
+        }
+        $this->logRevenueConfig('优惠券分账编码查询', [
+            'coupon_code' => $couponCode,
+            'found_coupon' => $coupon ? 1 : 0,
+            'rrc_id' => $coupon ? intval($coupon['rrc_id']) : 0,
+            'rr_id' => $coupon ? intval($coupon['rr_id']) : 0,
+        ]);
+        if (!$coupon || !$this->isCouponUsable($coupon)) {
+            return false;
+        }
+
+        $matched = $this->matchCouponScope($coupon);
+        $this->logRevenueConfig('优惠券分账范围匹配', [
+            'coupon_code' => $couponCode,
+            'rrc_id' => intval($coupon['rrc_id']),
+            'matched' => $matched['matched'] ? 1 : 0,
+            'scope_type' => $matched['scope_type'],
+            'base_amount' => $matched['base_amount'],
+            'matched_scope_ids' => $matched['scope_ids'],
+        ]);
+        if (!$matched['matched'] || bccomp($matched['base_amount'], '0.01', 2) < 0) {
+            return false;
+        }
+
+        $items = RevenueRuleItemModel::where(['rr_id' => intval($coupon['rr_id']), 'status' => 1])
+            ->order('sort asc,rri_id asc')
+            ->select()
+            ->toArray();
+        $this->logRevenueConfig('优惠券分账规则明细查询', [
+            'rr_id' => intval($coupon['rr_id']),
+            'rrc_id' => intval($coupon['rrc_id']),
+            'item_count' => count($items),
+            'rri_ids' => $this->collectColumnValues($items, 'rri_id'),
+        ]);
+        if (!$items) {
+            return false;
+        }
+
+        $allocatedAmount = '0.00';
+        $hasRecord = false;
+        foreach ($items as $item) {
+            $account = $this->getAccountById(intval($item['ra_id']));
+            if (!$account) {
+                $this->logRevenueConfig('分账账户查询', [
+                    'source' => 'coupon_rule',
+                    'ra_id' => intval($item['ra_id']),
+                    'rri_id' => intval($item['rri_id']),
+                    'found_account' => 0,
+                ]);
+                continue;
+            }
+            $calc = $this->calculateCouponRuleItemAmount($item, $matched['base_amount']);
+            if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) {
+                continue;
+            }
+            $allocatedAmount = bcadd($allocatedAmount, $calc['income_amount'], 2);
+            if (bccomp($allocatedAmount, $matched['base_amount'], 2) > 0) {
+                throw new \Exception("优惠券分账金额不能超过优惠券可分金额");
+            }
+            $this->couponAmount = bcadd($this->couponAmount, $calc['income_amount'], 2);
+            $hasRecord = true;
+            $this->records[] = $this->buildRecord([
+                'rule_mode' => 5,
+                'rr_id' => intval($coupon['rr_id']),
+                'rri_id' => intval($item['rri_id']),
+                'rrc_id' => intval($coupon['rrc_id']),
+                'coupon_code' => $couponCode,
+                'coupon_scope_type' => $matched['scope_type'],
+                'coupon_use_count_before' => intval($coupon['remain_count'] ?? 0),
+                'coupon_use_count_after' => max(0, intval($coupon['remain_count'] ?? 0) - 1),
+                'coupon_use_deducted' => 0,
+                'payer_ao_id' => intval($this->order['ao_id'] ?? 0),
+                'receiver_ao_id' => intval($item['receiver_ao_id']),
+                'calc_type' => intval($item['calc_type']),
+                'income_value' => $calc['income_value'],
+                'income_amount' => $calc['income_amount'],
+                'source' => 'coupon_rule',
+            ], $account, $coupon);
+        }
+        return $hasRecord;
+    }
+
+    protected function hasRevenueCouponCode()
+    {
+        return trim($this->order['revenue_coupon_code'] ?? '') !== '';
+    }
+
     protected function calculateDeviceRule()
     {
         $rule = $this->getRuleByMode(3);
         if (!$rule) {
             return false;
         }
-        $items = Db::name('revenue_rule_item')
-            ->where(['rr_id' => $rule['rr_id'], 'status' => 1])
+        $items = RevenueRuleItemModel::where(['rr_id' => $rule['rr_id'], 'status' => 1])
             ->order('sort asc,rri_id asc')
             ->select()
             ->toArray();
@@ -285,7 +414,7 @@ class RevenueCalculator
     protected function calculateNormal()
     {
         $payerAoId = intval($this->order['ao_id'] ?? 0);
-        $allocatedAmount = bcadd($this->rentalAmount, $this->productAmount, 2);
+        $allocatedAmount = bcadd(bcadd($this->rentalAmount, $this->couponAmount, 2), $this->productAmount, 2);
         $normalAmount = $this->money(bcsub($this->money($this->order['total_price'] ?? 0), $allocatedAmount, 2));
         if (bccomp($normalAmount, '0.01', 2) < 0) {
             return true;
@@ -294,8 +423,7 @@ class RevenueCalculator
         if (!$rule) {
             return true;
         }
-        $items = Db::name('revenue_rule_item')
-            ->where(['rr_id' => $rule['rr_id'], 'status' => 1])
+        $items = RevenueRuleItemModel::where(['rr_id' => $rule['rr_id'], 'status' => 1])
             ->order('sort asc,rri_id asc')
             ->select()
             ->toArray();
@@ -402,10 +530,131 @@ class RevenueCalculator
         return null;
     }
 
+    protected function calculateCouponRuleItemAmount(array $item, $baseAmount)
+    {
+        $calcType = intval($item['calc_type']);
+        if ($calcType === 1) {
+            return $this->calculateRuleItemAmount($item, $baseAmount, '0');
+        }
+        if ($calcType === 2) {
+            $value = $this->money($item['calc_value'] ?? 0);
+            return [
+                'income_value' => $value,
+                'income_amount' => $value,
+            ];
+        }
+        return null;
+    }
+
+    protected function isCouponUsable(array $coupon)
+    {
+        $remainCount = intval($coupon['remain_count'] ?? 0);
+        if ($remainCount <= 0) {
+            $this->logRevenueConfig('优惠券分账可用性校验', [
+                'rrc_id' => intval($coupon['rrc_id'] ?? 0),
+                'coupon_code' => $coupon['coupon_code'] ?? '',
+                'usable' => 0,
+                'skip_reason' => 'remain_count_empty',
+            ]);
+            return false;
+        }
+        $expireTime = intval($coupon['expire_time'] ?? 0);
+        if ($expireTime > 0 && $expireTime <= time()) {
+            $this->logRevenueConfig('优惠券分账可用性校验', [
+                'rrc_id' => intval($coupon['rrc_id'] ?? 0),
+                'coupon_code' => $coupon['coupon_code'] ?? '',
+                'usable' => 0,
+                'expire_time' => $expireTime,
+                'skip_reason' => 'expired',
+            ]);
+            return false;
+        }
+        $this->logRevenueConfig('优惠券分账可用性校验', [
+            'rrc_id' => intval($coupon['rrc_id'] ?? 0),
+            'coupon_code' => $coupon['coupon_code'] ?? '',
+            'usable' => 1,
+            'remain_count' => $remainCount,
+            'expire_time' => $expireTime,
+        ]);
+        return true;
+    }
+
+    protected function matchCouponScope(array $coupon)
+    {
+        $scopes = RevenueRuleCouponScopeModel::where(['rrc_id' => intval($coupon['rrc_id']), 'status' => 1])
+            ->order('rrcs_id asc')
+            ->select()
+            ->toArray();
+        $mId = intval($this->order['m_id'] ?? 0);
+        $orderAmount = $this->money(bcsub($this->money($this->order['total_price'] ?? 0), $this->rentalAmount, 2));
+        $matchedAmount = '0.00';
+        $scopeType = '';
+        $scopeIds = [];
+
+        foreach ($scopes as $scope) {
+            $scopeMId = intval($scope['m_id'] ?? 0);
+            $scopeGId = intval($scope['g_id'] ?? 0);
+            if ($scopeMId > 0 && $scopeGId <= 0) {
+                if ($scopeMId === $mId) {
+                    $matchedAmount = $orderAmount;
+                    $scopeType = 'machine';
+                    $scopeIds[] = intval($scope['rrcs_id']);
+                }
+                continue;
+            }
+            if ($scopeMId <= 0 && $scopeGId > 0) {
+                $amount = $this->sumCouponScopeGoodsAmount($scopeGId, 0);
+                if (bccomp($amount, '0.01', 2) >= 0) {
+                    $matchedAmount = bcadd($matchedAmount, $amount, 2);
+                    $scopeType = $scopeType ?: 'goods';
+                    $scopeIds[] = intval($scope['rrcs_id']);
+                }
+                continue;
+            }
+            if ($scopeMId > 0 && $scopeGId > 0) {
+                if ($scopeMId !== $mId) {
+                    continue;
+                }
+                $amount = $this->sumCouponScopeGoodsAmount($scopeGId, intval($scope['mg_id'] ?? 0));
+                if (bccomp($amount, '0.01', 2) >= 0) {
+                    $matchedAmount = bcadd($matchedAmount, $amount, 2);
+                    $scopeType = $scopeType ?: 'machine_goods';
+                    $scopeIds[] = intval($scope['rrcs_id']);
+                }
+            }
+        }
+
+        return [
+            'matched' => bccomp($matchedAmount, '0.01', 2) >= 0,
+            'base_amount' => $this->money($matchedAmount),
+            'scope_type' => $scopeType,
+            'scope_ids' => $scopeIds,
+        ];
+    }
+
+    protected function sumCouponScopeGoodsAmount($gId, $mgId = 0)
+    {
+        $amount = '0.00';
+        foreach ($this->details as $detail) {
+            if (intval($detail['g_id'] ?? 0) !== intval($gId)) {
+                continue;
+            }
+            if ($mgId > 0 && intval($detail['mg_id'] ?? 0) !== intval($mgId)) {
+                continue;
+            }
+            $sodId = intval($detail['sod_id'] ?? 0);
+            $detailAmount = $this->money($detail['total_sod_price'] ?? 0);
+            $baseAmount = $this->money(bcsub($detailAmount, $this->rentalAmountsBySod[$sodId] ?? '0', 2));
+            if (bccomp($baseAmount, '0.01', 2) >= 0) {
+                $amount = bcadd($amount, $baseAmount, 2);
+            }
+        }
+        return $this->money($amount);
+    }
+
     protected function calculateTierSplitAmount(array $item, $baseAmount, $periodBefore, $periodAfter)
     {
-        $tiers = Db::name('revenue_rule_item_tier')
-            ->where(['rri_id' => intval($item['rri_id']), 'status' => 1])
+        $tiers = RevenueRuleItemTierModel::where(['rri_id' => intval($item['rri_id']), 'status' => 1])
             ->order('threshold_min asc,rrit_id asc')
             ->select()
             ->toArray();
@@ -460,8 +709,7 @@ class RevenueCalculator
 
     protected function saveRecords()
     {
-        $locked = Db::name('revenue_order')
-            ->where(['order_id' => $this->order['order_id']])
+        $locked = RevenueOrderModel::where(['order_id' => $this->order['order_id']])
             ->where('status', '>', 0)
             ->find();
         if ($locked) {
@@ -472,10 +720,72 @@ class RevenueCalculator
         if (!$this->records) {
             return true;
         }
+        $this->ensureRevenueOrderSnapshotColumns();
         foreach ($this->records as $record) {
             $record['create_time'] = time();
             $record['update_time'] = time();
-            Db::name('revenue_order')->insert($record);
+            try {
+                RevenueOrderModel::create($record);
+            } catch (\Exception $e) {
+                $message = $this->resolveRevenueOrderMissingFieldMessage($e->getMessage());
+                if ($message) {
+                    throw new \Exception($message);
+                }
+                throw $e;
+            }
+        }
+        return true;
+    }
+
+    protected function resolveRevenueOrderMissingFieldMessage($message)
+    {
+        if (!preg_match('/fields not exists:\[([a-zA-Z0-9_]+)\]/', $message, $matches)) {
+            return '';
+        }
+        $field = $matches[1];
+        $messages = [
+            'g_id' => '设备商品分账缺少 revenue_order.g_id 字段，请先执行 文档说明/设备商品分账数据库变更.sql',
+            'mg_id' => '设备商品分账缺少 revenue_order.mg_id 字段，请先执行 文档说明/设备商品分账数据库变更.sql',
+            'rrc_id' => '优惠券分账缺少 revenue_order.rrc_id 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
+            'coupon_code' => '优惠券分账缺少 revenue_order.coupon_code 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
+            'coupon_scope_type' => '优惠券分账缺少 revenue_order.coupon_scope_type 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
+            'coupon_use_count_before' => '优惠券分账缺少 revenue_order.coupon_use_count_before 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
+            'coupon_use_count_after' => '优惠券分账缺少 revenue_order.coupon_use_count_after 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
+            'coupon_use_deducted' => '优惠券分账缺少 revenue_order.coupon_use_deducted 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
+        ];
+        return $messages[$field] ?? '';
+    }
+
+    protected function ensureRevenueOrderSnapshotColumns()
+    {
+        $required = [];
+        foreach ($this->records as $record) {
+            if (array_key_exists('g_id', $record) || array_key_exists('mg_id', $record)) {
+                $required['g_id'] = '设备商品分账缺少 revenue_order.g_id 字段，请先执行 文档说明/设备商品分账数据库变更.sql';
+                $required['mg_id'] = '设备商品分账缺少 revenue_order.mg_id 字段，请先执行 文档说明/设备商品分账数据库变更.sql';
+            }
+            if (intval($record['rule_mode'] ?? 0) === 5) {
+                foreach ([
+                    'rrc_id',
+                    'coupon_code',
+                    'coupon_scope_type',
+                    'coupon_use_count_before',
+                    'coupon_use_count_after',
+                    'coupon_use_deducted',
+                ] as $field) {
+                    $required[$field] = "优惠券分账缺少 revenue_order.{$field} 字段，请先执行 文档说明/优惠券分账数据库变更.sql";
+                }
+            }
+        }
+        if (!$required) {
+            return true;
+        }
+        $columns = Db::query("SHOW COLUMNS FROM `revenue_order`");
+        $fields = array_column($columns, 'Field');
+        foreach ($required as $field => $message) {
+            if (!in_array($field, $fields, true)) {
+                throw new \Exception($message);
+            }
         }
         return true;
     }
@@ -515,7 +825,7 @@ class RevenueCalculator
     protected function clearPendingRecords()
     {
         if (empty($this->order['order_id'])) return true;
-        Db::name('revenue_order')->where(['order_id' => $this->order['order_id'], 'status' => 0])->delete();
+        RevenueOrderModel::where(['order_id' => $this->order['order_id'], 'status' => 0])->delete();
         return true;
     }
 
@@ -531,9 +841,11 @@ class RevenueCalculator
             return false;
         }
 
-        $channel = Db::name('revenue_pay_channel')
-            ->where(['pay_channel' => $payChannel, 'status' => 1])
+        $channel = RevenuePayChannelModel::where(['pay_channel' => $payChannel, 'status' => 1])
             ->find();
+        if ($channel && !is_array($channel)) {
+            $channel = $channel->toArray();
+        }
         $this->logRevenueConfig('支付渠道查询', [
             'pay_channel' => $payChannel,
             'found_channel' => $channel ? 1 : 0,
@@ -546,8 +858,7 @@ class RevenueCalculator
 
     protected function getRuleByMode($mode)
     {
-        $rule = Db::name('revenue_rule_machine')
-            ->alias('rrm')
+        $rule = RevenueRuleMachineModel::alias('rrm')
             ->join('revenue_rule rr', 'rr.rr_id = rrm.rr_id')
             ->where([
                 'rrm.m_id' => intval($this->order['m_id'] ?? 0),
@@ -558,6 +869,9 @@ class RevenueCalculator
             ->field('rr.*')
             ->order('rrm.sort asc,rrm.rrm_id desc')
             ->find();
+        if ($rule && !is_array($rule)) {
+            $rule = $rule->toArray();
+        }
         $this->logRevenueConfig('分账规则查询', [
             'rule_mode' => intval($mode),
             'found_rule' => $rule ? 1 : 0,
@@ -569,14 +883,14 @@ class RevenueCalculator
 
     protected function getRentalRuleItem($rrId, $receiverAoId)
     {
-        return Db::name('revenue_rule_item')
-            ->where([
+        $item = RevenueRuleItemModel::where([
                 'rr_id' => $rrId,
                 'receiver_ao_id' => $receiverAoId,
                 'status' => 1,
             ])
             ->order('sort asc,rri_id asc')
             ->find();
+        return $item && !is_array($item) ? $item->toArray() : $item;
     }
 
     protected function validateRecordAmounts()
@@ -620,18 +934,17 @@ class RevenueCalculator
 
     protected function getAccountById($raId)
     {
-        return Db::name('revenue_account')
-            ->alias('ra')
+        $account = RevenueAccountModel::alias('ra')
             ->leftJoin('auth_manager am', 'am.manager_id = ra.manager_id')
             ->where(['ra.ra_id' => $raId, 'ra.status' => 1])
             ->field('ra.*,am.nickname manager_name')
             ->find();
+        return $account && !is_array($account) ? $account->toArray() : $account;
     }
 
     protected function getMatchedTier($rriId, $amount)
     {
-        $tiers = Db::name('revenue_rule_item_tier')
-            ->where(['rri_id' => $rriId, 'status' => 1])
+        $tiers = RevenueRuleItemTierModel::where(['rri_id' => $rriId, 'status' => 1])
             ->order('threshold_min asc,rrit_id asc')
             ->select()
             ->toArray();
@@ -652,14 +965,12 @@ class RevenueCalculator
         if ($mId <= 0) return '0.00';
         $start = strtotime($periodKey . '-01 00:00:00');
         $end = strtotime(date('Y-m-t 23:59:59', $start));
-        $query = Db::name('sale_orders')
-            ->where('m_id', $mId)
+        $query = SaleOrdersModel::where('m_id', $mId)
             ->where('pay_status', 3)
             ->whereBetween('pay_time', [$start, $end]);
         $total = $this->money($query->sum('total_price'));
         if (intval($turnoverType) === 1) {
-            $refund = $this->money(Db::name('sale_orders')
-                ->where('m_id', $mId)
+            $refund = $this->money(SaleOrdersModel::where('m_id', $mId)
                 ->where('pay_status', 3)
                 ->whereBetween('pay_time', [$start, $end])
                 ->sum('refund_amount'));

@@ -5,6 +5,8 @@ namespace app\AppFactory\Kernel\Traits\Revenue;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemTierModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleMachineModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleCouponModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleCouponScopeModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleModel;
 
 trait RevenueRuleTrait
@@ -114,5 +116,69 @@ trait RevenueRuleTrait
     public function delRevenueRuleMachine($where)
     {
         return RevenueRuleMachineModel::destroy($where);
+    }
+
+    public function getRevenueRuleCouponFind($where, $field = "*", $order = "")
+    {
+        return RevenueRuleCouponModel::getFind($where, $field, $order);
+    }
+
+    public function getRevenueRuleCouponList($where, $pageNum = 0, $field = "*", $order = "rrc_id desc")
+    {
+        return RevenueRuleCouponModel::getList($where, $pageNum, $field, $order);
+    }
+
+    public function addRevenueRuleCoupon($insert)
+    {
+        if (isset($this->manager['manager_id']) && !isset($insert['creator'])) {
+            $insert['creator'] = $this->manager['manager_id'];
+        }
+        $data = RevenueRuleCouponModel::create($insert);
+        return $data->rrc_id;
+    }
+
+    public function updateRevenueRuleCoupon($update, $where = [], $field = [])
+    {
+        return RevenueRuleCouponModel::update($update, $where, $field);
+    }
+
+    public function delRevenueRuleCoupon($where)
+    {
+        return RevenueRuleCouponModel::destroy($where);
+    }
+
+    public function existsRevenueRuleCouponCode($couponCode, $excludeRrcId = 0)
+    {
+        $query = RevenueRuleCouponModel::where(['coupon_code' => $couponCode]);
+        if (intval($excludeRrcId) > 0) {
+            $query->where('rrc_id', '<>', intval($excludeRrcId));
+        }
+        return $query->find() ? true : false;
+    }
+
+    public function getRevenueRuleCouponScopeFind($where, $field = "*", $order = "")
+    {
+        return RevenueRuleCouponScopeModel::getFind($where, $field, $order);
+    }
+
+    public function getRevenueRuleCouponScopeList($where, $pageNum = 0, $field = "*", $order = "rrcs_id desc")
+    {
+        return RevenueRuleCouponScopeModel::getList($where, $pageNum, $field, $order);
+    }
+
+    public function addRevenueRuleCouponScope($insert)
+    {
+        $data = RevenueRuleCouponScopeModel::create($insert);
+        return $data->rrcs_id;
+    }
+
+    public function updateRevenueRuleCouponScope($update, $where = [], $field = [])
+    {
+        return RevenueRuleCouponScopeModel::update($update, $where, $field);
+    }
+
+    public function delRevenueRuleCouponScope($where)
+    {
+        return RevenueRuleCouponScopeModel::destroy($where);
     }
 }

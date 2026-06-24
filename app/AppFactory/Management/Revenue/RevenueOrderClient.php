@@ -5,14 +5,15 @@ namespace app\AppFactory\Management\Revenue;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Revenue\RevenueOrderTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Management\ManagementClient;
-use think\facade\Db;
 
 class RevenueOrderClient extends ManagementClient
 {
     use RevenueOrderTrait;
     use SaleOrdersTrait;
+    use SaleOrdersRefundTrait;
     use BeforeOrderPaymentTrait;
     use AfterOrderPaymentTrait;
     use RevenueOrganizationNameTrait;
@@ -44,10 +45,10 @@ class RevenueOrderClient extends ManagementClient
         $order = $this->getRevenueOrderFind($where, "*", "ro_id desc");
         if (!$order) return $this->rNoData();
         $order = is_array($order) ? $order : $order->toArray();
-        $order['sale_order'] = Db::name('sale_orders')->where(['order_id' => $order['order_id']])->find();
-        $order['sale_details'] = Db::name('sale_orders_details')->where(['order_id' => $order['order_id']])->select()->toArray();
-        $order['revenue_orders'] = Db::name('revenue_order')->where(['order_id' => $order['order_id']])->order('ro_id asc')->select()->toArray();
-        $order['refund_orders'] = Db::name('sale_orders_refund')->where(['order_id' => $order['order_id']])->order('sor_id desc')->select()->toArray();
+        $order['sale_order'] = $this->getSaleOrdersFind(['order_id' => $order['order_id']]);
+        $order['sale_details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0, '*', 'sod_id asc')->toArray();
+        $order['revenue_orders'] = $this->getRevenueOrderList(['order_id' => $order['order_id']], 0, '*', 'ro_id asc')->toArray();
+        $order['refund_orders'] = $this->getSaleOrdersRefundList(['order_id' => $order['order_id']], 0, '*', 'sor_id desc')->toArray();
         return $this->rQ($this->appendRevenuePayTypeDesc(
             $this->appendRevenueOrganizationNames($order)
         ));
@@ -131,7 +132,7 @@ class RevenueOrderClient extends ManagementClient
         $this->startTrans();
         try {
             $flag = [];
-            $hasRevenue = Db::name('revenue_order')->where(['order_id' => $this->order['order_id']])->count();
+            $hasRevenue = $this->getRevenueOrderList(['order_id' => $this->order['order_id']], 0, 'ro_id', 'ro_id asc')->count();
             if (!$hasRevenue) {
                 $flag[] = $this->countIncome();
                 if (end($flag) === false) {
@@ -180,7 +181,7 @@ class RevenueOrderClient extends ManagementClient
 
     protected function getRuleModeText($mode)
     {
-        $map = [1 => '普通分账', 2 => '设备出租', 3 => '设备分账', 4 => '设备商品分账'];
+        $map = [1 => '普通分账', 2 => '设备出租', 3 => '设备分账', 4 => '设备商品分账', 5 => '优惠券分账'];
         return $map[intval($mode)] ?? '未知';
     }
 
@@ -212,14 +213,14 @@ class RevenueOrderClient extends ManagementClient
     protected function buildMockPayResult()
     {
         return [
-            'sale_order' => Db::name('sale_orders')->where(['order_id' => $this->order['order_id']])->find(),
-            'revenue_orders' => Db::name('revenue_order')->where(['order_id' => $this->order['order_id']])->order('ro_id asc')->select()->toArray(),
+            'sale_order' => $this->getSaleOrdersFind(['order_id' => $this->order['order_id']]),
+            'revenue_orders' => $this->getRevenueOrderList(['order_id' => $this->order['order_id']], 0, '*', 'ro_id asc')->toArray(),
         ];
     }
 
     protected function canMockSettleRevenue($payStatus)
     {
-        $revenueList = Db::name('revenue_order')->where(['order_id' => $this->order['order_id']])->select()->toArray();
+        $revenueList = $this->getRevenueOrderList(['order_id' => $this->order['order_id']], 0, '*', 'ro_id asc')->toArray();
         if (!$revenueList) return true;
         if (intval($payStatus) === 3) return true;
         foreach ($revenueList as $item) {

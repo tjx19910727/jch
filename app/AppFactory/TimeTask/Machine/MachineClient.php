@@ -257,7 +257,8 @@ class MachineClient extends TimeTaskBase
      */
     public function checkOffline()
     {
-        $details = $this->getMachineOnlineDetailsList(['offline_time' => 0, ['heart_time', '<', time() - env("machine.timeout",60)]], 0, 'mod_id,m_id,machine_name,machine_id,online_time,d_date');
+        $offlineTimeout = $this->getMachineOfflineTimeout();
+        $details = $this->getMachineOnlineDetailsList(['offline_time' => 0, ['heart_time', '<', time() - $offlineTimeout]], 0, 'mod_id,m_id,machine_name,machine_id,online_time,d_date');
         $httpFlag = [];
         if ($details) {
             $flag[] = 1;
@@ -378,6 +379,13 @@ class MachineClient extends TimeTaskBase
         }
 
         return "处理成功";
+    }
+
+    protected function getMachineOfflineTimeout()
+    {
+        $timeout = intval(env("machine.timeout", 60));
+        // 定时任务通常每分钟执行一次，低于 120 秒容易和心跳上报抖动互相踩边界。
+        return max(120, $timeout);
     }
 
     /**
