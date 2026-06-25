@@ -12,6 +12,7 @@ namespace app\machine\controller;
 
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Traits\Goods\GoodsBehaviorTrackingTrait;
 use app\AppFactory\Kernel\Traits\Laser\LaserResourceTrait;
 use app\AppFactory\Kernel\Util\SignUtil;
 use app\BaseController;
@@ -24,6 +25,7 @@ class Laser extends BaseController
 {
     use ReturnTrait;
     use LaserResourceTrait;
+    use GoodsBehaviorTrackingTrait;
     protected $signData = [];
     protected $machineId = '';
 
@@ -176,5 +178,83 @@ class Laser extends BaseController
             return returnTryCatch($e->getMessage());
         }
     }
-    
+
+    /**
+     * 设备上报商品行为埋点（每日汇总）
+     */
+    public function uploadBehaviorTracking()
+    {
+        try {
+            $machineId = $this->machineId;
+            if (empty($machineId)) {
+                return returnState(100, '缺少设备编号');
+            }
+
+            $machine = MachineModel::getFind(
+                ['machine_id' => $machineId],
+                'm_id,machine_id'
+            );
+            if (!$machine) {
+                return returnState(100, '设备不存在');
+            }
+            $mId = $machine['m_id'];
+
+            $body = input();
+            $date = $body['date'] ?? '';
+            if (empty($date)) {
+                return returnState(100, '缺少 date 字段');
+            }
+            $reportDate = date('Y-m-d', strtotime($date));
+
+            $records = $body['records'] ?? [];
+            $insertCount = 0;
+            $skipCount = 0;
+
+            foreach ($records as $record) {
+                $goodsId = $record['goods_id'] ?? 0;
+                if (!$goodsId) continue;
+
+                // 去重：同设备同商品同日期已有则跳过
+                $exist = $this->getGoodsBehaviorTrackingFind([
+                    'm_id' => $mId,
+                    'goods_id' => $goodsId,
+                    'report_date' => $reportDate,
+                ]);
+                if ($exist) {
+                    $skipCount++;
+                    continue;
+                }
+
+                $this->addGoodsBehaviorTracking([
+                    'm_id' => $mId,
+                    'machine_id' => $machineId,
+                    'goods_id' => $goodsId,
+                    'record_key' => $record['record_key'] ?? '',
+                    'click_count' => $record['click_count'] ?? 0,
+                    'cart_add_count' => $record['cart_add_count'] ?? 0,
+                    'order_count' => $record['order_count'] ?? 0,
+                    'purchase_success_count' => $record['purchase_success_count'] ?? 0,
+                    'retry_dispense_count' => $record['retry_dispense_count'] ?? 0,
+                    'help_count' => $record['help_count'] ?? 0,
+                    'report_date' => $reportDate,
+                    'device_created_at' => $record['created_at'] ?? null,
+                    'device_updated_at' => $record['updated_at'] ?? null,
+                    'active_orders' => !empty($body['active_orders']) ? json_encode($body['active_orders']) : null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s'),
+                ]);
+                $insertCount++;
+            }
+
+            actionLog($this->signData, "新增{$insertCount}条,跳过{$skipCount}条", 'goodsBehaviorTracking');
+            return returnState(200, 'ok', [
+                'insert_count' => $insertCount,
+                'skip_count' => $skipCount,
+            ]);
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
 }
