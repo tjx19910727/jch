@@ -4,8 +4,8 @@ namespace app\AppFactory\Kernel\Service\Revenue;
 
 use app\AppFactory\Kernel\Model\Activity\Coupon\ActivityCouponModel;
 use app\AppFactory\Kernel\Model\Activity\Coupon\ActivityCouponUsedModel;
-use app\AppFactory\Kernel\Model\Revenue\RevenueRuleCouponModel;
-use app\AppFactory\Kernel\Model\Revenue\RevenueRuleCouponScopeModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleConfigModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleConfigScopeModel;
 
 class RevenueCouponService
 {
@@ -21,9 +21,12 @@ class RevenueCouponService
 
     public static function existsRevenueCouponCode($couponCode, $excludeRrcId = 0)
     {
-        $query = RevenueRuleCouponModel::where(['coupon_code' => trim(strval($couponCode))]);
+        $query = RevenueRuleConfigModel::where([
+            'coupon_code' => trim(strval($couponCode)),
+            'rule_mode' => 5,
+        ]);
         if (intval($excludeRrcId) > 0) {
-            $query->where('rrc_id', '<>', intval($excludeRrcId));
+            $query->where('rrcfg_id', '<>', intval($excludeRrcId));
         }
         return $query->find() ? true : false;
     }
@@ -52,16 +55,22 @@ class RevenueCouponService
 
     public static function findEnabledCouponByCode($couponCode, $field = 'rrc.*,rr.rule_name,rr.rule_mode,rr.settlement_type,rr.settlement_days')
     {
-        return RevenueRuleCouponModel::alias('rrc')
-            ->join('revenue_rule rr', 'rr.rr_id = rrc.rr_id')
-            ->where([
-                'rrc.coupon_code' => trim(strval($couponCode)),
-                'rrc.status' => 1,
-                'rr.status' => 1,
-                'rr.rule_mode' => 5,
+        $coupon = RevenueRuleConfigModel::where([
+                'coupon_code' => trim(strval($couponCode)),
+                'status' => 1,
+                'rule_mode' => 5,
             ])
-            ->field($field)
             ->find();
+        if (!$coupon) {
+            return null;
+        }
+        if (!is_array($coupon)) {
+            $coupon = $coupon->toArray();
+        }
+        $coupon['rrc_id'] = intval($coupon['rrcfg_id']);
+        $coupon['rr_id'] = intval($coupon['rrcfg_id']);
+        $coupon['rule_name'] = $coupon['config_name'] ?? '';
+        return $coupon;
     }
 
     public static function checkUsable(array $coupon)
@@ -91,7 +100,7 @@ class RevenueCouponService
 
     public static function matchScope(array $coupon, array $order, array $details, array $rentalAmountsBySod = [], $rentalAmount = '0')
     {
-        $scopes = RevenueRuleCouponScopeModel::where(['rrc_id' => intval($coupon['rrc_id']), 'status' => 1])
+        $scopes = RevenueRuleConfigScopeModel::where(['rrcfg_id' => intval($coupon['rrc_id']), 'status' => 1])
             ->order('rrcs_id asc')
             ->select()
             ->toArray();
@@ -105,6 +114,12 @@ class RevenueCouponService
         foreach ($scopes as $scope) {
             $scopeMId = intval($scope['m_id'] ?? 0);
             $scopeGId = intval($scope['g_id'] ?? 0);
+            if ($scopeMId <= 0 && $scopeGId <= 0 && intval($scope['mg_id'] ?? 0) <= 0) {
+                self::appendMatchedScopeDetails($matchedDetails, $details, $rentalAmountsBySod, 0, 0);
+                $scopeType = 'all';
+                $scopeIds[] = intval($scope['rrcs_id']);
+                continue;
+            }
             if ($scopeMId > 0 && $scopeGId <= 0) {
                 if ($scopeMId === $mId) {
                     self::appendMatchedScopeDetails($matchedDetails, $details, $rentalAmountsBySod, 0, 0);

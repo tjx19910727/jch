@@ -295,7 +295,7 @@
                     "新分账-分账策略"
                 ],
                 "summary": "分账策略列表",
-                "description": "查询分账策略组。rule_name 支持模糊查询。",
+                "description": "查询分账策略组。rule_name 支持模糊查询。主查 revenue_rule，并补充 revenue_rule_machine 的 machine_num；本接口不返回优惠券配置，rule_mode=5 的优惠券信息请调用 getCouponConfig。",
                 "operationId": "revenueRuleGetList",
                 "parameters": [
                     {
@@ -318,7 +318,7 @@
                     "新分账-分账策略"
                 ],
                 "summary": "分账策略详情",
-                "description": "按条件查询单条分账策略，常用 rr_id。",
+                "description": "按条件查询单条分账策略，常用 rr_id。主查 revenue_rule；本接口不返回优惠券配置，rule_mode=5 的优惠券信息请调用 getCouponConfig。",
                 "operationId": "revenueRuleGetFind",
                 "parameters": [
                     {
@@ -341,7 +341,7 @@
                     "新分账-分账策略"
                 ],
                 "summary": "新增分账策略",
-                "description": "新增策略组。rule_mode：1普通分账，2设备出租，3设备分账，4设备商品分账。",
+                "description": "新增分账策略主表。rule_mode：1普通分账，2设备出租，3设备分账，4设备商品分账，5优惠券分账。本接口所有模式均只保存 revenue_rule 并返回 rr_id；接收方、分账比例/金额统一通过 addItem/addProductItem 写入 revenue_rule_item，并用同一个 rr_id 关联；rule_mode=5 的优惠券编码、优惠金额/比例、使用次数和适用范围通过 saveCouponConfig 写入 revenue_rule_coupon/revenue_rule_coupon_scope，也用同一个 rr_id 关联。",
                 "operationId": "revenueRuleAdd",
                 "parameters": [
                     {
@@ -387,7 +387,7 @@
                     "新分账-分账策略"
                 ],
                 "summary": "新增分账策略明细",
-                "description": "新增策略接收方明细。设备出租模式不支持阶梯分账；设备分账固定比例合计不能超过100%。",
+                "description": "新增策略接收方明细，写入 revenue_rule_item，并通过 rr_id 关联 revenue_rule。rule_mode=1/2/3/5 使用本接口配置接收方、比例或金额；rule_mode=4 也可使用 addProductItem 配置商品维度明细。优惠券分账 rule_mode=5 的 rule_item 仍通过同一个 rr_id 关联，不直接关联 rrc_id。",
                 "operationId": "revenueRuleAddItem",
                 "parameters": [
                     {
@@ -442,6 +442,52 @@
                 ],
                 "requestBody": {
                     "$ref": "#/components/requestBodies/RevenueRuleItemAddRequest"
+                },
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/CommonSuccess"
+                    }
+                }
+            }
+        },
+        "/management/revenue.revenue_rule/saveCouponConfig": {
+            "post": {
+                "tags": [
+                    "新分账-分账策略"
+                ],
+                "summary": "保存优惠券分账配置",
+                "description": "仅用于 rule_mode=5。先调用 add 创建优惠券分账策略主表并得到 rr_id，再调用 addItem 用同一个 rr_id 配置 revenue_rule_item 接收方明细，最后调用本接口保存优惠券编码、优惠金额/比例、使用次数和适用范围。coupon_code 可选，不传由系统生成；传入时必须为非0开头6位数字且全局唯一。本接口不直接关联 rule_item，运行时通过 revenue_rule_coupon.rr_id 查询同一策略下的 revenue_rule_item。",
+                "operationId": "revenueRuleSaveCouponConfig",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TokenHeader"
+                    }
+                ],
+                "requestBody": {
+                    "$ref": "#/components/requestBodies/RevenueCouponConfigSaveRequest"
+                },
+                "responses": {
+                    "200": {
+                        "$ref": "#/components/responses/CommonSuccess"
+                    }
+                }
+            }
+        },
+        "/management/revenue.revenue_rule/getCouponConfig": {
+            "post": {
+                "tags": [
+                    "新分账-分账策略"
+                ],
+                "summary": "查询优惠券分账配置",
+                "description": "仅用于 rule_mode=5。按 rr_id 查询时返回该策略下全部优惠券分账配置列表；按 rrc_id 查询时返回单条优惠券配置；每条配置均返回适用范围 scopes。",
+                "operationId": "revenueRuleGetCouponConfig",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TokenHeader"
+                    }
+                ],
+                "requestBody": {
+                    "$ref": "#/components/requestBodies/RevenueCouponConfigFindRequest"
                 },
                 "responses": {
                     "200": {
@@ -1245,8 +1291,17 @@
                             "$ref": "#/components/schemas/RevenueRuleListRequest"
                         },
                         "examples": {
-                            "出租策略": {
-                                "summary": "查询设备出租策略",
+                            "普通分账策略": {
+                                "summary": "查询 rule_mode=1 普通分账策略",
+                                "value": {
+                                    "page": 1,
+                                    "pageNum": 20,
+                                    "rule_mode": 1,
+                                    "status": 1
+                                }
+                            },
+                            "出租分账策略": {
+                                "summary": "查询 rule_mode=2 设备出租策略",
                                 "value": {
                                     "page": 1,
                                     "pageNum": 20,
@@ -1254,8 +1309,8 @@
                                     "status": 1
                                 }
                             },
-                            "设备策略": {
-                                "summary": "查询固定比例和阶梯策略",
+                            "设备分账策略": {
+                                "summary": "查询 rule_mode=3 设备分账策略，含固定比例和阶梯明细",
                                 "value": {
                                     "page": 1,
                                     "pageNum": 20,
@@ -1263,12 +1318,22 @@
                                     "status": 1
                                 }
                             },
-                            "停用规则": {
-                                "summary": "查询停用的备用规则",
+                            "设备商品分账策略": {
+                                "summary": "查询 rule_mode=4 设备商品分账策略",
                                 "value": {
                                     "page": 1,
                                     "pageNum": 20,
-                                    "status": 2
+                                    "rule_mode": 4,
+                                    "status": 1
+                                }
+                            },
+                            "优惠券分账策略": {
+                                "summary": "查询 rule_mode=5 优惠券分账策略",
+                                "value": {
+                                    "page": 1,
+                                    "pageNum": 20,
+                                    "rule_mode": 5,
+                                    "status": 1
                                 }
                             }
                         }
@@ -1288,16 +1353,39 @@
                             "$ref": "#/components/schemas/RevenueRuleFindRequest"
                         },
                         "examples": {
-                            "按策略ID": {
-                                "summary": "按策略ID查询",
+                            "普通分账": {
+                                "summary": "查询一条 rule_mode=1 普通分账策略",
                                 "value": {
-                                    "rr_id": 1
+                                    "rule_mode": 1,
+                                    "status": 1
                                 }
                             },
-                            "按模式": {
-                                "summary": "查询一条出租策略",
+                            "出租分账": {
+                                "summary": "查询一条 rule_mode=2 设备出租策略",
                                 "value": {
-                                    "rule_mode": 2
+                                    "rule_mode": 2,
+                                    "status": 1
+                                }
+                            },
+                            "设备分账": {
+                                "summary": "查询一条 rule_mode=3 设备分账策略",
+                                "value": {
+                                    "rule_mode": 3,
+                                    "status": 1
+                                }
+                            },
+                            "设备商品分账": {
+                                "summary": "查询一条 rule_mode=4 设备商品分账策略",
+                                "value": {
+                                    "rule_mode": 4,
+                                    "status": 1
+                                }
+                            },
+                            "优惠券分账": {
+                                "summary": "查询一条 rule_mode=5 优惠券分账策略",
+                                "value": {
+                                    "rule_mode": 5,
+                                    "status": 1
                                 }
                             }
                         }
@@ -1322,6 +1410,8 @@
                                 "value": {
                                     "rule_name": "普通订单分账",
                                     "rule_mode": 1,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
                                     "status": 1
                                 }
                             },
@@ -1330,15 +1420,19 @@
                                 "value": {
                                     "rule_name": "设备出租方全额分账",
                                     "rule_mode": 2,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
                                     "status": 1
                                 }
                             },
-                            "设备固定比例": {
+                            "设备分账": {
                                 "summary": "创建设备固定比例分账策略",
                                 "value": {
                                     "rule_name": "设备固定比例分账",
                                     "rule_mode": 3,
                                     "base_type": 1,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
                                     "status": 1
                                 }
                             },
@@ -1350,6 +1444,43 @@
                                     "base_type": 1,
                                     "turnover_type": 1,
                                     "tier_calc_mode": 1,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
+                                    "status": 1
+                                }
+                            },
+                            "设备商品分账": {
+                                "summary": "创建设备商品分账策略",
+                                "value": {
+                                    "rule_name": "设备指定商品分账",
+                                    "rule_mode": 4,
+                                    "base_type": 1,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
+                                    "status": 1
+                                }
+                            },
+                            "优惠券分账": {
+                                "summary": "创建 rule_mode=5 优惠券分账策略主表；优惠券配置另调 saveCouponConfig",
+                                "value": {
+                                    "rule_name": "优惠券分账策略",
+                                    "rule_mode": 5,
+                                    "base_type": 1,
+                                    "turnover_type": 1,
+                                    "tier_calc_mode": 1,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
+                                    "status": 1
+                                }
+                            },
+                            "T+N结算": {
+                                "summary": "创建T+N结算策略",
+                                "value": {
+                                    "rule_name": "设备T+3分账策略",
+                                    "rule_mode": 3,
+                                    "base_type": 1,
+                                    "settlement_type": 2,
+                                    "settlement_days": 3,
                                     "status": 1
                                 }
                             }
@@ -1370,26 +1501,64 @@
                             "$ref": "#/components/schemas/RevenueRuleUpdateRequest"
                         },
                         "examples": {
-                            "修改名称": {
-                                "summary": "修改策略名称",
+                            "普通分账": {
+                                "summary": "修改 rule_mode=1 普通分账策略",
                                 "value": {
                                     "rr_id": 1,
-                                    "rule_name": "设备固定比例分账-更新"
-                                }
-                            },
-                            "扣除出租金额": {
-                                "summary": "设备分账基数改为扣除出租金额",
-                                "value": {
-                                    "rr_id": 3,
-                                    "base_type": 2,
+                                    "rule_name": "普通订单分账-更新",
+                                    "rule_mode": 1,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
                                     "status": 1
                                 }
                             },
-                            "停用策略": {
-                                "summary": "停止策略参与新订单",
+                            "出租分账": {
+                                "summary": "修改 rule_mode=2 设备出租策略",
+                                "value": {
+                                    "rr_id": 2,
+                                    "rule_name": "设备出租分账-更新",
+                                    "rule_mode": 2,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
+                                    "status": 1
+                                }
+                            },
+                            "设备分账": {
+                                "summary": "修改 rule_mode=3 设备分账策略，示例为扣除出租金额后参与分账",
                                 "value": {
                                     "rr_id": 3,
-                                    "status": 2
+                                    "rule_name": "设备分账-扣除出租金额",
+                                    "rule_mode": 3,
+                                    "base_type": 2,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
+                                    "status": 1
+                                }
+                            },
+                            "设备商品分账": {
+                                "summary": "修改 rule_mode=4 设备商品分账策略",
+                                "value": {
+                                    "rr_id": 4,
+                                    "rule_name": "设备商品分账-更新",
+                                    "rule_mode": 4,
+                                    "base_type": 1,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
+                                    "status": 1
+                                }
+                            },
+                            "优惠券分账": {
+                                "summary": "修改 rule_mode=5 优惠券分账策略主表；优惠券配置另调 saveCouponConfig",
+                                "value": {
+                                    "rr_id": 5,
+                                    "rule_name": "优惠券分账策略-更新",
+                                    "rule_mode": 5,
+                                    "base_type": 1,
+                                    "turnover_type": 1,
+                                    "tier_calc_mode": 1,
+                                    "settlement_type": 1,
+                                    "settlement_days": 0,
+                                    "status": 1
                                 }
                             }
                         }
@@ -1397,6 +1566,112 @@
                     "application/x-www-form-urlencoded": {
                         "schema": {
                             "$ref": "#/components/schemas/RevenueRuleUpdateRequest"
+                        }
+                    }
+                }
+            },
+            "RevenueCouponConfigSaveRequest": {
+                "required": true,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/RevenueCouponConfigSaveRequest"
+                        },
+                        "examples": {
+                            "固定金额优惠": {
+                                "summary": "为 rule_mode=5 策略保存固定金额优惠券配置",
+                                "value": {
+                                    "rr_id": 5,
+                                    "coupon_code": "923456",
+                                    "discount_type": 1,
+                                    "discount_value": 5,
+                                    "use_limit": 100,
+                                    "expire_time": 0,
+                                    "scopes": [
+                                        {
+                                            "m_id": 127,
+                                            "machine_id": "JCHM-H2D-0064",
+                                            "g_id": 114,
+                                            "mg_id": 0,
+                                            "status": 1
+                                        }
+                                    ],
+                                    "status": 1
+                                }
+                            },
+                            "比例优惠": {
+                                "summary": "为 rule_mode=5 策略保存百分比优惠券配置",
+                                "value": {
+                                    "rr_id": 5,
+                                    "coupon_code": "923457",
+                                    "discount_type": 2,
+                                    "discount_value": 10,
+                                    "use_limit": 200,
+                                    "expire_time": 0,
+                                    "scopes": [
+                                        {
+                                            "m_id": 127,
+                                            "g_id": 0,
+                                            "mg_id": 0,
+                                            "status": 1
+                                        }
+                                    ],
+                                    "status": 1
+                                }
+                            },
+                            "系统生成编码": {
+                                "summary": "不传 coupon_code，由系统自动生成唯一优惠券编码",
+                                "value": {
+                                    "rr_id": 5,
+                                    "discount_type": 1,
+                                    "discount_value": 3,
+                                    "use_limit": 50,
+                                    "expire_time": 0,
+                                    "scopes": [
+                                        {
+                                            "m_id": 0,
+                                            "g_id": 114,
+                                            "mg_id": 0,
+                                            "status": 1
+                                        }
+                                    ],
+                                    "status": 1
+                                }
+                            }
+                        }
+                    },
+                    "application/x-www-form-urlencoded": {
+                        "schema": {
+                            "$ref": "#/components/schemas/RevenueCouponConfigSaveRequest"
+                        }
+                    }
+                }
+            },
+            "RevenueCouponConfigFindRequest": {
+                "required": false,
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/RevenueCouponConfigFindRequest"
+                        },
+                        "examples": {
+                            "按策略ID": {
+                                "summary": "按 rule_mode=5 策略ID查询优惠券配置",
+                                "value": {
+                                    "rr_id": 5
+                                }
+                            },
+                            "按配置ID": {
+                                "summary": "按优惠券配置ID查询优惠券配置",
+                                "value": {
+                                    "rrc_id": 1
+                                }
+                            }
+                        }
+                    },
+                    "application/x-www-form-urlencoded": {
+                        "schema": {
+                            "$ref": "#/components/schemas/RevenueCouponConfigFindRequest"
                         }
                     }
                 }
@@ -1409,8 +1684,8 @@
                             "$ref": "#/components/schemas/RevenueRuleItemAddRequest"
                         },
                         "examples": {
-                            "固定比例": {
-                                "summary": "按订单金额固定比例分账",
+                            "普通分账明细": {
+                                "summary": "rule_mode=1 普通分账：按订单剩余金额固定比例分账",
                                 "value": {
                                     "rr_id": 1,
                                     "receiver_ao_id": 2,
@@ -1422,8 +1697,8 @@
                                     "status": 1
                                 }
                             },
-                            "出租全额": {
-                                "summary": "出租商品金额全额分给出租方",
+                            "出租分账明细": {
+                                "summary": "rule_mode=2 设备出租：出租商品金额全额分给出租方",
                                 "value": {
                                     "rr_id": 2,
                                     "receiver_ao_id": 2,
@@ -1435,8 +1710,8 @@
                                     "status": 1
                                 }
                             },
-                            "阶梯比例": {
-                                "summary": "创建阶梯百分比分账明细，随后调用新增阶梯接口",
+                            "设备分账明细": {
+                                "summary": "rule_mode=3 设备分账：创建阶梯百分比分账明细，随后调用新增阶梯接口",
                                 "value": {
                                     "rr_id": 3,
                                     "receiver_ao_id": 2,
@@ -1448,8 +1723,8 @@
                                     "status": 1
                                 }
                             },
-                            "设备商品比例": {
-                                "summary": "指定设备上的商品按明细金额比例分账",
+                            "设备商品分账明细": {
+                                "summary": "rule_mode=4 设备商品分账：指定设备上的商品按明细金额比例分账，可调用 addProductItem",
                                 "value": {
                                     "rr_id": 4,
                                     "g_id": 700,
@@ -1462,8 +1737,21 @@
                                     "status": 1
                                 }
                             },
+                            "优惠券分账明细": {
+                                "summary": "rule_mode=5 优惠券分账：按优惠券调整后的订单金额比例分账",
+                                "value": {
+                                    "rr_id": 5,
+                                    "receiver_ao_id": 2,
+                                    "ra_id": 2,
+                                    "manager_id": 20,
+                                    "calc_type": 1,
+                                    "calc_value": 15,
+                                    "sort": 1,
+                                    "status": 1
+                                }
+                            },
                             "设备商品按件金额": {
-                                "summary": "指定设备上的商品按每件固定金额分账",
+                                "summary": "rule_mode=4 设备商品分账：指定设备上的商品按每件固定金额分账",
                                 "value": {
                                     "rr_id": 4,
                                     "g_id": 700,
@@ -1493,8 +1781,8 @@
                             "$ref": "#/components/schemas/RevenueRuleItemUpdateRequest"
                         },
                         "examples": {
-                            "修改固定比例": {
-                                "summary": "将B组织比例修改为25%",
+                            "普通分账明细": {
+                                "summary": "修改 rule_mode=1 普通分账明细比例",
                                 "value": {
                                     "rri_id": 1,
                                     "calc_type": 1,
@@ -1502,21 +1790,41 @@
                                     "status": 1
                                 }
                             },
-                            "更换账户": {
-                                "summary": "切换同组织其他账户",
+                            "出租分账明细": {
+                                "summary": "修改 rule_mode=2 设备出租明细为全额分账",
                                 "value": {
-                                    "rri_id": 1,
-                                    "receiver_ao_id": 2,
-                                    "ra_id": 6,
-                                    "manager_id": 21,
+                                    "rri_id": 2,
+                                    "calc_type": 3,
+                                    "calc_value": 0,
                                     "status": 1
                                 }
                             },
-                            "停用明细": {
-                                "summary": "停止接收方参与分账",
+                            "设备分账明细": {
+                                "summary": "修改 rule_mode=3 设备分账明细为阶梯分账",
                                 "value": {
-                                    "rri_id": 1,
-                                    "status": 2
+                                    "rri_id": 3,
+                                    "calc_type": 4,
+                                    "calc_value": 0,
+                                    "status": 1
+                                }
+                            },
+                            "设备商品分账明细": {
+                                "summary": "修改 rule_mode=4 设备商品分账明细为按件金额",
+                                "value": {
+                                    "rri_id": 4,
+                                    "g_id": 700,
+                                    "calc_type": 2,
+                                    "calc_value": 3,
+                                    "status": 1
+                                }
+                            },
+                            "优惠券分账明细": {
+                                "summary": "修改 rule_mode=5 优惠券分账明细比例",
+                                "value": {
+                                    "rri_id": 5,
+                                    "calc_type": 1,
+                                    "calc_value": 15,
+                                    "status": 1
                                 }
                             }
                         }
@@ -1536,8 +1844,8 @@
                             "$ref": "#/components/schemas/RevenueRuleItemListRequest"
                         },
                         "examples": {
-                            "查询策略明细": {
-                                "summary": "查询策略1全部启用明细",
+                            "普通分账明细": {
+                                "summary": "查询 rule_mode=1 普通分账策略明细，接口按 rr_id 查询",
                                 "value": {
                                     "page": 1,
                                     "pageNum": 20,
@@ -1545,21 +1853,40 @@
                                     "status": 1
                                 }
                             },
-                            "查询B组织明细": {
-                                "summary": "查询B组织相关明细",
+                            "出租分账明细": {
+                                "summary": "查询 rule_mode=2 设备出租策略明细，接口按 rr_id 查询",
                                 "value": {
                                     "page": 1,
                                     "pageNum": 20,
-                                    "receiver_ao_id": 2,
+                                    "rr_id": 2,
                                     "status": 1
                                 }
                             },
-                            "查询阶梯明细": {
-                                "summary": "查询阶梯百分比明细",
+                            "设备分账明细": {
+                                "summary": "查询 rule_mode=3 设备分账策略明细，阶梯明细 calc_type=4",
                                 "value": {
                                     "page": 1,
                                     "pageNum": 20,
+                                    "rr_id": 3,
                                     "calc_type": 4,
+                                    "status": 1
+                                }
+                            },
+                            "设备商品分账明细": {
+                                "summary": "查询 rule_mode=4 设备商品分账策略明细，接口按 rr_id 查询",
+                                "value": {
+                                    "page": 1,
+                                    "pageNum": 20,
+                                    "rr_id": 4,
+                                    "status": 1
+                                }
+                            },
+                            "优惠券分账明细": {
+                                "summary": "查询 rule_mode=5 优惠券分账策略明细，接口按 rr_id 查询",
+                                "value": {
+                                    "page": 1,
+                                    "pageNum": 20,
+                                    "rr_id": 5,
                                     "status": 1
                                 }
                             }
@@ -1744,8 +2071,20 @@
                             "$ref": "#/components/schemas/RevenueRuleBindMachineRequest"
                         },
                         "examples": {
-                            "批量绑定出租策略": {
-                                "summary": "将出租策略2批量绑定设备100和101",
+                            "绑定普通分账策略": {
+                                "summary": "绑定 rule_mode=1 普通分账策略；接口只传 rr_id，模式由策略决定",
+                                "value": {
+                                    "rr_id": 1,
+                                    "m_ids": [
+                                        100,
+                                        101
+                                    ],
+                                    "sort": 1,
+                                    "status": 1
+                                }
+                            },
+                            "绑定出租分账策略": {
+                                "summary": "绑定 rule_mode=2 设备出租策略；接口只传 rr_id，模式由策略决定",
                                 "value": {
                                     "rr_id": 2,
                                     "m_ids": [
@@ -1756,8 +2095,8 @@
                                     "status": 1
                                 }
                             },
-                            "批量绑定固定比例策略": {
-                                "summary": "将固定比例策略3批量绑定三台设备",
+                            "绑定设备分账策略": {
+                                "summary": "绑定 rule_mode=3 设备分账策略；接口只传 rr_id，模式由策略决定",
                                 "value": {
                                     "rr_id": 3,
                                     "m_ids": [
@@ -1769,8 +2108,8 @@
                                     "status": 1
                                 }
                             },
-                            "批量绑定停用备用策略": {
-                                "summary": "批量创建停用状态的备用绑定",
+                            "绑定设备商品分账策略": {
+                                "summary": "绑定 rule_mode=4 设备商品分账策略；接口只传 rr_id，模式由策略决定",
                                 "value": {
                                     "rr_id": 4,
                                     "m_ids": [
@@ -1778,7 +2117,19 @@
                                         101
                                     ],
                                     "sort": 1,
-                                    "status": 2
+                                    "status": 1
+                                }
+                            },
+                            "绑定优惠券分账策略": {
+                                "summary": "绑定 rule_mode=5 优惠券分账策略；接口只传 rr_id，模式由策略决定",
+                                "value": {
+                                    "rr_id": 5,
+                                    "m_ids": [
+                                        100,
+                                        101
+                                    ],
+                                    "sort": 1,
+                                    "status": 1
                                 }
                             }
                         }
@@ -1798,17 +2149,26 @@
                             "$ref": "#/components/schemas/RevenueRuleMachineListRequest"
                         },
                         "examples": {
-                            "按设备查询": {
-                                "summary": "查询设备100绑定策略",
+                            "普通分账绑定": {
+                                "summary": "查询 rule_mode=1 普通分账策略绑定设备，接口按 rr_id 查询",
                                 "value": {
                                     "page": 1,
                                     "pageNum": 20,
-                                    "m_id": 100,
+                                    "rr_id": 1,
                                     "status": 1
                                 }
                             },
-                            "按策略查询": {
-                                "summary": "查询策略3绑定设备",
+                            "出租分账绑定": {
+                                "summary": "查询 rule_mode=2 设备出租策略绑定设备，接口按 rr_id 查询",
+                                "value": {
+                                    "page": 1,
+                                    "pageNum": 20,
+                                    "rr_id": 2,
+                                    "status": 1
+                                }
+                            },
+                            "设备分账绑定": {
+                                "summary": "查询 rule_mode=3 设备分账策略绑定设备，接口按 rr_id 查询",
                                 "value": {
                                     "page": 1,
                                     "pageNum": 20,
@@ -1816,12 +2176,21 @@
                                     "status": 1
                                 }
                             },
-                            "按组织查询": {
-                                "summary": "查询A组织绑定",
+                            "设备商品分账绑定": {
+                                "summary": "查询 rule_mode=4 设备商品分账策略绑定设备，接口按 rr_id 查询",
                                 "value": {
                                     "page": 1,
                                     "pageNum": 20,
-                                    "ao_id": 1,
+                                    "rr_id": 4,
+                                    "status": 1
+                                }
+                            },
+                            "优惠券分账绑定": {
+                                "summary": "查询 rule_mode=5 优惠券分账策略绑定设备，接口按 rr_id 查询",
+                                "value": {
+                                    "page": 1,
+                                    "pageNum": 20,
+                                    "rr_id": 5,
                                     "status": 1
                                 }
                             }
@@ -1842,26 +2211,40 @@
                             "$ref": "#/components/schemas/RevenueRuleBoundMachineListRequest"
                         },
                         "examples": {
-                            "查询策略全部绑定设备": {
-                                "summary": "查询策略3绑定的全部设备",
+                            "普通分账已绑定设备": {
+                                "summary": "查询 rule_mode=1 普通分账策略已绑定设备，接口按 rr_id 查询",
                                 "value": {
-                                    "rr_id": 3,
+                                    "rr_id": 1,
                                     "pageNum": 20
                                 }
                             },
-                            "查询启用绑定": {
-                                "summary": "查询策略3启用中的设备绑定",
+                            "出租分账已绑定设备": {
+                                "summary": "查询 rule_mode=2 设备出租策略已绑定设备，接口按 rr_id 查询",
+                                "value": {
+                                    "rr_id": 2,
+                                    "pageNum": 20
+                                }
+                            },
+                            "设备分账已绑定设备": {
+                                "summary": "查询 rule_mode=3 设备分账策略已绑定设备，接口按 rr_id 查询",
                                 "value": {
                                     "rr_id": 3,
                                     "status": 1,
                                     "pageNum": 20
                                 }
                             },
-                            "按设备名称搜索": {
-                                "summary": "在策略3绑定设备中搜索名称",
+                            "设备商品分账已绑定设备": {
+                                "summary": "查询 rule_mode=4 设备商品分账策略已绑定设备，接口按 rr_id 查询",
                                 "value": {
-                                    "rr_id": 3,
+                                    "rr_id": 4,
                                     "machine_name": "测试设备",
+                                    "pageNum": 20
+                                }
+                            },
+                            "优惠券分账已绑定设备": {
+                                "summary": "查询 rule_mode=5 优惠券分账策略已绑定设备，接口按 rr_id 查询",
+                                "value": {
+                                    "rr_id": 5,
                                     "pageNum": 20
                                 }
                             }
@@ -1924,7 +2307,7 @@
                                 }
                             },
                             "普通分账": {
-                                "summary": "查询普通分账订单",
+                                "summary": "查询 rule_mode=1 普通分账订单",
                                 "value": {
                                     "pageNum": 20,
                                     "rule_mode": "1",
@@ -1932,20 +2315,36 @@
                                 }
                             },
                             "出租分账": {
-                                "summary": "查询设备出租分账订单",
+                                "summary": "查询 rule_mode=2 设备出租分账订单",
                                 "value": {
                                     "pageNum": 20,
                                     "rule_mode": "2",
                                     "source": "rental"
                                 }
                             },
-                            "阶梯分账": {
-                                "summary": "查询阶梯分账订单",
+                            "设备分账": {
+                                "summary": "查询 rule_mode=3 设备分账订单，含固定比例和阶梯",
                                 "value": {
                                     "pageNum": 20,
                                     "rule_mode": "3",
-                                    "source": "tier",
+                                    "source": "device_rule,tier",
                                     "period_key": "2026-06"
+                                }
+                            },
+                            "设备商品分账": {
+                                "summary": "查询 rule_mode=4 设备商品分账订单",
+                                "value": {
+                                    "pageNum": 20,
+                                    "rule_mode": "4",
+                                    "source": "product_rule"
+                                }
+                            },
+                            "优惠券分账": {
+                                "summary": "查询 rule_mode=5 优惠券分账订单",
+                                "value": {
+                                    "pageNum": 20,
+                                    "rule_mode": "5",
+                                    "source": "revenue_coupon"
                                 }
                             }
                         }
@@ -2415,7 +2814,7 @@
                             },
                             "rule_mode": {
                                 "type": "integer",
-                                "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账，4设备商品分账"
+                                "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账，4设备商品分账，5优惠券分账"
                             },
                             "status": {
                                 "type": "integer",
@@ -2434,7 +2833,7 @@
                     },
                     "rule_mode": {
                         "type": "integer",
-                        "description": "策略模式，非必填"
+                        "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账，4设备商品分账，5优惠券分账"
                     }
                 }
             },
@@ -2451,27 +2850,28 @@
                     },
                     "rule_mode": {
                         "type": "integer",
-                        "description": "策略模式，必填：1普通分账，2设备出租，3设备分账，4设备商品分账",
+                        "description": "策略模式，必填：1普通分账，2设备出租，3设备分账，4设备商品分账，5优惠券分账。这里只创建策略主表；接收方和金额规则通过 addItem/addProductItem 配置，rule_mode=5 的优惠券配置通过 saveCouponConfig 配置。",
                         "enum": [
                             1,
                             2,
                             3,
-                            4
+                            4,
+                            5
                         ]
                     },
                     "base_type": {
                         "type": "integer",
-                        "description": "设备分账基数，非必填：1订单总额，2扣除出租商品后金额；默认1",
+                        "description": "分账基数，非必填：1订单总额，2扣除出租商品后金额；默认1。主要用于 rule_mode=3/4，其他模式可不传。",
                         "default": 1
                     },
                     "turnover_type": {
                         "type": "integer",
-                        "description": "阶梯营业额口径，非必填：1净营业额，2支付成功金额；默认1",
+                        "description": "阶梯营业额口径，非必填：1净营业额，2支付成功金额；默认1。仅阶梯分账明细 calc_type=4 时生效。",
                         "default": 1
                     },
                     "tier_calc_mode": {
                         "type": "integer",
-                        "description": "阶梯命中模式，非必填：1本单后累计整单命中，2跨阶梯拆分",
+                        "description": "阶梯命中模式，非必填：1本单后累计整单命中，2跨阶梯拆分。仅阶梯分账明细 calc_type=4 时生效。",
                         "enum": [
                             1,
                             2
@@ -2500,6 +2900,113 @@
                     }
                 }
             },
+            "RevenueCouponScopeInput": {
+                "type": "object",
+                "properties": {
+                    "m_id": {
+                        "type": "integer",
+                        "description": "适用设备ID；m_id/g_id 至少一个大于0"
+                    },
+                    "machine_id": {
+                        "type": "string",
+                        "description": "设备编号快照或辅助展示字段，可选"
+                    },
+                    "g_id": {
+                        "type": "integer",
+                        "description": "适用商品ID；m_id/g_id 至少一个大于0"
+                    },
+                    "mg_id": {
+                        "type": "integer",
+                        "description": "适用设备商品ID，可选；传入时需匹配 m_id/g_id"
+                    },
+                    "status": {
+                        "type": "integer",
+                        "description": "范围状态：1启用，2停用；默认1",
+                        "enum": [
+                            1,
+                            2
+                        ],
+                        "default": 1
+                    }
+                }
+            },
+            "RevenueCouponConfigSaveRequest": {
+                "type": "object",
+                "required": [
+                    "rr_id"
+                ],
+                "properties": {
+                    "rr_id": {
+                        "type": "integer",
+                        "description": "分账策略ID，必填；对应策略必须为 rule_mode=5"
+                    },
+                    "rrc_id": {
+                        "type": "integer",
+                        "description": "优惠券配置ID，非必填；不传则新增配置，传入则修改已有配置"
+                    },
+                    "coupon_code": {
+                        "type": "string",
+                        "description": "优惠券编码，可选；不传由系统生成。传入时必须为非0开头6位数字，且与分账优惠券、活动优惠券固定码、活动优惠券已生成码全局唯一。",
+                        "pattern": "^[1-9][0-9]{5}$"
+                    },
+                    "discount_type": {
+                        "type": "integer",
+                        "description": "订单优惠方式：0不调整实付金额，1固定金额优惠，2按比例优惠；默认0。",
+                        "enum": [
+                            0,
+                            1,
+                            2
+                        ],
+                        "default": 0
+                    },
+                    "discount_value": {
+                        "type": "number",
+                        "description": "订单优惠金额或优惠比例。discount_type=1 表示优惠金额；discount_type=2 表示百分比，例如10表示优惠10%，最大100；discount_type=1/2 时必须大于0。",
+                        "minimum": 0,
+                        "default": 0
+                    },
+                    "use_limit": {
+                        "type": "integer",
+                        "description": "优惠券可使用次数，新增时必填且必须大于0；修改时不能小于已使用次数。",
+                        "minimum": 1
+                    },
+                    "expire_time": {
+                        "type": "integer",
+                        "description": "优惠券过期时间；0表示不过期，传时间戳时必须大于当前时间。",
+                        "minimum": 0,
+                        "default": 0
+                    },
+                    "scopes": {
+                        "type": "array",
+                        "description": "优惠券适用范围，新增时必填且不能为空；每项 m_id/g_id 至少一个大于0。",
+                        "items": {
+                            "$ref": "#/components/schemas/RevenueCouponScopeInput"
+                        }
+                    },
+                    "status": {
+                        "type": "integer",
+                        "description": "状态，非必填：1启用，2停用；默认1",
+                        "enum": [
+                            1,
+                            2
+                        ],
+                        "default": 1
+                    }
+                }
+            },
+            "RevenueCouponConfigFindRequest": {
+                "type": "object",
+                "properties": {
+                    "rr_id": {
+                        "type": "integer",
+                        "description": "分账策略ID，rr_id 和 rrc_id 至少传一个"
+                    },
+                    "rrc_id": {
+                        "type": "integer",
+                        "description": "优惠券配置ID，rr_id 和 rrc_id 至少传一个"
+                    }
+                }
+            },
             "RevenueRuleUpdateRequest": {
                 "type": "object",
                 "required": [
@@ -2516,12 +3023,13 @@
                     },
                     "rule_mode": {
                         "type": "integer",
-                        "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账，4设备商品分账",
+                        "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账，4设备商品分账，5优惠券分账",
                         "enum": [
                             1,
                             2,
                             3,
-                            4
+                            4,
+                            5
                         ]
                     },
                     "base_type": {
@@ -2592,7 +3100,7 @@
                     },
                     "calc_type": {
                         "type": "integer",
-                        "description": "计算方式，必填：1百分比，2固定金额，3全额，4阶梯百分比",
+                        "description": "计算方式，必填：1百分比，2固定金额，3全额，4阶梯百分比。rule_mode=1 支持1/3；rule_mode=2 不支持4；rule_mode=4 支持1/2且 g_id 必填；rule_mode=5 支持1/2。",
                         "enum": [
                             1,
                             2,
@@ -2684,6 +3192,10 @@
                             "rr_id": {
                                 "type": "integer",
                                 "description": "分账策略ID，非必填"
+                            },
+                            "rule_mode": {
+                                "type": "integer",
+                                "description": "策略模式，非必填：1普通分账，2设备出租，3设备分账，4设备商品分账，5优惠券分账。服务端会先按 rule_mode 查询 revenue_rule.rr_id，再查询对应 revenue_rule_item。"
                             },
                             "receiver_ao_id": {
                                 "type": "integer",
@@ -2982,11 +3494,11 @@
                             },
                             "rule_mode": {
                                 "type": "string",
-                                "description": "分账模式，可选，支持逗号分隔：1普通，2设备出租，3设备分账，4设备商品分账"
+                                "description": "分账模式，可选，支持逗号分隔：1普通，2设备出租，3设备分账，4设备商品分账，5优惠券分账"
                             },
                             "source": {
                                 "type": "string",
-                                "description": "分账来源，可选，支持逗号分隔：normal/rental/device_rule/tier/product_rule"
+                                "description": "分账来源，可选，支持逗号分隔：normal/rental/device_rule/tier/product_rule/revenue_coupon"
                             },
                             "status": {
                                 "type": "string",

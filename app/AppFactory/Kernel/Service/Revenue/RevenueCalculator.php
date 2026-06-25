@@ -5,9 +5,8 @@ namespace app\AppFactory\Kernel\Service\Revenue;
 use app\AppFactory\Kernel\Model\Revenue\RevenueOrderModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueAccountModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenuePayChannelModel;
-use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemModel;
-use app\AppFactory\Kernel\Model\Revenue\RevenueRuleItemTierModel;
-use app\AppFactory\Kernel\Model\Revenue\RevenueRuleMachineModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleConfigModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleConfigScopeModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
 use think\facade\Db;
@@ -128,25 +127,21 @@ class RevenueCalculator
 
     protected function calculateProductRule()
     {
-        $rule = $this->getRuleByMode(4);
-        if (!$rule) {
-            return false;
-        }
-        $items = RevenueRuleItemModel::where(['rr_id' => $rule['rr_id'], 'status' => 1])
-            ->order('sort asc,rri_id asc')
-            ->select()
-            ->toArray();
-        $this->logRevenueConfig('设备商品分账规则明细查询', [
-            'rr_id' => intval($rule['rr_id']),
-            'item_count' => count($items),
-            'g_ids' => $this->collectColumnValues($items, 'g_id'),
-        ]);
-        if (!$items) {
-            return false;
-        }
-
         $hasMatchedRuleItem = false;
         foreach ($this->details as $detail) {
+            $rule = $this->getRuleByMode(4, $detail);
+            if (!$rule) {
+                continue;
+            }
+            $items = $this->getRuleItems($rule);
+            $this->logRevenueConfig('设备商品分账规则明细查询', [
+                'rr_id' => intval($rule['rr_id']),
+                'item_count' => count($items),
+                'g_ids' => $this->collectColumnValues($items, 'g_id'),
+            ]);
+            if (!$items) {
+                continue;
+            }
             $gId = intval($detail['g_id'] ?? 0);
             $sodId = intval($detail['sod_id'] ?? 0);
             $detailAmount = $this->money($detail['total_sod_price'] ?? 0);
@@ -158,7 +153,7 @@ class RevenueCalculator
             $matchedItemCount = 0;
             $matchedRriIds = [];
             foreach ($items as $item) {
-                if (intval($item['g_id'] ?? 0) !== $gId) continue;
+                if (intval($item['g_id'] ?? 0) > 0 && intval($item['g_id'] ?? 0) !== $gId) continue;
                 $hasMatchedRuleItem = true;
                 $matchedItemCount++;
                 $matchedRriIds[] = intval($item['rri_id']);
@@ -269,10 +264,7 @@ class RevenueCalculator
             return false;
         }
 
-        $items = RevenueRuleItemModel::where(['rr_id' => intval($coupon['rr_id']), 'status' => 1])
-            ->order('sort asc,rri_id asc')
-            ->select()
-            ->toArray();
+        $items = $this->getRuleItems($coupon);
         $this->logRevenueConfig('优惠券分账规则明细查询', [
             'rr_id' => intval($coupon['rr_id']),
             'rrc_id' => intval($coupon['rrc_id']),
@@ -338,10 +330,7 @@ class RevenueCalculator
         if (!$rule) {
             return false;
         }
-        $items = RevenueRuleItemModel::where(['rr_id' => $rule['rr_id'], 'status' => 1])
-            ->order('sort asc,rri_id asc')
-            ->select()
-            ->toArray();
+        $items = $this->getRuleItems($rule);
         $this->logRevenueConfig('设备分账规则明细查询', [
             'rr_id' => intval($rule['rr_id']),
             'item_count' => count($items),
@@ -425,10 +414,7 @@ class RevenueCalculator
         if (!$rule) {
             return true;
         }
-        $items = RevenueRuleItemModel::where(['rr_id' => $rule['rr_id'], 'status' => 1])
-            ->order('sort asc,rri_id asc')
-            ->select()
-            ->toArray();
+        $items = $this->getRuleItems($rule);
         $this->logRevenueConfig('普通分账规则明细查询', [
             'rr_id' => intval($rule['rr_id']),
             'normal_amount' => $normalAmount,
@@ -498,7 +484,7 @@ class RevenueCalculator
             ];
         }
         if ($calcType === 4) {
-            $tier = $this->getMatchedTier(intval($item['rri_id']), $periodAfter);
+            $tier = $this->getMatchedTier($item, $periodAfter);
             if (!$tier) {
                 return [
                     'rrit_id' => null,
@@ -550,10 +536,7 @@ class RevenueCalculator
 
     protected function calculateTierSplitAmount(array $item, $baseAmount, $periodBefore, $periodAfter)
     {
-        $tiers = RevenueRuleItemTierModel::where(['rri_id' => intval($item['rri_id']), 'status' => 1])
-            ->order('threshold_min asc,rrit_id asc')
-            ->select()
-            ->toArray();
+        $tiers = $this->getItemTiers($item);
         if (!$tiers) {
             throw new \Exception("分账策略明细{$item['rri_id']}未配置阶梯区间");
         }
@@ -752,22 +735,10 @@ class RevenueCalculator
         return true;
     }
 
-    protected function getRuleByMode($mode)
+    protected function getRuleByMode($mode, array $detail = [])
     {
-        $rule = RevenueRuleMachineModel::alias('rrm')
-            ->join('revenue_rule rr', 'rr.rr_id = rrm.rr_id')
-            ->where([
-                'rrm.m_id' => intval($this->order['m_id'] ?? 0),
-                'rrm.status' => 1,
-                'rr.status' => 1,
-                'rr.rule_mode' => intval($mode),
-            ])
-            ->field('rr.*')
-            ->order('rrm.sort asc,rrm.rrm_id desc')
-            ->find();
-        if ($rule && !is_array($rule)) {
-            $rule = $rule->toArray();
-        }
+        $rules = $this->getRulesByMode($mode, $detail);
+        $rule = $rules ? $rules[0] : null;
         $this->logRevenueConfig('分账规则查询', [
             'rule_mode' => intval($mode),
             'found_rule' => $rule ? 1 : 0,
@@ -777,16 +748,125 @@ class RevenueCalculator
         return $rule;
     }
 
+    protected function getRulesByMode($mode, array $detail = [])
+    {
+        $mId = intval($this->order['m_id'] ?? 0);
+        $query = RevenueRuleConfigScopeModel::alias('rrcs')
+            ->join('revenue_rule_config rrc', 'rrc.rrcfg_id = rrcs.rrcfg_id')
+            ->where([
+                'rrcs.status' => 1,
+                'rrc.status' => 1,
+                'rrc.rule_mode' => intval($mode),
+            ])
+            ->whereIn('rrcs.m_id', [0, $mId]);
+        if ($detail) {
+            $query->whereIn('rrcs.g_id', [0, intval($detail['g_id'] ?? 0)]);
+            $query->whereIn('rrcs.mg_id', [0, intval($detail['mg_id'] ?? 0)]);
+        } else {
+            $query->where(['rrcs.g_id' => 0, 'rrcs.mg_id' => 0]);
+        }
+        $rules = $query
+            ->field('rrc.*')
+            ->group('rrc.rrcfg_id')
+            ->order('rrcs.sort asc,rrcs.rrcs_id desc')
+            ->select()
+            ->toArray();
+        foreach ($rules as &$rule) {
+            $rule = $this->normalizeConfigRule($rule);
+        }
+        unset($rule);
+        return $rules;
+    }
+
     protected function getRentalRuleItem($rrId, $receiverAoId)
     {
-        $item = RevenueRuleItemModel::where([
-                'rr_id' => $rrId,
-                'receiver_ao_id' => $receiverAoId,
-                'status' => 1,
-            ])
-            ->order('sort asc,rri_id asc')
-            ->find();
-        return $item && !is_array($item) ? $item->toArray() : $item;
+        $rule = RevenueRuleConfigModel::where(['rrcfg_id' => intval($rrId), 'status' => 1])->find();
+        if (!$rule) {
+            return null;
+        }
+        if (!is_array($rule)) {
+            $rule = $rule->toArray();
+        }
+        foreach ($this->getRuleItems($this->normalizeConfigRule($rule)) as $item) {
+            if (intval($item['receiver_ao_id'] ?? 0) === intval($receiverAoId)) {
+                return $item;
+            }
+        }
+        return null;
+    }
+
+    protected function normalizeConfigRule(array $rule)
+    {
+        $rule['rr_id'] = intval($rule['rrcfg_id'] ?? ($rule['rr_id'] ?? 0));
+        $rule['rrc_id'] = intval($rule['rrcfg_id'] ?? ($rule['rrc_id'] ?? 0));
+        $rule['rule_name'] = $rule['config_name'] ?? ($rule['rule_name'] ?? '');
+        return $rule;
+    }
+
+    protected function getRuleItems(array $rule)
+    {
+        $config = $rule['receiver_config'] ?? [];
+        if (is_string($config)) {
+            $decoded = json_decode($config, true);
+            $config = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($config)) {
+            return [];
+        }
+        $items = [];
+        foreach ($config as $index => $item) {
+            if (!is_array($item) || intval($item['status'] ?? 1) !== 1) {
+                continue;
+            }
+            $item['rr_id'] = intval($rule['rr_id'] ?? 0);
+            $item['rri_id'] = intval($item['rri_id'] ?? ($item['item_key'] ?? ($index + 1)));
+            $item['item_key'] = intval($item['item_key'] ?? $item['rri_id']);
+            $item['receiver_ao_id'] = intval($item['receiver_ao_id'] ?? 0);
+            $item['ra_id'] = intval($item['ra_id'] ?? 0);
+            $item['manager_id'] = intval($item['manager_id'] ?? 0);
+            $item['g_id'] = intval($item['g_id'] ?? 0);
+            $item['mg_id'] = intval($item['mg_id'] ?? 0);
+            $item['calc_type'] = intval($item['calc_type'] ?? 0);
+            $item['calc_value'] = $item['calc_value'] ?? 0;
+            $item['sort'] = intval($item['sort'] ?? 0);
+            $items[] = $item;
+        }
+        usort($items, function ($left, $right) {
+            $sort = intval($left['sort'] ?? 0) - intval($right['sort'] ?? 0);
+            return $sort !== 0 ? $sort : intval($left['rri_id'] ?? 0) - intval($right['rri_id'] ?? 0);
+        });
+        return $items;
+    }
+
+    protected function getItemTiers(array $item)
+    {
+        $tiers = $item['tiers'] ?? [];
+        if (is_string($tiers)) {
+            $decoded = json_decode($tiers, true);
+            $tiers = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($tiers)) {
+            return [];
+        }
+        $result = [];
+        foreach ($tiers as $index => $tier) {
+            if (!is_array($tier) || intval($tier['status'] ?? 1) !== 1) {
+                continue;
+            }
+            $tier['rrit_id'] = intval($tier['rrit_id'] ?? ($tier['tier_key'] ?? ($index + 1)));
+            $tier['tier_key'] = intval($tier['tier_key'] ?? $tier['rrit_id']);
+            $tier['threshold_min'] = $tier['threshold_min'] ?? 0;
+            $tier['threshold_max'] = $tier['threshold_max'] ?? null;
+            $tier['calc_value'] = $tier['calc_value'] ?? 0;
+            $result[] = $tier;
+        }
+        usort($result, function ($left, $right) {
+            if (floatval($left['threshold_min'] ?? 0) == floatval($right['threshold_min'] ?? 0)) {
+                return intval($left['rrit_id'] ?? 0) - intval($right['rrit_id'] ?? 0);
+            }
+            return floatval($left['threshold_min'] ?? 0) < floatval($right['threshold_min'] ?? 0) ? -1 : 1;
+        });
+        return $result;
     }
 
     protected function validateRecordAmounts()
@@ -838,12 +918,9 @@ class RevenueCalculator
         return $account && !is_array($account) ? $account->toArray() : $account;
     }
 
-    protected function getMatchedTier($rriId, $amount)
+    protected function getMatchedTier(array $item, $amount)
     {
-        $tiers = RevenueRuleItemTierModel::where(['rri_id' => $rriId, 'status' => 1])
-            ->order('threshold_min asc,rrit_id asc')
-            ->select()
-            ->toArray();
+        $tiers = $this->getItemTiers($item);
         foreach ($tiers as $tier) {
             $min = $this->money($tier['threshold_min'] ?? 0);
             $max = $tier['threshold_max'] === null || $tier['threshold_max'] === '' ? null : $this->money($tier['threshold_max']);

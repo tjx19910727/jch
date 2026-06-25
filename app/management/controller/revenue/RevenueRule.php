@@ -8,6 +8,18 @@ class RevenueRule extends Common
 {
     protected $validatePath = 'app\management\validate\VRevenueRule.';
 
+    public function saveConfig()
+    {
+        $postData = input();
+        return $this->app->revenueRule->saveConfig($postData);
+    }
+
+    public function saveScope()
+    {
+        $postData = input();
+        return $this->app->revenueRule->saveScope($postData);
+    }
+
     public function getList()
     {
         $postData = input();

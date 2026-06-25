@@ -96,11 +96,22 @@ class RevenueAccountClient extends ManagementClient
         if ($isUpdate) {
             $ownershipChanged = intval($accountData['ao_id']) !== intval($current['ao_id'])
                 || intval($accountData['manager_id']) !== intval($current['manager_id']);
-            if ($ownershipChanged
-                && Db::name('revenue_rule_item')->where(['ra_id' => intval($current['ra_id'])])->count()) {
-                return $this->rFail("分账账户已被规则明细引用，不允许修改所属组织或账户管理人");
+            if ($ownershipChanged && $this->isRevenueAccountUsedByConfig(intval($current['ra_id']))) {
+                return $this->rFail("分账账户已被分账配置引用，不允许修改所属组织或账户管理人");
             }
         }
         return true;
+    }
+
+    /**
+     * 判断账户是否已被新版统一分账配置引用。
+     */
+    protected function isRevenueAccountUsedByConfig($raId)
+    {
+        if ($raId <= 0) return false;
+        return Db::name('revenue_rule_config')
+            ->where('status', '<>', -1)
+            ->whereLike('receiver_config', '%"ra_id":' . $raId . '%')
+            ->count() > 0;
     }
 }

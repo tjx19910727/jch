@@ -3,7 +3,7 @@
 namespace app\AppFactory\Kernel\Service\Revenue;
 
 use app\AppFactory\Kernel\Model\Revenue\RevenueOrderModel;
-use app\AppFactory\Kernel\Model\Revenue\RevenueRuleCouponModel;
+use app\AppFactory\Kernel\Model\Revenue\RevenueRuleConfigModel;
 use think\facade\Db;
 
 class RevenueSettlementService
@@ -129,7 +129,7 @@ class RevenueSettlementService
             if ($rrcId <= 0) {
                 continue;
             }
-            $coupon = RevenueRuleCouponModel::where(['rrc_id' => $rrcId])->lock(true)->find();
+            $coupon = RevenueRuleConfigModel::where(['rrcfg_id' => $rrcId, 'rule_mode' => 5])->lock(true)->find();
             if (!$coupon) {
                 throw new \Exception("优惠券分账配置不存在");
             }
@@ -150,7 +150,7 @@ class RevenueSettlementService
             if ($newRemainCount <= 0) {
                 $update['status'] = 2;
             }
-            RevenueRuleCouponModel::where(['rrc_id' => $rrcId])->update($update);
+            RevenueRuleConfigModel::where(['rrcfg_id' => $rrcId])->update($update);
             RevenueOrderModel::where(['order_id' => intval($orderId), 'rule_mode' => 5, 'rrc_id' => $rrcId, 'coupon_use_deducted' => 0])
                 ->whereIn('status', [0, 2])
                 ->update([
