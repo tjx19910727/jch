@@ -8,11 +8,13 @@
 
 namespace app\AppFactory\Kernel\Traits\Mq;
 
+use app\AppFactory\Kernel\Traits\Api\ApiOutStatusNotifyTrait;
 use think\facade\Db;
 
 
 trait OutGoodsTrait
 {
+    use ApiOutStatusNotifyTrait;
 
     /**
      * 出货处理
@@ -119,6 +121,7 @@ trait OutGoodsTrait
             $result = $this->checkFlag($flag);
             if ($result) {
                 $this->handleTripPayCallback();
+                $this->handleOrderOutStatusCallback();
                 Db::commit();
             } else {
                 Db::rollback();
@@ -482,6 +485,17 @@ trait OutGoodsTrait
                 actionLog($ac,'查询刚添加的出货回调通知记录',"OutGoods");
             }
         }
+    }
+
+    protected function handleOrderOutStatusCallback()
+    {
+        if ((int)$this->order['out_status'] === 4) {
+            return $this->addOrderOutStatusCallback('success');
+        }
+        if ((int)$this->order['out_status'] === 5) {
+            return $this->addOrderOutStatusCallback('fail');
+        }
+        return false;
     }
 
 }

@@ -20,6 +20,7 @@ use app\AppFactory\Management\Auth\AuthOrganizationClient;
 use app\AppFactory\Management\Auth\AuthOrganizationRoleClient;
 use app\AppFactory\Management\Auth\AuthRoleClient;
 use app\AppFactory\Management\Auth\AuthRoleNodeClient;
+use app\AppFactory\Management\Auth\AuthRoleTemplateClient;
 
 class AuthProvider implements ServiceProviderInterface
 {
@@ -52,6 +53,9 @@ class AuthProvider implements ServiceProviderInterface
         };
         $app['authRoleNode'] = function ($app) {
             return new AuthRoleNodeClient($app);
+        };
+        $app['authRoleTemplate'] = function ($app) {
+            return new AuthRoleTemplateClient($app);
         };
     }
 }

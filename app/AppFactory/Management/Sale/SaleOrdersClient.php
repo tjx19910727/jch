@@ -1505,4 +1505,106 @@ class SaleOrdersClient extends ManagementClient
             return $this->rTryCatch($e->getMessage());
         }
     }
+
+    /**
+     * 手动扣库存
+     * 校验条件后手动扣减货道库存并更新子订单is_manual=1
+     * @param array $postData
+     * @return array|string
+     */
+    public function manualDeductStock($postData = [])
+    {
+        $sod_id = intval($postData['sod_id'] ?? 0);
+        if (!$sod_id) return $this->rFail('sod_id is required');
+
+        // 查询子订单
+        $sod = $this->getSaleOrdersDetailsFind(['sod_id' => $sod_id]);
+        if (!$sod) return $this->rFail('订单详情不存在');
+        $sod = is_object($sod) ? $sod->toArray() : $sod;
+
+        // 已经执行过手动扣库存
+        if (intval($sod['is_manual'] ?? 0) == 1) return $this->rFail('该子订单已执行过手动扣库存，不能重复执行');
+        // 子订单success_quantity必须为0（异常）
+        if (intval($sod['success_quantity']) != 0) return $this->rFail('该子订单已出货，不能手动扣库存');
+        // 远程出货状态不能等于3（已出货成功）
+        if (intval($sod['remote_out_goods_status'] ?? 0) == 3) return $this->rFail('该子订单远程已出货，不能手动扣库存');
+        // 未执行退款
+        if (intval($sod['refund_quantity']) != 0) return $this->rFail('该子订单已退款，不能手动扣库存');
+
+        // 查询主订单，必须是已支付且异常状态
+        $order = $this->getSaleOrdersFind(['order_id' => $sod['order_id']]);
+        if (!$order) return $this->rFail('订单不存在');
+        $order = is_object($order) ? $order->toArray() : $order;
+        if (!in_array($order['pay_status'], ['3', '7'])) return $this->rFail('订单未支付，不能手动扣库存');
+        if (!in_array($order['out_status'], [2, 3, 5])) return $this->rFail('订单出货状态非异常(仅支持2,3,5)，不能手动扣库存');
+
+        $m_id = intval($order['m_id']);
+        $channel_code = $sod['channel_code'] ?? '';
+        if (!$m_id || !$channel_code) return $this->rFail('订单设备或货道信息缺失');
+
+        // 查询货道（需要完整字段用于商品变化日志）
+        $mc = $this->getMachineChannelFind(
+            ['m_id' => $m_id, 'channel_code' => $channel_code],
+            'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock'
+        );
+        if (!$mc) return $this->rFail('未找到对应货道');
+        $mc = is_object($mc) ? $mc->toArray() : $mc;
+        if (intval($mc['stock']) <= 0) return $this->rFail('货道库存不足');
+
+        $quantity = intval($sod['quantity']);
+        if ($quantity <= 0) $quantity = 1;
+
+        Db::startTrans();
+        try {
+            $flag = [];
+
+            // 扣减货道库存
+            $newStock = bcsub($mc['stock'], $quantity);
+            if ($newStock < 0) $newStock = 0;
+            $flag[] = $this->updateMachineChannel([
+                'mc_id' => $mc['mc_id'],
+                'stock' => $newStock,
+            ]);
+
+            // 更新子订单success_quantity=1，标记is_manual=1
+            $flag[] = $this->updateSaleOrdersDetails(
+                ['is_manual' => 1],
+                ['sod_id' => $sod_id],
+                ['is_manual']
+            );
+            // 记录商品变化日志（参考出货流程）
+            $flag[] = Db::name('goods_change')->insert([
+                'm_id' => $m_id,
+                'machine_id' => $order['machine_id'] ?? '',
+                'machine_name' => $order['machine_name'] ?? '',
+                'ao_id' => $order['ao_id'] ?? 0,
+                'mc_id' => $mc['mc_id'],
+                'channel_code' => $mc['channel_code'] ?? '',
+                'mg_id' => $mc['mg_id'] ?? 0,
+                'g_id' => $mc['g_id'] ?? 0,
+                'g_name' => $mc['g_name'] ?? '',
+                'gc_id' => $mc['gc_id'] ?? 0,
+                'gc_name' => $mc['gc_name'] ?? '',
+                'pic' => $mc['pic'] ?? '',
+                'sku' => $mc['sku'] ?? '',
+                'bar_code' => $mc['bar_code'] ?? '',
+                'change_value' => $quantity,
+                'desc' => '出货失败：手动扣库存',
+                'position' => 1,
+                'type' => 1,
+                'create_time' => time(),
+            ]);
+            if (!$this->checkFlag($flag)) {
+                Db::rollback();
+                return $this->rFail('手动扣库存失败');
+            }
+
+            Db::commit();
+            return $this->r(200, '手动扣库存成功');
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
 }

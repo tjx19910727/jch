@@ -685,11 +685,498 @@ class GoodsClient extends ManagementClient
                 "totalRefundQuantity" => "退款数量",
                 "retail_price" => $this->lang("export.retail_price"),
             ];
-            $filename = $this->lang("export.goodsTopList") . date("Ymd");
+            $topTitle = "销售额-";
+            if($topType === 2){
+                $topTitle = "销量-";
+            }
+            $filename = $topTitle . $this->lang("export.goodsTopList") . date("Ymd");
             $result = $this->sendToExport($this->lang("export.goodsTopRankFileName"), $filename, $title, $list);
             return $result;
         }
         return $this->rQ($list);
+    }
+
+    /**
+     * 按商品维度统计所有在营设备的上架、库存、货道与周期销量。
+     * 在营设备口径：machine.is_operating = 1，且设备/货道均为启用状态。
+     * 销售口径：当前商品在对应在营设备上的已支付订单明细数量。
+     * @param array $postData
+     * @return array|\think\response\Json
+     */
+    public function getOperatingGoodsList($postData)
+    {
+        $pageNum = intval($postData['pageNum'] ?? 0);
+        $query = $this->buildOperatingGoodsQuery($postData);
+        $query->orderRaw($this->getOperatingGoodsOrder($postData));
+
+        if ($pageNum > 0) {
+            $page = $query->paginate($pageNum, false, ["query" => request()->param()]);
+            $result = $page->toArray();
+            $rows = $result['data'] ?? [];
+            $result['data'] = $this->appendOperatingGoodsDetail($rows, $postData);
+            return $this->rQ($result);
+        }
+
+        $rows = $query->select()->toArray();
+        $rows = $this->appendOperatingGoodsDetail($rows, $postData);
+        return $this->rQ($rows);
+    }
+
+    /**
+     * 导出商品维度在营库存、设备货道与周期销量。
+     * @param array $postData
+     * @return array|\think\response\Json
+     */
+    public function exportOperatingGoodsList($postData)
+    {
+        unset($postData['page'], $postData['pageNum']);
+        $query = $this->buildOperatingGoodsQuery($postData);
+        $query->orderRaw($this->getOperatingGoodsOrder($postData));
+
+        $rows = $query->select()->toArray();
+        if (!$rows) {
+            return $this->rNoData();
+        }
+
+        $rows = $this->appendOperatingGoodsDetail($rows, $postData);
+        $list = $this->formatOperatingGoodsExportRows($rows);
+        if (!$list) {
+            return $this->rNoData();
+        }
+
+        $title = [
+            'g_id' => '商品ID',
+            'g_name' => '商品名称',
+            'sku' => 'SKU',
+            'gc_name' => '商品分类',
+            'operating_stock' => '在营库存',
+            'operating_machine_count' => '在营设备数量',
+            'operating_machine_names' => '在营设备列表',
+            'operating_channel_count' => '对应设备货道数量',
+            'operating_channel_info' => '对应设备货道信息',
+            'period_sale_quantity' => '周期内销售数量',
+            'period_refund_quantity' => '周期内退款数量',
+            'period_net_sale_quantity' => '周期内净销售数量',
+        ];
+        $filename = '在营设备商品统计-' . date('YmdHis');
+        return $this->sendToExport('商品管理-在营设备商品统计', $filename, $title, $list);
+    }
+
+    /**
+     * 构造商品维度在营库存聚合查询。
+     * @param array $postData
+     * @return \think\db\Query
+     */
+    private function buildOperatingGoodsQuery($postData)
+    {
+        $query = Db::name('machine_channel')->alias('mc')
+            ->join('machine m', 'm.m_id = mc.m_id')
+            ->leftJoin('goods g', 'g.g_id = mc.g_id')
+            ->where('m.is_operating', 1)
+            ->where('m.status', 1)
+            ->where('mc.status', 1)
+            ->where('mc.g_id', '>', 0)
+            ->fieldRaw('
+                mc.g_id,
+                MAX(IFNULL(NULLIF(g.g_name, ""), mc.g_name)) AS g_name,
+                MAX(IFNULL(NULLIF(g.sku, ""), mc.sku)) AS sku,
+                MAX(IFNULL(NULLIF(g.gc_name, ""), mc.gc_name)) AS gc_name,
+                MAX(IFNULL(NULLIF(g.pic, ""), mc.pic)) AS pic,
+                SUM(IFNULL(mc.stock, 0)) AS operating_stock,
+                COUNT(DISTINCT mc.m_id) AS operating_machine_count,
+                COUNT(mc.mc_id) AS operating_channel_count
+            ')
+            ->group('mc.g_id');
+
+        $this->applyOperatingGoodsWhere($query, $postData);
+        return $query;
+    }
+
+    /**
+     * 查询条件映射。
+     * @param \think\db\Query $query
+     * @param array $postData
+     */
+    private function applyOperatingGoodsWhere(&$query, $postData)
+    {
+        $permittedMIds = $this->resolveGoodsOperatingPermittedMachineIds();
+        if ($permittedMIds !== null) {
+            if (!$permittedMIds) {
+                $query->where('mc.m_id', '=', 0);
+            } else {
+                $query->where('mc.m_id', 'in', $permittedMIds);
+            }
+        }
+
+        $gIds = $this->parseOperatingGoodsIds($postData['g_id'] ?? []);
+        if ($gIds) {
+            $query->where('mc.g_id', 'in', $gIds);
+        }
+
+        $mIds = $this->parseOperatingGoodsIds($postData['m_id'] ?? []);
+        if ($mIds) {
+            $query->where('mc.m_id', 'in', $mIds);
+        }
+
+        if (!empty($postData['machine_id'])) {
+            $machineIds = $this->parseOperatingGoodsStrings($postData['machine_id']);
+            if (count($machineIds) > 1) {
+                $query->where('mc.machine_id', 'in', $machineIds);
+            } else {
+                $query->where('mc.machine_id', 'like', '%' . $postData['machine_id'] . '%');
+            }
+        }
+
+        if (!empty($postData['g_name'])) {
+            $gName = $postData['g_name'];
+            $query->where(function ($q) use ($gName) {
+                $q->where('g.g_name', 'like', '%' . $gName . '%')
+                    ->whereOr('mc.g_name', 'like', '%' . $gName . '%');
+            });
+        }
+
+        if (!empty($postData['sku'])) {
+            $sku = $postData['sku'];
+            $query->where(function ($q) use ($sku) {
+                $q->where('g.sku', 'like', '%' . $sku . '%')
+                    ->whereOr('mc.sku', 'like', '%' . $sku . '%');
+            });
+        }
+
+        if (!empty($postData['ao_id'])) {
+            $query->where('m.ao_id', '=', intval($postData['ao_id']));
+        }
+    }
+
+    /**
+     * 补充设备列表、货道列表和周期销量。
+     * @param array $rows
+     * @param array $postData
+     * @return array
+     */
+    private function appendOperatingGoodsDetail($rows, $postData)
+    {
+        if (!$rows) {
+            return [];
+        }
+
+        $gIds = array_values(array_unique(array_filter(array_map('intval', array_column($rows, 'g_id')))));
+        if (!$gIds) {
+            return $rows;
+        }
+
+        $channelRows = $this->queryOperatingGoodsChannels($gIds, $postData);
+        $detailMap = [];
+        $goodsMachineMap = [];
+
+        foreach ($channelRows as $channel) {
+            $gId = intval($channel['g_id']);
+            $mId = intval($channel['m_id']);
+            if (!isset($detailMap[$gId])) {
+                $detailMap[$gId] = [
+                    'operating_machine_ids' => [],
+                    'operating_machine_list' => [],
+                    'operating_channel_list' => [],
+                ];
+            }
+            if (!isset($detailMap[$gId]['operating_machine_list'][$mId])) {
+                $detailMap[$gId]['operating_machine_ids'][] = $mId;
+                $detailMap[$gId]['operating_machine_list'][$mId] = [
+                    'm_id' => $mId,
+                    'machine_id' => $channel['machine_id'],
+                    'machine_name' => $channel['machine_name'],
+                    'ao_id' => intval($channel['ao_id']),
+                    'channel_count' => 0,
+                    'channel_stock' => 0,
+                    'channel_list' => [],
+                ];
+            }
+
+            $channelInfo = [
+                'mc_id' => intval($channel['mc_id']),
+                'mg_id' => intval($channel['mg_id']),
+                'm_id' => $mId,
+                'machine_id' => $channel['machine_id'],
+                'machine_name' => $channel['machine_name'],
+                'channel_code' => $channel['channel_code'],
+                'channel_name' => $channel['channel_name'],
+                'stock' => intval($channel['stock']),
+                'capacity' => intval($channel['capacity']),
+                'frozen_stock' => intval($channel['frozen_stock']),
+                'sku' => $channel['sku'],
+            ];
+
+            $detailMap[$gId]['operating_machine_list'][$mId]['channel_count']++;
+            $detailMap[$gId]['operating_machine_list'][$mId]['channel_stock'] += intval($channel['stock']);
+            $detailMap[$gId]['operating_machine_list'][$mId]['channel_list'][] = $channelInfo;
+            $detailMap[$gId]['operating_channel_list'][] = $channelInfo;
+            $goodsMachineMap[$gId][$mId] = true;
+        }
+
+        $saleMap = $this->queryOperatingGoodsSales($gIds, $goodsMachineMap, $postData);
+
+        foreach ($rows as $key => $row) {
+            $gId = intval($row['g_id']);
+            $detail = $detailMap[$gId] ?? [
+                'operating_machine_ids' => [],
+                'operating_machine_list' => [],
+                'operating_channel_list' => [],
+            ];
+
+            $rows[$key]['g_id'] = $gId;
+            $rows[$key]['operating_stock'] = intval($row['operating_stock'] ?? 0);
+            $rows[$key]['operating_machine_count'] = intval($row['operating_machine_count'] ?? 0);
+            $rows[$key]['operating_channel_count'] = intval($row['operating_channel_count'] ?? 0);
+            $rows[$key]['operating_machine_ids'] = array_values($detail['operating_machine_ids']);
+            $rows[$key]['operating_machine_list'] = array_values($detail['operating_machine_list']);
+            $rows[$key]['operating_channel_list'] = array_values($detail['operating_channel_list']);
+            $rows[$key]['period_sale_quantity'] = intval($saleMap[$gId]['period_sale_quantity'] ?? 0);
+            $rows[$key]['period_refund_quantity'] = intval($saleMap[$gId]['period_refund_quantity'] ?? 0);
+            $rows[$key]['period_net_sale_quantity'] = intval($saleMap[$gId]['period_net_sale_quantity'] ?? 0);
+        }
+
+        return $rows;
+    }
+
+    /**
+     * 将嵌套设备/货道信息整理为导出行。
+     * @param array $rows
+     * @return array
+     */
+    private function formatOperatingGoodsExportRows($rows)
+    {
+        $list = [];
+        foreach ($rows as $row) {
+            $machineNames = [];
+            foreach (($row['operating_machine_list'] ?? []) as $machine) {
+                $machineNames[] = sprintf(
+                    '%s/%s(货道:%d,库存:%d)',
+                    $machine['machine_id'] ?? '',
+                    $machine['machine_name'] ?? '',
+                    intval($machine['channel_count'] ?? 0),
+                    intval($machine['channel_stock'] ?? 0)
+                );
+            }
+
+            $channelInfo = [];
+            foreach (($row['operating_channel_list'] ?? []) as $channel) {
+                $channelInfo[] = sprintf(
+                    '%s/%s-%s(库存:%d,容量:%d,冻结:%d)',
+                    $channel['machine_id'] ?? '',
+                    $channel['machine_name'] ?? '',
+                    $channel['channel_code'] ?? '',
+                    intval($channel['stock'] ?? 0),
+                    intval($channel['capacity'] ?? 0),
+                    intval($channel['frozen_stock'] ?? 0)
+                );
+            }
+
+            $list[] = [
+                'g_id' => intval($row['g_id'] ?? 0),
+                'g_name' => $row['g_name'] ?? '',
+                'sku' => $row['sku'] ?? '',
+                'gc_name' => $row['gc_name'] ?? '',
+                'operating_stock' => intval($row['operating_stock'] ?? 0),
+                'operating_machine_count' => intval($row['operating_machine_count'] ?? 0),
+                'operating_machine_names' => implode('; ', $machineNames),
+                'operating_channel_count' => intval($row['operating_channel_count'] ?? 0),
+                'operating_channel_info' => implode('; ', $channelInfo),
+                'period_sale_quantity' => intval($row['period_sale_quantity'] ?? 0),
+                'period_refund_quantity' => intval($row['period_refund_quantity'] ?? 0),
+                'period_net_sale_quantity' => intval($row['period_net_sale_quantity'] ?? 0),
+            ];
+        }
+
+        return $list;
+    }
+
+    /**
+     * 查询当前页商品对应的在营设备货道。
+     * @param array $gIds
+     * @param array $postData
+     * @return array
+     */
+    private function queryOperatingGoodsChannels($gIds, $postData)
+    {
+        $query = Db::name('machine_channel')->alias('mc')
+            ->join('machine m', 'm.m_id = mc.m_id')
+            ->leftJoin('goods g', 'g.g_id = mc.g_id')
+            ->where('m.is_operating', 1)
+            ->where('m.status', 1)
+            ->where('mc.status', 1)
+            ->where('mc.g_id', 'in', $gIds)
+            ->field('mc.mc_id,mc.mg_id,mc.m_id,mc.machine_id,m.machine_name,m.ao_id,mc.g_id,mc.channel_code,mc.channel_name,mc.stock,mc.capacity,mc.frozen_stock,mc.sku')
+            ->order('mc.g_id desc,mc.m_id asc,mc.channel_code asc,mc.mc_id asc');
+
+        $this->applyOperatingGoodsWhere($query, $postData);
+        return $query->select()->toArray();
+    }
+
+    /**
+     * 查询周期内销量，按当前上架商品和对应在营设备匹配。
+     * @param array $gIds
+     * @param array $goodsMachineMap
+     * @param array $postData
+     * @return array
+     */
+    private function queryOperatingGoodsSales($gIds, $goodsMachineMap, $postData)
+    {
+        if (!$gIds || !$goodsMachineMap) {
+            return [];
+        }
+
+        $allMIds = [];
+        foreach ($goodsMachineMap as $machineMap) {
+            $allMIds = array_merge($allMIds, array_keys($machineMap));
+        }
+        $allMIds = array_values(array_unique(array_map('intval', $allMIds)));
+        if (!$allMIds) {
+            return [];
+        }
+
+        $query = Db::name('sale_orders_details')->alias('sod')
+            ->join('sale_orders so', 'so.order_id = sod.order_id')
+            ->where('so.pay_status', 3)
+            ->where('sod.g_id', 'in', $gIds)
+            ->where('so.m_id', 'in', $allMIds)
+            ->fieldRaw('sod.g_id,so.m_id,SUM(IFNULL(sod.quantity, 0)) AS period_sale_quantity,SUM(IFNULL(sod.refund_quantity, 0)) AS period_refund_quantity')
+            ->group('sod.g_id,so.m_id');
+
+        [$startTime, $endTime] = $this->parseOperatingGoodsPeriod($postData);
+        if ($startTime > 0) {
+            $query->where('so.create_date', '>=', $startTime);
+        }
+        if ($endTime > 0) {
+            $query->where('so.create_date', '<=', $endTime);
+        }
+
+        $sales = $query->select()->toArray();
+        $saleMap = [];
+        foreach ($sales as $sale) {
+            $gId = intval($sale['g_id']);
+            $mId = intval($sale['m_id']);
+            if (empty($goodsMachineMap[$gId][$mId])) {
+                continue;
+            }
+            if (!isset($saleMap[$gId])) {
+                $saleMap[$gId] = [
+                    'period_sale_quantity' => 0,
+                    'period_refund_quantity' => 0,
+                    'period_net_sale_quantity' => 0,
+                ];
+            }
+            $saleQuantity = intval($sale['period_sale_quantity']);
+            $refundQuantity = intval($sale['period_refund_quantity']);
+            $saleMap[$gId]['period_sale_quantity'] += $saleQuantity;
+            $saleMap[$gId]['period_refund_quantity'] += $refundQuantity;
+            $saleMap[$gId]['period_net_sale_quantity'] += max(0, $saleQuantity - $refundQuantity);
+        }
+
+        return $saleMap;
+    }
+
+    /**
+     * 账号可见设备范围，保持与 MachineClient::getMList 一致。
+     * @return array|null
+     */
+    private function resolveGoodsOperatingPermittedMachineIds()
+    {
+        if (($this->manager['pid'] ?? 0) > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
+            $createMIds = $this->getMachineColumn(['creator' => $this->manager['manager_id']], 'm_id');
+            return array_values(array_unique(array_map('intval', array_merge(
+                is_array($mIds) ? $mIds : [],
+                is_array($createMIds) ? $createMIds : []
+            ))));
+        }
+        return null;
+    }
+
+    /**
+     * 解析周期参数，支持 start_time/end_time 或 create_time=开始~结束。
+     * @param array $postData
+     * @return array
+     */
+    private function parseOperatingGoodsPeriod($postData)
+    {
+        $start = $postData['start_time'] ?? 0;
+        $end = $postData['end_time'] ?? 0;
+
+        if ((!$start || !$end) && !empty($postData['create_time']) && strpos($postData['create_time'], '~') !== false) {
+            [$start, $end] = explode('~', $postData['create_time'], 2);
+        }
+
+        $start = $this->normalizeOperatingGoodsTime($start, false);
+        $end = $this->normalizeOperatingGoodsTime($end, true);
+        return [$start, $end];
+    }
+
+    /**
+     * @param mixed $value
+     * @param bool $endOfDay
+     * @return int
+     */
+    private function normalizeOperatingGoodsTime($value, $endOfDay = false)
+    {
+        if ($value === '' || $value === null) {
+            return 0;
+        }
+        if (is_numeric($value)) {
+            return intval($value);
+        }
+        $value = trim($value);
+        if ($value === '') {
+            return 0;
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value)) {
+            $value .= $endOfDay ? ' 23:59:59' : ' 00:00:00';
+        }
+        $time = strtotime($value);
+        return $time ? intval($time) : 0;
+    }
+
+    /**
+     * @param mixed $ids
+     * @return array
+     */
+    private function parseOperatingGoodsIds($ids)
+    {
+        return array_values(array_unique(array_filter(array_map('intval', $this->parseOperatingGoodsStrings($ids)))));
+    }
+
+    /**
+     * @param mixed $value
+     * @return array
+     */
+    private function parseOperatingGoodsStrings($value)
+    {
+        if (is_array($value)) {
+            $list = $value;
+        } else {
+            $list = explode(',', strval($value));
+        }
+        $list = array_map('trim', $list);
+        return array_values(array_filter($list, function ($item) {
+            return $item !== '';
+        }));
+    }
+
+    /**
+     * @param array $postData
+     * @return string
+     */
+    private function getOperatingGoodsOrder($postData)
+    {
+        $sortBy = $postData['sort_by'] ?? 'g_id';
+        $sortOrder = strtolower($postData['sort_order'] ?? 'desc') == 'asc' ? 'asc' : 'desc';
+        $sortMap = [
+            'g_id' => 'mc.g_id',
+            'operating_stock' => 'operating_stock',
+            'operating_machine_count' => 'operating_machine_count',
+            'operating_channel_count' => 'operating_channel_count',
+        ];
+        $field = $sortMap[$sortBy] ?? $sortMap['g_id'];
+        return $field . ' ' . $sortOrder . ',mc.g_id desc';
     }
 
     /**
@@ -726,14 +1213,18 @@ class GoodsClient extends ManagementClient
                 'ROUND(SUM(sod.discount_price),2)' => 'totalDiscountPrice',
             ])
             ->group('sod.g_id')
+            ->having('ROUND(SUM(sod.total_sod_price), 2) > 0 AND SUM(sod.quantity) > 0')
             ->orderRaw($order);
 
         $this->applyGoodsRankingWhere($query, $where);
 
         if ($pageNum) {
-            return $query->paginate($pageNum, false, ["query" => request()->param()]);
+            $res = $query->paginate($pageNum, false, ["query" => request()->param()]);
+        }else{
+            $res = $query->select();
         }
-        return $query->select();
+        
+        return $res;
     }
 
     /**

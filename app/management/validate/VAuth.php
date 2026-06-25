@@ -23,9 +23,14 @@ class VAuth extends VCommon
         // auth_manager_role
         "mr_id" => 'require',
         "role_id" => 'require',
+        "manager_ids" => 'require',
+        "use_role_template" => 'in:1,2',
+        "art_id" => 'require',
+        "d_type" => 'require|in:0,1,2,3,4,5',
 
         // auth_node
         "type" => "require",
+        "permission_action" => "in:menu,create,delete,update,query,export,manage",
 
         // auth_role_node
         "nodeList" => "require",
@@ -57,7 +62,13 @@ class VAuth extends VCommon
         "status.in" => "VAuth.status_in",
         "mr_id.require" => "VAuth.mr_id_require",
         "role_id.require" => "VAuth.role_id_require",
+        "manager_ids.require" => "账号ID列表不能为空",
+        "use_role_template.in" => "是否使用角色权限模板仅支持1或2",
+        "art_id.require" => "角色权限模板ID不能为空",
+        "d_type.require" => "数据权限类型不能为空",
+        "d_type.in" => "数据权限类型不合法",
         "type.require" => "VAuth.type_require",
+        "permission_action.in" => "权限动作仅支持menu/create/delete/update/query/export及历史兼容值",
         "nodeList.require" => "VAuth.nodeList_require",
         "rn_id.require" => "VAuth.rn_id_require",
 
@@ -76,8 +87,8 @@ class VAuth extends VCommon
     ];
 
     protected $scene = [
-        "AuthManagerAdd" => ["account","password","status"],
-        "AuthManagerUpdate" => ["manager_id","status"],
+        "AuthManagerAdd" => ["account","password","status","use_role_template"],
+        "AuthManagerUpdate" => ["manager_id","status","use_role_template"],
         "UpdatePassword" => ["manager_id","password"],
         "UpdateSelfPwd" => ["old_pwd","password"],
 
@@ -88,15 +99,22 @@ class VAuth extends VCommon
 
         "AuthManagerRoleAdd" => ["manager_id","role_id"],
         "AuthManagerRoleUpdate" => ["mr_id"],
+        "AuthManagerRoleBatchSet" => ["role_id"],
 
-        "AuthNodeAdd" => ["name","type"],
-        "AuthNodeUpdate" => ["node_id"],
+        "AuthNodeAdd" => ["name","type","permission_action"],
+        "AuthNodeUpdate" => ["node_id","permission_action"],
 
         "AuthRoleAdd" => ["name","status"],
         "AuthRoleUpdate" => ["role_id"],
 
         "AuthRoleNodeAdd" => ["role_id","nodeList"],
         "AuthRoleNodeUpdate" => ["rn_id"],
+
+        "AuthRoleTemplateAdd" => ["name","status"],
+        "AuthRoleTemplateUpdate" => ["art_id"],
+        "AuthRoleTemplateNodes" => ["art_id","nodeList"],
+        "AuthRoleTemplateTopNavigationNodes" => ["art_id"],
+        "AuthRoleTemplateApply" => ["art_id","role_id"],
 
         "AuthOrganizationAdd" => ['pid','organization_name'],
         "AuthOrganizationUpdate" => ["or_id",'pid','organization_name'],

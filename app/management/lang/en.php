@@ -49,9 +49,10 @@ return [
         "goods_list" => "Product List",
 
         "goodsRankingFileName" => "Homepage - Popular Products Ranking (Last 7 Days)",
-
         "gift_points" => "Gift Points",
         "cost_points" => "Consumption Points",
+        "totalPrice" => "Total Sales",
+        "goodsTopRankFileName" => "Homepage - Popular Products Ranking",
     ],
 
     "getSelfRoleNode" => [
