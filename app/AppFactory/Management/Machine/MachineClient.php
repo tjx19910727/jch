@@ -1541,7 +1541,7 @@ class MachineClient extends ManagementClient
                                     'main_m_id' => 0,
                                     'status' => 2,
                                     'bind_time' => 0,
-                                ],['m_id', '=', $oldSub['m_id']]);
+                                ], [['m_id', '=', $oldSub['m_id']]]);
                             }
                             // 关联新副柜
                             $value['main_m_id'] = $mainM['m_id'];
