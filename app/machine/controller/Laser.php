@@ -199,7 +199,7 @@ class Laser extends BaseController
             }
             $mId = $machine['m_id'];
 
-            $body = input();
+            $body = $this->signData['data'] ?? [];
             $date = $body['date'] ?? '';
             if (empty($date)) {
                 return returnState(100, '缺少 date 字段');
