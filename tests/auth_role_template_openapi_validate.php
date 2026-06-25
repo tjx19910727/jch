@@ -13,7 +13,10 @@ function checkOpenApi($condition, $message, &$failures)
 checkOpenApi(is_array($data), 'OpenAPI JSON 解析失败：' . json_last_error_msg(), $failures);
 checkOpenApi(($data['openapi'] ?? '') === '3.0.3', 'OpenAPI 版本应为 3.0.3', $failures);
 $paths = $data['paths'] ?? [];
-checkOpenApi(count($paths) === 11, '角色权限相关接口数量应为 11', $failures);
+checkOpenApi(count($paths) === 12, '角色权限相关接口数量应为 12', $failures);
+checkOpenApi(!isset($paths['/management/auth.auth_role_template/apply']), '不应继续暴露旧的模板应用到角色接口', $failures);
+checkOpenApi(isset($paths['/management/auth.auth_role_template/getManagers']), '缺少查询模板直接绑定账号接口', $failures);
+checkOpenApi(isset($paths['/management/auth.auth_role_template/applyManagers']), '缺少模板批量设置账号接口', $failures);
 
 foreach ($paths as $path => $item) {
     $validPrefix = strpos($path, '/management/auth.auth_role_template/') === 0
@@ -43,6 +46,6 @@ if ($failures) {
 }
 
 echo "[PASS] OpenAPI JSON 可解析\n";
-echo "[PASS] 11 个角色权限相关接口均使用 POST\n";
+echo "[PASS] 12 个角色权限相关接口均使用 POST\n";
 echo "[PASS] 所有接口均携带 token Header，值为 {{token}}\n";
 echo "\nSummary: passed=3, failed=0\n";

@@ -86,6 +86,22 @@ class AuthRoleTemplate extends Common
         return $this->app->authRoleTemplate->apply($postData);
     }
 
+    public function applyManagers()
+    {
+        $postData = json2arr(input());
+        try { $this->validate($postData, $this->validatePath . 'AuthRoleTemplateApplyManagers'); }
+        catch (\Exception $e) { return returnValidate($e->getMessage()); }
+        return $this->app->authRoleTemplate->applyManagers($postData);
+    }
+
+    public function getManagers()
+    {
+        $postData = input();
+        try { $this->validate($postData, $this->validatePath . 'AuthRoleTemplateManagers'); }
+        catch (\Exception $e) { return returnValidate($e->getMessage()); }
+        return $this->app->authRoleTemplate->getManagers($postData);
+    }
+
     protected function getExcludedTemplateNodeIds()
     {
         if (!in_array($this->manager['ao_id'], $this->getTopOrgIds())) return [];

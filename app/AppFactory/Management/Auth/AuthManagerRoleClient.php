@@ -145,10 +145,9 @@ class AuthManagerRoleClient extends ManagementClient
         if (!$role) $role = [];
         if (!$or) $or = [];
         $role = array_unique(array_merge($role,$or));
-        if (!$role) return $this->rFail("您暂未被授予权限角色，无法使用系统");
-
 
         $roleNodes = $this->resolveManagerRoleNodes($this->manager, $role, intval($authNode['node_id']));
+        if (!$role && !$roleNodes) return $this->rFail("您暂未被授予权限角色或权限模板，无法使用系统");
         if (!$roleNodes) return $this->r(100,"您无权限操作【" . $authNode['name']. "】");
         $authNode['d_type'] = $roleNodes[0]['d_type'];
         $authNode['data_scope'] = $roleNodes[0]['data_scope'] ?? '';

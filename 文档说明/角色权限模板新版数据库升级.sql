@@ -77,7 +77,11 @@ ALTER TABLE `auth_role`
 
 ALTER TABLE `auth_manager`
   ADD COLUMN `use_role_template` tinyint(1) NOT NULL DEFAULT '2' COMMENT '是否使用角色权限模板：1是，2否（历史逻辑）' AFTER `status`,
+  ADD COLUMN `role_template_id` int(11) NOT NULL DEFAULT '0' COMMENT '账号直接绑定的角色权限模板ID，单账号仅允许一个模板' AFTER `use_role_template`,
   ADD INDEX `idx_use_role_template` (`use_role_template`);
+
+ALTER TABLE `auth_manager`
+  ADD INDEX `idx_role_template_id` (`role_template_id`);
 
 ALTER TABLE `auth_node`
   ADD COLUMN `permission_action` varchar(16) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'unclassified'
@@ -144,7 +148,8 @@ VALUES
   (@role_template_menu_id,'保存模板节点','/management/auth.auth_role_template/saveNodes','手动覆盖保存角色权限模板节点',6,2,1,1,2,'update',1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
   (@role_template_menu_id,'查询模板导航权限树','/management/auth.auth_role_template/getTopNavigationNodes','查询导航权限树及模板当前配置',7,2,1,1,2,'query',1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
   (@role_template_menu_id,'保存模板导航权限','/management/auth.auth_role_template/saveTopNavigationNodes','按导航保存数据范围及增删改查权限',8,2,1,1,2,'update',1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
-  (@role_template_menu_id,'应用权限模板','/management/auth.auth_role_template/apply','将权限模板关联到角色',9,2,1,1,2,'update',1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
+  (@role_template_menu_id,'查询模板关联账号','/management/auth.auth_role_template/getManagers','查询直接绑定当前模板的账号',9,2,1,1,2,'query',1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
+  (@role_template_menu_id,'模板批量设置账号','/management/auth.auth_role_template/applyManagers','直接替换设置模板绑定账号集合',10,2,1,1,2,'update',1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
 -- 角色批量设置账号接口挂载到当前“所属权限”节点（node_id=538）下。
 INSERT INTO `auth_node`

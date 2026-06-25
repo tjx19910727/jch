@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "角色权限模板接口",
-    "description": "自定义角色权限模板、模板节点配置及角色应用接口。所有接口均需在 Header 中传递 token。",
+    "description": "自定义角色权限模板、模板节点配置及账号直接绑定接口。新流程使用 applyManagers 将模板直接绑定到多个账号；单个账号仅允许绑定一个模板，切换模板时直接覆盖账号当前模板。所有接口均需在 Header 中传递 token。",
     "version": "1.0.0"
   },
   "servers": [
@@ -315,12 +315,12 @@
         }
       }
     },
-    "/management/auth.auth_role_template/apply": {
+    "/management/auth.auth_role_template/getManagers": {
       "post": {
         "tags": ["角色权限模板"],
-        "summary": "将权限模板应用到角色",
-        "description": "将模板关联到角色，不覆盖历史角色节点；仅对开启模板的账号生效。",
-        "operationId": "authRoleTemplateApply",
+        "summary": "查询模板直接绑定账号",
+        "description": "查询 role_template_id 直接绑定当前模板且 use_role_template=1 的账号列表。",
+        "operationId": "authRoleTemplateGetManagers",
         "parameters": [
           {"$ref": "#/components/parameters/TokenHeader"}
         ],
@@ -328,17 +328,47 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": {"$ref": "#/components/schemas/TemplateApplyRequest"},
-              "example": {"art_id": 1, "role_id": 10}
+              "schema": {"$ref": "#/components/schemas/TemplateIdRequest"},
+              "example": {"art_id": 1}
             }
           }
         },
         "responses": {
           "200": {
-            "description": "应用结果",
+            "description": "查询结果",
             "content": {
               "application/json": {
-                "schema": {"$ref": "#/components/schemas/ActionResponse"}
+                "schema": {"$ref": "#/components/schemas/TemplateManagersResponse"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/auth.auth_role_template/applyManagers": {
+      "post": {
+        "tags": ["角色权限模板"],
+        "summary": "模板批量设置账号",
+        "description": "以 manager_ids 替换模板当前直接绑定账号集合。保存后账号 use_role_template 自动置为 1，并写入 auth_manager.role_template_id；如果账号原本绑定其他模板，会切换到当前模板；空数组表示清空当前模板绑定账号。",
+        "operationId": "authRoleTemplateApplyManagers",
+        "parameters": [
+          {"$ref": "#/components/parameters/TokenHeader"}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref": "#/components/schemas/TemplateManagersRequest"},
+              "example": {"art_id": 1, "manager_ids": [101, 102, 103]}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "设置结果",
+            "content": {
+              "application/json": {
+                "schema": {"$ref": "#/components/schemas/TemplateApplyManagersResponse"}
               }
             }
           }
@@ -480,12 +510,16 @@
           }
         }
       },
-      "TemplateApplyRequest": {
+      "TemplateManagersRequest": {
         "type": "object",
-        "required": ["art_id", "role_id"],
+        "required": ["art_id", "manager_ids"],
         "properties": {
           "art_id": {"type": "integer", "description": "角色权限模板 ID"},
-          "role_id": {"type": "integer", "description": "目标权限角色 ID"}
+          "manager_ids": {
+            "type": "array",
+            "description": "模板最终直接绑定的账号 ID 集合，空数组表示清空",
+            "items": {"type": "integer"}
+          }
         }
       },
       "RoleManagersRequest": {
@@ -508,6 +542,7 @@
           "desc": {"type": "string", "nullable": true, "description": "模板说明"},
           "ao_id": {"type": "integer", "description": "所属组织 ID"},
           "status": {"type": "integer", "description": "状态：1启用，2停用"},
+          "manager_num": {"type": "integer", "description": "直接绑定当前模板的账号数量"},
           "is_del": {"type": "integer", "description": "删除状态：1已删除，2未删除"},
           "creator": {"type": "integer", "description": "创建人 ID"},
           "create_time": {"type": "integer", "description": "创建时间戳"},
@@ -522,6 +557,18 @@
           "art_id": {"type": "integer", "description": "角色权限模板 ID"},
           "node_id": {"type": "integer", "description": "权限节点 ID"},
           "data_scope": {"type": "string", "description": "新模板查询范围；空值表示历史兼容数据", "enum": ["", "organization", "all"]}
+        }
+      },
+      "TemplateManager": {
+        "type": "object",
+        "properties": {
+          "manager_id": {"type": "integer", "description": "账号 ID"},
+          "nickname": {"type": "string", "description": "账号昵称"},
+          "account": {"type": "string", "description": "登录账号"},
+          "status": {"type": "integer", "description": "账号状态"},
+          "ao_id": {"type": "integer", "description": "组织 ID"},
+          "organization_name": {"type": "string", "description": "组织名称"},
+          "role_template_id": {"type": "integer", "description": "账号直接绑定的角色权限模板 ID"}
         }
       },
       "ActionResponse": {
@@ -575,6 +622,35 @@
                 "description": "分页结果"
               }
             ]
+          }
+        }
+      }
+      ,
+      "TemplateManagersResponse": {
+        "type": "object",
+        "properties": {
+          "state": {"type": "integer", "example": 200},
+          "msg": {"type": "string", "example": "查询成功"},
+          "data": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/TemplateManager"}
+          }
+        }
+      },
+      "TemplateApplyManagersResponse": {
+        "type": "object",
+        "properties": {
+          "state": {"type": "integer", "example": 200},
+          "msg": {"type": "string", "example": "保存成功"},
+          "data": {
+            "type": "object",
+            "properties": {
+              "art_id": {"type": "integer", "description": "当前模板 ID"},
+              "manager_ids": {"type": "array", "description": "保存后的账号 ID 集合", "items": {"type": "integer"}},
+              "added_manager_ids": {"type": "array", "description": "新增绑定到当前模板的账号 ID", "items": {"type": "integer"}},
+              "removed_manager_ids": {"type": "array", "description": "从当前模板移除绑定的账号 ID", "items": {"type": "integer"}},
+              "moved_manager_ids": {"type": "array", "description": "从其他模板切换到当前模板的账号 ID", "items": {"type": "integer"}}
+            }
           }
         }
       }

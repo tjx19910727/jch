@@ -37,7 +37,11 @@ ALTER TABLE `auth_role`
 
 ALTER TABLE `auth_manager`
   ADD COLUMN `use_role_template` tinyint(1) NOT NULL DEFAULT 2 COMMENT '是否使用角色权限模板：1是，2否（走历史逻辑）' AFTER `status`,
+  ADD COLUMN `role_template_id` int NOT NULL DEFAULT 0 COMMENT '账号直接绑定的角色权限模板ID，单账号仅允许一个模板' AFTER `use_role_template`,
   ADD INDEX `idx_use_role_template` (`use_role_template`);
+
+ALTER TABLE `auth_manager`
+  ADD INDEX `idx_role_template_id` (`role_template_id`);
 
 ALTER TABLE `auth_node`
   ADD COLUMN `permission_action` varchar(16) NOT NULL DEFAULT 'manage' COMMENT '权限动作：menu/query/export/manage' AFTER `data_auth`,
@@ -116,11 +120,18 @@ WHERE url = '/management/auth.auth_role/getList'
   AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = '/management/auth.auth_role_template/saveNodes')
 LIMIT 1;
 
-INSERT INTO auth_node (pid, name, url, `desc`, sort, type, is_auth, is_button, data_auth, status, create_time, update_time)
-SELECT pid, '应用角色权限模板', '/management/auth.auth_role_template/apply', '将权限模板应用到角色', sort, type, 1, 1, 1, 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+INSERT INTO auth_node (pid, name, url, `desc`, sort, type, is_auth, is_button, data_auth, permission_action, status, create_time, update_time)
+SELECT pid, '查询模板关联账号', '/management/auth.auth_role_template/getManagers', '查询直接绑定当前模板的账号', sort, type, 1, 1, 1, 'query', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
 FROM auth_node
-WHERE url = '/management/auth.auth_role/getList'
-  AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = '/management/auth.auth_role_template/apply')
+WHERE url = '/management/auth.auth_role_template/getList'
+  AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = '/management/auth.auth_role_template/getManagers')
+LIMIT 1;
+
+INSERT INTO auth_node (pid, name, url, `desc`, sort, type, is_auth, is_button, data_auth, permission_action, status, create_time, update_time)
+SELECT pid, '模板批量设置账号', '/management/auth.auth_role_template/applyManagers', '直接替换设置模板绑定账号集合', sort, type, 1, 1, 1, 'update', 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
+FROM auth_node
+WHERE url = '/management/auth.auth_role_template/getList'
+  AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = '/management/auth.auth_role_template/applyManagers')
 LIMIT 1;
 
 INSERT INTO auth_node (pid, name, url, `desc`, sort, type, is_auth, is_button, data_auth, status, create_time, update_time)

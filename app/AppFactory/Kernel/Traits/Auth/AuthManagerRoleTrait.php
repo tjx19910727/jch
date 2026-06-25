@@ -45,27 +45,34 @@ trait AuthManagerRoleTrait
     }
 
     /**
-     * 按账号配置解析角色节点。未开启模板时完整保留历史 auth_role_node 逻辑。
-     * 开启模板后，已关联模板的角色读取模板节点，未关联模板的角色仍读取历史节点。
+     * 按账号配置解析权限节点。未开启模板时完整保留历史 auth_role_node 逻辑。
+     * 开启模板后，账号直接模板优先生效；未直接绑定模板时兼容旧角色模板关联。
      */
-    public function resolveManagerRoleNodes(array $manager, array $roleIds, $nodeId = 0)
+    public function resolveManagerRoleNodes($manager, array $roleIds, $nodeId = 0)
     {
+        $manager = $this->normalizeManagerRoleData($manager);
         $roleIds = array_values(array_unique(array_filter(array_map('intval', $roleIds))));
-        if (!$roleIds) return [];
 
         $useTemplate = intval($manager['use_role_template'] ?? 2) === 1;
         $templateRoleIds = [];
         $historyRoleIds = $roleIds;
+        $requestedDirectTemplateId = intval($manager['role_template_id'] ?? 0);
+        $directTemplateId = 0;
         if ($useTemplate) {
-            $templateRoleIds = Db::name('auth_role')
-                ->alias('ar')
-                ->join('auth_role_template art', 'art.art_id = ar.template_id')
-                ->where('ar.role_id', 'in', $roleIds)
-                ->where('ar.template_id', '>', 0)
-                ->where(['art.status' => 1, 'art.is_del' => 2])
-                ->column('ar.role_id');
-            $templateRoleIds = array_map('intval', $templateRoleIds);
-            $historyRoleIds = array_values(array_diff($roleIds, $templateRoleIds));
+            $directTemplateId = $this->resolveDirectManagerTemplateId($manager);
+            if ($requestedDirectTemplateId > 0) {
+                $historyRoleIds = [];
+            } elseif ($roleIds) {
+                $templateRoleIds = Db::name('auth_role')
+                    ->alias('ar')
+                    ->join('auth_role_template art', 'art.art_id = ar.template_id')
+                    ->where('ar.role_id', 'in', $roleIds)
+                    ->where('ar.template_id', '>', 0)
+                    ->where(['art.status' => 1, 'art.is_del' => 2])
+                    ->column('ar.role_id');
+                $templateRoleIds = array_map('intval', $templateRoleIds);
+                $historyRoleIds = array_values(array_diff($roleIds, $templateRoleIds));
+            }
         }
 
         $nodes = [];
@@ -75,6 +82,12 @@ trait AuthManagerRoleTrait
                 ->where('is_del', 2);
             if ($nodeId > 0) $query->where('node_id', intval($nodeId));
             $nodes = $query->field("node_id,d_type,'' data_scope")->select()->toArray();
+        }
+        if ($directTemplateId > 0) {
+            $query = Db::name('auth_role_template_node')
+                ->where(['art_id' => $directTemplateId, 'is_del' => 2]);
+            if ($nodeId > 0) $query->where('node_id', intval($nodeId));
+            $nodes = array_merge($nodes, $query->field('node_id,data_scope,d_type')->select()->toArray());
         }
         if ($templateRoleIds) {
             $query = Db::name('auth_role_template_node')
@@ -110,9 +123,35 @@ trait AuthManagerRoleTrait
         return array_values($result);
     }
 
-    public function resolveManagerRoleNodeIds(array $manager, array $roleIds)
+    public function resolveManagerRoleNodeIds($manager, array $roleIds)
     {
         return array_column($this->resolveManagerRoleNodes($manager, $roleIds), 'node_id');
+    }
+
+    protected function normalizeManagerRoleData($manager)
+    {
+        if (is_object($manager) && method_exists($manager, 'toArray')) {
+            $manager = $manager->toArray();
+        }
+        return is_array($manager) ? $manager : [];
+    }
+
+    protected function resolveDirectManagerTemplateId(array $manager)
+    {
+        $templateId = intval($manager['role_template_id'] ?? 0);
+        if ($templateId <= 0 || intval($manager['use_role_template'] ?? 2) !== 1) {
+            return 0;
+        }
+        $template = Db::name('auth_role_template')->where([
+            'art_id' => $templateId,
+            'status' => 1,
+            'is_del' => 2,
+        ])->find();
+        if (!$template) return 0;
+        if (intval($manager['ao_id'] ?? 0) > 1 && intval($template['ao_id']) !== intval($manager['ao_id'])) {
+            return 0;
+        }
+        return $templateId;
     }
 
     public function updateAuthManagerRole($update,$where = [],$field = [])
@@ -138,6 +177,7 @@ trait AuthManagerRoleTrait
             'manager_id' => $manager['manager_id'],
             'is_del' => 2,
         ], 'role_id');
+        if (!$roleIds) $roleIds = [];
         // 查询权限根节点
         $machineNodeId = $this->getAuthNodeValue(['url' => $fatherNodeUrl],'node_id');
         if (!$machineNodeId) return $this->r(100,$this->lang("VLogin.permission_denied"));
