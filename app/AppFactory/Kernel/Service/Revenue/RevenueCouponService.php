@@ -97,8 +97,8 @@ class RevenueCouponService
             ->toArray();
         $details = self::normalizeDetails($details);
         $mId = intval($order['m_id'] ?? 0);
-        $orderAmount = self::money(bcsub(self::money($order['total_price'] ?? 0), self::money($rentalAmount), 2));
-        $matchedAmount = '0.00';
+        $fallbackAmount = self::money(bcsub(self::money($order['total_price'] ?? 0), self::money($rentalAmount), 2));
+        $matchedDetails = [];
         $scopeType = '';
         $scopeIds = [];
 
@@ -107,16 +107,16 @@ class RevenueCouponService
             $scopeGId = intval($scope['g_id'] ?? 0);
             if ($scopeMId > 0 && $scopeGId <= 0) {
                 if ($scopeMId === $mId) {
-                    $matchedAmount = $orderAmount;
+                    self::appendMatchedScopeDetails($matchedDetails, $details, $rentalAmountsBySod, 0, 0);
                     $scopeType = 'machine';
                     $scopeIds[] = intval($scope['rrcs_id']);
                 }
                 continue;
             }
             if ($scopeMId <= 0 && $scopeGId > 0) {
-                $amount = self::sumScopeGoodsAmount($details, $rentalAmountsBySod, $scopeGId, 0);
-                if (bccomp($amount, '0.01', 2) >= 0) {
-                    $matchedAmount = bcadd($matchedAmount, $amount, 2);
+                $beforeCount = count($matchedDetails);
+                self::appendMatchedScopeDetails($matchedDetails, $details, $rentalAmountsBySod, $scopeGId, 0);
+                if (count($matchedDetails) > $beforeCount) {
                     $scopeType = $scopeType ?: 'goods';
                     $scopeIds[] = intval($scope['rrcs_id']);
                 }
@@ -126,13 +126,18 @@ class RevenueCouponService
                 if ($scopeMId !== $mId) {
                     continue;
                 }
-                $amount = self::sumScopeGoodsAmount($details, $rentalAmountsBySod, $scopeGId, intval($scope['mg_id'] ?? 0));
-                if (bccomp($amount, '0.01', 2) >= 0) {
-                    $matchedAmount = bcadd($matchedAmount, $amount, 2);
+                $beforeCount = count($matchedDetails);
+                self::appendMatchedScopeDetails($matchedDetails, $details, $rentalAmountsBySod, $scopeGId, intval($scope['mg_id'] ?? 0));
+                if (count($matchedDetails) > $beforeCount) {
                     $scopeType = $scopeType ?: 'machine_goods';
                     $scopeIds[] = intval($scope['rrcs_id']);
                 }
             }
+        }
+
+        $matchedAmount = self::sumMatchedDetailAmount($matchedDetails);
+        if (!$matchedDetails && $scopeType === 'machine') {
+            $matchedAmount = $fallbackAmount;
         }
 
         return [
@@ -140,6 +145,7 @@ class RevenueCouponService
             'base_amount' => self::money($matchedAmount),
             'scope_type' => $scopeType,
             'scope_ids' => $scopeIds,
+            'details' => array_values($matchedDetails),
         ];
     }
 
@@ -151,11 +157,10 @@ class RevenueCouponService
         return is_array($details) ? $details : [];
     }
 
-    protected static function sumScopeGoodsAmount(array $details, array $rentalAmountsBySod, $gId, $mgId = 0)
+    protected static function appendMatchedScopeDetails(array &$matchedDetails, array $details, array $rentalAmountsBySod, $gId = 0, $mgId = 0)
     {
-        $amount = '0.00';
-        foreach ($details as $detail) {
-            if (intval($detail['g_id'] ?? 0) !== intval($gId)) {
+        foreach ($details as $index => $detail) {
+            if (intval($gId) > 0 && intval($detail['g_id'] ?? 0) !== intval($gId)) {
                 continue;
             }
             if (intval($mgId) > 0 && intval($detail['mg_id'] ?? 0) !== intval($mgId)) {
@@ -165,10 +170,38 @@ class RevenueCouponService
             $detailAmount = self::money($detail['total_sod_price'] ?? 0);
             $baseAmount = self::money(bcsub($detailAmount, $rentalAmountsBySod[$sodId] ?? '0', 2));
             if (bccomp($baseAmount, '0.01', 2) >= 0) {
-                $amount = bcadd($amount, $baseAmount, 2);
+                $key = $sodId > 0 ? 'sod_' . $sodId : 'idx_' . $index;
+                $detail['_scope_amount'] = $baseAmount;
+                $matchedDetails[$key] = $detail;
             }
         }
+    }
+
+    protected static function sumMatchedDetailAmount(array $details)
+    {
+        $amount = '0.00';
+        foreach ($details as $detail) {
+            $amount = bcadd($amount, self::money($detail['_scope_amount'] ?? ($detail['total_sod_price'] ?? 0)), 2);
+        }
         return self::money($amount);
+    }
+
+    public static function calculateOrderDiscountAmount(array $coupon, $baseAmount)
+    {
+        $discountType = intval($coupon['discount_type'] ?? 0);
+        $discountValue = self::money($coupon['discount_value'] ?? 0, 3);
+        $baseAmount = self::money($baseAmount);
+        if ($discountType === 1) {
+            $discount = self::money($discountValue);
+        } elseif ($discountType === 2) {
+            $discount = self::money(bcmul($baseAmount, bcdiv($discountValue, '100', 6), 6));
+        } else {
+            return '0.00';
+        }
+        if (bccomp($discount, $baseAmount, 2) > 0) {
+            $discount = $baseAmount;
+        }
+        return self::money($discount);
     }
 
     protected static function money($value, $scale = 2)

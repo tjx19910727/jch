@@ -172,23 +172,115 @@ class ActivityClient extends ReceiveBaseClient
             return true;
         }
 
+        $this->startTrans();
+        try {
+            $applyResult = $this->applyRevenueCouponDiscount($coupon, $matched, $couponCode);
+            if ($applyResult !== true) {
+                $this->rollbackTrans();
+                return $applyResult;
+            }
+            actionLog($this->getLS(), '绑定分账优惠券到订单');
+            actionLog([
+                'order_id' => $this->order['order_id'],
+                'coupon_code' => $couponCode,
+                'rrc_id' => intval($coupon['rrc_id']),
+                'rr_id' => intval($coupon['rr_id']),
+            ], '分账优惠券使用信息');
+
+            $this->order['revenue_coupon_code'] = $couponCode;
+            $refreshResult = $this->refreshPendingRevenueAfterRevenueCoupon();
+            if ($refreshResult !== true) {
+                $this->rollbackTrans();
+                return $refreshResult;
+            }
+            $this->commitTrans();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+        return true;
+    }
+
+    protected function applyRevenueCouponDiscount(array $coupon, array $matched, $couponCode)
+    {
+        $discountAmount = RevenueCouponService::calculateOrderDiscountAmount($coupon, $matched['base_amount']);
+        $orderTotal = bcadd(strval($this->order['total_price'] ?? 0), '0', 2);
+        if (bccomp($discountAmount, $orderTotal, 2) > 0) {
+            $discountAmount = $orderTotal;
+        }
+
         $updateOrder = [
             'order_id' => $this->order['order_id'],
             'revenue_coupon_code' => $couponCode,
+            'revenue_coupon_discount_type' => intval($coupon['discount_type'] ?? 0),
+            'revenue_coupon_discount_value' => bcadd(strval($coupon['discount_value'] ?? 0), '0', 3),
+            'revenue_coupon_discount_amount' => $discountAmount,
         ];
-        $this->updateSaleOrders($updateOrder, [], ['order_id', 'revenue_coupon_code']);
-        actionLog($this->getLS(), '绑定分账优惠券到订单');
-        actionLog([
-            'order_id' => $this->order['order_id'],
-            'coupon_code' => $couponCode,
-            'rrc_id' => intval($coupon['rrc_id']),
-            'rr_id' => intval($coupon['rr_id']),
-        ], '分账优惠券使用信息');
+        if (bccomp($discountAmount, '0.01', 2) >= 0) {
+            if (empty($this->order['retail_price'])) {
+                $updateOrder['retail_price'] = $orderTotal;
+            }
+            $updateOrder['discount_price'] = bcadd(strval($this->order['discount_price'] ?? 0), $discountAmount, 2);
+            $updateOrder['total_price'] = bcsub($orderTotal, $discountAmount, 2);
+            $detailResult = $this->applyRevenueCouponDiscountToDetails($matched['details'] ?? [], $discountAmount);
+            if ($detailResult !== true) {
+                return $detailResult;
+            }
+            $this->order['discount_price'] = $updateOrder['discount_price'];
+            $this->order['total_price'] = $updateOrder['total_price'];
+            if (isset($updateOrder['retail_price'])) {
+                $this->order['retail_price'] = $updateOrder['retail_price'];
+            }
+        }
 
-        $this->order['revenue_coupon_code'] = $couponCode;
-        $refreshResult = $this->refreshPendingRevenueAfterRevenueCoupon();
-        if ($refreshResult !== true) {
-            return $refreshResult;
+        $this->updateSaleOrders($updateOrder, [], array_keys($updateOrder));
+        $this->order['revenue_coupon_discount_type'] = $updateOrder['revenue_coupon_discount_type'];
+        $this->order['revenue_coupon_discount_value'] = $updateOrder['revenue_coupon_discount_value'];
+        $this->order['revenue_coupon_discount_amount'] = $updateOrder['revenue_coupon_discount_amount'];
+        return true;
+    }
+
+    protected function applyRevenueCouponDiscountToDetails(array $details, $discountAmount)
+    {
+        if (!$details) {
+            return $this->rFail("优惠券适用订单明细为空");
+        }
+        $baseAmount = '0.00';
+        foreach ($details as $detail) {
+            $baseAmount = bcadd($baseAmount, bcadd(strval($detail['_scope_amount'] ?? ($detail['total_sod_price'] ?? 0)), '0', 2), 2);
+        }
+        if (bccomp($baseAmount, '0.01', 2) < 0) {
+            return $this->rFail("优惠券适用金额不足");
+        }
+
+        $remainDiscount = bcadd(strval($discountAmount), '0', 2);
+        $count = count($details);
+        foreach ($details as $index => $detail) {
+            $sodId = intval($detail['sod_id'] ?? 0);
+            if ($sodId <= 0) {
+                continue;
+            }
+            $detailAmount = bcadd(strval($detail['total_sod_price'] ?? 0), '0', 2);
+            $scopeAmount = bcadd(strval($detail['_scope_amount'] ?? $detailAmount), '0', 2);
+            if ($index === $count - 1) {
+                $sodDiscount = $remainDiscount;
+            } else {
+                $sodDiscount = bcadd(bcmul($discountAmount, bcdiv($scopeAmount, $baseAmount, 6), 6), '0', 2);
+            }
+            if (bccomp($sodDiscount, $detailAmount, 2) > 0) {
+                $sodDiscount = $detailAmount;
+            }
+            if (bccomp($sodDiscount, '0.01', 2) < 0) {
+                continue;
+            }
+            $remainDiscount = bcsub($remainDiscount, $sodDiscount, 2);
+            $updateSod = [
+                'sod_id' => $sodId,
+                'discount_price' => bcadd(strval($detail['discount_price'] ?? 0), $sodDiscount, 2),
+                'total_sod_price' => bcsub($detailAmount, $sodDiscount, 2),
+            ];
+            $this->updateSaleOrdersDetails($updateSod);
         }
         return true;
     }

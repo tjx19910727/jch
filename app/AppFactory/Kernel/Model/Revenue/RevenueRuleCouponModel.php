@@ -13,6 +13,8 @@ class RevenueRuleCouponModel extends BaseModel
         "rrc_id" => "int",
         "rr_id" => "int",
         "coupon_code" => "string",
+        "discount_type" => "int",
+        "discount_value" => "float",
         "use_limit" => "int",
         "used_count" => "int",
         "remain_count" => "int",
@@ -23,4 +25,3 @@ class RevenueRuleCouponModel extends BaseModel
         "update_time" => "int",
     ];
 }
-

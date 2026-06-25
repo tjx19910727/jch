@@ -550,6 +550,23 @@ class RevenueRuleClient extends ManagementClient
         $useLimit = intval($couponData['use_limit'] ?? 0);
         if ($useLimit < 0) return $this->rFail("优惠券使用次数不能小于0");
         if (!$isUpdate && $useLimit <= 0) return $this->rFail("优惠券使用次数必须大于0");
+        $discountType = intval($couponData['discount_type'] ?? 0);
+        if (!in_array($discountType, [0, 1, 2], true)) {
+            return $this->rFail("优惠方式不合法");
+        }
+        $discountValue = floatval($couponData['discount_value'] ?? 0);
+        if ($discountValue < 0) {
+            return $this->rFail("优惠金额或比例不能小于0");
+        }
+        if ($discountType > 0 && $discountValue <= 0) {
+            return $this->rFail("优惠金额或比例必须大于0");
+        }
+        if ($discountType === 2 && $discountValue > 100) {
+            return $this->rFail("优惠比例不能超过100%");
+        }
+        if ($discountType === 0) {
+            $discountValue = 0;
+        }
         $expireTime = intval($couponData['expire_time'] ?? 0);
         if ($expireTime > 0 && $expireTime <= time()) {
             return $this->rFail("优惠券过期时间必须大于当前时间");
@@ -562,6 +579,8 @@ class RevenueRuleClient extends ManagementClient
             $data['scopes'] = $scopes;
         }
         $data['coupon_code'] = $couponCode;
+        $data['discount_type'] = $discountType;
+        $data['discount_value'] = $discountValue;
         return true;
     }
 
@@ -575,6 +594,8 @@ class RevenueRuleClient extends ManagementClient
         $insertOrUpdate = array_intersect_key($postData, array_flip([
             'rr_id',
             'coupon_code',
+            'discount_type',
+            'discount_value',
             'use_limit',
             'expire_time',
             'status',

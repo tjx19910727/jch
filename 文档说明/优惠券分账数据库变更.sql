@@ -6,6 +6,8 @@ CREATE TABLE IF NOT EXISTS `revenue_rule_coupon` (
   `rrc_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '优惠券分账配置ID',
   `rr_id` int(11) NOT NULL COMMENT '分账策略ID',
   `coupon_code` varchar(6) NOT NULL COMMENT '优惠券编码：非0开头6位数字',
+  `discount_type` tinyint(1) NOT NULL DEFAULT '0' COMMENT '订单优惠方式：0不调整实付金额，1固定金额，2优惠比例',
+  `discount_value` decimal(10,3) NOT NULL DEFAULT '0.000' COMMENT '订单优惠金额或优惠比例；discount_type=2时表示百分比',
   `use_limit` int(11) NOT NULL DEFAULT '0' COMMENT '可使用次数',
   `used_count` int(11) NOT NULL DEFAULT '0' COMMENT '已使用次数',
   `remain_count` int(11) NOT NULL DEFAULT '0' COMMENT '剩余次数',
@@ -40,11 +42,66 @@ SET @db := DATABASE();
 SET @sql := (
   SELECT IF(
     COUNT(*) = 0,
+    'ALTER TABLE `revenue_rule_coupon` ADD COLUMN `discount_type` tinyint(1) NOT NULL DEFAULT ''0'' COMMENT ''订单优惠方式：0不调整实付金额，1固定金额，2优惠比例'' AFTER `coupon_code`',
+    'SELECT ''revenue_rule_coupon.discount_type already exists'' AS message'
+  )
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_coupon' AND COLUMN_NAME = 'discount_type'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    COUNT(*) = 0,
+    'ALTER TABLE `revenue_rule_coupon` ADD COLUMN `discount_value` decimal(10,3) NOT NULL DEFAULT ''0.000'' COMMENT ''订单优惠金额或优惠比例；discount_type=2时表示百分比'' AFTER `discount_type`',
+    'SELECT ''revenue_rule_coupon.discount_value already exists'' AS message'
+  )
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_coupon' AND COLUMN_NAME = 'discount_value'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    COUNT(*) = 0,
     'ALTER TABLE `sale_orders` ADD COLUMN `revenue_coupon_code` varchar(6) DEFAULT '''' COMMENT ''分账优惠券编码'' AFTER `coupon_id`',
     'SELECT ''sale_orders.revenue_coupon_code already exists'' AS message'
   )
   FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'sale_orders' AND COLUMN_NAME = 'revenue_coupon_code'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    COUNT(*) = 0,
+    'ALTER TABLE `sale_orders` ADD COLUMN `revenue_coupon_discount_type` tinyint(1) NOT NULL DEFAULT ''0'' COMMENT ''分账优惠券订单优惠方式：0无，1固定金额，2优惠比例'' AFTER `revenue_coupon_code`',
+    'SELECT ''sale_orders.revenue_coupon_discount_type already exists'' AS message'
+  )
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'sale_orders' AND COLUMN_NAME = 'revenue_coupon_discount_type'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    COUNT(*) = 0,
+    'ALTER TABLE `sale_orders` ADD COLUMN `revenue_coupon_discount_value` decimal(10,3) NOT NULL DEFAULT ''0.000'' COMMENT ''分账优惠券订单优惠金额或比例'' AFTER `revenue_coupon_discount_type`',
+    'SELECT ''sale_orders.revenue_coupon_discount_value already exists'' AS message'
+  )
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'sale_orders' AND COLUMN_NAME = 'revenue_coupon_discount_value'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql := (
+  SELECT IF(
+    COUNT(*) = 0,
+    'ALTER TABLE `sale_orders` ADD COLUMN `revenue_coupon_discount_amount` decimal(12,2) NOT NULL DEFAULT ''0.00'' COMMENT ''分账优惠券实际优惠金额'' AFTER `revenue_coupon_discount_value`',
+    'SELECT ''sale_orders.revenue_coupon_discount_amount already exists'' AS message'
+  )
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'sale_orders' AND COLUMN_NAME = 'revenue_coupon_discount_amount'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
@@ -135,4 +192,3 @@ WHERE url = '/management/revenue.revenue_rule/getFind'
     SELECT 1 FROM auth_node WHERE url = '/management/revenue.revenue_rule/getCouponConfig'
   )
 LIMIT 1;
-
