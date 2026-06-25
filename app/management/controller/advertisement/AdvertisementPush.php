@@ -53,6 +53,12 @@ class AdvertisementPush extends Common
                     if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
                 }
             }
+            $is_zero = input('is_zero', 0);
+            if ($is_zero == 1) {
+                $where['raw'] = "(SELECT COUNT(*) FROM advertisement_push ap WHERE ap.m_id = a.m_id AND ap.status = 2) = 0";
+            } elseif ($is_zero == 2) {
+                $where['raw'] = "(SELECT COUNT(*) FROM advertisement_push ap WHERE ap.m_id = a.m_id AND ap.status = 2) > 0";
+            }
             $group = "m_id";
             $field = "m_id,machine_id,(SELECT machine_name FROM machine m WHERE m.m_id = a.m_id limit 1 ) machine_name,count(adv_id) adv_num";
         }
