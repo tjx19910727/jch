@@ -181,7 +181,7 @@ class RevenueOrderClient extends ManagementClient
 
     protected function getRuleModeText($mode)
     {
-        $map = [1 => '普通分账', 2 => '设备出租', 3 => '设备分账', 4 => '设备商品分账', 5 => '优惠券分账'];
+        $map = [1 => '基础/设备分账', 2 => '设备出租', 3 => '设备分账(历史兼容)', 4 => '设备商品分账', 5 => '优惠券分账'];
         return $map[intval($mode)] ?? '未知';
     }
 

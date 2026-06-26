@@ -16,7 +16,7 @@ $migration = file_get_contents($root . '/文档说明/设备商品分账数据�
 checkProductRule(strpos($calculator, 'calculateProductRule') !== false, '计算器缺少设备商品分账流程', $failures);
 checkProductRule(strpos($calculator, "'source' => 'product_rule'") !== false, '设备商品分账未写入独立来源', $failures);
 checkProductRule(strpos($calculator, "bcmul(\$value, (string)max(0, intval(\$quantity))") !== false, '固定金额未按商品数量计算', $failures);
-checkProductRule(strpos($calculator, "getRuleByMode(4)") !== false, '计算器未读取 rule_mode=4', $failures);
+checkProductRule(strpos($calculator, "getRuleByMode(4, \$detail)") !== false, '计算器未读取 rule_mode=4', $failures);
 checkProductRule(strpos($calculator, 'return $hasMatchedRuleItem;') !== false, '未命中商品规则时仍会错误跳过设备规则', $failures);
 checkProductRule(strpos($ruleClient, '同一商品固定比例分账合计不能超过100%') !== false, '缺少同商品比例合计限制', $failures);
 checkProductRule(strpos($migration, 'ADD COLUMN `g_id`') !== false, '数据库变更缺少商品字段', $failures);

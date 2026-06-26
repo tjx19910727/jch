@@ -47,12 +47,10 @@ class RevenueCalculator
         $hasCouponCode = $this->hasRevenueCouponCode();
         $hasCouponRule = $this->calculateCouponRule();
         $hasProductRule = $hasCouponCode ? false : $this->calculateProductRule();
-        $hasDeviceRule = ($hasCouponCode || $hasProductRule) ? false : $this->calculateDeviceRule();
-
-        if (!$hasCouponCode && !$hasProductRule && !$hasDeviceRule) {
-            $this->calculateNormal();
+        if (!$hasCouponCode && !$hasProductRule) {
+            $this->calculateBaseRule(false);
         } elseif ($hasCouponRule || $hasProductRule) {
-            $this->calculateNormal();
+            $this->calculateBaseRule(true);
         }
 
         return $this->saveRecords();
@@ -61,19 +59,18 @@ class RevenueCalculator
     protected function calculateRental()
     {
         $payerAoId = intval($this->order['ao_id'] ?? 0);
-        $rentalRule = $this->getRuleByMode(2);
-        if (!$rentalRule) {
-            $this->logRevenueConfig('设备出租规则明细查询', [
-                'found_rule' => 0,
-            ]);
-            return true;
-        }
+        $matchedRuleCount = 0;
         foreach ($this->details as $detail) {
+            $rentalRule = $this->getRuleByMode(2, $detail);
+            if (!$rentalRule) {
+                continue;
+            }
+            $matchedRuleCount++;
             $receiverAoId = intval($detail['sod_ao_id'] ?? 0);
             if ($receiverAoId <= 0 || $receiverAoId === $payerAoId) {
                 continue;
             }
-            $item = $this->getRentalRuleItem(intval($rentalRule['rr_id']), $receiverAoId);
+            $item = $this->getRentalRuleItemFromRule($rentalRule, $receiverAoId);
             $this->logRevenueConfig('设备出租规则明细查询', [
                 'rr_id' => intval($rentalRule['rr_id']),
                 'sod_id' => intval($detail['sod_id'] ?? 0),
@@ -122,6 +119,11 @@ class RevenueCalculator
                 'income_amount' => $calc['income_amount'],
                 'source' => 'rental',
             ], $account, $rentalRule);
+        }
+        if ($matchedRuleCount === 0) {
+            $this->logRevenueConfig('设备出租规则明细查询', [
+                'found_rule' => 0,
+            ]);
         }
     }
 
@@ -324,15 +326,21 @@ class RevenueCalculator
         return trim($this->order['revenue_coupon_code'] ?? '') !== '';
     }
 
-    protected function calculateDeviceRule()
+    protected function calculateBaseRule($normalOnly = false)
     {
-        $rule = $this->getRuleByMode(3);
+        $rule = $this->getBaseRuleByMode(1);
+        if (!$rule && !$normalOnly) {
+            $rule = $this->getBaseRuleByMode(3);
+        }
         if (!$rule) {
             return false;
         }
         $items = $this->getRuleItems($rule);
-        $this->logRevenueConfig('设备分账规则明细查询', [
+        $ruleMode = intval($rule['rule_mode'] ?? 1);
+        $isLegacyDeviceRule = $ruleMode === 3;
+        $this->logRevenueConfig($isLegacyDeviceRule ? '设备分账规则明细查询' : '基础分账规则明细查询', [
             'rr_id' => intval($rule['rr_id']),
+            'rule_mode' => $ruleMode,
             'item_count' => count($items),
             'rri_ids' => $this->collectColumnValues($items, 'rri_id'),
         ]);
@@ -340,7 +348,8 @@ class RevenueCalculator
             return false;
         }
 
-        $baseAmount = $this->getDeviceRuleBaseAmount($rule);
+        $allocatedAmount = bcadd(bcadd($this->rentalAmount, $this->couponAmount, 2), $this->productAmount, 2);
+        $baseAmount = $this->getBaseRuleAmount($rule, $items, $allocatedAmount);
         if (bccomp($baseAmount, '0.01', 2) < 0) {
             return true;
         }
@@ -348,10 +357,12 @@ class RevenueCalculator
         $periodKey = date('Y-m', intval($this->order['pay_time'] ?? 0) ?: time());
         $periodBefore = $this->getMachineMonthlyTurnover(intval($this->order['m_id'] ?? 0), $periodKey, intval($rule['turnover_type'] ?? 1));
         $periodAfter = bcadd($periodBefore, $baseAmount, 2);
-        $deviceAllocatedAmount = '0.00';
-        $this->logRevenueConfig('设备分账计算基数', [
+        $baseAllocatedAmount = '0.00';
+        $this->logRevenueConfig($isLegacyDeviceRule ? '设备分账计算基数' : '基础分账计算基数', [
             'rr_id' => intval($rule['rr_id']),
+            'rule_mode' => $ruleMode,
             'base_amount' => $baseAmount,
+            'allocated_amount' => $allocatedAmount,
             'period_key' => $periodKey,
             'period_amount_before' => $periodBefore,
             'period_amount_after' => $periodAfter,
@@ -363,7 +374,7 @@ class RevenueCalculator
             $account = $this->getAccountById(intval($item['ra_id']));
             if (!$account) {
                 $this->logRevenueConfig('分账账户查询', [
-                    'source' => 'device_rule',
+                    'source' => $isLegacyDeviceRule ? 'device_rule' : 'base_rule',
                     'ra_id' => intval($item['ra_id']),
                     'rri_id' => intval($item['rri_id']),
                     'found_account' => 0,
@@ -378,12 +389,12 @@ class RevenueCalculator
             if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) {
                 continue;
             }
-            $deviceAllocatedAmount = bcadd($deviceAllocatedAmount, $calc['income_amount'], 2);
-            if (bccomp($deviceAllocatedAmount, $baseAmount, 2) > 0) {
-                throw new \Exception("设备分账策略{$rule['rr_id']}分账金额不能超过设备规则可分金额");
+            $baseAllocatedAmount = bcadd($baseAllocatedAmount, $calc['income_amount'], 2);
+            if (bccomp($baseAllocatedAmount, $baseAmount, 2) > 0) {
+                throw new \Exception("基础分账策略{$rule['rr_id']}分账金额不能超过可分金额");
             }
             $this->records[] = $this->buildRecord([
-                'rule_mode' => 3,
+                'rule_mode' => $ruleMode,
                 'rr_id' => $rule['rr_id'],
                 'rri_id' => $item['rri_id'],
                 'rrit_id' => $calc['rrit_id'] ?? null,
@@ -395,69 +406,26 @@ class RevenueCalculator
                 'period_key' => $periodKey,
                 'period_amount_before' => $periodBefore,
                 'period_amount_after' => $periodAfter,
-                'source' => intval($item['calc_type']) === 4 ? 'tier' : 'device_rule',
+                'source' => intval($item['calc_type']) === 4 ? 'tier' : ($isLegacyDeviceRule ? 'device_rule' : 'base_rule'),
             ], $account, $rule);
         }
 
         return true;
     }
 
-    protected function calculateNormal()
+    protected function getBaseRuleByMode($mode)
     {
-        $payerAoId = intval($this->order['ao_id'] ?? 0);
-        $allocatedAmount = bcadd(bcadd($this->rentalAmount, $this->couponAmount, 2), $this->productAmount, 2);
-        $normalAmount = $this->money(bcsub($this->money($this->order['total_price'] ?? 0), $allocatedAmount, 2));
-        if (bccomp($normalAmount, '0.01', 2) < 0) {
-            return true;
+        $rule = $this->getRuleByMode($mode);
+        if ($rule) {
+            return $rule;
         }
-        $rule = $this->getRuleByMode(1);
-        if (!$rule) {
-            return true;
-        }
-        $items = $this->getRuleItems($rule);
-        $this->logRevenueConfig('普通分账规则明细查询', [
-            'rr_id' => intval($rule['rr_id']),
-            'normal_amount' => $normalAmount,
-            'allocated_amount' => $allocatedAmount,
-            'item_count' => count($items),
-            'rri_ids' => $this->collectColumnValues($items, 'rri_id'),
-        ]);
-        if (!$items) {
-            return true;
-        }
-        $normalAllocatedAmount = '0.00';
-        foreach ($items as $item) {
-            $account = $this->getAccountById(intval($item['ra_id']));
-            if (!$account) {
-                $this->logRevenueConfig('分账账户查询', [
-                    'source' => 'normal',
-                    'ra_id' => intval($item['ra_id']),
-                    'rri_id' => intval($item['rri_id']),
-                    'found_account' => 0,
-                ]);
-                continue;
+        foreach ($this->details as $detail) {
+            $rule = $this->getRuleByMode($mode, $detail);
+            if ($rule) {
+                return $rule;
             }
-            $calc = $this->calculateRuleItemAmount($item, $normalAmount, '0');
-            if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) {
-                continue;
-            }
-            $normalAllocatedAmount = bcadd($normalAllocatedAmount, $calc['income_amount'], 2);
-            if (bccomp($normalAllocatedAmount, $normalAmount, 2) > 0) {
-                throw new \Exception("普通分账策略{$rule['rr_id']}分账金额不能超过订单剩余金额");
-            }
-            $this->records[] = $this->buildRecord([
-                'rule_mode' => 1,
-                'rr_id' => $rule['rr_id'],
-                'rri_id' => $item['rri_id'],
-                'payer_ao_id' => $payerAoId,
-                'receiver_ao_id' => intval($item['receiver_ao_id']),
-                'calc_type' => intval($item['calc_type']),
-                'income_value' => $calc['income_value'],
-                'income_amount' => $calc['income_amount'],
-                'source' => 'normal',
-            ], $account, $rule);
         }
-        return true;
+        return null;
     }
 
     protected function calculateRuleItemAmount(array $item, $baseAmount, $periodAfter)
@@ -751,6 +719,8 @@ class RevenueCalculator
     protected function getRulesByMode($mode, array $detail = [])
     {
         $mId = intval($this->order['m_id'] ?? 0);
+        $gId = intval($detail['g_id'] ?? 0);
+        $mgId = intval($detail['mg_id'] ?? 0);
         $query = RevenueRuleConfigScopeModel::alias('rrcs')
             ->join('revenue_rule_config rrc', 'rrc.rrcfg_id = rrcs.rrcfg_id')
             ->where([
@@ -760,15 +730,15 @@ class RevenueCalculator
             ])
             ->whereIn('rrcs.m_id', [0, $mId]);
         if ($detail) {
-            $query->whereIn('rrcs.g_id', [0, intval($detail['g_id'] ?? 0)]);
-            $query->whereIn('rrcs.mg_id', [0, intval($detail['mg_id'] ?? 0)]);
+            $query->whereIn('rrcs.g_id', [0, $gId]);
+            $query->whereIn('rrcs.mg_id', [0, $mgId]);
         } else {
             $query->where(['rrcs.g_id' => 0, 'rrcs.mg_id' => 0]);
         }
         $rules = $query
             ->field('rrc.*')
             ->group('rrc.rrcfg_id')
-            ->order('rrcs.sort asc,rrcs.rrcs_id desc')
+            ->orderRaw($this->getScopeOrderRaw($mId, $gId, $mgId))
             ->select()
             ->toArray();
         foreach ($rules as &$rule) {
@@ -776,6 +746,21 @@ class RevenueCalculator
         }
         unset($rule);
         return $rules;
+    }
+
+    protected function getScopeOrderRaw($mId, $gId, $mgId)
+    {
+        $mId = intval($mId);
+        $gId = intval($gId);
+        $mgId = intval($mgId);
+        return "rrcs.sort asc,"
+            . " CASE"
+            . " WHEN rrcs.m_id = {$mId} AND {$mgId} > 0 AND rrcs.mg_id = {$mgId} THEN 1"
+            . " WHEN rrcs.m_id = {$mId} AND {$gId} > 0 AND rrcs.g_id = {$gId} THEN 2"
+            . " WHEN rrcs.m_id = {$mId} AND rrcs.g_id = 0 AND rrcs.mg_id = 0 THEN 3"
+            . " WHEN rrcs.m_id = 0 AND {$gId} > 0 AND rrcs.g_id = {$gId} THEN 4"
+            . " ELSE 5 END asc,"
+            . " rrcs.rrcs_id desc";
     }
 
     protected function getRentalRuleItem($rrId, $receiverAoId)
@@ -788,6 +773,16 @@ class RevenueCalculator
             $rule = $rule->toArray();
         }
         foreach ($this->getRuleItems($this->normalizeConfigRule($rule)) as $item) {
+            if (intval($item['receiver_ao_id'] ?? 0) === intval($receiverAoId)) {
+                return $item;
+            }
+        }
+        return null;
+    }
+
+    protected function getRentalRuleItemFromRule(array $rule, $receiverAoId)
+    {
+        foreach ($this->getRuleItems($rule) as $item) {
             if (intval($item['receiver_ao_id'] ?? 0) === intval($receiverAoId)) {
                 return $item;
             }
@@ -906,6 +901,31 @@ class RevenueCalculator
             return $this->money(bcsub($orderAmount, $this->rentalAmount, 2));
         }
         return $orderAmount;
+    }
+
+    protected function getBaseRuleAmount(array $rule, array $items, $allocatedAmount)
+    {
+        if (intval($rule['rule_mode'] ?? 1) === 3) {
+            return $this->getDeviceRuleBaseAmount($rule);
+        }
+        $orderAmount = $this->money($this->order['total_price'] ?? 0);
+        if ($this->hasTierRuleItem($items)) {
+            if (intval($rule['base_type'] ?? 2) === 1) {
+                return $orderAmount;
+            }
+            return $this->money(bcsub($orderAmount, $this->rentalAmount, 2));
+        }
+        return $this->money(bcsub($orderAmount, $allocatedAmount, 2));
+    }
+
+    protected function hasTierRuleItem(array $items)
+    {
+        foreach ($items as $item) {
+            if (intval($item['calc_type'] ?? 0) === 4) {
+                return true;
+            }
+        }
+        return false;
     }
 
     protected function getAccountById($raId)

@@ -473,6 +473,8 @@ class RevenueRuleClient extends ManagementClient
             $couponCheck = $this->normalizeConfigCouponData($data, $merged, $isUpdate);
             if ($couponCheck !== true) return $couponCheck;
         }
+        $receiverCheck = $this->checkReceiverConfigData($merged);
+        if ($receiverCheck !== true) return $receiverCheck;
         return true;
     }
 
@@ -550,6 +552,31 @@ class RevenueRuleClient extends ManagementClient
             if (is_array($item)) $items[] = $this->normalizeConfigItem($item);
         }
         return json_encode($items, JSON_UNESCAPED_UNICODE);
+    }
+
+    protected function checkReceiverConfigData(array $data)
+    {
+        $config = $data['receivers'] ?? ($data['receiver_config'] ?? []);
+        if (is_string($config)) {
+            $decoded = json_decode($config, true);
+            $config = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($config) || intval($data['rule_mode'] ?? 0) !== 4) {
+            return true;
+        }
+        $percentTotals = [];
+        foreach ($config as $item) {
+            if (!is_array($item) || intval($item['status'] ?? 1) !== 1) continue;
+            if (intval($item['calc_type'] ?? 0) !== 1) continue;
+            $gId = intval($item['g_id'] ?? 0);
+            $mgId = intval($item['mg_id'] ?? 0);
+            $key = $gId . ':' . $mgId;
+            $percentTotals[$key] = ($percentTotals[$key] ?? 0) + floatval($item['calc_value'] ?? 0);
+            if ($percentTotals[$key] > 100) {
+                return $this->rFail("同一商品固定比例分账合计不能超过100%");
+            }
+        }
+        return true;
     }
 
     protected function getConfigItems($rrcfgId)
@@ -665,13 +692,22 @@ class RevenueRuleClient extends ManagementClient
         foreach ($scopes as $scope) {
             if (!is_array($scope)) continue;
             $mId = intval($scope['m_id'] ?? 0);
+            $gId = intval($scope['g_id'] ?? 0);
+            $mgId = intval($scope['mg_id'] ?? 0);
+            $machineGoods = $mgId > 0
+                ? MachineGoodsModel::getFind(['mg_id' => $mgId], 'mg_id,m_id,machine_id,g_id')
+                : [];
+            if ($machineGoods) {
+                if ($mId <= 0) $mId = intval($machineGoods['m_id'] ?? 0);
+                if ($gId <= 0) $gId = intval($machineGoods['g_id'] ?? 0);
+            }
             $machine = $mId > 0 ? MachineModel::getFind(['m_id' => $mId], 'm_id,machine_id,ao_id') : [];
             $result[] = [
                 'm_id' => $mId,
-                'machine_id' => trim($scope['machine_id'] ?? ($machine['machine_id'] ?? '')),
+                'machine_id' => trim($scope['machine_id'] ?? ($machineGoods['machine_id'] ?? ($machine['machine_id'] ?? ''))),
                 'ao_id' => intval($scope['ao_id'] ?? ($machine['ao_id'] ?? 0)),
-                'g_id' => intval($scope['g_id'] ?? 0),
-                'mg_id' => intval($scope['mg_id'] ?? 0),
+                'g_id' => $gId,
+                'mg_id' => $mgId,
                 'sort' => max(0, intval($scope['sort'] ?? 0)),
                 'status' => intval($scope['status'] ?? 1) ?: 1,
             ];
@@ -684,6 +720,10 @@ class RevenueRuleClient extends ManagementClient
         $mId = intval($scope['m_id'] ?? 0);
         $gId = intval($scope['g_id'] ?? 0);
         $mgId = intval($scope['mg_id'] ?? 0);
+        $status = intval($scope['status'] ?? 1);
+        if (!in_array($status, [1, 2], true)) {
+            return $this->rFail("生效范围状态不合法");
+        }
         if ($mId > 0 && !MachineModel::getFind(['m_id' => $mId], 'm_id')) {
             return $this->rFail("生效范围设备不存在：" . $mId);
         }
@@ -691,8 +731,11 @@ class RevenueRuleClient extends ManagementClient
             return $this->rFail("生效范围商品不存在：" . $gId);
         }
         if ($mgId > 0) {
+            if ($mId <= 0) {
+                return $this->rFail("指定设备商品时必须明确设备");
+            }
             $where = ['mg_id' => $mgId];
-            if ($mId > 0) $where['m_id'] = $mId;
+            $where['m_id'] = $mId;
             if ($gId > 0) $where['g_id'] = $gId;
             if (!MachineGoodsModel::getFind($where, 'mg_id')) {
                 return $this->rFail("生效范围设备商品不存在：" . $mgId);
