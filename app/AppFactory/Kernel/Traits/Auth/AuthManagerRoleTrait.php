@@ -46,7 +46,7 @@ trait AuthManagerRoleTrait
 
     /**
      * 按账号配置解析权限节点。未开启模板时完整保留历史 auth_role_node 逻辑。
-     * 开启模板后，账号直接模板优先生效；未直接绑定模板时兼容旧角色模板关联。
+     * 开启模板后只读取账号直接绑定的权限模板，避免新模板权限继续依赖角色层。
      */
     public function resolveManagerRoleNodes($manager, array $roleIds, $nodeId = 0)
     {
@@ -54,25 +54,11 @@ trait AuthManagerRoleTrait
         $roleIds = array_values(array_unique(array_filter(array_map('intval', $roleIds))));
 
         $useTemplate = intval($manager['use_role_template'] ?? 2) === 1;
-        $templateRoleIds = [];
         $historyRoleIds = $roleIds;
-        $requestedDirectTemplateId = intval($manager['role_template_id'] ?? 0);
         $directTemplateId = 0;
         if ($useTemplate) {
             $directTemplateId = $this->resolveDirectManagerTemplateId($manager);
-            if ($requestedDirectTemplateId > 0) {
-                $historyRoleIds = [];
-            } elseif ($roleIds) {
-                $templateRoleIds = Db::name('auth_role')
-                    ->alias('ar')
-                    ->join('auth_role_template art', 'art.art_id = ar.template_id')
-                    ->where('ar.role_id', 'in', $roleIds)
-                    ->where('ar.template_id', '>', 0)
-                    ->where(['art.status' => 1, 'art.is_del' => 2])
-                    ->column('ar.role_id');
-                $templateRoleIds = array_map('intval', $templateRoleIds);
-                $historyRoleIds = array_values(array_diff($roleIds, $templateRoleIds));
-            }
+            $historyRoleIds = [];
         }
 
         $nodes = [];
@@ -89,16 +75,6 @@ trait AuthManagerRoleTrait
             if ($nodeId > 0) $query->where('node_id', intval($nodeId));
             $nodes = array_merge($nodes, $query->field('node_id,data_scope,d_type')->select()->toArray());
         }
-        if ($templateRoleIds) {
-            $query = Db::name('auth_role_template_node')
-                ->alias('artn')
-                ->join('auth_role ar', 'ar.template_id = artn.art_id')
-                ->where('ar.role_id', 'in', $templateRoleIds)
-                ->where('artn.is_del', 2);
-            if ($nodeId > 0) $query->where('artn.node_id', intval($nodeId));
-            $nodes = array_merge($nodes, $query->field('artn.node_id,artn.data_scope,artn.d_type')->select()->toArray());
-        }
-
         $result = [];
         foreach ($nodes as $node) {
             $id = intval($node['node_id']);

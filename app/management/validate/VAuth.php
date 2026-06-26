@@ -99,8 +99,6 @@ class VAuth extends VCommon
 
         "AuthManagerRoleAdd" => ["manager_id","role_id"],
         "AuthManagerRoleUpdate" => ["mr_id"],
-        "AuthManagerRoleBatchSet" => ["role_id"],
-
         "AuthNodeAdd" => ["name","type","permission_action"],
         "AuthNodeUpdate" => ["node_id","permission_action"],
 
@@ -114,7 +112,6 @@ class VAuth extends VCommon
         "AuthRoleTemplateUpdate" => ["art_id"],
         "AuthRoleTemplateNodes" => ["art_id","nodeList"],
         "AuthRoleTemplateTopNavigationNodes" => ["art_id"],
-        "AuthRoleTemplateApply" => ["art_id","role_id"],
         "AuthRoleTemplateApplyManagers" => ["art_id","manager_ids"],
         "AuthRoleTemplateManagers" => ["art_id"],
 

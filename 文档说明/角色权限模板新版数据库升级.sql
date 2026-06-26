@@ -4,7 +4,7 @@
 --
 -- 当前数据库确认：
 -- 1. auth_role_template / auth_role_template_node / auth_role_template_navigation 均不存在。
--- 2. auth_role.template_id、auth_manager.use_role_template、auth_node.permission_action 均不存在。
+-- 2. auth_manager.use_role_template、auth_manager.role_template_id、auth_node.permission_action 均不存在。
 -- 3. 历史 auth_role_node.d_type 保留，用于未启用模板账号的兼容逻辑。
 --
 -- 此 SQL 按当前数据库状态生成，只执行一次。执行前请备份相关表。
@@ -70,10 +70,6 @@ CREATE TABLE `auth_role_template_navigation` (
 -- ============================================================
 -- 二、现有权限表增加模板字段
 -- ============================================================
-
-ALTER TABLE `auth_role`
-  ADD COLUMN `template_id` int(11) DEFAULT NULL COMMENT '角色权限模板ID' AFTER `ao_id`,
-  ADD INDEX `idx_template_id` (`template_id`);
 
 ALTER TABLE `auth_manager`
   ADD COLUMN `use_role_template` tinyint(1) NOT NULL DEFAULT '2' COMMENT '是否使用角色权限模板：1是，2否（历史逻辑）' AFTER `status`,
@@ -151,12 +147,6 @@ VALUES
   (@role_template_menu_id,'查询模板关联账号','/management/auth.auth_role_template/getManagers','查询直接绑定当前模板的账号',9,2,1,1,2,'query',1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP()),
   (@role_template_menu_id,'模板批量设置账号','/management/auth.auth_role_template/applyManagers','直接替换设置模板绑定账号集合',10,2,1,1,2,'update',1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
 
--- 角色批量设置账号接口挂载到当前“所属权限”节点（node_id=538）下。
-INSERT INTO `auth_node`
-  (`pid`,`name`,`url`,`desc`,`sort`,`type`,`is_auth`,`is_button`,`data_auth`,`permission_action`,`status`,`create_time`,`update_time`)
-VALUES
-  (538,'角色批量设置账号','/management/auth.auth_manager_role/setRoleManagers','替换设置角色绑定的账号集合',1,2,1,1,2,'update',1,UNIX_TIMESTAMP(),UNIX_TIMESTAMP());
-
 -- ============================================================
 -- 五、执行后检查
 -- ============================================================
@@ -174,8 +164,8 @@ FROM information_schema.COLUMNS
 WHERE `TABLE_SCHEMA` = DATABASE()
   AND (
     `TABLE_NAME` IN ('auth_role_template','auth_role_template_node','auth_role_template_navigation')
-    OR (`TABLE_NAME` = 'auth_role' AND `COLUMN_NAME` = 'template_id')
     OR (`TABLE_NAME` = 'auth_manager' AND `COLUMN_NAME` = 'use_role_template')
+    OR (`TABLE_NAME` = 'auth_manager' AND `COLUMN_NAME` = 'role_template_id')
     OR (`TABLE_NAME` = 'auth_node' AND `COLUMN_NAME` = 'permission_action')
   )
 ORDER BY `TABLE_NAME`,`ORDINAL_POSITION`;
@@ -183,5 +173,4 @@ ORDER BY `TABLE_NAME`,`ORDINAL_POSITION`;
 SELECT `node_id`,`pid`,`name`,`url`,`permission_action`
 FROM `auth_node`
 WHERE `url` LIKE '/management/auth.auth_role_template/%'
-   OR `url` = '/management/auth.auth_manager_role/setRoleManagers'
 ORDER BY `node_id`;

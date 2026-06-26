@@ -147,7 +147,7 @@
       "post": {
         "tags": ["角色权限模板"],
         "summary": "删除角色权限模板",
-        "description": "已被角色使用的模板不能删除。",
+        "description": "已被账号直接绑定的模板不能删除。",
         "operationId": "authRoleTemplateDelete",
         "parameters": [
           {"$ref": "#/components/parameters/TokenHeader"}
@@ -206,7 +206,7 @@
       "post": {
         "tags": ["角色权限模板"],
         "summary": "覆盖保存角色权限模板节点",
-        "description": "保存后会同步覆盖所有关联角色的节点权限。nodeList 的 Key 为节点 ID，Value 为数据权限类型 d_type。",
+        "description": "保存后会覆盖当前模板的节点权限，直接绑定该模板的账号下次鉴权立即按新节点生效。nodeList 的 Key 为节点 ID，Value 为数据权限类型 d_type。",
         "operationId": "authRoleTemplateSaveNodes",
         "parameters": [
           {"$ref": "#/components/parameters/TokenHeader"}
@@ -374,36 +374,6 @@
           }
         }
       }
-    },
-    "/management/auth.auth_manager_role/setRoleManagers": {
-      "post": {
-        "tags": ["账号角色"],
-        "summary": "角色批量设置账号",
-        "description": "以 manager_ids 替换角色当前绑定账号集合，空数组表示清空。",
-        "operationId": "authManagerRoleSetRoleManagers",
-        "parameters": [
-          {"$ref": "#/components/parameters/TokenHeader"}
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {"$ref": "#/components/schemas/RoleManagersRequest"},
-              "example": {"role_id": 10, "manager_ids": [101, 102, 103]}
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "设置结果",
-            "content": {
-              "application/json": {
-                "schema": {"$ref": "#/components/schemas/ActionResponse"}
-              }
-            }
-          }
-        }
-      }
     }
   },
   "components": {
@@ -518,18 +488,6 @@
           "manager_ids": {
             "type": "array",
             "description": "模板最终直接绑定的账号 ID 集合，空数组表示清空",
-            "items": {"type": "integer"}
-          }
-        }
-      },
-      "RoleManagersRequest": {
-        "type": "object",
-        "required": ["role_id", "manager_ids"],
-        "properties": {
-          "role_id": {"type": "integer", "description": "权限角色 ID"},
-          "manager_ids": {
-            "type": "array",
-            "description": "角色最终绑定的账号 ID 集合，空数组表示清空",
             "items": {"type": "integer"}
           }
         }

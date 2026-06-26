@@ -149,34 +149,9 @@ class AuthRoleTemplateClient extends ManagementClient
         }
     }
 
-    public function apply($data)
-    {
-        try {
-            $template = $this->assertTemplateManaged(intval($data['art_id']));
-            $role = $this->assertRoleManaged(intval($data['role_id']));
-            if (intval($role['ao_id']) > 1 && intval($template['ao_id']) !== intval($role['ao_id'])) {
-                throw new \Exception("角色与权限模板所属组织不一致");
-            }
-        } catch (\Exception $e) {
-            return $this->rTryCatch($e->getMessage());
-        }
-        $this->startTrans();
-        try {
-            $roleId = intval($data['role_id']);
-            $templateId = intval($data['art_id']);
-            Db::name('auth_role')->where(['role_id' => $roleId])->update([
-                'template_id' => $templateId,
-                'update_id' => $this->manager['manager_id'],
-                'update_time' => time(),
-            ]);
-            return $this->checkTrans(true);
-        } catch (\Exception $e) {
-            $this->rollbackTrans();
-            actionException($e, 1);
-            return $this->rTryCatch($e->getMessage());
-        }
-    }
-
+    /**
+     * 直接替换模板绑定账号。单个账号只保存一个 role_template_id，切换模板即覆盖旧值。
+     */
     public function applyManagers($data)
     {
         try {
@@ -220,6 +195,7 @@ class AuthRoleTemplateClient extends ManagementClient
                     ->where('manager_id', 'in', $removeIds)
                     ->update([
                         'role_template_id' => 0,
+                        'use_role_template' => 2,
                         'update_id' => $this->manager['manager_id'],
                         'update_time' => time(),
                     ]);
@@ -276,9 +252,8 @@ class AuthRoleTemplateClient extends ManagementClient
         } catch (\Exception $e) {
             return $this->rTryCatch($e->getMessage());
         }
-        $used = Db::name('auth_role')->where(['template_id' => intval($artId)])->count();
-        $used += Db::name('auth_manager')->where(['role_template_id' => intval($artId), 'use_role_template' => 1])->count();
-        if ($used > 0) return $this->rFail("模板已被角色或账号使用，不能删除");
+        $used = Db::name('auth_manager')->where(['role_template_id' => intval($artId), 'use_role_template' => 1])->count();
+        if ($used > 0) return $this->rFail("模板已被账号使用，不能删除");
         return $this->rU($this->updateAuthRoleTemplate(
             ['is_del' => 1],
             ['art_id' => intval($artId)],

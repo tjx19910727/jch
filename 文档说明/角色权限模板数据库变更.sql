@@ -31,10 +31,6 @@ CREATE TABLE IF NOT EXISTS `auth_role_template_node` (
   KEY `idx_template_active` (`art_id`, `is_del`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色权限模板节点表';
 
-ALTER TABLE `auth_role`
-  ADD COLUMN `template_id` int DEFAULT NULL COMMENT '角色权限模板ID' AFTER `ao_id`,
-  ADD INDEX `idx_template_id` (`template_id`);
-
 ALTER TABLE `auth_manager`
   ADD COLUMN `use_role_template` tinyint(1) NOT NULL DEFAULT 2 COMMENT '是否使用角色权限模板：1是，2否（走历史逻辑）' AFTER `status`,
   ADD COLUMN `role_template_id` int NOT NULL DEFAULT 0 COMMENT '账号直接绑定的角色权限模板ID，单账号仅允许一个模板' AFTER `use_role_template`,
@@ -134,9 +130,3 @@ WHERE url = '/management/auth.auth_role_template/getList'
   AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = '/management/auth.auth_role_template/applyManagers')
 LIMIT 1;
 
-INSERT INTO auth_node (pid, name, url, `desc`, sort, type, is_auth, is_button, data_auth, status, create_time, update_time)
-SELECT pid, '角色批量设置账号', '/management/auth.auth_manager_role/setRoleManagers', '替换设置角色绑定的账号集合', sort, type, 1, 1, 1, 1, UNIX_TIMESTAMP(), UNIX_TIMESTAMP()
-FROM auth_node
-WHERE url = '/management/auth.auth_manager_role/getList'
-  AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = '/management/auth.auth_manager_role/setRoleManagers')
-LIMIT 1;
