@@ -114,10 +114,9 @@ class RevenueSettlementService
 
     protected function deductCouponUsage($orderId)
     {
-        $records = RevenueOrderModel::where(['order_id' => intval($orderId), 'rule_mode' => 5, 'coupon_use_deducted' => 0])
-            ->whereIn('status', [0, 2])
-            ->field('rrc_id')
-            ->group('rrc_id')
+        $records = RevenueOrderModel::where(['order_id' => intval($orderId), 'rule_mode' => 5, 'status' => 0])
+            ->field('rr_id')
+            ->group('rr_id')
             ->select()
             ->toArray();
         if (!$records) {
@@ -125,11 +124,11 @@ class RevenueSettlementService
         }
 
         foreach ($records as $record) {
-            $rrcId = intval($record['rrc_id'] ?? 0);
-            if ($rrcId <= 0) {
+            $rrId = intval($record['rr_id'] ?? 0);
+            if ($rrId <= 0) {
                 continue;
             }
-            $coupon = RevenueRuleConfigModel::where(['rrcfg_id' => $rrcId, 'rule_mode' => 5])->lock(true)->find();
+            $coupon = RevenueRuleConfigModel::where(['rrcfg_id' => $rrId, 'rule_mode' => 5])->lock(true)->find();
             if (!$coupon) {
                 throw new \Exception("优惠券分账配置不存在");
             }
@@ -150,15 +149,7 @@ class RevenueSettlementService
             if ($newRemainCount <= 0) {
                 $update['status'] = 2;
             }
-            RevenueRuleConfigModel::where(['rrcfg_id' => $rrcId])->update($update);
-            RevenueOrderModel::where(['order_id' => intval($orderId), 'rule_mode' => 5, 'rrc_id' => $rrcId, 'coupon_use_deducted' => 0])
-                ->whereIn('status', [0, 2])
-                ->update([
-                    'coupon_use_count_before' => $remainCount,
-                    'coupon_use_count_after' => $newRemainCount,
-                    'coupon_use_deducted' => 1,
-                    'update_time' => time(),
-                ]);
+            RevenueRuleConfigModel::where(['rrcfg_id' => $rrId])->update($update);
         }
 
         return true;

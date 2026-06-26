@@ -19,23 +19,23 @@ class RevenueCouponService
         return ActivityCouponUsedModel::where(['code' => $couponCode])->find() ? true : false;
     }
 
-    public static function existsRevenueCouponCode($couponCode, $excludeRrcId = 0)
+    public static function existsRevenueCouponCode($couponCode, $excludeConfigId = 0)
     {
         $query = RevenueRuleConfigModel::where([
             'coupon_code' => trim(strval($couponCode)),
             'rule_mode' => 5,
         ]);
-        if (intval($excludeRrcId) > 0) {
-            $query->where('rrcfg_id', '<>', intval($excludeRrcId));
+        if (intval($excludeConfigId) > 0) {
+            $query->where('rrcfg_id', '<>', intval($excludeConfigId));
         }
         return $query->find() ? true : false;
     }
 
-    public static function isCouponCodeUnique($couponCode, $excludeRrcId = 0)
+    public static function isCouponCodeUnique($couponCode, $excludeConfigId = 0)
     {
         $couponCode = trim(strval($couponCode));
         if ($couponCode === '') return false;
-        if (self::existsRevenueCouponCode($couponCode, $excludeRrcId)) {
+        if (self::existsRevenueCouponCode($couponCode, $excludeConfigId)) {
             return false;
         }
         return self::hasActivityCouponCode($couponCode) ? false : true;
@@ -53,7 +53,7 @@ class RevenueCouponService
         throw new \Exception("生成唯一优惠券编码失败，请稍后重试");
     }
 
-    public static function findEnabledCouponByCode($couponCode, $field = 'rrc.*,rr.rule_name,rr.rule_mode,rr.settlement_type,rr.settlement_days')
+    public static function findEnabledCouponByCode($couponCode, $field = '*')
     {
         $coupon = RevenueRuleConfigModel::where([
                 'coupon_code' => trim(strval($couponCode)),
@@ -67,9 +67,7 @@ class RevenueCouponService
         if (!is_array($coupon)) {
             $coupon = $coupon->toArray();
         }
-        $coupon['rrc_id'] = intval($coupon['rrcfg_id']);
         $coupon['rr_id'] = intval($coupon['rrcfg_id']);
-        $coupon['rule_name'] = $coupon['config_name'] ?? '';
         return $coupon;
     }
 
@@ -100,7 +98,7 @@ class RevenueCouponService
 
     public static function matchScope(array $coupon, array $order, array $details, array $rentalAmountsBySod = [], $rentalAmount = '0')
     {
-        $scopes = RevenueRuleConfigScopeModel::where(['rrcfg_id' => intval($coupon['rrc_id']), 'status' => 1])
+        $scopes = RevenueRuleConfigScopeModel::where(['rrcfg_id' => intval($coupon['rr_id'] ?? $coupon['rrcfg_id'] ?? 0), 'status' => 1])
             ->order('rrcs_id asc')
             ->select()
             ->toArray();

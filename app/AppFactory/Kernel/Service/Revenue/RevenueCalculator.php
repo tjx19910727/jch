@@ -76,7 +76,7 @@ class RevenueCalculator
                 'sod_id' => intval($detail['sod_id'] ?? 0),
                 'receiver_ao_id' => $receiverAoId,
                 'found_item' => $item ? 1 : 0,
-                'rri_id' => $item ? intval($item['rri_id']) : 0,
+                'item_key' => $item ? intval($item['item_key']) : 0,
             ]);
             if (!$item) {
                 continue;
@@ -111,7 +111,6 @@ class RevenueCalculator
                 'sod_total_price' => $amount,
                 'rule_mode' => 2,
                 'rr_id' => $rentalRule['rr_id'],
-                'rri_id' => $item['rri_id'],
                 'payer_ao_id' => $payerAoId,
                 'receiver_ao_id' => $receiverAoId,
                 'calc_type' => intval($item['calc_type']),
@@ -153,18 +152,18 @@ class RevenueCalculator
             }
             $detailAllocatedAmount = '0.00';
             $matchedItemCount = 0;
-            $matchedRriIds = [];
+            $matchedItemKeys = [];
             foreach ($items as $item) {
                 if (intval($item['g_id'] ?? 0) > 0 && intval($item['g_id'] ?? 0) !== $gId) continue;
                 $hasMatchedRuleItem = true;
                 $matchedItemCount++;
-                $matchedRriIds[] = intval($item['rri_id']);
+                $matchedItemKeys[] = intval($item['item_key']);
                 $account = $this->getAccountById(intval($item['ra_id']));
                 if (!$account) {
                     $this->logRevenueConfig('分账账户查询', [
                         'source' => 'product_rule',
                         'ra_id' => intval($item['ra_id']),
-                        'rri_id' => intval($item['rri_id']),
+                        'item_key' => intval($item['item_key']),
                         'g_id' => $gId,
                         'found_account' => 0,
                     ]);
@@ -186,7 +185,6 @@ class RevenueCalculator
                     'sod_total_price' => $detailAmount,
                     'rule_mode' => 4,
                     'rr_id' => $rule['rr_id'],
-                    'rri_id' => $item['rri_id'],
                     'payer_ao_id' => intval($this->order['ao_id'] ?? 0),
                     'receiver_ao_id' => intval($item['receiver_ao_id']),
                     'calc_type' => intval($item['calc_type']),
@@ -202,7 +200,7 @@ class RevenueCalculator
                 'mg_id' => intval($detail['mg_id'] ?? 0),
                 'base_amount' => $baseAmount,
                 'matched_item_count' => $matchedItemCount,
-                'matched_rri_ids' => $matchedRriIds,
+                'matched_item_keys' => $matchedItemKeys,
             ]);
         }
         return $hasMatchedRuleItem;
@@ -233,7 +231,6 @@ class RevenueCalculator
         $this->logRevenueConfig('优惠券分账编码查询', [
             'coupon_code' => $couponCode,
             'found_coupon' => $coupon ? 1 : 0,
-            'rrc_id' => $coupon ? intval($coupon['rrc_id']) : 0,
             'rr_id' => $coupon ? intval($coupon['rr_id']) : 0,
         ]);
         if (!$coupon) {
@@ -242,7 +239,7 @@ class RevenueCalculator
 
         $usable = RevenueCouponService::checkUsable($coupon);
         $this->logRevenueConfig('优惠券分账可用性校验', [
-            'rrc_id' => intval($coupon['rrc_id'] ?? 0),
+            'rr_id' => intval($coupon['rr_id'] ?? 0),
             'coupon_code' => $coupon['coupon_code'] ?? '',
             'usable' => $usable['usable'] ? 1 : 0,
             'remain_count' => intval($coupon['remain_count'] ?? 0),
@@ -256,7 +253,7 @@ class RevenueCalculator
         $matched = RevenueCouponService::matchScope($coupon, $this->order, $this->details, $this->rentalAmountsBySod, $this->rentalAmount);
         $this->logRevenueConfig('优惠券分账范围匹配', [
             'coupon_code' => $couponCode,
-            'rrc_id' => intval($coupon['rrc_id']),
+            'rr_id' => intval($coupon['rr_id']),
             'matched' => $matched['matched'] ? 1 : 0,
             'scope_type' => $matched['scope_type'],
             'base_amount' => $matched['base_amount'],
@@ -269,9 +266,8 @@ class RevenueCalculator
         $items = $this->getRuleItems($coupon);
         $this->logRevenueConfig('优惠券分账规则明细查询', [
             'rr_id' => intval($coupon['rr_id']),
-            'rrc_id' => intval($coupon['rrc_id']),
             'item_count' => count($items),
-            'rri_ids' => $this->collectColumnValues($items, 'rri_id'),
+            'item_keys' => $this->collectColumnValues($items, 'item_key'),
         ]);
         if (!$items) {
             return false;
@@ -285,7 +281,7 @@ class RevenueCalculator
                 $this->logRevenueConfig('分账账户查询', [
                     'source' => 'coupon_rule',
                     'ra_id' => intval($item['ra_id']),
-                    'rri_id' => intval($item['rri_id']),
+                    'item_key' => intval($item['item_key']),
                     'found_account' => 0,
                 ]);
                 continue;
@@ -303,13 +299,6 @@ class RevenueCalculator
             $this->records[] = $this->buildRecord([
                 'rule_mode' => 5,
                 'rr_id' => intval($coupon['rr_id']),
-                'rri_id' => intval($item['rri_id']),
-                'rrc_id' => intval($coupon['rrc_id']),
-                'coupon_code' => $couponCode,
-                'coupon_scope_type' => $matched['scope_type'],
-                'coupon_use_count_before' => intval($coupon['remain_count'] ?? 0),
-                'coupon_use_count_after' => max(0, intval($coupon['remain_count'] ?? 0) - 1),
-                'coupon_use_deducted' => 0,
                 'payer_ao_id' => intval($this->order['ao_id'] ?? 0),
                 'receiver_ao_id' => intval($item['receiver_ao_id']),
                 'calc_type' => intval($item['calc_type']),
@@ -342,7 +331,7 @@ class RevenueCalculator
             'rr_id' => intval($rule['rr_id']),
             'rule_mode' => $ruleMode,
             'item_count' => count($items),
-            'rri_ids' => $this->collectColumnValues($items, 'rri_id'),
+            'item_keys' => $this->collectColumnValues($items, 'item_key'),
         ]);
         if (!$items) {
             return false;
@@ -376,7 +365,7 @@ class RevenueCalculator
                 $this->logRevenueConfig('分账账户查询', [
                     'source' => $isLegacyDeviceRule ? 'device_rule' : 'base_rule',
                     'ra_id' => intval($item['ra_id']),
-                    'rri_id' => intval($item['rri_id']),
+                    'item_key' => intval($item['item_key']),
                     'found_account' => 0,
                 ]);
                 continue;
@@ -396,8 +385,6 @@ class RevenueCalculator
             $this->records[] = $this->buildRecord([
                 'rule_mode' => $ruleMode,
                 'rr_id' => $rule['rr_id'],
-                'rri_id' => $item['rri_id'],
-                'rrit_id' => $calc['rrit_id'] ?? null,
                 'payer_ao_id' => intval($this->order['ao_id'] ?? 0),
                 'receiver_ao_id' => intval($item['receiver_ao_id']),
                 'calc_type' => intval($item['calc_type']),
@@ -455,14 +442,12 @@ class RevenueCalculator
             $tier = $this->getMatchedTier($item, $periodAfter);
             if (!$tier) {
                 return [
-                    'rrit_id' => null,
                     'income_value' => '0.000',
                     'income_amount' => '0.00',
                 ];
             }
             $value = $this->money($tier['calc_value'] ?? 0, 3);
             return [
-                'rrit_id' => $tier['rrit_id'],
                 'income_value' => $value,
                 'income_amount' => $this->percent($baseAmount, $value),
             ];
@@ -506,7 +491,7 @@ class RevenueCalculator
     {
         $tiers = $this->getItemTiers($item);
         if (!$tiers) {
-            throw new \Exception("分账策略明细{$item['rri_id']}未配置阶梯区间");
+            throw new \Exception("分账接收方{$item['item_key']}未配置阶梯区间");
         }
         $incomeAmount = '0.00';
         foreach ($tiers as $tier) {
@@ -593,12 +578,6 @@ class RevenueCalculator
         $messages = [
             'g_id' => '设备商品分账缺少 revenue_order.g_id 字段，请先执行 文档说明/设备商品分账数据库变更.sql',
             'mg_id' => '设备商品分账缺少 revenue_order.mg_id 字段，请先执行 文档说明/设备商品分账数据库变更.sql',
-            'rrc_id' => '优惠券分账缺少 revenue_order.rrc_id 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
-            'coupon_code' => '优惠券分账缺少 revenue_order.coupon_code 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
-            'coupon_scope_type' => '优惠券分账缺少 revenue_order.coupon_scope_type 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
-            'coupon_use_count_before' => '优惠券分账缺少 revenue_order.coupon_use_count_before 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
-            'coupon_use_count_after' => '优惠券分账缺少 revenue_order.coupon_use_count_after 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
-            'coupon_use_deducted' => '优惠券分账缺少 revenue_order.coupon_use_deducted 字段，请先执行 文档说明/优惠券分账数据库变更.sql',
         ];
         return $messages[$field] ?? '';
     }
@@ -610,18 +589,6 @@ class RevenueCalculator
             if (array_key_exists('g_id', $record) || array_key_exists('mg_id', $record)) {
                 $required['g_id'] = '设备商品分账缺少 revenue_order.g_id 字段，请先执行 文档说明/设备商品分账数据库变更.sql';
                 $required['mg_id'] = '设备商品分账缺少 revenue_order.mg_id 字段，请先执行 文档说明/设备商品分账数据库变更.sql';
-            }
-            if (intval($record['rule_mode'] ?? 0) === 5) {
-                foreach ([
-                    'rrc_id',
-                    'coupon_code',
-                    'coupon_scope_type',
-                    'coupon_use_count_before',
-                    'coupon_use_count_after',
-                    'coupon_use_deducted',
-                ] as $field) {
-                    $required[$field] = "优惠券分账缺少 revenue_order.{$field} 字段，请先执行 文档说明/优惠券分账数据库变更.sql";
-                }
             }
         }
         if (!$required) {
@@ -711,7 +678,7 @@ class RevenueCalculator
             'rule_mode' => intval($mode),
             'found_rule' => $rule ? 1 : 0,
             'rr_id' => $rule ? intval($rule['rr_id']) : 0,
-            'rule_name' => $rule ? ($rule['rule_name'] ?? '') : '',
+            'config_name' => $rule ? ($rule['config_name'] ?? '') : '',
         ]);
         return $rule;
     }
@@ -793,8 +760,6 @@ class RevenueCalculator
     protected function normalizeConfigRule(array $rule)
     {
         $rule['rr_id'] = intval($rule['rrcfg_id'] ?? ($rule['rr_id'] ?? 0));
-        $rule['rrc_id'] = intval($rule['rrcfg_id'] ?? ($rule['rrc_id'] ?? 0));
-        $rule['rule_name'] = $rule['config_name'] ?? ($rule['rule_name'] ?? '');
         return $rule;
     }
 
@@ -814,8 +779,7 @@ class RevenueCalculator
                 continue;
             }
             $item['rr_id'] = intval($rule['rr_id'] ?? 0);
-            $item['rri_id'] = intval($item['rri_id'] ?? ($item['item_key'] ?? ($index + 1)));
-            $item['item_key'] = intval($item['item_key'] ?? $item['rri_id']);
+            $item['item_key'] = intval($item['item_key'] ?? ($index + 1));
             $item['receiver_ao_id'] = intval($item['receiver_ao_id'] ?? 0);
             $item['ra_id'] = intval($item['ra_id'] ?? 0);
             $item['manager_id'] = intval($item['manager_id'] ?? 0);
@@ -828,7 +792,7 @@ class RevenueCalculator
         }
         usort($items, function ($left, $right) {
             $sort = intval($left['sort'] ?? 0) - intval($right['sort'] ?? 0);
-            return $sort !== 0 ? $sort : intval($left['rri_id'] ?? 0) - intval($right['rri_id'] ?? 0);
+            return $sort !== 0 ? $sort : intval($left['item_key'] ?? 0) - intval($right['item_key'] ?? 0);
         });
         return $items;
     }
@@ -848,8 +812,7 @@ class RevenueCalculator
             if (!is_array($tier) || intval($tier['status'] ?? 1) !== 1) {
                 continue;
             }
-            $tier['rrit_id'] = intval($tier['rrit_id'] ?? ($tier['tier_key'] ?? ($index + 1)));
-            $tier['tier_key'] = intval($tier['tier_key'] ?? $tier['rrit_id']);
+            $tier['tier_key'] = intval($tier['tier_key'] ?? ($index + 1));
             $tier['threshold_min'] = $tier['threshold_min'] ?? 0;
             $tier['threshold_max'] = $tier['threshold_max'] ?? null;
             $tier['calc_value'] = $tier['calc_value'] ?? 0;
@@ -857,7 +820,7 @@ class RevenueCalculator
         }
         usort($result, function ($left, $right) {
             if (floatval($left['threshold_min'] ?? 0) == floatval($right['threshold_min'] ?? 0)) {
-                return intval($left['rrit_id'] ?? 0) - intval($right['rrit_id'] ?? 0);
+                return intval($left['tier_key'] ?? 0) - intval($right['tier_key'] ?? 0);
             }
             return floatval($left['threshold_min'] ?? 0) < floatval($right['threshold_min'] ?? 0) ? -1 : 1;
         });

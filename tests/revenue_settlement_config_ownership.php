@@ -4,7 +4,7 @@
  * 结算时间配置归属检查。
  *
  * 渠道表只负责控制支付渠道是否触发分账；
- * 每条分账订单从实际命中的 revenue_rule 写入结算时间快照。
+ * 每条分账订单从实际命中的 revenue_rule_config 写入结算时间快照。
  */
 
 $root = dirname(__DIR__);
@@ -14,8 +14,8 @@ $channelModel = file_get_contents($root . '/app/AppFactory/Kernel/Model/Revenue/
 $channelValidator = file_get_contents($root . '/app/management/validate/VRevenuePayChannel.php');
 $channelController = file_get_contents($root . '/app/management/controller/revenue/RevenuePayChannel.php');
 $ruleClient = file_get_contents($root . '/app/AppFactory/Management/Revenue/RevenueRuleClient.php');
-$ruleModel = file_get_contents($root . '/app/AppFactory/Kernel/Model/Revenue/RevenueRuleModel.php');
-$databaseChange = file_get_contents($root . '/文档说明/新分账数据库初始化.sql');
+$ruleModel = file_get_contents($root . '/app/AppFactory/Kernel/Model/Revenue/RevenueRuleConfigModel.php');
+$databaseChange = file_get_contents($root . '/文档说明/统一分账配置数据库变更.sql');
 $failures = [];
 
 if (strpos($calculator, "\$rule['settlement_type']") === false
@@ -47,7 +47,7 @@ if (strpos($ruleClient, 'T+N 分账天数必须大于0') === false
 }
 
 preg_match('/CREATE TABLE IF NOT EXISTS `revenue_pay_channel` \\((.*?)\\) ENGINE=/s', $databaseChange, $channelTable);
-preg_match('/CREATE TABLE IF NOT EXISTS `revenue_rule` \\((.*?)\\) ENGINE=/s', $databaseChange, $ruleTable);
+preg_match('/CREATE TABLE IF NOT EXISTS `revenue_rule_config` \\((.*?)\\) ENGINE=/s', $databaseChange, $ruleTable);
 if (strpos($channelTable[1] ?? '', '`settlement_type`') !== false) {
     $failures[] = '初始化 SQL 的 revenue_pay_channel 仍包含结算时间字段';
 }
@@ -56,10 +56,11 @@ if (strpos($channelTable[1] ?? '', '`payee_type`') !== false) {
 }
 if (strpos($ruleTable[1] ?? '', '`settlement_type`') === false
     || strpos($ruleTable[1] ?? '', '`settlement_days`') === false) {
-    $failures[] = '初始化 SQL 的 revenue_rule 缺少结算时间字段';
+    $failures[] = '初始化 SQL 的 revenue_rule_config 缺少结算时间字段';
 }
-if (strpos($databaseChange, 'CREATE TABLE IF NOT EXISTS `revenue_payee_config`') !== false) {
-    $failures[] = '初始化 SQL 仍创建 revenue_payee_config';
+if (strpos($databaseChange, 'CREATE TABLE IF NOT EXISTS `revenue_rule`') !== false
+    || strpos($databaseChange, 'CREATE TABLE IF NOT EXISTS `revenue_payee_config`') !== false) {
+    $failures[] = '统一配置初始化 SQL 仍创建旧分账表';
 }
 
 if ($failures) {

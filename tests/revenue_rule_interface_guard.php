@@ -13,9 +13,9 @@ $checks = [
     'addData writes unified config table' => strpos($client, 'addRevenueRuleConfig($config)') !== false,
     'updateData writes unified config table' => strpos($client, 'updateRevenueRuleConfig($update') !== false,
     'scope save writes unified scope table' => strpos($client, 'replaceConfigScopes($rrcfgId') !== false,
-    'receiver items are saved in receiver_config' => strpos($client, 'saveConfigItems($rrcfgId, $items)') !== false,
+    'receiver items are saved in receiver_config' => strpos($client, 'encodeReceiverConfig') !== false,
     'tier items are saved in receiver_config tiers' => strpos($client, 'normalizeConfigTier') !== false,
-    'old bindMachine remains compatible' => strpos($validator, '"bindMachine" => ["rr_id"]') !== false,
+    'old bindMachine interface removed' => strpos($validator, '"bindMachine"') === false && strpos($controller, 'function bindMachine') === false,
     'calculator reads unified config scope' => strpos($calculator, 'RevenueRuleConfigScopeModel::alias') !== false,
     'calculator parses receiver_config' => strpos($calculator, 'getRuleItems(array $rule)') !== false,
 ];
@@ -31,5 +31,5 @@ if ($failures) {
 }
 
 echo "[PASS] 统一分账接口读写 revenue_rule_config / revenue_rule_config_scope\n";
-echo "[PASS] 旧接口名保持兼容，新入口 saveConfig/saveScope 可用于前端对接\n";
+echo "[PASS] 旧接口名已移除，新入口 saveConfig/saveScope 可用于前端对接\n";
 echo "\nSummary: passed=" . count($checks) . ", failed=0\n";

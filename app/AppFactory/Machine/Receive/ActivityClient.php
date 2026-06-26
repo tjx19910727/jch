@@ -147,7 +147,7 @@ class ActivityClient extends ReceiveBaseClient
             return $this->rFail($this->lang("VActivityCoupon.check_no_code"));
         }
 
-        $coupon = RevenueCouponService::findEnabledCouponByCode($couponCode, 'rrc.*,rr.rule_name,rr.rule_mode');
+        $coupon = RevenueCouponService::findEnabledCouponByCode($couponCode);
         if (!$coupon) {
             return $this->rFail($this->lang("VActivityCoupon.check_no_code"));
         }
@@ -183,7 +183,6 @@ class ActivityClient extends ReceiveBaseClient
             actionLog([
                 'order_id' => $this->order['order_id'],
                 'coupon_code' => $couponCode,
-                'rrc_id' => intval($coupon['rrc_id']),
                 'rr_id' => intval($coupon['rr_id']),
             ], '分账优惠券使用信息');
 

@@ -4,7 +4,6 @@ namespace app\AppFactory\Kernel\Traits\Revenue;
 
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleConfigModel;
 use app\AppFactory\Kernel\Model\Revenue\RevenueRuleConfigScopeModel;
-use app\AppFactory\Kernel\Model\Revenue\RevenueRuleModel;
 
 trait RevenueRuleTrait
 {
@@ -63,32 +62,4 @@ trait RevenueRuleTrait
         return RevenueRuleConfigScopeModel::destroy($where);
     }
 
-    public function getRevenueRuleFind($where, $field = "*", $order = "")
-    {
-        return RevenueRuleModel::getFind($where, $field, $order);
-    }
-
-    public function getRevenueRuleList($where, $pageNum = 0, $field = "*", $order = "rr_id desc")
-    {
-        return RevenueRuleModel::getList($where, $pageNum, $field, $order);
-    }
-
-    public function addRevenueRule($insert)
-    {
-        if (isset($this->manager['manager_id']) && !isset($insert['creator'])) {
-            $insert['creator'] = $this->manager['manager_id'];
-        }
-        $data = RevenueRuleModel::create($insert);
-        return $data->rr_id;
-    }
-
-    public function updateRevenueRule($update, $where = [], $field = [])
-    {
-        return RevenueRuleModel::update($update, $where, $field);
-    }
-
-    public function delRevenueRule($where)
-    {
-        return RevenueRuleModel::destroy($where);
-    }
 }
