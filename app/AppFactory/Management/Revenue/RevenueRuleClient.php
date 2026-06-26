@@ -94,11 +94,10 @@ class RevenueRuleClient extends ManagementClient
     public function getList($where= [], $pageNum = 0, $field = "*", $order = "rrcfg_id desc",$rQ = 1)
     {
         $where = $this->normalizeConfigWhere($where);
-        return $this->rQ($this->appendRevenueOrganizationNames(
-            $this->appendConfigScopeNums(
-                $this->formatConfigRows($this->getRevenueRuleConfigList($where, $pageNum, "*", $order))
-            )
-        ));
+        $data = $this->formatConfigRows($this->getRevenueRuleConfigList($where, $pageNum, "*", $order));
+        $data = $this->appendConfigScopeNums($data);
+        $data = $this->appendConfigScopes($data);
+        return $this->rQ($this->appendRevenueOrganizationNames($data));
     }
 
     public function getFind($where = [], $field = "*", $order = "rrcfg_id desc",$rQ = 1)
@@ -452,6 +451,27 @@ class RevenueRuleClient extends ManagementClient
         return $this->fillConfigScopeNums($data, $nums);
     }
 
+    protected function appendConfigScopes($data)
+    {
+        if (is_object($data) && method_exists($data, 'toArray')) $data = $data->toArray();
+        if (!is_array($data)) return $data;
+        $configIds = [];
+        $this->collectConfigIds($data, $configIds);
+        if (!$configIds) return $data;
+        $rows = RevenueRuleConfigScopeModel::whereIn('rrcfg_id', array_keys($configIds))
+            ->order('sort asc,rrcs_id asc')
+            ->select()
+            ->toArray();
+        $scopes = [];
+        foreach ($this->formatScopeRows($rows) as $row) {
+            $rrcfgId = intval($row['rrcfg_id'] ?? 0);
+            if ($rrcfgId <= 0) continue;
+            if (!isset($scopes[$rrcfgId])) $scopes[$rrcfgId] = [];
+            $scopes[$rrcfgId][] = $row;
+        }
+        return $this->fillConfigScopes($data, $scopes);
+    }
+
     protected function collectConfigIds(array $data, array &$configIds)
     {
         foreach ($data as $field => $value) {
@@ -464,6 +484,19 @@ class RevenueRuleClient extends ManagementClient
     {
         if (isset($data['rrcfg_id'])) $data['machine_num'] = $nums[intval($data['rrcfg_id'])] ?? 0;
         foreach ($data as &$value) if (is_array($value)) $value = $this->fillConfigScopeNums($value, $nums);
+        unset($value);
+        return $data;
+    }
+
+    protected function fillConfigScopes(array $data, array $scopes)
+    {
+        if (isset($data['rrcfg_id']) && !isset($data['rrcs_id'])) {
+            $data['scopes'] = $scopes[intval($data['rrcfg_id'])] ?? [];
+        }
+        foreach ($data as $field => &$value) {
+            if ($field === 'scopes') continue;
+            if (is_array($value)) $value = $this->fillConfigScopes($value, $scopes);
+        }
         unset($value);
         return $data;
     }

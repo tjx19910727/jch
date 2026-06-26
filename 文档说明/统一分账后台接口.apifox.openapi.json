@@ -63,7 +63,7 @@
       "post": {
         "tags": ["RevenueRule"],
         "summary": "分页查询分账配置",
-        "description": "查询 revenue_rule_config，并返回 receivers、machine_num 和组织名称。优惠券配置不再拆分到独立接口，rule_mode=5 直接从配置行返回 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。",
+        "description": "查询 revenue_rule_config，并返回 receivers、machine_num、完整 scopes 和组织名称。优惠券配置不再拆分到独立接口，rule_mode=5 直接从配置行返回 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。",
         "operationId": "revenueRuleGetList",
         "parameters": [
           {
@@ -84,7 +84,7 @@
       "post": {
         "tags": ["RevenueRule"],
         "summary": "查询单个分账配置",
-        "description": "按 rrcfg_id 或其他配置字段查询单条 revenue_rule_config。详情会额外读取 revenue_rule_config_scope 并返回完整 scopes；列表接口只返回 machine_num 作为范围数量。",
+        "description": "按 rrcfg_id 或其他配置字段查询单条 revenue_rule_config，并读取 revenue_rule_config_scope 返回完整 scopes。列表接口同样返回完整 scopes 和 machine_num。",
         "operationId": "revenueRuleGetFind",
         "parameters": [
           {

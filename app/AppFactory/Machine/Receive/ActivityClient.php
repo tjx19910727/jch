@@ -123,12 +123,7 @@ class ActivityClient extends ReceiveBaseClient
         // 有优惠券码，重新处理订单数据
         if (isset($this->data['coupon_code'])) {
             try {
-                $couponCode = trim(strval($this->data['coupon_code']));
-                if (RevenueCouponService::hasActivityCouponCode($couponCode)) {
-                    $result = $this->orderUseCoupon();
-                } else {
-                    $result = $this->orderUseRevenueCoupon($couponCode);
-                }
+                $result = $this->orderUseCoupon();
                 if ($result !== true) {
                     return $result;
                 }
@@ -139,6 +134,31 @@ class ActivityClient extends ReceiveBaseClient
             }
         }
         return $this->r(200,"操作成功",$this->order);
+    }
+
+    /**
+     * 使用分账优惠券
+     * @return array|bool|\think\response\Json
+     */
+    public function useRevenueCoupon()
+    {
+        $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
+        if (!$this->order) return $this->r(100, $this->lang("VActivityPickCode.order_no_data"));
+        if ($this->order['out_status'] != 1) return $this->r(100, $this->lang("VActivityPickCode."));
+
+        if (isset($this->data['coupon_code'])) {
+            try {
+                $result = $this->orderUseRevenueCoupon(trim(strval($this->data['coupon_code'])));
+                if ($result !== true) {
+                    return $result;
+                }
+                $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']], 0, '*');
+            } catch (\Exception $e) {
+                actionException($e, 1);
+                return $this->rTryCatch($e->getMessage());
+            }
+        }
+        return $this->r(200, "操作成功", $this->order);
     }
 
     protected function orderUseRevenueCoupon($couponCode)

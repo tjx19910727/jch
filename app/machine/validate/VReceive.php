@@ -194,6 +194,7 @@ class VReceive extends VCommon
         "useFd" => ["msg_id","machine_id","timestamp","sign","order_id","fd_id"],
         "usePickCode" => ["msg_id","machine_id","timestamp","sign","pick_code"],
         "useCoupon" => ["msg_id","machine_id","timestamp","sign","coupon_code"],
+        "useRevenueCoupon" => ["msg_id","machine_id","timestamp","sign","order_id","coupon_code"],
 
         "unclaimed" => ["msg_id","machine_id","timestamp","sign","order_id","details"],
 
