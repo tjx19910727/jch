@@ -104,9 +104,11 @@ class RevenueRuleClient extends ManagementClient
     public function getFind($where = [], $field = "*", $order = "rrcfg_id desc",$rQ = 1)
     {
         $where = $this->normalizeConfigWhere($where);
-        return $this->rQ($this->appendRevenueOrganizationNames(
-            $this->formatConfigRows($this->getRevenueRuleConfigFind($where, "*", $order))
-        ));
+        $data = $this->formatConfigRows($this->getRevenueRuleConfigFind($where, "*", $order));
+        if (is_array($data) && isset($data['rrcfg_id'])) {
+            $data['scopes'] = $this->getConfigScopes($data['rrcfg_id']);
+        }
+        return $this->rQ($this->appendRevenueOrganizationNames($data));
     }
 
     protected function getConfigIdFromData(array $data)

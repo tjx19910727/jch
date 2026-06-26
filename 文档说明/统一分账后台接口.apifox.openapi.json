@@ -84,7 +84,7 @@
       "post": {
         "tags": ["RevenueRule"],
         "summary": "查询单个分账配置",
-        "description": "按 rrcfg_id 或其他配置字段查询单条 revenue_rule_config。返回字段结构与 getList 一致。",
+        "description": "按 rrcfg_id 或其他配置字段查询单条 revenue_rule_config。详情会额外读取 revenue_rule_config_scope 并返回完整 scopes；列表接口只返回 machine_num 作为范围数量。",
         "operationId": "revenueRuleGetFind",
         "parameters": [
           {
