@@ -20,6 +20,8 @@ class CallbackClient extends ApiBaseClient
     use ApiCallbackTrait,ApiAdvanceTrait;
 
        public $callbackData;
+    protected $httpRetryTimes = 3;
+    protected $httpRetryInterval = 5;
 
     /**
      * @var array 各类型数据推送时间间隔，最多8次，最大7560秒
@@ -34,6 +36,8 @@ class CallbackClient extends ApiBaseClient
         "7" => [0,60,300,900,900,1800,3600,7200],
         "8" => [0,60,300,900,900,1800,3600,7200],
         "9" => [0,60],
+        "10" => [0,60,300,900,900,1800,3600,7200],
+        "11" => [0,60,300,900,900,1800,3600,7200],
     ];
     public $frequency = 0;
 
@@ -90,14 +94,15 @@ class CallbackClient extends ApiBaseClient
                 // 达到间隔时间，推送数据
                 if (time() - $value['create_time'] >= $time) {
                     if (!$value['uuid']) $value['uuid'] = uniqid();
-                    // 发起当前推送
-                    $curl = $this->curl_request($value['notify_url'], "POST", $value['message'],['Content-Type:application/json']);
+                    // 发起当前推送，HTTP 状态码非 200 时 5 秒间隔重试 3 次
+                    $curlResult = $this->sendCallbackWithHttpRetry($value['notify_url'], $value['message']);
+                    $curl = $curlResult['content'];
                     actionLog($value['message'],'推送数据',LOG_NAME);
-                    actionLog($curl,'推送结果',LOG_NAME);
+                    actionLog($curlResult,'推送结果',LOG_NAME);
                     $value['callback_time'] = date("Y-m-d H:i:s");
-                    $value['result'] = is_string($curl) ? $curl : json_encode($curl,320);
+                    $value['result'] = json_encode($curlResult,320);
                     // 返回成功
-                    if ($this->isCallbackSuccess($curl)) {
+                    if ($curlResult['http_code'] == 200 && $curl == "success") {
                         $value['callback_status'] = "success";
                         $this->updateApiCallback($value);
                     } else {
@@ -125,35 +130,54 @@ class CallbackClient extends ApiBaseClient
     }
 
     /**
-     * 判断外部回调是否成功。
-     * 历史接口返回纯文本 success，新接口可能返回 JSON：{"status":200,"data":"success","ok":true}。
-     * @param mixed $result
-     * @return bool
+     * HTTP 状态码非 200 时进行短间隔重试。
      */
-    protected function isCallbackSuccess($result)
+    protected function sendCallbackWithHttpRetry($url, $message): array
     {
-        if (is_string($result)) {
-            $result = trim($result);
-            if ($result === "success") return true;
-            $json = json_decode($result, true);
-            if (json_last_error() !== JSON_ERROR_NONE) return false;
-            $result = $json;
+        $result = [];
+        $maxAttempts = $this->httpRetryTimes + 1;
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $result = $this->sendCallbackHttpRequest($url, $message, $attempt);
+            if (intval($result['http_code']) === 200) {
+                break;
+            }
+            if ($attempt <= $this->httpRetryTimes) {
+                sleep($this->httpRetryInterval);
+            }
+        }
+        return $result;
+    }
+
+    protected function sendCallbackHttpRequest($url, $message, $attempt): array
+    {
+        $curl = curl_init($url);
+        curl_setopt($curl, CURLOPT_CUSTOMREQUEST, 'POST');
+        curl_setopt($curl, CURLOPT_POST, 1);
+        curl_setopt($curl, CURLOPT_POSTFIELDS, $message);
+        curl_setopt($curl, CURLOPT_HTTPHEADER, ['Content-Type:application/json']);
+        curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($curl, CURLOPT_TIMEOUT, 30);
+        curl_setopt($curl, CURLOPT_FAILONERROR, false);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_HEADER, true);
+        curl_setopt($curl, CURLINFO_HEADER_OUT, true);
+        if (1 == strpos("$" . $url, "https://")) {
+            curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+            curl_setopt($curl, CURLOPT_SSL_VERIFYHOST, false);
         }
 
-        if (!is_array($result)) return false;
+        $response = curl_exec($curl);
+        $error = curl_error($curl);
+        $status = curl_getinfo($curl);
+        curl_close($curl);
 
-        if (isset($result['content']) && is_string($result['content'])) {
-            if ($this->isCallbackSuccess($result['content'])) return true;
-        }
-
-        if (isset($result['data']) && is_string($result['data']) && trim($result['data']) === "success") return true;
-        if (isset($result['msg']) && is_string($result['msg']) && trim($result['msg']) === "success") return true;
-        if (isset($result['ok']) && $result['ok'] === true) return true;
-
-        foreach (['status', 'state', 'code', 'http_code'] as $field) {
-            if (isset($result[$field]) && intval($result[$field]) === 200) return true;
-        }
-
-        return false;
+        $content = is_string($response) ? trim(substr($response, $status['header_size'] ?? 0)) : '';
+        return [
+            'attempt' => $attempt,
+            'http_code' => intval($status['http_code'] ?? 0),
+            'content' => $content,
+            'error' => $error,
+            'url' => $url,
+        ];
     }
 }

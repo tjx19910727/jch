@@ -1,6 +1,6 @@
 <?php
 
 return [
-    // 四位特殊编码。留空时不启用特殊编码绕过订单校验。
-    'special_code' => env('refund_goods.special_code', ''),
+    // Leave empty to require every submitted code to match an order number suffix.
+    'special_code' => env('refund_goods.special_code', '0000'),
 ];

@@ -50,7 +50,9 @@ class ReceiveBaseClient extends MachineBaseClient
             die();
         }
 
-        $this->heartbeat();
+        if (!isset($this->data['msgType']) || (isset($this->data['msgType']) && $this->data['msgType'] != "heartbeat")) {
+            $this->heartbeat();
+        }
 
         $this->newRecord();
 
@@ -78,11 +80,20 @@ class ReceiveBaseClient extends MachineBaseClient
                 actionLog(['signKey' => $signKey], "SignKey","setSignKey");
 
                 if ($signKey) {
+                    $now = time();
+                    $expiresIn = intval(config('rabbit_mq.machine_sign_key_expires_in') ?: 3600);
+                    if ($expiresIn < 300) $expiresIn = 3600;
+                    $timestampTolerance = intval(config('rabbit_mq.machine_receive_timestamp_tolerance') ?: 180);
+                    if ($timestampTolerance < 120) $timestampTolerance = 120;
                     $data = [
                         "msg_id" => uniqid(),
-                        "timestamp" => time(),
+                        "timestamp" => $now,
+                        "server_time" => $now,
                         "machine_id" => $this->machine['machine_id'],
                         "signKey" => $signKey,
+                        "expires_in" => $expiresIn,
+                        "expires_at" => $now + $expiresIn,
+                        "timestamp_tolerance" => $timestampTolerance,
                     ];
                     actionLog($data, '发送至MQ服务器的数据',"setSignKey");
                     $this->dataRecord(2, 2);
