@@ -25,14 +25,14 @@ class RevenueRule extends Common
         $postData = input();
         $where = $this->getWhere($postData, false, ['config_name' => 'like']);
         $pageNum = $postData['pageNum'] ?? 0;
-        return $this->app->revenueRule->getList($where, $pageNum, "*", "rr_id desc");
+        return $this->app->revenueRule->getList($where, $pageNum, "*", "rrcfg_id desc");
     }
 
     public function getFind()
     {
         $postData = input();
         $where = $this->getWhere($postData);
-        return $this->app->revenueRule->getFind($where, "*", "rr_id desc");
+        return $this->app->revenueRule->getFind($where, "*", "rrcfg_id desc");
     }
 
 }

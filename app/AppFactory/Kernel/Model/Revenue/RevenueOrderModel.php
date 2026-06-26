@@ -25,7 +25,7 @@ class RevenueOrderModel extends BaseModel
         "sod_quantity" => "int",
         "sod_total_price" => "float",
         "rule_mode" => "int",
-        "rr_id" => "int",
+        "rrcfg_id" => "int",
         "payer_ao_id" => "int",
         "receiver_ao_id" => "int",
         "ra_id" => "int",

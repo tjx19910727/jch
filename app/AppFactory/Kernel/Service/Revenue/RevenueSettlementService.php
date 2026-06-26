@@ -115,8 +115,8 @@ class RevenueSettlementService
     protected function deductCouponUsage($orderId)
     {
         $records = RevenueOrderModel::where(['order_id' => intval($orderId), 'rule_mode' => 5, 'status' => 0])
-            ->field('rr_id')
-            ->group('rr_id')
+            ->field('rrcfg_id')
+            ->group('rrcfg_id')
             ->select()
             ->toArray();
         if (!$records) {
@@ -124,11 +124,11 @@ class RevenueSettlementService
         }
 
         foreach ($records as $record) {
-            $rrId = intval($record['rr_id'] ?? 0);
-            if ($rrId <= 0) {
+            $rrcfgId = intval($record['rrcfg_id'] ?? 0);
+            if ($rrcfgId <= 0) {
                 continue;
             }
-            $coupon = RevenueRuleConfigModel::where(['rrcfg_id' => $rrId, 'rule_mode' => 5])->lock(true)->find();
+            $coupon = RevenueRuleConfigModel::where(['rrcfg_id' => $rrcfgId, 'rule_mode' => 5])->lock(true)->find();
             if (!$coupon) {
                 throw new \Exception("优惠券分账配置不存在");
             }
@@ -149,7 +149,7 @@ class RevenueSettlementService
             if ($newRemainCount <= 0) {
                 $update['status'] = 2;
             }
-            RevenueRuleConfigModel::where(['rrcfg_id' => $rrId])->update($update);
+            RevenueRuleConfigModel::where(['rrcfg_id' => $rrcfgId])->update($update);
         }
 
         return true;

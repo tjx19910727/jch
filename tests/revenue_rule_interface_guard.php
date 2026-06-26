@@ -10,6 +10,7 @@ $failures = [];
 $checks = [
     'controller exposes unified saveConfig' => strpos($controller, 'public function saveConfig()') !== false,
     'controller exposes unified saveScope' => strpos($controller, 'public function saveScope()') !== false,
+    'controller orders by unified config id' => strpos($controller, '"rrcfg_id desc"') !== false && strpos($controller, '"rr_id desc"') === false,
     'addData writes unified config table' => strpos($client, 'addRevenueRuleConfig($config)') !== false,
     'updateData writes unified config table' => strpos($client, 'updateRevenueRuleConfig($update') !== false,
     'scope save writes unified scope table' => strpos($client, 'replaceConfigScopes($rrcfgId') !== false,

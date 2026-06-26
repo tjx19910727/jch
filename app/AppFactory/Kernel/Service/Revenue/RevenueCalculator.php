@@ -110,7 +110,7 @@ class RevenueCalculator
                 'sod_quantity' => $detail['quantity'] ?? 0,
                 'sod_total_price' => $amount,
                 'rule_mode' => 2,
-                'rr_id' => $rentalRule['rr_id'],
+                'rrcfg_id' => $rentalRule['rr_id'],
                 'payer_ao_id' => $payerAoId,
                 'receiver_ao_id' => $receiverAoId,
                 'calc_type' => intval($item['calc_type']),
@@ -184,7 +184,7 @@ class RevenueCalculator
                     'sod_quantity' => intval($detail['quantity'] ?? 0),
                     'sod_total_price' => $detailAmount,
                     'rule_mode' => 4,
-                    'rr_id' => $rule['rr_id'],
+                    'rrcfg_id' => $rule['rr_id'],
                     'payer_ao_id' => intval($this->order['ao_id'] ?? 0),
                     'receiver_ao_id' => intval($item['receiver_ao_id']),
                     'calc_type' => intval($item['calc_type']),
@@ -298,7 +298,7 @@ class RevenueCalculator
             $hasRecord = true;
             $this->records[] = $this->buildRecord([
                 'rule_mode' => 5,
-                'rr_id' => intval($coupon['rr_id']),
+                'rrcfg_id' => intval($coupon['rr_id']),
                 'payer_ao_id' => intval($this->order['ao_id'] ?? 0),
                 'receiver_ao_id' => intval($item['receiver_ao_id']),
                 'calc_type' => intval($item['calc_type']),
@@ -384,7 +384,7 @@ class RevenueCalculator
             }
             $this->records[] = $this->buildRecord([
                 'rule_mode' => $ruleMode,
-                'rr_id' => $rule['rr_id'],
+                'rrcfg_id' => $rule['rr_id'],
                 'payer_ao_id' => intval($this->order['ao_id'] ?? 0),
                 'receiver_ao_id' => intval($item['receiver_ao_id']),
                 'calc_type' => intval($item['calc_type']),
