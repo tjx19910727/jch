@@ -122,11 +122,17 @@ trait WcBaseTrait
         return $this->weicheng_curl($postUrl, []);
     }
 
-    public function synchronizeGoodsLists2Db($goods_lists, $type)
+    public function synchronizeGoodsLists2Db($goods_lists, $type, $syncBatchNo = '')
     {
         foreach ($goods_lists as $goods) {
+            if (empty($goods['no'])) {
+                continue;
+            }
             $wc_goods = $this->getWcGoodsFind(['no' => $goods['no']]);
             $goods['type'] = $type;
+            if ($syncBatchNo !== '') {
+                $goods['sync_status'] = $syncBatchNo . '_1';
+            }
             if (!$wc_goods) {
                 $this->addWcGoods($goods);
             } else {
@@ -148,8 +154,11 @@ trait WcBaseTrait
         return $this->weicheng_curl($postUrl, []);
     }
 
-    public function synchronizeGoods2Db($updateData)
+    public function synchronizeGoods2Db($updateData, $syncBatchNo = '')
     {
+        if ($syncBatchNo !== '') {
+            $updateData['sync_status'] = $syncBatchNo . '_1';
+        }
         $wc_goods = $this->getWcGoodsFind(['no' => $updateData['no']]);
         if (!$wc_goods) {
             $this->addWcGoods($updateData);

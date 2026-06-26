@@ -57,6 +57,32 @@ trait WcGoodsTrait
         return WcGoodsModel::update($update, $where, $field);
     }
 
+    /**
+     * 获取本次微程列表同步未返回的商品编码。
+     */
+    public function getWcGoodsMissingSyncOutNos($onlineStatus, $goodsType = 0)
+    {
+        $query = WcGoodsModel::where('id', '>', 0)
+            ->whereRaw('(`sync_status` <> ? OR `sync_status` IS NULL)', [$onlineStatus]);
+        if ($goodsType) {
+            $query->where('type', '=', $goodsType);
+        }
+        return $query->column('no');
+    }
+
+    /**
+     * 标记本次微程列表同步未返回的商品。
+     */
+    public function updateWcGoodsMissingSyncStatus($onlineStatus, $offlineStatus, $goodsType = 0)
+    {
+        $query = WcGoodsModel::where('id', '>', 0)
+            ->whereRaw('(`sync_status` <> ? OR `sync_status` IS NULL)', [$onlineStatus]);
+        if ($goodsType) {
+            $query->where('type', '=', $goodsType);
+        }
+        return $query->update(['sync_status' => $offlineStatus]);
+    }
+
     public function delWcGoods($where)
     {
         return WcGoodsModel::whereDel($where);
@@ -179,6 +205,15 @@ trait WcGoodsTrait
         return WcMachineChannelModel::whereDel($where);
     }
 
+    /**
+     * 删除指定微程商品在设备虚拟货道中的绑定。
+     */
+    public function deleteWcMachineChannelByOutNos(array $outNos)
+    {
+        if (!$outNos) return 0;
+        return WcMachineChannelModel::where('out_no', 'in', $outNos)->delete();
+    }
+
     public function getWcMachineGoodsList($where, $pageNum = 0, $field = "*", $order = "", $eachFun = "", $group = "")
     {
         return WcMachineGoodsModel::getList($where, $pageNum, $field, $order, $eachFun, $group);
@@ -210,6 +245,17 @@ trait WcGoodsTrait
     public function updateWcMachineGoods($update, $where = [], $field = [])
     {
         return WcMachineGoodsModel::update($update, $where, $field);
+    }
+
+    /**
+     * 将指定微程商品在设备上的在线绑定标记为下架。
+     */
+    public function offShelfWcMachineGoodsByOutNos(array $outNos)
+    {
+        if (!$outNos) return 0;
+        return WcMachineGoodsModel::where('is_shelf', '=', 1)
+            ->where('out_no', 'in', $outNos)
+            ->update(['is_shelf' => 2]);
     }
 
     public function delWcMachineGoods($where)
