@@ -84,6 +84,14 @@ ALTER TABLE `auth_node`
     COMMENT '权限动作：menu/create/delete/update/query/unclassified' AFTER `data_auth`,
   ADD INDEX `idx_permission_action` (`permission_action`);
 
+
+ALTER TABLE `auth_manager`
+  ADD COLUMN `role_template_id` int NOT NULL DEFAULT 0
+  COMMENT '账号直接绑定的角色权限模板ID，单账号仅允许一个模板'
+  AFTER `use_role_template`;
+
+ALTER TABLE `auth_manager`
+  ADD INDEX `idx_role_template_id` (`role_template_id`);
 -- ============================================================
 -- 三、现有权限节点初始化分类
 -- ============================================================
