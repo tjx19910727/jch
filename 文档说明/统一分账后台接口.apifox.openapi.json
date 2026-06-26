@@ -1,0 +1,709 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "统一分账后台接口",
+    "version": "2.1.0",
+    "description": "新版分账配置只使用 revenue_rule_config 与 revenue_rule_config_scope 两张配置表。推荐前端使用 saveConfig 保存主配置和接收方配置，使用 saveScope 保存生效范围。旧接口名仍保留兼容，但底层同样写入新表。所有后台接口均为 POST，并携带 Header token: {{token}}。"
+  },
+  "servers": [
+    { "url": "{{baseUrl}}" }
+  ],
+  "paths": {
+    "/management/revenue.revenue_rule/saveConfig": {
+      "post": {
+        "summary": "保存统一分账配置",
+        "description": "新增或更新 revenue_rule_config。传 rrcfg_id/rr_id 为更新，不传为新增。一次可保存主配置、接收方 receivers、优惠券字段和 scopes 生效范围。",
+        "operationId": "revenueRuleSaveConfig",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/SaveConfigRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/saveScope": {
+      "post": {
+        "summary": "保存配置生效范围",
+        "description": "替换写入 revenue_rule_config_scope。用于单独维护一条配置在哪些设备、商品或设备商品上生效。",
+        "operationId": "revenueRuleSaveScope",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/SaveScopeRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/getList": {
+      "post": {
+        "summary": "查询分账配置列表",
+        "description": "查询 revenue_rule_config。返回兼容字段 rr_id、rule_name、machine_num、receivers，供旧页面继续展示。",
+        "operationId": "revenueRuleGetList",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/ListRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/getFind": {
+      "post": {
+        "summary": "查询分账配置详情",
+        "description": "按 rrcfg_id 或兼容字段 rr_id 查询单条 revenue_rule_config，返回 receivers 接收方配置。",
+        "operationId": "revenueRuleGetFind",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/FindConfigRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/add": {
+      "post": {
+        "summary": "兼容新增分账配置",
+        "description": "兼容旧新增接口。底层写入 revenue_rule_config，参数同 saveConfig；推荐新页面直接调用 saveConfig。",
+        "operationId": "revenueRuleAddCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/SaveConfigRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/update": {
+      "post": {
+        "summary": "兼容修改分账配置",
+        "description": "兼容旧修改接口。必须传 rrcfg_id 或 rr_id。底层更新 revenue_rule_config，可同时替换 receivers 和 scopes。",
+        "operationId": "revenueRuleUpdateCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/SaveConfigRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/addItem": {
+      "post": {
+        "summary": "兼容新增接收方配置",
+        "description": "向 receiver_config JSON 追加一个接收方项，返回 item_key/rri_id。推荐新页面直接在 saveConfig.receivers 中整体保存。",
+        "operationId": "revenueRuleAddItemCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/ReceiverItemRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/updateItem": {
+      "post": {
+        "summary": "兼容修改接收方配置",
+        "description": "按 rr_id/rrcfg_id + rri_id/item_key 修改 receiver_config 中的一项。推荐新页面直接在 saveConfig.receivers 中整体保存。",
+        "operationId": "revenueRuleUpdateItemCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/ReceiverItemRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/addProductItem": {
+      "post": {
+        "summary": "兼容新增设备商品接收方",
+        "description": "兼容旧设备商品分账明细新增接口。底层仍写入 receiver_config，语义等同 addItem，但通常会传 g_id 或 mg_id。",
+        "operationId": "revenueRuleAddProductItemCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/ReceiverItemRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/getItemList": {
+      "post": {
+        "summary": "查询接收方配置",
+        "description": "从 revenue_rule_config.receiver_config 解析返回接收方列表。必须传 rrcfg_id 或 rr_id。",
+        "operationId": "revenueRuleGetItemList",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/FindConfigRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/delItem": {
+      "post": {
+        "summary": "删除接收方配置",
+        "description": "从 receiver_config JSON 删除一个接收方项。必须传 rr_id/rrcfg_id 和 rri_id/item_key。",
+        "operationId": "revenueRuleDelItemCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/DeleteItemRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/addTier": {
+      "post": {
+        "summary": "兼容新增阶梯区间",
+        "description": "向指定接收方 receivers[].tiers 追加阶梯区间。rule_mode=1 新基础/设备分账和历史兼容 rule_mode=3 的 calc_type=4 使用。",
+        "operationId": "revenueRuleAddTierCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/TierRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/updateTier": {
+      "post": {
+        "summary": "兼容修改阶梯区间",
+        "description": "按 rr_id/rrcfg_id + rri_id/item_key + rrit_id/tier_key 修改 receiver_config 中的阶梯区间。",
+        "operationId": "revenueRuleUpdateTierCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/TierRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/getTierList": {
+      "post": {
+        "summary": "查询阶梯区间",
+        "description": "查询指定接收方 receivers[].tiers。必须传 rr_id/rrcfg_id 和 rri_id/item_key。",
+        "operationId": "revenueRuleGetTierList",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/FindTierRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/delTier": {
+      "post": {
+        "summary": "删除阶梯区间",
+        "description": "删除指定接收方的一个阶梯区间。必须传 rr_id/rrcfg_id、rri_id/item_key、rrit_id/tier_key。",
+        "operationId": "revenueRuleDelTierCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/DeleteTierRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/bindMachine": {
+      "post": {
+        "summary": "兼容绑定设备范围",
+        "description": "向 revenue_rule_config_scope 增加设备范围。兼容旧 m_ids 批量绑定设备接口。",
+        "operationId": "revenueRuleBindMachineCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/BindMachineRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/getMachineList": {
+      "post": {
+        "summary": "查询生效范围列表",
+        "description": "查询 revenue_rule_config_scope。可用于查看设备、商品、设备商品范围。",
+        "operationId": "revenueRuleGetMachineList",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/ScopeListRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/getBoundMachineList": {
+      "post": {
+        "summary": "查询已绑定设备",
+        "description": "查询 revenue_rule_config_scope 中 m_id > 0 且 g_id/mg_id 为 0 的设备范围，返回兼容字段 rrm_id/rr_id。",
+        "operationId": "revenueRuleGetBoundMachineList",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/FindConfigRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/unbindMachine": {
+      "post": {
+        "summary": "解绑生效范围",
+        "description": "按 rrm_id 删除 revenue_rule_config_scope 记录。rrm_id 为兼容字段，等同新版 rrcs_id。",
+        "operationId": "revenueRuleUnbindMachineCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/UnbindMachineRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/saveCouponConfig": {
+      "post": {
+        "summary": "兼容保存优惠券配置",
+        "description": "兼容旧优惠券配置接口。rule_mode=5 时，同一条 revenue_rule_config 就是一张券；本接口只更新该配置上的券字段和 scopes。",
+        "operationId": "revenueRuleSaveCouponConfigCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/CouponConfigRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    },
+    "/management/revenue.revenue_rule/getCouponConfig": {
+      "post": {
+        "summary": "兼容查询优惠券配置",
+        "description": "按 rrc_id 或 rr_id 查询 rule_mode=5 的 revenue_rule_config，并返回 scopes。",
+        "operationId": "revenueRuleGetCouponConfigCompat",
+        "parameters": [{ "$ref": "#/components/parameters/token" }],
+        "requestBody": { "$ref": "#/components/requestBodies/FindCouponRequest" },
+        "responses": { "200": { "$ref": "#/components/responses/CommonResponse" } }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "token": {
+        "name": "token",
+        "in": "header",
+        "required": true,
+        "schema": { "type": "string", "example": "{{token}}" },
+        "description": "后台登录 token，固定从 Apifox 环境变量读取 {{token}}"
+      }
+    },
+    "requestBodies": {
+      "SaveConfigRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/SaveConfigRequest" },
+            "examples": {
+              "rule_mode_1_normal": { "$ref": "#/components/examples/RuleMode1Normal" },
+              "rule_mode_2_rental": { "$ref": "#/components/examples/RuleMode2Rental" },
+              "rule_mode_3_device_tier": { "$ref": "#/components/examples/RuleMode3DeviceTier" },
+              "rule_mode_4_product": { "$ref": "#/components/examples/RuleMode4Product" },
+              "rule_mode_5_coupon": { "$ref": "#/components/examples/RuleMode5Coupon" }
+            }
+          }
+        }
+      },
+      "SaveScopeRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/SaveScopeRequest" },
+            "examples": {
+              "replaceScopes": {
+                "summary": "替换配置生效范围",
+                "value": {
+                  "rrcfg_id": 101,
+                  "scopes": [
+                    { "m_id": 407, "g_id": 0, "mg_id": 0, "sort": 1, "status": 1 },
+                    { "m_id": 407, "g_id": 88, "mg_id": 0, "sort": 2, "status": 1 }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "ListRequest": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ListRequest" },
+            "examples": {
+              "list": {
+                "summary": "按模式查询",
+                "value": { "rule_mode": 5, "config_name": "券", "status": 1, "pageNum": 20 }
+              }
+            }
+          }
+        }
+      },
+      "FindConfigRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/FindConfigRequest" },
+            "examples": { "find": { "summary": "查询单条配置", "value": { "rrcfg_id": 101 } } }
+          }
+        }
+      },
+      "ReceiverItemRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ReceiverItemRequest" },
+            "examples": {
+              "addReceiver": {
+                "summary": "新增接收方",
+                "value": { "rrcfg_id": 101, "receiver_ao_id": 17, "ra_id": 3, "calc_type": 1, "calc_value": 20, "sort": 1 }
+              }
+            }
+          }
+        }
+      },
+      "DeleteItemRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/DeleteItemRequest" },
+            "examples": { "delete": { "summary": "删除接收方", "value": { "rrcfg_id": 101, "rri_id": 1 } } }
+          }
+        }
+      },
+      "TierRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/TierRequest" },
+            "examples": {
+              "tier": {
+                "summary": "新增或修改阶梯",
+                "value": { "rrcfg_id": 101, "rri_id": 1, "threshold_min": 0, "threshold_max": 1000, "calc_value": 10, "status": 1 }
+              }
+            }
+          }
+        }
+      },
+      "FindTierRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/FindTierRequest" },
+            "examples": { "findTier": { "summary": "查询阶梯", "value": { "rrcfg_id": 101, "rri_id": 1 } } }
+          }
+        }
+      },
+      "DeleteTierRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/DeleteTierRequest" },
+            "examples": { "deleteTier": { "summary": "删除阶梯", "value": { "rrcfg_id": 101, "rri_id": 1, "rrit_id": 1 } } }
+          }
+        }
+      },
+      "BindMachineRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/BindMachineRequest" },
+            "examples": { "bind": { "summary": "批量绑定设备", "value": { "rrcfg_id": 101, "m_ids": [407, 408], "sort": 1, "status": 1 } } }
+          }
+        }
+      },
+      "ScopeListRequest": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/ScopeListRequest" },
+            "examples": { "listScope": { "summary": "查询范围", "value": { "rrcfg_id": 101, "status": 1, "pageNum": 20 } } }
+          }
+        }
+      },
+      "UnbindMachineRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/UnbindMachineRequest" },
+            "examples": { "unbind": { "summary": "解绑范围", "value": { "rrm_id": 301 } } }
+          }
+        }
+      },
+      "CouponConfigRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/CouponConfigRequest" },
+            "examples": { "coupon": { "$ref": "#/components/examples/RuleMode5Coupon" } }
+          }
+        }
+      },
+      "FindCouponRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": { "$ref": "#/components/schemas/FindCouponRequest" },
+            "examples": { "findCoupon": { "summary": "查询券配置", "value": { "rrc_id": 101 } } }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "SaveConfigRequest": {
+        "type": "object",
+        "required": ["config_name", "rule_mode"],
+        "properties": {
+          "rrcfg_id": { "type": "integer", "description": "新版分账配置ID；更新时传，新增不传" },
+          "rr_id": { "type": "integer", "description": "兼容字段，等同 rrcfg_id" },
+          "config_name": { "type": "string", "description": "配置名称，对应 revenue_rule_config.config_name" },
+          "rule_name": { "type": "string", "description": "兼容字段，等同 config_name" },
+          "rule_mode": { "type": "integer", "enum": [1, 2, 3, 4, 5], "description": "分账模式：1基础/设备分账，2设备出租，3设备分账历史兼容，4设备商品分账，5优惠券分账；新配置不建议继续新增3" },
+          "base_type": { "type": "integer", "enum": [1, 2], "description": "分账基数：1订单总额，2扣除出租商品后金额" },
+          "turnover_type": { "type": "integer", "enum": [1, 2], "description": "阶梯营业额口径：1净营业额，2支付成功金额" },
+          "tier_calc_mode": { "type": "integer", "enum": [1, 2], "description": "阶梯命中方式：1本单后累计整单命中，2跨阶梯拆分" },
+          "settlement_type": { "type": "integer", "enum": [1, 2], "description": "结算类型：1即时分账，2 T+N 分账" },
+          "settlement_days": { "type": "integer", "description": "T+N 天数；settlement_type=1 时固定为0" },
+          "coupon_code": { "type": "string", "description": "优惠券编码，rule_mode=5 使用；非0开头6位数字，不传则后台生成" },
+          "discount_type": { "type": "integer", "enum": [0, 1, 2], "description": "订单优惠方式：0不调整实付金额，1固定金额，2优惠比例" },
+          "discount_value": { "type": "number", "description": "优惠金额或优惠比例；discount_type=2 时表示百分比" },
+          "use_limit": { "type": "integer", "description": "优惠券可使用次数，rule_mode=5 新增时必须大于0" },
+          "expire_time": { "type": "integer", "description": "优惠券过期时间戳，0或不传表示不过期" },
+          "receivers": { "type": "array", "description": "分账接收方配置，保存到 receiver_config JSON", "items": { "$ref": "#/components/schemas/ReceiverConfig" } },
+          "receiver_config": { "type": "array", "description": "兼容字段，等同 receivers", "items": { "$ref": "#/components/schemas/ReceiverConfig" } },
+          "scopes": { "type": "array", "description": "生效范围，保存到 revenue_rule_config_scope；传入时会替换旧范围", "items": { "$ref": "#/components/schemas/ScopeConfig" } },
+          "status": { "type": "integer", "enum": [1, 2], "description": "状态：1启用，2停用" }
+        }
+      },
+      "ReceiverConfig": {
+        "type": "object",
+        "required": ["receiver_ao_id", "ra_id", "calc_type"],
+        "properties": {
+          "item_key": { "type": "integer", "description": "接收方项唯一键；新增可不传，后台生成" },
+          "rri_id": { "type": "integer", "description": "兼容字段，等同 item_key" },
+          "receiver_ao_id": { "type": "integer", "description": "分账接收组织ID" },
+          "ra_id": { "type": "integer", "description": "分账账户ID" },
+          "manager_id": { "type": "integer", "description": "账户管理人ID；不传时按账户自动补全" },
+          "g_id": { "type": "integer", "description": "商品ID；rule_mode=4 可用于限定接收方只匹配某商品，0表示不限" },
+          "mg_id": { "type": "integer", "description": "设备商品ID；rule_mode=4 可用于限定设备商品，0表示不限" },
+          "calc_type": { "type": "integer", "enum": [1, 2, 3, 4], "description": "计算方式：1百分比，2固定金额，3全额，4阶梯百分比" },
+          "calc_value": { "type": "number", "description": "百分比值或固定金额；calc_type=4 时可为0，具体比例在 tiers 中" },
+          "sort": { "type": "integer", "description": "接收方排序，越小越先计算" },
+          "tiers": { "type": "array", "description": "阶梯区间，仅 calc_type=4 使用", "items": { "$ref": "#/components/schemas/TierConfig" } },
+          "status": { "type": "integer", "enum": [1, 2], "description": "状态：1启用，2停用" }
+        }
+      },
+      "TierConfig": {
+        "type": "object",
+        "required": ["threshold_min", "calc_value"],
+        "properties": {
+          "tier_key": { "type": "integer", "description": "阶梯项唯一键；新增可不传，后台生成" },
+          "rrit_id": { "type": "integer", "description": "兼容字段，等同 tier_key" },
+          "threshold_min": { "type": "number", "description": "营业额下限，包含" },
+          "threshold_max": { "type": "number", "nullable": true, "description": "营业额上限，不包含；null 表示无上限" },
+          "calc_value": { "type": "number", "description": "当前阶梯分账比例，单位百分比" },
+          "status": { "type": "integer", "enum": [1, 2], "description": "状态：1启用，2停用" }
+        }
+      },
+      "ScopeConfig": {
+        "type": "object",
+        "properties": {
+          "rrcs_id": { "type": "integer", "description": "生效范围ID；列表返回" },
+          "rrm_id": { "type": "integer", "description": "兼容字段，等同 rrcs_id" },
+          "m_id": { "type": "integer", "description": "设备ID，0表示全部设备" },
+          "machine_id": { "type": "string", "description": "设备编号快照；可不传，后台按 m_id 或 mg_id 补全" },
+          "ao_id": { "type": "integer", "description": "设备所属组织ID快照；可不传，后台按 m_id 补全" },
+          "g_id": { "type": "integer", "description": "商品ID，0表示全部商品；传 mg_id 时后台可自动补全" },
+          "mg_id": { "type": "integer", "description": "设备商品ID，0表示不限定设备商品；传入后必须能确定对应 m_id/g_id" },
+          "sort": { "type": "integer", "description": "范围匹配优先级，越小越先命中；同 sort 下按设备商品精确、设备+商品、设备全商品、全设备商品、全局排序" },
+          "status": { "type": "integer", "enum": [1, 2], "description": "状态：1启用，2停用" }
+        }
+      },
+      "SaveScopeRequest": {
+        "type": "object",
+        "required": ["scopes"],
+        "properties": {
+          "rrcfg_id": { "type": "integer", "description": "新版分账配置ID" },
+          "rr_id": { "type": "integer", "description": "兼容字段，等同 rrcfg_id" },
+          "scopes": { "type": "array", "description": "完整生效范围数组；提交后替换旧范围", "items": { "$ref": "#/components/schemas/ScopeConfig" } }
+        }
+      },
+      "ListRequest": {
+        "type": "object",
+        "properties": {
+          "rule_mode": { "type": "integer", "enum": [1, 2, 3, 4, 5], "description": "按分账模式筛选：1基础/设备分账，2设备出租，3设备分账历史兼容，4设备商品，5优惠券" },
+          "config_name": { "type": "string", "description": "按配置名称模糊查询" },
+          "rule_name": { "type": "string", "description": "兼容字段，等同 config_name" },
+          "status": { "type": "integer", "enum": [1, 2], "description": "状态筛选：1启用，2停用" },
+          "pageNum": { "type": "integer", "description": "每页数量；不传或0表示不分页", "example": 20 }
+        }
+      },
+      "FindConfigRequest": {
+        "type": "object",
+        "properties": {
+          "rrcfg_id": { "type": "integer", "description": "新版分账配置ID" },
+          "rr_id": { "type": "integer", "description": "兼容字段，等同 rrcfg_id" }
+        }
+      },
+      "ReceiverItemRequest": {
+        "allOf": [
+          { "$ref": "#/components/schemas/FindConfigRequest" },
+          { "$ref": "#/components/schemas/ReceiverConfig" }
+        ]
+      },
+      "DeleteItemRequest": {
+        "type": "object",
+        "required": ["rri_id"],
+        "properties": {
+          "rrcfg_id": { "type": "integer", "description": "新版分账配置ID" },
+          "rr_id": { "type": "integer", "description": "兼容字段，等同 rrcfg_id" },
+          "rri_id": { "type": "integer", "description": "接收方项ID，等同 item_key" },
+          "item_key": { "type": "integer", "description": "接收方项唯一键" }
+        }
+      },
+      "TierRequest": {
+        "allOf": [
+          { "$ref": "#/components/schemas/DeleteItemRequest" },
+          { "$ref": "#/components/schemas/TierConfig" }
+        ]
+      },
+      "FindTierRequest": {
+        "type": "object",
+        "properties": {
+          "rrcfg_id": { "type": "integer", "description": "新版分账配置ID" },
+          "rr_id": { "type": "integer", "description": "兼容字段，等同 rrcfg_id" },
+          "rri_id": { "type": "integer", "description": "接收方项ID，等同 item_key" },
+          "item_key": { "type": "integer", "description": "接收方项唯一键" }
+        }
+      },
+      "DeleteTierRequest": {
+        "type": "object",
+        "properties": {
+          "rrcfg_id": { "type": "integer", "description": "新版分账配置ID" },
+          "rr_id": { "type": "integer", "description": "兼容字段，等同 rrcfg_id" },
+          "rri_id": { "type": "integer", "description": "接收方项ID，等同 item_key" },
+          "item_key": { "type": "integer", "description": "接收方项唯一键" },
+          "rrit_id": { "type": "integer", "description": "阶梯项ID，等同 tier_key" },
+          "tier_key": { "type": "integer", "description": "阶梯项唯一键" }
+        }
+      },
+      "BindMachineRequest": {
+        "type": "object",
+        "properties": {
+          "rrcfg_id": { "type": "integer", "description": "新版分账配置ID" },
+          "rr_id": { "type": "integer", "description": "兼容字段，等同 rrcfg_id" },
+          "m_ids": { "type": "array", "description": "批量设备ID数组", "items": { "type": "integer" } },
+          "m_id": { "type": "integer", "description": "兼容单设备ID，也可传逗号字符串或数组" },
+          "sort": { "type": "integer", "description": "设备范围排序" },
+          "status": { "type": "integer", "enum": [1, 2], "description": "绑定状态：1启用，2停用备用" }
+        }
+      },
+      "ScopeListRequest": {
+        "allOf": [
+          { "$ref": "#/components/schemas/FindConfigRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "m_id": { "type": "integer", "description": "设备ID筛选" },
+              "g_id": { "type": "integer", "description": "商品ID筛选" },
+              "mg_id": { "type": "integer", "description": "设备商品ID筛选" },
+              "status": { "type": "integer", "enum": [1, 2], "description": "状态筛选" },
+              "pageNum": { "type": "integer", "description": "每页数量" }
+            }
+          }
+        ]
+      },
+      "UnbindMachineRequest": {
+        "type": "object",
+        "required": ["rrm_id"],
+        "properties": {
+          "rrm_id": { "type": "integer", "description": "兼容范围ID，等同 rrcs_id" },
+          "rrcs_id": { "type": "integer", "description": "新版生效范围ID" }
+        }
+      },
+      "CouponConfigRequest": {
+        "allOf": [
+          { "$ref": "#/components/schemas/FindConfigRequest" },
+          {
+            "type": "object",
+            "properties": {
+              "rrc_id": { "type": "integer", "description": "兼容优惠券配置ID，等同 rrcfg_id" },
+              "coupon_code": { "type": "string", "description": "优惠券编码，非0开头6位数字" },
+              "discount_type": { "type": "integer", "enum": [0, 1, 2], "description": "优惠方式：0不调整实付，1固定金额，2优惠比例" },
+              "discount_value": { "type": "number", "description": "优惠金额或比例" },
+              "use_limit": { "type": "integer", "description": "可使用次数" },
+              "expire_time": { "type": "integer", "description": "过期时间戳" },
+              "scopes": { "type": "array", "description": "优惠券生效范围，底层写 revenue_rule_config_scope", "items": { "$ref": "#/components/schemas/ScopeConfig" } }
+            }
+          }
+        ]
+      },
+      "FindCouponRequest": {
+        "type": "object",
+        "properties": {
+          "rrc_id": { "type": "integer", "description": "兼容优惠券配置ID，等同 rrcfg_id" },
+          "rrcfg_id": { "type": "integer", "description": "新版分账配置ID" },
+          "rr_id": { "type": "integer", "description": "兼容字段，等同 rrcfg_id" }
+        }
+      }
+    },
+    "examples": {
+      "RuleMode1Normal": {
+        "summary": "rule_mode=1 基础/设备分账",
+        "value": {
+          "config_name": "基础分账配置",
+          "rule_mode": 1,
+          "base_type": 2,
+          "settlement_type": 1,
+          "receivers": [
+            { "receiver_ao_id": 17, "ra_id": 3, "calc_type": 1, "calc_value": 30, "sort": 1, "status": 1 },
+            { "receiver_ao_id": 18, "ra_id": 4, "calc_type": 1, "calc_value": 70, "sort": 2, "status": 1 }
+          ],
+          "scopes": [
+            { "m_id": 407, "g_id": 0, "mg_id": 0, "sort": 1, "status": 1 }
+          ],
+          "status": 1
+        }
+      },
+      "RuleMode2Rental": {
+        "summary": "rule_mode=2 设备出租分账",
+        "value": {
+          "config_name": "设备出租分账配置",
+          "rule_mode": 2,
+          "settlement_type": 2,
+          "settlement_days": 1,
+          "receivers": [
+            { "receiver_ao_id": 17, "ra_id": 3, "calc_type": 1, "calc_value": 20, "sort": 1, "status": 1 }
+          ],
+          "scopes": [
+            { "m_id": 407, "g_id": 0, "mg_id": 0, "sort": 1, "status": 1 }
+          ],
+          "status": 1
+        }
+      },
+      "RuleMode3DeviceTier": {
+        "summary": "rule_mode=3 设备阶梯分账(历史兼容)",
+        "value": {
+          "config_name": "设备阶梯分账配置(历史兼容)",
+          "rule_mode": 3,
+          "base_type": 2,
+          "turnover_type": 1,
+          "tier_calc_mode": 2,
+          "settlement_type": 1,
+          "receivers": [
+            {
+              "receiver_ao_id": 17,
+              "ra_id": 3,
+              "calc_type": 4,
+              "calc_value": 0,
+              "sort": 1,
+              "status": 1,
+              "tiers": [
+                { "threshold_min": 0, "threshold_max": 1000, "calc_value": 10, "status": 1 },
+                { "threshold_min": 1000, "threshold_max": null, "calc_value": 15, "status": 1 }
+              ]
+            }
+          ],
+          "scopes": [
+            { "m_id": 407, "g_id": 0, "mg_id": 0, "sort": 1, "status": 1 }
+          ],
+          "status": 1
+        }
+      },
+      "RuleMode4Product": {
+        "summary": "rule_mode=4 设备商品分账",
+        "value": {
+          "config_name": "设备商品分账配置",
+          "rule_mode": 4,
+          "settlement_type": 1,
+          "receivers": [
+            { "receiver_ao_id": 17, "ra_id": 3, "g_id": 88, "mg_id": 0, "calc_type": 1, "calc_value": 25, "sort": 1, "status": 1 },
+            { "receiver_ao_id": 18, "ra_id": 4, "g_id": 88, "mg_id": 0, "calc_type": 2, "calc_value": 1.5, "sort": 2, "status": 1 }
+          ],
+          "scopes": [
+            { "m_id": 407, "g_id": 88, "mg_id": 0, "sort": 1, "status": 1 }
+          ],
+          "status": 1
+        }
+      },
+      "RuleMode5Coupon": {
+        "summary": "rule_mode=5 优惠券分账",
+        "value": {
+          "config_name": "优惠券分账配置",
+          "rule_mode": 5,
+          "coupon_code": "923456",
+          "discount_type": 1,
+          "discount_value": 2,
+          "use_limit": 100,
+          "expire_time": 0,
+          "settlement_type": 1,
+          "receivers": [
+            { "receiver_ao_id": 17, "ra_id": 3, "calc_type": 1, "calc_value": 20, "sort": 1, "status": 1 }
+          ],
+          "scopes": [
+            { "m_id": 407, "g_id": 0, "mg_id": 0, "sort": 1, "status": 1 }
+          ],
+          "status": 1
+        }
+      }
+    },
+    "responses": {
+      "CommonResponse": {
+        "description": "通用响应",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "state": { "type": "integer", "description": "业务状态码，200 表示成功", "example": 200 },
+                "msg": { "type": "string", "description": "响应消息", "example": "SUCCESS" },
+                "data": { "type": "object", "description": "响应数据；不同接口返回不同字段" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
