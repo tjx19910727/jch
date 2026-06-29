@@ -274,6 +274,7 @@ class PaymentClient extends PayBaseClient
                 }
                 return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
             }
+            $this->cancelPendingRevenueOrders();
             return $this->rSuccess();
         } catch (\Exception $e) {
             actionException($e,1);
