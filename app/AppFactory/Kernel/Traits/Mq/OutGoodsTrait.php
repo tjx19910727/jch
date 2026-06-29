@@ -199,7 +199,7 @@ trait OutGoodsTrait
                 $whereMc['channel_code'] = $channel_code;
                 $whereMc['m_id'] = $this->machine['m_id'];
                 $whereMc['channel_position'] = $position;
-                $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,frozen_stock,stock,stock_warning');
+                $mc = $this->getMachineChannelFind($whereMc,'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,frozen_stock,stock,out_fail_stock,stock_warning');
                 if (!$mc) {
                     actionLog($whereMc, '未找到货道，跳过货道库存处理', 'OutGoods');
                     continue;
@@ -271,6 +271,9 @@ trait OutGoodsTrait
                 if ($fail > 0) {
 //                    $updateMc['status'] = 3;
                     $this->order['out_status'] == 6 ? : $this->order['out_status'] = 5;
+                    $currentStock = isset($updateMc['stock']) ? intval($updateMc['stock']) : intval($mc['stock']);
+                    $updateMc['stock'] = max(0, $currentStock - $fail);
+                    $updateMc['out_fail_stock'] = max(0, intval($mc['out_fail_stock'] ?? 0)) + $fail;
 
                     // 出货失败发送通知
                     try {

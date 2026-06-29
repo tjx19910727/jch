@@ -699,6 +699,7 @@ class ApiClient extends ReceiveBaseClient
                 "errorCode" => $this->data['errorCode'] ?? "",
                 "msg" => $this->data['msg'] ?? "",
                 "error_position" => $this->data['error_position'] ?? "",
+                "creator_id" => $this->data['creator_id'] ?? 0,
             ];
             $this->errorCode();
             return $this->r(200, $this->lang("action_success"));
@@ -1147,7 +1148,58 @@ class ApiClient extends ReceiveBaseClient
         $where[] = ['start_date', '<=', time()];
         $field = "adv_id,adv_title,res_id,res_title,file_path,type,duration_time,total_times,play_times,remain_times,start_date,end_date,start_time,end_time,push_type,position,screen,screen_full,status";
         $advList = $this->getAdvertisementPushList($where, $this->data['pageNum'] ?? 0, $field);
+        // 有效广告数为空时，发送微信模板消息（每天每设备限一次）
+        if ($this->isPlayableAdvEmpty($where['m_id'])) {
+            $this->sendAdvEmptyNotice();
+        }
         return $this->rQ($advList);
+    }
+
+    /**
+     * 有效广告数为0时发送微信模板消息（复用mFault故障通知，错误码1002201）
+     * 使用缓存限制每天每设备仅发送一次
+     */
+    private function sendAdvEmptyNotice()
+    {
+        $cacheKey = 'adv_empty_notice_' . $this->machine['m_id'];
+        if (cache($cacheKey)) {
+            return;
+        }
+        cache($cacheKey, 1, 7200);
+        try {
+            $this->message = [
+                "errorCode" => '1002201',
+                "msg" => '',
+                "error_position" => '',
+            ];
+            $this->errorCode();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+        }
+    }
+
+    /**
+     * 判断当前设备可播放广告数是否为0
+     * 直接基于 end_date 和 end_time 实时 count，不受 status 字段滞后影响
+     * @return bool
+     */
+    private function isPlayableAdvEmpty($mId)
+    {
+        $nowDate = strtotime(date("Y-m-d"));
+        $nowTime = HourMinuteSec2int(date("H:i:s"));
+        $count = Db::name('advertisement_push')
+            ->where('m_id', $mId)
+            ->where('start_date', '<=', time())
+            ->where('status', '<', 3)
+            ->where(function ($query) use ($nowDate, $nowTime) {
+                $query->where('end_date', '>', $nowDate)
+                    ->whereOr(function ($q) use ($nowDate, $nowTime) {
+                        $q->where('end_date', '=', $nowDate)
+                          ->where('end_time', '>=', $nowTime);
+                    });
+            })
+            ->count();
+        return $count == 0;
     }
 
     /**
@@ -3831,11 +3883,15 @@ class ApiClient extends ReceiveBaseClient
             }
 
             $recordsCode = date('YmdHi');
-            $managerId = trim($this->data['manager_id'] ?? '');
-            $inspectionStaff = $this->getEnabledInspectionStaff($managerId);
+            $staffCode = trim(strval($this->data['manager_id'] ?? ''));
+            if (!preg_match('/^[1-9][0-9]{5}$/', $staffCode)) {
+                return $this->rValidate('巡检账号必须为首位非0的6位数字');
+            }
+            $inspectionStaff = $this->getEnabledInspectionStaff($staffCode);
             if (!$inspectionStaff) {
                 return $this->rFail('巡检人员不存在或已禁用');
             }
+            $staffId = intval($inspectionStaff['staff_id']);
             $notes = trim(strval($this->data['notes'] ?? ''));
             $checkTime = date('Y-m-d H:i:s');
 
@@ -3847,7 +3903,7 @@ class ApiClient extends ReceiveBaseClient
                     'records_code' => $recordsCode,
                     'item_id' => $itemId,
                     'machine_id' => $this->machine['machine_id'],
-                    'manager_id' => $managerId,
+                    'manager_id' => $staffId,
                     'check_status' => $rowStatus,
                     'check_time' => $checkTime,
                     'notes' => $rowNotes !== '' ? $rowNotes : $notes,
@@ -4220,19 +4276,19 @@ class ApiClient extends ReceiveBaseClient
         ]);
     }
 
-    protected function getEnabledInspectionStaff($staffId)
+    protected function getEnabledInspectionStaff($staffCode)
     {
-        $staffId = intval($staffId);
-        if ($staffId <= 0) {
+        $staffCode = trim((string)$staffCode);
+        if ($staffCode === '') {
             return [];
         }
 
         $staff = Db::name('inspection_staff')
             ->where([
-                'staff_id' => $staffId,
+                'staff_code' => $staffCode,
                 'status' => 1,
             ])
-            ->field('staff_id,account_name')
+            ->field('staff_id,staff_code,account_name')
             ->find();
 
         return $staff ?: [];

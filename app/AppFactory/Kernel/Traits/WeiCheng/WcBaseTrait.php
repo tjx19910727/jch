@@ -122,11 +122,17 @@ trait WcBaseTrait
         return $this->weicheng_curl($postUrl, []);
     }
 
-    public function synchronizeGoodsLists2Db($goods_lists, $type)
+    public function synchronizeGoodsLists2Db($goods_lists, $type, $syncBatchNo = '')
     {
         foreach ($goods_lists as $goods) {
+            if (empty($goods['no'])) {
+                continue;
+            }
             $wc_goods = $this->getWcGoodsFind(['no' => $goods['no']]);
             $goods['type'] = $type;
+            if ($syncBatchNo !== '') {
+                $goods['sync_status'] = $syncBatchNo . '_1';
+            }
             if (!$wc_goods) {
                 $this->addWcGoods($goods);
             } else {
@@ -148,8 +154,11 @@ trait WcBaseTrait
         return $this->weicheng_curl($postUrl, []);
     }
 
-    public function synchronizeGoods2Db($updateData)
+    public function synchronizeGoods2Db($updateData, $syncBatchNo = '')
     {
+        if ($syncBatchNo !== '') {
+            $updateData['sync_status'] = $syncBatchNo . '_1';
+        }
         $wc_goods = $this->getWcGoodsFind(['no' => $updateData['no']]);
         if (!$wc_goods) {
             $this->addWcGoods($updateData);
@@ -354,6 +363,7 @@ trait WcBaseTrait
                 
             }
 
+            $realChannelCode = isset($value['real_channel_code']) ? trim((string)$value['real_channel_code']) : '';
             $data = [
                 'out_order_no' => $order['trade_no'] . '#' . $detail['sod_id'],
                 'goods_no' => $no,
@@ -366,19 +376,22 @@ trait WcBaseTrait
                 'trip_date' => date('Y-m-d'),
                 'distributor_id' => $this->config['distributor_id'],
                 'machine_id' => $order['machine_id'] ?? '',
-                'dispensing_status' => $wc_order_no['real_channel_code'] == 'Z10' ? 2 : 1,
+                'dispensing_status' => $realChannelCode == 'Z10' ? 2 : 1,
             ];
             if(!empty($buy_date_range)) $data['buy_date_range'] = json_encode($buy_date_range);
             actionLog($data, "子订单同步数据");
             $postUrl = $this->order_add_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
             $res = $this->weicheng_curl($postUrl, []);
             // $res['response'] = '{"order_no":"O757423599403734","orderNo":"O757423599403734","tickets":["68234301"],"tickets_new":[{"ticket":"68234301","num":1,"qr_code":"https://oss-weicheng.jchtechnologies.com/upload/2026/03/04/8c0ae373080843e4a6f358361e20bd21.jpg","qr_code_url":"https://oss-weicheng.jchtechnologies.com/upload/2026/03/04/8c0ae373080843e4a6f358361e20bd21.jpg"}],"ticket_check_style":0,"tip":"出库成功","status":"success"}';
-            $res_arr = json_decode($res['response'], true);
-            if ($res_arr['status'] == "fail") {
-                actionLog($detail, "子订单同步失败" . $res_arr['tip']);
+            $res_arr = json_decode($res['response'] ?? '', true);
+            if (!is_array($res_arr)) {
+                actionLog(['detail' => $detail, 'response' => $res['response'] ?? ''], "子订单同步失败：微程返回格式异常");
+                $wc_order_no[$no]['order_no'] = '';
+            } elseif (($res_arr['status'] ?? '') == "fail") {
+                actionLog($detail, "子订单同步失败" . ($res_arr['tip'] ?? ''));
                 $wc_order_no[$no]['order_no'] = '';
             } else {
-                $wc_order_no[$no]['order_no'] = $res_arr['order_no'];
+                $wc_order_no[$no]['order_no'] = $res_arr['order_no'] ?? '';
                 $wc_order_no[$no]['response'] = $res_arr;
             }
         }

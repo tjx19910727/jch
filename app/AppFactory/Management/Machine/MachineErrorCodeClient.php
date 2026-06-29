@@ -9,6 +9,8 @@
 namespace app\AppFactory\Management\Machine;
 
 
+use app\AppFactory\Kernel\Model\Auth\AuthManagerModel;
+use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Management\ManagementClient;
@@ -103,15 +105,26 @@ class MachineErrorCodeClient extends ManagementClient
             }
         }
 
-        $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, function ($item) {
+        // 批量获取 creator_id 对应的管理员昵称，避免循环查询
+        $creatorIds = MachineErrorCodeModel::getColumn($where, 'creator_id');
+        $creatorIds = array_unique(array_filter($creatorIds));
+        $creatorNames = [];
+        if ($creatorIds) {
+            $creatorNames = AuthManagerModel::getColumn([['manager_id','in', $creatorIds]], 'nickname', 'manager_id');
+        }
+        $openArr = ['1200000' =>'1', '1200010' => '2', '1200020' => '3']; //开门方式
+        $data = $this->getMachineErrorCodeList($where, $pageNum, $field, $order, function ($item) use ($creatorNames, $openArr) {
             $item['v_type'] = 0;
-            if (isset($item['errorCode']) && $item['errorCode'] == 1200000) {
+            if (isset($item['errorCode']) && in_array($item['errorCode'], [1200000, 1200010, 1200020])) {
                 $item['v_type'] = 1;
             }
+            $item['open_type'] = $openArr[$item['errorCode']] ?? 1;
+            $item['creator_name'] = $creatorNames[$item['creator_id']] ?? '';
+            $item['create_time_text'] =  date("Y-m-d H:i:s", $item['create_time']);
             return $item;
         }, $group);
 
-        actionLog($this->getLS(),'【SQL】查询视频统一入口列表');
+        actionLog($this->getLS(),'【SQL】查询视频统一入口/开锁日志列表');
         return $this->rQ($data);
     }
 

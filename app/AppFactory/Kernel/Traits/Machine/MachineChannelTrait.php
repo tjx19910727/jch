@@ -140,6 +140,25 @@ trait MachineChannelTrait
         return MachineChannelModel::update($update, $where, $field);
     }
 
+    /**
+     * BAD恢复时将出货失败库存回补到货道库存。
+     * 出货失败库存表示已从可售库存扣减、但商品仍在设备内的数量。
+     */
+    protected function mergeOutFailStockOnBadRecover($mc, $update)
+    {
+        $outFailStock = max(0, intval($mc['out_fail_stock'] ?? 0));
+        if ($outFailStock <= 0) {
+            return $update;
+        }
+
+        $baseStock = array_key_exists('stock', $update)
+            ? intval($update['stock'])
+            : intval($mc['stock'] ?? 0);
+        $update['stock'] = $baseStock + $outFailStock;
+        $update['out_fail_stock'] = 0;
+        return $update;
+    }
+
     public function delMachineChannel($where)
     {
         $result = MachineChannelModel::whereDel($where);
@@ -242,13 +261,16 @@ trait MachineChannelTrait
                             "change_value" => $value['stock'] ?? 0,
                             "position" => 1,
                         ];
+                        if (isset($value['status']) && intval($value['status']) === 1 && intval($mc['status']) === 3) {
+                            $value = $this->mergeOutFailStockOnBadRecover($mc, $value);
+                        }
                         // 20250604 检查货道库存上货或下货，变化数量 = 上报stock - 当前货道stock
                         if (isset($value['stock']) && $value['stock'] != $mc['stock']) {
                             $changeValue = bcsub($value['stock'],$mc['stock']);
                             $insertGc = array_merge($insertGChange, [
                                 "change_value" => $changeValue,
                                 "type" => $changeValue > 0 ? 2 : 3 ,    // >0：上货，<0 下货
-                                "desc" => $value['status'] == 3 ? $this->lang("goodsChange.terminal_mc_bad") : $this->lang("goodsChange.terminal_mc_not_bad"),
+                                "desc" => $changeValue > 0 ? $this->lang("goodsChange.terminal_rep_inc_mc_stock") : $this->lang("goodsChange.terminal_rep_dec_mc_stock"),
                             ]);
                             $this->addGoodsChange($insertGc);
                         }
