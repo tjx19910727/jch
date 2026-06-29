@@ -298,6 +298,10 @@ class Machine extends Common
     public function update()
     {
         $postData = input();
+        if (isset($postData['machine_manager_id'])) {
+            $postData['manager_id'] = $postData['machine_manager_id'];
+            unset($postData['machine_manager_id']);
+        }
         try {
             $this->validate($postData, $this->validatePath . '.update');
         } catch (\Exception $e) {

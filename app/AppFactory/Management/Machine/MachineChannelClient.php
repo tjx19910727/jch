@@ -854,13 +854,16 @@ class MachineChannelClient extends ManagementClient
      */
     public function updateMc($postData)
     {
-        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,channel_position,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock');
+        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,channel_position,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,out_fail_stock,status');
+        if (!$mc) return $this->r(100, $this->lang("VMachineChannel.mc_no_data"));
+        $mc = obj2arr($mc);
         //如果是货道是边柜，查询主柜信息
         // if(isset($mc['channel_position']) && $mc['channel_position'] == 3){
         //     $main_m_id = $this->getMachineMainRelationValue(['b_mc_id' => $mc['m_id']], 'main_mc_id');
         //     $mc['m_id'] = $main_m_id;
         // }
         $machine = $this->getMachineFind(['m_id' => $mc['m_id']],'m_id,machine_id,machine_name,ao_id');
+        if (!$machine) return $this->r(100, $this->lang("VMachine.machine_no_data"));
         // 商品变化基础数据
         $insertGChange = [
             "m_id" => $machine['m_id'],
@@ -879,23 +882,39 @@ class MachineChannelClient extends ManagementClient
             "ao_id" => $machine['ao_id'],
         ];
 
-        // 更换货道商品处理
-        if (isset($postData['g_id']) && $postData['g_id'] > 0) {
-            $old = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']]);
-            if ($old['g_id'] != $postData['g_id']) {
-                $goods = $this->getGoodsFind(['g_id' => $postData['g_id']],"g_id,g_name,gc_id,gc_name,pic,sku,bar_code");
-                $postData = array_merge($postData,$goods->toArray() ?? []);
+        $this->startTrans();
+        try {
+            $newGId = isset($postData['g_id']) ? intval($postData['g_id']) : null;
+            $oldGId = intval($mc['g_id'] ?? 0);
+            $isChangingGoods = $newGId !== null && $newGId !== $oldGId;
 
-                // 20250604 更换货道商品，后台换货-货架下货旧商品，下货数量为当前库存
+            // 更换或清空货道商品时，先记录旧货架商品下货。
+            if ($isChangingGoods && $oldGId > 0) {
                 $insertGc = array_merge($insertGChange,[
-                    "change_value" => $mc['stock'],  // 变化数量为当前货道库存
+                    "change_value" => $mc['stock'] ?? 0,
                     "type" => 7,
                     "desc" => $this->lang("goodsChange.backstage_exchange_mc_under_old"),
                     "position" => 1,
                 ]);
                 $this->addGoodsChange($insertGc);
+            }
 
-                // 20250604 更换货道商品，后台换货-货架上货新商品，新商品数据替换原货道数据，上货数量为postData的stock参数
+            if ($newGId !== null && $newGId > 0 && $isChangingGoods) {
+                $goods = $this->getGoodsFind(['g_id' => $newGId],"g_id,g_name,gc_id,gc_name,pic,sku,bar_code");
+                if (!$goods) {
+                    $this->rollbackTrans();
+                    return $this->r(100, $this->lang("VGoods.goods_no_data"));
+                }
+                $goods = obj2arr($goods);
+                if (!isset($postData['stock'])) {
+                    $postData['stock'] = 0;
+                }
+                $postData['out_fail_stock'] = 0;
+                if (!isset($postData['mg_id'])) {
+                    $postData['mg_id'] = $this->getMachineGoodsValue(['m_id' => $mc['m_id'], 'g_id' => $newGId], 'mg_id') ?? 0;
+                }
+                $postData = array_merge($postData, $goods);
+
                 $insertGc = array_merge($insertGChange,[
                     "mg_id" => $postData['mg_id'] ?? 0,
                     "g_id" => $goods['g_id'],
@@ -905,59 +924,86 @@ class MachineChannelClient extends ManagementClient
                     "pic" => $goods['pic'],
                     "sku" => $goods['sku'],
                     "bar_code" => $goods['bar_code'],
-                    "change_value" => $postData['stock'],  // 变化数量为postData的stock参数
+                    "change_value" => $postData['stock'] ?? 0,
                     "type" => 6,
                     "desc" => $this->lang("goodsChange.backstage_exchange_mc_display_new"),
                     "position" => 1,
                 ]);
                 $this->addGoodsChange($insertGc);
-            }
-        } else {
-            // 20250604 非更新货道商品，检查库存变化（后台上货6、后台下货7），库存值相等时不记录变化
-            if (isset($postData['stock']) && $postData['stock'] > 0 && $mc['stock'] != $postData['stock']) {
-                $changeValue = bcsub($postData['stock'] ,$mc['stock']); // 变化数量为：postData的stock - 当前货道库存
-                $insertGc = array_merge($insertGChange, [
-                    "change_value" => $changeValue,
-                    "type" => $changeValue > 0 ? 6 : 7 ,   // >0：后台上货，<0 后台下货
-                    "desc" => $changeValue > 0 ? $this->lang("goodsChange.backstage_rep_mc_inc_stock"): $this->lang("goodsChange.backstage_rep_mc_dec_stock"),
-                    "position" => 1,
+            } elseif ($newGId === 0 && $isChangingGoods) {
+                $postData = array_merge($postData, [
+                    'mg_id' => 0,
+                    'g_name' => '',
+                    'gc_id' => 0,
+                    'gc_name' => '',
+                    'pic' => '',
+                    'sku' => '',
+                    'bar_code' => '',
+                    'stock' => 0,
+                    'out_fail_stock' => 0,
                 ]);
-                $this->addGoodsChange($insertGc);
             }
-            // 20250604 bad状态变化（后台BAD 8，后台恢复BAD 9），变化数量为当前货架库存值
+
+            if (!$isChangingGoods && isset($postData['status']) && intval($postData['status']) === 1 && intval($mc['status']) === 3) {
+                $postData = $this->mergeOutFailStockOnBadRecover($mc, $postData);
+            }
+
+            // 非换货库存调整也要记录，包括把库存调成0的后台下架退货。
+            if (!$isChangingGoods && array_key_exists('stock', $postData) && bccomp((string)$mc['stock'], (string)$postData['stock'], 3) !== 0) {
+                $changeValue = bcsub((string)$postData['stock'], (string)$mc['stock'], 3);
+                if (bccomp($changeValue, '0', 3) !== 0) {
+                    $insertGc = array_merge($insertGChange, [
+                        "change_value" => $changeValue,
+                        "type" => bccomp($changeValue, '0', 3) > 0 ? 6 : 7,
+                        "desc" => bccomp($changeValue, '0', 3) > 0 ? $this->lang("goodsChange.backstage_rep_mc_inc_stock"): $this->lang("goodsChange.backstage_rep_mc_dec_stock"),
+                        "position" => 1,
+                    ]);
+                    $this->addGoodsChange($insertGc);
+                }
+            }
+
+            // bad状态变化（后台BAD 8，后台恢复BAD 9），变化数量为当前货架库存值。
             if (isset($postData['status']) && $postData['status'] != $mc['status'] && in_array($postData['status'],[1,3])) {
                 $insertGc = array_merge($insertGChange, [
                     "change_value" => $mc['stock'],
-                    "type" => $postData['status'] == 3 ? 8 : 9 ,   // 3：后台BAD，1：后台恢复BAD
+                    "type" => $postData['status'] == 3 ? 8 : 9,
                     "desc" => $postData['status'] == 3 ? $this->lang("goodsChange.backstage_mc_bad") : $this->lang("goodsChange.backstage_mc_not_bad"),
                     "position" => 1,
                 ]);
                 $this->addGoodsChange($insertGc);
             }
-        }
-        if (!empty($postData['manufacture_time'])) {
-            $exp_arr = explode(" ",$postData['manufacture_time']);
-            $postData['manufacture_time'] = strtotime($exp_arr[0] . ' 23:59:59');
-        }
-        //如果有传入生产日期，expire_time根据生产日期和商品表的保质期自动计算得出
-        if (isset($postData['manufacture_time']) && $postData['manufacture_time'] > 0 && isset($postData['g_id']) && $postData['g_id'] > 0) {
-            $shelfLife = $this->getGoodsValue(['g_id' => $postData['g_id']], 'sell_by_date');
-            if ($shelfLife) {
-                $postData['expire_time'] = $postData['manufacture_time'] + $shelfLife * 86400;
-            } else {
-                $postData['expire_time'] = 0;
-            }
-        }
 
-        $result = $this->updateMachineChannel($postData);
-        if ($result) {
+            if (!empty($postData['manufacture_time'])) {
+                $exp_arr = explode(" ",$postData['manufacture_time']);
+                $postData['manufacture_time'] = strtotime($exp_arr[0] . ' 23:59:59');
+            }
+            //如果有传入生产日期，expire_time根据生产日期和商品表的保质期自动计算得出
+            if (isset($postData['manufacture_time']) && $postData['manufacture_time'] > 0 && isset($postData['g_id']) && $postData['g_id'] > 0) {
+                $shelfLife = $this->getGoodsValue(['g_id' => $postData['g_id']], 'sell_by_date');
+                if ($shelfLife) {
+                    $postData['expire_time'] = $postData['manufacture_time'] + $shelfLife * 86400;
+                } else {
+                    $postData['expire_time'] = 0;
+                }
+            }
+
+            $result = $this->updateMachineChannel($postData);
+            if (!$result) {
+                $this->rollbackTrans();
+                return $this->r(100,$this->lang('action_fail'));
+            }
+
+            $this->commitTrans();
             // 发送触发货道更新数据,如果是边柜货道不发送
             if ($mc['channel_position'] != 3) {
                 $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMc',['mc_id' => $mc['mc_id']]);
             }
             return $this->r(200,$this->lang("action_success"));
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
         }
-        return $this->r(100,$this->lang('action_fail'));
     }
 
     public function lockPrice($postData)
