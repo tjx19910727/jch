@@ -234,7 +234,7 @@ class MachineVoiceTemplateClient extends ManagementClient
 
         foreach (array_unique($machineIds) as $machineId) {
             if (!$machineId) continue;
-            $result = $this->sendToMachine(['machine_id' => $machineId], 'voiceTemplateUpdate', ['voice_id' => $voiceId]);
+            $result = $this->sendToMachine(['machine_id' => $machineId], 'appSettingsUpdate', ['voice_id' => $voiceId]);
             if (!is_object($result)) actionLog([$machineId => $result], '语音模板更新MQ发送结果');
         }
     }
