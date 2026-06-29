@@ -1134,7 +1134,7 @@ class ApiClient extends ReceiveBaseClient
         //        if ($this->data['pay_type'] != 4 && $this->data['pay_type'] != 0) return $this->rFail($this->lang("VSubCar.pay_type_no_range"));
         if ($this->data['pay_method'] == "41") $this->data['pay_method'] = 1;
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
-        if ($this->data['pay_type'] == 5 && (!isset($this->data['mobile']) || !$this->data['mobile'])) return $this->r(100, $this->lang("mobile_require"));
+        if ($this->data['pay_type'] == 5 && (!isset($this->data['mobile']) || !$this->data['mobile'])) return $this->subCarFailResponse(100, $this->lang("mobile_require"));
         $m_sel = [
             'm_id' => $this->machine['m_id']
         ];
@@ -1171,7 +1171,7 @@ class ApiClient extends ReceiveBaseClient
                 $updateOrder['total_cost_points'] = 0;
                 if (!isset($this->data['carList']) || !$this->data['carList']) {
                     $this->rollbackTrans();
-                    return $this->rFail("购物车不能为空");
+                    return $this->subCarFailResponse(100, "购物车不能为空");
                 }
                 $this->data['carList'] = json2arr($this->data['carList']);
                 //carList数据结构：
@@ -1188,7 +1188,7 @@ class ApiClient extends ReceiveBaseClient
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $wc_goods = $this->getWcGoodsFind(['no' => $value['out_no']]);
                         if ($wc_goods['maxBuy'] > 0 && $wc_goods['maxBuy'] < $value['quantity']) {
-                            return $this->r(100, $this->lang("VSubCar.make_order_fail") . "：" . $wc_goods['name'] . "购买数量超过限购数量");
+                            return $this->subCarFailResponse(100, $this->lang("VSubCar.make_order_fail") . "：" . $wc_goods['name'] . "购买数量超过限购数量");
                         }
                         // todo 添加库存校验
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
@@ -1276,21 +1276,21 @@ class ApiClient extends ReceiveBaseClient
                     }
                     if (!$mc) {
                         $this->rollbackTrans();
-                        return $this->r(300, $this->lang("VSubCar.channel_no_data"));
+                        return $this->subCarFailResponse(300, $this->lang("VSubCar.channel_no_data"));
                     }
                     $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']]);
 
                     if (!isset($value['channel_code']) && !$mc['mg_id']) {
                         $this->rollbackTrans();
-                        return $this->r(300, $this->lang("VSubCar.mg_id_require"));
+                        return $this->subCarFailResponse(300, $this->lang("VSubCar.mg_id_require"));
                     }
                     if (isset($value['channel_code']) && $value['channel_code'] != 'Z10' && $mc['status'] != 1) {
                         $this->rollbackTrans();
-                        return $this->r(300, $this->lang("VSubCar.channel_status_no_3"));
+                        return $this->subCarFailResponse(300, $this->lang("VSubCar.channel_status_no_3"));
                     }
                     if (isset($value['channel_code']) && $value['channel_code'] != 'Z10' &&  ($mc['stock'] < $value['quantity'])) {
                         $this->rollbackTrans();
-                        return $this->r(300, $this->lang("VSubCar.under_stock"));
+                        return $this->subCarFailResponse(300, $this->lang("VSubCar.under_stock"));
                     }
                     if ($this->data['pay_type'] == 0) {
                         $mc['retail_price'] = 0;
@@ -1338,19 +1338,19 @@ class ApiClient extends ReceiveBaseClient
                             $updateOrder['total_cost_points'] = bcadd($updateOrder['total_cost_points'], $details['total_sod_cost_points'], 3);
                         } else {
                             $this->rollbackTrans();
-                            return $this->r(300, $this->lang("VSubCar.make_order_details_fail"));
+                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_details_fail"));
                         }
                     }
                 }
                 $this->commitTrans();
             } else {
                 $this->rollbackTrans();
-                return $this->r(300, $this->lang("VSubCar.make_order_fail"));
+                return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail"));
             }
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);
-            return $this->rTryCatch($e->getMessage());
+            return $this->subCarFailResponse(3301, $e->getMessage());
         }
         $this->startTrans();
         try {
@@ -1366,7 +1366,7 @@ class ApiClient extends ReceiveBaseClient
                     // 免费的直接出货
                     if ($this->data['pay_type'] == 0) {
                         $this->rollbackTrans();
-                        return $this->r(200, $this->lang("VSubCar.pay_type_empty"));
+                        return $this->subCarFailResponse(200, $this->lang("VSubCar.pay_type_empty"));
                         //                        $this->outGoods();
                         //                        $this->commitTrans();
                         //                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
@@ -1376,7 +1376,10 @@ class ApiClient extends ReceiveBaseClient
                             $this->data['coupon_code'] = trim(strval($this->data['coupon_code']));
                             $couponResult = $this->orderUseCoupon();
                             if ($couponResult !== true) {
-                                return $couponResult;
+                                $couponResult = obj2arr($couponResult);
+                                $state = is_array($couponResult) ? ($couponResult['state'] ?? 100) : 100;
+                                $msg = is_array($couponResult) ? ($couponResult['msg'] ?? $this->lang("VSubCar.make_order_fail")) : strval($couponResult);
+                                return $this->subCarFailResponse($state, $msg);
                             }
                             $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
                             $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
@@ -1386,12 +1389,20 @@ class ApiClient extends ReceiveBaseClient
                 }
             }
             $this->rollbackTrans();
-            return $this->r(300, $this->lang("VSubCar.make_order_fail"));
+            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail"));
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);
-            return $this->rTryCatch($e->getMessage());
+            return $this->subCarFailResponse(3301, $e->getMessage());
         }
+    }
+
+    /**
+     * subCar 失败时也保持 data 为对象结构，避免设备端按 Map 解析时报类型错误。
+     */
+    protected function subCarFailResponse($state, $msg)
+    {
+        return $this->r($state, $msg, ['order' => (object)[]]);
     }
 
     /**
