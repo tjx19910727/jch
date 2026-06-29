@@ -102,7 +102,7 @@ class CallbackClient extends ApiBaseClient
                     $value['callback_time'] = date("Y-m-d H:i:s");
                     $value['result'] = json_encode($curlResult,320);
                     // 返回成功
-                    if ($curlResult['http_code'] == 200 && $curl == "success") {
+                    if ($curlResult['http_code'] == 200 && $this->isCallbackSuccess($curl)) {
                         $value['callback_status'] = "success";
                         $this->updateApiCallback($value);
                     } else {
@@ -179,5 +179,31 @@ class CallbackClient extends ApiBaseClient
             'error' => $error,
             'url' => $url,
         ];
+    }
+
+    /**
+     * 判断回调业务是否真正成功。
+     * 只接受明确 success 信号，避免仅凭 status/code=200 把业务失败误判为成功。
+     */
+    protected function isCallbackSuccess($result)
+    {
+        if (is_string($result)) {
+            $result = trim($result);
+            if ($result === 'success') return true;
+            $json = json_decode($result, true);
+            if (json_last_error() !== JSON_ERROR_NONE) return false;
+            $result = $json;
+        }
+
+        if (!is_array($result)) return false;
+
+        if (isset($result['content']) && $this->isCallbackSuccess($result['content'])) return true;
+        if (isset($result['data']) && $this->isCallbackSuccess($result['data'])) return true;
+        if (isset($result['msg']) && is_string($result['msg']) && trim($result['msg']) === 'success') return true;
+        if (isset($result['message']) && is_string($result['message']) && trim($result['message']) === 'success') return true;
+        if (isset($result['result']) && is_string($result['result']) && trim($result['result']) === 'success') return true;
+        if (isset($result['success']) && $result['success'] === true) return true;
+
+        return false;
     }
 }

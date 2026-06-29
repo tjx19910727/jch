@@ -62,17 +62,8 @@ trait AfterOrderPaymentTrait
         $flag[] = $this->updateSaleOrders($this->order);
         actionLog($this->getLS(), '订单修改数据');
         $result = flag_check($flag);
-        //订单推送到微程，判断条件：订单中mobile
-        $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
-        $sync_flag = false;
-        foreach($details as $detail){
-            if($detail['wc_order_no']){
-                $sync_flag = true;
-                break;
-            }
-        }
-        if ($sync_flag) $flag[] = $this->orderSync2Wc($this->order);
-        // if ($this->checkWcOrder($this->order)) $flag[] = $this->orderSync2Wc($this->order);
+        // 微程同步属于外部链路，失败不能回滚已支付订单状态。
+        $this->syncOrderToWcAfterPayment();
         actionLog($flag, '支付成功处理结果flag');
         actionLog($result, '支付成功处理结果');
         $this->machine['machine_id'] = $this->order['machine_id'];
@@ -86,6 +77,36 @@ trait AfterOrderPaymentTrait
             actionException($e, 1, 'tryCatch');
         }
         return $result;
+    }
+
+    protected function syncOrderToWcAfterPayment()
+    {
+        try {
+            $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
+            if (!$details) return true;
+            if (is_object($details) && method_exists($details, 'toArray')) {
+                $details = $details->toArray();
+            }
+            $syncFlag = false;
+            foreach($details as $detail){
+                if($detail['wc_order_no']){
+                    $syncFlag = true;
+                    break;
+                }
+            }
+            if ($syncFlag) {
+                $syncResult = $this->orderSync2Wc($this->order);
+                actionLog($syncResult, '微程订单同步结果');
+            }
+        } catch (\Throwable $e) {
+            actionException($e, 1, 'tryCatch');
+            actionLog([
+                'order_id' => $this->order['order_id'] ?? 0,
+                'trade_no' => $this->order['trade_no'] ?? '',
+                'error' => $e->getMessage(),
+            ], '微程订单同步异常，不影响支付成功事务');
+        }
+        return true;
     }
 
     /**
