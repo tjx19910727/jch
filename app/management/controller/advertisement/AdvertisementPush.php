@@ -53,14 +53,14 @@ class AdvertisementPush extends Common
                     if ($machineIds) $where[] = ['machine_id', 'in', $machineIds];
                 }
             }
-            $playableCondition = "ap.status < 3 AND (ap.end_date > UNIX_TIMESTAMP(CURDATE()) OR (ap.end_date = UNIX_TIMESTAMP(CURDATE()) AND ap.end_time >= HOUR(CURTIME())*3600 + MINUTE(CURTIME())*60 + SECOND(CURTIME())))";
+            $playableCondition = "ap.status < 3 AND ap.start_date <= UNIX_TIMESTAMP() AND (ap.end_date > UNIX_TIMESTAMP(CURDATE()) OR (ap.end_date = UNIX_TIMESTAMP(CURDATE()) AND ap.end_time >= HOUR(CURTIME())*3600 + MINUTE(CURTIME())*60 + SECOND(CURTIME())))";
             if ($is_zero == 1) {
                 $where['raw'] = "(SELECT COUNT(*) FROM advertisement_push ap WHERE ap.m_id = a.m_id AND {$playableCondition}) = 0";
             } elseif ($is_zero == 2) {
                 $where['raw'] = "(SELECT COUNT(*) FROM advertisement_push ap WHERE ap.m_id = a.m_id AND {$playableCondition}) > 0";
             }
             $group = "m_id";
-            $field = "m_id,machine_id,(SELECT machine_name FROM machine m WHERE m.m_id = a.m_id limit 1 ) machine_name,SUM(CASE WHEN status < 3 AND (end_date > UNIX_TIMESTAMP(CURDATE()) OR (end_date = UNIX_TIMESTAMP(CURDATE()) AND end_time >= HOUR(CURTIME())*3600 + MINUTE(CURTIME())*60 + SECOND(CURTIME()))) THEN 1 ELSE 0 END) adv_num";
+            $field = "m_id,machine_id,(SELECT machine_name FROM machine m WHERE m.m_id = a.m_id limit 1 ) machine_name,SUM(CASE WHEN status < 3 AND start_date <= UNIX_TIMESTAMP() AND (end_date > UNIX_TIMESTAMP(CURDATE()) OR (end_date = UNIX_TIMESTAMP(CURDATE()) AND end_time >= HOUR(CURTIME())*3600 + MINUTE(CURTIME())*60 + SECOND(CURTIME()))) THEN 1 ELSE 0 END) adv_num";
         }
         if ($groupType == 2) {
             $where[] = ['status',"<",3];
