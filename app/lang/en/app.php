@@ -81,6 +81,7 @@ return [
             "203224200" => "X-axis status query fault - return command - parsing",
             "203224201" => "Y-axis status query fault - return command - parsing",
             "203224700" => "Air pressure sensor fault - return command - parsing",
+            "1500000" => "Payment module exception",
             "1002201" => "The number of playable advertisements is 0",
             "100104900" => 'LED light control fault (03 xx] - Return command - Analysis',
             "100104901" => 'Equipment cabinet door opening fault (05 01] - Return command - Analysis',
