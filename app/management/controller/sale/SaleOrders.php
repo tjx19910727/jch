@@ -248,11 +248,12 @@ class SaleOrders extends Common
         }
         else{
             if(input('status')=='getOpenDoor'){
-                $mec = $this->app->machineErrorCode->getMachineErrorCodeFind(['me_id' => input('me_id')],'transaction_video,machine_id','',0);
+                $mec = $this->app->machineErrorCode->getMachineErrorCodeFind(['me_id' => input('me_id')],'transaction_video,machine_id,errorCode','',0);
                 if (!$mec) return returnState(100,lang("VSaleOrders.order_no_data"));
                 if (!$mec['trade_no']) $this->app->machineErrorCode->updateMachineErrorCode(['trade_no' => $trade_no],['me_id' => input('me_id')]);
                 if (!$mec['transaction_video']) {
-                    $otherData = ['trade_no' => $trade_no];
+                    $doorType = ['1200000'=>1,'1200010'=>2,'1200020'=>3]; // 默认为1机台，2远程，3钥匙
+                    $otherData = ['trade_no' => $trade_no,'door_type' => $doorType[$mec['errorCode']] ?? 1];//钥匙， 2机台  3远程
                     $result = $this->app->machine->sendToMachine(['machine_id' => $mec['machine_id']],'transactionVideo',$otherData);
                     return is_object($result) ? returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result) :
                     $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
