@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "统一分账后台接口",
-    "version": "2026-06-26",
-    "description": "当前分账后台只保留统一配置接口。配置写入 revenue_rule_config，生效设备和商品写入 revenue_rule_config_scope，接收方、商品规则、阶梯规则统一写入 receiver_config JSON。所有后台接口 Header 必传 token: {{token}}。"
+    "version": "2026-06-29",
+    "description": "当前分账后台只保留统一配置接口。配置写入 revenue_rule_config，生效设备和商品写入 revenue_rule_config_scope，接收方、商品规则、阶梯规则统一写入 receiver_config JSON。rule_mode=5 优惠券分账只保存 activity_coupon.c_id 到 coupon_id，不再保存 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。所有后台接口 Header 必传 token: {{token}}。对应数据库脚本：文档说明/统一分账配置数据库变更.sql。"
   },
   "servers": [
     {
@@ -21,7 +21,7 @@
       "post": {
         "tags": ["RevenueRule"],
         "summary": "新增或修改分账配置",
-        "description": "不传 rrcfg_id 时新增，传 rrcfg_id 时修改。rule_mode=1,2,3,4,5 均使用本接口保存配置主体和 receiver_config。rule_mode=5 的优惠券编码、优惠金额或优惠比例也写在本接口，不再调用旧优惠券配置接口。",
+        "description": "不传 rrcfg_id 时新增，传 rrcfg_id 时修改。rule_mode=1,2,3,4,5 均使用本接口保存配置主体和 receiver_config。rule_mode=5 只传 coupon_id 关联 activity_coupon.c_id；优惠金额、折扣、可用次数、生效期沿用活动优惠券配置，不再提交 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。",
         "operationId": "revenueRuleSaveConfig",
         "parameters": [
           {
@@ -84,7 +84,7 @@
       "post": {
         "tags": ["RevenueRule"],
         "summary": "查询单个分账配置",
-        "description": "按 rrcfg_id 或其他配置字段查询单条 revenue_rule_config，并读取 revenue_rule_config_scope 返回完整 scopes。列表接口同样返回完整 scopes 和 machine_num。",
+        "description": "按 rrcfg_id 或其他配置字段查询单条 revenue_rule_config，并读取 revenue_rule_config_scope 返回完整 scopes。rule_mode=5 且 coupon_id>0 时返回 coupon_info 展示 activity_coupon 信息。列表接口同样返回完整 scopes 和 machine_num。",
         "operationId": "revenueRuleGetFind",
         "parameters": [
           {
@@ -255,6 +255,9 @@
             "type": "integer",
             "description": "活动优惠券ID。仅 rule_mode=5 必填，对应 activity_coupon.c_id；优惠金额、次数、生效期沿用活动优惠券配置。"
           },
+          "coupon_info": {
+            "$ref": "#/components/schemas/CouponInfo"
+          },
           "status": {
             "type": "integer",
             "enum": [1, 2],
@@ -406,6 +409,49 @@
             "items": {
               "$ref": "#/components/schemas/ScopeItem"
             }
+          }
+        }
+      },
+      "CouponInfo": {
+        "type": "object",
+        "description": "rule_mode=5 返回的活动优惠券展示信息，仅查询接口返回，保存时不提交该对象。",
+        "properties": {
+          "c_id": {
+            "type": "integer",
+            "description": "活动优惠券ID，对应 revenue_rule_config.coupon_id。"
+          },
+          "code": {
+            "type": "string",
+            "description": "活动优惠券固定码。随机码场景由 activity_coupon_used.code 兑换，后台配置仍关联 c_id。"
+          },
+          "c_type": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "优惠类型：1固定金额，2折扣。"
+          },
+          "pay_limit": {
+            "type": "number",
+            "description": "使用门槛金额。"
+          },
+          "reduction": {
+            "type": "number",
+            "description": "优惠金额或折扣值，沿用 activity_coupon.reduction。"
+          },
+          "status": {
+            "type": "integer",
+            "description": "活动优惠券状态。"
+          },
+          "start_date": {
+            "type": "integer",
+            "description": "优惠券开始时间戳。"
+          },
+          "end_date": {
+            "type": "integer",
+            "description": "优惠券结束时间戳。"
+          },
+          "used_limit": {
+            "type": "integer",
+            "description": "固定码可用次数，0表示不限制。"
           }
         }
       },
