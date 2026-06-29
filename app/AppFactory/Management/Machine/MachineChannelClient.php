@@ -994,6 +994,27 @@ class MachineChannelClient extends ManagementClient
             }
 
             $this->commitTrans();
+            // 同步同设备同商品其他货道的售价
+            $syncGid = $postData['g_id'] ?? $mc['g_id'];
+            if ($syncGid > 0 && isset($postData['retail_price'])) {
+                $otherChannels = $this->getMachineChannelList([
+                    'm_id' => $mc['m_id'],
+                    'g_id' => $syncGid,
+                    ['mc_id', '<>', $mc['mc_id']],
+                    ['status', '<>', 2],
+                ], 0, 'mc_id,machine_id,channel_position,retail_price');
+                if ($otherChannels) {
+                    $otherChannels = $otherChannels->toArray();
+                    foreach ($otherChannels as $ch) {
+                        if ($ch['retail_price'] != $postData['retail_price']) {
+                            $this->updateMachineChannel(['retail_price' => $postData['retail_price']], ['mc_id' => $ch['mc_id']]);
+                            if ($ch['channel_position'] != 3) {
+                                $this->sendToMachine(['machine_id' => $ch['machine_id']], 'updateMc', ['mc_id' => $ch['mc_id']]);
+                            }
+                        }
+                    }
+                }
+            }
             // 发送触发货道更新数据,如果是边柜货道不发送
             if ($mc['channel_position'] != 3) {
                 $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMc',['mc_id' => $mc['mc_id']]);

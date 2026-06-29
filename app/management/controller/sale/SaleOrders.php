@@ -885,8 +885,8 @@ class SaleOrders extends Common
     
     /**
      * 支付方式统计
-     * 统计各支付方式实收总额（total_price - refund_amount）
-     * where条件与订单列表接口一致
+     * 统计各支付方式实收总额、总成本、利润额、平均售价、平均成本价
+     * where条件与订单列表接口一致，关联子订单表获取成本与数量
      * @return array|string
      */
     public function payTypeStatistics()
@@ -895,6 +895,7 @@ class SaleOrders extends Common
         $machineIds = [];
         $channelCode = trim((string)($postData['channel_code'] ?? ''));
         $supplier = $postData['supplier'] ?? null;
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
         unset($postData['channel_code']);
         unset($postData['supplier']);
         if (!empty($postData['machine_group_id'])) {
@@ -903,60 +904,94 @@ class SaleOrders extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
 
-        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", "pay_channel" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in']);
-        $where['raw'] = "pay_status in ('3', '7')";
+        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", "pay_channel" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'so.');
+        $where['raw'] = "so.pay_status in ('3', '7')";
         $authMch = $this->authMchCannel();
         if ($authMch['status'] != 0) {
             $orderIds = Db::name('sale_orders_details')
                 ->whereIn('mc_id', $authMch['data']['mc_id'])
                 ->column('order_id');
             $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
-            $where[] = ['order_id', 'in', $orderIds ?: [0]];
+            $where[] = ['so.order_id', 'in', $orderIds ?: [0]];
         }
         if ($channelCode !== '') {
             $orderIds = Db::name('sale_orders_details')
                 ->where('channel_code', 'like', '%' . $channelCode . '%')
                 ->column('order_id');
             $orderIds = array_values(array_unique(array_map('intval', $orderIds)));
-            $where[] = ['order_id', 'in', $orderIds ?: [0]];
+            $where[] = ['so.order_id', 'in', $orderIds ?: [0]];
         }
-        if (!empty($machineIds)) $where[] = ['machine_id', 'in', $machineIds];
-        if ($supplier) unset($where['ao_id']);
+        if (!empty($machineIds)) $where[] = ['so.machine_id', 'in', $machineIds];
+        if ($supplier) unset($where['so.ao_id']);
         if ($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0, 1])) {
-            $where['ao_id'] = $this->manager['ao_id'];
+            $where['so.ao_id'] = $this->manager['ao_id'];
         }
 
         $raw = $where['raw'] ?? '';
         unset($where['raw']);
-        $query = Db::name('sale_orders')->where($where);
+        $query = Db::name('sale_orders')->alias('so')
+            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
+            ->where($where);
         if ($raw) $query->whereRaw($raw);
 
-        $list = $query->field('pay_type, SUM(GREATEST(total_price - refund_amount, 0)) total_amount')
-            ->group('pay_type')
+        $list = $query->field("so.pay_type,
+            IFNULL(SUM(sod.total_sod_price - sod.refund_amount), 0) total_amount,
+            IFNULL(SUM(sod.cost_price * (sod.quantity - sod.refund_quantity)), 0) total_cost_price,
+            IFNULL(SUM(sod.quantity - sod.refund_quantity), 0) total_quantity,
+            IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift,
+            COUNT(DISTINCT so.order_id) total_orders")
+            ->group('so.pay_type')
             ->select()
             ->toArray();
 
         $amounts = [];
+        $costs = [];
+        $quantities = [];
+        $gifts = [];
+        $orders = [];
         foreach ($list as $item) {
-            $amounts[$item['pay_type']] = round($item['total_amount'], 2);
+            $pt = $item['pay_type'];
+            $amounts[$pt] = round($item['total_amount'], 2);
+            $costs[$pt] = round($item['total_cost_price'], 2);
+            $quantities[$pt] = (int)$item['total_quantity'];
+            $gifts[$pt] = (int)$item['total_gift'];
+            $orders[$pt] = (int)$item['total_orders'];
         }
 
+        $getAmount = function($t) use ($amounts) { return $amounts[$t] ?? 0; };
+
+        // 汇总值
+        $totalAmount = array_sum($amounts);
+        $totalCostPrice = array_sum($costs);
+        $totalQuantity = array_sum($quantities);
+        $totalGift = array_sum($gifts);
+        $totalOrders = array_sum($orders);
+        $totalSaleQuantity = $totalQuantity - $totalGift;
+
         $result = [
-            'wechat_scan'       => $amounts[11] ?? 0,    // 微信扫码支付
-            'wechat_reverse'    => $amounts[12] ?? 0,    // 微信反扫支付
-            'alipay_scan'       => $amounts[21] ?? 0,    // 支付宝扫码支付
-            'alipay_reverse'    => $amounts[22] ?? 0,    // 支付宝反扫支付
-            'unionpay_intl'     => $amounts[33] ?? 0,    // 国际银联
-            'octopus'           => ($amounts[10] ?? 0) + ($amounts[34] ?? 0), // 八达通(10+34)
-            'unionpay_card'     => $amounts[35] ?? 0,    // 银联卡
-            'cash'              => $amounts[36] ?? 0,    // 纸币
-            'coin'              => $amounts[37] ?? 0,    // 硬币
-            'points'            => $amounts[9] ?? 0,     // 积分(商场积分支付)
-            'balance'           => $amounts[20] ?? 0,    // 余额支付
-            'jd_pay'            => $amounts[4] ?? 0,     // 京东支付
-            'member_pay'        => $amounts[5] ?? 0,     // 会员支付
-            'licheng_online'    => $amounts[6] ?? 0,     // 丽呈线上支付
-            'robot_online'      => $amounts[7] ?? 0,     // 机器人线上支付
+            'wechat_scan'       => $getAmount(11),    // 微信扫码支付
+            'wechat_reverse'    => $getAmount(12),    // 微信反扫支付
+            'alipay_scan'       => $getAmount(21),    // 支付宝扫码支付
+            'alipay_reverse'    => $getAmount(22),    // 支付宝反扫支付
+            'unionpay_intl'     => $getAmount(33),    // 国际银联
+            'octopus'           => $getAmount(10) + $getAmount(34), // 八达通(10+34)
+            'unionpay_card'     => $getAmount(35),    // 银联卡
+            'cash'              => $getAmount(36),    // 纸币
+            'coin'              => $getAmount(37),    // 硬币
+            'points'            => $getAmount(9),     // 积分(商场积分支付)
+            'balance'           => $getAmount(20),    // 余额支付
+            'jd_pay'            => $getAmount(4),     // 京东支付
+            'member_pay'        => $getAmount(5),     // 会员支付
+            'licheng_online'    => $getAmount(6),     // 丽呈线上支付
+            'robot_online'      => $getAmount(7),     // 机器人线上支付
+            'total_cost_price'      => $hasCostPriceAuth ? round($totalCostPrice, 2) : '--',
+            // 'profit_amount'         => $hasCostPriceAuth ? round($totalAmount - $totalCostPrice, 2) : '--',
+            'profit_amount'         => round($totalAmount - $totalCostPrice, 2),
+            'average_retail_price'  => $totalSaleQuantity > 0 ? round($totalAmount / $totalSaleQuantity, 2) : 0,
+            'average_cost_price'    => $hasCostPriceAuth ? ($totalSaleQuantity > 0 ? round($totalCostPrice / $totalSaleQuantity, 2) : 0) : '--',
+            'total_amount'          => round($totalAmount, 2),
+            'total_quantity'        => $totalSaleQuantity,
+            'total_orders'          => $totalOrders,
         ];
 
         return returnData($result);

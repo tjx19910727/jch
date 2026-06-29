@@ -14,6 +14,7 @@ use app\management\controller\Common;
 use app\management\validate\Machine\VMachine;
 use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
 
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 class Machine extends Common
@@ -686,5 +687,71 @@ class Machine extends Common
     {
         $postData = input();
         return $this->app->machine->repairAddressAreaIds($postData);
+    }
+    
+    /**
+     * 设备销售额/销量统计图表
+     * 数据格式与management/index/getSaleChart一致，筛选条件与设备列表一致
+     * @return array|string
+     */
+    public function getSaleChart()
+    {
+        $postData = input();
+        $type = $postData['type'] ?? 1;
+
+        $machineIds = [];
+        if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
+            $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']], 'machine_id');
+            unset($postData['machine_group_id']);
+            if (!$machineIds) return $this->app->machine->rNoData();
+        }
+        if (isset($postData['online_all'])) {
+            $postData['online'] = $postData['online_all'];
+            unset($postData['online_all']);
+        }
+        $isOnOff = $postData['is_on_off'] ?? 0;
+        unset($postData['pageNum'], $postData['version_sort'], $postData['stock_ratio'], $postData['sort_name'], $postData['sort_order'], $postData['is_on_off'], $postData['type']);
+
+        $onlineValue = null;
+        if (isset($postData['online']) && $postData['online'] !== '') {
+            $onlineValue = $postData['online'];
+            unset($postData['online']);
+        }
+
+        $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
+        $where[] = ['vending_machine_type', '=', 1];
+        if (!empty($machineIds)) $where[] = ['machine_id', 'in', $machineIds];
+
+        if ($isOnOff) {
+            $where[] = $this->buildIsOnOffWhere($isOnOff);
+        }
+
+        if ($onlineValue !== null) {
+            if ($onlineValue == 1) {
+                $where['raw'] = (isset($where['raw']) ? $where['raw'] . ' AND ' : '') . '(a.http_online = 1 OR a.online = 1)';
+            } else {
+                $where[] = ['http_online', '=', 2];
+                $where[] = ['online', '=', 2];
+            }
+        }
+
+        // 权限过滤
+        $permitted = $this->app->machine->resolvePermittedMachineIds();
+        if ($permitted !== null) {
+            $where[] = ['m_id', 'in', $permitted];
+        }
+
+        // 查出符合条件的设备 m_id
+        $machineList = MachineModel::getList($where, 0, 'm_id');
+        $mIds = [];
+        if ($machineList) {
+            foreach ($machineList as $item) {
+                $itemArr = is_object($item) ? $item->toArray() : $item;
+                $mIds[] = $itemArr['m_id'];
+            }
+        }
+        if (empty($mIds)) return $this->app->saleOrders->rNoData();
+
+        return $this->app->saleOrders->getChartData(['m_id' => $mIds], $type);
     }
 }
