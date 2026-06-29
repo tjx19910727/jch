@@ -242,10 +242,42 @@ trait AfterOrderPaymentTrait
     protected function cancelPendingRevenueOrders()
     {
         if (empty($this->order['order_id'])) return true;
+        $this->clearPendingRevenueCouponInfo();
         Db::name('revenue_order')
             ->where(['order_id' => $this->order['order_id'], 'status' => 0])
             ->update(['status' => 4, 'update_time' => time()]);
         actionLog($this->getLS(), '取消待支付新分账订单SQL');
+        return true;
+    }
+
+    /**
+     * 清理待支付订单上的分账优惠券快照，只影响分账优惠券字段。
+     */
+    protected function clearPendingRevenueCouponInfo()
+    {
+        $orderId = intval($this->order['order_id']);
+        if ($orderId <= 0) return true;
+
+        $hasRevenueCoupon = trim(strval($this->order['revenue_coupon_code'] ?? '')) !== '';
+        if (!$hasRevenueCoupon) {
+            $hasRevenueCoupon = Db::name('revenue_order')
+                ->where(['order_id' => $orderId, 'status' => 0, 'rule_mode' => 5])
+                ->count() > 0;
+        }
+        if (!$hasRevenueCoupon) return true;
+
+        $update = [
+            'revenue_coupon_code' => '',
+            'revenue_coupon_discount_type' => 0,
+            'revenue_coupon_discount_value' => 0,
+            'revenue_coupon_discount_amount' => 0,
+            'update_time' => time(),
+        ];
+        Db::name('sale_orders')->where(['order_id' => $orderId])->update($update);
+        foreach ($update as $field => $value) {
+            $this->order[$field] = $value;
+        }
+        actionLog(['order_id' => $orderId], '清理待支付订单分账优惠券信息');
         return true;
     }
 
