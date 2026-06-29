@@ -807,7 +807,8 @@ class MachineClient extends ManagementClient
     // }
     public function getSubMList($where,$pageNum = 0,$field = "*",$order = "")
     {
-        $this->syncSubMachineAuxiliary();
+        //不需要再自动补齐副柜关系了，之前的逻辑是为了兼容之前没有建档的副柜，现在已经有了建档逻辑
+        //$this->syncSubMachineAuxiliary();
 
         // if ($this->manager['pid'] > 0) {
         //     $where[] = ['manager_id', '=', $this->manager['manager_id']];
@@ -992,7 +993,8 @@ class MachineClient extends ManagementClient
                 $is_add = false;
             }
             $postData['ao_id'] = $mainM['ao_id'];
-            $postData['status'] = 3;//已挂接未启用
+            $subCabinet = $this->getMachineInfoValue([['m_id', '=', $main_m_id]], 'sub_cabinet');
+            $postData['status'] = ($subCabinet == 1) ? 1 : 3;
             $postData['bind_time'] = time();
         }
 
@@ -1103,7 +1105,8 @@ class MachineClient extends ManagementClient
             }
             $mainM = $mainM->toArray();
             $postData['ao_id'] = $mainM['ao_id'] ?? 0;
-            $postData['status'] = 3;//已挂接未启用
+            $subCabinet = $this->getMachineInfoValue([['m_id', '=', $main_m_id]], 'sub_cabinet');
+            $postData['status'] = ($subCabinet == 1) ? 1 : 3;
         }
 
         if ($main_m_id == 0) {
@@ -1497,7 +1500,7 @@ class MachineClient extends ManagementClient
     {
         try {
             $path = root_path() . "public" . $data['file_path'];
-            $title = ["machine_id", "machine_name","address", "machine_type_desc"];
+            $title = ["machine_id", "machine_name","address", "machine_type_desc", "main_machine_id"];
             $other = [
                 'manager_id' => $this->manager['manager_id'] ?? 0, 
                 'ao_id' => $this->manager['ao_id'] ?? 0
@@ -1524,6 +1527,51 @@ class MachineClient extends ManagementClient
                     }
                     $value['status'] = 2; // 未挂接未启用
                     $value['manager_id'] = $this->manager['manager_id'] ?? 0;
+
+                    // 处理主柜关联：Excel 最后一列为 main_machine_id
+                    $mainMachineId = trim($value['main_machine_id'] ?? '');
+                    if ($mainMachineId !== '') {
+                        $mainM = $this->getMachineFind(['machine_id' => $mainMachineId], 'm_id,machine_id,ao_id');
+                        if ($mainM) {
+                            $mainM = $mainM->toArray();
+                            $machineType = $value['machine_type'] ?? 2;
+                            // 如果主柜已有同类型副柜，先解绑旧副柜
+                            $existsWhere = [
+                                ['main_m_id', '=', $mainM['m_id']],
+                                ['machine_type', '=', $machineType],
+                            ];
+                            $oldSub = $this->getMachineAuxiliaryFind($existsWhere, 'm_id');
+                            if ($oldSub) {
+                                $this->updateMachineAuxiliary([
+                                    'main_m_id' => 0,
+                                    'status' => 2,
+                                    'bind_time' => 0,
+                                ], [['m_id', '=', $oldSub['m_id']]]);
+                            }
+                            // 关联新副柜
+                            $value['main_m_id'] = $mainM['m_id'];
+                            $value['ao_id'] = $mainM['ao_id'] ?? 0;
+                            $value['bind_time'] = time();
+                            $subCabinet = $this->getMachineInfoValue([['m_id', '=', $mainM['m_id']]], 'sub_cabinet');
+                            $value['status'] = ($subCabinet == 1) ? 1 : 3;
+
+                            // 如果主柜没有此类型的货道，创建默认货道
+                            $channelPosition = $this->getSubMachineChannelPosition($machineType);
+                            $hasChannel = $this->getMachineChannelCount([
+                                ['m_id', '=', $mainM['m_id']],
+                                ['channel_position', '=', $channelPosition],
+                            ]);
+                            if ($hasChannel == 0) {
+                                $this->addDefaultSubMachineChannels(
+                                    $mainM['m_id'],
+                                    $mainM,
+                                    $machineType,
+                                    $value['machine_name'] ?? ''
+                                );
+                            }
+                        }
+                    }
+
                     $insertAuxiliary[$key] = $value;
                 }
 
@@ -1568,6 +1616,7 @@ class MachineClient extends ManagementClient
         }
 
         $mainM = null;
+        $bindStatus = 3;
         if ($main_m_id > 0) {
             // 查询此主柜是否已经关联过同类型副柜（排除当前副柜）
             $existsWhere = [
@@ -1586,6 +1635,7 @@ class MachineClient extends ManagementClient
                 return $this->r(100, $this->lang("VMachine.machine_no_data"));
             }
             $mainM = $mainM->toArray();
+            $bindStatus = $this->getMachineInfoValue([['m_id', '=', $main_m_id]], 'sub_cabinet') == 1 ? 1 : 3;
         }
 
         $this->startTrans();
@@ -1594,7 +1644,7 @@ class MachineClient extends ManagementClient
             $updateSub = [
                 'm_id' => $m_id,
                 'main_m_id' => $main_m_id,
-                'status' => $main_m_id > 0 ? 3 : 2,
+                'status' => $main_m_id > 0 ? $bindStatus : 2,
                 'ao_id' => $mainM['ao_id'] ?? 0,
                 'bind_time' => $main_m_id > 0 ? time() : 0,
             ];

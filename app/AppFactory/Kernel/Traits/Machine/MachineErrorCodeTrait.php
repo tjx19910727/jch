@@ -83,7 +83,7 @@ trait MachineErrorCodeTrait
                 $machine['errorCode'] = $errorMsg == "deviceErrorCode." . $this->message['errorCode'] ? $this->message['errorCode'] : $errorMsg;
                 $machine['date'] = date("Y年m月d日");
                 $machine['exceptionDeclaration'] = $errorMsg;
-                $machine['error_code'] = $errorMsg;
+                $machine['error_code'] = mb_substr($errorMsg, 0, 20, 'UTF-8');
                 $machine['error_time'] = date('Y-m-d H:i:s');
                 $machine['error_info'] = $this->message['errorCode'];
                 $this->noticeSendData = [
