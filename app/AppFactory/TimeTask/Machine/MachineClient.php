@@ -890,4 +890,81 @@ class MachineClient extends TimeTaskBase
         ];
     }
 
+    /**
+     * 每天凌晨2点执行，同步物联卡每日使用流量
+     * 因为第三方api接口有延迟，查询3天前的日用量
+     * 命令示例：php think time_task machine syncSimCardDayUsage
+     * @return string
+     */
+    public function syncSimCardDayUsage()
+    {
+        $targetDay = date('Ymd', strtotime('-3 days'));
+
+        $machineInfoList = Db::name('machine_info')->alias('a')
+            ->join('machine b', 'a.m_id = b.m_id')
+            ->whereNotNull('a.iccid')
+            ->where('a.iccid', '<>', '')
+            ->where('a.iccid', '<>', '0')
+            ->whereIn('b.is_operating', [1, 3])
+            ->field('a.m_id,b.machine_id,a.iccid')
+            ->select()
+            ->toArray();
+
+        if (!$machineInfoList) {
+            return '无可同步的物联卡';
+        }
+
+        $success = 0;
+        $fail = 0;
+        $updateCount = 0;
+        $skipCount = 0;
+
+        foreach ($machineInfoList as $item) {
+            try {
+                $iccid = strval($item['iccid']);
+                $resultDay = Simiot::queryDayUsage($iccid, $targetDay, $targetDay);
+                if (!$resultDay || !is_array($resultDay) || ($resultDay['code'] ?? -1) != 0) {
+                    $fail++;
+                    actionLog(['iccid' => $iccid, 'result' => $resultDay], '查询单卡日用量失败', 'syncSimCardDayUsage');
+                    continue;
+                }
+
+                $dayList = $resultDay['result'] ?? [];
+                if (!is_array($dayList) || empty($dayList)) {
+                    $skipCount++;
+                    continue;
+                }
+
+                $dayItem = $dayList[0] ?? [];
+                $day = $dayItem['day'] ?? 0;
+                $usage = $dayItem['usage'] ?? 0;
+                if (!$day) {
+                    $skipCount++;
+                    continue;
+                }
+                $dayDate = date('Y-m-d', strtotime($day));
+
+                $exist = Db::name('sim_card_machine')
+                    ->where('m_id', $item['m_id'])
+                    ->where('iccid', $iccid)
+                    ->where('date', $dayDate)
+                    ->find();
+
+                if ($exist) {
+                    Db::name('sim_card_machine')
+                        ->where('id', $exist['id'])
+                        ->update(['usage' => $usage]);
+                    $updateCount++;
+                } else {
+                    $skipCount++;
+                }
+                $success++;
+            } catch (\Throwable $e) {
+                $fail++;
+                actionException($e, 1, 'syncSimCardDayUsage');
+            }
+        }
+
+        return "处理成功，总数:" . count($machineInfoList) . "，成功:" . $success . "，失败:" . $fail . "，更新:" . $updateCount . "，跳过:" . $skipCount;
+    }
 }

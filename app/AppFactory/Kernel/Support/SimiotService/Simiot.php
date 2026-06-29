@@ -19,6 +19,7 @@ define("SIMIOT_QUERY_CARD", "https://iot.simiot.com/api/client/v1");
  * @method static queryCardBatch($iccids = [], $batchSize = 90) 批量查询卡信息
  * @method static queryPool()  查询流量池信息
  * @method static checkWarning()  查询是否需要预警
+ * @method static queryDayUsage($iccid, $dayBegin, $dayEnd)  查询单卡每日用量
  * @package app\AppFactory\Kernel\Support\SimiotService
  */
 class Simiot
@@ -56,6 +57,7 @@ class Simiot
 
 	/**
 	 * 流量预警接收账号（auth_manager.account）
+	 * 先写死，后续改成有mFault权限的账号都可以接收预警
 	 * @var array
 	 */
 	public $warningAccounts = [
@@ -322,6 +324,56 @@ class Simiot
 		}
 	}
 
+	/**
+	 * 查询卡在起止日期内的每日用量
+	 * @param string $iccid 单个iccid
+	 * @param string $dayBegin 开始日期，格式YYYYMMDD
+	 * @param string $dayEnd 截止日期，格式YYYYMMDD
+	 * @return array result里的day:日期，usage:用量，单位MB
+	 */
+	public function _queryDayUsage($iccid, $dayBegin, $dayEnd)
+	{
+		if (!$iccid) {
+			return ['code' => -1, 'message' => 'iccid empty'];
+		}
+		if (!$this->appId || !$this->secret) {
+			return ['code' => -1, 'message' => 'simiot config missing'];
+		}
+
+		$data = [
+			'appid' => $this->appId,
+			'timestamp' => time(),
+			'iccid' => $iccid,
+			'day_begin' => $dayBegin,
+			'day_end' => $dayEnd,
+		];
+		$data['sign'] = $this->makePostSign($data);
+		actionLog($data, "查询新物联单卡日用量接口参数");
+		$result = $this->request(SIMIOT_QUERY_CARD . '/sim-card/query-day-usage', 'POST', http_build_query($data), [
+			'Content-Type: application/x-www-form-urlencoded;charset=utf-8'
+		]);
+		actionLog($result, "查询新物联单卡日用量接口返回结果");
+		if ($result === false) {
+			return [
+				'code' => -1,
+				'message' => 'request new sim api failed',
+				'http_code' => intval($this->status['http_code'] ?? 0),
+				'curl_error' => $this->curlError,
+				'response' => $this->status['response_body'] ?? ''
+			];
+		}
+
+		$result = json_decode($result, true);
+		if (!is_array($result)) {
+			return [
+				'code' => -1,
+				'message' => 'new sim api response parse failed',
+				'http_code' => intval($this->status['http_code'] ?? 0),
+				'response' => $this->status['response_body'] ?? ''
+			];
+		}
+		return $result;
+	}
 
 	/**
 	 * 生成签名
