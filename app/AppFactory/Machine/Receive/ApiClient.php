@@ -1085,7 +1085,7 @@ class ApiClient extends ReceiveBaseClient
         $field = "adv_id,adv_title,res_id,res_title,file_path,type,duration_time,total_times,play_times,remain_times,start_date,end_date,start_time,end_time,push_type,position,screen,screen_full,status";
         $advList = $this->getAdvertisementPushList($where, $this->data['pageNum'] ?? 0, $field);
         // 有效广告数为空时，发送微信模板消息（每天每设备限一次）
-        if ($advList->isEmpty()) {
+        if ($this->isPlayableAdvEmpty($where['m_id'])) {
             $this->sendAdvEmptyNotice();
         }
         return $this->rQ($advList);
@@ -1112,6 +1112,29 @@ class ApiClient extends ReceiveBaseClient
         } catch (\Exception $e) {
             actionException($e, 1);
         }
+    }
+
+    /**
+     * 判断当前设备可播放广告数是否为0
+     * 直接基于 end_date 和 end_time 实时 count，不受 status 字段滞后影响
+     * @return bool
+     */
+    private function isPlayableAdvEmpty($mId)
+    {
+        $nowDate = strtotime(date("Y-m-d"));
+        $nowTime = HourMinuteSec2int(date("H:i:s"));
+        $count = Db::name('advertisement_push')
+            ->where('m_id', $mId)
+            ->where('start_date', '<=', time())
+            ->where(function ($query) use ($nowDate, $nowTime) {
+                $query->where('end_date', '>', $nowDate)
+                    ->whereOr(function ($q) use ($nowDate, $nowTime) {
+                        $q->where('end_date', '=', $nowDate)
+                          ->where('end_time', '>=', $nowTime);
+                    });
+            })
+            ->count();
+        return $count == 0;
     }
 
     /**
