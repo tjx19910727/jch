@@ -937,7 +937,8 @@ class SaleOrders extends Common
             IFNULL(SUM(sod.total_sod_price - sod.refund_amount), 0) total_amount,
             IFNULL(SUM(sod.cost_price * (sod.quantity - sod.refund_quantity)), 0) total_cost_price,
             IFNULL(SUM(sod.quantity - sod.refund_quantity), 0) total_quantity,
-            IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift")
+            IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift,
+            COUNT(DISTINCT so.order_id) total_orders")
             ->group('so.pay_type')
             ->select()
             ->toArray();
@@ -946,12 +947,14 @@ class SaleOrders extends Common
         $costs = [];
         $quantities = [];
         $gifts = [];
+        $orders = [];
         foreach ($list as $item) {
             $pt = $item['pay_type'];
             $amounts[$pt] = round($item['total_amount'], 2);
             $costs[$pt] = round($item['total_cost_price'], 2);
             $quantities[$pt] = (int)$item['total_quantity'];
             $gifts[$pt] = (int)$item['total_gift'];
+            $orders[$pt] = (int)$item['total_orders'];
         }
 
         $getAmount = function($t) use ($amounts) { return $amounts[$t] ?? 0; };
@@ -961,6 +964,7 @@ class SaleOrders extends Common
         $totalCostPrice = array_sum($costs);
         $totalQuantity = array_sum($quantities);
         $totalGift = array_sum($gifts);
+        $totalOrders = array_sum($orders);
         $totalSaleQuantity = $totalQuantity - $totalGift;
 
         $result = [
@@ -984,6 +988,9 @@ class SaleOrders extends Common
             'profit_amount'         => round($totalAmount - $totalCostPrice, 2),
             'average_retail_price'  => $totalSaleQuantity > 0 ? round($totalAmount / $totalSaleQuantity, 2) : 0,
             'average_cost_price'    => $hasCostPriceAuth ? ($totalSaleQuantity > 0 ? round($totalCostPrice / $totalSaleQuantity, 2) : 0) : '--',
+            'total_amount'          => round($totalAmount, 2),
+            'total_quantity'        => $totalSaleQuantity,
+            'total_orders'          => $totalOrders,
         ];
 
         return returnData($result);
