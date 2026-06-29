@@ -61,6 +61,7 @@ class AdvertisementPush extends Common
             }
             $group = "m_id";
             $field = "m_id,machine_id,(SELECT machine_name FROM machine m WHERE m.m_id = a.m_id limit 1 ) machine_name,SUM(CASE WHEN status < 3 AND start_date <= UNIX_TIMESTAMP() AND (end_date > UNIX_TIMESTAMP(CURDATE()) OR (end_date = UNIX_TIMESTAMP(CURDATE()) AND end_time >= HOUR(CURTIME())*3600 + MINUTE(CURTIME())*60 + SECOND(CURTIME()))) THEN 1 ELSE 0 END) adv_num";
+            $order = "adv_num asc";
         }
         if ($groupType == 2) {
             $where[] = ['status',"<",3];
@@ -68,7 +69,7 @@ class AdvertisementPush extends Common
             $group = "batch_num";
             $field = "batch_num,adv_title,file_path,type,start_date,end_date,start_time,end_time,position,screen,screen_full,count(m_id) machine_num,status";
         }
-        return $this->app->advertisementPush->getGroupList($where,$pageNum,$field,$group);
+        return $this->app->advertisementPush->getGroupList($where,$pageNum,$field,$group,$order ?? "");
     }
 
     /**
