@@ -1181,18 +1181,16 @@
                         },
                         "examples": {
                             "微信支付": {
-                                "summary": "新增微信支付分账触发配置",
+                                "summary": "按pay_type新增微信支付分账触发配置",
                                 "value": {
-                                    "pay_channel": 7,
-                                    "channel_name": "微信支付",
+                                    "pay_type": 1,
                                     "status": 1
                                 }
                             },
                             "支付宝支付": {
-                                "summary": "新增支付宝分账触发配置",
+                                "summary": "按pay_type新增支付宝分账触发配置",
                                 "value": {
-                                    "pay_channel": 8,
-                                    "channel_name": "支付宝支付",
+                                    "pay_type": 2,
                                     "status": 1
                                 }
                             },
@@ -1234,6 +1232,14 @@
                                 "value": {
                                     "rpc_id": 1,
                                     "channel_name": "微信支付",
+                                    "status": 1
+                                }
+                            },
+                            "按pay_type修改渠道": {
+                                "summary": "提交pay_type并自动推导pay_channel",
+                                "value": {
+                                    "rpc_id": 1,
+                                    "pay_type": 20,
                                     "status": 1
                                 }
                             },
@@ -2698,6 +2704,10 @@
                                 "type": "integer",
                                 "description": "订单支付渠道（sale_orders.pay_channel），可选；新配置应以此字段作为触发依据"
                             },
+                            "pay_type": {
+                                "type": "integer",
+                                "description": "订单支付类型（sale_orders.pay_type），可选；新增/修改时未传有效pay_channel则按系统订单分类规则自动生成pay_channel"
+                            },
                             "channel_name": {
                                 "type": "string",
                                 "description": "分账触发配置名称，可选，支持模糊查询"
@@ -2725,24 +2735,28 @@
                     "pay_channel": {
                         "type": "integer",
                         "description": "订单支付渠道（sale_orders.pay_channel），可选"
+                    },
+                    "pay_type": {
+                        "type": "integer",
+                        "description": "订单支付类型（sale_orders.pay_type），可选"
                     }
                 }
             },
             "RevenuePayChannelAddRequest": {
                 "type": "object",
-                "description": "新增新分账独立触发配置，不新增或修改原业务收款渠道。",
-                "required": [
-                    "pay_channel",
-                    "channel_name"
-                ],
+                "description": "新增新分账独立触发配置，不新增或修改原业务收款渠道。pay_channel和pay_type至少传一个；只传pay_type时系统按订单分类规则自动生成pay_channel/channel_name。",
                 "properties": {
+                    "pay_type": {
+                        "type": "integer",
+                        "description": "订单支付类型（sale_orders.pay_type），可选且唯一；未传有效pay_channel时按此字段自动生成pay_channel"
+                    },
                     "pay_channel": {
                         "type": "integer",
-                        "description": "订单支付渠道（sale_orders.pay_channel），必填且唯一；只有配置并启用的订单支付渠道（sale_orders.pay_channel）才生成新分账"
+                        "description": "订单支付渠道（sale_orders.pay_channel），可选且唯一；只有配置并启用的订单支付渠道（sale_orders.pay_channel）才生成新分账"
                     },
                     "channel_name": {
                         "type": "string",
-                        "description": "分账触发配置名称，必填，仅用于后台识别"
+                        "description": "分账触发配置名称，可选；为空时按pay_channel自动补全"
                     },
                     "status": {
                         "type": "integer",
@@ -2769,6 +2783,10 @@
                     "pay_channel": {
                         "type": "integer",
                         "description": "订单支付渠道（sale_orders.pay_channel），可选；提交时必须大于0且唯一"
+                    },
+                    "pay_type": {
+                        "type": "integer",
+                        "description": "订单支付类型（sale_orders.pay_type），可选且唯一；未传有效pay_channel时按此字段自动生成pay_channel"
                     },
                     "channel_name": {
                         "type": "string",

@@ -1372,6 +1372,15 @@ class ApiClient extends ReceiveBaseClient
                         //                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
                     } else {
                         $this->commitTrans();
+                        if (!empty($this->data['coupon_code'])) {
+                            $this->data['coupon_code'] = trim(strval($this->data['coupon_code']));
+                            $couponResult = $this->orderUseCoupon();
+                            if ($couponResult !== true) {
+                                return $couponResult;
+                            }
+                            $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
+                            $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
+                        }
                         return $this->r(200, $this->lang("VSubCar.make_order_success"), ['order' => $this->order]);
                     }
                 }
