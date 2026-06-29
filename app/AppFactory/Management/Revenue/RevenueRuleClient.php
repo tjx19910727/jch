@@ -2,7 +2,7 @@
 
 namespace app\AppFactory\Management\Revenue;
 
-use app\AppFactory\Kernel\Service\Revenue\RevenueCouponService;
+use app\AppFactory\Kernel\Model\Activity\Coupon\ActivityCouponModel;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineGoodsModel;
@@ -167,32 +167,22 @@ class RevenueRuleClient extends ManagementClient
 
     protected function normalizeConfigCouponData(&$data, array $merged, $isUpdate = false)
     {
-        $couponCode = trim($merged['coupon_code'] ?? '');
-        if ($couponCode === '') {
-            try {
-                $couponCode = RevenueCouponService::generateUniqueCouponCode();
-            } catch (\Exception $e) {
-                return $this->rFail($e->getMessage());
-            }
+        $couponId = intval($merged['coupon_id'] ?? 0);
+        if ($couponId <= 0) {
+            return $this->rFail("优惠券ID不能为空");
         }
-        if (!preg_match('/^[1-9][0-9]{5}$/', $couponCode)) return $this->rFail("优惠券编码必须为非0开头的6位数字");
-        if (!RevenueCouponService::isCouponCodeUnique($couponCode, $isUpdate ? $this->getConfigIdFromData($merged) : 0)) {
-            return $this->rFail("优惠券编码已存在或已被活动优惠券使用");
+        $coupon = ActivityCouponModel::where(['c_id' => $couponId])->find();
+        if (!$coupon) {
+            return $this->rFail("关联优惠券不存在");
         }
-        $useLimit = intval($merged['use_limit'] ?? 0);
-        if (!$isUpdate && $useLimit <= 0) return $this->rFail("优惠券使用次数必须大于0");
-        if ($useLimit < intval($merged['used_count'] ?? 0)) return $this->rFail("优惠券使用次数不能小于已使用次数");
-        $discountType = intval($merged['discount_type'] ?? 0);
-        if (!in_array($discountType, [0, 1, 2], true)) return $this->rFail("优惠方式不合法");
-        $discountValue = floatval($merged['discount_value'] ?? 0);
-        if ($discountValue < 0) return $this->rFail("优惠金额或比例不能小于0");
-        if ($discountType > 0 && $discountValue <= 0) return $this->rFail("优惠金额或比例必须大于0");
-        if ($discountType === 2 && $discountValue > 100) return $this->rFail("优惠比例不能超过100%");
-        $expireTime = intval($merged['expire_time'] ?? 0);
-        if ($expireTime > 0 && $expireTime <= time()) return $this->rFail("优惠券过期时间必须大于当前时间");
-        $data['coupon_code'] = $couponCode;
-        $data['discount_type'] = $discountType;
-        $data['discount_value'] = $discountType === 0 ? 0 : $discountValue;
+        $query = RevenueRuleConfigModel::where(['coupon_id' => $couponId, 'rule_mode' => 5]);
+        if ($isUpdate) {
+            $query->where('rrcfg_id', '<>', $this->getConfigIdFromData($merged));
+        }
+        if ($query->find()) {
+            return $this->rFail("优惠券已关联分账配置");
+        }
+        $data['coupon_id'] = $couponId;
         return true;
     }
 
@@ -201,8 +191,7 @@ class RevenueRuleClient extends ManagementClient
         $save = [];
         foreach ([
             'config_name', 'rule_mode', 'base_type', 'turnover_type', 'tier_calc_mode',
-            'settlement_type', 'settlement_days', 'coupon_code', 'discount_type',
-            'discount_value', 'use_limit', 'expire_time', 'receiver_config', 'status',
+            'settlement_type', 'settlement_days', 'coupon_id', 'receiver_config', 'status',
         ] as $field) {
             if (array_key_exists($field, $data)) $save[$field] = $data[$field];
         }
@@ -213,14 +202,6 @@ class RevenueRuleClient extends ManagementClient
                 if (!isset($save[$field])) $save[$field] = $value;
             }
             if (!isset($save['receiver_config'])) $save['receiver_config'] = '[]';
-            if (intval($save['rule_mode'] ?? 0) === 5) {
-                $save['used_count'] = 0;
-                $save['remain_count'] = intval($save['use_limit'] ?? 0);
-            }
-        } elseif (isset($save['use_limit'])) {
-            $current = $this->getRevenueRuleConfigFind(['rrcfg_id' => $this->getConfigIdFromData($data)], 'used_count');
-            $usedCount = $current ? intval($current['used_count'] ?? 0) : 0;
-            $save['remain_count'] = intval($save['use_limit']) - $usedCount;
         }
         if (isset($save['settlement_type']) && intval($save['settlement_type']) === 1) $save['settlement_days'] = 0;
         return $save;
@@ -411,6 +392,15 @@ class RevenueRuleClient extends ManagementClient
     {
         $row['receivers'] = isset($row['receiver_config']) ? json_decode($row['receiver_config'], true) : [];
         if (!is_array($row['receivers'])) $row['receivers'] = [];
+        if (intval($row['rule_mode'] ?? 0) === 5 && intval($row['coupon_id'] ?? 0) > 0) {
+            $coupon = ActivityCouponModel::where(['c_id' => intval($row['coupon_id'])])
+                ->field('c_id,code,c_type,pay_limit,reduction,status,start_date,end_date,used_limit')
+                ->find();
+            if ($coupon) {
+                if (!is_array($coupon)) $coupon = $coupon->toArray();
+                $row['coupon_info'] = $coupon;
+            }
+        }
         return $row;
     }
 

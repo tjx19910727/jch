@@ -22,22 +22,15 @@ CREATE TABLE IF NOT EXISTS `revenue_rule_config` (
   `tier_calc_mode` tinyint(1) NOT NULL DEFAULT '1' COMMENT '阶梯计算模式：1整单命中，2跨阶梯拆分',
   `settlement_type` tinyint(1) NOT NULL DEFAULT '1' COMMENT '结算类型：1即时分账，2 T+N分账',
   `settlement_days` int(11) NOT NULL DEFAULT '0' COMMENT 'T+N天数',
-  `coupon_code` varchar(6) DEFAULT NULL COMMENT '优惠券编码，rule_mode=5使用',
-  `discount_type` tinyint(1) NOT NULL DEFAULT '0' COMMENT '优惠方式：0不调整实付，1固定金额，2优惠比例',
-  `discount_value` decimal(10,3) NOT NULL DEFAULT '0.000' COMMENT '优惠金额或比例',
-  `use_limit` int(11) NOT NULL DEFAULT '0' COMMENT '可使用次数',
-  `used_count` int(11) NOT NULL DEFAULT '0' COMMENT '已使用次数',
-  `remain_count` int(11) NOT NULL DEFAULT '0' COMMENT '剩余次数',
-  `expire_time` int(11) DEFAULT NULL COMMENT '过期时间，0或空表示不过期',
+  `coupon_id` int(11) NOT NULL DEFAULT '0' COMMENT '关联活动优惠券ID，rule_mode=5使用',
   `receiver_config` mediumtext NOT NULL COMMENT '分账接收方配置JSON：账户、比例、固定金额、阶梯等',
   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态：1启用，2停用',
   `creator` int(11) DEFAULT NULL COMMENT '创建人',
   `create_time` int(11) DEFAULT NULL COMMENT '创建时间',
   `update_time` int(11) DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`rrcfg_id`),
-  UNIQUE KEY `uk_coupon_code` (`coupon_code`),
   KEY `idx_mode_status` (`rule_mode`,`status`),
-  KEY `idx_status_expire` (`status`,`expire_time`)
+  KEY `idx_coupon_id` (`coupon_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='统一分账配置表';
 
 CREATE TABLE IF NOT EXISTS `revenue_rule_config_scope` (
@@ -58,6 +51,78 @@ CREATE TABLE IF NOT EXISTS `revenue_rule_config_scope` (
   KEY `idx_goods_status` (`g_id`,`mg_id`,`status`),
   KEY `idx_config_status` (`rrcfg_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='统一分账配置生效范围表';
+
+-- 已存在环境升级：优惠券分账改为关联 activity_coupon.c_id，不再在 revenue_rule_config 重复保存优惠券编码、优惠金额、次数和过期时间。
+SET @sql = IF(
+  NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = 'coupon_id'),
+  'ALTER TABLE `revenue_rule_config` ADD COLUMN `coupon_id` int(11) NOT NULL DEFAULT ''0'' COMMENT ''关联活动优惠券ID，rule_mode=5使用'' AFTER `settlement_days`',
+  'SELECT ''revenue_rule_config.coupon_id already exists'' AS message'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = 'coupon_code'),
+  'UPDATE `revenue_rule_config` rrc INNER JOIN `activity_coupon` ac ON ac.`code` = rrc.`coupon_code` SET rrc.`coupon_id` = ac.`c_id` WHERE rrc.`rule_mode` = 5 AND rrc.`coupon_id` = 0',
+  'SELECT ''revenue_rule_config.coupon_code already absent, skip activity_coupon mapping'' AS message'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = 'coupon_code'),
+  'UPDATE `revenue_rule_config` rrc INNER JOIN `activity_coupon_used` acu ON acu.`code` = rrc.`coupon_code` SET rrc.`coupon_id` = acu.`c_id` WHERE rrc.`rule_mode` = 5 AND rrc.`coupon_id` = 0',
+  'SELECT ''revenue_rule_config.coupon_code already absent, skip activity_coupon_used mapping'' AS message'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = 'coupon_code'),
+  'SELECT `rrcfg_id`, `config_name`, `coupon_code` FROM `revenue_rule_config` WHERE `rule_mode` = 5 AND `coupon_id` = 0',
+  'SELECT ''revenue_rule_config.coupon_code already absent, skip unresolved coupon check'' AS message'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND INDEX_NAME = 'uk_coupon_code'),
+  'ALTER TABLE `revenue_rule_config` DROP INDEX `uk_coupon_code`',
+  'SELECT ''revenue_rule_config.uk_coupon_code already absent'' AS message'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND INDEX_NAME = 'idx_status_expire'),
+  'ALTER TABLE `revenue_rule_config` DROP INDEX `idx_status_expire`',
+  'SELECT ''revenue_rule_config.idx_status_expire already absent'' AS message'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  NOT EXISTS(SELECT 1 FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND INDEX_NAME = 'idx_coupon_id'),
+  'ALTER TABLE `revenue_rule_config` ADD INDEX `idx_coupon_id` (`coupon_id`)',
+  'SELECT ''revenue_rule_config.idx_coupon_id already exists'' AS message'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @column_name = 'coupon_code';
+SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = @column_name), 'ALTER TABLE `revenue_rule_config` DROP COLUMN `coupon_code`', 'SELECT ''revenue_rule_config.coupon_code already absent'' AS message');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @column_name = 'discount_type';
+SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = @column_name), 'ALTER TABLE `revenue_rule_config` DROP COLUMN `discount_type`', 'SELECT ''revenue_rule_config.discount_type already absent'' AS message');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @column_name = 'discount_value';
+SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = @column_name), 'ALTER TABLE `revenue_rule_config` DROP COLUMN `discount_value`', 'SELECT ''revenue_rule_config.discount_value already absent'' AS message');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @column_name = 'use_limit';
+SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = @column_name), 'ALTER TABLE `revenue_rule_config` DROP COLUMN `use_limit`', 'SELECT ''revenue_rule_config.use_limit already absent'' AS message');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @column_name = 'used_count';
+SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = @column_name), 'ALTER TABLE `revenue_rule_config` DROP COLUMN `used_count`', 'SELECT ''revenue_rule_config.used_count already absent'' AS message');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @column_name = 'remain_count';
+SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = @column_name), 'ALTER TABLE `revenue_rule_config` DROP COLUMN `remain_count`', 'SELECT ''revenue_rule_config.remain_count already absent'' AS message');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @column_name = 'expire_time';
+SET @sql = IF(EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = @column_name), 'ALTER TABLE `revenue_rule_config` DROP COLUMN `expire_time`', 'SELECT ''revenue_rule_config.expire_time already absent'' AS message');
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- revenue_order 配置ID字段修正：rr_id 是旧策略组命名，统一配置后改为 rrcfg_id。
 SET @sql = IF(

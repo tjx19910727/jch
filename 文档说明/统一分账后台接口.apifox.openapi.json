@@ -63,7 +63,7 @@
       "post": {
         "tags": ["RevenueRule"],
         "summary": "分页查询分账配置",
-        "description": "查询 revenue_rule_config，并返回 receivers、machine_num、完整 scopes 和组织名称。优惠券配置不再拆分到独立接口，rule_mode=5 直接从配置行返回 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。",
+        "description": "查询 revenue_rule_config，并返回 receivers、machine_num、完整 scopes 和组织名称。优惠券配置不再拆分到独立接口，rule_mode=5 只保存 coupon_id，并通过 coupon_info 返回关联 activity_coupon 的展示信息。",
         "operationId": "revenueRuleGetList",
         "parameters": [
           {
@@ -251,26 +251,9 @@
             "type": "integer",
             "description": "T+N天数。settlement_type=2时必须大于0。"
           },
-          "coupon_code": {
-            "type": "string",
-            "description": "优惠券编码。仅 rule_mode=5 使用；6位数字且不能以0开头。不传时系统自动生成。"
-          },
-          "discount_type": {
+          "coupon_id": {
             "type": "integer",
-            "enum": [0, 1, 2],
-            "description": "订单优惠方式。0不调整实付金额，1固定优惠金额，2按优惠比例计算。仅 rule_mode=5 使用。"
-          },
-          "discount_value": {
-            "type": "number",
-            "description": "优惠金额或优惠比例。discount_type=1表示金额，discount_type=2表示百分比。"
-          },
-          "use_limit": {
-            "type": "integer",
-            "description": "优惠券可使用总次数。仅 rule_mode=5 使用。"
-          },
-          "expire_time": {
-            "type": "integer",
-            "description": "优惠券过期时间戳，0表示不过期。仅 rule_mode=5 使用。"
+            "description": "活动优惠券ID。仅 rule_mode=5 必填，对应 activity_coupon.c_id；优惠金额、次数、生效期沿用活动优惠券配置。"
           },
           "status": {
             "type": "integer",
@@ -462,9 +445,9 @@
             "type": "integer",
             "description": "分账配置ID。"
           },
-          "coupon_code": {
-            "type": "string",
-            "description": "优惠券编码。用于查询 rule_mode=5 配置。"
+          "coupon_id": {
+            "type": "integer",
+            "description": "活动优惠券ID。用于查询 rule_mode=5 配置。"
           }
         }
       },
@@ -633,11 +616,7 @@
           "rule_mode": 5,
           "base_type": 2,
           "settlement_type": 1,
-          "coupon_code": "123456",
-          "discount_type": 1,
-          "discount_value": 2,
-          "use_limit": 100,
-          "expire_time": 0,
+          "coupon_id": 1001,
           "receivers": [
             {
               "receiver_ao_id": 17,

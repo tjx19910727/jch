@@ -240,10 +240,12 @@ class RevenueCalculator
         $usable = RevenueCouponService::checkUsable($coupon);
         $this->logRevenueConfig('优惠券分账可用性校验', [
             'rr_id' => intval($coupon['rr_id'] ?? 0),
+            'coupon_id' => intval($coupon['coupon_id'] ?? 0),
             'coupon_code' => $coupon['coupon_code'] ?? '',
             'usable' => $usable['usable'] ? 1 : 0,
-            'remain_count' => intval($coupon['remain_count'] ?? 0),
-            'expire_time' => intval($coupon['expire_time'] ?? 0),
+            'used_limit' => intval($coupon['used_limit'] ?? 0),
+            'used_count' => intval($coupon['used_count'] ?? 0),
+            'end_date' => intval($coupon['end_date'] ?? 0),
             'skip_reason' => $usable['reason'],
         ]);
         if (!$usable['usable']) {

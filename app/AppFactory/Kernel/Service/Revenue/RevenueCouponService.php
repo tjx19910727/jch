@@ -21,10 +21,9 @@ class RevenueCouponService
 
     public static function existsRevenueCouponCode($couponCode, $excludeConfigId = 0)
     {
-        $query = RevenueRuleConfigModel::where([
-            'coupon_code' => trim(strval($couponCode)),
-            'rule_mode' => 5,
-        ]);
+        $coupon = self::findActivityCouponByCode($couponCode);
+        if (!$coupon) return false;
+        $query = RevenueRuleConfigModel::where(['coupon_id' => intval($coupon['c_id']), 'rule_mode' => 5]);
         if (intval($excludeConfigId) > 0) {
             $query->where('rrcfg_id', '<>', intval($excludeConfigId));
         }
@@ -55,39 +54,61 @@ class RevenueCouponService
 
     public static function findEnabledCouponByCode($couponCode, $field = '*')
     {
-        $coupon = RevenueRuleConfigModel::where([
-                'coupon_code' => trim(strval($couponCode)),
-                'status' => 1,
-                'rule_mode' => 5,
-            ])
-            ->find();
-        if (!$coupon) {
+        $activityCoupon = self::findActivityCouponByCode($couponCode);
+        if (!$activityCoupon) {
             return null;
         }
-        if (!is_array($coupon)) {
-            $coupon = $coupon->toArray();
+        $config = RevenueRuleConfigModel::where([
+                'coupon_id' => intval($activityCoupon['c_id']),
+                'status' => 1,
+                'rule_mode' => 5,
+            ])->find();
+        if (!$config) {
+            return null;
         }
-        $coupon['rr_id'] = intval($coupon['rrcfg_id']);
-        return $coupon;
+        if (!is_array($config)) {
+            $config = $config->toArray();
+        }
+        $config['rr_id'] = intval($config['rrcfg_id']);
+        return self::mergeActivityCouponData($config, $activityCoupon, $couponCode);
     }
 
     public static function checkUsable(array $coupon)
     {
-        $remainCount = intval($coupon['remain_count'] ?? 0);
-        if ($remainCount <= 0) {
+        $status = intval($coupon['activity_status'] ?? $coupon['status'] ?? 0);
+        if (!in_array($status, [1, 2], true)) {
             return [
                 'usable' => false,
-                'message' => '优惠券已无可用次数',
-                'reason' => 'remain_count_empty',
+                'message' => '优惠券不可用',
+                'reason' => 'status_invalid',
             ];
         }
-        $expireTime = intval($coupon['expire_time'] ?? 0);
-        if ($expireTime > 0 && $expireTime <= time()) {
+        $startDate = intval($coupon['start_date'] ?? 0);
+        if ($startDate > 0 && $startDate > time()) {
+            return [
+                'usable' => false,
+                'message' => '优惠券未开始',
+                'reason' => 'not_begin',
+            ];
+        }
+        $endDate = intval($coupon['end_date'] ?? 0);
+        if ($endDate > 0 && $endDate <= time()) {
             return [
                 'usable' => false,
                 'message' => '优惠券已过期',
                 'reason' => 'expired',
             ];
+        }
+        if (intval($coupon['code_type'] ?? 2) === 1) {
+            $usedStatus = intval($coupon['used_status'] ?? 0);
+            if ($usedStatus === 2) return ['usable' => false, 'message' => '优惠券已使用', 'reason' => 'used'];
+            if ($usedStatus === 3) return ['usable' => false, 'message' => '优惠券已过期', 'reason' => 'used_expired'];
+            if ($usedStatus === 4) return ['usable' => false, 'message' => '优惠券已作废', 'reason' => 'used_cancelled'];
+        } else {
+            $usedLimit = intval($coupon['used_limit'] ?? 0);
+            if ($usedLimit > 0 && intval($coupon['used_count'] ?? 0) >= $usedLimit) {
+                return ['usable' => false, 'message' => '优惠券已无可用次数', 'reason' => 'used_limit'];
+            }
         }
         return [
             'usable' => true,
@@ -215,6 +236,59 @@ class RevenueCouponService
             $discount = $baseAmount;
         }
         return self::money($discount);
+    }
+
+    public static function findActivityCouponByCode($couponCode)
+    {
+        $couponCode = trim(strval($couponCode));
+        if ($couponCode === '') return null;
+        $field = 'c_id,code,c_type,pay_limit,reduction,status,start_date,end_date,used_limit,designated_machine,designated_goods,exclusion,creator';
+        $coupon = ActivityCouponModel::where(['code' => $couponCode])->field($field)->order('c_id desc')->find();
+        $used = null;
+        if (!$coupon) {
+            $used = ActivityCouponUsedModel::where(['code' => $couponCode, 'code_type' => 1])
+                ->field('cu_id,c_id,code,c_type,pay_limit,reduction,status,code_type')
+                ->order('cu_id desc')
+                ->find();
+            if (!$used) return null;
+            if (!is_array($used)) $used = $used->toArray();
+            $coupon = ActivityCouponModel::where(['c_id' => intval($used['c_id'])])->field($field)->find();
+        }
+        if (!$coupon) return null;
+        if (!is_array($coupon)) $coupon = $coupon->toArray();
+        $coupon['coupon_code'] = $couponCode;
+        $coupon['code_type'] = $used ? 1 : 2;
+        $coupon['used_count'] = $used ? 0 : ActivityCouponUsedModel::where(['c_id' => intval($coupon['c_id']), 'status' => 2])->count();
+        if ($used) {
+            $coupon['cu_id'] = intval($used['cu_id'] ?? 0);
+            $coupon['used_status'] = intval($used['status'] ?? 0);
+        }
+        return $coupon;
+    }
+
+    protected static function mergeActivityCouponData(array $config, array $activityCoupon, $couponCode)
+    {
+        $cType = intval($activityCoupon['c_type'] ?? 0);
+        $reduction = self::money($activityCoupon['reduction'] ?? 0, 3);
+        $discountType = $cType === 1 ? 1 : ($cType === 2 ? 2 : 0);
+        $discountValue = $discountType === 2
+            ? self::money(bcsub('100', $reduction, 3), 3)
+            : $reduction;
+        return array_merge($config, [
+            'coupon_id' => intval($activityCoupon['c_id']),
+            'coupon_code' => trim(strval($couponCode)),
+            'activity_status' => intval($activityCoupon['status'] ?? 0),
+            'start_date' => intval($activityCoupon['start_date'] ?? 0),
+            'end_date' => intval($activityCoupon['end_date'] ?? 0),
+            'used_limit' => intval($activityCoupon['used_limit'] ?? 0),
+            'used_count' => intval($activityCoupon['used_count'] ?? 0),
+            'code_type' => intval($activityCoupon['code_type'] ?? 2),
+            'cu_id' => intval($activityCoupon['cu_id'] ?? 0),
+            'used_status' => intval($activityCoupon['used_status'] ?? 0),
+            'discount_type' => $discountType,
+            'discount_value' => $discountValue,
+            'activity_coupon' => $activityCoupon,
+        ]);
     }
 
     protected static function money($value, $scale = 2)
