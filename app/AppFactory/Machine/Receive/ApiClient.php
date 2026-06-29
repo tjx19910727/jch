@@ -1126,6 +1126,7 @@ class ApiClient extends ReceiveBaseClient
         $count = Db::name('advertisement_push')
             ->where('m_id', $mId)
             ->where('start_date', '<=', time())
+            ->where('status', '<', 3)
             ->where(function ($query) use ($nowDate, $nowTime) {
                 $query->where('end_date', '>', $nowDate)
                     ->whereOr(function ($q) use ($nowDate, $nowTime) {
