@@ -23,7 +23,7 @@ class MachineView extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineView->getList($where,$pageNum,$this->field);
+        return $this->app->machineView->getList($where,$pageNum,$this->field,'create_time desc');
     }
 
     public function getFind()

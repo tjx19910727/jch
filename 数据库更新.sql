@@ -181,6 +181,7 @@ CREATE TABLE `wc_goods_local` (
 ALTER TABLE kiosk.wc_goods MODIFY COLUMN show_citys text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL COMMENT '展示城市';
 
 ALTER TABLE kiosk.wc_goods ADD is_pub TINYINT NULL COMMENT '是否上架：1是0否';
+ALTER TABLE kiosk.wc_goods ADD sync_status varchar(32) NULL COMMENT '微程商品同步批次状态：YmdHis_1本次返回，YmdHis_2本次未返回';
 ALTER TABLE kiosk.wc_goods ADD tempcolumn varchar(100) NULL;
 ALTER TABLE kiosk.wc_goods ADD temprownumber varchar(100) NULL;
 
@@ -339,6 +340,7 @@ CREATE TABLE `wc_goods` (
   `qq_video_id` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '腾讯视频id',
   `daysInfo` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '日历库存列表',
   `combination_goods` text CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci COMMENT '组合产品子产品列表',
+  `sync_status` varchar(32) DEFAULT NULL COMMENT '微程商品同步批次状态：YmdHis_1本次返回，YmdHis_2本次未返回',
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='微程商品信息表';
 

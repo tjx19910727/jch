@@ -3818,11 +3818,15 @@ class ApiClient extends ReceiveBaseClient
             }
 
             $recordsCode = date('YmdHi');
-            $managerId = trim($this->data['manager_id'] ?? '');
-            $inspectionStaff = $this->getEnabledInspectionStaff($managerId);
+            $staffCode = trim(strval($this->data['manager_id'] ?? ''));
+            if (!preg_match('/^[1-9][0-9]{5}$/', $staffCode)) {
+                return $this->rValidate('巡检账号必须为首位非0的6位数字');
+            }
+            $inspectionStaff = $this->getEnabledInspectionStaff($staffCode);
             if (!$inspectionStaff) {
                 return $this->rFail('巡检人员不存在或已禁用');
             }
+            $staffId = intval($inspectionStaff['staff_id']);
             $notes = trim(strval($this->data['notes'] ?? ''));
             $checkTime = date('Y-m-d H:i:s');
 
@@ -3834,7 +3838,7 @@ class ApiClient extends ReceiveBaseClient
                     'records_code' => $recordsCode,
                     'item_id' => $itemId,
                     'machine_id' => $this->machine['machine_id'],
-                    'manager_id' => $managerId,
+                    'manager_id' => $staffId,
                     'check_status' => $rowStatus,
                     'check_time' => $checkTime,
                     'notes' => $rowNotes !== '' ? $rowNotes : $notes,
@@ -4207,19 +4211,19 @@ class ApiClient extends ReceiveBaseClient
         ]);
     }
 
-    protected function getEnabledInspectionStaff($staffId)
+    protected function getEnabledInspectionStaff($staffCode)
     {
-        $staffId = intval($staffId);
-        if ($staffId <= 0) {
+        $staffCode = trim((string)$staffCode);
+        if ($staffCode === '') {
             return [];
         }
 
         $staff = Db::name('inspection_staff')
             ->where([
-                'staff_id' => $staffId,
+                'staff_code' => $staffCode,
                 'status' => 1,
             ])
-            ->field('staff_id,account_name')
+            ->field('staff_id,staff_code,account_name')
             ->find();
 
         return $staff ?: [];

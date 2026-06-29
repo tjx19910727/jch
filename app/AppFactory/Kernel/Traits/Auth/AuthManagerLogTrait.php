@@ -130,6 +130,7 @@ trait AuthManagerLogTrait
                 if (!in_array($this->apiUrl, $this->ignoreList)) {
                     $params = input();
                     $path = request()->baseUrl();
+                    $params = $this->normalizeManagerLogParams($params, $path);
                     $log = $this->getAuthManagerLogFind(['path' => $path, ['create_time', '>=', bcsub(time(), 3)]], 'ml_id');
                     if (!$log) {
                         if (!$manager) {
@@ -159,5 +160,14 @@ trait AuthManagerLogTrait
             actionException($e,1);
             die(json($this->r(3301,$e->getMessage(),[],false))->send());
         }
+    }
+
+    protected function normalizeManagerLogParams($params, $path)
+    {
+        if ($path == '/management/machine.machine/update' && isset($params['manager_id'])) {
+            $params['machine_manager_id'] = $params['manager_id'];
+            unset($params['manager_id']);
+        }
+        return $params;
     }
 }
