@@ -46,11 +46,19 @@ trait MachineErrorCodeTrait
             if ($len == 9) $position = 2;
             if ($len == 7) $position = 3;
         }
-        $lastEc = $this->getMachineErrorCodeFind([
+        // 同一设备同一错误码30秒内不重复插入
+        $recentEc = MachineErrorCodeModel::getCount([
             'm_id' => $this->machine['m_id'],
             'errorCode' => $this->message['errorCode'],
-            ['create_time','>=',time() - env('errorCode.noticeTime') ?? 1800 ]
-        ],'me_id','me_id desc');
+            ['create_time','>=',time() - 30]
+        ]);
+        if ($recentEc) return 1;
+
+        // $lastEc = $this->getMachineErrorCodeFind([
+        //     'm_id' => $this->machine['m_id'],
+        //     'errorCode' => $this->message['errorCode'],
+        //     ['create_time','>=',time() - env('errorCode.noticeTime') ?? 1800 ]
+        // ],'me_id','me_id desc');
         $insert = [
             "m_id" => $this->machine['m_id'],
             "machine_id" => $this->machine['machine_id'],
@@ -62,6 +70,9 @@ trait MachineErrorCodeTrait
             "msg" => $this->message['msg'] ?? "",
             "ao_id" => $this->machine['ao_id'] ?? 0,
         ];
+        if (in_array($this->message['errorCode'], ['1200010', '1200020']) && !empty($this->message['creator_id'])) {
+            $insert['creator_id'] = $this->message['creator_id'];
+        }
         $result = $this->addMachineErrorCode($insert);
         if ($result && !in_array($this->message['errorCode'], ['1100000', '1000001'])) {
             //if (!$lastEc) {
@@ -72,7 +83,7 @@ trait MachineErrorCodeTrait
                 $machine['errorCode'] = $errorMsg == "deviceErrorCode." . $this->message['errorCode'] ? $this->message['errorCode'] : $errorMsg;
                 $machine['date'] = date("Y年m月d日");
                 $machine['exceptionDeclaration'] = $errorMsg;
-                $machine['error_code'] = $errorMsg;
+                $machine['error_code'] = mb_substr($errorMsg, 0, 20, 'UTF-8');
                 $machine['error_time'] = date('Y-m-d H:i:s');
                 $machine['error_info'] = $this->message['errorCode'];
                 $this->noticeSendData = [

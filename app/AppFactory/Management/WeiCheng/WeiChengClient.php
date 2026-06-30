@@ -148,31 +148,44 @@ class WeiChengClient extends ManagementClient
 
     public function synchronizeGoodsTypesAll()
     {
+        $syncBatchNo = date('YmdHis');
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']]);
         if (!$wc_goods_type) return true;
         $wc_goods_type = $wc_goods_type->toArray();
+        $results = [];
         foreach ($wc_goods_type as $type) {
-            $res = $this->app->weicheng->synchronizeGoodsTypes($type['id'], 1);
+            $res = $this->app->weicheng->synchronizeGoodsTypes($type['id'], 1, $syncBatchNo, false);
+            $results[] = $res;
+            if (!$this->isWcSyncSuccess($res)) {
+                actionLog(['goods_type' => $type['id'], 'result' => $this->normalizeWcSyncLog($res), 'sync_batch_no' => $syncBatchNo], '微程分类同步失败，跳过未返回标记', "export_message_sync");
+                return $res;
+            }
         }
-        return $res;
+        $this->markWcGoodsMissingFromSync($syncBatchNo);
+        return $this->rA('分类商品同步成功', $results);
     }
 
-    public function synchronizeGoodsTypes($goods_type, $nowPage = 1)
+    public function synchronizeGoodsTypes($goods_type, $nowPage = 1, $syncBatchNo = '', $autoFinalize = true)
     {
+        if ($syncBatchNo === '') $syncBatchNo = date('YmdHis');
         $result = $this->goodsTypesSync($goods_type, $nowPage);
         if ($result['status'] != 200) {
-            return $this->rA('分类商品同步失败: ' . $result['response']);
+            return $this->r(100, '分类商品同步失败: ' . $result['response']);
         }
         $updateData = json2arr($result['response']);
+        if (!$updateData || !isset($updateData['data'])) {
+            return $this->r(100, '分类商品同步失败: 微程返回格式异常');
+        }
 
         $totalPage = isset($updateData['data']['totalPage']) ? intval($updateData['data']['totalPage']) : 1;
         $goods_lists = $updateData['data']['list'] ?? [];
 
-        $res = $this->synchronizeGoodsLists2Db($goods_lists, $goods_type);
+        $res = $this->synchronizeGoodsLists2Db($goods_lists, $goods_type, $syncBatchNo);
 
         // 如果还有下一页，递归处理并合并结果
         if ($nowPage < $totalPage) {
-            $nextRes = $this->synchronizeGoodsTypes($goods_type, $nowPage + 1);
+            $nextRes = $this->synchronizeGoodsTypes($goods_type, $nowPage + 1, $syncBatchNo, false);
+            if (!$this->isWcSyncSuccess($nextRes)) return $nextRes;
 
             // 合并当前页与后续页的结果，尽量兼容各种返回类型
             $current = is_array($res) ? $res : [$res];
@@ -188,7 +201,12 @@ class WeiChengClient extends ManagementClient
 
         // 仅在顶层调用时返回标准化的 rA 响应，递归内部返回原始合并结果
         if ($nowPage === 1) {
-            return $this->rA('分类商品同步成功', $combined);
+            if ($autoFinalize) $this->markWcGoodsMissingFromSync($syncBatchNo, $goods_type);
+            return $this->rA('分类商品同步成功', [
+                'sync_batch_no' => $syncBatchNo,
+                'goods_type' => $goods_type,
+                'result' => $combined,
+            ]);
         }
 
         return $combined;
@@ -196,17 +214,19 @@ class WeiChengClient extends ManagementClient
 
     public function synchronizeGoodsAll()
     {
+        $syncBatchNo = date('YmdHis');
         $wc_goods = $this->getWcGoodsList([['id', '>', '0'],['is_pub', '=', '1']])->toArray();
         foreach ($wc_goods as $v) {
-            $res = $this->synchronizeGoods($v['no'], $v['type']);
+            $res = $this->synchronizeGoods($v['no'], $v['type'], $syncBatchNo);
             if (!$res['status']) continue;
         }
         $this->wcGoodsWriteLocal();
         return returnState('200', '分类商品同步成功');
     }
 
-    public function synchronizeGoods($goods_no, $type)
+    public function synchronizeGoods($goods_no, $type, $syncBatchNo = '')
     {
+        if ($syncBatchNo === '') $syncBatchNo = date('YmdHis');
         $result = $this->goodsSync($goods_no, $type);
 
         if ($result['status'] == 200) {
@@ -231,10 +251,62 @@ class WeiChengClient extends ManagementClient
 
             //type值是从goods_type带过来的，这里不要修改商品的type，否则查询不到数据
             if (isset($updateData['type'])) unset($updateData['type']);
-            $res = $this->synchronizeGoods2Db($updateData);
+            $res = $this->synchronizeGoods2Db($updateData, $syncBatchNo);
             return ['status' => $res];
         }
         return ['status' => false, 'msg' => $result['response']];;
+    }
+
+    protected function markWcGoodsMissingFromSync($syncBatchNo, $goodsType = 0)
+    {
+        $onlineStatus = $syncBatchNo . '_1';
+        $offlineStatus = $syncBatchNo . '_2';
+        $missingOutNos = array_values(array_filter(array_unique($this->getWcGoodsMissingSyncOutNos($onlineStatus, $goodsType))));
+        $result = $this->updateWcGoodsMissingSyncStatus($onlineStatus, $offlineStatus, $goodsType);
+        $machineGoodsResult = $this->markWcMachineGoodsOffShelf($missingOutNos);
+        $machineChannelResult = $this->deleteWcMachineChannelByOutNos($missingOutNos);
+        actionLog([
+            'sync_batch_no' => $syncBatchNo,
+            'goods_type' => $goodsType,
+            'offline_status' => $offlineStatus,
+            'missing_out_no_count' => count($missingOutNos),
+            'result' => $result,
+            'machine_goods_result' => $machineGoodsResult,
+            'machine_channel_result' => $machineChannelResult,
+        ], '微程商品未返回标记结果', "export_message_sync");
+        return $result;
+    }
+
+    protected function markWcMachineGoodsOffShelf(array $outNos)
+    {
+        return $this->offShelfWcMachineGoodsByOutNos($outNos);
+    }
+
+    protected function isWcSyncSuccess($result)
+    {
+        if ($result === true) return true;
+        if (is_array($result)) {
+            if (isset($result['status']) && $result['status'] === false) return false;
+            if (isset($result['state']) && intval($result['state']) !== 200) return false;
+            return true;
+        }
+        if (is_object($result) && method_exists($result, 'getData')) {
+            $data = $result->getData();
+            if (is_object($data)) $data = json_decode(json_encode($data), true);
+            return is_array($data) && intval($data['state'] ?? 200) === 200;
+        }
+        if (is_object($result) && method_exists($result, 'getContent')) {
+            $data = json2arr($result->getContent());
+            return is_array($data) && intval($data['state'] ?? 200) === 200;
+        }
+        return true;
+    }
+
+    protected function normalizeWcSyncLog($result)
+    {
+        if (is_object($result) && method_exists($result, 'getData')) return $result->getData();
+        if (is_object($result) && method_exists($result, 'getContent')) return json2arr($result->getContent());
+        return $result;
     }
 
     public function wcGoodsWriteLocal()

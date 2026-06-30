@@ -774,8 +774,10 @@ trait MachineTrait
 
             // remoteOutGoods 状态定义：
             // 1-已发指令 2-设备已接收 20-不减库存 21-扣减库存 3-出货成功 4-出货失败
-            // status=21/3/4 首次处理库存；status=4 正常扣库存，不恢复库存。
-            if (in_array($status, [21, 3, 4], true) && !in_array($previousStatus, [21, 3, 4], true)) {
+            // status=21/3/4 首次处理库存；status=4 记录出货失败库存，BAD恢复时再回补。
+            $shouldProcessRemoteStock = in_array($status, [21, 3, 4], true) && !in_array($previousStatus, [21, 3, 4], true);
+            $shouldMarkRemoteFailStock = $status === 4 && $previousStatus === 21;
+            if ($shouldProcessRemoteStock || $shouldMarkRemoteFailStock) {
                 $remoteOutGoodsItem = $this->extractFirstRemoteOutGoodsItem($this->message);
                 $channelCode = $this->message['channel_code'] ?? ($log['channel_code'] ?? $detail['channel_code']);
                 if (!$channelCode) {
@@ -795,7 +797,7 @@ trait MachineTrait
 
                 $mc = $this->getMachineChannelFind(
                     ['m_id' => $machineMId, 'channel_code' => $channelCode],
-                    'mc_id,m_id,machine_id,channel_code,channel_position,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,stock_warning'
+                    'mc_id,m_id,machine_id,channel_code,channel_position,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,out_fail_stock,stock_warning'
                 );
                 if (!$mc) {
                     actionLog(['m_id' => $machineMId, 'channel_code' => $channelCode], '远程出货未找到对应货道', 'remoteOutGoods');
@@ -815,13 +817,19 @@ trait MachineTrait
                     $updateFields[] = 'fail_quantity';
                 }
 
-                $changeValue = min(1, max(0, intval($mc['stock'])));
-                $newStock = max(0, intval($mc['stock']) - 1);
-                $flag[] = $this->updateMachineChannel([
+                $changeValue = $shouldProcessRemoteStock ? min(1, max(0, intval($mc['stock']))) : 0;
+                $newStock = $shouldProcessRemoteStock ? max(0, intval($mc['stock']) - 1) : intval($mc['stock']);
+                $updateMc = [
                     'mc_id' => $mc['mc_id'],
                     'stock' => $newStock,
-                ]);
-                $this->addRemoteOutGoodsChange($mc, $changeValue);
+                ];
+                if ($status === 4) {
+                    $updateMc['out_fail_stock'] = max(0, intval($mc['out_fail_stock'] ?? 0)) + 1;
+                }
+                $flag[] = $this->updateMachineChannel($updateMc);
+                if ($changeValue > 0) {
+                    $this->addRemoteOutGoodsChange($mc, $changeValue);
+                }
                 if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
                 }
@@ -902,7 +910,9 @@ trait MachineTrait
             $updateLog = ['status' => $status, 'operator_at' => date('Y-m-d H:i:s')];
             $updateLogFields = ['status', 'operator_at'];
 
-            if (in_array($status, [21, 3, 4], true) && !in_array($previousStatus, [21, 3, 4], true)) {
+            $shouldProcessRemoteStock = in_array($status, [21, 3, 4], true) && !in_array($previousStatus, [21, 3, 4], true);
+            $shouldMarkRemoteFailStock = $status === 4 && $previousStatus === 21;
+            if ($shouldProcessRemoteStock || $shouldMarkRemoteFailStock) {
                 $remoteOutGoodsItem = $this->extractFirstRemoteOutGoodsItem($this->message);
                 $channelCode = $this->message['channel_code'] ?? ($log['channel_code'] ?? '');
                 if (!$channelCode) {
@@ -926,7 +936,7 @@ trait MachineTrait
 
                 $mc = $this->getMachineChannelFind(
                     ['m_id' => $machineMId, 'channel_code' => $channelCode],
-                    'mc_id,m_id,machine_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,stock_warning'
+                    'mc_id,m_id,machine_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,out_fail_stock,stock_warning'
                 );
                 if (!$mc) {
                     actionLog(['m_id' => $machineMId, 'channel_code' => $channelCode], '无订单远程出货未找到对应货道', 'remoteOutGoods');
@@ -935,13 +945,19 @@ trait MachineTrait
                 }
                 $mc = is_object($mc) ? $mc->toArray() : $mc;
 
-                $changeValue = min(1, max(0, intval($mc['stock'])));
-                $newStock = max(0, intval($mc['stock']) - 1);
-                $flag[] = $this->updateMachineChannel([
+                $changeValue = $shouldProcessRemoteStock ? min(1, max(0, intval($mc['stock']))) : 0;
+                $newStock = $shouldProcessRemoteStock ? max(0, intval($mc['stock']) - 1) : intval($mc['stock']);
+                $updateMc = [
                     'mc_id' => $mc['mc_id'],
                     'stock' => $newStock,
-                ]);
-                $this->addRemoteOutGoodsChange($mc, $changeValue);
+                ];
+                if ($status === 4) {
+                    $updateMc['out_fail_stock'] = max(0, intval($mc['out_fail_stock'] ?? 0)) + 1;
+                }
+                $flag[] = $this->updateMachineChannel($updateMc);
+                if ($changeValue > 0) {
+                    $this->addRemoteOutGoodsChange($mc, $changeValue);
+                }
                 if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
                 }

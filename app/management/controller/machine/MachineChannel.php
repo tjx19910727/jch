@@ -165,7 +165,7 @@ class MachineChannel extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, ['m_ids' => 'like', 'operator_name' => 'like']);
+        $where = $this->getWhere($postData, false, ['machine_ids' => 'like','m_ids' => 'like', 'operator_name' => 'like']);
         return $this->app->weicheng->getMcSortLogList($where, $pageNum);
     }
 
