@@ -165,7 +165,9 @@ class RevenueSettlementService
             throw new \Exception("订单分账优惠券编码与活动优惠券不匹配");
         }
         if ($used && intval($used['status'] ?? 0) === 2 && intval($used['order_id'] ?? 0) !== intval($orderId)) {
-            throw new \Exception("优惠券已使用");
+            // 分账优惠券允许多个订单复用同一券码，不受单订单独占限制
+            // 由 activity_coupon.used_limit 字段控制总使用次数上限
+            $used = null;
         }
 
         $usedData = [
