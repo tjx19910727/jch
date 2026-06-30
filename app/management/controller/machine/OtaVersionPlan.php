@@ -63,4 +63,16 @@ class OtaVersionPlan extends Common
         }
         return $this->app->otaVersionPlan->del($postData);
     }
+
+    // 获取设备ota版本，每设备每2分钟只能请求一次，下发getOtaVersionPlan的mq，获取设备的最新ota版本信息
+    public function getOtaVersionPlan()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, VOtaVersionPlan::class . '.getOtaVersionPlan');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->otaVersionPlan->getOtaVersionPlan($postData);
+    }
 }

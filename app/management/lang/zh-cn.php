@@ -521,6 +521,11 @@ return [
         "desc_max" => "版本说明超限制",
     ],
 
+    "VOtaVersionPlan" => [
+        "ota_version_frequency" => "2分钟内只能请求一次，请稍后再试",
+        "ota_version_send_success" => "下发成功，请稍后查看设备OTA版本信息",
+    ],
+
     "VTripMultiple" => [
         "delHotel_notEmpty" => "请选择需要删除的酒店",
         "delGoods_notEmpty" => "请选择需要删除的商品",

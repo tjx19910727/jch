@@ -30,5 +30,6 @@ class VOtaVersionPlan extends VCommon
     protected $scene = [
         "add" => ["ov_id", "m_id"],
         "del" => ["ovp_id"],
+        "getOtaVersionPlan" => ["m_id"],
     ];
 }

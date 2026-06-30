@@ -1573,6 +1573,24 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 上报设备当前OTA固件版本
+     * @return array|string
+     */
+    public function reportOtaVersion()
+    {
+        $otaVersion = $this->data['ota_version'] ?? '';
+        if ($otaVersion === '') {
+            return $this->rFail();
+        }
+        $currentVersion = $this->machine['ota_version'] ?? '';
+        if ($otaVersion === $currentVersion) {
+            return $this->rSuccess();
+        }
+        $result = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $otaVersion]);
+        return $result ? $this->rU($result) : $this->rFail();
+    }
+
+    /**
      * 获取库存盘点二维码
      * @return array|string
      */
