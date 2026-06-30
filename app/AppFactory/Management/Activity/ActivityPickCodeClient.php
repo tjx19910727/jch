@@ -315,7 +315,7 @@ class ActivityPickCodeClient extends ManagementClient
             if ($ap['status'] == 4) return $this->r(1104, $this->lang("VActivityPick.status4"), $ap);
             // 取货码活动状态由1.未开始修改为2.进行中
             if ($ap['status'] == 1) $flag[] = $this->updateActivityPick(['status' => 2], ['id' => $ap['id']]);
-            $machine = $this->getMachineFind(['m_id' => $this->data['m_id']], 'm_id,machine_name,machine_id,ao_id');
+            $machine = $this->getMachineFind(['m_id' => $this->data['m_id']], 'm_id,machine_name,machine_id,ao_id,factory,inventory_location');
             if (!$machine) {
                 $this->rollbackTrans();
                 return $this->r(100, $this->lang("VMachine.machine_no_data"));
@@ -351,6 +351,8 @@ class ActivityPickCodeClient extends ManagementClient
                     "pay_time" => time(),
                     "pay_code" => $this->data['pick_code'],
                     "total_quantity" => 1,
+                    "factory" => $machine['factory'] ?? '',
+                    "inventory_location" => $machine['inventory_location'] ?? '',
                     "create_date" => strtotime(date("Y-m-d")),
                 ];
                 $order_id = $this->addSaleOrders($order);

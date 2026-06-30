@@ -162,7 +162,10 @@ class WeiChengClient extends ManagementClient
             }
         }
         $this->markWcGoodsMissingFromSync($syncBatchNo);
-        return $this->rA('分类商品同步成功', $results);
+        return $this->r(200, '分类商品同步成功', [
+            'sync_batch_no' => $syncBatchNo,
+            'result' => $results,
+        ]);
     }
 
     public function synchronizeGoodsTypes($goods_type, $nowPage = 1, $syncBatchNo = '', $autoFinalize = true)
@@ -199,10 +202,10 @@ class WeiChengClient extends ManagementClient
             $combined = is_array($res) ? $res : [$res];
         }
 
-        // 仅在顶层调用时返回标准化的 rA 响应，递归内部返回原始合并结果
+        // 仅在顶层调用时返回标准化响应，递归内部返回原始合并结果
         if ($nowPage === 1) {
             if ($autoFinalize) $this->markWcGoodsMissingFromSync($syncBatchNo, $goods_type);
-            return $this->rA('分类商品同步成功', [
+            return $this->r(200, '分类商品同步成功', [
                 'sync_batch_no' => $syncBatchNo,
                 'goods_type' => $goods_type,
                 'result' => $combined,

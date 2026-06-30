@@ -4183,11 +4183,17 @@ class ApiClient extends ReceiveBaseClient
     public function checkInspectionStaffCode()
     {
         $staffCode = trim((string)($this->data['staff_code'] ?? ''));
+        if ($staffCode === '' && isset($this->data['manager_id'])) {
+            $staffCode = trim((string)$this->data['manager_id']);
+        }
         if ($staffCode === '') {
-            return $this->r(100, '巡检账号不能为空', [
+            return $this->r(100, '巡检账号或巡检人员ID不能为空', [
                 'exists' => 0,
                 'staff_code' => $staffCode,
             ]);
+        }
+        if (!preg_match('/^[1-9][0-9]{5}$/', $staffCode)) {
+            return $this->rValidate('巡检账号必须为首位非0的6位数字');
         }
 
         $staff = Db::name('inspection_staff')
