@@ -100,6 +100,27 @@
           }
         }
       }
+    },
+    "/management/revenue.revenue_rule/getAccountCouponList": {
+      "post": {
+        "tags": ["RevenueRule"],
+        "summary": "查询分账账户关联的优惠券",
+        "description": "按分账账户 ra_id 精确匹配 receiver_config 中的接收方账户，只返回 rule_mode=5 的分账优惠券配置，并同步返回每张活动优惠券的 coupon_info、接收方 receivers、生效范围 scopes、machine_num 和组织名称。权限节点 SQL：文档说明/分账账户关联优惠券接口权限节点.sql。",
+        "operationId": "revenueRuleGetAccountCouponList",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/token"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/GetAccountCouponListRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CommonResponse"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -192,6 +213,33 @@
             },
             "example": {
               "rrcfg_id": 1001
+            }
+          }
+        }
+      },
+      "GetAccountCouponListRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetAccountCouponListRequest"
+            },
+            "examples": {
+              "Default": {
+                "summary": "查询账户关联的分账优惠券",
+                "value": {
+                  "ra_id": 101,
+                  "pageNum": 1
+                }
+              },
+              "EnabledOnly": {
+                "summary": "只查询启用配置",
+                "value": {
+                  "ra_id": 101,
+                  "status": 1,
+                  "pageNum": 1
+                }
+              }
             }
           }
         }
@@ -511,6 +559,27 @@
           "data": {
             "type": "object",
             "description": "响应数据。"
+          }
+        }
+      },
+      "GetAccountCouponListRequest": {
+        "type": "object",
+        "required": ["ra_id"],
+        "properties": {
+          "ra_id": {
+            "type": "integer",
+            "description": "分账账户ID，精确匹配接收方配置中的账户",
+            "example": 101
+          },
+          "status": {
+            "type": "integer",
+            "description": "配置状态；不传则返回该账户关联的全部分账优惠券配置",
+            "example": 1
+          },
+          "pageNum": {
+            "type": "integer",
+            "description": "页码，0 或空表示不分页，沿用 getList 行为",
+            "example": 1
           }
         }
       }

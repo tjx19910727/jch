@@ -35,4 +35,10 @@ class RevenueRule extends Common
         return $this->app->revenueRule->getFind($where, "*", "rrcfg_id desc");
     }
 
+    public function getAccountCouponList()
+    {
+        $postData = input();
+        return $this->app->revenueRule->getAccountCouponList($postData);
+    }
+
 }

@@ -10,11 +10,19 @@ $failures = [];
 $checks = [
     'controller exposes unified saveConfig' => strpos($controller, 'public function saveConfig()') !== false,
     'controller exposes unified saveScope' => strpos($controller, 'public function saveScope()') !== false,
+    'controller exposes account coupon revenue list' => strpos($controller, 'public function getAccountCouponList()') !== false
+        && strpos($controller, '$this->app->revenueRule->getAccountCouponList($postData)') !== false,
     'controller orders by unified config id' => strpos($controller, '"rrcfg_id desc"') !== false && strpos($controller, '"rr_id desc"') === false,
     'addData writes unified config table' => strpos($client, 'addRevenueRuleConfig($config)') !== false,
     'updateData writes unified config table' => strpos($client, 'updateRevenueRuleConfig($update') !== false,
     'scope save writes unified scope table' => strpos($client, 'replaceConfigScopes($rrcfgId') !== false,
     'receiver items are saved in receiver_config' => strpos($client, 'encodeReceiverConfig') !== false,
+    'account coupon list requires revenue account' => strpos($client, 'public function getAccountCouponList($postData)') !== false
+        && strpos($client, '$this->getRevenueAccountFind([\'ra_id\' => $raId], \'ra_id\')') !== false,
+    'account coupon list matches receiver account exactly' => strpos($client, "buildReceiverJsonIntRegexp('ra_id', \$raId)") !== false
+        && strpos($client, 'receiver_config REGEXP') !== false,
+    'account coupon list returns coupon info through shared formatter' => strpos($client, 'coupon_info') !== false
+        && strpos($client, 'ActivityCouponModel::where') !== false,
     'tier items are saved in receiver_config tiers' => strpos($client, 'normalizeConfigTier') !== false,
     'old bindMachine interface removed' => strpos($validator, '"bindMachine"') === false && strpos($controller, 'function bindMachine') === false,
     'calculator reads unified config scope' => strpos($calculator, 'RevenueRuleConfigScopeModel::alias') !== false,

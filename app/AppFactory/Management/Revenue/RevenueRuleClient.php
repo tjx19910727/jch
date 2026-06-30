@@ -110,6 +110,29 @@ class RevenueRuleClient extends ManagementClient
         return $this->rQ($this->appendRevenueOrganizationNames($data));
     }
 
+    public function getAccountCouponList($postData)
+    {
+        $raId = intval($postData['ra_id'] ?? 0);
+        if ($raId <= 0) return $this->rFail("分账账户ID不能为空");
+        if (!$this->getRevenueAccountFind(['ra_id' => $raId], 'ra_id')) {
+            return $this->rFail("分账账户不存在");
+        }
+        $where = [
+            ['rule_mode', '=', 5],
+            'raw' => $this->buildReceiverJsonIntRegexp('ra_id', $raId),
+        ];
+        if (isset($postData['status']) && $postData['status'] !== '') {
+            $where[] = ['status', '=', intval($postData['status'])];
+        }
+        $pageNum = $postData['pageNum'] ?? 0;
+        return $this->getList($where, $pageNum, "*", "rrcfg_id desc");
+    }
+
+    protected function buildReceiverJsonIntRegexp($field, $value)
+    {
+        return 'receiver_config REGEXP \'"' . $field . '"[[:space:]]*:[[:space:]]*' . intval($value) . '([^0-9]|$)\'';
+    }
+
     protected function getConfigIdFromData(array $data)
     {
         return intval($data['rrcfg_id'] ?? 0);
@@ -262,8 +285,12 @@ class RevenueRuleClient extends ManagementClient
         $item['item_key'] = $itemKey;
         $item['g_id'] = intval($item['g_id'] ?? 0);
         $item['mg_id'] = intval($item['mg_id'] ?? 0);
-        $item['receiver_ao_id'] = intval($item['receiver_ao_id'] ?? 0);
         $item['ra_id'] = intval($item['ra_id'] ?? 0);
+        $receiverAoId = isset($item['receiver_ao_id']) ? intval($item['receiver_ao_id']) : 0;
+        if ($receiverAoId <= 0 && $item['ra_id'] > 0) {
+            $receiverAoId = intval($this->getRevenueAccountValue(['ra_id' => $item['ra_id']], 'ao_id'));
+        }
+        $item['receiver_ao_id'] = $receiverAoId;
         $item['manager_id'] = intval($item['manager_id'] ?? 0);
         $item['calc_type'] = intval($item['calc_type'] ?? 0);
         $item['calc_value'] = $item['calc_value'] ?? 0;
