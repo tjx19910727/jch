@@ -56,10 +56,16 @@ class MachineVoiceTemplateClient extends ManagementClient
     {
         $voice = $this->getCurrentVoice($postData['id'] ?? 0);
         if (!$voice) return $this->rFail(lang('VMachineVoiceTemplate.data_empty'));
-
+        //此处新增哪些字段进行了更新的判断，然后发送mq时，需要携带参数
+        $updatedFields = [];
+        foreach ($postData as $key => $value) {
+            if (isset($voice[$key]) && $voice[$key] != $value) {
+                $updatedFields[$key] = $value;
+            }
+        }
         $result = $this->updateVoiceTemplate($postData);
         if ($result && $this->getVoiceDetailCount(['voice_id' => $voice['id']]) > 0) {
-            $this->sendVoiceUpdateMq($voice['id']);
+            $this->sendVoiceUpdateMq($voice['id'], $updatedFields);
         }
         return $this->rU($result);
     }
@@ -128,7 +134,7 @@ class MachineVoiceTemplateClient extends ManagementClient
         ], [], ['status']);
 
         if ($result && $this->getVoiceDetailCount(['voice_id' => $voice['id']]) > 0) {
-            $this->sendVoiceUpdateMq($voice['id']);
+            $this->sendVoiceUpdateMq($voice['id'], ['status' => $postData['status']]);
         }
         return $this->rU($result);
     }
@@ -227,14 +233,17 @@ class MachineVoiceTemplateClient extends ManagementClient
         ];
     }
 
-    protected function sendVoiceUpdateMq($voiceId)
+    protected function sendVoiceUpdateMq($voiceId, $updatedFields = [])
     {
         $machineIds = $this->getVoiceDetailColumn(['voice_id' => $voiceId], 'machine_id');
         if (!$machineIds) return;
-
+        //如果$updatedFields为[],返回空对象{}
+        if (empty($updatedFields)) {
+            $updatedFields = new \stdClass();
+        }
         foreach (array_unique($machineIds) as $machineId) {
             if (!$machineId) continue;
-            $result = $this->sendToMachine(['machine_id' => $machineId], 'appSettingsUpdate', ['voice_id' => $voiceId]);
+            $result = $this->sendToMachine(['machine_id' => $machineId], 'appSettingsUpdate', ['voice_id' => $voiceId, 'updated_fields' => $updatedFields]);
             if (!is_object($result)) actionLog([$machineId => $result], '语音模板更新MQ发送结果');
         }
     }
