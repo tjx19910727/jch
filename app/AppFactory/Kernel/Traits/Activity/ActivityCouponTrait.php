@@ -162,10 +162,13 @@ trait ActivityCouponTrait
                 if ($acUsed['status'] == 4) return $this->lang("VActivityCoupon.status4");
             }
             // 不是随机码的，有使用次数上限的
-            if ($ac['code'] && $ac['used_limit'] > 0) {
+            if ($ac['code']) {
                 $whereCount['c_id'] = $ac['c_id'];
                 $whereCount['status'] = 2;
                 $usedNum = $this->getActivityCouponUsedCount($whereCount);
+                $ac['used_count'] = intval($usedNum);
+            }
+            if ($ac['code'] && $ac['used_limit'] > 0) {
                 // 已使用次数等于或超过上限设置的
                 if ($ac['used_limit'] <= $usedNum) {
                     return $this->lang("VActivityCoupon.used_limit");
