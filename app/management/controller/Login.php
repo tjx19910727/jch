@@ -135,7 +135,7 @@ class Login extends BaseController
     public function getWxLoginUrlV2()
     {
         $postData = input();
-        return AppFactory::management()->loginV2->getWxLoginUrlV2($postData);
+        return AppFactory::management()->loginV2->getWxScanQrCode($postData);
     }
 
     /**
@@ -145,6 +145,6 @@ class Login extends BaseController
     public function checkWxLoginStatus()
     {
         $postData = input();
-        return AppFactory::management()->login->checkWxLoginStatus($postData);
+        return AppFactory::management()->loginV2->checkWxLoginStatusV2($postData);
     }
 }
