@@ -167,6 +167,7 @@ trait ActivityCouponTrait
                 $whereCount['status'] = 2;
                 $usedNum = $this->getActivityCouponUsedCount($whereCount);
                 $ac['used_count'] = intval($usedNum);
+                $ac['remain_count'] = intval($ac['used_limit'] - $usedNum);
             }
             if ($ac['code'] && $ac['used_limit'] > 0) {
                 // 已使用次数等于或超过上限设置的
