@@ -31,7 +31,6 @@ use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDailyCountTrait;
-use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use think\db\exception\DataNotFoundException;
@@ -43,7 +42,7 @@ class V2Client extends V2BaseClient
     use MachineTrait, MachineChannelTrait,MachineMqRecordTrait;
     use ConfigSceneTrait;
     use EarthCountriesTrait, EarthCitiesTrait, EarthRegionsTrait, EarthAreaTrait, EarthStatesTrait;
-    use SaleOrdersDailyCountTrait, SaleOrdersTrait, SaleHotelTrait, SaleOrdersRevenueTrait;
+    use SaleOrdersDailyCountTrait, SaleOrdersTrait, SaleHotelTrait;
     use ActivityPickTrait,ActivityPickCodeTrait,ActivityCouponTrait,ActivityCouponUsedTrait;
     use ApiAdvanceTrait, ApiCallbackTrait;
     use AfterOrderPaymentTrait;
@@ -289,6 +288,7 @@ class V2Client extends V2BaseClient
             actionLog($this->getLS(), '修改取货码记录');
             $flag[] = $this->updateSaleOrders(['pay_status' => 5, 'order_id' => $this->order['order_id']]);
             actionLog($this->getLS(), '修改订单信息');
+            $flag[] = $this->cancelPendingRevenueOrders();
             $flag[] = $this->updateApiAdvance(['status' => "CANCELED"], ['order_id' => $this->order['order_id']]);
             actionLog($this->getLS(), '修改预订商品信息');
             $sod = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
