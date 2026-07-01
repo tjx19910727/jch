@@ -1,0 +1,668 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "设备型号布局模板API",
+    "description": "设备型号布局模板管理接口 - 管理端",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "开发环境"
+    }
+  ],
+  "paths": {
+    "/management/machine.machine_layout_model/getList": {
+      "get": {
+        "summary": "获取布局模板列表",
+        "description": "分页查询设备型号布局模板列表",
+        "parameters": [
+          {
+            "name": "pageNum",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "分页参数，0=不分页"
+          },
+          {
+            "name": "model_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "型号名称(模糊搜索)"
+          },
+          {
+            "name": "model_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "型号编码(模糊搜索)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "per_page": {
+                          "type": "integer",
+                          "example": 20
+                        },
+                        "current_page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/MachineLayoutModel"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_layout_model/save": {
+      "post": {
+        "summary": "新增/编辑布局模板",
+        "description": "新增或编辑设备型号布局模板，保存后自动生成布局明细",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": ["model_name", "model_code", "inner_width", "inner_height", "inner_depth", "channel_width", "channel_height", "channel_depth"],
+                "properties": {
+                  "mlm_id": {
+                    "type": "integer",
+                    "description": "主键ID，新增时不传或传0，编辑时传对应ID"
+                  },
+                  "model_name": {
+                    "type": "string",
+                    "description": "设备型号名称",
+                    "example": "WH-50A"
+                  },
+                  "model_code": {
+                    "type": "string",
+                    "description": "型号编码",
+                    "example": "WH50A"
+                  },
+                  "inner_width": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "内部总宽度(mm)",
+                    "example": 500
+                  },
+                  "inner_height": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "内部总高度(mm)",
+                    "example": 600
+                  },
+                  "inner_depth": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "内部总深度(mm)",
+                    "example": 400
+                  },
+                  "shelf_thickness": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "层板厚度(mm)，默认0",
+                    "example": 3
+                  },
+                  "divider_thickness": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "挡板厚度(mm)，默认0",
+                    "example": 2
+                  },
+                  "left_indent": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "挡板左缩进(mm)，默认0",
+                    "example": 10
+                  },
+                  "right_indent": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "挡板右缩进(mm)，默认0",
+                    "example": 10
+                  },
+                  "channel_width": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "标准货道宽度(mm)",
+                    "example": 60
+                  },
+                  "channel_height": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "标准货道高度(mm)",
+                    "example": 80
+                  },
+                  "channel_depth": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "标准货道深度(mm)",
+                    "example": 400
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_layout_model/getDetail": {
+      "get": {
+        "summary": "获取布局模板详情",
+        "description": "获取单个布局模板的详情，包含所有布局明细（货道坐标）",
+        "parameters": [
+          {
+            "name": "mlm_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "布局模板ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/MachineLayoutModel"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "details": {
+                              "type": "array",
+                              "description": "布局明细列表",
+                              "items": {
+                                "$ref": "#/components/schemas/MachineLayoutDetail"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_layout_model/del": {
+      "post": {
+        "summary": "删除布局模板",
+        "description": "删除指定的布局模板及其所有布局明细",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": ["mlm_id"],
+                "properties": {
+                  "mlm_id": {
+                    "type": "integer",
+                    "description": "布局模板ID",
+                    "example": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_layout_model/recalc": {
+      "post": {
+        "summary": "重新计算布局",
+        "description": "手动触发重新计算指定布局模板的货道布局明细",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": ["mlm_id"],
+                "properties": {
+                  "mlm_id": {
+                    "type": "integer",
+                    "description": "布局模板ID",
+                    "example": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_layout_model/getLevelLayoutRel": {
+      "get": {
+        "summary": "获取设备等级关联的布局模板列表",
+        "description": "根据设备等级查询已关联的布局模板",
+        "parameters": [
+          {
+            "name": "machine_level",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "设备等级（关联machine_level_desc.machine_level）"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "rel_list": {
+                          "type": "array",
+                          "description": "关联记录列表",
+                          "items": {
+                            "$ref": "#/components/schemas/MachineLevelLayoutRel"
+                          }
+                        },
+                        "model_list": {
+                          "type": "array",
+                          "description": "布局模板列表",
+                          "items": {
+                            "$ref": "#/components/schemas/MachineLayoutModel"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_layout_model/saveLevelLayoutRel": {
+      "post": {
+        "summary": "保存设备等级与布局模板的关联",
+        "description": "全量替换指定设备等级关联的布局模板（先删后增）",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": ["machine_level", "mlm_ids"],
+                "properties": {
+                  "machine_level": {
+                    "type": "integer",
+                    "description": "设备等级",
+                    "example": 1
+                  },
+                  "mlm_ids": {
+                    "type": "array",
+                    "description": "布局模板ID数组",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "example": [1, 2, 3]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MachineLevelLayoutRel": {
+        "type": "object",
+        "description": "设备等级与布局模板关联表",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "主键ID"
+          },
+          "machine_level": {
+            "type": "integer",
+            "description": "设备等级"
+          },
+          "mlm_id": {
+            "type": "integer",
+            "description": "布局模板ID"
+          },
+          "create_time": {
+            "type": "integer",
+            "description": "创建时间戳"
+          },
+          "update_time": {
+            "type": "integer",
+            "description": "更新时间戳"
+          }
+        }
+      },
+      "MachineLayoutModel": {
+        "type": "object",
+        "description": "设备型号布局模板",
+        "properties": {
+          "mlm_id": {
+            "type": "integer",
+            "description": "主键ID"
+          },
+          "model_name": {
+            "type": "string",
+            "description": "设备型号名称"
+          },
+          "model_code": {
+            "type": "string",
+            "description": "型号编码"
+          },
+          "inner_width": {
+            "type": "number",
+            "format": "float",
+            "description": "内部总宽度(mm)"
+          },
+          "inner_height": {
+            "type": "number",
+            "format": "float",
+            "description": "内部总高度(mm)"
+          },
+          "inner_depth": {
+            "type": "number",
+            "format": "float",
+            "description": "内部总深度(mm)"
+          },
+          "shelf_thickness": {
+            "type": "number",
+            "format": "float",
+            "description": "层板厚度(mm)"
+          },
+          "divider_thickness": {
+            "type": "number",
+            "format": "float",
+            "description": "挡板厚度(mm)"
+          },
+          "left_indent": {
+            "type": "number",
+            "format": "float",
+            "description": "挡板左缩进(mm)"
+          },
+          "right_indent": {
+            "type": "number",
+            "format": "float",
+            "description": "挡板右缩进(mm)"
+          },
+          "channel_width": {
+            "type": "number",
+            "format": "float",
+            "description": "标准货道宽度(mm)"
+          },
+          "channel_height": {
+            "type": "number",
+            "format": "float",
+            "description": "标准货道高度(mm)"
+          },
+          "channel_depth": {
+            "type": "number",
+            "format": "float",
+            "description": "标准货道深度(mm)"
+          },
+          "remain_strategy": {
+            "type": "integer",
+            "description": "剩余空间策略 1=均匀分配",
+            "default": 1
+          },
+          "total_rows": {
+            "type": "integer",
+            "description": "计算后的总行数"
+          },
+          "total_cols": {
+            "type": "integer",
+            "description": "计算后的总列数"
+          },
+          "actual_channel_width": {
+            "type": "number",
+            "format": "float",
+            "description": "实际货道宽度(含剩余均摊mm)"
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态 1=启用 0=禁用",
+            "default": 1
+          },
+          "create_time": {
+            "type": "integer",
+            "description": "创建时间戳"
+          },
+          "update_time": {
+            "type": "integer",
+            "description": "更新时间戳"
+          }
+        }
+      },
+      "MachineLayoutDetail": {
+        "type": "object",
+        "description": "布局明细（货道位置）",
+        "properties": {
+          "mld_id": {
+            "type": "integer",
+            "description": "主键ID"
+          },
+          "mlm_id": {
+            "type": "integer",
+            "description": "所属布局模板ID"
+          },
+          "row_index": {
+            "type": "integer",
+            "description": "行号(从1开始)"
+          },
+          "col_index": {
+            "type": "integer",
+            "description": "列号(从1开始)"
+          },
+          "channel_code": {
+            "type": "string",
+            "description": "货道编码(如A01、B03)",
+            "example": "A01"
+          },
+          "pos_x": {
+            "type": "number",
+            "format": "float",
+            "description": "左上角X坐标(距左边框mm)"
+          },
+          "pos_y": {
+            "type": "number",
+            "format": "float",
+            "description": "左上角Y坐标(距顶部mm)"
+          },
+          "actual_width": {
+            "type": "number",
+            "format": "float",
+            "description": "实际货道宽度(mm)"
+          },
+          "actual_height": {
+            "type": "number",
+            "format": "float",
+            "description": "实际货道高度(mm)"
+          },
+          "create_time": {
+            "type": "integer",
+            "description": "创建时间戳"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "token": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "token",
+        "description": "登录令牌（全局变量 {{token}}）"
+      }
+    }
+  },
+  "security": [
+    {
+      "token": []
+    }
+  ]
+}
