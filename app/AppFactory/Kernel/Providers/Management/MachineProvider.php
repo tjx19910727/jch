@@ -40,6 +40,7 @@ use app\AppFactory\Management\Machine\MachineVersionClient;
 use app\AppFactory\Management\Machine\MachineVersionPlanClient;
 use app\AppFactory\Management\Machine\MachineViewClient;
 use app\AppFactory\Management\Machine\SimCardInfoClient;
+use app\AppFactory\Management\Machine\MachineLayoutModelClient;
 use app\AppFactory\Management\Machine\MachineServiceLogClient;
 
 class MachineProvider implements ServiceProviderInterface
@@ -47,6 +48,9 @@ class MachineProvider implements ServiceProviderInterface
     public function register(Container $app)
     {
         // TODO: Implement register() method.
+        $app['machineLayoutModel'] = function ($app) {
+            return new MachineLayoutModelClient($app);
+        };
         $app['machineChannelReplenishment'] = function ($app) {
             return new MachineChannelReplenishmentClient($app);
         };
