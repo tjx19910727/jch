@@ -882,6 +882,14 @@ class SaleOrders extends Common
         return $this->app->saleOrders->getRemoteRecycleSodDetail(input());
     }
 
+    /**
+     * 获取远程出货步骤详情列表（按step正序）
+     */
+    public function remoteOutGoodsStepsDetail()
+    {
+        return $this->app->saleOrders->getRemoteOutGoodsStepsDetail(input());
+    }
+
     
     /**
      * 支付方式统计
