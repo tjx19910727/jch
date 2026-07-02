@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Providers\Management;
 
 use app\AppFactory\Kernel\Container;
 use app\AppFactory\Kernel\ServiceProviderInterface;
+use app\AppFactory\Management\Template\MachineVoiceTemplateClient;
 use app\AppFactory\Management\Template\TopicPageClient;
 use app\AppFactory\Management\Template\TemplateClient;
 use app\AppFactory\Management\Template\TemplateLayoutClient;
@@ -36,6 +37,9 @@ class TemplateProvider implements ServiceProviderInterface
         };
         $app['topicPage'] = function ($app) {
             return new TopicPageClient($app);
+        };
+        $app['machineVoiceTemplate'] = function ($app) {
+            return new MachineVoiceTemplateClient($app);
         };
     }
 }

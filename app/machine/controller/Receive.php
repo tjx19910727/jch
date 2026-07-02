@@ -1342,8 +1342,6 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
-
-    
     /**
      * 设备通过 HTTP 上报物联卡信号
      * @return array|string
@@ -1397,5 +1395,17 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
-    
+    /**
+     * 获取设备应用配置(type=1)
+     * @return array|string
+     */
+    public function getAppSettings()
+    {
+        try {
+            return $this->app->api->machineAppSettings();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
 }
