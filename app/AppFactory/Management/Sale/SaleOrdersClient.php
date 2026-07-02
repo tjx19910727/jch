@@ -1349,6 +1349,25 @@ class SaleOrdersClient extends ManagementClient
     }
 
     /**
+     * 获取远程出货步骤详情列表
+     * @param array $where 查询条件（需含 sod_id）
+     * @return array|string
+     */
+    public function getRemoteOutGoodsStepsDetail($where)
+    {
+        $sodId = intval($where['sod_id'] ?? 0);
+        if (!$sodId) {
+            return $this->r(100, 'sod_id不能为空');
+        }
+        $list = Db::name('machine_remote_steps')
+            ->where('sod_id', $sodId)
+            ->order('step', 'asc')
+            ->field('id,step,key,name,status,value,desc,created_at,updated_at')
+            ->select();
+        return $this->rQ($list ?: []);
+    }
+
+    /**
      * 批量回填历史订单分类（pay_channel）
      * 参数：
      * batch_size: 每批条数，默认500，最大5000
