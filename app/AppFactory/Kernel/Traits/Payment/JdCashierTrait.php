@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 use app\AppFactory\Kernel\Support\Validate\Pay\VJdCashierPay;
 use Jd\Jd;
 use Jd\Payment\Application;
+use think\facade\Db;
 
 trait JdCashierTrait
 {
@@ -227,13 +228,18 @@ trait JdCashierTrait
     {
         $billList = [];
         if (isset($this->strategyPayee['bill_account'])) {
-            $revenue = $this->getSaleOrdersRevenueList(['order_id' => $this->order['order_id'], 'revenue_type' => 4]);
+            $revenue = Db::name('revenue_order')
+                ->where(['order_id' => $this->order['order_id']])
+                ->where('account_type', 'jd_account')
+                ->where('income_amount', '>', 0)
+                ->select()
+                ->toArray();
             if ($revenue) {
-                $revenue = $revenue->toArray();
                 if ($revenue && $this->strategyPayee['bill_account']) {
                     $totalAmount = 0;
                     foreach ($revenue as $key => $value) {
-                        $billAccount = $this->getAuthManagerValue(['manager_id' => $value['beneficiary']], 'bill_account');
+                        $billAccount = $value['account'];
+                        if (!$billAccount) continue;
                         $bill['customerNum'] = $billAccount;
                         $amount = $value['income_amount'];
                         $bill['amount'] = "$amount";

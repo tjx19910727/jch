@@ -1,0 +1,374 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "优惠券分账接口变更",
+    "version": "1.0.0",
+    "description": "本文件用于导入 Apifox。本次变更：新增/保存优惠券分账策略时 coupon_code 可由外部传入，也可不传由系统生成；无论来源如何，编码均需与分账优惠券、活动优惠券固定码、活动优惠券已生成码保持唯一。"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}"
+    }
+  ],
+  "paths": {
+    "/management/revenue.revenue_rule/add": {
+      "post": {
+        "summary": "新增分账策略（支持优惠券分账自动生成编码）",
+        "description": "rule_mode=5 时创建优惠券分账策略。coupon_code 可选：传入时必须为非0开头6位数字且全局唯一；不传时系统自动生成唯一编码。全局唯一范围包含 revenue_rule_coupon.coupon_code、activity_coupon.code、activity_coupon_used.code。",
+        "tags": [
+          "新分账-优惠券分账"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevenueCouponRuleAddRequest"
+              },
+              "examples": {
+                "autoCode": {
+                  "summary": "系统生成优惠券编码",
+                  "value": {
+                    "rule_name": "优惠券分账-系统生成编码",
+                    "rule_mode": 5,
+                    "base_type": 1,
+                    "turnover_type": 1,
+                    "tier_calc_mode": 1,
+                    "settlement_type": 1,
+                    "settlement_days": 0,
+                    "discount_type": 1,
+                    "discount_value": 5,
+                    "use_limit": 100,
+                    "expire_time": 0,
+                    "scopes": [
+                      {
+                        "m_id": 127,
+                        "g_id": 114,
+                        "mg_id": 0,
+                        "status": 1
+                      }
+                    ]
+                  }
+                },
+                "inputCode": {
+                  "summary": "外部传入优惠券编码",
+                  "value": {
+                    "rule_name": "优惠券分账-外部编码",
+                    "rule_mode": 5,
+                    "coupon_code": "923456",
+                    "base_type": 1,
+                    "turnover_type": 1,
+                    "tier_calc_mode": 1,
+                    "settlement_type": 1,
+                    "settlement_days": 0,
+                    "discount_type": 2,
+                    "discount_value": 10,
+                    "use_limit": 100,
+                    "expire_time": 0,
+                    "scopes": [
+                      {
+                        "m_id": 127,
+                        "g_id": 114,
+                        "mg_id": 0,
+                        "status": 1
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "项目统一响应",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "success": {
+                    "summary": "成功",
+                    "value": {
+                      "state": 200,
+                      "msg": "操作成功",
+                      "data": {
+                        "rr_id": 1001,
+                        "rrc_id": 2001
+                      }
+                    }
+                  },
+                  "duplicate": {
+                    "summary": "编码与分账券或活动券重复",
+                    "value": {
+                      "state": 100,
+                      "msg": "优惠券编码已存在或已被活动优惠券使用"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/revenue.revenue_rule/saveCouponConfig": {
+      "post": {
+        "summary": "保存优惠券分账配置",
+        "description": "coupon_code 可选。传入时必须为非0开头6位数字且全局唯一；不传时系统自动生成唯一编码。全局唯一范围包含分账优惠券编码、活动优惠券固定码、活动优惠券已生成码。",
+        "tags": [
+          "新分账-优惠券分账"
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevenueCouponConfigSaveRequest"
+              },
+              "examples": {
+                "autoCode": {
+                  "summary": "不传编码，系统生成",
+                  "value": {
+                    "rr_id": 1001,
+                    "discount_type": 1,
+                    "discount_value": 5,
+                    "use_limit": 100,
+                    "expire_time": 0,
+                    "status": 1,
+                    "scopes": [
+                      {
+                        "m_id": 127,
+                        "g_id": 114,
+                        "mg_id": 0,
+                        "status": 1
+                      }
+                    ]
+                  }
+                },
+                "inputCode": {
+                  "summary": "传入编码",
+                  "value": {
+                    "rr_id": 1001,
+                    "coupon_code": "923456",
+                    "discount_type": 1,
+                    "discount_value": 5,
+                    "use_limit": 100,
+                    "expire_time": 0,
+                    "status": 1,
+                    "scopes": [
+                      {
+                        "m_id": 127,
+                        "g_id": 114,
+                        "mg_id": 0,
+                        "status": 1
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "项目统一响应",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "success": {
+                    "summary": "成功",
+                    "value": {
+                      "state": 200,
+                      "msg": "操作成功",
+                      "data": {
+                        "rrc_id": 2001
+                      }
+                    }
+                  },
+                  "duplicate": {
+                    "summary": "编码重复",
+                    "value": {
+                      "state": 100,
+                      "msg": "优惠券编码已存在或已被活动优惠券使用"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RevenueCouponScope": {
+        "type": "object",
+        "properties": {
+          "m_id": {
+            "type": "integer",
+            "description": "设备主键ID；0表示不限设备"
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号快照，可选"
+          },
+          "g_id": {
+            "type": "integer",
+            "description": "商品ID；0表示不限商品"
+          },
+          "mg_id": {
+            "type": "integer",
+            "description": "设备商品ID；0表示不限设备商品"
+          },
+          "status": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ],
+            "description": "状态：1启用，2停用"
+          }
+        }
+      },
+      "RevenueCouponRuleAddRequest": {
+        "type": "object",
+        "required": [
+          "rule_name",
+          "rule_mode"
+        ],
+        "properties": {
+          "rule_name": {
+            "type": "string",
+            "description": "分账策略名称"
+          },
+          "rule_mode": {
+            "type": "integer",
+            "enum": [
+              5
+            ],
+            "description": "优惠券分账固定传5"
+          },
+          "coupon_code": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{5}$",
+            "description": "优惠券编码，可选；不传则系统生成"
+          },
+          "discount_type": {
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "description": "订单优惠方式：0不调整实付金额，1固定金额，2优惠比例"
+          },
+          "discount_value": {
+            "type": "number",
+            "description": "订单优惠金额或优惠比例；discount_type=2时表示百分比，例如10表示优惠10%"
+          },
+          "use_limit": {
+            "type": "integer",
+            "description": "可使用次数，新建时业务层要求大于0"
+          },
+          "expire_time": {
+            "type": "integer",
+            "description": "过期时间戳；0或不传表示不过期"
+          },
+          "status": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ],
+            "description": "状态：1启用，2停用"
+          },
+          "scopes": {
+            "type": "array",
+            "description": "适用范围，新建优惠券分账时至少一项",
+            "items": {
+              "$ref": "#/components/schemas/RevenueCouponScope"
+            }
+          }
+        }
+      },
+      "RevenueCouponConfigSaveRequest": {
+        "type": "object",
+        "required": [
+          "rr_id"
+        ],
+        "properties": {
+          "rrc_id": {
+            "type": "integer",
+            "description": "优惠券分账配置ID；更新时传"
+          },
+          "rr_id": {
+            "type": "integer",
+            "description": "分账策略ID，必须为rule_mode=5"
+          },
+          "coupon_code": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]{5}$",
+            "description": "优惠券编码，可选；不传则系统生成"
+          },
+          "discount_type": {
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2
+            ],
+            "description": "订单优惠方式：0不调整实付金额，1固定金额，2优惠比例"
+          },
+          "discount_value": {
+            "type": "number",
+            "description": "订单优惠金额或优惠比例；discount_type=2时表示百分比，例如10表示优惠10%"
+          },
+          "use_limit": {
+            "type": "integer",
+            "description": "可使用次数"
+          },
+          "expire_time": {
+            "type": "integer",
+            "description": "过期时间戳；0或不传表示不过期"
+          },
+          "status": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ],
+            "description": "状态：1启用，2停用"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RevenueCouponScope"
+            }
+          }
+        }
+      }
+    }
+  }
+}
