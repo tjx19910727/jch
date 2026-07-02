@@ -690,7 +690,7 @@ class MachineClient extends ManagementClient
             }
         }
         $order = 'totalPrice desc,totalQuantity desc, m_id desc';
-        $list = $this->queryMachineRanking($where, $order, 10);
+        $list = $this->queryMachineRanking($where, $order, 0, 10);
         if ($list) {
             $list = $list->toArray();
             foreach ($list as $key => $item) {
@@ -1819,7 +1819,7 @@ class MachineClient extends ManagementClient
      * @param int $pageNum
      * @return \think\Collection|\think\Paginator
      */
-    private function queryMachineRanking($where, $order, $pageNum = 0)
+    private function queryMachineRanking($where, $order, $pageNum = 0, $limit = 0)
     {
         $query = Db::name('sale_orders')->alias('so')
             ->where('so.pay_status', 3)
@@ -1843,6 +1843,9 @@ class MachineClient extends ManagementClient
 
         if ($pageNum) {
             return $query->paginate($pageNum, false, ["query" => request()->param()]);
+        }
+        if ($limit) {
+            return $query->limit($limit)->select();
         }
         return $query->select();
     }
