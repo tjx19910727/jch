@@ -28,8 +28,6 @@ use app\AppFactory\Kernel\Traits\Mall\MallRequestLogsTrait;
 
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelNightlyTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleHotelTrait;
-use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRevenueTrait;
-use app\AppFactory\Kernel\Traits\Strategy\StrategyIncomeTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
 use app\AppFactory\Kernel\Traits\User\UserTrait;
@@ -38,14 +36,13 @@ use app\AppFactory\Pay\PayBaseClient;
 class PaymentClient extends PayBaseClient
 {
     use MachineTrait,
-        StrategyPayeeTrait,StrategyIncomeTrait,
+        StrategyPayeeTrait,
         StrategyMachineTrait,
         WxPayTrait,AliPayTrait,JdCashierTrait,TripPay,
         MallPointsPayTrait,BalancePayTrait,MallMachineTrait,MallTrait,MallRequestLogsTrait,
         BeforeOrderPaymentTrait,
         UserTrait,
-        SaleHotelTrait,SaleHotelNightlyTrait,
-        SaleOrdersRevenueTrait;
+        SaleHotelTrait,SaleHotelNightlyTrait;
     use AfterOrderPaymentTrait;
     use MachineMqRecordTrait;
     use ActivityFdUsedTrait;
@@ -188,9 +185,12 @@ class PaymentClient extends PayBaseClient
             }
             $this->order['sp_id'] = $this->strategyPayee['sp_id'];
 
-            // 分润须在 sp_id、pay_type 与本次收款策略确定之后执行，保证 sale_orders_revenue.sp_id 与当笔支付一致
+            // 新分账须在 sp_id、pay_type 与本次收款策略确定之后执行，保证 revenue_order.sp_id 与当笔支付一致
             if ($this->order['total_price'] > 0) {
-                $this->countIncome();
+                $countIncome = $this->countIncome();
+                if (!$countIncome) {
+                    return $this->rFail($this->revenueError ?: '生成分账订单失败');
+                }
             }
 
             $uOrder = $this->updateSaleOrders($this->order,[],['pay_code',"pay_method",'pay_type','sp_id']);
@@ -261,14 +261,20 @@ class PaymentClient extends PayBaseClient
                 }
                 $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status']);
                 if ($uOrder && $this->order['pay_type'] != 5) {
+                    $this->cancelPendingRevenueOrders();
                     $func_name = $this->cancelType[$this->strategyPayee['payee_type']];
                     if (method_exists($this,$func_name)) {
                         $result = $this->$func_name();
                         return $result;
                     }
                 }
+                if ($uOrder && $this->order['pay_type'] == 5) {
+                    $this->cancelPendingRevenueOrders();
+                    return $this->rSuccess();
+                }
                 return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
             }
+            $this->cancelPendingRevenueOrders();
             return $this->rSuccess();
         } catch (\Exception $e) {
             actionException($e,1);

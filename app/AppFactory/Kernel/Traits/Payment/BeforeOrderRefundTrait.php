@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 
 use app\AppFactory\Kernel\Support\Validate\SaleOrders\VSaleOrdersRefund;
+use think\facade\Db;
 
 trait BeforeOrderRefundTrait
 {
@@ -109,29 +110,48 @@ trait BeforeOrderRefundTrait
     protected function revenueRefund()
     {
         $flag[] = 1;
-        // 受分润记录
-        $revenue = $this->getSaleOrdersRevenueList(['sod_id' => $this->sod['sod_id'],['status','between',[2,3]]]);
+        $sodId = intval($this->sod['sod_id']);
+        $revenue = Db::name('revenue_order')
+            ->where(['order_id' => $this->order['order_id']])
+            ->whereRaw('(`sod_id` = ' . $sodId . ' OR `sod_id` = 0 OR `sod_id` IS NULL)')
+            ->whereBetween('status', [1, 3])
+            ->select()
+            ->toArray();
         if ($revenue) {
             foreach ($revenue as $key  => $value) {
                 $insertSor = $this->insertSor;
-                $refund_amount = bcmul(bcdiv($this->insertSor['refund_quantity'],$value['sod_quantity'],2),$value['income_amount'],3);
+                $refund_amount = $this->calcBeforeRevenueRefundAmount($value);
                 // 四舍五入取整并保留两位小数
                 $refund_amount = round($refund_amount, 2);
+                if ($refund_amount <= 0) continue;
                 $this->totalRefundMoney = bcadd($this->totalRefundMoney,$refund_amount,2);
                 $insertSor['refund_amount'] = $refund_amount;
                 $insertSor['manager_id'] = $value['manager_id'];
-                $insertSor['nickname'] = $this->getAuthManagerValue(['manager_id' => $value['manager_id']],'nickname');
+                $insertSor['nickname'] = $value['manager_name'] ?: $this->getAuthManagerValue(['manager_id' => $value['manager_id']],'nickname');
                 $flag[] = $this->addSaleOrdersRefund($insertSor);
-                // 京东收银角色退款退分润
-                if ($this->order['pay_type'] == 4) {
-                    $billList['customerNum'] = $revenue['bill_account'];
+                if ($this->order['pay_type'] == 4 && ($value['account_type'] ?? '') === 'jd_account' && !empty($value['account'])) {
+                    $billList['customerNum'] = $value['account'];
                     $billList['amount'] = $refund_amount; // 小数点两位
                     $this->billList[] = $billList;
                 }
             }
-            actionLog($flag,'生成分润退款flag');
+            actionLog($flag,'生成新分账退款flag');
         }
         return $this->checkFlag($flag);
+    }
+
+    protected function calcBeforeRevenueRefundAmount(array $revenue)
+    {
+        $incomeAmount = is_numeric($revenue['income_amount'] ?? null) ? $revenue['income_amount'] : 0;
+        if ($incomeAmount <= 0) return 0;
+        if (intval($revenue['sod_id'] ?? 0) === intval($this->sod['sod_id'])
+            && !empty($revenue['sod_quantity'])
+            && $revenue['sod_quantity'] > 0) {
+            return bcmul(bcdiv($this->insertSor['refund_quantity'], $revenue['sod_quantity'], 6), $incomeAmount, 3);
+        }
+        $orderAmount = is_numeric($this->order['total_price'] ?? null) ? $this->order['total_price'] : 0;
+        if ($orderAmount <= 0) return 0;
+        return bcmul(bcdiv($this->sodRefundAmount, $orderAmount, 6), $incomeAmount, 3);
     }
 
     /**

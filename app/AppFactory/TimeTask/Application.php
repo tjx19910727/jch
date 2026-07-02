@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\Providers\TimeTask\ExportProvider;
 use app\AppFactory\Kernel\Providers\TimeTask\GoodsProvider;
 use app\AppFactory\Kernel\Providers\TimeTask\MachineProvider;
 use app\AppFactory\Kernel\Providers\TimeTask\PaymentProvider;
+use app\AppFactory\Kernel\Providers\TimeTask\RevenueProvider;
 use app\AppFactory\Kernel\ServiceContainer;
 
 /**
@@ -28,6 +29,7 @@ use app\AppFactory\Kernel\ServiceContainer;
  * @property Payment\WxClient                           $wx                    微信定时查询反扫付款码支付结果
  * @property Export\ExportClient                        $export                导出Excel处理
  * @property Activity\CouponClient                      $coupon                优惠券
+ * @property Revenue\RevenueClient                      $revenue               延期分账定时任务
  * @package app\AppFactory\TimeTask
  */
 class Application extends ServiceContainer
@@ -39,5 +41,6 @@ class Application extends ServiceContainer
         PaymentProvider::class,
         ExportProvider::class,
         ActivityProvider::class,
+        RevenueProvider::class,
     ];
 }
