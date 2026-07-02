@@ -45,6 +45,7 @@ use app\AppFactory\Management\Machine\MachineViewClient;
 use app\AppFactory\Management\Machine\SimCardInfoClient;
 use app\AppFactory\Management\Machine\MachineLayoutModelClient;
 use app\AppFactory\Management\Machine\MachineServiceLogClient;
+use app\AppFactory\Management\Machine\MachineSchemeClient;
 
 class MachineProvider implements ServiceProviderInterface
 {
@@ -152,6 +153,10 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['simCardInfo'] = function ($app) {
             return new SimCardInfoClient($app);
+        };
+
+        $app['machineScheme'] = function ($app) {
+            return new MachineSchemeClient($app);
         };
 
     }

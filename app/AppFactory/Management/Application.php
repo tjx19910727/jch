@@ -1,4 +1,3 @@
-<?php
 /**
  * Created by PhpStorm.
  * User: Administrator
@@ -131,7 +130,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\SimCardInfoClient              $simCardInfo            物联卡基础信息
  * @property Machine\MachineLayoutModelClient        $machineLayoutModel      设备型号布局模板
  * @property Machine\MachineServiceLogClient        $machineServiceLog      设备运行日志
- * @property Mall\MallClient                        $mall                   商场管理
+ * @property Machine\MachineSchemeClient            $machineScheme          货道推荐上架方案
  * @property RemoteActionLog\RemoteActionLogClient  $remoteActionLog        远程操作日志管理
  *
  * @property Card\CardClient                        $card                   商场管理会员卡
