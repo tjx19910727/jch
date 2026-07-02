@@ -9,7 +9,8 @@ class MachinePreReplenishment extends Common
     public function getList()
     {
         $postData = input();
-        return $this->app->machinePreReplenishment->getOrderList($postData);
+        $where = $this->getWhere([]);
+        return $this->app->machinePreReplenishment->getOrderList($postData,$where);
     }
 
     public function getMachineChannels()
