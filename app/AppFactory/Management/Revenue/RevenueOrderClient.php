@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Management\Revenue;
 
+use app\AppFactory\Kernel\Model\Revenue\RevenueOrderRefundModel;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Payment\BeforeOrderPaymentTrait;
 use app\AppFactory\Kernel\Traits\Revenue\RevenueOrderTrait;
@@ -24,7 +25,9 @@ class RevenueOrderClient extends ManagementClient
         $where = $this->filterByManager($where);
         return $this->rQ($this->appendRevenuePayTypeDesc(
             $this->appendRevenueOrganizationNames(
-                $this->getRevenueOrderList($where, $pageNum, $field, $order)
+                $this->appendRevenueRefundSummary(
+                    $this->getRevenueOrderList($where, $pageNum, $field, $order)
+                )
             )
         ));
     }
@@ -49,6 +52,8 @@ class RevenueOrderClient extends ManagementClient
         $order['sale_details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0, '*', 'sod_id asc')->toArray();
         $order['revenue_orders'] = $this->getRevenueOrderList(['order_id' => $order['order_id']], 0, '*', 'ro_id asc')->toArray();
         $order['refund_orders'] = $this->getSaleOrdersRefundList(['order_id' => $order['order_id']], 0, '*', 'sor_id desc')->toArray();
+        $order['revenue_refund_orders'] = $this->getRevenueRefundOrdersByOrderId(intval($order['order_id']));
+        $order['revenue_orders'] = $this->attachRevenueRefundOrders($order['revenue_orders'], $order['revenue_refund_orders']);
         return $this->rQ($this->appendRevenuePayTypeDesc(
             $this->appendRevenueOrganizationNames($order)
         ));
@@ -59,6 +64,7 @@ class RevenueOrderClient extends ManagementClient
         $where = $this->filterByManager($where);
         $list = $this->getRevenueOrderList($where, 0, "*", "ro_id desc");
         if (!$list || $list->isEmpty()) return $this->rFail("没有数据可导出");
+        $list = $this->appendRevenueRefundSummary($list);
         $list = $this->appendRevenueOrganizationNames($list);
         foreach ($list as &$item) {
             $item['rule_mode_text'] = $this->getRuleModeText($item['rule_mode'] ?? 0);
@@ -91,6 +97,7 @@ class RevenueOrderClient extends ManagementClient
             'income_value' => '分账比例/值',
             'income_amount' => '应分账金额',
             'refund_amount' => '已退分账金额',
+            'refund_detail_amount' => '分账退款流水金额',
             'settle_amount' => '可结算金额',
             'period_key' => '阶梯周期',
             'period_amount_before' => '本单前累计',
@@ -177,6 +184,110 @@ class RevenueOrderClient extends ManagementClient
             $where[] = ['manager_id', '=', $this->manager['manager_id']];
         }
         return $where;
+    }
+
+    protected function appendRevenueRefundSummary($list)
+    {
+        if (!$list) return $list;
+        $isPaginator = is_object($list) && method_exists($list, 'getCollection');
+        $items = $isPaginator ? $list->getCollection() : $list;
+        if (!$items) return $list;
+        $roIds = [];
+        foreach ($items as $item) {
+            $itemArr = is_array($item) ? $item : $item->toArray();
+            if (!empty($itemArr['ro_id'])) $roIds[] = intval($itemArr['ro_id']);
+        }
+        $summary = $this->getRevenueRefundSummaryByRoIds($roIds);
+        if (is_array($items)) {
+            foreach ($items as $key => $item) {
+                $items[$key] = $this->appendRevenueRefundSummaryItem($item, $summary);
+            }
+        } else {
+            $items = $items->each(function ($item) use ($summary) {
+                return $this->appendRevenueRefundSummaryItem($item, $summary);
+            });
+        }
+        if ($isPaginator) {
+            $list->setCollection($items);
+            return $list;
+        }
+        return $items;
+    }
+
+    protected function appendRevenueRefundSummaryItem($item, array $summary)
+    {
+        $roId = intval($item['ro_id'] ?? 0);
+        $item['refund_detail_amount'] = $summary[$roId]['refund_detail_amount'] ?? '0.00';
+        $item['refund_pending_amount'] = $summary[$roId]['refund_pending_amount'] ?? '0.00';
+        $item['refund_failed_amount'] = $summary[$roId]['refund_failed_amount'] ?? '0.00';
+        $item['refund_record_count'] = $summary[$roId]['refund_record_count'] ?? 0;
+        return $item;
+    }
+
+    protected function getRevenueRefundSummaryByRoIds(array $roIds)
+    {
+        $roIds = array_values(array_unique(array_filter(array_map('intval', $roIds))));
+        if (!$roIds) return [];
+        $rows = RevenueOrderRefundModel::where('ro_id', 'in', $roIds)
+            ->field('ro_id,status,refund_amount')
+            ->select()
+            ->toArray();
+        $summary = [];
+        foreach ($rows as $row) {
+            $roId = intval($row['ro_id'] ?? 0);
+            if (!isset($summary[$roId])) {
+                $summary[$roId] = [
+                    'refund_detail_amount' => '0.00',
+                    'refund_pending_amount' => '0.00',
+                    'refund_failed_amount' => '0.00',
+                    'refund_record_count' => 0,
+                ];
+            }
+            $amount = $row['refund_amount'] ?? 0;
+            $summary[$roId]['refund_record_count']++;
+            if (intval($row['status'] ?? 0) === 2) {
+                $summary[$roId]['refund_detail_amount'] = bcadd($summary[$roId]['refund_detail_amount'], $amount, 2);
+            } elseif (intval($row['status'] ?? 0) === 1) {
+                $summary[$roId]['refund_pending_amount'] = bcadd($summary[$roId]['refund_pending_amount'], $amount, 2);
+            } elseif (intval($row['status'] ?? 0) === 3) {
+                $summary[$roId]['refund_failed_amount'] = bcadd($summary[$roId]['refund_failed_amount'], $amount, 2);
+            }
+        }
+        return $summary;
+    }
+
+    protected function getRevenueRefundOrdersByOrderId($orderId)
+    {
+        if ($orderId <= 0) return [];
+        return RevenueOrderRefundModel::where(['order_id' => intval($orderId)])
+            ->order('ror_id desc')
+            ->select()
+            ->toArray();
+    }
+
+    protected function attachRevenueRefundOrders(array $revenueOrders, array $refundOrders)
+    {
+        $map = [];
+        foreach ($refundOrders as $refundOrder) {
+            $roId = intval($refundOrder['ro_id'] ?? 0);
+            if (!isset($map[$roId])) $map[$roId] = [];
+            $map[$roId][] = $refundOrder;
+        }
+        foreach ($revenueOrders as $key => $revenueOrder) {
+            $roId = intval($revenueOrder['ro_id'] ?? 0);
+            $revenueOrders[$key]['refund_orders'] = $map[$roId] ?? [];
+            $revenueOrders[$key]['refund_detail_amount'] = '0.00';
+            foreach ($revenueOrders[$key]['refund_orders'] as $refundOrder) {
+                if (intval($refundOrder['status'] ?? 0) === 2) {
+                    $revenueOrders[$key]['refund_detail_amount'] = bcadd(
+                        $revenueOrders[$key]['refund_detail_amount'],
+                        $refundOrder['refund_amount'] ?? 0,
+                        2
+                    );
+                }
+            }
+        }
+        return $revenueOrders;
     }
 
     protected function getRuleModeText($mode)

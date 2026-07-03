@@ -788,4 +788,16 @@ return [
         "deal_fail_title_require" => "Transaction failure title cannot be empty",
         "deal_fail_sub_title_require" => "Transaction failure subtitle cannot be empty",
     ],
+    "VMachineVoiceTemplate" => [
+        "id_require" => "Voice template ID cannot be empty",
+        "id_number" => "Voice template ID format is incorrect",
+        "id_gt" => "Voice template ID must be greater than 0",
+        "status_require" => "Status cannot be empty",
+        "status_in" => "Status can only be 1 or 2",
+        "data_empty" => "Voice template does not exist",
+        "data_assigned" => "Voice template has been assigned to devices, cannot be deleted",
+        "data_invalid" => "Device data is abnormal, invalid m_id exists",
+        "data_assign_fail" => "Failed to assign devices",
+        "title_require" => "Voice template title cannot be empty",
+    ],
 ];
