@@ -407,7 +407,6 @@ class AuthRoleTemplateClient extends ManagementClient
             $normalized[$field] = $enabled ? 1 : 0;
             if ($enabled) $enabledActions[] = $action;
         }
-        if (!$enabledActions) throw new \Exception("每个导航至少选择一种接口权限");
         $normalized['_enabled_actions'] = $enabledActions;
         return $normalized;
     }
