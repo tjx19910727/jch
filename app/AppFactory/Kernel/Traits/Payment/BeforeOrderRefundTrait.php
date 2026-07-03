@@ -10,6 +10,7 @@ namespace app\AppFactory\Kernel\Traits\Payment;
 
 
 use app\AppFactory\Kernel\Support\Validate\SaleOrders\VSaleOrdersRefund;
+use app\AppFactory\Kernel\Model\Revenue\RevenueOrderRefundModel;
 use think\facade\Db;
 
 trait BeforeOrderRefundTrait
@@ -17,6 +18,8 @@ trait BeforeOrderRefundTrait
 
     protected $insertSor;
     protected $sodRefundAmount;
+    protected $businessSorId;
+    protected $revenueRefundMoney;
     public $billList;
 
     /**
@@ -80,6 +83,8 @@ trait BeforeOrderRefundTrait
     public function createSor()
     {
         $this->totalRefundMoney = 0;
+        $this->revenueRefundMoney = 0;
+        $this->billList = [];
         $this->refundTradeNo = $this->getRefundNo();
         $flag = [];
         $calc = $this->calcSodRefundAmount($this->postData['refund']);
@@ -92,10 +97,15 @@ trait BeforeOrderRefundTrait
         $this->sod['refund_quantity'] = bcadd($this->sod['refund_quantity'], $this->postData['refund']['quantity']);
         $this->sod['refund_amount'] = bcadd($this->sod['refund_amount'], $this->sodRefundAmount, 3);
         $this->handleSorData();
-        $flag[] = $this->revenueRefund();
         $systemRefund = $this->systemRefund();
         if (is_object($systemRefund) || is_string($systemRefund)) return $systemRefund;
         $flag[] = $systemRefund;
+        $revenueRefund = $this->revenueRefund();
+        if (is_object($revenueRefund) || is_string($revenueRefund)) return $revenueRefund;
+        $flag[] = $revenueRefund;
+        $appendBill = $this->appendSystemRefundBillList();
+        if (is_object($appendBill) || is_string($appendBill)) return $appendBill;
+        $flag[] = $appendBill;
         if ($this->sodRefundAmount <= 0) {
             if($this->order['pay_type'] != 9) return $this->rFail("退款金额小于0，退款失败");
         }
@@ -110,6 +120,9 @@ trait BeforeOrderRefundTrait
     protected function revenueRefund()
     {
         $flag[] = 1;
+        if (!$this->businessSorId) {
+            return $this->rFail("业务退款单生成失败");
+        }
         $sodId = intval($this->sod['sod_id']);
         $revenue = Db::name('revenue_order')
             ->where(['order_id' => $this->order['order_id']])
@@ -124,11 +137,8 @@ trait BeforeOrderRefundTrait
                 // 四舍五入取整并保留两位小数
                 $refund_amount = round($refund_amount, 2);
                 if ($refund_amount <= 0) continue;
-                $this->totalRefundMoney = bcadd($this->totalRefundMoney,$refund_amount,2);
-                $insertSor['refund_amount'] = $refund_amount;
-                $insertSor['manager_id'] = $value['manager_id'];
-                $insertSor['nickname'] = $value['manager_name'] ?: $this->getAuthManagerValue(['manager_id' => $value['manager_id']],'nickname');
-                $flag[] = $this->addSaleOrdersRefund($insertSor);
+                $this->revenueRefundMoney = bcadd($this->revenueRefundMoney,$refund_amount,2);
+                $flag[] = $this->addRevenueOrderRefund($value, $refund_amount);
                 if ($this->order['pay_type'] == 4 && ($value['account_type'] ?? '') === 'jd_account' && !empty($value['account'])) {
                     $billList['customerNum'] = $value['account'];
                     $billList['amount'] = $refund_amount; // 小数点两位
@@ -136,6 +146,9 @@ trait BeforeOrderRefundTrait
                 }
             }
             actionLog($flag,'生成新分账退款flag');
+        }
+        if (bccomp((string)$this->revenueRefundMoney, (string)$this->sodRefundAmount, 2) > 0) {
+            return $this->rFail("分账退款金额超出业务退款金额");
         }
         return $this->checkFlag($flag);
     }
@@ -160,33 +173,58 @@ trait BeforeOrderRefundTrait
      */
     protected function systemRefund()
     {
-        if ($this->totalRefundMoney < $this->sodRefundAmount) {
-            $insertSor = $this->insertSor;
-            $insertSor['refund_amount'] = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
-            $insertSor['manager_id'] = 0;
-            $insertSor['nickname'] = "收款方";
-            if($this->order['pay_type'] == 9 || $this->order['order_type'] == 7){//这里退的是消费的商场积分
-                // $refund_amount = round(bcsub($this->sodRefundAmount,$this->totalRefundMoney,2),2);
-                // $refund_points = $refund_amount * $this->order['intergral_rate'];
-                // $insertSor['refund_points'] = $refund_points;
-                $insertSor['refund_cost_points'] = bcmul(bcdiv($this->sod['refund_quantity'], $this->sod['quantity'], 0),$this->sod['total_sod_cost_points'],2);
-            }else{//这里退的是赠送的积分
-                $insertSor['refund_points'] = bcmul(bcdiv($this->sod['refund_quantity'], $this->sod['quantity'], 0),$this->sod['total_sod_points'],2);
-            }
-            $this->totalRefundMoney = $this->sodRefundAmount;
-            // 京东收银系统退款退分润
-            if ($this->order['pay_type'] == 4 && $this->billList) {
-                if (!isset($this->strategyPayee['bill_account'])) {
-                    return $this->rFail("收款方未配置分账账号");
-                }
-                if (!$this->strategyPayee) return $this->rFail("收款方分账账号不能为空");
-                $this->billList[] = [
-                    "customerNum" => $this->strategyPayee['bill_account'],
-                    "amount" => $insertSor['refund_amount'],
-                ];
-            }
-            actionLog($insertSor,'生成退款订单');
-            return $this->addSaleOrdersRefund($insertSor);
+        $insertSor = $this->insertSor;
+        $insertSor['refund_amount'] = round($this->sodRefundAmount, 2);
+        $insertSor['manager_id'] = 0;
+        $insertSor['nickname'] = "收款方";
+        if($this->order['pay_type'] == 9 || $this->order['order_type'] == 7){//这里退的是消费的商场积分
+            $insertSor['refund_cost_points'] = bcmul(bcdiv($this->sod['refund_quantity'], $this->sod['quantity'], 0),$this->sod['total_sod_cost_points'],2);
+        }else{//这里退的是赠送的积分
+            $insertSor['refund_points'] = bcmul(bcdiv($this->sod['refund_quantity'], $this->sod['quantity'], 0),$this->sod['total_sod_points'],2);
+        }
+        $this->totalRefundMoney = $this->sodRefundAmount;
+        actionLog($insertSor,'生成业务退款订单');
+        $this->businessSorId = $this->addSaleOrdersRefund($insertSor);
+        return $this->businessSorId;
+    }
+
+    protected function addRevenueOrderRefund(array $revenue, $refundAmount)
+    {
+        $insert = [
+            'ro_id' => intval($revenue['ro_id'] ?? 0),
+            'sor_id' => intval($this->businessSorId),
+            'order_id' => intval($this->order['order_id'] ?? 0),
+            'sod_id' => intval($this->sod['sod_id'] ?? 0),
+            'refund_trade_no' => $this->refundTradeNo,
+            'trade_no' => $this->order['trade_no'] ?? '',
+            'manager_id' => intval($revenue['manager_id'] ?? 0),
+            'manager_name' => $revenue['manager_name'] ?? '',
+            'account_type' => $revenue['account_type'] ?? '',
+            'account' => $revenue['account'] ?? '',
+            'refund_amount' => $refundAmount,
+            'refund_quantity' => intval($this->postData['refund']['quantity'] ?? 0),
+            'status' => 1,
+        ];
+        $record = RevenueOrderRefundModel::create($insert);
+        actionLog($this->getLS(), '生成分账退款明细SQL');
+        return $record->ror_id;
+    }
+
+    protected function appendSystemRefundBillList()
+    {
+        if ($this->order['pay_type'] != 4 || !$this->billList) {
+            return 1;
+        }
+        if (!isset($this->strategyPayee['bill_account'])) {
+            return $this->rFail("收款方未配置分账账号");
+        }
+        if (!$this->strategyPayee) return $this->rFail("收款方分账账号不能为空");
+        $systemAmount = round(bcsub($this->sodRefundAmount, $this->revenueRefundMoney, 2), 2);
+        if ($systemAmount > 0) {
+            $this->billList[] = [
+                "customerNum" => $this->strategyPayee['bill_account'],
+                "amount" => $systemAmount,
+            ];
         }
         return 1;
     }

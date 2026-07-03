@@ -778,4 +778,16 @@ return [
         "deal_fail_title_require" => "交易失败标题不能为空",
         "deal_fail_sub_title_require" => "交易失败副标题不能为空",
     ],
+    "VMachineVoiceTemplate" => [
+        "id_require" => "语音模板ID不能为空",
+        "id_number" => "语音模板ID格式错误",
+        "id_gt" => "语音模板ID必须大于0",
+        "status_require" => "状态不能为空",
+        "status_in" => "状态只能是1或2",
+        "data_empty" => "语音模板不存在",
+        "data_assigned" => "语音模板已分配设备，不能删除",
+        "data_invalid" => "设备数据异常，存在无效m_id",
+        "data_assign_fail" => "分配设备失败",
+        "title_require" => "语音模板标题不能为空",
+    ],
 ]; 

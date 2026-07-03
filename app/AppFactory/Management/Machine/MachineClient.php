@@ -676,6 +676,38 @@ class MachineClient extends ManagementClient
     }
 
     /**
+     * 概览——前10排行（V2）
+     * 使用 queryMachineRanking 正确聚合7天累计数据，修复旧版视图非聚合字段问题
+     * @param $where
+     * @return array|string
+     */
+    public function get10ListV2($where = [])
+    {
+        if ($this->manager['pid'] > 0) {
+            $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
+            if ($mIds) {
+                $where[] = ['m_id', 'in', $mIds];
+            }
+        }
+        $order = 'totalPrice desc,totalQuantity desc, m_id desc';
+        $list = $this->queryMachineRanking($where, $order, 0, 10);
+        if ($list) {
+            $list = $list->toArray();
+            foreach ($list as $key => $item) {
+                $m = $this->getMachineFind(['m_id' => $item['m_id']], "country_id,state_id,city_id,regions_id");
+                if ($m) {
+                    if ($m['country_id']) $item['country'] = $this->getEarthCountriesFind(['id' => $m['country_id']], 'code,name,cname');
+                    if ($m['state_id']) $item['state'] = $this->getEarthStatesFind(['id' => $m['state_id']], 'code,name,cname');
+                    if ($m['city_id']) $item['city'] = $this->getEarthCitiesFind(['id' => $m['city_id']], 'code,name,cname');
+                    if ($m['regions_id']) $item['regions'] = $this->getEarthRegionsFind(['id' => $m['regions_id']], 'code,name,cname');
+                }
+                $list[$key] = $item;
+            }
+        }
+        return $this->rQ($list);
+    }
+
+    /**
      * 导出设备排行榜
      * @param $where
      * @return array|\think\response\Json
@@ -1787,7 +1819,7 @@ class MachineClient extends ManagementClient
      * @param int $pageNum
      * @return \think\Collection|\think\Paginator
      */
-    private function queryMachineRanking($where, $order, $pageNum = 0)
+    private function queryMachineRanking($where, $order, $pageNum = 0, $limit = 0)
     {
         $query = Db::name('sale_orders')->alias('so')
             ->where('so.pay_status', 3)
@@ -1811,6 +1843,9 @@ class MachineClient extends ManagementClient
 
         if ($pageNum) {
             return $query->paginate($pageNum, false, ["query" => request()->param()]);
+        }
+        if ($limit) {
+            return $query->limit($limit)->select();
         }
         return $query->select();
     }
