@@ -41,6 +41,7 @@ use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelReplenishmentTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineAppSettingsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineCalibrationConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigLangTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
@@ -62,6 +63,7 @@ use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyMachineTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyManagerTrait;
 use app\AppFactory\Kernel\Traits\Strategy\StrategyPayeeTrait;
+use app\AppFactory\Kernel\Traits\Template\MachineVoiceTemplateTrait;
 use app\AppFactory\Kernel\Traits\Template\TopicPageTrait;
 use app\AppFactory\Kernel\Traits\Template\TemplateViewTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
@@ -109,6 +111,7 @@ class ApiClient extends ReceiveBaseClient
         GoodsMultipleGoodsTrait,
         GoodsMultipleMachineTrait,
         MachineViewTrait,
+        MachineAppSettingsTrait,
         MachineCalibrationConfigTrait,
         MachineConfigTrait,
         MachineConfigLangTrait,
@@ -124,6 +127,7 @@ class ApiClient extends ReceiveBaseClient
         SimCardInfoTrait,
         MachineTrait,
         TopicPageTrait,
+        MachineVoiceTemplateTrait,
         TemplateViewTrait,
 
         EarthCountriesTrait,
@@ -340,6 +344,66 @@ class ApiClient extends ReceiveBaseClient
             }
         }
         return $this->rQ($res);
+    }
+
+    /**
+     * 获取设备当前语音模板配置
+     * @return array|\think\response\Json
+     */
+    public function machineAppSettings()
+    {
+        $voiceIds = $this->getVoiceDetailColumn(['machine_id' => $this->machine['machine_id']], 'voice_id');
+        if (!$voiceIds) {
+            return $this->rQ(new \stdClass());
+        }
+
+        $voiceIds = array_values(array_unique(array_filter($voiceIds)));
+        if (!$voiceIds) {
+            return $this->rQ(new \stdClass());
+        }
+
+        $voice = $this->getVoiceTemplateFind([
+            ['id', 'in', $voiceIds],
+            ['status', '=', 1],
+        ], '*', 'id desc');
+
+        if (!$voice) {
+            return $this->rQ(new \stdClass());
+        }
+
+        return $this->rQ($voice->toArray());
+    }
+
+    protected function insertDefaultAppSettingsRows($fieldMap, $mId, $machineId, $type = 1)
+    {
+        foreach ($fieldMap as $key => $meta) {
+            $exists = $this->getMachineAppSettingsValue(
+                ['m_id' => $mId, 'type' => $type, 'key' => $key],
+                'id'
+            );
+            if ($exists) {
+                continue;
+            }
+            $this->addMachineAppSettings([
+                'm_id' => $mId,
+                'name' => $meta['name'],
+                'machine_id' => $machineId,
+                'type' => $type,
+                'key' => $key,
+                'value' => $meta['default'],
+                'value_type' => $meta['value_type'],
+                'desc' => $meta['desc'],
+                'manager_id' => 0,
+            ]);
+        }
+    }
+
+    protected function castAppSettingValueByType($value, $valueType)
+    {
+        if ($valueType === 'int') {
+            return is_numeric($value) ? $value + 0 : 0;
+        }
+        return (string)$value;
     }
 
     /**

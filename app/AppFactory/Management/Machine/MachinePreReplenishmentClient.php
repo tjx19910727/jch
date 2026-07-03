@@ -269,14 +269,11 @@ class MachinePreReplenishmentClient extends ManagementClient
         }
     }
 
-    public function getOrderList($postData)
+    public function getOrderList($postData,$where = [])
     {
         $page = $postData['page'] ?? 1;
         $pageSize = $postData['page_size'] ?? 20;
 
-        $where = [];
-        // 只允许查看当前 ao_id 下的数据
-        $where[] = ['ao_id', '=', $this->manager['ao_id'] ?? 0];
         if (!empty($postData['record_no'])) {
             $where[] = ['record_no', 'like', '%' . $postData['record_no'] . '%'];
         }
