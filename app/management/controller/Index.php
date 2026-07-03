@@ -134,7 +134,7 @@ class Index extends Common
     {
         $where = $this->getWhere([]);
         $where[] = ['countDate','>=',strtotime("-7 days")];
-        return $this->app->machine->get10List($where);
+        return $this->app->machine->get10ListV2($where);
     }
 
     /**

@@ -8,6 +8,7 @@
 
 namespace app\AppFactory\Kernel\Traits\Payment;
 
+use app\AppFactory\Kernel\Model\Revenue\RevenueOrderRefundModel;
 use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
 use think\facade\Db;
@@ -27,30 +28,29 @@ trait AfterOrderRefundTrait
         $sor = obj2arr($sor);
         if (!$sor) return $this->r(100,'查无退款记录');
         actionLog($sor,'退款记录');
-        $quantity = 0;
+        $this->refund = $this->buildBusinessRefund($sor);
+        if (!$this->order) $this->order = $this->getSaleOrdersFind(['order_id' => $this->refund['order_id']]);
+        if ($this->order && !is_array($this->order)) $this->order = $this->order->toArray();
+
+        // 退款退分账，按业务退款单执行一次，避免多条分账明细重复回退。
+        $refundRevenue = $this->refundRevenue();
+        if ($refundRevenue !== true) return $this->r(100,'退款退分润失败');
+
         foreach ($sor as $key => $value) {
             $this->refund = obj2arr($value);
-            if (!$quantity) $quantity = $value['refund_quantity'];
-            if (!$this->order) $this->order = $this->getSaleOrdersFind(['order_id' => $value['order_id']]);
-            // 退款退分润
-            $refundRevenue = $this->refundRevenue();
-            if ($refundRevenue !== true) return $this->r(100,'退款退分润失败');
-
             // 修改退款记录
             $flag[] = $this->refundSuccessUpdateSor();
-
-            // 退款成功修改订单副表
-            $flag[] = $this->refundSuccessUpdateSod();
-            
-            //修改卡积分 
-            // $flag[] = $this->addCardChangeLog();
-
-            $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $this->refund['sod_id']]);
-            if($detail['wc_order_no']){
-                $flag[] = $this->orderRefundSync2Wc($this->order, $detail);
-            }
         }
-        $this->order['refund_quantity'] += $quantity;
+
+        $this->refund = $this->buildBusinessRefund($sor);
+        // 退款成功修改订单副表
+        $flag[] = $this->refundSuccessUpdateSod();
+        $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $this->refund['sod_id']]);
+        if($detail['wc_order_no']){
+            $flag[] = $this->orderRefundSync2Wc($this->order, $detail);
+        }
+
+        $this->order['refund_quantity'] += $this->refund['refund_quantity'];
         // 修改订单退款状态
         $flag[] = $this->refundSuccessUpdateOrder();
         actionLog($flag,'退款处理结果');
@@ -66,21 +66,27 @@ trait AfterOrderRefundTrait
      */
     public function refundRevenue()
     {
-        $sodId = intval($this->refund['sod_id']);
-        $revenue = Db::name('revenue_order')
-            ->where(['order_id' => $this->refund['order_id']])
-            ->whereRaw('(`sod_id` = ' . $sodId . ' OR `sod_id` = 0 OR `sod_id` IS NULL)')
-            ->where('status', '>', 0)
+        $refundList = RevenueOrderRefundModel::where([
+                'refund_trade_no' => $this->refundTradeNo,
+                'status' => 1,
+            ])
             ->select()
             ->toArray();
-        if ($revenue) {
-            foreach ($revenue as $key => $value) {
+        if ($refundList) {
+            foreach ($refundList as $key => $refundItem) {
+                $value = Db::name('revenue_order')->where(['ro_id' => intval($refundItem['ro_id'])])->find();
+                if (!$value || intval($value['status'] ?? 0) <= 0) {
+                    RevenueOrderRefundModel::update([
+                        'ror_id' => intval($refundItem['ror_id']),
+                        'status' => 3,
+                    ]);
+                    return $this->r(100,'查无可退款分账订单');
+                }
                 $update = [];
                 $update['update_time'] = time();
-                $incomeValue = isset($value['income_value']) && is_numeric($value['income_value']) ? $value['income_value'] : 0;
                 $incomeAmount = isset($value['income_amount']) && is_numeric($value['income_amount']) ? $value['income_amount'] : 0;
                 $currentRefundAmount = isset($value['refund_amount']) && is_numeric($value['refund_amount']) ? $value['refund_amount'] : 0;
-                $refundRevenueAmountRaw = $this->calcAfterRevenueRefundAmount($value, $incomeValue, $incomeAmount);
+                $refundRevenueAmountRaw = isset($refundItem['refund_amount']) && is_numeric($refundItem['refund_amount']) ? $refundItem['refund_amount'] : 0;
                 $remainRefundable = bcsub($incomeAmount, $currentRefundAmount, 3);
                 if (bccomp($remainRefundable, '0', 3) < 0) {
                     $remainRefundable = '0';
@@ -106,6 +112,10 @@ trait AfterOrderRefundTrait
                 if (!$updateResult) {
                     return $this->r(100,'修改新分账订单失败');
                 }
+                RevenueOrderRefundModel::update([
+                    'ror_id' => intval($refundItem['ror_id']),
+                    'status' => 2,
+                ]);
             }
         }
         return true;
@@ -138,6 +148,24 @@ trait AfterOrderRefundTrait
         $orderAmount = is_numeric($this->order['total_price'] ?? null) ? $this->order['total_price'] : 0;
         if ($orderAmount <= 0) return 0;
         return bcmul($this->refund['refund_amount'], bcdiv($incomeAmount, $orderAmount, 6), 3);
+    }
+
+    protected function buildBusinessRefund(array $sor)
+    {
+        $summary = [];
+        foreach ($sor as $key => $value) {
+            $value = obj2arr($value);
+            if (!$summary) {
+                $summary = $value;
+                $summary['refund_amount'] = 0;
+                $summary['refund_cost_points'] = 0;
+                $summary['refund_points'] = 0;
+            }
+            $summary['refund_amount'] = bcadd($summary['refund_amount'], $value['refund_amount'] ?? 0, 3);
+            $summary['refund_cost_points'] = bcadd($summary['refund_cost_points'], $value['refund_cost_points'] ?? 0, 3);
+            $summary['refund_points'] = bcadd($summary['refund_points'], $value['refund_points'] ?? 0, 3);
+        }
+        return $summary;
     }
 
     /**
@@ -227,7 +255,9 @@ trait AfterOrderRefundTrait
      */
     public function refundFail()
     {
-        $result = $this->updateSaleOrdersRefund(['status' => 3],['refund_no' => $this->refundTradeNo]);
+        $result = $this->updateSaleOrdersRefund(['status' => 3],['refund_trade_no' => $this->refundTradeNo]);
+        RevenueOrderRefundModel::where(['refund_trade_no' => $this->refundTradeNo, 'status' => 1])
+            ->update(['status' => 3, 'update_time' => time()]);
         actionLog($this->getLS(),'修改退款记录退款失败');
         if (!$result) return $this->r(100,'修改退款记录失败');
         return true;
