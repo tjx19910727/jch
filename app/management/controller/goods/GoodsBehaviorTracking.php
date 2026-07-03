@@ -12,33 +12,26 @@ use app\management\controller\Common;
 
 class GoodsBehaviorTracking extends Common
 {
-    protected $field = "gbt_id,m_id,machine_id,goods_id,record_key,click_count,cart_add_count,order_count,purchase_success_count,retry_dispense_count,help_count,report_date,device_created_at,device_updated_at,active_orders,created_at,updated_at";
+    protected $field = "gbt.*,g.g_name,g.pic";
 
     /**
      * 商品行为埋点记录列表
-     * 筛选：machine_id(多选逗号分隔)、goods_id(多选逗号分隔)、report_date(时间范围~)
+     * 筛选：machine_id(多选逗号分隔)、goods_id(多选逗号分隔)、device_created_at(时间范围~)、goods_name(商品名称模糊)
      */
     public function getList()
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData);
 
-        if (!empty($postData['machine_id'])) {
-            $where[] = ['machine_id', 'in', $postData['machine_id']];
-        }
-        if (!empty($postData['goods_id'])) {
-            $where[] = ['goods_id', 'in', $postData['goods_id']];
-        }
-        if (!empty($postData['report_date'])) {
-            $dates = explode('~', $postData['report_date']);
-            if (count($dates) === 2) {
-                $where[] = ['report_date', 'between', [trim($dates[0]), trim($dates[1])]];
-            } else {
-                $where[] = ['report_date', '=', trim($postData['report_date'])];
-            }
+        // 商品名称筛选（goods表字段，需单独处理前缀，先从postData取出避免getWhere误加gbt.前缀）
+        $goodsWhere = [];
+        if (!empty($postData['goods_name'])) {
+            $goodsWhere[] = ['g.g_name', 'like', '%' . $postData['goods_name'] . '%'];
+            unset($postData['goods_name']);
         }
 
-        return $this->app->goodsBehaviorTracking->getTrackingList($where, $pageNum, $this->field, 'gbt_id desc');
+        $where = $this->getWhere($postData, false, [], 'gbt.');
+
+        return $this->app->goodsBehaviorTracking->getTrackingList($where, $pageNum, $this->field, 'gbt.gbt_id desc', $goodsWhere);
     }
 }
