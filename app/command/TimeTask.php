@@ -36,6 +36,7 @@ class TimeTask extends Command
      * php /home/wwwroot/kiosk/think time_task export clearExcel                清除超过3天的Excel，每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task coupon clearCouponUsed           清除已过期或已作废未使用的优惠券码，每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task machineAutoRefund autoRefund     自动退款（出货超时/异常），每3分钟执行一次
+     * php /home/wwwroot/kiosk/think time_task revenue settleDue                结算已到计划时间的 T+N 分账，每分钟执行一次
      * 
      * command
      *      php think time_task [moduleType] [actionType]
@@ -62,6 +63,8 @@ class TimeTask extends Command
      *          clearCouponUsed             清除已过期或已作废未使用的优惠券码
      *      machineAutoRefund
      *          autoRefund                  自动退款（出货超时/异常），每3分钟执行一次
+     *      revenue
+     *          settleDue                   结算已到计划时间的 T+N 分账
      * @param Input $input
      * @param Output $output
      * @return int|null|void
