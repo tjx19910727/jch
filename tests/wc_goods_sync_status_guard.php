@@ -44,6 +44,13 @@ checkWcGoodsSyncGuard(
     $failures
 );
 checkWcGoodsSyncGuard(
+    strpos($client, "return \$this->r(200, '分类商品同步成功', [") !== false
+        && strpos($client, "return \$this->rA('分类商品同步成功'") === false
+        && strpos($client, "'sync_batch_no' => \$syncBatchNo") !== false,
+    '同步成功响应应通过 r(200, msg, data) 返回批次数据，不得误用 rA 两参数',
+    $failures
+);
+checkWcGoodsSyncGuard(
     strpos($client, "\$offlineStatus = \$syncBatchNo . '_2'") !== false
         && strpos($client, 'getWcGoodsMissingSyncOutNos($onlineStatus, $goodsType)') !== false
         && strpos($client, 'updateWcGoodsMissingSyncStatus($onlineStatus, $offlineStatus, $goodsType)') !== false

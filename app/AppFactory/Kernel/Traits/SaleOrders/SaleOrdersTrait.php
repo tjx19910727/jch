@@ -275,6 +275,7 @@ trait SaleOrdersTrait
      */
     public function addSaleOrders($insert)
     {
+        $insert = $this->appendRevenueCouponCode($insert);
         $insert = $this->appendOrderPayChannel($insert);
         $order = SaleOrdersModel::create($insert);
         actionLog($this->getLS(), '生成订单SQL');
@@ -293,6 +294,32 @@ trait SaleOrdersTrait
     {
         $update = $this->appendOrderPayChannelForUpdate($update, $where, $field);
         return SaleOrdersModel::update($update, $where, $field);
+    }
+
+    /**
+     * 补充分账优惠券编码，独立于营销优惠券 coupon_code。
+     * @param array $order
+     * @return array
+     */
+    protected function appendRevenueCouponCode($order)
+    {
+        if (!empty($order['revenue_coupon_code'])) {
+            $couponCode = trim(strval($order['revenue_coupon_code']));
+        } elseif (isset($this->data) && !empty($this->data['revenue_coupon_code'])) {
+            $couponCode = trim(strval($this->data['revenue_coupon_code']));
+        } elseif (isset($this->config['params']) && !empty($this->config['params']['revenue_coupon_code'])) {
+            $couponCode = trim(strval($this->config['params']['revenue_coupon_code']));
+        } else {
+            return $order;
+        }
+
+        if (preg_match('/^[1-9][0-9]{5}$/', $couponCode)) {
+            $order['revenue_coupon_code'] = $couponCode;
+        } else {
+            unset($order['revenue_coupon_code']);
+        }
+
+        return $order;
     }
 
     /**

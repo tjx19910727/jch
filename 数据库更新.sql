@@ -2135,3 +2135,143 @@ SET `permission_action` = 'update'
 WHERE `permission_action` = 'unclassified'
   AND LOWER(SUBSTRING_INDEX(SUBSTRING_INDEX(`url`, '?', 1), '/', -1))
       REGEXP '^(refund|trigger|Refund|update|edit|save|bind|apply|set|copy|push|sync|import|reset|enable|disable|reset|change|move|sort|config|bind|fix|change|remote|Update|cancel|audit|Handle|assign|takeDown|unbind|operation|upDown|usePickCode|sendMainControl|Update)';
+
+
+
+ALTER TABLE `sale_orders`
+  ADD COLUMN `revenue_coupon_code` varchar(6) DEFAULT '' COMMENT '分账优惠券编码' AFTER `coupon_id`,
+  ADD COLUMN `revenue_coupon_discount_type` tinyint(1) NOT NULL DEFAULT '0' COMMENT '分账优惠券订单优惠方式：0无，1固定金额，2优惠比例' AFTER `revenue_coupon_code`,
+  ADD COLUMN `revenue_coupon_discount_value` decimal(10,3) NOT NULL DEFAULT '0.000' COMMENT '分账优惠券订单优惠金额或比例' AFTER `revenue_coupon_discount_type`,
+  ADD COLUMN `revenue_coupon_discount_amount` decimal(12,2) NOT NULL DEFAULT '0.00' COMMENT '分账优惠券实际优惠金额' AFTER `revenue_coupon_discount_value`;
+
+CREATE TABLE `revenue_account` (
+  `ra_id` int NOT NULL AUTO_INCREMENT COMMENT '分账账户ID',
+  `ao_id` int NOT NULL COMMENT '账户所属组织ID',
+  `manager_id` int NOT NULL COMMENT '账户管理人ID',
+  `account_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '账户名称',
+  `account` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '分账账户',
+  `account_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT 'balance' COMMENT '账户类型 balance/bank/alipay/wechat/jd_account',
+  `bill_account` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '账户展示账号',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态：1启用，2停用',
+  `creator` int DEFAULT NULL COMMENT '创建人',
+  `create_time` int DEFAULT NULL,
+  `update_time` int DEFAULT NULL,
+  PRIMARY KEY (`ra_id`),
+  KEY `idx_ao_manager` (`ao_id`,`manager_id`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='分账账户表';
+
+
+CREATE TABLE `revenue_order` (
+  `ro_id` int NOT NULL AUTO_INCREMENT COMMENT '新分账订单ID',
+  `order_id` int NOT NULL COMMENT '订单ID',
+  `sod_id` int DEFAULT NULL COMMENT '子订单ID',
+  `trade_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '订单交易号',
+  `sp_id` int DEFAULT NULL COMMENT '收款策略ID',
+  `m_id` int DEFAULT NULL COMMENT '设备ID',
+  `machine_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '设备编号',
+  `machine_name` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '设备名称',
+  `order_amount` decimal(12,2) DEFAULT '0.00' COMMENT '订单金额',
+  `sod_amount` decimal(12,2) DEFAULT '0.00' COMMENT '子订单单价',
+  `sod_quantity` int DEFAULT '0' COMMENT '子订单数量',
+  `sod_total_price` decimal(12,2) DEFAULT '0.00' COMMENT '子订单金额',
+  `rule_mode` tinyint(1) DEFAULT '0' COMMENT '分账模式：1普通，2设备出租，3设备分账',
+  `rrcfg_id` int DEFAULT '0' COMMENT '对应 revenue_rule_config.rrcfg_id',
+  `payer_ao_id` int DEFAULT NULL COMMENT '收款/代收组织ID',
+  `receiver_ao_id` int DEFAULT NULL COMMENT '分账接收组织ID',
+  `ra_id` int DEFAULT NULL COMMENT '分账账户ID',
+  `manager_id` int DEFAULT NULL COMMENT '账户管理人ID',
+  `manager_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '账户管理人名称快照',
+  `account_type` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '账户类型快照',
+  `account` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '分账账户快照',
+  `calc_type` tinyint(1) DEFAULT '1' COMMENT '计算方式：1百分比，2固定金额，3全额，4阶梯百分比',
+  `income_value` decimal(10,3) DEFAULT '0.000' COMMENT '分账比例或固定值',
+  `income_amount` decimal(12,2) DEFAULT '0.00' COMMENT '应分账金额',
+  `refund_amount` decimal(12,2) DEFAULT '0.00' COMMENT '已退分账金额',
+  `period_key` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '统计周期，如2026-06',
+  `period_amount_before` decimal(12,2) DEFAULT '0.00' COMMENT '本单前周期累计营业额',
+  `period_amount_after` decimal(12,2) DEFAULT '0.00' COMMENT '本单后周期累计营业额',
+  `source` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '来源：normal/rental/device_rule/tier',
+  `planned_revenue_time` int DEFAULT NULL COMMENT '计划结算时间',
+  `settlement_days` int DEFAULT '0' COMMENT 'T+N分账天数快照',
+  `settlement_type` tinyint(1) DEFAULT '1' COMMENT '分账时间类型快照：1即时分账，2 T+N分账',
+  `status` tinyint(1) DEFAULT '0' COMMENT '状态：0待支付，1已结算，2待结算，3失败，4已取消',
+  `revenue_time` int DEFAULT NULL COMMENT '结算时间',
+  `create_time` int DEFAULT NULL,
+  `update_time` int DEFAULT NULL,
+  `g_id` int DEFAULT NULL,
+  `mg_id` int DEFAULT NULL,
+  PRIMARY KEY (`ro_id`),
+  KEY `idx_order` (`order_id`,`sod_id`),
+  KEY `idx_trade_no` (`trade_no`),
+  KEY `idx_machine_period` (`m_id`,`period_key`),
+  KEY `idx_manager_status` (`manager_id`,`status`),
+  KEY `idx_receiver_status` (`receiver_ao_id`,`status`),
+  KEY `idx_rule_mode` (`rule_mode`)
+) ENGINE=InnoDB CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='新分账订单表';
+
+
+
+CREATE TABLE `revenue_pay_channel` (
+  `rpc_id` int NOT NULL AUTO_INCREMENT COMMENT '分账收款渠道配置ID',
+  `pay_channel` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '订单支付类型',
+  `channel_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci DEFAULT NULL COMMENT '渠道名称',
+  `status` tinyint(1) DEFAULT '1' COMMENT '状态：1启用分账，2停用分账',
+  `creator` int DEFAULT NULL,
+  `create_time` int DEFAULT NULL,
+  `update_time` int DEFAULT NULL,
+  `pay_type` int DEFAULT NULL COMMENT '订单支付类型',
+  PRIMARY KEY (`rpc_id`),
+  UNIQUE KEY `uk_pay_type` (`pay_channel`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='需要分账的收款渠道配置表';
+
+
+CREATE TABLE `revenue_rule_config` (
+  `rrcfg_id` int NOT NULL AUTO_INCREMENT COMMENT '分账配置ID',
+  `config_name` varchar(100) NOT NULL COMMENT '配置名称',
+  `rule_mode` tinyint(1) NOT NULL COMMENT '模式：1基础/设备分账，2设备出租，3设备分账历史兼容，4设备商品分账，5优惠券分账',
+  `base_type` tinyint(1) NOT NULL DEFAULT '1' COMMENT '分账基数：1订单总额，2扣除出租商品后金额',
+  `turnover_type` tinyint(1) NOT NULL DEFAULT '1' COMMENT '阶梯营业额口径：1净营业额，2支付成功金额',
+  `tier_calc_mode` tinyint(1) NOT NULL DEFAULT '1' COMMENT '阶梯命中方式：1整单命中，2跨阶梯拆分',
+  `settlement_type` tinyint(1) NOT NULL DEFAULT '1' COMMENT '结算类型：1即时分账，2 T+N分账',
+  `settlement_days` int NOT NULL DEFAULT '0' COMMENT 'T+N天数',
+  `coupon_id` int NOT NULL DEFAULT '0',
+  `coupon_code` varchar(6) DEFAULT NULL COMMENT '优惠券编码，rule_mode=5使用',
+  `discount_type` tinyint(1) NOT NULL DEFAULT '0' COMMENT '优惠方式：0不调整实付，1固定金额，2优惠比例',
+  `discount_value` decimal(10,3) NOT NULL DEFAULT '0.000' COMMENT '优惠金额或比例',
+  `use_limit` int NOT NULL DEFAULT '0' COMMENT '可使用次数',
+  `used_count` int NOT NULL DEFAULT '0' COMMENT '已使用次数',
+  `remain_count` int NOT NULL DEFAULT '0' COMMENT '剩余次数',
+  `expire_time` int DEFAULT NULL COMMENT '过期时间，0或空表示不过期',
+  `receiver_config` mediumtext NOT NULL COMMENT '分账接收方配置JSON：账户、比例、固定金额、阶梯等',
+  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态：1启用，2停用',
+  `creator` int DEFAULT NULL COMMENT '创建人',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  `update_time` int DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`rrcfg_id`),
+  UNIQUE KEY `uk_coupon_code` (`coupon_code`),
+  KEY `idx_mode_status` (`rule_mode`,`status`),
+  KEY `idx_status_expire` (`status`,`expire_time`),
+  KEY `idx_coupon_id` (`coupon_id`)
+) ENGINE=InnoDB  DEFAULT CHARSET=utf8mb3 COMMENT='统一分账配置表';
+
+
+CREATE TABLE `revenue_rule_config_scope` (
+  `rrcs_id` int NOT NULL AUTO_INCREMENT COMMENT '分账配置生效范围ID',
+  `rrcfg_id` int NOT NULL COMMENT '分账配置ID',
+  `m_id` int NOT NULL DEFAULT '0' COMMENT '设备ID，0表示全部设备',
+  `machine_id` varchar(64) DEFAULT '' COMMENT '设备编号快照',
+  `ao_id` int DEFAULT NULL COMMENT '设备组织ID快照',
+  `g_id` int NOT NULL DEFAULT '0' COMMENT '商品ID，0表示全部商品',
+  `mg_id` int NOT NULL DEFAULT '0' COMMENT '设备商品ID，0表示不限定设备商品；指定mg_id时必须有明确m_id',
+  `sort` int NOT NULL DEFAULT '0' COMMENT '匹配优先级，数字越小越优先；同sort按精确范围优先',
+  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态：1启用，2停用',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  `update_time` int DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`rrcs_id`),
+  UNIQUE KEY `uk_config_scope` (`rrcfg_id`,`m_id`,`g_id`,`mg_id`),
+  KEY `idx_machine_status` (`m_id`,`status`),
+  KEY `idx_goods_status` (`g_id`,`mg_id`,`status`),
+  KEY `idx_config_status` (`rrcfg_id`,`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COMMENT='统一分账配置生效范围表';
