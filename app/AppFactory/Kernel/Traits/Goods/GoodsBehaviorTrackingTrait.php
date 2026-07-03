@@ -9,6 +9,7 @@
 namespace app\AppFactory\Kernel\Traits\Goods;
 
 use app\AppFactory\Kernel\Model\Goods\GoodsBehaviorTrackingModel;
+use think\facade\Db;
 
 trait GoodsBehaviorTrackingTrait
 {
@@ -40,5 +41,27 @@ trait GoodsBehaviorTrackingTrait
     public function delGoodsBehaviorTracking($where)
     {
         return GoodsBehaviorTrackingModel::whereDel($where);
+    }
+
+    /**
+     * 从 goods_behavior_tracking 表按条件汇总 click_count
+     * @param array $where  业务侧的完整 $where 条件
+     * @return int
+     */
+    public function getBehaviorClickSum($postData)
+    {
+        $where = [];
+        if(isset($postData['g_id']) && $postData['g_id']){
+            $where[] = ['goods_id', 'in', is_array($postData['g_id']) ? $postData['g_id'] : explode(',', $postData['g_id'])];
+        }
+        if(isset($postData['create_date']) && $postData['create_date']){
+            $time = is_array($postData['create_date']) ? $postData['create_date'] : explode('~', $postData['create_date']);
+            if(count($time) == 2){
+                $where[] = ['device_created_at', 'between', [strtotime($time[0]), strtotime($time[1])]];
+            }
+        }
+        $query = Db::name('goods_behavior_tracking')->where($where);
+
+        return (int)$query->sum('click_count');
     }
 }

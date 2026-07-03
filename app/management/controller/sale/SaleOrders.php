@@ -605,7 +605,7 @@ class SaleOrders extends Common
             }
         }
         // $where['sod.ao_id'] = $this->manager['ao_id'];
-        return $this->app->saleOrders->saleDataCollect($where);
+        return $this->app->saleOrders->saleDataCollect($where,$postData);
 
     }
 
@@ -644,7 +644,7 @@ class SaleOrders extends Common
         $where['so.pay_status'] = 3;
         //$where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
         actionLog($where,'查询条件');
-        return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20);
+        return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20,$postData);
     }
 
     /**
@@ -663,7 +663,7 @@ class SaleOrders extends Common
         }
         $where['so.pay_status'] = 3;
         $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
-        return $this->app->saleOrders->exportSaleDataCollect($where);
+        return $this->app->saleOrders->exportSaleDataCollect($where,$postData);
     }
 
     /**
