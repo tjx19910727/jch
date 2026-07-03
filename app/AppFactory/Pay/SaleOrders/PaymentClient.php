@@ -191,6 +191,40 @@ class PaymentClient extends PayBaseClient
                 if (!$countIncome) {
                     return $this->rFail($this->revenueError ?: '生成分账订单失败');
                 }
+            } else {
+                // 订单金额为0（如优惠券全额抵扣），免支付直接完成
+                actionLog(['order_id' => $this->order['order_id'], 'total_price' => $this->order['total_price']], '订单金额为0，执行免支付完成');
+                $this->startTrans();
+                try {
+                    $flagSettlement = $this->settlementRevenue();
+                    $flagPayment = $this->paymentSuccessful();
+                    $checkFlag = flag_check([$flagSettlement, $flagPayment]);
+                    actionLog($checkFlag, '免支付订单完成事务处理结果');
+                    $result = $this->checkTrans($checkFlag);
+                    $this->returnData['order'] = $this->order;
+                    $this->returnData['result'] = $result;
+                    return $result;
+                } catch (\Exception $e) {
+                    $this->rollbackTrans();
+                    actionLog($e->getMessage(), '免支付订单处理异常');
+                    return $this->rFail($this->lang("VOrderPay.pay_exception"));
+                }
+            }
+
+            // 优惠后金额小于 0.01 元视为零元订单，跳过第三方支付直接走支付成功流程
+            if (bccomp(strval($this->order['total_price'] ?? 0), '0.01', 2) < 0) {
+                $this->order['total_price'] = '0.00';
+                $this->order['pay_status'] = 3;
+                $this->order['pay_time'] = time();
+                $this->order['pay_type'] = 0;
+                $this->order['pay_method'] = 1;
+                $uOrder = $this->updateSaleOrders($this->order, [], ['pay_code', 'pay_method', 'pay_type', 'sp_id', 'pay_status', 'pay_time']);
+                if ($uOrder) {
+                    actionLog($this->order, '零元订单直接标记支付成功');
+                    $result = $this->paymentSuccessful();
+                    return $this->rSuccess();
+                }
+                return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
             }
 
             $uOrder = $this->updateSaleOrders($this->order,[],['pay_code',"pay_method",'pay_type','sp_id']);
