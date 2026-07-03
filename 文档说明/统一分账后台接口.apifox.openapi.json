@@ -1,0 +1,760 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "统一分账后台接口",
+    "version": "2026-06-29",
+    "description": "当前分账后台只保留统一配置接口。配置写入 revenue_rule_config，生效设备和商品写入 revenue_rule_config_scope，接收方、商品规则、阶梯规则统一写入 receiver_config JSON。rule_mode=5 优惠券分账只保存 activity_coupon.c_id 到 coupon_id，不再保存 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。所有后台接口 Header 必传 token: {{token}}。对应数据库脚本：文档说明/统一分账配置数据库变更.sql。"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}"
+    }
+  ],
+  "tags": [
+    {
+      "name": "RevenueRule",
+      "description": "统一分账配置"
+    }
+  ],
+  "paths": {
+    "/management/revenue.revenue_rule/saveConfig": {
+      "post": {
+        "tags": ["RevenueRule"],
+        "summary": "新增或修改分账配置",
+        "description": "不传 rrcfg_id 时新增，传 rrcfg_id 时修改。rule_mode=1,2,3,4,5 均使用本接口保存配置主体和 receiver_config。rule_mode=5 只传 coupon_id 关联 activity_coupon.c_id；优惠金额、折扣、可用次数、生效期沿用活动优惠券配置，不再提交 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。",
+        "operationId": "revenueRuleSaveConfig",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/token"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/SaveConfigRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CommonResponse"
+          }
+        }
+      }
+    },
+    "/management/revenue.revenue_rule/saveScope": {
+      "post": {
+        "tags": ["RevenueRule"],
+        "summary": "保存配置生效范围",
+        "description": "按 rrcfg_id 全量替换生效范围。设备维度、商品维度、设备商品维度都写入 revenue_rule_config_scope。也可以在 saveConfig 中随配置一起提交 scopes。",
+        "operationId": "revenueRuleSaveScope",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/token"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/SaveScopeRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CommonResponse"
+          }
+        }
+      }
+    },
+    "/management/revenue.revenue_rule/getList": {
+      "post": {
+        "tags": ["RevenueRule"],
+        "summary": "分页查询分账配置",
+        "description": "查询 revenue_rule_config，并返回 receivers、machine_num、完整 scopes 和组织名称。优惠券配置不再拆分到独立接口，rule_mode=5 只保存 coupon_id，并通过 coupon_info 返回关联 activity_coupon 的展示信息。",
+        "operationId": "revenueRuleGetList",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/token"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/GetListRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CommonResponse"
+          }
+        }
+      }
+    },
+    "/management/revenue.revenue_rule/getFind": {
+      "post": {
+        "tags": ["RevenueRule"],
+        "summary": "查询单个分账配置",
+        "description": "按 rrcfg_id 或其他配置字段查询单条 revenue_rule_config，并读取 revenue_rule_config_scope 返回完整 scopes。rule_mode=5 且 coupon_id>0 时返回 coupon_info 展示 activity_coupon 信息。列表接口同样返回完整 scopes 和 machine_num。",
+        "operationId": "revenueRuleGetFind",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/token"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/GetFindRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CommonResponse"
+          }
+        }
+      }
+    },
+    "/management/revenue.revenue_rule/getAccountCouponList": {
+      "post": {
+        "tags": ["RevenueRule"],
+        "summary": "查询分账账户关联的优惠券",
+        "description": "按分账账户 ra_id 精确匹配 receiver_config 中的接收方账户，只返回 rule_mode=5 的分账优惠券配置，并同步返回每张活动优惠券的 coupon_info、接收方 receivers、生效范围 scopes、machine_num 和组织名称。权限节点 SQL：文档说明/分账账户关联优惠券接口权限节点.sql。",
+        "operationId": "revenueRuleGetAccountCouponList",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/token"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/GetAccountCouponListRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CommonResponse"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "token": {
+        "name": "token",
+        "in": "header",
+        "required": true,
+        "description": "后台登录令牌",
+        "schema": {
+          "type": "string",
+          "example": "{{token}}"
+        }
+      }
+    },
+    "requestBodies": {
+      "SaveConfigRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SaveConfigRequest"
+            },
+            "examples": {
+              "rule_mode_1": {
+                "$ref": "#/components/examples/RuleMode1Normal"
+              },
+              "rule_mode_2": {
+                "$ref": "#/components/examples/RuleMode2Rental"
+              },
+              "rule_mode_3": {
+                "$ref": "#/components/examples/RuleMode3DeviceTier"
+              },
+              "rule_mode_4": {
+                "$ref": "#/components/examples/RuleMode4Product"
+              },
+              "rule_mode_5": {
+                "$ref": "#/components/examples/RuleMode5Coupon"
+              }
+            }
+          }
+        }
+      },
+      "SaveScopeRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/SaveScopeRequest"
+            },
+            "example": {
+              "rrcfg_id": 1001,
+              "scopes": [
+                {
+                  "m_id": 407,
+                  "machine_id": "JCHM-H2D-0311",
+                  "g_id": 0,
+                  "mg_id": 0,
+                  "sort": 0,
+                  "status": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      "GetListRequest": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetListRequest"
+            },
+            "example": {
+              "rule_mode": 5,
+              "config_name": "优惠券",
+              "status": 1,
+              "page": 1,
+              "limit": 20
+            }
+          }
+        }
+      },
+      "GetFindRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetFindRequest"
+            },
+            "example": {
+              "rrcfg_id": 1001
+            }
+          }
+        }
+      },
+      "GetAccountCouponListRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/GetAccountCouponListRequest"
+            },
+            "examples": {
+              "Default": {
+                "summary": "查询账户关联的分账优惠券",
+                "value": {
+                  "ra_id": 101,
+                  "pageNum": 1
+                }
+              },
+              "EnabledOnly": {
+                "summary": "只查询启用配置",
+                "value": {
+                  "ra_id": 101,
+                  "status": 1,
+                  "pageNum": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "CommonResponse": {
+        "description": "统一业务响应",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/CommonResponse"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "SaveConfigRequest": {
+        "type": "object",
+        "required": ["config_name", "rule_mode", "receivers"],
+        "properties": {
+          "rrcfg_id": {
+            "type": "integer",
+            "description": "分账配置ID。新增时不传，修改时必传。"
+          },
+          "config_name": {
+            "type": "string",
+            "description": "配置名称。"
+          },
+          "rule_mode": {
+            "type": "integer",
+            "enum": [1, 2, 3, 4, 5],
+            "description": "分账模式：1普通分账，2设备出租，3设备分账，4设备商品分账，5优惠券分账。"
+          },
+          "base_type": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "分账基数类型：1订单实付金额，2扣除已分账金额后的剩余金额。"
+          },
+          "turnover_type": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "阶梯营业额口径：1扣除退款，2不扣除退款。"
+          },
+          "tier_calc_mode": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "阶梯计算模式：1按命中区间整体计算，2按区间分段计算。"
+          },
+          "settlement_type": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "结算时间类型：1支付成功立即分账，2支付成功后T+N天分账。"
+          },
+          "settlement_days": {
+            "type": "integer",
+            "description": "T+N天数。settlement_type=2时必须大于0。"
+          },
+          "coupon_id": {
+            "type": "integer",
+            "description": "活动优惠券ID。仅 rule_mode=5 必填，对应 activity_coupon.c_id；优惠金额、次数、生效期沿用活动优惠券配置。"
+          },
+          "coupon_info": {
+            "$ref": "#/components/schemas/CouponInfo"
+          },
+          "status": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "状态：1启用，2停用。"
+          },
+          "receivers": {
+            "type": "array",
+            "description": "分账接收方配置，服务端写入 receiver_config JSON。不同场景通过 g_id、mg_id、calc_type、tiers 表达差异。",
+            "items": {
+              "$ref": "#/components/schemas/ReceiverItem"
+            }
+          },
+          "scopes": {
+            "type": "array",
+            "description": "配置生效范围。可随 saveConfig 一起提交，也可单独调用 saveScope 全量替换。",
+            "items": {
+              "$ref": "#/components/schemas/ScopeItem"
+            }
+          }
+        }
+      },
+      "ReceiverItem": {
+        "type": "object",
+        "required": ["receiver_ao_id", "ra_id", "calc_type", "calc_value"],
+        "properties": {
+          "item_key": {
+            "type": "integer",
+            "description": "接收方项标识。新增时可不传；传入时用于前端本地定位。"
+          },
+          "g_id": {
+            "type": "integer",
+            "description": "商品ID。rule_mode=4指定商品分账时使用，其他场景传0。"
+          },
+          "mg_id": {
+            "type": "integer",
+            "description": "设备商品ID。rule_mode=4按设备商品精确配置时使用，其他场景传0。"
+          },
+          "receiver_ao_id": {
+            "type": "integer",
+            "description": "分账接收方组织ID。"
+          },
+          "ra_id": {
+            "type": "integer",
+            "description": "分账账户ID。"
+          },
+          "manager_id": {
+            "type": "integer",
+            "description": "账户所属后台账号ID，用于快照或展示。"
+          },
+          "calc_type": {
+            "type": "integer",
+            "enum": [1, 2, 3, 4],
+            "description": "计算方式：1固定比例，2固定金额，3全额，4阶梯比例。"
+          },
+          "calc_value": {
+            "type": "number",
+            "description": "计算值。calc_type=1表示百分比，2表示金额，3可传100，4时可传0并在 tiers 中配置。"
+          },
+          "tiers": {
+            "type": "array",
+            "description": "阶梯配置。calc_type=4时必填。",
+            "items": {
+              "$ref": "#/components/schemas/TierItem"
+            }
+          },
+          "sort": {
+            "type": "integer",
+            "description": "排序值，越小越靠前。"
+          },
+          "status": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "状态：1启用，2停用。"
+          }
+        }
+      },
+      "TierItem": {
+        "type": "object",
+        "properties": {
+          "tier_key": {
+            "type": "integer",
+            "description": "阶梯项标识。"
+          },
+          "threshold_min": {
+            "type": "number",
+            "description": "区间起始营业额，包含该值。"
+          },
+          "threshold_max": {
+            "type": "number",
+            "nullable": true,
+            "description": "区间结束营业额，不包含该值；null表示无上限。"
+          },
+          "calc_value": {
+            "type": "number",
+            "description": "该区间分账比例，单位百分比。"
+          },
+          "status": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "状态：1启用，2停用。"
+          }
+        }
+      },
+      "ScopeItem": {
+        "type": "object",
+        "properties": {
+          "m_id": {
+            "type": "integer",
+            "description": "设备主键ID。0表示不限设备。"
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号。用于展示和冗余定位。"
+          },
+          "ao_id": {
+            "type": "integer",
+            "description": "设备所属组织ID。可由设备自动补全。"
+          },
+          "g_id": {
+            "type": "integer",
+            "description": "商品ID。0表示不限商品。"
+          },
+          "mg_id": {
+            "type": "integer",
+            "description": "设备商品ID。用于精确到某台设备上的某个商品。"
+          },
+          "sort": {
+            "type": "integer",
+            "description": "匹配排序值，越小越优先。"
+          },
+          "status": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "状态：1启用，2停用。"
+          }
+        }
+      },
+      "SaveScopeRequest": {
+        "type": "object",
+        "required": ["rrcfg_id", "scopes"],
+        "properties": {
+          "rrcfg_id": {
+            "type": "integer",
+            "description": "分账配置ID。"
+          },
+          "scopes": {
+            "type": "array",
+            "description": "生效范围数组；提交后全量替换旧范围。",
+            "items": {
+              "$ref": "#/components/schemas/ScopeItem"
+            }
+          }
+        }
+      },
+      "CouponInfo": {
+        "type": "object",
+        "description": "rule_mode=5 返回的活动优惠券展示信息，仅查询接口返回，保存时不提交该对象。",
+        "properties": {
+          "c_id": {
+            "type": "integer",
+            "description": "活动优惠券ID，对应 revenue_rule_config.coupon_id。"
+          },
+          "code": {
+            "type": "string",
+            "description": "活动优惠券固定码。随机码场景由 activity_coupon_used.code 兑换，后台配置仍关联 c_id。"
+          },
+          "c_type": {
+            "type": "integer",
+            "enum": [1, 2],
+            "description": "优惠类型：1固定金额，2折扣。"
+          },
+          "pay_limit": {
+            "type": "number",
+            "description": "使用门槛金额。"
+          },
+          "reduction": {
+            "type": "number",
+            "description": "优惠金额或折扣值，沿用 activity_coupon.reduction。"
+          },
+          "status": {
+            "type": "integer",
+            "description": "活动优惠券状态。"
+          },
+          "start_date": {
+            "type": "integer",
+            "description": "优惠券开始时间戳。"
+          },
+          "end_date": {
+            "type": "integer",
+            "description": "优惠券结束时间戳。"
+          },
+          "used_limit": {
+            "type": "integer",
+            "description": "固定码可用次数，0表示不限制。"
+          }
+        }
+      },
+      "GetListRequest": {
+        "type": "object",
+        "properties": {
+          "rrcfg_id": {
+            "type": "integer",
+            "description": "分账配置ID。"
+          },
+          "config_name": {
+            "type": "string",
+            "description": "配置名称，支持模糊查询。"
+          },
+          "rule_mode": {
+            "type": "integer",
+            "description": "分账模式。"
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态：1启用，2停用。"
+          },
+          "page": {
+            "type": "integer",
+            "description": "页码。"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "每页数量。"
+          }
+        }
+      },
+      "GetFindRequest": {
+        "type": "object",
+        "properties": {
+          "rrcfg_id": {
+            "type": "integer",
+            "description": "分账配置ID。"
+          },
+          "coupon_id": {
+            "type": "integer",
+            "description": "活动优惠券ID。用于查询 rule_mode=5 配置。"
+          }
+        }
+      },
+      "CommonResponse": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "integer",
+            "description": "业务状态码，200表示成功。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "响应消息。"
+          },
+          "data": {
+            "type": "object",
+            "description": "响应数据。"
+          }
+        }
+      },
+      "GetAccountCouponListRequest": {
+        "type": "object",
+        "required": ["ra_id"],
+        "properties": {
+          "ra_id": {
+            "type": "integer",
+            "description": "分账账户ID，精确匹配接收方配置中的账户",
+            "example": 101
+          },
+          "status": {
+            "type": "integer",
+            "description": "配置状态；不传则返回该账户关联的全部分账优惠券配置",
+            "example": 1
+          },
+          "pageNum": {
+            "type": "integer",
+            "description": "页码，0 或空表示不分页，沿用 getList 行为",
+            "example": 1
+          }
+        }
+      }
+    },
+    "examples": {
+      "RuleMode1Normal": {
+        "summary": "rule_mode=1 普通订单分账",
+        "value": {
+          "config_name": "普通订单按比例分账",
+          "rule_mode": 1,
+          "base_type": 2,
+          "settlement_type": 1,
+          "receivers": [
+            {
+              "receiver_ao_id": 17,
+              "ra_id": 101,
+              "manager_id": 146,
+              "calc_type": 1,
+              "calc_value": 10,
+              "sort": 0,
+              "status": 1
+            }
+          ],
+          "scopes": [
+            {
+              "m_id": 407,
+              "machine_id": "JCHM-H2D-0311",
+              "g_id": 0,
+              "mg_id": 0,
+              "sort": 0,
+              "status": 1
+            }
+          ]
+        }
+      },
+      "RuleMode2Rental": {
+        "summary": "rule_mode=2 设备出租分账",
+        "value": {
+          "config_name": "设备出租方全额分账",
+          "rule_mode": 2,
+          "base_type": 1,
+          "settlement_type": 1,
+          "receivers": [
+            {
+              "receiver_ao_id": 18,
+              "ra_id": 102,
+              "manager_id": 147,
+              "calc_type": 3,
+              "calc_value": 100,
+              "sort": 0,
+              "status": 1
+            }
+          ],
+          "scopes": [
+            {
+              "m_id": 407,
+              "machine_id": "JCHM-H2D-0311",
+              "g_id": 0,
+              "mg_id": 0,
+              "sort": 0,
+              "status": 1
+            }
+          ]
+        }
+      },
+      "RuleMode3DeviceTier": {
+        "summary": "rule_mode=3 设备分账",
+        "value": {
+          "config_name": "设备月营业额阶梯分账",
+          "rule_mode": 3,
+          "base_type": 2,
+          "turnover_type": 1,
+          "tier_calc_mode": 2,
+          "settlement_type": 2,
+          "settlement_days": 3,
+          "receivers": [
+            {
+              "receiver_ao_id": 17,
+              "ra_id": 101,
+              "manager_id": 146,
+              "calc_type": 4,
+              "calc_value": 0,
+              "tiers": [
+                {
+                  "threshold_min": 0,
+                  "threshold_max": 10000,
+                  "calc_value": 5,
+                  "status": 1
+                },
+                {
+                  "threshold_min": 10000,
+                  "threshold_max": null,
+                  "calc_value": 8,
+                  "status": 1
+                }
+              ],
+              "sort": 0,
+              "status": 1
+            }
+          ],
+          "scopes": [
+            {
+              "m_id": 407,
+              "machine_id": "JCHM-H2D-0311",
+              "g_id": 0,
+              "mg_id": 0,
+              "sort": 0,
+              "status": 1
+            }
+          ]
+        }
+      },
+      "RuleMode4Product": {
+        "summary": "rule_mode=4 设备商品分账",
+        "value": {
+          "config_name": "指定商品固定金额分账",
+          "rule_mode": 4,
+          "base_type": 2,
+          "settlement_type": 1,
+          "receivers": [
+            {
+              "g_id": 700,
+              "mg_id": 3870,
+              "receiver_ao_id": 17,
+              "ra_id": 101,
+              "manager_id": 146,
+              "calc_type": 2,
+              "calc_value": 3,
+              "sort": 0,
+              "status": 1
+            }
+          ],
+          "scopes": [
+            {
+              "m_id": 407,
+              "machine_id": "JCHM-H2D-0311",
+              "g_id": 700,
+              "mg_id": 3870,
+              "sort": 0,
+              "status": 1
+            }
+          ]
+        }
+      },
+      "RuleMode5Coupon": {
+        "summary": "rule_mode=5 优惠券分账",
+        "value": {
+          "config_name": "优惠券分账-固定优惠",
+          "rule_mode": 5,
+          "base_type": 2,
+          "settlement_type": 1,
+          "coupon_id": 1001,
+          "receivers": [
+            {
+              "receiver_ao_id": 17,
+              "ra_id": 101,
+              "manager_id": 146,
+              "calc_type": 1,
+              "calc_value": 20,
+              "sort": 0,
+              "status": 1
+            }
+          ],
+          "scopes": [
+            {
+              "m_id": 407,
+              "machine_id": "JCHM-H2D-0311",
+              "g_id": 700,
+              "mg_id": 0,
+              "sort": 0,
+              "status": 1
+            }
+          ]
+        }
+      }
+    }
+  }
+}

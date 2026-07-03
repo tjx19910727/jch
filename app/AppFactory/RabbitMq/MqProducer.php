@@ -95,10 +95,19 @@ class MqProducer
              * AMQPMessage::DELIVERY_MODE_PERSISTENT = 2: 持久化
              *///将要发送数据变为json字符串
             $messageBody = json_encode($data);
-            // 所有后台下发到设备的 MQ 指令统一设置过期时间，默认 3 分钟（单位：毫秒）
+            // 后台下发到设备的 MQ 指令统一设置过期时间，默认 3 分钟（单位：毫秒）
+            // 心跳只保留 30 秒，避免设备恢复后消费过期心跳。
             // RabbitMQ expects expiration in milliseconds as string
             $expirationMs = (int)(config('rabbit_mq.data_send_expiration_ms') ?: (180 * 1000));
             if ($expirationMs < 1000) $expirationMs = 180 * 1000;
+            $msgType = $data['msgType'] ?? '';
+            if (!$msgType && isset($data['data'])) {
+                $actionData = json2arr($data['data']);
+                $msgType = $actionData['msgType'] ?? '';
+            }
+            if ($msgType == 'heartbeat') {
+                $expirationMs = 30 * 1000;
+            }
             $expiration = (string)$expirationMs;
             /**
              * 创建AMQP消息类型

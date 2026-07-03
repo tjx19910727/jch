@@ -223,6 +223,7 @@ class VReceive extends VCommon
         "useFd" => ["msg_id","machine_id","timestamp","sign","order_id","fd_id"],
         "usePickCode" => ["msg_id","machine_id","timestamp","sign","pick_code"],
         "useCoupon" => ["msg_id","machine_id","timestamp","sign","coupon_code"],
+        "useRevenueCoupon" => ["msg_id","machine_id","timestamp","sign","order_id","coupon_code"],
 
         "unclaimed" => ["msg_id","machine_id","timestamp","sign","order_id","details"],
 
@@ -280,7 +281,7 @@ class VReceive extends VCommon
     "importMaintenanceRecords" => ["msg_id","machine_id","timestamp","sign","file_content","per_row"],
 
         "getCheckListItems" => ["msg_id","machine_id","timestamp","sign"],
-        "checkInspectionStaffCode" => ["msg_id","machine_id","timestamp","sign","staff_code"],
+        "checkInspectionStaffCode" => ["msg_id","machine_id","timestamp","sign"],
         "submitCheckListRecord" => ["msg_id","machine_id","timestamp","sign","manager_id","check_list"],
         "getCheckListRecords" => ["msg_id","machine_id","timestamp","sign"],
     "importCheckListRecords" => ["msg_id","machine_id","timestamp","sign","file_content","per_row"],
