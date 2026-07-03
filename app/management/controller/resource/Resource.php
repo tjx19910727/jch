@@ -10,11 +10,12 @@ namespace app\management\controller\resource;
 
 
 use app\management\controller\Common;
+use app\AppFactory\Kernel\Model\Advertisement\AdvertisementPushModel;
 
 class Resource extends Common
 {
 
-    protected $field = "res_id,title,file_path,type,file_name,`desc`,length,width,size,`status`,ao_id,creator,create_time,update_id,update_time,(SELECT COUNT(DISTINCT m_id) FROM advertisement_push WHERE res_id = a.res_id AND status < 3 AND (end_date > UNIX_TIMESTAMP(CURDATE()) OR (end_date = UNIX_TIMESTAMP(CURDATE()) AND end_time >= HOUR(CURTIME())*3600 + MINUTE(CURTIME())*60 + SECOND(CURTIME())))) machine_count";
+    protected $field = "res_id,title,file_path,type,file_name,`desc`,length,width,size,`status`,ao_id,creator,FROM_UNIXTIME(create_time) create_time,update_id,update_time,(SELECT COUNT(DISTINCT m_id) FROM advertisement_push WHERE res_id = a.res_id AND status < 3 AND (end_date > UNIX_TIMESTAMP(CURDATE()) OR (end_date = UNIX_TIMESTAMP(CURDATE()) AND end_time >= HOUR(CURTIME())*3600 + MINUTE(CURTIME())*60 + SECOND(CURTIME())))) machine_count";
     protected $validatePath = 'app\management\validate\VResource.';
 
     public function getList()
@@ -99,6 +100,6 @@ class Resource extends Common
                 });
         };
         $field = "adv_id,m_id,(SELECT machine_id FROM machine WHERE m_id = a.m_id limit 1) machine_id,(SELECT machine_name FROM machine WHERE m_id = a.m_id limit 1) machine_name,adv_title,status,start_date,end_date,start_time,end_time";
-        return $this->app->advertisementPush->getList($where, $pageNum, $field, "adv_id desc");
+        return returnData(AdvertisementPushModel::getList($where, $pageNum, $field, "adv_id desc"));
     }
 }
