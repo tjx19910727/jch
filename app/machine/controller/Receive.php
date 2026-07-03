@@ -1395,6 +1395,7 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+    
     /**
      * 获取设备应用配置(type=1)
      * @return array|string
