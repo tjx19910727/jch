@@ -12,7 +12,7 @@ use app\management\controller\Common;
 
 class GoodsBehaviorTracking extends Common
 {
-    protected $field = "gbt.*,g.g_name,g.pic";
+    protected $field = "gbt.gbt_id,gbt.m_id,gbt.machine_id,gbt.goods_id,gbt.record_key,gbt.click_count,gbt.cart_add_count,gbt.order_count,gbt.purchase_success_count,gbt.retry_dispense_count,gbt.help_count,gbt.report_date,FROM_UNIXTIME(gbt.device_created_at, '%Y-%m-%d %H:%i:%s') device_created_at,FROM_UNIXTIME(gbt.device_updated_at, '%Y-%m-%d %H:%i:%s') device_updated_at,gbt.active_orders,gbt.created_at,gbt.updated_at,g.g_name,g.pic";
 
     /**
      * 商品行为埋点记录列表
