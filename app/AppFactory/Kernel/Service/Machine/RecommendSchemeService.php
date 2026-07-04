@@ -155,33 +155,32 @@ class RecommendSchemeService
         foreach ($sortedGoods as $item) {
             $gId = $item['g_id'];
             $compatibles = $item['compatibles'];
-            // 再次过滤已占用货道
-            $avail = [];
-            foreach ($compatibles as $c) {
-                if (!in_array($c['mld_id'], $usedMldIds)) {
-                    $avail[] = $c;
-                }
+            $remainQty = intval($item['quantity']);
+            if ($remainQty <= 0) continue;
+
+            foreach ($compatibles as $chosen) {
+                if ($remainQty <= 0) break;
+                if (in_array($chosen['mld_id'], $usedMldIds)) continue;
+
+                $planQty = min($remainQty, intval($chosen['max_qty']));
+                if ($planQty <= 0) continue;
+
+                $usedMldIds[] = $chosen['mld_id'];
+                $remainQty -= $planQty;
+
+                $result[] = [
+                    'mld_id' => $chosen['mld_id'],
+                    'channel_code' => $chosen['channel_code'],
+                    'g_id' => $gId,
+                    'g_name' => $item['g_name'],
+                    'sku' => $item['sku'],
+                    'retail_price' => $item['retail_price'],
+                    'quantity' => $planQty,
+                    'total_amount' => round($item['retail_price'] * $planQty, 2),
+                    'pos_x' => $chosen['pos_x'],
+                    'pos_y' => $chosen['pos_y'],
+                ];
             }
-            if (!$avail) continue;
-
-            // 取第一个可用货道
-            $chosen = $avail[0];
-            $usedMldIds[] = $chosen['mld_id'];
-
-            $planQty = min($item['quantity'], $chosen['max_qty']);
-
-            $result[] = [
-                'mld_id' => $chosen['mld_id'],
-                'channel_code' => $chosen['channel_code'],
-                'g_id' => $gId,
-                'g_name' => $item['g_name'],
-                'sku' => $item['sku'],
-                'retail_price' => $item['retail_price'],
-                'quantity' => $planQty,
-                'total_amount' => round($item['retail_price'] * $planQty, 2),
-                'pos_x' => $chosen['pos_x'],
-                'pos_y' => $chosen['pos_y'],
-            ];
         }
 
         return $result;
