@@ -30,7 +30,7 @@ class MachineLayoutModelClient extends ManagementClient
     public function getList($where = [], $pageNum = 0, $field = "*", $order = "mlm_id desc", $rQ = 1)
     {
         if (!$where && $field == "*") {
-            $field = "mlm_id,model_name,model_code,inner_width,inner_height,inner_depth,shelf_thickness,divider_thickness,left_indent,right_indent,channel_width,channel_height,channel_depth,total_rows,total_cols,actual_channel_width,status,create_time,update_time";
+            $field = "mlm_id,model_name,model_code,inner_width,inner_height,inner_depth,shelf_thickness,divider_thickness,left_indent,right_indent,channel_width,custom_channel_widths,channel_height,channel_depth,total_rows,total_cols,actual_channel_width,status,create_time,update_time";
         }
         return $this->rQ($this->getMachineLayoutModelList($where, $pageNum, $field, $order));
     }
@@ -42,6 +42,14 @@ class MachineLayoutModelClient extends ManagementClient
     {
         $postData = input();
         $mlmId = intval($postData['mlm_id'] ?? 0);
+        $customWidthsError = '';
+        $customChannelWidths = $this->normalizeCustomChannelWidthsForSave(
+            $postData['custom_channel_widths'] ?? ($postData['channel_widths'] ?? []),
+            $customWidthsError
+        );
+        if ($customWidthsError) {
+            return $this->rFail($customWidthsError);
+        }
 
         $insert = [
             "model_name" => $postData['model_name'] ?? '',
@@ -54,20 +62,36 @@ class MachineLayoutModelClient extends ManagementClient
             "left_indent" => floatval($postData['left_indent'] ?? 0),
             "right_indent" => floatval($postData['right_indent'] ?? 0),
             "channel_width" => floatval($postData['channel_width'] ?? 0),
+            "custom_channel_widths" => $customChannelWidths,
             "channel_height" => floatval($postData['channel_height'] ?? 0),
             "channel_depth" => floatval($postData['channel_depth'] ?? 0),
         ];
-
-        if ($mlmId) {
-            $this->updateMachineLayoutModel($insert, ['mlm_id' => $mlmId]);
-        } else {
-            $mlmId = $this->addMachineLayoutModel($insert);
+        if (isset($postData['total_cols'])) {
+            $insert['total_cols'] = intval($postData['total_cols']);
         }
 
-        // 重新生成布局明细
-        $this->generateLayoutDetail($mlmId);
+        $this->startTrans();
+        try {
+            if ($mlmId) {
+                $this->updateMachineLayoutModel($insert, ['mlm_id' => $mlmId]);
+            } else {
+                $mlmId = $this->addMachineLayoutModel($insert);
+            }
 
-        return $this->rSuccess();
+            // 重新生成布局明细
+            $result = $this->generateLayoutDetail($mlmId);
+            if ($result !== true) {
+                $this->rollbackTrans();
+                return $result;
+            }
+
+            $this->commitTrans();
+            return $this->rSuccess();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rFail($e->getMessage());
+        }
     }
 
     /**
@@ -204,17 +228,26 @@ class MachineLayoutModelClient extends ManagementClient
         $totalRows = intval(floor($innerHeight / $unitHeight));
         if ($totalRows <= 0) return $this->rFail("内部高度不足以容纳任何货道");
 
-        // Step3: 计算列数
-        $totalCols = intval(floor(($availableWidth + $dividerThickness) / ($channelWidth + $dividerThickness)));
+        // Step3: 计算列数。传入 total_cols 时按固定货道数量计算，否则兼容旧逻辑自动推算。
+        $totalCols = intval($model['total_cols'] ?? 0);
+        if ($totalCols <= 0) {
+            $totalCols = intval(floor(($availableWidth + $dividerThickness) / ($channelWidth + $dividerThickness)));
+        }
         if ($totalCols <= 0) return $this->rFail("可用宽度不足以容纳任何货道");
 
-        // Step4: 剩余宽度均匀分配到每个货道
-        $usedWidth = $totalCols * $channelWidth + ($totalCols - 1) * $dividerThickness;
-        $remainingWidth = $availableWidth - $usedWidth;
-        $actualChannelWidth = $channelWidth;
-        if ($totalCols > 0) {
-            $actualChannelWidth = $channelWidth + ($remainingWidth / $totalCols);
+        // Step4: 计算每列货道宽度。指定列使用自定义宽度，未指定列均分剩余空间。
+        $widthResult = $this->calculateChannelWidths(
+            $totalCols,
+            $availableWidth,
+            $dividerThickness,
+            $channelWidth,
+            $model['custom_channel_widths'] ?? ''
+        );
+        if ($widthResult['error']) {
+            return $this->rFail($widthResult['error']);
         }
+        $channelWidths = $widthResult['widths'];
+        $actualChannelWidth = $widthResult['average_width'];
 
         // Step5: 更新主表自动计算字段
         $this->updateMachineLayoutModel([
@@ -230,11 +263,12 @@ class MachineLayoutModelClient extends ManagementClient
         $now = time();
         for ($row = 0; $row < $totalRows; $row++) {
             $posY = $row * ($channelHeight + $shelfThickness);
+            $posX = $leftIndent;
             for ($col = 0; $col < $totalCols; $col++) {
-                $posX = $leftIndent + $col * ($actualChannelWidth + $dividerThickness);
                 $rowChar = chr(65 + $row);
                 $colStr = str_pad($col + 1, 2, '0', STR_PAD_LEFT);
                 $channelCode = $rowChar . $colStr;
+                $currentWidth = $channelWidths[$col + 1];
 
                 $insertAll[] = [
                     'mlm_id' => $mlmId,
@@ -243,10 +277,11 @@ class MachineLayoutModelClient extends ManagementClient
                     'channel_code' => $channelCode,
                     'pos_x' => round($posX, 2),
                     'pos_y' => round($posY, 2),
-                    'actual_width' => round($actualChannelWidth, 2),
+                    'actual_width' => round($currentWidth, 2),
                     'actual_height' => $channelHeight,
                     'create_time' => $now,
                 ];
+                $posX += $currentWidth + $dividerThickness;
             }
         }
 
@@ -255,5 +290,146 @@ class MachineLayoutModelClient extends ManagementClient
         }
 
         return true;
+    }
+
+    protected function normalizeCustomChannelWidthsForSave($customWidths, &$error = '')
+    {
+        $widthMap = $this->parseCustomChannelWidths($customWidths, $error);
+        if ($error) {
+            return '';
+        }
+        if (empty($widthMap)) {
+            return '';
+        }
+
+        $items = [];
+        ksort($widthMap);
+        foreach ($widthMap as $colIndex => $width) {
+            $items[] = [
+                'col_index' => intval($colIndex),
+                'width' => round(floatval($width), 2),
+            ];
+        }
+        return json_encode($items, JSON_UNESCAPED_UNICODE);
+    }
+
+    protected function calculateChannelWidths($totalCols, $availableWidth, $dividerThickness, $defaultChannelWidth, $customWidths)
+    {
+        $result = [
+            'widths' => [],
+            'average_width' => 0,
+            'error' => '',
+        ];
+
+        $totalCols = intval($totalCols);
+        if ($totalCols <= 0) {
+            $result['error'] = '货道数量必须大于0';
+            return $result;
+        }
+
+        if ($dividerThickness < 0) {
+            $result['error'] = '隔板宽度不能小于0';
+            return $result;
+        }
+
+        $dividerTotalWidth = $dividerThickness * max(0, $totalCols - 1);
+        $availableChannelWidth = $availableWidth - $dividerTotalWidth;
+        if ($availableChannelWidth <= 0) {
+            $result['error'] = '可用宽度不足，无法扣除隔板宽度';
+            return $result;
+        }
+
+        $parseError = '';
+        $widthMap = $this->parseCustomChannelWidths($customWidths, $parseError);
+        if ($parseError) {
+            $result['error'] = $parseError;
+            return $result;
+        }
+        $customTotalWidth = 0;
+        $customCount = 0;
+        foreach ($widthMap as $colIndex => $width) {
+            if ($colIndex < 1 || $colIndex > $totalCols) {
+                $result['error'] = '自定义货道列号超出货道数量范围';
+                return $result;
+            }
+            if ($width <= 0) {
+                $result['error'] = '自定义货道宽度必须大于0';
+                return $result;
+            }
+            $customTotalWidth += $width;
+            $customCount++;
+        }
+
+        if ($customTotalWidth > $availableChannelWidth) {
+            $result['error'] = '自定义货道宽度总和超过可用宽度';
+            return $result;
+        }
+
+        $remainCount = $totalCols - $customCount;
+        if ($remainCount > 0) {
+            $remainWidth = ($availableChannelWidth - $customTotalWidth) / $remainCount;
+        } else {
+            $remainWidth = 0;
+            if (abs($availableChannelWidth - $customTotalWidth) > 0.01) {
+                $result['error'] = '全部货道已指定宽度时，货道宽度总和必须等于可用宽度';
+                return $result;
+            }
+        }
+
+        if ($remainCount > 0 && $remainWidth <= 0) {
+            $result['error'] = '剩余货道均分宽度必须大于0';
+            return $result;
+        }
+
+        for ($col = 1; $col <= $totalCols; $col++) {
+            $result['widths'][$col] = isset($widthMap[$col]) ? $widthMap[$col] : $remainWidth;
+        }
+
+        $result['average_width'] = round(array_sum($result['widths']) / $totalCols, 2);
+        return $result;
+    }
+
+    protected function parseCustomChannelWidths($customWidths, &$error = '')
+    {
+        if (empty($customWidths)) {
+            return [];
+        }
+
+        if (is_string($customWidths)) {
+            $decoded = json_decode($customWidths, true);
+            if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+                $error = '自定义货道宽度JSON格式错误';
+                return [];
+            }
+            $customWidths = $decoded;
+        }
+
+        if (!is_array($customWidths)) {
+            $error = '自定义货道宽度参数格式错误';
+            return [];
+        }
+
+        $widthMap = [];
+        foreach ($customWidths as $key => $item) {
+            if (is_array($item)) {
+                $colIndex = intval($item['col_index'] ?? ($item['col'] ?? 0));
+                $width = floatval($item['width'] ?? 0);
+            } else {
+                $colIndex = is_numeric($key) ? intval($key) : 0;
+                $width = floatval($item);
+            }
+
+            if ($colIndex <= 0) {
+                $error = '自定义货道列号必须大于0';
+                return [];
+            }
+            if (isset($widthMap[$colIndex])) {
+                $error = '自定义货道列号不能重复';
+                return [];
+            }
+            $widthMap[$colIndex] = $width;
+        }
+
+        return $widthMap;
     }
 }
