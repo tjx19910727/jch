@@ -62,6 +62,68 @@ class ReceiveBaseClient extends MachineBaseClient
     }
 
     /**
+     * 优惠券/满减后金额为0时，设备端不会再调用支付接口，这里直接完成支付并触发出货。
+     */
+    protected function completeZeroPayOrderIfNeeded($orderId, $reason = '')
+    {
+        $order = $this->getSaleOrdersFind(['order_id' => $orderId]);
+        if (!$order) {
+            return ['handled' => false, 'success' => false, 'msg' => $this->lang("VSaleOrders.order_not_data")];
+        }
+        $order = is_object($order) && method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
+        if (bccomp(strval($order['total_price'] ?? 0), '0.01', 2) >= 0) {
+            return ['handled' => false, 'success' => true, 'order' => $this->buildOrderPayActionData($order)];
+        }
+        if (intval($order['pay_status'] ?? 0) == 3) {
+            return ['handled' => true, 'success' => true, 'order' => $this->buildOrderPayActionData($order, false, true)];
+        }
+
+        $this->startTrans();
+        try {
+            $order['total_price'] = '0.00';
+            $order['pay_status'] = 3;
+            $order['pay_time'] = time();
+            $order['pay_type'] = 0;
+            $order['pay_method'] = 1;
+            $order['pay_code'] = $reason ? $reason : 'zero_pay';
+            $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0);
+            $this->order = $order;
+            actionLog(['order_id' => $order['order_id'], 'reason' => $reason], '设备端0元单免支付完成');
+            $success = $this->paymentSuccessful();
+            $result = $this->checkTrans($success, 0);
+            if (!$result) {
+                return ['handled' => true, 'success' => false, 'msg' => $this->lang("action_fail")];
+            }
+            $latest = $this->getSaleOrdersFind(['order_id' => $order['order_id']]);
+            $latest = is_object($latest) && method_exists($latest, 'toArray') ? $latest->toArray() : (array)$latest;
+            return ['handled' => true, 'success' => true, 'order' => $this->buildOrderPayActionData($latest, false, true)];
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return ['handled' => true, 'success' => false, 'msg' => $e->getMessage()];
+        }
+    }
+
+    protected function buildOrderPayActionData($order, $payRequired = null, $zeroPay = null)
+    {
+        $order = is_object($order) && method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
+        $needPay = bccomp(strval($order['total_price'] ?? 0), '0.01', 2) >= 0 && intval($order['pay_status'] ?? 0) != 3;
+        if ($payRequired !== null) {
+            $needPay = (bool)$payRequired;
+        }
+        $isZeroPay = !$needPay && bccomp(strval($order['total_price'] ?? 0), '0.01', 2) < 0;
+        if ($zeroPay !== null) {
+            $isZeroPay = (bool)$zeroPay;
+        }
+        return [
+            'order' => $order,
+            'pay_required' => $needPay,
+            'zero_pay' => $isZeroPay,
+            'next_action' => $needPay ? 'pay' : 'wait_out_goods',
+        ];
+    }
+
+    /**
      * 通过Mac地址生成SignKey，并下发给设备，只有mac参数才触发
      */
     public function setSignKey()

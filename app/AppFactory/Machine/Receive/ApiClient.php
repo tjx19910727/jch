@@ -1514,7 +1514,12 @@ class ApiClient extends ReceiveBaseClient
                             $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
                             $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
                         }
-                        return $this->r(200, $this->lang("VSubCar.make_order_success"), ['order' => $this->order]);
+                        $zeroPay = $this->completeZeroPayOrderIfNeeded($order_id, 'subcar_coupon_zero_pay');
+                        if (!($zeroPay['success'] ?? false)) {
+                            return $this->subCarFailResponse(300, $zeroPay['msg'] ?? $this->lang("action_fail"));
+                        }
+                        $data = $zeroPay['order'] ?? $this->buildOrderPayActionData($this->order);
+                        return $this->r(200, $this->lang("VSubCar.make_order_success"), $data);
                     }
                 }
             }
