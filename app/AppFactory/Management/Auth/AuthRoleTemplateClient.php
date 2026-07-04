@@ -334,6 +334,17 @@ class AuthRoleTemplateClient extends ManagementClient
             $selected[$topNodeId] = $this->navigationResponseRow($topSetting);
         }
 
+        // 补充父菜单节点：如果某节点有子节点被授权，但父菜单节点未被授权，则自动补充
+        foreach (array_keys($nodeList) as $nid) {
+            $pid = $nodeMap[$nid]['pid'] ?? 0;
+            while ($pid > 0) {
+                if (!isset($nodeList[$pid]) && isset($nodeMap[$pid]) && $nodeMap[$pid]['permission_action'] === 'menu') {
+                    $nodeList[$pid] = ['data_scope' => ($nodeList[$nid] ?? [])['data_scope'] ?? 'organization'];
+                }
+                $pid = $nodeMap[$pid]['pid'] ?? 0;
+            }
+        }
+
         ksort($nodeList);
         return [
             'top_navigation_list' => array_values($selected),
@@ -440,7 +451,14 @@ class AuthRoleTemplateClient extends ManagementClient
         $enabledActions = $setting['_enabled_actions'] ?? [];
         foreach ($nodeIds as $id) {
             $action = $nodeMap[$id]['permission_action'];
-            if ($action === 'menu' || in_array($action, $enabledActions, true) || ($action === 'export' && in_array('query', $enabledActions, true))) {
+            $isSelf = (intval($id) === intval($nodeId));
+            // 节点自身：只要有启用的操作权限就放行（证明用户选中了此导航）
+            if ($isSelf && !empty($enabledActions)) {
+                $nodeList[$id] = ['data_scope' => $setting['data_scope']];
+                continue;
+            }
+            // 子节点：只放行业务操作权限明确匹配的节点（menu类型不自动继承）
+            if (in_array($action, $enabledActions, true) || ($action === 'export' && in_array('query', $enabledActions, true))) {
                 $nodeList[$id] = ['data_scope' => $setting['data_scope']];
             }
         }

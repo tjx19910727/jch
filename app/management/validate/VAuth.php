@@ -112,7 +112,7 @@ class VAuth extends VCommon
         "AuthRoleTemplateUpdate" => ["art_id"],
         "AuthRoleTemplateNodes" => ["art_id","nodeList"],
         "AuthRoleTemplateTopNavigationNodes" => ["art_id"],
-        "AuthRoleTemplateApplyManagers" => ["art_id","manager_ids"],
+        "AuthRoleTemplateApplyManagers" => ["art_id"],
         "AuthRoleTemplateManagers" => ["art_id"],
 
         "AuthOrganizationAdd" => ['pid','organization_name'],
