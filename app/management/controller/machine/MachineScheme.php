@@ -48,6 +48,14 @@ class MachineScheme extends Common
     }
 
     /**
+     * 方案真实上架
+     */
+    public function applyScheme()
+    {
+        return $this->app->machineScheme->applyScheme();
+    }
+
+    /**
      * 取消方案
      */
     public function cancelScheme()
