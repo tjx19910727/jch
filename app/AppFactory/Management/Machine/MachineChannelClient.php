@@ -884,6 +884,65 @@ class MachineChannelClient extends ManagementClient
 
         $this->startTrans();
         try {
+            // ========== 多商品批次处理 ==========
+            $isMultiGoods = isset($postData['is_multi_goods']) && intval($postData['is_multi_goods']) === 1;
+            $batchArr = isset($postData['batch_arr']) ? $postData['batch_arr'] : [];
+
+            if ($isMultiGoods) {
+                // 校验：batch_arr 至少 1 个（加上队首 ≥2）
+                if (empty($batchArr) || count($batchArr) < 1) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '开启多商品模式必须设置多个商品');
+                }
+                // 校验：队首商品必须有 g_id
+                if (!isset($postData['g_id']) || intval($postData['g_id'] ?? 0) <= 0) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '开启多商品模式必须设置商品');
+                }
+                // 总库存不超容量
+                $totalStock = intval($postData['stock'] ?? 0);
+                $checkGoodsIds = [];
+                foreach ($batchArr as $item) {
+                    $totalStock += intval($item['stock'] ?? 0);
+                    if (isset($item['g_id']) && intval($item['g_id'] ?? 0) > 0) {
+                        $checkGoodsIds[] = $item['g_id'];
+                    }
+                }
+                if(count($checkGoodsIds) != count($batchArr)) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '开启多商品模式必须设置有效的商品');
+                }
+                $capacity = intval($mc['capacity'] ?? 0);
+                if ($totalStock > $capacity) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '批次商品总库存(' . $totalStock . ')超过货道容量(' . $capacity . ')');
+                }
+
+                // 构建队首数据（来自 $postData）
+                $headData = [
+                    'g_id'             => $postData['g_id'] ?? 0,
+                    'stock'            => $postData['stock'] ?? 0,
+                    'retail_price'     => $postData['retail_price'] ?? 0,
+                    'gift_points'      => $postData['gift_points'] ?? 0,
+                    'manufacture_time' => $postData['manufacture_time'] ?? 0,
+                    'batch_number'     => $postData['batch_number'] ?? '',
+                ];
+
+                $headBatch = $this->saveChannelGoodsBatch($mc['mc_id'], $headData, $batchArr);
+                // 队首 g_id 跟 postData 不一致时，更新 postData 的商品信息
+                if (isset($headBatch['g_id']) && $headBatch['g_id'] != ($postData['g_id'] ?? 0)) {
+                    $postData['g_id'] = $headBatch['g_id'];
+                    $postData['mg_id'] = $this->getMachineGoodsValue(['m_id' => $mc['m_id'], 'g_id' => $headBatch['g_id']], 'mg_id') ?? 0;
+                    // 队首的 stock/frozen_stock/retail_price/gift_points 以批次表为准
+                    $postData['stock']          = $headBatch['stock'];
+                    $postData['frozen_stock']   = $headBatch['frozen_stock'];
+                    $postData['retail_price']   = $headBatch['retail_price'];
+                    $postData['gift_points']    = $headBatch['gift_points'];
+                    $postData['is_multi_goods'] = 1;
+                }
+            }
+            // ========== 多商品批次处理结束 ==========
+
             $newGId = isset($postData['g_id']) ? intval($postData['g_id']) : null;
             $oldGId = intval($mc['g_id'] ?? 0);
             $isChangingGoods = $newGId !== null && $newGId !== $oldGId;
