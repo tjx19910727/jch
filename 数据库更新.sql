@@ -2275,3 +2275,288 @@ CREATE TABLE `revenue_rule_config_scope` (
   KEY `idx_goods_status` (`g_id`,`mg_id`,`status`),
   KEY `idx_config_status` (`rrcfg_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COMMENT='统一分账配置生效范围表';
+
+#20260527
+CREATE TABLE pre_replenishment_order (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  ao_id INT UNSIGNED NOT NULL DEFAULT 0 COMMENT '组织ID',
+  record_no VARCHAR(32) NOT NULL COMMENT '预补货单号，唯一',
+  creator_id BIGINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '创建人ID',
+  creator_name VARCHAR(64) NOT NULL DEFAULT '' COMMENT '创建人名称',
+  remark VARCHAR(255) NULL DEFAULT NULL COMMENT '备注',
+  biz_status TINYINT UNSIGNED NOT NULL DEFAULT 1 COMMENT '业务状态:1未补货 2正常 3少补',
+  export_status TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT '导出状态:0未导出 1已导出',
+  export_time DATETIME NULL DEFAULT NULL COMMENT '导出时间',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_record_no (record_no),
+  KEY idx_ao_id (ao_id),
+  KEY idx_creator_id (creator_id),
+  KEY idx_biz_status (biz_status),
+  KEY idx_created_at (created_at),
+  KEY idx_export_time (export_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='预补货主单';
+
+CREATE TABLE pre_replenishment_detail (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  order_id BIGINT UNSIGNED NOT NULL COMMENT '主单ID',
+  m_id BIGINT UNSIGNED NOT NULL COMMENT '设备ID',
+  machine_id VARCHAR(64) NOT NULL COMMENT '设备编号',
+  mc_id BIGINT UNSIGNED NOT NULL COMMENT '货道ID',
+  channel_code VARCHAR(32) NOT NULL COMMENT '货道编号',
+  sku VARCHAR(64) NOT NULL COMMENT 'SKU',
+  before_stock INT NOT NULL DEFAULT 0 COMMENT '补货前库存',
+  capacity INT NOT NULL DEFAULT 0 COMMENT '货道容量',
+  available_stock INT NOT NULL DEFAULT 0 COMMENT '可补数量',
+  plan_quantity INT NOT NULL DEFAULT 0 COMMENT '预补数量',
+  actual_quantity INT NULL DEFAULT NULL COMMENT '实际补货数量',
+  actual_sku VARCHAR(64) NULL DEFAULT NULL COMMENT '实际上报SKU',
+  actual_channel_code VARCHAR(32) NULL DEFAULT NULL COMMENT '实际上报货道',
+  compare_status VARCHAR(32) NOT NULL DEFAULT 'pending' COMMENT '对比状态1未补货 2正常 3少补',
+  order_count INT NOT NULL DEFAULT 0 COMMENT '补货次数(0未补货;>=1已预补货)',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id),
+  KEY idx_order_id (order_id),
+  KEY idx_m_id (m_id),
+  KEY idx_mc_id (mc_id),
+  KEY idx_compare_status (compare_status),
+  KEY idx_order_machine (order_id, m_id),
+  UNIQUE KEY uk_order_machine_mc (order_id, m_id, mc_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='预补货明细';
+
+CREATE TABLE pre_replenishment_log (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  record_no VARCHAR(32) NOT NULL COMMENT '预补货单号',
+  m_id BIGINT UNSIGNED NOT NULL COMMENT '设备ID',
+  machine_id VARCHAR(64) NOT NULL COMMENT '设备编号',
+  channel_code VARCHAR(32) NOT NULL COMMENT '货道编号',
+  sku VARCHAR(64) NOT NULL COMMENT 'SKU',
+  quantity INT NOT NULL DEFAULT 0 COMMENT '补货数量',
+  report_time DATETIME NOT NULL COMMENT '上报时间',
+  raw_payload JSON NULL COMMENT '原始上报内容',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (id),
+  KEY idx_record_no (record_no),
+  KEY idx_m_id (m_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='预补货日志';
+
+CREATE TABLE `machine_app_settings` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `m_id` int NOT NULL DEFAULT '0' COMMENT '设备m_id',
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '名称',
+  `machine_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '设备的machine_id',
+  `type` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1:软件设置页',
+  `key` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的键',
+  `value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的值',
+  `value_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'string' COMMENT '配置的值类型: string, int, float, bool',
+  `desc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的描述',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `manager_id` int NOT NULL DEFAULT '0' COMMENT '管理员ID',
+  PRIMARY KEY (`id`),
+  KEY `m_id` (`m_id`) USING BTREE,
+  KEY `machine_id` (`machine_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备软件设置表';
+
+CREATE TABLE `pre_replenishment_video` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `order_id` int NOT NULL COMMENT '预补货订单ID',
+  `record_no` varchar(50) NOT NULL COMMENT '预补货单号',
+  `m_id` int NOT NULL COMMENT '设备ID',
+  `machine_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '设备的machine_id',
+  `replenishment_video` varchar(500) DEFAULT NULL COMMENT '补货视频地址',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `m_id` (`m_id`),
+  KEY `idx_record_no` (`record_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='预补货设备视频表';
+
+CREATE TABLE `machine_remote_steps` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `m_id` int NOT NULL DEFAULT '0' COMMENT '设备m_id',
+  `sod_id` int NOT NULL DEFAULT '0' COMMENT '子单id',
+  `name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '名称',
+  `machine_id` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '设备的machine_id',
+  `key` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的键',
+  `status` tinyint(1) NOT NULL DEFAULT '2' COMMENT '步骤状态：1成功2失败',
+  `step` int NOT NULL DEFAULT 0 COMMENT '步骤编号',
+  `value` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的值',
+  `desc` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '配置的描述',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `manager_id` int NOT NULL DEFAULT '0' COMMENT '管理员ID',
+  PRIMARY KEY (`id`),
+  KEY `m_id` (`m_id`) USING BTREE,
+  KEY `sod_id` (`sod_id`) USING BTREE,
+  KEY `machine_id` (`machine_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='设备订单远程出货步骤表';
+
+CREATE TABLE machine_operating_log (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `m_id` BIGINT UNSIGNED NOT NULL COMMENT '设备ID',
+  `machine_id` VARCHAR(64) NOT NULL COMMENT '设备编号',
+  `is_operating` tinyint(1) NOT NULL DEFAULT '1' COMMENT '在营状态，1-在营 2-在库3-外售',
+  `manager_id` int NOT NULL DEFAULT '0' COMMENT '管理员ID',
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (id),
+  KEY idx_m_id (m_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='在营状态日志';
+
+ALTER TABLE `machine_config` ADD COLUMN `enable_shutdown` tinyint(1) DEFAULT '1' COMMENT '是否开启设备端倒计时弹窗  1开启2关闭';
+
+alter table laser_resource add `trade_no` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '订单编号';
+
+ALTER TABLE kiosk.goods ADD COLUMN `sell_by_date` int DEFAULT 0 COMMENT '保质期天数（默认值，上架到货道时自动带入）' AFTER `expire_notice`;
+
+ALTER TABLE kiosk.machine_channel ADD COLUMN `expire_time` bigint DEFAULT 0 COMMENT '过期时间' AFTER `manufacture_time`;
+
+ALTER TABLE kiosk.topic_page ADD COLUMN `title` varchar(100) NOT NULL DEFAULT '' COMMENT '主题名称';
+ALTER TABLE kiosk.topic_page ADD COLUMN `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '主题备注';
+
+ALTER TABLE kiosk.sale_orders_details ADD COLUMN `is_manual` tinyint(1) DEFAULT 0 COMMENT '是否手动执行库存，0-否，1-是';
+
+ALTER TABLE kiosk.machine_error_code ADD COLUMN `creator_id` int DEFAULT 0 COMMENT '管理员id' AFTER `ao_id`;
+
+ALTER TABLE kiosk.machine_config ADD COLUMN `open_door_video_exp` int DEFAULT 15 COMMENT '开门视频保留时间' AFTER `remote_calibration`;
+ALTER TABLE kiosk.machine_config ADD COLUMN `order_video_exp` int DEFAULT 30 COMMENT '订单视频保留时间' AFTER `remote_calibration`;
+ALTER TABLE kiosk.machine_config ADD COLUMN `remote_delivery_video_exp` int DEFAULT 30 COMMENT '远程视频保留时间' AFTER `remote_calibration`;
+
+CREATE TABLE IF NOT EXISTS `ota_version` (
+  `ov_id` int NOT NULL AUTO_INCREMENT COMMENT 'OTA版本ID',
+  `version_no` varchar(100) NOT NULL COMMENT '版本号',
+  `path` varchar(255) NOT NULL COMMENT '固件包路径',
+  `size` varchar(50) NOT NULL DEFAULT '0' COMMENT '文件大小(字节)',
+  `desc` varchar(10000) DEFAULT '' COMMENT '版本描述/更新日志',
+  `creator` int NOT NULL DEFAULT 0 COMMENT '创建人',
+  `update_id` int NOT NULL DEFAULT 0 COMMENT '更新人',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  `update_time` int DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`ov_id`),
+  KEY `idx_version_no` (`version_no`),
+  KEY `idx_create_time` (`create_time`, `update_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='OTA固件版本表';
+
+CREATE TABLE IF NOT EXISTS `ota_version_plan` (
+  `ovp_id` int NOT NULL AUTO_INCREMENT COMMENT '发布计划ID',
+  `ov_id` int NOT NULL COMMENT '关联ota_version.ov_id',
+  `m_id` int NOT NULL COMMENT '设备主键',
+  `machine_id` varchar(32) NOT NULL COMMENT '设备编号',
+  `version_no` varchar(100) NOT NULL COMMENT '版本号',
+  `path` varchar(255) NOT NULL COMMENT '固件包路径',
+  `size` varchar(50) DEFAULT '0' COMMENT '文件大小',
+  `desc` text COMMENT '版本描述',
+  `download_progress` tinyint(3) NOT NULL DEFAULT 0 COMMENT '下载进度 0-100',
+  `publish_time` int NOT NULL DEFAULT 0 COMMENT '发布时间',
+  `status` tinyint(1) NOT NULL DEFAULT 1 COMMENT '状态: 1待更新 2下载中 3已更新 4更新失败 5已下架',
+  `creator` int NOT NULL DEFAULT 0 COMMENT '创建人',
+  `create_time` int DEFAULT NULL COMMENT '创建时间',
+  `update_time` int DEFAULT NULL COMMENT '更新时间',
+  PRIMARY KEY (`ovp_id`),
+  KEY `idx_ov_id` (`ov_id`),
+  KEY `idx_machine` (`m_id`, `machine_id`),
+  KEY `idx_version_no` (`version_no`),
+  KEY `idx_status` (`status`),
+  KEY `idx_publish_time` (`publish_time`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='OTA固件发布计划表';
+
+ALTER TABLE kiosk.machine ADD COLUMN `ota_version` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT '' COMMENT '设备OTA版本' AFTER `version`;
+
+CREATE TABLE `machine_voice_template` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `manager_id` int NOT NULL DEFAULT '0' COMMENT '管理员id',
+  `title` varchar(100) NOT NULL DEFAULT '' COMMENT '语音模板名称',
+  `remark` varchar(255) NOT NULL DEFAULT '' COMMENT '语音模板备注',
+  `home_anim_enabled` tinyint(1) DEFAULT '2' COMMENT '首页动画状态 1启用 2禁用',
+  `home_voice_img` varchar(255) NOT NULL DEFAULT '' COMMENT '首页动画图片',
+  `home_anim_style` tinyint(1) DEFAULT '2' COMMENT '首页动画样式，1:S形，2:直线',
+  `ad_show_goods_enabled` tinyint(1) DEFAULT '2' COMMENT '广告页是否显示商品，1开启，2关闭',
+  `ad_goods_jump_target` tinyint(1) DEFAULT '2' COMMENT '广告页商品跳转目标，1商品详情页，2商品列表页',
+  `home_anim_volume` int NOT NULL DEFAULT '50' COMMENT '首页动画音量',
+  `purchase_voice_enabled` tinyint(1) DEFAULT '2' COMMENT '购买语音状态 1启用 2禁用',
+  `cart_item_added` varchar(255) NOT NULL DEFAULT '' COMMENT '加入购物车语音文件（简体）',
+  `cart_item_added_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '加入购物车语音文件（繁体）',
+  `cart_item_added_en` varchar(255) NOT NULL DEFAULT '' COMMENT '加入购物车语音文件（英文）',
+  `online_goods_available` varchar(255) NOT NULL DEFAULT '' COMMENT '在线商品语音文件（简体）',
+  `online_goods_available_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '在线商品语音文件（繁体）',
+  `online_goods_available_en` varchar(255) NOT NULL DEFAULT '' COMMENT '在线商品语音文件（英文）',
+  `pay_alipay_qrcode` varchar(255) NOT NULL DEFAULT '' COMMENT '支付宝扫码支付语音文件（简体）',
+  `pay_alipay_qrcode_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '支付宝扫码支付语音文件（繁体）',
+  `pay_alipay_qrcode_en` varchar(255) NOT NULL DEFAULT '' COMMENT '支付宝扫码支付语音文件（英文）',
+  `pay_alipay_scan` varchar(255) NOT NULL DEFAULT '' COMMENT '支付宝反扫支付语音文件（简体）',
+  `pay_alipay_scan_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '支付宝反扫支付语音文件（繁体）',
+  `pay_alipay_scan_en` varchar(255) NOT NULL DEFAULT '' COMMENT '支付宝反扫支付语音文件（英文）',
+  `pay_jd_qrcode` varchar(255) NOT NULL DEFAULT '' COMMENT '京东扫码支付语音文件（简体）',
+  `pay_jd_qrcode_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '京东扫码支付语音文件（繁体）',
+  `pay_jd_qrcode_en` varchar(255) NOT NULL DEFAULT '' COMMENT '京东扫码支付语音文件（英文）',
+  `pay_jd_scan` varchar(255) NOT NULL DEFAULT '' COMMENT '京东反扫支付语音文件（简体）',
+  `pay_jd_scan_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '京东反扫支付语音文件（繁体）',
+  `pay_jd_scan_en` varchar(255) NOT NULL DEFAULT '' COMMENT '京东反扫支付语音文件（英文）',
+  `pay_other` varchar(255) NOT NULL DEFAULT '' COMMENT '其他支付语音文件（简体）',
+  `pay_other_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '其他支付语音文件（繁体）',
+  `pay_other_en` varchar(255) NOT NULL DEFAULT '' COMMENT '其他支付语音文件（英文）',
+  `pay_wechat_qrcode` varchar(255) NOT NULL DEFAULT '' COMMENT '微信扫码支付语音文件（简体）',
+  `pay_wechat_qrcode_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '微信扫码支付语音文件（繁体）',
+  `pay_wechat_qrcode_en` varchar(255) NOT NULL DEFAULT '' COMMENT '微信扫码支付语音文件（英文）',
+  `pay_wechat_scan` varchar(255) NOT NULL DEFAULT '' COMMENT '微信反扫支付语音文件（简体）',
+  `pay_wechat_scan_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '微信反扫支付语音文件（繁体）',
+  `pay_wechat_scan_en` varchar(255) NOT NULL DEFAULT '' COMMENT '微信反扫支付语音文件（英文）',
+  `please_pickup` varchar(255) NOT NULL DEFAULT '' COMMENT '请取货语音（简体）',
+  `please_pickup_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '请取货语音（繁体）',
+  `please_pickup_en` varchar(255) NOT NULL DEFAULT '' COMMENT '请取货语音（英文）',
+  `purchase_entry` varchar(255) NOT NULL DEFAULT '' COMMENT '首页动画语音（简体）',
+  `purchase_entry_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '首页动画语音（繁体）',
+  `purchase_entry_en` varchar(255) NOT NULL DEFAULT '' COMMENT '首页动画语音（英文）',
+  `refund_place_goods` varchar(255) NOT NULL DEFAULT '' COMMENT '退货语音（简体）',
+  `refund_place_goods_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '退货语音（繁体）',
+  `refund_place_goods_en` varchar(255) NOT NULL DEFAULT '' COMMENT '退货语音（英文）',
+  `ship_prompt` varchar(255) NOT NULL DEFAULT '' COMMENT '出货语音（简体）',
+  `ship_prompt_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '出货语音（繁体）',
+  `ship_prompt_en` varchar(255) NOT NULL DEFAULT '' COMMENT '出货语音（英文）',
+  `welcome` varchar(255) NOT NULL DEFAULT '' COMMENT '欢迎语音（简体）',
+  `welcome_hant` varchar(255) NOT NULL DEFAULT '' COMMENT '欢迎语音（繁体）',
+  `welcome_en` varchar(255) NOT NULL DEFAULT '' COMMENT '欢迎语音（英文）',
+  `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态 1启用 2禁用',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_manager_id` (`manager_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='设备语音配置表';
+
+CREATE TABLE `machine_voice_detail` (
+  `voice_id` int NOT NULL DEFAULT '0' COMMENT '语音配置ID',
+  `m_id` int NOT NULL DEFAULT '0' COMMENT '设备m_id',
+  `machine_id` varchar(255) NOT NULL DEFAULT '' COMMENT '设备编码',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `idx_voice_id` (`voice_id`) USING BTREE,
+  KEY `idx_m_id` (`m_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='设备语音分配表';
+
+CREATE TABLE `goods_behavior_tracking` (
+  `gbt_id`                  INT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `m_id`                    INT UNSIGNED NOT NULL COMMENT '设备主键ID',
+  `machine_id`              VARCHAR(32)  NOT NULL DEFAULT '' COMMENT '设备编号',
+  `goods_id`                INT UNSIGNED NOT NULL COMMENT '商品ID',
+  `record_key`              VARCHAR(64)  NOT NULL DEFAULT '' COMMENT '设备端key: goods:{goods_id}',
+  `click_count`             INT NOT NULL DEFAULT 0 COMMENT '点击次数',
+  `cart_add_count`          INT NOT NULL DEFAULT 0 COMMENT '加购件数',
+  `order_count`             INT NOT NULL DEFAULT 0 COMMENT '下单件数',
+  `purchase_success_count`  INT NOT NULL DEFAULT 0 COMMENT '购买成功件数',
+  `retry_dispense_count`    INT NOT NULL DEFAULT 0 COMMENT '再次出货次数',
+  `help_count`              INT NOT NULL DEFAULT 0 COMMENT '帮助点击数',
+  `report_date`             DATE NOT NULL COMMENT '上报日期',
+  `device_created_at`       INT NULL COMMENT '设备端创建时间(Unix秒)',
+  `device_updated_at`       INT NULL COMMENT '设备端更新时间(Unix秒)',
+  `active_orders`           TEXT NULL COMMENT '活跃订单关联(JSON,备用)',
+  `created_at`              DATETIME NULL COMMENT '服务器创建时间',
+  `updated_at`              DATETIME NULL COMMENT '服务器更新时间',
+  PRIMARY KEY (`gbt_id`),
+  KEY `idx_m_id` (`m_id`),
+  KEY `idx_goods_id` (`goods_id`),
+  KEY `idx_report_date` (`report_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商品行为埋点记录表';
+
+ALTER TABLE kiosk.machine_config ADD COLUMN `is_pay_exception` tinyint(1) DEFAULT '2' COMMENT '支付模块异常通知是否开启，1开启，2关闭';
