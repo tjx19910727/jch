@@ -1420,6 +1420,7 @@ class MachineChannelClient extends ManagementClient
             'total_count' => max(intval($mc['stock']), 0),
             'success_count' => 0,
             'fail_count' => 0,
+            'creator' => $this->manager['manager_id'] ?? 0,
             'remark' => '下发remoteRemoval指令',
             'created_at' => time(),
             'reported_at' => 0,

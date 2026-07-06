@@ -1149,7 +1149,7 @@ trait MachineTrait
 
             $lastLog = $this->getRemoteRemovalLogFind(
                 ['m_id' => $mc['m_id'], 'mc_id' => $mc['mc_id']],
-                'id',
+                'id,creator',
                 'id desc'
             );
 
@@ -1174,6 +1174,7 @@ trait MachineTrait
             }
 
             if ($successCount > 0) {
+                $creator = $lastLog['creator'] ?? 0;
                 $newStock = max(0, intval($mc['stock']) - $successCount);
                 $updateMc = ['stock' => $newStock];
                 if ($newStock <= 0) {
@@ -1199,10 +1200,12 @@ trait MachineTrait
                         "sku"           => $mc['sku'] ?? "",
                         "bar_code"      => $mc['bar_code'] ?? "",
                         "ao_id"         => $this->machine['ao_id'] ?? 0,
+                        "creator"       => $creator,
                         "change_value"  => $changeValue,
                         "type"          => 3,
                         "desc"          => '远程下架回收扣减',
                         "position"      => 1,
+                        "create_time"   => time(),
                     ]);
                 }
                 // 库存归零则追加终端BAD记录
@@ -1222,10 +1225,12 @@ trait MachineTrait
                         "sku"           => $mc['sku'] ?? "",
                         "bar_code"      => $mc['bar_code'] ?? "",
                         "ao_id"         => $this->machine['ao_id'] ?? 0,
+                        "creator"       => $creator,
                         "change_value"  => $changeValue,
                         "type"          => 3,
                         "desc"          => '远程下架回收完毕设置货道为BAD',
                         "position"      => 1,
+                        "create_time"   => time(),
                     ]);
                 }
 
