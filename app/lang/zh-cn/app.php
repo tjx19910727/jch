@@ -223,6 +223,11 @@ return [
         "terminal_exchange_mc_display_new" => "终端换货-货架上货新商品",
         "terminal_exchange_mg_inc_reserve_stock" => "终端换货-设备商品库上货备用库存",
         "terminal_exchange_mg_dec_reserve_stock" => "终端换货-设备商品库下货备用库存",
+        "terminal_recycle_box_add_goods" => "终端回收箱-添加商品",
+        "terminal_recycle_box_add_goods_1" => "回收箱商品上架-出货失败商品回收",
+        "terminal_recycle_box_add_goods_2" => "回收箱商品上架-远程回收商品",
+        "terminal_recycle_box_remove_goods" => "终端回收箱-取出商品",
+        "terminal_recycle_box_clear_goods" => "终端回收箱-清空商品",
 
         // CheckClient.php
         "check_stock_shortage" => "库存盘点-库存盘亏",

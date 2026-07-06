@@ -41,6 +41,9 @@ class VReport extends SupportValidate
         "errorCode" => "require",
         "rsrp" => "require",
         "sinr" => "require",
+        "g_ids" => "require",
+        "operate" => "require|in:1,2,3",
+        "type" => "require|in:1,2",
     ];
 
     protected $message = [
@@ -72,6 +75,11 @@ class VReport extends SupportValidate
         "errorCode.require" => "错误码不能为空",
         "rsrp.require" => "信号强度不能为空",
         "sinr.require" => "信噪比不能为空",
+        "g_ids.require" => "商品ID不能为空",
+        "operate.require" => "回收箱操作类型不能为空",
+        "operate.in" => "回收箱操作类型错误",
+        "type.require" => "回收箱商品变化类型不能为空",
+        "type.in" => "回收箱商品变化类型错误",
     ];
 
     protected $scene = [
@@ -109,6 +117,7 @@ class VReport extends SupportValidate
         "updateSimSignal" => ["msgType", "rsrp", "sinr"],//物联卡信号上报
 
         "replenishmentVideo" => ["msgType","record_no","path"],
+        "recycleBoxGoodsChange" => ["msgType","operate","type"],//回收箱商品数量变化
 
     ];
 }
