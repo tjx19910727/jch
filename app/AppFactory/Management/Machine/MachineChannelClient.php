@@ -1366,12 +1366,18 @@ class MachineChannelClient extends ManagementClient
     {
         $mc = $this->getMachineChannelFind(
             ['mc_id' => $postData['mc_id']],
-            'mc_id,m_id,machine_id,channel_code,mg_id,g_id,sku,stock'
+            'mc_id,m_id,machine_id,channel_code,mg_id,g_id,sku,stock,is_multi_goods'
         );
         if (!$mc) {
             return $this->r(100, $this->lang("VMachineChannel.mc_data_empty"));
         }
         $mc = $mc->toArray();
+
+        // 单货道多商品模式不允许远程下架回收
+        if (isset($mc['is_multi_goods']) && intval($mc['is_multi_goods']) === 1) {
+            return $this->r(100, '单货道多商品模式下不支持远程下架回收');
+        }
+
         if (intval($mc['g_id']) <= 0) {
             return $this->r(100, $this->lang("VMachineChannel.mc_empty_goods"));
         }

@@ -1123,6 +1123,10 @@ trait MachineTrait
                 actionLog($whereMc, 'remoteRemovalEnd未找到货道', 'DataUpload');
                 return 1;
             }
+            if (!method_exists($this, 'addGoodsChange')) {
+                actionLog($mc, '远程下架回收缺少商品变化记录方法', 'remoteRemovalEnd');
+                return 1;
+            }
             $mc = $mc->toArray();
 
             $totalCount = intval($this->message['total_count'] ?? 0);
@@ -1170,28 +1174,59 @@ trait MachineTrait
             }
 
             if ($successCount > 0) {
-                $newStock = intval($mc['stock']) - $successCount;
-                if ($newStock > 0) {
-                    $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $newStock]);
-                } else {
-                    $clearData = [
-                        'mc_id' => $mc['mc_id'],
-                        'mg_id' => 0,
-                        'g_id' => 0,
-                        'g_name' => '',
-                        'gc_id' => 0,
-                        'gc_name' => '',
-                        'pic' => '',
-                        'sku' => '',
-                        'bar_code' => '',
-                        'cost_price' => 0,
-                        'market_price' => 0,
-                        'retail_price' => 0,
-                        'gift_points' => 0,
-                        'stock' => 0,
-                        'frozen_stock' => 0,
-                    ];
-                    $this->updateMachineChannel($clearData);
+                $newStock = max(0, intval($mc['stock']) - $successCount);
+                $updateMc = ['stock' => $newStock];
+                if ($newStock <= 0) {
+                    $updateMc['status'] = 3;
+                }
+                $this->updateMachineChannel($updateMc, ['mc_id' => $mc['mc_id']]);
+
+                // 商品变化记录：远程下架回收
+                $changeValue = min($successCount, intval($mc['stock']));
+                if ($changeValue > 0) {
+                    $this->addGoodsChange([
+                        "m_id"          => $this->machine['m_id'],
+                        "machine_id"    => $this->machine['machine_id'],
+                        "machine_name"  => $this->machine['machine_name'],
+                        "mc_id"         => $mc['mc_id'],
+                        "channel_code"  => $mc['channel_code'],
+                        "mg_id"         => $mc['mg_id'] ?? 0,
+                        "g_id"          => $mc['g_id'] ?? 0,
+                        "g_name"        => $mc['g_name'] ?? "",
+                        "gc_id"         => $mc['gc_id'] ?? 0,
+                        "gc_name"       => $mc['gc_name'] ?? "",
+                        "pic"           => $mc['pic'] ?? "",
+                        "sku"           => $mc['sku'] ?? "",
+                        "bar_code"      => $mc['bar_code'] ?? "",
+                        "ao_id"         => $this->machine['ao_id'] ?? 0,
+                        "change_value"  => $changeValue,
+                        "type"          => 3,
+                        "desc"          => '远程下架回收扣减',
+                        "position"      => 1,
+                    ]);
+                }
+                // 库存归零则追加终端BAD记录
+                if ($newStock <= 0) {
+                    $this->addGoodsChange([
+                        "m_id"          => $this->machine['m_id'],
+                        "machine_id"    => $this->machine['machine_id'],
+                        "machine_name"  => $this->machine['machine_name'],
+                        "mc_id"         => $mc['mc_id'],
+                        "channel_code"  => $mc['channel_code'],
+                        "mg_id"         => $mc['mg_id'] ?? 0,
+                        "g_id"          => $mc['g_id'] ?? 0,
+                        "g_name"        => $mc['g_name'] ?? "",
+                        "gc_id"         => $mc['gc_id'] ?? 0,
+                        "gc_name"       => $mc['gc_name'] ?? "",
+                        "pic"           => $mc['pic'] ?? "",
+                        "sku"           => $mc['sku'] ?? "",
+                        "bar_code"      => $mc['bar_code'] ?? "",
+                        "ao_id"         => $this->machine['ao_id'] ?? 0,
+                        "change_value"  => $changeValue,
+                        "type"          => 3,
+                        "desc"          => '远程下架回收完毕设置货道为BAD',
+                        "position"      => 1,
+                    ]);
                 }
 
                 $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => intval($mc['mc_id'])]);
