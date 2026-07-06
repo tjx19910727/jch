@@ -1263,6 +1263,7 @@ class ApiClient extends ReceiveBaseClient
     {
         //        if ($this->data['pay_type'] != 4 && $this->data['pay_type'] != 0) return $this->rFail($this->lang("VSubCar.pay_type_no_range"));
         if ($this->data['pay_method'] == "41") $this->data['pay_method'] = 1;
+        $hasCouponCode = isset($this->data['coupon_code']) && trim(strval($this->data['coupon_code'])) !== '';
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
         if ($this->data['pay_type'] == 5 && (!isset($this->data['mobile']) || !$this->data['mobile'])) return $this->subCarFailResponse(100, $this->lang("mobile_require"));
         $m_sel = [
@@ -1422,7 +1423,7 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.under_stock"));
                     }
-                    if ($this->data['pay_type'] == 0) {
+                    if ($this->data['pay_type'] == 0 && !$hasCouponCode) {
                         $mc['retail_price'] = 0;
                     }
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
@@ -1493,34 +1494,28 @@ class ApiClient extends ReceiveBaseClient
                 $result = $this->checkFlag($flag);
                 actionLog($result, '事务结果');
                 if ($result) {
-                    // 免费的直接出货
-                    if ($this->data['pay_type'] == 0) {
-                        $this->rollbackTrans();
-                        return $this->subCarFailResponse(200, $this->lang("VSubCar.pay_type_empty"));
-                        //                        $this->outGoods();
-                        //                        $this->commitTrans();
-                        //                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
-                    } else {
-                        $this->commitTrans();
-                        if (!empty($this->data['coupon_code'])) {
-                            $this->data['coupon_code'] = trim(strval($this->data['coupon_code']));
-                            $couponResult = $this->orderUseCoupon();
-                            if ($couponResult !== true) {
-                                $couponResult = obj2arr($couponResult);
-                                $state = is_array($couponResult) ? ($couponResult['state'] ?? 100) : 100;
-                                $msg = is_array($couponResult) ? ($couponResult['msg'] ?? $this->lang("VSubCar.make_order_fail")) : strval($couponResult);
-                                return $this->subCarFailResponse($state, $msg);
-                            }
-                            $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
-                            $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
+                    $this->commitTrans();
+                    if ($hasCouponCode) {
+                        $this->data['coupon_code'] = trim(strval($this->data['coupon_code']));
+                        $couponResult = $this->orderUseCoupon();
+                        if ($couponResult !== true) {
+                            $couponResult = obj2arr($couponResult);
+                            $state = is_array($couponResult) ? ($couponResult['state'] ?? 100) : 100;
+                            $msg = is_array($couponResult) ? ($couponResult['msg'] ?? $this->lang("VSubCar.make_order_fail")) : strval($couponResult);
+                            return $this->subCarFailResponse($state, $msg);
                         }
-                        $zeroPay = $this->completeZeroPayOrderIfNeeded($order_id, 'subcar_coupon_zero_pay');
-                        if (!($zeroPay['success'] ?? false)) {
-                            return $this->subCarFailResponse(300, $zeroPay['msg'] ?? $this->lang("action_fail"));
-                        }
-                        $data = $zeroPay['order'] ?? $this->buildOrderPayActionData($this->order);
-                        return $this->r(200, $this->lang("VSubCar.make_order_success"), $data);
+                        $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
+                        $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
                     }
+                    $zeroPay = $this->completeZeroPayOrderIfNeeded($order_id, 'subcar_coupon_zero_pay');
+                    if (!($zeroPay['success'] ?? false)) {
+                        return $this->subCarFailResponse(300, $zeroPay['msg'] ?? $this->lang("action_fail"));
+                    }
+                    if ($this->data['pay_type'] == 0 && !($zeroPay['handled'] ?? false)) {
+                        return $this->subCarFailResponse($hasCouponCode ? 100 : 200, $this->lang("VSubCar.pay_type_empty"));
+                    }
+                    $data = $zeroPay['order'] ?? $this->buildOrderPayActionData($this->order);
+                    return $this->r(200, $this->lang("VSubCar.make_order_success"), $data);
                 }
             }
             $this->rollbackTrans();
