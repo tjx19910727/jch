@@ -302,6 +302,10 @@ trait OutGoodsTrait
                     $updateMc['mc_id'] = $mc['mc_id'];
                     $flag[] = $this->updateMachineChannel($updateMc);
                     actionLog($this->getLS(),'【SQL】修改设备货道','OutGoods');
+                    // 多商品FIFO：出货后尝试切换下一批次
+                    if (method_exists($this, 'trySwitchNextBatch')) {
+                        $this->trySwitchNextBatch($mc['mc_id']);
+                    }
                 }
             }
         }

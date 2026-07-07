@@ -528,4 +528,77 @@ trait MachineChannelTrait
             'status'           => $status,
         ];
     }
+
+    /**
+     * 出货后尝试切换到下一个批次（多商品 FIFO）
+     * @param int $mc_id 货道ID
+     */
+    public function trySwitchNextBatch($mc_id)
+    {
+        $mc = $this->getMachineChannelFind(['mc_id' => $mc_id], 'mc_id,is_multi_goods,stock,frozen_stock,m_id,machine_id');
+        if (!$mc) {
+            return;
+        }
+        $mc = is_object($mc) ? $mc->toArray() : $mc;
+
+        // 非多商品模式或还有库存则跳过
+        if (intval($mc['is_multi_goods'] ?? 2) !== 1) {
+            return;
+        }
+        if (intval($mc['stock'] ?? 0) + intval($mc['frozen_stock'] ?? 0) > 0) {
+            return;
+        }
+
+        // 当前队首批次标记为已结束
+        Db::name('channel_goods_batch')
+            ->where('mc_id', $mc_id)
+            ->where('status', 1)
+            ->update(['status' => 3]);
+
+        // 查找下一个等待中的批次
+        $nextBatch = Db::name('channel_goods_batch')
+            ->where('mc_id', $mc_id)
+            ->where('status', 2)
+            ->order('sequence asc')
+            ->find();
+
+        if (!$nextBatch) {
+            // 无下一批次，货道设为 BAD
+            $this->updateMachineChannel(['status' => 3], ['mc_id' => $mc_id]);
+            return;
+        }
+
+        // 切换到下一批次
+        Db::name('channel_goods_batch')
+            ->where('batch_id', $nextBatch['batch_id'])
+            ->update(['status' => 1]);
+
+        $updateMc = [
+            'g_id'          => $nextBatch['g_id'],
+            'stock'         => $nextBatch['stock'],
+            'frozen_stock'  => $nextBatch['frozen_stock'],
+            'retail_price'  => $nextBatch['retail_price'],
+            'gift_points'   => $nextBatch['gift_points'],
+        ];
+        $this->updateMachineChannel($updateMc, ['mc_id' => $mc_id]);
+
+        // goods_change 记录切换
+        if (method_exists($this, 'addGoodsChange')) {
+            $this->addGoodsChange([
+                "m_id"          => $mc['m_id'],
+                "machine_id"    => $mc['machine_id'],
+                "mc_id"         => $mc_id,
+                "g_id"          => $nextBatch['g_id'],
+                "change_value"  => $nextBatch['stock'],
+                "type"          => 2,
+                "desc"          => 'FIFO自动切换下一批次',
+                "position"      => 1,
+            ]);
+        }
+
+        // 通知设备更新货道
+        if (!empty($mc['machine_id']) && method_exists($this, 'sendToMachine')) {
+            $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => intval($mc_id)]);
+        }
+    }
 }

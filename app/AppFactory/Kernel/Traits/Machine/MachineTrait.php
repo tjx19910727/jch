@@ -829,6 +829,8 @@ trait MachineTrait
                 $flag[] = $this->updateMachineChannel($updateMc);
                 if ($changeValue > 0) {
                     $this->addRemoteOutGoodsChange($mc, $changeValue);
+                    //单货道多少功能
+                    $this->trySwitchNextBatch($mc['mc_id']);
                 }
                 if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
@@ -957,6 +959,8 @@ trait MachineTrait
                 $flag[] = $this->updateMachineChannel($updateMc);
                 if ($changeValue > 0) {
                     $this->addRemoteOutGoodsChange($mc, $changeValue);
+                    //单货道多商品功能
+                    $this->trySwitchNextBatch($mc['mc_id']);
                 }
                 if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];

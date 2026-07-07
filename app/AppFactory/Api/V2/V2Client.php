@@ -627,6 +627,8 @@ class V2Client extends V2BaseClient
                     // 减新货道库存
                     $flag[] = $this->setMachineChannelDec(['mc_id' => $mc['mc_id']], 'stock', $value['quantity']);
                     actionLog($this->getLS(), '【SQL】减新货道冻结库存');
+                    //单货道多商品功能
+                    $this->trySwitchNextBatch($mc['mc_id']);
 
                     // 修改订单详情数据
                     unset($mc['stock']);
@@ -643,6 +645,8 @@ class V2Client extends V2BaseClient
                 foreach ($details as $key => $value) {
                     $flag[] = $this->setMachineChannelDec(['mc_id' => $value['mc_id']],'frozen_stock',$value['quantity']);
                     actionLog($this->getLS(),'【SQL】减货道冻结库存');
+                    //单货道多商品功能
+                    $this->trySwitchNextBatch($value['mc_id']);
                     $updateSod['success_quantity'] = $value['quantity'];
                     $updateSod['sod_id'] = $value['sod_id'];
                     $flag[] = $this->updateSaleOrdersDetails($updateSod);
