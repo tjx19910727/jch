@@ -38,13 +38,20 @@ class MachineSchemeClient extends ManagementClient
         $machineId = trim($postData['machine_id'] ?? '');
         $priorityType = in_array($postData['priority_type'] ?? '', ['amount', 'sku', 'quantity'])
             ? $postData['priority_type'] : 'amount';
-        $goodsList = $postData['goods_list'] ?? [];
+        $goodsListInput = $postData['goods_lists'] ?? ($postData['goods_list'] ?? []);
+        $goodsList = $this->normalizeRecommendGoodsLists($goodsListInput);
 
-        if (!$mId || !$mlmId || !$goodsList) {
+        if (!$mId || !$mlmId) {
             return $this->rFail("参数不完整");
         }
-        if (!is_array($goodsList)) {
-            return $this->rFail("goods_list格式错误");
+        if ($goodsList === false) {
+            return $this->rFail("goods_lists格式错误");
+        }
+        if (!$goodsList) {
+            $goodsList = $this->getDefaultRecommendGoodsLists($mId);
+        }
+        if (!$goodsList) {
+            return $this->rFail("设备暂无已上架商品");
         }
 
         $machineLevel = $this->getMachineValue(['m_id' => $mId], 'machine_level');
@@ -59,7 +66,7 @@ class MachineSchemeClient extends ManagementClient
             return $this->rFail("布局模板不属于当前设备等级");
         }
 
-        // 同一设备、模板、优先级重新生成方案时，取消旧待确认方案，避免 goods_list 变化后复用旧结果。
+        // 同一设备、模板、优先级重新生成方案时，取消旧待确认方案，避免 goods_lists 变化后复用旧结果。
         $existScheme = $this->getMachineChannelSchemeFind([
             'm_id' => $mId,
             'mlm_id' => $mlmId,
@@ -158,6 +165,55 @@ class MachineSchemeClient extends ManagementClient
         }
 
         return $this->r(200, "方案生成成功", $responseData);
+    }
+
+    protected function normalizeRecommendGoodsLists($goodsLists)
+    {
+        if (is_string($goodsLists)) {
+            if ($goodsLists === '') {
+                return [];
+            }
+            $goodsLists = json_decode($goodsLists, true);
+            if (!is_array($goodsLists)) {
+                return false;
+            }
+        }
+        return is_array($goodsLists) ? $goodsLists : false;
+    }
+
+    protected function getDefaultRecommendGoodsLists($mId)
+    {
+        $machineGoodsList = $this->getMachineGoodsList([
+            'm_id' => intval($mId),
+            'is_shelf' => 1,
+        ], 0, 'g_id,available_stock,standby_stock,reserve_stock,pre_loading_stock', 'mg_id asc');
+        if (!$machineGoodsList) {
+            return [];
+        }
+        $machineGoodsList = is_object($machineGoodsList) ? $machineGoodsList->toArray() : $machineGoodsList;
+
+        $goodsLists = [];
+        foreach ($machineGoodsList as $machineGoods) {
+            $gId = intval($machineGoods['g_id'] ?? 0);
+            if ($gId <= 0) {
+                continue;
+            }
+            $quantity = intval($machineGoods['available_stock'] ?? 0);
+            if ($quantity <= 0) {
+                $quantity = intval($machineGoods['standby_stock'] ?? 0);
+            }
+            if ($quantity <= 0) {
+                $quantity = intval($machineGoods['reserve_stock'] ?? 0);
+            }
+            if ($quantity <= 0) {
+                $quantity = intval($machineGoods['pre_loading_stock'] ?? 0);
+            }
+            $goodsLists[] = [
+                'g_id' => $gId,
+                'quantity' => max(1, $quantity),
+            ];
+        }
+        return $goodsLists;
     }
 
     /**

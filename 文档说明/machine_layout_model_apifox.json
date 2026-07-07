@@ -909,7 +909,7 @@
     "/management/machine.machine_scheme/getRecommendScheme": {
       "post": {
         "summary": "生成或获取推荐上架方案",
-        "description": "根据设备、布局模板和商品列表计算推荐上架方案。每次调用会取消同一m_id、mlm_id、priority_type下旧的待确认方案并重新生成，避免goods_list变化后复用旧方案。会校验布局模板必须绑定当前设备machine_level。适配规则：商品width/height不能超过模板货道actual_width/actual_height；channel_depth / goods.length计算单货道最大可放数量；同一商品可按剩余数量分配到多个兼容货道。",
+        "description": "根据设备、布局模板和必须上架商品列表计算推荐上架方案。goods_lists 可选；未传或为空时，接口默认使用 machine_goods 中 m_id 对应且 is_shelf=1 的已上架商品作为 goods_lists。每次调用会取消同一m_id、mlm_id、priority_type下旧的待确认方案并重新生成，避免goods_lists变化后复用旧方案。会校验布局模板必须绑定当前设备machine_level。适配规则：商品width/height不能超过模板货道actual_width/actual_height；channel_depth / goods.length计算单货道最大可放数量；同一商品可按剩余数量分配到多个兼容货道。",
         "requestBody": {
           "required": true,
           "content": {
@@ -918,8 +918,7 @@
                 "type": "object",
                 "required": [
                   "m_id",
-                  "mlm_id",
-                  "goods_list"
+                  "mlm_id"
                 ],
                 "properties": {
                   "m_id": {
@@ -948,9 +947,9 @@
                     "description": "推荐优先级，默认amount",
                     "example": "quantity"
                   },
-                  "goods_list": {
+                  "goods_lists": {
                     "type": "array",
-                    "description": "参与推荐的商品列表。后端只使用g_id查询商品资料，quantity表示计划可上架数量",
+                    "description": "必须上架商品列表。可选；未传或为空时，后端默认取 machine_goods 中 m_id 对应且 is_shelf=1 的商品。后端使用 g_id 查询商品资料，quantity表示计划可上架数量。兼容旧字段 goods_list。",
                     "items": {
                       "$ref": "#/components/schemas/GoodsRecommendInput"
                     }
@@ -965,7 +964,7 @@
                     "machine_id": "JCHM-H2D-0064",
                     "mlm_id": 6,
                     "priority_type": "quantity",
-                    "goods_list": [
+                    "goods_lists": [
                       {
                         "g_id": 1028,
                         "quantity": 1
@@ -980,8 +979,7 @@
                 "type": "object",
                 "required": [
                   "m_id",
-                  "mlm_id",
-                  "goods_list"
+                  "mlm_id"
                 ],
                 "properties": {
                   "m_id": {
@@ -1010,9 +1008,9 @@
                     "description": "推荐优先级，默认amount",
                     "example": "quantity"
                   },
-                  "goods_list": {
+                  "goods_lists": {
                     "type": "array",
-                    "description": "参与推荐的商品列表。后端只使用g_id查询商品资料，quantity表示计划可上架数量",
+                    "description": "必须上架商品列表。可选；未传或为空时，后端默认取 machine_goods 中 m_id 对应且 is_shelf=1 的商品。后端使用 g_id 查询商品资料，quantity表示计划可上架数量。兼容旧字段 goods_list。",
                     "items": {
                       "$ref": "#/components/schemas/GoodsRecommendInput"
                     }
@@ -1027,7 +1025,7 @@
                     "machine_id": "JCHM-H2D-0064",
                     "mlm_id": 6,
                     "priority_type": "quantity",
-                    "goods_list": [
+                    "goods_lists": [
                       {
                         "g_id": 1028,
                         "quantity": 1
@@ -1140,11 +1138,11 @@
                       "msg": "参数不完整"
                     }
                   },
-                  "bad_goods_list": {
-                    "summary": "goods_list格式错误",
+                  "bad_goods_lists": {
+                    "summary": "goods_lists格式错误",
                     "value": {
                       "state": 100,
-                      "msg": "goods_list格式错误"
+                      "msg": "goods_lists格式错误"
                     }
                   },
                   "invalid_goods": {
