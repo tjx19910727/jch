@@ -604,6 +604,7 @@ trait MachineChannelTrait
             'bar_code'          => $goods['bar_code'] ?? '',
             'cost_price'        => $goods['cost_price'] ?? 0,
             'market_price'      => $goods['market_price'] ?? 0,
+            'capacity'          => $nextBatch['capacity'] ?? 0,
             'stock'             => $nextBatch['stock'],
             'frozen_stock'      => $nextBatch['frozen_stock'],
             'retail_price'      => $nextBatch['retail_price'],
