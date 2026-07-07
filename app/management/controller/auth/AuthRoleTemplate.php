@@ -78,12 +78,20 @@ class AuthRoleTemplate extends Common
         return $this->app->authRoleTemplate->saveTopNavigationNodes($postData, $this->getExcludedTemplateNodeIds());
     }
 
-    public function apply()
+    public function applyManagers()
+    {
+        $postData = json2arr(input());
+        try { $this->validate($postData, $this->validatePath . 'AuthRoleTemplateApplyManagers'); }
+        catch (\Exception $e) { return returnValidate($e->getMessage()); }
+        return $this->app->authRoleTemplate->applyManagers($postData);
+    }
+
+    public function getManagers()
     {
         $postData = input();
-        try { $this->validate($postData, $this->validatePath . 'AuthRoleTemplateApply'); }
+        try { $this->validate($postData, $this->validatePath . 'AuthRoleTemplateManagers'); }
         catch (\Exception $e) { return returnValidate($e->getMessage()); }
-        return $this->app->authRoleTemplate->apply($postData);
+        return $this->app->authRoleTemplate->getManagers($postData);
     }
 
     protected function getExcludedTemplateNodeIds()

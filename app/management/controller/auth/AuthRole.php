@@ -22,7 +22,7 @@ class AuthRole extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData,false,['name' => "like"]);
-        $field = "role_id,name,desc,sort,status,template_id,creator,update_id";
+        $field = "role_id,name,desc,sort,status,creator,update_id";
         return $this->app->authRole->getFind($where,$field);
     }
 
@@ -35,7 +35,7 @@ class AuthRole extends Common
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
         $where = $this->getWhere($postData,false,['name' => "like"]);
-        $field = "role_id,`name`,`desc`,`sort`,`status`,template_id,creator,update_id";
+        $field = "role_id,`name`,`desc`,`sort`,`status`,creator,update_id";
         if ($this->manager['pid'] > 0) {
             $where[] = ['role_id',"<>",1];
         }

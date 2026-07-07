@@ -287,7 +287,7 @@ class Common extends AuthController
             'manager_id' => $this->manager['manager_id'],
             'is_del' => 2
         ], 'role_id');
-        if (!$roleIds) return false;
+        if (!$roleIds) $roleIds = [];
 
         $nodeIds = $this->app->authNode->getAuthNodeColumn(['url' => $url], 'node_id');
         if (!$nodeIds) return false;
@@ -488,6 +488,7 @@ class Common extends AuthController
                 'manager_id' => $this->manager['manager_id'],
                 'is_del' => 2,
             ], 'role_id');
+            if (!$roleIds) $roleIds = [];
             $where[] = ['node_id', 'in', $this->app->authManagerRole->resolveManagerRoleNodeIds($this->manager, $roleIds)];
         }
         $where['status'] = 1;
