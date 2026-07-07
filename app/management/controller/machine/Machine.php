@@ -377,8 +377,20 @@ class Machine extends Common
             unset($postData['machine_group_id']);
             if (!$machineIds) return $this->app->machine->rNoData();
         }
-        $where = $this->getWhere($postData, false, ["version" => "like","machine_name" => "like"]);
-        if ($machineIds) $where[] = ['machine_id', 'in',$machineIds];
+        if(isset($postData['online_all'])){
+            $postData['online'] = $postData['online_all'];
+            unset($postData['online_all']);
+        }
+        $isOnOff = $postData['is_on_off'] ?? 0;
+        unset($postData['pageNum'], $postData['version_sort'], $postData['stock_ratio'], $postData['sort_name'], $postData['sort_order'], $postData['is_on_off']);
+
+        $onlineValue = null;
+        if (isset($postData['online']) && $postData['online'] !== '') {
+            $onlineValue = $postData['online'];
+            unset($postData['online']);
+        }
+        $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
+        if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
         $field = "m_id,machine_id,machine_name,ao_id,country_id,state_id,city_id,regions_id,street,floor,version,factory,inventory_location,
         IFNULL((SELECT GROUP_CONCAT(DISTINCT mg.mg_name ORDER BY mg.id SEPARATOR ',') FROM machine_group_mg mg WHERE mg.m_id = a.m_id),'') machine_group_name,
         (case online when 1 then '" . lang("online") . "' else '" . lang("offline"). "' END) online,
@@ -389,6 +401,17 @@ class Machine extends Common
         (case status when 1 then '" . lang("normal") . "' when 2 then '" . lang("disable") . "' when 3 then '" . lang("maintenance") . "' end) status";
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];
+        if ($isOnOff) {
+            $where[] = $this->buildIsOnOffWhere($isOnOff);
+        }
+        if ($onlineValue !== null) {
+            if ($onlineValue == 1) {
+                $where['raw'] = (isset($where['raw']) ? $where['raw'] . ' AND ' : '') . '(a.http_online = 1 OR a.online = 1)';
+            } else {
+                $where[] = ['http_online', '=', 2];
+                $where[] = ['online', '=', 2];
+            }
+        }
         return $this->app->machine->exportM($where,$field,"machine_id desc");
     }
 
