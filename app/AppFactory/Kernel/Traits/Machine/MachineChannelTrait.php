@@ -432,7 +432,7 @@ trait MachineChannelTrait
     /**
      * 保存货道批次商品队列（全量覆盖）
      * @param int    $mc_id       货道ID
-     * @param array  $headData    队首数据 {g_id, stock, retail_price, gift_points, manufacture_time, batch_number}
+     * @param array  $headData    队首数据 {g_id, stock, capacity, retail_price, gift_points, manufacture_time, batch_number}
      * @param array  $batchArr    后续商品数组 [{g_id, stock, ...}, ...]
      * @param bool   $autoReorder 是否自动重排（true: 找第一个有库存的作为队首; false: 以传入顺序为准）
      * @return array|null         返回队首批次信息，失败返回 null
@@ -516,6 +516,7 @@ trait MachineChannelTrait
             'mc_id'            => $mc_id,
             'g_id'             => intval($item['g_id'] ?? 0),
             'sequence'         => 0,
+            'capacity'         => intval($item['capacity'] ?? ($item['stock'] ?? 0)),
             'stock'            => intval($item['stock'] ?? 0),
             'frozen_stock'     => 0,
             'sold_quantity'    => 0,

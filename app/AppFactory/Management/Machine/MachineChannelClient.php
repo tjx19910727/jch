@@ -854,7 +854,7 @@ class MachineChannelClient extends ManagementClient
      */
     public function updateMc($postData)
     {
-        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,channel_position,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,out_fail_stock,status');
+        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,channel_position,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,capacity,out_fail_stock,status');
         if (!$mc) return $this->r(100, $this->lang("VMachineChannel.mc_no_data"));
         $mc = obj2arr($mc);
         //如果是货道是边柜，查询主柜信息
@@ -899,11 +899,30 @@ class MachineChannelClient extends ManagementClient
                     $this->rollbackTrans();
                     return $this->r(100, '开启多商品模式必须设置商品');
                 }
-                // 总库存不超容量
+                // 多商品模式下，machine_channel.capacity 只保存队首商品容量；总容量按各批次容量相加。
                 $totalStock = intval($postData['stock'] ?? 0);
+                $headCapacity = intval($postData['capacity'] ?? ($mc['capacity'] ?? 0));
+                if ($headCapacity <= 0) {
+                    $headCapacity = intval($postData['stock'] ?? 0);
+                }
+                if (intval($postData['stock'] ?? 0) > $headCapacity) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '队首商品库存不能超过队首容量');
+                }
+                $totalCapacity = $headCapacity;
                 $checkGoodsIds = [];
                 foreach ($batchArr as $item) {
-                    $totalStock += intval($item['stock'] ?? 0);
+                    $itemStock = intval($item['stock'] ?? 0);
+                    $itemCapacity = intval($item['capacity'] ?? $itemStock);
+                    if ($itemCapacity <= 0) {
+                        $itemCapacity = $itemStock;
+                    }
+                    if ($itemStock > $itemCapacity) {
+                        $this->rollbackTrans();
+                        return $this->r(100, '批次商品库存不能超过该商品容量');
+                    }
+                    $totalStock += $itemStock;
+                    $totalCapacity += $itemCapacity;
                     if (isset($item['g_id']) && intval($item['g_id'] ?? 0) > 0) {
                         $checkGoodsIds[] = $item['g_id'];
                     }
@@ -912,16 +931,16 @@ class MachineChannelClient extends ManagementClient
                     $this->rollbackTrans();
                     return $this->r(100, '开启多商品模式必须设置有效的商品');
                 }
-                $capacity = intval($mc['capacity'] ?? 0);
-                if ($totalStock > $capacity) {
+                if ($totalStock > $totalCapacity) {
                     $this->rollbackTrans();
-                    return $this->r(100, '批次商品总库存(' . $totalStock . ')超过货道容量(' . $capacity . ')');
+                    return $this->r(100, '批次商品总库存(' . $totalStock . ')超过批次总容量(' . $totalCapacity . ')');
                 }
 
                 // 构建队首数据（来自 $postData）
                 $headData = [
                     'g_id'             => $postData['g_id'] ?? 0,
                     'stock'            => $postData['stock'] ?? 0,
+                    'capacity'         => $headCapacity,
                     'retail_price'     => $postData['retail_price'] ?? 0,
                     'gift_points'      => $postData['gift_points'] ?? 0,
                     'manufacture_time' => $postData['manufacture_time'] ?? 0,
@@ -929,16 +948,21 @@ class MachineChannelClient extends ManagementClient
                 ];
 
                 $headBatch = $this->saveChannelGoodsBatch($mc['mc_id'], $headData, $batchArr);
+                if (!$headBatch) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '保存多商品批次失败');
+                }
+                // machine_channel 只保存队首商品快照。
+                $postData['stock']          = $headBatch['stock'];
+                $postData['frozen_stock']   = $headBatch['frozen_stock'];
+                $postData['capacity']       = $headBatch['capacity'];
+                $postData['retail_price']   = $headBatch['retail_price'];
+                $postData['gift_points']    = $headBatch['gift_points'];
+                $postData['is_multi_goods'] = 1;
                 // 队首 g_id 跟 postData 不一致时，更新 postData 的商品信息
                 if (isset($headBatch['g_id']) && $headBatch['g_id'] != ($postData['g_id'] ?? 0)) {
                     $postData['g_id'] = $headBatch['g_id'];
                     $postData['mg_id'] = $this->getMachineGoodsValue(['m_id' => $mc['m_id'], 'g_id' => $headBatch['g_id']], 'mg_id') ?? 0;
-                    // 队首的 stock/frozen_stock/retail_price/gift_points 以批次表为准
-                    $postData['stock']          = $headBatch['stock'];
-                    $postData['frozen_stock']   = $headBatch['frozen_stock'];
-                    $postData['retail_price']   = $headBatch['retail_price'];
-                    $postData['gift_points']    = $headBatch['gift_points'];
-                    $postData['is_multi_goods'] = 1;
                 }
             }
             // ========== 多商品批次处理结束 ==========
@@ -1046,6 +1070,7 @@ class MachineChannelClient extends ManagementClient
                 }
             }
 
+            unset($postData['batch_arr']);
             $result = $this->updateMachineChannel($postData);
             if (!$result) {
                 $this->rollbackTrans();
