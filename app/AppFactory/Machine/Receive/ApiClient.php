@@ -236,7 +236,7 @@ class ApiClient extends ReceiveBaseClient
 
     protected function getWxLoginOfficialConfig()
     {
-        $where['ao_id'] = $this->machine['ao_id'];
+        // $where['ao_id'] = $this->machine['ao_id'];
         $where['status'] = 1;
         $config = $this->getWxOfficialFind($where, '*', "id desc");
         if ($config) return $config;
@@ -246,7 +246,7 @@ class ApiClient extends ReceiveBaseClient
         return $this->getWxOfficialFind([
             ['ao_id', 'in', $sharedAoIds],
             'status' => 1,
-        ], '*', "FIELD(ao_id,18,1),id desc");
+        ], '*', "FIELD(ao_id,17,1),id desc");
     }
 
     /**
