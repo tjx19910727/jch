@@ -391,7 +391,7 @@ trait MachineTrait
             $m = $m->toArray();
             // 判断不在线且不处于空闲状态的设备并下发通知
             $unqualified = array_filter($m,function($v , $k){
-                return $v['online']==2||$v['current_status']=!'normal';
+                return $v['online']==2||$v['current_status']!='normal';
             },ARRAY_FILTER_USE_BOTH);
             if(!empty($unqualified)){
                 $unmachine = '';

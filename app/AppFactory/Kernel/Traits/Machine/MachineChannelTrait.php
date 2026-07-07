@@ -573,12 +573,46 @@ trait MachineChannelTrait
             ->where('batch_id', $nextBatch['batch_id'])
             ->update(['status' => 1]);
 
+        $goods = GoodsModel::getFind(
+            ['g_id' => $nextBatch['g_id']],
+            'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,sell_by_date'
+        );
+        $goods = $goods ? (is_object($goods) ? $goods->toArray() : $goods) : [];
+
+        $machineGoods = MachineGoodsModel::getFind(
+            ['m_id' => $mc['m_id'], 'g_id' => $nextBatch['g_id']],
+            'mg_id,intergral_rate,gift_points'
+        );
+        $machineGoods = $machineGoods ? (is_object($machineGoods) ? $machineGoods->toArray() : $machineGoods) : [];
+
+        $manufactureTime = intval($nextBatch['manufacture_time'] ?? 0);
+        $sellByDate = intval($nextBatch['sell_by_date'] ?? ($goods['sell_by_date'] ?? 0));
+        $expireTime = 0;
+        if ($manufactureTime > 0 && $sellByDate > 0) {
+            $expireTime = $manufactureTime + $sellByDate * 86400;
+        }
+
         $updateMc = [
-            'g_id'          => $nextBatch['g_id'],
-            'stock'         => $nextBatch['stock'],
-            'frozen_stock'  => $nextBatch['frozen_stock'],
-            'retail_price'  => $nextBatch['retail_price'],
-            'gift_points'   => $nextBatch['gift_points'],
+            'g_id'              => $nextBatch['g_id'],
+            'mg_id'             => $machineGoods['mg_id'] ?? 0,
+            'g_name'            => $goods['g_name'] ?? '',
+            'gc_id'             => $goods['gc_id'] ?? 0,
+            'gc_name'           => $goods['gc_name'] ?? '',
+            'pic'               => $goods['pic'] ?? '',
+            'sku'               => $goods['sku'] ?? '',
+            'bar_code'          => $goods['bar_code'] ?? '',
+            'cost_price'        => $goods['cost_price'] ?? 0,
+            'market_price'      => $goods['market_price'] ?? 0,
+            'stock'             => $nextBatch['stock'],
+            'frozen_stock'      => $nextBatch['frozen_stock'],
+            'retail_price'      => $nextBatch['retail_price'],
+            'gift_points'       => $nextBatch['gift_points'] ?: ($machineGoods['gift_points'] ?? 0),
+            'intergral_rate'    => $machineGoods['intergral_rate'] ?? 0,
+            'batch_number'      => $nextBatch['batch_number'] ?? '',
+            'manufacture_time'  => $manufactureTime,
+            'expire_time'       => $expireTime,
+            'sell_by_date'      => $sellByDate,
+            'status'            => 1,
         ];
         $this->updateMachineChannel($updateMc, ['mc_id' => $mc_id]);
 
