@@ -36,6 +36,7 @@ use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
+use think\facade\Db;
 
 class V2Client extends V2BaseClient
 {
@@ -306,6 +307,24 @@ class V2Client extends V2BaseClient
                     $updateMc['stock'] = bcadd($mc['stock'], $dv['quantity']);
                     $flag[] = $this->updateMachineChannel($updateMc);
                     actionLog($this->getLS(), '修改货架库存');
+                    //单货道多商品功能开始
+                    if (!empty($dv['batch_id'])) {
+                        $batch = Db::name('channel_goods_batch')
+                            ->where('batch_id', $dv['batch_id'])
+                            ->field('batch_id,stock,frozen_stock')
+                            ->find();
+                        if ($batch) {
+                            $updateBatch = [
+                                'stock' => bcadd($batch['stock'], $dv['quantity']),
+                                'frozen_stock' => $batch['frozen_stock'] > $dv['quantity'] ? bcsub($batch['frozen_stock'], $dv['quantity']) : 0,
+                            ];
+                            $flag[] = Db::name('channel_goods_batch')
+                                ->where('batch_id', $dv['batch_id'])
+                                ->update($updateBatch);
+                            actionLog($this->getLS(), '修改批次库存');
+                        }
+                    }
+                    //单货道多商品功能结束
                 }
             }
             actionLog($flag, '修改结果');
