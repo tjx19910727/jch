@@ -2022,6 +2022,244 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200, 'success');
     }
 
+    /**
+     * 设备 HTTP 上报回收箱商品数量变化。
+     * operate: 1 回收箱添加商品；2 回收箱取出商品；3 回收箱清空
+     * type: 1 出货失败商品回收；2 远程回收；3 货道回收；4 后台退货退款
+     * @return array|string
+     */
+    public function recycleBoxGoodsChange()
+    {
+        try {
+            $operate = intval($this->data['operate'] ?? 0);
+            if (!in_array($operate, [1, 2, 3], true)) {
+                return $this->r(300, '回收箱操作类型错误');
+            }
+            $recycleBoxChangeType = intval($this->data['type'] ?? 0);
+            if (!in_array($recycleBoxChangeType, [1, 2, 3, 4], true)) {
+                return $this->r(300, '回收箱商品变化类型错误');
+            }
+
+            if ($operate === 3) {
+                $goodsChanges = $this->getRecycleBoxCurrentGoodsChanges($recycleBoxChangeType);
+            } else {
+                $goodsChanges = $this->buildRecycleBoxGoodsChangesFromInfo($this->data['goods_info'] ?? []);
+                if (!$goodsChanges) {
+                    return $this->r(300, '商品信息不能为空');
+                }
+            }
+
+            $config = $this->getMachineConfigFind(['m_id' => $this->machine['m_id']], 'recycle_bin_capacity');
+            $totalCapacity = intval($config['recycle_bin_capacity'] ?? 0);
+            if ($totalCapacity < 0) {
+                $totalCapacity = 0;
+            }
+            $currentRemain = intval($this->machine['recycle_box_remain_capacity'] ?? $totalCapacity);
+            if ($currentRemain < 0 || $currentRemain > $totalCapacity) {
+                $currentRemain = $totalCapacity;
+            }
+
+            $changeCount = $this->sumRecycleBoxGoodsChangeQuantity($goodsChanges);
+            if ($operate === 1) {
+                if ($changeCount > $currentRemain) {
+                    return $this->r(300, '回收箱可用容量不足', [
+                        'recycle_box_total_capacity' => $totalCapacity,
+                        'recycle_box_remain_capacity' => $currentRemain,
+                        'change_count' => $changeCount,
+                    ]);
+                }
+                $remainCapacity = max(0, $currentRemain - $changeCount);
+            } elseif ($operate === 2) {
+                $remainCapacity = min($totalCapacity, $currentRemain + $changeCount);
+            } else {
+                $remainCapacity = $totalCapacity;
+            }
+
+            $this->startTrans();
+            $flag = [];
+            $flag[] = $this->updateMachine([
+                'm_id' => $this->machine['m_id'],
+                'recycle_box_total_capacity' => $totalCapacity,
+                'recycle_box_remain_capacity' => $remainCapacity,
+            ]);
+            foreach ($goodsChanges as $goodsChange) {
+                $flag[] = $this->addRecycleBoxGoodsChangeLog(
+                    $goodsChange['g_id'],
+                    $operate,
+                    $recycleBoxChangeType,
+                    $goodsChange['quantity']
+                );
+            }
+            $result = $this->checkFlag($flag);
+            $result ? $this->commitTrans() : $this->rollbackTrans();
+            actionLog([
+                'operate' => $operate,
+                'type' => $recycleBoxChangeType,
+                'goods_changes' => $goodsChanges,
+                'total_capacity' => $totalCapacity,
+                'remain_capacity' => $remainCapacity,
+                'result' => $result,
+            ], 'HTTP回收箱商品数量变化处理结果', 'DataUpload');
+            if (!$result) {
+                return $this->r(300, '回收箱商品变化处理失败');
+            }
+            return $this->r(200, 'success', [
+                'recycle_box_total_capacity' => $totalCapacity,
+                'recycle_box_remain_capacity' => $remainCapacity,
+            ]);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1, 'recycleBoxGoodsChange');
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    protected function buildRecycleBoxGoodsChangesFromInfo($goodsInfo)
+    {
+        if (is_string($goodsInfo)) {
+            $goodsInfo = json2arr($goodsInfo);
+        }
+        if (!is_array($goodsInfo)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($goodsInfo as $item) {
+            if (is_string($item)) {
+                $item = json2arr($item);
+            }
+            if (!is_array($item)) {
+                continue;
+            }
+            $gId = intval($item['g_id'] ?? 0);
+            $quantity = intval($item['num'] ?? 0);
+            if ($gId <= 0 || $quantity <= 0) {
+                continue;
+            }
+            if (!isset($result[$gId])) {
+                $result[$gId] = [
+                    'g_id' => $gId,
+                    'quantity' => 0,
+                ];
+            }
+            $result[$gId]['quantity'] += $quantity;
+        }
+        return $result;
+    }
+
+    protected function getRecycleBoxCurrentGoodsChanges($recycleBoxChangeType)
+    {
+        $logs = $this->getGoodsChangeList([
+            'm_id' => $this->machine['m_id'],
+            'position' => 2,
+            'type' => 3,
+            'recycle_box_change_type' => $recycleBoxChangeType,
+        ], 0, 'change_id,g_id,change_value,type,desc', 'change_id asc');
+        if (!$logs) {
+            return [];
+        }
+        $logs = is_object($logs) ? $logs->toArray() : $logs;
+
+        $goodsChanges = [];
+        foreach ($logs as $log) {
+            $gId = intval($log['g_id'] ?? 0);
+            if ($gId <= 0) {
+                continue;
+            }
+            $quantity = intval($log['change_value'] ?? 1);
+            if ($quantity <= 0) {
+                $quantity = 1;
+            }
+            if (!isset($goodsChanges[$gId])) {
+                $goodsChanges[$gId] = [
+                    'g_id' => $gId,
+                    'quantity' => 0,
+                ];
+            }
+            if ($this->isRecycleBoxAddGoodsDesc($log['desc'] ?? '')) {
+                $goodsChanges[$gId]['quantity'] += $quantity;
+            } else {
+                $goodsChanges[$gId]['quantity'] = max(0, $goodsChanges[$gId]['quantity'] - $quantity);
+            }
+        }
+
+        foreach ($goodsChanges as $gId => $goodsChange) {
+            if (intval($goodsChange['quantity']) <= 0) {
+                unset($goodsChanges[$gId]);
+            }
+        }
+        return $goodsChanges;
+    }
+
+    protected function sumRecycleBoxGoodsChangeQuantity($goodsChanges)
+    {
+        $total = 0;
+        foreach ($goodsChanges as $goodsChange) {
+            $total += intval($goodsChange['quantity'] ?? 0);
+        }
+        return $total;
+    }
+
+    protected function addRecycleBoxGoodsChangeLog($gId, $operate, $recycleBoxChangeType, $changeValue = 1)
+    {
+        $goods = $this->getMachineGoodsFind(
+            ['m_id' => $this->machine['m_id'], 'g_id' => $gId],
+            'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code'
+        );
+        if (!$goods) {
+            $goods = $this->getGoodsFind(
+                ['g_id' => $gId],
+                'g_id,g_name,gc_id,gc_name,pic,sku,bar_code'
+            );
+        }
+        $goods = $goods ? (is_object($goods) ? $goods->toArray() : $goods) : [];
+
+        $descKey = $operate === 2
+            ? 'terminal_recycle_box_remove_goods_' . $recycleBoxChangeType
+            : 'terminal_recycle_box_change_goods_' . $recycleBoxChangeType;
+        if ($operate === 3) {
+            $descKey = 'terminal_recycle_box_clear_goods';
+        }
+
+        $insert = [
+            'm_id' => $this->machine['m_id'],
+            'machine_id' => $this->machine['machine_id'],
+            'machine_name' => $this->machine['machine_name'] ?? '',
+            'mc_id' => 0,
+            'channel_code' => '',
+            'mg_id' => $goods['mg_id'] ?? 0,
+            'g_id' => $gId,
+            'g_name' => $goods['g_name'] ?? '',
+            'gc_id' => $goods['gc_id'] ?? 0,
+            'gc_name' => $goods['gc_name'] ?? '',
+            'pic' => $goods['pic'] ?? '',
+            'sku' => $goods['sku'] ?? '',
+            'bar_code' => $goods['bar_code'] ?? '',
+            'change_value' => intval($changeValue) > 0 ? intval($changeValue) : 1,
+            'ao_id' => $this->machine['ao_id'] ?? 0,
+            'desc' => $this->lang('goodsChange.' . $descKey),
+            'position' => 2,
+            'type' => 3,
+            'recycle_box_change_type' => $recycleBoxChangeType,
+        ];
+        if (isset($this->data['manager_id']) && $this->data['manager_id'] !== '') {
+            $insert['creator'] = intval($this->data['manager_id']);
+        }
+        $changeId = $this->addGoodsChange($insert);
+        actionLog(['change_id' => $changeId, 'data' => $insert], '【SQL】HTTP添加回收箱商品变化日志', 'DataUpload');
+        return $changeId;
+    }
+
+    protected function isRecycleBoxAddGoodsDesc($desc)
+    {
+        for ($type = 1; $type <= 4; $type++) {
+            if ($desc === $this->lang('goodsChange.terminal_recycle_box_change_goods_' . $type)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 /**
      * HTTP 心跳上报
      * 与 MQ 心跳类似：更新 last_online_time、online；并单独维护 http_online（仅 HTTP 通道，与 machine.online 可区分）。

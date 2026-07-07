@@ -93,7 +93,7 @@ trait MachineConfigTrait
             return false;
         }
 
-        $machine = MachineModel::getFind($machineWhere, 'm_id,recycle_box_remain_capacity');
+        $machine = MachineModel::getFind($machineWhere, 'm_id,recycle_box_total_capacity,recycle_box_remain_capacity');
         if (!$machine) {
             actionLog($machineWhere, '同步回收箱总容量未找到设备');
             return false;
@@ -102,10 +102,8 @@ trait MachineConfigTrait
         $update = [
             'm_id' => $machine['m_id'],
             'recycle_box_total_capacity' => $capacity,
+            'recycle_box_remain_capacity' => $capacity,
         ];
-        if (isset($machine['recycle_box_remain_capacity']) && intval($machine['recycle_box_remain_capacity']) > $capacity) {
-            $update['recycle_box_remain_capacity'] = $capacity;
-        }
 
         return MachineModel::update($update);
     }
