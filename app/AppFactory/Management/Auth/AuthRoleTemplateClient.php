@@ -149,32 +149,100 @@ class AuthRoleTemplateClient extends ManagementClient
         }
     }
 
-    public function apply($data)
+    /**
+     * 直接替换模板绑定账号。单个账号只保存一个 role_template_id，切换模板即覆盖旧值。
+     */
+    public function applyManagers($data)
     {
         try {
             $template = $this->assertTemplateManaged(intval($data['art_id']));
-            $role = $this->assertRoleManaged(intval($data['role_id']));
-            if (intval($role['ao_id']) > 1 && intval($template['ao_id']) !== intval($role['ao_id'])) {
-                throw new \Exception("角色与权限模板所属组织不一致");
+            $managerIds = $this->normalizeManagerIds($data['manager_ids'] ?? []);
+            $templateId = intval($template['art_id']);
+            $templateAoId = intval($template['ao_id']);
+            $moveIds = [];
+            if ($managerIds) {
+                $query = Db::name('auth_manager')
+                    ->where('manager_id', 'in', $managerIds)
+                    ->where('status', 1);
+                if ($templateAoId > 1) $query->where('ao_id', $templateAoId);
+                $validManagerIds = $query->column('manager_id');
+                if (count(array_unique(array_map('intval', $validManagerIds))) !== count($managerIds)) {
+                    throw new \Exception("账号不存在、已停用或与模板所属组织不一致");
+                }
+                $moveIds = Db::name('auth_manager')
+                    ->where('manager_id', 'in', $managerIds)
+                    ->where('role_template_id', '>', 0)
+                    ->where('role_template_id', '<>', $templateId)
+                    ->where('use_role_template', 1)
+                    ->column('manager_id');
+                $moveIds = array_values(array_unique(array_map('intval', $moveIds)));
             }
         } catch (\Exception $e) {
             return $this->rTryCatch($e->getMessage());
         }
+
         $this->startTrans();
         try {
-            $roleId = intval($data['role_id']);
-            $templateId = intval($data['art_id']);
-            Db::name('auth_role')->where(['role_id' => $roleId])->update([
-                'template_id' => $templateId,
-                'update_id' => $this->manager['manager_id'],
-                'update_time' => time(),
+            $activeQuery = Db::name('auth_manager')
+                ->where(['role_template_id' => $templateId, 'use_role_template' => 1]);
+            if ($templateAoId > 1) $activeQuery->where('ao_id', $templateAoId);
+            $activeIds = array_map('intval', $activeQuery->column('manager_id'));
+            $removeIds = array_diff($activeIds, $managerIds);
+            $addIds = array_diff($managerIds, $activeIds);
+
+            if ($removeIds) {
+                Db::name('auth_manager')
+                    ->where('manager_id', 'in', $removeIds)
+                    ->update([
+                        'role_template_id' => 0,
+                        'use_role_template' => 2,
+                        'update_id' => $this->manager['manager_id'],
+                        'update_time' => time(),
+                    ]);
+            }
+            if ($addIds) {
+                Db::name('auth_manager')
+                    ->where('manager_id', 'in', $addIds)
+                    ->update([
+                        'role_template_id' => $templateId,
+                        'use_role_template' => 1,
+                        'update_id' => $this->manager['manager_id'],
+                        'update_time' => time(),
+                    ]);
+            }
+            $this->commitTrans();
+            return $this->r(200, '保存成功', [
+                'art_id' => $templateId,
+                'manager_ids' => $managerIds,
+                'added_manager_ids' => array_values($addIds),
+                'removed_manager_ids' => array_values($removeIds),
+                'moved_manager_ids' => $moveIds,
             ]);
-            return $this->checkTrans(true);
         } catch (\Exception $e) {
             $this->rollbackTrans();
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    public function getManagers($data)
+    {
+        try {
+            $template = $this->assertTemplateManaged(intval($data['art_id'] ?? 0));
+        } catch (\Exception $e) {
+            return $this->rTryCatch($e->getMessage());
+        }
+        $query = Db::name('auth_manager')
+            ->alias('au')
+            ->join('auth_organization ao', 'ao.ao_id = au.ao_id', 'left')
+            ->where([
+                'au.role_template_id' => intval($template['art_id']),
+                'au.use_role_template' => 1,
+            ])
+            ->field('au.manager_id,au.nickname,au.account,au.status,au.ao_id,ao.organization_name,au.role_template_id')
+            ->order('au.manager_id asc');
+        if (intval($template['ao_id']) > 1) $query->where('au.ao_id', intval($template['ao_id']));
+        return $this->rQ($query->select());
     }
 
     public function remove($artId)
@@ -184,8 +252,8 @@ class AuthRoleTemplateClient extends ManagementClient
         } catch (\Exception $e) {
             return $this->rTryCatch($e->getMessage());
         }
-        $used = Db::name('auth_role')->where(['template_id' => intval($artId)])->count();
-        if ($used > 0) return $this->rFail("模板已被角色使用，不能删除");
+        $used = Db::name('auth_manager')->where(['role_template_id' => intval($artId), 'use_role_template' => 1])->count();
+        if ($used > 0) return $this->rFail("模板已被账号使用，不能删除");
         return $this->rU($this->updateAuthRoleTemplate(
             ['is_del' => 1],
             ['art_id' => intval($artId)],
@@ -211,6 +279,16 @@ class AuthRoleTemplateClient extends ManagementClient
             throw new \Exception("无权操作其他组织的权限角色");
         }
         return $role;
+    }
+
+    protected function normalizeManagerIds($managerIds)
+    {
+        if (is_string($managerIds)) {
+            $decoded = json_decode($managerIds, true);
+            $managerIds = is_array($decoded) ? $decoded : explode(',', $managerIds);
+        }
+        if (!is_array($managerIds)) return [];
+        return array_values(array_unique(array_filter(array_map('intval', $managerIds))));
     }
 
     protected function expandTopNavigationPermissions(array $topNavigationList, array $nodes)
@@ -254,6 +332,17 @@ class AuthRoleTemplateClient extends ManagementClient
                 $childrenMap
             );
             $selected[$topNodeId] = $this->navigationResponseRow($topSetting);
+        }
+
+        // 补充父菜单节点：如果某节点有子节点被授权，但父菜单节点未被授权，则自动补充
+        foreach (array_keys($nodeList) as $nid) {
+            $pid = $nodeMap[$nid]['pid'] ?? 0;
+            while ($pid > 0) {
+                if (!isset($nodeList[$pid]) && isset($nodeMap[$pid]) && $nodeMap[$pid]['permission_action'] === 'menu') {
+                    $nodeList[$pid] = ['data_scope' => ($nodeList[$nid] ?? [])['data_scope'] ?? 'organization'];
+                }
+                $pid = $nodeMap[$pid]['pid'] ?? 0;
+            }
         }
 
         ksort($nodeList);
@@ -329,7 +418,6 @@ class AuthRoleTemplateClient extends ManagementClient
             $normalized[$field] = $enabled ? 1 : 0;
             if ($enabled) $enabledActions[] = $action;
         }
-        if (!$enabledActions) throw new \Exception("每个导航至少选择一种接口权限");
         $normalized['_enabled_actions'] = $enabledActions;
         return $normalized;
     }
@@ -363,7 +451,14 @@ class AuthRoleTemplateClient extends ManagementClient
         $enabledActions = $setting['_enabled_actions'] ?? [];
         foreach ($nodeIds as $id) {
             $action = $nodeMap[$id]['permission_action'];
-            if ($action === 'menu' || in_array($action, $enabledActions, true) || ($action === 'export' && in_array('query', $enabledActions, true))) {
+            $isSelf = (intval($id) === intval($nodeId));
+            // 节点自身：只要有启用的操作权限就放行（证明用户选中了此导航）
+            if ($isSelf && !empty($enabledActions)) {
+                $nodeList[$id] = ['data_scope' => $setting['data_scope']];
+                continue;
+            }
+            // 子节点：只放行业务操作权限明确匹配的节点（menu类型不自动继承）
+            if (in_array($action, $enabledActions, true) || ($action === 'export' && in_array('query', $enabledActions, true))) {
                 $nodeList[$id] = ['data_scope' => $setting['data_scope']];
             }
         }
@@ -382,6 +477,7 @@ class AuthRoleTemplateClient extends ManagementClient
     protected function templateListField()
     {
         return "art_id,name,`desc`,ao_id,status,creator,update_id,create_time,update_time,"
+            . "(SELECT COUNT(*) FROM auth_manager au WHERE au.role_template_id = a.art_id AND au.use_role_template = 1) manager_num,"
             . "(SELECT nickname FROM auth_manager au WHERE au.manager_id = a.update_id) update_nickname";
     }
 
@@ -393,6 +489,7 @@ class AuthRoleTemplateClient extends ManagementClient
             . "(SELECT nickname FROM auth_manager au WHERE au.manager_id = auth_role_template.creator) creator_nickname,"
             . "update_id,"
             . "(SELECT nickname FROM auth_manager au WHERE au.manager_id = auth_role_template.update_id) update_nickname,"
+            . "(SELECT COUNT(*) FROM auth_manager au WHERE au.role_template_id = auth_role_template.art_id AND au.use_role_template = 1) manager_num,"
             . "create_time,update_time";
     }
 
