@@ -184,6 +184,14 @@ trait MachineChannelTrait
                 $mcList = json2arr($this->data['mcList']);
                 foreach ($mcList as $key => $value) {
                     $whereMc = [];
+                    $batchArr = $value['batch_arr'] ?? [];
+                    if (is_string($batchArr)) {
+                        $batchArr = json2arr($batchArr);
+                    }
+                    if (!is_array($batchArr)) {
+                        $batchArr = [];
+                    }
+                    $isMultiGoods = isset($value['is_multi_goods']) && intval($value['is_multi_goods']) === 1;
                     try {
                         validate(VChannel::class)->scene("subChannel")->check($value);
                     } catch (\Exception $e) {
@@ -203,7 +211,18 @@ trait MachineChannelTrait
                     $mc = $this->getMachineChannelFind($whereMc);
                     actionLog($this->getLS(), '查询货道');
                     if (!$mc) {
-                        $mc = $value;
+                        // ==================== 单货道多商品相关开始 ====================
+                        if ($isMultiGoods) {
+                            $validateMsg = $this->validateReportedChannelGoodsBatch($value, $batchArr);
+                            if ($validateMsg !== '') {
+                                $this->rollbackTrans();
+                                return $this->rFail($validateMsg);
+                            }
+                        }
+                        $saveValue = $value;
+                        unset($saveValue['batch_arr']);
+                        $mc = $saveValue;
+                        // ==================== 单货道多商品相关结束 ====================
                         if (isset($value['g_id'])) {
                             $gField = "g_id,g_name,gc_id,gc_name,bar_code,sku,pic,cost_price,market_price,retail_price,ao_id";
                             $g = $this->getGoodsFind(['g_id' => $value['g_id']], $gField);
@@ -221,16 +240,16 @@ trait MachineChannelTrait
                         }
                         // ==================== 单货道多商品相关开始 ====================
                         // 多商品批次处理（设备上报固定队首模式）
-                        $isMultiGoods = isset($value['is_multi_goods']) && intval($value['is_multi_goods']) === 1;
                         if ($isMultiGoods) {
-                            $headBatch = $this->saveChannelGoodsBatch($mc['mc_id'], $value, $value['batch_arr'] ?? [], false);
+                            $headBatch = $this->saveChannelGoodsBatch($mc['mc_id'], $value, $batchArr, false);
                             if (!$headBatch) {
-                                $value['is_multi_goods'] = 2;
-                                $mc['is_multi_goods'] = 2;
+                                $this->rollbackTrans();
+                                return $this->rFail('保存多商品批次失败');
                             } else {
                                 $value['g_id']          = $headBatch['g_id'];
                                 $value['stock']         = $headBatch['stock'];
                                 $value['frozen_stock']  = $headBatch['frozen_stock'];
+                                $value['capacity']      = $headBatch['capacity'];
                                 $value['retail_price']  = $headBatch['retail_price'];
                                 $value['gift_points']   = $headBatch['gift_points'];
                                 $value['is_multi_goods'] = 1;
@@ -238,10 +257,14 @@ trait MachineChannelTrait
                                     'g_id'          => $headBatch['g_id'],
                                     'stock'         => $headBatch['stock'],
                                     'frozen_stock'  => $headBatch['frozen_stock'],
+                                    'capacity'      => $headBatch['capacity'],
                                     'retail_price'  => $headBatch['retail_price'],
                                     'gift_points'   => $headBatch['gift_points'],
                                     'is_multi_goods' => 1,
                                 ]);
+                                $updateHead = $mc;
+                                unset($updateHead['batch_arr']);
+                                $this->updateMachineChannel($updateHead, ['mc_id' => $mc['mc_id']]);
                             }
                         }
                         // ==================== 单货道多商品相关结束 ====================
@@ -270,19 +293,28 @@ trait MachineChannelTrait
                         $this->addGoodsChange($insertGChange);
                     } else {
                         $mc = $mc->toArray() ?? obj2arr($mc);
-
                         // ==================== 单货道多商品相关开始 ====================
+                        $multiStateChanging = isset($value['is_multi_goods']) && intval($value['is_multi_goods']) !== intval($mc['is_multi_goods'] ?? 2);
+                        if (intval($mc['frozen_stock'] ?? 0) > 0 && ($multiStateChanging || !empty($batchArr))) {
+                            $this->rollbackTrans();
+                            return $this->rFail('当前货道有冻结库存，不允许重建多商品队列');
+                        }
                         // 多商品批次处理（设备上报固定队首模式）
-                        $isMultiGoods = isset($value['is_multi_goods']) && intval($value['is_multi_goods']) === 1;
                         if ($isMultiGoods) {
-                            $headBatch = $this->saveChannelGoodsBatch($mc['mc_id'], $value, $value['batch_arr'] ?? [], false);
+                            $validateMsg = $this->validateReportedChannelGoodsBatch($value, $batchArr);
+                            if ($validateMsg !== '') {
+                                $this->rollbackTrans();
+                                return $this->rFail($validateMsg);
+                            }
+                            $headBatch = $this->saveChannelGoodsBatch($mc['mc_id'], $value, $batchArr, false);
                             if (!$headBatch) {
-                                $value['is_multi_goods'] = 2;
-                                $mc['is_multi_goods'] = 2;
+                                $this->rollbackTrans();
+                                return $this->rFail('保存多商品批次失败');
                             } else {
                                 $value['g_id']          = $headBatch['g_id'];
                                 $value['stock']         = $headBatch['stock'];
                                 $value['frozen_stock']  = $headBatch['frozen_stock'];
+                                $value['capacity']      = $headBatch['capacity'];
                                 $value['retail_price']  = $headBatch['retail_price'];
                                 $value['gift_points']   = $headBatch['gift_points'];
                                 $value['is_multi_goods'] = 1;
@@ -290,11 +322,22 @@ trait MachineChannelTrait
                                     'g_id'          => $headBatch['g_id'],
                                     'stock'         => $headBatch['stock'],
                                     'frozen_stock'  => $headBatch['frozen_stock'],
+                                    'capacity'      => $headBatch['capacity'],
                                     'retail_price'  => $headBatch['retail_price'],
                                     'gift_points'   => $headBatch['gift_points'],
                                     'is_multi_goods' => 1,
                                 ]);
                             }
+                        } elseif (
+                            isset($value['is_multi_goods'])
+                            && intval($value['is_multi_goods']) !== 1
+                            && intval($mc['is_multi_goods'] ?? 2) === 1
+                        ) {
+                            Db::name('channel_goods_batch')
+                                ->where('mc_id', $mc['mc_id'])
+                                ->whereIn('status', [1, 2, 3])
+                                ->update(['status' => 4]);
+                            $value['is_multi_goods'] = 2;
                         }
                         // ==================== 单货道多商品相关结束 ====================
 
@@ -340,6 +383,7 @@ trait MachineChannelTrait
                         }
 
                         $mc = array_merge($mc, $value);
+                        unset($mc['batch_arr']);
                         $mc = $this->updateMachineChannel($mc);
                         if (!$mc) {
                             $this->rollbackTrans();
@@ -429,6 +473,34 @@ trait MachineChannelTrait
     }
 
     // ==================== 多商品批次相关 ====================
+    /**
+     * 校验终端上报的多商品批次数据。
+     */
+    private function validateReportedChannelGoodsBatch($headData, $batchArr)
+    {
+        if (!isset($headData['g_id']) || intval($headData['g_id']) <= 0) {
+            return '开启多商品模式必须设置队首商品';
+        }
+        if (empty($batchArr) || count($batchArr) < 1) {
+            return '开启多商品模式必须设置后续商品';
+        }
+        $allBatches = array_merge([$headData], $batchArr);
+        foreach ($allBatches as $item) {
+            if (!isset($item['g_id']) || intval($item['g_id']) <= 0) {
+                return '多商品批次必须设置有效商品';
+            }
+            $stock = intval($item['stock'] ?? 0);
+            $capacity = intval($item['capacity'] ?? $stock);
+            if ($capacity <= 0) {
+                $capacity = $stock;
+            }
+            if ($stock > $capacity) {
+                return '多商品批次库存不能超过容量';
+            }
+        }
+        return '';
+    }
+
     /**
      * 保存货道批次商品队列（全量覆盖）
      * @param int    $mc_id       货道ID
