@@ -35,7 +35,11 @@ class SaleOrders extends Common
             unset($postData['machine_group_id']);
             if (!$machineIds) return $this->app->machine->rNoData();
         }
-
+        //从首页跳转过来携带的是此参数，需要重置下
+        if (!empty($postData['create_date'])) {
+            $postData['pay_time'] = $postData['create_date'];
+        }
+        unset($postData['create_date']);
         $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in","pay_channel" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
         $where['raw'] = "pay_status in ('3', '7')";
         $authMch = $this->authMchCannel();
@@ -900,10 +904,11 @@ class SaleOrders extends Common
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         unset($postData['channel_code']);
         unset($postData['supplier']);
-        // if (!empty($postData['pay_time']) && empty($postData['create_date'])) {
-        //     $postData['create_date'] = $postData['pay_time'];
-        // }
-        // unset($postData['pay_time']);
+        //从首页跳转过来携带的是此参数，需要重置下
+        if (!empty($postData['create_date'])) {
+            $postData['pay_time'] = $postData['create_date'];
+        }
+        unset($postData['create_date']);
         if (!empty($postData['machine_group_id'])) {
             $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']], 'machine_id');
             unset($postData['machine_group_id']);
