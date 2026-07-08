@@ -215,9 +215,7 @@ class ApiClient extends ReceiveBaseClient
      */
     public function wxLoginQrCode()
     {
-        $where['ao_id'] = $this->machine['ao_id'];
-        $where['status'] = 1;
-        $config = $this->getWxOfficialFind($where, '*', "id desc");
+        $config = $this->getWxLoginOfficialConfig();
         if (!$config) return $this->r(300, $this->lang("VWxLogin.wx_no_data"));
         $config = $config->toArray();
         $insert = [
@@ -234,6 +232,21 @@ class ApiClient extends ReceiveBaseClient
         $loginUrl = $this->getUrl("/wx/login/scanLogin/login_id/$id/time/" . time());
         $this->updateWxOfficialLogin(['id' => $id, "login_url" => $loginUrl]);
         return $this->r(200, $this->lang("action_success"), ["id" => $id, "login_url" => $loginUrl]);
+    }
+
+    protected function getWxLoginOfficialConfig()
+    {
+        // $where['ao_id'] = $this->machine['ao_id'];
+        $where['status'] = 1;
+        $config = $this->getWxOfficialFind($where, '*', "id desc");
+        if ($config) return $config;
+
+
+        $sharedAoIds = [17];
+        return $this->getWxOfficialFind([
+            ['ao_id', 'in', $sharedAoIds],
+            'status' => 1,
+        ], '*', "FIELD(ao_id,17,1),id desc");
     }
 
     /**
