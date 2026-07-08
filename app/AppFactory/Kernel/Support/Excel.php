@@ -42,6 +42,7 @@ class Excel
                 }
                 $imgList = self::getImg($sheet,$imageFilePath);
                 if (is_string($imgList)) return returnState(100,$imgList);
+                $ignoredImgList = [];
                 for ($i = $startRow; $i <= $highestRow; $i++) {
                     $row = [];
                     foreach ($list as $key => $value) {
@@ -49,6 +50,9 @@ class Excel
                         if (isset($imgList[$cellName]) && ($imageFields === null || in_array($value, $imageFields, true))) {
                             $row[$value] = $imgList[$cellName];
                         } else {
+                            if (isset($imgList[$cellName])) {
+                                $ignoredImgList[] = ['cell' => $cellName, 'field' => $value, 'image' => $imgList[$cellName]];
+                            }
                             $row[$value] = $objPHPExcel->getActiveSheet()->getCell($cellName)->getValue();
                             if ($row[$value] === null) $row[$value] = "";
                         }
@@ -58,6 +62,7 @@ class Excel
                     }
                     if ($row) $data[] = $row;
                 }
+                if ($ignoredImgList) actionLog($ignoredImgList, 'importExcel_ignored_images');
             }
             return $data;
         } catch (\PHPExcel_Reader_Exception $e) {

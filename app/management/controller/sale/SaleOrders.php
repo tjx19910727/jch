@@ -591,6 +591,8 @@ class SaleOrders extends Common
     {
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
+        $postData['pay_time'] = $postData['create_date'];
+        unset($postData['create_date']);
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
         if (!isset($postData['m_id']) || !$postData['m_id']) {
             if ($this->manager['pid'] > 0) {
@@ -898,6 +900,10 @@ class SaleOrders extends Common
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         unset($postData['channel_code']);
         unset($postData['supplier']);
+        // if (!empty($postData['pay_time']) && empty($postData['create_date'])) {
+        //     $postData['create_date'] = $postData['pay_time'];
+        // }
+        // unset($postData['pay_time']);
         if (!empty($postData['machine_group_id'])) {
             $machineIds = $this->app->machine->getMachineGroupMgColumn(['mg_id' => $postData['machine_group_id']], 'machine_id');
             unset($postData['machine_group_id']);
@@ -937,8 +943,10 @@ class SaleOrders extends Common
             IFNULL(SUM(sod.quantity - sod.refund_quantity), 0) total_quantity,
             IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift,
             COUNT(DISTINCT so.order_id) total_orders")
-            ->find()
-            ->toArray();
+            ->find();
+        if (!is_array($summary)) {
+            $summary = [];
+        }
 
         $totalAmount = round($summary['total_amount'] ?? 0, 2);
         $totalCostPrice = round($summary['total_cost_price'] ?? 0, 2);
