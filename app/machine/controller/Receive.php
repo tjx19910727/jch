@@ -803,6 +803,20 @@ class Receive extends Common
     }
 
     /**
+     * 上报回收箱商品数量变化
+     * @return array|\think\response\Json
+     */
+    public function recycleBoxGoodsChange()
+    {
+        try {
+            return $this->app->api->recycleBoxGoodsChange();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * HTTP心跳上报
      * @return array|string
      */
