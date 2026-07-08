@@ -92,28 +92,28 @@ class GoodsHitClient extends ManagementClient
             if ($eType == 1) {
                 $title = [
                     "sku" => "SKU",
-                    "g_name" => "鍟嗗搧鍚嶇О",
-                    "gc_name" => "鍝佺被",
-                    "hits" => "鐐瑰嚮鏁?,
-                    "saleNum" => "閿€閲?,
-                    "conversion_rate" => "杞寲鐜?,
+                    "g_name" => "商品名称",
+                    "gc_name" => "品类",
+                    "hits" => "点击数",
+                    "saleNum" => "销量",
+                    "conversion_rate" => "转化率",
                 ];
-                $filename = "浜掑姩鎶ヨ〃(鎸夊晢鍝?-" . date("Ymd");
+                $filename = "互动报表(按商品)-" . date("Ymd");
             }
             if ($eType == 2) {
                 $title = [
-                    "machine_id" => "璁惧缂栧彿",
-                    "machine_name" => "璁惧鍚嶇О",
+                    "machine_id" => "设备编号",
+                    "machine_name" => "设备名称",
                     "sku" => "SKU",
-                    "g_name" => "鍟嗗搧鍚嶇О",
-                    "gc_name" => "鍝佺被",
-                    "hits" => "鐐瑰嚮鏁?,
-                    "saleNum" => "閿€閲?,
-                    "conversion_rate" => "杞寲鐜?,
+                    "g_name" => "商品名称",
+                    "gc_name" => "品类",
+                    "hits" => "点击数",
+                    "saleNum" => "销量",
+                    "conversion_rate" => "转化率",
                 ];
-                $filename = "浜掑姩鎶ヨ〃(鎸夎澶?-" . date("Ymd");
+                $filename = "互动报表(按设备)-" . date("Ymd");
             }
-            return $this->sendToExport("缁熻鎶ヨ〃-浜掑姩鎶ヨ〃", $filename, $title, $list);
+            return $this->sendToExport("统计报表-互动报表", $filename, $title, $list);
         }
         return $this->rFail();
     }
@@ -140,34 +140,34 @@ class GoodsHitClient extends ManagementClient
         if ($eType == 1) {
             $title = [
                 "sku" => "SKU",
-                "g_name" => "鍟嗗搧鍚嶇О",
-                "gc_name" => "鍝佺被",
-                "hits" => "鐐瑰嚮鏁?,
-                "cart_add_count" => "Cart Add Count",
-                "retry_dispense_count" => "Retry Dispense Count",
-                "help_count" => "Help Count",
-                "saleNum" => "閿€閲?,
-                "conversion_rate" => "杞寲鐜?,
+                "g_name" => "商品名称",
+                "gc_name" => "品类",
+                "hits" => "点击数",
+                "cart_add_count" => "加购件数",
+                "retry_dispense_count" => "再次出货次数",
+                "help_count" => "帮助点击数",
+                "saleNum" => "销量",
+                "conversion_rate" => "转化率",
             ];
-            $filename = "浜掑姩鎶ヨ〃(鎸夊晢鍝?-" . date("Ymd");
+            $filename = "互动报表(按商品)-" . date("Ymd");
         }
         if ($eType == 2) {
             $title = [
-                "machine_id" => "璁惧缂栧彿",
-                "machine_name" => "璁惧鍚嶇О",
+                "machine_id" => "设备编号",
+                "machine_name" => "设备名称",
                 "sku" => "SKU",
-                "g_name" => "鍟嗗搧鍚嶇О",
-                "gc_name" => "鍝佺被",
-                "hits" => "鐐瑰嚮鏁?,
-                "cart_add_count" => "Cart Add Count",
-                "retry_dispense_count" => "Retry Dispense Count",
-                "help_count" => "Help Count",
-                "saleNum" => "閿€閲?,
-                "conversion_rate" => "杞寲鐜?,
+                "g_name" => "商品名称",
+                "gc_name" => "品类",
+                "hits" => "点击数",
+                "cart_add_count" => "加购件数",
+                "retry_dispense_count" => "再次出货次数",
+                "help_count" => "帮助点击数",
+                "saleNum" => "销量",
+                "conversion_rate" => "转化率",
             ];
-            $filename = "浜掑姩鎶ヨ〃(鎸夎澶?-" . date("Ymd");
+            $filename = "互动报表(按设备)-" . date("Ymd");
         }
-        return $this->sendToExport("缁熻鎶ヨ〃-浜掑姩鎶ヨ〃", $filename, $title, $list);
+        return $this->sendToExport("统计报表-互动报表", $filename, $title, $list);
     }
 
     protected function getGoodsBehaviorTrackingHitList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = "")
