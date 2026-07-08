@@ -36,7 +36,7 @@ class SaleOrders extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
         //从首页跳转过来携带的是此参数，需要重置下
-        if (!empty($postData['create_date'])) {
+        if (!empty($postData['create_date']) && empty($postData['pay_time'])) {
             $postData['pay_time'] = $postData['create_date'];
         }
         unset($postData['create_date']);
@@ -905,7 +905,7 @@ class SaleOrders extends Common
         unset($postData['channel_code']);
         unset($postData['supplier']);
         //从首页跳转过来携带的是此参数，需要重置下
-        if (!empty($postData['create_date'])) {
+        if (!empty($postData['create_date']) && empty($postData['pay_time'])) {
             $postData['pay_time'] = $postData['create_date'];
         }
         unset($postData['create_date']);
