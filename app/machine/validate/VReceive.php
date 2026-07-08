@@ -190,6 +190,9 @@ class VReceive extends VCommon
         "getMachineViewList" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineVersionPlan" => ["msg_id","machine_id","timestamp","sign"],
         "reportMachineVersionDownload" => ["msg_id","machine_id","timestamp","sign","mvp_id","download_progress"],
+        "getOtaVersionPlan" => ["msg_id","machine_id","timestamp","sign"],
+        "reportOtaVersionDownload" => ["msg_id","machine_id","timestamp","sign","ovp_id","download_progress"],
+        "reportOtaVersion" => ["msg_id","machine_id","timestamp","sign","ota_version"],
 
         "getGoods" => ["msg_id","machine_id","timestamp","sign"],
         "submitRefundGoodsLog" => ["msg_id","machine_id","timestamp","sign","mobile","input_code","pic_out_goods_box","video_out_goods_box","video_refund_goods"],

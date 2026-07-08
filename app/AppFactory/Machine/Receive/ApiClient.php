@@ -53,6 +53,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineRefundGoodsLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\SimCardInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
+use app\AppFactory\Kernel\Traits\Machine\OtaVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
@@ -120,6 +121,7 @@ class ApiClient extends ReceiveBaseClient
         MachineChannelTrait,
         MachineChannelReplenishmentTrait,
         MachineVersionPlanTrait,
+        OtaVersionPlanTrait,
         MachineGoodsTrait,
         MachineHelpTrait,
         MachineOnOffTrait,
@@ -1576,6 +1578,109 @@ class ApiClient extends ReceiveBaseClient
         $update['download_progress'] = $this->data['download_progress'];
         $result = $this->updateMachineVersionPlan($update);
         return $this->rU($result);
+    }
+
+    /**
+     * 获取最新一条OTA固件更新计划
+     * @return array|string
+     */
+    public function otaVersionPlan()
+    {
+        $where['m_id'] = $this->machine['m_id'];
+        $where[] = ['publish_time', '<', time()];
+        $result = $this->getOtaVersionPlanFind($where, 'ovp_id,ov_id,version_no,path,`desc`,size,update_time,status', 'ovp_id desc');
+        actionLog($result, '查询OTA固件更新计划');
+        actionLog($this->getLS(), '【SQL】查询OTA固件更新计划');
+        if (!$result) {
+            return $this->rNoData();
+        }
+        if ($result['status'] != 1) return $this->rFail();
+        return $this->rQ($result);
+    }
+
+    /**
+     * 上报OTA固件更新下载进度
+     * @return array|\think\response\Json
+     */
+    public function otaVersionDownload()
+    {
+        $otaVersionPlan = $this->getOtaVersionPlanFind(['ovp_id' => $this->data['ovp_id']]);
+        if (!$otaVersionPlan) {
+            return $this->rFail();
+        }
+        $update['download_progress'] = $this->data['download_progress'];
+        $ota_status = $this->data['ota_status'] ?? 0;
+        if ($ota_status == 1) {
+            $update['status'] = 3;
+            if ($this->data['download_progress'] != 100) {
+                $update['download_progress'] = 100;
+            }
+        }
+        $this->startTrans();
+        try {
+            $flag[] = $this->updateOtaVersionPlan($update, ['ovp_id' => $this->data['ovp_id']]);
+            if ($ota_status == 1 && !empty($this->data['ota_version'])) {
+                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['ota_version']]);
+            }
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result) ? $this->rU($result) : $this->rFail();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 上报OTA固件更新状态
+     * @return array|\think\response\Json
+     */
+    public function otaVersionStatus()
+    {
+        //先查询version_plan表中是否有此条记录  
+        $otaVersionPlan = $this->getOtaVersionPlanFind(['ovp_id' => $this->data['ovp_id']]);
+        if (!$otaVersionPlan) {
+            return $this->rFail();
+        }
+        $statusArr = ["1" =>3, "2" => 4];
+        $ota_status = $this->data['ota_status'] ?? 2;
+        $update['status'] = $statusArr[$ota_status] ?? 2;
+        if ($ota_status == 1) {
+            if ($otaVersionPlan['download_progress'] != 100) {
+                $update['download_progress'] = 100;
+            }
+        }
+        $this->startTrans();
+        try {
+            $flag[] = $this->updateOtaVersionPlan($update,['ovp_id' => $this->data['ovp_id']]);
+            if ($ota_status == 1 && !empty($this->data['ota_version'])) {
+                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['ota_version']]);
+            }
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result) ? $this->rU($result) : $this->rFail();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 上报设备当前OTA固件版本
+     * @return array|string
+     */
+    public function reportOtaVersion()
+    {
+        $otaVersion = $this->data['ota_version'] ?? '';
+        if ($otaVersion === '') {
+            return $this->rFail();
+        }
+        $currentVersion = $this->machine['ota_version'] ?? '';
+        if ($otaVersion === $currentVersion) {
+            return $this->rSuccess();
+        }
+        $result = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $otaVersion]);
+        return $result ? $this->rU($result) : $this->rFail();
     }
 
     /**
