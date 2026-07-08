@@ -927,67 +927,29 @@ class SaleOrders extends Common
             $where['so.ao_id'] = $this->manager['ao_id'];
         }
 
-        $detailSummarySql = Db::name('sale_orders_details')
-            ->field("order_id,
-                IFNULL(SUM(cost_price * (quantity - refund_quantity)), 0) total_cost_price,
-                IFNULL(SUM(CASE is_gift WHEN 1 THEN quantity ELSE 0 END), 0) total_gift")
-            ->group('order_id')
-            ->buildSql();
-
         $query = Db::name('sale_orders')->alias('so')
-            ->leftJoin([$detailSummarySql => 'sod'], 'sod.order_id = so.order_id')
+            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
             ->where($where);
 
-        $list = $query->field("so.pay_type,
-            IFNULL(SUM(so.total_price), 0) total_amount,
-            IFNULL(SUM(sod.total_cost_price), 0) total_cost_price,
-            IFNULL(SUM(so.total_quantity), 0) total_quantity,
-            IFNULL(SUM(sod.total_gift), 0) total_gift,
-            COUNT(so.order_id) total_orders")
-            ->group('so.pay_type')
-            ->select()
+        $summary = $query->field("
+            IFNULL(SUM(sod.total_sod_price - sod.refund_amount), 0) total_amount,
+            IFNULL(SUM(sod.cost_price * (sod.quantity - sod.refund_quantity)), 0) total_cost_price,
+            IFNULL(SUM(sod.quantity - sod.refund_quantity), 0) total_quantity,
+            IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift,
+            COUNT(DISTINCT so.order_id) total_orders")
+            ->find()
             ->toArray();
 
-        $amounts = [];
-        $costs = [];
-        $quantities = [];
-        $gifts = [];
-        $orders = [];
-        foreach ($list as $item) {
-            $pt = $item['pay_type'];
-            $amounts[$pt] = round($item['total_amount'], 2);
-            $costs[$pt] = round($item['total_cost_price'], 2);
-            $quantities[$pt] = (int)$item['total_quantity'];
-            $gifts[$pt] = (int)$item['total_gift'];
-            $orders[$pt] = (int)$item['total_orders'];
-        }
-
-        $getAmount = function($t) use ($amounts) { return $amounts[$t] ?? 0; };
+        $totalAmount = round($summary['total_amount'] ?? 0, 2);
+        $totalCostPrice = round($summary['total_cost_price'] ?? 0, 2);
+        $totalQuantity = (int)($summary['total_quantity'] ?? 0);
+        $totalGift = (int)($summary['total_gift'] ?? 0);
+        $totalOrders = (int)($summary['total_orders'] ?? 0);
 
         // 汇总值
-        $totalAmount = array_sum($amounts);
-        $totalCostPrice = array_sum($costs);
-        $totalQuantity = array_sum($quantities);
-        $totalGift = array_sum($gifts);
-        $totalOrders = array_sum($orders);
         $totalSaleQuantity = $totalQuantity - $totalGift;
 
-        $result = [
-            'wechat_scan'       => $getAmount(11),    // 微信扫码支付
-            'wechat_reverse'    => $getAmount(12),    // 微信反扫支付
-            'alipay_scan'       => $getAmount(21),    // 支付宝扫码支付
-            'alipay_reverse'    => $getAmount(22),    // 支付宝反扫支付
-            'unionpay_intl'     => $getAmount(33),    // 国际银联
-            'octopus'           => $getAmount(10) + $getAmount(34), // 八达通(10+34)
-            'unionpay_card'     => $getAmount(35),    // 银联卡
-            'cash'              => $getAmount(36),    // 纸币
-            'coin'              => $getAmount(37),    // 硬币
-            'points'            => $getAmount(9),     // 积分(商场积分支付)
-            'balance'           => $getAmount(20),    // 余额支付
-            'jd_pay'            => $getAmount(4),     // 京东支付
-            'member_pay'        => $getAmount(5),     // 会员支付
-            'licheng_online'    => $getAmount(6),     // 丽呈线上支付
-            'robot_online'      => $getAmount(7),     // 机器人线上支付
+        return returnData([
             'total_cost_price'      => $hasCostPriceAuth ? round($totalCostPrice, 2) : '--',
             'profit_amount'         => $hasCostPriceAuth ? round($totalAmount - $totalCostPrice, 2) : '--',
             'average_retail_price'  => $totalSaleQuantity > 0 ? round($totalAmount / $totalSaleQuantity, 2) : 0,
@@ -995,9 +957,7 @@ class SaleOrders extends Common
             'total_amount'          => round($totalAmount, 2),
             'total_quantity'        => $totalSaleQuantity,
             'total_orders'          => $totalOrders,
-        ];
-
-        return returnData($result);
+        ]);
     }
 
     /**
