@@ -905,7 +905,7 @@ class SaleOrders extends Common
         }
 
         $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", "pay_channel" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'so.');
-        $where['raw'] = "so.pay_status in ('3', '7')";
+        $where['so.pay_status'] = 3;
         $authMch = $this->authMchCannel();
         if ($authMch['status'] != 0) {
             $orderIds = Db::name('sale_orders_details')
@@ -927,19 +927,23 @@ class SaleOrders extends Common
             $where['so.ao_id'] = $this->manager['ao_id'];
         }
 
-        $raw = $where['raw'] ?? '';
-        unset($where['raw']);
+        $detailSummarySql = Db::name('sale_orders_details')
+            ->field("order_id,
+                IFNULL(SUM(cost_price * (quantity - refund_quantity)), 0) total_cost_price,
+                IFNULL(SUM(CASE is_gift WHEN 1 THEN quantity ELSE 0 END), 0) total_gift")
+            ->group('order_id')
+            ->buildSql();
+
         $query = Db::name('sale_orders')->alias('so')
-            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
+            ->leftJoin([$detailSummarySql => 'sod'], 'sod.order_id = so.order_id')
             ->where($where);
-        if ($raw) $query->whereRaw($raw);
 
         $list = $query->field("so.pay_type,
-            IFNULL(SUM(sod.total_sod_price - sod.refund_amount), 0) total_amount,
-            IFNULL(SUM(sod.cost_price * (sod.quantity - sod.refund_quantity)), 0) total_cost_price,
-            IFNULL(SUM(sod.quantity - sod.refund_quantity), 0) total_quantity,
-            IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift,
-            COUNT(DISTINCT so.order_id) total_orders")
+            IFNULL(SUM(so.total_price), 0) total_amount,
+            IFNULL(SUM(sod.total_cost_price), 0) total_cost_price,
+            IFNULL(SUM(so.total_quantity), 0) total_quantity,
+            IFNULL(SUM(sod.total_gift), 0) total_gift,
+            COUNT(so.order_id) total_orders")
             ->group('so.pay_type')
             ->select()
             ->toArray();
@@ -985,8 +989,7 @@ class SaleOrders extends Common
             'licheng_online'    => $getAmount(6),     // 丽呈线上支付
             'robot_online'      => $getAmount(7),     // 机器人线上支付
             'total_cost_price'      => $hasCostPriceAuth ? round($totalCostPrice, 2) : '--',
-            // 'profit_amount'         => $hasCostPriceAuth ? round($totalAmount - $totalCostPrice, 2) : '--',
-            'profit_amount'         => round($totalAmount - $totalCostPrice, 2),
+            'profit_amount'         => $hasCostPriceAuth ? round($totalAmount - $totalCostPrice, 2) : '--',
             'average_retail_price'  => $totalSaleQuantity > 0 ? round($totalAmount / $totalSaleQuantity, 2) : 0,
             'average_cost_price'    => $hasCostPriceAuth ? ($totalSaleQuantity > 0 ? round($totalCostPrice / $totalSaleQuantity, 2) : 0) : '--',
             'total_amount'          => round($totalAmount, 2),
