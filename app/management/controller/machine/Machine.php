@@ -397,6 +397,7 @@ class Machine extends Common
         FROM_UNIXTIME(last_online_time) last_online_time,
         (case device_type when 1 then '" . lang("vending_machine") . "' else '" . lang("store") . "' end) device_type,
         (case machine_level when 1 then '" . lang("simplified_version") . "' else '" . lang("luxury_edition") . "' END) machine_level,
+        (case run_mode when 2 then '测试模式' else '生产模式' END) run_mode,
     (case is_operating when 1 then '在营' when 2 then '在库' when 3 then '停营' END) is_operating,
         (case status when 1 then '" . lang("normal") . "' when 2 then '" . lang("disable") . "' when 3 then '" . lang("maintenance") . "' end) status";
         //只取vending_machine_type为1的设备，即主柜设备

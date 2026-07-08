@@ -649,6 +649,7 @@ class SaleOrdersClient extends ManagementClient
                 "machine_id" => "设备编号",
                 "machine_name" => "设备名称",
                 "machine_level_desc" => "设备等级",
+                "run_mode_desc" => "运行模式",
                 "device_type" => "设备类型",
                 "trade_no" => "订单编号",
                 "mch_no" => "支付编号",

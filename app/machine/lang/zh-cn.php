@@ -68,6 +68,8 @@ return [
 
         "mvp_id_require" => "版本更新记录ID不能为空",
         "download_progress_require" => "下载进度不能为空",
+        "run_mode_require" => "设备模式不能为空",
+        "run_mode_in" => "设备模式参数错误",
 
     ],
 
