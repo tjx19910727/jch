@@ -22,7 +22,7 @@ class Excel
      * @param array $other
      * @return array|string
      */
-    public static function importExcel($filePath, $list=[],$other = [],$startRow = 2)
+    public static function importExcel($filePath, $list=[],$other = [],$startRow = 2,$imageFields = null)
     {
         try {
             $data = [];
@@ -42,14 +42,19 @@ class Excel
                 }
                 $imgList = self::getImg($sheet,$imageFilePath);
                 if (is_string($imgList)) return returnState(100,$imgList);
+                $ignoredImgList = [];
                 for ($i = $startRow; $i <= $highestRow; $i++) {
                     $row = [];
                     foreach ($list as $key => $value) {
-                        if (!isset($imgList[$header_arr[$key] . $i])) {
-                            $row[$value] = $objPHPExcel->getActiveSheet()->getCell($header_arr[$key] . $i)->getValue();
-                            if ($row[$value] === null) $row[$value] = "";
+                        $cellName = $header_arr[$key] . $i;
+                        if (isset($imgList[$cellName]) && ($imageFields === null || in_array($value, $imageFields, true))) {
+                            $row[$value] = $imgList[$cellName];
                         } else {
-                            $row[$value] = $imgList[$header_arr[$key] . $i];
+                            if (isset($imgList[$cellName])) {
+                                $ignoredImgList[] = ['cell' => $cellName, 'field' => $value, 'image' => $imgList[$cellName]];
+                            }
+                            $row[$value] = $objPHPExcel->getActiveSheet()->getCell($cellName)->getValue();
+                            if ($row[$value] === null) $row[$value] = "";
                         }
                     }
                     if ($other) {
@@ -57,6 +62,7 @@ class Excel
                     }
                     if ($row) $data[] = $row;
                 }
+                if ($ignoredImgList) actionLog($ignoredImgList, 'importExcel_ignored_images');
             }
             return $data;
         } catch (\PHPExcel_Reader_Exception $e) {

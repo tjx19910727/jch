@@ -196,6 +196,17 @@ return [
         "terminal_exchange_mc_display_new" => "Terminal exchange - New products placed on the shelves",
         "terminal_exchange_mg_inc_reserve_stock" => "Terminal exchange - Goods inventory for equipment - Reserve inventory for replenishment",
         "terminal_exchange_mg_dec_reserve_stock" => "Terminal exchange - Reserve inventory of equipment goods in the warehouse",
+        "terminal_recycle_box_add_goods" => "Terminal recycle bin - Add goods",
+        "terminal_recycle_box_change_goods_1" => "Recycle bin goods off-shelf - Failed shipment recycle",
+        "terminal_recycle_box_change_goods_2" => "Recycle bin goods off-shelf - Remote recycle",
+        "terminal_recycle_box_change_goods_3" => "Recycle bin goods off-shelf - Channel recycle",
+        "terminal_recycle_box_change_goods_4" => "Recycle bin goods off-shelf - Backstage return refund",
+        "terminal_recycle_box_remove_goods" => "Terminal recycle bin - Remove goods",
+        "terminal_recycle_box_remove_goods_1" => "Recycle bin goods removed - Failed shipment recycle",
+        "terminal_recycle_box_remove_goods_2" => "Recycle bin goods removed - Remote recycle",
+        "terminal_recycle_box_remove_goods_3" => "Recycle bin goods removed - Channel recycle",
+        "terminal_recycle_box_remove_goods_4" => "Recycle bin goods removed - Backstage return refund",
+        "terminal_recycle_box_clear_goods" => "Terminal recycle bin - Clear goods",
 
         // CheckClient.php
         "check_stock_shortage" => "Inventory count - Inventory shortage",

@@ -109,6 +109,5 @@ class VReport extends SupportValidate
         "updateSimSignal" => ["msgType", "rsrp", "sinr"],//物联卡信号上报
 
         "replenishmentVideo" => ["msgType","record_no","path"],
-
     ];
 }

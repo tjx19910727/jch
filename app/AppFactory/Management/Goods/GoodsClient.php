@@ -203,15 +203,16 @@ class GoodsClient extends ManagementClient
         $latestMarket = $postData['market_price'] ?? $goods['market_price'];
         $latestRetail = $postData['retail_price'] ?? $goods['retail_price'];
 
-        $mgDiff = Db::name('machine_goods')
-            ->where('g_id', $gId)
+        $mgDiff = Db::name('machine_goods')->alias('mg')
+            ->join('machine m', 'm.m_id = mg.m_id')
+            ->where('mg.g_id', $gId)
             ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
-                $query->where('cost_price', '<>', $latestCost)
-                    ->whereOr('market_price', '<>', $latestMarket)
-                    ->whereOr('retail_price', '<>', $latestRetail);
+                $query->where('mg.cost_price', '<>', $latestCost)
+                    ->whereOr('mg.market_price', '<>', $latestMarket)
+                    ->whereOr('mg.retail_price', '<>', $latestRetail);
             })
-            ->field('mg_id,m_id,machine_id,g_id,g_name,cost_price,market_price,retail_price')
-            ->order('mg_id desc')
+            ->field('mg.mg_id,mg.m_id,mg.machine_id,m.machine_name,mg.g_id,mg.g_name,mg.cost_price,mg.market_price,mg.retail_price')
+            ->order('mg.mg_id desc')
             ->limit(200)
             ->select()
             ->toArray();
@@ -226,15 +227,16 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        $mcDiff = Db::name('machine_channel')
-            ->where('g_id', $gId)
+        $mcDiff = Db::name('machine_channel')->alias('mc')
+            ->join('machine m', 'm.m_id = mc.m_id')
+            ->where('mc.g_id', $gId)
             ->where(function ($query) use ($latestCost, $latestMarket, $latestRetail) {
-                $query->where('cost_price', '<>', $latestCost)
-                    ->whereOr('market_price', '<>', $latestMarket)
-                    ->whereOr('retail_price', '<>', $latestRetail);
+                $query->where('mc.cost_price', '<>', $latestCost)
+                    ->whereOr('mc.market_price', '<>', $latestMarket)
+                    ->whereOr('mc.retail_price', '<>', $latestRetail);
             })
-            ->field('mc_id,m_id,machine_id,channel_code,g_id,g_name,cost_price,market_price,retail_price,update_price as update_status')
-            ->order('mc_id desc')
+            ->field('mc.mc_id,mc.m_id,mc.machine_id,m.machine_name,mc.channel_code,mc.g_id,mc.g_name,mc.cost_price,mc.market_price,mc.retail_price,mc.update_price as update_status')
+            ->order('mc.mc_id desc')
             ->limit(200)
             ->select()
             ->toArray();
@@ -339,7 +341,7 @@ class GoodsClient extends ManagementClient
             $path = root_path() . "public" . $data['file_path'];
             $title = ["g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status",'length','width','height'];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
-            $goods = Excel::importExcel($path, $title, $other);
+            $goods = Excel::importExcel($path, $title, $other, 2, ['pic']);
             if (is_object($goods)) return $goods;
             actionLog($goods, '导入的商品数据');
             if ($goods) {
@@ -371,7 +373,7 @@ class GoodsClient extends ManagementClient
             $path = root_path() . "public" . $data['file_path'];
             $title = ["g_name", "gc_id", "gc_name", "model", "sku", "sku2", "pic", "bar_code", "cost_price", "market_price", "retail_price", "manufacturer", "service_phone", "status",'length','width','height',"g_id"];
             $other = ['creator' => $this->manager['manager_id'] ?? 0, 'ao_id' => $this->manager['ao_id'] ?? 0];
-            $goods = Excel::importExcel($path, $title, $other);
+            $goods = Excel::importExcel($path, $title, $other, 2, ['pic']);
             if (is_object($goods)) return $goods;
             actionLog($goods, '导入的商品数据');
             if ($goods) {
