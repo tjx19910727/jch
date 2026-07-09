@@ -509,6 +509,21 @@ return [
         "desc_max" => "Version description exceeds limit",
     ],
 
+    "VOtaVersion" => [
+        "ov_id_require" => "OTA firmware ID cannot be empty",
+        "version_no_require" => "Version number cannot be empty",
+        "version_no_max" => "Version number exceeds length limit",
+        "path_require" => "Firmware path cannot be empty",
+        "path_max" => "Firmware path exceeds length limit",
+        "size_require" => "File size cannot be empty",
+        "desc_max" => "Version description exceeds limit",
+    ],
+
+    "VOtaVersionPlan" => [
+        "ota_version_frequency" => "Only one request is allowed within 2 minutes, please try again later",
+        "ota_version_send_success" => "Command sent successfully, please check the device OTA version info later",
+    ],
+
     "VTripMultiple" => [
         "delHotel_notEmpty" => "Please select hotels to delete",
         "delGoods_notEmpty" => "Please select products to delete",

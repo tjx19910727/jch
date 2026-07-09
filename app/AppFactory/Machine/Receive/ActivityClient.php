@@ -883,6 +883,26 @@ class ActivityClient extends ReceiveBaseClient
      */
     public function useFd()
     {
-        return $this->orderUseFd();
+        $result = $this->orderUseFd();
+        $resultArr = obj2arr($result);
+        if (!is_array($resultArr) || intval($resultArr['state'] ?? 0) != 200) {
+            return $result;
+        }
+        $orderId = intval($this->data['order_id'] ?? (($resultArr['data']['order']['order_id'] ?? 0)));
+        if ($orderId <= 0) {
+            return $result;
+        }
+        $zeroPay = $this->completeZeroPayOrderIfNeeded($orderId, 'usefd_zero_pay');
+        if (!($zeroPay['success'] ?? false)) {
+            return $this->r(300, $zeroPay['msg'] ?? $this->lang("action_fail"));
+        }
+        if (!($zeroPay['handled'] ?? false)) {
+            $resultArr['data']['pay_required'] = true;
+            $resultArr['data']['zero_pay'] = false;
+            $resultArr['data']['next_action'] = 'pay';
+            return $this->r(200, $resultArr['msg'] ?? $this->lang("action_success"), $resultArr['data']);
+        }
+        $resultArr['data'] = array_merge($resultArr['data'] ?? [], $zeroPay['order']);
+        return $this->r(200, $resultArr['msg'] ?? $this->lang("action_success"), $resultArr['data']);
     }
 }

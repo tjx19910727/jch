@@ -124,23 +124,4 @@ trait AuthRoleTemplateTrait
         return true;
     }
 
-    public function assertRoleTemplateAssociation($roleId, $templateId, $roleAoId = 0)
-    {
-        $templateId = intval($templateId);
-        if ($templateId <= 0) return true;
-        if (!$roleAoId && $roleId) {
-            $roleAoId = intval(Db::name('auth_role')->where('role_id', intval($roleId))->value('ao_id'));
-        }
-        $template = Db::name('auth_role_template')->where([
-            'art_id' => $templateId,
-            'status' => 1,
-            'is_del' => 2,
-        ])->find();
-        if (!$template) throw new \Exception("角色权限模板不存在或未启用");
-        if (intval($roleAoId) > 1 && intval($template['ao_id']) !== intval($roleAoId)) {
-            throw new \Exception("角色与权限模板所属组织不一致");
-        }
-        return true;
-    }
-
 }

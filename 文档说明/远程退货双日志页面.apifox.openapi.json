@@ -1,0 +1,258 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "远程退货双日志页面接口",
+    "version": "1.0.0",
+    "description": "分别查询设备端客户提交退货日志和后台远程退货操作日志。两个接口均只读，并按当前后台账号可见设备过滤。"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}"
+    }
+  ],
+  "tags": [
+    {
+      "name": "客户退货日志"
+    },
+    {
+      "name": "远程退货操作日志"
+    }
+  ],
+  "paths": {
+    "/management/eventlog.machine_refund_goods_log/getList": {
+      "post": {
+        "tags": [
+          "客户退货日志"
+        ],
+        "summary": "查询客户提交退货日志",
+        "operationId": "getMachineRefundGoodsLogList",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerRefundLogRequest"
+              },
+              "example": {
+                "pageNum": 20,
+                "machine_id": "JCHM-H2D",
+                "mobile": "138",
+                "verify_status": 1,
+                "create_time": "2026-06-01 00:00:00~2026-06-15 23:59:59"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/eventlog.remote_action_log/getRemoteRefundGoodsList": {
+      "post": {
+        "tags": [
+          "远程退货操作日志"
+        ],
+        "summary": "查询后台远程退货操作日志",
+        "operationId": "getRemoteRefundGoodsActionLogList",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RemoteRefundActionLogRequest"
+              },
+              "example": {
+                "pageNum": 20,
+                "machine_id": "JCHM-H2D",
+                "status": "3,4",
+                "manager_name": "管理员",
+                "operator_at": "2026-06-01 00:00:00~2026-06-15 23:59:59"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "查询成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "TokenHeader": {
+        "name": "token",
+        "in": "header",
+        "required": true,
+        "description": "后台登录令牌",
+        "schema": {
+          "type": "string"
+        },
+        "example": "{{token}}"
+      }
+    },
+    "schemas": {
+      "CustomerRefundLogRequest": {
+        "type": "object",
+        "properties": {
+          "pageNum": {
+            "type": "integer",
+            "default": 20,
+            "maximum": 200
+          },
+          "mrgl_id": {
+            "type": "integer"
+          },
+          "m_id": {
+            "type": "integer"
+          },
+          "machine_id": {
+            "type": "string"
+          },
+          "machine_name": {
+            "type": "string"
+          },
+          "ao_id": {
+            "type": "integer"
+          },
+          "order_id": {
+            "type": "integer"
+          },
+          "trade_no": {
+            "type": "string"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "input_code": {
+            "type": "string"
+          },
+          "verify_type": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ]
+          },
+          "verify_status": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ]
+          },
+          "create_time": {
+            "type": "string",
+            "description": "时间范围，使用 ~ 分隔"
+          }
+        }
+      },
+      "RemoteRefundActionLogRequest": {
+        "type": "object",
+        "properties": {
+          "pageNum": {
+            "type": "integer",
+            "default": 20,
+            "maximum": 200
+          },
+          "id": {
+            "type": "integer"
+          },
+          "m_id": {
+            "type": "integer"
+          },
+          "machine_id": {
+            "type": "string"
+          },
+          "machine_name": {
+            "type": "string"
+          },
+          "ao_id": {
+            "type": "integer"
+          },
+          "order_id": {
+            "type": "integer"
+          },
+          "trade_no": {
+            "type": "string"
+          },
+          "sod_id": {
+            "type": "integer"
+          },
+          "goods_id": {
+            "type": "integer"
+          },
+          "g_name": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "channel_code": {
+            "type": "string"
+          },
+          "manager_id": {
+            "type": "integer"
+          },
+          "manager_name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "description": "支持单个状态或逗号分隔多个状态"
+          },
+          "operator_at": {
+            "type": "string",
+            "description": "时间范围，使用 ~ 分隔"
+          }
+        }
+      },
+      "PaginatedResponse": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "integer",
+            "example": 200
+          },
+          "msg": {
+            "type": "string",
+            "example": "查询成功"
+          },
+          "data": {
+            "type": "object",
+            "description": "ThinkPHP 分页响应，列表位于 data 字段内",
+            "additionalProperties": true
+          }
+        }
+      }
+    }
+  }
+}

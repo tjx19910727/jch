@@ -53,6 +53,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineOnOffTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineRefundGoodsLogTrait;
 use app\AppFactory\Kernel\Traits\Machine\SimCardInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineVersionPlanTrait;
+use app\AppFactory\Kernel\Traits\Machine\OtaVersionPlanTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineViewTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
@@ -120,6 +121,7 @@ class ApiClient extends ReceiveBaseClient
         MachineChannelTrait,
         MachineChannelReplenishmentTrait,
         MachineVersionPlanTrait,
+        OtaVersionPlanTrait,
         MachineGoodsTrait,
         MachineHelpTrait,
         MachineOnOffTrait,
@@ -215,9 +217,7 @@ class ApiClient extends ReceiveBaseClient
      */
     public function wxLoginQrCode()
     {
-        $where['ao_id'] = $this->machine['ao_id'];
-        $where['status'] = 1;
-        $config = $this->getWxOfficialFind($where, '*', "id desc");
+        $config = $this->getWxLoginOfficialConfig();
         if (!$config) return $this->r(300, $this->lang("VWxLogin.wx_no_data"));
         $config = $config->toArray();
         $insert = [
@@ -234,6 +234,21 @@ class ApiClient extends ReceiveBaseClient
         $loginUrl = $this->getUrl("/wx/login/scanLogin/login_id/$id/time/" . time());
         $this->updateWxOfficialLogin(['id' => $id, "login_url" => $loginUrl]);
         return $this->r(200, $this->lang("action_success"), ["id" => $id, "login_url" => $loginUrl]);
+    }
+
+    protected function getWxLoginOfficialConfig()
+    {
+        // $where['ao_id'] = $this->machine['ao_id'];
+        $where['status'] = 1;
+        $config = $this->getWxOfficialFind($where, '*', "id desc");
+        if ($config) return $config;
+
+
+        $sharedAoIds = [17];
+        return $this->getWxOfficialFind([
+            ['ao_id', 'in', $sharedAoIds],
+            'status' => 1,
+        ], '*', "FIELD(ao_id,17,1),id desc");
     }
 
     /**
@@ -1263,6 +1278,7 @@ class ApiClient extends ReceiveBaseClient
     {
         //        if ($this->data['pay_type'] != 4 && $this->data['pay_type'] != 0) return $this->rFail($this->lang("VSubCar.pay_type_no_range"));
         if ($this->data['pay_method'] == "41") $this->data['pay_method'] = 1;
+        $hasCouponCode = isset($this->data['coupon_code']) && trim(strval($this->data['coupon_code'])) !== '';
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
         if ($this->data['pay_type'] == 5 && (!isset($this->data['mobile']) || !$this->data['mobile'])) return $this->subCarFailResponse(100, $this->lang("mobile_require"));
         $m_sel = [
@@ -1422,7 +1438,7 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.under_stock"));
                     }
-                    if ($this->data['pay_type'] == 0) {
+                    if ($this->data['pay_type'] == 0 && !$hasCouponCode) {
                         $mc['retail_price'] = 0;
                     }
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
@@ -1493,29 +1509,28 @@ class ApiClient extends ReceiveBaseClient
                 $result = $this->checkFlag($flag);
                 actionLog($result, '事务结果');
                 if ($result) {
-                    // 免费的直接出货
-                    if ($this->data['pay_type'] == 0) {
-                        $this->rollbackTrans();
-                        return $this->subCarFailResponse(200, $this->lang("VSubCar.pay_type_empty"));
-                        //                        $this->outGoods();
-                        //                        $this->commitTrans();
-                        //                        return $this->r(200, $this->lang("VSubCar.goods_outing"));
-                    } else {
-                        $this->commitTrans();
-                        if (!empty($this->data['coupon_code'])) {
-                            $this->data['coupon_code'] = trim(strval($this->data['coupon_code']));
-                            $couponResult = $this->orderUseCoupon();
-                            if ($couponResult !== true) {
-                                $couponResult = obj2arr($couponResult);
-                                $state = is_array($couponResult) ? ($couponResult['state'] ?? 100) : 100;
-                                $msg = is_array($couponResult) ? ($couponResult['msg'] ?? $this->lang("VSubCar.make_order_fail")) : strval($couponResult);
-                                return $this->subCarFailResponse($state, $msg);
-                            }
-                            $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
-                            $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
+                    $this->commitTrans();
+                    if ($hasCouponCode) {
+                        $this->data['coupon_code'] = trim(strval($this->data['coupon_code']));
+                        $couponResult = $this->orderUseCoupon();
+                        if ($couponResult !== true) {
+                            $couponResult = obj2arr($couponResult);
+                            $state = is_array($couponResult) ? ($couponResult['state'] ?? 100) : 100;
+                            $msg = is_array($couponResult) ? ($couponResult['msg'] ?? $this->lang("VSubCar.make_order_fail")) : strval($couponResult);
+                            return $this->subCarFailResponse($state, $msg);
                         }
-                        return $this->r(200, $this->lang("VSubCar.make_order_success"), ['order' => $this->order]);
+                        $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
+                        $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
                     }
+                    $zeroPay = $this->completeZeroPayOrderIfNeeded($order_id, 'subcar_coupon_zero_pay');
+                    if (!($zeroPay['success'] ?? false)) {
+                        return $this->subCarFailResponse(300, $zeroPay['msg'] ?? $this->lang("action_fail"));
+                    }
+                    if ($this->data['pay_type'] == 0 && !($zeroPay['handled'] ?? false)) {
+                        return $this->subCarFailResponse($hasCouponCode ? 100 : 200, $this->lang("VSubCar.pay_type_empty"));
+                    }
+                    $data = $zeroPay['order'] ?? $this->buildOrderPayActionData($this->order);
+                    return $this->r(200, $this->lang("VSubCar.make_order_success"), $data);
                 }
             }
             $this->rollbackTrans();
@@ -1563,6 +1578,109 @@ class ApiClient extends ReceiveBaseClient
         $update['download_progress'] = $this->data['download_progress'];
         $result = $this->updateMachineVersionPlan($update);
         return $this->rU($result);
+    }
+
+    /**
+     * 获取最新一条OTA固件更新计划
+     * @return array|string
+     */
+    public function otaVersionPlan()
+    {
+        $where['m_id'] = $this->machine['m_id'];
+        $where[] = ['publish_time', '<', time()];
+        $result = $this->getOtaVersionPlanFind($where, 'ovp_id,ov_id,version_no,path,`desc`,size,update_time,status', 'ovp_id desc');
+        actionLog($result, '查询OTA固件更新计划');
+        actionLog($this->getLS(), '【SQL】查询OTA固件更新计划');
+        if (!$result) {
+            return $this->rNoData();
+        }
+        if ($result['status'] != 1) return $this->rFail();
+        return $this->rQ($result);
+    }
+
+    /**
+     * 上报OTA固件更新下载进度
+     * @return array|\think\response\Json
+     */
+    public function otaVersionDownload()
+    {
+        $otaVersionPlan = $this->getOtaVersionPlanFind(['ovp_id' => $this->data['ovp_id']]);
+        if (!$otaVersionPlan) {
+            return $this->rFail();
+        }
+        $update['download_progress'] = $this->data['download_progress'];
+        $ota_status = $this->data['ota_status'] ?? 0;
+        if ($ota_status == 1) {
+            $update['status'] = 3;
+            if ($this->data['download_progress'] != 100) {
+                $update['download_progress'] = 100;
+            }
+        }
+        $this->startTrans();
+        try {
+            $flag[] = $this->updateOtaVersionPlan($update, ['ovp_id' => $this->data['ovp_id']]);
+            if ($ota_status == 1 && !empty($this->data['ota_version'])) {
+                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['ota_version']]);
+            }
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result) ? $this->rU($result) : $this->rFail();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 上报OTA固件更新状态
+     * @return array|\think\response\Json
+     */
+    public function otaVersionStatus()
+    {
+        //先查询version_plan表中是否有此条记录  
+        $otaVersionPlan = $this->getOtaVersionPlanFind(['ovp_id' => $this->data['ovp_id']]);
+        if (!$otaVersionPlan) {
+            return $this->rFail();
+        }
+        $statusArr = ["1" =>3, "2" => 4];
+        $ota_status = $this->data['ota_status'] ?? 2;
+        $update['status'] = $statusArr[$ota_status] ?? 2;
+        if ($ota_status == 1) {
+            if ($otaVersionPlan['download_progress'] != 100) {
+                $update['download_progress'] = 100;
+            }
+        }
+        $this->startTrans();
+        try {
+            $flag[] = $this->updateOtaVersionPlan($update,['ovp_id' => $this->data['ovp_id']]);
+            if ($ota_status == 1 && !empty($this->data['ota_version'])) {
+                $flag[] = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $this->data['ota_version']]);
+            }
+            $result = $this->checkFlag($flag);
+            return $this->checkTrans($result) ? $this->rU($result) : $this->rFail();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 上报设备当前OTA固件版本
+     * @return array|string
+     */
+    public function reportOtaVersion()
+    {
+        $otaVersion = $this->data['ota_version'] ?? '';
+        if ($otaVersion === '') {
+            return $this->rFail();
+        }
+        $currentVersion = $this->machine['ota_version'] ?? '';
+        if ($otaVersion === $currentVersion) {
+            return $this->rSuccess();
+        }
+        $result = $this->updateMachine(['m_id' => $this->machine['m_id'], 'ota_version' => $otaVersion]);
+        return $result ? $this->rU($result) : $this->rFail();
     }
 
     /**
@@ -2020,6 +2138,244 @@ class ApiClient extends ReceiveBaseClient
             'machine_id' => $this->machine['machine_id'] ?? 0
         ]);
         return $this->r(200, 'success');
+    }
+
+    /**
+     * 设备 HTTP 上报回收箱商品数量变化。
+     * operate: 1 回收箱添加商品；2 回收箱取出商品；3 回收箱清空
+     * type: 1 出货失败商品回收；2 远程回收；3 货道回收；4 后台退货退款
+     * @return array|string
+     */
+    public function recycleBoxGoodsChange()
+    {
+        try {
+            $operate = intval($this->data['operate'] ?? 0);
+            if (!in_array($operate, [1, 2, 3], true)) {
+                return $this->r(300, '回收箱操作类型错误');
+            }
+            $recycleBoxChangeType = intval($this->data['type'] ?? 0);
+            if (!in_array($recycleBoxChangeType, [1, 2, 3, 4], true)) {
+                return $this->r(300, '回收箱商品变化类型错误');
+            }
+
+            if ($operate === 3) {
+                $goodsChanges = $this->getRecycleBoxCurrentGoodsChanges($recycleBoxChangeType);
+            } else {
+                $goodsChanges = $this->buildRecycleBoxGoodsChangesFromInfo($this->data['goods_info'] ?? []);
+                if (!$goodsChanges) {
+                    return $this->r(300, '商品信息不能为空');
+                }
+            }
+
+            $config = $this->getMachineConfigFind(['m_id' => $this->machine['m_id']], 'recycle_bin_capacity');
+            $totalCapacity = intval($config['recycle_bin_capacity'] ?? 0);
+            if ($totalCapacity < 0) {
+                $totalCapacity = 0;
+            }
+            $currentRemain = intval($this->machine['recycle_box_remain_capacity'] ?? $totalCapacity);
+            if ($currentRemain < 0 || $currentRemain > $totalCapacity) {
+                $currentRemain = $totalCapacity;
+            }
+
+            $changeCount = $this->sumRecycleBoxGoodsChangeQuantity($goodsChanges);
+            if ($operate === 1) {
+                if ($changeCount > $currentRemain) {
+                    return $this->r(300, '回收箱可用容量不足', [
+                        'recycle_box_total_capacity' => $totalCapacity,
+                        'recycle_box_remain_capacity' => $currentRemain,
+                        'change_count' => $changeCount,
+                    ]);
+                }
+                $remainCapacity = max(0, $currentRemain - $changeCount);
+            } elseif ($operate === 2) {
+                $remainCapacity = min($totalCapacity, $currentRemain + $changeCount);
+            } else {
+                $remainCapacity = $totalCapacity;
+            }
+
+            $this->startTrans();
+            $flag = [];
+            $flag[] = $this->updateMachine([
+                'm_id' => $this->machine['m_id'],
+                'recycle_box_total_capacity' => $totalCapacity,
+                'recycle_box_remain_capacity' => $remainCapacity,
+            ]);
+            foreach ($goodsChanges as $goodsChange) {
+                $flag[] = $this->addRecycleBoxGoodsChangeLog(
+                    $goodsChange['g_id'],
+                    $operate,
+                    $recycleBoxChangeType,
+                    $goodsChange['quantity']
+                );
+            }
+            $result = $this->checkFlag($flag);
+            $result ? $this->commitTrans() : $this->rollbackTrans();
+            actionLog([
+                'operate' => $operate,
+                'type' => $recycleBoxChangeType,
+                'goods_changes' => $goodsChanges,
+                'total_capacity' => $totalCapacity,
+                'remain_capacity' => $remainCapacity,
+                'result' => $result,
+            ], 'HTTP回收箱商品数量变化处理结果', 'DataUpload');
+            if (!$result) {
+                return $this->r(300, '回收箱商品变化处理失败');
+            }
+            return $this->r(200, 'success', [
+                'recycle_box_total_capacity' => $totalCapacity,
+                'recycle_box_remain_capacity' => $remainCapacity,
+            ]);
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1, 'recycleBoxGoodsChange');
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    protected function buildRecycleBoxGoodsChangesFromInfo($goodsInfo)
+    {
+        if (is_string($goodsInfo)) {
+            $goodsInfo = json2arr($goodsInfo);
+        }
+        if (!is_array($goodsInfo)) {
+            return [];
+        }
+
+        $result = [];
+        foreach ($goodsInfo as $item) {
+            if (is_string($item)) {
+                $item = json2arr($item);
+            }
+            if (!is_array($item)) {
+                continue;
+            }
+            $gId = intval($item['g_id'] ?? 0);
+            $quantity = intval($item['num'] ?? 0);
+            if ($gId <= 0 || $quantity <= 0) {
+                continue;
+            }
+            if (!isset($result[$gId])) {
+                $result[$gId] = [
+                    'g_id' => $gId,
+                    'quantity' => 0,
+                ];
+            }
+            $result[$gId]['quantity'] += $quantity;
+        }
+        return $result;
+    }
+
+    protected function getRecycleBoxCurrentGoodsChanges($recycleBoxChangeType)
+    {
+        $logs = $this->getGoodsChangeList([
+            'm_id' => $this->machine['m_id'],
+            'position' => 2,
+            'type' => 3,
+            'recycle_box_change_type' => $recycleBoxChangeType,
+        ], 0, 'change_id,g_id,change_value,type,desc', 'change_id asc');
+        if (!$logs) {
+            return [];
+        }
+        $logs = is_object($logs) ? $logs->toArray() : $logs;
+
+        $goodsChanges = [];
+        foreach ($logs as $log) {
+            $gId = intval($log['g_id'] ?? 0);
+            if ($gId <= 0) {
+                continue;
+            }
+            $quantity = intval($log['change_value'] ?? 1);
+            if ($quantity <= 0) {
+                $quantity = 1;
+            }
+            if (!isset($goodsChanges[$gId])) {
+                $goodsChanges[$gId] = [
+                    'g_id' => $gId,
+                    'quantity' => 0,
+                ];
+            }
+            if ($this->isRecycleBoxAddGoodsDesc($log['desc'] ?? '')) {
+                $goodsChanges[$gId]['quantity'] += $quantity;
+            } else {
+                $goodsChanges[$gId]['quantity'] = max(0, $goodsChanges[$gId]['quantity'] - $quantity);
+            }
+        }
+
+        foreach ($goodsChanges as $gId => $goodsChange) {
+            if (intval($goodsChange['quantity']) <= 0) {
+                unset($goodsChanges[$gId]);
+            }
+        }
+        return $goodsChanges;
+    }
+
+    protected function sumRecycleBoxGoodsChangeQuantity($goodsChanges)
+    {
+        $total = 0;
+        foreach ($goodsChanges as $goodsChange) {
+            $total += intval($goodsChange['quantity'] ?? 0);
+        }
+        return $total;
+    }
+
+    protected function addRecycleBoxGoodsChangeLog($gId, $operate, $recycleBoxChangeType, $changeValue = 1)
+    {
+        $goods = $this->getMachineGoodsFind(
+            ['m_id' => $this->machine['m_id'], 'g_id' => $gId],
+            'mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code'
+        );
+        if (!$goods) {
+            $goods = $this->getGoodsFind(
+                ['g_id' => $gId],
+                'g_id,g_name,gc_id,gc_name,pic,sku,bar_code'
+            );
+        }
+        $goods = $goods ? (is_object($goods) ? $goods->toArray() : $goods) : [];
+
+        $descKey = $operate === 2
+            ? 'terminal_recycle_box_remove_goods_' . $recycleBoxChangeType
+            : 'terminal_recycle_box_change_goods_' . $recycleBoxChangeType;
+        if ($operate === 3) {
+            $descKey = 'terminal_recycle_box_clear_goods';
+        }
+
+        $insert = [
+            'm_id' => $this->machine['m_id'],
+            'machine_id' => $this->machine['machine_id'],
+            'machine_name' => $this->machine['machine_name'] ?? '',
+            'mc_id' => 0,
+            'channel_code' => '',
+            'mg_id' => $goods['mg_id'] ?? 0,
+            'g_id' => $gId,
+            'g_name' => $goods['g_name'] ?? '',
+            'gc_id' => $goods['gc_id'] ?? 0,
+            'gc_name' => $goods['gc_name'] ?? '',
+            'pic' => $goods['pic'] ?? '',
+            'sku' => $goods['sku'] ?? '',
+            'bar_code' => $goods['bar_code'] ?? '',
+            'change_value' => intval($changeValue) > 0 ? intval($changeValue) : 1,
+            'ao_id' => $this->machine['ao_id'] ?? 0,
+            'desc' => $this->lang('goodsChange.' . $descKey),
+            'position' => 2,
+            'type' => 3,
+            'recycle_box_change_type' => $recycleBoxChangeType,
+        ];
+        if (isset($this->data['manager_id']) && $this->data['manager_id'] !== '') {
+            $insert['creator'] = intval($this->data['manager_id']);
+        }
+        $changeId = $this->addGoodsChange($insert);
+        actionLog(['change_id' => $changeId, 'data' => $insert], '【SQL】HTTP添加回收箱商品变化日志', 'DataUpload');
+        return $changeId;
+    }
+
+    protected function isRecycleBoxAddGoodsDesc($desc)
+    {
+        for ($type = 1; $type <= 4; $type++) {
+            if ($desc === $this->lang('goodsChange.terminal_recycle_box_change_goods_' . $type)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 /**

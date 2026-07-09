@@ -79,13 +79,18 @@ class ActivityCouponUsedClient extends ManagementClient
         $coupon = $this->getActivityCouponFind(['c_id' => $postData['c_id']], "c_name,code,desc");
         if (!$coupon) return $this->r(100, '查无优惠券信息');
         $list = $this->getActivityCouponUsedList(['c_id' => $postData['c_id']], 0,
-            '("' . $coupon['c_name'] . '") c_name,("' . $coupon['desc'] . '") `desc`,pay_limit,machine_id,machine_name,
+            'pay_limit,machine_id,machine_name,
                 reduction,original_price,discount_price,retail_price,code,trade_no,
                 (CASE c_type WHEN 1 THEN "立减金额" WHEN 2 THEN "优惠折扣" END) c_type,
                 (CASE status WHEN 1 THEN "未使用" WHEN 2 THEN "已使用" WHEN 3 THEN "已过期" WHEN 4 THEN "已作废" END ) status, 
                 FROM_UNIXTIME(used_time,"%Y-%m-%d %H:%i:%s") used_time');
         if ($list) {
             $list = $list->toArray();
+            foreach ($list as &$item) {
+                $item['c_name'] = $coupon['c_name'] ?? '';
+                $item['desc'] = $coupon['desc'] ?? '';
+            }
+            unset($item);
             $title = [
 //                "c_name" => "优惠券名称",
 //                "desc" => "简介",

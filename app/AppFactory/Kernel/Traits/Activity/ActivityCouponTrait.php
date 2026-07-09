@@ -272,7 +272,11 @@ trait ActivityCouponTrait
                 // 区分优惠券类型，1：立减金额，2：优惠折扣，计算优惠值
                 if ($ac['c_type'] == 1) $discount_price = $ac['reduction'];
                 if ($ac['c_type'] == 2) $discount_price = bcmul($this->order['total_price'], bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
-                if ($discount_price <= $this->order['total_price']) {
+                // 优惠金额超过订单总金额时自动封顶，避免零元以下金额
+                if ($discount_price > $this->order['total_price']) {
+                    $discount_price = $this->order['total_price'];
+                }
+                if ($discount_price >= 0.01) {
 //                    $totalPrice = $this->order['total_price'];
                     // 优惠金额作用至订单总金额
                     $this->order['discount_price'] = bcadd($this->order['discount_price'], $discount_price, 2);
@@ -316,7 +320,11 @@ trait ActivityCouponTrait
                         if ($ac['c_type'] == 1) $discount_price = $ac['reduction'];
                         if ($ac['c_type'] == 2) $discount_price = bcmul($value['retail_price'], bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
                         if ($discount_price < 0.01) continue;
-                        if ($value['total_sod_price'] > $discount_price) {
+                        // 优惠金额超过商品总金额时自动封顶，避免零元以下金额
+                        if ($discount_price > $value['total_sod_price']) {
+                            $discount_price = $value['total_sod_price'];
+                        }
+                        if ($discount_price >= 0.01) {
                             $value['discount_price'] = bcadd($value['discount_price'], $discount_price, 4);
                             $totalDiscountPrice = bcmul($discount_price, $value['quantity'], 3);
                             $value['total_sod_price'] = bcsub($value['total_sod_price'], $totalDiscountPrice, 4);

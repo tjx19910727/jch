@@ -600,6 +600,8 @@ class SaleOrdersClient extends ManagementClient
     {
         $field = "";
         $group = "";
+        $order = "create_date asc";
+        $todayEnd = strtotime(date("Y-m-d 23:59:59"));
         // if ($this->manager['pid'] > 0) {
         //     $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         //     if ($mIds) {
@@ -610,18 +612,21 @@ class SaleOrdersClient extends ManagementClient
             $field = "ROUND(SUM(totalPrice - totalRefundAmount),2) totalPrice,SUM(totalQuantity - totalRefundQuantity) totalQuantity,countDate";
             $group = "create_date";
             $where[] = ['create_date', '>=', strtotime("-1 months")];
+            $where[] = ['create_date', '<=', $todayEnd];
         }
         if ($type == 2) {
             $field = "ROUND(sum(totalPrice - totalRefundAmount),2) totalPrice, sum(totalQuantity - totalRefundQuantity) totalQuantity, DATE_FORMAT(countDate,'Week %v,%x') week";
             $group = "week";
             $where[] = ['create_date', '>=', strtotime("-15 week")];
+            $where[] = ['create_date', '<=', $todayEnd];
         }
         if ($type == 3) {
-            $field = "ROUND(sum(totalPrice - totalRefundAmount),2) totalPrice, sum(totalQuantity - totalRefundQuantity) totalQuantity, DATE_FORMAT(countDate,'%x-%m') month";
+            $field = "ROUND(sum(totalPrice - totalRefundAmount),2) totalPrice, sum(totalQuantity - totalRefundQuantity) totalQuantity, DATE_FORMAT(countDate,'%Y-%m') month";
             $group = "month";
             $where[] = ['create_date', '>=', strtotime("-12 month")];
+            $where[] = ['create_date', '<=', $todayEnd];
         }
-        $data = $this->getSaleOrdersDailyCountList($where, 0, $field, '', $group);
+        $data = $this->getSaleOrdersDailyCountList($where, 0, $field, $order, $group);
         return $this->rQ($data);
     }
 
