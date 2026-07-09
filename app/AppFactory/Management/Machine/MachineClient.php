@@ -73,7 +73,7 @@ class MachineClient extends ManagementClient
                 $whereMc = [
                     'm_id' => $machine['m_id'],
                 ];
-                if (isset($postData['recycle_bin_capacity']) && $postData['recycle_bin_capacity']) {
+                if (isset($postData['recycle_bin_capacity']) && $postData['recycle_bin_capacity'] !== '') {
                     $updateMc['recycle_bin_capacity'] = $postData['recycle_bin_capacity'];
                 }
                 if ($updateMc) $this->updateMachineConfig($updateMc,$whereMc);

@@ -11,6 +11,7 @@ namespace app\AppFactory\Pay\SaleOrders;
 
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 use app\AppFactory\Kernel\Support\AuthCode;
+use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityFdUsedTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
@@ -45,6 +46,7 @@ class PaymentClient extends PayBaseClient
         SaleHotelTrait,SaleHotelNightlyTrait;
     use AfterOrderPaymentTrait;
     use MachineMqRecordTrait;
+    use ActivityCouponUsedTrait;
     use ActivityFdUsedTrait;
 
     public $machine;
@@ -191,6 +193,40 @@ class PaymentClient extends PayBaseClient
                 if (!$countIncome) {
                     return $this->rFail($this->revenueError ?: '生成分账订单失败');
                 }
+            } else {
+                // 订单金额为0（如优惠券全额抵扣），免支付直接完成
+                actionLog(['order_id' => $this->order['order_id'], 'total_price' => $this->order['total_price']], '订单金额为0，执行免支付完成');
+                $this->startTrans();
+                try {
+                    $flagSettlement = $this->settlementRevenue();
+                    $flagPayment = $this->paymentSuccessful();
+                    $checkFlag = flag_check([$flagSettlement, $flagPayment]);
+                    actionLog($checkFlag, '免支付订单完成事务处理结果');
+                    $result = $this->checkTrans($checkFlag);
+                    $this->returnData['order'] = $this->order;
+                    $this->returnData['result'] = $result;
+                    return $result;
+                } catch (\Exception $e) {
+                    $this->rollbackTrans();
+                    actionLog($e->getMessage(), '免支付订单处理异常');
+                    return $this->rFail($this->lang("VOrderPay.pay_exception"));
+                }
+            }
+
+            // 优惠后金额小于 0.01 元视为零元订单，跳过第三方支付直接走支付成功流程
+            if (bccomp(strval($this->order['total_price'] ?? 0), '0.01', 2) < 0) {
+                $this->order['total_price'] = '0.00';
+                $this->order['pay_status'] = 3;
+                $this->order['pay_time'] = time();
+                $this->order['pay_type'] = 0;
+                $this->order['pay_method'] = 1;
+                $uOrder = $this->updateSaleOrders($this->order, [], ['pay_code', 'pay_method', 'pay_type', 'sp_id', 'pay_status', 'pay_time']);
+                if ($uOrder) {
+                    actionLog($this->order, '零元订单直接标记支付成功');
+                    $result = $this->paymentSuccessful();
+                    return $this->rSuccess();
+                }
+                return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
             }
 
             $uOrder = $this->updateSaleOrders($this->order,[],['pay_code',"pay_method",'pay_type','sp_id']);
@@ -233,6 +269,10 @@ class PaymentClient extends PayBaseClient
             $this->order = $this->order->toArray();
             if ($this->order['pay_status'] == 3) return $this->rFail($this->lang("VOrderPay.pay_status3"));
             actionLog($this->order, '发起支付订单数据');
+            $this->machine = $this->getMachineFind(['m_id' => $this->order['m_id']]);
+            if (!$this->machine) {
+                return $this->rFail($this->lang("VOrderPay.machine_no_data"));
+            }
             if ($this->order['sp_id']) {
                 if ($this->order['pay_type'] != 5) {
                     $where['sp_id'] = $this->order['sp_id'];
@@ -259,6 +299,9 @@ class PaymentClient extends PayBaseClient
                 if ($this->order['fd_id'] > 0) {
                     $this->delActivityFdUsed(['order_id' => $this->order['order_id']]);
                 }
+                if (!$this->clearCancelPayCouponInfo()) {
+                    return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
+                }
                 $uOrder = $this->updateSaleOrders($this->order, [], ['pay_status']);
                 if ($uOrder && $this->order['pay_type'] != 5) {
                     $this->cancelPendingRevenueOrders();
@@ -274,12 +317,81 @@ class PaymentClient extends PayBaseClient
                 }
                 return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
             }
+            if (!$this->clearCancelPayCouponInfo()) {
+                return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
+            }
             $this->cancelPendingRevenueOrders();
             return $this->rSuccess();
         } catch (\Exception $e) {
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    /**
+     * 取消支付时回滚普通优惠券绑定和订单金额，分账优惠券快照由 cancelPendingRevenueOrders() 清理。
+     */
+    protected function clearCancelPayCouponInfo()
+    {
+        if (empty($this->order['coupon_id']) && floatval($this->order['discount_price'] ?? 0) <= 0) {
+            return true;
+        }
+
+        $orderId = intval($this->order['order_id']);
+        $used = $this->getActivityCouponUsedFind(['order_id' => $orderId], 'cu_id,c_id,code_type,original_price');
+        if ($used && is_object($used) && method_exists($used, 'toArray')) {
+            $used = $used->toArray();
+        }
+        $originalPrice = $used && floatval($used['original_price'] ?? 0) > 0
+            ? $used['original_price']
+            : (floatval($this->order['retail_price'] ?? 0) > 0
+                ? $this->order['retail_price']
+                : bcadd($this->order['total_price'], $this->order['discount_price'], 3));
+
+        $flag = [];
+        $details = $this->getSaleOrdersDetailsList(['order_id' => $orderId], 0, 'sod_id,total_sod_price,discount_price');
+        if ($details && is_object($details) && method_exists($details, 'toArray')) {
+            $details = $details->toArray();
+        }
+        if ($details) {
+            foreach ($details as $detail) {
+                $discountPrice = strval($detail['discount_price'] ?? 0);
+                if (bccomp($discountPrice, '0', 4) <= 0) continue;
+                $flag[] = $this->updateSaleOrdersDetails([
+                    'sod_id' => $detail['sod_id'],
+                    'total_sod_price' => bcadd(strval($detail['total_sod_price'] ?? 0), $discountPrice, 4),
+                    'discount_price' => 0,
+                ]);
+            }
+        }
+
+        $flag[] = $this->updateSaleOrders([
+            'order_id' => $orderId,
+            'coupon_id' => 0,
+            'discount_price' => 0,
+            'total_price' => $originalPrice,
+            'update_time' => time(),
+        ]);
+
+        if ($used) {
+            $flag[] = $this->updateActivityCouponUsed([
+                'cu_id' => $used['cu_id'],
+                'status' => intval($used['code_type']) == 1 ? 1 : 4,
+                'order_id' => null,
+                'trade_no' => '',
+                'm_id' => 0,
+                'machine_id' => '',
+                'machine_name' => '',
+                'original_price' => 0,
+                'discount_price' => 0,
+                'retail_price' => 0,
+            ]);
+        }
+
+        $this->order['coupon_id'] = 0;
+        $this->order['discount_price'] = 0;
+        $this->order['total_price'] = $originalPrice;
+        return $this->checkFlag($flag);
     }
 
     /**

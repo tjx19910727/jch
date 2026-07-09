@@ -803,6 +803,20 @@ class Receive extends Common
     }
 
     /**
+     * 上报回收箱商品数量变化
+     * @return array|\think\response\Json
+     */
+    public function recycleBoxGoodsChange()
+    {
+        try {
+            return $this->app->api->recycleBoxGoodsChange();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * HTTP心跳上报
      * @return array|string
      */
@@ -1395,6 +1409,7 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+    
     /**
      * 获取设备应用配置(type=1)
      * @return array|string
@@ -1408,4 +1423,61 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
+    
+    /**
+     * 获取最新一条OTA固件更新信息
+     * @return array|string
+     */
+    public function getOtaVersionPlan()
+    {
+        try {
+            return $this->app->api->otaVersionPlan();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 上报OTA固件更新下载进度
+     * @return array|\think\response\Json
+     */
+    public function reportOtaVersionDownload()
+    {
+        try {
+            return $this->app->api->otaVersionDownload();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 上报OTA固件更新状态
+     * @return array|\think\response\Json
+     */
+    public function reportOtaVersionStatus()
+    {
+        try {
+            return $this->app->api->otaVersionStatus();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 上报OTA固件版本
+     * @return array|\think\response\Json
+     */
+    public function reportOtaVersion()
+    {
+        try {
+            return $this->app->api->reportOtaVersion();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }  
 }
+

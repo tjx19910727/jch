@@ -63,15 +63,4 @@ class AuthManagerRole extends Common
         return $result;
     }
 
-    /**
-     * 批量设置某个角色的账号，manager_ids 为该角色最终账号集合。
-     */
-    public function setRoleManagers()
-    {
-        $postData = input();
-        try { $this->validate($postData, $this->validatePath . 'AuthManagerRoleBatchSet'); }
-        catch (\Exception $e) { return returnValidate($e->getMessage()); }
-        if (!array_key_exists('manager_ids', $postData)) return returnValidate("账号ID列表必须显式传递");
-        return $this->app->authManagerRole->setRoleManagers($postData);
-    }
 }

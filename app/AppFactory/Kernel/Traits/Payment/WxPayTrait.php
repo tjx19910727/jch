@@ -261,7 +261,9 @@ trait WxPayTrait
         if ($init !== true) return $init;
         $result = $this->wpApp->order->close($this->order['trade_no']);
         actionLog($result, '微信支付关闭订单结果');
-        if (isset($result['return_code']) && $result['return_code'] == 'success') {
+        $returnCode = strtoupper(strval($result['return_code'] ?? ''));
+        $resultCode = strtoupper(strval($result['result_code'] ?? ''));
+        if ($returnCode == 'SUCCESS' && ($resultCode == '' || $resultCode == 'SUCCESS')) {
             return $this->r(200, $this->lang("cancel_payment_success"));
         }
         $msg = '';
