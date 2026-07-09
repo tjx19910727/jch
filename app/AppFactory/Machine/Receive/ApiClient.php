@@ -2025,7 +2025,7 @@ class ApiClient extends ReceiveBaseClient
     /**
      * 设备 HTTP 上报回收箱商品数量变化。
      * operate: 1 回收箱添加商品；2 回收箱取出商品；3 回收箱清空
-     * type: 1 出货失败商品回收；2 远程回收；3 货道回收；4 后台退货退款
+     * type: 1 出货失败商品回收；2 远程回收；3 货道回收；4 超预取货失败
      * @return array|string
      */
     public function recycleBoxGoodsChange()
@@ -2038,6 +2038,10 @@ class ApiClient extends ReceiveBaseClient
             $recycleBoxChangeType = intval($this->data['type'] ?? 0);
             if (!in_array($recycleBoxChangeType, [1, 2, 3, 4], true)) {
                 return $this->r(300, '回收箱商品变化类型错误');
+            }
+            $machineChannel = $this->getRecycleBoxStockMachineChannel($operate, $recycleBoxChangeType);
+            if ($machineChannel === false) {
+                return $this->r(300, 'machine_channel不能为空');
             }
 
             if ($operate === 3) {
@@ -2082,12 +2086,16 @@ class ApiClient extends ReceiveBaseClient
                 'recycle_box_total_capacity' => $totalCapacity,
                 'recycle_box_remain_capacity' => $remainCapacity,
             ]);
+            if ($operate === 1 && in_array($recycleBoxChangeType, [1, 4], true)) {
+                $flag[] = $this->deductMachineChannelStockAndSendUpdateMq($machineChannel, $changeCount, 'recycleBoxGoodsChange');
+            }
             foreach ($goodsChanges as $goodsChange) {
                 $flag[] = $this->addRecycleBoxGoodsChangeLog(
                     $goodsChange['g_id'],
                     $operate,
                     $recycleBoxChangeType,
-                    $goodsChange['quantity']
+                    $goodsChange['quantity'],
+                    $machineChannel
                 );
             }
             $result = $this->checkFlag($flag);
@@ -2112,6 +2120,29 @@ class ApiClient extends ReceiveBaseClient
             actionException($e, 1, 'recycleBoxGoodsChange');
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    protected function getRecycleBoxStockMachineChannel($operate, $recycleBoxChangeType)
+    {
+        if (intval($operate) !== 1 || !in_array(intval($recycleBoxChangeType), [1, 4], true)) {
+            return [];
+        }
+
+        $machineChannelCode = trim(strval($this->data['machine_channel'] ?? ''));
+        if ($machineChannelCode === '') {
+            return false;
+        }
+
+        $field = 'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code';
+        $machineChannel = $this->getMachineChannelFind([
+            'm_id' => $this->machine['m_id'],
+            'channel_code' => $machineChannelCode,
+        ], $field);
+        if ($machineChannel) {
+            return is_object($machineChannel) ? $machineChannel->toArray() : $machineChannel;
+        }
+
+        return false;
     }
 
     protected function buildRecycleBoxGoodsChangesFromInfo($goodsInfo)
@@ -2200,7 +2231,7 @@ class ApiClient extends ReceiveBaseClient
         return $total;
     }
 
-    protected function addRecycleBoxGoodsChangeLog($gId, $operate, $recycleBoxChangeType, $changeValue = 1)
+    protected function addRecycleBoxGoodsChangeLog($gId, $operate, $recycleBoxChangeType, $changeValue = 1, $machineChannel = [])
     {
         $goods = $this->getMachineGoodsFind(
             ['m_id' => $this->machine['m_id'], 'g_id' => $gId],
@@ -2213,6 +2244,11 @@ class ApiClient extends ReceiveBaseClient
             );
         }
         $goods = $goods ? (is_object($goods) ? $goods->toArray() : $goods) : [];
+        if ($machineChannel && intval($machineChannel['g_id'] ?? 0) === intval($gId)) {
+            $goods = array_merge($goods, array_filter($machineChannel, function ($value) {
+                return $value !== null && $value !== '';
+            }));
+        }
 
         $descKey = $operate === 2
             ? 'terminal_recycle_box_remove_goods_' . $recycleBoxChangeType
@@ -2225,8 +2261,8 @@ class ApiClient extends ReceiveBaseClient
             'm_id' => $this->machine['m_id'],
             'machine_id' => $this->machine['machine_id'],
             'machine_name' => $this->machine['machine_name'] ?? '',
-            'mc_id' => 0,
-            'channel_code' => '',
+            'mc_id' => intval($machineChannel['mc_id'] ?? 0),
+            'channel_code' => $machineChannel['channel_code'] ?? '',
             'mg_id' => $goods['mg_id'] ?? 0,
             'g_id' => $gId,
             'g_name' => $goods['g_name'] ?? '',

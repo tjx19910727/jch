@@ -200,12 +200,12 @@ return [
         "terminal_recycle_box_change_goods_1" => "Recycle bin goods off-shelf - Failed shipment recycle",
         "terminal_recycle_box_change_goods_2" => "Recycle bin goods off-shelf - Remote recycle",
         "terminal_recycle_box_change_goods_3" => "Recycle bin goods off-shelf - Channel recycle",
-        "terminal_recycle_box_change_goods_4" => "Recycle bin goods off-shelf - Backstage return refund",
+        "terminal_recycle_box_change_goods_4" => "Recycle bin goods off-shelf - Over-reserved pickup failure",
         "terminal_recycle_box_remove_goods" => "Terminal recycle bin - Remove goods",
         "terminal_recycle_box_remove_goods_1" => "Recycle bin goods removed - Failed shipment recycle",
         "terminal_recycle_box_remove_goods_2" => "Recycle bin goods removed - Remote recycle",
         "terminal_recycle_box_remove_goods_3" => "Recycle bin goods removed - Channel recycle",
-        "terminal_recycle_box_remove_goods_4" => "Recycle bin goods removed - Backstage return refund",
+        "terminal_recycle_box_remove_goods_4" => "Recycle bin goods removed - Over-reserved pickup failure",
         "terminal_recycle_box_clear_goods" => "Terminal recycle bin - Clear goods",
 
         // CheckClient.php
