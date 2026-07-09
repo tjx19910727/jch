@@ -12,20 +12,18 @@ namespace app\AppFactory\Management\Auth;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleTrait;
-use app\AppFactory\Kernel\Traits\Auth\AuthRoleTemplateTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class AuthRoleClient extends ManagementClient
 {
     use AuthRoleTrait,AuthOrganizationRoleTrait;
     use AuthRoleNodeTrait;
-    use AuthRoleTemplateTrait;
 
     public function add($postData, $rA = 1)
     {
         $this->startTrans();
         try {
-            $this->assertRoleTemplateAssociation(0, intval($postData['template_id'] ?? 0), intval($postData['ao_id'] ?? 0));
+            unset($postData['template_id']);
             $roleId = $this->addAuthRole($postData);
             $this->commitTrans();
             return $rA ? $this->rA($roleId) : $roleId;
@@ -40,10 +38,7 @@ class AuthRoleClient extends ManagementClient
     {
         $this->startTrans();
         try {
-            $this->assertRoleTemplateAssociation(
-                intval($postData['role_id'] ?? 0),
-                intval($postData['template_id'] ?? 0)
-            );
+            unset($postData['template_id']);
             $result = $this->updateAuthRole($postData, $where, $field);
             $this->commitTrans();
             return $rU ? $this->rU($result) : $result;

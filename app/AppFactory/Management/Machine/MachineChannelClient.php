@@ -1425,6 +1425,7 @@ class MachineChannelClient extends ManagementClient
             [
                 'mc_id' => intval($mc['mc_id']),
                 'channel_code' => $mc['channel_code'],
+                'manager_id' => $this->manager['manager_id'],
             ]
         );
 

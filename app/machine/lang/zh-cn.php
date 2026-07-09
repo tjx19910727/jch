@@ -67,6 +67,7 @@ return [
         "details_require" => "订单详情不能为空",
 
         "mvp_id_require" => "版本更新记录ID不能为空",
+        "ovp_id_require" => "OTA固件更新记录ID不能为空",
         "download_progress_require" => "下载进度不能为空",
 
     ],
