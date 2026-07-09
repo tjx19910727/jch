@@ -2275,32 +2275,3 @@ CREATE TABLE `revenue_rule_config_scope` (
   KEY `idx_goods_status` (`g_id`,`mg_id`,`status`),
   KEY `idx_config_status` (`rrcfg_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COMMENT='统一分账配置生效范围表';
-
-CREATE TABLE `channel_goods_batch` (
-  `batch_id`              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '批次主键',
-  `mc_id`                 INT UNSIGNED NOT NULL COMMENT '关联 machine_channel.mc_id',
-  `g_id`                  INT UNSIGNED NOT NULL COMMENT '商品ID',
-  `sequence`              INT UNSIGNED NOT NULL DEFAULT 1 COMMENT '排列顺序，越小越靠前',
-  `stock`                 INT NOT NULL DEFAULT 0 COMMENT '剩余库存',
-  `frozen_stock`          INT NOT NULL DEFAULT 0 COMMENT '冻结库存(下单未出货)',
-  `sold_quantity`         INT NOT NULL DEFAULT 0 COMMENT '已售数量',
-  `retail_price`          DECIMAL(10,2) NOT NULL DEFAULT 0 COMMENT '零售价',
-  `gift_points`           DECIMAL(10,3) NOT NULL DEFAULT 0 COMMENT '赠送积分',
-  `batch_number`          VARCHAR(64) DEFAULT NULL COMMENT '生产批号',
-  `manufacture_time`      INT DEFAULT 0 COMMENT '生产时间',
-  `expire_time`           BIGINT DEFAULT 0 COMMENT '过期时间',
-  `sell_by_date`          INT DEFAULT 0 COMMENT '保质期，天数',
-  `status`                TINYINT NOT NULL DEFAULT 2 COMMENT '1售卖中 2等待 3结束 4取消',
-  `replenishment_record_no` VARCHAR(64) NOT NULL DEFAULT '' COMMENT '补货单号',
-  `create_time`           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time`           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`batch_id`),
-  KEY `idx_mc_sequence` (`mc_id`, `sequence`),
-  KEY `idx_mc_goods_status` (`mc_id`, `g_id`, `status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='货道商品批次队列表';
-
-ALTER TABLE `machine_channel`
-ADD COLUMN `is_multi_goods` TINYINT(1) NOT NULL DEFAULT 2 COMMENT '是否开启多商品 1开2关' AFTER `update_time`;
-
-ALTER TABLE `sale_orders_details`
-ADD COLUMN `batch_id` BIGINT UNSIGNED DEFAULT 0 COMMENT '批次ID';
