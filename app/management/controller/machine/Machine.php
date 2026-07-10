@@ -503,10 +503,13 @@ class Machine extends Common
             $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             $lightArr = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             if (isset($postData['msgType']) && is_int($postData['msgType'])) {
-                $typeList = [1 => "sleep", 2 => "wakeUp",3 => "machineCkcOnOff"];
+                $typeList = [1 => "sleep", 2 => "wakeUp",3 => "machineCkcOnOff",5 =>"shutdown"];
                 $postData['msgType'] = $typeList[$postData['msgType']];
             }
             $postData['machine_id'] = explode(',',$postData['machine_id']);
+            if ($postData['msgType'] === 'shutdown' && count($postData['machine_id']) > 10) {
+                return returnValidate('批量关机一次最多只能选择10台机器');
+            }
             $result = $this->app->machine->sendToArrMachine($postData, $postData['msgType'], $otherData);
             if(!$result) $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
             if($postData['msgType'] == 'sleep') $lightArr = ['value' => 0];
