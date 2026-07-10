@@ -137,7 +137,7 @@ class AdvertisementPush extends Common
      * is_advertised：1=投放过广告，2=未投放过广告；不传或传空不筛选
      * @return mixed
      */
-    public function getZeroAdvertisementMachineList()
+    public function getZeroAdvMachine()
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
