@@ -721,6 +721,21 @@ class Machine extends Common
     {
         $postData = input();
         $type = $postData['type'] ?? 1;
+        $ignoreFilterKeys = ['page', 'pageNum', 'version_sort', 'stock_ratio', 'sort_name', 'sort_order', 'type'];
+        $hasMachineFilter = false;
+        foreach ($postData as $key => $value) {
+            if (in_array($key, $ignoreFilterKeys)) {
+                continue;
+            }
+            if ($value !== '' && $value !== null) {
+                $hasMachineFilter = true;
+                break;
+            }
+        }
+        if (!$hasMachineFilter) {
+            $where = $this->getWhere([]);
+            return $this->app->saleOrders->getChartData($where, $type);
+        }
 
         $machineIds = [];
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
@@ -775,6 +790,8 @@ class Machine extends Common
         }
         if (empty($mIds)) return $this->app->saleOrders->rNoData();
 
-        return $this->app->saleOrders->getChartData(['m_id' => $mIds], $type);
+        $chartWhere = $this->getWhere([]);
+        $chartWhere[] = ['m_id', 'in', $mIds];
+        return $this->app->saleOrders->getChartData($chartWhere, $type);
     }
 }
