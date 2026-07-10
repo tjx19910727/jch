@@ -10,6 +10,7 @@ namespace app\AppFactory\Management\Advertisement;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Traits\Advertisement\AdvertisementPushTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Resource\ResourceTrait;
@@ -27,6 +28,32 @@ class AdvertisementPushClient extends ManagementClient
     public function getGroupList($where,$pageNum = 0,$field = "*", $group = "", $order = "")
     {
         $data = $this->getAdvertisementPushGroupList($where,$pageNum,$field,$group,$order);
+        return $this->rQ($data);
+    }
+
+    /**
+     * 获取当前有效广告数为0的在营设备列表
+     *
+     * @param array $where
+     * @param int $pageNum
+     * @param int|string $isAdvertised 1=投放过，2=未投放过
+     * @return mixed
+     */
+    public function getZeroAdvertisementMachineList($where, $pageNum = 0, $isAdvertised = '')
+    {
+        $advertisedCondition = "EXISTS(SELECT 1 FROM advertisement_push ap_history WHERE ap_history.m_id = a.m_id AND ap_history.push_type = 1)";
+        $playableCondition = "ap.status < 3 AND ap.start_date <= UNIX_TIMESTAMP() AND (ap.end_date > UNIX_TIMESTAMP(CURDATE()) OR (ap.end_date = UNIX_TIMESTAMP(CURDATE()) AND ap.end_time >= HOUR(CURTIME())*3600 + MINUTE(CURTIME())*60 + SECOND(CURTIME())))";
+        $zeroAdvertisementCondition = "NOT EXISTS(SELECT 1 FROM advertisement_push ap WHERE ap.m_id = a.m_id AND ap.push_type = 1 AND {$playableCondition})";
+
+        if ((string)$isAdvertised === '1') {
+            $zeroAdvertisementCondition .= " AND {$advertisedCondition}";
+        } elseif ((string)$isAdvertised === '2') {
+            $zeroAdvertisementCondition .= " AND NOT {$advertisedCondition}";
+        }
+
+        $where['raw'] = $zeroAdvertisementCondition;
+        $field = "a.m_id,a.machine_name,a.machine_id,CASE WHEN {$advertisedCondition} THEN 1 ELSE 2 END is_advertised";
+        $data = MachineModel::getList($where, $pageNum, $field, 'a.m_id desc');
         return $this->rQ($data);
     }
 
