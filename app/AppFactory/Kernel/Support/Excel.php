@@ -221,6 +221,18 @@ class Excel
                 $objActSheet->getRowDimension((int)$rowNumber)->setRowHeight((float)$height);
             }
         }
+        if (!empty($otherData['boldRows']) && is_array($otherData['boldRows'])) {
+            foreach ($otherData['boldRows'] as $rowNumber) {
+                $objActSheet->getStyle('A' . (int)$rowNumber . ':' . $lastColumn . (int)$rowNumber)
+                    ->getFont()->setBold(true);
+            }
+        }
+        if (!empty($otherData['fontSizeRows']) && is_array($otherData['fontSizeRows'])) {
+            foreach ($otherData['fontSizeRows'] as $rowNumber => $fontSize) {
+                $objActSheet->getStyle('A' . (int)$rowNumber . ':' . $lastColumn . (int)$rowNumber)
+                    ->getFont()->setSize((float)$fontSize);
+            }
+        }
         $savePath = "/export/excel/" . date("Ymd");
         $path = root_path() . "public" . $savePath;
         if (!is_dir($path)) {

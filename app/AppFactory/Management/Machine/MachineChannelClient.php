@@ -1218,6 +1218,7 @@ class MachineChannelClient extends ManagementClient
         $title = $buildHeaderRow($firstGroup);
         $list = [];
         $rowHeights = [4 => 25];
+        $headerRows = [4];
         $excelRow = 5;
         $fields = [
             ['商品图片', 'pic'],
@@ -1241,6 +1242,7 @@ class MachineChannelClient extends ManagementClient
             $list[] = array_fill_keys($columnKeys, '');
             $rowHeights[$excelRow++] = 12;
             $list[] = $buildHeaderRow($channelsInGroup);
+            $headerRows[] = $excelRow;
             $rowHeights[$excelRow++] = 25;
             $appendGroupData($channelsInGroup);
         }
@@ -1258,10 +1260,12 @@ class MachineChannelClient extends ManagementClient
             'imageFields' => $imageFields,
             'imageWidth' => 120,
             'imageHeight' => 100,
-            'columnWidth' => 32,
+            'columnWidth' => 24,
             'wrapText' => true,
             'vertical' => 'center',
             'rowHeights' => $rowHeights,
+            'boldRows' => $headerRows,
+            'fontSizeRows' => array_fill_keys($headerRows, 13),
         ]);
     }
 
