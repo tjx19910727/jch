@@ -7,6 +7,11 @@ return [
             'shelf_on_require' => 'Whether to list cannot be empty',
             'pageNum_require' => 'The number of page data entries cannot be empty',
         ],
+    'VRobot' =>
+        [
+            'machine_id_require' => 'The machine number cannot be empty',
+            'status_require' => 'The status cannot be empty',
+        ],
     'msg' =>
         [
             0 => 'success',

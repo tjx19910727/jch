@@ -14,6 +14,10 @@ return [
         "pageNum_require" => "页面数据条数不能为空",
 
     ],
+    "VRobot" => [
+        "machine_id_require" => "机器编号不能为空",
+        "status_require" => "状态不能为空",
+    ],
     "msg" => [
         0 => "成功",
         1 => "无效IP地址",
