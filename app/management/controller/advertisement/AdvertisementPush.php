@@ -130,4 +130,26 @@ class AdvertisementPush extends Common
         $adv_ids = input("adv_id");
         return $this->app->advertisementPush->triggerUpdate([['adv_id','in',$adv_ids]]);
     }
+
+    /**
+     * 获取当前未投放有效广告的在营设备列表
+     *
+     * is_advertised：1=投放过广告，2=未投放过广告；不传或传空不筛选
+     * @return mixed
+     */
+    public function getZeroAdvertisementMachineList()
+    {
+        $postData = input();
+        $pageNum = $postData['pageNum'] ?? 0;
+        $isAdvertised = $postData['is_advertised'] ?? '';
+        unset($postData['is_advertised']);
+        $where = $this->getWhere($postData);
+
+        $where['is_operating'] = 1;
+        return $this->app->advertisementPush->getZeroAdvertisementMachineList(
+            $where,
+            $pageNum,
+            $isAdvertised
+        );
+    }
 }
