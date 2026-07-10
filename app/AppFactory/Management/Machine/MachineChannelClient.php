@@ -1258,7 +1258,7 @@ class MachineChannelClient extends ManagementClient
             'imageFields' => $imageFields,
             'imageWidth' => 120,
             'imageHeight' => 100,
-            'columnWidth' => 48,
+            'columnWidth' => 32,
             'wrapText' => true,
             'vertical' => 'center',
             'rowHeights' => $rowHeights,
