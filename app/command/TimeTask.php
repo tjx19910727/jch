@@ -32,6 +32,7 @@ class TimeTask extends Command
      * php /home/wwwroot/kiosk/think time_task machine checkOffline             检查设备最后心跳时间判断在线离线，每隔1分钟执行一次定时任务，判断30秒内未更新心跳的为离线
      * php /home/wwwroot/kiosk/think time_task machine checkOnOff               检查当天设置定时开关机设备是否正常执行，若不正常则重发临时断电开关机任务做执行
      * php /home/wwwroot/kiosk/think time_task machine checkOperatingStartup    每隔5分钟检查运营中设备是否超过开机时间5分钟仍未开机，并发送异常提醒（每日每机一次）
+     * php /home/wwwroot/kiosk/think time_task machine checkOperatingShutdown   每隔15分钟检查设备超过关机时间30分钟后是否仍未关机，并发送异常提醒（每日每机一次）
      * php /home/wwwroot/kiosk/think time_task machine syncSimCardDayUsage     每天凌晨2点同步物联卡每日使用流量（查询3天前数据并更新sim_card_machine表）
      * php /home/wwwroot/kiosk/think time_task export clearExcel                清除超过3天的Excel，每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task coupon clearCouponUsed           清除已过期或已作废未使用的优惠券码，每天定时任务运行一次
@@ -50,6 +51,7 @@ class TimeTask extends Command
      *          checkOnOff                  检查设备定时开关机是否正常
     *          updateSimCardUsage          每天0点同步物联卡基础信息并统计流量
      *          checkOperatingStartup       检查设备是否超时未开机并发送提醒
+     *          checkOperatingShutdown      检查设备是否超时未关机并发送提醒
      *          syncSimCardDayUsage         每天凌晨2点同步物联卡每日使用流量
      *      machineChannelStock
      *          countMcStock                统计库存报表，已废弃，使用实时获取
