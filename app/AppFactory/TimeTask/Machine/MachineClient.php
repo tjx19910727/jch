@@ -967,4 +967,164 @@ class MachineClient extends TimeTaskBase
 
         return "处理成功，总数:" . count($machineInfoList) . "，成功:" . $success . "，失败:" . $fail . "，更新:" . $updateCount . "，跳过:" . $skipCount;
     }
+
+    /**
+     * 定时任务-建议每15分钟执行一次，检查设备超过关机时间30分钟后是否仍未关机。
+     * 命令示例：php think time_task machine checkOperatingShutdown
+     *
+     * @return string
+     */
+    public function checkOperatingShutdown()
+    {
+        try {
+            $now = time();
+            $today = strtotime(date('Y-m-d', $now));
+            $todayEnd = $today + 86399;
+            $ttl = $todayEnd - $now;
+
+            $list = Db::name('machine')->alias('m')
+                ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left')
+                ->where('m.is_operating', 1)
+                ->where(function ($query) {
+                    $query->where('m.online', 1)->whereOr('m.http_online', 1);
+                })
+                ->whereNotNull('moo.on_off_machine')
+                ->where('moo.on_off_machine', '<>', '')
+                ->where('moo.on_off_machine', '<>', '{}')
+                ->where('moo.status', 1)
+                ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.ao_id,moo.on_off_machine')
+                ->order('m.m_id desc')
+                ->select()
+                ->toArray();
+
+            if (!$list) {
+                return '无设备需要检查';
+            }
+
+            $flag = [];
+            foreach ($list as $item) {
+                $onOffMachine = $item['on_off_machine'];
+                if (is_string($onOffMachine)) {
+                    $onOffMachine = json_decode($onOffMachine, true);
+                }
+                if (!is_array($onOffMachine)) {
+                    continue;
+                }
+
+                $yesterday = strtotime('-1 day', $today);
+                $todayWeekKey = (string)(intval(date('N', $today)) - 1);
+                $yesterdayWeekKey = (string)(intval(date('N', $yesterday)) - 1);
+                $nowSec = $now - $today;
+                $lateShutdownSec = 23 * 3600 + 30 * 60;
+
+                // on_off_machine 下标：0=周一，1=周二，...，6=周日；没有下标表示当天未配置。
+                $parseOnOff = function ($weekKey) use ($onOffMachine) {
+                    if (!array_key_exists($weekKey, $onOffMachine)) {
+                        return null;
+                    }
+
+                    $onOffTime = explode(',', strval($onOffMachine[$weekKey]));
+                    $shutdownTime = trim($onOffTime[0] ?? '');
+                    $startupTime = trim($onOffTime[1] ?? '');
+                    if (
+                        $shutdownTime === '' || $startupTime === '' ||
+                        strtolower($shutdownTime) === 'null' || strtolower($startupTime) === 'null' ||
+                        strtotime($shutdownTime) === false || strtotime($startupTime) === false
+                    ) {
+                        return null;
+                    }
+
+                    $shutdownSec = HourMinuteSec2int($shutdownTime);
+                    $startupSec = HourMinuteSec2int($startupTime);
+                    return [
+                        'shutdown_sec' => $shutdownSec,
+                        'startup_sec' => $startupSec,
+                        'is_cross_day' => $shutdownSec <= $startupSec,
+                    ];
+                };
+
+                $todayOnOff = $parseOnOff($todayWeekKey);
+                $yesterdayOnOff = $parseOnOff($yesterdayWeekKey);
+
+                // 当前仍在昨天的跨天营业尾段，或者已进入今天营业时间，设备在线属于正常状态。
+                $isInBusinessWindow = false;
+                if (
+                    $yesterdayOnOff && $yesterdayOnOff['is_cross_day'] &&
+                    $nowSec <= $yesterdayOnOff['shutdown_sec']
+                ) {
+                    $isInBusinessWindow = true;
+                }
+                if ($todayOnOff && $nowSec >= $todayOnOff['startup_sec']) {
+                    if ($todayOnOff['is_cross_day'] || $nowSec <= $todayOnOff['shutdown_sec']) {
+                        $isInBusinessWindow = true;
+                    }
+                }
+                if ($isInBusinessWindow) {
+                    continue;
+                }
+
+                $shutdownTimestamp = 0;
+                $beforeTodayStartup = !$todayOnOff || $nowSec < $todayOnOff['startup_sec'];
+
+                // 昨天跨天关机，或昨天23:30后普通关机，其30分钟提醒点发生在今天。
+                if ($yesterdayOnOff && $beforeTodayStartup) {
+                    if ($yesterdayOnOff['is_cross_day']) {
+                        $shutdownTimestamp = $today + $yesterdayOnOff['shutdown_sec'];
+                    } elseif ($yesterdayOnOff['shutdown_sec'] >= $lateShutdownSec) {
+                        $shutdownTimestamp = $yesterday + $yesterdayOnOff['shutdown_sec'];
+                    }
+                }
+
+                // 今天只处理提醒点仍在今天的普通关机；跨天及23:30后关机留到明天处理。
+                if (
+                    $todayOnOff && !$todayOnOff['is_cross_day'] &&
+                    $todayOnOff['shutdown_sec'] < $lateShutdownSec &&
+                    $nowSec > $todayOnOff['shutdown_sec']
+                ) {
+                    $shutdownTimestamp = $today + $todayOnOff['shutdown_sec'];
+                }
+
+                if (!$shutdownTimestamp || $now <= $shutdownTimestamp + 1800) {
+                    continue;
+                }
+
+                $sentCacheKey = 'machine_shutdown_exception_sent:' . $item['m_id'] . ':' . date('Ymd', $shutdownTimestamp);
+                if (Cache::get($sentCacheKey)) {
+                    continue;
+                }
+
+                $item['errorCode'] = '设备未关机提醒';
+                $item['date'] = date('Y年m月d日', $shutdownTimestamp);
+                $item['exceptionDeclaration'] = '设备未关机提醒';
+                $item['error_code'] = '设备未关机提醒';
+                $item['error_time'] = date('Y-m-d H:i:s');
+                $item['error_info'] = 12202011;
+                $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
+
+                $this->noticeSendData = [
+                    'ao_id' => $item['ao_id'],
+                    'm_id' => $item['m_id'],
+                    'templateType' => 'mFault',
+                    'replaceData' => $item,
+                ];
+
+                $flag[] = $this->noticeSend();
+                Cache::set($sentCacheKey, 1, $ttl > 0 ? $ttl : 60);
+                actionLog([
+                    'm_id' => $item['m_id'],
+                    'machine_id' => $item['machine_id'],
+                    'shutdown_time' => date('Y-m-d H:i:s', $shutdownTimestamp),
+                    'online' => $item['online'],
+                    'http_online' => $item['http_online'],
+                ], '发送设备未关机提醒', 'checkOperatingShutdown');
+            }
+
+            actionLog($flag, '处理设备未关机提醒结果', 'checkOperatingShutdown');
+        } catch (\Throwable $e) {
+            actionException($e, 1, 'checkOperatingShutdown');
+            return '处理异常';
+        }
+
+        return '处理成功';
+    }
 }
