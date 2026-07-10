@@ -11,12 +11,41 @@ namespace app\AppFactory\TimeTask\Export;
 
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Export\ExportLogTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\OrderTypeTrait;
 use app\AppFactory\TimeTask\TimeTaskBase;
 use think\facade\Db;
 
 class ExportClient extends TimeTaskBase
 {
     use ExportLogTrait;
+    use OrderTypeTrait;
+
+    protected function buildSqlCaseByMap($column, $map, $defaultPrefix)
+    {
+        if (!is_array($map) || !$map) {
+            return "IFNULL(CONCAT('" . str_replace("'", "''", $defaultPrefix) . "',{$column}), '')";
+        }
+
+        $cases = [];
+        foreach ($map as $value => $label) {
+            $cases[] = "WHEN " . intval($value) . " THEN '" . str_replace("'", "''", $label) . "'";
+        }
+        return "(CASE {$column} " . implode(' ', $cases) . " ELSE CONCAT('" . str_replace("'", "''", $defaultPrefix) . "',{$column}) END)";
+    }
+
+    protected function buildOrderTypeCaseSql($column)
+    {
+        $tableMap = $this->getOrderTypeNameMapFromTable(false);
+        $map = $tableMap ?: [
+            1 => '普通订单',
+            2 => '优惠券订单',
+            3 => '取货码订单',
+            4 => '付费抽奖订单',
+            5 => '满减满送订单',
+            6 => '叠加营销活动订单',
+        ];
+        return $this->buildSqlCaseByMap($column, $map, '订单类型#');
+    }
 
     /**
      * 生成Excel文件并且修改记录
@@ -156,34 +185,15 @@ class ExportClient extends TimeTaskBase
         $hasCostPriceAuth = !empty($data['has_cost_price_auth']);
         $costPriceField = $hasCostPriceAuth ? 'a.cost_price' : '0 cost_price';
         $refundCostPriceField = $hasCostPriceAuth ? 'so.cost_price' : '0 cost_price';
+        $aOrderTypeCase = $this->buildOrderTypeCaseSql('a.order_type');
+        $soOrderTypeCase = $this->buildOrderTypeCaseSql('so.order_type');
 
         $whereRaw = $where['raw'] ?? '';
         unset($where['raw']);
         $mainWhere = $this->prefixWhereForAlias($where, 'a.');
         $field = 'a.order_id,a.m_id,a.machine_id,a.machine_name,a.machine_level,IFNULL(mld.name,"") machine_level_desc,a.pay_status,a.trade_no,a.mch_no,a.total_quantity,a.total_price,a.total_cost_points,a.total_points,a.discount_price,a.retail_price,a.factory,a.inventory_location,
             (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name,
-            (CASE a.order_type
-                WHEN 1 THEN "普通订单"
-                WHEN 2 THEN "优惠券订单"
-                WHEN 3 THEN "取货码订单"
-                WHEN 4 THEN "盲盒活动"
-                WHEN 5 THEN "满减满送活动"
-                WHEN 6 THEN "叠加营销活动"
-                END
-            ) order_type,
-            IFNULL(NULLIF(a.pay_channel_name,""),(CASE a.pay_channel
-                WHEN 1 THEN "微程小程序订单"
-                WHEN 2 THEN "机械车小程序订单"
-                WHEN 3 THEN "售卖机会员积分订单"
-                WHEN 4 THEN "商场积分订单"
-                WHEN 5 THEN "取货码订单"
-                WHEN 6 THEN "余额支付订单"
-                WHEN 7 THEN "微信支付"
-                WHEN 8 THEN "支付宝支付"
-                WHEN 9 THEN "POS/刷卡支付"
-                WHEN 10 THEN "现金支付"
-                WHEN 11 THEN "其他"
-                ELSE "其他" END)) pay_channel,
+            ' . $aOrderTypeCase . ' order_type,
             (CASE a.out_status
                 WHEN 1 THEN "正常"
                 WHEN 2 THEN "已发出货命令"
@@ -240,28 +250,7 @@ class ExportClient extends TimeTaskBase
             sor.refund_quantity total_quantity,
             (0-sor.refund_amount) total_price,("-") total_cost_points,("-") total_points,("-") discount_price,("-") retail_price,
             ("已退款") refund_status,
-            (CASE so.order_type
-                WHEN 1 THEN "普通订单"
-                WHEN 2 THEN "优惠券订单"
-                WHEN 3 THEN "取货码订单"
-                WHEN 4 THEN "盲盒活动"
-                WHEN 5 THEN "满减满送活动"
-                WHEN 6 THEN "叠加营销活动"
-                END
-            ) order_type,
-            IFNULL(NULLIF(so.pay_channel_name,""),(CASE so.pay_channel
-                WHEN 1 THEN "微程小程序订单"
-                WHEN 2 THEN "机械车小程序订单"
-                WHEN 3 THEN "售卖机会员积分订单"
-                WHEN 4 THEN "商场积分订单"
-                WHEN 5 THEN "取货码订单"
-                WHEN 6 THEN "余额支付订单"
-                WHEN 7 THEN "微信支付"
-                WHEN 8 THEN "支付宝支付"
-                WHEN 9 THEN "POS/刷卡支付"
-                WHEN 10 THEN "现金支付"
-                WHEN 11 THEN "其他"
-                ELSE "其他" END)) pay_channel,
+            ' . $soOrderTypeCase . ' order_type,
             (CASE so.pay_type
                 WHEN 1 THEN "微信支付"
                 WHEN 2 THEN "支付宝支付"

@@ -185,20 +185,18 @@ class SaleOrdersClient extends ManagementClient
                 ->order('pay_type asc')
                 ->column('pay_type');
 
-            $payChannels = (clone $baseQuery)
-                ->whereRaw('pay_channel IS NOT NULL')
-                ->field('pay_channel,pay_channel_name')
+            $orderTypes = (clone $baseQuery)
+                ->whereRaw('order_type IS NOT NULL')
                 ->distinct(true)
-                ->order('pay_channel asc')
-                ->select()
-                ->toArray();
+                ->order('order_type asc')
+                ->column('order_type');
 
             $data = [
                 'pay_type_list' => [],
-                'pay_channel_list' => [],
+                'order_type_list' => [],
             ];
             $payTypeExists = [];
-            $payChannelExists = [];
+            $orderTypeExists = [];
 
             foreach ($payTypes as $payType) {
                 $payType = intval($payType);
@@ -210,18 +208,13 @@ class SaleOrdersClient extends ManagementClient
                 ];
             }
 
-            $payChannelMap = $this->getPayChannelNameMap();
-            foreach ($payChannels as $item) {
-                $payChannel = intval($item['pay_channel'] ?? 0);
-                if (isset($payChannelExists[$payChannel])) continue;
-                $payChannelExists[$payChannel] = 1;
-                $label = trim((string)($item['pay_channel_name'] ?? ''));
-                if ($label === '') {
-                    $label = $payChannelMap[$payChannel] ?? '其他';
-                }
-                $data['pay_channel_list'][] = [
-                    'value' => $payChannel,
-                    'label' => $label,
+            foreach ($orderTypes as $orderType) {
+                $orderType = intval($orderType);
+                if (isset($orderTypeExists[$orderType])) continue;
+                $orderTypeExists[$orderType] = 1;
+                $data['order_type_list'][] = [
+                    'value' => $orderType,
+                    'label' => $this->formatOrderType($orderType),
                 ];
             }
 
@@ -248,6 +241,11 @@ class SaleOrdersClient extends ManagementClient
     protected function buildPayTypeCaseSql($column)
     {
         return $this->buildSqlCaseByMap($column, $this->getPayTypeNameMap(), '支付类型#');
+    }
+
+    protected function buildOrderTypeCaseSql($column)
+    {
+        return $this->buildSqlCaseByMap($column, $this->getOrderTypeNameMap(), '订单类型#');
     }
 
     protected function buildPayMethodCaseSql($column)
@@ -663,7 +661,6 @@ class SaleOrdersClient extends ManagementClient
                 'organization_name' => "所属组织",
                 "refund_status" => "订单状态",
                 "order_type" => "订单类型",
-                "pay_channel" => "订单分类",
                 "pay_type" => "支付类型",
                 "pay_time" => "支付时间",
                 "out_time" => "出货时间",
@@ -690,6 +687,7 @@ class SaleOrdersClient extends ManagementClient
     {
         $costPriceField = $hasCostPriceAuth ? 'sod.cost_price' : '0 cost_price';
         $refundCostPriceField = $hasCostPriceAuth ? 'sod.cost_price' : '0 cost_price';
+        $soOrderTypeCase = $this->buildOrderTypeCaseSql('so.order_type');
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
@@ -697,27 +695,7 @@ class SaleOrdersClient extends ManagementClient
         $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,
         sod.total_sod_price,sod.total_sod_cost_points,sod.total_sod_points,so.factory,so.inventory_location,
             (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '设备已接收' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
-            (CASE so.order_type 
-            WHEN 1 THEN '普通订单' 
-            WHEN 2 THEN '优惠券订单'
-            WHEN 3 THEN '取货码订单'
-            WHEN 4 THEN '付费抽奖订单'
-            WHEN 5 THEN '满减满送订单'
-            WHEN 6 THEN '叠加营销活动订单'
-            ELSE '' END) order_type,
-            IFNULL(NULLIF(so.pay_channel_name,''),(CASE so.pay_channel
-            WHEN 1 THEN '微程小程序订单'
-            WHEN 2 THEN '机械车小程序订单'
-            WHEN 3 THEN '售卖机会员积分订单'
-            WHEN 4 THEN '商场积分订单'
-            WHEN 5 THEN '取货码订单'
-            WHEN 6 THEN '余额支付订单'
-            WHEN 7 THEN '微信支付'
-            WHEN 8 THEN '支付宝支付'
-            WHEN 9 THEN 'POS/刷卡支付'
-            WHEN 10 THEN '现金支付'
-            WHEN 11 THEN '其他'
-            ELSE '其他' END)) pay_channel,
+            {$soOrderTypeCase} order_type,
             (CASE so.pay_type 
             WHEN 0 THEN '免支付' 
             WHEN 1 THEN '微信' 
@@ -764,27 +742,7 @@ class SaleOrdersClient extends ManagementClient
                 $refundField = "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
                             (0-sod.refund_cost_points) total_sod_cost_points,(0-sod.refund_points) total_sod_points,
                             (CASE so.out_status WHEN 1 THEN '待取货' WHEN 2 THEN '已发出货命令' WHEN 3 THEN '设备已接收' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
-                        (CASE so.order_type 
-                        WHEN 1 THEN '普通订单' 
-                        WHEN 2 THEN '优惠券订单'
-                        WHEN 3 THEN '取货码订单'
-                        WHEN 4 THEN '付费抽奖订单'
-                        WHEN 5 THEN '满减满送订单'
-                        WHEN 6 THEN '叠加营销活动订单'
-                        ELSE '' END) order_type,
-                        IFNULL(NULLIF(so.pay_channel_name,''),(CASE so.pay_channel
-                        WHEN 1 THEN '微程小程序订单'
-                        WHEN 2 THEN '机械车小程序订单'
-                        WHEN 3 THEN '售卖机会员积分订单'
-                        WHEN 4 THEN '商场积分订单'
-                        WHEN 5 THEN '取货码订单'
-                        WHEN 6 THEN '余额支付订单'
-                        WHEN 7 THEN '微信支付'
-                        WHEN 8 THEN '支付宝支付'
-                        WHEN 9 THEN 'POS/刷卡支付'
-                        WHEN 10 THEN '现金支付'
-                        WHEN 11 THEN '其他'
-                        ELSE '其他' END)) pay_channel,
+                        {$soOrderTypeCase} order_type,
                         (CASE so.pay_type 
                         WHEN 0 THEN '免支付' 
                         WHEN 1 THEN '微信' 
@@ -828,7 +786,6 @@ class SaleOrdersClient extends ManagementClient
                     "out_status" => "出货状态",
                     "order_status" => "订单状态",
                     "order_type" => "订单类型",
-                    "pay_channel" => "订单分类",
                     "pay_type" => "支付类型",
                     "pay_method" => "支付方式",
                     "pay_time" => "支付时间",
@@ -1253,6 +1210,7 @@ class SaleOrdersClient extends ManagementClient
     {
         try {
             $aPayTypeCase = $this->buildPayTypeCaseSql('a.pay_type');
+            $aOrderTypeCase = $this->buildOrderTypeCaseSql('a.order_type');
             if ($supplier) {
                 if ($this->manager['pid'] > 0) {
                     $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
@@ -1261,28 +1219,7 @@ class SaleOrdersClient extends ManagementClient
             }
 
             $field = "a.order_id,a.machine_id,a.machine_name,a.trade_no,a.mch_no,a.total_quantity,(a.total_price - a.refund_amount) total_price,a.discount_price,a.retail_price,a.factory,a.inventory_location,se.remark exception_remark,se.create_time exception_create_time,
-            (CASE a.order_type 
-                WHEN 1 THEN '普通订单'
-                WHEN 2 THEN '优惠券订单'
-                WHEN 3 THEN '取货码订单'
-                WHEN 4 THEN '盲盒活动'
-                WHEN 5 THEN '满减满送活动'
-                WHEN 6 THEN '叠加营销活动'
-                END
-            ) order_type,
-            IFNULL(NULLIF(a.pay_channel_name,''),(CASE a.pay_channel
-                WHEN 1 THEN '微程小程序订单'
-                WHEN 2 THEN '机械车小程序订单'
-                WHEN 3 THEN '售卖机会员积分订单'
-                WHEN 4 THEN '商场积分订单'
-                WHEN 5 THEN '取货码订单'
-                WHEN 6 THEN '余额支付订单'
-                WHEN 7 THEN '微信支付'
-                WHEN 8 THEN '支付宝支付'
-                WHEN 9 THEN 'POS/刷卡支付'
-                WHEN 10 THEN '现金支付'
-                WHEN 11 THEN '其他'
-                ELSE '其他' END)) pay_channel,
+            {$aOrderTypeCase} order_type,
             (CASE a.out_status
                 WHEN 1 THEN '正常'
                 WHEN 2 THEN '已发出货命令'
@@ -1313,7 +1250,6 @@ class SaleOrdersClient extends ManagementClient
                     'inventory_location' => '库存地点',
                     'refund_status' => '订单状态',
                     'order_type' => '订单类型',
-                    'pay_channel' => '订单分类',
                     'pay_type' => '支付类型',
                     'pay_time' => '支付时间',
                     'out_time' => '出货时间',
@@ -1340,134 +1276,6 @@ class SaleOrdersClient extends ManagementClient
         $sale_order_data = $this->getSaleOrdersFind(['order_id' => $sale_order_detail['order_id']], $sale_order_field)->toArray();
         $rtn = array_merge($sale_order_detail, $sale_order_data);
         return $this->rQ($rtn);
-    }
-
-    /**
-     * 批量回填历史订单分类（pay_channel）
-     * 参数：
-     * batch_size: 每批条数，默认500，最大5000
-     * max_batches: 本次最多处理批次，默认1，最大200
-     * start_order_id: 起始order_id（不含）
-     * end_order_id: 结束order_id（含，0表示不限制）
-     * only_unclassified: 1仅处理未分类或名称为空，0处理全部
-     * dry_run: 1仅预览不落库，0执行落库
-     * @param array $postData
-     * @return array|string
-     */
-    public function backfillPayChannelHistory($postData = [])
-    {
-        try {
-            $batchSize = intval($postData['batch_size'] ?? 500);
-            $maxBatches = intval($postData['max_batches'] ?? 1);
-            $startOrderId = intval($postData['start_order_id'] ?? 0);
-            $endOrderId = intval($postData['end_order_id'] ?? 0);
-            $onlyUnclassified = intval($postData['only_unclassified'] ?? 1);
-            $dryRun = intval($postData['dry_run'] ?? 0);
-
-            if ($batchSize <= 0) $batchSize = 500;
-            if ($batchSize > 5000) $batchSize = 5000;
-            if ($maxBatches <= 0) $maxBatches = 1;
-            if ($maxBatches > 200) $maxBatches = 200;
-
-            $summary = [
-                'batch_size' => $batchSize,
-                'max_batches' => $maxBatches,
-                'start_order_id' => $startOrderId,
-                'end_order_id' => $endOrderId,
-                'only_unclassified' => $onlyUnclassified,
-                'dry_run' => $dryRun,
-                'processed' => 0,
-                'updated' => 0,
-                'skipped' => 0,
-                'failed' => 0,
-                'last_order_id' => $startOrderId,
-                'change_samples' => [],
-                'fail_samples' => [],
-            ];
-
-            $cursor = $startOrderId;
-            for ($i = 0; $i < $maxBatches; $i++) {
-                $query = Db::name('sale_orders')->where('order_id', '>', $cursor);
-                if ($endOrderId > 0) {
-                    $query->where('order_id', '<=', $endOrderId);
-                }
-                if ($onlyUnclassified === 1) {
-                    $query->whereRaw("(IFNULL(pay_channel,0)=0 OR IFNULL(pay_channel_name,'')='')");
-                }
-
-                $rows = $query
-                    ->field('order_id,order_type,pay_type,pay_method,total_cost_points,gift_points,total_points,acp_id,pay_channel,pay_channel_name')
-                    ->order('order_id asc')
-                    ->limit($batchSize)
-                    ->select()
-                    ->toArray();
-
-                if (!$rows) {
-                    break;
-                }
-
-                $orderIds = array_column($rows, 'order_id');
-                $hasWcMap = $this->buildOrderHasWcOrderNoMap($orderIds);
-
-                foreach ($rows as $row) {
-                    $orderId = intval($row['order_id']);
-                    $cursor = $orderId;
-                    $summary['last_order_id'] = $orderId;
-                    $summary['processed']++;
-
-                    $row['has_wc_order_no'] = !empty($hasWcMap[$orderId]) ? 1 : 0;
-                    $classified = $this->buildOrderPayChannel($row);
-                    $newChannel = intval($classified['pay_channel'] ?? 0);
-                    $newName = strval($classified['pay_channel_name'] ?? '');
-                    $oldChannel = intval($row['pay_channel'] ?? 0);
-                    $oldName = strval($row['pay_channel_name'] ?? '');
-
-                    if ($oldChannel === $newChannel && $oldName === $newName) {
-                        $summary['skipped']++;
-                        continue;
-                    }
-
-                    if (count($summary['change_samples']) < 20) {
-                        $summary['change_samples'][] = [
-                            'order_id' => $orderId,
-                            'old_pay_channel' => $oldChannel,
-                            'new_pay_channel' => $newChannel,
-                            'old_pay_channel_name' => $oldName,
-                            'new_pay_channel_name' => $newName,
-                        ];
-                    }
-
-                    if ($dryRun === 1) {
-                        $summary['updated']++;
-                        continue;
-                    }
-
-                    $result = $this->updateSaleOrders([
-                        'order_id' => $orderId,
-                        'pay_channel' => $newChannel,
-                        'pay_channel_name' => $newName,
-                    ], [], ['pay_channel', 'pay_channel_name']);
-
-                    if ($result) {
-                        $summary['updated']++;
-                    } else {
-                        $summary['failed']++;
-                        if (count($summary['fail_samples']) < 20) {
-                            $summary['fail_samples'][] = [
-                                'order_id' => $orderId,
-                                'old_pay_channel' => $oldChannel,
-                                'new_pay_channel' => $newChannel,
-                            ];
-                        }
-                    }
-                }
-            }
-
-            return $this->r(200, '回填完成', $summary);
-        } catch (\Exception $e) {
-            actionException($e, 1);
-            return $this->rTryCatch($e->getMessage());
-        }
     }
 
     /**

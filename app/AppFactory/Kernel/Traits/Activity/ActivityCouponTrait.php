@@ -257,7 +257,7 @@ trait ActivityCouponTrait
             return $this->rFail($this->lang("VActivityCoupon.pay_limit"));
         }
         // 原始订单支付金额
-        $original_price = $this->order['total_price'];
+        $original_price = $this->couponMoney($this->order['total_price']);
 
         if (!isset($this->order['details'])) {
             $sodField = "sod_id,discount_price,total_sod_price,retail_price,quantity,g_id";
@@ -268,15 +268,16 @@ trait ActivityCouponTrait
             $this->startTrans();// 区分适用商品规则
             // 1. 全部商品，以订单总金额计算优惠金额与打折扣
             if ($ac['designated_goods'] == 1) {
-                $discount_price = 0;
+                $discount_price = '0.00';
                 // 区分优惠券类型，1：立减金额，2：优惠折扣，计算优惠值
                 if ($ac['c_type'] == 1) $discount_price = $ac['reduction'];
                 if ($ac['c_type'] == 2) $discount_price = bcmul($this->order['total_price'], bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
-                if ($discount_price <= $this->order['total_price']) {
+                $discount_price = $this->clampCouponDiscount($discount_price, $this->order['total_price']);
+                if (bccomp($discount_price, '0.01', 2) >= 0) {
 //                    $totalPrice = $this->order['total_price'];
                     // 优惠金额作用至订单总金额
                     $this->order['discount_price'] = bcadd($this->order['discount_price'], $discount_price, 2);
-                    $this->order['total_price'] = bcsub($this->order['total_price'], $discount_price, 3);
+                    $this->order['total_price'] = $this->subtractCouponDiscount($this->order['total_price'], $discount_price);
                     actionLog($this->order,'优惠券订单数据');
 
                     foreach ($this->order['details'] as $key => $value) {
@@ -291,17 +292,21 @@ trait ActivityCouponTrait
                         }
                         // 商品优惠金额 = 商品总额 / 订单总额 * 立减金额
                         if ($ac['c_type'] == 1 ) {
+                            if (bccomp($original_price, '0.01', 2) < 0) continue;
                             $sodDiscountPrice = bcmul(bcdiv($value['total_sod_price'],$original_price,4),$ac['reduction'],4);
                         }
                         // 最后一个优惠金额，并且优惠金额大于计算后的商品详情优惠金额，则将剩下的优惠金额都给这个商品
                         if (!isset($this->order['details'][$key + 1]) && $discount_price > $sodDiscountPrice)
                             $sodDiscountPrice = $discount_price;
+                        $sodDiscountPrice = $this->clampCouponDiscount($sodDiscountPrice, $value['total_sod_price']);
+                        $sodDiscountPrice = $this->clampCouponDiscount($sodDiscountPrice, $discount_price);
                         actionLog($value,'优惠计算前商品数据');
                         actionLog($sodDiscountPrice,'商品优惠金额');
                         if ($sodDiscountPrice < 0.01 && $key > 0) continue;
                         $discount_price = bcsub($discount_price,$sodDiscountPrice,4);
+                        if (bccomp($discount_price, '0.00', 4) < 0) $discount_price = '0.0000';
                         $value['discount_price'] = $sodDiscountPrice;
-                        $value['total_sod_price'] = bcsub($value['total_sod_price'], $sodDiscountPrice, 4);
+                        $value['total_sod_price'] = $this->subtractCouponDiscount($value['total_sod_price'], $sodDiscountPrice);
                         actionLog($value,'优惠后商品数据');
                         $this->updateSaleOrdersDetails(['sod_id' => $value['sod_id'], 'discount_price' => $value['discount_price'], 'total_sod_price' => $value['total_sod_price']]);
                     }
@@ -315,16 +320,20 @@ trait ActivityCouponTrait
                         // 区分优惠券类型，1：立减金额，2：优惠折扣，计算优惠值
                         if ($ac['c_type'] == 1) $discount_price = $ac['reduction'];
                         if ($ac['c_type'] == 2) $discount_price = bcmul($value['retail_price'], bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
+                        $discount_price = $this->clampCouponDiscount($discount_price, $value['total_sod_price']);
                         if ($discount_price < 0.01) continue;
-                        if ($value['total_sod_price'] > $discount_price) {
-                            $value['discount_price'] = bcadd($value['discount_price'], $discount_price, 4);
+                        if (bccomp($value['total_sod_price'], '0.01', 2) >= 0) {
                             $totalDiscountPrice = bcmul($discount_price, $value['quantity'], 3);
-                            $value['total_sod_price'] = bcsub($value['total_sod_price'], $totalDiscountPrice, 4);
-                            $this->updateSaleOrdersDetails(['sod_id' => $value['sod_id'], 'discount_price' => $discount_price, 'total_sod_price' => $value['total_sod_price']]);
+                            $totalDiscountPrice = $this->clampCouponDiscount($totalDiscountPrice, $value['total_sod_price']);
+                            $totalDiscountPrice = $this->clampCouponDiscount($totalDiscountPrice, $this->order['total_price']);
+                            if (bccomp($totalDiscountPrice, '0.01', 2) < 0) continue;
+                            $value['discount_price'] = bcadd($value['discount_price'], $totalDiscountPrice, 4);
+                            $value['total_sod_price'] = $this->subtractCouponDiscount($value['total_sod_price'], $totalDiscountPrice);
+                            $this->updateSaleOrdersDetails(['sod_id' => $value['sod_id'], 'discount_price' => $value['discount_price'], 'total_sod_price' => $value['total_sod_price']]);
                             actionLog($this->getLS(), '优惠券使用，减去商品总价');
                             actionLog($value, '处理后的数据');
                             $this->order['discount_price'] = bcadd($this->order['discount_price'], $totalDiscountPrice, 3);
-                            $this->order['total_price'] = bcsub($this->order['total_price'], $totalDiscountPrice, 3);
+                            $this->order['total_price'] = $this->subtractCouponDiscount($this->order['total_price'], $totalDiscountPrice);
                         }
                     }
                 }
@@ -444,7 +453,7 @@ trait ActivityCouponTrait
     protected function refreshPendingRevenueAfterRevenueCoupon()
     {
         $order = $this->getRevenueCouponOrderArray();
-        if (empty($order['order_id']) || floatval($order['total_price'] ?? 0) <= 0 || intval($order['pay_channel'] ?? 0) <= 0) {
+        if (empty($order['order_id']) || floatval($order['total_price'] ?? 0) <= 0 || intval($order['pay_type'] ?? 0) <= 0) {
             return true;
         }
         $pendingCount = RevenueOrderModel::where(['order_id' => intval($order['order_id']), 'status' => 0])->count();
@@ -469,5 +478,34 @@ trait ActivityCouponTrait
         $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']], 0, 'sod_id,g_id,mg_id,total_sod_price,quantity');
         if (!$details) return [];
         return is_array($details) ? $details : $details->toArray();
+    }
+
+    protected function couponMoney($value, $scale = 2)
+    {
+        if ($value === null || $value === '') {
+            $value = 0;
+        }
+        return bcadd((string)$value, '0', $scale);
+    }
+
+    protected function clampCouponDiscount($discount, $limit)
+    {
+        $discount = $this->couponMoney($discount);
+        $limit = $this->couponMoney($limit);
+        if (bccomp($discount, '0.00', 2) < 0) {
+            return '0.00';
+        }
+        if (bccomp($discount, $limit, 2) > 0) {
+            return $limit;
+        }
+        return $discount;
+    }
+
+    protected function subtractCouponDiscount($amount, $discount)
+    {
+        $amount = $this->couponMoney($amount);
+        $discount = $this->clampCouponDiscount($discount, $amount);
+        $remain = bcsub($amount, $discount, 2);
+        return bccomp($remain, '0.00', 2) < 0 ? '0.00' : $remain;
     }
 }

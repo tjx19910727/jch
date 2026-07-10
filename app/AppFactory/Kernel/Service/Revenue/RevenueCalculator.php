@@ -289,6 +289,7 @@ class RevenueCalculator
                 continue;
             }
             $calc = $this->calculateCouponRuleItemAmount($item, $matched['base_amount']);
+            $calc = $this->applyCouponCostAssume($calc, $coupon);
             if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) {
                 continue;
             }
@@ -489,6 +490,32 @@ class RevenueCalculator
         return null;
     }
 
+    protected function applyCouponCostAssume($calc, array $coupon)
+    {
+        if (!$calc) {
+            return $calc;
+        }
+        $costAssume = intval($coupon['cost_assume'] ?? 0);
+        if (!in_array($costAssume, [1, 2], true)) {
+            return $calc;
+        }
+        $discountAmount = $this->getRevenueCouponDiscountAmount();
+        if (bccomp($discountAmount, '0.01', 2) < 0) {
+            return $calc;
+        }
+        $incomeAmount = bcsub($this->money($calc['income_amount'] ?? 0), $discountAmount, 2);
+        if (bccomp($incomeAmount, '0.00', 2) < 0) {
+            $incomeAmount = '0.00';
+        }
+        $calc['income_amount'] = $this->money($incomeAmount);
+        return $calc;
+    }
+
+    protected function getRevenueCouponDiscountAmount()
+    {
+        return $this->money($this->order['revenue_coupon_discount_amount'] ?? 0);
+    }
+
     protected function calculateTierSplitAmount(array $item, $baseAmount, $periodBefore, $periodAfter)
     {
         $tiers = $this->getItemTiers($item);
@@ -647,23 +674,23 @@ class RevenueCalculator
 
     protected function shouldCalculateRevenue()
     {
-        $payChannel = intval($this->order['pay_channel'] ?? 0);
-        if ($payChannel <= 0) {
-            $this->logRevenueConfig('支付渠道查询', [
-                'pay_channel' => $payChannel,
+        $payType = intval($this->order['pay_type'] ?? 0);
+        if ($payType <= 0) {
+            $this->logRevenueConfig('支付类型查询', [
+                'pay_type' => $payType,
                 'found_channel' => 0,
-                'skip_reason' => 'empty_pay_channel',
+                'skip_reason' => 'empty_pay_type',
             ]);
             return false;
         }
 
-        $channel = RevenuePayChannelModel::where(['pay_channel' => $payChannel, 'status' => 1])
+        $channel = RevenuePayChannelModel::where(['pay_type' => $payType, 'status' => 1])
             ->find();
         if ($channel && !is_array($channel)) {
             $channel = $channel->toArray();
         }
-        $this->logRevenueConfig('支付渠道查询', [
-            'pay_channel' => $payChannel,
+        $this->logRevenueConfig('支付类型查询', [
+            'pay_type' => $payType,
             'found_channel' => $channel ? 1 : 0,
             'rpc_id' => $channel ? intval($channel['rpc_id'] ?? 0) : 0,
         ]);
@@ -836,6 +863,9 @@ class RevenueCalculator
         $sodTotals = [];
         foreach ($this->records as $record) {
             $amount = $this->money($record['income_amount'] ?? 0);
+            if (bccomp($amount, '0.00', 2) < 0) {
+                throw new \Exception("分账金额不能小于0");
+            }
             $total = bcadd($total, $amount, 2);
             if (in_array(intval($record['rule_mode'] ?? 0), [2, 4], true) && !empty($record['sod_id'])) {
                 $sodId = intval($record['sod_id']);

@@ -1,11 +1,10 @@
 -- 新分账配置自检脚本
 -- 说明：本脚本只读查询，不修改数据。
 
--- 1. 已启用的分账收款渠道
+-- 1. 已启用的分账支付类型
 SELECT
   rpc_id,
   pay_type,
-  pay_channel,
   channel_name,
   status
 FROM revenue_pay_channel

@@ -179,6 +179,9 @@ class RevenueRuleClient extends ManagementClient
         if (intval($merged['settlement_type'] ?? 1) === 2 && intval($merged['settlement_days'] ?? 0) < 1) {
             return $this->rFail("T+N 分账天数必须大于0");
         }
+        if (isset($merged['cost_assume']) && !in_array(intval($merged['cost_assume']), [0, 1, 2], true)) {
+            return $this->rFail("优惠券成本承担方式不合法");
+        }
         if (intval($merged['rule_mode'] ?? 0) === 5) {
             $couponCheck = $this->normalizeConfigCouponData($data, $merged, $isUpdate);
             if ($couponCheck !== true) return $couponCheck;
@@ -214,14 +217,14 @@ class RevenueRuleClient extends ManagementClient
         $save = [];
         foreach ([
             'config_name', 'rule_mode', 'base_type', 'turnover_type', 'tier_calc_mode',
-            'settlement_type', 'settlement_days', 'coupon_id', 'receiver_config', 'status',
+            'settlement_type', 'settlement_days', 'coupon_id', 'cost_assume', 'receiver_config', 'status',
         ] as $field) {
             if (array_key_exists($field, $data)) $save[$field] = $data[$field];
         }
         if (isset($data['receivers']) && !isset($save['receiver_config'])) $save['receiver_config'] = $data['receivers'];
         if (isset($save['receiver_config'])) $save['receiver_config'] = $this->encodeReceiverConfig($save['receiver_config']);
         if (!$isUpdate) {
-            foreach (['base_type' => 1, 'turnover_type' => 1, 'tier_calc_mode' => 1, 'settlement_type' => 1, 'settlement_days' => 0, 'status' => 1] as $field => $value) {
+            foreach (['base_type' => 1, 'turnover_type' => 1, 'tier_calc_mode' => 1, 'settlement_type' => 1, 'settlement_days' => 0, 'cost_assume' => 0, 'status' => 1] as $field => $value) {
                 if (!isset($save[$field])) $save[$field] = $value;
             }
             if (!isset($save['receiver_config'])) $save['receiver_config'] = '[]';
@@ -417,6 +420,7 @@ class RevenueRuleClient extends ManagementClient
 
     protected function formatConfigRow(array $row)
     {
+        $row['cost_assume'] = intval($row['cost_assume'] ?? 0);
         $row['receivers'] = isset($row['receiver_config']) ? json_decode($row['receiver_config'], true) : [];
         if (!is_array($row['receivers'])) $row['receivers'] = [];
         if (intval($row['rule_mode'] ?? 0) === 5 && intval($row['coupon_id'] ?? 0) > 0) {

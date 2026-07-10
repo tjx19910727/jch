@@ -36,7 +36,7 @@ class SaleOrders extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
 
-        $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in","pay_channel" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
+        $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
         $where['raw'] = "pay_status in ('3', '7')";
         $authMch = $this->authMchCannel();
         if($authMch['status'] != 0){
@@ -56,7 +56,7 @@ class SaleOrders extends Common
         $hasCostPriceAuth = $this->hasCostPriceAuth();
 
         $costPriceField = $hasCostPriceAuth ? "cost_price" : "0 cost_price";
-        $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,pay_channel,pay_channel_name,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,a.m_id,a.machine_id,a.machine_level,
+        $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,a.m_id,a.machine_id,a.machine_level,
         factory,inventory_location,has_hotel,refund_status,(total_price - refund_amount) total_price, (total_cost_points - refund_cost_points) total_cost_points, pay_code, mobile,{$costPriceField}";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         if ($supplier) unset($where['ao_id']);
@@ -125,7 +125,7 @@ class SaleOrders extends Common
         }
 
         $costPriceField = $hasCostPriceAuth ? "sod.cost_price" : "0 cost_price";
-        $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_channel,so.pay_channel_name,so.pay_time,so.out_time,so.create_time,so.out_status,so.refund_status,so.factory,so.inventory_location,
+        $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,so.refund_status,so.factory,so.inventory_location,
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,(sod.total_sod_points - sod.refund_points) total_sod_points,(sod.total_sod_cost_points - sod.refund_cost_points) total_sod_cost_points,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount,(SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name,{$costPriceField}";
         // if ($postData['supplier']) unset($where['ao_id']);                                                                                                                                                                                                                                                                                                                                                                                                           
@@ -318,7 +318,7 @@ class SaleOrders extends Common
             unset($postData['machine_group_id']);
             if (!$machineIds) return $this->app->machine->rNoData();
         }
-        $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in","pay_channel" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
+        $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
         $authMch = $this->authMchCannel();
         if ($authMch['status'] != 0) {
             $orderIds = Db::name('sale_orders_details')
@@ -368,7 +368,6 @@ class SaleOrders extends Common
         if (isset($postData['machine_id']) && $postData['machine_id']) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
         if (isset($postData['refund_no']) && $postData['refund_no']) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
         if (isset($postData['pay_type']) && $postData['pay_type']) $where['pay_type'] = $postData['pay_type'];
-        if (isset($postData['pay_channel']) && $postData['pay_channel']) $where['so.pay_channel'] = $postData['pay_channel'];
 //        $where = $this->getWhere($postData,false,['refund_trade_no' => "like",'machine_id' => "like",'trade_no' => "like","refund_no" => "like"]);
         if ($this->manager['pid'] > 0) {
             $mIds = $this->app->authManagerMachine->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], 'm_id');
@@ -406,7 +405,6 @@ class SaleOrders extends Common
         if (isset($postData['machine_id']) && $postData['machine_id']) $where[] = ['sor.machine_id','like',"%" .$postData['machine_id']. "%"];
         if (isset($postData['refund_no']) && $postData['refund_no']) $where[] = ['sor.refund_no','like',"%" .$postData['refund_no']. "%"];
         if (isset($postData['pay_type']) && $postData['pay_type']) $where['pay_type'] = $postData['pay_type'];
-        if (isset($postData['pay_channel']) && $postData['pay_channel']) $where['so.pay_channel'] = $postData['pay_channel'];
         $where = $this->formatAoIdWhereWithPrefix($where, 'sor.');
         return $this->app->saleOrders->exportRefund($where);
     }
@@ -724,18 +722,6 @@ class SaleOrders extends Common
     }
 
     /**
-     * 历史订单分类回填
-     * 参数：
-     * batch_size,max_batches,start_order_id,end_order_id,only_unclassified,dry_run
-     * @return array|string
-     */
-    public function backfillPayChannel()
-    {
-        $postData = input();
-        return $this->app->saleOrders->backfillPayChannelHistory($postData);
-    }
-
-    /**
      * 异常订单处理列表
      * 列表查询条件与订单列表一致，增加异常处理状态字段：1.已处理，2.未处理
      * @param bool supplier 供应商账号是否跳过组织选择查看所属商品订单
@@ -767,7 +753,7 @@ class SaleOrders extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
 
-        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", "pay_channel" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'a.');
+        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'a.');
         $where['raw'] = "a.pay_status in ('3', '7')";
         if ($isProcessed == 1) {
             $where['raw'] .= " AND se.status = 1";
@@ -793,7 +779,7 @@ class SaleOrders extends Common
         $hasCostPriceAuth = $this->hasCostPriceAuth();
 
         $costPriceField = $hasCostPriceAuth ? "a.cost_price" : "0 cost_price";
-        $field = "a.order_id,a.trade_no,a.mch_no,a.total_quantity,a.total_price,a.total_points,a.retail_price,a.out_status,a.order_type,a.pay_type,a.pay_method,a.pay_channel,a.pay_channel_name,a.user_id,a.out_trade_no,a.pay_status,a.pay_time,a.out_time,a.machine_name,a.machine_id,a.discount_price,a.factory,a.inventory_location,a.has_hotel,a.refund_status,(a.total_price - a.refund_amount) total_price,(a.total_cost_points - a.refund_cost_points) total_cost_points,a.pay_code,a.mobile,se.status exception_status,se.remark exception_remark,se.manager_id exception_manager_id,se.create_time exception_create_time,am.account manager_account,am.nickname manager_nickname,{$costPriceField}";
+        $field = "a.order_id,a.trade_no,a.mch_no,a.total_quantity,a.total_price,a.total_points,a.retail_price,a.out_status,a.order_type,a.pay_type,a.pay_method,a.user_id,a.out_trade_no,a.pay_status,a.pay_time,a.out_time,a.machine_name,a.machine_id,a.discount_price,a.factory,a.inventory_location,a.has_hotel,a.refund_status,(a.total_price - a.refund_amount) total_price,(a.total_cost_points - a.refund_cost_points) total_cost_points,a.pay_code,a.mobile,se.status exception_status,se.remark exception_remark,se.manager_id exception_manager_id,se.create_time exception_create_time,am.account manager_account,am.nickname manager_nickname,{$costPriceField}";
         if (!empty($machineIds)) $where[] = ['a.machine_id', 'in', $machineIds];
         if (isset($postData['supplier']) && $postData['supplier']) unset($where['a.ao_id']);
         if ($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0, 1])) {
@@ -832,7 +818,7 @@ class SaleOrders extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
 
-        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", "pay_channel" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'a.');
+        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'a.');
         $where['raw'] = "a.pay_status in ('3', '7')";
         if ($isProcessed == 1) {
             $where['raw'] .= " AND se.status = 1";
@@ -904,7 +890,7 @@ class SaleOrders extends Common
             if (!$machineIds) return $this->app->machine->rNoData();
         }
 
-        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", "pay_channel" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'so.');
+        $where = $this->getWhere($postData, false, ['trade_no' => "like", "order_type" => "in", "mch_no" => "like", "machine_name" => "like", "machine_id" => "like", "pay_type" => "in", 'factory' => 'in', 'inventory_location' => 'in', 'out_status' => 'in'], 'so.');
         $where['raw'] = "so.pay_status in ('3', '7')";
         $authMch = $this->authMchCannel();
         if ($authMch['status'] != 0) {
