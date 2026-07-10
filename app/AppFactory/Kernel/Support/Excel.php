@@ -203,6 +203,24 @@ class Excel
             $startRow++;
         }
         // 保存到本地
+        $lastDataRow = $startRow - 1;
+        $lastColumn = $header_arr[max(0, count($indexKey) - 1)];
+        if (isset($otherData['columnWidth'])) {
+            foreach (array_slice($header_arr, 0, count($indexKey)) as $column) {
+                $objActSheet->getColumnDimension($column)->setWidth((float)$otherData['columnWidth']);
+            }
+        }
+        if (!empty($otherData['wrapText']) && $lastDataRow > 0) {
+            $objActSheet->getStyle('A1:' . $lastColumn . $lastDataRow)->getAlignment()->setWrapText(true);
+        }
+        if (!empty($otherData['vertical']) && $lastDataRow > 0) {
+            $objActSheet->getStyle('A1:' . $lastColumn . $lastDataRow)->getAlignment()->setVertical($otherData['vertical']);
+        }
+        if (!empty($otherData['rowHeights']) && is_array($otherData['rowHeights'])) {
+            foreach ($otherData['rowHeights'] as $rowNumber => $height) {
+                $objActSheet->getRowDimension((int)$rowNumber)->setRowHeight((float)$height);
+            }
+        }
         $savePath = "/export/excel/" . date("Ymd");
         $path = root_path() . "public" . $savePath;
         if (!is_dir($path)) {

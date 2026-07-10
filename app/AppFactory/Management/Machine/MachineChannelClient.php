@@ -1140,6 +1140,147 @@ class MachineChannelClient extends ManagementClient
         return $this->r(100,$this->lang("query_fail"));
     }
 
+    /**
+     * 按货架层级导出货道数据。字母部分为层级，非“字母+数字”的货道置于底部。
+     */
+    public function exportMcByShelfLevel($m_id, $hasCostPriceAuth = true)
+    {
+        if (!$m_id) return $this->r(100, $this->lang("VMachineChannel.m_id_require"));
+
+        $costPriceField = $hasCostPriceAuth ? 'cost_price' : '0 cost_price';
+        $field = "machine_id,channel_code,pic,sku,g_name,retail_price,capacity,stock,{$costPriceField}";
+        $result = $this->getMachineChannelList(['m_id' => $m_id], 0, $field, 'channel_code asc');
+        $channels = $result ? $result->toArray() : [];
+        if (!$channels) return $this->r(100, $this->lang("query_fail"));
+
+        $machineName = (string)$this->getMachineValue(['m_id' => $m_id], 'machine_name');
+        $machineId = (string)($channels[0]['machine_id'] ?? '');
+        $levels = [];
+        $specialChannels = [];
+        foreach ($channels as $channel) {
+            $code = trim((string)($channel['channel_code'] ?? ''));
+            if (preg_match('/^([a-zA-Z]+)(\d+)$/', $code, $matches)) {
+                $level = strtoupper($matches[1]);
+                $channel['_level_number'] = (int)$matches[2];
+                $levels[$level][] = $channel;
+            } else {
+                $specialChannels[] = $channel;
+            }
+        }
+
+        uksort($levels, 'strnatcasecmp');
+        foreach ($levels as &$levelChannels) {
+            usort($levelChannels, function ($a, $b) {
+                $compare = ($a['_level_number'] ?? 0) <=> ($b['_level_number'] ?? 0);
+                return $compare !== 0 ? $compare : strnatcasecmp((string)$a['channel_code'], (string)$b['channel_code']);
+            });
+        }
+        unset($levelChannels);
+        usort($specialChannels, function ($a, $b) {
+            return strnatcasecmp((string)$a['channel_code'], (string)$b['channel_code']);
+        });
+
+        $levelNames = array_keys($levels);
+        if (!$levelNames) $levelNames = ['货道'];
+        if (count($levelNames) > 52) return $this->r(100, '货架层级数量不能超过52层');
+
+        $title = [];
+        foreach ($levelNames as $index => $levelName) $title['level_' . $index] = $levelName . '层';
+
+        $list = [];
+        $rowHeights = [];
+        $excelRow = 5;
+        $maxChannelCount = 0;
+        foreach ($levels as $levelChannels) $maxChannelCount = max($maxChannelCount, count($levelChannels));
+
+        for ($channelIndex = 0; $channelIndex < $maxChannelCount; $channelIndex++) {
+            $imageRow = [];
+            $detailRow = [];
+            foreach ($levelNames as $levelIndex => $levelName) {
+                $key = 'level_' . $levelIndex;
+                $channel = $levels[$levelName][$channelIndex] ?? null;
+                $imageRow[$key] = $channel ? $this->formatShelfChannelExportImage($channel['pic'] ?? '') : '';
+                $detailRow[$key] = $channel ? $this->formatShelfChannelExportText($channel, $hasCostPriceAuth) : '';
+            }
+            $list[] = $imageRow;
+            $rowHeights[$excelRow++] = 80;
+            $list[] = $detailRow;
+            $rowHeights[$excelRow++] = $hasCostPriceAuth ? 105 : 92;
+        }
+
+        $merge = [];
+        $lastColumn = $this->getShelfExportColumnName(count($levelNames));
+        $merge[] = ['merge' => 'A1:' . $lastColumn . '1', 'cell' => 'A1', 'name' => '设备名称：' . $machineName];
+        $merge[] = ['merge' => 'A2:' . $lastColumn . '2', 'cell' => 'A2', 'name' => '设备编号：' . $machineId];
+
+        if ($specialChannels) {
+            $specialTitle = array_fill_keys(array_keys($title), '');
+            $specialTitle['level_0'] = '特殊货道';
+            $list[] = $specialTitle;
+            $merge[] = ['merge' => 'A' . $excelRow . ':' . $lastColumn . $excelRow];
+            $rowHeights[$excelRow++] = 25;
+            foreach ($specialChannels as $channel) {
+                $imageRow = array_fill_keys(array_keys($title), '');
+                $imageRow['level_0'] = $this->formatShelfChannelExportImage($channel['pic'] ?? '');
+                $list[] = $imageRow;
+                $merge[] = ['merge' => 'A' . $excelRow . ':' . $lastColumn . $excelRow];
+                $rowHeights[$excelRow++] = 80;
+
+                $detailRow = array_fill_keys(array_keys($title), '');
+                $detailRow['level_0'] = $this->formatShelfChannelExportText($channel, $hasCostPriceAuth);
+                $list[] = $detailRow;
+                $merge[] = ['merge' => 'A' . $excelRow . ':' . $lastColumn . $excelRow];
+                $rowHeights[$excelRow++] = $hasCostPriceAuth ? 105 : 92;
+            }
+        }
+
+        $filename = '货架层级铺货计划-' . date('YmdHis');
+        return $this->sendToExport('设备管理-设备货架-按层级导出', $filename, $title, $list, [
+            'startRow' => 4,
+            'merge' => $merge,
+            'imageFields' => array_keys($title),
+            'imageWidth' => 120,
+            'imageHeight' => 100,
+            'columnWidth' => 32,
+            'wrapText' => true,
+            'vertical' => 'center',
+            'rowHeights' => $rowHeights,
+        ]);
+    }
+
+    private function formatShelfChannelExportText(array $channel, $hasCostPriceAuth)
+    {
+        $lines = [
+            '货道编号：' . ($channel['channel_code'] ?? ''),
+            '商品名称：' . ($channel['g_name'] ?? ''),
+            '商品SKU：' . ($channel['sku'] ?? ''),
+            '商品售价：' . ($channel['retail_price'] ?? ''),
+            '库存容量：' . ($channel['capacity'] ?? ''),
+            '当前库存：' . ($channel['stock'] ?? ''),
+        ];
+        if ($hasCostPriceAuth) $lines[] = '成本价：' . ($channel['cost_price'] ?? '');
+        return implode("\n", $lines);
+    }
+
+    private function formatShelfChannelExportImage($pic)
+    {
+        $pic = trim((string)$pic);
+        if ($pic === '' || preg_match('#^https?://#i', $pic)) return $pic;
+        if (strpos($pic, '//') === 0) return 'https:' . $pic;
+        return $this->getUrl('/' . ltrim($pic, '/'));
+    }
+
+    private function getShelfExportColumnName($columnCount)
+    {
+        $name = '';
+        while ($columnCount > 0) {
+            $columnCount--;
+            $name = chr(65 + ($columnCount % 26)) . $name;
+            $columnCount = intdiv($columnCount, 26);
+        }
+        return $name ?: 'A';
+    }
+
 
     public function setMachineChannelGiftPoints($m_id, $integral_rate)
     {
