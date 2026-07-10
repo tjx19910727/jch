@@ -52,7 +52,7 @@ class AdvertisementPushClient extends ManagementClient
         }
 
         $where['raw'] = $zeroAdvertisementCondition;
-        $field = "a.m_id,a.machine_name,a.machine_id,CASE WHEN {$advertisedCondition} THEN 1 ELSE 2 END is_advertised";
+        $field = "a.m_id,a.machine_name,a.machine_id,0 AS adv_num,CASE WHEN {$advertisedCondition} THEN 1 ELSE 2 END is_advertised";
         $data = MachineModel::getList($where, $pageNum, $field, 'a.m_id desc');
         return $this->rQ($data);
     }
