@@ -1180,86 +1180,89 @@ class MachineChannelClient extends ManagementClient
             return strnatcasecmp((string)$a['channel_code'], (string)$b['channel_code']);
         });
 
-        $levelNames = array_keys($levels);
-        if (!$levelNames) $levelNames = ['货道'];
-        if (count($levelNames) > 52) return $this->r(100, '货架层级数量不能超过52层');
+        $groups = array_values($levels);
+        if ($specialChannels) $groups[] = $specialChannels;
 
-        $title = [];
-        foreach ($levelNames as $index => $levelName) $title['level_' . $index] = $levelName . '层';
-
-        $list = [];
-        $rowHeights = [];
-        $excelRow = 5;
         $maxChannelCount = 0;
-        foreach ($levels as $levelChannels) $maxChannelCount = max($maxChannelCount, count($levelChannels));
-
-        for ($channelIndex = 0; $channelIndex < $maxChannelCount; $channelIndex++) {
-            $imageRow = [];
-            $detailRow = [];
-            foreach ($levelNames as $levelIndex => $levelName) {
-                $key = 'level_' . $levelIndex;
-                $channel = $levels[$levelName][$channelIndex] ?? null;
-                $imageRow[$key] = $channel ? $this->formatShelfChannelExportImage($channel['pic'] ?? '') : '';
-                $detailRow[$key] = $channel ? $this->formatShelfChannelExportText($channel, $hasCostPriceAuth) : '';
-            }
-            $list[] = $imageRow;
-            $rowHeights[$excelRow++] = 80;
-            $list[] = $detailRow;
-            $rowHeights[$excelRow++] = $hasCostPriceAuth ? 105 : 92;
+        foreach ($groups as $channelsInGroup) {
+            $maxChannelCount = max($maxChannelCount, count($channelsInGroup));
         }
+        // PHPExcel当前公共组件最多支持到AZ列，首列预留给信息项标题。
+        if ($maxChannelCount > 51) return $this->r(100, '单层货道数量不能超过51个');
 
-        $merge = [];
-        $lastColumn = $this->getShelfExportColumnName(count($levelNames));
-        $merge[] = ['merge' => 'A1:' . $lastColumn . '1', 'cell' => 'A1', 'name' => '设备名称：' . $machineName];
-        $merge[] = ['merge' => 'A2:' . $lastColumn . '2', 'cell' => 'A2', 'name' => '设备编号：' . $machineId];
+        $columnCount = $maxChannelCount + 1;
+        $columnKeys = [];
+        for ($index = 0; $index < $columnCount; $index++) $columnKeys[] = 'column_' . $index;
 
-        if ($specialChannels) {
-            $specialTitle = array_fill_keys(array_keys($title), '');
-            $specialTitle['level_0'] = '特殊货道';
-            $list[] = $specialTitle;
-            $merge[] = ['merge' => 'A' . $excelRow . ':' . $lastColumn . $excelRow];
+        $buildHeaderRow = function (array $channelsInGroup) use ($columnKeys) {
+            $row = array_fill_keys($columnKeys, '');
+            $row['column_0'] = '信息项';
+            foreach ($channelsInGroup as $index => $channel) {
+                $row['column_' . ($index + 1)] = (string)($channel['channel_code'] ?? '');
+            }
+            return $row;
+        };
+        $buildDataRow = function ($label, $field, array $channelsInGroup) use ($columnKeys) {
+            $row = array_fill_keys($columnKeys, '');
+            $row['column_0'] = $label;
+            foreach ($channelsInGroup as $index => $channel) {
+                $value = $field === 'pic'
+                    ? $this->formatShelfChannelExportImage($channel[$field] ?? '')
+                    : ($channel[$field] ?? '');
+                $row['column_' . ($index + 1)] = (string)$value;
+            }
+            return $row;
+        };
+
+        $firstGroup = array_shift($groups);
+        $title = $buildHeaderRow($firstGroup);
+        $list = [];
+        $rowHeights = [4 => 25];
+        $excelRow = 5;
+        $fields = [
+            ['商品图片', 'pic'],
+            ['商品名称', 'g_name'],
+            ['商品SKU', 'sku'],
+            ['商品售价', 'retail_price'],
+            ['库存容量', 'capacity'],
+            ['当前库存', 'stock'],
+        ];
+        if ($hasCostPriceAuth) $fields[] = ['成本价', 'cost_price'];
+
+        $appendGroupData = function (array $channelsInGroup) use (&$list, &$rowHeights, &$excelRow, $fields, $buildDataRow) {
+            foreach ($fields as $field) {
+                $list[] = $buildDataRow($field[0], $field[1], $channelsInGroup);
+                $rowHeights[$excelRow++] = $field[1] === 'pic' ? 80 : 25;
+            }
+        };
+        $appendGroupData($firstGroup);
+
+        foreach ($groups as $channelsInGroup) {
+            $list[] = array_fill_keys($columnKeys, '');
+            $rowHeights[$excelRow++] = 12;
+            $list[] = $buildHeaderRow($channelsInGroup);
             $rowHeights[$excelRow++] = 25;
-            foreach ($specialChannels as $channel) {
-                $imageRow = array_fill_keys(array_keys($title), '');
-                $imageRow['level_0'] = $this->formatShelfChannelExportImage($channel['pic'] ?? '');
-                $list[] = $imageRow;
-                $merge[] = ['merge' => 'A' . $excelRow . ':' . $lastColumn . $excelRow];
-                $rowHeights[$excelRow++] = 80;
-
-                $detailRow = array_fill_keys(array_keys($title), '');
-                $detailRow['level_0'] = $this->formatShelfChannelExportText($channel, $hasCostPriceAuth);
-                $list[] = $detailRow;
-                $merge[] = ['merge' => 'A' . $excelRow . ':' . $lastColumn . $excelRow];
-                $rowHeights[$excelRow++] = $hasCostPriceAuth ? 105 : 92;
-            }
+            $appendGroupData($channelsInGroup);
         }
 
+        $lastColumn = $this->getShelfExportColumnName($columnCount);
+        $merge = [
+            ['merge' => 'A1:' . $lastColumn . '1', 'cell' => 'A1', 'name' => '设备名称：' . $machineName],
+            ['merge' => 'A2:' . $lastColumn . '2', 'cell' => 'A2', 'name' => '设备编号：' . $machineId],
+        ];
+        $imageFields = array_slice($columnKeys, 1);
         $filename = '货架层级铺货计划-' . date('YmdHis');
         return $this->sendToExport('设备管理-设备货架-按层级导出', $filename, $title, $list, [
             'startRow' => 4,
             'merge' => $merge,
-            'imageFields' => array_keys($title),
+            'imageFields' => $imageFields,
             'imageWidth' => 120,
             'imageHeight' => 100,
-            'columnWidth' => 32,
+            'columnWidth' => 24,
             'wrapText' => true,
             'vertical' => 'center',
             'rowHeights' => $rowHeights,
         ]);
-    }
-
-    private function formatShelfChannelExportText(array $channel, $hasCostPriceAuth)
-    {
-        $lines = [
-            '货道编号：' . ($channel['channel_code'] ?? ''),
-            '商品名称：' . ($channel['g_name'] ?? ''),
-            '商品SKU：' . ($channel['sku'] ?? ''),
-            '商品售价：' . ($channel['retail_price'] ?? ''),
-            '库存容量：' . ($channel['capacity'] ?? ''),
-            '当前库存：' . ($channel['stock'] ?? ''),
-        ];
-        if ($hasCostPriceAuth) $lines[] = '成本价：' . ($channel['cost_price'] ?? '');
-        return implode("\n", $lines);
     }
 
     private function formatShelfChannelExportImage($pic)
