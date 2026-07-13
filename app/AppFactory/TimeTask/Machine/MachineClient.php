@@ -12,6 +12,7 @@ namespace app\AppFactory\TimeTask\Machine;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineSnapshotTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
@@ -32,12 +33,15 @@ use think\facade\Env as FacadeEnv;
 
 class MachineClient extends TimeTaskBase
 {
-    use MachineOnlineTrait,MachineOnlineDetailsTrait,MachineOnlineSnapshotTrait,MachineTrait,MachineOnOffTrait,MachineMqRecordTrait;
+    use MachineOnlineTrait,MachineOnlineDetailsTrait,MachineOnlineSnapshotTrait,MachineTrait,MachineOnOffTrait,MachineMqRecordTrait,MachineErrorCodeTrait;
     use SaleOrdersTrait;
     use AuthManagerMachineTrait;
     use ActivityCouponUsedTrait;
     use SimCardInfoTrait;
     use ToManagerTrait;
+
+    public $machine = [];
+    public $message = [];
 
     /**
      * 定时任务，每天定时一次，结算昨天在线时长
@@ -1094,26 +1098,18 @@ class MachineClient extends TimeTaskBase
                 }
 
                 $sentCacheKey = 'machine_shutdown_exception_sent:' . $item['m_id'] . ':' . date('Ymd', $shutdownTimestamp);
-                if (Cache::get($sentCacheKey)) {
-                    continue;
-                }
-
-                $item['errorCode'] = '设备未关机提醒';
-                $item['date'] = date('Y年m月d日', $shutdownTimestamp);
-                $item['exceptionDeclaration'] = '设备未关机提醒';
-                $item['error_code'] = '设备未关机提醒';
-                $item['error_time'] = date('Y-m-d H:i:s');
-                $item['error_info'] = 12202011;
-                $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
-
-                $this->noticeSendData = [
-                    'ao_id' => $item['ao_id'],
-                    'm_id' => $item['m_id'],
-                    'templateType' => 'mFault',
-                    'replaceData' => $item,
+                // if (Cache::get($sentCacheKey)) {
+                //     continue;
+                // }
+                
+                // 复用设备故障上报流程：去重、写入 machine_error_code，再发送故障通知
+                $this->machine = $item;
+                $this->message = [
+                    'errorCode' => '12202011',
+                    'msg' => '设备超过计划关机时间30分钟仍在线',
+                    'error_position' => 3,
                 ];
-
-                $flag[] = $this->noticeSend();
+                $flag[] = $this->errorCode();
                 Cache::set($sentCacheKey, 1, $ttl > 0 ? $ttl : 60);
                 actionLog([
                     'm_id' => $item['m_id'],

@@ -53,12 +53,12 @@ trait MachineErrorCodeTrait
             ['create_time','>=',time() - 30]
         ]);
         if ($recentEc) return 1;
-
-        // $lastEc = $this->getMachineErrorCodeFind([
-        //     'm_id' => $this->machine['m_id'],
-        //     'errorCode' => $this->message['errorCode'],
-        //     ['create_time','>=',time() - env('errorCode.noticeTime') ?? 1800 ]
-        // ],'me_id','me_id desc');
+        //虽然下一层做了通知频率的限制，但这里60秒内也只触发一次相同故障码，防止通知过于频繁
+        $lastEc = $this->getMachineErrorCodeFind([
+            'm_id' => $this->machine['m_id'],
+            'errorCode' => $this->message['errorCode'],
+            ['create_time','>=',time() - 60 ]
+        ],'me_id','me_id desc');
         $insert = [
             "m_id" => $this->machine['m_id'],
             "machine_id" => $this->machine['machine_id'],
@@ -75,7 +75,7 @@ trait MachineErrorCodeTrait
         }
         $result = $this->addMachineErrorCode($insert);
         if ($result && !in_array($this->message['errorCode'], ['1100000', '1000001'])) {
-            //if (!$lastEc) {
+            if (!$lastEc) {
                 $machine = $this->machine;
                 if (!is_array($this->machine)) $machine = $this->machine->toArray();
                 $machine['machine_name'] = mb_substr($machine['machine_name'], 0, 20, 'UTF-8');
@@ -95,7 +95,7 @@ trait MachineErrorCodeTrait
                 ];
                 actionLog($this->noticeSendData, '发送设备故障通知');
                 @$this->noticeSend();
-            //}
+            }
         }
         return 1;
     }
