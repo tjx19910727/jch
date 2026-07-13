@@ -982,8 +982,13 @@ class MachineClient extends TimeTaskBase
             $todayEnd = $today + 86399;
             $ttl = $todayEnd - $now;
 
-            $list = Db::name('machine')->alias('m')
-                ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left')
+            $query = Db::name('machine')->alias('m')
+                ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left');
+            if (env('CglPay.is_test')) {
+                // 测试环境仅查询特定设备，方便测试验证
+                $query = $query->where('m.machine_id', 'JCHM-H2D-0064');
+            }
+            $list = $query
                 ->where('m.is_operating', 1)
                 ->where(function ($query) {
                     $query->where('m.online', 1)->whereOr('m.http_online', 1);
