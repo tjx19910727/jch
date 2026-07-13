@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Management\Machine;
 
+use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentDetailModel;
@@ -50,13 +51,15 @@ class MachinePreReplenishmentClient extends ManagementClient
         $orderPlanQtyMap = [];
         if ($orderId) {
             $orderDetails = PreReplenishmentDetailModel::where(['order_id' => $orderId])
-                ->field('m_id,machine_id,mc_id,plan_quantity')
+                ->field('m_id,machine_id,mc_id,g_id,is_head,plan_quantity')
                 ->select()
                 ->toArray();
             foreach ($orderDetails as $d) {
+                $gId = (int)($d['g_id'] ?? 0);
+                $isHead = (int)($d['is_head'] ?? 1);
                 $mcKey = $d['m_id'] . '_' . $d['mc_id'];
                 $orderMcIds[$mcKey] = true;
-                $orderPlanQtyMap[$mcKey] = (int)$d['plan_quantity'];
+                $orderPlanQtyMap[$mcKey . '_' . $gId . '_' . $isHead] = (int)$d['plan_quantity'];
             }
         }
 
@@ -71,10 +74,32 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         $mIds = array_column($machineList, 'm_id');
         $channelList = MachineChannelModel::where([['m_id', 'in', $mIds]])
-            ->field('m_id,mc_id,channel_code,stock,capacity,sku,g_name,pic,g_id')
+            ->field('m_id,mc_id,channel_code,stock,capacity,sku,g_name,pic,g_id,is_multi_goods')
             ->order('mc_id asc')
             ->select()
             ->toArray();
+
+        // ==================== 单货道多商品相关开始 ====================
+        $multiMcIds = [];
+        foreach ($channelList as $channel) {
+            if ((int)($channel['is_multi_goods'] ?? 2) === 1) {
+                $multiMcIds[] = (int)$channel['mc_id'];
+            }
+        }
+        $batchMap = [];
+        if ($multiMcIds) {
+            $batchRows = Db::name('channel_goods_batch')->alias('b')
+                ->leftJoin('goods g', 'g.g_id = b.g_id')
+                ->whereIn('b.mc_id', $multiMcIds)
+                ->whereIn('b.status', [2, 3])
+                ->field('b.mc_id,b.g_id,b.sequence,b.capacity,b.stock,b.frozen_stock,b.status,g.sku,g.g_name,g.pic')
+                ->order('b.mc_id asc,b.sequence asc')
+                ->select()->toArray();
+            foreach ($batchRows as $batch) {
+                $batchMap[$batch['mc_id']][] = $batch;
+            }
+        }
+        // ==================== 单货道多商品相关结束 ====================
 
         $channelMap = [];
         $salesCache = [];
@@ -84,14 +109,51 @@ class MachinePreReplenishmentClient extends ManagementClient
                 $availableStock = 0;
             }
 
-            // 过滤：可补数量大于0 或者 属于该订单已有的货道
             $mcKey = $channel['m_id'] . '_' . $channel['mc_id'];
-            if ($availableStock <= 0 && !isset($orderMcIds[$mcKey])) {
+            $hasBatchAvailable = false;
+            foreach ($batchMap[$channel['mc_id']] ?? [] as $batch) {
+                $batchPlanKey = $mcKey . '_' . (int)$batch['g_id'] . '_2';
+                if ((int)$batch['capacity'] > (int)$batch['stock'] || isset($orderPlanQtyMap[$batchPlanKey])) {
+                    $hasBatchAvailable = true;
+                    break;
+                }
+            }
+            if ($availableStock <= 0 && !$hasBatchAvailable && !isset($orderMcIds[$mcKey])) {
                 continue;
             }
 
             $gId = $channel['g_id'] ?? 0;
             $mcId = $channel['mc_id'];
+
+            // ==================== 单货道多商品相关开始 ====================
+            $batchArr = [];
+            $batchGoodsMap = [];
+            if ((int)($channel['is_multi_goods'] ?? 2) === 1) {
+                foreach ($batchMap[$mcId] ?? [] as $batch) {
+                    $batchGId = (int)$batch['g_id'];
+                    if (isset($batchGoodsMap[$batchGId])) {
+                        continue;
+                    }
+                    $batchGoodsMap[$batchGId] = true;
+                    $batchAvailableStock = max(0, (int)$batch['capacity'] - (int)$batch['stock']);
+                    $batchPlanKey = $mcKey . '_' . $batchGId . '_2';
+                    if ($batchAvailableStock <= 0 && !isset($orderPlanQtyMap[$batchPlanKey])) {
+                        continue;
+                    }
+                    $batchArr[] = [
+                        'g_id' => $batchGId,
+                        'sku' => $batch['sku'] ?? '',
+                        'g_name' => $batch['g_name'] ?? '',
+                        'image_url' => $batch['pic'] ?? '',
+                        'before_stock' => (int)$batch['stock'],
+                        'capacity' => (int)$batch['capacity'],
+                        'available_stock' => $batchAvailableStock,
+                        'plan_quantity' => $orderPlanQtyMap[$batchPlanKey] ?? 0,
+                        'sequence' => (int)$batch['sequence'],
+                    ];
+                }
+            }
+            // ==================== 单货道多商品相关结束 ====================
 
             $channelMap[$channel['m_id']][] = [
                 'mc_id' => $mcId,
@@ -102,8 +164,12 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'before_stock' => $channel['stock'],
                 'capacity' => $channel['capacity'],
                 'available_stock' => $availableStock,
-                'plan_quantity' => $orderPlanQtyMap[$mcKey] ?? 0,
+                'plan_quantity' => $orderPlanQtyMap[$mcKey . '_' . (int)$gId . '_1']
+                    ?? $orderPlanQtyMap[$mcKey . '_0_1']
+                    ?? 0,
                 'g_id' => $gId,
+                'is_multi_goods' => (int)($channel['is_multi_goods'] ?? 2),
+                'batch_arr' => $batchArr,
             ];
         }
 
@@ -392,6 +458,17 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
         }
 
+        // ==================== 单货道多商品相关开始 ====================
+        $detailGoodsMap = [];
+        $detailGoodsIds = array_values(array_filter(array_unique(array_column($details, 'g_id'))));
+        if ($detailGoodsIds) {
+            $detailGoods = GoodsModel::where([['g_id', 'in', $detailGoodsIds]])
+                ->field('g_id,sku,g_name,pic,bar_code')
+                ->select()->toArray();
+            $detailGoodsMap = array_column($detailGoods, null, 'g_id');
+        }
+        // ==================== 单货道多商品相关结束 ====================
+
         // 日志按 device+machine 统计 reported_count
         $logReportedMap = [];
         foreach ($logs as $log) {
@@ -417,6 +494,8 @@ class MachinePreReplenishmentClient extends ManagementClient
             $mid     = $d['machine_id'];
             $mcId    = $d['mc_id'];
             $channel = $channelMap[$mcId] ?? [];
+            $gId = (int)($d['g_id'] ?? 0);
+            $goods = $detailGoodsMap[$gId] ?? $channel;
             $machine = $machineMap[$mid] ?? [];
             $planQty = (int)$d['plan_quantity'];
             $actualQty = isset($d['actual_quantity']) ? (int)$d['actual_quantity'] : null;
@@ -449,7 +528,9 @@ class MachinePreReplenishmentClient extends ManagementClient
             // 找出最新的上报时间
             $reportTime = null;
             foreach ($logs as $log) {
-                if ($log['machine_id'] === $mid && ($log['channel_code'] ?? '') === ($d['channel_code'] ?? '')) {
+                if ($log['machine_id'] === $mid
+                    && ($log['channel_code'] ?? '') === ($d['channel_code'] ?? '')
+                    && ($log['sku'] ?? '') === ($d['sku'] ?? '')) {
                     $reportTime = $log['report_time'];
                 }
             }
@@ -476,7 +557,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
 
             // ---- replenishment_compare detail ----
-            $gId = $channel['g_id'] ?? 0;
+            $gId = $gId ?: (int)($channel['g_id'] ?? 0);
             $salesKey = $mid . '_' . $mcId . '_' . $gId;
             if (!isset($salesCache[$salesKey])) {
                 $salesCache[$salesKey] = ($gId && $mcId) ? $this->getSalesAmount($mid, $gId, 30, $mcId) : 0;
@@ -485,13 +566,15 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'id'                 => $d['id'],
                 'm_id'               => $machine['m_id'] ?? 0,
                 'mc_id'              => $mcId,
+                'g_id'               => $gId,
+                'is_head'            => (int)($d['is_head'] ?? 1),
                 'machine_id'         => $mid,
                 'machine_name'       => $machine['machine_name'] ?? $mid,
                 'channel_code'       => $d['channel_code'],
                 'sku'                => $d['sku'],
-                'g_name'             => $channel['g_name'] ?? '',
-                'image_url'          => $channel['pic'] ?? '',
-                'bar_code'           => $channel['bar_code'] ?? '',
+                'g_name'             => $goods['g_name'] ?? '',
+                'image_url'          => $goods['pic'] ?? '',
+                'bar_code'           => $goods['bar_code'] ?? '',
                 'model'              => '',
                 'before_stock'       => $d['before_stock'] ?? 0,
                 'capacity'           => $d['capacity'] ?? 0,
@@ -511,14 +594,13 @@ class MachinePreReplenishmentClient extends ManagementClient
             $compareGroups[$mid][] = $compareDetail;
 
             // ---- material_details (按 g_id 聚合) ----
-            $gId = $channel['g_id'] ?? 0;
             $gIdKey = $gId ? (string)$gId : ($d['sku'] ?? '');
             if (!isset($materialMap[$gIdKey])) {
                 $materialMap[$gIdKey] = [
-                    'sku'          => $channel['sku'] ?? $d['sku'] ?? '',
-                    'g_name'       => $channel['g_name'] ?? '',
-                    'image_url'    => $channel['pic'] ?? '',
-                    'bar_code'     => $channel['bar_code'] ?? '',
+                    'sku'          => $goods['sku'] ?? $d['sku'] ?? '',
+                    'g_name'       => $goods['g_name'] ?? '',
+                    'image_url'    => $goods['pic'] ?? '',
+                    'bar_code'     => $goods['bar_code'] ?? '',
                     'model'        => '',
                     'quantity'     => 0,
                     'device_count' => 0,
@@ -621,7 +703,9 @@ class MachinePreReplenishmentClient extends ManagementClient
         // ---- summary ----
         $summary = [
             'device_count'   => count($deviceProgress),
-            'channel_count'  => count($details),
+            'channel_count'  => count(array_unique(array_map(function ($detail) {
+                return $detail['machine_id'] . '_' . $detail['mc_id'];
+            }, $details))),
             'plan_total'     => $planTotal,
             'actual_total'   => $actualTotal,
             'abnormal_count' => $abnormalTotal,
@@ -655,7 +739,7 @@ class MachinePreReplenishmentClient extends ManagementClient
         }
 
         $details = PreReplenishmentDetailModel::where([['order_id', 'in', $orderIds]])
-            ->field('id,order_id,m_id,machine_id,mc_id,channel_code,sku,plan_quantity,actual_quantity,compare_status')
+            ->field('id,order_id,m_id,machine_id,mc_id,g_id,is_head,channel_code,sku,plan_quantity,actual_quantity,compare_status')
             ->order('id asc')
             ->select()
             ->toArray();
@@ -685,19 +769,31 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
         }
 
+        // ==================== 单货道多商品相关开始 ====================
+        $exportGoodsMap = [];
+        $exportGoodsIds = array_values(array_filter(array_unique(array_column($details, 'g_id'))));
+        if ($exportGoodsIds) {
+            $exportGoods = GoodsModel::where([['g_id', 'in', $exportGoodsIds]])
+                ->field('g_id,g_name,pic,sku')
+                ->select()->toArray();
+            $exportGoodsMap = array_column($exportGoods, null, 'g_id');
+        }
+        // ==================== 单货道多商品相关结束 ====================
+
         $groupRows = [];
         foreach ($details as $row) {
             $order = $orderMap[$row['order_id']] ?? [];
             $channel = $channelMap[$row['m_id'] . '_' . $row['mc_id']] ?? [];
-            $gId = $channel['g_id'] ?? 0;
+            $gId = (int)($row['g_id'] ?? 0) ?: (int)($channel['g_id'] ?? 0);
+            $goods = $exportGoodsMap[$gId] ?? $channel;
             $groupKey = ($order['record_no'] ?? '') . '|' . $gId;
             if (!isset($groupRows[$groupKey])) {
                 $recordNo = trim((string)($order['record_no'] ?? ''));
                 $groupRows[$groupKey] = [
                     'record_no' => $order['record_no'] ?? '',
                     'order_bar_code_image' => $recordNo === '' ? '' : ('https://bwipjs-api.metafloor.com/?bcid=code128&includetext=true&scale=2&text=' . urlencode($recordNo)),
-                    'goods_name' => $channel['g_name'] ?? '',
-                    'goods_pic' => $channel['pic'] ?? '',
+                    'goods_name' => $goods['g_name'] ?? '',
+                    'goods_pic' => $goods['pic'] ?? '',
                     'sku' => $row['sku'] ?? '',
                     'plan_quantity' => 0,
                     'actual_quantity' => 0,
@@ -707,11 +803,11 @@ class MachinePreReplenishmentClient extends ManagementClient
                 ];
             }
 
-            if ($groupRows[$groupKey]['goods_name'] === '' && !empty($channel['g_name'])) {
-                $groupRows[$groupKey]['goods_name'] = $channel['g_name'];
+            if ($groupRows[$groupKey]['goods_name'] === '' && !empty($goods['g_name'])) {
+                $groupRows[$groupKey]['goods_name'] = $goods['g_name'];
             }
-            if ($groupRows[$groupKey]['goods_pic'] === '' && !empty($channel['pic'])) {
-                $groupRows[$groupKey]['goods_pic'] = $channel['pic'];
+            if ($groupRows[$groupKey]['goods_pic'] === '' && !empty($goods['pic'])) {
+                $groupRows[$groupKey]['goods_pic'] = $goods['pic'];
             }
 
             $groupRows[$groupKey]['plan_quantity'] += (int)($row['plan_quantity'] ?? 0);
@@ -832,13 +928,14 @@ class MachinePreReplenishmentClient extends ManagementClient
             foreach ($rows as $row) {
                 $order = $orderMap[$row['order_id']] ?? [];
                 $channel = $channelMap[$row['m_id'] . '_' . $row['mc_id']] ?? [];
-                $gId = $channel['g_id'] ?? 0;
+                $gId = (int)($row['g_id'] ?? 0) ?: (int)($channel['g_id'] ?? 0);
+                $goods = $exportGoodsMap[$gId] ?? $channel;
                 $gIdKey = $gId ? (string)$gId : ($row['sku'] ?? '');
                 // 查询近30天销售额，仅在首次遇到该g_id时查询
                 if (!isset($goodsMap[$gIdKey])) {
                     $sales30Days = $gId ? $this->getSalesAmount($machineId, $gId) : 0;
                     $goodsMap[$gIdKey] = [
-                        'g_name' => $channel['g_name'] ?? '',
+                        'g_name' => $goods['g_name'] ?? '',
                         'sku' => $row['sku'] ?? '',
                         'plan_quantity' => 0,
                         'creator_name' => $order['creator_name'] ?? '',
@@ -847,8 +944,8 @@ class MachinePreReplenishmentClient extends ManagementClient
                     ];
                 }
                 $goodsMap[$gIdKey]['plan_quantity'] += (int)($row['plan_quantity'] ?? 0);
-                if (empty($goodsMap[$gIdKey]['g_name']) && !empty($channel['g_name'])) {
-                    $goodsMap[$gIdKey]['g_name'] = $channel['g_name'];
+                if (empty($goodsMap[$gIdKey]['g_name']) && !empty($goods['g_name'])) {
+                    $goodsMap[$gIdKey]['g_name'] = $goods['g_name'];
                 }
             }
             $deviceList = [];

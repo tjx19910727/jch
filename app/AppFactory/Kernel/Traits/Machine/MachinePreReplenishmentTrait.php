@@ -21,9 +21,35 @@ trait MachinePreReplenishmentTrait
         if (!is_array($details)) {
             return [];
         }
-        return array_values(array_filter($details, function ($item) {
+        $details = array_values(array_filter($details, function ($item) {
             return is_array($item);
         }));
+
+        // ==================== 单货道多商品相关开始 ====================
+        $result = [];
+        foreach ($details as $item) {
+            $batchArr = json2arr($item['batch_arr'] ?? []);
+            unset($item['batch_arr']);
+            $item['is_head'] = 1;
+            $result[] = $item;
+            if (!is_array($batchArr)) {
+                continue;
+            }
+            foreach ($batchArr as $batch) {
+                if (!is_array($batch)) {
+                    continue;
+                }
+                $result[] = [
+                    'machine_id' => $item['machine_id'] ?? '',
+                    'mc_id' => $item['mc_id'] ?? 0,
+                    'g_id' => (int)($batch['g_id'] ?? 0),
+                    'is_head' => 2,
+                    'plan_quantity' => $batch['plan_quantity'] ?? 0,
+                ];
+            }
+        }
+        // ==================== 单货道多商品相关结束 ====================
+        return $result;
     }
 
     protected function buildOrderDetails($details)
@@ -40,11 +66,6 @@ trait MachinePreReplenishmentTrait
                 return ['state' => 0, 'msg' => '预补数量不能小于0'];
             }
 
-            $uniqueKey = $item['machine_id'] . '_' . $item['mc_id'];
-            if (isset($uniqueMap[$uniqueKey])) {
-                return ['state' => 0, 'msg' => '同一单内 machine_id + mc_id 不允许重复'];
-            }
-            $uniqueMap[$uniqueKey] = 1;
             $machineIds[$item['machine_id']] = $item['machine_id'];
         }
 
@@ -58,7 +79,7 @@ trait MachinePreReplenishmentTrait
         $channels = [];
         if ($mIds) {
             $channels = MachineChannelModel::where([['m_id', 'in', $mIds]])
-                ->field('m_id,mc_id,channel_code,sku,g_name,pic,stock,capacity')
+                ->field('m_id,mc_id,channel_code,sku,g_name,pic,g_id,stock,capacity,is_multi_goods')
                 ->select()
                 ->toArray();
         }
@@ -67,6 +88,27 @@ trait MachinePreReplenishmentTrait
         foreach ($channels as $channel) {
             $channelMap[$channel['m_id'] . '_' . $channel['mc_id']] = $channel;
         }
+
+        // ==================== 单货道多商品相关开始 ====================
+        $batchRows = [];
+        $mcIds = array_values(array_unique(array_column($details, 'mc_id')));
+        if ($mcIds) {
+            $batchRows = Db::name('channel_goods_batch')->alias('b')
+                ->leftJoin('goods g', 'g.g_id = b.g_id')
+                ->whereIn('b.mc_id', $mcIds)
+                ->whereIn('b.status', [2, 3])
+                ->field('b.mc_id,b.g_id,b.stock,b.capacity,g.sku')
+                ->order('b.sequence asc')
+                ->select()->toArray();
+        }
+        $batchMap = [];
+        foreach ($batchRows as $batch) {
+            $batchKey = $batch['mc_id'] . '_' . $batch['g_id'];
+            if (!isset($batchMap[$batchKey])) {
+                $batchMap[$batchKey] = $batch;
+            }
+        }
+        // ==================== 单货道多商品相关结束 ====================
 
         $buildDetails = [];
         foreach ($details as $item) {
@@ -82,7 +124,38 @@ trait MachinePreReplenishmentTrait
             }
 
             $channel = $channelMap[$channelKey];
-            $availableStock = $channel['capacity'] - $channel['stock'];
+            // ==================== 单货道多商品相关开始 ====================
+            $isHead = (int)($item['is_head'] ?? 1) === 2 ? 2 : 1;
+            $gId = (int)($item['g_id'] ?? 0);
+            if ($isHead === 1) {
+                if ($gId > 0 && $gId !== (int)$channel['g_id']) {
+                    return ['state' => 0, 'msg' => '货道队首商品已发生变化，请刷新后重试'];
+                }
+                $gId = (int)$channel['g_id'];
+                $stock = (int)$channel['stock'];
+                $capacity = (int)$channel['capacity'];
+                $sku = $channel['sku'];
+            } else {
+                if ((int)($channel['is_multi_goods'] ?? 2) !== 1 || $gId <= 0) {
+                    return ['state' => 0, 'msg' => '货道非队首商品参数错误'];
+                }
+                $batch = $batchMap[$channel['mc_id'] . '_' . $gId] ?? null;
+                if (!$batch) {
+                    return ['state' => 0, 'msg' => '货道非队首商品不存在或状态已变化'];
+                }
+                $stock = (int)$batch['stock'];
+                $capacity = (int)$batch['capacity'];
+                $sku = $batch['sku'] ?? '';
+            }
+
+            $uniqueKey = $machineId . '_' . $channel['mc_id'] . '_' . $gId;
+            if (isset($uniqueMap[$uniqueKey])) {
+                return ['state' => 0, 'msg' => '同一货道内商品不允许重复'];
+            }
+            $uniqueMap[$uniqueKey] = 1;
+            // ==================== 单货道多商品相关结束 ====================
+
+            $availableStock = $capacity - $stock;
             if ($availableStock < 0) {
                 $availableStock = 0;
             }
@@ -95,10 +168,12 @@ trait MachinePreReplenishmentTrait
                 'm_id' => $machine['m_id'],
                 'machine_id' => $machine['machine_id'],
                 'mc_id' => $channel['mc_id'],
+                'g_id' => $gId,
+                'is_head' => $isHead,
                 'channel_code' => $channel['channel_code'],
-                'sku' => $channel['sku'],
-                'before_stock' => $channel['stock'],
-                'capacity' => $channel['capacity'],
+                'sku' => $sku,
+                'before_stock' => $stock,
+                'capacity' => $capacity,
                 'available_stock' => $availableStock,
                 'plan_quantity' => $item['plan_quantity'],
                 'actual_quantity' => null,
@@ -209,6 +284,7 @@ trait MachinePreReplenishmentTrait
                 ['order_id', '=', $order['id']],
                 ['machine_id', '=', $logData['machine_id']],
                 ['channel_code', '=', $logData['channel_code']],
+                ['is_head', '=', 1],
             ])->lock(true)->find();
             if ($detailByChannel) {
                 $actualQuantity = $detailByChannel['actual_quantity'] ?? 0;
