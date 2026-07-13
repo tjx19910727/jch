@@ -20,6 +20,7 @@ class RevenueRuleConfigModel extends BaseModel
         "settlement_days" => "int",
         "coupon_id" => "int",
         "cost_assume" => "int",
+        "trigger_pay_types" => "string",
         "receiver_config" => "string",
         "status" => "int",
         "creator" => "int",

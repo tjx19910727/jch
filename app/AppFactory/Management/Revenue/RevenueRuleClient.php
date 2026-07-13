@@ -182,6 +182,13 @@ class RevenueRuleClient extends ManagementClient
         if (isset($merged['cost_assume']) && !in_array(intval($merged['cost_assume']), [0, 1, 2], true)) {
             return $this->rFail("优惠券成本承担方式不合法");
         }
+        if (array_key_exists('trigger_pay_types', $data)) {
+            $normalizePayTypes = $this->normalizeTriggerPayTypes($data['trigger_pay_types']);
+            if ($normalizePayTypes === false) {
+                return $this->rFail("触发收款方式不合法");
+            }
+            $data['trigger_pay_types'] = $normalizePayTypes;
+        }
         if (intval($merged['rule_mode'] ?? 0) === 5) {
             $couponCheck = $this->normalizeConfigCouponData($data, $merged, $isUpdate);
             if ($couponCheck !== true) return $couponCheck;
@@ -217,20 +224,47 @@ class RevenueRuleClient extends ManagementClient
         $save = [];
         foreach ([
             'config_name', 'rule_mode', 'base_type', 'turnover_type', 'tier_calc_mode',
-            'settlement_type', 'settlement_days', 'coupon_id', 'cost_assume', 'receiver_config', 'status',
+            'settlement_type', 'settlement_days', 'coupon_id', 'cost_assume', 'trigger_pay_types', 'receiver_config', 'status',
         ] as $field) {
             if (array_key_exists($field, $data)) $save[$field] = $data[$field];
         }
         if (isset($data['receivers']) && !isset($save['receiver_config'])) $save['receiver_config'] = $data['receivers'];
         if (isset($save['receiver_config'])) $save['receiver_config'] = $this->encodeReceiverConfig($save['receiver_config']);
+        if (isset($save['trigger_pay_types']) && is_array($save['trigger_pay_types'])) {
+            $save['trigger_pay_types'] = json_encode($save['trigger_pay_types'], JSON_UNESCAPED_UNICODE);
+        }
         if (!$isUpdate) {
             foreach (['base_type' => 1, 'turnover_type' => 1, 'tier_calc_mode' => 1, 'settlement_type' => 1, 'settlement_days' => 0, 'cost_assume' => 0, 'status' => 1] as $field => $value) {
                 if (!isset($save[$field])) $save[$field] = $value;
             }
             if (!isset($save['receiver_config'])) $save['receiver_config'] = '[]';
+            if (!isset($save['trigger_pay_types'])) $save['trigger_pay_types'] = '[]';
         }
         if (isset($save['settlement_type']) && intval($save['settlement_type']) === 1) $save['settlement_days'] = 0;
         return $save;
+    }
+
+    protected function normalizeTriggerPayTypes($payTypes)
+    {
+        if ($payTypes === '' || $payTypes === null) return [];
+        if (is_string($payTypes)) {
+            $decoded = json_decode($payTypes, true);
+            if (is_array($decoded)) {
+                $payTypes = $decoded;
+            } else {
+                $payTypes = explode(',', $payTypes);
+            }
+        }
+        if (!is_array($payTypes)) return false;
+        $result = [];
+        foreach ($payTypes as $payType) {
+            if ($payType === '' || $payType === null) continue;
+            if (!is_numeric($payType) || intval($payType) < 0) return false;
+            $payType = intval($payType);
+            if (!in_array($payType, $result, true)) $result[] = $payType;
+        }
+        sort($result);
+        return $result;
     }
 
     protected function encodeReceiverConfig($config)
@@ -421,6 +455,7 @@ class RevenueRuleClient extends ManagementClient
     protected function formatConfigRow(array $row)
     {
         $row['cost_assume'] = intval($row['cost_assume'] ?? 0);
+        $row['trigger_pay_types'] = $this->normalizeConfigPayTypesForResponse($row['trigger_pay_types'] ?? []);
         $row['receivers'] = isset($row['receiver_config']) ? json_decode($row['receiver_config'], true) : [];
         if (!is_array($row['receivers'])) $row['receivers'] = [];
         if (intval($row['rule_mode'] ?? 0) === 5 && intval($row['coupon_id'] ?? 0) > 0) {
@@ -433,6 +468,12 @@ class RevenueRuleClient extends ManagementClient
             }
         }
         return $row;
+    }
+
+    protected function normalizeConfigPayTypesForResponse($payTypes)
+    {
+        $result = $this->normalizeTriggerPayTypes($payTypes);
+        return $result === false ? [] : $result;
     }
 
     protected function formatScopeRows($data)

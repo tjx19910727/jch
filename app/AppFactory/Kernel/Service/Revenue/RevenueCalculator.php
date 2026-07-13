@@ -224,7 +224,7 @@ class RevenueCalculator
             return false;
         }
 
-        $coupon = RevenueCouponService::findEnabledCouponByCode($couponCode);
+        $coupon = RevenueCouponService::findEnabledCouponByCode($couponCode, intval($this->order['pay_type'] ?? 0));
         if ($coupon && !is_array($coupon)) {
             $coupon = $coupon->toArray();
         }
@@ -741,7 +741,54 @@ class RevenueCalculator
             $rule = $this->normalizeConfigRule($rule);
         }
         unset($rule);
-        return $rules;
+        return $this->filterRulesByPayType($rules);
+    }
+
+    protected function filterRulesByPayType(array $rules)
+    {
+        $result = [];
+        foreach ($rules as $rule) {
+            if ($this->ruleAllowsPayType($rule)) {
+                $result[] = $rule;
+            } else {
+                $this->logRevenueConfig('分账规则收款方式过滤', [
+                    'rule_mode' => intval($rule['rule_mode'] ?? 0),
+                    'rr_id' => intval($rule['rr_id'] ?? 0),
+                    'pay_type' => intval($this->order['pay_type'] ?? 0),
+                    'trigger_pay_types' => $this->getRuleTriggerPayTypes($rule),
+                ]);
+            }
+        }
+        return $result;
+    }
+
+    protected function ruleAllowsPayType(array $rule)
+    {
+        $payTypes = $this->getRuleTriggerPayTypes($rule);
+        if (!$payTypes) {
+            return true;
+        }
+        return in_array(intval($this->order['pay_type'] ?? 0), $payTypes, true);
+    }
+
+    protected function getRuleTriggerPayTypes(array $rule)
+    {
+        $payTypes = $rule['trigger_pay_types'] ?? [];
+        if (is_string($payTypes)) {
+            $decoded = json_decode($payTypes, true);
+            $payTypes = is_array($decoded) ? $decoded : explode(',', $payTypes);
+        }
+        if (!is_array($payTypes)) {
+            return [];
+        }
+        $result = [];
+        foreach ($payTypes as $payType) {
+            if ($payType === '' || $payType === null) continue;
+            $payType = intval($payType);
+            if (!in_array($payType, $result, true)) $result[] = $payType;
+        }
+        sort($result);
+        return $result;
     }
 
     protected function getScopeOrderRaw($mId, $gId, $mgId)
