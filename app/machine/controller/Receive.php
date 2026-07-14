@@ -690,6 +690,21 @@ class Receive extends Common
     }
 
     /**
+     * 订单使用分账优惠券。
+     *
+     * @return array|\think\response\Json
+     */
+    public function useRevenueCoupon()
+    {
+        try {
+            return $this->app->activity->useRevenueCoupon();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 获取设备公网IP
      * @return array|string
      */
