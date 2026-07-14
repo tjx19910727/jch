@@ -150,6 +150,14 @@ trait MallPointsPayTrait
             if ($uOrder) {
                 actionLog($this->getLS(), '修改订单支付状态信息');
                 $this->outGoods();
+                if (property_exists($this, 'returnData')) {
+                    $this->returnData['order'] = $this->order;
+                    $this->returnData['pay_required'] = false;
+                    $this->returnData['zero_pay'] = false;
+                    $this->returnData['next_action'] = 'wait_out_goods';
+                    $this->returnData['result'] = true;
+                    return $this->r(200, $this->lang("VOrderPay.pay_status3"), $this->returnData);
+                }
                 return $this->rSuccess($this->lang("VOrderPay.pay_status3"));
             }
         }
