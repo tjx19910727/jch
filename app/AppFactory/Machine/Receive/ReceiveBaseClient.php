@@ -71,6 +71,13 @@ class ReceiveBaseClient extends MachineBaseClient
             return ['handled' => false, 'success' => false, 'msg' => $this->lang("VSaleOrders.order_not_data")];
         }
         $order = is_object($order) && method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
+        if ($this->isMallPointsExchangeOrder($order)) {
+            return [
+                'handled' => false,
+                'success' => true,
+                'order' => $this->buildOrderPayActionData($order, true, false),
+            ];
+        }
         if (bccomp(strval($order['total_price'] ?? 0), '0.01', 2) >= 0) {
             return ['handled' => false, 'success' => true, 'order' => $this->buildOrderPayActionData($order)];
         }
@@ -107,6 +114,21 @@ class ReceiveBaseClient extends MachineBaseClient
     protected function buildOrderPayActionData($order, $payRequired = null, $zeroPay = null)
     {
         $order = is_object($order) && method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
+        $details = isset($order['details']) ? $order['details'] : [];
+        if (!$details && !empty($order['order_id'])) {
+            $details = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0);
+        }
+        if (is_object($details) && method_exists($details, 'toArray')) {
+            $details = $details->toArray();
+        }
+        if (is_array($details)) {
+            foreach ($details as $key => $detail) {
+                if (is_object($detail)) {
+                    $details[$key] = method_exists($detail, 'toArray') ? $detail->toArray() : (array)$detail;
+                }
+            }
+        }
+        $order['details'] = is_array($details) ? array_values($details) : [];
         $needPay = bccomp(strval($order['total_price'] ?? 0), '0.01', 2) >= 0 && intval($order['pay_status'] ?? 0) != 3;
         if ($payRequired !== null) {
             $needPay = (bool)$payRequired;
