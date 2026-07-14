@@ -1478,6 +1478,20 @@ class Receive extends Common
             actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
-    }  
+    }
+    
+    /**
+     * 设备上报远程出货步骤状态
+     * @return array|string
+     */
+    public function remoteStatus()
+    {
+        try {
+            return $this->app->api->remoteStatus();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
 }
 
