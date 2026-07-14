@@ -20,6 +20,8 @@ use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\Machine\MachineOnOffModel;
+use app\AppFactory\Kernel\Model\Mall\MallMachineModel;
+use app\AppFactory\Kernel\Model\Mall\MallModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
 use app\AppFactory\Kernel\Support\ApiOutStatusNotify;
 use app\AppFactory\Kernel\Traits\Api\ApiAdvanceTrait;
@@ -60,6 +62,7 @@ class Test extends BaseController
         }
 
         $machineId = trim((string)input('machine_id', ''));
+        $mallId = intval(input('mall_id', 0));
         $mcId = intval(input('mc_id', 0));
         $gId = intval(input('g_id', 0));
         $costPoints = input('cost_points', null);
@@ -89,6 +92,40 @@ class Test extends BaseController
             return returnState(100, 'mac请求头与目标设备不匹配');
         }
 
+        $activeBinding = MallMachineModel::getFind([
+            'machine_id' => $machineId,
+            'status' => 1,
+        ]);
+        $activeBinding = $activeBinding
+            ? (is_object($activeBinding) && method_exists($activeBinding, 'toArray') ? $activeBinding->toArray() : (array)$activeBinding)
+            : [];
+        if ($mallId <= 0 && !empty($activeBinding['mall_id'])) {
+            $mallId = intval($activeBinding['mall_id']);
+        }
+        if ($mallId <= 0) {
+            $availableMalls = MallModel::getList([
+                ['status', '=', 1],
+                ['type', '<>', 1],
+            ], 0, 'mall_id,mall_name,type,status', 'mall_id desc');
+            $availableMalls = is_object($availableMalls) && method_exists($availableMalls, 'toArray')
+                ? $availableMalls->toArray()
+                : (array)$availableMalls;
+            if (count($availableMalls) !== 1) {
+                return returnState(100, '无法唯一确定积分商城，请传mall_id', [
+                    'available_mall_ids' => array_map('intval', array_column($availableMalls, 'mall_id')),
+                ]);
+            }
+            $mallId = intval($availableMalls[0]['mall_id']);
+        }
+        $mall = MallModel::getFind(['mall_id' => $mallId, 'status' => 1], 'mall_id,mall_name,type,status');
+        if (!$mall) {
+            return returnState(100, '商城不存在或未启用');
+        }
+        $mall = is_object($mall) && method_exists($mall, 'toArray') ? $mall->toArray() : (array)$mall;
+        if (intval($mall['type']) === 1) {
+            return returnState(100, '该商城未启用积分支付');
+        }
+
         $where = ['m_id' => intval($machine['m_id'])];
         if ($mcId > 0) $where['mc_id'] = $mcId;
         if ($gId > 0) $where['g_id'] = $gId;
@@ -104,8 +141,36 @@ class Test extends BaseController
         $channels = is_object($channels) && method_exists($channels, 'toArray') ? $channels->toArray() : (array)$channels;
 
         $updated = [];
+        $bindingChanged = empty($activeBinding) || intval($activeBinding['mall_id']) !== $mallId;
         Db::startTrans();
         try {
+            MallMachineModel::where([
+                'machine_id' => $machineId,
+                'status' => 1,
+            ])->where('mall_id', '<>', $mallId)->update(['status' => 2]);
+            $targetBinding = MallMachineModel::getFind([
+                'mall_id' => $mallId,
+                'machine_id' => $machineId,
+            ]);
+            if ($targetBinding) {
+                $targetBinding = is_object($targetBinding) && method_exists($targetBinding, 'toArray')
+                    ? $targetBinding->toArray()
+                    : (array)$targetBinding;
+                MallMachineModel::update([
+                    'id' => intval($targetBinding['id']),
+                    'm_id' => intval($machine['m_id']),
+                    'status' => 1,
+                ]);
+                $bindingId = intval($targetBinding['id']);
+            } else {
+                $bindingId = MallMachineModel::insertGetId([
+                    'mall_id' => $mallId,
+                    'm_id' => intval($machine['m_id']),
+                    'machine_id' => $machineId,
+                    'creator' => 0,
+                    'status' => 1,
+                ]);
+            }
             foreach ($channels as $channel) {
                 $before = round(floatval($channel['cost_points'] ?? 0), 3);
                 if ($before != $costPoints) {
@@ -140,12 +205,22 @@ class Test extends BaseController
                 'machine_id' => (string)$machine['machine_id'],
                 'machine_name' => (string)$machine['machine_name'],
             ],
+            'mall' => [
+                'mall_id' => intval($mall['mall_id']),
+                'mall_name' => (string)$mall['mall_name'],
+                'type' => intval($mall['type']),
+            ],
+            'mall_binding' => [
+                'id' => intval($bindingId),
+                'status' => 1,
+                'changed' => $bindingChanged,
+            ],
             'cost_points' => $costPoints,
             'enabled' => $costPoints > 0,
             'pay_type_required' => 9,
             'channel_count' => count($updated),
             'channels' => $updated,
-            'notice' => '设备下单时仍需传pay_type=9；cost_points=0可取消积分兑换配置。',
+            'notice' => '设备已绑定积分商城；下单时仍需传pay_type=9。cost_points=0仅取消商品积分配置，不解除商城绑定。',
         ]);
     }
 
