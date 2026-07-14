@@ -12,6 +12,7 @@ namespace app\AppFactory\TimeTask\Machine;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineErrorCodeTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineSnapshotTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineOnlineTrait;
@@ -32,12 +33,15 @@ use think\facade\Env as FacadeEnv;
 
 class MachineClient extends TimeTaskBase
 {
-    use MachineOnlineTrait,MachineOnlineDetailsTrait,MachineOnlineSnapshotTrait,MachineTrait,MachineOnOffTrait,MachineMqRecordTrait;
+    use MachineOnlineTrait,MachineOnlineDetailsTrait,MachineOnlineSnapshotTrait,MachineTrait,MachineOnOffTrait,MachineMqRecordTrait,MachineErrorCodeTrait;
     use SaleOrdersTrait;
     use AuthManagerMachineTrait;
     use ActivityCouponUsedTrait;
     use SimCardInfoTrait;
     use ToManagerTrait;
+
+    public $machine = [];
+    public $message = [];
 
     /**
      * 定时任务，每天定时一次，结算昨天在线时长
@@ -452,11 +456,9 @@ class MachineClient extends TimeTaskBase
 
             $query = Db::name('machine')->alias('m')
                     ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left');
-            $title = '';
             if (env('CglPay.is_test')) {
                 // 测试环境仅查询特定设备，方便测试验证
                 $query = $query->where('m.machine_id', 'JCHM-H2D-0064')->where('m.online', 2)->where('m.http_online', 2);
-                $title = '测试';
             }else{
                 //只查询最近的2天有在线记录的设备，避免查询历史数据较多的设备，影响巡检效率
                 $query = $query->where('m.online', 2)
@@ -541,22 +543,14 @@ class MachineClient extends TimeTaskBase
                     }
                     $currentStage = $nextStage;
 
-                    $item['errorCode'] = '在营设备未开机'.$title;
-                    $item['date'] = date("Y年m月d日");
-                    $item['exceptionDeclaration'] = '在营设备未开机';
-                    $item['error_code'] = '在营设备未开机'.$title;
-                    $item['error_time'] = date('Y-m-d H:i:s');
-                    $item['error_info'] = 11102011; // 在营设备未开机
-                    $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
-
-                    $this->noticeSendData = [
-                        "ao_id" => $item['ao_id'],
-                        "m_id" => $item['m_id'],
-                        "templateType" => "mFault",
-                        "replaceData" => $item,
+                    // 复用设备故障上报流程：去重、写入 machine_error_code，再发送故障通知
+                    $this->machine = $item;
+                    $this->message = [
+                        'errorCode' => '11102011',
+                        'msg' => '设备超过计划开机时间仍未开机',
+                        'error_position' => 3,
                     ];
-
-                    $flag[] = $this->noticeSend();
+                    $flag[] = $this->errorCode();
                     //当前阶段的通知发送成功后，更新已发送阶段数缓存，过期时间为当天23:59:59
                     Cache::set($stageCacheKey, $currentStage, $ttl > 0 ? $ttl : 60);
                     actionLog([
@@ -890,4 +884,238 @@ class MachineClient extends TimeTaskBase
         ];
     }
 
+    /**
+     * 每天凌晨2点执行，同步物联卡每日使用流量
+     * 因为第三方api接口有延迟，查询3天前的日用量
+     * 命令示例：php think time_task machine syncSimCardDayUsage
+     * @return string
+     */
+    public function syncSimCardDayUsage()
+    {
+        $targetDay = date('Ymd', strtotime('-3 days'));
+
+        $machineInfoList = Db::name('machine_info')->alias('a')
+            ->join('machine b', 'a.m_id = b.m_id')
+            ->whereNotNull('a.iccid')
+            ->where('a.iccid', '<>', '')
+            ->where('a.iccid', '<>', '0')
+            ->whereIn('b.is_operating', [1, 3])
+            ->field('a.m_id,b.machine_id,a.iccid')
+            ->select()
+            ->toArray();
+
+        if (!$machineInfoList) {
+            return '无可同步的物联卡';
+        }
+
+        $success = 0;
+        $fail = 0;
+        $updateCount = 0;
+        $skipCount = 0;
+
+        foreach ($machineInfoList as $item) {
+            try {
+                $iccid = strval($item['iccid']);
+                $resultDay = Simiot::queryDayUsage($iccid, $targetDay, $targetDay);
+                if (!$resultDay || !is_array($resultDay) || ($resultDay['code'] ?? -1) != 0) {
+                    $fail++;
+                    actionLog(['iccid' => $iccid, 'result' => $resultDay], '查询单卡日用量失败', 'syncSimCardDayUsage');
+                    continue;
+                }
+
+                $dayList = $resultDay['result'] ?? [];
+                if (!is_array($dayList) || empty($dayList)) {
+                    $skipCount++;
+                    continue;
+                }
+
+                $dayItem = $dayList[0] ?? [];
+                $day = $dayItem['day'] ?? 0;
+                $usage = $dayItem['usage'] ?? 0;
+                if (!$day) {
+                    $skipCount++;
+                    continue;
+                }
+                $dayDate = date('Y-m-d', strtotime($day));
+
+                $exist = Db::name('sim_card_machine')
+                    ->where('m_id', $item['m_id'])
+                    ->where('iccid', $iccid)
+                    ->where('date', $dayDate)
+                    ->find();
+
+                if ($exist) {
+                    Db::name('sim_card_machine')
+                        ->where('id', $exist['id'])
+                        ->update(['usage' => $usage]);
+                    $updateCount++;
+                } else {
+                    $skipCount++;
+                }
+                $success++;
+            } catch (\Throwable $e) {
+                $fail++;
+                actionException($e, 1, 'syncSimCardDayUsage');
+            }
+        }
+
+        return "处理成功，总数:" . count($machineInfoList) . "，成功:" . $success . "，失败:" . $fail . "，更新:" . $updateCount . "，跳过:" . $skipCount;
+    }
+
+    /**
+     * 定时任务-建议每15分钟执行一次，检查设备超过关机时间30分钟后是否仍未关机。
+     * 命令示例：php think time_task machine checkOperatingShutdown
+     *
+     * @return string
+     */
+    public function checkOperatingShutdown()
+    {
+        try {
+            $now = time();
+            $today = strtotime(date('Y-m-d', $now));
+            $todayEnd = $today + 86399;
+            $ttl = $todayEnd - $now;
+
+            $query = Db::name('machine')->alias('m')
+                ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left');
+            if (env('CglPay.is_test')) {
+                // 测试环境仅查询特定设备，方便测试验证
+                $query = $query->where('m.machine_id', 'JCHM-H4DPK-0095');
+            }
+            $list = $query
+                ->where('m.is_operating', 1)
+                ->where(function ($query) {
+                    $query->where('m.online', 1)->whereOr('m.http_online', 1);
+                })
+                ->whereNotNull('moo.on_off_machine')
+                ->where('moo.on_off_machine', '<>', '')
+                ->where('moo.on_off_machine', '<>', '{}')
+                ->where('moo.status', 1)
+                ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.ao_id,moo.on_off_machine')
+                ->order('m.m_id desc')
+                ->select()
+                ->toArray();
+
+            if (!$list) {
+                return '无设备需要检查';
+            }
+
+            $flag = [];
+            foreach ($list as $item) {
+                $onOffMachine = $item['on_off_machine'];
+                if (is_string($onOffMachine)) {
+                    $onOffMachine = json_decode($onOffMachine, true);
+                }
+                if (!is_array($onOffMachine)) {
+                    continue;
+                }
+
+                $yesterday = strtotime('-1 day', $today);
+                $todayWeekKey = (string)(intval(date('N', $today)) - 1);
+                $yesterdayWeekKey = (string)(intval(date('N', $yesterday)) - 1);
+                $nowSec = $now - $today;
+                $lateShutdownSec = 23 * 3600 + 30 * 60;
+
+                // on_off_machine 下标：0=周一，1=周二，...，6=周日；没有下标表示当天未配置。
+                $parseOnOff = function ($weekKey) use ($onOffMachine) {
+                    if (!array_key_exists($weekKey, $onOffMachine)) {
+                        return null;
+                    }
+
+                    $onOffTime = explode(',', strval($onOffMachine[$weekKey]));
+                    $shutdownTime = trim($onOffTime[0] ?? '');
+                    $startupTime = trim($onOffTime[1] ?? '');
+                    if (
+                        $shutdownTime === '' || $startupTime === '' ||
+                        strtolower($shutdownTime) === 'null' || strtolower($startupTime) === 'null' ||
+                        strtotime($shutdownTime) === false || strtotime($startupTime) === false
+                    ) {
+                        return null;
+                    }
+
+                    $shutdownSec = HourMinuteSec2int($shutdownTime);
+                    $startupSec = HourMinuteSec2int($startupTime);
+                    return [
+                        'shutdown_sec' => $shutdownSec,
+                        'startup_sec' => $startupSec,
+                        'is_cross_day' => $shutdownSec <= $startupSec,
+                    ];
+                };
+
+                $todayOnOff = $parseOnOff($todayWeekKey);
+                $yesterdayOnOff = $parseOnOff($yesterdayWeekKey);
+
+                // 当前仍在昨天的跨天营业尾段，或者已进入今天营业时间，设备在线属于正常状态。
+                $isInBusinessWindow = false;
+                if (
+                    $yesterdayOnOff && $yesterdayOnOff['is_cross_day'] &&
+                    $nowSec <= $yesterdayOnOff['shutdown_sec']
+                ) {
+                    $isInBusinessWindow = true;
+                }
+                if ($todayOnOff && $nowSec >= $todayOnOff['startup_sec']) {
+                    if ($todayOnOff['is_cross_day'] || $nowSec <= $todayOnOff['shutdown_sec']) {
+                        $isInBusinessWindow = true;
+                    }
+                }
+                if ($isInBusinessWindow) {
+                    continue;
+                }
+
+                $shutdownTimestamp = 0;
+                $beforeTodayStartup = !$todayOnOff || $nowSec < $todayOnOff['startup_sec'];
+
+                // 昨天跨天关机，或昨天23:30后普通关机，其30分钟提醒点发生在今天。
+                if ($yesterdayOnOff && $beforeTodayStartup) {
+                    if ($yesterdayOnOff['is_cross_day']) {
+                        $shutdownTimestamp = $today + $yesterdayOnOff['shutdown_sec'];
+                    } elseif ($yesterdayOnOff['shutdown_sec'] >= $lateShutdownSec) {
+                        $shutdownTimestamp = $yesterday + $yesterdayOnOff['shutdown_sec'];
+                    }
+                }
+
+                // 今天只处理提醒点仍在今天的普通关机；跨天及23:30后关机留到明天处理。
+                if (
+                    $todayOnOff && !$todayOnOff['is_cross_day'] &&
+                    $todayOnOff['shutdown_sec'] < $lateShutdownSec &&
+                    $nowSec > $todayOnOff['shutdown_sec']
+                ) {
+                    $shutdownTimestamp = $today + $todayOnOff['shutdown_sec'];
+                }
+
+                if (!$shutdownTimestamp || $now <= $shutdownTimestamp + 1800) {
+                    continue;
+                }
+
+                $sentCacheKey = 'machine_shutdown_exception_sent:' . $item['m_id'] . ':' . date('Ymd', $shutdownTimestamp);
+                // if (Cache::get($sentCacheKey)) {
+                //     continue;
+                // }
+                
+                // 复用设备故障上报流程：去重、写入 machine_error_code，再发送故障通知
+                $this->machine = $item;
+                $this->message = [
+                    'errorCode' => '12202011',
+                    'msg' => '设备超过计划关机时间30分钟仍在线',
+                    'error_position' => 3,
+                ];
+                $flag[] = $this->errorCode();
+                Cache::set($sentCacheKey, 1, $ttl > 0 ? $ttl : 60);
+                actionLog([
+                    'm_id' => $item['m_id'],
+                    'machine_id' => $item['machine_id'],
+                    'shutdown_time' => date('Y-m-d H:i:s', $shutdownTimestamp),
+                    'online' => $item['online'],
+                    'http_online' => $item['http_online'],
+                ], '发送设备未关机提醒', 'checkOperatingShutdown');
+            }
+
+            actionLog($flag, '处理设备未关机提醒结果', 'checkOperatingShutdown');
+        } catch (\Throwable $e) {
+            actionException($e, 1, 'checkOperatingShutdown');
+            return '处理异常';
+        }
+
+        return '处理成功';
+    }
 }
