@@ -836,6 +836,9 @@ class RevenueCalculator
         $sodTotals = [];
         foreach ($this->records as $record) {
             $amount = $this->money($record['income_amount'] ?? 0);
+            if (bccomp($amount, '0', 2) < 0) {
+                throw new \Exception("分账金额不能小于0");
+            }
             $total = bcadd($total, $amount, 2);
             if (in_array(intval($record['rule_mode'] ?? 0), [2, 4], true) && !empty($record['sod_id'])) {
                 $sodId = intval($record['sod_id']);
