@@ -503,10 +503,16 @@ class Machine extends Common
             $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             $lightArr = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
             if (isset($postData['msgType']) && is_int($postData['msgType'])) {
-                $typeList = [1 => "sleep", 2 => "wakeUp",3 => "machineCkcOnOff"];
+                $typeList = [1 => "sleep", 2 => "wakeUp",3 => "machineCkcOnOff",5 =>"shutdown",6 =>"reboot"];
                 $postData['msgType'] = $typeList[$postData['msgType']];
             }
             $postData['machine_id'] = explode(',',$postData['machine_id']);
+            if ($postData['msgType'] === 'shutdown' && count($postData['machine_id']) > 10) {
+                return returnValidate('批量关机一次最多只能选择10台机器');
+            }
+            if ($postData['msgType'] === 'reboot' && count($postData['machine_id']) > 20) {
+                return returnValidate('批量重启一次最多只能选择20台机器');
+            }
             $result = $this->app->machine->sendToArrMachine($postData, $postData['msgType'], $otherData);
             if(!$result) $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
             if($postData['msgType'] == 'sleep') $lightArr = ['value' => 0];
@@ -721,6 +727,21 @@ class Machine extends Common
     {
         $postData = input();
         $type = $postData['type'] ?? 1;
+        $ignoreFilterKeys = ['page', 'pageNum', 'version_sort', 'stock_ratio', 'sort_name', 'sort_order', 'type'];
+        $hasMachineFilter = false;
+        foreach ($postData as $key => $value) {
+            if (in_array($key, $ignoreFilterKeys)) {
+                continue;
+            }
+            if ($value !== '' && $value !== null) {
+                $hasMachineFilter = true;
+                break;
+            }
+        }
+        if (!$hasMachineFilter) {
+            $where = $this->getWhere([]);
+            return $this->app->saleOrders->getChartData($where, $type);
+        }
 
         $machineIds = [];
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
@@ -775,6 +796,8 @@ class Machine extends Common
         }
         if (empty($mIds)) return $this->app->saleOrders->rNoData();
 
-        return $this->app->saleOrders->getChartData(['m_id' => $mIds], $type);
+        $chartWhere = $this->getWhere([]);
+        $chartWhere[] = ['m_id', 'in', $mIds];
+        return $this->app->saleOrders->getChartData($chartWhere, $type);
     }
 }
