@@ -1088,9 +1088,9 @@ class MachineClient extends TimeTaskBase
                 }
 
                 $sentCacheKey = 'machine_shutdown_exception_sent:' . $item['m_id'] . ':' . date('Ymd', $shutdownTimestamp);
-                // if (Cache::get($sentCacheKey)) {
-                //     continue;
-                // }
+                if (Cache::get($sentCacheKey)) {
+                    continue;
+                }
                 
                 // 复用设备故障上报流程：去重、写入 machine_error_code，再发送故障通知
                 $this->machine = $item;
