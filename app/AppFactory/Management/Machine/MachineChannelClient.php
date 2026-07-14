@@ -1257,10 +1257,59 @@ class MachineChannelClient extends ManagementClient
         //把货道的channel_position设置成设备相同的vending_machine_type
         $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
         $list = $list->toArray();
-        foreach ($list as $key => $value) {
+        $isPaginated = $pageNum && isset($list['data']) && is_array($list['data']);
+        $listData = $isPaginated ? $list['data'] : $list;
+
+        $multiGoodsMcIds = [];
+        foreach ($listData as $key => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
             $value['manufacture_time'] = $value['manufacture_time'] ? date("Y-m-d", $value['manufacture_time']) : '';
             $value['gift_points'] = round($value['gift_points']);
-            $list[$key] = $value;
+            // ==================== 单货道多商品相关开始 ====================
+            $value['batch_arr'] = [];
+            if (intval($value['is_multi_goods'] ?? 2) === 1 && !empty($value['mc_id'])) {
+                $multiGoodsMcIds[] = intval($value['mc_id']);
+            }
+            // ==================== 单货道多商品相关结束 ====================
+            $listData[$key] = $value;
+        }
+
+        // ==================== 单货道多商品相关开始 ====================
+        if ($multiGoodsMcIds) {
+            $batchRows = Db::name('channel_goods_batch')->alias('b')
+                ->leftJoin('goods g', 'g.g_id = b.g_id')
+                ->whereIn('b.mc_id', array_values(array_unique($multiGoodsMcIds)))
+                ->whereIn('b.status', [2, 3])
+                ->field('b.mc_id,b.g_id,b.sequence,b.stock,b.frozen_stock,b.capacity,b.retail_price,b.gift_points,b.batch_number,b.manufacture_time,b.expire_time,b.sell_by_date,b.status,g.sku,g.g_name,g.pic,g.bar_code')
+                ->order('b.mc_id asc,b.sequence asc')
+                ->select()
+                ->toArray();
+
+            $batchMap = [];
+            foreach ($batchRows as $batch) {
+                $batchMcId = intval($batch['mc_id']);
+                $batch['manufacture_time'] = !empty($batch['manufacture_time'])
+                    ? date('Y-m-d', $batch['manufacture_time'])
+                    : '';
+                $batch['gift_points'] = round($batch['gift_points'] ?? 0);
+                unset($batch['mc_id']);
+                $batchMap[$batchMcId][] = $batch;
+            }
+
+            foreach ($listData as $key => $value) {
+                if (!is_array($value) || intval($value['is_multi_goods'] ?? 2) !== 1) {
+                    continue;
+                }
+                $listData[$key]['batch_arr'] = $batchMap[intval($value['mc_id'] ?? 0)] ?? [];
+            }
+        }
+        // ==================== 单货道多商品相关结束 ====================
+        if ($isPaginated) {
+            $list['data'] = $listData;
+        } else {
+            $list = $listData;
         }
         // foreach ($list as $key => &$value) {
         //     if (!isset($value['channel_code'])) {
