@@ -11,6 +11,7 @@ namespace app\machine\controller;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Traits\Goods\GoodsBehaviorTrackingTrait;
 use app\AppFactory\Kernel\Traits\Laser\LaserResourceTrait;
@@ -213,6 +214,13 @@ class Laser extends BaseController
             foreach ($records as $record) {
                 $goodsId = $record['goods_id'] ?? 0;
                 if (!$goodsId) continue;
+
+                // 商品不存在时，不写入行为埋点数据
+                $goods = GoodsModel::getFind(['g_id' => $goodsId], 'g_id');
+                if (!$goods) {
+                    $skipCount++;
+                    continue;
+                }
 
                 // 去重：同设备同商品同日期已有则跳过
                 $exist = $this->getGoodsBehaviorTrackingFind([
