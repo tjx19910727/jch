@@ -1271,6 +1271,24 @@ class MachineChannelClient extends ManagementClient
             $value['batch_arr'] = [];
             if (intval($value['is_multi_goods'] ?? 2) === 1 && !empty($value['mc_id'])) {
                 $multiGoodsMcIds[] = intval($value['mc_id']);
+                $value['batch_arr'][] = [
+                    'g_id' => intval($value['g_id'] ?? 0),
+                    'sku' => $value['sku'] ?? '',
+                    'g_name' => $value['g_name'] ?? '',
+                    'pic' => $value['pic'] ?? '',
+                    'bar_code' => $value['bar_code'] ?? '',
+                    'stock' => intval($value['stock'] ?? 0),
+                    'frozen_stock' => intval($value['frozen_stock'] ?? 0),
+                    'capacity' => intval($value['capacity'] ?? 0),
+                    'retail_price' => $value['retail_price'] ?? 0,
+                    'gift_points' => $value['gift_points'],
+                    'batch_number' => $value['batch_number'] ?? '',
+                    'manufacture_time' => $value['manufacture_time'],
+                    'expire_time' => intval($value['expire_time'] ?? 0),
+                    'sell_by_date' => intval($value['sell_by_date'] ?? 0),
+                    'sequence' => 1,
+                    'status' => 1,
+                ];
             }
             // ==================== 单货道多商品相关结束 ====================
             $listData[$key] = $value;
@@ -1302,7 +1320,10 @@ class MachineChannelClient extends ManagementClient
                 if (!is_array($value) || intval($value['is_multi_goods'] ?? 2) !== 1) {
                     continue;
                 }
-                $listData[$key]['batch_arr'] = $batchMap[intval($value['mc_id'] ?? 0)] ?? [];
+                $listData[$key]['batch_arr'] = array_merge(
+                    $value['batch_arr'],
+                    $batchMap[intval($value['mc_id'] ?? 0)] ?? []
+                );
             }
         }
         // ==================== 单货道多商品相关结束 ====================
