@@ -980,7 +980,7 @@ class MachineClient extends TimeTaskBase
                 ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left');
             if (env('CglPay.is_test')) {
                 // 测试环境仅查询特定设备，方便测试验证
-                $query = $query->where('m.machine_id', 'JCHM-H2D-0064');
+                $query = $query->where('m.machine_id', 'JCHM-H4DPK-0095');
             }
             $list = $query
                 ->where('m.is_operating', 1)
