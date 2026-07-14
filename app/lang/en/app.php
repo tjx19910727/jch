@@ -66,6 +66,7 @@ return [
             "1000104" => 'Delivery of goods to the discharge box failed',
             "1000105" => "The secondary cabinet door opening failed.",
             "1200001" => "There are goods in the pickup box in the business logic",
+            "11102011" => "Operating device has not started",
             "11102012" => "The device is turned on but has not entered the homepage",
             "12202011" => "Device shutdown overdue reminder",
             "1100000" => 'Camera call error',

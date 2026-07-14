@@ -456,11 +456,9 @@ class MachineClient extends TimeTaskBase
 
             $query = Db::name('machine')->alias('m')
                     ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left');
-            $title = '';
             if (env('CglPay.is_test')) {
                 // 测试环境仅查询特定设备，方便测试验证
                 $query = $query->where('m.machine_id', 'JCHM-H2D-0064')->where('m.online', 2)->where('m.http_online', 2);
-                $title = '测试';
             }else{
                 //只查询最近的2天有在线记录的设备，避免查询历史数据较多的设备，影响巡检效率
                 $query = $query->where('m.online', 2)
@@ -545,22 +543,14 @@ class MachineClient extends TimeTaskBase
                     }
                     $currentStage = $nextStage;
 
-                    $item['errorCode'] = '在营设备未开机'.$title;
-                    $item['date'] = date("Y年m月d日");
-                    $item['exceptionDeclaration'] = '在营设备未开机';
-                    $item['error_code'] = '在营设备未开机'.$title;
-                    $item['error_time'] = date('Y-m-d H:i:s');
-                    $item['error_info'] = 11102011; // 在营设备未开机
-                    $item['machine_name'] = mb_substr($item['machine_name'], 0, 20, 'UTF-8');
-
-                    $this->noticeSendData = [
-                        "ao_id" => $item['ao_id'],
-                        "m_id" => $item['m_id'],
-                        "templateType" => "mFault",
-                        "replaceData" => $item,
+                    // 复用设备故障上报流程：去重、写入 machine_error_code，再发送故障通知
+                    $this->machine = $item;
+                    $this->message = [
+                        'errorCode' => '11102011',
+                        'msg' => '设备超过计划开机时间仍未开机',
+                        'error_position' => 3,
                     ];
-
-                    $flag[] = $this->noticeSend();
+                    $flag[] = $this->errorCode();
                     //当前阶段的通知发送成功后，更新已发送阶段数缓存，过期时间为当天23:59:59
                     Cache::set($stageCacheKey, $currentStage, $ttl > 0 ? $ttl : 60);
                     actionLog([
