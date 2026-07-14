@@ -44,6 +44,112 @@ class Test extends BaseController
     public $mqQueue;
 
     /**
+     * 测试环境快速配置设备货道为积分兑换商品。
+     * POST /machine/test/configurePointsGoods
+     */
+    public function configurePointsGoods()
+    {
+        if (!request()->isPost()) {
+            return returnState(100, '仅支持POST请求');
+        }
+        if (!config('app.app_debug') && !env('app.allow_test_points_config', false)) {
+            return returnState(100, '当前环境未开放积分商品测试配置接口');
+        }
+        if (trim((string)input('confirm', '')) !== 'CONFIGURE_POINTS_GOODS') {
+            return returnState(100, 'confirm确认串错误');
+        }
+
+        $machineId = trim((string)input('machine_id', ''));
+        $mcId = intval(input('mc_id', 0));
+        $gId = intval(input('g_id', 0));
+        $costPoints = input('cost_points', null);
+
+        if ($machineId === '') {
+            return returnState(100, 'machine_id不能为空');
+        }
+        if ($mcId <= 0 && $gId <= 0) {
+            return returnState(100, 'mc_id和g_id至少填写一个');
+        }
+        if ($costPoints === null || $costPoints === '' || !is_numeric($costPoints)) {
+            return returnState(100, 'cost_points必须是数字');
+        }
+        $costPoints = round(floatval($costPoints), 3);
+        if ($costPoints < 0) {
+            return returnState(100, 'cost_points不能小于0');
+        }
+
+        $machine = MachineModel::getFind(['machine_id' => $machineId], 'm_id,machine_id,machine_name,mac_address');
+        if (!$machine) {
+            return returnState(100, '设备不存在');
+        }
+        $machine = is_object($machine) && method_exists($machine, 'toArray') ? $machine->toArray() : (array)$machine;
+        $requestMac = strtolower(str_replace([':', '-'], '', trim((string)request()->header('mac', ''))));
+        $machineMac = strtolower(str_replace([':', '-'], '', trim((string)($machine['mac_address'] ?? ''))));
+        if ($requestMac === '' || $machineMac === '' || $requestMac !== $machineMac) {
+            return returnState(100, 'mac请求头与目标设备不匹配');
+        }
+
+        $where = ['m_id' => intval($machine['m_id'])];
+        if ($mcId > 0) $where['mc_id'] = $mcId;
+        if ($gId > 0) $where['g_id'] = $gId;
+        $channels = MachineChannelModel::getList(
+            $where,
+            0,
+            'mc_id,m_id,machine_id,channel_code,g_id,g_name,retail_price,cost_points,status,stock',
+            'mc_id asc'
+        );
+        if (!$channels) {
+            return returnState(100, '该设备未找到匹配货道');
+        }
+        $channels = is_object($channels) && method_exists($channels, 'toArray') ? $channels->toArray() : (array)$channels;
+
+        $updated = [];
+        Db::startTrans();
+        try {
+            foreach ($channels as $channel) {
+                $before = round(floatval($channel['cost_points'] ?? 0), 3);
+                if ($before != $costPoints) {
+                    MachineChannelModel::update([
+                        'mc_id' => intval($channel['mc_id']),
+                        'cost_points' => $costPoints,
+                    ]);
+                }
+                $updated[] = [
+                    'mc_id' => intval($channel['mc_id']),
+                    'channel_code' => (string)$channel['channel_code'],
+                    'g_id' => intval($channel['g_id']),
+                    'g_name' => (string)$channel['g_name'],
+                    'retail_price' => (string)$channel['retail_price'],
+                    'cost_points_before' => $before,
+                    'cost_points_after' => $costPoints,
+                    'changed' => $before != $costPoints,
+                    'status' => intval($channel['status']),
+                    'stock' => intval($channel['stock']),
+                ];
+            }
+            Db::commit();
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1, 'configurePointsGoods');
+            return returnState(100, '配置失败：' . $e->getMessage());
+        }
+
+        return returnState(200, '积分兑换商品配置成功', [
+            'machine' => [
+                'm_id' => intval($machine['m_id']),
+                'machine_id' => (string)$machine['machine_id'],
+                'machine_name' => (string)$machine['machine_name'],
+            ],
+            'cost_points' => $costPoints,
+            'enabled' => $costPoints > 0,
+            'pay_type_required' => 9,
+            'channel_count' => count($updated),
+            'channels' => $updated,
+            'notice' => '设备下单时仍需传pay_type=9；cost_points=0可取消积分兑换配置。',
+        ]);
+    }
+
+    /**
      * 测试订单出货状态通知，只生成 api_callback 记录，不主动请求外部地址。
      * /machine/test/testOrderOutStatusNotify?trade_no=xxx&event=ready&out_status=2
      */
