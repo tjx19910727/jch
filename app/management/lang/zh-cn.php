@@ -419,6 +419,9 @@ return [
         "x_y_axis_require" => "x，y轴至少需要定义一个偏移量",
         "get_recycle_box_overtime" => "获取回收箱容量数据超时",
         "pick_up_door_overtime" => "获取出料箱门操作结果超时",
+        "msg_type_invalid" => "无效的主控指令类型",
+        "simplified_command_only" => "该指令仅支持简易机",
+        "luxury_command_only" => "该指令仅支持豪华机",
     ],
 
     "VMachineLang" => [
