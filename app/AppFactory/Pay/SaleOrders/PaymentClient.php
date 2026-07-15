@@ -56,6 +56,9 @@ class PaymentClient extends PayBaseClient
         "qrCodeLink" => "",
         "order" => [],
         "result" => "",
+        "pay_required" => true,
+        "zero_pay" => false,
+        "next_action" => "pay",
     ];
 
     /**
@@ -186,6 +189,7 @@ class PaymentClient extends PayBaseClient
                 $this->order['pay_type'] = $this->strategyPayee['payee_type'];
             }
             $this->order['sp_id'] = $this->strategyPayee['sp_id'];
+            $isMallPointsExchangeOrder = $this->isMallPointsExchangeOrder($this->order);
 
             // 新分账须在 sp_id、pay_type 与本次收款策略确定之后执行，保证 revenue_order.sp_id 与当笔支付一致
             if ($this->order['total_price'] > 0) {
@@ -193,7 +197,7 @@ class PaymentClient extends PayBaseClient
                 if (!$countIncome) {
                     return $this->rFail($this->revenueError ?: '生成分账订单失败');
                 }
-            } else {
+            } elseif (!$isMallPointsExchangeOrder) {
                 // 订单金额为0（如优惠券全额抵扣），免支付直接完成
                 actionLog(['order_id' => $this->order['order_id'], 'total_price' => $this->order['total_price']], '订单金额为0，执行免支付完成');
                 $this->startTrans();
@@ -204,8 +208,11 @@ class PaymentClient extends PayBaseClient
                     actionLog($checkFlag, '免支付订单完成事务处理结果');
                     $result = $this->checkTrans($checkFlag);
                     $this->returnData['order'] = $this->order;
+                    $this->returnData['pay_required'] = false;
+                    $this->returnData['zero_pay'] = true;
+                    $this->returnData['next_action'] = 'wait_out_goods';
                     $this->returnData['result'] = $result;
-                    return $result;
+                    return $this->r(200, $this->lang("VOrderPay.pay_status3"), $this->returnData);
                 } catch (\Exception $e) {
                     $this->rollbackTrans();
                     actionLog($e->getMessage(), '免支付订单处理异常');
@@ -214,7 +221,7 @@ class PaymentClient extends PayBaseClient
             }
 
             // 优惠后金额小于 0.01 元视为零元订单，跳过第三方支付直接走支付成功流程
-            if (bccomp(strval($this->order['total_price'] ?? 0), '0.01', 2) < 0) {
+            if (!$isMallPointsExchangeOrder && bccomp(strval($this->order['total_price'] ?? 0), '0.01', 2) < 0) {
                 $this->order['total_price'] = '0.00';
                 $this->order['pay_status'] = 3;
                 $this->order['pay_time'] = time();
@@ -224,7 +231,12 @@ class PaymentClient extends PayBaseClient
                 if ($uOrder) {
                     actionLog($this->order, '零元订单直接标记支付成功');
                     $result = $this->paymentSuccessful();
-                    return $this->rSuccess();
+                    $this->returnData['order'] = $this->order;
+                    $this->returnData['pay_required'] = false;
+                    $this->returnData['zero_pay'] = true;
+                    $this->returnData['next_action'] = 'wait_out_goods';
+                    $this->returnData['result'] = $result;
+                    return $this->r(200, $this->lang("VOrderPay.pay_status3"), $this->returnData);
                 }
                 return $this->rFail($this->lang("VOrderPay.update_order_pay_info_fail"));
             }

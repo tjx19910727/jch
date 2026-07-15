@@ -241,7 +241,7 @@ class ActivityClient extends ReceiveBaseClient
                 $updateOrder['retail_price'] = $orderTotal;
             }
             $updateOrder['discount_price'] = bcadd(strval($this->order['discount_price'] ?? 0), $discountAmount, 2);
-            $updateOrder['total_price'] = bcsub($orderTotal, $discountAmount, 2);
+            $updateOrder['total_price'] = $this->subtractRevenueCouponDiscount($orderTotal, $discountAmount);
             $detailResult = $this->applyRevenueCouponDiscountToDetails($matched['details'] ?? [], $discountAmount);
             if ($detailResult !== true) {
                 return $detailResult;
@@ -297,11 +297,22 @@ class ActivityClient extends ReceiveBaseClient
             $updateSod = [
                 'sod_id' => $sodId,
                 'discount_price' => bcadd(strval($detail['discount_price'] ?? 0), $sodDiscount, 2),
-                'total_sod_price' => bcsub($detailAmount, $sodDiscount, 2),
+                'total_sod_price' => $this->subtractRevenueCouponDiscount($detailAmount, $sodDiscount),
             ];
             $this->updateSaleOrdersDetails($updateSod);
         }
         return true;
+    }
+
+    protected function subtractRevenueCouponDiscount($amount, $discount)
+    {
+        $amount = bcadd(strval($amount), '0', 2);
+        $discount = bcadd(strval($discount), '0', 2);
+        if (bccomp($amount, '0', 2) < 0) $amount = '0.00';
+        if (bccomp($discount, '0', 2) < 0) $discount = '0.00';
+        if (bccomp($discount, $amount, 2) > 0) $discount = $amount;
+        $result = bcsub($amount, $discount, 2);
+        return bccomp($result, '0', 2) < 0 ? '0.00' : $result;
     }
 
     protected function getRevenueCouponOrderArray()

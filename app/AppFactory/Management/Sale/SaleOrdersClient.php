@@ -10,6 +10,7 @@ namespace app\AppFactory\Management\Sale;
 
 
 use app\AppFactory\Kernel\Traits\Auth\AuthManagerTrait;
+use app\AppFactory\Kernel\Traits\Goods\GoodsBehaviorTrackingTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsHitTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderRefundTrait;
 use app\AppFactory\Kernel\Traits\Payment\AliPayTrait;
@@ -53,7 +54,7 @@ class SaleOrdersClient extends ManagementClient
     use StrategyPayeeTrait;
     use BeforeOrderRefundTrait, AfterOrderRefundTrait;
     use WxPayTrait, AliPayTrait, JdCashierTrait;
-    use GoodsHitTrait;
+    use GoodsHitTrait, GoodsBehaviorTrackingTrait;
     use BalancePayTrait;
 
     public $order;
@@ -1038,7 +1039,7 @@ class SaleOrdersClient extends ManagementClient
      * @param $where
      * @return array|\think\response\Json
      */
-    public function saleDataCollect($where)
+    public function saleDataCollect($where, $postData = [])
     {
         $whereCollect = $where;
         $whereCollect['so.pay_status'] = 3;
@@ -1056,7 +1057,7 @@ class SaleOrdersClient extends ManagementClient
         $whereGIds = $where;
         $whereGIds[] = ['g_id', ">", 0];
         $gIds = $this->joinSoSodColumn($whereGIds, 'g_id', 'g_id');
-        $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $gIds]) ?? 0;
+        $collectData['totalClick'] = $this->getBehaviorClickSum($postData);
         $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
         $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
         $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
@@ -1090,7 +1091,7 @@ class SaleOrdersClient extends ManagementClient
      * @param int $pageNum 页面数据条数
      * @return array|\think\response\Json
      */
-    public function saleDataCollectList($where, $pageNum = 0)
+    public function saleDataCollectList($where, $pageNum = 0, $postData = [])
     {
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
@@ -1103,9 +1104,9 @@ class SaleOrdersClient extends ManagementClient
         ";
         $collectList = $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, 'totalPrice desc', 'm_id,g_id');
         actionLog($this->getLS(), '统计销售数据');
-        $collectList = $collectList->each(function ($collectData) {
+        $collectList = $collectList->each(function ($collectData) use ($postData) {
             $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
-            $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
+            $collectData['totalClick'] = $this->getBehaviorClickSum($postData);
             $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
             $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
             $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
@@ -1123,7 +1124,7 @@ class SaleOrdersClient extends ManagementClient
      * @param $where
      * @return array|\think\response\Json
      */
-    public function exportSaleDataCollect($where)
+    public function exportSaleDataCollect($where, $postData = [])
     {
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
@@ -1141,7 +1142,7 @@ class SaleOrdersClient extends ManagementClient
             actionLog($list, '导出数据');
             foreach ($list as $k => $collectData) {
                 $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
-                $collectData['totalClick'] = $this->getGoodsHitCount(['g_id' => $collectData['g_id']]) ?? 0;
+                $collectData['totalClick'] = $this->getBehaviorClickSum($postData);
                 $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
                 $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
                 $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
@@ -1345,6 +1346,25 @@ class SaleOrdersClient extends ManagementClient
         $sale_order_data = $this->getSaleOrdersFind(['order_id' => $sale_order_detail['order_id']], $sale_order_field)->toArray();
         $rtn = array_merge($sale_order_detail, $sale_order_data);
         return $this->rQ($rtn);
+    }
+
+    /**
+     * 获取远程出货步骤详情列表
+     * @param array $where 查询条件（需含 sod_id）
+     * @return array|string
+     */
+    public function getRemoteOutGoodsStepsDetail($where)
+    {
+        $sodId = intval($where['sod_id'] ?? 0);
+        if (!$sodId) {
+            return $this->r(100, 'sod_id不能为空');
+        }
+        $list = Db::name('machine_remote_steps')
+            ->where('sod_id', $sodId)
+            ->order('step', 'asc')
+            ->field('id,step,key,name,status,value,desc,created_at,updated_at')
+            ->select();
+        return $this->rQ($list ?: []);
     }
 
     /**

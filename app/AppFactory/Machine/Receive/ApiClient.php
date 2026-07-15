@@ -4961,6 +4961,60 @@ class ApiClient extends ReceiveBaseClient
         }
     }
 
+    
+    /**
+     * 设备上报远程出货步骤状态（HTTP接口 /machine/receive/remoteStatus）
+     * 设备传入 sod_id + md_content（JSON字符串，key为步骤键，value=1成功/2失败）
+     * 内部转为步骤数组后调用 handleRemoteOutGoodsSteps 入库
+     * @return array|\think\response\Json
+     */
+    public function remoteStatus()
+    {
+        try {
+            $sodId = intval($this->data['sod_id'] ?? 0);
+            $mdContent = $this->data['md_content'] ?? '';
+            $managerId = intval($this->data['manager_id'] ?? 0);
+            if (!$sodId) {
+                return $this->rFail('sod_id不能为空');
+            }
+            
+            if (!$mdContent) {
+                return $this->rFail('md_content不能为空');
+            }
+
+            // 解析 md_content JSON 字符串为数组
+            if (is_string($mdContent)) {
+                $mdContent = json_decode($mdContent, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    actionLog(['sod_id' => $sodId, 'md_content_raw' => $this->data['md_content']], 'remoteStatus md_content json解析失败');
+                    return $this->rFail('md_content格式错误，需为JSON字符串');
+                }
+            }
+
+            if (!is_array($mdContent) || !$mdContent) {
+                return $this->rFail('md_content内容为空');
+            }
+
+            // 转换为步骤数组：[['key' => 'xxxx', 'status' => 1], ...]
+            $steps = [];
+            foreach ($mdContent as $key => $status) {
+                $steps[] = [
+                    'key' => $key,
+                    'status' => intval($status),
+                ];
+            }
+
+            actionLog(['sod_id' => $sodId, 'steps' => $steps,'manager_id' => $managerId], 'remoteStatus接收步骤数据','remoteStatus');
+
+            $this->handleRemoteOutGoodsSteps($sodId, $steps,$managerId);
+
+            return $this->r(200, 'SUCCESS');
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
 	/**
      * 设备提交客户退货日志。
      * 普通编码匹配当前设备订单号后四位；特殊编码仅跳过订单校验，不触发实际退款。
