@@ -570,7 +570,7 @@ trait MachineChannelTrait
 
         // 4. 批量插入
         try {
-            Db::name('channel_goods_batch')->insertAll($insertData);
+            $res = Db::name('channel_goods_batch')->insertAll($insertData);
         } catch (\Exception $e) {
             actionException($e, 1, 'saveChannelGoodsBatch');
             return null;
@@ -584,6 +584,9 @@ trait MachineChannelTrait
      */
     private function buildBatchRow($mc_id, $item, $status)
     {
+        $manufactureTime = $this->normalizeBatchDateValue($item['manufacture_time'] ?? 0);
+        $expireTime = $this->normalizeBatchDateValue($item['expire_time'] ?? 0);
+
         return [
             'mc_id'            => $mc_id,
             'g_id'             => intval($item['g_id'] ?? 0),
@@ -594,12 +597,32 @@ trait MachineChannelTrait
             'sold_quantity'    => 0,
             'retail_price'     => $item['retail_price'] ?? 0,
             'gift_points'      => $item['gift_points'] ?? 0,
-            'manufacture_time' => $item['manufacture_time'] ?? 0,
-            'expire_time'      => $item['expire_time'] ?? 0,
-            'sell_by_date'     => $item['sell_by_date'] ?? 0,
+            'manufacture_time' => $manufactureTime,
+            'expire_time'      => $expireTime,
+            'sell_by_date'     => intval($item['sell_by_date'] ?? 0),
             'batch_number'     => $item['batch_number'] ?? '',
             'status'           => $status,
         ];
+    }
+
+    /**
+     * 批次日期字段在数据库中保存时间戳，兼容前端日期字符串和历史时间戳。
+     */
+    private function normalizeBatchDateValue($value)
+    {
+        if ($value === null || $value === '') {
+            return 0;
+        }
+        if (is_numeric($value)) {
+            return intval($value);
+        }
+
+        $parsedTimestamp = strtotime(trim((string)$value));
+        if ($parsedTimestamp === false) {
+            return 0;
+        }
+
+        return strtotime(date('Y-m-d', $parsedTimestamp) . ' 23:59:59');
     }
 
     /**
