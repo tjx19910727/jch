@@ -425,9 +425,45 @@ class Machine extends Common
         try {
             $postData = input();
             $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
-            if (isset($postData['msgType']) && is_int($postData['msgType'])) {
-                $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update", 6=> "powerWakeUp", 7=>"initialization",8=>'backHome'];
-                $postData['msgType'] = $typeList[$postData['msgType']];
+            $typeList = [
+                1 => "sleep",
+                2 => "wakeUp",
+                3 => "reboot",
+                4 => "shutdown",
+                5 => "update",
+                6 => "powerWakeUp",
+                7 => "initialization",
+                8 => "backHome",
+                9 => "shield",
+                10 => "shield",
+                11 => "continueOutGoods",
+                12 => "recycGoods",
+            ];
+            if (isset($postData['msgType']) && (is_int($postData['msgType']) || ctype_digit((string)$postData['msgType']))) {
+                $msgType = intval($postData['msgType']);
+                if (!isset($typeList[$msgType])) return returnValidate(lang("VMachine.msg_type_invalid"));
+                $postData['msgType'] = $typeList[$msgType];
+                if ($msgType === 9 || $msgType === 10) {
+                    $otherData['status'] = $msgType === 9 ? 1 : 2;
+                }
+            }
+
+            $machineLevelLimit = [
+                "shield" => 1,
+                "continueOutGoods" => 2,
+                "recycGoods" => 2,
+            ];
+            $resolvedMsgType = $postData['msgType'] ?? '';
+            if (isset($machineLevelLimit[$resolvedMsgType])) {
+                if (empty($postData['machine_id'])) return returnValidate(lang("VMachine.machine_id_require"));
+                $machineLevel = MachineModel::where('machine_id', $postData['machine_id'])->value('machine_level');
+                if ($machineLevel === null) return returnValidate(lang("VMachine.machine_no_data"));
+                if (intval($machineLevel) !== $machineLevelLimit[$resolvedMsgType]) {
+                    $langKey = $machineLevelLimit[$resolvedMsgType] === 1
+                        ? "VMachine.simplified_command_only"
+                        : "VMachine.luxury_command_only";
+                    return returnValidate(lang($langKey));
+                }
             }
             if(!empty($postData['powerTime'])) {
                 $Mchtime = explode(',',$postData['powerTime']);
