@@ -899,8 +899,8 @@ class SaleOrders extends Common
     
     /**
      * 支付方式统计
-     * 统计各支付方式实收总额、总成本、利润额、平均售价、平均成本价
-     * where条件与订单列表接口一致，关联子订单表获取成本与数量
+     * 订单主表统计支付总额、退款总额与订单数，明细表统计成本与数量。
+     * where条件与订单列表接口一致。
      * @return array|string
      */
     public function payTypeStatistics()
@@ -946,36 +946,47 @@ class SaleOrders extends Common
             $where['so.ao_id'] = $this->manager['ao_id'];
         }
 
-        $query = Db::name('sale_orders')->alias('so')
-            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
-            ->where($where);
-
-        $summary = $query->field("
-            IFNULL(SUM(sod.total_sod_price - sod.refund_amount), 0) total_amount,
-            IFNULL(SUM(sod.cost_price * (sod.quantity - sod.refund_quantity)), 0) total_cost_price,
-            IFNULL(SUM(sod.quantity - sod.refund_quantity), 0) total_quantity,
-            IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift,
-            COUNT(DISTINCT so.order_id) total_orders")
+        $orderSummary = Db::name('sale_orders')->alias('so')
+            ->where($where)
+            ->field("
+            IFNULL(SUM(so.total_price), 0) total_amount,
+            IFNULL(SUM(so.refund_amount), 0) refund_amount,
+            COUNT(so.order_id) total_orders")
             ->find();
-        if (!is_array($summary)) {
-            $summary = [];
+        if (!is_array($orderSummary)) {
+            $orderSummary = [];
         }
 
-        $totalAmount = round($summary['total_amount'] ?? 0, 2);
-        $totalCostPrice = round($summary['total_cost_price'] ?? 0, 2);
-        $totalQuantity = (int)($summary['total_quantity'] ?? 0);
-        $totalGift = (int)($summary['total_gift'] ?? 0);
-        $totalOrders = (int)($summary['total_orders'] ?? 0);
+        $detailSummary = Db::name('sale_orders')->alias('so')
+            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
+            ->where($where)
+            ->field("
+            IFNULL(SUM(sod.cost_price * (sod.quantity - sod.refund_quantity)), 0) total_cost_price,
+            IFNULL(SUM(sod.quantity - sod.refund_quantity), 0) total_quantity,
+            IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift")
+            ->find();
+        if (!is_array($detailSummary)) {
+            $detailSummary = [];
+        }
+
+        $totalAmount = round($orderSummary['total_amount'] ?? 0, 2);
+        $refundAmount = round($orderSummary['refund_amount'] ?? 0, 2);
+        $netAmount = round($totalAmount - $refundAmount, 2);
+        $totalOrders = (int)($orderSummary['total_orders'] ?? 0);
+        $totalCostPrice = round($detailSummary['total_cost_price'] ?? 0, 2);
+        $totalQuantity = (int)($detailSummary['total_quantity'] ?? 0);
+        $totalGift = (int)($detailSummary['total_gift'] ?? 0);
 
         // 汇总值
         $totalSaleQuantity = $totalQuantity - $totalGift;
 
         return returnData([
             'total_cost_price'      => $hasCostPriceAuth ? round($totalCostPrice, 2) : '--',
-            'profit_amount'         => $hasCostPriceAuth ? round($totalAmount - $totalCostPrice, 2) : '--',
-            'average_retail_price'  => $totalSaleQuantity > 0 ? round($totalAmount / $totalSaleQuantity, 2) : 0,
+            'profit_amount'         => $hasCostPriceAuth ? round($netAmount - $totalCostPrice, 2) : '--',
+            'average_retail_price'  => $totalSaleQuantity > 0 ? round($netAmount / $totalSaleQuantity, 2) : 0,
             'average_cost_price'    => $hasCostPriceAuth ? ($totalSaleQuantity > 0 ? round($totalCostPrice / $totalSaleQuantity, 2) : 0) : '--',
             'total_amount'          => round($totalAmount, 2),
+            'refund_amount'         => round($refundAmount, 2),
             'total_quantity'        => $totalSaleQuantity,
             'total_orders'          => $totalOrders,
         ]);
