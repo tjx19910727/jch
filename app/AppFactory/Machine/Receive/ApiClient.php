@@ -2086,9 +2086,6 @@ class ApiClient extends ReceiveBaseClient
                 'recycle_box_total_capacity' => $totalCapacity,
                 'recycle_box_remain_capacity' => $remainCapacity,
             ]);
-            if ($operate === 1 && in_array($recycleBoxChangeType, [1, 4], true)) {
-                $flag[] = $this->deductMachineChannelStockAndSendUpdateMq($machineChannel, $changeCount, 'recycleBoxGoodsChange');
-            }
             foreach ($goodsChanges as $goodsChange) {
                 $flag[] = $this->addRecycleBoxGoodsChangeLog(
                     $goodsChange['g_id'],
