@@ -951,7 +951,8 @@ class SaleOrders extends Common
             ->field("
             IFNULL(SUM(so.total_price), 0) total_amount,
             IFNULL(SUM(so.refund_amount), 0) refund_amount,
-            COUNT(so.order_id) total_orders")
+            COUNT(so.order_id) total_orders,
+            IFNULL(SUM(CASE WHEN so.refund_amount > 0 THEN 1 ELSE 0 END), 0) refund_orders")
             ->find();
         if (!is_array($orderSummary)) {
             $orderSummary = [];
@@ -962,7 +963,8 @@ class SaleOrders extends Common
             ->where($where)
             ->field("
             IFNULL(SUM(sod.cost_price * (sod.quantity - sod.refund_quantity)), 0) total_cost_price,
-            IFNULL(SUM(sod.quantity - sod.refund_quantity), 0) total_quantity,
+            IFNULL(SUM(sod.quantity), 0) total_quantity,
+            IFNULL(SUM(sod.refund_quantity), 0) refund_quantity,
             IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift")
             ->find();
         if (!is_array($detailSummary)) {
@@ -973,22 +975,27 @@ class SaleOrders extends Common
         $refundAmount = round($orderSummary['refund_amount'] ?? 0, 2);
         $netAmount = round($totalAmount - $refundAmount, 2);
         $totalOrders = (int)($orderSummary['total_orders'] ?? 0);
+        $refundOrders = (int)($orderSummary['refund_orders'] ?? 0);
         $totalCostPrice = round($detailSummary['total_cost_price'] ?? 0, 2);
         $totalQuantity = (int)($detailSummary['total_quantity'] ?? 0);
+        $refundQuantity = (int)($detailSummary['refund_quantity'] ?? 0);
         $totalGift = (int)($detailSummary['total_gift'] ?? 0);
 
         // 汇总值
         $totalSaleQuantity = $totalQuantity - $totalGift;
+        $netSaleQuantity = $totalSaleQuantity - $refundQuantity;
 
         return returnData([
             'total_cost_price'      => $hasCostPriceAuth ? round($totalCostPrice, 2) : '--',
             'profit_amount'         => $hasCostPriceAuth ? round($netAmount - $totalCostPrice, 2) : '--',
-            'average_retail_price'  => $totalSaleQuantity > 0 ? round($netAmount / $totalSaleQuantity, 2) : 0,
-            'average_cost_price'    => $hasCostPriceAuth ? ($totalSaleQuantity > 0 ? round($totalCostPrice / $totalSaleQuantity, 2) : 0) : '--',
+            'average_retail_price'  => $netSaleQuantity > 0 ? round($netAmount / $netSaleQuantity, 2) : 0,
+            'average_cost_price'    => $hasCostPriceAuth ? ($netSaleQuantity > 0 ? round($totalCostPrice / $netSaleQuantity, 2) : 0) : '--',
             'total_amount'          => round($totalAmount, 2),
             'refund_amount'         => round($refundAmount, 2),
             'total_quantity'        => $totalSaleQuantity,
+            'refund_quantity'       => $refundQuantity,
             'total_orders'          => $totalOrders,
+            'refund_orders'         => $refundOrders,
         ]);
     }
 
