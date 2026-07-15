@@ -943,6 +943,8 @@ class MachineChannelClient extends ManagementClient
                     'capacity'         => $headCapacity,
                     'retail_price'     => $postData['retail_price'] ?? 0,
                     'gift_points'      => $postData['gift_points'] ?? 0,
+                    'cost_points'      => $postData['cost_points'] ?? 0,
+                    'stock_warning'    => $postData['stock_warning'] ?? 0,
                     'manufacture_time' => $postData['manufacture_time'] ?? 0,
                     'batch_number'     => $postData['batch_number'] ?? '',
                 ];
@@ -958,6 +960,8 @@ class MachineChannelClient extends ManagementClient
                 $postData['capacity']       = $headBatch['capacity'];
                 $postData['retail_price']   = $headBatch['retail_price'];
                 $postData['gift_points']    = $headBatch['gift_points'];
+                $postData['cost_points']    = $headBatch['cost_points'];
+                $postData['stock_warning']  = $headBatch['stock_warning'];
                 $postData['is_multi_goods'] = 1;
                 // 队首 g_id 跟 postData 不一致时，更新 postData 的商品信息
                 if (isset($headBatch['g_id']) && $headBatch['g_id'] != ($postData['g_id'] ?? 0)) {
@@ -1430,6 +1434,8 @@ class MachineChannelClient extends ManagementClient
                     'capacity' => intval($value['capacity'] ?? 0),
                     'retail_price' => $value['retail_price'] ?? 0,
                     'gift_points' => $value['gift_points'],
+                    'cost_points' => $value['cost_points'] ?? 0,
+                    'stock_warning' => intval($value['stock_warning'] ?? 0),
                     'batch_number' => $value['batch_number'] ?? '',
                     'manufacture_time' => $value['manufacture_time'],
                     'expire_time' => intval($value['expire_time'] ?? 0),
@@ -1448,7 +1454,7 @@ class MachineChannelClient extends ManagementClient
                 ->leftJoin('goods g', 'g.g_id = b.g_id')
                 ->whereIn('b.mc_id', array_values(array_unique($multiGoodsMcIds)))
                 ->whereIn('b.status', [2, 3])
-                ->field('b.mc_id,b.g_id,b.sequence,b.stock,b.frozen_stock,b.capacity,b.retail_price,b.gift_points,b.batch_number,b.manufacture_time,b.expire_time,b.sell_by_date,b.status,g.sku,g.g_name,g.pic,g.bar_code')
+                ->field('b.mc_id,b.g_id,b.sequence,b.stock,b.frozen_stock,b.capacity,b.retail_price,b.gift_points,b.cost_points,b.stock_warning,b.batch_number,b.manufacture_time,b.expire_time,b.sell_by_date,b.status,g.sku,g.g_name,g.pic,g.bar_code')
                 ->order('b.mc_id asc,b.sequence asc')
                 ->select()
                 ->toArray();

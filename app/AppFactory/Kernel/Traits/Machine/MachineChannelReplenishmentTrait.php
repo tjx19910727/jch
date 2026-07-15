@@ -530,6 +530,8 @@ trait MachineChannelReplenishmentTrait
             'market_price' => $goods['market_price'] ?? 0,
             'retail_price' => $headBatch['retail_price'] ?? ($goods['retail_price'] ?? 0),
             'gift_points' => $headBatch['gift_points'] ?? ($machineGoods['gift_points'] ?? 0),
+            'cost_points' => $headBatch['cost_points'] ?? 0,
+            'stock_warning' => max(0, intval($headBatch['stock_warning'] ?? 0)),
             'capacity' => $headBatch['capacity'] ?? 0,
             'stock' => $headBatch['stock'] ?? 0,
             'frozen_stock' => $headBatch['frozen_stock'] ?? 0,
