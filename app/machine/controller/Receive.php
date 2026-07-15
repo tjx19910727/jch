@@ -690,6 +690,21 @@ class Receive extends Common
     }
 
     /**
+     * 订单使用分账优惠券。
+     *
+     * @return array|\think\response\Json
+     */
+    public function useRevenueCoupon()
+    {
+        try {
+            return $this->app->activity->useRevenueCoupon();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 获取设备公网IP
      * @return array|string
      */
@@ -1404,6 +1419,20 @@ class Receive extends Common
     {
         try {
             return $this->app->api->confirmPreReplenishmentV2();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
+     * 设备上报远程出货步骤状态
+     * @return array|string
+     */
+    public function remoteStatus()
+    {
+        try {
+            return $this->app->api->remoteStatus();
         } catch (\Exception $e) {
             actionException($e, 1);
             return returnTryCatch($e->getMessage());

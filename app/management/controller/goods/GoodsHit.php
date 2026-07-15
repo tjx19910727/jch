@@ -24,9 +24,8 @@ class GoodsHit extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, ["sku" => "like","machine_id" => "like"]);
-        $where['ao_id'] = $this->manager['ao_id'];
-        return $this->app->goodsHit->getTotalList($where,$pageNum,$this->field,'g_id desc');
+        $where = $this->getWhere($postData);
+        return $this->app->goodsHit->getTotalListV2($where,$pageNum,$this->field,'g_id desc');
     }
 
     /**
@@ -37,21 +36,21 @@ class GoodsHit extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData);
-        return $this->app->goodsHit->getHitList($where,$postData['pageNum'] ?? 0,'machine_id,machine_name,max(create_time) create_time,count(g_id) hits','','','g_id,m_id');
+        return $this->app->goodsHit->getHitListV2($where,$postData['pageNum'] ?? 0,'machine_id,machine_name,max(create_time) create_time,count(g_id) hits','','','g_id,m_id');
     }
 
     public function exportBySku()
     {
         $postData = input();
-        $where = $this->getWhere($postData,false,['sku' => "like","machine_id" => "like"]);
-        return $this->app->goodsHit->export($where);
+        $where = $this->getWhere($postData);
+        return $this->app->goodsHit->exportV2($where);
     }
 
     public function exportByMachine()
     {
         $postData = input();
-        $where = $this->getWhere($postData,false,['sku' => "like","machine_id" => "like"]);
-        return $this->app->goodsHit->export($where,2);
+        $where = $this->getWhere($postData);
+        return $this->app->goodsHit->exportV2($where,2);
     }
 
 }

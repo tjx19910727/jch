@@ -226,4 +226,15 @@ class MachineChannel extends Common
         }
         return $this->app->machineChannel->remoteRemoval($postData);
     }
+
+    /**
+     * 按货架层级导出货道数据
+     * @return array|\think\response\Json
+     */
+    public function exportByShelfLevel()
+    {
+        $m_id = input('m_id');
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        return $this->app->machineChannel->exportMcByShelfLevel($m_id, $hasCostPriceAuth);
+    }
 }

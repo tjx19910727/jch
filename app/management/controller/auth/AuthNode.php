@@ -58,6 +58,9 @@ class AuthNode extends Common
     {
         $postData = input();
         try { $this->validate($postData,$this->validatePath . 'AuthNodeAdd');} catch (\Exception $e) { return returnValidate($e->getMessage());}
+        if ($this->isUrlExists($postData['url'] ?? '')) {
+            return returnValidate('路由已存在，请勿重复添加');
+        }
         $result = $this->app->authNode->add($postData);
         return $result;
     }
@@ -70,8 +73,31 @@ class AuthNode extends Common
     {
         $postData = input();
         try { $this->validate($postData,$this->validatePath . 'AuthNodeUpdate');} catch (\Exception $e) { return returnValidate($e->getMessage());}
+        if ($this->isUrlExists($postData['url'] ?? '', $postData['node_id'])) {
+            return returnValidate('路由已存在，请勿重复添加');
+        }
         $result = $this->app->authNode->update($postData);
         return $result;
+    }
+
+    /**
+     * 检查节点路由是否已存在
+     * @param string $url
+     * @param int $excludeNodeId
+     * @return bool
+     */
+    protected function isUrlExists($url, $excludeNodeId = 0)
+    {
+        if ($url === '') {
+            return false;
+        }
+
+        $query = Db::name('auth_node')->where('url', $url);
+        if ($excludeNodeId) {
+            $query->where('node_id', '<>', $excludeNodeId);
+        }
+
+        return $query->count() > 0;
     }
 
     /**

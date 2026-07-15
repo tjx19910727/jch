@@ -24,6 +24,24 @@ use think\facade\Db;
 
 trait SaleOrdersTrait
 {
+    /**
+     * 判断订单是否必须走商场积分真实扣减，避免被普通0元购快捷路径截走。
+     *
+     * @param array|object $order
+     * @return bool
+     */
+    public function isMallPointsExchangeOrder($order)
+    {
+        if (is_object($order)) {
+            $order = method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
+        }
+        if (!is_array($order)) return false;
+
+        return intval($order['pay_type'] ?? 0) === 9
+            || intval($order['order_type'] ?? 0) === 7
+            || floatval($order['total_cost_points'] ?? 0) > 0;
+    }
+
     public function getPayTypeNameMap()
     {
         return config('payment.pay_type_map') ?: [];
