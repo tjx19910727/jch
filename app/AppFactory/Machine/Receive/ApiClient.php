@@ -3295,6 +3295,13 @@ class ApiClient extends ReceiveBaseClient
      */
     public function getWcSmSCode()
     {
+        if ($this->isWcVirtualLoginRequest(false)) {
+            actionLog([
+                'phone' => $this->data['phone'],
+                'machine_id' => $this->data['machine_id'],
+            ], '微程测试会员跳过短信接口');
+            return $this->r(200, 'success', '测试验证码已生成');
+        }
         $res = $this->getSmsCode($this->data['phone'], $this->data['machine_id']);
         $response = json_decode($res['response'], true);
         if (isset($response['data'])) {
@@ -3312,6 +3319,9 @@ class ApiClient extends ReceiveBaseClient
      */
     public function getWcLoginUser()
     {
+        if ($this->isWcVirtualLoginRequest(true)) {
+            return $this->buildWcVirtualLoginResponse();
+        }
         $res = $this->wcLoginUser($this->data['phone'], $this->data['machine_id'], $this->data['code']);
         // $res['response'] = '{"success":true,"message":"登录成功","token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ7XCJ1c2VySWRcIjo3OTYyMjYwfSIsImV4cCI6MTc2ODgyOTIyOCwiaWF0IjoxNzY4ODI4NjI4fQ.LgquQkybzpcmJ1dgjAA3HsL7RA0iwgnV2slr-3C3pOE"}';
         actionLog($res, '登录微程返回内容');
@@ -3358,6 +3368,48 @@ class ApiClient extends ReceiveBaseClient
         $response['card_lists'] = $card_lists;
         $response['address_lists'] = $address_lists;
         return $this->r(200, "success", $response);
+    }
+
+    /**
+     * 测试环境微程虚拟会员凭据判断，生产环境始终返回false。
+     */
+    protected function isWcVirtualLoginRequest($checkCode = true)
+    {
+        if (!filter_var(env('CglPay.is_test', false), FILTER_VALIDATE_BOOLEAN)) return false;
+        $config = config('weicheng.virtual_login') ?: [];
+        if (!filter_var($config['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN)) return false;
+        if (trim(strval($this->data['phone'] ?? '')) !== trim(strval($config['phone'] ?? ''))) return false;
+        if (!$checkCode) return true;
+        return trim(strval($this->data['code'] ?? '')) === trim(strval($config['code'] ?? ''));
+    }
+
+    /**
+     * 构造本地虚拟登录结果，全程不请求微程登录、地址和积分接口。
+     */
+    protected function buildWcVirtualLoginResponse()
+    {
+        $phone = trim(strval($this->data['phone']));
+        $machineId = trim(strval($this->data['machine_id']));
+        $cardLists = $this->getCardList(['bind_id' => $phone]);
+        $cardLists = $cardLists && is_object($cardLists) && method_exists($cardLists, 'toArray') ? $cardLists->toArray() : (array)$cardLists;
+        $addressLists = $this->getWcUserAddressesList(['bind_id' => $phone]);
+        $addressLists = $addressLists && is_object($addressLists) && method_exists($addressLists, 'toArray') ? $addressLists->toArray() : (array)$addressLists;
+        $response = [
+            'success' => true,
+            'message' => '登录成功',
+            'token' => 'virtual_test_' . hash('sha256', $phone . '|' . $machineId . '|' . date('Y-m-d') . '|' . config('app.salt')),
+            'phone' => $phone,
+            'virtual_login' => true,
+            'card_lists' => array_values($cardLists),
+            'address_lists' => array_values($addressLists),
+        ];
+        actionLog([
+            'phone' => $phone,
+            'machine_id' => $machineId,
+            'card_count' => count($response['card_lists']),
+            'address_count' => count($response['address_lists']),
+        ], '微程测试会员虚拟登录成功');
+        return $this->r(200, 'success', $response);
     }
 
     /**

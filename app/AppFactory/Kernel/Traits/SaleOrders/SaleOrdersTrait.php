@@ -311,6 +311,9 @@ trait SaleOrdersTrait
     public function updateSaleOrders($update, $where = [], $field = [])
     {
         $update = $this->appendOrderPayChannelForUpdate($update, $where, $field);
+        if (is_array($update) && array_key_exists('total_price', $update) && is_numeric($update['total_price'])) {
+            $update['total_price'] = bccomp(strval($update['total_price']), '0', 4) < 0 ? '0.0000' : $update['total_price'];
+        }
         return SaleOrdersModel::update($update, $where, $field);
     }
 
@@ -948,6 +951,12 @@ trait SaleOrdersTrait
      */
     public function updateSaleOrdersDetails($update, $where = [], $field = [])
     {
+        if (is_object($update)) {
+            $update = method_exists($update, 'toArray') ? $update->toArray() : (array)$update;
+        }
+        if (is_array($update) && array_key_exists('total_sod_price', $update) && is_numeric($update['total_sod_price'])) {
+            $update['total_sod_price'] = bccomp(strval($update['total_sod_price']), '0', 4) < 0 ? '0.0000' : $update['total_sod_price'];
+        }
         return SaleOrdersDetailsModel::update($update, $where, $field);
     }
 

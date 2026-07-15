@@ -203,7 +203,7 @@ trait ActivityCouponTrait
                 $whereAg['a_type'] = 1;
                 if ($gIds) $whereAg[] = ['g_id','in',$gIds];
                 $ag = $this->getActivityGoodsList(['a_id' => $ac['c_id'], 'a_type' => 1], 0,
-                    'g_id,g_name,pic,sku,market_price,retail_price,gc_id,gc_name'
+                    'g_id,g_name,pic,sku,market_price,retail_price,gc_id,gc_name,goods_source,source_no'
                 );
                 if (!$ag) return $this->r(100,$this->lang("VActivityCoupon.no_ag_data"));
                 if ($ag) $ac['ag'] = $ag->toArray();
@@ -260,7 +260,7 @@ trait ActivityCouponTrait
         $original_price = $this->order['total_price'];
 
         if (!isset($this->order['details'])) {
-            $sodField = "sod_id,discount_price,total_sod_price,retail_price,quantity,g_id";
+            $sodField = "sod_id,discount_price,total_sod_price,retail_price,quantity,g_id,wc_order_no";
             $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,$sodField,'total_sod_price asc')->toArray();
         }
 
@@ -309,11 +309,11 @@ trait ActivityCouponTrait
                     }
                 }
             } else {
-                $acg_id = array_column($ac['ag'], 'g_id');
                 foreach ($this->order['details'] as $key => $value) {
+                    $matchesDesignatedGoods = $this->couponDetailMatchesGoods($value, $ac['ag']);
                     // 2. 指定商品，商品在指定范围内。  3.部分商品除外，商品在指定范围外
-                    if (($ac['designated_goods'] == 2 && in_array($value['g_id'], $acg_id)) ||
-                        ($ac['designated_goods'] == 3 && !in_array($value['g_id'], $acg_id))) {
+                    if (($ac['designated_goods'] == 2 && $matchesDesignatedGoods) ||
+                        ($ac['designated_goods'] == 3 && !$matchesDesignatedGoods)) {
                         // 区分优惠券类型，1：立减金额，2：优惠折扣，计算优惠值
                         if ($ac['c_type'] == 1) $discount_price = $ac['reduction'];
                         if ($ac['c_type'] == 2) $discount_price = bcmul($value['retail_price'], bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
@@ -382,6 +382,42 @@ trait ActivityCouponTrait
             return $e->getMessage();
         }
         return true;
+    }
+
+    /**
+     * 判断订单明细（含微程线上组合子商品）是否命中优惠券商品范围。
+     */
+    protected function couponDetailMatchesGoods($detail, $couponGoods)
+    {
+        $couponGoodsIds = [];
+        $couponSourceNos = [];
+        foreach ((array)$couponGoods as $goods) {
+            if (!is_array($goods)) {
+                $couponGoodsIds[] = intval($goods);
+                continue;
+            }
+            if (intval($goods['goods_source'] ?? 1) === 2) {
+                $couponSourceNos[] = trim(strval($goods['source_no'] ?? ''));
+            } else {
+                $couponGoodsIds[] = intval($goods['g_id'] ?? 0);
+            }
+        }
+        $detailGoodsIds = [intval($detail['g_id'] ?? 0)];
+        $detailSourceNos = [];
+        $wcOrderNo = json_decode($detail['wc_order_no'] ?? '', true);
+        if (is_array($wcOrderNo)) {
+            foreach ($wcOrderNo as $wcGoods) {
+                if (is_array($wcGoods) && isset($wcGoods['g_id'])) {
+                    $detailGoodsIds[] = intval($wcGoods['g_id']);
+                }
+                if (is_array($wcGoods) && !empty($wcGoods['out_no'])) {
+                    $detailSourceNos[] = trim(strval($wcGoods['out_no']));
+                }
+            }
+        }
+        $detailGoodsIds = array_values(array_filter(array_unique($detailGoodsIds)));
+        return count(array_intersect($detailGoodsIds, $couponGoodsIds)) > 0
+            || count(array_intersect(array_unique($detailSourceNos), array_filter(array_unique($couponSourceNos)))) > 0;
     }
 
     protected function clampCouponDiscount($discount, $amount)

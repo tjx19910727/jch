@@ -14,13 +14,14 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityFdTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityMachineTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Management\ManagementClient;
 use app\management\validate\Activity\VActivityFd;
 
 class ActivityFdClient extends ManagementClient
 {
     use ActivityFdTrait,ActivityFdContentTrait,ActivityMachineTrait;
-    use GoodsTrait,MachineTrait;
+    use GoodsTrait,MachineTrait,WcGoodsTrait;
 
     public function getFdAmFind($where,$field = "*")
     {
@@ -69,7 +70,23 @@ class ActivityFdClient extends ManagementClient
                     }
                     $value['fd_id'] = $fd_id;
                     $value['fd_name'] = $postData['fd_name'];
-                    if ($postData["condition_type"] == 3) {
+                    if (intval($value['goods_source'] ?? 1) === 2) {
+                        $sourceNo = trim(strval($value['source_no'] ?? $value['condition_value'] ?? ''));
+                        $goods = $this->getWcGoodsFind(['no' => $sourceNo]);
+                        if (!$goods) {
+                            $this->rollbackTrans();
+                            return $this->rValidate('查无线上商品信息：' . $sourceNo);
+                        }
+                        $goods = is_object($goods) && method_exists($goods, 'toArray') ? $goods->toArray() : (array)$goods;
+                        $value['goods_source'] = 2;
+                        $value['source_no'] = $sourceNo;
+                        $value['condition_value'] = $sourceNo;
+                        $value['g_id'] = 0;
+                        $value['g_name'] = $goods['name'] ?? '';
+                        $value['pic'] = $goods['pic'] ?? '';
+                        $value['sku'] = $sourceNo;
+                    }
+                    if ($postData["condition_type"] == 3 && intval($value['goods_source'] ?? 1) !== 2) {
                         $goods =  $this->getGoodsFind(['g_id' => $value['g_id']], 'g_id,g_name,sku,pic,gc_id,gc_name');
                         if(!isset($value['condition_value'])){
                             $value['condition_value'] = $goods['sku'];
@@ -83,7 +100,7 @@ class ActivityFdClient extends ManagementClient
                         $value['pic'] = $goods['pic'];
                         $value['sku'] = $goods['sku'];
                     }
-                    if (isset($value['g_id'])) {
+                    if (isset($value['g_id']) && intval($value['goods_source'] ?? 1) !== 2) {
                         $g = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_name,sku,pic,gc_id,gc_name');
                         if (!$g) {
                             $this->rollbackTrans();
@@ -151,7 +168,24 @@ class ActivityFdClient extends ManagementClient
                         $value['fd_id'] = $postData['fd_id'];
                         $value['fd_name'] = ($postData['fd_name'] ? $postData['fd_name'] : $this->getActivityFdValue(['fd_id' => $postData['fd_id']], 'fd_name'));
 
-                        if ($postData["condition_type"] == 3) {
+                        if (intval($value['goods_source'] ?? 1) === 2) {
+                            $sourceNo = trim(strval($value['source_no'] ?? $value['condition_value'] ?? ''));
+                            $goods = $this->getWcGoodsFind(['no' => $sourceNo]);
+                            if (!$goods) {
+                                $this->rollbackTrans();
+                                return $this->rValidate('查无线上商品信息：' . $sourceNo);
+                            }
+                            $goods = is_object($goods) && method_exists($goods, 'toArray') ? $goods->toArray() : (array)$goods;
+                            $value['goods_source'] = 2;
+                            $value['source_no'] = $sourceNo;
+                            $value['condition_value'] = $sourceNo;
+                            $value['g_id'] = 0;
+                            $value['g_name'] = $goods['name'] ?? '';
+                            $value['pic'] = $goods['pic'] ?? '';
+                            $value['sku'] = $sourceNo;
+                        }
+
+                        if ($postData["condition_type"] == 3 && intval($value['goods_source'] ?? 1) !== 2) {
                             $goods = $this->getGoodsFind(['sku' => $value['condition_value']]);
                             if (!$goods) {
                                 $this->rollbackTrans();
@@ -162,7 +196,7 @@ class ActivityFdClient extends ManagementClient
                             $value['pic'] = $goods['pic'];
                             $value['sku'] = $goods['sku'];
                         }
-                        if (isset($value['g_id'])) {
+                        if (isset($value['g_id']) && intval($value['goods_source'] ?? 1) !== 2) {
                             $g = $this->getGoodsFind(['g_id' => $value['g_id']], 'g_name,sku,pic,gc_id,gc_name');
                             if (!$g) {
                                 $this->rollbackTrans();

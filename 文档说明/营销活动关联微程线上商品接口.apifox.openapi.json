@@ -1,0 +1,39 @@
+{
+  "openapi": "3.0.3",
+  "info": {"title": "营销活动关联微程线上商品接口", "version": "1.0.0"},
+  "paths": {
+    "/management/activity.activity_coupon/add": {
+      "post": {
+        "summary": "新增优惠券（支持微程线上商品）",
+        "parameters": [{"name":"token","in":"header","required":true,"schema":{"type":"string","example":"{{token}}"}}],
+        "requestBody": {"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"designated_goods":{"type":"integer","enum":[1,2,3],"description":"1全部商品2指定商品3排除指定商品"},"goodsList":{"type":"array","items":{"type":"integer"},"description":"普通商品g_id列表"},"onlineGoodsList":{"type":"array","items":{"type":"string"},"description":"微程线上父商品out_no列表"}}},"examples":{"指定线上商品":{"value":{"designated_goods":2,"goodsList":[],"onlineGoodsList":["VC2601071001"]}}}}}},
+        "responses":{"200":{"description":"项目标准state/msg/data响应"}}
+      }
+    },
+    "/management/activity.activity_coupon/update": {
+      "post": {
+        "summary": "修改优惠券线上商品关联",
+        "parameters": [{"name":"token","in":"header","required":true,"schema":{"type":"string","example":"{{token}}"}}],
+        "requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["c_id"],"properties":{"c_id":{"type":"integer"},"designated_goods":{"type":"integer","enum":[1,2,3]},"goodsList":{"type":"array","items":{"type":"integer"}},"onlineGoodsList":{"type":"array","items":{"type":"string"},"description":"传入时全量替换线上商品；不传保持原关联"}}}}},
+        "responses":{"200":{"description":"项目标准state/msg/data响应"}}
+      }
+    },
+    "/management/activity.activity_fd/add": {
+      "post": {
+        "summary":"新增满减活动（指定线上商品）",
+        "parameters":[{"name":"token","in":"header","required":true,"schema":{"type":"string","example":"{{token}}"}}],
+        "requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"condition_type":{"type":"integer","enum":[0,1,2,3],"description":"3为指定商品"},"content":{"type":"array","items":{"$ref":"#/components/schemas/FdOnlineContent"}}}},"examples":{"线上商品立减":{"value":{"condition_type":3,"content":[{"goods_source":2,"source_no":"VC2601071001","active_value":3,"sort":1}]}}}}}},
+        "responses":{"200":{"description":"项目标准state/msg/data响应"}}
+      }
+    },
+    "/management/activity.activity_fd/update": {
+      "post": {
+        "summary":"修改满减活动线上商品规则",
+        "parameters":[{"name":"token","in":"header","required":true,"schema":{"type":"string","example":"{{token}}"}}],
+        "requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["fd_id","content"],"properties":{"fd_id":{"type":"integer"},"condition_type":{"type":"integer","enum":[0,1,2,3]},"content":{"type":"array","items":{"$ref":"#/components/schemas/FdOnlineContent"}}}}}}},
+        "responses":{"200":{"description":"项目标准state/msg/data响应"}}
+      }
+    }
+  },
+  "components":{"schemas":{"FdOnlineContent":{"type":"object","required":["goods_source","source_no","active_value","sort"],"properties":{"fdc_id":{"type":"integer","description":"修改既有规则时传"},"goods_source":{"type":"integer","enum":[1,2],"description":"1普通商品2微程线上商品"},"source_no":{"type":"string","description":"goods_source=2时传微程父商品out_no"},"active_value":{"type":"number","description":"优惠值"},"sort":{"type":"integer","description":"规则排序"}}}}}
+}}

@@ -66,12 +66,12 @@ trait ActivityFdTrait
             foreach ($fdList as $key => $fdl){
                 $update = [];
                 $fieldOrder = "fdc_sort ASC, fdc_id desc";
-                $field = "condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value";
+                $field = "condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,goods_source,source_no";
                 // 20250320，与朱工、陈工、聂工讨论确认最低消费金额、最低消费件数排序规则，优先排序值顺序排序，排序值一致时，以条件数值倒序排序
                 if (in_array($fdl['condition_type'],[1,2])) {
                     // 20250414，终端是以最后一条满足条件覆盖前一满足条件，所以排序得反向排序
                     $fieldOrder = "fdc_sort DESC, condition_value1 asc, fdc_id asc";
-                    $field = "fdc_id,CAST(condition_value AS UNSIGNED) condition_value1, condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
+                    $field = "fdc_id,CAST(condition_value AS UNSIGNED) condition_value1, condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort,goods_source,source_no";
                 }
                 $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id']],0,$field,$fieldOrder);
                 if ($fdl['status'] == 1) $update['status'] = 2;
@@ -123,7 +123,7 @@ trait ActivityFdTrait
             }
         }
         $fieldOrder = "fdc_sort ASC, fdc_id desc";
-        $field = "fdc_id,fd_id,fd_name,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
+        $field = "fdc_id,fd_id,fd_name,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort,goods_source,source_no";
         // 20250320，与朱工、陈工、聂工讨论确认最低消费金额、最低消费件数排序规则，优先排序值顺序排序，排序值一致时，以条件数值倒序排序
         if (in_array($this->fd['condition_type'],[1,2])) {
             $fieldOrder = "fdc_sort ASC,condition_value1 desc, fdc_id desc";
@@ -297,12 +297,20 @@ trait ActivityFdTrait
             }
             $handledSku[$ruleSku] = 1;
 
-            $detailsList = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id'],'sku' => $value['condition_value']],
-                0,'sod_id,total_sod_price,discount_price,quantity');
+            if (intval($value['goods_source'] ?? 1) === 2) {
+                $detailsList = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],
+                    0, 'sod_id,total_sod_price,discount_price,quantity,wc_order_no');
+            } else {
+                $detailsList = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id'],'sku' => $value['condition_value']],
+                    0,'sod_id,total_sod_price,discount_price,quantity');
+            }
             actionLog($this->getLS(),'查询指定SKU');
             if ($detailsList) {
                 $detailsList = $detailsList->toArray();
                 foreach ($detailsList as $dk => $dv) {
+                    if (intval($value['goods_source'] ?? 1) === 2 && !$this->fdDetailMatchesOnlineGoods($dv, $value['source_no'] ?? '')) {
+                        continue;
+                    }
                     $this->sku = $dv;
                     // 满足条件，执行逻辑，不满足就跳出
                     $this->countContent($value);
@@ -315,6 +323,16 @@ trait ActivityFdTrait
                 }
             }
         }
+    }
+
+    protected function fdDetailMatchesOnlineGoods($detail, $sourceNo)
+    {
+        $wcOrderNo = json_decode($detail['wc_order_no'] ?? '', true);
+        if (!is_array($wcOrderNo)) return false;
+        foreach ($wcOrderNo as $wcGoods) {
+            if (is_array($wcGoods) && trim(strval($wcGoods['out_no'] ?? '')) === trim(strval($sourceNo))) return true;
+        }
+        return false;
     }
 
     /**
@@ -349,14 +367,14 @@ trait ActivityFdTrait
             if ($this->fd['condition_type'] != 3) {
                 $discount_price = $value['active_value'];
             } else {
-                $discount_price = $value['active_value'] * $this->sku['quantity'];
+                $discount_price = $this->clampFdDiscount($value['active_value'] * $this->sku['quantity'], $this->sku['total_sod_price']);
                 actionLog($discount_price,'指定SKU优惠立减金额');
-                if ($this->sku['total_sod_price'] >= $discount_price) {
+                if (bccomp($discount_price, '0', 4) > 0) {
                     // 修改订单详情商品总价
                     $this->updateSaleOrdersDetails([
                         'sod_id' => $this->sku['sod_id'],
-                        'total_sod_price' => bcsub($this->sku['total_sod_price'], $discount_price, 4),
-                        'discount_price' => $discount_price]);
+                        'total_sod_price' => $this->subtractFdDiscount($this->sku['total_sod_price'], $discount_price),
+                        'discount_price' => bcadd(strval($this->sku['discount_price'] ?? 0), $discount_price, 4)]);
                     actionLog($this->getLS(),'【SQL】指定SKU立减');
                 }
             }
@@ -379,24 +397,26 @@ trait ActivityFdTrait
             } else {
                 // 指定SKU，优惠金额以商品单价计算
                 $discount_price = round(bcmul(
-                    bcmul($this->sku['total_sod_price'],$this->sku['quantity'],3),
+                    $this->sku['total_sod_price'],
                     bcdiv(
                         bcsub(100,$value['active_value']),
                         100,
                         2),
                     3),2);
                 actionLog($discount_price,'指定SKU优惠折扣金额');
-                if ($this->sku['total_sod_price'] >= $discount_price) {
+                $discount_price = $this->clampFdDiscount($discount_price, $this->sku['total_sod_price']);
+                if (bccomp($discount_price, '0', 4) > 0) {
                     // 修改订单详情商品总价
                     $this->updateSaleOrdersDetails([
                         'sod_id' => $this->sku['sod_id'],
-                        'total_sod_price' => bcsub($this->sku['total_sod_price'], $discount_price, 2),
-                        'discount_price' => $discount_price]);
+                        'total_sod_price' => $this->subtractFdDiscount($this->sku['total_sod_price'], $discount_price),
+                        'discount_price' => bcadd(strval($this->sku['discount_price'] ?? 0), $discount_price, 4)]);
                     actionLog($this->getLS(),'【SQL】指定SKU折扣');
                 }
             }
         }
-        if ($discount_price) $this->countContent['discount_price'] = bcadd($this->countContent['discount_price'],$discount_price,2);
+        $discount_price = $this->clampFdDiscount($discount_price, $this->fd['condition_type'] == 3 ? ($this->sku['total_sod_price'] ?? 0) : $this->order['total_price']);
+        if (bccomp($discount_price, '0', 4) > 0) $this->countContent['discount_price'] = bcadd($this->countContent['discount_price'],$discount_price,2);
         if ($mc_id) $this->countContent['mc_id'] = $mc_id;
     }
 
@@ -410,26 +430,33 @@ trait ActivityFdTrait
         $updateOrder = [];
         actionLog($this->countContent,'过滤后的最终优惠');
         if ($this->countContent['discount_price']) {
+            $currentDiscount = $this->clampFdDiscount($this->countContent['discount_price'], $this->order['total_price']);
+            if (bccomp($currentDiscount, '0', 4) <= 0) return true;
             if (!$this->order['retail_price']) $updateOrder['retail_price'] = $this->order['total_price'];
-            $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $this->countContent['discount_price'],2);
-            $updateOrder['total_price'] = bcsub($this->order['total_price'],$this->countContent['discount_price'],2);
+            $updateOrder['discount_price'] = bcadd($this->order['discount_price'], $currentDiscount,2);
+            $updateOrder['total_price'] = $this->subtractFdDiscount($this->order['total_price'], $currentDiscount);
             actionLog($this->order,'订单数据');
             $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']]);
             if (!$details) return $this->lang("VActivityFd.sod_no_data");
             $details = $details->toArray();
-            $remainDiscount = $updateOrder['discount_price'];
-            $num = count($details);
-            foreach ($details as $dk => $dv) {
+            $remainDiscount = $currentDiscount;
+            $eligibleDetails = array_values(array_filter($details, function ($detail) {
+                return intval($detail['is_gift'] ?? 2) === 2;
+            }));
+            $num = count($eligibleDetails);
+            foreach ($eligibleDetails as $dk => $dv) {
                 actionLog($dv, '商品数据');
-                if ($dv['is_gift'] == 2 && $this->fd['condition_type'] != 3) {
+                if ($this->fd['condition_type'] != 3) {
                     // 商品优惠金额 = 订单优惠金额 * 商品金额占比 = 订单优惠金额 *  （商品总金额 / 订单总金额）
-                    $sodDiscountPrice = round(bcmul($updateOrder['discount_price'], bcdiv($dv['total_sod_price'], $this->order['total_price'], 5), 3),2);
+                    $sodDiscountPrice = round(bcmul($currentDiscount, bcdiv($dv['total_sod_price'], $this->order['total_price'], 5), 3),2);
                     actionLog($sodDiscountPrice, '商品优惠金额');
                     if ($sodDiscountPrice < 0.01) $sodDiscountPrice = 0;
                     if ($num - 1 == $dk && $sodDiscountPrice < $remainDiscount) {
                         $sodDiscountPrice = $remainDiscount;
                         actionLog($sodDiscountPrice,'当前商品为最后一个商品，并且计算的优惠金额小于剩余优惠金额，重置为剩下的优惠金额');
                     }
+                    $sodDiscountPrice = $this->clampFdDiscount($sodDiscountPrice, $dv['total_sod_price']);
+                    $sodDiscountPrice = $this->clampFdDiscount($sodDiscountPrice, $remainDiscount);
                     if ($sodDiscountPrice < $remainDiscount) {
                         $remainDiscount -= $sodDiscountPrice;
                         actionLog($remainDiscount,"剩下的优惠金额，减去 {$dk} 的优惠金额 {$sodDiscountPrice}");
@@ -437,7 +464,7 @@ trait ActivityFdTrait
 
                     $updateSod['sod_id'] = $dv['sod_id'];
                     $updateSod['discount_price'] = bcadd($dv['discount_price'], $sodDiscountPrice, 2);
-                    $updateSod['total_sod_price'] = bcsub($dv['total_sod_price'], $sodDiscountPrice, 2);
+                    $updateSod['total_sod_price'] = $this->subtractFdDiscount($dv['total_sod_price'], $sodDiscountPrice);
                     actionLog($dv, '修改商品优惠数据');
                     $flag[] = $this->updateSaleOrdersDetails($updateSod);
                     actionLog($this->getLS(), '【SQL】处理订单详情信息');
@@ -472,6 +499,22 @@ trait ActivityFdTrait
             actionLog($this->getLS(),'【SQL】处理订单信息');
         }
         return $this->checkFlag($flag);
+    }
+
+    protected function clampFdDiscount($discount, $amount)
+    {
+        $discount = bcadd(strval($discount), '0', 4);
+        $amount = bcadd(strval($amount), '0', 4);
+        if (bccomp($discount, '0', 4) < 0 || bccomp($amount, '0', 4) <= 0) return '0.0000';
+        return bccomp($discount, $amount, 4) > 0 ? $amount : $discount;
+    }
+
+    protected function subtractFdDiscount($amount, $discount)
+    {
+        $amount = bcadd(strval($amount), '0', 4);
+        $discount = $this->clampFdDiscount($discount, $amount);
+        $result = bcsub($amount, $discount, 4);
+        return bccomp($result, '0', 4) < 0 ? '0.0000' : $result;
     }
 
 }
