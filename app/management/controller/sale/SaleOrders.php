@@ -983,4 +983,23 @@ class SaleOrders extends Common
         return $this->app->saleOrders->manualDeductStock(input());
     }
 
+    /** 后台手动推送已支付订单到微程。 */
+    public function manualPushToWeiCheng()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'manualPushToWeiCheng');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        $orderId = intval($postData['order_id'] ?? 0);
+        $tradeNo = trim((string)($postData['trade_no'] ?? ''));
+        if ($orderId <= 0 && $tradeNo === '') return returnState(100, 'order_id和trade_no至少填写一个');
+
+        $frequencyKey = 'manual_push_weicheng_' . ($orderId > 0 ? $orderId : $tradeNo) . '_' . intval($postData['sod_id'] ?? 0);
+        $check = checkFrequency($frequencyKey, 3);
+        if ($check !== true) return returnState(100, $check);
+        return $this->app->saleOrders->manualPushToWeiCheng($postData);
+    }
+
 }

@@ -9,6 +9,7 @@
 
 namespace app\AppFactory\Kernel\Traits\WeiCheng;
 
+use app\AppFactory\Kernel\Service\WeiCheng\WcOrderSyncRetryService;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcRequestLogsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
@@ -326,27 +327,72 @@ trait WcBaseTrait
         if (!$details) return true;
         $details = $details->toArray();
         foreach ($details as $detail) {
-            $wc_order_no = $this->orderDetailSync2Wc($order, $detail);
-            $wc_order_no_json = json_encode($wc_order_no);
-            $this->updateSaleOrdersDetails(['wc_order_no' => $wc_order_no_json], ['sod_id' => $detail['sod_id']]);
+            if (empty($detail['wc_order_no'])) continue;
+            $this->syncWcOrderDetailWithRetry($order, $detail);
         }
-        //返回true是为了不影响正常出货流程
+        // 微程同步失败只进入重试队列，不影响支付成功和设备出货。
         return true;
+    }
+
+    /**
+     * 同步一个微程订单明细并维护失败重试任务。
+     * 手动推送时 resetFinal=true，可将已转人工任务重新进入三次重试周期。
+     */
+    public function syncWcOrderDetailWithRetry($order, $detail, $resetFinal = false)
+    {
+        $order = is_object($order) && method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
+        $detail = is_object($detail) && method_exists($detail, 'toArray') ? $detail->toArray() : (array)$detail;
+        $wcOrderNo = json_decode($detail['wc_order_no'] ?? '', true) ?: [];
+        $failure = '';
+        $retryQueued = false;
+        try {
+            $wcOrderNo = $this->orderDetailSync2Wc($order, $detail);
+            $this->updateSaleOrdersDetails(
+                ['wc_order_no' => json_encode($wcOrderNo, JSON_UNESCAPED_UNICODE)],
+                ['sod_id' => $detail['sod_id']]
+            );
+            $failure = $this->getWcOrderSyncFailure($wcOrderNo);
+        } catch (\Throwable $e) {
+            $failure = $e->getMessage();
+            actionException($e, 1, $resetFinal ? 'wcOrderManualSync' : 'wcOrderInitialSync');
+        }
+
+        try {
+            $retryService = new WcOrderSyncRetryService();
+            if ($failure === '') {
+                $retryService->markSuccessBySodId($detail['sod_id'], $wcOrderNo);
+            } else {
+                $retryQueued = (bool)$retryService->enqueue($order, $detail, $failure, $wcOrderNo, $resetFinal);
+            }
+        } catch (\Throwable $e) {
+            // 数据库升级缺失等入队异常也不能影响支付或手动操作的主结果。
+            actionException($e, 1, 'wcOrderSyncEnqueue');
+        }
+
+        return [
+            'success' => $failure === '',
+            'error' => $failure,
+            'retry_queued' => $retryQueued,
+            'wc_order_no' => $wcOrderNo,
+        ];
     }
 
     public function orderDetailSync2Wc($order, $detail)
     {
         $this->initWcBase();
+        $wc_order_no = json_decode($detail['wc_order_no'] ?? '{}', true) ?: [];
         $wc_machine_channel = $this->getWcMachineChannelFind(['mc_id' => $detail['mc_id']]);
-        if (!$wc_machine_channel) return true;
+        if (!$wc_machine_channel) return $wc_order_no;
         $wc_machine_channel = $wc_machine_channel->toArray();
         $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $wc_machine_channel['out_no']]);
-        if (!$wc_goods_locals) return true;
+        if (!$wc_goods_locals) return $wc_order_no;
         $wc_goods_locals = $wc_goods_locals->toArray();
-        $wc_order_no = json_decode($detail['wc_order_no'] ?? '{}', true) ?: [];
 
         $buy_date_range = [];
         foreach($wc_order_no as $no => $value) {
+            if (!is_array($value)) continue;
+            // 已同步成功的子商品不重复请求，保证组合商品部分成功场景幂等。
+            if (!empty($value['order_no'])) continue;
             if(!empty($value['order_date'])) {
                 if(count($value['order_date']) == 1){
                     $buy_date_range = [
@@ -387,15 +433,41 @@ trait WcBaseTrait
             if (!is_array($res_arr)) {
                 actionLog(['detail' => $detail, 'response' => $res['response'] ?? ''], "子订单同步失败：微程返回格式异常");
                 $wc_order_no[$no]['order_no'] = '';
+                $wc_order_no[$no]['sync_error'] = '微程返回格式异常，HTTP状态码：' . intval($res['status'] ?? 0);
+                $wc_order_no[$no]['response'] = $res['response'] ?? '';
             } elseif (($res_arr['status'] ?? '') == "fail") {
                 actionLog($detail, "子订单同步失败" . ($res_arr['tip'] ?? ''));
                 $wc_order_no[$no]['order_no'] = '';
+                $wc_order_no[$no]['sync_error'] = $res_arr['tip'] ?? '微程返回失败';
+                $wc_order_no[$no]['response'] = $res_arr;
             } else {
                 $wc_order_no[$no]['order_no'] = $res_arr['order_no'] ?? '';
                 $wc_order_no[$no]['response'] = $res_arr;
+                if (empty($wc_order_no[$no]['order_no'])) {
+                    $wc_order_no[$no]['sync_error'] = '微程成功响应缺少order_no';
+                } else {
+                    unset($wc_order_no[$no]['sync_error']);
+                }
             }
         }
         return $wc_order_no;
+    }
+
+    /** 返回尚未同步成功的子商品错误摘要；空字符串表示全部成功。 */
+    public function getWcOrderSyncFailure($wcOrderNo)
+    {
+        if (!is_array($wcOrderNo)) return '微程订单数据格式异常';
+        $errors = [];
+        $goodsCount = 0;
+        foreach ($wcOrderNo as $goodsNo => $item) {
+            if (!is_array($item)) continue;
+            $goodsCount++;
+            if (empty($item['order_no'])) {
+                $errors[] = (string)$goodsNo . '：' . ($item['sync_error'] ?? '未返回微程订单号');
+            }
+        }
+        if ($goodsCount === 0) return '微程订单中没有可同步的子商品';
+        return implode('；', $errors);
     }
 
     public function orderRefundSync2Wc($order, $detail)
