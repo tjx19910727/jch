@@ -1439,9 +1439,9 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.channel_no_data"));
                     }
-                    $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']]);
+                    $mg = $this->getMachineGoodsFind(['mg_id' => ($mc['mg_id'] ?? 0)]);
 
-                    if (!isset($value['channel_code']) && !$mc['mg_id']) {
+                    if (!isset($value['channel_code']) && !($mc['mg_id'] ?? 0)) {
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.mg_id_require"));
                     }
@@ -1449,6 +1449,7 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.channel_status_no_3"));
                     }
+
                     if (isset($value['channel_code']) && $value['channel_code'] != 'Z10' &&  ($mc['stock'] < $value['quantity'])) {
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.under_stock"));
@@ -1474,14 +1475,14 @@ class ApiClient extends ReceiveBaseClient
                             "g_id" => $mc['g_id'],
                             "g_name" => $mc['g_name'],
                             "pic" => $mc['pic'],
-                            "sku" => $mc['sku'],
+                            "sku" => $mc['sku'] ?? '',
                             "gc_id" => $mc['gc_id'],
                             "gc_name" => $mc['gc_name'],
                             "cost_price" => $mc['cost_price'] ?? 0,
                             "market_price" => $mc['market_price'] ?? 0,
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'] ?? '',
-                            'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
+                            'total_sod_cost_points' => bcmul(($mc['cost_points'] ?? 0), $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                             'sod_ao_id' => $mg['ao_id'] ?? '',
                         ];
@@ -3977,6 +3978,7 @@ class ApiClient extends ReceiveBaseClient
                 'item_id' => intval($itemId),
                 'machine_id' => $machineId,
                 'maintainer_id' => trim($maintainerId),
+                'check_status' => 1, // 默认设置为1，表示已检查
                 'maintenance_time' => $maintenanceTime,
                 'notes' => '',
             ];
@@ -3991,7 +3993,7 @@ class ApiClient extends ReceiveBaseClient
         }
 
         // 构建 SQL 字符串用于日志记录
-        $columns = "`records_code`,`item_id`,`machine_id`,`maintainer_id`,`maintenance_time`,`notes`";
+        $columns = "`records_code`,`item_id`,`machine_id`,`maintainer_id`,`maintenance_time`,`check_status`,`notes`";
         $valueTuples = [];
         foreach ($insertAll as $row) {
             $v = [
@@ -4000,6 +4002,7 @@ class ApiClient extends ReceiveBaseClient
                 addslashes($row['machine_id']),
                 addslashes($row['maintainer_id']),
                 addslashes($row['maintenance_time']),
+                addslashes($row['check_status']),
                 addslashes($row['notes']),
             ];
             $valueTuples[] = "('" . implode("','", $v) . "')";
@@ -4738,7 +4741,6 @@ class ApiClient extends ReceiveBaseClient
             ])
             ->field('staff_id,staff_code,account_name')
             ->find();
-
         return $staff ?: [];
     }
 
@@ -5031,7 +5033,7 @@ class ApiClient extends ReceiveBaseClient
         }
     }
 
-	/**
+    /**
      * 设备提交客户退货日志。
      * 普通编码匹配当前设备订单号后四位；特殊编码仅跳过订单校验，不触发实际退款。
      */
