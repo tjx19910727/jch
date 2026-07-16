@@ -1039,7 +1039,7 @@ class SaleOrdersClient extends ManagementClient
      * @param $where
      * @return array|\think\response\Json
      */
-    public function saleDataCollect($where, $postData = [])
+    public function saleDataCollect($where, $behaviorWhere = [])
     {
         $whereCollect = $where;
         $whereCollect['so.pay_status'] = 3;
@@ -1057,7 +1057,7 @@ class SaleOrdersClient extends ManagementClient
         $whereGIds = $where;
         $whereGIds[] = ['g_id', ">", 0];
         $gIds = $this->joinSoSodColumn($whereGIds, 'g_id', 'g_id');
-        $collectData['totalClick'] = $this->getBehaviorClickSum($postData);
+        $collectData['totalClick'] = $this->getBehaviorClickSum($behaviorWhere);
         $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
         $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
         $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
@@ -1091,7 +1091,7 @@ class SaleOrdersClient extends ManagementClient
      * @param int $pageNum 页面数据条数
      * @return array|\think\response\Json
      */
-    public function saleDataCollectList($where, $pageNum = 0, $postData = [])
+    public function saleDataCollectList($where, $pageNum = 0, $behaviorWhere = [])
     {
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
@@ -1104,9 +1104,9 @@ class SaleOrdersClient extends ManagementClient
         ";
         $collectList = $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, 'totalPrice desc', 'm_id,g_id');
         actionLog($this->getLS(), '统计销售数据');
-        $collectList = $collectList->each(function ($collectData) use ($postData) {
+        $collectList = $collectList->each(function ($collectData) use ($behaviorWhere) {
             $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
-            $collectData['totalClick'] = $this->getBehaviorClickSum($postData);
+            $collectData['totalClick'] = $this->getBehaviorClickSum($behaviorWhere);
             $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
             $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
             $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
@@ -1124,7 +1124,7 @@ class SaleOrdersClient extends ManagementClient
      * @param $where
      * @return array|\think\response\Json
      */
-    public function exportSaleDataCollect($where, $postData = [])
+    public function exportSaleDataCollect($where, $behaviorWhere = [])
     {
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
@@ -1142,7 +1142,7 @@ class SaleOrdersClient extends ManagementClient
             actionLog($list, '导出数据');
             foreach ($list as $k => $collectData) {
                 $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
-                $collectData['totalClick'] = $this->getBehaviorClickSum($postData);
+                $collectData['totalClick'] = $this->getBehaviorClickSum($behaviorWhere);
                 $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
                 $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
                 $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
