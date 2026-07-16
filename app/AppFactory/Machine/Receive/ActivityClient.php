@@ -62,7 +62,9 @@ class ActivityClient extends ReceiveBaseClient
     public function __destruct()
     {
         // TODO: Implement __destruct() method.
-        $result = $this->updateMachineMqRecord(['status' => 2, 'msg_id' => $this->data['msg_id']], ['msg_id' => $this->data['msg_id']]);
+        $msgId = isset($this->data['msg_id']) ? $this->data['msg_id'] : '';
+        if ($msgId === '') return;
+        $result = $this->updateMachineMqRecord(['status' => 2, 'msg_id' => $msgId], ['msg_id' => $msgId]);
         actionLog($result, '处理完成时修改状态为已处理');
     }
 

@@ -23,24 +23,41 @@ class ActivityFdClient extends ManagementClient
     use ActivityFdTrait,ActivityFdContentTrait,ActivityMachineTrait;
     use GoodsTrait,MachineTrait,WcGoodsTrait;
 
+    /** 查询满减活动列表，并补充普通规则和微程线上商品规则。 */
+    public function getList($where = [], $pageNum = 0, $field = "*", $order = "", $rQ = 1)
+    {
+        $data = $this->getActivityFdList($where, $pageNum, $field, $order, function ($fd) {
+            return $this->appendFdGoodsLists($fd);
+        });
+        return $rQ ? $this->rQ($data) : $data;
+    }
+
     public function getFdAmFind($where,$field = "*")
     {
         $fd = $this->getActivityFdFind($where,$field);
         if ($fd) {
-            $fd = $fd->toArray();
-            $allContent = $this->getActivityFdContentList($where)->toArray();
-            $fd['content'] = [];
-            $fd['onlineGoodsList'] = [];
-            foreach ($allContent as $item) {
-                if (intval($item['goods_source'] ?? 1) === 2) {
-                    $fd['onlineGoodsList'][] = $item;
-                } else {
-                    $fd['content'][] = $item;
-                }
-            }
+            $fd = $this->appendFdGoodsLists($fd);
             $fd['machineList'] = $this->getActivityMachineList(['a_id' => $fd['fd_id'], 'a_type' => 2],0,'am_id,m_id,machine_id,machine_name');
         }
         return $this->rQ($fd);
+    }
+
+    /** 将满减规则拆分为普通规则和微程线上商品列表，便于后台直接回显。 */
+    protected function appendFdGoodsLists($fd)
+    {
+        $fd = is_object($fd) && method_exists($fd, 'toArray') ? $fd->toArray() : (array)$fd;
+        $allContent = $this->getActivityFdContentList(['fd_id' => $fd['fd_id']], 0, '*', 'fdc_sort asc,fdc_id asc');
+        $allContent = is_object($allContent) && method_exists($allContent, 'toArray') ? $allContent->toArray() : (array)$allContent;
+        $fd['content'] = [];
+        $fd['onlineGoodsList'] = [];
+        foreach ($allContent as $item) {
+            if (intval(isset($item['goods_source']) ? $item['goods_source'] : 1) === 2) {
+                $fd['onlineGoodsList'][] = $item;
+            } else {
+                $fd['content'][] = $item;
+            }
+        }
+        return $fd;
     }
 
     /**
@@ -51,9 +68,10 @@ class ActivityFdClient extends ManagementClient
     public function addFd($postData)
     {
         $content = json2arr($postData['content']);
-        $onlineGoodsList = json2arr($postData['onlineGoodsList'] ?? []);
+        $onlineGoodsList = $this->normalizeOnlineGoodsList($postData['onlineGoodsList'] ?? []);
         $mList = explode(",",$postData['machineList']);
-        unset($postData['content'],$postData['onlineGoodsList'],$postData['machineList']);
+        // 新增接口兼容从已有活动复制的请求，历史主键和修改专用字段不得写入新记录。
+        unset($postData['fd_id'],$postData['delContent'],$postData['content'],$postData['onlineGoodsList'],$postData['machineList']);
 
         if ($postData['start_date'] && $postData['start_date'] <= strtotime(date("Y-m-d"))) {
             $postData['status'] = 2;
@@ -64,6 +82,7 @@ class ActivityFdClient extends ManagementClient
             $fd_id = $this->addActivityFd($postData);
             if ($fd_id) {
                 foreach ($content as $key => $value) {
+                    unset($value['fdc_id'], $value['fd_id']);
                     try {
                         validate(VActivityFd::class)->scene("addContent")->check($value);
                     } catch (\Exception $e) {
@@ -186,7 +205,8 @@ class ActivityFdClient extends ManagementClient
         $machineList = explode(",",$postData['machineList']);
         $delContent = $postData['delContent'];
         $content = json2arr($postData['content']);
-        $onlineGoodsList = json2arr($postData['onlineGoodsList'] ?? []);
+        $hasOnlineGoodsList = array_key_exists('onlineGoodsList', $postData);
+        $onlineGoodsList = $this->normalizeOnlineGoodsList($postData['onlineGoodsList'] ?? []);
         unset($postData['content'],$postData['delContent'],$postData['onlineGoodsList'],$postData['machineList']);
         $flag = [];
         $this->startTrans();
@@ -246,7 +266,7 @@ class ActivityFdClient extends ManagementClient
                 if ($insertAll) $this->addActivityFdContentMore($insertAll);
             }
             // 处理线上商品列表（先删除原有线上商品记录，再重新插入）
-            if ($onlineGoodsList) {
+            if ($hasOnlineGoodsList) {
                 $this->delActivityFdContent(['fd_id' => $postData['fd_id'], 'goods_source' => 2]);
                 $onlineInsertAll = [];
                 foreach ($onlineGoodsList as $onlineItem) {
@@ -304,6 +324,19 @@ class ActivityFdClient extends ManagementClient
             actionException($e,1);
             return $this->rValidate($e->getMessage());
         }
+    }
+
+    /** 兼容数组、JSON数组字符串及逗号分隔的线上商品编码。 */
+    protected function normalizeOnlineGoodsList($value)
+    {
+        if (is_array($value)) return $value;
+        $value = trim(strval($value));
+        if ($value === '') return [];
+        $decoded = json_decode($value, true);
+        if (is_array($decoded)) return $decoded;
+        return array_values(array_filter(array_map('trim', explode(',', $value)), function ($item) {
+            return $item !== '';
+        }));
     }
 
     /**

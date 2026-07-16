@@ -41,7 +41,8 @@ class ActivityCouponClient extends ManagementClient
                 $ac['status'] = 3;
             }
             $whereA = ['a_type' => 1, "a_id" => $ac['c_id']];
-            $ac['goodsList'] = $this->getActivityGoodsList($whereA,0,'ag_id,g_id,g_name,sku,market_price,retail_price,goods_source,source_no');
+            $ac['goodsList'] = $this->getActivityGoodsList(array_merge($whereA, ['goods_source' => 1]),0,'ag_id,g_id,g_name,sku,market_price,retail_price,goods_source,source_no');
+            $ac['onlineGoodsList'] = $this->getActivityGoodsList(array_merge($whereA, ['goods_source' => 2]),0,'ag_id,g_id,g_name,sku,market_price,retail_price,goods_source,source_no');
             $ac['machineList'] = $this->getActivityMachineList($whereA,0,'am_id,m_id,machine_id,machine_name');
             return $ac;
         }));
@@ -52,7 +53,8 @@ class ActivityCouponClient extends ManagementClient
         $ac = $this->getActivityCouponFind($where,$field);
         if ($ac) {
             $whereA = ['a_type' => 1, "a_id" => $ac['c_id']];
-            $ac['goodsList'] = $this->getActivityGoodsList($whereA,0,'ag_id,g_id,g_name,sku,market_price,retail_price,goods_source,source_no');
+            $ac['goodsList'] = $this->getActivityGoodsList(array_merge($whereA, ['goods_source' => 1]),0,'ag_id,g_id,g_name,sku,market_price,retail_price,goods_source,source_no');
+            $ac['onlineGoodsList'] = $this->getActivityGoodsList(array_merge($whereA, ['goods_source' => 2]),0,'ag_id,g_id,g_name,sku,market_price,retail_price,goods_source,source_no');
             $ac['machineList'] = $this->getActivityMachineList($whereA,0,'am_id,m_id,machine_id,machine_name');
         }
         return $this->rQ($ac);

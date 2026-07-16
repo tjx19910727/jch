@@ -113,15 +113,19 @@ trait ActivityFdTrait
 
 
         actionLog($this->fd,'活动信息');
-        // 订单包含微程线上商品（wc_order_no非空）时，非指定SKU的满减活动不适用
+        // 非指定SKU活动仅允许配置范围内的微程线上商品参与。
         if ($this->fd['condition_type'] != 3) {
-            $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']], 0, 'sod_id,wc_order_no');
-            if ($details) {
-                $details = $details->toArray();
-                foreach ($details as $detail) {
-                    if (!empty($detail['wc_order_no'])) {
-                        return $this->r(100, '线上商品订单不支持当前满减活动');
-                    }
+            $onlineDetails = $this->getSaleOrdersDetailsList([
+                'order_id' => $this->order['order_id'],
+                ['wc_order_no', '<>', ''],
+            ], 0, 'sod_id,wc_order_no');
+            if ($onlineDetails) {
+                $onlineContents = $this->getActivityFdContentList([
+                    'fd_id' => $this->fd['fd_id'],
+                    'goods_source' => 2,
+                ], 0, 'fdc_id,source_no');
+                if (!$this->fdOnlineGoodsMatch($onlineDetails, $onlineContents)) {
+                    return $this->r(100, '线上商品不适用当前满减活动');
                 }
             }
         }
@@ -141,7 +145,9 @@ trait ActivityFdTrait
             $fieldOrder = "fdc_sort ASC,condition_value1 desc, fdc_id desc";
             $field = "fdc_id,fd_id,fd_name, CAST(condition_value AS UNSIGNED) condition_value1,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
         }
-        $this->content = $this->getActivityFdContentList(['fd_id' => $this->fd['fd_id']],0,$field,$fieldOrder);
+        $contentWhere = ['fd_id' => $this->fd['fd_id']];
+        if ($this->fd['condition_type'] != 3) $contentWhere['goods_source'] = 1;
+        $this->content = $this->getActivityFdContentList($contentWhere,0,$field,$fieldOrder);
         if (!$this->content) return $this->rFail($this->lang("VActivityFd.content_no_data"));
         if (is_string($this->content)) return $this->rFail($this->content);
         actionLog($this->getLS(),'【SQL】查询活动规则');
@@ -343,6 +349,22 @@ trait ActivityFdTrait
         if (!is_array($wcOrderNo)) return false;
         foreach ($wcOrderNo as $wcGoods) {
             if (is_array($wcGoods) && trim(strval($wcGoods['out_no'] ?? '')) === trim(strval($sourceNo))) return true;
+        }
+        return false;
+    }
+
+    /** 判断订单中的微程商品是否命中活动配置的线上商品范围。 */
+    protected function fdOnlineGoodsMatch($details, $onlineContents)
+    {
+        $details = is_object($details) && method_exists($details, 'toArray') ? $details->toArray() : (array)$details;
+        $onlineContents = is_object($onlineContents) && method_exists($onlineContents, 'toArray') ? $onlineContents->toArray() : (array)$onlineContents;
+        if (!$details || !$onlineContents) return false;
+        foreach ($onlineContents as $content) {
+            foreach ($details as $detail) {
+                if ($this->fdDetailMatchesOnlineGoods($detail, isset($content['source_no']) ? $content['source_no'] : '')) {
+                    return true;
+                }
+            }
         }
         return false;
     }
