@@ -113,6 +113,18 @@ trait ActivityFdTrait
 
 
         actionLog($this->fd,'活动信息');
+        // 订单包含微程线上商品（wc_order_no非空）时，非指定SKU的满减活动不适用
+        if ($this->fd['condition_type'] != 3) {
+            $details = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']], 0, 'sod_id,wc_order_no');
+            if ($details) {
+                $details = $details->toArray();
+                foreach ($details as $detail) {
+                    if (!empty($detail['wc_order_no'])) {
+                        return $this->r(100, '线上商品订单不支持当前满减活动');
+                    }
+                }
+            }
+        }
         if ($this->order['order_type'] > 1 && $this->order['order_type'] != 5) {
             if ($this->fd['exclusion'] == 1)
                 return $this->rFail($this->lang("VActivityFd.exclusion"));
