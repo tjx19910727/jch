@@ -54,10 +54,23 @@ trait GoodsBehaviorTrackingTrait
         if(isset($postData['g_id']) && $postData['g_id']){
             $where[] = ['goods_id', 'in', is_array($postData['g_id']) ? $postData['g_id'] : explode(',', $postData['g_id'])];
         }
-        if(isset($postData['create_date']) && $postData['create_date']){
-            $time = is_array($postData['create_date']) ? $postData['create_date'] : explode('~', $postData['create_date']);
-            if(count($time) == 2){
-                $where[] = ['device_created_at', 'between', [strtotime($time[0]), strtotime($time[1])]];
+        if (isset($postData['is_online']) && in_array(intval($postData['is_online']), [1, 2], true)) {
+            $where[] = ['is_online', '=', intval($postData['is_online'])];
+        }
+        // saleDataCollect 会将 create_date 覆盖为 pay_time；这里同时兼容两个参数名。
+        $dateRange = $postData['create_date'] ?? $postData['pay_time'] ?? '';
+        if ($dateRange) {
+            $time = is_array($dateRange) ? array_values($dateRange) : explode('~', $dateRange, 2);
+            if (count($time) === 2) {
+                $startTime = is_numeric($time[0]) ? intval($time[0]) : strtotime(trim($time[0]));
+                $endTime = is_numeric($time[1]) ? intval($time[1]) : strtotime(trim($time[1]));
+                if ($startTime !== false && $endTime !== false) {
+                    $where[] = [
+                        'report_date',
+                        'between',
+                        [date('Y-m-d', $startTime), date('Y-m-d', $endTime)],
+                    ];
+                }
             }
         }
         $query = Db::name('goods_behavior_tracking')->where($where);
