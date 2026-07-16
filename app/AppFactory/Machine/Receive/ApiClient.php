@@ -1333,15 +1333,30 @@ class ApiClient extends ReceiveBaseClient
                 foreach ($this->data['carList'] as $value) {
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $wc_goods = $this->getWcGoodsFind(['no' => $value['out_no']]);
+                        if (!$wc_goods) {
+                            $this->rollbackTrans();
+                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail") . "：微程商品[" . $value['out_no'] . "]不存在");
+                        }
                         if ($wc_goods['maxBuy'] > 0 && $wc_goods['maxBuy'] < $value['quantity']) {
                             return $this->subCarFailResponse(100, $this->lang("VSubCar.make_order_fail") . "：" . $wc_goods['name'] . "购买数量超过限购数量");
                         }
                         // todo 添加库存校验
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
+                        if (!$mc) {
+                            $this->rollbackTrans();
+                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail") . "：虚拟货道[" . $value['mc_id'] . "]不存在");
+                        }
+                        if (is_object($mc) && method_exists($mc, 'toArray')) {
+                            $mc = $mc->toArray();
+                        }
                         $mc['status'] = 1;
                         $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $value['out_no']])->toArray();
 
                         $total_price = 0;
+                        // 根据商品seller_price设置价格兜底
+                        if (!empty($value['seller_price']) && floatval($value['seller_price']) > 0) {
+                            $total_price = floatval($value['seller_price']);
+                        }
                         if ($wc_goods['type'] == 1) { //抢购商品没有子商品，直接根据父商品计算价格
                             $total_price = $wc_goods['price'];
                         } elseif ($wc_goods['type'] == 5) {
