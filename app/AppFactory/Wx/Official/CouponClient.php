@@ -288,6 +288,24 @@ class CouponClient extends WxBaseClient
         }
 
         $description = trim(strval($coupon['desc'] ?? '')) ?: $defaultDescription;
+        $descriptionZhCn = $description;
+        $descriptionZhHk = $description;
+        $descriptionEnUs = $description;
+        $descriptionI18n = json_decode($description, true);
+        if (is_array($descriptionI18n)) {
+            $normalizedDescriptions = [];
+            foreach ($descriptionI18n as $language => $content) {
+                $language = strtolower(str_replace('_', '-', trim(strval($language))));
+                $normalizedDescriptions[$language] = trim(strval($content));
+            }
+            $descriptionZhCn = $normalizedDescriptions['zh-cn'] ?? '';
+            $descriptionZhHk = $normalizedDescriptions['zh-hk'] ?? '';
+            $descriptionEnUs = $normalizedDescriptions['en-us'] ?? ($normalizedDescriptions['en'] ?? '');
+            if (!$descriptionZhCn) $descriptionZhCn = $descriptionZhHk ?: $defaultDescription;
+            if (!$descriptionZhHk) $descriptionZhHk = $descriptionZhCn ?: $defaultDescription;
+            if (!$descriptionEnUs) $descriptionEnUs = $descriptionZhCn ?: $defaultDescription;
+            $description = $descriptionZhCn;
+        }
         $startDate = intval($coupon['start_date']) > 0 ? date('Y.m.d', intval($coupon['start_date'])) : '即日起';
         $endDate = intval($coupon['end_date']) > 0 ? date('Y.m.d', intval($coupon['end_date'])) : '长期有效';
 
@@ -303,6 +321,9 @@ class CouponClient extends WxBaseClient
             'thresholdText' => $thresholdText,
             'validDate' => $startDate . ' - ' . $endDate,
             'description' => $description,
+            'descriptionZhCn' => $descriptionZhCn,
+            'descriptionZhHk' => $descriptionZhHk,
+            'descriptionEnUs' => $descriptionEnUs,
             'limitText' => '每个用户限领' . intval($coupon['url_coupon_count']) . '张',
         ];
     }
