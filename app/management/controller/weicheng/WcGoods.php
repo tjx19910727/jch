@@ -10,7 +10,7 @@
 namespace app\management\controller\weicheng;
 
 use app\AppFactory\AppFactory;
-use app\AppFactory\RabbitMq\MqProducer;
+use app\AppFactory\RabbitMq\AsyncTaskProducer;
 use app\management\controller\Common;
 use think\facade\Cache;
 
@@ -23,8 +23,7 @@ class WcGoods extends Common
         if (Cache::get($cacheKey)) return returnState(100, '10分钟内只能请求一次，请稍后重试');
 
         $goods_type = input('goods_type') ?? '';
-        $res = MqProducer::export([
-            'job_type' => 'wc_goods_sync',
+        $res = AsyncTaskProducer::publish('wc_goods_sync', [
             'request_time' => date('Y-m-d H:i:s'),
             'manager_id' => input('manager_id') ?? 0,
             'goods_type' => $goods_type,
