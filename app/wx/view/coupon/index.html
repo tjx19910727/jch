@@ -45,13 +45,18 @@
         .claim-button{width:100%;height:clamp(58px,15vw,86px);margin-top:20px;border:0;border-radius:999px;background:linear-gradient(110deg,#ff531e,#ff201d 55%,#ff5f28);box-shadow:0 9px 17px rgba(255,50,27,.25);color:#fff;font-size:clamp(23px,6vw,36px);font-weight:800;letter-spacing:.08em;cursor:pointer}
         .claim-button:active{transform:translateY(1px);box-shadow:0 5px 11px rgba(255,50,27,.22)}
         .claim-button[disabled]{opacity:.68;cursor:default}
+        .receive-tip{margin:10px 4px 0;text-align:center;color:#b45b43;font-size:13px;line-height:1.5}
         .limit{text-align:center;margin:12px 0 0;color:#ad9992;font-size:clamp(13px,3.4vw,19px);letter-spacing:.08em}
         .limit:before,.limit:after{content:"·";margin:0 12px}
-        .result{display:none;margin-top:20px;padding:22px 16px;border:1px solid #ffd7bc;border-radius:16px;background:#fff7ef;text-align:center}
-        .result.show{display:block}
-        .result-label{font-size:15px;color:#9b7667}
-        .result-code{margin-top:6px;color:#ef3d19;font-size:clamp(34px,9vw,56px);font-weight:900;letter-spacing:.12em}
-        .copy-button{margin-top:10px;padding:9px 24px;border:1px solid #ff7040;border-radius:999px;background:#fff;color:#ed4f20}
+        .coupon-history{margin-top:22px;padding:18px 15px;border:1px solid #ffd7bc;border-radius:16px;background:#fff7ef}
+        .history-title{margin:0 0 13px;color:#6d2d1a;font-size:18px;font-weight:700}
+        .coupon-code-list{display:flex;flex-direction:column;gap:10px}
+        .coupon-code-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:13px 14px;border-radius:12px;background:#fff;box-shadow:0 3px 10px rgba(164,76,25,.08)}
+        .coupon-code-value{overflow:hidden;color:#ef3d19;font-size:clamp(23px,6vw,31px);font-weight:900;letter-spacing:.1em;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+        .coupon-code-time{align-self:end;color:#a18b84;font-size:12px}
+        .coupon-status{align-self:center;padding:4px 9px;border-radius:999px;font-size:12px;white-space:nowrap}
+        .coupon-status.unused{color:#17834d;background:#e7f7ef}.coupon-status.used{color:#8b7770;background:#eee9e7}.coupon-status.expired{color:#a66b25;background:#fff1dc}.coupon-status.invalid,.coupon-status.unknown{color:#9f5a5a;background:#f7e7e7}
+        .coupon-empty{padding:18px 0;text-align:center;color:#ad9992;font-size:14px}
         .error-card{margin-top:clamp(90px,25vw,170px);padding:42px 25px;border:7px solid rgba(255,255,255,.8);border-radius:25px;background:rgba(255,255,255,.94);box-shadow:0 12px 34px rgba(164,76,25,.13);text-align:center}
         .error-icon{width:68px;height:68px;margin:0 auto 20px;border-radius:50%;display:grid;place-items:center;background:#fff0e7;color:#f25127;font-size:38px;font-weight:800}
         .error-card h2{margin:0;color:#6d2d1a;font-size:24px}.error-card p{margin:15px 0 0;color:#8c746b;line-height:1.8}
@@ -107,12 +112,21 @@
                 </div>
             </section>
 
-            <button id="claimButton" class="claim-button" type="button" data-key="{$key|htmlspecialchars}">立即领取</button>
+            <button id="claimButton" class="claim-button" type="button" data-key="{$key|htmlspecialchars}" {if !$canReceive}disabled{/if}>{if $canReceive}立即领取{else /}暂不可领取{/if}</button>
+            <p id="receiveTip" class="receive-tip" {if $canReceive}hidden{/if}>{$receiveMessage|htmlspecialchars}</p>
             <p class="limit">{$limitText|htmlspecialchars}</p>
-            <section id="result" class="result">
-                <div class="result-label">领取成功，您的优惠券码是</div>
-                <div id="resultCode" class="result-code"></div>
-                <button id="copyButton" class="copy-button" type="button">复制优惠券码</button>
+            <section class="coupon-history">
+                <h2 class="history-title">我的优惠券码</h2>
+                <div id="couponCodeList" class="coupon-code-list">
+                    {volist name="couponCodes" id="couponCode"}
+                    <div class="coupon-code-item">
+                        <span class="coupon-code-value" data-code="{$couponCode.code|htmlspecialchars}" title="点击复制">{$couponCode.code|htmlspecialchars}</span>
+                        <span class="coupon-status {$couponCode.statusClass|htmlspecialchars}">{$couponCode.statusText|htmlspecialchars}</span>
+                        <span class="coupon-code-time">领取时间：{$couponCode.receiveTime|htmlspecialchars}</span>
+                    </div>
+                    {/volist}
+                </div>
+                <div id="couponEmpty" class="coupon-empty" {if $couponCodes}hidden{/if}>暂未领取优惠券码</div>
             </section>
         </main>
         {else /}
@@ -130,11 +144,10 @@
 <script>
 (function(){
     var button=document.getElementById('claimButton');
-    var result=document.getElementById('result');
-    var resultCode=document.getElementById('resultCode');
-    var copyButton=document.getElementById('copyButton');
+    var receiveTip=document.getElementById('receiveTip');
+    var couponCodeList=document.getElementById('couponCodeList');
+    var couponEmpty=document.getElementById('couponEmpty');
     var toast=document.getElementById('toast');
-    var couponCode='';
     var toastTimer=null;
     var description=document.getElementById('couponDescription');
     var browserLanguages=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||'zh-CN'];
@@ -152,6 +165,29 @@
         clearTimeout(toastTimer);
         toastTimer=setTimeout(function(){toast.classList.remove('show');},2200);
     }
+    function copyCode(code){
+        if(!code)return;
+        if(navigator.clipboard&&navigator.clipboard.writeText){
+            navigator.clipboard.writeText(code).then(function(){showToast('优惠券码已复制');});
+            return;
+        }
+        var input=document.createElement('input');
+        input.value=code;document.body.appendChild(input);input.select();
+        document.execCommand('copy');document.body.removeChild(input);showToast('优惠券码已复制');
+    }
+    function addCouponCode(item){
+        if(!item||!item.code)return;
+        var row=document.createElement('div');row.className='coupon-code-item';
+        var code=document.createElement('span');code.className='coupon-code-value';code.setAttribute('data-code',String(item.code));code.setAttribute('title','点击复制');code.textContent=String(item.code);
+        var status=document.createElement('span');status.className='coupon-status '+String(item.statusClass||'unknown');status.textContent=String(item.statusText||'未知状态');
+        var time=document.createElement('span');time.className='coupon-code-time';time.textContent='领取时间：'+String(item.receiveTime||'--');
+        row.appendChild(code);row.appendChild(status);row.appendChild(time);
+        couponCodeList.insertBefore(row,couponCodeList.firstChild);
+        couponEmpty.hidden=true;
+    }
+    couponCodeList.addEventListener('click',function(event){
+        if(event.target.classList.contains('coupon-code-value'))copyCode(event.target.getAttribute('data-code'));
+    });
     button.addEventListener('click',function(){
         if(button.disabled)return;
         button.disabled=true;
@@ -165,27 +201,18 @@
             if(Number(data.state)!==200||!data.data||!data.data.code){
                 throw new Error(data.msg||'领取失败，请稍后重试');
             }
-            couponCode=String(data.data.code);
-            resultCode.textContent=couponCode;
-            result.classList.add('show');
-            button.textContent='领取成功';
+            addCouponCode(data.data.couponCode);
+            button.disabled=!data.data.canReceive;
+            button.textContent=data.data.canReceive?'立即领取':'暂不可领取';
+            receiveTip.textContent=String(data.data.receiveMessage||'');
+            receiveTip.hidden=!!data.data.canReceive;
             showToast('优惠券领取成功');
-            result.scrollIntoView({behavior:'smooth',block:'nearest'});
+            couponCodeList.scrollIntoView({behavior:'smooth',block:'nearest'});
         }).catch(function(error){
             button.disabled=false;
             button.textContent='立即领取';
             showToast(error.message||'领取失败，请稍后重试');
         });
-    });
-    copyButton.addEventListener('click',function(){
-        if(!couponCode)return;
-        if(navigator.clipboard&&navigator.clipboard.writeText){
-            navigator.clipboard.writeText(couponCode).then(function(){showToast('优惠券码已复制');});
-            return;
-        }
-        var input=document.createElement('input');
-        input.value=couponCode;document.body.appendChild(input);input.select();
-        document.execCommand('copy');document.body.removeChild(input);showToast('优惠券码已复制');
     });
 })();
 </script>

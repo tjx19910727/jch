@@ -21,8 +21,6 @@ class CouponClient extends WxBaseClient
 
         $coupon = $this->getCouponByTicket($ticket);
         if (!$coupon) showMsg('优惠券领取链接不存在');
-        $check = $this->checkCoupon($coupon);
-        if ($check !== true) showMsg($check);
 
         $wxApp = $this->getDefaultWxApp();
         if (!$wxApp) showMsg('查无可用的微信公众号配置');
@@ -43,8 +41,6 @@ class CouponClient extends WxBaseClient
 
         $coupon = $this->getCouponByTicket($ticket);
         if (!$coupon) showMsg('优惠券领取链接不存在');
-        $check = $this->checkCoupon($coupon);
-        if ($check !== true) showMsg($check);
 
         try {
             $wxApp = $this->getDefaultWxApp();
@@ -53,9 +49,6 @@ class CouponClient extends WxBaseClient
             $response = $user->getTokenResponse();
             $openid = trim(strval($response['openid'] ?? ''));
             if (!$openid) showMsg('微信授权失败，未获取到openid');
-
-            $check = $this->checkReceiveRule($coupon, $openid);
-            if ($check !== true) showMsg($check);
 
             $timestamp = time();
             $key = md5($openid . $ticket . $timestamp . self::CACHE_SUFFIX);
@@ -115,14 +108,25 @@ class CouponClient extends WxBaseClient
             ];
             $couponUsedId = $this->addActivityCouponUsed($insert);
             if (!$couponUsedId) return $this->r(100, '优惠券领取失败，请稍后重试');
-            cache($key, null);
+            $receiveTime = time();
+            $nextCheck = $this->checkReceiveRule($coupon, $openid);
             actionLog([
                 'cu_id' => $couponUsedId,
                 'c_id' => intval($coupon['c_id']),
                 'openid' => $openid,
                 'code' => $code,
             ], '通过链接领取优惠券成功');
-            return $this->r(200, '领取成功', ['code' => $code]);
+            return $this->r(200, '领取成功', [
+                'code' => $code,
+                'couponCode' => $this->formatCouponCode([
+                    'cu_id' => $couponUsedId,
+                    'code' => $code,
+                    'status' => 1,
+                    'create_time' => $receiveTime,
+                ]),
+                'canReceive' => $nextCheck === true,
+                'receiveMessage' => $nextCheck === true ? '' : strval($nextCheck),
+            ]);
         } catch (\Exception $e) {
             actionException($e, 1);
             return $this->rTryCatch($e->getMessage());
@@ -154,15 +158,56 @@ class CouponClient extends WxBaseClient
         if (!$coupon) return $this->pageError('查无优惠券信息');
         $coupon = $coupon->toArray();
         $check = $this->checkCoupon($coupon);
-        if ($check !== true) return $this->pageError($check);
-        $check = $this->checkReceiveRule($coupon, $openid);
-        if ($check !== true) return $this->pageError($check);
+        if ($check === true) {
+            $check = $this->checkReceiveRule($coupon, $openid);
+        }
 
         return array_merge([
             'pageSuccess' => true,
             'pageMessage' => '',
             'key' => $key,
+            'canReceive' => $check === true,
+            'receiveMessage' => $check === true ? '' : strval($check),
+            'couponCodes' => $this->getCouponCodeList(intval($coupon['c_id']), $openid),
         ], $this->formatCouponPageData($coupon));
+    }
+
+    protected function getCouponCodeList($couponId, $openid)
+    {
+        $list = $this->getActivityCouponUsedList([
+            'c_id' => intval($couponId),
+            'openid' => strval($openid),
+        ], 0, 'cu_id,code,status,create_time,used_time', 'create_time desc,cu_id desc');
+        if (!$list) return [];
+
+        $result = [];
+        foreach ($list->toArray() as $item) {
+            $result[] = $this->formatCouponCode($item);
+        }
+        return $result;
+    }
+
+    protected function formatCouponCode($item)
+    {
+        $status = intval($item['status'] ?? 0);
+        $statusMap = [
+            1 => ['text' => '未使用', 'class' => 'unused'],
+            2 => ['text' => '已使用', 'class' => 'used'],
+            3 => ['text' => '已过期', 'class' => 'expired'],
+            4 => ['text' => '已作废', 'class' => 'invalid'],
+        ];
+        $statusInfo = $statusMap[$status] ?? ['text' => '未知状态', 'class' => 'unknown'];
+        $createTime = $item['create_time'] ?? 0;
+        $createTimestamp = is_numeric($createTime) ? intval($createTime) : intval(strtotime(strval($createTime)));
+
+        return [
+            'cuId' => intval($item['cu_id'] ?? 0),
+            'code' => strval($item['code'] ?? ''),
+            'status' => $status,
+            'statusText' => $statusInfo['text'],
+            'statusClass' => $statusInfo['class'],
+            'receiveTime' => $createTimestamp > 0 ? date('Y-m-d H:i:s', $createTimestamp) : '--',
+        ];
     }
 
     protected function getCouponByTicket($ticket)
