@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+    <meta name="format-detection" content="telephone=no">
+    <title>{$couponName|htmlspecialchars}</title>
+    <style>
+        :root{color-scheme:light;--red:#ff3928;--orange:#ff7416;--brown:#672716;--muted:#846d66}
+        *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:#3d251e;background:#f8e7d7}
+        button{font:inherit}
+        .page-shell{position:relative;width:min(100%,640px);min-height:100vh;min-height:100dvh;margin:0 auto;overflow:hidden;background:#fff4e8 url('/wx/coupon/background') center top/100% 100% no-repeat;box-shadow:0 0 42px rgba(116,55,16,.12)}
+        .page-content{position:relative;z-index:1;padding:clamp(32px,8vw,62px) clamp(16px,4.2vw,30px) max(42px,env(safe-area-inset-bottom))}
+        .hero{text-align:center;color:#963211;text-shadow:0 2px 0 rgba(255,255,255,.55)}
+        .hero h1{margin:0;font-size:clamp(38px,10.2vw,68px);font-weight:900;letter-spacing:.05em;line-height:1.08}
+        .hero p{display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0 0;font-size:clamp(17px,4.5vw,28px);letter-spacing:.18em;color:#b54b28}
+        .hero p:before,.hero p:after{content:"";width:42px;height:1px;background:#c85a35}
+        .gift-stage{position:relative;height:clamp(72px,19vw,124px);margin:16px auto -13px;max-width:76%}
+        .envelope{position:absolute;left:12%;right:12%;bottom:0;height:55%;border-radius:14px 14px 5px 5px;background:linear-gradient(155deg,#ff8026,#f12618 60%,#bc160f);box-shadow:0 10px 22px rgba(231,66,18,.24)}
+        .envelope:after{content:"";position:absolute;inset:0;background:linear-gradient(25deg,transparent 49%,rgba(255,193,69,.8) 50%,transparent 51%),linear-gradient(-25deg,transparent 49%,rgba(255,193,69,.8) 50%,transparent 51%)}
+        .gift-ticket{position:absolute;bottom:23%;left:50%;width:34%;height:66%;transform:translateX(-50%) rotate(-2deg);border:2px solid #ffcf65;border-radius:9px;background:linear-gradient(145deg,#ffe38b,#ffb125);box-shadow:0 5px 10px rgba(191,76,6,.18);color:#ff6816;font-size:clamp(32px,8vw,54px);font-weight:900;display:grid;place-items:center}
+        .gift-ticket:before,.gift-ticket:after{content:"";position:absolute;top:45%;width:12px;height:12px;border-radius:50%;background:#fff3df}
+        .gift-ticket:before{left:-7px}.gift-ticket:after{right:-7px}
+        .card{position:relative;padding:clamp(15px,4vw,26px);border:7px solid rgba(255,255,255,.78);border-radius:25px;background:rgba(255,255,255,.93);box-shadow:0 12px 34px rgba(164,76,25,.13),inset 0 0 0 1px rgba(255,220,194,.72);backdrop-filter:blur(4px)}
+        .coupon-ticket{position:relative;display:grid;grid-template-columns:42% 58%;min-height:clamp(142px,38vw,228px);overflow:hidden;border-radius:13px;background:linear-gradient(115deg,#ffae20 0%,#ff7210 49%,#ff4219 100%);box-shadow:0 10px 20px rgba(255,91,18,.24);color:#fff}
+        .coupon-ticket:before,.coupon-ticket:after{content:"";position:absolute;left:42%;width:26px;height:26px;margin-left:-13px;border-radius:50%;background:#fff}
+        .coupon-ticket:before{top:-13px}.coupon-ticket:after{bottom:-13px}
+        .coupon-ticket .dash{position:absolute;left:42%;top:18px;bottom:18px;border-left:2px dashed rgba(255,255,255,.88)}
+        .ticket-value{display:flex;align-items:center;justify-content:center;padding:18px 8px;text-align:center}
+        .ticket-value .prefix{align-self:center;margin-top:32px;font-size:clamp(24px,6vw,40px);font-weight:800}
+        .ticket-value strong{font-size:clamp(66px,18vw,118px);line-height:.85;letter-spacing:-.06em}
+        .ticket-value .suffix{align-self:flex-end;margin:0 0 25px 5px;font-size:clamp(22px,6vw,38px);font-weight:800}
+        .ticket-copy{display:flex;flex-direction:column;justify-content:center;padding:22px clamp(15px,4vw,30px)}
+        .ticket-copy strong{font-size:clamp(23px,6.2vw,39px);line-height:1.25}
+        .ticket-copy span{margin-top:12px;font-size:clamp(14px,3.6vw,23px);line-height:1.45;color:rgba(255,255,255,.9)}
+        .details{margin-top:22px;padding:0 3px}
+        .detail-row{display:grid;grid-template-columns:42px minmax(92px,.72fr) minmax(0,1.3fr);align-items:center;min-height:70px;border-bottom:1px dashed #eadbd5;font-size:clamp(15px,4vw,22px)}
+        .detail-row:last-child{border-bottom:0}
+        .detail-icon{width:30px;height:30px;border:2px solid #693324;border-radius:50%;display:grid;place-items:center;font-size:16px;font-weight:700;color:#693324}
+        .detail-icon.ticket-icon{border-radius:6px;font-size:13px}
+        .detail-label{white-space:nowrap;color:#37251f}
+        .detail-value{text-align:right;line-height:1.5;color:#725f59;word-break:break-word}
+        .detail-value.accent{color:#ff5b17;font-weight:700}
+        .claim-button{width:100%;height:clamp(58px,15vw,86px);margin-top:20px;border:0;border-radius:999px;background:linear-gradient(110deg,#ff531e,#ff201d 55%,#ff5f28);box-shadow:0 9px 17px rgba(255,50,27,.25);color:#fff;font-size:clamp(23px,6vw,36px);font-weight:800;letter-spacing:.08em;cursor:pointer}
+        .claim-button:active{transform:translateY(1px);box-shadow:0 5px 11px rgba(255,50,27,.22)}
+        .claim-button[disabled]{opacity:.68;cursor:default}
+        .limit{text-align:center;margin:12px 0 0;color:#ad9992;font-size:clamp(13px,3.4vw,19px);letter-spacing:.08em}
+        .limit:before,.limit:after{content:"·";margin:0 12px}
+        .result{display:none;margin-top:20px;padding:22px 16px;border:1px solid #ffd7bc;border-radius:16px;background:#fff7ef;text-align:center}
+        .result.show{display:block}
+        .result-label{font-size:15px;color:#9b7667}
+        .result-code{margin-top:6px;color:#ef3d19;font-size:clamp(34px,9vw,56px);font-weight:900;letter-spacing:.12em}
+        .copy-button{margin-top:10px;padding:9px 24px;border:1px solid #ff7040;border-radius:999px;background:#fff;color:#ed4f20}
+        .error-card{margin-top:clamp(90px,25vw,170px);padding:42px 25px;border:7px solid rgba(255,255,255,.8);border-radius:25px;background:rgba(255,255,255,.94);box-shadow:0 12px 34px rgba(164,76,25,.13);text-align:center}
+        .error-icon{width:68px;height:68px;margin:0 auto 20px;border-radius:50%;display:grid;place-items:center;background:#fff0e7;color:#f25127;font-size:38px;font-weight:800}
+        .error-card h2{margin:0;color:#6d2d1a;font-size:24px}.error-card p{margin:15px 0 0;color:#8c746b;line-height:1.8}
+        .toast{position:fixed;z-index:20;left:50%;bottom:calc(32px + env(safe-area-inset-bottom));max-width:80%;transform:translate(-50%,20px);padding:11px 18px;border-radius:999px;background:rgba(43,28,23,.88);color:#fff;font-size:14px;opacity:0;pointer-events:none;transition:.2s}
+        .toast.show{opacity:1;transform:translate(-50%,0)}
+        @media (max-width:360px){.page-content{padding-left:11px;padding-right:11px}.card{padding:12px;border-width:5px}.detail-row{grid-template-columns:36px 88px minmax(0,1fr)}.coupon-ticket{grid-template-columns:40% 60%}.coupon-ticket:before,.coupon-ticket:after,.coupon-ticket .dash{left:40%}}
+    </style>
+</head>
+<body>
+<div class="page-shell">
+    <div class="page-content">
+        <header class="hero">
+            <h1>领取优惠券</h1>
+            <p>专属优惠&nbsp;&nbsp;立即领取</p>
+        </header>
+
+        {if $pageSuccess}
+        <div class="gift-stage" aria-hidden="true"><div class="gift-ticket">%</div><div class="envelope"></div></div>
+        <main class="card">
+            <section class="coupon-ticket">
+                <div class="dash"></div>
+                <div class="ticket-value">
+                    <span class="prefix">{$heroPrefix|htmlspecialchars}</span>
+                    <strong>{$heroValue|htmlspecialchars}</strong>
+                    <span class="suffix">{$heroSuffix|htmlspecialchars}</span>
+                </div>
+                <div class="ticket-copy">
+                    <strong>{$heroTitle|htmlspecialchars}</strong>
+                    <span>{$heroSubtitle|htmlspecialchars}</span>
+                </div>
+            </section>
+
+            <section class="details">
+                <div class="detail-row"><span class="detail-icon ticket-icon">券</span><span class="detail-label">优惠券名称</span><span class="detail-value">{$couponName|htmlspecialchars}</span></div>
+                <div class="detail-row"><span class="detail-icon">¥</span><span class="detail-label">{$benefitLabel|htmlspecialchars}</span><span class="detail-value accent">{$benefitValue|htmlspecialchars}</span></div>
+                <div class="detail-row"><span class="detail-icon">▢</span><span class="detail-label">使用门槛</span><span class="detail-value">{$thresholdText|htmlspecialchars}</span></div>
+                <div class="detail-row"><span class="detail-icon">◷</span><span class="detail-label">有效期</span><span class="detail-value">{$validDate|htmlspecialchars}</span></div>
+                <div class="detail-row"><span class="detail-icon">!</span><span class="detail-label">使用说明</span><span class="detail-value">{$description|htmlspecialchars}</span></div>
+            </section>
+
+            <button id="claimButton" class="claim-button" type="button" data-key="{$key|htmlspecialchars}">立即领取</button>
+            <p class="limit">{$limitText|htmlspecialchars}</p>
+            <section id="result" class="result">
+                <div class="result-label">领取成功，您的优惠券码是</div>
+                <div id="resultCode" class="result-code"></div>
+                <button id="copyButton" class="copy-button" type="button">复制优惠券码</button>
+            </section>
+        </main>
+        {else /}
+        <main class="error-card">
+            <div class="error-icon">!</div>
+            <h2>暂时无法领取</h2>
+            <p>{$pageMessage|htmlspecialchars}</p>
+        </main>
+        {/if}
+    </div>
+</div>
+<div id="toast" class="toast"></div>
+
+{if $pageSuccess}
+<script>
+(function(){
+    var button=document.getElementById('claimButton');
+    var result=document.getElementById('result');
+    var resultCode=document.getElementById('resultCode');
+    var copyButton=document.getElementById('copyButton');
+    var toast=document.getElementById('toast');
+    var couponCode='';
+    var toastTimer=null;
+    function showToast(message){
+        toast.textContent=message;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer=setTimeout(function(){toast.classList.remove('show');},2200);
+    }
+    button.addEventListener('click',function(){
+        if(button.disabled)return;
+        button.disabled=true;
+        button.textContent='领取中...';
+        fetch('/wx/coupon/receive',{
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
+            body:'key='+encodeURIComponent(button.getAttribute('data-key')),
+            credentials:'same-origin'
+        }).then(function(response){return response.json();}).then(function(data){
+            if(Number(data.state)!==200||!data.data||!data.data.code){
+                throw new Error(data.msg||'领取失败，请稍后重试');
+            }
+            couponCode=String(data.data.code);
+            resultCode.textContent=couponCode;
+            result.classList.add('show');
+            button.textContent='领取成功';
+            showToast('优惠券领取成功');
+            result.scrollIntoView({behavior:'smooth',block:'nearest'});
+        }).catch(function(error){
+            button.disabled=false;
+            button.textContent='立即领取';
+            showToast(error.message||'领取失败，请稍后重试');
+        });
+    });
+    copyButton.addEventListener('click',function(){
+        if(!couponCode)return;
+        if(navigator.clipboard&&navigator.clipboard.writeText){
+            navigator.clipboard.writeText(couponCode).then(function(){showToast('优惠券码已复制');});
+            return;
+        }
+        var input=document.createElement('input');
+        input.value=couponCode;document.body.appendChild(input);input.select();
+        document.execCommand('copy');document.body.removeChild(input);showToast('优惠券码已复制');
+    });
+})();
+</script>
+{/if}
+</body>
+</html>
