@@ -51,10 +51,10 @@
         .coupon-history{margin-top:22px;padding:18px 15px;border:1px solid #ffd7bc;border-radius:16px;background:#fff7ef}
         .history-title{margin:0 0 13px;color:#6d2d1a;font-size:18px;font-weight:700}
         .coupon-code-list{display:flex;flex-direction:column;gap:10px}
-        .coupon-code-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:13px 14px;border-radius:12px;background:#fff;box-shadow:0 3px 10px rgba(164,76,25,.08)}
-        .coupon-code-value{overflow:hidden;color:#ef3d19;font-size:clamp(23px,6vw,31px);font-weight:900;letter-spacing:.1em;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
-        .coupon-code-time{align-self:end;color:#a18b84;font-size:12px}
-        .coupon-status{align-self:center;padding:4px 9px;border-radius:999px;font-size:12px;white-space:nowrap}
+        .coupon-code-item{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"code code" "time status";gap:7px 12px;padding:13px 14px;border-radius:12px;background:#fff;box-shadow:0 3px 10px rgba(164,76,25,.08)}
+        .coupon-code-value{grid-area:code;min-width:0;color:#ef3d19;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:clamp(21px,6vw,31px);font-variant-numeric:tabular-nums;font-weight:900;letter-spacing:.08em;line-height:1.2;white-space:nowrap;cursor:pointer}
+        .coupon-code-time{grid-area:time;align-self:center;min-width:0;color:#a18b84;font-size:12px;line-height:1.4}
+        .coupon-status{grid-area:status;align-self:center;justify-self:end;padding:4px 9px;border-radius:999px;font-size:12px;white-space:nowrap}
         .coupon-status.unused{color:#17834d;background:#e7f7ef}.coupon-status.used{color:#8b7770;background:#eee9e7}.coupon-status.expired{color:#a66b25;background:#fff1dc}.coupon-status.invalid,.coupon-status.unknown{color:#9f5a5a;background:#f7e7e7}
         .coupon-empty{padding:18px 0;text-align:center;color:#ad9992;font-size:14px}
         .error-card{margin-top:clamp(90px,25vw,170px);padding:42px 25px;border:7px solid rgba(255,255,255,.8);border-radius:25px;background:rgba(255,255,255,.94);box-shadow:0 12px 34px rgba(164,76,25,.13);text-align:center}
@@ -62,7 +62,7 @@
         .error-card h2{margin:0;color:#6d2d1a;font-size:24px}.error-card p{margin:15px 0 0;color:#8c746b;line-height:1.8}
         .toast{position:fixed;z-index:20;left:50%;bottom:calc(32px + env(safe-area-inset-bottom));max-width:80%;transform:translate(-50%,20px);padding:11px 18px;border-radius:999px;background:rgba(43,28,23,.88);color:#fff;font-size:14px;opacity:0;pointer-events:none;transition:.2s}
         .toast.show{opacity:1;transform:translate(-50%,0)}
-        @media (max-width:360px){.page-content{padding-left:11px;padding-right:11px}.card{padding:12px;border-width:5px}.detail-row{grid-template-columns:36px 88px minmax(0,1fr)}.coupon-ticket{grid-template-columns:40% 60%}.coupon-ticket:before,.coupon-ticket:after,.coupon-ticket .dash{left:40%}}
+        @media (max-width:360px){.page-content{padding-left:11px;padding-right:11px}.card{padding:12px;border-width:5px}.detail-row{grid-template-columns:36px 88px minmax(0,1fr)}.coupon-ticket{grid-template-columns:40% 60%}.coupon-ticket:before,.coupon-ticket:after,.coupon-ticket .dash{left:40%}.coupon-history{padding:14px 11px}.coupon-code-item{gap:6px 8px;padding:11px 10px}.coupon-code-value{font-size:20px;letter-spacing:.04em}.coupon-code-time,.coupon-status{font-size:11px}}
     </style>
 </head>
 <body>
