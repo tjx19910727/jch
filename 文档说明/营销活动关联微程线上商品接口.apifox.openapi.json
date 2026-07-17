@@ -1,39 +1,110 @@
 {
   "openapi": "3.0.3",
-  "info": {"title": "营销活动关联微程线上商品接口", "version": "1.0.0"},
+  "info": {
+    "title": "优惠券与满减活动微程线上商品接口",
+    "version": "1.1.0",
+    "description": "后台优惠券、满减活动新增、修改、列表和详情接口。查询接口将普通商品或普通规则与微程线上商品分开返回：goodsList/content 为普通数据，onlineGoodsList 为 goods_source=2 的微程线上商品。"
+  },
+  "tags": [
+    {"name": "优惠券活动"},
+    {"name": "满减活动"}
+  ],
   "paths": {
+    "/management/activity.activity_coupon/getList": {
+      "post": {
+        "tags": ["优惠券活动"],
+        "summary": "查询优惠券活动列表",
+        "parameters": [{"$ref": "#/components/parameters/Token"}],
+        "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ListRequest"}}}},
+        "responses": {"200": {"description": "查询成功；每条活动均返回普通商品 goodsList 和线上商品 onlineGoodsList", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CouponListResponse"}, "examples": {"查询成功": {"value": {"state": 200, "msg": "success", "data": {"list": [{"c_id": 101, "c_name": "线上商品满10减3", "designated_goods": 2, "goodsList": [], "onlineGoodsList": [{"ag_id": 501, "g_id": 0, "g_name": "微程线上商品", "sku": "VC2601071001", "market_price": "20.00", "retail_price": "20.00", "goods_source": 2, "source_no": "VC2601071001"}], "machineList": []}], "count": 1}}}}}}}}
+      }
+    },
+    "/management/activity.activity_coupon/getFind": {
+      "post": {
+        "tags": ["优惠券活动"],
+        "summary": "查询优惠券活动详情",
+        "parameters": [{"$ref": "#/components/parameters/Token"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["c_id"], "properties": {"c_id": {"type": "integer", "description": "优惠券活动ID", "example": 101}}}}}},
+        "responses": {"200": {"description": "查询成功；线上商品仅在 onlineGoodsList 返回", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CouponDetailResponse"}}}}}
+      }
+    },
     "/management/activity.activity_coupon/add": {
       "post": {
-        "summary": "新增优惠券（支持微程线上商品）",
-        "parameters": [{"name":"token","in":"header","required":true,"schema":{"type":"string","example":"{{token}}"}}],
-        "requestBody": {"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"designated_goods":{"type":"integer","enum":[1,2,3],"description":"1全部商品2指定商品3排除指定商品"},"goodsList":{"type":"array","items":{"type":"integer"},"description":"普通商品g_id列表"},"onlineGoodsList":{"type":"array","items":{"type":"string"},"description":"微程线上父商品out_no列表"}}},"examples":{"指定线上商品":{"value":{"designated_goods":2,"goodsList":[],"onlineGoodsList":["VC2601071001"]}}}}}},
-        "responses":{"200":{"description":"项目标准state/msg/data响应"}}
+        "tags": ["优惠券活动"],
+        "summary": "新增优惠券活动",
+        "parameters": [{"$ref": "#/components/parameters/Token"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CouponSaveRequest"}, "examples": {"指定微程线上商品": {"value": {"c_name": "线上商品满10减3", "designated_goods": 2, "goodsList": [], "onlineGoodsList": ["VC2601071001"], "machineList": [], "designated_machine": 1}}}}}},
+        "responses": {"200": {"$ref": "#/components/responses/WriteResponse"}}
       }
     },
     "/management/activity.activity_coupon/update": {
       "post": {
-        "summary": "修改优惠券线上商品关联",
-        "parameters": [{"name":"token","in":"header","required":true,"schema":{"type":"string","example":"{{token}}"}}],
-        "requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["c_id"],"properties":{"c_id":{"type":"integer"},"designated_goods":{"type":"integer","enum":[1,2,3]},"goodsList":{"type":"array","items":{"type":"integer"}},"onlineGoodsList":{"type":"array","items":{"type":"string"},"description":"传入时全量替换线上商品；不传保持原关联"}}}}},
-        "responses":{"200":{"description":"项目标准state/msg/data响应"}}
+        "tags": ["优惠券活动"],
+        "summary": "修改优惠券活动",
+        "description": "传 onlineGoodsList 时全量替换线上商品关联；传空数组表示清空；不传表示保持原线上商品关联。",
+        "parameters": [{"$ref": "#/components/parameters/Token"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"allOf": [{"$ref": "#/components/schemas/CouponSaveRequest"}, {"type": "object", "required": ["c_id"], "properties": {"c_id": {"type": "integer", "description": "优惠券活动ID", "example": 101}}}]}}}},
+        "responses": {"200": {"$ref": "#/components/responses/WriteResponse"}}
+      }
+    },
+    "/management/activity.activity_fd/getList": {
+      "post": {
+        "tags": ["满减活动"],
+        "summary": "查询满减活动列表",
+        "parameters": [{"$ref": "#/components/parameters/Token"}],
+        "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/ListRequest"}}}},
+        "responses": {"200": {"description": "查询成功；每条活动返回普通规则 content 和线上商品规则 onlineGoodsList", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/FdListResponse"}, "examples": {"查询成功": {"value": {"state": 200, "msg": "success", "data": {"list": [{"fd_id": 201, "fd_name": "线上商品立减", "condition_type": 3, "content": [], "onlineGoodsList": [{"fdc_id": 601, "fd_id": 201, "goods_source": 2, "source_no": "VC2601071001", "g_id": 0, "g_name": "微程线上商品", "active_value": "3.00", "fdc_sort": 1}]}], "count": 1}}}}}}}}
+      }
+    },
+    "/management/activity.activity_fd/getFind": {
+      "post": {
+        "tags": ["满减活动"],
+        "summary": "查询满减活动详情",
+        "parameters": [{"$ref": "#/components/parameters/Token"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["fd_id"], "properties": {"fd_id": {"type": "integer", "description": "满减活动ID", "example": 201}}}}}},
+        "responses": {"200": {"description": "查询成功；线上商品规则仅在 onlineGoodsList 返回", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/FdDetailResponse"}}}}}
       }
     },
     "/management/activity.activity_fd/add": {
       "post": {
-        "summary":"新增满减活动（指定线上商品）",
-        "parameters":[{"name":"token","in":"header","required":true,"schema":{"type":"string","example":"{{token}}"}}],
-        "requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","properties":{"condition_type":{"type":"integer","enum":[0,1,2,3],"description":"3为指定商品"},"content":{"type":"array","items":{"$ref":"#/components/schemas/FdOnlineContent"}}}},"examples":{"线上商品立减":{"value":{"condition_type":3,"content":[{"goods_source":2,"source_no":"VC2601071001","active_value":3,"sort":1}]}}}}}},
-        "responses":{"200":{"description":"项目标准state/msg/data响应"}}
+        "tags": ["满减活动"],
+        "summary": "新增满减活动",
+        "description": "新增时不需要传 fd_id、fdc_id、delContent；即使从已有活动复制并携带这些字段，后台也会忽略历史主键，避免主键重复。condition_type=0/1/2 时，content 保存不限额、最低金额或最低件数规则，onlineGoodsList 限定允许参加活动的微程线上商品；condition_type=3 时按指定商品逐项计算优惠。",
+        "parameters": [{"$ref": "#/components/parameters/Token"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/FdSaveRequest"}, "examples": {"指定微程线上商品": {"value": {"fd_name": "线上商品立减", "condition_type": 3, "content": [], "onlineGoodsList": "VC2601071001,VC2601071002", "machineList": "JCHM-H2D-0064,JCHM-H3D-0005"}}}}}},
+        "responses": {"200": {"$ref": "#/components/responses/WriteResponse"}}
       }
     },
     "/management/activity.activity_fd/update": {
       "post": {
-        "summary":"修改满减活动线上商品规则",
-        "parameters":[{"name":"token","in":"header","required":true,"schema":{"type":"string","example":"{{token}}"}}],
-        "requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"object","required":["fd_id","content"],"properties":{"fd_id":{"type":"integer"},"condition_type":{"type":"integer","enum":[0,1,2,3]},"content":{"type":"array","items":{"$ref":"#/components/schemas/FdOnlineContent"}}}}}}},
-        "responses":{"200":{"description":"项目标准state/msg/data响应"}}
+        "tags": ["满减活动"],
+        "summary": "修改满减活动",
+        "parameters": [{"$ref": "#/components/parameters/Token"}],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"allOf": [{"$ref": "#/components/schemas/FdSaveRequest"}, {"type": "object", "required": ["fd_id"], "properties": {"fd_id": {"type": "integer", "description": "满减活动ID", "example": 201}, "delContent": {"type": "array", "description": "需要删除的普通规则ID列表", "items": {"type": "integer"}}}}]}}}},
+        "responses": {"200": {"$ref": "#/components/responses/WriteResponse"}}
       }
     }
   },
-  "components":{"schemas":{"FdOnlineContent":{"type":"object","required":["goods_source","source_no","active_value","sort"],"properties":{"fdc_id":{"type":"integer","description":"修改既有规则时传"},"goods_source":{"type":"integer","enum":[1,2],"description":"1普通商品2微程线上商品"},"source_no":{"type":"string","description":"goods_source=2时传微程父商品out_no"},"active_value":{"type":"number","description":"优惠值"},"sort":{"type":"integer","description":"规则排序"}}}}}
-}}
+  "components": {
+    "parameters": {
+      "Token": {"name": "token", "in": "header", "required": true, "description": "后台登录令牌", "schema": {"type": "string", "example": "{{token}}"}}
+    },
+    "responses": {
+      "WriteResponse": {"description": "操作结果", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/StandardResponse"}, "examples": {"成功": {"value": {"state": 200, "msg": "操作成功", "data": []}}, "参数错误": {"value": {"state": 100, "msg": "请选择商品", "data": []}}}}}}
+    },
+    "schemas": {
+      "ListRequest": {"type": "object", "properties": {"page": {"type": "integer", "minimum": 1, "description": "页码", "default": 1}, "pageNum": {"type": "integer", "minimum": 0, "description": "每页数量；0表示不分页", "default": 20}}},
+      "StandardResponse": {"type": "object", "required": ["state", "msg", "data"], "properties": {"state": {"type": "integer", "description": "业务状态码；200表示成功", "example": 200}, "msg": {"type": "string", "description": "响应信息", "example": "success"}, "data": {"description": "响应数据"}}},
+      "OnlineGoodsItem": {"type": "object", "required": ["goods_source", "source_no"], "properties": {"ag_id": {"type": "integer", "description": "优惠券商品关联ID"}, "g_id": {"type": "integer", "description": "普通商品ID；线上商品固定为0", "example": 0}, "g_name": {"type": "string", "description": "商品名称"}, "sku": {"type": "string", "description": "线上商品编码，通常等于 source_no"}, "market_price": {"type": "number", "format": "float", "description": "市场价"}, "retail_price": {"type": "number", "format": "float", "description": "零售价"}, "goods_source": {"type": "integer", "enum": [2], "description": "商品来源；2表示微程线上商品"}, "source_no": {"type": "string", "description": "微程父商品 out_no", "example": "VC2601071001"}}},
+      "CouponActivity": {"type": "object", "properties": {"c_id": {"type": "integer", "description": "优惠券活动ID"}, "c_name": {"type": "string", "description": "优惠券名称"}, "designated_goods": {"type": "integer", "enum": [1, 2, 3], "description": "1全部商品，2指定商品，3排除指定商品"}, "goodsList": {"type": "array", "description": "普通商品列表，不包含微程线上商品", "items": {"type": "object", "additionalProperties": true}}, "onlineGoodsList": {"type": "array", "description": "微程线上商品列表；无数据时返回空列表", "items": {"$ref": "#/components/schemas/OnlineGoodsItem"}}, "machineList": {"type": "array", "description": "适用设备列表", "items": {"type": "object", "additionalProperties": true}}}},
+      "CouponListResponse": {"allOf": [{"$ref": "#/components/schemas/StandardResponse"}, {"type": "object", "properties": {"data": {"type": "object", "properties": {"list": {"type": "array", "items": {"$ref": "#/components/schemas/CouponActivity"}}, "count": {"type": "integer", "description": "总记录数"}}}}}]},
+      "CouponDetailResponse": {"allOf": [{"$ref": "#/components/schemas/StandardResponse"}, {"type": "object", "properties": {"data": {"$ref": "#/components/schemas/CouponActivity"}}}]},
+      "CouponSaveRequest": {"type": "object", "properties": {"c_name": {"type": "string", "description": "优惠券名称"}, "designated_goods": {"type": "integer", "enum": [1, 2, 3], "description": "1全部商品，2指定商品，3排除指定商品"}, "goodsList": {"type": "array", "description": "普通商品 g_id 列表", "items": {"type": "integer"}}, "onlineGoodsList": {"type": "array", "description": "微程父商品 out_no 列表", "items": {"type": "string"}}, "designated_machine": {"type": "integer", "enum": [1, 2], "description": "1全部设备，2指定设备"}, "machineList": {"type": "array", "description": "指定设备 machine_id 列表", "items": {"type": "string"}}}},
+      "FdContentItem": {"type": "object", "properties": {"fdc_id": {"type": "integer", "description": "满减规则ID"}, "fd_id": {"type": "integer", "description": "满减活动ID"}, "condition_value": {"type": "string", "description": "规则条件值；线上商品通常为 source_no"}, "g_id": {"type": "integer", "description": "普通商品ID；线上商品固定为0"}, "g_name": {"type": "string", "description": "商品名称"}, "active_value": {"type": "number", "format": "float", "description": "优惠值"}, "fdc_sort": {"type": "integer", "description": "规则排序"}, "goods_source": {"type": "integer", "enum": [1, 2], "description": "1普通规则或商品，2微程线上商品"}, "source_no": {"type": "string", "description": "微程父商品 out_no；普通规则为空"}}},
+      "FdActivity": {"type": "object", "properties": {"fd_id": {"type": "integer", "description": "满减活动ID"}, "fd_name": {"type": "string", "description": "满减活动名称"}, "condition_type": {"type": "integer", "enum": [0, 1, 2, 3], "description": "0不限额，1最低金额，2最低件数，3指定商品"}, "content": {"type": "array", "description": "普通满减规则，不包含微程线上商品", "items": {"$ref": "#/components/schemas/FdContentItem"}}, "onlineGoodsList": {"type": "array", "description": "微程线上商品规则；无数据时返回空列表", "items": {"$ref": "#/components/schemas/FdContentItem"}}, "machineList": {"type": "array", "description": "详情接口返回的适用设备列表", "items": {"type": "object", "additionalProperties": true}}}},
+      "FdListResponse": {"allOf": [{"$ref": "#/components/schemas/StandardResponse"}, {"type": "object", "properties": {"data": {"type": "object", "properties": {"list": {"type": "array", "items": {"$ref": "#/components/schemas/FdActivity"}}, "count": {"type": "integer", "description": "总记录数"}}}}}]},
+      "FdDetailResponse": {"allOf": [{"$ref": "#/components/schemas/StandardResponse"}, {"type": "object", "properties": {"data": {"$ref": "#/components/schemas/FdActivity"}}}]},
+      "FdSaveRequest": {"type": "object", "properties": {"fd_name": {"type": "string", "description": "满减活动名称"}, "condition_type": {"type": "integer", "enum": [0, 1, 2, 3], "description": "0不限额，1最低金额，2最低件数，3指定商品"}, "content": {"type": "array", "description": "普通满减规则列表", "items": {"$ref": "#/components/schemas/FdContentItem"}}, "onlineGoodsList": {"description": "微程父商品 out_no。兼容数组、JSON数组字符串及逗号分隔字符串；修改时显式传空值表示清空线上商品", "oneOf": [{"type": "array", "items": {"oneOf": [{"type": "string"}, {"type": "object", "properties": {"source_no": {"type": "string"}, "out_no": {"type": "string"}}}]}}, {"type": "string", "example": "VC2601071001,VC2601071002"}]}, "machineList": {"type": "string", "description": "逗号分隔的设备 machine_id", "example": "JCHM-H2D-0064,JCHM-H3D-0005"}}}
+    }
+  }
+}
