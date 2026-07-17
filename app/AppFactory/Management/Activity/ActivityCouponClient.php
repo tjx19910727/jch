@@ -79,7 +79,7 @@ class ActivityCouponClient extends ManagementClient
             unset($postData['goodsList']);
         }
         if (isset($postData['onlineGoodsList'])) {
-            $onlineGoodsList = $postData['onlineGoodsList'];
+            $onlineGoodsList = $this->normalizeOnlineGoodsList($postData['onlineGoodsList']);
             unset($postData['onlineGoodsList']);
         }
         if ($postData['start_date'] && $postData['start_date'] <= strtotime(date("Y-m-d"))) {
@@ -113,15 +113,15 @@ class ActivityCouponClient extends ManagementClient
                             return $this->rFail($agResult);
                         }
                     }
-                    $agResult = $this->addOnlineAg($insert, $onlineGoodsList);
-                    if ($agResult !== true) {
-                        $this->rollbackTrans();
-                        return $this->rFail($agResult);
-                    }
                     if (!$goodsList && !$onlineGoodsList) {
                         $this->rollbackTrans();
                         return $this->rFail('请选择商品');
                     }
+                }
+                $agResult = $this->addOnlineAg($insert, $onlineGoodsList);
+                if ($agResult !== true) {
+                    $this->rollbackTrans();
+                    return $this->rFail($agResult);
                 }
                 $this->commitTrans();
                 return $this->r(200, $this->lang("add_success"));
@@ -154,7 +154,7 @@ class ActivityCouponClient extends ManagementClient
         }
         if (isset($postData['onlineGoodsList'])) {
             $hasOnlineGoodsList = true;
-            $onlineGoodsList = $postData['onlineGoodsList'];
+            $onlineGoodsList = $this->normalizeOnlineGoodsList($postData['onlineGoodsList']);
             unset($postData['onlineGoodsList']);
         }
         if (isset($postData['code']) && $postData['code']) {
@@ -206,7 +206,7 @@ class ActivityCouponClient extends ManagementClient
                     $flag[] = 1;
                 }
             }
-            if ($hasOnlineGoodsList && ($postData['designated_goods'] == 2 || $postData['designated_goods'] == 3)) {
+            if ($hasOnlineGoodsList) {
                 $this->delActivityGoods(['a_id' => $postData['c_id'], 'a_type' => 1, 'goods_source' => 2]);
                 $agResult = $this->addOnlineAg($insert, $onlineGoodsList);
                 if ($agResult !== true) {
@@ -222,6 +222,19 @@ class ActivityCouponClient extends ManagementClient
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    /** 线上商品独立于 designated_goods，按逗号分隔字符串接收。 */
+    protected function normalizeOnlineGoodsList($value)
+    {
+        if (is_array($value)) return $value;
+        $value = trim(strval($value));
+        if ($value === '') return [];
+        $decoded = json_decode($value, true);
+        if (is_array($decoded)) return $decoded;
+        return array_values(array_filter(array_map('trim', explode(',', $value)), function ($item) {
+            return $item !== '';
+        }));
     }
 
     /**

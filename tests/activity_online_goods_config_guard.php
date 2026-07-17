@@ -2,6 +2,9 @@
 
 $root = dirname(__DIR__);
 $couponClient = file_get_contents($root . '/app/AppFactory/Management/Activity/ActivityCouponClient.php');
+$couponAddStart = strpos($couponClient, 'public function addAc($postData)');
+$couponUpdateStart = strpos($couponClient, 'public function updateAc($postData)');
+$couponAdd = substr($couponClient, $couponAddStart, $couponUpdateStart - $couponAddStart);
 $couponRuntime = file_get_contents($root . '/app/AppFactory/Kernel/Traits/Activity/ActivityCouponTrait.php');
 $fdClient = file_get_contents($root . '/app/AppFactory/Management/Activity/ActivityFdClient.php');
 $fdRuntime = file_get_contents($root . '/app/AppFactory/Kernel/Traits/Activity/ActivityFdTrait.php');
@@ -12,6 +15,14 @@ $checks = [
     'coupon accepts onlineGoodsList' => strpos($couponClient, "onlineGoodsList") !== false,
     'coupon query separates onlineGoodsList' => substr_count($couponClient, "['onlineGoodsList'] = \$this->getActivityGoodsList") >= 2
         && substr_count($couponClient, "['goods_source' => 2]") >= 2,
+    'coupon online goods ignore designated_goods' => strpos($couponClient, 'if ($hasOnlineGoodsList) {') !== false
+        && strpos($couponClient, "\$onlineGoodsList = \$this->normalizeOnlineGoodsList(\$postData['onlineGoodsList'])") !== false,
+    'coupon accepts comma separated online goods' => strpos($couponClient, 'protected function normalizeOnlineGoodsList') !== false
+        && strpos($couponClient, "explode(',', \$value)") !== false,
+    'coupon add saves online goods independently' => strpos($couponAdd, "\$onlineGoodsList = \$this->normalizeOnlineGoodsList(\$postData['onlineGoodsList'])") !== false
+        && substr_count($couponAdd, 'addOnlineAg($insert, $onlineGoodsList)') === 1
+        && strpos($couponAdd, "if (\$postData['designated_goods'] == 2 || \$postData['designated_goods'] == 3) {")
+            < strpos($couponAdd, 'addOnlineAg($insert, $onlineGoodsList)'),
     'coupon stores online source number' => strpos($couponRuntime, "source_no") !== false,
     'coupon runtime matches wc out number' => strpos($couponRuntime, "detailSourceNos") !== false,
     'fd resolves wc goods configuration' => strpos($fdClient, "getWcGoodsFind(['no' => \$sourceNo])") !== false,
@@ -36,6 +47,8 @@ $checks = [
         && isset($openapi['paths']['/management/activity.activity_fd/getFind']['post']),
     'openapi documents onlineGoodsList and token' => isset($openapi['components']['schemas']['CouponActivity']['properties']['onlineGoodsList'])
         && isset($openapi['components']['schemas']['FdActivity']['properties']['onlineGoodsList'])
+        && strpos($openapi['components']['schemas']['CouponSaveRequest']['properties']['onlineGoodsList']['description'] ?? '', 'designated_goods') !== false
+        && ($openapi['components']['schemas']['CouponSaveRequest']['properties']['onlineGoodsList']['type'] ?? '') === 'string'
         && ($openapi['components']['parameters']['Token']['schema']['example'] ?? '') === '{{token}}',
 ];
 

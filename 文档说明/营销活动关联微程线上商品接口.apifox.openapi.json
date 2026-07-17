@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "优惠券与满减活动微程线上商品接口",
-    "version": "1.1.0",
-    "description": "后台优惠券、满减活动新增、修改、列表和详情接口。查询接口将普通商品或普通规则与微程线上商品分开返回：goodsList/content 为普通数据，onlineGoodsList 为 goods_source=2 的微程线上商品。"
+    "version": "1.2.0",
+    "description": "后台优惠券、满减活动新增、修改、列表和详情接口。查询接口将普通商品或普通规则与微程线上商品分开返回：goodsList/content 为普通数据，onlineGoodsList 为 goods_source=2 的微程线上商品。优惠券的 designated_goods 仅控制本地商品，不影响 onlineGoodsList。"
   },
   "tags": [
     {"name": "优惠券活动"},
@@ -33,7 +33,7 @@
         "tags": ["优惠券活动"],
         "summary": "新增优惠券活动",
         "parameters": [{"$ref": "#/components/parameters/Token"}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CouponSaveRequest"}, "examples": {"指定微程线上商品": {"value": {"c_name": "线上商品满10减3", "designated_goods": 2, "goodsList": [], "onlineGoodsList": ["VC2601071001"], "machineList": [], "designated_machine": 1}}}}}},
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CouponSaveRequest"}, "examples": {"全部本地商品并指定线上商品": {"value": {"c_name": "线上商品满10减3", "designated_goods": 1, "goodsList": [], "onlineGoodsList": "VC2601071001,VC2601071002", "machineList": [], "designated_machine": 1}}}}}},
         "responses": {"200": {"$ref": "#/components/responses/WriteResponse"}}
       }
     },
@@ -41,7 +41,7 @@
       "post": {
         "tags": ["优惠券活动"],
         "summary": "修改优惠券活动",
-        "description": "传 onlineGoodsList 时全量替换线上商品关联；传空数组表示清空；不传表示保持原线上商品关联。",
+        "description": "designated_goods 仅控制本地 goodsList，不影响线上商品。onlineGoodsList 传逗号分隔字符串时全量替换线上商品关联；传空字符串表示清空；不传表示保持原线上商品关联。",
         "parameters": [{"$ref": "#/components/parameters/Token"}],
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"allOf": [{"$ref": "#/components/schemas/CouponSaveRequest"}, {"type": "object", "required": ["c_id"], "properties": {"c_id": {"type": "integer", "description": "优惠券活动ID", "example": 101}}}]}}}},
         "responses": {"200": {"$ref": "#/components/responses/WriteResponse"}}
@@ -99,7 +99,7 @@
       "CouponActivity": {"type": "object", "properties": {"c_id": {"type": "integer", "description": "优惠券活动ID"}, "c_name": {"type": "string", "description": "优惠券名称"}, "designated_goods": {"type": "integer", "enum": [1, 2, 3], "description": "1全部商品，2指定商品，3排除指定商品"}, "goodsList": {"type": "array", "description": "普通商品列表，不包含微程线上商品", "items": {"type": "object", "additionalProperties": true}}, "onlineGoodsList": {"type": "array", "description": "微程线上商品列表；无数据时返回空列表", "items": {"$ref": "#/components/schemas/OnlineGoodsItem"}}, "machineList": {"type": "array", "description": "适用设备列表", "items": {"type": "object", "additionalProperties": true}}}},
       "CouponListResponse": {"allOf": [{"$ref": "#/components/schemas/StandardResponse"}, {"type": "object", "properties": {"data": {"type": "object", "properties": {"list": {"type": "array", "items": {"$ref": "#/components/schemas/CouponActivity"}}, "count": {"type": "integer", "description": "总记录数"}}}}}]},
       "CouponDetailResponse": {"allOf": [{"$ref": "#/components/schemas/StandardResponse"}, {"type": "object", "properties": {"data": {"$ref": "#/components/schemas/CouponActivity"}}}]},
-      "CouponSaveRequest": {"type": "object", "properties": {"c_name": {"type": "string", "description": "优惠券名称"}, "designated_goods": {"type": "integer", "enum": [1, 2, 3], "description": "1全部商品，2指定商品，3排除指定商品"}, "goodsList": {"type": "array", "description": "普通商品 g_id 列表", "items": {"type": "integer"}}, "onlineGoodsList": {"type": "array", "description": "微程父商品 out_no 列表", "items": {"type": "string"}}, "designated_machine": {"type": "integer", "enum": [1, 2], "description": "1全部设备，2指定设备"}, "machineList": {"type": "array", "description": "指定设备 machine_id 列表", "items": {"type": "string"}}}},
+      "CouponSaveRequest": {"type": "object", "properties": {"c_name": {"type": "string", "description": "优惠券名称"}, "designated_goods": {"type": "integer", "enum": [1, 2, 3], "description": "仅控制本地 goodsList：1全部商品，2指定商品，3排除指定商品；不影响 onlineGoodsList"}, "goodsList": {"type": "array", "description": "普通商品 g_id 列表", "items": {"type": "integer"}}, "onlineGoodsList": {"type": "string", "description": "逗号分隔的微程父商品 out_no，独立于 designated_goods 生效。修改时传空字符串表示清空，不传表示保持原关联", "example": "VC2601071001,VC2601071002"}, "designated_machine": {"type": "integer", "enum": [1, 2], "description": "1全部设备，2指定设备"}, "machineList": {"type": "array", "description": "指定设备 machine_id 列表", "items": {"type": "string"}}}},
       "FdContentItem": {"type": "object", "properties": {"fdc_id": {"type": "integer", "description": "满减规则ID"}, "fd_id": {"type": "integer", "description": "满减活动ID"}, "condition_value": {"type": "string", "description": "规则条件值；线上商品通常为 source_no"}, "g_id": {"type": "integer", "description": "普通商品ID；线上商品固定为0"}, "g_name": {"type": "string", "description": "商品名称"}, "active_value": {"type": "number", "format": "float", "description": "优惠值"}, "fdc_sort": {"type": "integer", "description": "规则排序"}, "goods_source": {"type": "integer", "enum": [1, 2], "description": "1普通规则或商品，2微程线上商品"}, "source_no": {"type": "string", "description": "微程父商品 out_no；普通规则为空"}}},
       "FdActivity": {"type": "object", "properties": {"fd_id": {"type": "integer", "description": "满减活动ID"}, "fd_name": {"type": "string", "description": "满减活动名称"}, "condition_type": {"type": "integer", "enum": [0, 1, 2, 3], "description": "0不限额，1最低金额，2最低件数，3指定商品"}, "content": {"type": "array", "description": "普通满减规则，不包含微程线上商品", "items": {"$ref": "#/components/schemas/FdContentItem"}}, "onlineGoodsList": {"type": "array", "description": "微程线上商品规则；无数据时返回空列表", "items": {"$ref": "#/components/schemas/FdContentItem"}}, "machineList": {"type": "array", "description": "详情接口返回的适用设备列表", "items": {"type": "object", "additionalProperties": true}}}},
       "FdListResponse": {"allOf": [{"$ref": "#/components/schemas/StandardResponse"}, {"type": "object", "properties": {"data": {"type": "object", "properties": {"list": {"type": "array", "items": {"$ref": "#/components/schemas/FdActivity"}}, "count": {"type": "integer", "description": "总记录数"}}}}}]},
