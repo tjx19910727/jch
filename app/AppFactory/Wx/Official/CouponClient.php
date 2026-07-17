@@ -280,10 +280,25 @@ class CouponClient extends WxBaseClient
         $fixedCodeList = $this->getActivityCouponColumn([['status', 'in', [1, 2]]], 'code');
         $codeList = array_map('strval', array_merge($codeList, $fixedCodeList));
         for ($i = 0; $i < 100; $i++) {
-            $code = $this->leftHandZero(random_int(0, 999999), 6);
+            $code = $this->generateRandomCouponCode();
             if (!in_array($code, $codeList, true)) return $code;
         }
         return '';
+    }
+
+    /**
+     * 生成优惠券链接领取专用的8位随机码
+     * @return string
+     */
+    protected function generateRandomCouponCode()
+    {
+        $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $maxIndex = strlen($characters) - 1;
+        $code = '';
+        for ($i = 0; $i < 8; $i++) {
+            $code .= $characters[random_int(0, $maxIndex)];
+        }
+        return $code;
     }
 
     protected function pageError($message)
@@ -360,7 +375,7 @@ class CouponClient extends WxBaseClient
             'heroValue' => $heroValue,
             'heroSuffix' => $heroSuffix,
             'heroTitle' => $heroTitle,
-            'heroSubtitle' => $couponType === 2 ? $thresholdText : '全场通用优惠券',
+            'heroSubtitle' => $couponType === 2 ? $thresholdText : '',
             'benefitLabel' => $benefitLabel,
             'benefitValue' => $benefitValue,
             'thresholdText' => $thresholdText,

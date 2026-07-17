@@ -85,7 +85,7 @@
                 </div>
                 <div class="ticket-copy">
                     <strong>{$heroTitle|htmlspecialchars}</strong>
-                    <span>{$heroSubtitle|htmlspecialchars}</span>
+                    {if $heroSubtitle}<span>{$heroSubtitle|htmlspecialchars}</span>{/if}
                 </div>
             </section>
 
