@@ -11,11 +11,12 @@ namespace app\AppFactory\Management\Machine;
 
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelStockReportTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class MachineChannelStockReportClient extends ManagementClient
 {
-    use MachineChannelStockReportTrait;
+    use MachineChannelStockReportTrait, MachineTrait;
 
     /**
      * 查询库存报表
@@ -26,8 +27,12 @@ class MachineChannelStockReportClient extends ManagementClient
      * @param string $group
      * @return array|string
      */
-    public function getMcsList($where,$pageNum = 0,$field = "*",$order = "",$group = "")
+    public function getMcsList($where,$pageNum = 0,$field = "*",$order = "",$group = "",$isOperating = "")
     {
+        if (!$this->validateStockReportOperatingStatus($isOperating)) {
+            return $this->rValidate('设备在营状态参数错误');
+        }
+        $this->applyStockReportOperatingWhere($where, $isOperating);
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $data = $this->getMachineChannelStockReportList($where,$pageNum,$field,$order,$group);
@@ -42,11 +47,15 @@ class MachineChannelStockReportClient extends ManagementClient
      * @throws \PHPExcel_Exception
      * @throws \PHPExcel_Writer_Exception
      */
-    public function export($where,$eType = 1)
+    public function export($where,$eType = 1,$isOperating = "")
     {
+        if (!$this->validateStockReportOperatingStatus($isOperating)) {
+            return $this->rValidate('设备在营状态参数错误');
+        }
         $group = "";
         $field = "*";
         if ($eType == 1) {
+            $this->applyStockReportOperatingWhere($where, $isOperating);
             $field = "sku,g_name,bar_code,model,gc_name,
         retail_price,
         sum(mc_stock) mc_stock,
@@ -58,6 +67,7 @@ class MachineChannelStockReportClient extends ManagementClient
             $list = $this->getMachineChannelStockReportList($where,0,$field,"total_stock desc",$group);
         }
         if ($eType == 2) {
+            $this->applyStockReportOperatingWhere($where, $isOperating, 'mcs.m_id');
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['mcs.m_id', 'in', $mIds];
             $where['mcs.ao_id'] = $this->manager['ao_id'];
@@ -104,5 +114,33 @@ class MachineChannelStockReportClient extends ManagementClient
             return $this->sendToExport("统计报表-库存报表", $filename, $title, $list);
         }
         return $this->rFail();
+    }
+
+    /**
+     * 库存报表只支持在营、在库两种设备状态。
+     * @param mixed $isOperating
+     * @return bool
+     */
+    private function validateStockReportOperatingStatus($isOperating)
+    {
+        if ($isOperating === '' || $isOperating === null) {
+            return true;
+        }
+        return in_array(intval($isOperating), [1, 2], true);
+    }
+
+    /**
+     * 将设备状态转换为视图已有的 m_id 条件，避免依赖视图字段结构。
+     * @param array $where
+     * @param mixed $isOperating
+     * @param string $machineIdField
+     */
+    private function applyStockReportOperatingWhere(&$where, $isOperating, $machineIdField = 'm_id')
+    {
+        if ($isOperating === '' || $isOperating === null) {
+            return;
+        }
+        $mIds = $this->getMachineColumn(['is_operating' => intval($isOperating)], 'm_id');
+        $where[] = [$machineIdField, 'in', $mIds ?: [0]];
     }
 }
