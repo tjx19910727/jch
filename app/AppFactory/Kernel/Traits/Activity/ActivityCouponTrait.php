@@ -222,7 +222,7 @@ trait ActivityCouponTrait
      * 订单使用优惠券
      * 优惠券适用商品处理规则：
      * 后台创建优惠券活动时，可设置适用商品，适用商品的设置有三种模式，1.全部商品，2.指定商品，3.部分商品除外（勾选全部商品，选择了商品生成列表，不包含在列表中的享受优惠券作用）
-     * 当适用商品为1.全部商品时，以订单总金额去计算优惠金额与打折扣
+     * 当适用商品为1.全部商品时，全部线下商品与线上配置范围内商品参与优惠计算
      * 当适用商品为2.指定商品时，以指定商品单价计算优惠，即：（单价 - 优惠值）* 购买数量 = 商品总金额。购物车内不在指定商品范围内的不享受优惠。
      * 当适用商品为3.部分商品除外时，指定商品列表内的商品不享受优惠，其他的商品以单价计算优惠。
      * 优惠计算方式，全部商品时直接从订单总金额优惠
@@ -267,19 +267,22 @@ trait ActivityCouponTrait
             $sodField = "sod_id,discount_price,total_sod_price,retail_price,quantity,g_id,wc_order_no";
             $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,$sodField,'total_sod_price asc')->toArray();
         }
-        if (!$this->couponOnlineGoodsMatch($this->order['details'], $ac['onlineAg'] ?? [])) {
-            return $this->r(100, '线上商品不适用当前优惠券');
-        }
-
         try {
             $this->startTrans();// 区分适用商品规则
-            // 1. 全部商品，以订单总金额计算优惠金额与打折扣
+            // 1. 全部线下商品与线上配置范围内商品参与优惠金额与折扣计算
             if ($ac['designated_goods'] == 1) {
+                $eligibleDetails = array_values(array_filter($this->order['details'], function ($detail) use ($ac) {
+                    return $this->couponDetailIsEligible($detail, $ac);
+                }));
+                $eligiblePrice = '0.0000';
+                foreach ($eligibleDetails as $eligibleDetail) {
+                    $eligiblePrice = bcadd($eligiblePrice, strval($eligibleDetail['total_sod_price'] ?? 0), 4);
+                }
                 $discount_price = 0;
                 // 区分优惠券类型，1：立减金额，2：优惠折扣，计算优惠值
                 if ($ac['c_type'] == 1) $discount_price = $ac['reduction'];
-                if ($ac['c_type'] == 2) $discount_price = bcmul($this->order['total_price'], bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
-                $discount_price = $this->clampCouponDiscount($discount_price, $this->order['total_price']);
+                if ($ac['c_type'] == 2) $discount_price = bcmul($eligiblePrice, bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
+                $discount_price = $this->clampCouponDiscount($discount_price, $eligiblePrice);
                 if ($discount_price >= 0.01) {
 //                    $totalPrice = $this->order['total_price'];
                     // 优惠金额作用至订单总金额
@@ -287,7 +290,7 @@ trait ActivityCouponTrait
                     $this->order['total_price'] = $this->subtractCouponDiscount($this->order['total_price'], $discount_price);
                     actionLog($this->order,'优惠券订单数据');
 
-                    foreach ($this->order['details'] as $key => $value) {
+                    foreach ($eligibleDetails as $key => $value) {
                         // 商品优惠金额 = 订单优惠金额 * 商品金额占比 = 订单优惠金额 *  （商品总金额 / 订单总金额）
 //                        $sodDiscountPrice = bcmul($this->order['discount_price'],bcdiv($value['total_sod_price'],$totalPrice,2),4);
 
@@ -299,10 +302,10 @@ trait ActivityCouponTrait
                         }
                         // 商品优惠金额 = 商品总额 / 订单总额 * 立减金额
                         if ($ac['c_type'] == 1 ) {
-                            $sodDiscountPrice = bcmul(bcdiv($value['total_sod_price'],$original_price,4),$ac['reduction'],4);
+                            $sodDiscountPrice = bcmul(bcdiv($value['total_sod_price'],$eligiblePrice,4),$ac['reduction'],4);
                         }
                         // 最后一个优惠金额，并且优惠金额大于计算后的商品详情优惠金额，则将剩下的优惠金额都给这个商品
-                        if (!isset($this->order['details'][$key + 1]) && $discount_price > $sodDiscountPrice)
+                        if (!isset($eligibleDetails[$key + 1]) && $discount_price > $sodDiscountPrice)
                             $sodDiscountPrice = $discount_price;
                         $sodDiscountPrice = $this->clampCouponDiscount($sodDiscountPrice, $value['total_sod_price']);
                         actionLog($value,'优惠计算前商品数据');
@@ -318,13 +321,8 @@ trait ActivityCouponTrait
             } else {
                 $acg_id = array_column($ac['ag'] ?? [], 'g_id');
                 foreach ($this->order['details'] as $key => $value) {
-                    $isOnlineDetail = $this->isOnlineActivityDetail($value);
-                    $matchesOnlineGoods = $isOnlineDetail && $this->couponDetailMatchesOnlineGoods($value, $ac['onlineAg'] ?? []);
-                    $matchesCoreGoods = !$isOnlineDetail && in_array($value['g_id'], $acg_id);
                     // 2. 指定商品，商品在指定范围内。  3.部分商品除外，商品在指定范围外
-                    if ($matchesOnlineGoods ||
-                        (!$isOnlineDetail && (($ac['designated_goods'] == 2 && $matchesCoreGoods) ||
-                        ($ac['designated_goods'] == 3 && !$matchesCoreGoods)))) {
+                    if ($this->couponDetailIsEligible($value, $ac, $acg_id)) {
                         // 区分优惠券类型，1：立减金额，2：优惠折扣，计算优惠值
                         if ($ac['c_type'] == 1) $discount_price = $ac['reduction'];
                         if ($ac['c_type'] == 2) $discount_price = bcmul($value['retail_price'], bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
@@ -417,14 +415,18 @@ trait ActivityCouponTrait
         return false;
     }
 
-    /** 校验订单内每条线上商品明细均属于优惠券独立配置的线上范围。 */
-    protected function couponOnlineGoodsMatch($details, $onlineGoods)
+    /** 线上商品按线上范围、线下商品按 designated_goods 独立判断是否参与优惠。 */
+    protected function couponDetailIsEligible($detail, $coupon, $coreGoodsIds = null)
     {
-        foreach ((array)$details as $detail) {
-            if (!$this->isOnlineActivityDetail($detail)) continue;
-            if (!$this->couponDetailMatchesOnlineGoods($detail, $onlineGoods)) return false;
+        if ($this->isOnlineActivityDetail($detail)) {
+            return $this->couponDetailMatchesOnlineGoods($detail, $coupon['onlineAg'] ?? []);
         }
-        return true;
+        if (intval($coupon['designated_goods'] ?? 1) === 1) return true;
+        $coreGoodsIds = $coreGoodsIds === null ? array_column($coupon['ag'] ?? [], 'g_id') : $coreGoodsIds;
+        $matchesCoreGoods = in_array($detail['g_id'] ?? 0, $coreGoodsIds);
+        if (intval($coupon['designated_goods']) === 2) return $matchesCoreGoods;
+        if (intval($coupon['designated_goods']) === 3) return !$matchesCoreGoods;
+        return false;
     }
 
     protected function clampCouponDiscount($discount, $amount)
