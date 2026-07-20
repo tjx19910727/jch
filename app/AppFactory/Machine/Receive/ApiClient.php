@@ -1331,6 +1331,7 @@ class ApiClient extends ReceiveBaseClient
                 //type = 11: [{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151415","no":"VC2507151415","order_date":""}]
                 $total_sod_points = 0;
                 foreach ($this->data['carList'] as $value) {
+                    $wc_order_no = [];
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $wc_goods = $this->getWcGoodsFind(['no' => $value['out_no']]);
                         if (!$wc_goods) {
@@ -1405,7 +1406,6 @@ class ApiClient extends ReceiveBaseClient
                             $other_wc_goods_locals = $this->getWcGoodsLocalList([['no', '<>', $value['no']], 'out_no' => $value['out_no']])->toArray();
                             $total_price += array_sum(array_column($other_wc_goods_locals, 'retail_price')) ?? 0;
                         }
-                        $wc_order_no = [];
                         foreach ($wc_goods_locals as $wc_goods_local) {
                             $wcLocalGid = $wc_goods_local['g_id'] ?? '9999';
                             $total_sod_points += $wc_goods_local['gift_points'];

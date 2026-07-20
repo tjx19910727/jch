@@ -9,50 +9,41 @@ require_once __DIR__ . '/../vendor/autoload.php';
 $matcher = new class {
     use \app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
 
-    public function matches($detail, $couponGoodsIds)
+    public function matches($detail, $onlineGoods)
     {
-        return $this->couponDetailMatchesGoods($detail, $couponGoodsIds);
+        return $this->couponDetailMatchesOnlineGoods($detail, $onlineGoods);
+    }
+
+    public function isOnline($detail)
+    {
+        return $this->isOnlineActivityDetail($detail);
     }
 };
 
 $checks = [
     'subCar creates wc order snapshot' =>
         strpos($api, '$wc_order_no = [];') !== false,
+    'subCar resets wc snapshot for every cart item' =>
+        strpos($api, "foreach (\$this->data['carList'] as \$value) {\n                    \$wc_order_no = [];") !== false,
     'coupon detail query includes wc snapshot' =>
         strpos($coupon, 'g_id,wc_order_no') !== false,
-    'coupon scope resolves ordinary and online goods ids' =>
-        strpos($coupon, 'couponDetailMatchesGoods($value, $ac[\'ag\'])') !== false
-        && strpos($coupon, '$detail[\'g_id\']') !== false
-        && strpos($coupon, '$wcGoods[\'g_id\']') !== false,
-    'designated coupon accepts matched online detail' =>
-        strpos($coupon, '$ac[\'designated_goods\'] == 2 && $matchesDesignatedGoods') !== false,
-    'excluded coupon rejects matched online detail' =>
-        strpos($coupon, '$ac[\'designated_goods\'] == 3 && !$matchesDesignatedGoods') !== false,
-    'ordinary detail still matches by detail goods id' =>
-        $matcher->matches(['g_id' => 1001, 'wc_order_no' => ''], [1001]),
-    'online detail matches by child goods id' =>
-        $matcher->matches([
-            'g_id' => 9999,
-            'wc_order_no' => json_encode([
-                'B' => ['g_id' => 1001],
-                'C' => ['g_id' => 0],
-            ]),
-        ], [1001]),
-    'online detail does not match unrelated goods id' =>
-        !$matcher->matches([
-            'g_id' => 9999,
-            'wc_order_no' => json_encode(['B' => ['g_id' => 1001]]),
-        ], [2002]),
+    'coupon keeps core goods matching separate' =>
+        strpos($coupon, "\$acg_id = array_column(\$ac['ag'] ?? [], 'g_id')") !== false
+        && strpos($coupon, "\$matchesCoreGoods = !\$isOnlineDetail && in_array(\$value['g_id'], \$acg_id)") !== false,
+    'ordinary detail is not classified as online' =>
+        !$matcher->isOnline(['g_id' => 1001, 'wc_order_no' => '']),
+    'valid wc snapshot is classified as online' =>
+        $matcher->isOnline(['g_id' => 9999, 'wc_order_no' => json_encode(['B' => ['out_no' => 'WC-PARENT-001']])]),
     'online detail matches configured parent source number' =>
         $matcher->matches([
             'g_id' => 9999,
             'wc_order_no' => json_encode(['B' => ['out_no' => 'WC-PARENT-001']]),
-        ], [['goods_source' => 2, 'source_no' => 'WC-PARENT-001']]),
+        ], [['source_no' => 'WC-PARENT-001']]),
     'online detail does not match another parent source number' =>
         !$matcher->matches([
             'g_id' => 9999,
             'wc_order_no' => json_encode(['B' => ['out_no' => 'WC-PARENT-001']]),
-        ], [['goods_source' => 2, 'source_no' => 'WC-PARENT-002']]),
+        ], [['source_no' => 'WC-PARENT-002']]),
 ];
 
 $failed = [];

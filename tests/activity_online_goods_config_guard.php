@@ -24,7 +24,8 @@ $checks = [
         && strpos($couponAdd, "if (\$postData['designated_goods'] == 2 || \$postData['designated_goods'] == 3) {")
             < strpos($couponAdd, 'addOnlineAg($insert, $onlineGoodsList)'),
     'coupon stores online source number' => strpos($couponRuntime, "source_no") !== false,
-    'coupon runtime matches wc out number' => strpos($couponRuntime, "detailSourceNos") !== false,
+    'coupon runtime matches wc out number independently' => strpos($couponRuntime, 'couponDetailMatchesOnlineGoods') !== false
+        && strpos($couponRuntime, 'couponOnlineGoodsMatch') !== false,
     'fd resolves wc goods configuration' => strpos($fdClient, "getWcGoodsFind(['no' => \$sourceNo])") !== false,
     'fd list and find return onlineGoodsList' => strpos($fdClient, 'public function getList(') !== false
         && strpos($fdClient, 'appendFdGoodsLists') !== false
@@ -35,10 +36,10 @@ $checks = [
     'fd add ignores copied primary keys' => strpos($fdClient, "unset(\$postData['fd_id'],\$postData['delContent']") !== false
         && strpos($fdClient, "unset(\$value['fdc_id'], \$value['fd_id'])") !== false,
     'fd runtime matches wc order snapshot' => strpos($fdRuntime, 'fdDetailMatchesOnlineGoods') !== false,
-    'fd amount rules support configured online goods' => strpos($fdRuntime, 'fdOnlineGoodsMatch') !== false
-        && strpos($fdRuntime, "\$contentWhere['goods_source'] = 1") !== false
+    'fd amount rules keep online goods independent' => strpos($fdRuntime, 'fdOnlineGoodsMatch') !== false
+        && strpos($fdRuntime, "['fd_id' => \$this->fd['fd_id'], 'goods_source' => 1]") !== false
         && strpos($fdRuntime, '线上商品不适用当前满减活动') !== false
-        && strpos($fdRuntime, '线上商品订单不支持当前满减活动') === false,
+        && strpos($fdRuntime, "if (\$this->fd['condition_type'] != 3) {\n            \$onlineDetails") === false,
     'migration covers coupon and fd tables' => strpos($sql, 'activity_goods') !== false && strpos($sql, 'activity_fd_content') !== false,
     'openapi documents four query interfaces' => is_array($openapi)
         && isset($openapi['paths']['/management/activity.activity_coupon/getList']['post'])
