@@ -155,6 +155,12 @@ class MqClient extends SendBaseClient
      */
 
     /**
+     * 通知设备打印指定订单小票 printReceipt
+     * @param int $order_id
+     * @return array|string
+     */
+
+    /**
      * 主动发送至MQ
      * @param $msgType
      * @param array $otherData

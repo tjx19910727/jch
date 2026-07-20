@@ -983,4 +983,24 @@ class SaleOrders extends Common
         return $this->app->saleOrders->manualDeductStock(input());
     }
 
+    /**
+     * 指定设备重新打印订单小票
+     * @return array|string
+     */
+    public function printReceipt()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'printReceipt');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+
+        $frequencyKey = 'printReceipt:' . intval($postData['order_id']) . ':' . trim((string)$postData['machine_id']);
+        $check = checkFrequency($frequencyKey, 3);
+        if ($check !== true) return returnState(100, $check);
+
+        return $this->app->saleOrders->printOrderReceipt($postData);
+    }
+
 }
