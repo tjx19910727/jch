@@ -4,12 +4,14 @@ namespace app\AppFactory\Wx\Official;
 
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityGoodsTrait;
+use app\AppFactory\Kernel\Traits\Activity\ActivityMachineTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Wx\WxBaseClient;
 
 class CouponClient extends WxBaseClient
 {
-    use ActivityCouponTrait, ActivityCouponUsedTrait, WxOfficialTrait;
+    use ActivityCouponTrait, ActivityCouponUsedTrait, ActivityGoodsTrait, ActivityMachineTrait, WxOfficialTrait;
 
     const CACHE_EXPIRE = 300;
     const CACHE_SUFFIX = 'url_coupon';
@@ -169,7 +171,86 @@ class CouponClient extends WxBaseClient
             'canReceive' => $check === true,
             'receiveMessage' => $check === true ? '' : strval($check),
             'couponCodes' => $this->getCouponCodeList(intval($coupon['c_id']), $openid),
-        ], $this->formatCouponPageData($coupon));
+        ], $this->formatCouponPageData($coupon), $this->formatCouponScopeData($coupon));
+    }
+
+    protected function formatCouponScopeData($coupon)
+    {
+        $couponId = intval($coupon['c_id']);
+        $where = ['a_id' => $couponId, 'a_type' => 1];
+        $machineType = intval($coupon['designated_machine'] ?? 1);
+        $goodsType = intval($coupon['designated_goods'] ?? 1);
+        $machineScopeList = [];
+        $goodsScopeList = [];
+
+        if ($machineType === 2) {
+            $machineList = $this->getActivityMachineList(
+                $where,
+                0,
+                'am_id,m_id,machine_id,machine_name',
+                'am_id asc'
+            );
+            if ($machineList) {
+                foreach ($machineList->toArray() as $machine) {
+                    $machineId = trim(strval($machine['machine_id'] ?? ''));
+                    $machineScopeList[] = [
+                        'name' => trim(strval($machine['machine_name'] ?? '')) ?: ($machineId ?: '未命名设备'),
+                        'subText' => $machineId ? '设备编号：' . $machineId : '',
+                    ];
+                }
+            }
+        }
+
+        if (in_array($goodsType, [2, 3], true)) {
+            $goodsList = $this->getActivityGoodsList(
+                $where,
+                0,
+                'ag_id,g_id,g_name,sku',
+                'ag_id asc'
+            );
+            if ($goodsList) {
+                foreach ($goodsList->toArray() as $goods) {
+                    $sku = trim(strval($goods['sku'] ?? ''));
+                    $goodsScopeList[] = [
+                        'name' => trim(strval($goods['g_name'] ?? '')) ?: '未命名商品',
+                        'subText' => $sku ? 'SKU：' . $sku : '',
+                    ];
+                }
+            }
+        }
+
+        $machineCount = count($machineScopeList);
+        $goodsCount = count($goodsScopeList);
+        if ($goodsType === 2) {
+            $goodsScopeLabel = '适用商品';
+            $goodsScopeText = '指定商品（' . $goodsCount . '款）';
+            $goodsScopeTitle = '适用商品';
+            $goodsScopeHint = '以下商品可以使用该优惠券';
+        } elseif ($goodsType === 3) {
+            $goodsScopeLabel = '不适用商品';
+            $goodsScopeText = '排除商品（' . $goodsCount . '款）';
+            $goodsScopeTitle = '以下商品不可使用';
+            $goodsScopeHint = '除以下商品外，其他商品可以使用该优惠券';
+        } else {
+            $goodsScopeLabel = '适用商品';
+            $goodsScopeText = '全部商品';
+            $goodsScopeTitle = '';
+            $goodsScopeHint = '';
+        }
+
+        return [
+            'machineScopeText' => $machineType === 2 ? '指定设备（' . $machineCount . '台）' : '全部设备',
+            'machineScopeClickable' => $machineType === 2 && $machineCount > 0,
+            'machineScopeTitle' => '适用设备',
+            'machineScopeHint' => '该优惠券仅可在以下设备使用',
+            'machineScopeList' => $machineScopeList,
+            'goodsScopeLabel' => $goodsScopeLabel,
+            'goodsScopeText' => $goodsScopeText,
+            'goodsScopeClickable' => in_array($goodsType, [2, 3], true) && $goodsCount > 0,
+            'goodsScopeTitle' => $goodsScopeTitle,
+            'goodsScopeHint' => $goodsScopeHint,
+            'goodsScopeList' => $goodsScopeList,
+        ];
     }
 
     protected function getCouponCodeList($couponId, $openid)
@@ -314,6 +395,7 @@ class CouponClient extends WxBaseClient
     protected function formatCouponPageData($coupon)
     {
         $couponType = intval($coupon['c_type']);
+        $goodsType = intval($coupon['designated_goods']);
         $reduction = floatval($coupon['reduction']);
         $payLimit = floatval($coupon['pay_limit']);
         $thresholdText = $payLimit > 0
@@ -326,7 +408,8 @@ class CouponClient extends WxBaseClient
             $heroPrefix = '';
             $heroValue = $discountValue;
             $heroSuffix = '折';
-            $heroTitle = '全场商品' . $discountValue . '折';
+            $goodsScopeTitle = $goodsType === 2 ? '指定商品' : ($goodsType === 3 ? '部分商品' : '全场商品');
+            $heroTitle = $goodsScopeTitle . $discountValue . '折';
             $benefitLabel = '折扣力度';
             $benefitValue = $discountValue . '折（立享' . $this->formatNumber($reduction) . '%优惠）';
         } else {
@@ -338,7 +421,6 @@ class CouponClient extends WxBaseClient
             $benefitValue = $this->formatNumber($reduction) . '元';
         }
 
-        $goodsType = intval($coupon['designated_goods']);
         if ($goodsType === 2) {
             $defaultDescription = '指定商品可用';
         } elseif ($goodsType === 3) {

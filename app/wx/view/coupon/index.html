@@ -42,6 +42,23 @@
         .detail-label{white-space:nowrap;color:#37251f}
         .detail-value{text-align:right;line-height:1.5;color:#725f59;word-break:break-word}
         .detail-value.accent{color:#ff5b17;font-weight:700}
+        .detail-icon.scope-icon,.detail-icon.scope-icon path,.detail-icon.scope-icon rect{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+        .scope-value{width:100%;min-width:0;padding:0;border:0;background:transparent;color:#725f59;text-align:right;line-height:1.5}
+        button.scope-value{display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer}
+        .scope-arrow{flex:0 0 auto;color:#d76843;font-size:24px;line-height:1}
+        .scope-modal[hidden]{display:none}
+        .scope-modal{position:fixed;z-index:40;inset:0;display:flex;align-items:flex-end;justify-content:center}
+        .scope-mask{position:absolute;inset:0;background:rgba(45,27,20,.52);backdrop-filter:blur(2px)}
+        .scope-sheet{position:relative;width:min(100%,640px);max-height:65vh;max-height:65dvh;border-radius:22px 22px 0 0;background:#fffaf6;box-shadow:0 -12px 36px rgba(68,31,18,.2);overflow:hidden}
+        .scope-sheet-header{display:grid;grid-template-columns:1fr auto;gap:5px 14px;padding:18px 20px 14px;border-bottom:1px solid #f0ddd3;background:#fff}
+        .scope-sheet-title{margin:0;color:#66301f;font-size:20px;font-weight:800}
+        .scope-sheet-hint{grid-column:1/-1;margin:0;color:#9c8178;font-size:13px;line-height:1.5}
+        .scope-close{grid-column:2;grid-row:1;width:32px;height:32px;margin-top:-5px;border:0;border-radius:50%;background:#fff0e8;color:#9b543d;font-size:25px;line-height:30px;cursor:pointer}
+        .scope-list{max-height:calc(65vh - 88px);max-height:calc(65dvh - 88px);padding:6px 18px max(18px,env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+        .scope-list-item{padding:13px 2px;border-bottom:1px dashed #eadbd5}.scope-list-item:last-child{border-bottom:0}
+        .scope-item-name{color:#49312a;font-size:16px;line-height:1.45;word-break:break-word}
+        .scope-item-sub{margin-top:3px;color:#a08a82;font-size:12px;line-height:1.4;word-break:break-all}
+        body.scope-open{overflow:hidden}
         .claim-button{width:100%;height:clamp(58px,15vw,86px);margin-top:20px;border:0;border-radius:999px;background:linear-gradient(110deg,#ff531e,#ff201d 55%,#ff5f28);box-shadow:0 9px 17px rgba(255,50,27,.25);color:#fff;font-size:clamp(23px,6vw,36px);font-weight:800;letter-spacing:.08em;cursor:pointer}
         .claim-button:active{transform:translateY(1px);box-shadow:0 5px 11px rgba(255,50,27,.22)}
         .claim-button[disabled]{opacity:.68;cursor:default}
@@ -110,6 +127,16 @@
                     <svg class="detail-icon" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false"><path d="M512 0a512 512 0 1 1 0 1024A512 512 0 0 1 512 0zm0 73.143a438.857 438.857 0 1 0 0 877.714 438.857 438.857 0 0 0 0-877.714zm0 292.571a36.571 36.571 0 0 1 36.571 36.572V768a36.571 36.571 0 0 1-73.142 0V402.286A36.571 36.571 0 0 1 512 365.714zm0-146.285a36.571 36.571 0 1 1 0 73.142 36.571 36.571 0 0 1 0-73.142z"/></svg>
                     <span class="detail-label">使用说明</span><span id="couponDescription" class="detail-value" data-zh-cn="{$descriptionZhCn|htmlspecialchars}" data-zh-hk="{$descriptionZhHk|htmlspecialchars}" data-en-us="{$descriptionEnUs|htmlspecialchars}">{$description|htmlspecialchars}</span>
                 </div>
+                <div class="detail-row">
+                    <svg class="detail-icon scope-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h8M9 17h.01M15 17h.01"/></svg>
+                    <span class="detail-label">适用设备</span>
+                    {if $machineScopeClickable}<button class="scope-value scope-trigger" type="button" data-target="machineScopeModal">{$machineScopeText|htmlspecialchars}<span class="scope-arrow">›</span></button>{else /}<span class="scope-value">{$machineScopeText|htmlspecialchars}</span>{/if}
+                </div>
+                <div class="detail-row">
+                    <svg class="detail-icon scope-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 8h14l-1 13H6L5 8zM9 9V6a3 3 0 0 1 6 0v3"/></svg>
+                    <span class="detail-label">{$goodsScopeLabel|htmlspecialchars}</span>
+                    {if $goodsScopeClickable}<button class="scope-value scope-trigger" type="button" data-target="goodsScopeModal">{$goodsScopeText|htmlspecialchars}<span class="scope-arrow">›</span></button>{else /}<span class="scope-value">{$goodsScopeText|htmlspecialchars}</span>{/if}
+                </div>
             </section>
 
             <button id="claimButton" class="claim-button" type="button" data-key="{$key|htmlspecialchars}" {if !$canReceive}disabled{/if}>{if $canReceive}立即领取{else /}暂不可领取{/if}</button>
@@ -129,6 +156,40 @@
                 <div id="couponEmpty" class="coupon-empty" {if $couponCodes}hidden{/if}>暂未领取优惠券码</div>
             </section>
         </main>
+        {if $machineScopeClickable}
+        <div id="machineScopeModal" class="scope-modal" hidden>
+            <div class="scope-mask" data-scope-close></div>
+            <section class="scope-sheet" role="dialog" aria-modal="true" aria-labelledby="machineScopeTitle">
+                <header class="scope-sheet-header">
+                    <h2 id="machineScopeTitle" class="scope-sheet-title">{$machineScopeTitle|htmlspecialchars}</h2>
+                    <button class="scope-close" type="button" aria-label="关闭" data-scope-close>×</button>
+                    <p class="scope-sheet-hint">{$machineScopeHint|htmlspecialchars}</p>
+                </header>
+                <div class="scope-list">
+                    {volist name="machineScopeList" id="scopeItem"}
+                    <div class="scope-list-item"><div class="scope-item-name">{$scopeItem.name|htmlspecialchars}</div>{if $scopeItem.subText}<div class="scope-item-sub">{$scopeItem.subText|htmlspecialchars}</div>{/if}</div>
+                    {/volist}
+                </div>
+            </section>
+        </div>
+        {/if}
+        {if $goodsScopeClickable}
+        <div id="goodsScopeModal" class="scope-modal" hidden>
+            <div class="scope-mask" data-scope-close></div>
+            <section class="scope-sheet" role="dialog" aria-modal="true" aria-labelledby="goodsScopeTitle">
+                <header class="scope-sheet-header">
+                    <h2 id="goodsScopeTitle" class="scope-sheet-title">{$goodsScopeTitle|htmlspecialchars}</h2>
+                    <button class="scope-close" type="button" aria-label="关闭" data-scope-close>×</button>
+                    <p class="scope-sheet-hint">{$goodsScopeHint|htmlspecialchars}</p>
+                </header>
+                <div class="scope-list">
+                    {volist name="goodsScopeList" id="scopeItem"}
+                    <div class="scope-list-item"><div class="scope-item-name">{$scopeItem.name|htmlspecialchars}</div>{if $scopeItem.subText}<div class="scope-item-sub">{$scopeItem.subText|htmlspecialchars}</div>{/if}</div>
+                    {/volist}
+                </div>
+            </section>
+        </div>
+        {/if}
         {else /}
         <main class="error-card">
             <div class="error-icon">!</div>
@@ -159,6 +220,35 @@
     if(description){
         description.textContent=description.getAttribute('data-'+descriptionLanguage)||description.textContent;
     }
+    var scopeTriggers=document.querySelectorAll('.scope-trigger');
+    var scopeClosers=document.querySelectorAll('[data-scope-close]');
+    function closeScopeModal(modal){
+        if(!modal)return;
+        modal.hidden=true;
+        document.body.classList.remove('scope-open');
+    }
+    for(var scopeIndex=0;scopeIndex<scopeTriggers.length;scopeIndex++){
+        scopeTriggers[scopeIndex].addEventListener('click',function(){
+            var modal=document.getElementById(this.getAttribute('data-target'));
+            if(!modal)return;
+            modal.hidden=false;
+            document.body.classList.add('scope-open');
+            var closeButton=modal.querySelector('.scope-close');
+            if(closeButton)closeButton.focus();
+        });
+    }
+    for(var closeIndex=0;closeIndex<scopeClosers.length;closeIndex++){
+        scopeClosers[closeIndex].addEventListener('click',function(){
+            var modal=this;
+            while(modal&&!modal.classList.contains('scope-modal'))modal=modal.parentNode;
+            closeScopeModal(modal);
+        });
+    }
+    document.addEventListener('keydown',function(event){
+        if(event.key!=='Escape')return;
+        var openedModal=document.querySelector('.scope-modal:not([hidden])');
+        closeScopeModal(openedModal);
+    });
     function showToast(message){
         toast.textContent=message;
         toast.classList.add('show');
