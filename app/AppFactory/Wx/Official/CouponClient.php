@@ -263,8 +263,8 @@ class CouponClient extends WxBaseClient
         }
 
         $lastRecord = $this->getActivityCouponUsedFind($where, 'cu_id,create_time', 'create_time desc');
-        if ($lastRecord) {
-            $intervalDays = max(1, intval($coupon['url_day_count']));
+        $intervalDays = intval($coupon['url_day_count'] ?? 0);
+        if ($lastRecord && $intervalDays > 0) {
             $lastDayStart = strtotime(date('Y-m-d', intval($lastRecord['create_time'])));
             $nextReceiveTime = strtotime('+' . $intervalDays . ' day', $lastDayStart);
             if (time() < $nextReceiveTime) {
