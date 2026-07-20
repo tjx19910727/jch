@@ -271,7 +271,9 @@ trait ActivityCouponTrait
             $this->startTrans();// 区分适用商品规则
             // 1. 全部线下商品与线上配置范围内商品参与优惠金额与折扣计算
             if ($ac['designated_goods'] == 1) {
-                $eligibleDetails = array_values(array_filter($this->order['details'], function ($detail) use ($ac) {
+                //$this->order['details']转成数组
+                $order_details = is_array($this->order['details']) ? $this->order['details'] : $this->order['details']->toArray();
+                $eligibleDetails = array_values(array_filter($order_details, function ($detail) use ($ac) {
                     return $this->couponDetailIsEligible($detail, $ac);
                 }));
                 $eligiblePrice = '0.0000';
