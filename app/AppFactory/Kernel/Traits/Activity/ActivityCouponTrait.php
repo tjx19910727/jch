@@ -202,11 +202,15 @@ trait ActivityCouponTrait
                 $whereAg['a_id'] = $ac['c_id'];
                 $whereAg['a_type'] = 1;
                 if ($gIds) $whereAg[] = ['g_id','in',$gIds];
-                $ag = $this->getActivityGoodsList(['a_id' => $ac['c_id'], 'a_type' => 1], 0,
-                    'g_id,g_name,pic,sku,market_price,retail_price,gc_id,gc_name,goods_source,source_no'
+                $ag = $this->getActivityGoodsList(['a_id' => $ac['c_id'], 'a_type' => 1, 'goods_source' => 1], 0,
+                    'g_id,g_name,pic,sku,market_price,retail_price,gc_id,gc_name'
                 );
-                if (!$ag) return $this->r(100,$this->lang("VActivityCoupon.no_ag_data"));
                 if ($ag) $ac['ag'] = $ag->toArray();
+            }
+            $onlineAg = $this->getActivityGoodsList(['a_id' => $ac['c_id'], 'a_type' => 1, 'goods_source' => 2], 0, 'source_no');
+            $ac['onlineAg'] = $onlineAg ? $onlineAg->toArray() : [];
+            if ($ac['designated_goods'] > 1 && empty($ac['ag']) && empty($ac['onlineAg'])) {
+                return $this->r(100,$this->lang("VActivityCoupon.no_ag_data"));
             }
             $ac['acUsed'] = $acUsed;
             return $ac;
@@ -263,6 +267,9 @@ trait ActivityCouponTrait
             $sodField = "sod_id,discount_price,total_sod_price,retail_price,quantity,g_id,wc_order_no";
             $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,$sodField,'total_sod_price asc')->toArray();
         }
+        if (!$this->couponOnlineGoodsMatch($this->order['details'], $ac['onlineAg'] ?? [])) {
+            return $this->r(100, '线上商品不适用当前优惠券');
+        }
 
         try {
             $this->startTrans();// 区分适用商品规则
@@ -309,11 +316,15 @@ trait ActivityCouponTrait
                     }
                 }
             } else {
+                $acg_id = array_column($ac['ag'] ?? [], 'g_id');
                 foreach ($this->order['details'] as $key => $value) {
-                    $matchesDesignatedGoods = $this->couponDetailMatchesGoods($value, $ac['ag']);
+                    $isOnlineDetail = $this->isOnlineActivityDetail($value);
+                    $matchesOnlineGoods = $isOnlineDetail && $this->couponDetailMatchesOnlineGoods($value, $ac['onlineAg'] ?? []);
+                    $matchesCoreGoods = !$isOnlineDetail && in_array($value['g_id'], $acg_id);
                     // 2. 指定商品，商品在指定范围内。  3.部分商品除外，商品在指定范围外
-                    if (($ac['designated_goods'] == 2 && $matchesDesignatedGoods) ||
-                        ($ac['designated_goods'] == 3 && !$matchesDesignatedGoods)) {
+                    if ($matchesOnlineGoods ||
+                        (!$isOnlineDetail && (($ac['designated_goods'] == 2 && $matchesCoreGoods) ||
+                        ($ac['designated_goods'] == 3 && !$matchesCoreGoods)))) {
                         // 区分优惠券类型，1：立减金额，2：优惠折扣，计算优惠值
                         if ($ac['c_type'] == 1) $discount_price = $ac['reduction'];
                         if ($ac['c_type'] == 2) $discount_price = bcmul($value['retail_price'], bcdiv(bcsub(100,$ac['reduction']), 100, 2), 3);
@@ -384,40 +395,36 @@ trait ActivityCouponTrait
         return true;
     }
 
-    /**
-     * 判断订单明细（含微程线上组合子商品）是否命中优惠券商品范围。
-     */
-    protected function couponDetailMatchesGoods($detail, $couponGoods)
+    /** 判断订单明细是否包含有效的微程线上商品快照。 */
+    protected function isOnlineActivityDetail($detail)
     {
-        $couponGoodsIds = [];
-        $couponSourceNos = [];
-        foreach ((array)$couponGoods as $goods) {
-            if (!is_array($goods)) {
-                $couponGoodsIds[] = intval($goods);
-                continue;
-            }
-            if (intval($goods['goods_source'] ?? 1) === 2) {
-                $couponSourceNos[] = trim(strval($goods['source_no'] ?? ''));
-            } else {
-                $couponGoodsIds[] = intval($goods['g_id'] ?? 0);
-            }
-        }
-        $detailGoodsIds = [intval($detail['g_id'] ?? 0)];
-        $detailSourceNos = [];
         $wcOrderNo = json_decode($detail['wc_order_no'] ?? '', true);
-        if (is_array($wcOrderNo)) {
-            foreach ($wcOrderNo as $wcGoods) {
-                if (is_array($wcGoods) && isset($wcGoods['g_id'])) {
-                    $detailGoodsIds[] = intval($wcGoods['g_id']);
-                }
-                if (is_array($wcGoods) && !empty($wcGoods['out_no'])) {
-                    $detailSourceNos[] = trim(strval($wcGoods['out_no']));
-                }
-            }
+        return is_array($wcOrderNo) && !empty($wcOrderNo);
+    }
+
+    /** 线上商品独立按微程父商品编码判断优惠券适用范围。 */
+    protected function couponDetailMatchesOnlineGoods($detail, $onlineGoods)
+    {
+        $sourceNos = array_filter(array_map(function ($goods) {
+            return trim(strval(is_array($goods) ? ($goods['source_no'] ?? '') : $goods));
+        }, (array)$onlineGoods));
+        if (!$sourceNos) return false;
+        $wcOrderNo = json_decode($detail['wc_order_no'] ?? '', true);
+        if (!is_array($wcOrderNo)) return false;
+        foreach ($wcOrderNo as $wcGoods) {
+            if (is_array($wcGoods) && in_array(trim(strval($wcGoods['out_no'] ?? '')), $sourceNos, true)) return true;
         }
-        $detailGoodsIds = array_values(array_filter(array_unique($detailGoodsIds)));
-        return count(array_intersect($detailGoodsIds, $couponGoodsIds)) > 0
-            || count(array_intersect(array_unique($detailSourceNos), array_filter(array_unique($couponSourceNos)))) > 0;
+        return false;
+    }
+
+    /** 校验订单内每条线上商品明细均属于优惠券独立配置的线上范围。 */
+    protected function couponOnlineGoodsMatch($details, $onlineGoods)
+    {
+        foreach ((array)$details as $detail) {
+            if (!$this->isOnlineActivityDetail($detail)) continue;
+            if (!$this->couponDetailMatchesOnlineGoods($detail, $onlineGoods)) return false;
+        }
+        return true;
     }
 
     protected function clampCouponDiscount($discount, $amount)

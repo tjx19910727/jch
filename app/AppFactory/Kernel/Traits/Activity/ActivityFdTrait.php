@@ -66,14 +66,14 @@ trait ActivityFdTrait
             foreach ($fdList as $key => $fdl){
                 $update = [];
                 $fieldOrder = "fdc_sort ASC, fdc_id desc";
-                $field = "condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,goods_source,source_no";
+                $field = "condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value";
                 // 20250320，与朱工、陈工、聂工讨论确认最低消费金额、最低消费件数排序规则，优先排序值顺序排序，排序值一致时，以条件数值倒序排序
                 if (in_array($fdl['condition_type'],[1,2])) {
                     // 20250414，终端是以最后一条满足条件覆盖前一满足条件，所以排序得反向排序
                     $fieldOrder = "fdc_sort DESC, condition_value1 asc, fdc_id asc";
-                    $field = "fdc_id,CAST(condition_value AS UNSIGNED) condition_value1, condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort,goods_source,source_no";
+                    $field = "fdc_id,CAST(condition_value AS UNSIGNED) condition_value1, condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
                 }
-                $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id']],0,$field,$fieldOrder);
+                $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id'], 'goods_source' => 1],0,$field,$fieldOrder);
                 if ($fdl['status'] == 1) $update['status'] = 2;
                 if ($fdl['end_date'] > 0 && $fdl['end_date'] < strtotime(date("Y-m-d")) && $fdl['status'] != 3) {
                     $update['status'] = 3;
@@ -113,20 +113,18 @@ trait ActivityFdTrait
 
 
         actionLog($this->fd,'活动信息');
-        // 非指定SKU活动仅允许配置范围内的微程线上商品参与。
-        if ($this->fd['condition_type'] != 3) {
-            $onlineDetails = $this->getSaleOrdersDetailsList([
-                'order_id' => $this->order['order_id'],
-                ['wc_order_no', '<>', ''],
-            ], 0, 'sod_id,wc_order_no');
-            if ($onlineDetails) {
-                $onlineContents = $this->getActivityFdContentList([
-                    'fd_id' => $this->fd['fd_id'],
-                    'goods_source' => 2,
-                ], 0, 'fdc_id,source_no');
-                if (!$this->fdOnlineGoodsMatch($onlineDetails, $onlineContents)) {
-                    return $this->r(100, '线上商品不适用当前满减活动');
-                }
+        // 线上商品适用范围独立校验，不参与 condition_type 核心商品规则。
+        $onlineDetails = $this->getSaleOrdersDetailsList([
+            'order_id' => $this->order['order_id'],
+            ['wc_order_no', '<>', ''],
+        ], 0, 'sod_id,wc_order_no');
+        if ($onlineDetails) {
+            $onlineContents = $this->getActivityFdContentList([
+                'fd_id' => $this->fd['fd_id'],
+                'goods_source' => 2,
+            ], 0, 'fdc_id,source_no');
+            if (!$this->fdOnlineGoodsMatch($onlineDetails, $onlineContents)) {
+                return $this->r(100, '线上商品不适用当前满减活动');
             }
         }
         if ($this->order['order_type'] > 1 && $this->order['order_type'] != 5) {
@@ -139,15 +137,13 @@ trait ActivityFdTrait
             }
         }
         $fieldOrder = "fdc_sort ASC, fdc_id desc";
-        $field = "fdc_id,fd_id,fd_name,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort,goods_source,source_no";
+        $field = "fdc_id,fd_id,fd_name,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
         // 20250320，与朱工、陈工、聂工讨论确认最低消费金额、最低消费件数排序规则，优先排序值顺序排序，排序值一致时，以条件数值倒序排序
         if (in_array($this->fd['condition_type'],[1,2])) {
             $fieldOrder = "fdc_sort ASC,condition_value1 desc, fdc_id desc";
             $field = "fdc_id,fd_id,fd_name, CAST(condition_value AS UNSIGNED) condition_value1,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
         }
-        $contentWhere = ['fd_id' => $this->fd['fd_id']];
-        if ($this->fd['condition_type'] != 3) $contentWhere['goods_source'] = 1;
-        $this->content = $this->getActivityFdContentList($contentWhere,0,$field,$fieldOrder);
+        $this->content = $this->getActivityFdContentList(['fd_id' => $this->fd['fd_id'], 'goods_source' => 1],0,$field,$fieldOrder);
         if (!$this->content) return $this->rFail($this->lang("VActivityFd.content_no_data"));
         if (is_string($this->content)) return $this->rFail($this->content);
         actionLog($this->getLS(),'【SQL】查询活动规则');
@@ -315,20 +311,12 @@ trait ActivityFdTrait
             }
             $handledSku[$ruleSku] = 1;
 
-            if (intval($value['goods_source'] ?? 1) === 2) {
-                $detailsList = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],
-                    0, 'sod_id,total_sod_price,discount_price,quantity,wc_order_no');
-            } else {
-                $detailsList = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id'],'sku' => $value['condition_value']],
-                    0,'sod_id,total_sod_price,discount_price,quantity');
-            }
+            $detailsList = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id'],'sku' => $value['condition_value']],
+                0,'sod_id,total_sod_price,discount_price,quantity');
             actionLog($this->getLS(),'查询指定SKU');
             if ($detailsList) {
                 $detailsList = $detailsList->toArray();
                 foreach ($detailsList as $dk => $dv) {
-                    if (intval($value['goods_source'] ?? 1) === 2 && !$this->fdDetailMatchesOnlineGoods($dv, $value['source_no'] ?? '')) {
-                        continue;
-                    }
                     $this->sku = $dv;
                     // 满足条件，执行逻辑，不满足就跳出
                     $this->countContent($value);
@@ -359,14 +347,17 @@ trait ActivityFdTrait
         $details = is_object($details) && method_exists($details, 'toArray') ? $details->toArray() : (array)$details;
         $onlineContents = is_object($onlineContents) && method_exists($onlineContents, 'toArray') ? $onlineContents->toArray() : (array)$onlineContents;
         if (!$details || !$onlineContents) return false;
-        foreach ($onlineContents as $content) {
-            foreach ($details as $detail) {
+        foreach ($details as $detail) {
+            $matched = false;
+            foreach ($onlineContents as $content) {
                 if ($this->fdDetailMatchesOnlineGoods($detail, isset($content['source_no']) ? $content['source_no'] : '')) {
-                    return true;
+                    $matched = true;
+                    break;
                 }
             }
+            if (!$matched) return false;
         }
-        return false;
+        return true;
     }
 
     /**
