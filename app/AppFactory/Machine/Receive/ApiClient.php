@@ -2479,6 +2479,7 @@ class ApiClient extends ReceiveBaseClient
         $rows = Db::name('machine_mq_record')
             ->where('machine_id', $this->machine['machine_id'])
             ->where('type', 2)
+            ->where('status', 2)
             ->where('create_time', '>=', time() - intval($seconds))
             ->order('mr_id', 'desc')
             ->limit(20)
@@ -2499,15 +2500,15 @@ class ApiClient extends ReceiveBaseClient
             if (!$payload || !isset($payload['msgType'])) {
                 continue;
             }
-            if ($payload['msgType'] === 'img' && ($payload['field'] ?? '') === 'screen_img') {
-                return [
-                    'msgType' => $payload['msgType'],
-                    'field' => $payload['field'],
-                    'msg_id' => $record['msg_id'] ?? ($row['msg_id'] ?? ''),
-                    'timestamp' => $record['timestamp'] ?? ($row['create_time'] ?? 0),
-                ];
-            }
             if (in_array($payload['msgType'], $restartTypes, true)) {
+                // HTTP 兜底只允许真正的重启命令，并原子标记为已消费，避免后续心跳重复返回。
+                $consumed = Db::name('machine_mq_record')
+                    ->where('mr_id', intval($row['mr_id']))
+                    ->where('status', 2)
+                    ->update(['status' => 4]);
+                if (!$consumed) {
+                    continue;
+                }
                 return [
                     'msgType' => $payload['msgType'],
                     'msg_id' => $record['msg_id'] ?? ($row['msg_id'] ?? ''),
