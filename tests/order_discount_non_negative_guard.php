@@ -20,12 +20,14 @@ $calculator = new class {
 };
 
 $checks = [
-    'fd clamps current discount to order balance' => strpos($fd, 'clampFdDiscount($this->countContent[\'discount_price\'], $this->order[\'total_price\'])') !== false,
+    'fd clamps current discount to eligible balance' => strpos($fd, 'clampFdDiscount($this->countContent[\'discount_price\'], $discountBase)') !== false,
     'fd distributes current rather than cumulative discount' => strpos($fd, 'bcmul($currentDiscount, bcdiv(') !== false,
     'fd detail subtraction is non negative' => strpos($fd, 'subtractFdDiscount($dv[\'total_sod_price\'], $sodDiscountPrice)') !== false,
     'fd designated goods subtraction is non negative' => strpos($fd, 'subtractFdDiscount($this->sku[\'total_sod_price\'], $discount_price)') !== false,
-    'order update prevents negative total price' => strpos($orders, "array_key_exists('total_price', \$update)") !== false,
-    'detail update prevents negative total sod price' => strpos($orders, "array_key_exists('total_sod_price', \$update)") !== false,
+    'order insert and update normalize non negative fields' =>
+        substr_count($orders, 'normalizeSaleOrderNonNegativeFields(') >= 3,
+    'detail insert and update normalize non negative fields' =>
+        substr_count($orders, 'normalizeSaleOrderDetailNonNegativeFields(') >= 3,
     'discount larger than amount is capped' => bccomp($calculator->clamp('10', '5'), '5', 4) === 0,
     'subtraction cannot return a negative amount' => bccomp($calculator->subtract('5', '10'), '0', 4) === 0,
     'negative configured discount is ignored' => bccomp($calculator->clamp('-3', '5'), '0', 4) === 0,
