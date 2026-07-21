@@ -1045,9 +1045,12 @@ class SaleOrdersClient extends ManagementClient
         $whereCollect['so.pay_status'] = 3;
         $field = "
         IFNULL(sum(sod.quantity - sod.refund_quantity),0) totalQuantity,
-        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) detailsTotalPrice,
+        IFNULL(sum(CASE
+            WHEN sod.total_sod_price > 0 THEN GREATEST(sod.total_sod_price - sod.refund_amount, 0)
+            ELSE 0
+        END),0) detailsTotalPrice,
         IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
-        IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
+        IFNULL(sum(CASE WHEN sod.total_sod_price > 0 THEN sod.total_sod_price ELSE 0 END),0) totalSalePrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(sod.cost_price * (sod.quantity - sod.refund_quantity)),0) totalCostPrice
         ";
@@ -1099,8 +1102,12 @@ class SaleOrdersClient extends ManagementClient
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
         IFNULL(sum(sod.quantity - sod.refund_quantity),0) totalQuantity,
-        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) totalPrice,
-        IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
+        IFNULL(sum(CASE
+            WHEN sod.total_sod_price > 0
+            THEN GREATEST(sod.total_sod_price - sod.refund_amount, 0)
+            ELSE 0
+        END),0) totalPrice,
+        IFNULL(sum(CASE WHEN sod.total_sod_price > 0 THEN sod.total_sod_price ELSE 0 END),0) totalSalePrice,
         IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(sod.cost_price * (sod.quantity - sod.refund_quantity)),0) totalCostPrice
@@ -1132,8 +1139,17 @@ class SaleOrdersClient extends ManagementClient
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
         IFNULL(sum(sod.quantity - sod.refund_quantity),0) totalQuantity,
-        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) totalPrice,
-        IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
+        IFNULL(sum(CASE
+            WHEN sod.total_sod_price > 0
+            THEN GREATEST(sod.total_sod_price - sod.refund_amount, 0)
+            ELSE 0
+        END),0) totalPrice,
+        IFNULL(sum(CASE
+            WHEN so.pay_type = 9 AND so.total_price = 0 AND sod.total_sod_price > 0
+            THEN GREATEST(sod.total_sod_price - sod.refund_amount, 0)
+            ELSE 0
+        END),0) mallPointsAmount,
+        IFNULL(sum(CASE WHEN sod.total_sod_price > 0 THEN sod.total_sod_price ELSE 0 END),0) totalSalePrice,
         IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(sod.cost_price * (sod.quantity - sod.refund_quantity)),0) totalCostPrice
@@ -1144,6 +1160,11 @@ class SaleOrdersClient extends ManagementClient
             $list = $list->toArray();
             actionLog($list, '导出数据');
             foreach ($list as $k => $collectData) {
+                $collectData['totalPrice'] = bcsub($collectData['totalPrice'], $collectData['mallPointsAmount'], 2);
+                if (bccomp($collectData['totalPrice'], 0, 2) < 0) {
+                    $collectData['totalPrice'] = 0.00;
+                }
+                unset($collectData['mallPointsAmount']);
                 $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
                 $collectData['totalClick'] = $this->getBehaviorClickSum($behaviorWhere);
                 $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
@@ -1644,25 +1665,36 @@ class SaleOrdersClient extends ManagementClient
      */
     protected function getSaleDataCollectOrderSummary($where)
     {
+        actionLog($where, 'saleDataCollect order summary where');
         $orderSubQuery = Db::name('sale_orders')
             ->alias('so')
             ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
             ->where($where)
             ->field("
                 so.order_id,
-                MAX(so.total_price) totalPrice,
-                IFNULL(SUM(CASE WHEN so.pay_type = 9 THEN sod.total_sod_price - sod.refund_amount ELSE 0 END),0) mallPointsAmount
+                CASE
+                    WHEN MAX(so.total_price) > 0
+                    THEN GREATEST(MAX(so.total_price) - MAX(IFNULL(so.refund_amount, 0)), 0)
+                    ELSE 0
+                END totalPrice,
+                IFNULL(SUM(CASE
+                    WHEN so.pay_type = 9 AND so.total_price = 0 AND sod.total_sod_price > 0
+                    THEN GREATEST(sod.total_sod_price - sod.refund_amount, 0)
+                    ELSE 0
+                END),0) mallPointsAmount
             ")
             ->group('so.order_id')
             ->buildSql();
+        actionLog($orderSubQuery, 'saleDataCollect order summary subquery SQL');
 
-        $summary = Db::table($orderSubQuery)
-            ->alias('summary')
-            ->field('
-                IFNULL(SUM(summary.totalPrice),0) totalPrice,
-                IFNULL(SUM(summary.mallPointsAmount),0) mallPointsAmount
-            ')
-            ->find();
+        $summarySql = "SELECT
+            IFNULL(SUM(summary.totalPrice),0) totalPrice,
+            IFNULL(SUM(summary.mallPointsAmount),0) mallPointsAmount
+            FROM {$orderSubQuery} summary";
+        actionLog($summarySql, 'saleDataCollect order summary executed SQL');
+        $summaryRows = Db::query($summarySql);
+        $summary = $summaryRows[0] ?? [];
+        actionLog($summary, 'saleDataCollect order summary result');
 
         return [
             'totalPrice' => $summary['totalPrice'] ?? 0,
