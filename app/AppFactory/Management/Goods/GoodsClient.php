@@ -1162,9 +1162,9 @@ class GoodsClient extends ManagementClient
      */
     private function queryGoodsRanking($where, $topType = 1, $pageNum = 0, $limit = 0)
     {
-        $order = 'totalPrice desc,totalQuantity desc,g_id desc,g_name asc';
+        $order = 'totalRankPrice desc,totalRankQuantity desc,g_id desc,g_name asc';
         if ($topType == 2) {
-            $order = 'totalQuantity desc,totalPrice desc,g_id desc,g_name asc';
+            $order = 'totalRankQuantity desc,totalRankPrice desc,g_id desc,g_name asc';
         }
 
         $query = Db::name('sale_orders_details')->alias('sod')
@@ -1185,6 +1185,8 @@ class GoodsClient extends ManagementClient
                 'SUM(sod.quantity)' => 'totalQuantity',
                 'ROUND(SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalRefundAmount',
                 'SUM(IFNULL(sod.refund_quantity,0))' => 'totalRefundQuantity',
+                'ROUND(SUM(sod.total_sod_price)-SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalRankPrice',
+                'SUM(sod.quantity)-SUM(IFNULL(sod.refund_quantity,0))' => 'totalRankQuantity',
                 'ROUND(SUM(sod.discount_price),2)' => 'totalDiscountPrice',
             ])
             ->group("sod.g_id,IF(sod.g_id = 0, sod.g_name, '')")
