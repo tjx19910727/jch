@@ -1644,7 +1644,7 @@ class SaleOrdersClient extends ManagementClient
      */
     protected function getSaleDataCollectOrderSummary($where)
     {
-        $orderSql = Db::name('sale_orders')
+        $orderSubQuery = Db::name('sale_orders')
             ->alias('so')
             ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
             ->where($where)
@@ -1656,8 +1656,12 @@ class SaleOrdersClient extends ManagementClient
             ->group('so.order_id')
             ->buildSql();
 
-        $summary = Db::table($orderSql . ' t')
-            ->field('IFNULL(SUM(totalPrice),0) totalPrice,IFNULL(SUM(mallPointsAmount),0) mallPointsAmount')
+        $summary = Db::table($orderSubQuery)
+            ->alias('summary')
+            ->field('
+                IFNULL(SUM(summary.totalPrice),0) totalPrice,
+                IFNULL(SUM(summary.mallPointsAmount),0) mallPointsAmount
+            ')
             ->find();
 
         return [
