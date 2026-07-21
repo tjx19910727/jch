@@ -27,6 +27,7 @@ class RemoteActionLog extends Common
                     'remote_refund_goods_img',
                     'pickUpDoorOpen',
                     'pickUpDoorClose',
+                    'continueOutGoods',
                     'recycGoods',
                 ]);
 
@@ -48,6 +49,7 @@ class RemoteActionLog extends Common
                 'remote_refund_goods_img' => '远程退货拍照',
                 'pickUpDoorOpen' => '打开取货门',
                 'pickUpDoorClose' => '关闭取货门',
+                'continueOutGoods' => '继续出货',
                 'recycGoods' => '回收商品',
             ];
             $list = $list->each(function ($item) use ($statusMap, $typeMap) {
