@@ -36,12 +36,12 @@ class GoodsHitClient extends ManagementClient
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $trackingWhere = $this->formatGoodsBehaviorTrackingWhere($where);
-        $field = "gbt.goods_id g_id,MAX(g.g_name) g_name,MAX(g.sku) sku,MAX(g.gc_name) gc_name,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
+        $field = "gbt.goods_id g_id,gbt.is_online,MAX(IF(gbt.is_online = 1, wg.out_no, '')) goods_out_no,MAX(IF(gbt.is_online = 1, wg.g_name, g.g_name)) g_name,MAX(IF(gbt.is_online = 1, wg.sku, g.sku)) sku,MAX(IF(gbt.is_online = 1, wg.gc_name, g.gc_name)) gc_name,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
         $return = $this->rQ($this->getGoodsBehaviorTrackingHitList($trackingWhere,$pageNum,$field,'gbt.goods_id desc',function ($item) use ($where) {
             $item['saleNum'] = $this->getNetSaleQuantity($where, $item);
             $item['conversion_rate'] = ($item['saleNum'] > 0 && $item['hits'] > 0 ? bcmul(bcdiv($item['saleNum'],$item['hits'],3),100,1) : 0) . "%";
             return $item;
-        },"gbt.goods_id"));
+        },"gbt.goods_id,gbt.is_online"));
         return $return;
     }
 
@@ -57,12 +57,12 @@ class GoodsHitClient extends ManagementClient
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $trackingWhere = $this->formatGoodsBehaviorTrackingWhere($where);
-        $field = "gbt.goods_id g_id,gbt.m_id,gbt.machine_id,MAX(m.machine_name) machine_name,MAX(g.g_name) g_name,MAX(g.sku) sku,MAX(g.gc_name) gc_name,MAX(gbt.updated_at) create_time,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
+        $field = "gbt.goods_id g_id,gbt.is_online,gbt.m_id,gbt.machine_id,MAX(IF(gbt.is_online = 1, wg.out_no, '')) goods_out_no,MAX(m.machine_name) machine_name,MAX(IF(gbt.is_online = 1, wg.g_name, g.g_name)) g_name,MAX(IF(gbt.is_online = 1, wg.sku, g.sku)) sku,MAX(IF(gbt.is_online = 1, wg.gc_name, g.gc_name)) gc_name,MAX(gbt.updated_at) create_time,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
         $list = $this->getGoodsBehaviorTrackingHitList($trackingWhere,$pageNum,$field,$order,function ($item) use ($where) {
             $item['saleNum'] = $this->getNetSaleQuantity($where, $item);
             $item['conversion_rate'] = ($item['saleNum'] > 0 && $item['hits'] > 0 ? bcmul(bcdiv($item['saleNum'],$item['hits'],3),100,1) : 0) . "%";
             return $item;
-        },"gbt.goods_id,gbt.m_id");
+        },"gbt.goods_id,gbt.is_online,gbt.m_id");
         return $this->r(200,$this->lang("query_success"),$list);
     }
 
@@ -123,11 +123,11 @@ class GoodsHitClient extends ManagementClient
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $trackingWhere = $this->formatGoodsBehaviorTrackingWhere($where);
-        $field = "gbt.goods_id g_id,MAX(g.g_name) g_name,MAX(g.sku) sku,MAX(g.gc_name) gc_name,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
-        $group = "gbt.goods_id";
+        $field = "gbt.goods_id g_id,gbt.is_online,MAX(IF(gbt.is_online = 1, wg.out_no, '')) goods_out_no,MAX(IF(gbt.is_online = 1, wg.g_name, g.g_name)) g_name,MAX(IF(gbt.is_online = 1, wg.sku, g.sku)) sku,MAX(IF(gbt.is_online = 1, wg.gc_name, g.gc_name)) gc_name,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
+        $group = "gbt.goods_id,gbt.is_online";
         if ($eType == 2) {
-            $field = "gbt.machine_id,MAX(m.machine_name) machine_name,MAX(g.g_name) g_name,MAX(g.gc_name) gc_name,MAX(g.sku) sku,gbt.goods_id g_id,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count,gbt.report_date create_date,gbt.m_id";
-            $group = "gbt.m_id,gbt.goods_id,gbt.report_date";
+            $field = "gbt.machine_id,gbt.is_online,MAX(IF(gbt.is_online = 1, wg.out_no, '')) goods_out_no,MAX(m.machine_name) machine_name,MAX(IF(gbt.is_online = 1, wg.g_name, g.g_name)) g_name,MAX(IF(gbt.is_online = 1, wg.gc_name, g.gc_name)) gc_name,MAX(IF(gbt.is_online = 1, wg.sku, g.sku)) sku,gbt.goods_id g_id,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count,gbt.report_date create_date,gbt.m_id";
+            $group = "gbt.m_id,gbt.goods_id,gbt.is_online,gbt.report_date";
         }
         $list = $this->getGoodsBehaviorTrackingHitList($trackingWhere,0,$field,'','',$group);
         if (!$list) return $this->rFail();
@@ -173,7 +173,8 @@ class GoodsHitClient extends ManagementClient
     protected function getGoodsBehaviorTrackingHitList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = "")
     {
         $query = Db::name('goods_behavior_tracking')->alias('gbt')
-            ->leftJoin('goods g', 'g.g_id = gbt.goods_id')
+            ->leftJoin('goods g', 'gbt.is_online = 2 AND g.g_id = gbt.goods_id')
+            ->leftJoin('wc_goods_local wg', 'gbt.is_online = 1 AND wg.id = gbt.goods_id')
             ->leftJoin('machine m', 'm.m_id = gbt.m_id')
             ->where($where)
             ->field($field);
@@ -239,8 +240,18 @@ class GoodsHitClient extends ManagementClient
 
         $query = Db::name('sale_orders_details')->alias('sod')
             ->join('sale_orders so', 'so.order_id = sod.order_id')
-            ->where('so.pay_status', 3)
-            ->where('sod.g_id', $gId);
+            ->where('so.pay_status', 3);
+
+        if (intval($item['is_online'] ?? 2) === 1) {
+            $outNo = trim(strval($item['goods_out_no'] ?? ''));
+            if ($outNo === '') return 0;
+            $query->whereRaw(
+                "JSON_SEARCH(IF(JSON_VALID(sod.wc_goods_no), sod.wc_goods_no, JSON_OBJECT()), 'one', ?, NULL, '$.*.out_no') IS NOT NULL",
+                [$outNo]
+            );
+        } else {
+            $query->where('sod.g_id', $gId);
+        }
 
         if (!empty($item['m_id'])) {
             $query->where('so.m_id', intval($item['m_id']));

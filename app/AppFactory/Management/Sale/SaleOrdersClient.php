@@ -1039,25 +1039,31 @@ class SaleOrdersClient extends ManagementClient
      * @param $where
      * @return array|\think\response\Json
      */
-    public function saleDataCollect($where, $postData = [])
+    public function saleDataCollect($where, $behaviorWhere = [])
     {
         $whereCollect = $where;
         $whereCollect['so.pay_status'] = 3;
         $field = "
         IFNULL(sum(sod.quantity - sod.refund_quantity),0) totalQuantity,
-        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) totalPrice,
+        IFNULL(sum(CASE
+            WHEN sod.total_sod_price > 0 THEN GREATEST(sod.total_sod_price - sod.refund_amount, 0)
+            ELSE 0
+        END),0) detailsTotalPrice,
         IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
-        IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
+        IFNULL(sum(CASE WHEN sod.total_sod_price > 0 THEN sod.total_sod_price ELSE 0 END),0) totalSalePrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(sod.cost_price * (sod.quantity - sod.refund_quantity)),0) totalCostPrice
         ";
         $collectData = $this->getSaleOrdersDetailsData($whereCollect, $field)->toArray();
+        $orderSummary = $this->getSaleDataCollectOrderSummary($whereCollect);
+        $collectData['totalPrice'] = $orderSummary['totalPrice'];
+        $collectData['mallPointsAmount'] = $orderSummary['mallPointsAmount'];
         actionLog($this->getLS(), '【SQL】统计概况');
         $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
         $whereGIds = $where;
         $whereGIds[] = ['g_id', ">", 0];
         $gIds = $this->joinSoSodColumn($whereGIds, 'g_id', 'g_id');
-        $collectData['totalClick'] = $this->getBehaviorClickSum($postData);
+        $collectData['totalClick'] = $this->getBehaviorClickSum($behaviorWhere);
         $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
         $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
         $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
@@ -1091,22 +1097,26 @@ class SaleOrdersClient extends ManagementClient
      * @param int $pageNum 页面数据条数
      * @return array|\think\response\Json
      */
-    public function saleDataCollectList($where, $pageNum = 0, $postData = [])
+    public function saleDataCollectList($where, $pageNum = 0, $behaviorWhere = [])
     {
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
         IFNULL(sum(sod.quantity - sod.refund_quantity),0) totalQuantity,
-        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) totalPrice,
-        IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
+        IFNULL(sum(CASE
+            WHEN sod.total_sod_price > 0
+            THEN GREATEST(sod.total_sod_price - sod.refund_amount, 0)
+            ELSE 0
+        END),0) totalPrice,
+        IFNULL(sum(CASE WHEN sod.total_sod_price > 0 THEN sod.total_sod_price ELSE 0 END),0) totalSalePrice,
         IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(sod.cost_price * (sod.quantity - sod.refund_quantity)),0) totalCostPrice
         ";
         $collectList = $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, 'totalPrice desc', 'm_id,g_id');
         actionLog($this->getLS(), '统计销售数据');
-        $collectList = $collectList->each(function ($collectData) use ($postData) {
+        $collectList = $collectList->each(function ($collectData) use ($behaviorWhere) {
             $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
-            $collectData['totalClick'] = $this->getBehaviorClickSum($postData);
+            $collectData['totalClick'] = $this->getBehaviorClickSum($behaviorWhere);
             $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
             $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
             $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
@@ -1124,13 +1134,22 @@ class SaleOrdersClient extends ManagementClient
      * @param $where
      * @return array|\think\response\Json
      */
-    public function exportSaleDataCollect($where, $postData = [])
+    public function exportSaleDataCollect($where, $behaviorWhere = [])
     {
         $field = "
         sod.g_id,so.machine_id,so.machine_name,sod.sku,sod.g_name,
         IFNULL(sum(sod.quantity - sod.refund_quantity),0) totalQuantity,
-        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) totalPrice,
-        IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
+        IFNULL(sum(CASE
+            WHEN sod.total_sod_price > 0
+            THEN GREATEST(sod.total_sod_price - sod.refund_amount, 0)
+            ELSE 0
+        END),0) totalPrice,
+        IFNULL(sum(CASE
+            WHEN so.pay_type = 9 AND so.total_price = 0 AND sod.total_sod_price > 0
+            THEN GREATEST(sod.total_sod_price - sod.refund_amount, 0)
+            ELSE 0
+        END),0) mallPointsAmount,
+        IFNULL(sum(CASE WHEN sod.total_sod_price > 0 THEN sod.total_sod_price ELSE 0 END),0) totalSalePrice,
         IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(sod.cost_price * (sod.quantity - sod.refund_quantity)),0) totalCostPrice
@@ -1141,8 +1160,13 @@ class SaleOrdersClient extends ManagementClient
             $list = $list->toArray();
             actionLog($list, '导出数据');
             foreach ($list as $k => $collectData) {
+                $collectData['totalPrice'] = bcsub($collectData['totalPrice'], $collectData['mallPointsAmount'], 2);
+                if (bccomp($collectData['totalPrice'], 0, 2) < 0) {
+                    $collectData['totalPrice'] = 0.00;
+                }
+                unset($collectData['mallPointsAmount']);
                 $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
-                $collectData['totalClick'] = $this->getBehaviorClickSum($postData);
+                $collectData['totalClick'] = $this->getBehaviorClickSum($behaviorWhere);
                 $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
                 $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
                 $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
@@ -1632,4 +1656,107 @@ class SaleOrdersClient extends ManagementClient
             return $this->rTryCatch($e->getMessage());
         }
     }
+
+    /**
+     * 将指定订单的小票打印命令下发到目标设备。
+     * 接口只负责投递命令，设备收到 printReceipt 后通过 receipt 接口获取小票内容。
+     *
+     * @param array $postData
+     * @return array|string|\think\response\Json
+     */
+    public function printOrderReceipt($postData)
+    {
+        $orderId = intval($postData['order_id'] ?? 0);
+        $machineId = trim((string)($postData['machine_id'] ?? ''));
+
+        $order = $this->getSaleOrdersFind(['order_id' => $orderId], 'order_id,trade_no,m_id,machine_id,ao_id');
+        if (!$order) return $this->rFail('订单不存在');
+        $order = is_object($order) ? $order->toArray() : $order;
+
+        $machine = $this->getMachineFind(['machine_id' => $machineId], 'm_id,machine_id,machine_name,ao_id');
+        if (!$machine) return $this->rFail('目标设备不存在');
+        $machine = is_object($machine) ? $machine->toArray() : $machine;
+
+        $managerAoId = intval($this->manager['ao_id'] ?? 0);
+        $managerLevel = intval($this->manager['level'] ?? 0);
+        if ($managerLevel > 3 && !in_array($managerAoId, [0, 1])) {
+            if (intval($order['ao_id'] ?? 0) !== $managerAoId) return $this->rFail('无权打印其他组织的订单');
+            if (intval($machine['ao_id'] ?? 0) !== $managerAoId) return $this->rFail('无权操作其他组织的设备');
+        }
+
+        if (intval($this->manager['pid'] ?? 0) > 0) {
+            $authMIds = $this->getAuthManagerMachineColumn(
+                ['manager_id' => $this->manager['manager_id']],
+                'm_id'
+            );
+            if ($authMIds) {
+                $authMIds = array_map('intval', $authMIds);
+                if (!in_array(intval($order['m_id']), $authMIds)) return $this->rFail('无权打印该设备的订单');
+                if (!in_array(intval($machine['m_id']), $authMIds)) return $this->rFail('无权操作目标设备');
+            }
+        }
+
+        actionLog([
+            'order_id' => $orderId,
+            'trade_no' => $order['trade_no'] ?? '',
+            'source_machine_id' => $order['machine_id'] ?? '',
+            'target_machine_id' => $machineId,
+            'manager_id' => $this->manager['manager_id'] ?? 0,
+        ], '后台指定设备打印订单小票');
+
+        $result = $this->sendToMachine(
+            ['machine_id' => $machineId],
+            'printReceipt',
+            ['order_id' => $orderId]
+        );
+        if (is_object($result)) return $result;
+        if ($result === false) return $this->rFail('目标设备不存在');
+        return $this->rFail($result);
+    }
+
+    /**
+     * saleDataCollect 的销售额按订单主表汇总，避免商场积分支付时明细金额计入现金销售额。
+     *
+     * @param array $where
+     * @return array
+     */
+    protected function getSaleDataCollectOrderSummary($where)
+    {
+        actionLog($where, 'saleDataCollect order summary where');
+        $orderSubQuery = Db::name('sale_orders')
+            ->alias('so')
+            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
+            ->where($where)
+            ->field("
+                so.order_id,
+                CASE
+                    WHEN MAX(so.total_price) > 0
+                    THEN GREATEST(MAX(so.total_price) - MAX(IFNULL(so.refund_amount, 0)), 0)
+                    ELSE 0
+                END totalPrice,
+                IFNULL(SUM(CASE
+                    WHEN so.pay_type = 9 AND so.total_price = 0 AND sod.total_sod_price > 0
+                    THEN GREATEST(sod.total_sod_price - sod.refund_amount, 0)
+                    ELSE 0
+                END),0) mallPointsAmount
+            ")
+            ->group('so.order_id')
+            ->buildSql();
+        actionLog($orderSubQuery, 'saleDataCollect order summary subquery SQL');
+
+        $summarySql = "SELECT
+            IFNULL(SUM(summary.totalPrice),0) totalPrice,
+            IFNULL(SUM(summary.mallPointsAmount),0) mallPointsAmount
+            FROM {$orderSubQuery} summary";
+        actionLog($summarySql, 'saleDataCollect order summary executed SQL');
+        $summaryRows = Db::query($summarySql);
+        $summary = $summaryRows[0] ?? [];
+        actionLog($summary, 'saleDataCollect order summary result');
+
+        return [
+            'totalPrice' => $summary['totalPrice'] ?? 0,
+            'mallPointsAmount' => $summary['mallPointsAmount'] ?? 0,
+        ];
+    }
+
 }
