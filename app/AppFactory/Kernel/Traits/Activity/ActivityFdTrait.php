@@ -86,6 +86,50 @@ trait ActivityFdTrait
         return $fdList;
     }
 
+    /**
+     * 查询当前时间点生效的设备满减活动，并返回每个活动配置的线上商品。
+     * @param int|null $timestamp
+     * @return array
+     */
+    public function getCurrentActivityFdListByMachine($timestamp = null)
+    {
+        $timestamp = $timestamp === null ? time() : intval($timestamp);
+        $where = 'am.m_id = ' . intval($this->machine['m_id'])
+            . ' AND status IN (1,2)'
+            . ' AND start_date <= ' . $timestamp
+            . ' AND (end_date = 0 OR end_date >= ' . $timestamp . ')';
+        $fdList = $this->getActivityFdListByMachine(
+            $where,
+            'fd_id,fd_name,start_date,end_date,fd_type,condition_type,desc,status',
+            'fd_id desc'
+        );
+        if (!$fdList) return [];
+
+        $fdList = is_object($fdList) && method_exists($fdList, 'toArray') ? $fdList->toArray() : (array)$fdList;
+        foreach ($fdList as $key => $fd) {
+            $fieldOrder = 'fdc_sort ASC, fdc_id desc';
+            $field = 'condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value';
+            if (in_array(intval($fd['condition_type']), [1, 2])) {
+                $fieldOrder = 'fdc_sort DESC, condition_value1 asc, fdc_id asc';
+                $field = 'fdc_id,CAST(condition_value AS UNSIGNED) condition_value1,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort';
+            }
+            $fd['content'] = $this->getActivityFdContentList(
+                ['fd_id' => $fd['fd_id'], 'goods_source' => 1],
+                0,
+                $field,
+                $fieldOrder
+            );
+            $fd['onlineGoodsList'] = $this->getActivityFdContentList(
+                ['fd_id' => $fd['fd_id'], 'goods_source' => 2],
+                0,
+                'fdc_id,source_no,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,goods_source',
+                'fdc_id asc'
+            );
+            $fdList[$key] = $fd;
+        }
+        return $fdList;
+    }
+
     private $fd;
     private $content;
     private $lastContent;

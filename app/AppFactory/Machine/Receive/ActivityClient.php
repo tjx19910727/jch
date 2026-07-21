@@ -891,6 +891,15 @@ class ActivityClient extends ReceiveBaseClient
     }
 
     /**
+     * 获取当前时间点生效的满减活动及其线上商品配置。
+     * @return array|\think\response\Json
+     */
+    public function getCurrentFdListByMachine()
+    {
+        return $this->rQ($this->getCurrentActivityFdListByMachine());
+    }
+
+    /**
      * 订单使用满减满送活动
      * @return mixed
      */
