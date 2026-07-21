@@ -23,5 +23,8 @@ class OfficialProvider implements ServiceProviderInterface
         $app['login'] = function ($app) {
             return new LoginClient($app);
         };
+        $app['coupon'] = function ($app) {
+            return new CouponClient($app);
+        };
     }
 }

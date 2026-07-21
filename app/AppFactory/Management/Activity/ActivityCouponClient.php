@@ -66,6 +66,9 @@ class ActivityCouponClient extends ManagementClient
     {
         $machineList = [];
         $goodsList = [];
+        unset($postData['ticket']);
+        if (!isset($postData['url_day_count'])) $postData['url_day_count'] = 0;
+        if (!isset($postData['url_coupon_count'])) $postData['url_coupon_count'] = 1;
         if (isset($postData['machineList'])) {
             $machineList = $postData['machineList'];
             unset($postData['machineList']);
@@ -86,6 +89,10 @@ class ActivityCouponClient extends ManagementClient
         try {
             $a_id = $this->addActivityCoupon($postData);
             if ($a_id) {
+                $this->updateActivityCoupon([
+                    'c_id' => $a_id,
+                    'ticket' => md5('url_coupon' . $a_id),
+                ]);
                 $insert = [
                     "a_id" => $a_id,
                     "a_type" => 1,
@@ -125,6 +132,7 @@ class ActivityCouponClient extends ManagementClient
     {
         $machineList = [];
         $goodsList = [];
+        unset($postData['ticket']);
         if (isset($postData['machineList'])) {
             $machineList = $postData['machineList'];
         }
@@ -204,5 +212,35 @@ class ActivityCouponClient extends ManagementClient
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    /**
+     * 获取优惠券微信领取链接
+     * @param array $postData
+     * @return array|\think\response\Json
+     */
+    public function getCouponUrl($postData)
+    {
+        $where = ['c_id' => intval($postData['c_id'])];
+        if (!in_array(intval($this->manager['ao_id']), [0, 1])) {
+            $where['ao_id'] = intval($this->manager['ao_id']);
+        }
+        $coupon = $this->getActivityCouponFind($where, 'c_id,code,ticket');
+        if (!$coupon) return $this->r(100, '查无优惠券信息');
+        if (!empty($coupon['code'])) {
+            return $this->r(100, '固定码优惠券不支持链接领取');
+        }
+        $ticket = trim(strval($coupon['ticket'] ?? ''));
+        if (!$ticket) {
+            $ticket = md5('url_coupon' . $coupon['c_id']);
+            $this->updateActivityCoupon([
+                'c_id' => intval($coupon['c_id']),
+                'ticket' => $ticket,
+            ]);
+        }
+        $host = rtrim(strval(env('app.host')), '/');
+        if (!$host) return $this->r(100, '系统域名未配置');
+        $url = $host . '/wx/coupon/authorize?' . http_build_query(['ticket' => $ticket]);
+        return $this->r(200, '获取成功', ['url' => $url]);
     }
 }
