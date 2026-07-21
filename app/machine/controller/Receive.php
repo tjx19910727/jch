@@ -666,6 +666,20 @@ class Receive extends Common
     }
 
     /**
+     * 获取当前时间点生效的满减活动及其线上商品配置。
+     * @return array|string
+     */
+    public function getCurrentFdList()
+    {
+        try {
+            return $this->app->activity->getCurrentFdListByMachine();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 使用提货码
      * @return array|\think\response\Json
      */

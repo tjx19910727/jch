@@ -228,6 +228,7 @@ class VReceive extends VCommon
         "getLotteryOutGoods" => ["msg_id","machine_id","timestamp","sign","order_id"],
 
         "getFd" => ["msg_id","machine_id","timestamp","sign"],
+        "getCurrentFdList" => ["msg_id","machine_id","timestamp","sign"],
 
         "useFd" => ["msg_id","machine_id","timestamp","sign","order_id","fd_id"],
         "usePickCode" => ["msg_id","machine_id","timestamp","sign","pick_code"],
