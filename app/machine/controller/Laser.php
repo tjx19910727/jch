@@ -13,6 +13,7 @@ namespace app\machine\controller;
 use app\AppFactory\AppFactory;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
 use app\AppFactory\Kernel\Traits\Goods\GoodsBehaviorTrackingTrait;
 use app\AppFactory\Kernel\Traits\Laser\LaserResourceTrait;
 use app\AppFactory\Kernel\Util\SignUtil;
@@ -212,12 +213,30 @@ class Laser extends BaseController
             $skipCount = 0;
 
             foreach ($records as $record) {
-                $goodsId = $record['goods_id'] ?? 0;
-                if (!$goodsId) continue;
+                $recordKey = trim(strval($record['record_key'] ?? ''));
+                $recordGoodsKey = strpos($recordKey, 'goods:') === 0
+                    ? trim(substr($recordKey, strlen('goods:')))
+                    : '';
+                $isOnline = strtoupper(substr($recordGoodsKey, 0, 2)) === 'VC' ? 1 : 2;
 
-                // 商品不存在时，不写入行为埋点数据
-                $goods = GoodsModel::getFind(['g_id' => $goodsId], 'g_id');
-                if (!$goods) {
+                if ($isOnline === 1) {
+                    // WC 商品只统计父商品；同一 out_no 有多条时固定取 id 最小的一条。
+                    $goods = WcGoodsLocalModel::getFind(
+                        ['out_no' => $recordGoodsKey],
+                        'id',
+                        'id asc'
+                    );
+                    $goodsId = intval($goods['id'] ?? 0);
+                } else {
+                    // 本地商品优先沿用 goods_id，缺失时兼容从 goods:{goods_id} 中解析。
+                    $goodsId = intval($record['goods_id'] ?? $recordGoodsKey);
+                    $goods = $goodsId
+                        ? GoodsModel::getFind(['g_id' => $goodsId], 'g_id')
+                        : null;
+                }
+
+                // 商品不存在时，不写入行为埋点数据。
+                if (!$goods || !$goodsId) {
                     $skipCount++;
                     continue;
                 }
@@ -226,6 +245,7 @@ class Laser extends BaseController
                 $exist = $this->getGoodsBehaviorTrackingFind([
                     'm_id' => $mId,
                     'goods_id' => $goodsId,
+                    'is_online' => $isOnline,
                     'report_date' => $reportDate,
                 ]);
                 if ($exist) {
@@ -237,7 +257,8 @@ class Laser extends BaseController
                     'm_id' => $mId,
                     'machine_id' => $machineId,
                     'goods_id' => $goodsId,
-                    'record_key' => $record['record_key'] ?? '',
+                    'is_online' => $isOnline,
+                    'record_key' => $recordKey,
                     'click_count' => $record['click_count'] ?? 0,
                     'cart_add_count' => $record['cart_add_count'] ?? 0,
                     'order_count' => $record['order_count'] ?? 0,

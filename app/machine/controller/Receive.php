@@ -1507,6 +1507,6 @@ class Receive extends Common
             actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
-    }  
+    }
 }
 

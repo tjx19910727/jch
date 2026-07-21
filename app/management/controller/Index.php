@@ -179,7 +179,7 @@ class Index extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 15;
-        $topType = $postData['top_type'] ?? 1;
+        $topType = intval($postData['top_type'] ?? 1);
         if (!in_array($topType, [1, 2], true)) {
             $topType = 1;
         }
@@ -196,7 +196,7 @@ class Index extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 15;
-        $topType = $postData['top_type'] ?? 1;
+        $topType = intval($postData['top_type'] ?? 1);
         if (!in_array($topType, [1, 2], true)) {
             $topType = 1;
         }
@@ -212,7 +212,7 @@ class Index extends Common
     public function exportMachineListV2()
     {
         $postData = input();
-        $topType = $postData['top_type'] ?? 1;
+        $topType = intval($postData['top_type'] ?? 1);
         if (!in_array($topType, [1, 2], true)) {
             $topType = 1;
         }

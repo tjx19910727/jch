@@ -16,6 +16,7 @@ use app\AppFactory\Wx\Official\OfficialProvider;
  * Class Application
  * @property Official\OfficialClient        $official    公众号
  * @property Official\LoginClient           $login       用户登录
+ * @property Official\CouponClient          $coupon      优惠券链接领取
  * @package app\AppFactory\Wx
  */
 class Application extends ServiceContainer

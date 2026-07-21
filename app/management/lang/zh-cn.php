@@ -112,6 +112,10 @@ return [
         "c_type_require" => "优惠券类型不能为空",
         "designated_machine_require" => "适用机器不能为空",
         "designated_goods_require" => "适用商品不能为空",
+        "url_day_count_integer" => "链接领取间隔天数必须为整数",
+        "url_day_count_egt" => "链接领取间隔天数不能小于0",
+        "url_coupon_count_integer" => "链接累计领取数量必须为整数",
+        "url_coupon_count_gt" => "链接累计领取数量必须大于0",
     ],
 
     "VActivityCouponUsed" => [
