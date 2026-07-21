@@ -74,6 +74,12 @@ trait ActivityFdTrait
                     $field = "fdc_id,CAST(condition_value AS UNSIGNED) condition_value1, condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,fdc_sort";
                 }
                 $fdl['content'] = $this->getActivityFdContentList(['fd_id' => $fdl['fd_id'], 'goods_source' => 1],0,$field,$fieldOrder);
+                $fdl['onlineGoodsList'] = $this->getActivityFdContentList(
+                    ['fd_id' => $fdl['fd_id'], 'goods_source' => 2],
+                    0,
+                    'fdc_id,source_no,condition_value,g_id,g_name,pic,sku,gc_id,gc_name,active_value,goods_source',
+                    'fdc_id asc'
+                );
                 if ($fdl['status'] == 1) $update['status'] = 2;
                 if ($fdl['end_date'] > 0 && $fdl['end_date'] < strtotime(date("Y-m-d")) && $fdl['status'] != 3) {
                     $update['status'] = 3;
