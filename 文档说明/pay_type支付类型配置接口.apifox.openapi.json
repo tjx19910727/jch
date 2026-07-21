@@ -1,0 +1,784 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "嘉潮汇管理后台 - 支付类型配置接口",
+    "description": "支付类型配置表 pay_type 的增删改查接口及树形查询接口。该表承接原 config/payment.php 中 pay_type_map 的配置，并记录每种支付类型属于线上支付还是线下支付。运行时支付类型名称优先读取 pay_type 表；表不存在或无数据时回退 config/payment.php。配套 SQL：文档说明/pay_type支付类型配置数据库变更.sql。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}",
+      "description": "Apifox 环境变量 baseUrl"
+    }
+  ],
+  "security": [
+    {
+      "TokenAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "支付类型配置",
+      "description": "维护 sale_orders.pay_type 对应的展示名称、启停状态和排序"
+    }
+  ],
+  "paths": {
+    "/management/config.pay_type/getList": {
+      "post": {
+        "tags": [
+          "支付类型配置"
+        ],
+        "summary": "支付类型配置列表",
+        "description": "分页查询 pay_type 表。pay_type_name、remark 支持模糊查询。",
+        "operationId": "payTypeGetList",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PayTypeListRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/PayTypeListSuccess"
+          }
+        }
+      }
+    },
+    "/management/config.pay_type/getFind": {
+      "post": {
+        "tags": [
+          "支付类型配置"
+        ],
+        "summary": "支付类型配置详情",
+        "description": "按 pt_id 或 pay_type 查询单条支付类型配置。",
+        "operationId": "payTypeGetFind",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PayTypeFindRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/PayTypeFindSuccess"
+          }
+        }
+      }
+    },
+    "/management/config.pay_type/getTree": {
+      "post": {
+        "tags": [
+          "支付类型配置"
+        ],
+        "summary": "支付类型配置树",
+        "description": "按 pay_scene 返回树形数据，第一层为线上支付/线下支付，children 为各自所属的 pay_type。默认返回 status=1 的启用支付类型。",
+        "operationId": "payTypeGetTree",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PayTypeTreeRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/PayTypeTreeSuccess"
+          }
+        }
+      }
+    },
+    "/management/config.pay_type/add": {
+      "post": {
+        "tags": [
+          "支付类型配置"
+        ],
+        "summary": "新增支付类型配置",
+        "description": "新增 pay_type 记录。pay_type 唯一，status 未传时默认启用。",
+        "operationId": "payTypeAdd",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PayTypeAddRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CommonWriteSuccess"
+          }
+        }
+      }
+    },
+    "/management/config.pay_type/update": {
+      "post": {
+        "tags": [
+          "支付类型配置"
+        ],
+        "summary": "修改支付类型配置",
+        "description": "按 pt_id 修改支付类型配置。pay_type 如提交则仍需保持唯一。",
+        "operationId": "payTypeUpdate",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PayTypeUpdateRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CommonWriteSuccess"
+          }
+        }
+      }
+    },
+    "/management/config.pay_type/del": {
+      "post": {
+        "tags": [
+          "支付类型配置"
+        ],
+        "summary": "删除支付类型配置",
+        "description": "按 pt_id 删除支付类型配置。删除后该支付类型不会出现在启用下拉选项中；历史订单展示若表内无名称会回退 config/payment.php 或显示 支付类型#值。",
+        "operationId": "payTypeDel",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/TokenHeader"
+          }
+        ],
+        "requestBody": {
+          "$ref": "#/components/requestBodies/PayTypeDelRequest"
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/CommonWriteSuccess"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "TokenAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "token"
+      }
+    },
+    "parameters": {
+      "TokenHeader": {
+        "name": "token",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "example": "{{token}}"
+        },
+        "description": "管理后台登录 token"
+      }
+    },
+    "requestBodies": {
+      "PayTypeListRequest": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeListRequest"
+            },
+            "examples": {
+              "分页查询": {
+                "value": {
+                  "pageNum": 20,
+                  "status": 1,
+                  "pay_type_name": "微信"
+                }
+              }
+            }
+          },
+          "application/x-www-form-urlencoded": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeListRequest"
+            }
+          }
+        }
+      },
+      "PayTypeFindRequest": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeFindRequest"
+            },
+            "examples": {
+              "按配置ID": {
+                "value": {
+                  "pt_id": 1
+                }
+              },
+              "按支付类型": {
+                "value": {
+                  "pay_type": 1
+                }
+              }
+            }
+          },
+          "application/x-www-form-urlencoded": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeFindRequest"
+            }
+          }
+        }
+      },
+      "PayTypeTreeRequest": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeTreeRequest"
+            },
+            "examples": {
+              "启用支付类型树": {
+                "value": {}
+              },
+              "线下支付类型树": {
+                "value": {
+                  "pay_scene": 2,
+                  "status": 1
+                }
+              }
+            }
+          },
+          "application/x-www-form-urlencoded": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeTreeRequest"
+            }
+          }
+        }
+      },
+      "PayTypeAddRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeAddRequest"
+            },
+            "examples": {
+              "新增支付类型": {
+                "value": {
+                  "pay_type": 38,
+                  "pay_type_name": "测试支付",
+                  "pay_scene": 1,
+                  "status": 1,
+                  "sort": 380,
+                  "remark": "测试环境支付类型"
+                }
+              }
+            }
+          },
+          "application/x-www-form-urlencoded": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeAddRequest"
+            }
+          }
+        }
+      },
+      "PayTypeUpdateRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeUpdateRequest"
+            },
+            "examples": {
+              "停用支付类型": {
+                "value": {
+                  "pt_id": 1,
+                  "status": 2
+                }
+              },
+              "修改名称": {
+                "value": {
+                  "pt_id": 1,
+                  "pay_type_name": "微信支付",
+                  "pay_scene": 1,
+                  "sort": 10
+                }
+              }
+            }
+          },
+          "application/x-www-form-urlencoded": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeUpdateRequest"
+            }
+          }
+        }
+      },
+      "PayTypeDelRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeDelRequest"
+            },
+            "examples": {
+              "删除": {
+                "value": {
+                  "pt_id": 1
+                }
+              }
+            }
+          },
+          "application/x-www-form-urlencoded": {
+            "schema": {
+              "$ref": "#/components/schemas/PayTypeDelRequest"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "PayTypeListRequest": {
+        "type": "object",
+        "properties": {
+          "pageNum": {
+            "type": "integer",
+            "description": "分页条数；不传或0表示不分页"
+          },
+          "pt_id": {
+            "type": "integer",
+            "description": "支付类型配置ID，可选"
+          },
+          "pay_type": {
+            "type": "integer",
+            "description": "支付类型值，可选"
+          },
+          "pay_type_name": {
+            "type": "string",
+            "description": "支付类型名称，支持模糊查询"
+          },
+          "pay_scene": {
+            "type": "integer",
+            "description": "线上线下支付标记：1线上支付，2线下支付",
+            "enum": [
+              1,
+              2
+            ]
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态：1启用，2停用",
+            "enum": [
+              1,
+              2
+            ]
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注，支持模糊查询"
+          }
+        }
+      },
+      "PayTypeFindRequest": {
+        "type": "object",
+        "properties": {
+          "pt_id": {
+            "type": "integer",
+            "description": "支付类型配置ID"
+          },
+          "pay_type": {
+            "type": "integer",
+            "description": "支付类型值"
+          }
+        }
+      },
+      "PayTypeTreeRequest": {
+        "type": "object",
+        "properties": {
+          "pay_scene": {
+            "type": "integer",
+            "description": "可选，1线上支付，2线下支付；不传返回两个分组",
+            "enum": [
+              1,
+              2
+            ]
+          },
+          "status": {
+            "type": "integer",
+            "description": "可选，1启用，2停用；不传时后端默认 status=1",
+            "enum": [
+              1,
+              2
+            ]
+          },
+          "pay_type_name": {
+            "type": "string",
+            "description": "支付类型名称，支持模糊查询"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注，支持模糊查询"
+          }
+        }
+      },
+      "PayTypeAddRequest": {
+        "type": "object",
+        "required": [
+          "pay_type",
+          "pay_type_name"
+        ],
+        "properties": {
+          "pay_type": {
+            "type": "integer",
+            "description": "支付类型值，必须唯一"
+          },
+          "pay_type_name": {
+            "type": "string",
+            "description": "支付类型名称，最长50字符"
+          },
+          "pay_scene": {
+            "type": "integer",
+            "description": "线上线下支付标记：1线上支付，2线下支付；默认1",
+            "enum": [
+              1,
+              2
+            ],
+            "default": 1
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态：1启用，2停用；默认1",
+            "enum": [
+              1,
+              2
+            ],
+            "default": 1
+          },
+          "sort": {
+            "type": "integer",
+            "description": "排序，越小越靠前；默认0"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注，最长255字符"
+          }
+        }
+      },
+      "PayTypeUpdateRequest": {
+        "type": "object",
+        "required": [
+          "pt_id"
+        ],
+        "properties": {
+          "pt_id": {
+            "type": "integer",
+            "description": "支付类型配置ID，必填"
+          },
+          "pay_type": {
+            "type": "integer",
+            "description": "支付类型值，可选；提交时必须唯一"
+          },
+          "pay_type_name": {
+            "type": "string",
+            "description": "支付类型名称，可选，最长50字符"
+          },
+          "pay_scene": {
+            "type": "integer",
+            "description": "线上线下支付标记：1线上支付，2线下支付",
+            "enum": [
+              1,
+              2
+            ]
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态：1启用，2停用",
+            "enum": [
+              1,
+              2
+            ]
+          },
+          "sort": {
+            "type": "integer",
+            "description": "排序，越小越靠前"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注，最长255字符"
+          }
+        }
+      },
+      "PayTypeDelRequest": {
+        "type": "object",
+        "required": [
+          "pt_id"
+        ],
+        "properties": {
+          "pt_id": {
+            "type": "integer",
+            "description": "支付类型配置ID，必填"
+          }
+        }
+      },
+      "PayTypeRecord": {
+        "type": "object",
+        "properties": {
+          "pt_id": {
+            "type": "integer",
+            "description": "支付类型配置ID"
+          },
+          "pay_type": {
+            "type": "integer",
+            "description": "支付类型值"
+          },
+          "pay_type_name": {
+            "type": "string",
+            "description": "支付类型名称"
+          },
+          "pay_scene": {
+            "type": "integer",
+            "description": "线上线下支付标记：1线上支付，2线下支付"
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态：1启用，2停用"
+          },
+          "sort": {
+            "type": "integer",
+            "description": "排序"
+          },
+          "remark": {
+            "type": "string",
+            "description": "备注"
+          },
+          "creator": {
+            "type": "integer",
+            "description": "创建人 manager_id"
+          },
+          "creator_nickname": {
+            "type": "string",
+            "description": "创建人昵称，列表查询时由 BaseModel 自动补充"
+          },
+          "create_time": {
+            "type": "integer",
+            "description": "创建时间戳"
+          },
+          "update_time": {
+            "type": "integer",
+            "description": "更新时间戳"
+          }
+        }
+      },
+      "PayTypeTreeNode": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "integer",
+            "description": "第一层为 pay_scene，第二层为 pay_type"
+          },
+          "label": {
+            "type": "string",
+            "description": "展示名称"
+          },
+          "pay_scene": {
+            "type": "integer",
+            "description": "支付场景：1线上支付，2线下支付"
+          },
+          "pay_scene_name": {
+            "type": "string",
+            "description": "支付场景名称，仅第一层返回"
+          },
+          "children": {
+            "type": "array",
+            "description": "支付类型子节点",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "description": "pay_type"
+                },
+                "label": {
+                  "type": "string",
+                  "description": "pay_type_name"
+                },
+                "pt_id": {
+                  "type": "integer",
+                  "description": "支付类型配置ID"
+                },
+                "pay_type": {
+                  "type": "integer",
+                  "description": "支付类型"
+                },
+                "pay_type_name": {
+                  "type": "string",
+                  "description": "支付类型名称"
+                },
+                "pay_scene": {
+                  "type": "integer",
+                  "description": "所属支付场景"
+                },
+                "status": {
+                  "type": "integer",
+                  "description": "状态"
+                },
+                "sort": {
+                  "type": "integer",
+                  "description": "排序"
+                },
+                "remark": {
+                  "type": "string",
+                  "description": "备注"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "CommonWriteSuccess": {
+        "description": "写操作成功",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object"
+            },
+            "examples": {
+              "成功": {
+                "value": {
+                  "state": 200,
+                  "msg": "操作成功",
+                  "data": 1
+                }
+              },
+              "失败": {
+                "value": {
+                  "state": 100,
+                  "msg": "该支付类型已存在",
+                  "data": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "PayTypeListSuccess": {
+        "description": "列表查询成功",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object"
+            },
+            "example": {
+              "state": 200,
+              "msg": "success",
+              "data": {
+                "list": [
+                  {
+                    "pt_id": 1,
+                    "pay_type": 1,
+                    "pay_type_name": "微信支付",
+                    "pay_scene": 1,
+                    "status": 1,
+                    "sort": 10,
+                    "remark": "来源：config/payment.php pay_type_map",
+                    "creator": 0,
+                    "creator_nickname": "",
+                    "create_time": 1783311989,
+                    "update_time": 1783311989
+                  }
+                ],
+                "total": 1
+              }
+            }
+          }
+        }
+      },
+      "PayTypeFindSuccess": {
+        "description": "详情查询成功",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object"
+            },
+            "example": {
+              "state": 200,
+              "msg": "success",
+              "data": {
+                "pt_id": 1,
+                "pay_type": 1,
+                "pay_type_name": "微信支付",
+                "pay_scene": 1,
+                "status": 1,
+                "sort": 10,
+                "remark": "来源：config/payment.php pay_type_map",
+                "creator": 0,
+                "create_time": 1783311989,
+                "update_time": 1783311989
+              }
+            }
+          }
+        }
+      },
+      "PayTypeTreeSuccess": {
+        "description": "树形查询成功",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object"
+            },
+            "example": {
+              "state": 200,
+              "msg": "success",
+              "data": [
+                {
+                  "value": 1,
+                  "label": "线上支付",
+                  "pay_scene": 1,
+                  "pay_scene_name": "线上支付",
+                  "children": [
+                    {
+                      "value": 1,
+                      "label": "微信支付",
+                      "pt_id": 1,
+                      "pay_type": 1,
+                      "pay_type_name": "微信支付",
+                      "pay_scene": 1,
+                      "status": 1,
+                      "sort": 10,
+                      "remark": ""
+                    }
+                  ]
+                },
+                {
+                  "value": 2,
+                  "label": "线下支付",
+                  "pay_scene": 2,
+                  "pay_scene_name": "线下支付",
+                  "children": [
+                    {
+                      "value": 12,
+                      "label": "微信反扫支付",
+                      "pt_id": 12,
+                      "pay_type": 12,
+                      "pay_type_name": "微信反扫支付",
+                      "pay_scene": 2,
+                      "status": 1,
+                      "sort": 12,
+                      "remark": ""
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

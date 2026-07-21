@@ -1,0 +1,747 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "嘉潮汇 - 本次支付类型/订单类型/设备支付类型接口",
+    "description": "本文件汇总本次改动涉及的 HTTP 接口：后台 pay_type 支付类型配置及树形查询、后台 order_type 订单类型配置、设备端 pay_type 启用列表查询。后台接口需要 token；设备端接口需要 mac 请求头，并按设备端签名规则提交 msg_id、machine_id、timestamp、sign。配套 SQL：文档说明/本次支付订单类型配置及pay_channel清理汇总.sql。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}",
+      "description": "Apifox 环境变量 baseUrl"
+    }
+  ],
+  "tags": [
+    {
+      "name": "后台-支付类型配置",
+      "description": "维护 pay_type 表，供订单、分账、设备端支付方式展示使用"
+    },
+    {
+      "name": "后台-订单类型配置",
+      "description": "维护 order_type 表，供订单查询、导出、统计展示使用"
+    },
+    {
+      "name": "设备端-支付类型",
+      "description": "设备端读取后台启用的支付类型配置"
+    }
+  ],
+  "paths": {
+    "/management/config.pay_type/getList": {
+      "post": {
+        "tags": ["后台-支付类型配置"],
+        "summary": "支付类型配置列表",
+        "description": "分页查询 pay_type 表。pay_type_name、remark 支持模糊查询；status、pay_scene、pay_type 支持精确筛选。",
+        "operationId": "payTypeGetList",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/PayTypeListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/PayTypeListSuccess"}}
+      }
+    },
+    "/management/config.pay_type/getFind": {
+      "post": {
+        "tags": ["后台-支付类型配置"],
+        "summary": "支付类型配置详情",
+        "description": "按 pt_id 或 pay_type 查询单条 pay_type 配置。",
+        "operationId": "payTypeGetFind",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/PayTypeFindRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/PayTypeFindSuccess"}}
+      }
+    },
+    "/management/config.pay_type/getTree": {
+      "post": {
+        "tags": ["后台-支付类型配置"],
+        "summary": "支付类型配置树",
+        "description": "返回树形支付类型数据。第一层固定按 pay_scene 分组：1线上支付、2线下支付；children 中返回各自所属的 pay_type。默认只返回 status=1 的启用支付类型；如请求体传 status，则按传入状态过滤。",
+        "operationId": "payTypeGetTree",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/PayTypeTreeRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/PayTypeTreeSuccess"}}
+      }
+    },
+    "/management/config.pay_type/add": {
+      "post": {
+        "tags": ["后台-支付类型配置"],
+        "summary": "新增支付类型配置",
+        "description": "新增 pay_type 记录。pay_type 唯一；pay_scene 未传时业务默认按线上支付处理；status 未传时默认启用。",
+        "operationId": "payTypeAdd",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/PayTypeAddRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonWriteSuccess"}}
+      }
+    },
+    "/management/config.pay_type/update": {
+      "post": {
+        "tags": ["后台-支付类型配置"],
+        "summary": "修改支付类型配置",
+        "description": "按 pt_id 修改 pay_type 配置。pay_type 如提交仍需唯一。",
+        "operationId": "payTypeUpdate",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/PayTypeUpdateRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonWriteSuccess"}}
+      }
+    },
+    "/management/config.pay_type/del": {
+      "post": {
+        "tags": ["后台-支付类型配置"],
+        "summary": "删除支付类型配置",
+        "description": "按 pt_id 删除 pay_type 配置。删除后设备端启用列表不会返回该支付类型；历史订单展示会回退配置或显示默认文案。",
+        "operationId": "payTypeDel",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/PayTypeDelRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonWriteSuccess"}}
+      }
+    },
+    "/management/config.order_type/getList": {
+      "post": {
+        "tags": ["后台-订单类型配置"],
+        "summary": "订单类型配置列表",
+        "description": "分页查询 order_type 表。order_type_name、remark 支持模糊查询；status、order_type 支持精确筛选。",
+        "operationId": "orderTypeGetList",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/OrderTypeListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/OrderTypeListSuccess"}}
+      }
+    },
+    "/management/config.order_type/getFind": {
+      "post": {
+        "tags": ["后台-订单类型配置"],
+        "summary": "订单类型配置详情",
+        "description": "按 ot_id 或 order_type 查询单条 order_type 配置。",
+        "operationId": "orderTypeGetFind",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/OrderTypeFindRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/OrderTypeFindSuccess"}}
+      }
+    },
+    "/management/config.order_type/add": {
+      "post": {
+        "tags": ["后台-订单类型配置"],
+        "summary": "新增订单类型配置",
+        "description": "新增 order_type 记录。order_type 唯一；status 未传时默认启用。",
+        "operationId": "orderTypeAdd",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/OrderTypeAddRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonWriteSuccess"}}
+      }
+    },
+    "/management/config.order_type/update": {
+      "post": {
+        "tags": ["后台-订单类型配置"],
+        "summary": "修改订单类型配置",
+        "description": "按 ot_id 修改 order_type 配置。order_type 如提交仍需唯一。",
+        "operationId": "orderTypeUpdate",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/OrderTypeUpdateRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonWriteSuccess"}}
+      }
+    },
+    "/management/config.order_type/del": {
+      "post": {
+        "tags": ["后台-订单类型配置"],
+        "summary": "删除订单类型配置",
+        "description": "按 ot_id 删除 order_type 配置。删除后启用下拉不会返回该订单类型；历史订单展示会回退内置默认映射或显示默认文案。",
+        "operationId": "orderTypeDel",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/OrderTypeDelRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonWriteSuccess"}}
+      }
+    },
+    "/machine/receive/getPayTypeList": {
+      "post": {
+        "tags": ["设备端-支付类型"],
+        "summary": "设备端获取启用支付类型列表",
+        "description": "设备端读取 pay_type 表中 status=1 的支付类型配置，按 sort asc、pay_type asc 排序。若 pay_type 表不存在或没有可用记录，后端回退 config/payment.php 的 pay_type_map。该接口只读，不修改订单和库存。",
+        "operationId": "machineGetPayTypeList",
+        "parameters": [{"$ref": "#/components/parameters/MacHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/MachineSignedRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/MachinePayTypeListSuccess"}}
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "TokenHeader": {
+        "name": "token",
+        "in": "header",
+        "required": true,
+        "schema": {"type": "string"},
+        "example": "{{token}}",
+        "description": "后台登录 token"
+      },
+      "MacHeader": {
+        "name": "mac",
+        "in": "header",
+        "required": true,
+        "schema": {"type": "string"},
+        "example": "04:2B:58:12:16:3A",
+        "description": "设备网卡 MAC，参与设备身份校验"
+      }
+    },
+    "requestBodies": {
+      "PayTypeListRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/PayTypeListRequest"},
+            "examples": {
+              "allEnabled": {
+                "summary": "查询启用支付类型",
+                "value": {"pageNum": 1, "pageSize": 20, "status": 1}
+              },
+              "offline": {
+                "summary": "查询线下支付类型",
+                "value": {"pageNum": 1, "pageSize": 20, "pay_scene": 2}
+              }
+            }
+          }
+        }
+      },
+      "PayTypeFindRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/PayTypeFindRequest"},
+            "examples": {
+              "byId": {"summary": "按 pt_id 查询", "value": {"pt_id": 1}},
+              "byPayType": {"summary": "按 pay_type 查询", "value": {"pay_type": 1}}
+            }
+          }
+        }
+      },
+      "PayTypeTreeRequest": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/PayTypeTreeRequest"},
+            "examples": {
+              "enabled": {
+                "summary": "查询启用支付类型树",
+                "value": {}
+              },
+              "offlineEnabled": {
+                "summary": "只查询线下支付类型树",
+                "value": {"pay_scene": 2, "status": 1}
+              }
+            }
+          }
+        }
+      },
+      "PayTypeAddRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/PayTypeWriteRequest"},
+            "examples": {
+              "online": {
+                "summary": "新增线上支付",
+                "value": {"pay_type": 38, "pay_type_name": "测试线上支付", "pay_scene": 1, "status": 1, "sort": 380, "remark": "联调测试"}
+              }
+            }
+          }
+        }
+      },
+      "PayTypeUpdateRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/PayTypeUpdateRequest"},
+            "examples": {
+              "rename": {
+                "summary": "修改名称和排序",
+                "value": {"pt_id": 1, "pay_type_name": "微信支付", "pay_scene": 1, "status": 1, "sort": 10}
+              }
+            }
+          }
+        }
+      },
+      "PayTypeDelRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/PayTypeDelRequest"},
+            "examples": {"del": {"summary": "删除", "value": {"pt_id": 38}}}
+          }
+        }
+      },
+      "OrderTypeListRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeListRequest"},
+            "examples": {
+              "allEnabled": {"summary": "查询启用订单类型", "value": {"pageNum": 1, "pageSize": 20, "status": 1}}
+            }
+          }
+        }
+      },
+      "OrderTypeFindRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeFindRequest"},
+            "examples": {
+              "byId": {"summary": "按 ot_id 查询", "value": {"ot_id": 1}},
+              "byOrderType": {"summary": "按 order_type 查询", "value": {"order_type": 7}}
+            }
+          }
+        }
+      },
+      "OrderTypeAddRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeWriteRequest"},
+            "examples": {
+              "mallPoint": {"summary": "新增订单类型", "value": {"order_type": 8, "order_type_name": "测试订单", "status": 1, "sort": 80, "remark": "联调测试"}}
+            }
+          }
+        }
+      },
+      "OrderTypeUpdateRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeUpdateRequest"},
+            "examples": {
+              "rename": {"summary": "修改名称和排序", "value": {"ot_id": 7, "order_type_name": "商场积分订单", "status": 1, "sort": 70}}
+            }
+          }
+        }
+      },
+      "OrderTypeDelRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeDelRequest"},
+            "examples": {"del": {"summary": "删除", "value": {"ot_id": 8}}}
+          }
+        }
+      },
+      "MachineSignedRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/MachineSignedRequest"},
+            "examples": {
+              "query": {
+                "summary": "设备查询启用支付类型",
+                "value": {
+                  "msg_id": "dc4f7e93-9df7-48bb-a6ae-4f4550afa48a",
+                  "machine_id": "JCHM-H4DPK-0095",
+                  "timestamp": "1783311989",
+                  "sign": "780296632b570784b422feac1f45988d"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "PayTypeListSuccess": {
+        "description": "查询成功",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/PayTypeListResponse"},
+            "examples": {
+              "success": {
+                "value": {
+                  "state": 200,
+                  "msg": "查询成功",
+                  "data": {
+                    "data": [
+                      {"pt_id": 1, "pay_type": 1, "pay_type_name": "微信支付", "pay_scene": 1, "status": 1, "sort": 10, "remark": "", "creator": 0, "create_time": 1783311989, "update_time": 1783311989}
+                    ],
+                    "total": 1,
+                    "per_page": 20,
+                    "current_page": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "PayTypeFindSuccess": {
+        "description": "查询成功",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/PayTypeFindResponse"},
+            "examples": {
+              "success": {"value": {"state": 200, "msg": "查询成功", "data": {"pt_id": 1, "pay_type": 1, "pay_type_name": "微信支付", "pay_scene": 1, "status": 1, "sort": 10, "remark": ""}}}
+            }
+          }
+        }
+      },
+      "PayTypeTreeSuccess": {
+        "description": "查询成功",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/PayTypeTreeResponse"},
+            "examples": {
+              "success": {
+                "value": {
+                  "state": 200,
+                  "msg": "查询成功",
+                  "data": [
+                    {
+                      "value": 1,
+                      "label": "线上支付",
+                      "pay_scene": 1,
+                      "pay_scene_name": "线上支付",
+                      "children": [
+                        {"value": 1, "label": "微信支付", "pt_id": 1, "pay_type": 1, "pay_type_name": "微信支付", "pay_scene": 1, "status": 1, "sort": 10, "remark": ""}
+                      ]
+                    },
+                    {
+                      "value": 2,
+                      "label": "线下支付",
+                      "pay_scene": 2,
+                      "pay_scene_name": "线下支付",
+                      "children": [
+                        {"value": 12, "label": "微信反扫支付", "pt_id": 12, "pay_type": 12, "pay_type_name": "微信反扫支付", "pay_scene": 2, "status": 1, "sort": 12, "remark": ""}
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "OrderTypeListSuccess": {
+        "description": "查询成功",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeListResponse"},
+            "examples": {
+              "success": {
+                "value": {
+                  "state": 200,
+                  "msg": "查询成功",
+                  "data": {
+                    "data": [
+                      {"ot_id": 7, "order_type": 7, "order_type_name": "商场积分订单", "status": 1, "sort": 70, "remark": "来源：商城积分支付/退款逻辑", "creator": 0, "create_time": 1783311989, "update_time": 1783311989}
+                    ],
+                    "total": 1,
+                    "per_page": 20,
+                    "current_page": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "OrderTypeFindSuccess": {
+        "description": "查询成功",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeFindResponse"},
+            "examples": {
+              "success": {"value": {"state": 200, "msg": "查询成功", "data": {"ot_id": 7, "order_type": 7, "order_type_name": "商场积分订单", "status": 1, "sort": 70, "remark": ""}}}
+            }
+          }
+        }
+      },
+      "MachinePayTypeListSuccess": {
+        "description": "设备查询成功",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/MachinePayTypeListResponse"},
+            "examples": {
+              "success": {
+                "value": {
+                  "state": 200,
+                  "msg": "查询成功",
+                  "data": {
+                    "list": [
+                      {"pay_type": 1, "pay_type_name": "微信支付", "pay_scene": 1, "sort": 10, "remark": "", "value": 1, "label": "微信支付"},
+                      {"pay_type": 12, "pay_type_name": "微信反扫支付", "pay_scene": 2, "sort": 12, "remark": "", "value": 12, "label": "微信反扫支付"}
+                    ]
+                  }
+                }
+              },
+              "signFail": {"value": {"state": 100, "msg": "验签失败"}}
+            }
+          }
+        }
+      },
+      "CommonWriteSuccess": {
+        "description": "写操作返回",
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/CommonResponse"},
+            "examples": {
+              "success": {"value": {"state": 200, "msg": "操作成功", "data": 1}},
+              "validateFail": {"value": {"state": 300, "msg": "参数错误"}}
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "CommonResponse": {
+        "type": "object",
+        "properties": {
+          "state": {"type": "integer", "description": "状态码，200 表示成功"},
+          "msg": {"type": "string", "description": "返回消息"},
+          "data": {"description": "返回数据，写操作通常为主键或影响结果"}
+        },
+        "required": ["state", "msg"]
+      },
+      "PayTypeItem": {
+        "type": "object",
+        "properties": {
+          "pt_id": {"type": "integer", "description": "支付类型配置ID"},
+          "pay_type": {"type": "integer", "description": "订单支付类型，对应 sale_orders.pay_type"},
+          "pay_type_name": {"type": "string", "description": "支付类型名称"},
+          "pay_scene": {"type": "integer", "enum": [1, 2], "description": "线上线下支付标记：1线上支付，2线下支付"},
+          "status": {"type": "integer", "enum": [1, 2], "description": "状态：1启用，2禁用"},
+          "sort": {"type": "integer", "description": "排序，升序"},
+          "remark": {"type": "string", "description": "备注"},
+          "creator": {"type": "integer", "description": "创建人 manager_id"},
+          "create_time": {"type": "integer", "description": "创建时间戳"},
+          "update_time": {"type": "integer", "description": "更新时间戳"}
+        }
+      },
+      "OrderTypeItem": {
+        "type": "object",
+        "properties": {
+          "ot_id": {"type": "integer", "description": "订单类型配置ID"},
+          "order_type": {"type": "integer", "description": "订单类型，对应 sale_orders.order_type"},
+          "order_type_name": {"type": "string", "description": "订单类型名称"},
+          "status": {"type": "integer", "enum": [1, 2], "description": "状态：1启用，2禁用"},
+          "sort": {"type": "integer", "description": "排序，升序"},
+          "remark": {"type": "string", "description": "备注"},
+          "creator": {"type": "integer", "description": "创建人 manager_id"},
+          "create_time": {"type": "integer", "description": "创建时间戳"},
+          "update_time": {"type": "integer", "description": "更新时间戳"}
+        }
+      },
+      "MachinePayTypeItem": {
+        "type": "object",
+        "properties": {
+          "pay_type": {"type": "integer", "description": "订单支付类型"},
+          "pay_type_name": {"type": "string", "description": "支付类型名称"},
+          "pay_scene": {"type": "integer", "enum": [1, 2], "description": "线上线下支付标记：1线上支付，2线下支付"},
+          "sort": {"type": "integer", "description": "排序"},
+          "remark": {"type": "string", "description": "备注"},
+          "value": {"type": "integer", "description": "兼容前端/设备下拉组件的值，等同 pay_type"},
+          "label": {"type": "string", "description": "兼容前端/设备下拉组件的展示名，等同 pay_type_name"}
+        },
+        "required": ["pay_type", "pay_type_name", "pay_scene", "value", "label"]
+      },
+      "PageResponse": {
+        "type": "object",
+        "properties": {
+          "data": {"type": "array", "items": {"type": "object"}, "description": "分页数据"},
+          "total": {"type": "integer", "description": "总数"},
+          "per_page": {"type": "integer", "description": "每页数量"},
+          "current_page": {"type": "integer", "description": "当前页"}
+        }
+      },
+      "PayTypeListRequest": {
+        "type": "object",
+        "properties": {
+          "pageNum": {"type": "integer", "description": "页码，0 表示不分页或使用默认逻辑"},
+          "pageSize": {"type": "integer", "description": "每页数量"},
+          "pt_id": {"type": "integer", "description": "支付类型配置ID"},
+          "pay_type": {"type": "integer", "description": "支付类型"},
+          "pay_type_name": {"type": "string", "description": "支付类型名称，支持模糊查询"},
+          "pay_scene": {"type": "integer", "enum": [1, 2], "description": "1线上支付，2线下支付"},
+          "status": {"type": "integer", "enum": [1, 2], "description": "1启用，2禁用"},
+          "remark": {"type": "string", "description": "备注，支持模糊查询"}
+        }
+      },
+      "PayTypeFindRequest": {
+        "type": "object",
+        "properties": {
+          "pt_id": {"type": "integer", "description": "支付类型配置ID"},
+          "pay_type": {"type": "integer", "description": "支付类型"}
+        }
+      },
+      "PayTypeTreeRequest": {
+        "type": "object",
+        "properties": {
+          "pay_scene": {"type": "integer", "enum": [1, 2], "description": "可选，1线上支付，2线下支付；不传返回两个分组"},
+          "status": {"type": "integer", "enum": [1, 2], "description": "可选，1启用，2禁用；不传时后端默认 status=1"},
+          "pay_type_name": {"type": "string", "description": "可选，支付类型名称，支持模糊查询"},
+          "remark": {"type": "string", "description": "可选，备注，支持模糊查询"}
+        }
+      },
+      "PayTypeWriteRequest": {
+        "type": "object",
+        "properties": {
+          "pay_type": {"type": "integer", "minimum": 0, "description": "支付类型，唯一"},
+          "pay_type_name": {"type": "string", "maxLength": 50, "description": "支付类型名称"},
+          "pay_scene": {"type": "integer", "enum": [1, 2], "default": 1, "description": "1线上支付，2线下支付"},
+          "status": {"type": "integer", "enum": [1, 2], "default": 1, "description": "1启用，2禁用"},
+          "sort": {"type": "integer", "default": 0, "description": "排序"},
+          "remark": {"type": "string", "maxLength": 255, "description": "备注"}
+        },
+        "required": ["pay_type", "pay_type_name"]
+      },
+      "PayTypeUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "pt_id": {"type": "integer", "description": "支付类型配置ID"},
+          "pay_type": {"type": "integer", "minimum": 0, "description": "支付类型，提交时需唯一"},
+          "pay_type_name": {"type": "string", "maxLength": 50, "description": "支付类型名称"},
+          "pay_scene": {"type": "integer", "enum": [1, 2], "description": "1线上支付，2线下支付"},
+          "status": {"type": "integer", "enum": [1, 2], "description": "1启用，2禁用"},
+          "sort": {"type": "integer", "description": "排序"},
+          "remark": {"type": "string", "maxLength": 255, "description": "备注"}
+        },
+        "required": ["pt_id"]
+      },
+      "PayTypeDelRequest": {
+        "type": "object",
+        "properties": {"pt_id": {"type": "integer", "description": "支付类型配置ID"}},
+        "required": ["pt_id"]
+      },
+      "PayTypeTreeNode": {
+        "type": "object",
+        "properties": {
+          "value": {"type": "integer", "description": "第一层为 pay_scene，第二层为 pay_type"},
+          "label": {"type": "string", "description": "展示名称"},
+          "pay_scene": {"type": "integer", "enum": [1, 2], "description": "支付场景：1线上支付，2线下支付"},
+          "pay_scene_name": {"type": "string", "description": "支付场景名称，仅第一层返回"},
+          "children": {
+            "type": "array",
+            "description": "支付类型子节点",
+            "items": {
+              "type": "object",
+              "properties": {
+                "value": {"type": "integer", "description": "pay_type"},
+                "label": {"type": "string", "description": "pay_type_name"},
+                "pt_id": {"type": "integer", "description": "支付类型配置ID"},
+                "pay_type": {"type": "integer", "description": "支付类型"},
+                "pay_type_name": {"type": "string", "description": "支付类型名称"},
+                "pay_scene": {"type": "integer", "enum": [1, 2], "description": "所属支付场景"},
+                "status": {"type": "integer", "enum": [1, 2], "description": "状态"},
+                "sort": {"type": "integer", "description": "排序"},
+                "remark": {"type": "string", "description": "备注"}
+              },
+              "required": ["value", "label", "pay_type", "pay_type_name", "pay_scene"]
+            }
+          }
+        },
+        "required": ["value", "label", "pay_scene", "children"]
+      },
+      "OrderTypeListRequest": {
+        "type": "object",
+        "properties": {
+          "pageNum": {"type": "integer", "description": "页码，0 表示不分页或使用默认逻辑"},
+          "pageSize": {"type": "integer", "description": "每页数量"},
+          "ot_id": {"type": "integer", "description": "订单类型配置ID"},
+          "order_type": {"type": "integer", "description": "订单类型"},
+          "order_type_name": {"type": "string", "description": "订单类型名称，支持模糊查询"},
+          "status": {"type": "integer", "enum": [1, 2], "description": "1启用，2禁用"},
+          "remark": {"type": "string", "description": "备注，支持模糊查询"}
+        }
+      },
+      "OrderTypeFindRequest": {
+        "type": "object",
+        "properties": {
+          "ot_id": {"type": "integer", "description": "订单类型配置ID"},
+          "order_type": {"type": "integer", "description": "订单类型"}
+        }
+      },
+      "OrderTypeWriteRequest": {
+        "type": "object",
+        "properties": {
+          "order_type": {"type": "integer", "minimum": 0, "description": "订单类型，唯一"},
+          "order_type_name": {"type": "string", "maxLength": 50, "description": "订单类型名称"},
+          "status": {"type": "integer", "enum": [1, 2], "default": 1, "description": "1启用，2禁用"},
+          "sort": {"type": "integer", "default": 0, "description": "排序"},
+          "remark": {"type": "string", "maxLength": 255, "description": "备注"}
+        },
+        "required": ["order_type", "order_type_name"]
+      },
+      "OrderTypeUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "ot_id": {"type": "integer", "description": "订单类型配置ID"},
+          "order_type": {"type": "integer", "minimum": 0, "description": "订单类型，提交时需唯一"},
+          "order_type_name": {"type": "string", "maxLength": 50, "description": "订单类型名称"},
+          "status": {"type": "integer", "enum": [1, 2], "description": "1启用，2禁用"},
+          "sort": {"type": "integer", "description": "排序"},
+          "remark": {"type": "string", "maxLength": 255, "description": "备注"}
+        },
+        "required": ["ot_id"]
+      },
+      "OrderTypeDelRequest": {
+        "type": "object",
+        "properties": {"ot_id": {"type": "integer", "description": "订单类型配置ID"}},
+        "required": ["ot_id"]
+      },
+      "MachineSignedRequest": {
+        "type": "object",
+        "properties": {
+          "msg_id": {"type": "string", "description": "请求唯一ID，需在 machine_mq_record 中保持唯一"},
+          "machine_id": {"type": "string", "description": "设备编号"},
+          "timestamp": {"type": "string", "description": "请求时间戳，需在后台容忍窗口内"},
+          "sign": {"type": "string", "description": "设备签名"}
+        },
+        "required": ["msg_id", "machine_id", "timestamp", "sign"]
+      },
+      "PayTypeListResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/CommonResponse"},
+          {"type": "object", "properties": {"data": {"$ref": "#/components/schemas/PageResponse"}}}
+        ]
+      },
+      "PayTypeFindResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/CommonResponse"},
+          {"type": "object", "properties": {"data": {"$ref": "#/components/schemas/PayTypeItem"}}}
+        ]
+      },
+      "PayTypeTreeResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/CommonResponse"},
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {"$ref": "#/components/schemas/PayTypeTreeNode"}
+              }
+            }
+          }
+        ]
+      },
+      "OrderTypeListResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/CommonResponse"},
+          {"type": "object", "properties": {"data": {"$ref": "#/components/schemas/PageResponse"}}}
+        ]
+      },
+      "OrderTypeFindResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/CommonResponse"},
+          {"type": "object", "properties": {"data": {"$ref": "#/components/schemas/OrderTypeItem"}}}
+        ]
+      },
+      "MachinePayTypeListResponse": {
+        "allOf": [
+          {"$ref": "#/components/schemas/CommonResponse"},
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "properties": {
+                  "list": {"type": "array", "items": {"$ref": "#/components/schemas/MachinePayTypeItem"}}
+                },
+                "required": ["list"]
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}
