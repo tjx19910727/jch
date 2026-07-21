@@ -68,12 +68,31 @@
         .coupon-history{margin-top:22px;padding:18px 15px;border:1px solid #ffd7bc;border-radius:16px;background:#fff7ef}
         .history-title{margin:0 0 13px;color:#6d2d1a;font-size:18px;font-weight:700}
         .coupon-code-list{display:flex;flex-direction:column;gap:10px}
-        .coupon-code-item{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"code code" "time status";gap:7px 12px;padding:13px 14px;border-radius:12px;background:#fff;box-shadow:0 3px 10px rgba(164,76,25,.08)}
-        .coupon-code-value{grid-area:code;min-width:0;color:#ef3d19;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:clamp(21px,6vw,31px);font-variant-numeric:tabular-nums;font-weight:900;letter-spacing:.08em;line-height:1.2;white-space:nowrap;cursor:pointer}
+        .coupon-code-item{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"code code" "time status";gap:7px 12px;padding:13px 14px;border-radius:12px;background:#fff;box-shadow:0 3px 10px rgba(164,76,25,.08);cursor:pointer}
+        .coupon-code-item:active{transform:translateY(1px);background:#fffaf6}.coupon-code-item:focus-visible{outline:2px solid #ff7040;outline-offset:2px}
+        .coupon-code-value{grid-area:code;display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;color:#ef3d19;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:clamp(21px,6vw,31px);font-variant-numeric:tabular-nums;font-weight:900;letter-spacing:.08em;line-height:1.2;white-space:nowrap;cursor:pointer}
+        .barcode-entry{flex:0 0 auto;color:#c76a49;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:12px;font-weight:500;letter-spacing:0}
         .coupon-code-time{grid-area:time;align-self:center;min-width:0;color:#a18b84;font-size:12px;line-height:1.4}
         .coupon-status{grid-area:status;align-self:center;justify-self:end;padding:4px 9px;border-radius:999px;font-size:12px;white-space:nowrap}
         .coupon-status.unused{color:#17834d;background:#e7f7ef}.coupon-status.used{color:#8b7770;background:#eee9e7}.coupon-status.expired{color:#a66b25;background:#fff1dc}.coupon-status.invalid,.coupon-status.unknown{color:#9f5a5a;background:#f7e7e7}
         .coupon-empty{padding:18px 0;text-align:center;color:#ad9992;font-size:14px}
+        .barcode-modal[hidden]{display:none}
+        .barcode-modal{position:fixed;z-index:50;inset:0;display:flex;align-items:center;justify-content:center;padding:20px 16px}
+        .barcode-mask{position:absolute;inset:0;background:rgba(38,23,18,.62);backdrop-filter:blur(3px)}
+        .barcode-dialog{position:relative;width:min(100%,440px);padding:24px 20px 22px;border-radius:22px;background:#fffaf6;box-shadow:0 20px 60px rgba(40,20,13,.3);text-align:center}
+        .barcode-close{position:absolute;top:12px;right:12px;width:34px;height:34px;border:0;border-radius:50%;background:#fff0e8;color:#95513b;font-size:26px;line-height:32px;cursor:pointer}
+        .barcode-title{margin:0 42px 18px;color:#67301f;font-size:21px;font-weight:800}
+        .barcode-frame{position:relative;padding:18px 12px 13px;border:1px solid #f0e2db;border-radius:14px;background:#fff;overflow:hidden}
+        .barcode-svg{display:block;width:100%;height:112px;background:#fff}
+        .barcode-frame.inactive .barcode-svg{opacity:.22;filter:grayscale(1)}
+        .barcode-state-cover{position:absolute;inset:0;display:none;align-items:center;justify-content:center;color:#a64f37;font-size:26px;font-weight:900;letter-spacing:.12em;text-shadow:0 1px #fff}
+        .barcode-frame.inactive .barcode-state-cover{display:flex}
+        .barcode-number{margin-top:13px;color:#2f211d;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono",monospace;font-size:28px;font-variant-numeric:tabular-nums;font-weight:900;letter-spacing:.12em;line-height:1.2}
+        .barcode-status{display:inline-block;margin-top:10px;padding:4px 11px;border-radius:999px;font-size:13px}
+        .barcode-status.unused{color:#17834d;background:#e7f7ef}.barcode-status.used{color:#8b7770;background:#eee9e7}.barcode-status.expired{color:#a66b25;background:#fff1dc}.barcode-status.invalid,.barcode-status.unknown{color:#9f5a5a;background:#f7e7e7}
+        .barcode-tip{margin:14px 0 0;color:#9a8178;font-size:13px;line-height:1.6}
+        .barcode-copy{margin-top:15px;padding:9px 25px;border:1px solid #ff7040;border-radius:999px;background:#fff;color:#ed4f20;cursor:pointer}
+        body.barcode-open{overflow:hidden}
         .error-card{margin-top:clamp(90px,25vw,170px);padding:42px 25px;border:7px solid rgba(255,255,255,.8);border-radius:25px;background:rgba(255,255,255,.94);box-shadow:0 12px 34px rgba(164,76,25,.13);text-align:center}
         .error-icon{width:68px;height:68px;margin:0 auto 20px;border-radius:50%;display:grid;place-items:center;background:#fff0e7;color:#f25127;font-size:38px;font-weight:800}
         .error-card h2{margin:0;color:#6d2d1a;font-size:24px}.error-card p{margin:15px 0 0;color:#8c746b;line-height:1.8}
@@ -146,8 +165,8 @@
                 <h2 class="history-title">我的优惠券码</h2>
                 <div id="couponCodeList" class="coupon-code-list">
                     {volist name="couponCodes" id="couponCode"}
-                    <div class="coupon-code-item">
-                        <span class="coupon-code-value" data-code="{$couponCode.code|htmlspecialchars}" title="点击复制">{$couponCode.code|htmlspecialchars}</span>
+                    <div class="coupon-code-item barcode-trigger" role="button" tabindex="0" aria-label="查看优惠券码 {$couponCode.code|htmlspecialchars} 的条形码" data-code="{$couponCode.code|htmlspecialchars}" data-status-text="{$couponCode.statusText|htmlspecialchars}" data-status-class="{$couponCode.statusClass|htmlspecialchars}">
+                        <span class="coupon-code-value"><span>{$couponCode.code|htmlspecialchars}</span><span class="barcode-entry">条形码 ›</span></span>
                         <span class="coupon-status {$couponCode.statusClass|htmlspecialchars}">{$couponCode.statusText|htmlspecialchars}</span>
                         <span class="coupon-code-time">领取时间：{$couponCode.receiveTime|htmlspecialchars}</span>
                     </div>
@@ -199,6 +218,23 @@
         {/if}
     </div>
 </div>
+{if $pageSuccess}
+<div id="barcodeModal" class="barcode-modal" hidden>
+    <div class="barcode-mask" data-barcode-close></div>
+    <section class="barcode-dialog" role="dialog" aria-modal="true" aria-labelledby="barcodeTitle">
+        <button id="barcodeClose" class="barcode-close" type="button" aria-label="关闭" data-barcode-close>×</button>
+        <h2 id="barcodeTitle" class="barcode-title">优惠券条形码</h2>
+        <div id="barcodeFrame" class="barcode-frame">
+            <svg id="barcodeSvg" class="barcode-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="优惠券条形码"></svg>
+            <div id="barcodeStateCover" class="barcode-state-cover"></div>
+        </div>
+        <div id="barcodeNumber" class="barcode-number"></div>
+        <span id="barcodeStatus" class="barcode-status"></span>
+        <p class="barcode-tip">请调高屏幕亮度，并将条形码对准设备扫码口</p>
+        <button id="barcodeCopy" class="barcode-copy" type="button">复制优惠券码</button>
+    </section>
+</div>
+{/if}
 <div id="toast" class="toast"></div>
 
 {if $pageSuccess}
@@ -208,6 +244,14 @@
     var receiveTip=document.getElementById('receiveTip');
     var couponCodeList=document.getElementById('couponCodeList');
     var couponEmpty=document.getElementById('couponEmpty');
+    var barcodeModal=document.getElementById('barcodeModal');
+    var barcodeFrame=document.getElementById('barcodeFrame');
+    var barcodeSvg=document.getElementById('barcodeSvg');
+    var barcodeNumber=document.getElementById('barcodeNumber');
+    var barcodeStatus=document.getElementById('barcodeStatus');
+    var barcodeStateCover=document.getElementById('barcodeStateCover');
+    var barcodeCopy=document.getElementById('barcodeCopy');
+    var activeBarcodeCode='';
     var toast=document.getElementById('toast');
     var toastTimer=null;
     var description=document.getElementById('couponDescription');
@@ -265,10 +309,66 @@
         input.value=code;document.body.appendChild(input);input.select();
         document.execCommand('copy');document.body.removeChild(input);showToast('优惠券码已复制');
     }
+    var CODE128_PATTERNS=["212222","222122","222221","121223","121322","131222","122213","122312","132212","221213","221312","231212","112232","122132","122231","113222","123122","123221","223211","221132","221231","213212","223112","312131","311222","321122","321221","312212","322112","322211","212123","212321","232121","111323","131123","131321","112313","132113","132311","211313","231113","231311","112133","112331","132131","113123","113321","133121","313121","211331","231131","213113","213311","213131","311123","311321","331121","312113","312311","332111","314111","221411","431111","111224","111422","121124","121421","141122","141221","112214","112412","122114","122411","142112","142211","241211","221114","413111","241112","134111","111242","121142","121241","114212","124112","124211","411212","421112","421211","212141","214121","412121","111143","111341","131141","114113","114311","411113","411311","113141","114131","311141","411131","211412","211214","211232","2331112"];
+    function renderCode128(svg,code){
+        if(!/^\d{8}$/.test(code))throw new Error('优惠券码格式错误');
+        var values=[105];
+        for(var pairIndex=0;pairIndex<code.length;pairIndex+=2)values.push(Number(code.substr(pairIndex,2)));
+        var checksum=values[0];
+        for(var valueIndex=1;valueIndex<values.length;valueIndex++)checksum+=values[valueIndex]*valueIndex;
+        values.push(checksum%103);values.push(106);
+        while(svg.firstChild)svg.removeChild(svg.firstChild);
+        var namespace='http://www.w3.org/2000/svg';
+        var moduleWidth=3;
+        var x=10*moduleWidth;
+        for(var patternIndex=0;patternIndex<values.length;patternIndex++){
+            var pattern=CODE128_PATTERNS[values[patternIndex]];
+            for(var widthIndex=0;widthIndex<pattern.length;widthIndex++){
+                var width=Number(pattern.charAt(widthIndex))*moduleWidth;
+                if(widthIndex%2===0){
+                    var bar=document.createElementNS(namespace,'rect');
+                    bar.setAttribute('x',String(x));bar.setAttribute('y','0');bar.setAttribute('width',String(width));bar.setAttribute('height','90');bar.setAttribute('fill','#111');svg.appendChild(bar);
+                }
+                x+=width;
+            }
+        }
+        svg.setAttribute('viewBox','0 0 '+String(x+10*moduleWidth)+' 90');
+        svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+    }
+    function findBarcodeRow(element){
+        while(element&&element!==couponCodeList){
+            if(element.classList&&element.classList.contains('barcode-trigger'))return element;
+            element=element.parentNode;
+        }
+        return null;
+    }
+    function openBarcode(row){
+        if(!row)return;
+        var code=String(row.getAttribute('data-code')||'');
+        var statusText=String(row.getAttribute('data-status-text')||'未知状态');
+        var statusClass=String(row.getAttribute('data-status-class')||'unknown');
+        try{renderCode128(barcodeSvg,code);}catch(error){showToast(error.message||'条形码生成失败');return;}
+        activeBarcodeCode=code;
+        barcodeNumber.textContent=code;
+        barcodeStatus.textContent=statusText;
+        barcodeStatus.className='barcode-status '+statusClass;
+        barcodeStateCover.textContent=statusText;
+        barcodeFrame.classList.toggle('inactive',statusClass!=='unused');
+        barcodeModal.hidden=false;
+        document.body.classList.add('barcode-open');
+        document.getElementById('barcodeClose').focus();
+    }
+    function closeBarcode(){
+        barcodeModal.hidden=true;
+        document.body.classList.remove('barcode-open');
+    }
     function addCouponCode(item){
         if(!item||!item.code)return;
-        var row=document.createElement('div');row.className='coupon-code-item';
-        var code=document.createElement('span');code.className='coupon-code-value';code.setAttribute('data-code',String(item.code));code.setAttribute('title','点击复制');code.textContent=String(item.code);
+        var row=document.createElement('div');row.className='coupon-code-item barcode-trigger';row.setAttribute('role','button');row.setAttribute('tabindex','0');row.setAttribute('aria-label','查看优惠券码 '+String(item.code)+' 的条形码');row.setAttribute('data-code',String(item.code));row.setAttribute('data-status-text',String(item.statusText||'未知状态'));row.setAttribute('data-status-class',String(item.statusClass||'unknown'));
+        var code=document.createElement('span');code.className='coupon-code-value';
+        var codeText=document.createElement('span');codeText.textContent=String(item.code);
+        var barcodeEntry=document.createElement('span');barcodeEntry.className='barcode-entry';barcodeEntry.textContent='条形码 ›';
+        code.appendChild(codeText);code.appendChild(barcodeEntry);
         var status=document.createElement('span');status.className='coupon-status '+String(item.statusClass||'unknown');status.textContent=String(item.statusText||'未知状态');
         var time=document.createElement('span');time.className='coupon-code-time';time.textContent='领取时间：'+String(item.receiveTime||'--');
         row.appendChild(code);row.appendChild(status);row.appendChild(time);
@@ -276,8 +376,17 @@
         couponEmpty.hidden=true;
     }
     couponCodeList.addEventListener('click',function(event){
-        if(event.target.classList.contains('coupon-code-value'))copyCode(event.target.getAttribute('data-code'));
+        openBarcode(findBarcodeRow(event.target));
     });
+    couponCodeList.addEventListener('keydown',function(event){
+        if(event.key!=='Enter'&&event.key!==' ')return;
+        var row=findBarcodeRow(event.target);if(!row)return;
+        event.preventDefault();openBarcode(row);
+    });
+    var barcodeClosers=document.querySelectorAll('[data-barcode-close]');
+    for(var barcodeCloseIndex=0;barcodeCloseIndex<barcodeClosers.length;barcodeCloseIndex++)barcodeClosers[barcodeCloseIndex].addEventListener('click',closeBarcode);
+    barcodeCopy.addEventListener('click',function(){copyCode(activeBarcodeCode);});
+    document.addEventListener('keydown',function(event){if(event.key==='Escape'&&!barcodeModal.hidden)closeBarcode();});
     button.addEventListener('click',function(){
         if(button.disabled)return;
         button.disabled=true;
