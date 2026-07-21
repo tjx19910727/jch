@@ -595,6 +595,7 @@ class SaleOrders extends Common
     {
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
+        $behaviorWhere = $this->formatBehaviorTrackingWhere($postData);
         $postData['pay_time'] = $postData['create_date'];
         unset($postData['create_date']);
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
@@ -605,7 +606,7 @@ class SaleOrders extends Common
             }
         }
         // $where['sod.ao_id'] = $this->manager['ao_id'];
-        return $this->app->saleOrders->saleDataCollect($where,$postData);
+        return $this->app->saleOrders->saleDataCollect($where,$behaviorWhere);
 
     }
 
@@ -644,7 +645,8 @@ class SaleOrders extends Common
         $where['so.pay_status'] = 3;
         //$where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
         actionLog($where,'查询条件');
-        return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20,$postData);
+        $behaviorWhere = $this->formatBehaviorTrackingWhere($postData);
+        return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20,$behaviorWhere);
     }
 
     /**
@@ -663,7 +665,31 @@ class SaleOrders extends Common
         }
         $where['so.pay_status'] = 3;
         $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
-        return $this->app->saleOrders->exportSaleDataCollect($where,$postData);
+        $behaviorWhere = $this->formatBehaviorTrackingWhere($postData);
+        return $this->app->saleOrders->exportSaleDataCollect($where,$behaviorWhere);
+    }
+
+    /**
+     * 将销售统计条件映射为商品行为埋点查询条件。
+     */
+    protected function formatBehaviorTrackingWhere($postData)
+    {
+        $fieldMap = [
+            'm_id' => 'm_id',
+            'machine_id' => 'machine_id',
+            'g_id' => 'goods_id',
+            'is_online' => 'is_online',
+            'create_date' => 'device_created_at',
+        ];
+        $behaviorPostData = [];
+        foreach ($fieldMap as $sourceField => $targetField) {
+            if (array_key_exists($sourceField, $postData)) {
+                $behaviorPostData[$targetField] = $postData[$sourceField];
+            }
+        }
+
+        $where = $this->getWhere($behaviorPostData, false, ['machine_id' => 'like'], 'gbt.');
+        return $this->formatAoIdWhereWithPrefix($where, 'm.');
     }
 
     /**
@@ -1007,6 +1033,26 @@ class SaleOrders extends Common
     public function stockDeduction()
     {
         return $this->app->saleOrders->manualDeductStock(input());
+    }
+
+    /**
+     * 指定设备重新打印订单小票
+     * @return array|string
+     */
+    public function printReceipt()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'printReceipt');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+
+        $frequencyKey = 'printReceipt:' . intval($postData['order_id']) . ':' . trim((string)$postData['machine_id']);
+        $check = checkFrequency($frequencyKey, 3);
+        if ($check !== true) return returnState(100, $check);
+
+        return $this->app->saleOrders->printOrderReceipt($postData);
     }
 
 }

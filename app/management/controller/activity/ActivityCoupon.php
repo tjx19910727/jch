@@ -101,4 +101,19 @@ class ActivityCoupon extends Common
         strpos($c_id,',') !== false ? $where[] = ['c_id',"in",$c_id] : $where['c_id'] = $c_id;
         return $this->app->activityCoupon->activeTakeDown($where);
     }
+
+    /**
+     * 获取优惠券微信领取链接
+     * @return array|\think\response\Json
+     */
+    public function getUrl()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'getUrl');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->activityCoupon->getCouponUrl($postData);
+    }
 }

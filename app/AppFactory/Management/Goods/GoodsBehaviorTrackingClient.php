@@ -22,19 +22,23 @@ class GoodsBehaviorTrackingClient extends ManagementClient
      * @param int $pageNum 分页条数
      * @param string $field 查询字段
      * @param string $order 排序
-     * @param array $goodsWhere goods表额外条件（如商品名称模糊搜索）
+     * @param string $goodsName 商品名称模糊搜索
      */
-    public function getTrackingList($where, $pageNum = 0, $field = "*", $order = "", $goodsWhere = [])
+    public function getTrackingList($where, $pageNum = 0, $field = "*", $order = "", $goodsName = '')
     {
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['gbt.m_id', 'in', $mIds];
 
         $query = Db::name('goods_behavior_tracking')->alias('gbt')
-            ->leftJoin('goods g', 'g.g_id = gbt.goods_id')
+            ->leftJoin('goods g', 'gbt.is_online = 2 AND g.g_id = gbt.goods_id')
+            ->leftJoin('wc_goods_local wg', 'gbt.is_online = 1 AND wg.id = gbt.goods_id')
             ->where($where);
 
-        if ($goodsWhere) {
-            $query->where($goodsWhere);
+        if ($goodsName !== '') {
+            $query->where(function ($query) use ($goodsName) {
+                $query->where('g.g_name', 'like', '%' . $goodsName . '%')
+                    ->whereOr('wg.g_name', 'like', '%' . $goodsName . '%');
+            });
         }
 
         if ($pageNum) {

@@ -1,0 +1,77 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "订单任意设备打印小票接口",
+    "version": "1.0.0",
+    "description": "后台选择一个订单，向有权限操作的任意在线设备下发打印命令。接口成功表示命令已投递，不代表打印机已完成物理打印。"
+  },
+  "paths": {
+    "/management/sale.sale_orders/printReceipt": {
+      "post": {
+        "summary": "指定设备打印订单小票",
+        "description": "设备端收到 msgType=printReceipt、order_id 后，调用现有 /machine/receive/receipt 获取小票内容并打印。相同订单和设备3秒内禁止重复提交。",
+        "operationId": "printSaleOrderReceiptOnMachine",
+        "tags": ["销售订单"],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "description": "后台登录令牌",
+            "schema": {"type": "string"},
+            "example": "{{token}}"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["order_id", "machine_id"],
+                "properties": {
+                  "order_id": {"type": "integer", "minimum": 1, "description": "需要打印的订单ID"},
+                  "machine_id": {"type": "string", "maxLength": 64, "description": "执行打印的目标设备编号"}
+                }
+              },
+              "example": {"order_id": 35836, "machine_id": "JCHM-H3D-0005"}
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": ["order_id", "machine_id"],
+                "properties": {
+                  "order_id": {"type": "integer", "minimum": 1},
+                  "machine_id": {"type": "string", "maxLength": 64}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "业务响应；state=200表示命令已投递，state=100表示校验或投递失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["state", "msg", "data"],
+                  "properties": {
+                    "state": {"type": "integer", "enum": [100, 200]},
+                    "msg": {"type": "string"},
+                    "data": {"type": "object", "additionalProperties": true}
+                  }
+                },
+                "examples": {
+                  "命令已投递": {"value": {"state": 200, "msg": "操作成功:true", "data": []}},
+                  "设备离线": {"value": {"state": 100, "msg": "操作失败:设备离线", "data": []}},
+                  "无权限": {"value": {"state": 100, "msg": "操作失败:无权操作其他组织的设备", "data": []}}
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
