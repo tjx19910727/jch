@@ -1045,13 +1045,16 @@ class SaleOrdersClient extends ManagementClient
         $whereCollect['so.pay_status'] = 3;
         $field = "
         IFNULL(sum(sod.quantity - sod.refund_quantity),0) totalQuantity,
-        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) totalPrice,
+        IFNULL(sum(sod.total_sod_price - sod.refund_amount),0) detailsTotalPrice,
         IFNULL(sum(sod.discount_price),0) totalDiscountPrice,
         IFNULL(sum(sod.total_sod_price),0) totalSalePrice,
         IFNULL(sum(case sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END),0) totalGift,
         IFNULL(sum(sod.cost_price * (sod.quantity - sod.refund_quantity)),0) totalCostPrice
         ";
         $collectData = $this->getSaleOrdersDetailsData($whereCollect, $field)->toArray();
+        $orderSummary = $this->getSaleDataCollectOrderSummary($whereCollect);
+        $collectData['totalPrice'] = $orderSummary['totalPrice'];
+        $collectData['mallPointsAmount'] = $orderSummary['mallPointsAmount'];
         actionLog($this->getLS(), '【SQL】统计概况');
         $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
         $whereGIds = $where;
@@ -1632,4 +1635,35 @@ class SaleOrdersClient extends ManagementClient
             return $this->rTryCatch($e->getMessage());
         }
     }
+
+    /**
+     * saleDataCollect 的销售额按订单主表汇总，避免商场积分支付时明细金额计入现金销售额。
+     *
+     * @param array $where
+     * @return array
+     */
+    protected function getSaleDataCollectOrderSummary($where)
+    {
+        $orderSql = Db::name('sale_orders')
+            ->alias('so')
+            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
+            ->where($where)
+            ->field("
+                so.order_id,
+                MAX(so.total_price) totalPrice,
+                IFNULL(SUM(CASE WHEN so.pay_type = 9 THEN sod.total_sod_price - sod.refund_amount ELSE 0 END),0) mallPointsAmount
+            ")
+            ->group('so.order_id')
+            ->buildSql();
+
+        $summary = Db::table($orderSql . ' t')
+            ->field('IFNULL(SUM(totalPrice),0) totalPrice,IFNULL(SUM(mallPointsAmount),0) mallPointsAmount')
+            ->find();
+
+        return [
+            'totalPrice' => $summary['totalPrice'] ?? 0,
+            'mallPointsAmount' => $summary['mallPointsAmount'] ?? 0,
+        ];
+    }
+
 }
