@@ -386,7 +386,9 @@
     var barcodeClosers=document.querySelectorAll('[data-barcode-close]');
     for(var barcodeCloseIndex=0;barcodeCloseIndex<barcodeClosers.length;barcodeCloseIndex++)barcodeClosers[barcodeCloseIndex].addEventListener('click',closeBarcode);
     barcodeCopy.addEventListener('click',function(){copyCode(activeBarcodeCode);});
-    document.addEventListener('keydown',function(event){if(event.key==='Escape'&&!barcodeModal.hidden)closeBarcode();});
+    document.addEventListener('keydown',function(event){
+        if(event.key==='Escape'&&!barcodeModal.hidden)closeBarcode();
+    });
     button.addEventListener('click',function(){
         if(button.disabled)return;
         button.disabled=true;
