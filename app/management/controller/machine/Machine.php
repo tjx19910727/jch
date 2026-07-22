@@ -844,6 +844,9 @@ class Machine extends Common
     public function sendMainControlV2()
     {
         $actionLogId = 0;
+        $sodId = 0;
+        $previousRemoteOutGoodsStatus = 0;
+        $continueRemoteStatusMarked = false;
         try {
             $postData = input();
             $msgType = intval($postData['msgType'] ?? 0);
@@ -869,7 +872,7 @@ class Machine extends Common
 
             $detail = $this->getSaleOrdersDetailsFind(
                 ['sod_id' => $sodId],
-                'sod_id,order_id,g_id,channel_code,quantity,success_quantity,fail_quantity,refund_quantity'
+                'sod_id,order_id,g_id,channel_code,quantity,success_quantity,fail_quantity,refund_quantity,remote_out_goods_status'
             );
             if (!$detail) return returnValidate('找不到订单子单记录');
             $detail = is_object($detail) ? $detail->toArray() : $detail;
@@ -891,6 +894,9 @@ class Machine extends Common
                 || intval($detail['success_quantity']) !== 1
                 || intval($detail['fail_quantity']) !== 0) {
                 return returnValidate('该子单不是商品已离开货道、后续动作失败的状态');
+            }
+            if ($msgType === 11 && in_array(intval($detail['remote_out_goods_status'] ?? 0), [1, 2, 21, 3], true)) {
+                return returnValidate('该子单正在远程出货或已经远程出货成功，不能重复继续出货');
             }
 
             $lastAction = $this->app->machine->getRALogsFind([
@@ -923,6 +929,24 @@ class Machine extends Common
             ]);
             if (!$actionLogId) return returnValidate('创建远程动作日志失败');
 
+            if ($msgType === 11) {
+                $previousRemoteOutGoodsStatus = intval($detail['remote_out_goods_status'] ?? 0);
+                $markResult = $this->updateSaleOrdersDetails(
+                    ['sod_id' => $sodId, 'remote_out_goods_status' => 1],
+                    [],
+                    ['remote_out_goods_status']
+                );
+                if ($markResult === false) {
+                    $this->app->machine->updateRALog(
+                        ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
+                        ['id' => $actionLogId],
+                        ['status', 'operator_at']
+                    );
+                    return returnValidate('更新子单远程出货状态失败');
+                }
+                $continueRemoteStatusMarked = true;
+            }
+
             $otherData = [
                 'time_point' => !empty($postData['time_point']) ? strtotime($postData['time_point']) : time(),
                 'sod_id' => $sodId,
@@ -940,11 +964,30 @@ class Machine extends Common
                     ['id' => $actionLogId],
                     ['status', 'operator_at']
                 );
+                if ($continueRemoteStatusMarked) {
+                    $this->updateSaleOrdersDetails(
+                        ['sod_id' => $sodId, 'remote_out_goods_status' => $previousRemoteOutGoodsStatus],
+                        [],
+                        ['remote_out_goods_status']
+                    );
+                    $continueRemoteStatusMarked = false;
+                }
             }
             return is_object($result)
                 ? $result
                 : $this->app->machine->rFail($this->app->machine->lang('VMachine.' . $result));
         } catch (\Exception $e) {
+            if ($continueRemoteStatusMarked && $sodId) {
+                try {
+                    $this->updateSaleOrdersDetails(
+                        ['sod_id' => $sodId, 'remote_out_goods_status' => $previousRemoteOutGoodsStatus],
+                        [],
+                        ['remote_out_goods_status']
+                    );
+                } catch (\Throwable $statusException) {
+                    actionException($statusException, 1, 'headGoodsAction');
+                }
+            }
             if ($actionLogId) {
                 try {
                     $this->app->machine->updateRALog(
