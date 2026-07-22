@@ -50,6 +50,15 @@ class MachinePreReplenishment extends Common
     }
 
     /**
+     * 手动完结预补货单
+     */
+    public function finish()
+    {
+        $postData = input();
+        return $this->app->machinePreReplenishment->finishOrder($postData);
+    }
+
+    /**
      * 下发获取补货视频
      * @return array|string
      */
