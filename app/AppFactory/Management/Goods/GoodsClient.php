@@ -651,6 +651,8 @@ class GoodsClient extends ManagementClient
             $list = $list->toArray();
             $title = [
                 "g_name" => $this->lang("export.g_name"),
+                "totalRankPrice" => '实际销售额（扣除退款）',
+                "totalRankQuantity" => '实际销量（扣除退款）',
                 "totalPrice" => $this->lang("export.totalPrice"),
                 "totalQuantity" => $this->lang("export.totalQuantity"),
                 "totalDiscountPrice" => "优惠金额",
