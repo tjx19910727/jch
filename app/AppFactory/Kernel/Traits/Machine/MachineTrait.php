@@ -1038,7 +1038,7 @@ trait MachineTrait
 
         $detail = $this->getSaleOrdersDetailsFind(
             ['sod_id' => $sodId],
-            'sod_id,channel_code,channel_position,success_quantity,fail_quantity,remote_out_goods_status'
+            'sod_id,channel_code,channel_position,quantity,success_quantity,fail_quantity,remote_out_goods_status'
         );
         if (!$detail) {
             actionLog(['sod_id' => $sodId], "远程出货未找到子订单", "remoteOutGoods");
@@ -1109,8 +1109,15 @@ trait MachineTrait
                 $updateFields[] = 'channel_position';
 
                 if (in_array($status, [21, 3], true)) {
-                    $updateSod['success_quantity'] = intval($detail['success_quantity'] ?? 0) + 1;
-                    $updateSod['fail_quantity'] = max(0, intval($detail['fail_quantity'] ?? 0) - 1);
+                    $quantity = max(1, intval($detail['quantity'] ?? 0));
+                    $currentSuccess = max(0, intval($detail['success_quantity'] ?? 0));
+                    $nextSuccess = min($quantity, $currentSuccess + 1);
+                    $successIncrement = max(0, $nextSuccess - $currentSuccess);
+                    $updateSod['success_quantity'] = $nextSuccess;
+                    $updateSod['fail_quantity'] = max(
+                        0,
+                        intval($detail['fail_quantity'] ?? 0) - $successIncrement
+                    );
                     $updateFields[] = 'success_quantity';
                     $updateFields[] = 'fail_quantity';
                 }
