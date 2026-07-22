@@ -450,6 +450,9 @@ return [
         "m_id_unique" => "Device configuration already exists, do not add duplicate",
         "machine_id_require" => "Device number cannot be empty",
         "mcList_require" => "Batch configuration list parameter cannot be empty",
+        "subcar_mix_in" => "Mixed ordering only supports 1 or 2",
+        "subcar_offline_sp_ids_invalid" => "Invalid offline goods payee strategy IDs",
+        "subcar_online_sp_ids_invalid" => "Invalid online goods payee strategy IDs",
     ],
     "VMachineConfigLang" => [
         "mcl_id_require" => "Device configuration multilingual ID cannot be empty",

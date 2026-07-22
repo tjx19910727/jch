@@ -11,6 +11,7 @@ namespace app\AppFactory\Machine\Receive;
 
 
 use app\AppFactory\Kernel\ServiceContainer;
+use app\AppFactory\Kernel\Support\SubCarMixPolicy;
 use app\AppFactory\Kernel\Support\Trip\Trip;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
@@ -986,7 +987,7 @@ class ApiClient extends ReceiveBaseClient
             if ($pay_type) {
                 $sIds = $this->getStrategyMachineColumn(['m_id' => $this->machine['m_id'], 's_type' => 1], 's_id');
                 if ($sIds) {
-                    $payTypeList = $this->getStrategyPayeeList([['sp_id', 'in', $sIds], 'status' => 1], 0, 'sp_name,title,payee_type,ico');
+                    $payTypeList = $this->getStrategyPayeeList([['sp_id', 'in', $sIds], 'status' => 1], 0, 'sp_id,sp_name,title,payee_type,ico');
                     $data['payTypeList'] = $payTypeList;
                 }
             }
@@ -1356,6 +1357,24 @@ class ApiClient extends ReceiveBaseClient
         $updateOrder = [];
         $this->startTrans();
         try {
+            if (!isset($this->data['carList']) || !$this->data['carList']) {
+                $this->rollbackTrans();
+                return $this->subCarFailResponse(100, "购物车不能为空");
+            }
+            $this->data['carList'] = json2arr($this->data['carList']);
+            $machineConfig = $this->getMachineConfigFind(['m_id' => $this->machine['m_id']], '*');
+            if (is_object($machineConfig) && method_exists($machineConfig, 'toArray')) {
+                $machineConfig = $machineConfig->toArray();
+            }
+            $subCarMix = is_array($machineConfig)
+                ? intval($machineConfig['subcar_mix'] ?? SubCarMixPolicy::MIX_ALLOWED)
+                : SubCarMixPolicy::MIX_ALLOWED;
+            if ($subCarMix === SubCarMixPolicy::MIX_FORBIDDEN
+                && SubCarMixPolicy::cartGoodsSource($this->data['carList']) === SubCarMixPolicy::SOURCE_MIXED) {
+                $this->rollbackTrans();
+                return $this->subCarFailResponse(100, $this->lang("VSubCar.subcar_mix_mixed_goods"));
+            }
+
             $real_channel_code = 'Z10';
             $order_id = $this->addSaleOrders($order);
             if ($order_id) {
@@ -1367,11 +1386,6 @@ class ApiClient extends ReceiveBaseClient
                 $updateOrder['total_price'] = 0;
                 $updateOrder['total_quantity'] = 0;
                 $updateOrder['total_cost_points'] = 0;
-                if (!isset($this->data['carList']) || !$this->data['carList']) {
-                    $this->rollbackTrans();
-                    return $this->subCarFailResponse(100, "购物车不能为空");
-                }
-                $this->data['carList'] = json2arr($this->data['carList']);
                 //carList数据结构：
                 //type=3 有早：[{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151411","no":"VC2507151415","order_date":["2026-03-07","2026-03-08","2026-03-09"]}]
                 //type=3 无早：[{"mc_id":186,"quantity":4,"channel_code":"Z10","out_no":"VC2507151411","no":"VC2507151414","order_date":["2026-03-11","2026-03-07","2026-03-08","2026-03-09"]}]
