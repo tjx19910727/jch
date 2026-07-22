@@ -24,7 +24,11 @@ class Coupon
 
     public function page()
     {
-        View::assign(AppFactory::wx()->coupon->getPageData(input()));
+        $pageData = AppFactory::wx()->coupon->getPageData(input());
+        $host = rtrim(trim(strval(env('app.host'))), '/');
+        $pageData['couponReceiveUrl'] = $host . '/wx/coupon/receive';
+        $pageData['couponBackgroundUrl'] = $host . '/wx/coupon/background';
+        View::assign($pageData);
         return View::fetch('coupon/index');
     }
 
