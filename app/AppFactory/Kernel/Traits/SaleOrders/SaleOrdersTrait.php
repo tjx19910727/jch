@@ -293,6 +293,7 @@ trait SaleOrdersTrait
      */
     public function addSaleOrders($insert)
     {
+        $insert = $this->normalizeSaleOrderNonNegativeFields($insert);
         $insert = $this->appendRevenueCouponCode($insert);
         $insert = $this->appendOrderPayChannel($insert);
         $order = SaleOrdersModel::create($insert);
@@ -311,10 +312,31 @@ trait SaleOrdersTrait
     public function updateSaleOrders($update, $where = [], $field = [])
     {
         $update = $this->appendOrderPayChannelForUpdate($update, $where, $field);
-        if (is_array($update) && array_key_exists('total_price', $update) && is_numeric($update['total_price'])) {
-            $update['total_price'] = bccomp(strval($update['total_price']), '0', 4) < 0 ? '0.0000' : $update['total_price'];
-        }
+        $update = $this->normalizeSaleOrderNonNegativeFields($update);
         return SaleOrdersModel::update($update, $where, $field);
+    }
+
+    /**
+     * 订单金额与数量字段不得以负值落库，差额类字段不在此处处理。
+     */
+    protected function normalizeSaleOrderNonNegativeFields($data)
+    {
+        if (is_object($data)) {
+            $data = method_exists($data, 'toArray') ? $data->toArray() : (array)$data;
+        }
+        if (!is_array($data)) return $data;
+
+        $fields = [
+            'cost_price', 'retail_price', 'total_price', 'discount_price', 'refund_amount',
+            'total_quantity', 'refund_quantity', 'total_points', 'total_cost_points',
+        ];
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $data) && is_numeric($data[$field])
+                && bccomp(strval($data[$field]), '0', 4) < 0) {
+                $data[$field] = '0.0000';
+            }
+        }
+        return $data;
     }
 
     /**
@@ -735,6 +757,7 @@ trait SaleOrdersTrait
      */
     public function addSaleOrdersDetails($insert)
     {
+        $insert = $this->normalizeSaleOrderDetailNonNegativeFields($insert);
         if (!isset($insert['sod_ao_id']) || intval($insert['sod_ao_id']) <= 0) {
             $insert['sod_ao_id'] = $this->resolveSaleOrderDetailAoId($insert);
         }
@@ -951,13 +974,32 @@ trait SaleOrdersTrait
      */
     public function updateSaleOrdersDetails($update, $where = [], $field = [])
     {
-        if (is_object($update)) {
-            $update = method_exists($update, 'toArray') ? $update->toArray() : (array)$update;
-        }
-        if (is_array($update) && array_key_exists('total_sod_price', $update) && is_numeric($update['total_sod_price'])) {
-            $update['total_sod_price'] = bccomp(strval($update['total_sod_price']), '0', 4) < 0 ? '0.0000' : $update['total_sod_price'];
-        }
+        $update = $this->normalizeSaleOrderDetailNonNegativeFields($update);
         return SaleOrdersDetailsModel::update($update, $where, $field);
+    }
+
+    /**
+     * 订单详情金额与数量字段不得以负值落库。
+     */
+    protected function normalizeSaleOrderDetailNonNegativeFields($data)
+    {
+        if (is_object($data)) {
+            $data = method_exists($data, 'toArray') ? $data->toArray() : (array)$data;
+        }
+        if (!is_array($data)) return $data;
+
+        $fields = [
+            'cost_price', 'retail_price', 'total_sod_price', 'discount_price', 'refund_amount',
+            'quantity', 'refund_quantity', 'success_quantity', 'fail_quantity',
+            'total_sod_points', 'total_sod_cost_points',
+        ];
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $data) && is_numeric($data[$field])
+                && bccomp(strval($data[$field]), '0', 4) < 0) {
+                $data[$field] = '0.0000';
+            }
+        }
+        return $data;
     }
 
     /**
