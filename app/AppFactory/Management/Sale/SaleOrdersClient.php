@@ -38,6 +38,8 @@ use app\AppFactory\Kernel\Traits\Mall\MallRequestLogsTrait;
 use app\AppFactory\Kernel\Traits\Payment\BalancePayTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersDetailsDailyCountTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
+use app\AppFactory\Kernel\Traits\WeiCheng\WcBaseTrait;
+use app\AppFactory\Kernel\Service\WeiCheng\WcOrderSyncRetryService;
 use think\facade\Db;
 
 class SaleOrdersClient extends ManagementClient
@@ -55,6 +57,7 @@ class SaleOrdersClient extends ManagementClient
     use WxPayTrait, AliPayTrait, JdCashierTrait;
     use GoodsHitTrait;
     use BalancePayTrait;
+    use WcBaseTrait;
 
     public $order;
     public $sod;
@@ -83,6 +86,79 @@ class SaleOrdersClient extends ManagementClient
 
     protected $postData;
     protected $totalRefundMoney;
+
+    /** 后台手动将已支付订单中的未同步微程子商品推送到微程。 */
+    public function manualPushToWeiCheng($postData)
+    {
+        $orderId = intval($postData['order_id'] ?? 0);
+        $tradeNo = trim((string)($postData['trade_no'] ?? ''));
+        $sodId = intval($postData['sod_id'] ?? 0);
+        $where = $orderId > 0 ? ['order_id' => $orderId] : ['trade_no' => $tradeNo];
+        $order = $this->getSaleOrdersFind($where);
+        if (!$order) return $this->rFail('订单不存在');
+        $order = is_object($order) && method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
+
+        if (!in_array(intval($order['pay_status'] ?? 0), [3, 7], true)) {
+            return $this->rFail('仅已支付订单允许推送微程');
+        }
+        if (intval($this->manager['level'] ?? 0) > 3
+            && !in_array(intval($this->manager['ao_id'] ?? 0), [0, 1], true)
+            && intval($order['ao_id'] ?? 0) !== intval($this->manager['ao_id'])) {
+            return $this->rFail('无权操作其他组织订单');
+        }
+
+        $detailWhere = ['order_id' => intval($order['order_id'])];
+        if ($sodId > 0) $detailWhere['sod_id'] = $sodId;
+        $details = $this->getSaleOrdersDetailsList($detailWhere, 0, '*', 'sod_id asc');
+        $details = $details && is_object($details) && method_exists($details, 'toArray') ? $details->toArray() : (array)$details;
+        if (!$details) return $this->rFail($sodId > 0 ? '订单明细不存在或不属于该订单' : '订单没有商品明细');
+
+        $result = ['order_id' => intval($order['order_id']), 'trade_no' => $order['trade_no'], 'total' => 0, 'success' => 0, 'failed' => 0, 'skipped' => 0, 'details' => []];
+        $retryService = new WcOrderSyncRetryService();
+        foreach ($details as $detail) {
+            $wcOrderNo = json_decode($detail['wc_order_no'] ?? '', true);
+            if (!is_array($wcOrderNo) || !$wcOrderNo) continue;
+            $result['total']++;
+            if ($this->getWcOrderSyncFailure($wcOrderNo) === '') {
+                $result['skipped']++;
+                $result['details'][] = ['sod_id' => intval($detail['sod_id']), 'status' => 'skipped', 'msg' => '微程子商品均已同步成功'];
+                continue;
+            }
+            if (!$retryService->reserveManualPush($detail['sod_id'])) {
+                $result['skipped']++;
+                $result['details'][] = ['sod_id' => intval($detail['sod_id']), 'status' => 'skipped', 'msg' => '自动重试任务正在执行，请稍后再试'];
+                continue;
+            }
+            $sync = $this->syncWcOrderDetailWithRetry($order, $detail, true);
+            if ($sync['success']) {
+                $result['success']++;
+                $status = 'success';
+                $msg = '推送成功';
+            } else {
+                $result['failed']++;
+                $status = 'failed';
+                $msg = $sync['error'] . ($sync['retry_queued'] ? '，已进入重试队列' : '，重试任务入队失败');
+            }
+            $result['details'][] = [
+                'sod_id' => intval($detail['sod_id']),
+                'status' => $status,
+                'msg' => $msg,
+                'retry_queued' => (bool)$sync['retry_queued'],
+                'wc_order_no' => $sync['wc_order_no'],
+            ];
+        }
+        if ($result['total'] === 0) return $this->rFail('该订单不包含微程商品');
+
+        actionLog([
+            'manager_id' => intval($this->manager['manager_id'] ?? 0),
+            'order_id' => $result['order_id'],
+            'trade_no' => $result['trade_no'],
+            'sod_id' => $sodId,
+            'result' => $result,
+        ], '后台手动推送订单到微程');
+        $msg = $result['failed'] > 0 ? '手动推送完成，失败明细已进入重试队列' : '手动推送完成';
+        return $this->r(200, $msg, $result);
+    }
 
     /**
      * @param $where
@@ -598,6 +674,8 @@ class SaleOrdersClient extends ManagementClient
     {
         $field = "";
         $group = "";
+        $order = "create_date asc";
+        $todayEnd = strtotime(date("Y-m-d 23:59:59"));
         // if ($this->manager['pid'] > 0) {
         //     $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         //     if ($mIds) {
@@ -608,18 +686,21 @@ class SaleOrdersClient extends ManagementClient
             $field = "ROUND(SUM(totalPrice - totalRefundAmount),2) totalPrice,SUM(totalQuantity - totalRefundQuantity) totalQuantity,countDate";
             $group = "create_date";
             $where[] = ['create_date', '>=', strtotime("-1 months")];
+            $where[] = ['create_date', '<=', $todayEnd];
         }
         if ($type == 2) {
             $field = "ROUND(sum(totalPrice - totalRefundAmount),2) totalPrice, sum(totalQuantity - totalRefundQuantity) totalQuantity, DATE_FORMAT(countDate,'Week %v,%x') week";
             $group = "week";
             $where[] = ['create_date', '>=', strtotime("-15 week")];
+            $where[] = ['create_date', '<=', $todayEnd];
         }
         if ($type == 3) {
-            $field = "ROUND(sum(totalPrice - totalRefundAmount),2) totalPrice, sum(totalQuantity - totalRefundQuantity) totalQuantity, DATE_FORMAT(countDate,'%x-%m') month";
+            $field = "ROUND(sum(totalPrice - totalRefundAmount),2) totalPrice, sum(totalQuantity - totalRefundQuantity) totalQuantity, DATE_FORMAT(countDate,'%Y-%m') month";
             $group = "month";
             $where[] = ['create_date', '>=', strtotime("-12 month")];
+            $where[] = ['create_date', '<=', $todayEnd];
         }
-        $data = $this->getSaleOrdersDailyCountList($where, 0, $field, '', $group);
+        $data = $this->getSaleOrdersDailyCountList($where, 0, $field, $order, $group);
         return $this->rQ($data);
     }
 

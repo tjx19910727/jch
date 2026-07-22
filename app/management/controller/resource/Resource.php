@@ -51,8 +51,7 @@ class Resource extends Common
         } catch (\Exception $e) {
             return returnValidate($e->getMessage());
         }
-        $postData['status'] = 2;
-        return $this->app->resource->update($postData);
+        return $this->app->resource->updateResourceData($postData);
     }
 
 

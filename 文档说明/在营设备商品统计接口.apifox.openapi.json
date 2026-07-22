@@ -402,6 +402,17 @@
             "description": "组织 ID",
             "example": 17
           },
+          "is_operating": {
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "default": 1,
+            "description": "设备在营状态：1 在营、2 在库、3 停营；不传默认 1",
+            "example": 1
+          },
           "start_time": {
             "oneOf": [
               {

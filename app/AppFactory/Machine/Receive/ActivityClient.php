@@ -62,7 +62,9 @@ class ActivityClient extends ReceiveBaseClient
     public function __destruct()
     {
         // TODO: Implement __destruct() method.
-        $result = $this->updateMachineMqRecord(['status' => 2, 'msg_id' => $this->data['msg_id']], ['msg_id' => $this->data['msg_id']]);
+        $msgId = isset($this->data['msg_id']) ? $this->data['msg_id'] : '';
+        if ($msgId === '') return;
+        $result = $this->updateMachineMqRecord(['status' => 2, 'msg_id' => $msgId], ['msg_id' => $msgId]);
         actionLog($result, '处理完成时修改状态为已处理');
     }
 
@@ -241,7 +243,7 @@ class ActivityClient extends ReceiveBaseClient
                 $updateOrder['retail_price'] = $orderTotal;
             }
             $updateOrder['discount_price'] = bcadd(strval($this->order['discount_price'] ?? 0), $discountAmount, 2);
-            $updateOrder['total_price'] = bcsub($orderTotal, $discountAmount, 2);
+            $updateOrder['total_price'] = $this->subtractRevenueCouponDiscount($orderTotal, $discountAmount);
             $detailResult = $this->applyRevenueCouponDiscountToDetails($matched['details'] ?? [], $discountAmount);
             if ($detailResult !== true) {
                 return $detailResult;
@@ -297,11 +299,22 @@ class ActivityClient extends ReceiveBaseClient
             $updateSod = [
                 'sod_id' => $sodId,
                 'discount_price' => bcadd(strval($detail['discount_price'] ?? 0), $sodDiscount, 2),
-                'total_sod_price' => bcsub($detailAmount, $sodDiscount, 2),
+                'total_sod_price' => $this->subtractRevenueCouponDiscount($detailAmount, $sodDiscount),
             ];
             $this->updateSaleOrdersDetails($updateSod);
         }
         return true;
+    }
+
+    protected function subtractRevenueCouponDiscount($amount, $discount)
+    {
+        $amount = bcadd(strval($amount), '0', 2);
+        $discount = bcadd(strval($discount), '0', 2);
+        if (bccomp($amount, '0', 2) < 0) $amount = '0.00';
+        if (bccomp($discount, '0', 2) < 0) $discount = '0.00';
+        if (bccomp($discount, $amount, 2) > 0) $discount = $amount;
+        $result = bcsub($amount, $discount, 2);
+        return bccomp($result, '0', 2) < 0 ? '0.00' : $result;
     }
 
     protected function getRevenueCouponOrderArray()
@@ -878,11 +891,40 @@ class ActivityClient extends ReceiveBaseClient
     }
 
     /**
+     * 获取当前时间点生效的满减活动及其线上商品配置。
+     * @return array|\think\response\Json
+     */
+    public function getCurrentFdListByMachine()
+    {
+        return $this->rQ($this->getCurrentActivityFdListByMachine());
+    }
+
+    /**
      * 订单使用满减满送活动
      * @return mixed
      */
     public function useFd()
     {
-        return $this->orderUseFd();
+        $result = $this->orderUseFd();
+        $resultArr = obj2arr($result);
+        if (!is_array($resultArr) || intval($resultArr['state'] ?? 0) != 200) {
+            return $result;
+        }
+        $orderId = intval($this->data['order_id'] ?? (($resultArr['data']['order']['order_id'] ?? 0)));
+        if ($orderId <= 0) {
+            return $result;
+        }
+        $zeroPay = $this->completeZeroPayOrderIfNeeded($orderId, 'usefd_zero_pay');
+        if (!($zeroPay['success'] ?? false)) {
+            return $this->r(300, $zeroPay['msg'] ?? $this->lang("action_fail"));
+        }
+        if (!($zeroPay['handled'] ?? false)) {
+            $resultArr['data']['pay_required'] = true;
+            $resultArr['data']['zero_pay'] = false;
+            $resultArr['data']['next_action'] = 'pay';
+            return $this->r(200, $resultArr['msg'] ?? $this->lang("action_success"), $resultArr['data']);
+        }
+        $resultArr['data'] = array_merge($resultArr['data'] ?? [], $zeroPay['order']);
+        return $this->r(200, $resultArr['msg'] ?? $this->lang("action_success"), $resultArr['data']);
     }
 }

@@ -16,6 +16,8 @@ class MachineChannelStockReport extends Common
     public function getList()
     {
         $postData = input();
+        $isOperating = $postData['is_operating'] ?? '';
+        unset($postData['is_operating']);
         $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like","g_name" => "like"]);
         $where['ao_id'] = $this->manager['ao_id'];
         $field = "sku,g_name,bar_code,model,
@@ -29,20 +31,24 @@ class MachineChannelStockReport extends Common
         $order = "total_stock desc";
         $pageNum = $postData['pageNum'] ?? 0;
         $group = "g_id";
-        return $this->app->machineChannelStockReport->getMcsList($where,$pageNum,$field,$order,$group);
+        return $this->app->machineChannelStockReport->getMcsList($where,$pageNum,$field,$order,$group,$isOperating);
     }
 
     public function exportBySku()
     {
         $postData = input();
+        $isOperating = $postData['is_operating'] ?? '';
+        unset($postData['is_operating']);
         $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like"]);
-        return $this->app->machineChannelStockReport->export($where);
+        return $this->app->machineChannelStockReport->export($where,1,$isOperating);
     }
 
     public function exportByMachine()
     {
         $postData = input();
+        $isOperating = $postData['is_operating'] ?? '';
+        unset($postData['is_operating']);
         $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like"]);
-        return $this->app->machineChannelStockReport->export($where,2);
+        return $this->app->machineChannelStockReport->export($where,2,$isOperating);
     }
 }

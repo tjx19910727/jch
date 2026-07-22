@@ -78,6 +78,9 @@ class VReceive extends VCommon
         "per_row" => "integer",
         "last_login_info_id" => "integer",
         "staff_code" => "require|regex:/^[1-9][0-9]{5}$/",
+        "operate" => "require|in:1,2,3",
+        "type" => "require|in:1,2,3,4",
+        "goods_info" => "require",
     ];
 
     protected $message = [
@@ -156,6 +159,11 @@ class VReceive extends VCommon
         "machine_usage.require" => "VReceive.machine_usage_require",
         "rsrp.require" => "信号强度不能为空",
         "sinr.require" => "信噪比不能为空",
+        "operate.require" => "回收箱操作类型不能为空",
+        "operate.in" => "回收箱操作类型错误",
+        "type.require" => "回收箱商品变化类型不能为空",
+        "type.in" => "回收箱商品变化类型错误",
+        "goods_info.require" => "商品信息不能为空",
 
     ];
 
@@ -183,6 +191,9 @@ class VReceive extends VCommon
         "getMachineViewList" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineVersionPlan" => ["msg_id","machine_id","timestamp","sign"],
         "reportMachineVersionDownload" => ["msg_id","machine_id","timestamp","sign","mvp_id","download_progress"],
+        "getOtaVersionPlan" => ["msg_id","machine_id","timestamp","sign"],
+        "reportOtaVersionDownload" => ["msg_id","machine_id","timestamp","sign","ovp_id","download_progress"],
+        "reportOtaVersion" => ["msg_id","machine_id","timestamp","sign","ota_version"],
 
         "getGoods" => ["msg_id","machine_id","timestamp","sign"],
         "submitRefundGoodsLog" => ["msg_id","machine_id","timestamp","sign","mobile","input_code","pic_out_goods_box","video_out_goods_box","video_refund_goods"],
@@ -218,6 +229,7 @@ class VReceive extends VCommon
         "getLotteryOutGoods" => ["msg_id","machine_id","timestamp","sign","order_id"],
 
         "getFd" => ["msg_id","machine_id","timestamp","sign"],
+        "getCurrentFdList" => ["msg_id","machine_id","timestamp","sign"],
 
         "useFd" => ["msg_id","machine_id","timestamp","sign","order_id","fd_id"],
         "usePickCode" => ["msg_id","machine_id","timestamp","sign","pick_code"],
@@ -268,6 +280,7 @@ class VReceive extends VCommon
         "getRentOrgGoodsLists" => ["msg_id","machine_id","timestamp","sign"],
         "reportSimCardMachineUsage" => ["msg_id","machine_id","timestamp","sign","date","machine_usage"],
         "reportSimSignal" => ["msg_id","machine_id","timestamp","sign","rsrp","sinr"],
+        "recycleBoxGoodsChange" => ["msg_id","machine_id","timestamp","sign","operate","type"],
 
         "searchWCGoods" => ["msg_id","machine_id","timestamp","name"],
         "sendError" => ["msg_id","machine_id","timestamp","sign","errorCode"],
