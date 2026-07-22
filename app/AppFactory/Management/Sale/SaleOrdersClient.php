@@ -1759,4 +1759,22 @@ class SaleOrdersClient extends ManagementClient
         ];
     }
 
+    /**
+     * 视频表无数据时，将原表的单视频路径包装为统一返回结构。
+     * 仅做读取兼容，不回填 sale_orders_video。
+     */
+    public function getLegacyTransactionVideos($tradeNo, $transactionVideo)
+    {
+        $tradeNo = trim((string)$tradeNo);
+        $transactionVideo = trim((string)$transactionVideo);
+        if ($transactionVideo === '') return [];
+
+        $segmentNo = $this->getSaleOrdersVideoSegmentNo($transactionVideo);
+        return [[
+            'video_name' => $tradeNo . '_' . $segmentNo,
+            'transaction_video' => $transactionVideo,
+            'segment_no' => $segmentNo,
+        ]];
+    }
+
 }
