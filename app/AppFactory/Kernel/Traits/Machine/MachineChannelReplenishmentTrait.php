@@ -266,12 +266,14 @@ trait MachineChannelReplenishmentTrait
 
             if ($goodsChangeRows) {
                 foreach (array_chunk($goodsChangeRows, 500) as $batch) {
+                    actionLog(GoodsChangeModel::fetchSql()->insertAll($batch), 'goods_change SQL', 'replenishment_sql');
                     $flag[] = GoodsChangeModel::insertAll($batch);
                 }
             }
 
             if ($repRows) {
                 foreach (array_chunk($repRows, 500) as $batch) {
+                    actionLog(MachineChannelReplenishmentModel::fetchSql()->insertAll($batch), 'machine_channel_replenishment SQL', 'replenishment_sql');
                     $flag[] = MachineChannelReplenishmentModel::insertAll($batch);
                 }
             }
