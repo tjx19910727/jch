@@ -32,6 +32,9 @@ class Coupon
             strval($pageData['couponLogo'] ?? ''),
             $host
         );
+        if (!$pageData['couponLogoUrl']) {
+            $pageData['couponLogoUrl'] = $host . '/wx/coupon/logo';
+        }
         View::assign($pageData);
         return View::fetch('coupon/index');
     }
@@ -52,6 +55,16 @@ class Coupon
     public function background()
     {
         $path = dirname(__DIR__) . '/view/coupon/images/bg.png';
+        if (!is_file($path)) return response('', 404);
+        return response(file_get_contents($path), 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'public, max-age=604800',
+        ]);
+    }
+
+    public function logo()
+    {
+        $path = dirname(__DIR__) . '/view/coupon/images/logo.png';
         if (!is_file($path)) return response('', 404);
         return response(file_get_contents($path), 200, [
             'Content-Type' => 'image/png',

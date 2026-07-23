@@ -22,7 +22,13 @@
         .gift-ticket{position:absolute;bottom:23%;left:50%;width:34%;height:66%;transform:translateX(-50%) rotate(-2deg);border:2px solid #ffcf65;border-radius:9px;background:linear-gradient(145deg,#ffe38b,#ffb125);box-shadow:0 5px 10px rgba(191,76,6,.18);color:#ff6816;font-size:clamp(32px,8vw,54px);font-weight:900;display:grid;place-items:center}
         .gift-ticket:before,.gift-ticket:after{content:"";position:absolute;top:45%;width:12px;height:12px;border-radius:50%;background:#fff3df}
         .gift-ticket:before{left:-7px}.gift-ticket:after{right:-7px}
-        .card{position:relative;padding:clamp(15px,4vw,26px);border:7px solid rgba(255,255,255,.78);border-radius:25px;background:rgba(255,255,255,.93);box-shadow:0 12px 34px rgba(164,76,25,.13),inset 0 0 0 1px rgba(255,220,194,.72);backdrop-filter:blur(4px)}
+        .card{position:relative;display:flex;flex-direction:column;padding:clamp(15px,4vw,26px);border:7px solid rgba(255,255,255,.78);border-radius:25px;background:rgba(255,255,255,.93);box-shadow:0 12px 34px rgba(164,76,25,.13),inset 0 0 0 1px rgba(255,220,194,.72);backdrop-filter:blur(4px)}
+        .coupon-ticket{order:1}
+        .details{order:2}
+        .claim-button{order:3}
+        .receive-tip{order:4}
+        .limit{order:5}
+        .coupon-history{order:6}
         .coupon-ticket{position:relative;display:grid;grid-template-columns:42% 58%;min-height:clamp(142px,38vw,228px);overflow:hidden;border-radius:13px;background:linear-gradient(115deg,#ffae20 0%,#ff7210 49%,#ff4219 100%);box-shadow:0 10px 20px rgba(255,91,18,.24);color:#fff}
         .coupon-ticket:before,.coupon-ticket:after{content:"";position:absolute;left:42%;width:26px;height:26px;margin-left:-13px;border-radius:50%;background:#fff}
         .coupon-ticket:before{top:-13px}.coupon-ticket:after{bottom:-13px}
@@ -43,9 +49,10 @@
         .detail-label{white-space:nowrap;color:#37251f}
         .detail-value{text-align:right;line-height:1.5;color:#725f59;word-break:break-word}
         .detail-value.accent{color:#ff5b17;font-weight:700}
-        .detail-toggle{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:46px;margin-top:4px;border:0;background:transparent;color:#b25c3f;font-size:14px;cursor:pointer}
-        .detail-toggle-arrow{font-size:20px;line-height:1;transition:transform .2s}
-        .detail-toggle[aria-expanded="true"] .detail-toggle-arrow{transform:rotate(180deg)}
+        .detail-toggle{display:flex;flex-wrap:nowrap;align-items:center;justify-content:center;gap:9px;width:100%;height:46px;margin-top:4px;border:0;background:transparent;color:#b25c3f;font-size:14px;white-space:nowrap;cursor:pointer}
+        .detail-toggle-text{display:block;line-height:20px}
+        .detail-toggle-arrow{display:block;flex:0 0 auto;width:8px;height:8px;margin-top:-4px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);transition:transform .2s,margin .2s}
+        .detail-toggle[aria-expanded="true"] .detail-toggle-arrow{margin-top:4px;transform:rotate(225deg)}
         .detail-icon.scope-icon,.detail-icon.scope-icon path,.detail-icon.scope-icon rect{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
         .scope-value{width:100%;min-width:0;padding:0;border:0;background:transparent;color:#725f59;text-align:right;line-height:1.5}
         button.scope-value{display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer}
@@ -180,7 +187,7 @@
                 </div>
                 </div>
                 <button id="couponDetailToggle" class="detail-toggle" type="button" aria-expanded="false" aria-controls="couponDetailExtra">
-                    <span class="detail-toggle-text">展开详情</span><span class="detail-toggle-arrow" aria-hidden="true">⌄</span>
+                    <span class="detail-toggle-text">展开详情</span><span class="detail-toggle-arrow" aria-hidden="true"></span>
                 </button>
             </section>
         </main>
