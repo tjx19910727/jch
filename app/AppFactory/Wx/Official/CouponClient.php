@@ -389,6 +389,8 @@ class CouponClient extends WxBaseClient
             'pageMessage' => strval($message),
             'key' => '',
             'couponName' => '优惠券领取',
+            'couponLogo' => '',
+            'slogan' => '专属优惠，立即领取',
         ];
     }
 
@@ -453,6 +455,8 @@ class CouponClient extends WxBaseClient
 
         return [
             'couponName' => strval($coupon['c_name'] ?? '专属优惠券'),
+            'couponLogo' => trim(strval($coupon['coupon_logo'] ?? '')),
+            'slogan' => trim(strval($coupon['slogan'] ?? '')) ?: '专属优惠，立即领取',
             'heroPrefix' => $heroPrefix,
             'heroValue' => $heroValue,
             'heroSuffix' => $heroSuffix,

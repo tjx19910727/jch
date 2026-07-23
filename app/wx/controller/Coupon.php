@@ -28,8 +28,25 @@ class Coupon
         $host = rtrim(trim(strval(env('app.host'))), '/');
         $pageData['couponReceiveUrl'] = $host . '/wx/coupon/receive';
         $pageData['couponBackgroundUrl'] = $host . '/wx/coupon/background';
+        $pageData['couponLogoUrl'] = $this->buildCouponLogoUrl(
+            strval($pageData['couponLogo'] ?? ''),
+            $host
+        );
         View::assign($pageData);
         return View::fetch('coupon/index');
+    }
+
+    /**
+     * 优惠券 Logo 属于静态资源，相对地址不经过正式环境的 /api 前缀。
+     */
+    protected function buildCouponLogoUrl($couponLogo, $host)
+    {
+        $couponLogo = trim(strval($couponLogo));
+        if (!$couponLogo) return '';
+        if (preg_match('#^https?://#i', $couponLogo)) return $couponLogo;
+
+        $resourceHost = preg_replace('#/api/?$#i', '', rtrim(strval($host), '/'));
+        return rtrim($resourceHost, '/') . '/' . ltrim($couponLogo, '/');
     }
 
     public function background()

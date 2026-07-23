@@ -12,10 +12,10 @@
         button{font:inherit}
         .page-shell{position:relative;width:min(100%,640px);min-height:100vh;min-height:100dvh;margin:0 auto;overflow:hidden;background-color:#fff4e8;background-position:center top;background-size:100% 100%;background-repeat:no-repeat;box-shadow:0 0 42px rgba(116,55,16,.12)}
         .page-content{position:relative;z-index:1;padding:clamp(14px,3.8vw,28px) clamp(16px,4.2vw,30px) max(42px,env(safe-area-inset-bottom))}
-        .hero{text-align:center;color:#963211;text-shadow:0 2px 0 rgba(255,255,255,.55)}
-        .hero h1{margin:0;font-size:clamp(38px,10.2vw,68px);font-weight:900;letter-spacing:.05em;line-height:1.08}
-        .hero p{display:flex;align-items:center;justify-content:center;gap:12px;margin:16px 0 0;font-size:clamp(17px,4.5vw,28px);letter-spacing:.18em;color:#b54b28}
-        .hero p:before,.hero p:after{content:"";width:42px;height:1px;background:#c85a35}
+        .hero{position:relative;margin-bottom:18px;text-align:center;color:#963211;text-shadow:0 2px 0 rgba(255,255,255,.55)}
+        .hero.has-logo{padding-top:54px}
+        .hero-logo{position:absolute;top:0;left:0;display:block;width:auto;height:auto;max-width:min(25vw,96px);max-height:48px;object-fit:contain}
+        .hero h1{margin:0;font-size:clamp(28px,7.5vw,48px);font-weight:900;letter-spacing:.04em;line-height:1.25;overflow-wrap:anywhere}
         .gift-stage{position:relative;height:clamp(72px,19vw,124px);margin:16px auto -13px;max-width:76%}
         .envelope{position:absolute;left:12%;right:12%;bottom:0;height:55%;border-radius:14px 14px 5px 5px;background:linear-gradient(155deg,#ff8026,#f12618 60%,#bc160f);box-shadow:0 10px 22px rgba(231,66,18,.24)}
         .envelope:after{content:"";position:absolute;inset:0;background:linear-gradient(25deg,transparent 49%,rgba(255,193,69,.8) 50%,transparent 51%),linear-gradient(-25deg,transparent 49%,rgba(255,193,69,.8) 50%,transparent 51%)}
@@ -35,6 +35,7 @@
         .ticket-copy strong{min-width:0;overflow:hidden;font-size:clamp(23px,6.2vw,39px);line-height:1.25;white-space:nowrap}
         .ticket-copy span{margin-top:12px;font-size:clamp(14px,3.6vw,23px);line-height:1.45;color:rgba(255,255,255,.9)}
         .details{margin-top:22px;padding:0 3px}
+        .detail-extra[hidden]{display:none}
         .detail-row{display:grid;grid-template-columns:42px minmax(92px,.72fr) minmax(0,1.3fr);align-items:center;min-height:70px;border-bottom:1px dashed #eadbd5;font-size:clamp(15px,4vw,22px)}
         .detail-row:last-child{border-bottom:0}
         .detail-icon{display:block;width:30px;height:30px;padding:2px;color:#693324;fill:currentColor}
@@ -42,6 +43,9 @@
         .detail-label{white-space:nowrap;color:#37251f}
         .detail-value{text-align:right;line-height:1.5;color:#725f59;word-break:break-word}
         .detail-value.accent{color:#ff5b17;font-weight:700}
+        .detail-toggle{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;height:46px;margin-top:4px;border:0;background:transparent;color:#b25c3f;font-size:14px;cursor:pointer}
+        .detail-toggle-arrow{font-size:20px;line-height:1;transition:transform .2s}
+        .detail-toggle[aria-expanded="true"] .detail-toggle-arrow{transform:rotate(180deg)}
         .detail-icon.scope-icon,.detail-icon.scope-icon path,.detail-icon.scope-icon rect{fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
         .scope-value{width:100%;min-width:0;padding:0;border:0;background:transparent;color:#725f59;text-align:right;line-height:1.5}
         button.scope-value{display:flex;align-items:center;justify-content:flex-end;gap:6px;cursor:pointer}
@@ -104,9 +108,9 @@
 <body>
 <div class="page-shell" style="background-image:url('{$couponBackgroundUrl|htmlspecialchars}')">
     <div class="page-content">
-        <header class="hero">
-            <h1>领取优惠券</h1>
-            <p>专属优惠&nbsp;&nbsp;立即领取</p>
+        <header class="hero{if $couponLogoUrl} has-logo{/if}">
+            {if $couponLogoUrl}<img class="hero-logo" src="{$couponLogoUrl|htmlspecialchars}" alt="{$couponName|htmlspecialchars} Logo">{/if}
+            <h1>{$slogan|htmlspecialchars}</h1>
         </header>
 
         {if $pageSuccess}
@@ -125,11 +129,29 @@
                 </div>
             </section>
 
+            <button id="claimButton" class="claim-button" type="button" data-key="{$key|htmlspecialchars}" data-receive-url="{$couponReceiveUrl|htmlspecialchars}" {if !$canReceive}disabled{/if}>{if $canReceive}立即领取{else /}暂不可领取{/if}</button>
+            <p id="receiveTip" class="receive-tip" {if $canReceive}hidden{/if}>{$receiveMessage|htmlspecialchars}</p>
+            <p class="limit">{$limitText|htmlspecialchars}</p>
+            <section class="coupon-history">
+                <h2 class="history-title">我的优惠券码</h2>
+                <div id="couponCodeList" class="coupon-code-list">
+                    {volist name="couponCodes" id="couponCode"}
+                    <div class="coupon-code-item barcode-trigger" role="button" tabindex="0" aria-label="查看优惠券码 {$couponCode.code|htmlspecialchars} 的条形码" data-code="{$couponCode.code|htmlspecialchars}" data-status-text="{$couponCode.statusText|htmlspecialchars}" data-status-class="{$couponCode.statusClass|htmlspecialchars}">
+                        <span class="coupon-code-value"><span>{$couponCode.code|htmlspecialchars}</span><span class="barcode-entry">条形码 ›</span></span>
+                        <span class="coupon-status {$couponCode.statusClass|htmlspecialchars}">{$couponCode.statusText|htmlspecialchars}</span>
+                        <span class="coupon-code-time">领取时间：{$couponCode.receiveTime|htmlspecialchars}</span>
+                    </div>
+                    {/volist}
+                </div>
+                <div id="couponEmpty" class="coupon-empty" {if $couponCodes}hidden{/if}>暂未领取优惠券码</div>
+            </section>
+
             <section class="details">
                 <div class="detail-row">
                     <svg class="detail-icon" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false"><path d="M785.33 878.49h-548.6c-90.53 0-164.19-73.65-164.19-164.19v-51.07c0-27 19.49-50.33 46.34-55.45 33.81-6.46 58.35-36.18 58.35-70.67s-24.54-64.21-58.34-70.67c-26.85-5.13-46.34-28.45-46.34-55.45V389c0-90.53 73.65-164.19 164.19-164.19h548.6c90.53 0 164.19 73.65 164.19 164.19v30.34c0 27.03-19.51 50.35-46.39 55.46-33.84 6.43-58.41 36.16-58.41 70.69s24.56 64.26 58.41 70.69c26.88 5.11 46.39 28.44 46.39 55.46v42.65c-.02 90.54-73.67 164.2-164.2 164.2zM138.22 670.76v43.54c0 54.32 44.19 98.51 98.51 98.51h548.6c54.32 0 98.51-44.19 98.51-98.51v-35.12c-61.14-14.95-104.8-70.07-104.8-133.69 0-63.62 43.66-118.74 104.8-133.69v-22.81c0-54.32-44.19-98.51-98.51-98.51h-548.6c-54.32 0-98.51 44.19-98.51 98.51v14.47c61.08 14.99 104.68 70.09 104.68 133.65s-43.61 118.66-104.68 133.65z"/><path d="M355.95 526.65c-18.14 0-32.84-14.7-32.84-32.84v-98.82c0-18.14 14.7-32.84 32.84-32.84s32.84 14.7 32.84 32.84v98.82c0 18.14-14.7 32.84-32.84 32.84zM355.95 741.15c-18.14 0-32.84-14.7-32.84-32.84v-95.1c0-18.14 14.7-32.84 32.84-32.84s32.84 14.7 32.84 32.84v95.1c0 18.14-14.7 32.84-32.84 32.84z"/></svg>
                     <span class="detail-label">优惠券名称</span><span class="detail-value">{$couponName|htmlspecialchars}</span>
                 </div>
+                <div id="couponDetailExtra" class="detail-extra" hidden>
                 <div class="detail-row">
                     <svg class="detail-icon" viewBox="0 0 1024 1024" aria-hidden="true" focusable="false"><path d="M643.169 500.635a28.037 28.037 0 0 0 0-56.074h-48.08a131.728 131.728 0 0 0 50.042-103.354 28.035 28.035 0 1 0-56.069 0 75.84 75.84 0 0 1-151.68 0 28.035 28.035 0 1 0-56.07 0 131.728 131.728 0 0 0 50.042 103.354H380.83a28.037 28.037 0 0 0 0 56.074h102.164v48.21H380.831a28.036 28.036 0 0 0 0 56.071h102.164v77.877a28.037 28.037 0 0 0 56.074 0v-77.877h104.1a28.036 28.036 0 0 0 0-56.071h-104.1v-48.21z"/><path d="M930.752 411.085l.577.009 28.244.08V233.054A69.13 69.13 0 0 0 890.518 164H133.482a69.13 69.13 0 0 0-69.055 69.053v178.384l28.493-.334 1.176-.018a100.914 100.914 0 0 1 0 201.828l-29.669-.35v178.384A69.13 69.13 0 0 0 133.482 860h757.036a69.13 69.13 0 0 0 69.055-69.053V612.908h-28.161l-.665.005a100.914 100.914 0 0 1 .005-201.828zM903.25 666.801v124.146a12.748 12.748 0 0 1-12.732 12.73H133.482a12.748 12.748 0 0 1-12.732-12.73V666.975C194.805 654.283 251.337 589.62 251.337 512c0-77.62-56.532-142.284-130.587-154.977v-123.97a12.746 12.746 0 0 1 12.732-12.73h757.036a12.746 12.746 0 0 1 12.732 12.73v124.145C829.694 370.305 773.673 434.736 773.673 512c0 77.267 56.02 141.693 129.577 154.802z"/></svg>
                     <span class="detail-label">{$benefitLabel|htmlspecialchars}</span><span class="detail-value accent">{$benefitValue|htmlspecialchars}</span>
@@ -156,23 +178,10 @@
                     <span class="detail-label">{$goodsScopeLabel|htmlspecialchars}</span>
                     {if $goodsScopeClickable}<button class="scope-value scope-trigger" type="button" data-target="goodsScopeModal">{$goodsScopeText|htmlspecialchars}<span class="scope-arrow">›</span></button>{else /}<span class="scope-value">{$goodsScopeText|htmlspecialchars}</span>{/if}
                 </div>
-            </section>
-
-            <button id="claimButton" class="claim-button" type="button" data-key="{$key|htmlspecialchars}" data-receive-url="{$couponReceiveUrl|htmlspecialchars}" {if !$canReceive}disabled{/if}>{if $canReceive}立即领取{else /}暂不可领取{/if}</button>
-            <p id="receiveTip" class="receive-tip" {if $canReceive}hidden{/if}>{$receiveMessage|htmlspecialchars}</p>
-            <p class="limit">{$limitText|htmlspecialchars}</p>
-            <section class="coupon-history">
-                <h2 class="history-title">我的优惠券码</h2>
-                <div id="couponCodeList" class="coupon-code-list">
-                    {volist name="couponCodes" id="couponCode"}
-                    <div class="coupon-code-item barcode-trigger" role="button" tabindex="0" aria-label="查看优惠券码 {$couponCode.code|htmlspecialchars} 的条形码" data-code="{$couponCode.code|htmlspecialchars}" data-status-text="{$couponCode.statusText|htmlspecialchars}" data-status-class="{$couponCode.statusClass|htmlspecialchars}">
-                        <span class="coupon-code-value"><span>{$couponCode.code|htmlspecialchars}</span><span class="barcode-entry">条形码 ›</span></span>
-                        <span class="coupon-status {$couponCode.statusClass|htmlspecialchars}">{$couponCode.statusText|htmlspecialchars}</span>
-                        <span class="coupon-code-time">领取时间：{$couponCode.receiveTime|htmlspecialchars}</span>
-                    </div>
-                    {/volist}
                 </div>
-                <div id="couponEmpty" class="coupon-empty" {if $couponCodes}hidden{/if}>暂未领取优惠券码</div>
+                <button id="couponDetailToggle" class="detail-toggle" type="button" aria-expanded="false" aria-controls="couponDetailExtra">
+                    <span class="detail-toggle-text">展开详情</span><span class="detail-toggle-arrow" aria-hidden="true">⌄</span>
+                </button>
             </section>
         </main>
         {if $machineScopeClickable}
@@ -255,6 +264,18 @@
     var toast=document.getElementById('toast');
     var toastTimer=null;
     var description=document.getElementById('couponDescription');
+    var couponDetailToggle=document.getElementById('couponDetailToggle');
+    var couponDetailExtra=document.getElementById('couponDetailExtra');
+    if(couponDetailToggle&&couponDetailExtra){
+        couponDetailToggle.addEventListener('click',function(){
+            var expanded=this.getAttribute('aria-expanded')==='true';
+            expanded=!expanded;
+            this.setAttribute('aria-expanded',expanded?'true':'false');
+            couponDetailExtra.hidden=!expanded;
+            var text=this.querySelector('.detail-toggle-text');
+            if(text)text.textContent=expanded?'收起详情':'展开详情';
+        });
+    }
     var ticketValue=document.querySelector('.ticket-value');
     var ticketNumber=ticketValue?ticketValue.querySelector('strong'):null;
     var ticketCopy=document.querySelector('.ticket-copy');

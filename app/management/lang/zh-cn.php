@@ -107,6 +107,7 @@ return [
         "c_name_require" => "优惠券名称不能为空",
         "c_name_max" => "优惠券名称长度超过限制",
         "desc_max" => "优惠券说明长度超过限制",
+        "slogan_max" => "宣传语最多输入20个字符",
         "start_date_require" => "开始日期不能为空",
         "end_date_require" => "结束日期不能为空",
         "c_type_require" => "优惠券类型不能为空",
