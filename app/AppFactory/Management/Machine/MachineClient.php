@@ -424,6 +424,7 @@ class MachineClient extends ManagementClient
                 "address" => "详细地址",
                 "device_type" => "应用类型",
                 "machine_level" => "设备等级",
+                "run_mode" => "运行模式",
                 "is_operating" => "在营状态",
                 "status" => "设备状态",
                 "online" => "设备在离线",

@@ -413,6 +413,7 @@ return [
         "machine_id_exists" => "设备编号已存在，请勿重复添加",
         "machine_no_data" => "查无设备信息",
         "status_in" => "设备状态不在范围内",
+        "run_mode_in" => "设备模式参数错误",
 
         "light_require" => "灯光亮度不能为空",
         "volume_require" => "音量不能为空",

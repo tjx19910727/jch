@@ -846,6 +846,20 @@ class Receive extends Common
     }
 
     /**
+     * 设备端设置运行模式
+     * @return array|string
+     */
+    public function setMachineRunMode()
+    {
+        try {
+            return $this->app->api->setMachineRunMode();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 接收设备上传的首页截屏路径
      * @return array|string
      */

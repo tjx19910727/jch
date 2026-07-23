@@ -412,6 +412,7 @@ return [
         "machine_id_exists" => "The equipment number already exists. Please do not add it repeatedly.",
         "machine_no_data" => "No device information found",
         "status_in" => "Device status out of range",
+        "run_mode_in" => "Device run mode out of range",
 
         "light_require" => "Light brightness cannot be empty",
         "volume_require" => "Volume cannot be empty",

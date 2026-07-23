@@ -2433,6 +2433,30 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 设备端设置自身运行模式：1生产模式，2测试模式
+     * @return array|string
+     */
+    public function setMachineRunMode()
+    {
+        $runMode = intval($this->data['run_mode'] ?? 0);
+        if (!in_array($runMode, [1, 2])) {
+            return $this->r(100, $this->lang("VReceive.run_mode_in"));
+        }
+
+        $result = $this->updateMachine([
+            'm_id' => $this->machine['m_id'],
+            'run_mode' => $runMode,
+        ]);
+        actionLog([
+            'machine_id' => $this->machine['machine_id'] ?? '',
+            'run_mode' => $runMode,
+            'result' => $result,
+        ], '设备端设置运行模式', 'setMachineRunMode');
+
+        return $this->rU($result);
+    }
+
+    /**
      * HTTP接收设备上传的首页截屏。
      * 设备先上传文件拿到路径后，再通过该接口把截图路径写入 machine_info.screen_img。
      * @return array|string
