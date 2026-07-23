@@ -1717,6 +1717,8 @@ class MachineClient extends ManagementClient
      */
     public function getRankingList($where = [], $pageNum = 0, $topType = 1)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) {
@@ -1756,6 +1758,18 @@ class MachineClient extends ManagementClient
                     $list[$key] = $item;
                 }
             }
+        }
+
+        if ($pageNum === 0) {
+            $rows = is_array($list) ? $list : [];
+            $total = count($rows);
+            $list = [
+                'total' => $total,
+                'per_page' => $total,
+                'current_page' => 1,
+                'last_page' => $total > 0 ? 1 : 0,
+                'data' => $rows,
+            ];
         }
 
         return $this->rQ($list);
