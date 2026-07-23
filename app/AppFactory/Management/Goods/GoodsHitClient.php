@@ -246,7 +246,7 @@ class GoodsHitClient extends ManagementClient
             $outNo = trim(strval($item['goods_out_no'] ?? ''));
             if ($outNo === '') return 0;
             $query->whereRaw(
-                "JSON_SEARCH(IF(JSON_VALID(sod.wc_goods_no), sod.wc_goods_no, JSON_OBJECT()), 'one', ?, NULL, '$.*.out_no') IS NOT NULL",
+                "JSON_SEARCH(IF(JSON_VALID(sod.wc_order_no), sod.wc_order_no, JSON_OBJECT()), 'one', ?, NULL, '$.*.out_no') IS NOT NULL",
                 [$outNo]
             );
         } else {
