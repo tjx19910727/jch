@@ -8,6 +8,7 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityGoodsTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityMachineTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Wx\WxBaseClient;
+use think\facade\Session;
 
 class CouponClient extends WxBaseClient
 {
@@ -15,6 +16,7 @@ class CouponClient extends WxBaseClient
 
     const CACHE_EXPIRE = 300;
     const CACHE_SUFFIX = 'url_coupon';
+    const SESSION_KEY = 'wx_coupon_receive_key';
 
     public function authorize($postData)
     {
@@ -55,6 +57,7 @@ class CouponClient extends WxBaseClient
             $timestamp = time();
             $key = md5($openid . $ticket . $timestamp . self::CACHE_SUFFIX);
             cache($key, $openid . '&' . intval($coupon['c_id']), ['expire' => self::CACHE_EXPIRE]);
+            Session::set(self::SESSION_KEY, $key);
 
             $host = rtrim(strval(env('app.host')), '/');
             if (!$host) showMsg('系统域名未配置');
@@ -65,8 +68,7 @@ class CouponClient extends WxBaseClient
                 'key' => $key,
                 'url' => $pageUrl,
             ], '优惠券静默授权成功，跳转领取页面');
-            header('Location: ' . $pageUrl);
-            die();
+            return redirect($pageUrl);
         } catch (\Exception $e) {
             actionException($e, 1);
             showMsg('微信授权失败，请重新打开优惠券领取链接');
@@ -78,6 +80,9 @@ class CouponClient extends WxBaseClient
         if (!request()->isPost()) return $this->r(100, '仅支持POST请求');
         $key = trim(strval($postData['key'] ?? ''));
         if (!preg_match('/^[a-f0-9]{32}$/', $key)) return $this->r(100, '领取凭证参数错误');
+        if (!$this->isSessionKeyValid($key)) {
+            return $this->r(100, '打开方式有误，请重新打开领取链接');
+        }
 
         $cacheValue = strval(cache($key));
         if (!$cacheValue) return $this->r(100, '领取凭证已过期，请重新打开优惠券领取链接');
@@ -145,6 +150,9 @@ class CouponClient extends WxBaseClient
         $key = trim(strval($postData['key'] ?? ''));
         if (!preg_match('/^[a-f0-9]{32}$/', $key)) {
             return $this->pageError('领取凭证参数错误，请重新打开优惠券领取链接');
+        }
+        if (!$this->isSessionKeyValid($key)) {
+            return $this->pageError('打开方式有误，请重新打开领取链接');
         }
 
         $cacheValue = strval(cache($key));
@@ -307,6 +315,12 @@ class CouponClient extends WxBaseClient
     protected function isValidTicket($ticket)
     {
         return boolval(preg_match('/^[a-f0-9]{32}$/', $ticket));
+    }
+
+    protected function isSessionKeyValid($key)
+    {
+        $sessionKey = trim(strval(Session::get(self::SESSION_KEY, '')));
+        return $sessionKey !== '' && hash_equals($sessionKey, strval($key));
     }
 
     protected function checkCoupon($coupon)

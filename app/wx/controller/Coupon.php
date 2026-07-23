@@ -35,6 +35,8 @@ class Coupon
         if (!$pageData['couponLogoUrl']) {
             $pageData['couponLogoUrl'] = $host . '/wx/coupon/logo';
         }
+        $pageData['couponLogoUrl'] .= (strpos($pageData['couponLogoUrl'], '?') === false ? '?' : '&')
+            . 'logo_random=' . mt_rand(100000, 999999);
         View::assign($pageData);
         return View::fetch('coupon/index');
     }
@@ -64,7 +66,7 @@ class Coupon
 
     public function logo()
     {
-        $path = dirname(__DIR__) . '/view/coupon/images/logo.png';
+        $path = dirname(__DIR__) . '/view/coupon/images/logo_1.png';
         if (!is_file($path)) return response('', 404);
         return response(file_get_contents($path), 200, [
             'Content-Type' => 'image/png',
