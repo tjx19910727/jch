@@ -435,6 +435,7 @@ class Machine extends Common
                 8 => "backHome",
                 9 => "shield",
                 10 => "shield",
+                11 => "autoRestocking",
             ];
             if (isset($postData['msgType']) && (is_int($postData['msgType']) || ctype_digit((string)$postData['msgType']))) {
                 $msgType = intval($postData['msgType']);
