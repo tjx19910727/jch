@@ -117,7 +117,7 @@ class MachineChannelStockReportClient extends ManagementClient
     }
 
     /**
-     * 库存报表只支持在营、在库两种设备状态。
+     * 库存报表只支持在营、在库、外售三种设备状态。
      * @param mixed $isOperating
      * @return bool
      */
@@ -126,7 +126,7 @@ class MachineChannelStockReportClient extends ManagementClient
         if ($isOperating === '' || $isOperating === null) {
             return true;
         }
-        return in_array(intval($isOperating), [1, 2], true);
+        return in_array(intval($isOperating), [1, 2, 3], true);
     }
 
     /**
