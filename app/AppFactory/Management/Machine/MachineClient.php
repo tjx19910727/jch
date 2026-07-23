@@ -1724,9 +1724,9 @@ class MachineClient extends ManagementClient
             }
         }
 
-        $order = 'totalRankPrice desc,totalRankQuantity desc, m_id desc';
+        $order = 'totalPrice desc,totalQuantity desc, m_id desc';
         if (intval($topType) === 2) {
-            $order = 'totalRankQuantity desc,totalRankPrice desc, m_id desc';
+            $order = 'totalQuantity desc,totalPrice desc, m_id desc';
         }
 
         $list = $this->queryMachineRanking($where, $order, $pageNum);
@@ -1773,9 +1773,9 @@ class MachineClient extends ManagementClient
             $where[] = ['m_id', 'in', $mIds];
         }
 
-        $order = 'totalRankPrice desc,totalRankQuantity desc, m_id desc';
+        $order = 'totalPrice desc,totalQuantity desc, m_id desc';
         if (intval($topType) === 2) {
-            $order = 'totalRankQuantity desc,totalRankPrice desc, m_id desc';
+            $order = 'totalQuantity desc,totalPrice desc, m_id desc';
         }
 
         $list = $this->queryMachineRanking($where, $order, 0);
@@ -1797,8 +1797,8 @@ class MachineClient extends ManagementClient
                 "machine_name" => "机器名称",
                 // "address" => "机器位置",
                 "street" => "机器位置",
-                "totalRankPrice" => "销售额",
-                "totalRankQuantity" => "销量",
+                "totalPrice" => "销售额(不包含退款金额)",
+                "totalQuantity" => "销量(不包含退款数量)",
                 "coupon_used" => "优惠券",
             ];
             $topTitle = "销售额-";
@@ -1829,10 +1829,10 @@ class MachineClient extends ManagementClient
                 'MAX(so.machine_name)' => 'machine_name',
                 'ROUND(SUM(IFNULL(so.refund_amount,0)),2)' => 'totalRefundAmount',
                 'SUM(IFNULL(so.refund_quantity,0))' => 'totalRefundQuantity',
-                'ROUND(SUM(so.total_price),2)' => 'totalPrice',
-                'SUM(so.total_quantity)' => 'totalQuantity',
-                'ROUND(SUM(so.total_price)-SUM(IFNULL(so.refund_amount,0)),2)' => 'totalRankPrice',
-                'SUM(so.total_quantity)-SUM(IFNULL(so.refund_quantity,0))' => 'totalRankQuantity',
+                'ROUND(SUM(so.total_price),2)' => 'totalRankPrice',
+                'SUM(so.total_quantity)' => 'totalRankQuantity',
+                'ROUND(SUM(so.total_price)-SUM(IFNULL(so.refund_amount,0)),2)' => 'totalPrice',
+                'SUM(so.total_quantity)-SUM(IFNULL(so.refund_quantity,0))' => 'totalQuantity',
                 'ROUND(SUM(so.discount_price),2)' => 'totalDiscountPrice',
                 'COUNT(so.order_id)' => 'order_num',
                 'COUNT((SELECT acu.cu_id FROM activity_coupon_used acu WHERE acu.order_id = so.order_id AND acu.status = 2))' => 'coupon_used',

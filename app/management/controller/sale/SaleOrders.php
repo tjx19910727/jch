@@ -664,7 +664,7 @@ class SaleOrders extends Common
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
         $where['so.pay_status'] = 3;
-        $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
+        //$where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
         $behaviorWhere = $this->formatBehaviorTrackingWhere($postData);
         return $this->app->saleOrders->exportSaleDataCollect($where,$behaviorWhere);
     }
