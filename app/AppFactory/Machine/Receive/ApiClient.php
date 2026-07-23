@@ -5074,9 +5074,9 @@ class ApiClient extends ReceiveBaseClient
             'input_code' => $inputCode,
             'verify_type' => $isSpecialCode ? 2 : 1,
             'verify_status' => $verifyStatus,
-            'pic_out_goods_box' => trim((string)$this->data['pic_out_goods_box']),
-            'video_out_goods_box' => trim((string)$this->data['video_out_goods_box']),
-            'video_refund_goods' => trim((string)$this->data['video_refund_goods']),
+            'pic_out_goods_box' => trim((string)($this->data['pic_out_goods_box'] ?? '')),
+            'video_out_goods_box' => trim((string)($this->data['video_out_goods_box'] ?? '')),
+            'video_refund_goods' => trim((string)($this->data['video_refund_goods'] ?? '')),
         ];
         $logId = $this->addMachineRefundGoodsLog($insert);
 
