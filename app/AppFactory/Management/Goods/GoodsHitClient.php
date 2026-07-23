@@ -36,7 +36,8 @@ class GoodsHitClient extends ManagementClient
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $trackingWhere = $this->formatGoodsBehaviorTrackingWhere($where);
-        $field = "gbt.goods_id g_id,gbt.is_online,MAX(IF(gbt.is_online = 1, wg.out_no, '')) goods_out_no,MAX(IF(gbt.is_online = 1, wg.g_name, g.g_name)) g_name,MAX(IF(gbt.is_online = 1, wg.sku, g.sku)) sku,MAX(IF(gbt.is_online = 1, wg.gc_name, g.gc_name)) gc_name,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
+        $goodsFields = $this->getGoodsBehaviorTrackingAggregateFields();
+        $field = "gbt.goods_id g_id,gbt.is_online,{$goodsFields},SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
         $return = $this->rQ($this->getGoodsBehaviorTrackingHitList($trackingWhere,$pageNum,$field,'gbt.goods_id desc',function ($item) use ($where) {
             $item['saleNum'] = $this->getNetSaleQuantity($where, $item);
             $item['conversion_rate'] = ($item['saleNum'] > 0 && $item['hits'] > 0 ? bcmul(bcdiv($item['saleNum'],$item['hits'],3),100,1) : 0) . "%";
@@ -57,7 +58,8 @@ class GoodsHitClient extends ManagementClient
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $trackingWhere = $this->formatGoodsBehaviorTrackingWhere($where);
-        $field = "gbt.goods_id g_id,gbt.is_online,gbt.m_id,gbt.machine_id,MAX(IF(gbt.is_online = 1, wg.out_no, '')) goods_out_no,MAX(m.machine_name) machine_name,MAX(IF(gbt.is_online = 1, wg.g_name, g.g_name)) g_name,MAX(IF(gbt.is_online = 1, wg.sku, g.sku)) sku,MAX(IF(gbt.is_online = 1, wg.gc_name, g.gc_name)) gc_name,MAX(gbt.updated_at) create_time,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
+        $goodsFields = $this->getGoodsBehaviorTrackingAggregateFields();
+        $field = "gbt.goods_id g_id,gbt.is_online,gbt.m_id,gbt.machine_id,{$goodsFields},MAX(m.machine_name) machine_name,MAX(gbt.updated_at) create_time,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
         $list = $this->getGoodsBehaviorTrackingHitList($trackingWhere,$pageNum,$field,$order,function ($item) use ($where) {
             $item['saleNum'] = $this->getNetSaleQuantity($where, $item);
             $item['conversion_rate'] = ($item['saleNum'] > 0 && $item['hits'] > 0 ? bcmul(bcdiv($item['saleNum'],$item['hits'],3),100,1) : 0) . "%";
@@ -123,10 +125,11 @@ class GoodsHitClient extends ManagementClient
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $trackingWhere = $this->formatGoodsBehaviorTrackingWhere($where);
-        $field = "gbt.goods_id g_id,gbt.is_online,MAX(IF(gbt.is_online = 1, wg.out_no, '')) goods_out_no,MAX(IF(gbt.is_online = 1, wg.g_name, g.g_name)) g_name,MAX(IF(gbt.is_online = 1, wg.sku, g.sku)) sku,MAX(IF(gbt.is_online = 1, wg.gc_name, g.gc_name)) gc_name,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
+        $goodsFields = $this->getGoodsBehaviorTrackingAggregateFields();
+        $field = "gbt.goods_id g_id,gbt.is_online,{$goodsFields},SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count";
         $group = "gbt.goods_id,gbt.is_online";
         if ($eType == 2) {
-            $field = "gbt.machine_id,gbt.is_online,MAX(IF(gbt.is_online = 1, wg.out_no, '')) goods_out_no,MAX(m.machine_name) machine_name,MAX(IF(gbt.is_online = 1, wg.g_name, g.g_name)) g_name,MAX(IF(gbt.is_online = 1, wg.gc_name, g.gc_name)) gc_name,MAX(IF(gbt.is_online = 1, wg.sku, g.sku)) sku,gbt.goods_id g_id,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count,gbt.report_date create_date,gbt.m_id";
+            $field = "gbt.machine_id,gbt.is_online,{$goodsFields},MAX(m.machine_name) machine_name,gbt.goods_id g_id,SUM(gbt.click_count) hits,SUM(gbt.cart_add_count) cart_add_count,SUM(gbt.retry_dispense_count) retry_dispense_count,SUM(gbt.help_count) help_count,gbt.report_date create_date,gbt.m_id";
             $group = "gbt.m_id,gbt.goods_id,gbt.is_online,gbt.report_date";
         }
         $list = $this->getGoodsBehaviorTrackingHitList($trackingWhere,0,$field,'','',$group);
@@ -168,6 +171,15 @@ class GoodsHitClient extends ManagementClient
             $filename = "互动报表(按设备)-" . date("Ymd");
         }
         return $this->sendToExport("统计报表-互动报表", $filename, $title, $list);
+    }
+
+    /**
+     * Normalize both goods sources before MAX so deployments with different
+     * column collations can be aggregated safely.
+     */
+    protected function getGoodsBehaviorTrackingAggregateFields()
+    {
+        return "MAX(IF(gbt.is_online = 1, CONVERT(wg.out_no USING utf8mb4) COLLATE utf8mb4_unicode_ci, NULL)) goods_out_no,MAX(IF(gbt.is_online = 1, CONVERT(wg.g_name USING utf8mb4) COLLATE utf8mb4_unicode_ci, CONVERT(g.g_name USING utf8mb4) COLLATE utf8mb4_unicode_ci)) g_name,MAX(IF(gbt.is_online = 1, CONVERT(wg.sku USING utf8mb4) COLLATE utf8mb4_unicode_ci, CONVERT(g.sku USING utf8mb4) COLLATE utf8mb4_unicode_ci)) sku,MAX(IF(gbt.is_online = 1, CONVERT(wg.gc_name USING utf8mb4) COLLATE utf8mb4_unicode_ci, CONVERT(g.gc_name USING utf8mb4) COLLATE utf8mb4_unicode_ci)) gc_name";
     }
 
     protected function getGoodsBehaviorTrackingHitList($where,$pageNum = 0,$field = "*", $order = "",$eachFun = "",$group = "")
