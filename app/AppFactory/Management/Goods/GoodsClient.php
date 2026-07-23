@@ -621,6 +621,8 @@ class GoodsClient extends ManagementClient
      */
     public function getRankingList($where = [], $pageNum = 0, $topType = 1)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
@@ -629,6 +631,18 @@ class GoodsClient extends ManagementClient
 
         if ($list) {
             $list = $this->formatGoodsRankingList($list);
+        }
+
+        if ($pageNum === 0) {
+            $rows = $list ? $list->toArray() : [];
+            $total = count($rows);
+            $list = [
+                'total' => $total,
+                'per_page' => $total,
+                'current_page' => 1,
+                'last_page' => $total > 0 ? 1 : 0,
+                'data' => $rows,
+            ];
         }
 
         return $this->rQ($list);

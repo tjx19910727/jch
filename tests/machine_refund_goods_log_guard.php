@@ -2,6 +2,25 @@
 
 require dirname(__DIR__) . '/vendor/autoload.php';
 
+$mediaFields = ['pic_out_goods_box', 'video_out_goods_box', 'video_refund_goods'];
+$emptyMediaPayload = [
+    'pic_out_goods_box' => '',
+    'video_out_goods_box' => '',
+    'video_refund_goods' => '',
+];
+$validator = new \app\machine\validate\VReceive();
+$emptyMediaValid = $validator->only($mediaFields)->check($emptyMediaPayload);
+$validator = new \app\machine\validate\VReceive();
+$missingMediaValid = $validator->only($mediaFields)->check([]);
+$overlongMediaRejected = false;
+try {
+    $validator = new \app\machine\validate\VReceive();
+    $validator->only($mediaFields)
+        ->check(['pic_out_goods_box' => str_repeat('a', 1001)]);
+} catch (\Exception $e) {
+    $overlongMediaRejected = true;
+}
+
 $checks = [
     'refund log model loads' => class_exists(\app\AppFactory\Kernel\Model\Machine\MachineRefundGoodsLogModel::class),
     'refund log trait loads' => trait_exists(\app\AppFactory\Kernel\Traits\Machine\MachineRefundGoodsLogTrait::class),
@@ -9,6 +28,9 @@ $checks = [
     'receive api exposes submit method' => method_exists(\app\AppFactory\Machine\Receive\ApiClient::class, 'submitRefundGoodsLog'),
     'receive api exposes log insert method' => method_exists(\app\AppFactory\Machine\Receive\ApiClient::class, 'addMachineRefundGoodsLog'),
     'refund goods config exists' => is_file(dirname(__DIR__) . '/config/refund_goods.php'),
+    'empty media fields pass validation' => $emptyMediaValid,
+    'missing media fields pass validation' => $missingMediaValid,
+    'overlong media field is rejected' => $overlongMediaRejected,
 ];
 
 $failed = [];

@@ -107,6 +107,7 @@ return [
         "c_name_require" => "优惠券名称不能为空",
         "c_name_max" => "优惠券名称长度超过限制",
         "desc_max" => "优惠券说明长度超过限制",
+        "slogan_max" => "宣传语最多输入20个字符",
         "start_date_require" => "开始日期不能为空",
         "end_date_require" => "结束日期不能为空",
         "c_type_require" => "优惠券类型不能为空",
@@ -412,6 +413,7 @@ return [
         "machine_id_exists" => "设备编号已存在，请勿重复添加",
         "machine_no_data" => "查无设备信息",
         "status_in" => "设备状态不在范围内",
+        "run_mode_in" => "设备模式参数错误",
 
         "light_require" => "灯光亮度不能为空",
         "volume_require" => "音量不能为空",

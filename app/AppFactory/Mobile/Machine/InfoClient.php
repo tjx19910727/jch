@@ -28,7 +28,7 @@ class InfoClient extends MobileBase
     public function getChannel()
     {
         $this->checkToken();
-        return $this->rQ($this->getMachineChannelList(['machine_id' => $this->tokenArr['machine_id']],0,'sku,channel_code,g_name,stock,mc_id,pic'));
+        return $this->rQ($this->getMachineChannelList(['machine_id' => $this->tokenArr['machine_id']],0,'sku,channel_code,g_name,stock,mc_id,pic','channel_code asc'));
     }
 
     public function getMachineGoods()
