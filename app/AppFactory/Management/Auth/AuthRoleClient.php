@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Db;
 
 class AuthRoleClient extends ManagementClient
 {
@@ -82,5 +83,28 @@ class AuthRoleClient extends ManagementClient
         }
         $this->commitTrans();
         return $this->r(200,$this->lang("copy_success"));
+    }
+
+    /**
+     * 获取角色关联的账户列表（不分页）
+     * @param int $roleId
+     * @return array|\think\response\Json
+     */
+    public function getManagers($roleId)
+    {
+        $list = Db::name('auth_manager_role')
+            ->alias('mr')
+            ->join('auth_manager au', 'au.manager_id = mr.manager_id')
+            ->where([
+                'mr.role_id' => intval($roleId),
+                'mr.is_del' => 2,
+                'au.status' => 1,
+            ])
+            ->field('au.manager_id,au.nickname,au.account,au.real_name,au.status')
+            ->distinct(true)
+            ->order('au.manager_id asc')
+            ->select();
+
+        return $this->rQ($list);
     }
 }
