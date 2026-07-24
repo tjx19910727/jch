@@ -56,7 +56,7 @@ class SaleOrders extends Common
 
         $costPriceField = $hasCostPriceAuth ? "cost_price" : "0 cost_price";
         $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,pay_channel,pay_channel_name,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,a.m_id,a.machine_id,a.machine_level,a.run_mode,(CASE a.run_mode WHEN 2 THEN '测试模式' ELSE '生产模式' END) run_mode_desc,
-        factory,inventory_location,has_hotel,refund_status,(total_price - refund_amount) total_price, (total_cost_points - refund_cost_points) total_cost_points, pay_code, mobile,{$costPriceField}";
+        factory,inventory_location,has_hotel,refund_status,(total_price - refund_amount) total_price, (total_cost_points - refund_cost_points) total_cost_points, pay_code, mobile,receipt,{$costPriceField}";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         if ($supplier) unset($where['ao_id']);
         if($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0,1] )){
