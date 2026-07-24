@@ -25,6 +25,7 @@ class VActivityCoupon extends VCommon
         "designated_goods" => "require",
         "url_day_count" => "integer|egt:0",
         "url_coupon_count" => "integer|gt:0",
+        "need_oauth" => "in:0,1",
     ];
 
     protected $message = [
@@ -42,11 +43,12 @@ class VActivityCoupon extends VCommon
         "url_day_count.egt" => "VActivityCoupon.url_day_count_egt",
         "url_coupon_count.integer" => "VActivityCoupon.url_coupon_count_integer",
         "url_coupon_count.gt" => "VActivityCoupon.url_coupon_count_gt",
+        "need_oauth.in" => "VActivityCoupon.need_oauth_in",
     ];
 
     protected $scene = [
-        "add" => ["c_name","desc","slogan","start_date","end_date","c_type","designated_machine","designated_goods","url_day_count","url_coupon_count"],
-        "update" => ["c_id","slogan",'designated_machine','designated_goods',"url_day_count","url_coupon_count"],
+        "add" => ["c_name","desc","slogan","start_date","end_date","c_type","designated_machine","designated_goods","url_day_count","url_coupon_count","need_oauth"],
+        "update" => ["c_id","slogan",'designated_machine','designated_goods',"url_day_count","url_coupon_count","need_oauth"],
         "del" => ["c_id"],
         "takeDown" => ["c_id"],
         "getUrl" => ["c_id"],

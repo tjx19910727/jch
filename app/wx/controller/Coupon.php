@@ -22,11 +22,23 @@ class Coupon
         return AppFactory::wx()->coupon->receive(input());
     }
 
+    public function captcha()
+    {
+        return AppFactory::wx()->coupon->captcha(input());
+    }
+
+    public function captchaCheck()
+    {
+        return AppFactory::wx()->coupon->captchaCheck(input());
+    }
+
     public function page()
     {
         $pageData = AppFactory::wx()->coupon->getPageData(input());
         $host = rtrim(trim(strval(env('app.host'))), '/');
         $pageData['couponReceiveUrl'] = $host . '/wx/coupon/receive';
+        $pageData['couponCaptchaUrl'] = $host . '/wx/coupon/captcha';
+        $pageData['couponCaptchaCheckUrl'] = $host . '/wx/coupon/captchaCheck';
         $pageData['couponBackgroundUrl'] = $host . '/wx/coupon/background';
         $pageData['couponLogoUrl'] = $this->buildCouponLogoUrl(
             strval($pageData['couponLogo'] ?? ''),

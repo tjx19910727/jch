@@ -117,6 +117,7 @@ return [
         "url_day_count_egt" => "链接领取间隔天数不能小于0",
         "url_coupon_count_integer" => "链接累计领取数量必须为整数",
         "url_coupon_count_gt" => "链接累计领取数量必须大于0",
+        "need_oauth_in" => "是否需要静默授权只能填写0或1",
     ],
 
     "VActivityCouponUsed" => [
