@@ -352,10 +352,19 @@ class MachineClient extends ManagementClient
                 $item['stock_ratio'] = "0%";
             }
 
-            $targetAmount = round((float) Db::name('machine_target_monthly')
-                ->where('m_id', intval($item['m_id']))
+            $mid = intval($item['m_id']);
+            $targetAmountValue = Db::name('machine_target_monthly')
+                ->where('m_id', $mid)
                 ->where('month', $month)
-                ->sum('target_amount'), 2);
+                ->value('SUM(target_amount)');
+            if ($targetAmountValue === null) {
+                $targetAmountValue = Db::name('machine_target_group')
+                    ->where('m_id', $mid)
+                    ->where('months', '<=', $month)
+                    ->order('months', 'desc')
+                    ->value('target_amount');
+            }
+            $targetAmount = round((float) ($targetAmountValue ?? 0), 2);
 
             // if ($targetAmount <= 0) {
             //     $item['month_target_amount'] = 0;

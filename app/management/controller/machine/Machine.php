@@ -140,7 +140,11 @@ class Machine extends Common
 
         if ($sortName == 'month_target_amount') {
             $month = date('Y-m');
-            $this->appendSelectField($field, 'month_target_amount_sort', "(SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}')");
+            $this->appendSelectField(
+                $field,
+                'month_target_amount_sort',
+                $this->buildMonthTargetAmountExpression($month)
+            );
             return 'month_target_amount_sort';
         }
 
@@ -159,10 +163,11 @@ class Machine extends Common
             $month = date('Y-m');
             $monthStart = strtotime(date('Y-m-01 00:00:00'));
             $monthEnd = strtotime(date('Y-m-t 23:59:59'));
+            $targetAmountExpression = $this->buildMonthTargetAmountExpression($month);
             $this->appendSelectField(
                 $field,
                 'month_achieve_rate_sort',
-                "(IF((SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}') > 0, ((SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd}) / (SELECT IFNULL(SUM(target_amount),0) FROM machine_target_monthly WHERE m_id = a.m_id AND month = '{$month}') * 100), 0))"
+                "(IF({$targetAmountExpression} > 0, ((SELECT IFNULL(SUM(total_price - refund_amount),0) FROM sale_orders WHERE m_id = a.m_id AND pay_status = 3 AND create_date >= {$monthStart} AND create_date <= {$monthEnd}) / {$targetAmountExpression} * 100), 0))"
             );
             return 'month_achieve_rate_sort';
         }
@@ -180,6 +185,19 @@ class Machine extends Common
         }
 
         return '';
+    }
+
+    private function buildMonthTargetAmountExpression($month)
+    {
+        $month = preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', (string) $month)
+            ? (string) $month
+            : date('Y-m');
+
+        return "COALESCE("
+            . "(SELECT SUM(mt.target_amount) FROM machine_target_monthly mt WHERE mt.m_id = a.m_id AND mt.month = '{$month}'),"
+            . "(SELECT mtg.target_amount FROM machine_target_group mtg "
+            . "WHERE mtg.m_id = a.m_id AND mtg.months <= '{$month}' "
+            . "ORDER BY mtg.months DESC LIMIT 1),0)";
     }
 
     private function appendSelectField(&$field, $alias, $expression)
