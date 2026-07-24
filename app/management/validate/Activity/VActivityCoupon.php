@@ -17,6 +17,7 @@ class VActivityCoupon extends VCommon
         "c_id" => "require",
         "c_name" => "require|max:100",
         "desc" => "max:255",
+        "slogan" => "max:20",
         "start_date" => "require",
         "end_date" => "require",
         "c_type" => "require",
@@ -31,6 +32,7 @@ class VActivityCoupon extends VCommon
         "c_name.require" => "VActivityCoupon.c_name_require",
         "c_name.max" => "VActivityCoupon.c_name_max",
         "desc.max" => "VActivityCoupon.desc_max",
+        "slogan.max" => "VActivityCoupon.slogan_max",
         "start_date.require" => "VActivityCoupon.start_date_require",
         "end_date.require" => "VActivityCoupon.end_date_require",
         "c_type.require" => "VActivityCoupon.c_type_require",
@@ -43,8 +45,8 @@ class VActivityCoupon extends VCommon
     ];
 
     protected $scene = [
-        "add" => ["c_name","desc","start_date","end_date","c_type","designated_machine","designated_goods","url_day_count","url_coupon_count"],
-        "update" => ["c_id",'designated_machine','designated_goods',"url_day_count","url_coupon_count"],
+        "add" => ["c_name","desc","slogan","start_date","end_date","c_type","designated_machine","designated_goods","url_day_count","url_coupon_count"],
+        "update" => ["c_id","slogan",'designated_machine','designated_goods',"url_day_count","url_coupon_count"],
         "del" => ["c_id"],
         "takeDown" => ["c_id"],
         "getUrl" => ["c_id"],

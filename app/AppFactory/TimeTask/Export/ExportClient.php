@@ -160,7 +160,7 @@ class ExportClient extends TimeTaskBase
         $whereRaw = $where['raw'] ?? '';
         unset($where['raw']);
         $mainWhere = $this->prefixWhereForAlias($where, 'a.');
-        $field = 'a.order_id,a.m_id,a.machine_id,a.machine_name,a.machine_level,IFNULL(mld.name,"") machine_level_desc,a.pay_status,a.trade_no,a.mch_no,a.total_quantity,a.total_price,a.total_cost_points,a.total_points,a.discount_price,a.retail_price,a.factory,a.inventory_location,
+        $field = 'a.order_id,a.m_id,a.machine_id,a.machine_name,a.machine_level,IFNULL(mld.name,"") machine_level_desc,(CASE a.run_mode WHEN 2 THEN "测试模式" ELSE "生产模式" END) run_mode_desc,a.pay_status,a.trade_no,a.mch_no,a.total_quantity,a.total_price,a.total_cost_points,a.total_points,a.discount_price,a.retail_price,a.factory,a.inventory_location,
             (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = a.ao_id) organization_name,
             (CASE a.order_type
                 WHEN 1 THEN "普通订单"
@@ -235,7 +235,7 @@ class ExportClient extends TimeTaskBase
             if (count($time) >= 2) $refundWhere[] = ['so.out_time', 'between', [strtotime($time[0]), strtotime($time[1])]];
         }
 
-        $refundField = 'sor.order_id,so.m_id,sor.machine_id,sor.machine_name,so.machine_level,IFNULL(mld.name,"") machine_level_desc,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
+        $refundField = 'sor.order_id,so.m_id,sor.machine_id,sor.machine_name,so.machine_level,IFNULL(mld.name,"") machine_level_desc,(CASE so.run_mode WHEN 2 THEN "测试模式" ELSE "生产模式" END) run_mode_desc,sor.trade_no,so.mch_no,so.factory,so.inventory_location,
             (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = so.ao_id) organization_name,
             sor.refund_quantity total_quantity,
             (0-sor.refund_amount) total_price,("-") total_cost_points,("-") total_points,("-") discount_price,("-") retail_price,
