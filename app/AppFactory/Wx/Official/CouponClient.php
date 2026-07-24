@@ -195,6 +195,7 @@ class CouponClient extends WxBaseClient
                 'c_id' => intval($coupon['c_id']),
                 'openid' => $openid,
                 'code' => $code,
+                'ip' => request()->ip(),
             ], '通过链接领取优惠券成功');
             return $this->r(200, '领取成功', [
                 'code' => $code,
