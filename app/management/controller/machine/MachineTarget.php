@@ -36,6 +36,7 @@ class MachineTarget extends Common
             'm_id' => $postData['m_id'] ?? '',
             'date' => $postData['date'] ?? '',
             'price' => $postData['price'] ?? 0,
+            'target_amount' => $postData['target_amount'] ?? 0,
             'auth_where' => $this->getWhere([]),
         ];
 
@@ -55,6 +56,7 @@ class MachineTarget extends Common
             'm_id' => $postData['m_id'] ?? '',
             'date' => $postData['date'] ?? '',
             'price' => $postData['price'] ?? 0,
+            'target_amount' => $postData['target_amount'] ?? 0,
             'auth_where' => $this->getWhere([]),
         ];
 
