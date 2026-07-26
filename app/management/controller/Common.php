@@ -126,7 +126,18 @@ class Common extends AuthController
      */
     public function authNodeWhere($where = [], $prefix = "")
     {
-        $where = $this->applyManagerQueryStartTimeWhere($where, $prefix);
+        if (in_array(
+            $this->currentMenu['url'],
+            [
+                "/management/sale.sale_orders/getReport",
+                "/management/sale.sale_orders/getReportList",
+                "/management/sale.sale_orders/exportReport"
+            ]
+        )) {
+            $where = $this->applyManagerQueryStartTimeWhere($where, $prefix, 'create_date');
+        } else {
+            $where = $this->applyManagerQueryStartTimeWhere($where, $prefix);
+        }
 
         $dataScope = strval($this->currentMenu['data_scope'] ?? '');
         $legacyDType = intval($this->currentMenu['d_type'] ?? 0);
@@ -187,7 +198,7 @@ class Common extends AuthController
      * @param string $prefix
      * @return array
      */
-    protected function applyManagerQueryStartTimeWhere($where = [], $prefix = "")
+    protected function applyManagerQueryStartTimeWhere($where = [], $prefix = "",$time_field="create_time")
     {
         $startTime = intval($this->manager['query_start_time'] ?? 0);
         if ($startTime <= 0) {
@@ -204,7 +215,7 @@ class Common extends AuthController
             return $where;
         }
 
-        $field = $prefix ? $prefix . 'create_time' : 'create_time';
+        $field = $prefix ? $prefix . $time_field : $time_field;
         $where[] = [$field, '>', $startTime];
         return $where;
     }
