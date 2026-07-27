@@ -621,7 +621,7 @@ class MachineTargetService
      */
     public function statsSummary(array $ctx): array
     {
-        $res = $this->statsCore($ctx);
+        $res = $this->statsCore($ctx, true);
         if (($res['state'] ?? 100) !== 200) {
             return $res;
         }
@@ -631,30 +631,50 @@ class MachineTargetService
             'state' => 200,
             'msg' => '查询成功',
             'data' => [
+                'query_scope' => $data['query_scope'] ?? [],
                 'summary' => $data['summary'] ?? [],
                 'summaryCompare' => $data['summaryCompare'] ?? [],
+                'forecast' => $data['forecast'] ?? [],
+                'device_progress' => $data['device_progress'] ?? [],
+                'trend' => $data['trend'] ?? [],
+                'updated_at' => strval($data['updated_at'] ?? ''),
             ],
         ];
     }
 
     /**
-     * @param array{m_id?:mixed,date?:mixed} $ctx
+     * @param array{m_id?:mixed,date?:mixed,page?:mixed,pageNum?:mixed} $ctx
      * @return array{state:int,msg:string,data:array<string,mixed>}
      */
     public function statsList(array $ctx): array
     {
-        $res = $this->statsCore($ctx);
+        $page = max(1, intval($ctx['page'] ?? 1));
+        $pageNum = intval($ctx['pageNum'] ?? 25);
+        if ($pageNum <= 0) {
+            $pageNum = 25;
+        }
+
+        $res = $this->statsCore($ctx, false);
         if (($res['state'] ?? 100) !== 200) {
             return $res;
         }
 
         $data = is_array($res['data'] ?? null) ? $res['data'] : [];
+        $fullList = is_array($data['list'] ?? null) ? $data['list'] : [];
+        $total = intval($data['total'] ?? count($fullList));
+        $list = array_slice($fullList, ($page - 1) * $pageNum, $pageNum);
+        $lastPage = $total > 0 ? intval(ceil($total / $pageNum)) : 0;
         return [
             'state' => 200,
             'msg' => '查询成功',
             'data' => [
-                'list' => $data['list'] ?? [],
-                'total' => intval($data['total'] ?? 0),
+                'list' => $list,
+                'total' => $total,
+                'per_page' => $pageNum,
+                'current_page' => $page,
+                'last_page' => $lastPage,
+                'on_track_count' => intval($data['on_track_count'] ?? 0),
+                'updated_at' => strval($data['updated_at'] ?? ''),
             ],
         ];
     }
@@ -665,7 +685,7 @@ class MachineTargetService
      */
     public function exportStatsList(array $ctx): array
     {
-        $res = $this->statsCore($ctx);
+        $res = $this->statsCore($ctx, false);
         if (($res['state'] ?? 100) !== 200) {
             return $res;
         }
@@ -700,19 +720,23 @@ class MachineTargetService
      * @param array{m_id?:mixed,date?:mixed} $ctx
      * @return array{state:int,msg:string,data:array<string,mixed>}
      */
-    protected function statsCore(array $ctx): array
+    protected function statsCore(array $ctx, bool $includeDashboard = true): array
     {
         $parsed = $this->parseMonthSelection($ctx['date'] ?? date('Y-m'), true);
         if (($parsed['state'] ?? 100) !== 200) {
             return ['state' => 100, 'msg' => strval($parsed['msg'] ?? '月份格式错误'), 'data' => []];
         }
 
-        $months = $parsed['months'];
+        $months = is_array($parsed['months'] ?? null) ? $parsed['months'] : [];
         $start = intval($parsed['start']);
         $end = intval($parsed['end']);
         $prevStart = intval($parsed['prevStart']);
-        $prevEnd = intval($parsed['prevEnd']);
+        $statsNow = time();
+        $prevEnd = $this->resolveComparisonStatEnd($parsed, $statsNow);
         $dayCount = max(1, intval($parsed['dayCount']));
+        $updatedAt = date('Y-m-d H:i:s', $statsNow);
+        $statEnd = min($statsNow, $end);
+        $queryScope = $this->buildQueryScope($parsed, $statEnd, 0);
 
         $authWhere = is_array($ctx['auth_where'] ?? null) ? $ctx['auth_where'] : [];
         $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
@@ -720,30 +744,40 @@ class MachineTargetService
             return [
                 'state' => 200,
                 'msg' => '查询成功',
-                'data' => $this->emptyStatsPayload($months, $ctx['m_id'] ?? ''),
+                'data' => $this->emptyStatsPayload(
+                    $months,
+                    $ctx['m_id'] ?? '',
+                    [],
+                    $queryScope,
+                    $updatedAt
+                ),
             ];
         }
 
-        $devices = $this->devices([
-            'date' => implode(',', $months),
-            'auth_where' => $authWhere,
-        ]);
-        $deviceOptions = is_array($devices['list'] ?? null) ? $devices['list'] : [];
+        $allowedTargetByMonthMap = $this->queryEffectiveTargetAmountByMonthMap($allowedMids, $months);
+        $allowedTargetMap = $this->sumTargetAmountByMonthMap(
+            $allowedMids,
+            $months,
+            $allowedTargetByMonthMap
+        );
         $configuredMids = [];
-        foreach ($deviceOptions as $item) {
-            $mid = intval($item['m_id'] ?? 0);
-            if ($mid > 0) {
+        foreach ($allowedMids as $mid) {
+            if (round((float) ($allowedTargetMap[$mid] ?? 0), 2) > 0) {
                 $configuredMids[] = $mid;
             }
         }
         $configuredMids = array_values(array_unique($configuredMids));
+        rsort($configuredMids);
+        $configuredMachineMap = $this->queryMachineBaseInfo($configuredMids);
+        $deviceOptions = $this->buildDeviceOptions($configuredMids, $configuredMachineMap);
 
         $selectedMids = $this->normalizeMachineIdInput($ctx['m_id'] ?? '');
+        $hasMachineFilter = $selectedMids !== [];
         if ($selectedMids !== []) {
             $selectedMids = array_values(array_intersect($selectedMids, $allowedMids));
         }
 
-        $baseMids = $selectedMids !== [] ? $selectedMids : $configuredMids;
+        $baseMids = $hasMachineFilter ? $selectedMids : $configuredMids;
         if ($baseMids !== []) {
             $baseMids = array_values(array_intersect($baseMids, $configuredMids));
         }
@@ -752,14 +786,27 @@ class MachineTargetService
             return [
                 'state' => 200,
                 'msg' => '查询成功',
-                'data' => $this->emptyStatsPayload($months, $ctx['m_id'] ?? '', $deviceOptions),
+                'data' => $this->emptyStatsPayload(
+                    $months,
+                    $ctx['m_id'] ?? '',
+                    $deviceOptions,
+                    $queryScope,
+                    $updatedAt
+                ),
             ];
         }
 
-        $machineMap = $this->queryMachineBaseInfo($baseMids);
-        $targetMap = $this->queryTargetAmountMap($baseMids, $months);
+        $machineMap = [];
+        $targetByMonthMap = [];
+        foreach ($baseMids as $mid) {
+            $machineMap[$mid] = $configuredMachineMap[$mid] ?? ['machine_id' => '', 'machine_name' => ''];
+            $targetByMonthMap[$mid] = $allowedTargetByMonthMap[$mid] ?? [];
+        }
+        $targetMap = $this->sumTargetAmountByMonthMap($baseMids, $months, $targetByMonthMap);
         $fullChannelMap = $this->queryFullChannelAmountCostMap($baseMids);
-        $currentMap = $this->queryAmountCostMap($baseMids, $start, $end);
+        $currentMap = $statEnd >= $start
+            ? $this->queryAmountCostMap($baseMids, $start, $statEnd)
+            : [];
         $prevMap = $this->queryAmountCostMap($baseMids, $prevStart, $prevEnd);
 
         $list = [];
@@ -770,6 +817,9 @@ class MachineTargetService
         $sumCurrentTarget = 0;
         $sumPrevSale = 0;
         $sumPrevCost = 0;
+        $summaryTargetByMonth = array_fill_keys($months, 0.0);
+        $onTrackCount = 0;
+        $weakestDevice = null;
 
         foreach ($baseMids as $mid) {
             $machine = $machineMap[$mid] ?? ['machine_id' => '', 'machine_name' => ''];
@@ -789,6 +839,19 @@ class MachineTargetService
             $prevProfit = round($prevSale - $prevCost, 2);
 
             $achievementRate = $targetAmount > 0 ? round($saleAmount / $targetAmount * 100, 2) : 0;
+            $costRate = $saleAmount > 0 ? round($costAmount / $saleAmount * 100, 2) : 0;
+            $profitMargin = $saleAmount > 0 ? round($profitAmount / $saleAmount * 100, 2) : 0;
+            $targetGapAmount = round(max($targetAmount - $saleAmount, 0), 2);
+            $expectedPace = $this->calculateExpectedPace(
+                $targetByMonthMap[$mid] ?? [],
+                $months,
+                $statEnd,
+                $targetAmount
+            );
+            $paceDelta = $expectedPace === null
+                ? null
+                : round($achievementRate - $expectedPace, 2);
+            $status = $paceDelta !== null && $paceDelta >= 0 ? 'ON_TRACK' : 'BEHIND';
             $turnoverRatio = $fullChannelCost > 0 ? round($saleAmount / $fullChannelCost, 2) : 0;
             $turnoverDays = $turnoverRatio > 0 ? round($dayCount / $turnoverRatio, 1) : 0;
 
@@ -815,6 +878,13 @@ class MachineTargetService
                 'prev_profit_amount' => $prevProfit,
                 'prev_turnover_ratio' => $prevTurnoverRatio,
                 'prev_turnover_days' => $prevTurnoverDays,
+                'target_configured' => true,
+                'cost_rate' => $costRate,
+                'profit_margin' => $profitMargin,
+                'target_gap_amount' => $targetGapAmount,
+                'expected_pace' => $expectedPace,
+                'pace_delta' => $paceDelta,
+                'status' => $status,
             ];
 
             $sumCurrentSale += $saleAmount;
@@ -824,14 +894,46 @@ class MachineTargetService
             $sumCurrentTarget += $targetAmount;
             $sumPrevSale += $prevSale;
             $sumPrevCost += $prevCost;
+            foreach ($months as $month) {
+                $summaryTargetByMonth[$month] += (float) ($targetByMonthMap[$mid][$month] ?? 0);
+            }
+
+            if ($status === 'ON_TRACK') {
+                $onTrackCount++;
+            }
+            if (
+                $paceDelta !== null
+                && ($weakestDevice === null || $paceDelta < (float) $weakestDevice['pace_delta'])
+            ) {
+                $weakestDevice = [
+                    'm_id' => $mid,
+                    'machine_name' => strval($machine['machine_name'] ?? ''),
+                    'machine_id' => strval($machine['machine_id'] ?? ''),
+                    'pace_delta' => $paceDelta,
+                ];
+            }
         }
 
         $sumCurrentSale = round($sumCurrentSale, 2);
         $sumCurrentCost = round($sumCurrentCost, 2);
         $sumFullChannelAmount = round($sumFullChannelAmount, 2);
         $sumFullChannelCost = round($sumFullChannelCost, 2);
+        $sumCurrentTarget = round($sumCurrentTarget, 2);
         $sumCurrentProfit = round($sumCurrentSale - $sumCurrentCost, 2);
         $sumCurrentRate = $sumCurrentTarget > 0 ? round($sumCurrentSale / $sumCurrentTarget * 100, 2) : 0;
+        $sumCostRate = $sumCurrentSale > 0 ? round($sumCurrentCost / $sumCurrentSale * 100, 2) : 0;
+        $sumProfitMargin = $sumCurrentSale > 0 ? round($sumCurrentProfit / $sumCurrentSale * 100, 2) : 0;
+        $sumTargetGap = round(max($sumCurrentTarget - $sumCurrentSale, 0), 2);
+        $sumDailyTarget = $dayCount > 0 ? round($sumCurrentTarget / $dayCount, 2) : 0;
+        $sumExpectedPace = $this->calculateExpectedPace(
+            $summaryTargetByMonth,
+            $months,
+            $statEnd,
+            $sumCurrentTarget
+        );
+        $sumPaceDelta = $sumExpectedPace === null
+            ? null
+            : round($sumCurrentRate - $sumExpectedPace, 2);
         $sumCurrentRatio = $sumFullChannelCost > 0 ? round($sumCurrentSale / $sumFullChannelCost, 2) : 0;
         $sumCurrentDays = $sumCurrentRatio > 0 ? round($dayCount / $sumCurrentRatio, 1) : 0;
 
@@ -841,6 +943,59 @@ class MachineTargetService
         $sumPrevRate = $sumCurrentTarget > 0 ? round($sumPrevSale / $sumCurrentTarget * 100, 2) : 0;
         $sumPrevRatio = $sumFullChannelCost > 0 ? round($sumPrevSale / $sumFullChannelCost, 2) : 0;
         $sumPrevDays = $sumPrevRatio > 0 ? round($dayCount / $sumPrevRatio, 1) : 0;
+        $saleCompare = $this->compare($sumCurrentSale, $sumPrevSale);
+        $profitCompare = $this->compare($sumCurrentProfit, $sumPrevProfit);
+        $queryScope = $this->buildQueryScope($parsed, $statEnd, count($list));
+        $summary = [
+            'full_channel_amount' => $sumFullChannelAmount,
+            'full_channel_cost' => $sumFullChannelCost,
+            'sale_amount' => $sumCurrentSale,
+            'cost_amount' => $sumCurrentCost,
+            'estimated_profit' => $sumCurrentProfit,
+            'achievement_rate' => $sumCurrentRate,
+            'turnover_ratio' => $sumCurrentRatio,
+            'turnover_days' => $sumCurrentDays,
+            'previous_sale_amount' => $sumPrevSale,
+            'sale_growth_rate' => $saleCompare['rate'],
+            'cost_rate' => $sumCostRate,
+            'profit_amount' => $sumCurrentProfit,
+            'previous_profit_amount' => $sumPrevProfit,
+            'profit_margin' => $sumProfitMargin,
+            'profit_growth_rate' => $profitCompare['rate'],
+            'target_amount' => $sumCurrentTarget,
+            'target_gap_amount' => $sumTargetGap,
+            'daily_target_amount' => $sumDailyTarget,
+            'expected_pace' => $sumExpectedPace,
+            'pace_delta' => $sumPaceDelta,
+        ];
+        $summaryCompare = [
+            'full_channel_amount' => $this->compare($sumFullChannelAmount, $sumFullChannelAmount),
+            'full_channel_cost' => $this->compare($sumFullChannelCost, $sumFullChannelCost),
+            'sale_amount' => $saleCompare,
+            'cost_amount' => $this->compare($sumCurrentCost, $sumPrevCost),
+            'estimated_profit' => $profitCompare,
+            'achievement_rate' => $this->compare($sumCurrentRate, $sumPrevRate),
+            'turnover_ratio' => $this->compare($sumCurrentRatio, $sumPrevRatio),
+            'turnover_days' => $this->compare($sumCurrentDays, $sumPrevDays),
+        ];
+        $forecast = [];
+        $trend = [];
+        if ($includeDashboard) {
+            $forecast = $this->buildForecast(
+                $baseMids,
+                $parsed,
+                $queryScope,
+                $summary,
+                $statEnd
+            );
+            $trend = $this->buildTrend(
+                $baseMids,
+                $parsed,
+                $summaryTargetByMonth,
+                $statEnd,
+                $prevEnd
+            );
+        }
 
         return [
             'state' => 200,
@@ -852,30 +1007,443 @@ class MachineTargetService
                     'm_id' => $baseMids,
                 ],
                 'machineOptions' => $deviceOptions,
-                'summary' => [
-                    'full_channel_amount' => $sumFullChannelAmount,
-                    'full_channel_cost' => $sumFullChannelCost,
-                    'sale_amount' => $sumCurrentSale,
-                    'cost_amount' => $sumCurrentCost,
-                    'estimated_profit' => $sumCurrentProfit,
-                    'achievement_rate' => $sumCurrentRate,
-                    'turnover_ratio' => $sumCurrentRatio,
-                    'turnover_days' => $sumCurrentDays,
+                'query_scope' => $queryScope,
+                'summary' => $summary,
+                'summaryCompare' => $summaryCompare,
+                'forecast' => $forecast,
+                'device_progress' => [
+                    'total_count' => count($list),
+                    'on_track_count' => $onTrackCount,
+                    'weakest_device' => $weakestDevice,
                 ],
-                'summaryCompare' => [
-                    'full_channel_amount' => $this->compare($sumFullChannelAmount, $sumFullChannelAmount),
-                    'full_channel_cost' => $this->compare($sumFullChannelCost, $sumFullChannelCost),
-                    'sale_amount' => $this->compare($sumCurrentSale, $sumPrevSale),
-                    'cost_amount' => $this->compare($sumCurrentCost, $sumPrevCost),
-                    'estimated_profit' => $this->compare($sumCurrentProfit, $sumPrevProfit),
-                    'achievement_rate' => $this->compare($sumCurrentRate, $sumPrevRate),
-                    'turnover_ratio' => $this->compare($sumCurrentRatio, $sumPrevRatio),
-                    'turnover_days' => $this->compare($sumCurrentDays, $sumPrevDays),
-                ],
+                'trend' => $trend,
+                'updated_at' => $updatedAt,
                 'list' => $list,
                 'total' => count($list),
+                'on_track_count' => $onTrackCount,
             ],
         ];
+    }
+
+    /**
+     * @param int[] $mIds
+     * @param array<int,array{machine_id:string,machine_name:string}> $machineMap
+     * @return array<int,array<string,mixed>>
+     */
+    protected function buildDeviceOptions(array $mIds, array $machineMap): array
+    {
+        $list = [];
+        foreach ($mIds as $mid) {
+            $mid = intval($mid);
+            if ($mid <= 0) {
+                continue;
+            }
+            $machine = $machineMap[$mid] ?? ['machine_id' => '', 'machine_name' => ''];
+            $machineId = strval($machine['machine_id'] ?? '');
+            $machineName = strval($machine['machine_name'] ?? '');
+            $list[] = [
+                'm_id' => $mid,
+                'machine_id' => $machineId,
+                'machine_name' => $machineName,
+                'label' => $machineId . ' ' . $machineName,
+            ];
+        }
+        return $list;
+    }
+
+    /**
+     * 当前月份尚未结束时，对比期最后一个月只统计到相同自然日和时间。
+     *
+     * @param array<string,mixed> $parsed
+     */
+    protected function resolveComparisonStatEnd(array $parsed, int $now = 0): int
+    {
+        $end = intval($parsed['end'] ?? 0);
+        $prevEnd = intval($parsed['prevEnd'] ?? 0);
+        $now = $now > 0 ? $now : time();
+        if ($end <= 0 || $prevEnd <= 0 || date('Y-m', $end) !== date('Y-m', $now)) {
+            return $prevEnd;
+        }
+
+        $previousMonth = date('Y-m', $prevEnd);
+        $previousMonthDays = intval(date('t', strtotime($previousMonth . '-01')));
+        $day = min(intval(date('j', $now)), $previousMonthDays);
+        $aligned = strtotime(sprintf(
+            '%s-%02d %s',
+            $previousMonth,
+            $day,
+            date('H:i:s', $now)
+        ));
+
+        return $aligned === false ? $prevEnd : min(intval($aligned), $prevEnd);
+    }
+
+    /**
+     * @param array<string,mixed> $parsed
+     * @return array<string,mixed>
+     */
+    protected function buildQueryScope(array $parsed, int $statEnd, int $deviceCount): array
+    {
+        $months = is_array($parsed['months'] ?? null) ? $parsed['months'] : [];
+        $start = intval($parsed['start'] ?? 0);
+        $end = intval($parsed['end'] ?? 0);
+        $prevStart = intval($parsed['prevStart'] ?? 0);
+        $prevEnd = intval($parsed['prevEnd'] ?? 0);
+        $totalDays = max(0, intval($parsed['dayCount'] ?? 0));
+
+        if ($statEnd < $start) {
+            $elapsedDays = 0;
+        } elseif ($statEnd >= $end) {
+            $elapsedDays = $totalDays;
+        } else {
+            $statDayStart = strtotime(date('Y-m-d 00:00:00', $statEnd));
+            $elapsedDays = $statDayStart === false
+                ? 0
+                : intval(floor(($statDayStart - $start) / 86400) + 1);
+            $elapsedDays = max(0, min($elapsedDays, $totalDays));
+        }
+
+        return [
+            'start_month' => strval($months[0] ?? ''),
+            'end_month' => strval($months === [] ? '' : $months[count($months) - 1]),
+            'comparison_start_month' => $prevStart > 0 ? date('Y-m', $prevStart) : '',
+            'comparison_end_month' => $prevEnd > 0 ? date('Y-m', $prevEnd) : '',
+            'stat_end_at' => $statEnd > 0 ? date('Y-m-d H:i:s', $statEnd) : '',
+            'total_days' => $totalDays,
+            'elapsed_days' => $elapsedDays,
+            'remaining_days' => max($totalDays - $elapsedDays, 0),
+            'device_count' => max(0, $deviceCount),
+        ];
+    }
+
+    /**
+     * @param array<string,float|int> $targetByMonth
+     * @param string[] $months
+     */
+    protected function calculatePlanAmount(
+        array $targetByMonth,
+        array $months,
+        int $statEnd
+    ): float {
+        $planAmount = 0.0;
+        foreach ($months as $month) {
+            $month = strval($month);
+            $targetAmount = round((float) ($targetByMonth[$month] ?? 0), 2);
+            if ($targetAmount <= 0) {
+                continue;
+            }
+
+            $bounds = $this->monthBounds($month);
+            if ($statEnd < $bounds['start']) {
+                continue;
+            }
+            if ($statEnd >= $bounds['end']) {
+                $planAmount += $targetAmount;
+                continue;
+            }
+
+            $statDayStart = strtotime(date('Y-m-d 00:00:00', $statEnd));
+            $elapsedDays = $statDayStart === false
+                ? 0
+                : intval(floor(($statDayStart - $bounds['start']) / 86400) + 1);
+            $monthDays = intval(date('t', $bounds['start']));
+            if ($monthDays > 0 && $elapsedDays > 0) {
+                $planAmount += $targetAmount * min($elapsedDays, $monthDays) / $monthDays;
+            }
+        }
+
+        return round($planAmount, 2);
+    }
+
+    /**
+     * @param array<string,float|int> $targetByMonth
+     * @param string[] $months
+     */
+    protected function calculateExpectedPace(
+        array $targetByMonth,
+        array $months,
+        int $statEnd,
+        float $targetAmount
+    ): ?float {
+        if ($targetAmount <= 0) {
+            return null;
+        }
+        $planAmount = $this->calculatePlanAmount($targetByMonth, $months, $statEnd);
+        return round($planAmount / $targetAmount * 100, 2);
+    }
+
+    /**
+     * @param int[] $mIds
+     * @param array<string,mixed> $parsed
+     * @param array<string,mixed> $queryScope
+     * @param array<string,mixed> $summary
+     * @return array<string,mixed>
+     */
+    protected function buildForecast(
+        array $mIds,
+        array $parsed,
+        array $queryScope,
+        array $summary,
+        int $statEnd
+    ): array {
+        $targetAmount = round((float) ($summary['target_amount'] ?? 0), 2);
+        $saleAmount = round((float) ($summary['sale_amount'] ?? 0), 2);
+        $profitAmount = round((float) ($summary['profit_amount'] ?? 0), 2);
+        $achievementRate = $targetAmount > 0
+            ? round($saleAmount / $targetAmount * 100, 2)
+            : null;
+        $base = [
+            'status' => 'UNAVAILABLE',
+            'method' => 'RECENT_7_DAY_AVERAGE',
+            'recent_daily_sale_amount' => null,
+            'required_daily_sale_amount' => 0,
+            'projected_sale_amount' => 0,
+            'projected_achievement_rate' => null,
+            'projected_target_delta_amount' => 0,
+            'projected_profit_amount' => 0,
+            'projected_incremental_profit_amount' => 0,
+        ];
+        if ($mIds === [] || $targetAmount <= 0) {
+            return $base;
+        }
+
+        $end = intval($parsed['end'] ?? 0);
+        if ($end > 0 && $statEnd >= $end) {
+            $base['status'] = 'COMPLETED';
+            $base['projected_sale_amount'] = $saleAmount;
+            $base['projected_achievement_rate'] = $achievementRate;
+            $base['projected_target_delta_amount'] = round($saleAmount - $targetAmount, 2);
+            $base['projected_profit_amount'] = $profitAmount;
+            return $base;
+        }
+
+        $months = is_array($parsed['months'] ?? null) ? $parsed['months'] : [];
+        $endMonth = strval($months === [] ? '' : $months[count($months) - 1]);
+        if ($endMonth !== date('Y-m') || $statEnd <= 0) {
+            return $base;
+        }
+
+        $monthStart = strtotime($endMonth . '-01 00:00:00');
+        $statDayStart = strtotime(date('Y-m-d 00:00:00', $statEnd));
+        if ($monthStart === false || $statDayStart === false) {
+            return $base;
+        }
+
+        $elapsedMonthDays = intval(floor(($statDayStart - $monthStart) / 86400) + 1);
+        $recentDays = max(1, min(7, $elapsedMonthDays));
+        $recentStart = strtotime('-' . ($recentDays - 1) . ' day', $statDayStart);
+        if ($recentStart === false) {
+            return $base;
+        }
+
+        $recentMap = $this->queryAmountCostTimelineMap($mIds, $recentStart, $statEnd, 'DAY');
+        $recentSale = 0.0;
+        foreach ($recentMap as $item) {
+            $recentSale += (float) ($item['sale'] ?? 0);
+        }
+        $recentDailySale = round($recentSale / $recentDays, 2);
+        $remainingDays = max(0, intval($queryScope['remaining_days'] ?? 0));
+        $requiredDailySale = $remainingDays > 0
+            ? round(max($targetAmount - $saleAmount, 0) / $remainingDays, 2)
+            : 0;
+        $projectedSale = round($saleAmount + $recentDailySale * $remainingDays, 2);
+        $projectedAchievement = $targetAmount > 0
+            ? round($projectedSale / $targetAmount * 100, 2)
+            : null;
+        $profitMargin = $saleAmount > 0 ? $profitAmount / $saleAmount : 0;
+        $projectedProfit = round($projectedSale * $profitMargin, 2);
+
+        return [
+            'status' => 'IN_PROGRESS',
+            'method' => 'RECENT_7_DAY_AVERAGE',
+            'recent_daily_sale_amount' => $recentDailySale,
+            'required_daily_sale_amount' => $requiredDailySale,
+            'projected_sale_amount' => $projectedSale,
+            'projected_achievement_rate' => $projectedAchievement,
+            'projected_target_delta_amount' => round($projectedSale - $targetAmount, 2),
+            'projected_profit_amount' => $projectedProfit,
+            'projected_incremental_profit_amount' => round($projectedProfit - $profitAmount, 2),
+        ];
+    }
+
+    /**
+     * @param int[] $mIds
+     * @param array<string,mixed> $parsed
+     * @param array<string,float|int> $targetByMonth
+     * @return array{granularity:string,items:array<int,array<string,mixed>>}
+     */
+    protected function buildTrend(
+        array $mIds,
+        array $parsed,
+        array $targetByMonth,
+        int $statEnd,
+        int $prevEnd
+    ): array {
+        $months = is_array($parsed['months'] ?? null) ? $parsed['months'] : [];
+        $start = intval($parsed['start'] ?? 0);
+        $prevStart = intval($parsed['prevStart'] ?? 0);
+        $granularity = count($months) === 1 ? 'DAY' : 'MONTH';
+        if ($mIds === [] || $months === [] || $statEnd < $start) {
+            return ['granularity' => $granularity, 'items' => []];
+        }
+
+        $currentPeriods = $this->buildTrendPeriods($months, $start, $statEnd, $granularity);
+        $previousPeriods = $this->buildComparisonTrendPeriods(
+            $prevStart,
+            $prevEnd,
+            $granularity,
+            count($months)
+        );
+        $currentMap = $this->queryAmountCostTimelineMap($mIds, $start, $statEnd, $granularity);
+        $previousMap = $this->queryAmountCostTimelineMap(
+            $mIds,
+            $prevStart,
+            $prevEnd,
+            $granularity
+        );
+
+        $previousCumulative = [];
+        $previousSale = 0.0;
+        $previousCost = 0.0;
+        foreach ($previousPeriods as $period) {
+            $previousSale += (float) ($previousMap[$period]['sale'] ?? 0);
+            $previousCost += (float) ($previousMap[$period]['cost'] ?? 0);
+            $previousCumulative[] = [
+                'cost' => round($previousCost, 2),
+                'profit' => round($previousSale - $previousCost, 2),
+            ];
+        }
+
+        $items = [];
+        $saleCumulative = 0.0;
+        $costCumulative = 0.0;
+        foreach ($currentPeriods as $index => $period) {
+            $saleCumulative += (float) ($currentMap[$period]['sale'] ?? 0);
+            $costCumulative += (float) ($currentMap[$period]['cost'] ?? 0);
+            $profitCumulative = $saleCumulative - $costCumulative;
+            $pointEnd = $this->trendPeriodEnd($period, $granularity, $statEnd);
+            $planCumulative = $this->calculatePlanAmount(
+                $targetByMonth,
+                $months,
+                $pointEnd
+            );
+
+            $periodMonth = substr($period, 0, 7);
+            $targetCumulative = 0.0;
+            foreach ($months as $month) {
+                if ($month <= $periodMonth) {
+                    $targetCumulative += (float) ($targetByMonth[$month] ?? 0);
+                }
+            }
+            $achievementRate = $targetCumulative > 0
+                ? round($saleCumulative / $targetCumulative * 100, 2)
+                : null;
+            $planRate = $targetCumulative > 0
+                ? round($planCumulative / $targetCumulative * 100, 2)
+                : null;
+
+            $previousIndex = $previousCumulative === []
+                ? null
+                : min($index, count($previousCumulative) - 1);
+            $previous = $previousIndex === null
+                ? ['cost' => 0, 'profit' => 0]
+                : $previousCumulative[$previousIndex];
+            $items[] = [
+                'period' => $period,
+                'label' => $granularity === 'DAY'
+                    ? date('m-d', strtotime($period))
+                    : intval(substr($period, 5, 2)) . '月',
+                'sale_cumulative_amount' => round($saleCumulative, 2),
+                'cost_cumulative_amount' => round($costCumulative, 2),
+                'profit_cumulative_amount' => round($profitCumulative, 2),
+                'plan_cumulative_amount' => $planCumulative,
+                'achievement_rate' => $achievementRate,
+                'plan_rate' => $planRate,
+                'previous_cost_cumulative_amount' => round((float) $previous['cost'], 2),
+                'previous_profit_cumulative_amount' => round((float) $previous['profit'], 2),
+            ];
+        }
+
+        return ['granularity' => $granularity, 'items' => $items];
+    }
+
+    /**
+     * @param string[] $months
+     * @return string[]
+     */
+    protected function buildTrendPeriods(
+        array $months,
+        int $start,
+        int $statEnd,
+        string $granularity
+    ): array {
+        if ($granularity === 'MONTH') {
+            return array_values(array_filter($months, function ($month) use ($statEnd) {
+                return $this->monthBounds(strval($month))['start'] <= $statEnd;
+            }));
+        }
+
+        $periods = [];
+        $cursor = $start;
+        $lastDay = strtotime(date('Y-m-d 00:00:00', $statEnd));
+        while ($lastDay !== false && $cursor <= $lastDay) {
+            $periods[] = date('Y-m-d', $cursor);
+            $next = strtotime('+1 day', $cursor);
+            if ($next === false || $next <= $cursor) {
+                break;
+            }
+            $cursor = $next;
+        }
+        return $periods;
+    }
+
+    /**
+     * @return string[]
+     */
+    protected function buildComparisonTrendPeriods(
+        int $start,
+        int $end,
+        string $granularity,
+        int $monthCount
+    ): array {
+        if ($start <= 0 || $end <= 0 || $start > $end) {
+            return [];
+        }
+        $periods = [];
+        $cursor = $start;
+        if ($granularity === 'MONTH') {
+            for ($i = 0; $i < $monthCount; $i++) {
+                $periods[] = date('Y-m', $cursor);
+                $next = strtotime('+1 month', $cursor);
+                if ($next === false || $next <= $cursor) {
+                    break;
+                }
+                $cursor = $next;
+            }
+            return $periods;
+        }
+
+        $lastDay = strtotime(date('Y-m-d 00:00:00', $end));
+        while ($lastDay !== false && $cursor <= $lastDay) {
+            $periods[] = date('Y-m-d', $cursor);
+            $next = strtotime('+1 day', $cursor);
+            if ($next === false || $next <= $cursor) {
+                break;
+            }
+            $cursor = $next;
+        }
+        return $periods;
+    }
+
+    protected function trendPeriodEnd(string $period, string $granularity, int $statEnd): int
+    {
+        if ($granularity === 'MONTH') {
+            $periodEnd = $this->monthBounds($period)['end'];
+        } else {
+            $value = strtotime($period . ' 23:59:59');
+            $periodEnd = $value === false ? $statEnd : intval($value);
+        }
+        return min($periodEnd, $statEnd);
     }
 
     /**
@@ -1100,6 +1668,19 @@ class MachineTargetService
      */
     protected function queryTargetAmountMap(array $mIds, array $months): array
     {
+        $effectiveMap = $this->queryEffectiveTargetAmountByMonthMap($mIds, $months);
+        return $this->sumTargetAmountByMonthMap($mIds, $months, $effectiveMap);
+    }
+
+    /**
+     * 月度目标记录按“记录存在”优先，即使金额为 0 也不会回退到默认目标。
+     *
+     * @param int[] $mIds
+     * @param string[] $months
+     * @return array<int,array<string,float>>
+     */
+    protected function queryEffectiveTargetAmountByMonthMap(array $mIds, array $months): array
+    {
         if ($mIds === [] || $months === []) {
             return [];
         }
@@ -1123,7 +1704,12 @@ class MachineTargetService
         }
 
         $defaultMap = $this->queryDefaultTargetAmountByMonthMap($mIds, $months);
-        return $this->mergeTargetAmountMap($mIds, $months, $monthlyMap, $defaultMap);
+        return $this->mergeEffectiveTargetAmountByMonthMap(
+            $mIds,
+            $months,
+            $monthlyMap,
+            $defaultMap
+        );
     }
 
     /**
@@ -1139,6 +1725,28 @@ class MachineTargetService
         array $monthlyMap,
         array $defaultMap
     ): array {
+        $effectiveMap = $this->mergeEffectiveTargetAmountByMonthMap(
+            $mIds,
+            $months,
+            $monthlyMap,
+            $defaultMap
+        );
+        return $this->sumTargetAmountByMonthMap($mIds, $months, $effectiveMap);
+    }
+
+    /**
+     * @param int[] $mIds
+     * @param string[] $months
+     * @param array<int,array<string,float>> $monthlyMap
+     * @param array<int,array<string,float>> $defaultMap
+     * @return array<int,array<string,float>>
+     */
+    protected function mergeEffectiveTargetAmountByMonthMap(
+        array $mIds,
+        array $months,
+        array $monthlyMap,
+        array $defaultMap
+    ): array {
         $map = [];
         foreach ($mIds as $mid) {
             $mid = intval($mid);
@@ -1146,19 +1754,43 @@ class MachineTargetService
                 continue;
             }
 
-            $total = 0.0;
             foreach ($months as $month) {
                 $month = strval($month);
                 // 月度目标按记录是否存在判断，存在时始终优先于默认目标。
                 if (isset($monthlyMap[$mid]) && array_key_exists($month, $monthlyMap[$mid])) {
-                    $total += (float) $monthlyMap[$mid][$month];
+                    $map[$mid][$month] = round((float) $monthlyMap[$mid][$month], 2);
                     continue;
                 }
-                $total += (float) ($defaultMap[$mid][$month] ?? 0);
+                $map[$mid][$month] = round((float) ($defaultMap[$mid][$month] ?? 0), 2);
+            }
+        }
+
+        return $map;
+    }
+
+    /**
+     * @param int[] $mIds
+     * @param string[] $months
+     * @param array<int,array<string,float|int>> $effectiveMap
+     * @return array<int,float>
+     */
+    protected function sumTargetAmountByMonthMap(
+        array $mIds,
+        array $months,
+        array $effectiveMap
+    ): array {
+        $map = [];
+        foreach ($mIds as $mid) {
+            $mid = intval($mid);
+            if ($mid <= 0) {
+                continue;
+            }
+            $total = 0.0;
+            foreach ($months as $month) {
+                $total += (float) ($effectiveMap[$mid][strval($month)] ?? 0);
             }
             $map[$mid] = round($total, 2);
         }
-
         return $map;
     }
 
@@ -1301,6 +1933,72 @@ class MachineTargetService
     }
 
     /**
+     * @param int[] $mIds
+     * @return array<string,array{sale:float,cost:float}>
+     */
+    protected function queryAmountCostTimelineMap(
+        array $mIds,
+        int $start,
+        int $end,
+        string $granularity
+    ): array {
+        if ($mIds === [] || $start <= 0 || $end <= 0 || $start > $end) {
+            return [];
+        }
+
+        $periodExpression = $granularity === 'DAY'
+            ? "FROM_UNIXTIME(so.create_date, '%Y-%m-%d')"
+            : "FROM_UNIXTIME(so.create_date, '%Y-%m')";
+        $saleRows = Db::name('sale_orders')->alias('so')
+            ->where('so.pay_status', 3)
+            ->where('so.create_date', '>=', $start)
+            ->where('so.create_date', '<=', $end)
+            ->whereIn('so.m_id', $mIds)
+            ->field($periodExpression . ' as period,'
+                . ' IFNULL(SUM(so.total_price - so.refund_amount),0) as sale_amount')
+            ->group('period')
+            ->select()
+            ->toArray();
+        $costRows = Db::name('sale_orders')->alias('so')
+            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
+            ->where('so.pay_status', 3)
+            ->where('so.create_date', '>=', $start)
+            ->where('so.create_date', '<=', $end)
+            ->whereIn('so.m_id', $mIds)
+            ->field($periodExpression . ' as period,'
+                . ' IFNULL(SUM((IFNULL(sod.success_quantity,0)'
+                . ' - IFNULL(sod.refund_quantity,0))'
+                . ' * IFNULL(sod.cost_price,0)),0) as cost_amount')
+            ->group('period')
+            ->select()
+            ->toArray();
+
+        $map = [];
+        foreach ($saleRows as $row) {
+            $period = strval($row['period'] ?? '');
+            if ($period === '') {
+                continue;
+            }
+            $map[$period] = [
+                'sale' => round((float) ($row['sale_amount'] ?? 0), 2),
+                'cost' => 0,
+            ];
+        }
+        foreach ($costRows as $row) {
+            $period = strval($row['period'] ?? '');
+            if ($period === '') {
+                continue;
+            }
+            if (!isset($map[$period])) {
+                $map[$period] = ['sale' => 0, 'cost' => 0];
+            }
+            $map[$period]['cost'] = round((float) ($row['cost_amount'] ?? 0), 2);
+        }
+        ksort($map);
+        return $map;
+    }
+
+    /**
      * 货道上满货金额/成本（仅统计 g_id > 0 的货道）
      * @param int[] $mIds
      * @return array<int,array{amount:float,cost:float}>
@@ -1382,9 +2080,17 @@ class MachineTargetService
     /**
      * @return array<string,mixed>
      */
-    protected function emptyStatsPayload(array $months, $rawMids, array $deviceOptions = []): array
+    protected function emptyStatsPayload(
+        array $months,
+        $rawMids,
+        array $deviceOptions = [],
+        array $queryScope = [],
+        string $updatedAt = ''
+    ): array
     {
         $selected = $this->normalizeMachineIdInput($rawMids);
+        $updatedAt = $updatedAt !== '' ? $updatedAt : date('Y-m-d H:i:s');
+        $queryScope['device_count'] = 0;
         return [
             'filters' => [
                 'date' => implode('~', [$months[0], $months[count($months) - 1]]),
@@ -1392,6 +2098,7 @@ class MachineTargetService
                 'm_id' => $selected,
             ],
             'machineOptions' => $deviceOptions,
+            'query_scope' => $queryScope,
             'summary' => [
                 'full_channel_amount' => 0,
                 'full_channel_cost' => 0,
@@ -1401,6 +2108,18 @@ class MachineTargetService
                 'achievement_rate' => 0,
                 'turnover_ratio' => 0,
                 'turnover_days' => 0,
+                'previous_sale_amount' => 0,
+                'sale_growth_rate' => 0,
+                'cost_rate' => 0,
+                'profit_amount' => 0,
+                'previous_profit_amount' => 0,
+                'profit_margin' => 0,
+                'profit_growth_rate' => 0,
+                'target_amount' => 0,
+                'target_gap_amount' => 0,
+                'daily_target_amount' => 0,
+                'expected_pace' => null,
+                'pace_delta' => null,
             ],
             'summaryCompare' => [
                 'full_channel_amount' => $this->compare(0, 0),
@@ -1412,8 +2131,30 @@ class MachineTargetService
                 'turnover_ratio' => $this->compare(0, 0),
                 'turnover_days' => $this->compare(0, 0),
             ],
+            'forecast' => [
+                'status' => 'UNAVAILABLE',
+                'method' => 'RECENT_7_DAY_AVERAGE',
+                'recent_daily_sale_amount' => null,
+                'required_daily_sale_amount' => 0,
+                'projected_sale_amount' => 0,
+                'projected_achievement_rate' => null,
+                'projected_target_delta_amount' => 0,
+                'projected_profit_amount' => 0,
+                'projected_incremental_profit_amount' => 0,
+            ],
+            'device_progress' => [
+                'total_count' => 0,
+                'on_track_count' => 0,
+                'weakest_device' => null,
+            ],
+            'trend' => [
+                'granularity' => count($months) === 1 ? 'DAY' : 'MONTH',
+                'items' => [],
+            ],
+            'updated_at' => $updatedAt,
             'list' => [],
             'total' => 0,
+            'on_track_count' => 0,
         ];
     }
 
