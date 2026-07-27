@@ -13,18 +13,19 @@ class RecommendSchemeService
 {
     protected $error = '';
     protected $skippedGoods = []; // 记录被跳过的商品
+    protected $layoutChannelCount = 0;
 
     /**
      * 计算推荐上架方案
-     * @param int $mId 设备ID
      * @param int $mlmId 布局模板ID
-     * @param array $goodsList 商品列表 [{g_id, quantity, retail_price, length, width, height, g_name, sku}]
+     * @param array $goodsList 商品列表 [{g_id, cost_price, retail_price, length, width, height, g_name, sku}]
      * @param string $priorityType 优先级: amount/sku/quantity
      * @return array|false
      */
-    public function calculate($mId, $mlmId, $goodsList, $priorityType = 'amount')
+    public function calculate($mlmId, $goodsList, $priorityType = 'amount')
     {
         $this->skippedGoods = [];
+        $this->layoutChannelCount = 0;
 
         // 1. 获取货道明细
         $details = MachineLayoutDetailModel::where(['mlm_id' => intval($mlmId)])
@@ -35,6 +36,7 @@ class RecommendSchemeService
             $this->error = '布局模板未生成货道明细';
             return false;
         }
+        $this->layoutChannelCount = count($details);
 
         // 2. 获取布局模型（取channel_depth作为深度）
         $model = MachineLayoutModelModel::getFind(['mlm_id' => intval($mlmId)], 'channel_depth');
@@ -83,6 +85,7 @@ class RecommendSchemeService
                     'pos_y' => floatval($detail['pos_y'] ?? 0),
                     'actual_width' => $chW,
                     'actual_height' => $chH,
+                    'channel_depth' => $channelDepth,
                 ];
             }
         }
@@ -93,7 +96,7 @@ class RecommendSchemeService
         }
 
         // 4. 按优先级排序分配
-        $schemeDetails = $this->allocateByPriority($goodsList, $compatibleMap, $details, $priorityType);
+        $schemeDetails = $this->allocateByPriority($goodsList, $compatibleMap, $priorityType);
 
         return $schemeDetails;
     }
@@ -101,7 +104,7 @@ class RecommendSchemeService
     /**
      * 按优先级分配货道
      */
-    protected function allocateByPriority($goodsList, $compatibleMap, $allDetails, $priorityType)
+    protected function allocateByPriority($goodsList, $compatibleMap, $priorityType)
     {
         // 标记已被占用的货道mld_id集合
         $usedMldIds = [];
@@ -124,8 +127,11 @@ class RecommendSchemeService
                 'g_id' => $gId,
                 'g_name' => $goods['g_name'] ?? '',
                 'sku' => $goods['sku'] ?? '',
+                'cost_price' => floatval($goods['cost_price'] ?? 0),
                 'retail_price' => floatval($goods['retail_price'] ?? 0),
-                'quantity' => intval($goods['quantity'] ?? 0),
+                'length' => floatval($goods['length'] ?? 0),
+                'width' => floatval($goods['width'] ?? 0),
+                'height' => floatval($goods['height'] ?? 0),
                 'compatibles' => $availCompatibles,
             ];
         }
@@ -152,36 +158,46 @@ class RecommendSchemeService
 
         $result = [];
 
-        foreach ($sortedGoods as $item) {
-            $gId = $item['g_id'];
-            $compatibles = $item['compatibles'];
-            $remainQty = intval($item['quantity']);
-            if ($remainQty <= 0) continue;
+        // 按优先级轮询商品，直到所有可适配货道都被铺满。
+        do {
+            $allocatedInRound = false;
+            foreach ($sortedGoods as $item) {
+                foreach ($item['compatibles'] as $chosen) {
+                    if (in_array($chosen['mld_id'], $usedMldIds, true)) {
+                        continue;
+                    }
 
-            foreach ($compatibles as $chosen) {
-                if ($remainQty <= 0) break;
-                if (in_array($chosen['mld_id'], $usedMldIds)) continue;
+                    $planQty = intval($chosen['max_qty']);
+                    if ($planQty <= 0) {
+                        continue;
+                    }
 
-                $planQty = min($remainQty, intval($chosen['max_qty']));
-                if ($planQty <= 0) continue;
-
-                $usedMldIds[] = $chosen['mld_id'];
-                $remainQty -= $planQty;
-
-                $result[] = [
-                    'mld_id' => $chosen['mld_id'],
-                    'channel_code' => $chosen['channel_code'],
-                    'g_id' => $gId,
-                    'g_name' => $item['g_name'],
-                    'sku' => $item['sku'],
-                    'retail_price' => $item['retail_price'],
-                    'quantity' => $planQty,
-                    'total_amount' => round($item['retail_price'] * $planQty, 2),
-                    'pos_x' => $chosen['pos_x'],
-                    'pos_y' => $chosen['pos_y'],
-                ];
+                    $usedMldIds[] = $chosen['mld_id'];
+                    $allocatedInRound = true;
+                    $result[] = [
+                        'mld_id' => $chosen['mld_id'],
+                        'channel_code' => $chosen['channel_code'],
+                        'g_id' => $item['g_id'],
+                        'g_name' => $item['g_name'],
+                        'sku' => $item['sku'],
+                        'cost_price' => $item['cost_price'],
+                        'retail_price' => $item['retail_price'],
+                        'length' => $item['length'],
+                        'width' => $item['width'],
+                        'height' => $item['height'],
+                        'quantity' => $planQty,
+                        'total_cost' => round($item['cost_price'] * $planQty, 2),
+                        'total_amount' => round($item['retail_price'] * $planQty, 2),
+                        'channel_width' => $chosen['actual_width'],
+                        'channel_height' => $chosen['actual_height'],
+                        'channel_depth' => $chosen['channel_depth'],
+                        'pos_x' => $chosen['pos_x'],
+                        'pos_y' => $chosen['pos_y'],
+                    ];
+                    break;
+                }
             }
-        }
+        } while ($allocatedInRound && count($usedMldIds) < $this->layoutChannelCount);
 
         return $result;
     }
@@ -192,18 +208,16 @@ class RecommendSchemeService
     public function getGoodsDetails($goodsList)
     {
         $gIds = [];
-        $goodsMap = [];
-        foreach ($goodsList as $g) {
-            $gId = intval($g['g_id'] ?? 0);
+        foreach ($goodsList as $gId) {
+            $gId = intval($gId);
             if ($gId > 0) {
                 $gIds[] = $gId;
-                $goodsMap[$gId] = $g;
             }
         }
         if (!$gIds) return [];
 
         $goods = GoodsModel::whereIn('g_id', $gIds)
-            ->field('g_id,g_name,sku,retail_price,length,width,height')
+            ->field('g_id,g_name,sku,cost_price,retail_price,length,width,height')
             ->select()
             ->toArray();
 
@@ -214,8 +228,8 @@ class RecommendSchemeService
                 'g_id' => $gId,
                 'g_name' => $g['g_name'] ?? '',
                 'sku' => $g['sku'] ?? '',
+                'cost_price' => floatval($g['cost_price'] ?? 0),
                 'retail_price' => floatval($g['retail_price'] ?? 0),
-                'quantity' => intval($goodsMap[$gId]['quantity'] ?? 0),
                 'length' => floatval($g['length'] ?? 0),
                 'width' => floatval($g['width'] ?? 0),
                 'height' => floatval($g['height'] ?? 0),
@@ -236,5 +250,10 @@ class RecommendSchemeService
     public function getSkippedGoods()
     {
         return $this->skippedGoods;
+    }
+
+    public function getLayoutChannelCount()
+    {
+        return $this->layoutChannelCount;
     }
 }

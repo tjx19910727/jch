@@ -11,7 +11,6 @@ namespace app\AppFactory\Management\Machine;
 
 use app\AppFactory\Management\ManagementClient;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelSchemeTrait;
-use app\AppFactory\Kernel\Traits\Machine\MachineLevelLayoutRelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
@@ -21,150 +20,80 @@ use app\AppFactory\Kernel\Service\Machine\RecommendSchemeService;
 class MachineSchemeClient extends ManagementClient
 {
     use MachineChannelSchemeTrait;
-    use MachineLevelLayoutRelTrait;
     use MachineGoodsTrait;
     use MachineTrait;
     use GoodsTrait;
     use GoodsChangeTrait;
 
     /**
-     * 获取推荐上架方案（已存储则直接返回，否则计算后存储）
+     * 根据布局模板和外部商品列表生成推荐预览，不绑定设备、不保存方案。
      */
     public function getRecommendScheme()
     {
         $postData = input();
-        $mId = intval($postData['m_id'] ?? 0);
         $mlmId = intval($postData['mlm_id'] ?? 0);
-        $machineId = trim($postData['machine_id'] ?? '');
-        $priorityType = in_array($postData['priority_type'] ?? '', ['amount', 'sku', 'quantity'])
-            ? $postData['priority_type'] : 'amount';
-        $goodsListInput = $postData['goods_lists'] ?? ($postData['goods_list'] ?? []);
+        $priorityType = 'amount';
+        $goodsListInput = $postData['goods_list'] ?? ($postData['goods_lists'] ?? null);
         $goodsList = $this->normalizeRecommendGoodsLists($goodsListInput);
 
-        if (!$mId || !$mlmId) {
-            return $this->rFail("参数不完整");
+        if (!$mlmId) {
+            return $this->rFail("请提交mlm_id参数");
         }
         if ($goodsList === false) {
-            return $this->rFail("goods_lists格式错误");
+            return $this->rFail("goods_list格式错误");
         }
         if (!$goodsList) {
-            $goodsList = $this->getDefaultRecommendGoodsLists($mId);
-        }
-        if (!$goodsList) {
-            return $this->rFail("设备暂无已上架商品");
+            return $this->rFail("请提交goods_list参数");
         }
 
-        $machineLevel = $this->getMachineValue(['m_id' => $mId], 'machine_level');
-        if (!$machineLevel) {
-            return $this->rFail("设备不存在或未配置设备等级");
-        }
-        $rel = $this->getMachineLevelLayoutRelFind([
-            'machine_level' => intval($machineLevel),
-            'mlm_id' => $mlmId,
-        ], 'id');
-        if (!$rel) {
-            return $this->rFail("布局模板不属于当前设备等级");
-        }
-
-        // 同一设备、模板、优先级重新生成方案时，取消旧待确认方案，避免 goods_lists 变化后复用旧结果。
-        $existScheme = $this->getMachineChannelSchemeFind([
-            'm_id' => $mId,
-            'mlm_id' => $mlmId,
-            'priority_type' => $priorityType,
-            'status' => 1,
-        ]);
-        if ($existScheme) {
-            $mcsId = intval($existScheme['mcs_id']);
-            $this->updateMachineChannelScheme([
-                'status' => 3,
-                'update_time' => time(),
-            ], ['mcs_id' => $mcsId]);
-            $this->updateMachineChannelSchemeDetailStatus($mcsId, 3);
-        }
-
-        // 调用算法服务计算
         $service = new RecommendSchemeService();
         $goodsDetails = $service->getGoodsDetails($goodsList);
         if (!$goodsDetails) {
             return $this->rFail("商品不存在或ID无效");
         }
 
-        $schemeDetails = $service->calculate($mId, $mlmId, $goodsDetails, $priorityType);
+        $schemeDetails = $service->calculate($mlmId, $goodsDetails, $priorityType);
         if ($schemeDetails === false) {
             return $this->rFail($service->getError());
         }
+        if (!$schemeDetails) {
+            return $this->rFail("未生成可用推荐方案");
+        }
 
-        // 获取被跳过的商品（无长宽高）
         $skippedGoods = $service->getSkippedGoods();
-
-        // 统计汇总
         $totalGoods = 0;
         $totalAmount = 0;
+        $totalCost = 0;
         $skuSet = [];
         foreach ($schemeDetails as $d) {
             $totalGoods += intval($d['quantity']);
             $totalAmount += floatval($d['total_amount']);
+            $totalCost += floatval($d['total_cost']);
             $skuSet[intval($d['g_id'])] = true;
         }
-
-        // 存储方案主表（含跳过的商品信息）
-        $saveData = [
-            'machine_id' => $machineId,
-            'm_id' => $mId,
-            'mlm_id' => $mlmId,
-            'scheme_name' => '推荐方案-' . date('YmdHis'),
-            'priority_type' => $priorityType,
-            'total_goods' => $totalGoods,
-            'total_amount' => round($totalAmount, 2),
-            'total_sku' => count($skuSet),
-            'status' => 1,
-            'create_time' => time(),
-            'update_time' => time(),
-        ];
-        if (!empty($skippedGoods)) {
-            $saveData['skipped_goods'] = json_encode($skippedGoods, JSON_UNESCAPED_UNICODE);
-        }
-        $mcsId = $this->addMachineChannelScheme($saveData);
-
-        // 存储方案明细
-        $insertAll = [];
-        $now = time();
-        foreach ($schemeDetails as $d) {
-            $insertAll[] = [
-                'mcs_id' => $mcsId,
-                'mld_id' => intval($d['mld_id']),
-                'channel_code' => $d['channel_code'],
-                'g_id' => intval($d['g_id']),
-                'g_name' => $d['g_name'],
-                'sku' => $d['sku'],
-                'retail_price' => floatval($d['retail_price']),
-                'quantity' => intval($d['quantity']),
-                'total_amount' => round(floatval($d['total_amount']), 2),
-                'pos_x' => floatval($d['pos_x']),
-                'pos_y' => floatval($d['pos_y']),
-                'status' => 1,
-                'create_time' => $now,
-                'update_time' => $now,
-            ];
-        }
-        $this->addMachineChannelSchemeDetailAll($insertAll);
+        $totalChannels = $service->getLayoutChannelCount();
+        $assignedChannels = count($schemeDetails);
 
         $responseData = [
-            'mcs_id' => $mcsId,
+            'priority_type' => $priorityType,
             'scheme' => [
                 'total_goods' => $totalGoods,
+                'total_quantity' => $totalGoods,
                 'total_amount' => round($totalAmount, 2),
+                'total_cost' => round($totalCost, 2),
                 'total_sku' => count($skuSet),
+                'total_channels' => $totalChannels,
+                'assigned_channels' => $assignedChannels,
+                'unassigned_channels' => max(0, $totalChannels - $assignedChannels),
             ],
             'details' => $schemeDetails,
         ];
 
-        // 如有被跳过的商品（无长宽高），附带提示
         if (!empty($skippedGoods)) {
             $responseData['warn_skipped_goods'] = $skippedGoods;
         }
 
-        return $this->r(200, "方案生成成功", $responseData);
+        return $this->r(200, "推荐方案计算成功", $responseData);
     }
 
     protected function normalizeRecommendGoodsLists($goodsLists)
@@ -178,42 +107,18 @@ class MachineSchemeClient extends ManagementClient
                 return false;
             }
         }
-        return is_array($goodsLists) ? $goodsLists : false;
-    }
-
-    protected function getDefaultRecommendGoodsLists($mId)
-    {
-        $machineGoodsList = $this->getMachineGoodsList([
-            'm_id' => intval($mId),
-            'is_shelf' => 1,
-        ], 0, 'g_id,available_stock,standby_stock,reserve_stock,pre_loading_stock', 'mg_id asc');
-        if (!$machineGoodsList) {
-            return [];
+        if (!is_array($goodsLists)) {
+            return false;
         }
-        $machineGoodsList = is_object($machineGoodsList) ? $machineGoodsList->toArray() : $machineGoodsList;
 
-        $goodsLists = [];
-        foreach ($machineGoodsList as $machineGoods) {
-            $gId = intval($machineGoods['g_id'] ?? 0);
-            if ($gId <= 0) {
-                continue;
+        $gIds = [];
+        foreach ($goodsLists as $gId) {
+            if (is_array($gId) || is_object($gId) || intval($gId) <= 0) {
+                return false;
             }
-            $quantity = intval($machineGoods['available_stock'] ?? 0);
-            if ($quantity <= 0) {
-                $quantity = intval($machineGoods['standby_stock'] ?? 0);
-            }
-            if ($quantity <= 0) {
-                $quantity = intval($machineGoods['reserve_stock'] ?? 0);
-            }
-            if ($quantity <= 0) {
-                $quantity = intval($machineGoods['pre_loading_stock'] ?? 0);
-            }
-            $goodsLists[] = [
-                'g_id' => $gId,
-                'quantity' => max(1, $quantity),
-            ];
+            $gIds[] = intval($gId);
         }
-        return $goodsLists;
+        return array_values(array_unique($gIds));
     }
 
     /**
