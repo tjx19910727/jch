@@ -740,6 +740,11 @@ class WeiChengClient extends ManagementClient
                 'machine_name'=> $machine ? $machine['machine_name'] : '',
             ];
         }
+        if (empty($machine_list)) {
+            $machine_list = array_values(array_filter(array_map('trim', explode(',', (string)($log['machine_ids'] ?? ''))), function ($machine_id) {
+                return $machine_id !== '';
+            }));
+        }
 
         // 2 & 3. 按 is_combo 拆分：单品 + 组合商品
         $out_nos_arr = $log['out_nos'] ? explode(',', $log['out_nos']) : [];
