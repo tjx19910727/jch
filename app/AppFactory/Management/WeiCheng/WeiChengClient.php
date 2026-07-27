@@ -463,8 +463,13 @@ class WeiChengClient extends ManagementClient
         if (empty($m_ids)) return $this->r(100, '请选择设备');
 
         $out_nos = is_array($out_nos) ? $out_nos : explode(',', (string)$out_nos);
-        $out_nos = array_values(array_unique($out_nos));
-        if (empty($out_nos)) return $this->r(100, '请选择微程商品');
+        $out_nos = array_map(function ($out_no) {
+            return trim((string)$out_no);
+        }, $out_nos);
+        $out_nos = array_values(array_unique(array_filter($out_nos, function ($out_no) {
+            return $out_no !== '';
+        })));
+        $is_batch_off_shelf = empty($out_nos);
 
         $machine_maps = [];
         foreach ($m_ids as $id) {
@@ -473,6 +478,38 @@ class WeiChengClient extends ManagementClient
             $machine_maps[$id] = $machine->toArray();
         }
         if (count($m_ids) !== count($machine_maps)) return $this->r(100, '选中的设备存在异常的设备');
+
+        if ($is_batch_off_shelf) {
+            $machine_ids_arr = array_column($machine_maps, 'machine_id');
+            $operator = $this->manager ?? [];
+            $log_data = [
+                'm_ids'           => implode(',', $m_ids),
+                'machine_ids'     => implode(',', $machine_ids_arr),
+                'out_nos'         => '',
+                'total_machines'  => count($m_ids),
+                'total_goods'     => 0,
+                'combo_count'     => 0,
+                'combo_out_nos'   => json_encode([], JSON_UNESCAPED_UNICODE),
+                'operator_id'     => $operator['manager_id'] ?? 0,
+                'operator_name'   => $operator['nickname'] ?? '',
+                'create_time'     => time(),
+                'update_time'     => time(),
+            ];
+
+            $this->startTrans();
+            try {
+                $this->delWcMachineChannelInfo([['m_id', 'in', $m_ids]]);
+                $log_id = $this->addWcMcSortLog($log_data);
+                actionLog(['log_id' => $log_id, 'log_data' => $log_data], '批量下架日志主表写入', 'wc_sort_log');
+
+                $this->commitTrans();
+                return $this->rA('虚拟货道微程商品批量下架完成');
+            } catch (\Throwable $e) {
+                $this->rollbackTrans();
+                actionLog(['error' => $e->getMessage(), 'file' => $e->getFile(), 'line' => $e->getLine()], '批量下架日志写入异常', 'wc_sort_log');
+                return $this->r(100, $e->getMessage());
+            }
+        }
 
         $wc_goods_type = $this->getWcGoodsTypesList([['id', '>', '0']])->toArray();
         $wc_goods_type_arr = array_column($wc_goods_type, 'name', 'id');
