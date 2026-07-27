@@ -124,6 +124,8 @@ class MachineTarget extends Common
         $ctx = [
             'm_id' => $postData['m_id'] ?? '',
             'date' => $postData['date'] ?? date('Y-m'),
+            'page' => $postData['page'] ?? 1,
+            'pageNum' => $postData['pageNum'] ?? 25,
             'auth_where' => $this->getWhere([]),
         ];
 
