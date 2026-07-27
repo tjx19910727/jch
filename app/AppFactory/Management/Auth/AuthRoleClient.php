@@ -107,4 +107,26 @@ class AuthRoleClient extends ManagementClient
 
         return $this->rQ($list);
     }
+
+    
+    /**
+     * 获取角色列表，并统计每个角色关联的有效账户数
+     * @param array $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @param int $rQ
+     * @return mixed
+     */
+    public function getList($where = [], $pageNum = 0, $field = "*", $order = "", $rQ = 1)
+    {
+        $field .= ",(SELECT COUNT(DISTINCT amr.manager_id)
+            FROM auth_manager_role amr
+            INNER JOIN auth_manager au ON au.manager_id = amr.manager_id
+            WHERE amr.role_id = a.role_id
+            AND amr.is_del = 2
+            AND au.status = 1) manager_num";
+        $data = $this->getAuthRoleList($where, $pageNum, $field, $order);
+        return $rQ ? $this->rQ($data) : $data;
+    }
 }
