@@ -931,6 +931,11 @@ class ApiClient extends ReceiveBaseClient
         $where["m_id"] = $this->machine['m_id'];
         $configField = "*";
         $data = $this->getMachineConfigFind($where, $configField);
+        if (!isset($data['run_mode']) || !in_array(intval($data['run_mode']), [1, 2], true)) {
+            $data['run_mode'] = 1;
+        } else {
+            $data['run_mode'] = intval($data['run_mode']);
+        }
         if (!isset($data['online_pay_success_tip'])) {
             $data['online_pay_success_tip'] = '';
         }
@@ -951,6 +956,27 @@ class ApiClient extends ReceiveBaseClient
             $data['cart_num_limit'] = $data['limit_quantity'];
         }
         return $this->rQ($data);
+    }
+
+    /**
+     * 设备上报修改自身运行模式：1生产模式，2测试模式
+     * @return array|\think\response\Json
+     */
+    public function reportMachineRunMode()
+    {
+        $runMode = intval($this->data['run_mode']);
+        $result = $this->updateMachineConfig([
+            'run_mode' => $runMode,
+        ], [
+            'm_id' => $this->machine['m_id'],
+        ]);
+        actionLog([
+            'machine_id' => $this->machine['machine_id'],
+            'run_mode' => $runMode,
+            'result' => $result,
+        ], '设备上报修改运行模式', 'reportMachineRunMode');
+
+        return $this->rU($result);
     }
 
     /**
@@ -2468,30 +2494,6 @@ class ApiClient extends ReceiveBaseClient
         return $this->r(200, 'success', [
             'has_restart_command' => 0,
         ]);
-    }
-
-    /**
-     * 设备端设置自身运行模式：1生产模式，2测试模式
-     * @return array|string
-     */
-    public function setMachineRunMode()
-    {
-        $runMode = intval($this->data['run_mode'] ?? 0);
-        if (!in_array($runMode, [1, 2])) {
-            return $this->r(100, $this->lang("VReceive.run_mode_in"));
-        }
-
-        $result = $this->updateMachine([
-            'm_id' => $this->machine['m_id'],
-            'run_mode' => $runMode,
-        ]);
-        actionLog([
-            'machine_id' => $this->machine['machine_id'] ?? '',
-            'run_mode' => $runMode,
-            'result' => $result,
-        ], '设备端设置运行模式', 'setMachineRunMode');
-
-        return $this->rU($result);
     }
 
     /**
