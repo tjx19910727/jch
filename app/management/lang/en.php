@@ -106,6 +106,7 @@ return [
         "c_name_require" => "Coupon name cannot be empty",
         "c_name_max" => "Coupon name exceeds length limit",
         "desc_max" => "Coupon description exceeds length limit",
+        "slogan_max" => "The slogan cannot exceed 20 characters",
         "start_date_require" => "Start date cannot be empty",
         "end_date_require" => "End date cannot be empty",
         "c_type_require" => "Coupon type cannot be empty",
@@ -411,6 +412,7 @@ return [
         "machine_id_exists" => "The equipment number already exists. Please do not add it repeatedly.",
         "machine_no_data" => "No device information found",
         "status_in" => "Device status out of range",
+        "run_mode_in" => "Device run mode out of range",
 
         "light_require" => "Light brightness cannot be empty",
         "volume_require" => "Volume cannot be empty",

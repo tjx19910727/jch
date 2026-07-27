@@ -1420,31 +1420,7 @@ trait MachineTrait
             }
 
             if ($successCount > 0) {
-                $newStock = intval($mc['stock']) - $successCount;
-                if ($newStock > 0) {
-                    $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $newStock]);
-                } else {
-                    $clearData = [
-                        'mc_id' => $mc['mc_id'],
-                        'mg_id' => 0,
-                        'g_id' => 0,
-                        'g_name' => '',
-                        'gc_id' => 0,
-                        'gc_name' => '',
-                        'pic' => '',
-                        'sku' => '',
-                        'bar_code' => '',
-                        'cost_price' => 0,
-                        'market_price' => 0,
-                        'retail_price' => 0,
-                        'gift_points' => 0,
-                        'stock' => 0,
-                        'frozen_stock' => 0,
-                    ];
-                    $this->updateMachineChannel($clearData);
-                }
-
-                $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => intval($mc['mc_id'])]);
+                $this->deductMachineChannelStockAndSendUpdateMq($mc, $successCount, 'remoteRemovalEnd');
             }
 
             return 1;
@@ -1452,6 +1428,51 @@ trait MachineTrait
             actionException($e, 1, 'remoteRemovalEnd');
             return 1;
         }
+    }
+
+    /**
+     * 扣减货道库存；库存不足时清空货道商品，并复用后台 updateMc MQ 同步设备货道信息。
+     * @param array $mc
+     * @param int $quantity
+     * @param string $logTag
+     * @return mixed
+     */
+    protected function deductMachineChannelStockAndSendUpdateMq($mc, $quantity, $logTag = 'DataUpload')
+    {
+        $quantity = intval($quantity);
+        if ($quantity <= 0 || empty($mc['mc_id'])) {
+            return true;
+        }
+
+        $newStock = intval($mc['stock'] ?? 0) - $quantity;
+        if ($newStock > 0) {
+            $result = $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $newStock]);
+        } else {
+            $clearData = [
+                'mc_id' => $mc['mc_id'],
+                'mg_id' => 0,
+                'g_id' => 0,
+                'g_name' => '',
+                'gc_id' => 0,
+                'gc_name' => '',
+                'pic' => '',
+                'sku' => '',
+                'bar_code' => '',
+                'cost_price' => 0,
+                'market_price' => 0,
+                'retail_price' => 0,
+                'gift_points' => 0,
+                'stock' => 0,
+                'frozen_stock' => 0,
+            ];
+            $result = $this->updateMachineChannel($clearData);
+        }
+
+        if (!empty($mc['machine_id'])) {
+            $mqResult = $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => intval($mc['mc_id'])]);
+            actionLog(['mc_id' => intval($mc['mc_id']), 'quantity' => $quantity, 'mq_result' => $mqResult], '扣减货道库存后下发updateMc', $logTag);
+        }
+        return $result;
     }
 
     // public function checkRecycleBox(){

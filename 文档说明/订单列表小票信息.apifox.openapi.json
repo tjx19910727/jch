@@ -1,0 +1,228 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "后台订单列表小票信息",
+    "version": "1.0.0",
+    "description": "后台订单列表响应新增 receipt 字段，直接返回 sale_orders 中已生成的小票 HTML。历史订单尚未生成小票时该字段为空字符串或 null。"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}"
+    }
+  ],
+  "tags": [
+    {
+      "name": "销售订单",
+      "description": "后台销售订单查询"
+    }
+  ],
+  "paths": {
+    "/management/sale.sale_orders/getList": {
+      "post": {
+        "tags": [
+          "销售订单"
+        ],
+        "summary": "查询订单列表（含小票信息）",
+        "description": "保持原有分页、权限及筛选逻辑不变；每条订单新增 receipt 字段。receipt 为设备生成并保存的小票 HTML，本接口不会临时生成小票。",
+        "operationId": "managementSaleOrdersGetListWithReceipt",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "description": "后台登录令牌",
+            "schema": {
+              "type": "string"
+            },
+            "example": "{{token}}"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaleOrderListRequest"
+              },
+              "example": {
+                "page": 1,
+                "pageNum": 15,
+                "trade_no": ""
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/SaleOrderListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "业务查询响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaleOrderListResponse"
+                },
+                "examples": {
+                  "已生成小票": {
+                    "value": {
+                      "state": 200,
+                      "msg": "查询成功",
+                      "data": {
+                        "total": 1,
+                        "per_page": 15,
+                        "current_page": 1,
+                        "last_page": 1,
+                        "data": [
+                          {
+                            "order_id": 86698,
+                            "trade_no": "202607240955511374",
+                            "machine_id": "JCHM-H2D-0198",
+                            "machine_name": "示例设备",
+                            "receipt": "<html><body><div>订单小票内容</div></body></html>"
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "历史订单无小票": {
+                    "value": {
+                      "state": 200,
+                      "msg": "查询成功",
+                      "data": {
+                        "total": 1,
+                        "per_page": 15,
+                        "current_page": 1,
+                        "last_page": 1,
+                        "data": [
+                          {
+                            "order_id": 80001,
+                            "trade_no": "202606010000000001",
+                            "machine_id": "JCHM-H2D-0001",
+                            "machine_name": "示例设备",
+                            "receipt": null
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SaleOrderListRequest": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1,
+            "description": "页码"
+          },
+          "pageNum": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 15,
+            "description": "每页条数"
+          },
+          "trade_no": {
+            "type": "string",
+            "description": "订单号，支持模糊查询"
+          }
+        }
+      },
+      "SaleOrderListItem": {
+        "type": "object",
+        "properties": {
+          "order_id": {
+            "type": "integer",
+            "description": "订单主键"
+          },
+          "trade_no": {
+            "type": "string",
+            "description": "订单号"
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号"
+          },
+          "machine_name": {
+            "type": "string",
+            "description": "设备名称"
+          },
+          "receipt": {
+            "type": "string",
+            "nullable": true,
+            "description": "已生成的小票 HTML；尚未生成时为空字符串或 null"
+          }
+        },
+        "additionalProperties": true
+      },
+      "SaleOrderPaginator": {
+        "type": "object",
+        "required": [
+          "total",
+          "per_page",
+          "current_page",
+          "last_page",
+          "data"
+        ],
+        "properties": {
+          "total": {
+            "type": "integer",
+            "description": "总记录数"
+          },
+          "per_page": {
+            "type": "integer",
+            "description": "每页条数"
+          },
+          "current_page": {
+            "type": "integer",
+            "description": "当前页"
+          },
+          "last_page": {
+            "type": "integer",
+            "description": "最后一页"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SaleOrderListItem"
+            }
+          }
+        }
+      },
+      "SaleOrderListResponse": {
+        "type": "object",
+        "required": [
+          "state",
+          "msg",
+          "data"
+        ],
+        "properties": {
+          "state": {
+            "type": "integer",
+            "example": 200,
+            "description": "业务状态码"
+          },
+          "msg": {
+            "type": "string",
+            "example": "查询成功",
+            "description": "响应信息"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SaleOrderPaginator"
+          }
+        }
+      }
+    }
+  }
+}
