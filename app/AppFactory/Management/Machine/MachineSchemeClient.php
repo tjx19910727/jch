@@ -304,7 +304,7 @@ class MachineSchemeClient extends ManagementClient
     }
 
     /**
-     * 方案真实上架 - 将已确认方案写入真实货道。
+     * 方案真实上架 - 待确认方案可直接执行，已确认方案保持兼容。
      */
     public function applyScheme()
     {
@@ -313,7 +313,7 @@ class MachineSchemeClient extends ManagementClient
 
         $scheme = $this->getMachineChannelSchemeFind(['mcs_id' => $mcsId]);
         if (!$scheme) return $this->rFail("方案不存在");
-        if (intval($scheme['status']) !== 2) return $this->rFail("方案状态不允许真实上架");
+        if (!in_array(intval($scheme['status']), [1, 2], true)) return $this->rFail("方案状态不允许真实上架");
 
         $details = $this->getMachineChannelSchemeDetailList(['mcs_id' => $mcsId])->toArray();
         if (!$details) return $this->rFail("方案明细为空");
@@ -426,6 +426,13 @@ class MachineSchemeClient extends ManagementClient
                     ];
                 }
             }
+
+            // 标记为已上架，避免同一方案重复执行并重复写入库存变更记录。
+            $this->updateMachineChannelScheme([
+                'status' => 4,
+                'update_time' => time(),
+            ], ['mcs_id' => $mcsId]);
+            $this->updateMachineChannelSchemeDetailStatus($mcsId, 4);
 
             $this->commitTrans();
             foreach ($sendList as $send) {

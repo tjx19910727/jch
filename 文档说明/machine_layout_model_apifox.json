@@ -862,7 +862,8 @@
                     "example": [
                       1,
                       2,
-                      3
+                      3,
+                      4
                     ]
                   }
                 }
@@ -1275,9 +1276,10 @@
                     "enum": [
                       1,
                       2,
-                      3
+                      3,
+                      4
                     ],
-                    "description": "方案状态：1待确认，2已确认，3已取消"
+                    "description": "方案状态：1待确认，2已确认，3已取消，4已上架"
                   }
                 }
               }
@@ -1302,7 +1304,7 @@
                       2,
                       3
                     ],
-                    "description": "方案状态：1待确认，2已确认，3已取消"
+                    "description": "方案状态：1待确认，2已确认，3已取消，4已上架"
                   }
                 }
               }
@@ -1469,7 +1471,7 @@
     "/management/machine.machine_scheme/confirmScheme": {
       "post": {
         "summary": "确认推荐上架方案（仅保存）",
-        "description": "确认待确认方案，仅将方案主表和明细状态改为2，不更新真实machine_channel，不写库存，不发送updateMc。真实上架请调用 /management/machine.machine_scheme/applyScheme。",
+        "description": "可选的人工确认步骤。仅将方案主表和明细状态改为2，不更新真实machine_channel、不写库存、不发送updateMc。当前业务可在getRecommendScheme成功后直接调用applyScheme；保留本接口用于兼容原确认流程。",
         "requestBody": {
           "required": true,
           "content": {
@@ -1766,7 +1768,7 @@
     "/management/machine.machine_scheme/applyScheme": {
       "post": {
         "summary": "方案真实上架",
-        "description": "将已确认方案写入真实设备货道。接口会先校验方案状态必须为2，且方案内所有channel_code都能在该设备machine_channel中找到；任一货道缺失则整体失败，不做半更新。成功后补全商品基础字段、retail_price、stock、out_fail_stock，记录goods_change，并在事务提交后发送updateMc到设备。",
+        "description": "将待确认（status=1）或已确认（status=2）的方案写入真实设备货道，可在getRecommendScheme成功后携带返回的mcs_id直接调用。接口会校验方案内所有channel_code都能在该设备machine_channel中找到；任一货道缺失则整体失败，不做半更新。成功后补全商品基础字段、retail_price、stock、out_fail_stock，记录goods_change，将方案和明细状态更新为4已上架，并在事务提交后发送updateMc到设备。已上架方案禁止重复执行。",
         "requestBody": {
           "required": true,
           "content": {
@@ -1779,7 +1781,7 @@
                 "properties": {
                   "mcs_id": {
                     "type": "integer",
-                    "description": "已确认方案ID，方案状态必须为2",
+                    "description": "待确认或已确认方案ID，方案状态允许1或2",
                     "example": 2
                   }
                 }
@@ -1802,7 +1804,7 @@
                 "properties": {
                   "mcs_id": {
                     "type": "integer",
-                    "description": "已确认方案ID，方案状态必须为2",
+                    "description": "待确认或已确认方案ID，方案状态允许1或2",
                     "example": 2
                   }
                 }
@@ -1878,7 +1880,7 @@
                     }
                   },
                   "bad_status": {
-                    "summary": "方案未确认",
+                    "summary": "方案状态不允许上架或已经上架",
                     "value": {
                       "state": 100,
                       "msg": "方案状态不允许真实上架"
@@ -2203,9 +2205,10 @@
             "enum": [
               1,
               2,
-              3
+              3,
+              4
             ],
-            "description": "方案状态：1待确认，2已确认，3已取消",
+            "description": "方案状态：1待确认，2已确认，3已取消，4已上架",
             "example": 1
           },
           "create_time": {
@@ -2290,9 +2293,10 @@
             "enum": [
               1,
               2,
-              3
+              3,
+              4
             ],
-            "description": "明细状态：1待确认，2已确认，3已取消",
+            "description": "明细状态：1待确认，2已确认，3已取消，4已上架",
             "example": 1
           },
           "create_time": {
