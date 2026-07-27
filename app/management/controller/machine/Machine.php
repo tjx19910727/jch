@@ -48,7 +48,22 @@ class Machine extends Common
             $onlineValue = $postData['online'];
             unset($postData['online']);
         }
+        $runMode = isset($postData['run_mode']) && $postData['run_mode'] !== ''
+            ? intval($postData['run_mode'])
+            : 0;
+        unset($postData['run_mode']);
         $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
+        if ($runMode) {
+            $runModeMIds = $this->app->machine->getMachineConfigList(
+                ['run_mode' => $runMode],
+                0,
+                'm_id'
+            )->column('m_id');
+            if (!$runModeMIds) {
+                return $this->app->machine->rNoData();
+            }
+            $where[] = ['m_id', 'in', $runModeMIds];
+        }
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];//vending_machine_type字段已废弃，入库默认值为1，代码层面涉及此字段的不用管
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
@@ -389,7 +404,22 @@ class Machine extends Common
             $onlineValue = $postData['online'];
             unset($postData['online']);
         }
+        $runMode = isset($postData['run_mode']) && $postData['run_mode'] !== ''
+            ? intval($postData['run_mode'])
+            : 0;
+        unset($postData['run_mode']);
         $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
+        if ($runMode) {
+            $runModeMIds = $this->app->machine->getMachineConfigList(
+                ['run_mode' => $runMode],
+                0,
+                'm_id'
+            )->column('m_id');
+            if (!$runModeMIds) {
+                return $this->app->machine->rNoData();
+            }
+            $where[] = ['m_id', 'in', $runModeMIds];
+        }
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
         $field = "m_id,machine_id,machine_name,ao_id,country_id,state_id,city_id,regions_id,street,floor,version,factory,inventory_location,
         IFNULL((SELECT GROUP_CONCAT(DISTINCT mg.mg_name ORDER BY mg.id SEPARATOR ',') FROM machine_group_mg mg WHERE mg.m_id = a.m_id),'') machine_group_name,
@@ -397,7 +427,7 @@ class Machine extends Common
         FROM_UNIXTIME(last_online_time) last_online_time,
         (case device_type when 1 then '" . lang("vending_machine") . "' else '" . lang("store") . "' end) device_type,
         (case machine_level when 1 then '" . lang("simplified_version") . "' else '" . lang("luxury_edition") . "' END) machine_level,
-        (case run_mode when 2 then '测试模式' else '生产模式' END) run_mode,
+        (SELECT CASE mc.run_mode WHEN 2 THEN '测试模式' ELSE '生产模式' END FROM machine_config mc WHERE mc.m_id = a.m_id LIMIT 1) run_mode,
     (case is_operating when 1 then '在营' when 2 then '在库' when 3 then '停营' END) is_operating,
         (case status when 1 then '" . lang("normal") . "' when 2 then '" . lang("disable") . "' when 3 then '" . lang("maintenance") . "' end) status";
         //只取vending_machine_type为1的设备，即主柜设备

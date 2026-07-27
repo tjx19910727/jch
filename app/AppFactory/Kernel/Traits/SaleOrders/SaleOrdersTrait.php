@@ -16,6 +16,7 @@ use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelNightlyModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersUnclaimedModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\Machine\MachineConfigModel;
 use app\AppFactory\Kernel\Model\Machine\MachineLevelDescModel;
 use app\AppFactory\Kernel\Support\Validate\Api\VV2;
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
@@ -315,10 +316,6 @@ trait SaleOrdersTrait
         }
 
         $runMode = 1;
-        if (isset($this->machine) && isset($this->machine['run_mode']) && in_array(intval($this->machine['run_mode']), [1, 2])) {
-            $runMode = intval($this->machine['run_mode']);
-        }
-
         $where = [];
         if (!empty($order['m_id'])) {
             $where['m_id'] = intval($order['m_id']);
@@ -327,9 +324,9 @@ trait SaleOrdersTrait
         }
 
         if ($where) {
-            $machineRunMode = MachineModel::getFieldValue($where, 'run_mode');
-            if (in_array(intval($machineRunMode), [1, 2])) {
-                $runMode = intval($machineRunMode);
+            $configRunMode = MachineConfigModel::getFieldValue($where, 'run_mode');
+            if (in_array(intval($configRunMode), [1, 2])) {
+                $runMode = intval($configRunMode);
             }
         }
 
