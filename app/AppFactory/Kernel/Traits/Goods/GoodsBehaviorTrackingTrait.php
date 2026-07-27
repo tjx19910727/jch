@@ -57,7 +57,7 @@ trait GoodsBehaviorTrackingTrait
             ->where($where)
             ->whereRaw(
                 'bvc.switch_time IS NOT NULL '
-                . 'AND COALESCE(NULLIF(gbt.device_created_at, 0), UNIX_TIMESTAMP(gbt.report_date)) >= bvc.switch_time'
+                . 'AND gbt.device_created_at >= bvc.switch_time'
             )
             ->sum('gbt.click_count');
 
@@ -95,7 +95,7 @@ trait GoodsBehaviorTrackingTrait
             ->where($where)
             ->whereRaw(
                 'bvc.switch_time IS NOT NULL '
-                . 'AND COALESCE(NULLIF(gbt.device_created_at, 0), UNIX_TIMESTAMP(gbt.report_date)) >= bvc.switch_time'
+                . 'AND gbt.device_created_at >= bvc.switch_time'
             )
             ->field(
                 "CONVERT(gbt.machine_id USING utf8mb4) COLLATE utf8mb4_unicode_ci machine_id,"
