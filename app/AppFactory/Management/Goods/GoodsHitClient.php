@@ -189,7 +189,7 @@ class GoodsHitClient extends ManagementClient
             ->where($trackingWhere)
             ->whereRaw(
                 'bvc.switch_time IS NOT NULL '
-                . 'AND COALESCE(NULLIF(gbt.device_created_at, 0), UNIX_TIMESTAMP(gbt.report_date)) >= bvc.switch_time'
+                . 'AND gbt.device_created_at >= bvc.switch_time'
             )
             ->field($this->getVersionedGoodsHitSourceFields('new', $groupType))
             ->group($this->getVersionedGoodsHitSourceGroup('new', $groupType));
@@ -336,15 +336,7 @@ class GoodsHitClient extends ManagementClient
             if ($field == 'machine_id') $value[0] = 'gbt.machine_id';
             if ($field == 'sku') $value[0] = Db::raw('IF(gbt.is_online = 1, wg.sku, g.sku)');
             if ($field == 'create_time') {
-                $value[0] = 'gbt.report_date';
-                if (($value[1] ?? '') == 'between' && is_array($value[2] ?? null)) {
-                    $value[2] = [
-                        date('Y-m-d', intval($value[2][0])),
-                        date('Y-m-d', intval($value[2][1])),
-                    ];
-                } elseif (isset($value[2]) && is_numeric($value[2])) {
-                    $value[2] = date('Y-m-d', intval($value[2]));
-                }
+                $value[0] = 'gbt.device_created_at';
             }
             if ($field == 'ao_id') $value[0] = 'm.ao_id';
             $newWhere[] = $value;
@@ -354,7 +346,7 @@ class GoodsHitClient extends ManagementClient
 
     protected function formatGoodsBehaviorTrackingOrder($order)
     {
-        return str_replace(['g_id', 'm_id', 'create_time'], ['gbt.goods_id', 'gbt.m_id', 'gbt.report_date'], $order);
+        return str_replace(['g_id', 'm_id', 'create_time'], ['gbt.goods_id', 'gbt.m_id', 'gbt.device_created_at'], $order);
     }
 
     protected function getNetSaleQuantity($where, $item = [])
