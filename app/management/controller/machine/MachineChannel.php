@@ -146,8 +146,7 @@ class MachineChannel extends Common
     public function setWcGoods2Mc(){
         $m_id = input("m_id");
         $out_nos = input('out_nos');
-        $out_nos_arr = explode(',', $out_nos);
-        return $this->app->weicheng->setWcMachineChannelListsV2($m_id, $out_nos_arr);
+        return $this->app->weicheng->setWcMachineChannelListsV2($m_id, $out_nos ?? []);
     }
 
     public function getWcGoods2Mc()
