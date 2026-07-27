@@ -460,6 +460,8 @@ return [
         "m_id_unique" => "Device configuration already exists, do not add duplicate",
         "machine_id_require" => "Device number cannot be empty",
         "mcList_require" => "Batch configuration list parameter cannot be empty",
+        "online_pay_success_tip_max" => "The online payment success message cannot exceed 255 characters",
+        "online_pay_success_tip_max" => "The online payment success message cannot exceed 255 characters",
     ],
     "VMachineConfigLang" => [
         "mcl_id_require" => "Device configuration multilingual ID cannot be empty",
