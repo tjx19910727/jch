@@ -741,9 +741,18 @@ class WeiChengClient extends ManagementClient
             ];
         }
         if (empty($machine_list)) {
-            $machine_list = array_values(array_filter(array_map('trim', explode(',', (string)($log['machine_ids'] ?? ''))), function ($machine_id) {
+            $log_m_ids = array_map('trim', explode(',', (string)($log['m_ids'] ?? '')));
+            $log_machine_ids = array_filter(array_map('trim', explode(',', (string)($log['machine_ids'] ?? ''))), function ($machine_id) {
                 return $machine_id !== '';
-            }));
+            });
+            foreach ($log_machine_ids as $index => $machine_id) {
+                $machine = $this->getMachineFind(['machine_id' => $machine_id]);
+                $machine_list[] = [
+                    'm_id'         => $machine ? $machine['m_id'] : ($log_m_ids[$index] ?? ''),
+                    'machine_id'   => $machine_id,
+                    'machine_name' => $machine ? $machine['machine_name'] : '',
+                ];
+            }
         }
 
         // 2 & 3. 按 is_combo 拆分：单品 + 组合商品
