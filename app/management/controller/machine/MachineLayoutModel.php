@@ -20,7 +20,10 @@ class MachineLayoutModel extends Common
     {
         $postData = input();
         $pageNum = $postData['pageNum'] ?? 0;
-        $where = $this->getWhere($postData, false, ["model_name" => "like", "model_code" => "like"]);
+        $where = $this->getWhere($postData, false, ["model_name" => "like"]);
+        if (!empty($postData['machine_level'])) {
+            $where['machine_level'] = intval($postData['machine_level']);
+        }
         return $this->app->machineLayoutModel->getList($where, $pageNum);
     }
 

@@ -12,11 +12,11 @@ namespace app\AppFactory\Management\Machine;
 use app\AppFactory\Management\ManagementClient;
 use app\AppFactory\Kernel\Traits\Machine\MachineLayoutModelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineLayoutDetailTrait;
-use app\AppFactory\Kernel\Traits\Machine\MachineLevelLayoutRelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineLevelDescTrait;
 
 class MachineLayoutModelClient extends ManagementClient
 {
-    use MachineLayoutModelTrait, MachineLayoutDetailTrait, MachineLevelLayoutRelTrait;
+    use MachineLayoutModelTrait, MachineLayoutDetailTrait, MachineLevelDescTrait;
 
     /**
      * 获取列表（兼容父类 ManagementTrait::getList 签名）
@@ -30,7 +30,7 @@ class MachineLayoutModelClient extends ManagementClient
     public function getList($where = [], $pageNum = 0, $field = "*", $order = "mlm_id desc", $rQ = 1)
     {
         if (!$where && $field == "*") {
-            $field = "mlm_id,model_name,model_code,inner_width,inner_height,inner_depth,shelf_thickness,divider_thickness,left_indent,right_indent,channel_width,custom_channel_widths,channel_height,channel_depth,total_rows,total_cols,actual_channel_width,status,create_time,update_time";
+            $field = "mlm_id,model_name,machine_level,inner_width,inner_height,inner_depth,shelf_thickness,divider_thickness,left_indent,right_indent,channel_width,custom_channel_widths,channel_height,channel_depth,total_rows,total_cols,actual_channel_width,status,create_time,update_time";
         }
         return $this->rQ($this->getMachineLayoutModelList($where, $pageNum, $field, $order));
     }
@@ -42,6 +42,13 @@ class MachineLayoutModelClient extends ManagementClient
     {
         $postData = input();
         $mlmId = intval($postData['mlm_id'] ?? 0);
+        $machineLevel = intval($postData['machine_level'] ?? 0);
+        if ($machineLevel <= 0) {
+            return $this->rFail("设备等级不能为空");
+        }
+        if (!$this->getMachineLevelFind(['machine_level' => $machineLevel], 'machine_level')) {
+            return $this->rFail("设备等级不存在");
+        }
         $customWidthsError = '';
         $customChannelWidths = $this->normalizeCustomChannelWidthsForSave(
             $postData['custom_channel_widths'] ?? ($postData['channel_widths'] ?? []),
@@ -53,7 +60,7 @@ class MachineLayoutModelClient extends ManagementClient
 
         $insert = [
             "model_name" => $postData['model_name'] ?? '',
-            "model_code" => $postData['model_code'] ?? '',
+            "machine_level" => $machineLevel,
             "inner_width" => floatval($postData['inner_width'] ?? 0),
             "inner_height" => floatval($postData['inner_height'] ?? 0),
             "inner_depth" => floatval($postData['inner_depth'] ?? 0),
@@ -156,16 +163,17 @@ class MachineLayoutModelClient extends ManagementClient
         $machineLevel = intval(input('machine_level'));
         if (!$machineLevel) return $this->rFail("参数错误");
 
-        $relList = $this->getMachineLevelLayoutRelList(['machine_level' => $machineLevel]);
-        $mlmIds = [];
-        foreach ($relList as $rel) {
-            $mlmIds[] = $rel['mlm_id'];
-        }
-
-        // 查询布局模板列表
-        $modelList = [];
-        if (!empty($mlmIds)) {
-            $modelList = $this->getMachineLayoutModelList([['mlm_id', 'in', $mlmIds]], 0, "mlm_id,model_name,model_code");
+        $modelList = $this->getMachineLayoutModelList(
+            ['machine_level' => $machineLevel],
+            0,
+            "mlm_id,model_name,machine_level"
+        );
+        $relList = [];
+        foreach ($modelList as $model) {
+            $relList[] = [
+                'machine_level' => $machineLevel,
+                'mlm_id' => intval($model['mlm_id']),
+            ];
         }
 
         return $this->r(200, "查询成功", [
@@ -187,9 +195,37 @@ class MachineLayoutModelClient extends ManagementClient
         if (!$machineLevel) return $this->rFail("设备等级参数错误");
         if (!is_array($mlmIds)) return $this->rFail("布局模板ID参数错误");
 
-        $this->_saveLevelLayoutRel($machineLevel, $mlmIds);
+        if (!$this->getMachineLevelFind(['machine_level' => $machineLevel], 'machine_level')) {
+            return $this->rFail("设备等级不存在");
+        }
 
-        return $this->rSuccess();
+        $normalizedMlmIds = [];
+        foreach ($mlmIds as $mlmId) {
+            $mlmId = intval($mlmId);
+            if ($mlmId > 0) {
+                $normalizedMlmIds[$mlmId] = $mlmId;
+            }
+        }
+
+        $this->startTrans();
+        try {
+            $this->updateMachineLayoutModel(
+                ['machine_level' => 0],
+                ['machine_level' => $machineLevel]
+            );
+            if ($normalizedMlmIds) {
+                $this->updateMachineLayoutModel(
+                    ['machine_level' => $machineLevel],
+                    [['mlm_id', 'in', array_values($normalizedMlmIds)]]
+                );
+            }
+            $this->commitTrans();
+            return $this->rSuccess();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rFail($e->getMessage());
+        }
     }
 
     // ==================== 布局计算核心逻辑 ====================
