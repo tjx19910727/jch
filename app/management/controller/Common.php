@@ -125,8 +125,9 @@ class Common extends AuthController
      * @return array
      */
     public function authNodeWhere($where = [], $prefix = "")
-    {
-        if (in_array(
+    {{
+        if(!$this->currentMenu) return $where;
+        if(in_array(
             $this->currentMenu['url'],
             [
                 "/management/sale.sale_orders/getReport",
