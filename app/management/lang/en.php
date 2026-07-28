@@ -424,6 +424,9 @@ return [
         "x_y_axis_require" => "x，y axis cannot be all empty",
         "get_recycle_box_overtime" => "Timeout getting recycle box capacity data",
         "pick_up_door_overtime" => "Timeout waiting for the pickup door action result",
+        "msg_type_invalid" => "Invalid main control command type",
+        "simplified_command_only" => "This command is only supported by simplified machines",
+        "luxury_command_only" => "This command is only supported by luxury machines",
     ],
 
     "VMachineLang" => [
