@@ -167,7 +167,10 @@ class GoodsHitClient extends ManagementClient
      */
     protected function getGoodsBehaviorTrackingAggregateFields()
     {
-        return "MAX(IF(gbt.is_online = 1, CONVERT(wg.out_no USING utf8mb4) COLLATE utf8mb4_unicode_ci, NULL)) goods_out_no,MAX(IF(gbt.is_online = 1, CONVERT(wg.g_name USING utf8mb4) COLLATE utf8mb4_unicode_ci, CONVERT(g.g_name USING utf8mb4) COLLATE utf8mb4_unicode_ci)) g_name,MAX(IF(gbt.is_online = 1, CONVERT(wg.sku USING utf8mb4) COLLATE utf8mb4_unicode_ci, CONVERT(g.sku USING utf8mb4) COLLATE utf8mb4_unicode_ci)) sku,MAX(IF(gbt.is_online = 1, CONVERT(wg.gc_name USING utf8mb4) COLLATE utf8mb4_unicode_ci, CONVERT(g.gc_name USING utf8mb4) COLLATE utf8mb4_unicode_ci)) gc_name";
+        return "MAX(IF(gbt.is_online = 1, CONVERT(wg.g_name USING utf8mb4) COLLATE utf8mb4_unicode_ci, CONVERT(g.g_name USING utf8mb4) COLLATE utf8mb4_unicode_ci)) g_name,"
+            . "MAX(IF(gbt.is_online = 1, CONVERT(wg.sku USING utf8mb4) COLLATE utf8mb4_unicode_ci, CONVERT(g.sku USING utf8mb4) COLLATE utf8mb4_unicode_ci)) sku,"
+            . "MAX(IF(gbt.is_online = 1, CONVERT(wg.gc_name USING utf8mb4) COLLATE utf8mb4_unicode_ci, CONVERT(g.gc_name USING utf8mb4) COLLATE utf8mb4_unicode_ci)) gc_name,"
+            . "MAX(IF(gbt.is_online = 1, CONVERT(wg.out_no USING utf8mb4) COLLATE utf8mb4_unicode_ci, NULL)) goods_out_no";
     }
 
     protected function getVersionedGoodsHitList($where,$pageNum = 0,$groupType = 'goods',$order = '',$eachFun = '')
