@@ -119,7 +119,7 @@ class GoodsHitClient extends ManagementClient
     {
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
-        $groupType = $eType == 2 ? 'machine_date' : 'goods';
+        $groupType = $eType == 2 ? 'machine' : 'goods';
         $list = $this->getVersionedGoodsHitList($where,0,$groupType);
         if (!$list) return $this->rFail();
         $list = $list->toArray();
