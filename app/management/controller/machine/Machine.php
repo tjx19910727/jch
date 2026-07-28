@@ -48,22 +48,7 @@ class Machine extends Common
             $onlineValue = $postData['online'];
             unset($postData['online']);
         }
-        $runMode = isset($postData['run_mode']) && $postData['run_mode'] !== ''
-            ? intval($postData['run_mode'])
-            : 0;
-        unset($postData['run_mode']);
         $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
-        if ($runMode) {
-            $runModeMIds = $this->app->machine->getMachineConfigList(
-                ['run_mode' => $runMode],
-                0,
-                'm_id'
-            )->column('m_id');
-            if (!$runModeMIds) {
-                return $this->app->machine->rNoData();
-            }
-            $where[] = ['m_id', 'in', $runModeMIds];
-        }
         //只取vending_machine_type为1的设备，即主柜设备
         $where[] = ['vending_machine_type', '=', 1];//vending_machine_type字段已废弃，入库默认值为1，代码层面涉及此字段的不用管
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
