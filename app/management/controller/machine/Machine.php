@@ -389,22 +389,9 @@ class Machine extends Common
             $onlineValue = $postData['online'];
             unset($postData['online']);
         }
-        $runMode = isset($postData['run_mode']) && $postData['run_mode'] !== ''
-            ? intval($postData['run_mode'])
-            : 0;
-        unset($postData['run_mode']);
+        
         $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
-        if ($runMode) {
-            $runModeMIds = $this->app->machine->getMachineConfigList(
-                ['run_mode' => $runMode],
-                0,
-                'm_id'
-            )->column('m_id');
-            if (!$runModeMIds) {
-                return $this->app->machine->rNoData();
-            }
-            $where[] = ['m_id', 'in', $runModeMIds];
-        }
+        
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
         $field = "m_id,machine_id,machine_name,ao_id,country_id,state_id,city_id,regions_id,street,floor,version,factory,inventory_location,
         IFNULL((SELECT GROUP_CONCAT(DISTINCT mg.mg_name ORDER BY mg.id SEPARATOR ',') FROM machine_group_mg mg WHERE mg.m_id = a.m_id),'') machine_group_name,
