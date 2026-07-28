@@ -146,12 +146,17 @@ class SaleOrders extends Common
         $postData = input();
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         $mIds = [];
+        $gIds = [];
         $machineIds = [];
         $sku = '';
         $g_name = '';
         if (isset($postData['m_id']) && $postData['m_id']) {
             $mIds = $this->parseExportGoodsListIds($postData['m_id']);
             unset($postData['m_id']);
+        }
+        if (isset($postData['g_id']) && $postData['g_id']) {
+            $gIds = $this->parseExportGoodsListIds($postData['g_id']);
+            unset($postData['g_id']);
         }
         if (isset($postData['machine_id']) && $postData['machine_id']) {
             $machineIds = $this->parseExportGoodsListIds($postData['machine_id']);
@@ -173,6 +178,7 @@ class SaleOrders extends Common
         // }
         $where['so.pay_status'] = 3;
         if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
+        if ($gIds) $where[] = ['sod.g_id', 'in', $gIds];
         if (count($machineIds) > 1) $where[] = ['so.machine_id', 'in', $machineIds];
         if ($sku) $where[] = ['sod.sku', 'like', '%'.$sku.'%'];
         if ($g_name) $where[] = ['sod.g_name', 'like', '%'.$g_name.'%'];
