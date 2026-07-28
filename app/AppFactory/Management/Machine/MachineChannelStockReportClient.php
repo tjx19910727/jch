@@ -11,11 +11,12 @@ namespace app\AppFactory\Management\Machine;
 
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelStockReportTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class MachineChannelStockReportClient extends ManagementClient
 {
-    use MachineChannelStockReportTrait;
+    use MachineChannelStockReportTrait, MachineTrait;
 
     /**
      * 查询库存报表
@@ -26,12 +27,31 @@ class MachineChannelStockReportClient extends ManagementClient
      * @param string $group
      * @return array|string
      */
-    public function getMcsList($where,$pageNum = 0,$field = "*",$order = "",$group = "")
+    public function getMcsList($where,$pageNum = 0,$field = "*",$order = "",$group = "",$isOperating = null)
     {
+        $where = $this->applyStockReportOperatingWhere($where, $isOperating);
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $data = $this->getMachineChannelStockReportList($where,$pageNum,$field,$order,$group);
         return $this->rQ($data);
+    }
+
+    /**
+     * 在营状态属于 machine 表，先换算成设备 ID 再筛选库存报表视图。
+     *
+     * @param array $where
+     * @param mixed $isOperating
+     * @param string $machineIdField
+     * @return array
+     */
+    protected function applyStockReportOperatingWhere($where, $isOperating, $machineIdField = 'm_id')
+    {
+        if (!in_array(intval($isOperating), [1, 2], true)) {
+            return $where;
+        }
+        $mIds = $this->getMachineColumn(['is_operating' => intval($isOperating)], 'm_id');
+        $where[] = [$machineIdField, 'in', $mIds ?: [0]];
+        return $where;
     }
 
     /**
@@ -42,11 +62,12 @@ class MachineChannelStockReportClient extends ManagementClient
      * @throws \PHPExcel_Exception
      * @throws \PHPExcel_Writer_Exception
      */
-    public function export($where,$eType = 1)
+    public function export($where,$eType = 1,$isOperating = null)
     {
         $group = "";
         $field = "*";
         if ($eType == 1) {
+            $where = $this->applyStockReportOperatingWhere($where, $isOperating);
             $field = "sku,g_name,bar_code,model,gc_name,
         retail_price,
         sum(mc_stock) mc_stock,
@@ -58,6 +79,7 @@ class MachineChannelStockReportClient extends ManagementClient
             $list = $this->getMachineChannelStockReportList($where,0,$field,"total_stock desc",$group);
         }
         if ($eType == 2) {
+            $where = $this->applyStockReportOperatingWhere($where, $isOperating, 'mcs.m_id');
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['mcs.m_id', 'in', $mIds];
             $where['mcs.ao_id'] = $this->manager['ao_id'];

@@ -620,6 +620,8 @@ class GoodsClient extends ManagementClient
      */
     public function getRankingList($where = [], $pageNum = 0, $topType = 1)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
@@ -628,6 +630,18 @@ class GoodsClient extends ManagementClient
 
         if ($list) {
             $list = $this->formatGoodsRankingList($list);
+        }
+
+        if ($pageNum === 0) {
+            $rows = $list ? $list->toArray() : [];
+            $total = count($rows);
+            $list = [
+                'total' => $total,
+                'per_page' => $total,
+                'current_page' => 1,
+                'last_page' => $total > 0 ? 1 : 0,
+                'data' => $rows,
+            ];
         }
 
         return $this->rQ($list);
@@ -650,8 +664,10 @@ class GoodsClient extends ManagementClient
             $list = $list->toArray();
             $title = [
                 "g_name" => $this->lang("export.g_name"),
-                "totalPrice" => $this->lang("export.totalPrice"),
-                "totalQuantity" => $this->lang("export.totalQuantity"),
+                "totalPrice" => '实际销售额（扣除退款）',
+                "totalQuantity" => '实际销量（扣除退款）',
+                "totalRankPrice" => $this->lang("export.totalPrice"),
+                "totalRankQuantity" => $this->lang("export.totalQuantity"),
                 "totalDiscountPrice" => "优惠金额",
                 "totalRefundAmount" => "退款金额",
                 "totalRefundQuantity" => "退款数量",
@@ -1161,9 +1177,9 @@ class GoodsClient extends ManagementClient
      */
     private function queryGoodsRanking($where, $topType = 1, $pageNum = 0, $limit = 0)
     {
-        $order = 'totalRankPrice desc,totalRankQuantity desc,g_id desc,g_name asc';
+        $order = 'totalPrice desc,totalQuantity desc,g_id desc,g_name asc';
         if ($topType == 2) {
-            $order = 'totalRankQuantity desc,totalRankPrice desc,g_id desc,g_name asc';
+            $order = 'totalQuantity desc,totalPrice desc,g_id desc,g_name asc';
         }
 
         $query = Db::name('sale_orders_details')->alias('sod')
@@ -1180,12 +1196,12 @@ class GoodsClient extends ManagementClient
                 'ROUND(MAX(sod.cost_price),2)' => 'cost_price',
                 'ROUND(MAX(sod.market_price),2)' => 'market_price',
                 'ROUND(MAX(sod.retail_price),2)' => 'retail_price',
-                'ROUND(SUM(sod.total_sod_price),2)' => 'totalPrice',
-                'SUM(sod.quantity)' => 'totalQuantity',
+                'ROUND(SUM(sod.total_sod_price),2)' => 'totalRankPrice',
+                'SUM(sod.quantity)' => 'totalRankQuantity',
                 'ROUND(SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalRefundAmount',
                 'SUM(IFNULL(sod.refund_quantity,0))' => 'totalRefundQuantity',
-                'ROUND(SUM(sod.total_sod_price)-SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalRankPrice',
-                'SUM(sod.quantity)-SUM(IFNULL(sod.refund_quantity,0))' => 'totalRankQuantity',
+                'ROUND(SUM(sod.total_sod_price)-SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalPrice',
+                'SUM(sod.quantity)-SUM(IFNULL(sod.refund_quantity,0))' => 'totalQuantity',
                 'ROUND(SUM(sod.discount_price),2)' => 'totalDiscountPrice',
             ])
             ->group("sod.g_id,IF(sod.g_id = 0, sod.g_name, '')")

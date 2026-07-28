@@ -21,6 +21,23 @@ class MachineOnOffClient extends ManagementClient
 {
     use MachineOnOffTrait, MachineTrait, ApiOutStatusNotifyTrait;
 
+    /**
+     * 获取单条设备营业配置。
+     * 查询字段中的关联子查询使用了 a.m_id，因此主表需要统一设置 a 别名。
+     */
+    public function getFind($where = [], $field = '*', $order = '', $rQ = 1)
+    {
+        $query = Db::name('machine_on_off')
+            ->alias('a')
+            ->where($where)
+            ->field($field);
+        if ($order) {
+            $query = $query->order($order);
+        }
+        $data = $query->find();
+        return $rQ ? $this->rQ($data) : $data;
+    }
+
     public function addOf($postData)
     {
         $flag = [];

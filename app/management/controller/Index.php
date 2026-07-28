@@ -178,7 +178,7 @@ class Index extends Common
     public function getMachineTopList()
     {
         $postData = input();
-        $pageNum = $postData['pageNum'] ?? 15;
+        $pageNum = max(0, intval($postData['pageNum'] ?? 0));
         $topType = intval($postData['top_type'] ?? 1);
         if (!in_array($topType, [1, 2], true)) {
             $topType = 1;
@@ -195,7 +195,7 @@ class Index extends Common
     public function getGoodsTopList()
     {
         $postData = input();
-        $pageNum = $postData['pageNum'] ?? 15;
+        $pageNum = max(0, intval($postData['pageNum'] ?? 0));
         $topType = intval($postData['top_type'] ?? 1);
         if (!in_array($topType, [1, 2], true)) {
             $topType = 1;
