@@ -61,6 +61,7 @@ class MachineClient extends ManagementClient
     public function addM($postData)
     {
         try {
+            unset($postData['run_mode']);
             $machine_group_id = 0;
             if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
                 $machine_group_id = explode(",", $postData['machine_group_id']);
@@ -101,6 +102,7 @@ class MachineClient extends ManagementClient
 
     public function updateM($postData)
     {
+        unset($postData['run_mode']);
         $machine_group_id = [];
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
             $machine_group_id = explode(",",$postData['machine_group_id']);
@@ -262,6 +264,9 @@ class MachineClient extends ManagementClient
         $monthEnd = strtotime(date('Y-m-t 23:59:59', $monthStart));
         $defaultSignal = ['rsrp' => -999, 'sinr' => -999, 'rsrp_level' => 0, 'sinr_level' => 0];
         return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) use ($defaultSignal, $month, $monthStart, $monthEnd) {
+            $configRunMode = $this->getMachineConfigFind(['m_id' => intval($item['m_id'])], 'run_mode');
+            $item['run_mode'] = $configRunMode ? intval($configRunMode['run_mode']) : 1;
+            $item['run_mode_desc'] = $item['run_mode'] === 2 ? '测试模式' : '生产模式';
             $item['last_operating_time'] = Db::name('machine_operating_log')
                 ->where('m_id', intval($item['m_id']))
                 ->order('id', 'desc')
@@ -524,6 +529,9 @@ class MachineClient extends ManagementClient
         $item = $this->getMachineFind($where,$field, "", $with);
         if ($item) {
             $item = $item->toArray();
+            $configRunMode = $this->getMachineConfigFind(['m_id' => intval($item['m_id'])], 'run_mode');
+            $item['run_mode'] = $configRunMode ? intval($configRunMode['run_mode']) : 1;
+            $item['run_mode_desc'] = $item['run_mode'] === 2 ? '测试模式' : '生产模式';
             $item['last_operating_time'] = Db::name('machine_operating_log')
                 ->where('m_id', intval($item['m_id']))
                 ->order('id', 'desc')

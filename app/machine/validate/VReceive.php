@@ -183,6 +183,7 @@ class VReceive extends VCommon
         "getMachineGoods" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineInfo" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineConfig" => ["msg_id","machine_id","timestamp","sign"],
+        "reportMachineRunMode" => ["msg_id","machine_id","timestamp","sign","run_mode"],
         "getCalibrationConfig" => ["msg_id","machine_id","timestamp","sign"],
         "getAppSettings" => ["msg_id","machine_id","timestamp","sign"],
         "getTopicPage" => ["msg_id","machine_id","timestamp","sign"],
@@ -252,7 +253,6 @@ class VReceive extends VCommon
 
         "receipt" => ["msg_id","machine_id","timestamp","order_id"],
         "httpHeartbeat" => ["msg_id","machine_id","timestamp","sign"],
-        "setMachineRunMode" => ["msg_id","machine_id","timestamp","sign","run_mode"],
         "reportScreenImg" => ["msg_id","machine_id","timestamp","sign"],
         "requireOutGoods" => ["msg_id","machine_id","timestamp","sign","trade_no"],
         "getOrderPayStatus" => ["msg_id","machine_id","timestamp","sign"],

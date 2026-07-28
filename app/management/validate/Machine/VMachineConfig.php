@@ -18,6 +18,8 @@ class VMachineConfig extends VCommon
         "m_id" => "require|unique:machine_config",
         "machine_id" => "require",
         "mcList" => "require",
+        "online_pay_success_tip" => "max:255",
+        "run_mode" => "in:1,2",
     ];
 
     protected $message = [
@@ -26,18 +28,20 @@ class VMachineConfig extends VCommon
         "m_id.unique" => "VMachineConfig.m_id_unique",
         "machine_id.require" => "VMachineConfig.machine_id_require",
         "mcList.require" => "VMachineConfig.mcList_require",
+        "online_pay_success_tip.max" => "VMachineConfig.online_pay_success_tip_max",
+        "run_mode.in" => "VMachine.run_mode_in",
     ];
 
     protected $scene = [
-        "add" => ["m_id", "machine_id"],
-        "update" => ["mc_id"],
+        "add" => ["m_id", "machine_id", "online_pay_success_tip", "run_mode"],
+        "update" => ["mc_id", "online_pay_success_tip", "run_mode"],
         "del" => ["mc_id"],
         "updateMoreMc" => ["mcList"],
-        "mcList" => ["m_id"],
+        "mcList" => ["m_id", "online_pay_success_tip", "run_mode"],
     ];
 
     public function sceneMcList()
     {
-        return $this->only(['m_id'])->remove("m_id",'unique');
+        return $this->only(['m_id', 'online_pay_success_tip', 'run_mode'])->remove("m_id",'unique');
     }
 }

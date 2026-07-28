@@ -259,6 +259,20 @@ class Receive extends Common
     }
 
     /**
+     * 设备上报修改自身运行模式
+     * @return array|string
+     */
+    public function reportMachineRunMode()
+    {
+        try {
+            return $this->app->api->reportMachineRunMode();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 获取设备配置多语言数据
      * @return array|\think\response\Json
      */
@@ -839,20 +853,6 @@ class Receive extends Common
     {
         try {
             return $this->app->api->httpHeartbeat();
-        } catch (\Exception $e) {
-            actionException($e, 1);
-            return returnTryCatch($e->getMessage());
-        }
-    }
-
-    /**
-     * 设备端设置运行模式
-     * @return array|string
-     */
-    public function setMachineRunMode()
-    {
-        try {
-            return $this->app->api->setMachineRunMode();
         } catch (\Exception $e) {
             actionException($e, 1);
             return returnTryCatch($e->getMessage());
