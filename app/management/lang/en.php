@@ -116,6 +116,7 @@ return [
         "url_day_count_egt" => "Link claim interval days cannot be less than 0",
         "url_coupon_count_integer" => "Total link coupon claims must be an integer",
         "url_coupon_count_gt" => "Total link coupon claims must be greater than 0",
+        "need_oauth_in" => "Silent authorization must be either 0 or 1",
     ],
 
     "VActivityCouponUsed" => [
