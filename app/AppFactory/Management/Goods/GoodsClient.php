@@ -20,7 +20,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
-use app\AppFactory\RabbitMq\MqProducer;
+use app\AppFactory\RabbitMq\AsyncTaskProducer;
 use app\management\validate\VGoods;
 use think\facade\Db;
 
@@ -161,8 +161,7 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        MqProducer::export([
-            'job_type' => 'goods_update',
+        AsyncTaskProducer::publish('goods_update', [
             'g_id' => $gId,
             'request_time' => date('Y-m-d H:i:s'),
             'manager_id' => $this->manager['manager_id'] ?? 0,
