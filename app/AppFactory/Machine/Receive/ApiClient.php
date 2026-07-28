@@ -160,6 +160,8 @@ class ApiClient extends ReceiveBaseClient
     public $card_default_pwd = '123456';
     public $receipt_code1 = "/uploads/adv/20250618/41da4aa9c2e34fb84b123c8d39eba214.png";
     public $receipt_code2 = "/uploads/adv/20251022/0e543e3d6e1861bd59fed97194fd3f3f.jpg";
+    protected $refundGoodsSpecialCode = '0000';
+
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
@@ -5080,7 +5082,7 @@ class ApiClient extends ReceiveBaseClient
     public function submitRefundGoodsLog()
     {
         $inputCode = trim((string)$this->data['input_code']);
-        $specialCode = trim((string)config('refund_goods.special_code')) ?? '0000';
+        $specialCode = $this->refundGoodsSpecialCode;
         $isSpecialCode = $specialCode !== ''
             && preg_match('/^\d{4}$/', $specialCode)
             && hash_equals($specialCode, $inputCode);
