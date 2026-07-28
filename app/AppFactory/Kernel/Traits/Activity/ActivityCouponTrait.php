@@ -209,6 +209,7 @@ trait ActivityCouponTrait
             }
             $onlineAg = $this->getActivityGoodsList(['a_id' => $ac['c_id'], 'a_type' => 1, 'goods_source' => 2], 0, 'source_no');
             $ac['onlineAg'] = $onlineAg ? $onlineAg->toArray() : [];
+            $ac['onlineGoodsList'] = $ac['onlineAg'];
             if ($ac['designated_goods'] > 1 && empty($ac['ag']) && empty($ac['onlineAg'])) {
                 return $this->r(100,$this->lang("VActivityCoupon.no_ag_data"));
             }
