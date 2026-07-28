@@ -414,7 +414,6 @@ return [
         "machine_id_exists" => "设备编号已存在，请勿重复添加",
         "machine_no_data" => "查无设备信息",
         "status_in" => "设备状态不在范围内",
-        "run_mode_in" => "设备模式参数错误",
 
         "light_require" => "灯光亮度不能为空",
         "volume_require" => "音量不能为空",
@@ -461,7 +460,7 @@ return [
         "m_id_unique" => "设备配置已存在，请勿重复添加",
         "machine_id_require" => "设备编号不能为空",
         "mcList_require" => "批量配置列表参数不能为空",
-        "online_pay_success_tip_max" => "线上商品支付成功提示不能超过255个字符",
+        "run_mode_in" => "设备模式参数错误",
         "online_pay_success_tip_max" => "线上商品支付成功提示不能超过255个字符",
     ],
     "VMachineConfigLang" => [

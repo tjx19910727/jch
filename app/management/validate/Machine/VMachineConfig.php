@@ -29,7 +29,7 @@ class VMachineConfig extends VCommon
         "machine_id.require" => "VMachineConfig.machine_id_require",
         "mcList.require" => "VMachineConfig.mcList_require",
         "online_pay_success_tip.max" => "VMachineConfig.online_pay_success_tip_max",
-        "run_mode.in" => "VMachine.run_mode_in",
+        "run_mode.in" => "VMachineConfig.run_mode_in",
     ];
 
     protected $scene = [

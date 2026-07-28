@@ -413,7 +413,6 @@ return [
         "machine_id_exists" => "The equipment number already exists. Please do not add it repeatedly.",
         "machine_no_data" => "No device information found",
         "status_in" => "Device status out of range",
-        "run_mode_in" => "Device run mode out of range",
 
         "light_require" => "Light brightness cannot be empty",
         "volume_require" => "Volume cannot be empty",
@@ -460,7 +459,7 @@ return [
         "m_id_unique" => "Device configuration already exists, do not add duplicate",
         "machine_id_require" => "Device number cannot be empty",
         "mcList_require" => "Batch configuration list parameter cannot be empty",
-        "online_pay_success_tip_max" => "The online payment success message cannot exceed 255 characters",
+        "run_mode_in" => "Device run mode out of range",
         "online_pay_success_tip_max" => "The online payment success message cannot exceed 255 characters",
     ],
     "VMachineConfigLang" => [
