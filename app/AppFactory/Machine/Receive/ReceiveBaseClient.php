@@ -180,7 +180,8 @@ class ReceiveBaseClient extends MachineBaseClient
                         "timestamp_tolerance" => $timestampTolerance,
                     ];
                     actionLog($data, '发送至MQ服务器的数据',"setSignKey");
-                    $this->dataRecord(2, 2);
+                    // 记录实际下发的认证消息，保证发布确认可按同一个 msg_id 更新状态。
+                    $this->dataRecord(2, 2, $data);
 
                     actionLog($this->mqQueue,'下发队列名',"setSignKey");
                     $result = MqProducer::dataSend($data, $this->mqQueue);
