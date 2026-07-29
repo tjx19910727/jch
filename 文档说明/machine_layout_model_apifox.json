@@ -277,7 +277,7 @@
     "/management/machine.machine_layout_model/getList": {
       "post": {
         "summary": "获取布局模板列表",
-        "description": "分页查询设备型号布局模板列表",
+        "description": "分页查询设备型号布局模板列表。每条记录同时返回 machine_level 和对应的 machine_level_desc 设备等级说明。",
         "parameters": [
           {
             "name": "token",
@@ -531,7 +531,7 @@
     "/management/machine.machine_layout_model/getDetail": {
       "post": {
         "summary": "获取布局模板详情",
-        "description": "获取单个布局模板的详情，包含所有布局明细（货道坐标）",
+        "description": "获取单个布局模板的详情，包含 machine_level、对应的 machine_level_desc 设备等级说明及全部布局明细（货道坐标）。",
         "parameters": [
           {
             "name": "token",
@@ -1964,6 +1964,14 @@
           "model_name": {
             "type": "string",
             "description": "设备型号名称"
+          },
+          "machine_level": {
+            "type": "integer",
+            "description": "设备等级，关联 machine_level_desc.machine_level"
+          },
+          "machine_level_desc": {
+            "type": "string",
+            "description": "设备等级说明，取自 machine_level_desc.name；未配置说明时返回空字符串"
           },
           "model_code": {
             "type": "string",
