@@ -458,6 +458,7 @@ class Machine extends Common
                 10 => "shield",
                 11 => "autoRestocking",
             ];
+            if (empty($postData['machine_id'])) return returnValidate(lang("VMachine.machine_id_require"));
             if (isset($postData['msgType']) && (is_int($postData['msgType']) || ctype_digit((string)$postData['msgType']))) {
                 $msgType = intval($postData['msgType']);
                 if (!isset($typeList[$msgType])) return returnValidate(lang("VMachine.msg_type_invalid"));
@@ -467,12 +468,22 @@ class Machine extends Common
                 }
             }
 
+            if (isset($postData['msgType']) && $postData['msgType'] == 11) {
+                $channelCode = trim((string)($postData['channel_code'] ?? ''));
+                if ($channelCode === '') return returnValidate(lang('VMachineChannel.channel_code_require'));
+                $channel = $this->app->machineChannel->getMachineChannelFind([
+                    'machine_id' => $postData['machine_id'],
+                    'channel_code' => $channelCode,
+                ], 'mc_id');
+                if (!$channel) return returnValidate(lang('VMachineChannel.mc_data_empty'));
+                $otherData['channel_code'] = $channelCode;
+            }
+
             $machineLevelLimit = [
                 "shield" => 1,
             ];
             $resolvedMsgType = $postData['msgType'] ?? '';
             if (isset($machineLevelLimit[$resolvedMsgType])) {
-                if (empty($postData['machine_id'])) return returnValidate(lang("VMachine.machine_id_require"));
                 $machineLevel = MachineModel::where('machine_id', $postData['machine_id'])->value('machine_level');
                 if ($machineLevel === null) return returnValidate(lang("VMachine.machine_no_data"));
                 if (intval($machineLevel) !== $machineLevelLimit[$resolvedMsgType]) {
