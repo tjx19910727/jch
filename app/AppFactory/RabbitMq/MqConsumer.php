@@ -43,6 +43,7 @@ class MqConsumer
     {
         //手动发送ack
         $message->ack($message->getDeliveryTag());
+        $data = [];
         try {
             $data = $message->body;
             $data = json2arr($data);
@@ -67,11 +68,14 @@ class MqConsumer
 
             $updateResult = $this->updateMachineMqRecord(['status' => 2,'msg_id' => $data['msg_id']],['msg_id' => $data['msg_id']]);
             actionLog($updateResult,'修改MQ记录成功结果','DataUpload');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"DataUpload");
             actionLog($e->getTrace(), 'tryCatchTrace',"DataUpload");
-            $updateResult = $this->updateMachineMqRecord(['status' => 3,'msg_id' => $data['msg_id']],['msg_id' => $data['msg_id']]);
-            actionLog($updateResult,'修改MQ记录失败结果','DataUpload');
+            $msgId = is_array($data) ? ($data['msg_id'] ?? '') : '';
+            if ($msgId) {
+                $updateResult = $this->updateMachineMqRecord(['status' => 3,'msg_id' => $msgId],['msg_id' => $msgId]);
+                actionLog($updateResult,'修改MQ记录失败结果','DataUpload');
+            }
         }
     }
 
