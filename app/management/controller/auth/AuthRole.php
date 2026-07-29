@@ -101,4 +101,17 @@ class AuthRole extends Common
         $postData = input();
         return $this->app->authRole->copy($postData);
     }
+
+    /**
+     * 获取角色关联的账户列表（不分页）
+     * @return array|\think\response\Json
+     */
+    public function getManagers()
+    {
+        $roleId = intval(input('role_id', 0));
+        if ($roleId <= 0) {
+            return returnValidate('角色ID不能为空');
+        }
+        return $this->app->authRole->getManagers($roleId);
+    }
 }

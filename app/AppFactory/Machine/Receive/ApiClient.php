@@ -160,6 +160,8 @@ class ApiClient extends ReceiveBaseClient
     public $card_default_pwd = '123456';
     public $receipt_code1 = "/uploads/adv/20250618/41da4aa9c2e34fb84b123c8d39eba214.png";
     public $receipt_code2 = "/uploads/adv/20251022/0e543e3d6e1861bd59fed97194fd3f3f.jpg";
+    protected $refundGoodsSpecialCode = '0000';
+
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
@@ -929,6 +931,14 @@ class ApiClient extends ReceiveBaseClient
         $where["m_id"] = $this->machine['m_id'];
         $configField = "*";
         $data = $this->getMachineConfigFind($where, $configField);
+        if (!isset($data['run_mode']) || !in_array(intval($data['run_mode']), [1, 2], true)) {
+            $data['run_mode'] = 1;
+        } else {
+            $data['run_mode'] = intval($data['run_mode']);
+        }
+        if (!isset($data['online_pay_success_tip'])) {
+            $data['online_pay_success_tip'] = '';
+        }
         if (isset($data['pay_type']) && $data['pay_type']) {
             $pay_type = explode(",", $data['pay_type']);
             if ($pay_type) {
@@ -946,6 +956,27 @@ class ApiClient extends ReceiveBaseClient
             $data['cart_num_limit'] = $data['limit_quantity'];
         }
         return $this->rQ($data);
+    }
+
+    /**
+     * 设备上报修改自身运行模式：1生产模式，2测试模式
+     * @return array|\think\response\Json
+     */
+    public function reportMachineRunMode()
+    {
+        $runMode = intval($this->data['run_mode']);
+        $result = $this->updateMachineConfig([
+            'run_mode' => $runMode,
+        ], [
+            'm_id' => $this->machine['m_id'],
+        ]);
+        actionLog([
+            'machine_id' => $this->machine['machine_id'],
+            'run_mode' => $runMode,
+            'result' => $result,
+        ], '设备上报修改运行模式', 'reportMachineRunMode');
+
+        return $this->rU($result);
     }
 
     /**
@@ -2143,7 +2174,7 @@ class ApiClient extends ReceiveBaseClient
     /**
      * 设备 HTTP 上报回收箱商品数量变化。
      * operate: 1 回收箱添加商品；2 回收箱取出商品；3 回收箱清空
-     * type: 1 出货失败商品回收；2 远程回收；3 货道回收；4 后台退货退款
+     * type: 1 出货失败商品回收；2 远程回收；3 货道回收；4 超预取货失败
      * @return array|string
      */
     public function recycleBoxGoodsChange()
@@ -2156,6 +2187,10 @@ class ApiClient extends ReceiveBaseClient
             $recycleBoxChangeType = intval($this->data['type'] ?? 0);
             if (!in_array($recycleBoxChangeType, [1, 2, 3, 4], true)) {
                 return $this->r(300, '回收箱商品变化类型错误');
+            }
+            $machineChannel = $this->getRecycleBoxStockMachineChannel($operate, $recycleBoxChangeType);
+            if ($machineChannel === false) {
+                return $this->r(300, 'machine_channel不能为空');
             }
 
             if ($operate === 3) {
@@ -2205,7 +2240,8 @@ class ApiClient extends ReceiveBaseClient
                     $goodsChange['g_id'],
                     $operate,
                     $recycleBoxChangeType,
-                    $goodsChange['quantity']
+                    $goodsChange['quantity'],
+                    $machineChannel
                 );
             }
             $result = $this->checkFlag($flag);
@@ -2230,6 +2266,29 @@ class ApiClient extends ReceiveBaseClient
             actionException($e, 1, 'recycleBoxGoodsChange');
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    protected function getRecycleBoxStockMachineChannel($operate, $recycleBoxChangeType)
+    {
+        if (intval($operate) !== 1 || !in_array(intval($recycleBoxChangeType), [1, 4], true)) {
+            return [];
+        }
+
+        $machineChannelCode = trim(strval($this->data['machine_channel'] ?? ''));
+        if ($machineChannelCode === '') {
+            return false;
+        }
+
+        $field = 'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code';
+        $machineChannel = $this->getMachineChannelFind([
+            'm_id' => $this->machine['m_id'],
+            'channel_code' => $machineChannelCode,
+        ], $field);
+        if ($machineChannel) {
+            return is_object($machineChannel) ? $machineChannel->toArray() : $machineChannel;
+        }
+
+        return false;
     }
 
     protected function buildRecycleBoxGoodsChangesFromInfo($goodsInfo)
@@ -2318,7 +2377,7 @@ class ApiClient extends ReceiveBaseClient
         return $total;
     }
 
-    protected function addRecycleBoxGoodsChangeLog($gId, $operate, $recycleBoxChangeType, $changeValue = 1)
+    protected function addRecycleBoxGoodsChangeLog($gId, $operate, $recycleBoxChangeType, $changeValue = 1, $machineChannel = [])
     {
         $goods = $this->getMachineGoodsFind(
             ['m_id' => $this->machine['m_id'], 'g_id' => $gId],
@@ -2331,6 +2390,11 @@ class ApiClient extends ReceiveBaseClient
             );
         }
         $goods = $goods ? (is_object($goods) ? $goods->toArray() : $goods) : [];
+        if ($machineChannel && intval($machineChannel['g_id'] ?? 0) === intval($gId)) {
+            $goods = array_merge($goods, array_filter($machineChannel, function ($value) {
+                return $value !== null && $value !== '';
+            }));
+        }
 
         $descKey = $operate === 2
             ? 'terminal_recycle_box_remove_goods_' . $recycleBoxChangeType
@@ -2343,8 +2407,8 @@ class ApiClient extends ReceiveBaseClient
             'm_id' => $this->machine['m_id'],
             'machine_id' => $this->machine['machine_id'],
             'machine_name' => $this->machine['machine_name'] ?? '',
-            'mc_id' => 0,
-            'channel_code' => '',
+            'mc_id' => intval($machineChannel['mc_id'] ?? 0),
+            'channel_code' => $machineChannel['channel_code'] ?? '',
             'mg_id' => $goods['mg_id'] ?? 0,
             'g_id' => $gId,
             'g_name' => $goods['g_name'] ?? '',
@@ -5023,7 +5087,7 @@ class ApiClient extends ReceiveBaseClient
     public function submitRefundGoodsLog()
     {
         $inputCode = trim((string)$this->data['input_code']);
-        $specialCode = trim((string)config('refund_goods.special_code')) ?? '0000';
+        $specialCode = $this->refundGoodsSpecialCode;
         $isSpecialCode = $specialCode !== ''
             && preg_match('/^\d{4}$/', $specialCode)
             && hash_equals($specialCode, $inputCode);
@@ -5050,9 +5114,9 @@ class ApiClient extends ReceiveBaseClient
             'input_code' => $inputCode,
             'verify_type' => $isSpecialCode ? 2 : 1,
             'verify_status' => $verifyStatus,
-            'pic_out_goods_box' => trim((string)$this->data['pic_out_goods_box']),
-            'video_out_goods_box' => trim((string)$this->data['video_out_goods_box']),
-            'video_refund_goods' => trim((string)$this->data['video_refund_goods']),
+            'pic_out_goods_box' => trim((string)($this->data['pic_out_goods_box'] ?? '')),
+            'video_out_goods_box' => trim((string)($this->data['video_out_goods_box'] ?? '')),
+            'video_refund_goods' => trim((string)($this->data['video_refund_goods'] ?? '')),
         ];
         $logId = $this->addMachineRefundGoodsLog($insert);
 

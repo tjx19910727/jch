@@ -20,7 +20,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
-use app\AppFactory\RabbitMq\MqProducer;
+use app\AppFactory\RabbitMq\AsyncTaskProducer;
 use app\management\validate\VGoods;
 use think\facade\Db;
 
@@ -161,8 +161,7 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        MqProducer::export([
-            'job_type' => 'goods_update',
+        AsyncTaskProducer::publish('goods_update', [
             'g_id' => $gId,
             'request_time' => date('Y-m-d H:i:s'),
             'manager_id' => $this->manager['manager_id'] ?? 0,
@@ -621,6 +620,8 @@ class GoodsClient extends ManagementClient
      */
     public function getRankingList($where = [], $pageNum = 0, $topType = 1)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
@@ -631,6 +632,18 @@ class GoodsClient extends ManagementClient
             $list = $this->formatGoodsRankingList($list);
         }
 
+        if ($pageNum === 0) {
+            $rows = $list ? $list->toArray() : [];
+            $total = count($rows);
+            $list = [
+                'total' => $total,
+                'per_page' => $total,
+                'current_page' => 1,
+                'last_page' => $total > 0 ? 1 : 0,
+                'data' => $rows,
+            ];
+        }
+
         return $this->rQ($list);
     }
 
@@ -638,23 +651,27 @@ class GoodsClient extends ManagementClient
     /**
      * 导出商品排行榜（V2）
      * @param array $where
+     * @param int $topType
+     * @param int $pageNum 排行前多少条，0 表示全部
      * @return array|\think\response\Json|string
      */
-    public function exportRankingListV2($where, $topType = 1)
+    public function exportRankingListV2($where, $topType = 1, $pageNum = 0)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
 
-        $list = $this->queryGoodsRanking($where, $topType, 0);
+        $list = $this->queryGoodsRanking($where, $topType, 0, $pageNum);
         if ($list) {
             $list = $list->toArray();
             $title = [
                 "g_name" => $this->lang("export.g_name"),
-                "totalRankPrice" => '实际销售额（扣除退款）',
-                "totalRankQuantity" => '实际销量（扣除退款）',
-                "totalPrice" => $this->lang("export.totalPrice"),
-                "totalQuantity" => $this->lang("export.totalQuantity"),
+                "totalPrice" => '实际销售额（扣除退款）',
+                "totalQuantity" => '实际销量（扣除退款）',
+                "totalRankPrice" => $this->lang("export.totalPrice"),
+                "totalRankQuantity" => $this->lang("export.totalQuantity"),
                 "totalDiscountPrice" => "优惠金额",
                 "totalRefundAmount" => "退款金额",
                 "totalRefundQuantity" => "退款数量",
@@ -1164,9 +1181,9 @@ class GoodsClient extends ManagementClient
      */
     private function queryGoodsRanking($where, $topType = 1, $pageNum = 0, $limit = 0)
     {
-        $order = 'totalRankPrice desc,totalRankQuantity desc,g_id desc,g_name asc';
+        $order = 'totalPrice desc,totalQuantity desc,g_id desc,g_name asc';
         if ($topType == 2) {
-            $order = 'totalRankQuantity desc,totalRankPrice desc,g_id desc,g_name asc';
+            $order = 'totalQuantity desc,totalPrice desc,g_id desc,g_name asc';
         }
 
         $query = Db::name('sale_orders_details')->alias('sod')
@@ -1183,12 +1200,12 @@ class GoodsClient extends ManagementClient
                 'ROUND(MAX(sod.cost_price),2)' => 'cost_price',
                 'ROUND(MAX(sod.market_price),2)' => 'market_price',
                 'ROUND(MAX(sod.retail_price),2)' => 'retail_price',
-                'ROUND(SUM(sod.total_sod_price),2)' => 'totalPrice',
-                'SUM(sod.quantity)' => 'totalQuantity',
+                'ROUND(SUM(sod.total_sod_price),2)' => 'totalRankPrice',
+                'SUM(sod.quantity)' => 'totalRankQuantity',
                 'ROUND(SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalRefundAmount',
                 'SUM(IFNULL(sod.refund_quantity,0))' => 'totalRefundQuantity',
-                'ROUND(SUM(sod.total_sod_price)-SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalRankPrice',
-                'SUM(sod.quantity)-SUM(IFNULL(sod.refund_quantity,0))' => 'totalRankQuantity',
+                'ROUND(SUM(sod.total_sod_price)-SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalPrice',
+                'SUM(sod.quantity)-SUM(IFNULL(sod.refund_quantity,0))' => 'totalQuantity',
                 'ROUND(SUM(sod.discount_price),2)' => 'totalDiscountPrice',
             ])
             ->group("sod.g_id,IF(sod.g_id = 0, sod.g_name, '')")

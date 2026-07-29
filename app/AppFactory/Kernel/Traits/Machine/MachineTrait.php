@@ -982,7 +982,55 @@ trait MachineTrait
         $status = intval($this->message['status'] ?? 0);
         $sodId = intval($this->message['sod_id'] ?? 0);
         $logId = intval($this->message['log_id'] ?? 0);
+        $reportedLogId = $logId;
+        if (!$reportedLogId && $sodId) {
+            $pendingHeadAction = RemoteActionLogModel::getFind([
+                ['sod_id', '=', $sodId],
+                ['type', 'in', ['continueOutGoods', 'recycGoods']],
+                ['status', 'in', [1, 2]],
+            ], 'id,type,status', 'id desc');
+            if ($pendingHeadAction) {
+                actionLog(
+                    ['sod_id' => $sodId, 'status' => $status],
+                    '机头商品处理回执缺少log_id，拒绝按普通远程出货处理',
+                    'headGoodsAction'
+                );
+                return false;
+            }
+        }
         [$logId, $log] = $this->resolveRemoteOutGoodsLog($logId, $sodId);
+        if ($reportedLogId && !$log) {
+            actionLog(
+                ['log_id' => $reportedLogId, 'sod_id' => $sodId, 'status' => $status],
+                '远程出货回执log_id无效',
+                'remoteOutGoods'
+            );
+            return false;
+        }
+        if ($log) {
+            $logSodId = intval($log['sod_id'] ?? 0);
+            $logMachineId = (string)($log['machine_id'] ?? '');
+            $currentMachineId = (string)($this->machine['machine_id'] ?? '');
+            if (($sodId && $logSodId && $sodId !== $logSodId)
+                || ($logMachineId !== '' && $currentMachineId !== '' && $logMachineId !== $currentMachineId)) {
+                actionLog(
+                    [
+                        'log_id' => $logId,
+                        'sod_id' => $sodId,
+                        'log_sod_id' => $logSodId,
+                        'machine_id' => $currentMachineId,
+                        'log_machine_id' => $logMachineId,
+                    ],
+                    '远程出货回执与动作日志不匹配',
+                    'remoteOutGoods'
+                );
+                return false;
+            }
+        }
+        $actionType = is_array($log) ? ($log['type'] ?? '') : '';
+        if (in_array($actionType, ['continueOutGoods', 'recycGoods'], true)) {
+            return $this->handleHeadGoodsActionReport($status, $logId, $log);
+        }
         if (!$sodId) {
             actionLog($this->message, "远程出货缺少sod_id", "remoteOutGoods");
             return $this->handleRemoteOutGoodsWithoutOrder($status, $logId, $log);
@@ -990,7 +1038,7 @@ trait MachineTrait
 
         $detail = $this->getSaleOrdersDetailsFind(
             ['sod_id' => $sodId],
-            'sod_id,channel_code,channel_position,success_quantity,fail_quantity,remote_out_goods_status'
+            'sod_id,channel_code,channel_position,quantity,success_quantity,fail_quantity,remote_out_goods_status'
         );
         if (!$detail) {
             actionLog(['sod_id' => $sodId], "远程出货未找到子订单", "remoteOutGoods");
@@ -1061,8 +1109,15 @@ trait MachineTrait
                 $updateFields[] = 'channel_position';
 
                 if (in_array($status, [21, 3], true)) {
-                    $updateSod['success_quantity'] = intval($detail['success_quantity'] ?? 0) + 1;
-                    $updateSod['fail_quantity'] = max(0, intval($detail['fail_quantity'] ?? 0) - 1);
+                    $quantity = max(1, intval($detail['quantity'] ?? 0));
+                    $currentSuccess = max(0, intval($detail['success_quantity'] ?? 0));
+                    $nextSuccess = min($quantity, $currentSuccess + 1);
+                    $successIncrement = max(0, $nextSuccess - $currentSuccess);
+                    $updateSod['success_quantity'] = $nextSuccess;
+                    $updateSod['fail_quantity'] = max(
+                        0,
+                        intval($detail['fail_quantity'] ?? 0) - $successIncrement
+                    );
                     $updateFields[] = 'success_quantity';
                     $updateFields[] = 'fail_quantity';
                 }
@@ -1107,24 +1162,124 @@ trait MachineTrait
         }
     }
 
+    /**
+     * 处理机头遗留商品的继续出货/直接回收回执。
+     *
+     * 这两类动作复用 remoteOutGoods 上报协议，但原订单已经完成库存结算，
+     * 因此这里只维护动作日志，不能再次修改订单、子单、退款、库存或
+     * remote_out_goods_status。
+     */
+    protected function handleHeadGoodsActionReport($status, $logId, array $log)
+    {
+        $status = intval($status);
+        $logId = intval($logId);
+        if (!$logId || !in_array($status, [2, 20, 21, 3, 4], true)) {
+            actionLog(
+                ['log_id' => $logId, 'status' => $status],
+                '机头商品处理回执参数无效',
+                'headGoodsAction'
+            );
+            return false;
+        }
+
+        try {
+            Db::startTrans();
+            $lockedLog = Db::name('remote_action_log')->where(['id' => $logId])->lock(true)->find();
+            if (!$lockedLog || !in_array($lockedLog['type'] ?? '', ['continueOutGoods', 'recycGoods'], true)) {
+                Db::rollback();
+                actionLog(['log_id' => $logId], '未找到机头商品处理日志', 'headGoodsAction');
+                return false;
+            }
+
+            $machineId = (string)($this->machine['machine_id'] ?? '');
+            if ($machineId !== '' && (string)$lockedLog['machine_id'] !== $machineId) {
+                Db::rollback();
+                actionLog(
+                    ['log_id' => $logId, 'log_machine_id' => $lockedLog['machine_id'], 'machine_id' => $machineId],
+                    '机头商品处理回执设备不匹配',
+                    'headGoodsAction'
+                );
+                return false;
+            }
+
+            $messageSodId = intval($this->message['sod_id'] ?? 0);
+            $logSodId = intval($lockedLog['sod_id'] ?? 0);
+            if (!$messageSodId || !$logSodId || $messageSodId !== $logSodId) {
+                Db::rollback();
+                actionLog(
+                    ['log_id' => $logId, 'message_sod_id' => $messageSodId, 'log_sod_id' => $logSodId],
+                    '机头商品处理回执sod_id不匹配',
+                    'headGoodsAction'
+                );
+                return false;
+            }
+
+            $currentStatus = intval($lockedLog['status'] ?? 0);
+            // 一个动作日志一旦成功或失败即为终态；重试必须创建新的 log_id。
+            if (in_array($currentStatus, [3, 4], true)) {
+                Db::commit();
+                actionLog(
+                    ['log_id' => $logId, 'type' => $lockedLog['type'], 'status' => $status, 'current_status' => $currentStatus],
+                    '机头商品处理重复终态回执，按幂等成功返回',
+                    'headGoodsAction'
+                );
+                return true;
+            }
+
+            // 2/20/21 都是执行中的过程状态；只有3/4是最终成功/失败。
+            $actionStatus = in_array($status, [2, 20, 21], true) ? 2 : $status;
+            $result = Db::name('remote_action_log')->where(['id' => $logId])->update([
+                'status' => $actionStatus,
+                'operator_at' => date('Y-m-d H:i:s'),
+            ]);
+            if ($result === false) {
+                Db::rollback();
+                return false;
+            }
+
+            Db::commit();
+            actionLog(
+                [
+                    'log_id' => $logId,
+                    'type' => $lockedLog['type'],
+                    'device_status' => $status,
+                    'action_status' => $actionStatus,
+                    'sod_id' => $logSodId,
+                ],
+                '机头商品处理回执完成',
+                'headGoodsAction'
+            );
+            return true;
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1, 'headGoodsAction');
+            return false;
+        }
+    }
+
     protected function resolveRemoteOutGoodsLog($logId, $sodId): array
     {
         $logId = intval($logId);
         $sodId = intval($sodId);
+        $hasExplicitLogId = $logId > 0;
         if (!$logId) {
             $tradeNo = trim((string)($this->message['trade_no'] ?? ''));
             if (strpos($tradeNo, 'remote_out_goods_') === 0) {
                 $logId = intval(str_replace('remote_out_goods_', '', $tradeNo));
+                $hasExplicitLogId = $logId > 0;
             }
         }
 
         $log = null;
         if ($logId) {
-            $log = RemoteActionLogModel::getFind(['id' => $logId], 'id,machine_id,channel_code,status,sod_id');
+            $log = RemoteActionLogModel::getFind(
+                ['id' => $logId],
+                'id,type,machine_id,order_id,sod_id,goods_id,channel_code,status'
+            );
             $log = is_object($log) ? $log->toArray() : $log;
         }
 
-        if (!$log && $sodId) {
+        if (!$log && !$hasExplicitLogId && $sodId) {
             $where = [
                 'type' => 'remoteOutGoods',
                 'sod_id' => $sodId,
@@ -1134,7 +1289,11 @@ trait MachineTrait
             } elseif (!empty($this->machine['machine_id'])) {
                 $where['machine_id'] = $this->machine['machine_id'];
             }
-            $log = RemoteActionLogModel::getFind($where, 'id,machine_id,channel_code,status,sod_id', 'id desc');
+            $log = RemoteActionLogModel::getFind(
+                $where,
+                'id,type,machine_id,order_id,sod_id,goods_id,channel_code,status',
+                'id desc'
+            );
             $log = is_object($log) ? $log->toArray() : $log;
             if ($log) {
                 $logId = intval($log['id'] ?? 0);
@@ -1420,31 +1579,7 @@ trait MachineTrait
             }
 
             if ($successCount > 0) {
-                $newStock = intval($mc['stock']) - $successCount;
-                if ($newStock > 0) {
-                    $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $newStock]);
-                } else {
-                    $clearData = [
-                        'mc_id' => $mc['mc_id'],
-                        'mg_id' => 0,
-                        'g_id' => 0,
-                        'g_name' => '',
-                        'gc_id' => 0,
-                        'gc_name' => '',
-                        'pic' => '',
-                        'sku' => '',
-                        'bar_code' => '',
-                        'cost_price' => 0,
-                        'market_price' => 0,
-                        'retail_price' => 0,
-                        'gift_points' => 0,
-                        'stock' => 0,
-                        'frozen_stock' => 0,
-                    ];
-                    $this->updateMachineChannel($clearData);
-                }
-
-                $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => intval($mc['mc_id'])]);
+                $this->deductMachineChannelStockAndSendUpdateMq($mc, $successCount, 'remoteRemovalEnd');
             }
 
             return 1;
@@ -1452,6 +1587,51 @@ trait MachineTrait
             actionException($e, 1, 'remoteRemovalEnd');
             return 1;
         }
+    }
+
+    /**
+     * 扣减货道库存；库存不足时清空货道商品，并复用后台 updateMc MQ 同步设备货道信息。
+     * @param array $mc
+     * @param int $quantity
+     * @param string $logTag
+     * @return mixed
+     */
+    protected function deductMachineChannelStockAndSendUpdateMq($mc, $quantity, $logTag = 'DataUpload')
+    {
+        $quantity = intval($quantity);
+        if ($quantity <= 0 || empty($mc['mc_id'])) {
+            return true;
+        }
+
+        $newStock = intval($mc['stock'] ?? 0) - $quantity;
+        if ($newStock > 0) {
+            $result = $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $newStock]);
+        } else {
+            $clearData = [
+                'mc_id' => $mc['mc_id'],
+                'mg_id' => 0,
+                'g_id' => 0,
+                'g_name' => '',
+                'gc_id' => 0,
+                'gc_name' => '',
+                'pic' => '',
+                'sku' => '',
+                'bar_code' => '',
+                'cost_price' => 0,
+                'market_price' => 0,
+                'retail_price' => 0,
+                'gift_points' => 0,
+                'stock' => 0,
+                'frozen_stock' => 0,
+            ];
+            $result = $this->updateMachineChannel($clearData);
+        }
+
+        if (!empty($mc['machine_id'])) {
+            $mqResult = $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => intval($mc['mc_id'])]);
+            actionLog(['mc_id' => intval($mc['mc_id']), 'quantity' => $quantity, 'mq_result' => $mqResult], '扣减货道库存后下发updateMc', $logTag);
+        }
+        return $result;
     }
 
     // public function checkRecycleBox(){

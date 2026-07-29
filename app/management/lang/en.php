@@ -106,6 +106,7 @@ return [
         "c_name_require" => "Coupon name cannot be empty",
         "c_name_max" => "Coupon name exceeds length limit",
         "desc_max" => "Coupon description exceeds length limit",
+        "slogan_max" => "The slogan cannot exceed 20 characters",
         "start_date_require" => "Start date cannot be empty",
         "end_date_require" => "End date cannot be empty",
         "c_type_require" => "Coupon type cannot be empty",
@@ -115,6 +116,7 @@ return [
         "url_day_count_egt" => "Link claim interval days cannot be less than 0",
         "url_coupon_count_integer" => "Total link coupon claims must be an integer",
         "url_coupon_count_gt" => "Total link coupon claims must be greater than 0",
+        "need_oauth_in" => "Silent authorization must be either 0 or 1",
     ],
 
     "VActivityCouponUsed" => [
@@ -422,6 +424,9 @@ return [
         "x_y_axis_require" => "x，y axis cannot be all empty",
         "get_recycle_box_overtime" => "Timeout getting recycle box capacity data",
         "pick_up_door_overtime" => "Timeout waiting for the pickup door action result",
+        "msg_type_invalid" => "Invalid main control command type",
+        "simplified_command_only" => "This command is only supported by simplified machines",
+        "luxury_command_only" => "This command is only supported by luxury machines",
     ],
 
     "VMachineLang" => [
@@ -454,6 +459,8 @@ return [
         "m_id_unique" => "Device configuration already exists, do not add duplicate",
         "machine_id_require" => "Device number cannot be empty",
         "mcList_require" => "Batch configuration list parameter cannot be empty",
+        "run_mode_in" => "Device run mode out of range",
+        "online_pay_success_tip_max" => "The online payment success message cannot exceed 255 characters",
     ],
     "VMachineConfigLang" => [
         "mcl_id_require" => "Device configuration multilingual ID cannot be empty",
