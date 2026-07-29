@@ -179,6 +179,7 @@
           "type": "string",
           "example": "{{token}}"
         },
+        "example": "{{token}}",
         "description": "管理后台登录 token"
       }
     },

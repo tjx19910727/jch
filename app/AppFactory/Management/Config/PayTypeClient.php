@@ -9,14 +9,16 @@ class PayTypeClient extends ManagementClient
 {
     use PayTypeTrait;
 
-    public function getList($where = [], $pageNum = 0, $field = "*", $order = "sort asc, pay_type asc")
+    public function getList($where = [], $pageNum = 0, $field = "*", $order = "sort asc, pay_type asc", $rQ = 1)
     {
-        return $this->rQ($this->getPayTypeList($where, $pageNum, $field, $order));
+        $data = $this->getPayTypeList($where, $pageNum, $field, $order);
+        return $rQ ? $this->rQ($data) : $data;
     }
 
-    public function getFind($where = [], $field = "*", $order = "pt_id desc")
+    public function getFind($where = [], $field = "*", $order = "pt_id desc", $rQ = 1)
     {
-        return $this->rQ($this->getPayTypeFind($where, $field, $order));
+        $data = $this->getPayTypeFind($where, $field, $order);
+        return $rQ ? $this->rQ($data) : $data;
     }
 
     public function getTree($where = [])
