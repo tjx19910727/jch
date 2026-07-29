@@ -24,6 +24,14 @@ class MachineScheme extends Common
     }
 
     /**
+     * 导出推荐上架方案：1按货架，2按SKU，3按层级。
+     */
+    public function exportRecommendScheme()
+    {
+        return $this->app->machineScheme->exportRecommendScheme();
+    }
+
+    /**
      * 获取方案列表
      */
     public function getList()

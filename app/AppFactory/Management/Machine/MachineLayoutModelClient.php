@@ -29,8 +29,8 @@ class MachineLayoutModelClient extends ManagementClient
      */
     public function getList($where = [], $pageNum = 0, $field = "*", $order = "mlm_id desc", $rQ = 1)
     {
-        if (!$where && $field == "*") {
-            $field = "mlm_id,model_name,machine_level,inner_width,inner_height,inner_depth,shelf_thickness,divider_thickness,left_indent,right_indent,channel_width,custom_channel_widths,channel_height,channel_depth,total_rows,total_cols,actual_channel_width,status,create_time,update_time";
+        if ($field == "*") {
+            $field = "mlm_id,model_name,machine_level,IFNULL((SELECT name FROM machine_level_desc WHERE machine_level = a.machine_level LIMIT 1),'') machine_level_desc,inner_width,inner_height,inner_depth,shelf_thickness,divider_thickness,left_indent,right_indent,channel_width,custom_channel_widths,channel_height,channel_depth,total_rows,total_cols,actual_channel_width,status,create_time,update_time";
         }
         return $this->rQ($this->getMachineLayoutModelList($where, $pageNum, $field, $order));
     }
@@ -113,6 +113,10 @@ class MachineLayoutModelClient extends ManagementClient
         if (!$model) return $this->rFail("数据不存在");
 
         $model = $model->toArray();
+        $model['machine_level_desc'] = trim((string)$this->getMachineLevelValue(
+            ['machine_level' => intval($model['machine_level'] ?? 0)],
+            'name'
+        ));
         $model['details'] = $this->getMachineLayoutDetailList(['mlm_id' => $mlmId])->toArray();
         return $this->r(200, "查询成功", $model);
     }
