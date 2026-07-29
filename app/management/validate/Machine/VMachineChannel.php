@@ -30,6 +30,7 @@ class VMachineChannel extends VCommon
     ];
 
     protected $scene = [
+        'interruptRemoteRemoval' => ['mc_id'],
         "add" => ["m_id", "machine_id", "channel_code"],
         "update" => ["mc_id"],
         "updateAll" => ["mc_ids"],

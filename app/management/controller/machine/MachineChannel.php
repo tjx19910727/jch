@@ -227,6 +227,21 @@ class MachineChannel extends Common
     }
 
     /**
+     * 中断远程下架货道商品回收
+     * @return array|string
+     */
+    public function interruptRemoteRemoval()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.interruptRemoteRemoval');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineChannel->interruptRemoteRemoval($postData);
+    }
+
+    /**
      * 按货架层级导出货道数据
      * @return array|\think\response\Json
      */
