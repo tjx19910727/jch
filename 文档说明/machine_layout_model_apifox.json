@@ -351,10 +351,15 @@
                     "type": "string",
                     "description": "型号名称(模糊搜索)"
                   },
-                  "model_code": {
-                    "type": "string",
-                    "description": "型号编码(模糊搜索)"
+                  "machine_level": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "设备等级，精确查询"
                   }
+                },
+                "example": {
+                  "pageNum": 15,
+                  "machine_level": 1
                 }
               }
             },
@@ -371,10 +376,15 @@
                     "type": "string",
                     "description": "型号名称(模糊搜索)"
                   },
-                  "model_code": {
-                    "type": "string",
-                    "description": "型号编码(模糊搜索)"
+                  "machine_level": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "设备等级，精确查询"
                   }
+                },
+                "example": {
+                  "pageNum": 15,
+                  "machine_level": 1
                 }
               }
             }
