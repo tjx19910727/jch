@@ -126,7 +126,8 @@ class Common extends AuthController
      */
     public function authNodeWhere($where = [], $prefix = "")
     {
-        if (in_array(
+        if(!$this->currentMenu) return $where;
+        if(in_array(
             $this->currentMenu['url'],
             [
                 "/management/sale.sale_orders/getReport",
@@ -198,7 +199,7 @@ class Common extends AuthController
      * @param string $prefix
      * @return array
      */
-    protected function applyManagerQueryStartTimeWhere($where = [], $prefix = "",$time_field="create_time")
+    function applyManagerQueryStartTimeWhere($where = [], $prefix = "",$time_field="create_time")
     {
         $startTime = intval($this->manager['query_start_time'] ?? 0);
         if ($startTime <= 0) {

@@ -18,7 +18,6 @@ class VMachine extends VCommon
         "machine_id" => "require|alphaDash|unique:machine",
         "status" => "in:1,2,3",
         "is_operating" => "in:1,2,3",
-        "run_mode" => "in:1,2",
     ];
 
     protected $message = [
@@ -28,12 +27,11 @@ class VMachine extends VCommon
         "machine_id.unique" => "VMachine.machine_id_exists",
         "status.in" => "VMachine.status_in",
         "is_operating.in" => "VMachine.is_operating_in",
-        "run_mode.in" => "VMachine.run_mode_in",
     ];
 
     protected $scene = [
-        "add" => ["machine_id","status","run_mode"],
-        "update" => ["m_id","status","run_mode"],
+        "add" => ["machine_id","status"],
+        "update" => ["m_id","status"],
         "updateMore" => ["m_id"],
         "setOperating" => ["m_id","is_operating"],
         "del" => ["m_id"],
