@@ -651,15 +651,19 @@ class GoodsClient extends ManagementClient
     /**
      * 导出商品排行榜（V2）
      * @param array $where
+     * @param int $topType
+     * @param int $pageNum 排行前多少条，0 表示全部
      * @return array|\think\response\Json|string
      */
-    public function exportRankingListV2($where, $topType = 1)
+    public function exportRankingListV2($where, $topType = 1, $pageNum = 0)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
 
-        $list = $this->queryGoodsRanking($where, $topType, 0);
+        $list = $this->queryGoodsRanking($where, $topType, 0, $pageNum);
         if ($list) {
             $list = $list->toArray();
             $title = [
