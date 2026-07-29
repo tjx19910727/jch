@@ -59,6 +59,15 @@ return [
         'consumer_tag' => 'export',
     ],
 
+    # 异步任务队列
+    'async_task_queue' => [
+        'exchange_name' => 'async_task_exchange',
+        'exchange_type' => 'topic',#主题
+        'queue_name' => 'async_task_queue',
+        'route_key' => 'async_task',
+        'consumer_tag' => 'async_task',
+    ],
+
     # 发送设备信息队列
     'dataSend_queue' => [
         'exchange_name' => 'dataSend_exchange',

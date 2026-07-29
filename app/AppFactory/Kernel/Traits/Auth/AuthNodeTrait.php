@@ -102,6 +102,9 @@ trait AuthNodeTrait
             // 配置管理
             "/management/config.config/getList" => "creator",
 
+            // 导出管理
+            "/management/export.export_log/getList" => "creator",
+
             // 商品管理
             "/management/goods.goods/getList" => "creator",
             "/management/goods.goods_category/getList" => "creator",

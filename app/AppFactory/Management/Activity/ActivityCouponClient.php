@@ -69,6 +69,7 @@ class ActivityCouponClient extends ManagementClient
         unset($postData['ticket']);
         if (!isset($postData['url_day_count'])) $postData['url_day_count'] = 0;
         if (!isset($postData['url_coupon_count'])) $postData['url_coupon_count'] = 1;
+        if (!isset($postData['need_oauth'])) $postData['need_oauth'] = 1;
         if (isset($postData['machineList'])) {
             $machineList = $postData['machineList'];
             unset($postData['machineList']);

@@ -1053,6 +1053,57 @@ class MachinePreReplenishmentClient extends ManagementClient
     }
 
     /**
+     * 手动完结预补货单
+     * 未上报的明细按实际补货 0、少补处理，并将补货次数置为 1，防止设备再次上报。
+     * @param $postData
+     * @return array
+     */
+    public function finishOrder($postData)
+    {
+        $id = $postData['id'] ?? 0;
+        if (!$id) {
+            return returnState(4001, '参数错误: id不能为空');
+        }
+
+        Db::startTrans();
+        try {
+            $order = PreReplenishmentOrderModel::where(['id' => $id])
+                ->lock(true)
+                ->find();
+            if (!$order) {
+                Db::rollback();
+                return returnState(4003, '单据不存在');
+            }
+
+            if ((int)$order['biz_status'] !== 1) {
+                Db::rollback();
+                return returnState(4004, '该预补货单已完结');
+            }
+
+            $affected = PreReplenishmentDetailModel::where(['order_id' => $id])
+                ->whereNull('actual_quantity')
+                ->update([
+                    'actual_quantity' => 0,
+                    'compare_status' => 3,
+                    'order_count' => 1,
+                ]);
+
+            $orderUpdated = PreReplenishmentOrderModel::where(['id' => $id])
+                ->update(['biz_status' => 3]);
+            if (!$orderUpdated) {
+                throw new \Exception('预补货单状态更新失败');
+            }
+
+            Db::commit();
+            return returnState(200, '预补货单完结成功', ['affected' => $affected]);
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1);
+            return returnState(5000, '系统错误');
+        }
+    }
+
+    /**
      * 重置补货次数（order_count 置 0）
      * @param $postData
      * @return array
@@ -1062,6 +1113,14 @@ class MachinePreReplenishmentClient extends ManagementClient
         $orderId = $postData['order_id'] ?? 0;
         if (!$orderId) {
             return returnState(4001, '参数错误: order_id不能为空');
+        }
+
+        $order = PreReplenishmentOrderModel::getFind(['id' => $orderId], 'id,biz_status');
+        if (!$order) {
+            return returnState(4003, '单据不存在');
+        }
+        if ((int)$order['biz_status'] !== 1) {
+            return returnState(4004, '已完结的预补货单不能重置补货次数');
         }
 
         $updated = PreReplenishmentDetailModel::where(['order_id' => $orderId])

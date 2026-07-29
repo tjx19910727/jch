@@ -214,6 +214,11 @@ class Laser extends BaseController
 
             foreach ($records as $record) {
                 $recordKey = trim(strval($record['record_key'] ?? ''));
+                $currentTime = time();
+                $deviceCreatedAt = intval($record['created_at'] ?? 0);
+                if ($deviceCreatedAt <= 0) $deviceCreatedAt = $currentTime;
+                $deviceUpdatedAt = intval($record['updated_at'] ?? 0);
+                if ($deviceUpdatedAt <= 0) $deviceUpdatedAt = $currentTime;
                 $recordGoodsKey = strpos($recordKey, 'goods:') === 0
                     ? trim(substr($recordKey, strlen('goods:')))
                     : '';
@@ -241,12 +246,13 @@ class Laser extends BaseController
                     continue;
                 }
 
-                // 去重：同设备同商品同日期已有则跳过
+                // 同一天允许多次上报，设备端创建时间用于识别同一批记录的重试。
                 $exist = $this->getGoodsBehaviorTrackingFind([
                     'm_id' => $mId,
                     'goods_id' => $goodsId,
                     'is_online' => $isOnline,
                     'report_date' => $reportDate,
+                    'device_created_at' => $deviceCreatedAt,
                 ]);
                 if ($exist) {
                     $skipCount++;
@@ -266,8 +272,8 @@ class Laser extends BaseController
                     'retry_dispense_count' => $record['retry_dispense_count'] ?? 0,
                     'help_count' => $record['help_count'] ?? 0,
                     'report_date' => $reportDate,
-                    'device_created_at' => $record['created_at'] ?? null,
-                    'device_updated_at' => $record['updated_at'] ?? null,
+                    'device_created_at' => $deviceCreatedAt,
+                    'device_updated_at' => $deviceUpdatedAt,
                     'active_orders' => !empty($body['active_orders']) ? json_encode($body['active_orders']) : null,
                     'created_at' => date('Y-m-d H:i:s'),
                     'updated_at' => date('Y-m-d H:i:s'),

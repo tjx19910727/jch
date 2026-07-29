@@ -389,7 +389,9 @@ class Machine extends Common
             $onlineValue = $postData['online'];
             unset($postData['online']);
         }
+        
         $where = $this->getWhere($postData, false, ["machine_name" => "like"]);
+        
         if (!empty($machineIds)) $where[] = ['machine_id', 'in',$machineIds];
         $field = "m_id,machine_id,machine_name,ao_id,country_id,state_id,city_id,regions_id,street,floor,version,factory,inventory_location,
         IFNULL((SELECT GROUP_CONCAT(DISTINCT mg.mg_name ORDER BY mg.id SEPARATOR ',') FROM machine_group_mg mg WHERE mg.m_id = a.m_id),'') machine_group_name,
@@ -397,6 +399,7 @@ class Machine extends Common
         FROM_UNIXTIME(last_online_time) last_online_time,
         (case device_type when 1 then '" . lang("vending_machine") . "' else '" . lang("store") . "' end) device_type,
         (case machine_level when 1 then '" . lang("simplified_version") . "' else '" . lang("luxury_edition") . "' END) machine_level,
+        (SELECT CASE mc.run_mode WHEN 2 THEN '测试模式' ELSE '生产模式' END FROM machine_config mc WHERE mc.m_id = a.m_id LIMIT 1) run_mode,
     (case is_operating when 1 then '在营' when 2 then '在库' when 3 then '停营' END) is_operating,
         (case status when 1 then '" . lang("normal") . "' when 2 then '" . lang("disable") . "' when 3 then '" . lang("maintenance") . "' end) status";
         //只取vending_machine_type为1的设备，即主柜设备
@@ -424,9 +427,42 @@ class Machine extends Common
         try {
             $postData = input();
             $otherData = ["time_point" => (isset($postData['time_point']) && $postData['time_point'] ? strtotime($postData['time_point']) : time())];
-            if (isset($postData['msgType']) && is_int($postData['msgType'])) {
-                $typeList = [1 => "sleep", 2 => "wakeUp", 3 => "reboot", 4 => "shutdown", 5 => "update", 6=> "powerWakeUp", 7=>"initialization",8=>'backHome'];
-                $postData['msgType'] = $typeList[$postData['msgType']];
+            $typeList = [
+                1 => "sleep",
+                2 => "wakeUp",
+                3 => "reboot",
+                4 => "shutdown",
+                5 => "update",
+                6 => "powerWakeUp",
+                7 => "initialization",
+                8 => "backHome",
+                9 => "shield",
+                10 => "shield",
+                11 => "autoRestocking",
+            ];
+            if (isset($postData['msgType']) && (is_int($postData['msgType']) || ctype_digit((string)$postData['msgType']))) {
+                $msgType = intval($postData['msgType']);
+                if (!isset($typeList[$msgType])) return returnValidate(lang("VMachine.msg_type_invalid"));
+                $postData['msgType'] = $typeList[$msgType];
+                if ($msgType === 9 || $msgType === 10) {
+                    $otherData['status'] = $msgType === 9 ? 1 : 2;
+                }
+            }
+
+            $machineLevelLimit = [
+                "shield" => 1,
+            ];
+            $resolvedMsgType = $postData['msgType'] ?? '';
+            if (isset($machineLevelLimit[$resolvedMsgType])) {
+                if (empty($postData['machine_id'])) return returnValidate(lang("VMachine.machine_id_require"));
+                $machineLevel = MachineModel::where('machine_id', $postData['machine_id'])->value('machine_level');
+                if ($machineLevel === null) return returnValidate(lang("VMachine.machine_no_data"));
+                if (intval($machineLevel) !== $machineLevelLimit[$resolvedMsgType]) {
+                    $langKey = $machineLevelLimit[$resolvedMsgType] === 1
+                        ? "VMachine.simplified_command_only"
+                        : "VMachine.luxury_command_only";
+                    return returnValidate(lang($langKey));
+                }
             }
             if(!empty($postData['powerTime'])) {
                 $Mchtime = explode(',',$postData['powerTime']);
@@ -799,5 +835,175 @@ class Machine extends Common
         $chartWhere = $this->getWhere([]);
         $chartWhere[] = ['m_id', 'in', $mIds];
         return $this->app->saleOrders->getChartData($chartWhere, $type);
+    }
+
+    /**
+     * 下发机头遗留商品处理指令。
+     * msgType：11-继续出货，12-直接回收。
+     *
+     * 设备后续统一通过 remoteOutGoods 上报，并原样返回 sod_id、log_id。
+     * @return array|string
+     */
+    public function sendMainControlV2()
+    {
+        $actionLogId = 0;
+        $sodId = 0;
+        $previousRemoteOutGoodsStatus = 0;
+        $continueRemoteStatusMarked = false;
+        try {
+            $postData = input();
+            $msgType = intval($postData['msgType'] ?? 0);
+            $typeList = [
+                11 => 'continueOutGoods',
+                12 => 'recycGoods',
+            ];
+            if (!isset($typeList[$msgType])) {
+                return returnValidate(lang('VMachine.msg_type_invalid'));
+            }
+
+            $machineId = trim((string)($postData['machine_id'] ?? ''));
+            if ($machineId === '') return returnValidate(lang('VMachine.machine_id_require'));
+
+            $machineLevel = MachineModel::where('machine_id', $machineId)->value('machine_level');
+            if ($machineLevel === null) return returnValidate(lang('VMachine.machine_no_data'));
+            if (intval($machineLevel) !== 2) {
+                return returnValidate(lang('VMachine.luxury_command_only'));
+            }
+
+            $sodId = intval($postData['sod_id'] ?? 0);
+            if ($sodId <= 0) return returnValidate('sod_id不能为空');
+
+            $detail = $this->getSaleOrdersDetailsFind(
+                ['sod_id' => $sodId],
+                'sod_id,order_id,g_id,channel_code,quantity,success_quantity,fail_quantity,refund_quantity,remote_out_goods_status'
+            );
+            if (!$detail) return returnValidate('找不到订单子单记录');
+            $detail = is_object($detail) ? $detail->toArray() : $detail;
+
+            $order = $this->getSaleOrdersFind(
+                ['order_id' => $detail['order_id']],
+                'order_id,trade_no,machine_id,out_status,refund_status,refund_quantity'
+            );
+            if (!$order) return returnValidate('找不到订单记录');
+            $order = is_object($order) ? $order->toArray() : $order;
+
+            if ((string)$order['machine_id'] !== $machineId) {
+                return returnValidate('子单不属于当前设备');
+            }
+            if (intval($order['out_status']) !== 5) {
+                return returnValidate('仅出货失败订单允许继续出货或直接回收');
+            }
+            if (intval($detail['quantity']) !== 1
+                || intval($detail['success_quantity']) !== 1
+                || intval($detail['fail_quantity']) !== 0) {
+                return returnValidate('该子单不是商品已离开货道、后续动作失败的状态');
+            }
+            if ($msgType === 11 && in_array(intval($detail['remote_out_goods_status'] ?? 0), [1, 2, 21, 3], true)) {
+                return returnValidate('该子单正在远程出货或已经远程出货成功，不能重复继续出货');
+            }
+
+            $lastAction = $this->app->machine->getRALogsFind([
+                ['sod_id', '=', $sodId],
+                ['type', 'in', ['continueOutGoods', 'recycGoods']],
+            ], 'id,type,status', 'id desc');
+            if ($lastAction) {
+                $lastAction = is_object($lastAction) ? $lastAction->toArray() : $lastAction;
+                $lastStatus = intval($lastAction['status'] ?? 0);
+                if (in_array($lastStatus, [1, 2], true)) {
+                    return returnValidate('该子单已有正在执行的机头商品处理指令');
+                }
+                if ($lastStatus === 3) {
+                    return returnValidate('该子单的机头商品已经处理成功，不能重复操作');
+                }
+            }
+
+            $resolvedMsgType = $typeList[$msgType];
+            $actionLogId = $this->app->machine->addRALog([
+                'machine_id' => $machineId,
+                'type' => $resolvedMsgType,
+                'msgType' => $resolvedMsgType,
+                'order_id' => $order['order_id'],
+                'sod_id' => $sodId,
+                'goods_id' => intval($detail['g_id'] ?? 0),
+                'channel_code' => $detail['channel_code'] ?? '',
+                'status' => 1,
+                'manager_id' => $this->manager['manager_id'] ?? 0,
+                'operator_at' => date('Y-m-d H:i:s'),
+            ]);
+            if (!$actionLogId) return returnValidate('创建远程动作日志失败');
+
+            if ($msgType === 11) {
+                $previousRemoteOutGoodsStatus = intval($detail['remote_out_goods_status'] ?? 0);
+                $markResult = $this->updateSaleOrdersDetails(
+                    ['sod_id' => $sodId, 'remote_out_goods_status' => 1],
+                    [],
+                    ['remote_out_goods_status']
+                );
+                if ($markResult === false) {
+                    $this->app->machine->updateRALog(
+                        ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
+                        ['id' => $actionLogId],
+                        ['status', 'operator_at']
+                    );
+                    return returnValidate('更新子单远程出货状态失败');
+                }
+                $continueRemoteStatusMarked = true;
+            }
+
+            $otherData = [
+                'time_point' => !empty($postData['time_point']) ? strtotime($postData['time_point']) : time(),
+                'sod_id' => $sodId,
+                'log_id' => $actionLogId,
+                'trade_no' => $order['trade_no'] ?? '',
+            ];
+            $result = $this->app->machine->sendToMachine(
+                ['machine_id' => $machineId],
+                $resolvedMsgType,
+                $otherData
+            );
+            if (!is_object($result)) {
+                $this->app->machine->updateRALog(
+                    ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
+                    ['id' => $actionLogId],
+                    ['status', 'operator_at']
+                );
+                if ($continueRemoteStatusMarked) {
+                    $this->updateSaleOrdersDetails(
+                        ['sod_id' => $sodId, 'remote_out_goods_status' => $previousRemoteOutGoodsStatus],
+                        [],
+                        ['remote_out_goods_status']
+                    );
+                    $continueRemoteStatusMarked = false;
+                }
+            }
+            return is_object($result)
+                ? $result
+                : $this->app->machine->rFail($this->app->machine->lang('VMachine.' . $result));
+        } catch (\Exception $e) {
+            if ($continueRemoteStatusMarked && $sodId) {
+                try {
+                    $this->updateSaleOrdersDetails(
+                        ['sod_id' => $sodId, 'remote_out_goods_status' => $previousRemoteOutGoodsStatus],
+                        [],
+                        ['remote_out_goods_status']
+                    );
+                } catch (\Throwable $statusException) {
+                    actionException($statusException, 1, 'headGoodsAction');
+                }
+            }
+            if ($actionLogId) {
+                try {
+                    $this->app->machine->updateRALog(
+                        ['status' => 4, 'operator_at' => date('Y-m-d H:i:s')],
+                        ['id' => $actionLogId],
+                        ['status', 'operator_at']
+                    );
+                } catch (\Throwable $logException) {
+                    actionException($logException, 1, 'headGoodsAction');
+                }
+            }
+            actionException($e, 1);
+            return $this->app->machine->rTryCatch($e->getMessage());
+        }
     }
 }

@@ -662,14 +662,19 @@ class MachineChannelClient extends ManagementClient
     {
         $list = $this->buildStockOutListData($where);
         if (!$list) return $this->rNoData();
+        $list = $this->buildStockOutExportData($list);
 
         $title = [
             "machine_id" => "设备编号",
             "machine_name" => "设备名称",
+            "channel_code" => "缺货货道编号",
+            "channel_position_name" => "货道类型",
+            "sku" => "商品SKU",
+            "g_name" => "商品名称",
+            "bar_code" => "商品条码",
+            "stock" => "货道库存",
             "total_channel" => "总货道数",
             "stock_out_num" => "空货数",
-            "stock_out_channel" => "基础机组空货槽位",
-            "stock_out_channel_arc" => "弧柜空货槽位",
             "stock_out_ratio" => "空货占比",
         ];
         $filename = "首页-空货列表-" . date("YmdHis");
@@ -831,20 +836,62 @@ class MachineChannelClient extends ManagementClient
             $whereTotal['m_id'] = $value['m_id'];
             $value['total_channel'] = $this->getMachineChannelCount($whereTotal);
 
-            $whereStockOutBase = ['m_id' => $value['m_id'], 'channel_position' => 1, 'stock' => 0];
-            $whereStockOutBase[] = ['g_id', '>', 0];
-            $stockOutList = $this->getMachineChannelColumn($whereStockOutBase, 'channel_code');
-            $value['stock_out_channel'] = implode(",", $stockOutList ?? []);
-
-            $whereStockOutArc = ['m_id' => $value['m_id'], 'channel_position' => 2, 'stock' => 0];
-            $whereStockOutArc[] = ['g_id', '>', 0];
-            $stockOutArcList = $this->getMachineChannelColumnV2($whereStockOutArc, 'channel_code');
-            $value['stock_out_channel_arc'] = implode(",", $stockOutArcList ?? []);
+            $whereStockOut = ['m_id' => $value['m_id'], 'stock' => 0];
+            $whereStockOut[] = ['g_id', '>', 0];
+            $whereStockOut['raw'] = "(a.channel_position <> 2 OR EXISTS(SELECT 1 FROM machine_info mi WHERE mi.m_id = a.m_id AND mi.sub_cabinet = 1))";
+            $stockOutGoods = $this->getMachineChannelList(
+                $whereStockOut,
+                0,
+                'mc_id,channel_code,channel_position,g_id,sku,g_name,bar_code,stock',
+                'channel_position asc,channel_code asc'
+            );
+            $stockOutGoods = $stockOutGoods ? $stockOutGoods->toArray() : [];
+            $stockOutList = [];
+            $stockOutArcList = [];
+            foreach ($stockOutGoods as $stockOutGoodsItem) {
+                if (intval($stockOutGoodsItem['channel_position']) === 2) {
+                    $stockOutArcList[] = $stockOutGoodsItem['channel_code'];
+                } else {
+                    $stockOutList[] = $stockOutGoodsItem['channel_code'];
+                }
+            }
+            $value['stock_out_channel'] = implode(",", $stockOutList);
+            $value['stock_out_channel_arc'] = implode(",", $stockOutArcList);
+            $value['stock_out_goods'] = $stockOutGoods;
 
             $value['stock_out_ratio'] = $value['total_channel'] > 0 ? (bcmul(bcdiv($value['stock_out_num'], $value['total_channel'], 3), 100, 1) . "%") : "0%";
             $list[$key] = $value;
         }
         return $list;
+    }
+
+    /**
+     * 缺货导出按货道展开，保证货道与商品信息一一对应。
+     *
+     * @param array $list
+     * @return array
+     */
+    private function buildStockOutExportData($list)
+    {
+        $exportList = [];
+        foreach ($list as $machine) {
+            foreach ($machine['stock_out_goods'] as $goods) {
+                $exportList[] = [
+                    'machine_id' => $machine['machine_id'],
+                    'machine_name' => $machine['machine_name'],
+                    'channel_code' => $goods['channel_code'],
+                    'channel_position_name' => intval($goods['channel_position']) === 2 ? '弧柜' : '基础机组',
+                    'sku' => $goods['sku'],
+                    'g_name' => $goods['g_name'],
+                    'bar_code' => $goods['bar_code'],
+                    'stock' => $goods['stock'],
+                    'total_channel' => $machine['total_channel'],
+                    'stock_out_num' => $machine['stock_out_num'],
+                    'stock_out_ratio' => $machine['stock_out_ratio'],
+                ];
+            }
+        }
+        return $exportList;
     }
 
     /**

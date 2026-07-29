@@ -20,7 +20,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
-use app\AppFactory\RabbitMq\MqProducer;
+use app\AppFactory\RabbitMq\AsyncTaskProducer;
 use app\management\validate\VGoods;
 use think\facade\Db;
 
@@ -161,8 +161,7 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        MqProducer::export([
-            'job_type' => 'goods_update',
+        AsyncTaskProducer::publish('goods_update', [
             'g_id' => $gId,
             'request_time' => date('Y-m-d H:i:s'),
             'manager_id' => $this->manager['manager_id'] ?? 0,
@@ -621,6 +620,8 @@ class GoodsClient extends ManagementClient
      */
     public function getRankingList($where = [], $pageNum = 0, $topType = 1)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
@@ -631,6 +632,18 @@ class GoodsClient extends ManagementClient
             $list = $this->formatGoodsRankingList($list);
         }
 
+        if ($pageNum === 0) {
+            $rows = $list ? $list->toArray() : [];
+            $total = count($rows);
+            $list = [
+                'total' => $total,
+                'per_page' => $total,
+                'current_page' => 1,
+                'last_page' => $total > 0 ? 1 : 0,
+                'data' => $rows,
+            ];
+        }
+
         return $this->rQ($list);
     }
 
@@ -638,15 +651,19 @@ class GoodsClient extends ManagementClient
     /**
      * 导出商品排行榜（V2）
      * @param array $where
+     * @param int $topType
+     * @param int $pageNum 排行前多少条，0 表示全部
      * @return array|\think\response\Json|string
      */
-    public function exportRankingListV2($where, $topType = 1)
+    public function exportRankingListV2($where, $topType = 1, $pageNum = 0)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
 
-        $list = $this->queryGoodsRanking($where, $topType, 0);
+        $list = $this->queryGoodsRanking($where, $topType, 0, $pageNum);
         if ($list) {
             $list = $list->toArray();
             $title = [
