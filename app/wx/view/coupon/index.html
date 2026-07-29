@@ -115,6 +115,25 @@
         .barcode-tip{margin:14px 0 0;color:#9a8178;font-size:13px;line-height:1.6}
         .barcode-copy{margin-top:15px;padding:9px 25px;border:1px solid #ff7040;border-radius:999px;background:#fff;color:#ed4f20;cursor:pointer}
         body.barcode-open{overflow:hidden}
+        .slider-captcha-modal[hidden]{display:none}
+        .slider-captcha-modal{position:fixed;z-index:60;inset:0;display:flex;align-items:center;justify-content:center;padding:20px 16px}
+        .slider-captcha-mask{position:absolute;inset:0;background:rgba(38,23,18,.62);backdrop-filter:blur(3px)}
+        .slider-captcha-dialog{position:relative;width:min(100%,360px);padding:21px 18px 20px;border-radius:20px;background:#fffaf6;box-shadow:0 20px 60px rgba(40,20,13,.32)}
+        .slider-captcha-title{margin:0 42px 16px;color:#67301f;text-align:center;font-size:20px;font-weight:800}
+        .slider-captcha-close,.slider-captcha-refresh{position:absolute;width:34px;height:34px;border:0;border-radius:50%;background:#fff0e8;color:#95513b;cursor:pointer}
+        .slider-captcha-close{top:11px;right:11px;font-size:26px;line-height:32px}
+        .slider-captcha-refresh{top:11px;left:11px;font-size:19px;line-height:34px}
+        .slider-captcha-stage{position:relative;width:100%;min-height:140px;overflow:hidden;border:1px solid #efdcd2;border-radius:12px;background:#f5e9e2;user-select:none}
+        .slider-captcha-bg{display:block;width:100%;height:auto;pointer-events:none}
+        .slider-captcha-block{position:absolute;z-index:2;top:0;left:0;height:100%;width:auto;filter:drop-shadow(0 2px 2px rgba(45,25,18,.5));pointer-events:none}
+        .slider-captcha-track{position:relative;height:46px;margin-top:14px;overflow:hidden;border:1px solid #ecd9d0;border-radius:999px;background:#f5eae4;color:#9d8177;text-align:center;font-size:13px;line-height:44px;user-select:none;touch-action:none}
+        .slider-captcha-progress{position:absolute;inset:0 auto 0 0;width:0;background:linear-gradient(90deg,#ffe2cf,#ffd1b4)}
+        .slider-captcha-handle{position:absolute;z-index:2;top:-1px;left:-1px;width:47px;height:46px;border:1px solid #ff7a43;border-radius:50%;background:linear-gradient(135deg,#ff914d,#ff5425);box-shadow:0 3px 9px rgba(230,72,29,.25);color:#fff;font-size:24px;line-height:43px;cursor:grab}
+        .slider-captcha-handle:active{cursor:grabbing}
+        .slider-captcha-message{min-height:20px;margin:10px 3px 0;color:#a87868;text-align:center;font-size:13px;line-height:20px}
+        .slider-captcha-message.error{color:#d64b35}.slider-captcha-message.success{color:#168451}
+        .slider-captcha-loading .slider-captcha-handle{pointer-events:none;opacity:.65}
+        body.captcha-open{overflow:hidden}
         .error-card{margin-top:clamp(90px,25vw,170px);padding:42px 25px;border:7px solid rgba(255,255,255,.8);border-radius:25px;background:rgba(255,255,255,.94);box-shadow:0 12px 34px rgba(164,76,25,.13);text-align:center}
         .error-icon{width:68px;height:68px;margin:0 auto 20px;border-radius:50%;display:grid;place-items:center;background:#fff0e7;color:#f25127;font-size:38px;font-weight:800}
         .error-card h2{margin:0;color:#6d2d1a;font-size:24px}.error-card p{margin:15px 0 0;color:#8c746b;line-height:1.8}
@@ -147,7 +166,7 @@
                 </div>
             </section>
 
-            <button id="claimButton" class="claim-button" type="button" data-key="{$key|htmlspecialchars}" data-receive-url="{$couponReceiveUrl|htmlspecialchars}" {if !$canReceive}disabled{/if}>{if $canReceive}立即领取{else /}暂不可领取{/if}</button>
+            <button id="claimButton" class="claim-button" type="button" data-key="{$key|htmlspecialchars}" data-receive-url="{$couponReceiveUrl|htmlspecialchars}" data-captcha-url="{$couponCaptchaUrl|htmlspecialchars}" data-captcha-check-url="{$couponCaptchaCheckUrl|htmlspecialchars}" {if !$canReceive}disabled{/if}>{if $canReceive}立即领取{else /}暂不可领取{/if}</button>
             <p id="receiveTip" class="receive-tip" {if $canReceive}hidden{/if}>{$receiveMessage|htmlspecialchars}</p>
             <p class="limit">{$limitText|htmlspecialchars}</p>
             <section id="couponHistory" class="coupon-history is-collapsed">
@@ -268,6 +287,24 @@
         <button id="barcodeCopy" class="barcode-copy" type="button">复制优惠券码</button>
     </section>
 </div>
+<div id="sliderCaptchaModal" class="slider-captcha-modal" hidden>
+    <div class="slider-captcha-mask" data-captcha-close></div>
+    <section id="sliderCaptchaDialog" class="slider-captcha-dialog" role="dialog" aria-modal="true" aria-labelledby="sliderCaptchaTitle">
+        <button id="sliderCaptchaRefresh" class="slider-captcha-refresh" type="button" aria-label="刷新验证码">↻</button>
+        <button class="slider-captcha-close" type="button" aria-label="关闭" data-captcha-close>×</button>
+        <h2 id="sliderCaptchaTitle" class="slider-captcha-title">请完成安全验证</h2>
+        <div id="sliderCaptchaStage" class="slider-captcha-stage">
+            <img id="sliderCaptchaBg" class="slider-captcha-bg" alt="滑块验证码背景">
+            <img id="sliderCaptchaBlock" class="slider-captcha-block" alt="">
+        </div>
+        <div id="sliderCaptchaTrack" class="slider-captcha-track">
+            <div id="sliderCaptchaProgress" class="slider-captcha-progress"></div>
+            <span>向右拖动滑块完成拼图</span>
+            <button id="sliderCaptchaHandle" class="slider-captcha-handle" type="button" aria-label="拖动滑块">›</button>
+        </div>
+        <p id="sliderCaptchaMessage" class="slider-captcha-message">拖动滑块，将拼图移动到缺口位置</p>
+    </section>
+</div>
 {/if}
 <div id="toast" class="toast"></div>
 
@@ -281,6 +318,23 @@
     var couponHistory=document.getElementById('couponHistory');
     var couponHistoryToggle=document.getElementById('couponHistoryToggle');
     var couponHistoryToggleSlot=document.getElementById('couponHistoryToggleSlot');
+    var sliderCaptchaModal=document.getElementById('sliderCaptchaModal');
+    var sliderCaptchaDialog=document.getElementById('sliderCaptchaDialog');
+    var sliderCaptchaStage=document.getElementById('sliderCaptchaStage');
+    var sliderCaptchaBg=document.getElementById('sliderCaptchaBg');
+    var sliderCaptchaBlock=document.getElementById('sliderCaptchaBlock');
+    var sliderCaptchaTrack=document.getElementById('sliderCaptchaTrack');
+    var sliderCaptchaProgress=document.getElementById('sliderCaptchaProgress');
+    var sliderCaptchaHandle=document.getElementById('sliderCaptchaHandle');
+    var sliderCaptchaMessage=document.getElementById('sliderCaptchaMessage');
+    var sliderCaptchaRefresh=document.getElementById('sliderCaptchaRefresh');
+    var captchaToken='';
+    var captchaDragging=false;
+    var captchaStartClientX=0;
+    var captchaHandleX=0;
+    var captchaBlockX=0;
+    var captchaLoading=false;
+    var captchaReceiving=false;
     var historyPositionFrame=0;
     function updateHistoryTogglePosition(){
         historyPositionFrame=0;
@@ -586,22 +640,166 @@
     document.addEventListener('keydown',function(event){
         if(event.key==='Escape'&&!barcodeModal.hidden)closeBarcode();
     });
-    button.addEventListener('click',function(){
-        if(button.disabled)return;
-        button.disabled=true;
-        button.textContent='领取中...';
-        fetch(button.getAttribute('data-receive-url'),{
+    function parseJsonResponse(response,errorPrefix){
+        return response.text().then(function(text){
+            try{return JSON.parse(text);}catch(error){
+                throw new Error(response.ok?errorPrefix+'返回格式错误':errorPrefix+'请求失败（HTTP '+response.status+'）');
+            }
+        });
+    }
+    function postForm(url,params,errorPrefix){
+        var parts=[];
+        for(var name in params){
+            if(Object.prototype.hasOwnProperty.call(params,name)){
+                parts.push(encodeURIComponent(name)+'='+encodeURIComponent(String(params[name])));
+            }
+        }
+        return fetch(url,{
             method:'POST',
             headers:{'Content-Type':'application/x-www-form-urlencoded;charset=UTF-8'},
-            body:'key='+encodeURIComponent(button.getAttribute('data-key')),
+            body:parts.join('&'),
             credentials:'same-origin'
-        }).then(function(response){
-            return response.text().then(function(text){
-                try{return JSON.parse(text);}catch(error){
-                    throw new Error(response.ok?'领取接口返回格式错误':'领取接口请求失败（HTTP '+response.status+'）');
-                }
-            });
-        }).then(function(data){
+        }).then(function(response){return parseJsonResponse(response,errorPrefix);});
+    }
+    function setCaptchaMessage(message,type){
+        sliderCaptchaMessage.textContent=message;
+        sliderCaptchaMessage.className='slider-captcha-message'+(type?' '+type:'');
+    }
+    function resetCaptchaPosition(){
+        captchaHandleX=0;
+        captchaBlockX=0;
+        sliderCaptchaHandle.style.transform='translateX(0)';
+        sliderCaptchaProgress.style.width='0';
+        sliderCaptchaBlock.style.transform='translateX(0)';
+    }
+    function setCaptchaLoading(loading){
+        captchaLoading=loading;
+        sliderCaptchaDialog.classList.toggle('slider-captcha-loading',loading);
+        sliderCaptchaRefresh.disabled=loading;
+        sliderCaptchaHandle.disabled=loading;
+    }
+    function closeSliderCaptcha(resetClaim){
+        captchaDragging=false;
+        sliderCaptchaModal.hidden=true;
+        document.body.classList.remove('captcha-open');
+        if(resetClaim&&!captchaReceiving){
+            button.disabled=false;
+            button.textContent='立即领取';
+        }
+    }
+    function loadSliderCaptcha(){
+        if(captchaLoading)return;
+        captchaToken='';
+        resetCaptchaPosition();
+        setCaptchaLoading(true);
+        setCaptchaMessage('验证码加载中...');
+        postForm(button.getAttribute('data-captcha-url'),{
+            key:button.getAttribute('data-key')
+        },'验证码接口').then(function(data){
+            if(Number(data.state)!==200||!data.data||!data.data.token){
+                throw new Error(data.msg||'验证码加载失败');
+            }
+            captchaToken=String(data.data.token);
+            sliderCaptchaBg.src='data:image/png;base64,'+String(data.data.originalImageBase64||'');
+            sliderCaptchaBlock.src='data:image/png;base64,'+String(data.data.jigsawImageBase64||'');
+            setCaptchaMessage('拖动滑块，将拼图移动到缺口位置');
+        }).catch(function(error){
+            setCaptchaMessage(error.message||'验证码加载失败，请点击刷新','error');
+        }).then(function(){
+            setCaptchaLoading(false);
+        });
+    }
+    function openSliderCaptcha(){
+        sliderCaptchaModal.hidden=false;
+        document.body.classList.add('captcha-open');
+        button.disabled=true;
+        button.textContent='安全验证中...';
+        loadSliderCaptcha();
+    }
+    function getPointerClientX(event){
+        if(event.touches&&event.touches.length)return event.touches[0].clientX;
+        if(event.changedTouches&&event.changedTouches.length)return event.changedTouches[0].clientX;
+        return event.clientX;
+    }
+    function updateCaptchaPosition(clientX){
+        var handleMax=Math.max(1,sliderCaptchaTrack.clientWidth-sliderCaptchaHandle.offsetWidth);
+        var nextX=Math.max(0,Math.min(handleMax,clientX-captchaStartClientX));
+        var blockMax=Math.max(1,sliderCaptchaStage.clientWidth-sliderCaptchaBlock.getBoundingClientRect().width);
+        captchaHandleX=nextX;
+        captchaBlockX=nextX/handleMax*blockMax;
+        sliderCaptchaHandle.style.transform='translateX('+Math.round(captchaHandleX)+'px)';
+        sliderCaptchaProgress.style.width=Math.round(captchaHandleX+sliderCaptchaHandle.offsetWidth/2)+'px';
+        sliderCaptchaBlock.style.transform='translateX('+Math.round(captchaBlockX)+'px)';
+    }
+    function beginCaptchaDrag(event){
+        if(captchaLoading||!captchaToken)return;
+        captchaDragging=true;
+        captchaStartClientX=getPointerClientX(event)-captchaHandleX;
+        setCaptchaMessage('松开滑块进行验证');
+        if(event.cancelable)event.preventDefault();
+    }
+    function moveCaptchaDrag(event){
+        if(!captchaDragging)return;
+        updateCaptchaPosition(getPointerClientX(event));
+        if(event.cancelable)event.preventDefault();
+    }
+    function endCaptchaDrag(event){
+        if(!captchaDragging)return;
+        captchaDragging=false;
+        if(event.cancelable)event.preventDefault();
+        if(captchaHandleX<5){
+            resetCaptchaPosition();
+            setCaptchaMessage('请向右拖动滑块','error');
+            return;
+        }
+        var naturalWidth=sliderCaptchaBg.naturalWidth||sliderCaptchaStage.clientWidth;
+        var pointX=Math.round(captchaBlockX*naturalWidth/Math.max(1,sliderCaptchaStage.clientWidth));
+        setCaptchaLoading(true);
+        setCaptchaMessage('正在验证...');
+        postForm(button.getAttribute('data-captcha-check-url'),{
+            key:button.getAttribute('data-key'),
+            token:captchaToken,
+            x:pointX
+        },'验证码校验接口').then(function(data){
+            if(Number(data.state)!==200||!data.data||!data.data.captchaVerification){
+                throw new Error(data.msg||'滑块验证失败');
+            }
+            setCaptchaMessage('验证成功','success');
+            setCaptchaLoading(false);
+            captchaReceiving=true;
+            closeSliderCaptcha(false);
+            submitReceive(String(data.data.captchaVerification));
+        }).catch(function(error){
+            setCaptchaMessage(error.message||'滑块位置不正确，请重试','error');
+            setTimeout(function(){
+                setCaptchaLoading(false);
+                loadSliderCaptcha();
+            },650);
+        });
+    }
+    sliderCaptchaHandle.addEventListener('mousedown',beginCaptchaDrag);
+    sliderCaptchaHandle.addEventListener('touchstart',beginCaptchaDrag,{passive:false});
+    window.addEventListener('mousemove',moveCaptchaDrag);
+    window.addEventListener('touchmove',moveCaptchaDrag,{passive:false});
+    window.addEventListener('mouseup',endCaptchaDrag);
+    window.addEventListener('touchend',endCaptchaDrag,{passive:false});
+    sliderCaptchaRefresh.addEventListener('click',function(){
+        if(!captchaLoading)loadSliderCaptcha();
+    });
+    var captchaClosers=document.querySelectorAll('[data-captcha-close]');
+    for(var captchaCloseIndex=0;captchaCloseIndex<captchaClosers.length;captchaCloseIndex++){
+        captchaClosers[captchaCloseIndex].addEventListener('click',function(){closeSliderCaptcha(true);});
+    }
+    document.addEventListener('keydown',function(event){
+        if(event.key==='Escape'&&!sliderCaptchaModal.hidden)closeSliderCaptcha(true);
+    });
+    function submitReceive(captchaVerification){
+        button.disabled=true;
+        button.textContent='领取中...';
+        postForm(button.getAttribute('data-receive-url'),{
+            key:button.getAttribute('data-key'),
+            captchaVerification:captchaVerification
+        },'领取接口').then(function(data){
             if(Number(data.state)!==200||!data.data||!data.data.code){
                 throw new Error(data.msg||'领取失败，请稍后重试');
             }
@@ -616,7 +814,13 @@
             button.disabled=false;
             button.textContent='立即领取';
             showToast(error.message||'领取失败，请稍后重试');
+        }).then(function(){
+            captchaReceiving=false;
         });
+    }
+    button.addEventListener('click',function(){
+        if(button.disabled)return;
+        openSliderCaptcha();
     });
 })();
 </script>

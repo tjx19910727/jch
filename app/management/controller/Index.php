@@ -212,12 +212,13 @@ class Index extends Common
     public function exportMachineListV2()
     {
         $postData = input();
+        $pageNum = max(0, intval($postData['pageNum'] ?? 0));
         $topType = intval($postData['top_type'] ?? 1);
         if (!in_array($topType, [1, 2], true)) {
             $topType = 1;
         }
         $where = $this->buildRankingWhereV2($postData, true);
-        return $this->app->machine->exportRankingListV2($where, $topType);
+        return $this->app->machine->exportRankingListV2($where, $topType, $pageNum);
     }
 
     /**
@@ -228,12 +229,13 @@ class Index extends Common
     public function exportGoodsListV2()
     {
         $postData = input();
+        $pageNum = max(0, intval($postData['pageNum'] ?? 0));
         $topType = intval($postData['top_type'] ?? 1);
         if (!in_array($topType, [1, 2], true)) {
             $topType = 1;
         }
         $where = $this->buildRankingWhereV2($postData, false);
-        return $this->app->goods->exportRankingListV2($where, $topType);
+        return $this->app->goods->exportRankingListV2($where, $topType, $pageNum);
     }
 
     /**

@@ -8,6 +8,8 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityGoodsTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityMachineTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\Wx\WxBaseClient;
+use think\facade\Cache;
+use think\facade\Cookie;
 use think\facade\Session;
 
 class CouponClient extends WxBaseClient
@@ -17,6 +19,12 @@ class CouponClient extends WxBaseClient
     const CACHE_EXPIRE = 300;
     const CACHE_SUFFIX = 'url_coupon';
     const SESSION_KEY = 'wx_coupon_receive_key';
+    const VISITOR_SESSION_KEY = 'wx_coupon_visitor_id';
+    const VISITOR_COOKIE_KEY = 'wx_coupon_visitor';
+    const CAPTCHA_EXPIRE = 120;
+    const RATE_KEY_MINUTE_LIMIT = 10;
+    const RATE_COUPON_MINUTE_LIMIT = 30;
+    const RATE_IP_DAY_LIMIT = 50;
 
     public function authorize($postData)
     {
@@ -25,6 +33,10 @@ class CouponClient extends WxBaseClient
 
         $coupon = $this->getCouponByTicket($ticket);
         if (!$coupon) showMsg('优惠券领取链接不存在');
+
+        if (intval($coupon['need_oauth'] ?? 1) === 0) {
+            return $this->redirectAnonymousCoupon($coupon, $ticket);
+        }
 
         $wxApp = $this->getDefaultWxApp();
         if (!$wxApp) showMsg('查无可用的微信公众号配置');
@@ -54,10 +66,7 @@ class CouponClient extends WxBaseClient
             $openid = trim(strval($response['openid'] ?? ''));
             if (!$openid) showMsg('微信授权失败，未获取到openid');
 
-            $timestamp = time();
-            $key = md5($openid . $ticket . $timestamp . self::CACHE_SUFFIX);
-            cache($key, $openid . '&' . intval($coupon['c_id']), ['expire' => self::CACHE_EXPIRE]);
-            Session::set(self::SESSION_KEY, $key);
+            $key = $this->createReceiveKey($openid, intval($coupon['c_id']), $ticket, 'openid');
 
             $host = rtrim(strval(env('app.host')), '/');
             if (!$host) showMsg('系统域名未配置');
@@ -75,21 +84,85 @@ class CouponClient extends WxBaseClient
         }
     }
 
+    public function captcha($postData)
+    {
+        if (!request()->isPost()) return $this->r(100, '仅支持POST请求');
+        $key = trim(strval($postData['key'] ?? ''));
+        $credential = $this->getReceiveCredential($key);
+        if (is_string($credential)) return $this->r(100, $credential);
+        $rateCheck = $this->checkReceiveRateLimit($key, intval($credential['coupon_id']));
+        if ($rateCheck !== true) return $this->r(100, $rateCheck);
+
+        try {
+            $captcha = $this->getCaptchaService()->get();
+            $token = trim(strval($captcha['token'] ?? ''));
+            if (!$token) return $this->r(100, '滑块验证码生成失败，请重试');
+
+            Cache::set(
+                $this->getCaptchaChallengeCacheKey($token),
+                $this->getCaptchaBindingValue($key),
+                self::CAPTCHA_EXPIRE
+            );
+            return $this->r(200, '获取成功', [
+                'token' => $token,
+                'originalImageBase64' => strval($captcha['originalImageBase64'] ?? ''),
+                'jigsawImageBase64' => strval($captcha['jigsawImageBase64'] ?? ''),
+            ]);
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return $this->r(100, '滑块验证码生成失败，请重试');
+        }
+    }
+
+    public function captchaCheck($postData)
+    {
+        if (!request()->isPost()) return $this->r(100, '仅支持POST请求');
+        $key = trim(strval($postData['key'] ?? ''));
+        $credential = $this->getReceiveCredential($key);
+        if (is_string($credential)) return $this->r(100, $credential);
+
+        $token = trim(strval($postData['token'] ?? ''));
+        $x = intval($postData['x'] ?? -1);
+        if (!preg_match('/^[a-f0-9-]{36}$/', $token) || $x < 0 || $x > 1000) {
+            return $this->r(100, '滑块验证码参数错误，请重试');
+        }
+
+        $challengeCacheKey = $this->getCaptchaChallengeCacheKey($token);
+        $challengeBinding = strval(Cache::get($challengeCacheKey, ''));
+        Cache::delete($challengeCacheKey);
+        if (
+            !$challengeBinding
+            || !hash_equals($challengeBinding, $this->getCaptchaBindingValue($key))
+        ) {
+            return $this->r(100, '滑块验证码已失效，请重试');
+        }
+
+        try {
+            $verification = strval($this->getCaptchaService()->checkPlainPoint($token, $x));
+            if (!$verification) return $this->r(100, '滑块验证失败，请重试');
+            Cache::set(
+                $this->getCaptchaVerificationCacheKey($verification),
+                $this->getCaptchaBindingValue($key),
+                self::CAPTCHA_EXPIRE
+            );
+            return $this->r(200, '验证成功', ['captchaVerification' => $verification]);
+        } catch (\Exception $e) {
+            return $this->r(100, '滑块位置不正确，请重试');
+        }
+    }
+
     public function receive($postData)
     {
         if (!request()->isPost()) return $this->r(100, '仅支持POST请求');
         $key = trim(strval($postData['key'] ?? ''));
-        if (!preg_match('/^[a-f0-9]{32}$/', $key)) return $this->r(100, '领取凭证参数错误');
-        if (!$this->isSessionKeyValid($key)) {
-            return $this->r(100, '打开方式有误，请重新打开领取链接');
-        }
+        $credential = $this->getReceiveCredential($key);
+        if (is_string($credential)) return $this->r(100, $credential);
+        $openid = strval($credential['identity']);
+        $couponId = intval($credential['coupon_id']);
 
-        $cacheValue = strval(cache($key));
-        if (!$cacheValue) return $this->r(100, '领取凭证已过期，请重新打开优惠券领取链接');
-        $valueParts = explode('&', $cacheValue, 2);
-        $openid = trim(strval($valueParts[0] ?? ''));
-        $couponId = intval($valueParts[1] ?? 0);
-        if (!$openid || !$couponId) return $this->r(100, '领取凭证数据错误');
+        $captchaVerification = trim(strval($postData['captchaVerification'] ?? ''));
+        $captchaCheck = $this->verifyCaptchaVerification($key, $captchaVerification);
+        if ($captchaCheck !== true) return $this->r(100, $captchaCheck);
 
         $coupon = $this->getActivityCouponFind(['c_id' => $couponId]);
         if (!$coupon) return $this->r(100, '查无优惠券信息');
@@ -122,6 +195,7 @@ class CouponClient extends WxBaseClient
                 'c_id' => intval($coupon['c_id']),
                 'openid' => $openid,
                 'code' => $code,
+                'ip' => request()->ip(),
             ], '通过链接领取优惠券成功');
             return $this->r(200, '领取成功', [
                 'code' => $code,
@@ -148,21 +222,10 @@ class CouponClient extends WxBaseClient
     public function getPageData($postData)
     {
         $key = trim(strval($postData['key'] ?? ''));
-        if (!preg_match('/^[a-f0-9]{32}$/', $key)) {
-            return $this->pageError('领取凭证参数错误，请重新打开优惠券领取链接');
-        }
-        if (!$this->isSessionKeyValid($key)) {
-            return $this->pageError('打开方式有误，请重新打开领取链接');
-        }
-
-        $cacheValue = strval(cache($key));
-        if (!$cacheValue) {
-            return $this->pageError('领取凭证已过期，请重新打开优惠券领取链接');
-        }
-        $valueParts = explode('&', $cacheValue, 2);
-        $openid = trim(strval($valueParts[0] ?? ''));
-        $couponId = intval($valueParts[1] ?? 0);
-        if (!$openid || !$couponId) return $this->pageError('领取凭证数据错误');
+        $credential = $this->getReceiveCredential($key);
+        if (is_string($credential)) return $this->pageError($credential);
+        $openid = strval($credential['identity']);
+        $couponId = intval($credential['coupon_id']);
 
         $coupon = $this->getActivityCouponFind(['c_id' => $couponId]);
         if (!$coupon) return $this->pageError('查无优惠券信息');
@@ -317,10 +380,234 @@ class CouponClient extends WxBaseClient
         return boolval(preg_match('/^[a-f0-9]{32}$/', $ticket));
     }
 
+    protected function redirectAnonymousCoupon($coupon, $ticket)
+    {
+        $visitorId = trim(strval(Session::get(self::VISITOR_SESSION_KEY, '')));
+        if (!preg_match('/^[a-f0-9]{32}$/', $visitorId)) {
+            $visitorId = $this->getVisitorIdFromCookie();
+        }
+        if (!preg_match('/^[a-f0-9]{32}$/', $visitorId)) {
+            $visitorId = bin2hex(random_bytes(16));
+        }
+        Session::set(self::VISITOR_SESSION_KEY, $visitorId);
+        Cookie::set(self::VISITOR_COOKIE_KEY, $visitorId . '.' . $this->signVisitorId($visitorId), [
+            'expire' => 31536000,
+            'path' => '/',
+            'secure' => request()->isSsl(),
+            'httponly' => true,
+            'samesite' => 'lax',
+        ]);
+
+        $identity = 'anonymous_' . $visitorId;
+        $key = $this->createReceiveKey(
+            $identity,
+            intval($coupon['c_id']),
+            $ticket,
+            'anonymous'
+        );
+        $host = rtrim(strval(env('app.host')), '/');
+        if (!$host) showMsg('系统域名未配置');
+        $pageUrl = $host . '/wx/coupon/page?' . http_build_query(['key' => $key]);
+        actionLog([
+            'c_id' => intval($coupon['c_id']),
+            'identity' => $identity,
+            'key' => $key,
+            'url' => $pageUrl,
+        ], '优惠券无需静默授权，跳转领取页面');
+        return redirect($pageUrl);
+    }
+
+    protected function getVisitorIdFromCookie()
+    {
+        $cookieValue = trim(strval(Cookie::get(self::VISITOR_COOKIE_KEY, '')));
+        $parts = explode('.', $cookieValue, 2);
+        $visitorId = trim(strval($parts[0] ?? ''));
+        $signature = trim(strval($parts[1] ?? ''));
+        if (
+            !preg_match('/^[a-f0-9]{32}$/', $visitorId)
+            || !preg_match('/^[a-f0-9]{64}$/', $signature)
+            || !hash_equals($this->signVisitorId($visitorId), $signature)
+        ) {
+            return '';
+        }
+        return $visitorId;
+    }
+
+    protected function signVisitorId($visitorId)
+    {
+        $secret = strval(config('app.salt')) . '|' . self::CACHE_SUFFIX;
+        return hash_hmac('sha256', strval($visitorId), $secret);
+    }
+
+    protected function createReceiveKey($identity, $couponId, $ticket, $identityType)
+    {
+        $key = md5(
+            strval($identity)
+            . strval($ticket)
+            . microtime(true)
+            . bin2hex(random_bytes(16))
+            . self::CACHE_SUFFIX
+        );
+        cache($key, [
+            'identity' => strval($identity),
+            'coupon_id' => intval($couponId),
+            'identity_type' => strval($identityType),
+            'session_hash' => $this->getSessionHash(),
+        ], ['expire' => self::CACHE_EXPIRE]);
+        Session::set(self::SESSION_KEY, $key);
+        return $key;
+    }
+
+    protected function getReceiveCredential($key)
+    {
+        if (!preg_match('/^[a-f0-9]{32}$/', strval($key))) {
+            return '领取凭证参数错误，请重新打开优惠券领取链接';
+        }
+        if (!$this->isSessionKeyValid($key)) {
+            return '打开方式有误，请重新打开领取链接';
+        }
+
+        $cacheValue = cache($key);
+        if (!$cacheValue) {
+            return '领取凭证已过期，请重新打开优惠券领取链接';
+        }
+
+        // 兼容发布前已经生成、尚未过期的旧版字符串缓存。
+        if (is_string($cacheValue)) {
+            $valueParts = explode('&', $cacheValue, 2);
+            $cacheValue = [
+                'identity' => trim(strval($valueParts[0] ?? '')),
+                'coupon_id' => intval($valueParts[1] ?? 0),
+                'identity_type' => 'openid',
+                'session_hash' => '',
+            ];
+        }
+        if (!is_array($cacheValue)) return '领取凭证数据错误';
+
+        $identity = trim(strval($cacheValue['identity'] ?? ''));
+        $couponId = intval($cacheValue['coupon_id'] ?? 0);
+        $sessionHash = trim(strval($cacheValue['session_hash'] ?? ''));
+        if (!$identity || !$couponId) return '领取凭证数据错误';
+        if ($sessionHash && !hash_equals($sessionHash, $this->getSessionHash())) {
+            return '打开方式有误，请重新打开领取链接';
+        }
+
+        return [
+            'identity' => $identity,
+            'coupon_id' => $couponId,
+            'identity_type' => strval($cacheValue['identity_type'] ?? 'openid'),
+        ];
+    }
+
     protected function isSessionKeyValid($key)
     {
         $sessionKey = trim(strval(Session::get(self::SESSION_KEY, '')));
         return $sessionKey !== '' && hash_equals($sessionKey, strval($key));
+    }
+
+    protected function getSessionHash()
+    {
+        return hash('sha256', strval(Session::getId()));
+    }
+
+    protected function getCaptchaService()
+    {
+        $config = require dirname(__DIR__, 4) . '/extend/Fastknife/config.php';
+        $config['watermark'] = [];
+        $config['cache']['constructor'] = Cache::store();
+        $config['cache']['options'] = ['expire' => self::CAPTCHA_EXPIRE];
+        return new CouponSliderCaptchaService($config);
+    }
+
+    protected function getCaptchaBindingValue($key)
+    {
+        return hash('sha256', strval($key) . '|' . $this->getSessionHash());
+    }
+
+    protected function getCaptchaChallengeCacheKey($token)
+    {
+        return 'wx_coupon_captcha_challenge_' . md5(strval($token));
+    }
+
+    protected function getCaptchaVerificationCacheKey($verification)
+    {
+        return 'wx_coupon_captcha_verification_' . md5(strval($verification));
+    }
+
+    protected function verifyCaptchaVerification($key, $verification)
+    {
+        if (!$verification || strlen($verification) > 2048) {
+            return '请先完成滑块验证';
+        }
+        $cacheKey = $this->getCaptchaVerificationCacheKey($verification);
+        $binding = strval(Cache::get($cacheKey, ''));
+        if (!$binding || !hash_equals($binding, $this->getCaptchaBindingValue($key))) {
+            return '滑块验证已失效，请重新验证';
+        }
+
+        // 先删除业务绑定，再执行组件的一次性二次校验，阻止重复提交。
+        Cache::delete($cacheKey);
+        try {
+            $this->getCaptchaService()->verificationByEncryptCode($verification);
+        } catch (\Exception $e) {
+            return '滑块验证已失效，请重新验证';
+        }
+        return true;
+    }
+
+    protected function checkReceiveRateLimit($key, $couponId)
+    {
+        $ip = request()->ip();
+        if (!filter_var($ip, FILTER_VALIDATE_IP)) $ip = '0.0.0.0';
+        $dayBucket = date('Ymd');
+        $tomorrow = strtotime('tomorrow');
+        $rules = [
+            [
+                'key' => 'wx_coupon_rate_key_' . md5($ip . '|' . $key),
+                'ttl' => 60,
+                'limit' => self::RATE_KEY_MINUTE_LIMIT,
+                'message' => '操作过于频繁，请1分钟后重试',
+            ],
+            [
+                'key' => 'wx_coupon_rate_coupon_' . md5($ip . '|' . intval($couponId)),
+                'ttl' => 60,
+                'limit' => self::RATE_COUPON_MINUTE_LIMIT,
+                'message' => '当前网络领取过于频繁，请稍后重试',
+            ],
+            [
+                'key' => 'wx_coupon_rate_ip_day_' . md5($ip . '|' . $dayBucket),
+                'ttl' => max(60, $tomorrow - time() + 60),
+                'limit' => self::RATE_IP_DAY_LIMIT,
+                'message' => '当前网络今日领取次数已达上限',
+            ],
+        ];
+
+        $blockedMessage = '';
+        foreach ($rules as $rule) {
+            $count = $this->increaseRateCounter($rule['key'], $rule['ttl']);
+            if (!$blockedMessage && $count > $rule['limit']) {
+                $blockedMessage = $rule['message'];
+            }
+        }
+        if ($blockedMessage) {
+            actionLog([
+                'ip' => $ip,
+                'coupon_id' => intval($couponId),
+                'key' => strval($key),
+                'message' => $blockedMessage,
+            ], '优惠券链接领取触发限流');
+            return $blockedMessage;
+        }
+        return true;
+    }
+
+    protected function increaseRateCounter($cacheKey, $ttl)
+    {
+        if (!Cache::has($cacheKey)) {
+            Cache::set($cacheKey, 1, intval($ttl));
+            return 1;
+        }
+        return intval(Cache::store()->inc($cacheKey));
     }
 
     protected function checkCoupon($coupon)

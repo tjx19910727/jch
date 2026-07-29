@@ -8,9 +8,24 @@ class MachinePreReplenishment extends Common
 {
     public function getList()
     {
-        $postData = input();
-        $where = $this->getWhere([]);
-        return $this->app->machinePreReplenishment->getOrderList($postData,$where);
+        $postData = [];
+        $where = [];
+        try {
+            $postData = input();
+            $where = $this->getWhere([]);
+            return $this->app->machinePreReplenishment->getOrderList($postData, $where);
+        } catch (\Throwable $e) {
+            actionLog([
+                'request_data' => $postData,
+                'where' => $where,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ], '预补货列表查询异常', 'getList_error');
+            return returnState(5000, '系统错误');
+        }
     }
 
     public function getMachineChannels()
@@ -47,6 +62,15 @@ class MachinePreReplenishment extends Common
     {
         $postData = input();
         return $this->app->machinePreReplenishment->reportLog($postData);
+    }
+
+    /**
+     * 手动完结预补货单
+     */
+    public function finish()
+    {
+        $postData = input();
+        return $this->app->machinePreReplenishment->finishOrder($postData);
     }
 
     /**

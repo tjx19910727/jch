@@ -129,13 +129,64 @@ class WeiCheng
         return response($content, $statusCode, ['Content-Type' => 'text/plain; charset=utf-8']);
     }
     
-    //最新商品信息同步
-    public function syncGoodsInfo(){
-		//用户信息入库等。
+    /**
+     * 接收微程商品上下架状态同步。
+     */
+    public function syncGoodsInfo()
+    {
+        // 商品信息：{"product":{"no":"VC2607231004","is_pub":1}}
         $postData = input();
         $postData = json2arr($postData);
         actionLog($postData, '最新商品数据');
-        return 'ok';                                                                                                                                                                                                                                    
+
+        $product = isset($postData['product']) && is_array($postData['product'])
+            ? $postData['product']
+            : [];
+        $goodsNo = trim(strval(isset($product['no']) ? $product['no'] : ''));
+        $isPub = isset($product['is_pub']) ? intval($product['is_pub']) : -1;
+        if ($goodsNo === '') {
+            actionLog($postData, 'syncGoodsInfo商品编码为空，拒绝本次推送');
+            return $this->textResponse('product_no_required', 422);
+        }
+        if (!in_array($isPub, [0, 1], true)) {
+            actionLog($postData, 'syncGoodsInfo商品上下架状态错误，拒绝本次推送');
+            return $this->textResponse('is_pub_invalid', 422);
+        }
+
+        $goods = Db::name('wc_goods')->where('no', $goodsNo)->field('id,no,is_pub')->find();
+        if (!$goods) {
+            actionLog(['no' => $goodsNo, 'is_pub' => $isPub], 'syncGoodsInfo商品不存在');
+            return $this->textResponse('product_not_found', 404);
+        }
+
+        Db::startTrans();
+        try {
+            Db::name('wc_goods')->where('no', $goodsNo)->update(['is_pub' => $isPub]);
+            $channelUpdateCount = 0;
+            if ($isPub === 1) {
+                $channelUpdateCount = Db::name('wc_machine_channel')
+                    ->where('out_no', $goodsNo)
+                    ->where('is_hidden', 1)
+                    ->update(['is_hidden' => 2]);
+            } else {
+                $channelUpdateCount = Db::name('wc_machine_channel')
+                    ->where('out_no', $goodsNo)
+                    ->where('is_hidden', 2)
+                    ->update(['is_hidden' => 1]);
+            }
+            Db::commit();
+            actionLog([
+                'no' => $goodsNo,
+                'is_pub' => $isPub,
+                'channel_update_count' => $channelUpdateCount,
+            ], 'syncGoodsInfo商品状态同步完成');
+        } catch (\Throwable $e) {
+            Db::rollback();
+            actionException($e, 1);
+            return $this->textResponse('sync_failed', 500);
+        }
+
+        return $this->textResponse('ok');
     }
 
     public function refund()

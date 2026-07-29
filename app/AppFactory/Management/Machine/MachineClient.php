@@ -61,6 +61,7 @@ class MachineClient extends ManagementClient
     public function addM($postData)
     {
         try {
+            unset($postData['run_mode']);
             $machine_group_id = 0;
             if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
                 $machine_group_id = explode(",", $postData['machine_group_id']);
@@ -101,6 +102,7 @@ class MachineClient extends ManagementClient
 
     public function updateM($postData)
     {
+        unset($postData['run_mode']);
         $machine_group_id = [];
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
             $machine_group_id = explode(",",$postData['machine_group_id']);
@@ -262,6 +264,9 @@ class MachineClient extends ManagementClient
         $monthEnd = strtotime(date('Y-m-t 23:59:59', $monthStart));
         $defaultSignal = ['rsrp' => -999, 'sinr' => -999, 'rsrp_level' => 0, 'sinr_level' => 0];
         return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) use ($defaultSignal, $month, $monthStart, $monthEnd) {
+            $configRunMode = $this->getMachineConfigFind(['m_id' => intval($item['m_id'])], 'run_mode');
+            $item['run_mode'] = $configRunMode ? intval($configRunMode['run_mode']) : 1;
+            $item['run_mode_desc'] = $item['run_mode'] === 2 ? '测试模式' : '生产模式';
             $item['last_operating_time'] = Db::name('machine_operating_log')
                 ->where('m_id', intval($item['m_id']))
                 ->order('id', 'desc')
@@ -533,6 +538,9 @@ class MachineClient extends ManagementClient
         $item = $this->getMachineFind($where,$field, "", $with);
         if ($item) {
             $item = $item->toArray();
+            $configRunMode = $this->getMachineConfigFind(['m_id' => intval($item['m_id'])], 'run_mode');
+            $item['run_mode'] = $configRunMode ? intval($configRunMode['run_mode']) : 1;
+            $item['run_mode_desc'] = $item['run_mode'] === 2 ? '测试模式' : '生产模式';
             $item['last_operating_time'] = Db::name('machine_operating_log')
                 ->where('m_id', intval($item['m_id']))
                 ->order('id', 'desc')
@@ -1788,10 +1796,14 @@ class MachineClient extends ManagementClient
     /**
      * 导出设备排行榜（V2）
      * @param array $where
+     * @param int $topType
+     * @param int $pageNum 排行前多少条，0 表示全部
      * @return array|\think\response\Json
      */
-    public function exportRankingListV2($where = [], $topType = 1)
+    public function exportRankingListV2($where = [], $topType = 1, $pageNum = 0)
     {
+        $pageNum = max(0, intval($pageNum));
+
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"m_id");
         if ($mIds) {
             $where[] = ['m_id', 'in', $mIds];
@@ -1802,7 +1814,7 @@ class MachineClient extends ManagementClient
             $order = 'totalQuantity desc,totalPrice desc, m_id desc';
         }
 
-        $list = $this->queryMachineRanking($where, $order, 0);
+        $list = $this->queryMachineRanking($where, $order, 0, $pageNum);
         if ($list) {
             $list = $list->toArray();
             foreach ($list as $key => $item) {

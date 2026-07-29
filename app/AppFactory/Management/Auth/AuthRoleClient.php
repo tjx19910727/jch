@@ -13,6 +13,7 @@ use app\AppFactory\Kernel\Traits\Auth\AuthOrganizationRoleTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleNodeTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthRoleTrait;
 use app\AppFactory\Management\ManagementClient;
+use think\facade\Db;
 
 class AuthRoleClient extends ManagementClient
 {
@@ -82,5 +83,50 @@ class AuthRoleClient extends ManagementClient
         }
         $this->commitTrans();
         return $this->r(200,$this->lang("copy_success"));
+    }
+
+    /**
+     * 获取角色关联的账户列表（不分页）
+     * @param int $roleId
+     * @return array|\think\response\Json
+     */
+    public function getManagers($roleId)
+    {
+        $list = Db::name('auth_manager_role')
+            ->alias('mr')
+            ->join('auth_manager au', 'au.manager_id = mr.manager_id')
+            ->where([
+                'mr.role_id' => intval($roleId),
+                'mr.is_del' => 2,
+                'au.status' => 1,
+            ])
+            ->field('au.manager_id,au.nickname,au.account,au.real_name,au.status')
+            ->distinct(true)
+            ->order('au.manager_id asc')
+            ->select();
+
+        return $this->rQ($list);
+    }
+
+    
+    /**
+     * 获取角色列表，并统计每个角色关联的有效账户数
+     * @param array $where
+     * @param int $pageNum
+     * @param string $field
+     * @param string $order
+     * @param int $rQ
+     * @return mixed
+     */
+    public function getList($where = [], $pageNum = 0, $field = "*", $order = "", $rQ = 1)
+    {
+        $field .= ",(SELECT COUNT(DISTINCT amr.manager_id)
+            FROM auth_manager_role amr
+            INNER JOIN auth_manager au ON au.manager_id = amr.manager_id
+            WHERE amr.role_id = a.role_id
+            AND amr.is_del = 2
+            AND au.status = 1) manager_num";
+        $data = $this->getAuthRoleList($where, $pageNum, $field, $order);
+        return $rQ ? $this->rQ($data) : $data;
     }
 }

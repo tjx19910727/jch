@@ -7,6 +7,7 @@ return [
     'commands' => [
         'dataUpload' => 'app\command\DataUpload',
         'exportQueue' => 'app\command\ExportQueue',
+        'asyncTaskQueue' => 'app\command\AsyncTaskQueue',
         'machineReceive' => 'app\command\MachineReceive',
         'time_task' => 'app\command\TimeTask',
         'api' => 'app\command\Api',

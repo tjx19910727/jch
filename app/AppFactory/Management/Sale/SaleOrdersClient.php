@@ -1115,9 +1115,10 @@ class SaleOrdersClient extends ManagementClient
         ";
         $collectList = $this->getSaleOrdersDetailsJoinOrderList($where, $pageNum, $field, 'totalPrice desc', 'm_id,g_id');
         actionLog($this->getLS(), '统计销售数据');
-        $collectList = $collectList->each(function ($collectData) use ($behaviorWhere) {
+        $behaviorClickMap = $this->getBehaviorClickGroupMap($behaviorWhere);
+        $collectList = $collectList->each(function ($collectData) use ($behaviorClickMap) {
             $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
-            $collectData['totalClick'] = $this->getBehaviorClickSum($behaviorWhere);
+            $collectData['totalClick'] = $this->getSaleRowBehaviorClickFromMap($behaviorClickMap, $collectData);
             $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
             $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
             $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
@@ -1159,6 +1160,7 @@ class SaleOrdersClient extends ManagementClient
         actionLog($this->getLS(), '【SQL】获取导出数据');
         if ($list) {
             $list = $list->toArray();
+            $behaviorClickMap = $this->getBehaviorClickGroupMap($behaviorWhere);
             actionLog($list, '导出数据');
             foreach ($list as $k => $collectData) {
                 $collectData['totalPrice'] = bcsub($collectData['totalPrice'], $collectData['mallPointsAmount'], 2);
@@ -1167,7 +1169,7 @@ class SaleOrdersClient extends ManagementClient
                 }
                 unset($collectData['mallPointsAmount']);
                 $collectData['totalSaleQuantity'] = bcsub($collectData['totalQuantity'], $collectData['totalGift']);
-                $collectData['totalClick'] = $this->getBehaviorClickSum($behaviorWhere);
+                $collectData['totalClick'] = $this->getSaleRowBehaviorClickFromMap($behaviorClickMap, $collectData);
                 $collectData['clickConversionRate'] = $collectData['totalClick'] > 0 ? bcmul(bcdiv($collectData['totalSaleQuantity'], $collectData['totalClick'], 4), 100, 2) . "%" : "0%";
                 $collectData['profitAmount'] = bcsub($collectData['totalPrice'], $collectData['totalCostPrice'], 2);
                 $collectData['averageRetailPrice'] = $collectData['totalSaleQuantity'] > 0 ? bcdiv($collectData['totalPrice'], $collectData['totalSaleQuantity'], 2) : 0.00;
@@ -1198,6 +1200,16 @@ class SaleOrdersClient extends ManagementClient
             return $this->sendToExport("运营数据-销售数据", $filename, $title, $list);
         }
         return $this->r(100, $this->lang("query_fail"));
+    }
+
+    /**
+     * Add the current sale row dimensions before calculating versioned clicks.
+     */
+    protected function getSaleRowBehaviorClickFromMap($behaviorClickMap, $collectData)
+    {
+        $machineId = strval($collectData['machine_id'] ?? '');
+        $goodsId = intval($collectData['g_id'] ?? 0);
+        return intval($behaviorClickMap[$machineId][$goodsId] ?? 0);
     }
     
     /**

@@ -117,6 +117,7 @@ return [
         "url_day_count_egt" => "链接领取间隔天数不能小于0",
         "url_coupon_count_integer" => "链接累计领取数量必须为整数",
         "url_coupon_count_gt" => "链接累计领取数量必须大于0",
+        "need_oauth_in" => "是否需要静默授权只能填写0或1",
     ],
 
     "VActivityCouponUsed" => [
@@ -413,7 +414,6 @@ return [
         "machine_id_exists" => "设备编号已存在，请勿重复添加",
         "machine_no_data" => "查无设备信息",
         "status_in" => "设备状态不在范围内",
-        "run_mode_in" => "设备模式参数错误",
 
         "light_require" => "灯光亮度不能为空",
         "volume_require" => "音量不能为空",
@@ -425,6 +425,9 @@ return [
         "x_y_axis_require" => "x，y轴至少需要定义一个偏移量",
         "get_recycle_box_overtime" => "获取回收箱容量数据超时",
         "pick_up_door_overtime" => "获取出料箱门操作结果超时",
+        "msg_type_invalid" => "无效的主控指令类型",
+        "simplified_command_only" => "该指令仅支持简易机",
+        "luxury_command_only" => "该指令仅支持豪华机",
     ],
 
     "VMachineLang" => [
@@ -457,6 +460,8 @@ return [
         "m_id_unique" => "设备配置已存在，请勿重复添加",
         "machine_id_require" => "设备编号不能为空",
         "mcList_require" => "批量配置列表参数不能为空",
+        "run_mode_in" => "设备模式参数错误",
+        "online_pay_success_tip_max" => "线上商品支付成功提示不能超过255个字符",
     ],
     "VMachineConfigLang" => [
         "mcl_id_require" => "设备配置多语言ID不能为空",
