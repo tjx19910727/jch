@@ -1779,10 +1779,14 @@ class MachineClient extends ManagementClient
     /**
      * 导出设备排行榜（V2）
      * @param array $where
+     * @param int $topType
+     * @param int $pageNum 排行前多少条，0 表示全部
      * @return array|\think\response\Json
      */
-    public function exportRankingListV2($where = [], $topType = 1)
+    public function exportRankingListV2($where = [], $topType = 1, $pageNum = 0)
     {
+        $pageNum = max(0, intval($pageNum));
+
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"m_id");
         if ($mIds) {
             $where[] = ['m_id', 'in', $mIds];
@@ -1793,7 +1797,7 @@ class MachineClient extends ManagementClient
             $order = 'totalQuantity desc,totalPrice desc, m_id desc';
         }
 
-        $list = $this->queryMachineRanking($where, $order, 0);
+        $list = $this->queryMachineRanking($where, $order, 0, $pageNum);
         if ($list) {
             $list = $list->toArray();
             foreach ($list as $key => $item) {
