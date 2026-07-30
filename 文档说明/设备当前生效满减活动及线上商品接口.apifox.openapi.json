@@ -1,0 +1,498 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "设备当前生效满减活动及线上商品接口",
+    "version": "2026-07-21",
+    "description": "新增独立设备接口，不修改原 /machine/receive/getFd。接口按当前设备和服务器当前时间查询生效的满减满送活动，并在每条活动的 onlineGoodsList 中返回该活动配置的微程线上商品。无需数据库结构变更。"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}"
+    }
+  ],
+  "tags": [
+    {
+      "name": "设备营销活动",
+      "description": "设备端营销活动查询"
+    }
+  ],
+  "paths": {
+    "/machine/receive/getCurrentFdList": {
+      "post": {
+        "tags": [
+          "设备营销活动"
+        ],
+        "summary": "获取当前生效的满减活动及线上商品",
+        "description": "仅返回当前设备已关联并且 status 为 1 或 2、start_date <= 当前服务器时间、end_date=0 或 end_date >= 当前服务器时间的活动。每条活动的 content 为普通商品活动档位（goods_source=1），onlineGoodsList 为该活动配置的微程线上商品（goods_source=2）。source_no 对应微程父商品 out_no。",
+        "operationId": "machineReceiveGetCurrentFdList",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/mac"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetCurrentFdListRequest"
+              },
+              "examples": {
+                "queryCurrentActivities": {
+                  "summary": "查询当前生效活动",
+                  "value": {
+                    "machine_id": "JCHM-H3D-0005",
+                    "msg_id": "73e099e4-cf92-4b05-ac8e-2986ca2bf33f",
+                    "timestamp": 1784604000,
+                    "sign": "0123456789abcdef0123456789abcdef"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/GetCurrentFdListRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "统一业务响应；HTTP 状态通常为 200，设备仍需判断 state。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCurrentFdListResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "查询成功",
+                    "value": {
+                      "state": 200,
+                      "msg": "查询成功",
+                      "data": [
+                        {
+                          "fd_id": 221,
+                          "fd_name": "满50减5",
+                          "start_date": 1784217600,
+                          "end_date": 1788537599,
+                          "fd_type": 2,
+                          "condition_type": 1,
+                          "desc": "",
+                          "status": 2,
+                          "content": [
+                            {
+                              "fdc_id": 901,
+                              "condition_value1": 50,
+                              "condition_value": "50.00",
+                              "g_id": 0,
+                              "g_name": "",
+                              "pic": "",
+                              "sku": "",
+                              "gc_id": 0,
+                              "gc_name": "",
+                              "active_value": "5.00",
+                              "fdc_sort": 1
+                            }
+                          ],
+                          "onlineGoodsList": [
+                            {
+                              "fdc_id": 902,
+                              "source_no": "ONLINE-001",
+                              "condition_value": "ONLINE-001",
+                              "g_id": 0,
+                              "g_name": "微程线上商品A",
+                              "pic": "https://example.test/upload/online-001.jpg",
+                              "sku": "ONLINE-001",
+                              "gc_id": 0,
+                              "gc_name": "",
+                              "active_value": "0.00",
+                              "goods_source": 2
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  },
+                  "empty": {
+                    "summary": "当前无生效活动",
+                    "description": "项目 returnState 在 data 为空数组时会省略 data 字段。",
+                    "value": {
+                      "state": 200,
+                      "msg": "查无数据"
+                    }
+                  },
+                  "macMismatch": {
+                    "summary": "MAC 校验失败",
+                    "value": {
+                      "state": 300,
+                      "msg": "Mac地址与后台配置不匹配"
+                    }
+                  },
+                  "signFailed": {
+                    "summary": "验签失败",
+                    "value": {
+                      "state": 100,
+                      "msg": "验签失败"
+                    }
+                  },
+                  "timestampExpired": {
+                    "summary": "时间戳超时",
+                    "value": {
+                      "state": 300,
+                      "msg": "时间戳超时，请更新时间",
+                      "data": {
+                        "server_time": 1784604100,
+                        "request_timestamp": 1784603000,
+                        "server_time_offset": 1100,
+                        "timestamp_tolerance": 180
+                      }
+                    }
+                  },
+                  "exception": {
+                    "summary": "业务异常",
+                    "value": {
+                      "state": 3301,
+                      "msg": "异常信息"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "mac": {
+        "name": "mac",
+        "in": "header",
+        "required": true,
+        "description": "设备 MAC 地址，必须与后台 machine.mac_address 一致。",
+        "schema": {
+          "type": "string",
+          "example": "00:11:22:33:44:55"
+        }
+      }
+    },
+    "schemas": {
+      "GetCurrentFdListRequest": {
+        "type": "object",
+        "required": [
+          "machine_id",
+          "msg_id",
+          "timestamp",
+          "sign"
+        ],
+        "properties": {
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号。",
+            "example": "JCHM-H3D-0005"
+          },
+          "msg_id": {
+            "type": "string",
+            "description": "设备请求消息唯一 ID，不能与 machine_mq_record 中已有记录重复。",
+            "example": "73e099e4-cf92-4b05-ac8e-2986ca2bf33f"
+          },
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "设备发起请求时的 Unix 秒级时间戳，必须处于服务端允许的偏差范围内。",
+            "example": 1784604000
+          },
+          "sign": {
+            "type": "string",
+            "description": "按项目设备 HTTP 签名规则生成的签名。",
+            "example": "0123456789abcdef0123456789abcdef"
+          }
+        }
+      },
+      "GetCurrentFdListResponse": {
+        "type": "object",
+        "required": [
+          "state",
+          "msg"
+        ],
+        "properties": {
+          "state": {
+            "type": "integer",
+            "description": "业务状态码：200 查询完成；100 常见于验签失败；300 为参数、MAC 或时间戳校验失败；3301 为业务异常。",
+            "example": 200
+          },
+          "msg": {
+            "type": "string",
+            "description": "业务处理结果说明。",
+            "example": "查询成功"
+          },
+          "data": {
+            "description": "成功时为当前生效活动数组；校验失败时可能为诊断对象；无活动时该字段会省略。",
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CurrentFdActivity"
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          }
+        }
+      },
+      "CurrentFdActivity": {
+        "type": "object",
+        "required": [
+          "fd_id",
+          "fd_name",
+          "start_date",
+          "end_date",
+          "fd_type",
+          "condition_type",
+          "desc",
+          "status",
+          "content",
+          "onlineGoodsList"
+        ],
+        "properties": {
+          "fd_id": {
+            "type": "integer",
+            "description": "满减满送活动 ID。",
+            "example": 221
+          },
+          "fd_name": {
+            "type": "string",
+            "description": "活动名称。",
+            "example": "满50减5"
+          },
+          "start_date": {
+            "type": "integer",
+            "format": "int64",
+            "description": "生效开始时间，Unix 秒级时间戳。",
+            "example": 1784217600
+          },
+          "end_date": {
+            "type": "integer",
+            "format": "int64",
+            "description": "生效结束时间，Unix 秒级时间戳；0 表示不限制结束时间。",
+            "example": 1788537599
+          },
+          "fd_type": {
+            "type": "integer",
+            "description": "活动类型：1 赠品；2 立减金额；3 惊喜礼品；4 折扣。",
+            "enum": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "example": 2
+          },
+          "condition_type": {
+            "type": "integer",
+            "description": "活动条件：0 不限额；1 最低消费金额；2 最少消费件数；3 指定 SKU。",
+            "enum": [
+              0,
+              1,
+              2,
+              3
+            ],
+            "example": 1
+          },
+          "desc": {
+            "type": "string",
+            "description": "活动说明。",
+            "example": ""
+          },
+          "status": {
+            "type": "integer",
+            "description": "活动状态。本接口仅查询状态 1 或 2。",
+            "enum": [
+              1,
+              2
+            ],
+            "example": 2
+          },
+          "content": {
+            "type": "array",
+            "description": "普通商品活动档位，仅包含 goods_source=1 的 activity_fd_content 记录。",
+            "items": {
+              "$ref": "#/components/schemas/FdContent"
+            }
+          },
+          "onlineGoodsList": {
+            "type": "array",
+            "description": "当前活动配置的微程线上商品列表，仅包含 goods_source=2 的 activity_fd_content 记录；未配置时为空数组。",
+            "items": {
+              "$ref": "#/components/schemas/FdOnlineGoods"
+            }
+          }
+        }
+      },
+      "FdContent": {
+        "type": "object",
+        "required": [
+          "condition_value",
+          "g_id",
+          "g_name",
+          "pic",
+          "sku",
+          "gc_id",
+          "gc_name",
+          "active_value"
+        ],
+        "properties": {
+          "fdc_id": {
+            "type": "integer",
+            "description": "活动内容 ID；condition_type=1/2 时返回。",
+            "example": 901
+          },
+          "condition_value1": {
+            "type": "integer",
+            "description": "condition_value 的无符号整数转换值，用于 condition_type=1/2 的档位排序。",
+            "example": 50
+          },
+          "condition_value": {
+            "type": "string",
+            "description": "条件值：最低金额、最少件数或指定商品 SKU。",
+            "example": "50.00"
+          },
+          "g_id": {
+            "type": "integer",
+            "description": "关联普通商品 ID，无关联商品时为 0。",
+            "example": 0
+          },
+          "g_name": {
+            "type": "string",
+            "description": "关联普通商品名称。",
+            "example": ""
+          },
+          "pic": {
+            "type": "string",
+            "description": "关联普通商品图片地址。",
+            "example": ""
+          },
+          "sku": {
+            "type": "string",
+            "description": "关联普通商品 SKU。",
+            "example": ""
+          },
+          "gc_id": {
+            "type": "integer",
+            "description": "商品分类 ID。",
+            "example": 0
+          },
+          "gc_name": {
+            "type": "string",
+            "description": "商品分类名称。",
+            "example": ""
+          },
+          "active_value": {
+            "description": "活动值：立减金额、惊喜礼品概率或折扣百分值。",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "example": "5.00"
+          },
+          "fdc_sort": {
+            "type": "integer",
+            "description": "活动档位排序值；condition_type=1/2 时返回。",
+            "example": 1
+          }
+        }
+      },
+      "FdOnlineGoods": {
+        "type": "object",
+        "required": [
+          "fdc_id",
+          "source_no",
+          "condition_value",
+          "g_id",
+          "g_name",
+          "pic",
+          "sku",
+          "gc_id",
+          "gc_name",
+          "active_value",
+          "goods_source"
+        ],
+        "properties": {
+          "fdc_id": {
+            "type": "integer",
+            "description": "活动线上商品配置记录 ID。",
+            "example": 902
+          },
+          "source_no": {
+            "type": "string",
+            "description": "微程线上父商品编码，对应订单快照中的 out_no。",
+            "example": "ONLINE-001"
+          },
+          "condition_value": {
+            "type": "string",
+            "description": "兼容字段，线上商品配置时与 source_no 相同。",
+            "example": "ONLINE-001"
+          },
+          "g_id": {
+            "type": "integer",
+            "description": "线上商品配置固定为 0。",
+            "example": 0
+          },
+          "g_name": {
+            "type": "string",
+            "description": "配置时保存的微程线上商品名称。",
+            "example": "微程线上商品A"
+          },
+          "pic": {
+            "type": "string",
+            "description": "配置时保存的微程线上商品图片地址。",
+            "example": "https://example.test/upload/online-001.jpg"
+          },
+          "sku": {
+            "type": "string",
+            "description": "线上商品编码，当前保存值与 source_no 相同。",
+            "example": "ONLINE-001"
+          },
+          "gc_id": {
+            "type": "integer",
+            "description": "商品分类 ID；线上商品未配置本地分类时为 0。",
+            "example": 0
+          },
+          "gc_name": {
+            "type": "string",
+            "description": "商品分类名称；线上商品未配置本地分类时为空。",
+            "example": ""
+          },
+          "active_value": {
+            "description": "线上商品配置记录的活动值，当前保存为 0。",
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "example": "0.00"
+          },
+          "goods_source": {
+            "type": "integer",
+            "description": "商品来源，2 表示微程线上商品。",
+            "enum": [
+              2
+            ],
+            "example": 2
+          }
+        }
+      }
+    }
+  }
+}

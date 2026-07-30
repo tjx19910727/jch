@@ -3,7 +3,7 @@
   "info": {
     "title": "统一分账后台接口",
     "version": "2026-06-29",
-    "description": "当前分账后台只保留统一配置接口。配置写入 revenue_rule_config，生效设备和商品写入 revenue_rule_config_scope，接收方、商品规则、阶梯规则统一写入 receiver_config JSON。rule_mode=5 优惠券分账只保存 activity_coupon.c_id 到 coupon_id，不再保存 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。所有后台接口 Header 必传 token: {{token}}。对应数据库脚本：文档说明/统一分账配置数据库变更.sql。"
+    "description": "当前分账后台只保留统一配置接口。配置写入 revenue_rule_config，生效设备和商品写入 revenue_rule_config_scope，接收方、商品规则、阶梯规则统一写入 receiver_config JSON。rule_mode=5 优惠券分账只保存 activity_coupon.c_id 到 coupon_id，并通过 cost_assume 控制优惠券成本承担方式；trigger_pay_types 用于限制当前策略只在指定 sale_orders.pay_type 收款方式下触发，空数组表示不限制；不再保存 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。所有后台接口 Header 必传 token: {{token}}。对应数据库脚本：文档说明/统一分账配置数据库变更.sql、文档说明/优惠券分账成本承担配置数据库变更.sql、文档说明/分账策略触发收款方式配置数据库变更.sql。"
   },
   "servers": [
     {
@@ -21,7 +21,7 @@
       "post": {
         "tags": ["RevenueRule"],
         "summary": "新增或修改分账配置",
-        "description": "不传 rrcfg_id 时新增，传 rrcfg_id 时修改。rule_mode=1,2,3,4,5 均使用本接口保存配置主体和 receiver_config。rule_mode=5 只传 coupon_id 关联 activity_coupon.c_id；优惠金额、折扣、可用次数、生效期沿用活动优惠券配置，不再提交 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。",
+        "description": "不传 rrcfg_id 时新增，传 rrcfg_id 时修改。rule_mode=1,2,3,4,5 均使用本接口保存配置主体和 receiver_config。trigger_pay_types 可传 pay_type 数组，用于限制当前策略只在指定收款方式下触发；不传或传空数组表示不限制，兼容历史策略。rule_mode=5 只传 coupon_id 关联 activity_coupon.c_id，可传 cost_assume 控制优惠券成本承担方式；优惠金额、折扣、可用次数、生效期沿用活动优惠券配置，不再提交 coupon_code、discount_type、discount_value、use_limit、used_count、remain_count、expire_time。",
         "operationId": "revenueRuleSaveConfig",
         "parameters": [
           {
@@ -63,7 +63,7 @@
       "post": {
         "tags": ["RevenueRule"],
         "summary": "分页查询分账配置",
-        "description": "查询 revenue_rule_config，并返回 receivers、machine_num、完整 scopes 和组织名称。优惠券配置不再拆分到独立接口，rule_mode=5 只保存 coupon_id，并通过 coupon_info 返回关联 activity_coupon 的展示信息。",
+        "description": "查询 revenue_rule_config，并返回 receivers、machine_num、完整 scopes、cost_assume、trigger_pay_types 和组织名称。优惠券配置不再拆分到独立接口，rule_mode=5 只保存 coupon_id，并通过 coupon_info 返回关联 activity_coupon 的展示信息。",
         "operationId": "revenueRuleGetList",
         "parameters": [
           {
@@ -84,7 +84,7 @@
       "post": {
         "tags": ["RevenueRule"],
         "summary": "查询单个分账配置",
-        "description": "按 rrcfg_id 或其他配置字段查询单条 revenue_rule_config，并读取 revenue_rule_config_scope 返回完整 scopes。rule_mode=5 且 coupon_id>0 时返回 coupon_info 展示 activity_coupon 信息。列表接口同样返回完整 scopes 和 machine_num。",
+        "description": "按 rrcfg_id 或其他配置字段查询单条 revenue_rule_config，并读取 revenue_rule_config_scope 返回完整 scopes。rule_mode=5 且 coupon_id>0 时返回 coupon_info 展示 activity_coupon 信息，同时返回 cost_assume 和 trigger_pay_types。列表接口同样返回完整 scopes、machine_num 和 trigger_pay_types。",
         "operationId": "revenueRuleGetFind",
         "parameters": [
           {
@@ -302,6 +302,20 @@
           "coupon_id": {
             "type": "integer",
             "description": "活动优惠券ID。仅 rule_mode=5 必填，对应 activity_coupon.c_id；优惠金额、次数、生效期沿用活动优惠券配置。"
+          },
+          "cost_assume": {
+            "type": "integer",
+            "enum": [0, 1, 2],
+            "default": 0,
+            "description": "优惠券成本承担方式。仅 rule_mode=5 生效：0无需承担成本，保持原分账金额；1分账方承担成本，分账方金额扣减本次优惠券金额；2按当前业务示例处理，先按订单实收金额计算分账方金额，再扣减本次优惠券金额。扣减后小于0按0处理，不生成负数分账记录。"
+          },
+          "trigger_pay_types": {
+            "type": "array",
+            "description": "当前策略适用的收款方式 pay_type 列表，对应 pay_type 表和 sale_orders.pay_type。空数组或不传表示不限制支付类型，历史配置默认不限制。",
+            "items": {
+              "type": "integer"
+            },
+            "example": [1, 11, 20]
           },
           "coupon_info": {
             "$ref": "#/components/schemas/CouponInfo"
@@ -732,6 +746,7 @@
           "base_type": 2,
           "settlement_type": 1,
           "coupon_id": 1001,
+          "cost_assume": 2,
           "receivers": [
             {
               "receiver_ao_id": 17,

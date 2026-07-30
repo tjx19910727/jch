@@ -19,6 +19,8 @@ class VSaleOrders extends VCommon
         "payment_time" => "require",
         "payment_amount" => "require|float|gt:0",
         "receiver_account" => "require",
+        "trade_no" => "max:64",
+        "sod_id" => "integer|egt:0",
     ];
 
     protected $message = [
@@ -32,6 +34,9 @@ class VSaleOrders extends VCommon
         "payment_amount.float" => "VSaleOrders.offline_refund_payment_amount_invalid",
         "payment_amount.gt" => "VSaleOrders.offline_refund_payment_amount_invalid",
         "receiver_account.require" => "VSaleOrders.offline_refund_receiver_account_require",
+        "trade_no.max" => "trade_no长度不能超过64个字符",
+        "sod_id.integer" => "sod_id必须是整数",
+        "sod_id.egt" => "sod_id不能小于0",
     ];
 
     protected $scene = [
@@ -45,5 +50,6 @@ class VSaleOrders extends VCommon
             "payment_amount",
             "receiver_account",
         ],
+        "manualPushToWeiCheng" => ["trade_no", "sod_id"],
     ];
 }

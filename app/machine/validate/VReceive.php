@@ -184,6 +184,7 @@ class VReceive extends VCommon
         "getMachineInfo" => ["msg_id","machine_id","timestamp","sign"],
         "getMachineConfig" => ["msg_id","machine_id","timestamp","sign"],
         "reportMachineRunMode" => ["msg_id","machine_id","timestamp","sign","run_mode"],
+        "getPayTypeList" => ["msg_id","machine_id","timestamp","sign"],
         "getCalibrationConfig" => ["msg_id","machine_id","timestamp","sign"],
         "getAppSettings" => ["msg_id","machine_id","timestamp","sign"],
         "getTopicPage" => ["msg_id","machine_id","timestamp","sign"],
@@ -235,7 +236,7 @@ class VReceive extends VCommon
 
         "useFd" => ["msg_id","machine_id","timestamp","sign","order_id","fd_id"],
         "usePickCode" => ["msg_id","machine_id","timestamp","sign","pick_code"],
-        "useCoupon" => ["msg_id","machine_id","timestamp","sign","coupon_code"],
+        "useCoupon" => ["msg_id","machine_id","timestamp","sign","order_id","coupon_code"],
         "useRevenueCoupon" => ["msg_id","machine_id","timestamp","sign","order_id","coupon_code"],
 
         "unclaimed" => ["msg_id","machine_id","timestamp","sign","order_id","details"],

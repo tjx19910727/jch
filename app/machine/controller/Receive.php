@@ -273,6 +273,20 @@ class Receive extends Common
     }
 
     /**
+     * 获取启用的支付类型配置
+     * @return array|string
+     */
+    public function getPayTypeList()
+    {
+        try {
+            return $this->app->api->getPayTypeList();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 获取设备配置多语言数据
      * @return array|\think\response\Json
      */
@@ -1466,7 +1480,6 @@ class Receive extends Common
             return returnTryCatch($e->getMessage());
         }
     }
-    
     /**
      * 获取最新一条OTA固件更新信息
      * @return array|string
@@ -1523,4 +1536,3 @@ class Receive extends Common
         }
     }
 }
-
