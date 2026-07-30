@@ -119,3 +119,47 @@
 - 不执行 `文档说明/微程订单混合履约数据库变更.sql`。
 - `tests/wc_mixed_fulfillment_guard.php` 属于未跟踪的弃用方案验证脚本，不纳入本次合并验收。
 - 保留当前普通微程订单同步、同步失败重试及后台手动推送能力。
+
+## 第二次合并：`mainfix_0724` 合入 `github_uat`
+
+### 再次产生冲突的原因
+
+- 这是一次新的 merge，不是上一次冲突恢复失败。
+- 本次 `MERGE_HEAD` 为 `mainfix_0724` 的 `26bbc79a`，共同祖先为 `a3e1be77`。
+- 共同祖先之后，`github_uat` 有 87 个独有提交，`mainfix_0724` 有 9 个独有提交。
+- `mainfix_0724` 基于较早版本修改了设备控制器、验证场景和语言数组；`github_uat` 已在相同位置增加支付类型和混合下单配置。双方虽然不是修改同一业务，但都在相同方法/数组尾部追加内容，Git 无法自动决定排列顺序。
+
+### 1. `app/machine/controller/Receive.php`
+
+- 冲突内容：当前分支新增 `getPayTypeList()`，`mainfix_0724` 在该位置直接进入设备配置多语言接口。
+- 处理方式：保留 `getPayTypeList()` 及其独立异常处理，继续保留后续设备配置多语言接口。
+
+### 2. `app/machine/validate/VReceive.php`
+
+- 冲突内容：当前分支新增 `getPayTypeList` 验证场景，`mainfix_0724` 无该场景。
+- 处理方式：保留签名字段 `msg_id/machine_id/timestamp/sign`，不影响后续校准、应用设置和专题页场景。
+
+### 3. `app/management/lang/en.php`
+
+- 冲突内容：当前分支新增混合下单及线上/线下收款策略英文提示，`mainfix_0724` 无对应键。
+- 处理方式：保留三个提示键。
+
+### 4. `app/management/lang/zh-cn.php`
+
+- 冲突内容：当前分支新增混合下单及线上/线下收款策略中文提示，`mainfix_0724` 无对应键。
+- 处理方式：保留三个提示键，并保持与英文文件键一致。
+
+### 5. `app/management/validate/Machine/VMachineConfig.php`
+
+- 冲突内容：`mainfix_0724` 只包含支付成功提示和运行模式；当前分支还包含混合下单开关及收款策略 ID。
+- 处理方式：保留当前分支完整规则、消息、`add/update/mcList` 场景和 `checkPayeeIds()`；没有引入已弃用的微程设备出货/寄送混合履约。
+
+### 第二次合并验证
+
+- 5 个冲突文件全部通过 `php -l`。
+- `app` 下无 Git 冲突标记。
+- 5 个冲突文件未发现重复方法。
+- 本轮冲突文件及处理记录通过 `git diff --check`。
+- `pay_type_config_guard.php`、`pay_type_client_signature_guard.php`、`machine_report_run_mode_guard.php` 和 `payment_virtual_order_scenarios.php` 通过。
+- `machine_run_mode_guard.php` 仍是上一轮已记录的两项失败：旧版精确字符串断言，以及非冲突文件 `Machine.php` 的未传参数行为；本轮没有新增失败。
+- 合并提交：未创建。
