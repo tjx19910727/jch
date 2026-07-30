@@ -184,57 +184,6 @@ class ApiClient extends ReceiveBaseClient
     protected $refundTradeNo;
 
     /**
-     * 设备端获取启用的支付类型配置。
-     * @return array|\think\response\Json
-     */
-    public function getPayTypeList()
-    {
-        $list = [];
-        try {
-            $rows = PayTypeModel::getList(
-                ['status' => 1],
-                0,
-                'pay_type,pay_type_name,pay_scene,sort,remark',
-                'sort asc, pay_type asc'
-            );
-            foreach ($rows as $row) {
-                $payType = intval($row['pay_type'] ?? 0);
-                $name = trim((string)($row['pay_type_name'] ?? ''));
-                if ($name === '') continue;
-                $list[] = [
-                    'pay_type' => $payType,
-                    'pay_type_name' => $name,
-                    'pay_scene' => intval($row['pay_scene'] ?? 1),
-                    'sort' => intval($row['sort'] ?? 0),
-                    'remark' => trim((string)($row['remark'] ?? '')),
-                    'value' => $payType,
-                    'label' => $name,
-                ];
-            }
-        } catch (\Throwable $e) {
-            $list = [];
-        } catch (\Exception $e) {
-            $list = [];
-        }
-
-        if (!$list) {
-            foreach ((config('payment.pay_type_map') ?: []) as $payType => $name) {
-                $list[] = [
-                    'pay_type' => intval($payType),
-                    'pay_type_name' => $name,
-                    'pay_scene' => 1,
-                    'sort' => intval($payType),
-                    'remark' => '来源：config/payment.php 回退配置',
-                    'value' => intval($payType),
-                    'label' => $name,
-                ];
-            }
-        }
-
-        return $this->r(200, lang('query_success'), ['list' => $list]);
-    }
-
-    /**
      * 登录验证
      * @return array|string
      */
