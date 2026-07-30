@@ -795,10 +795,10 @@ class MachineTargetService
         $sortName = trim((string) $rawSortName);
         $needSaleRank = in_array(
             $sortName,
-            ['完成进度', '完成金额', '销售利润', '销售目标完成差额'],
+            ['achievement_rate', 'sale_amount', 'profit_amount', 'target_gap_amount'],
             true
         );
-        $needCostRank = in_array($sortName, ['销售成本', '销售利润'], true);
+        $needCostRank = in_array($sortName, ['cost_amount', 'profit_amount'], true);
         $baseSql = $this->buildStatsListRankBaseSql(
             $mIds,
             $targetMap,
@@ -813,12 +813,12 @@ class MachineTargetService
         }
 
         $sortExpressionMap = [
-            '完成进度' => 'IF(target_amount > 0, sale_amount / target_amount * 100, 0)',
-            '完成金额' => 'sale_amount',
-            '销售成本' => 'cost_amount',
-            '销售利润' => '(sale_amount - cost_amount)',
-            '销售目标' => 'target_amount',
-            '销售目标完成差额' => '(target_amount - sale_amount)',
+            'achievement_rate' => 'IF(target_amount > 0, sale_amount / target_amount * 100, 0)',
+            'sale_amount' => 'sale_amount',
+            'cost_amount' => 'cost_amount',
+            'profit_amount' => '(sale_amount - cost_amount)',
+            'target_amount' => 'target_amount',
+            'target_gap_amount' => '(target_amount - sale_amount)',
         ];
         $sort = strtolower(trim((string) $rawSort));
         if ($sort !== 'asc') {
