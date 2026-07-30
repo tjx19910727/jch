@@ -73,7 +73,7 @@ class MqClient extends ReceiveBaseClient
             json(['state' => 100,"msg" => '缺少签名'])->send();
         if (isset($this->data['sign']) && $this->checkSign($this->data) !== true) {
             actionLog($this->data,'验签失败',"DataUpload");
-            die(json_encode(["state" => 200, "msg" => "验签失败"],320));
+            throw new \RuntimeException('MQ消息验签失败');
         }
         $this->message = json2arr($this->data['data'] ?? "");
         actionLog($this->message, '消息数据', "DataUpload");

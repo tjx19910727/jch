@@ -119,8 +119,9 @@ class MachineBaseClient extends BaseClient
      * @param int $from  数据来源，1：API，2：MQ
      * @param int $type  消息类型，1：接收，2：发送
      */
-    public function dataRecord($from = 1,$type = 1)
+    public function dataRecord($from = 1,$type = 1,$recordData = null)
     {
+        $recordData = is_array($recordData) ? $recordData : $this->data;
         $controller = request()->controller();
         $action = request()->action();
         $path = "";
@@ -131,20 +132,20 @@ class MachineBaseClient extends BaseClient
             if (isset($this->message['data']) && $this->message['data']) {
                 $path = json2arr($this->message['data'])['msgType'] ?? "";
             }
-            if (isset($this->data['data']) && $this->data['data']) {
-                $path = json2arr($this->data['data'])['msgType'] ?? "";
+            if (isset($recordData['data']) && $recordData['data']) {
+                $path = json2arr($recordData['data'])['msgType'] ?? "";
             }
         }
         if ($path != "heartbeat") {
-            $msg = $this->getMachineMqRecordFind(['msg_id' => $this->data['msg_id']]);
+            $msg = $this->getMachineMqRecordFind(['msg_id' => $recordData['msg_id']]);
             if (!$msg) {
                 $insertMqRecord = [
                     "m_id" => $this->machine['m_id'],
                     "machine_id" => $this->machine['machine_id'],
                     "machine_name" => $this->machine['machine_name'],
-                    "msg_id" => $this->data['msg_id'],
+                    "msg_id" => $recordData['msg_id'],
                     "path" => $path,
-                    "content" => json_encode($this->data),
+                    "content" => json_encode($recordData),
                     "from" => $from,
                     "type" => $type,
                 ];
