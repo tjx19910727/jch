@@ -42,9 +42,14 @@ trait SaleOrdersTrait
         }
         if (!is_array($order)) return false;
 
-        return intval($order['pay_type'] ?? 0) === 9
-            || intval($order['order_type'] ?? 0) === 7
-            || floatval($order['total_cost_points'] ?? 0) > 0;
+        if (intval($order['pay_type'] ?? 0) === 9 || intval($order['order_type'] ?? 0) === 7) {
+            return true;
+        }
+        if (intval($order['coupon_id'] ?? 0) > 0
+            && bccomp(strval($order['total_price'] ?? 0), '0.01', 2) < 0) {
+            return false;
+        }
+        return floatval($order['total_cost_points'] ?? 0) > 0;
     }
     
     public function getDefaultOrderTypeNameMap()

@@ -1331,7 +1331,6 @@ class ApiClient extends ReceiveBaseClient
     {
         //        if ($this->data['pay_type'] != 4 && $this->data['pay_type'] != 0) return $this->rFail($this->lang("VSubCar.pay_type_no_range"));
         if ($this->data['pay_method'] == "41") $this->data['pay_method'] = 1;
-        $hasCouponCode = isset($this->data['coupon_code']) && trim(strval($this->data['coupon_code'])) !== '';
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
         if ($this->data['pay_type'] == 5 && (!isset($this->data['mobile']) || !$this->data['mobile'])) return $this->subCarFailResponse(100, $this->lang("mobile_require"));
         $m_sel = [
@@ -1399,15 +1398,6 @@ class ApiClient extends ReceiveBaseClient
                 foreach ($this->data['carList'] as $value) {
                     $wc_order_no = [];
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
-                        $wc_goods = $this->getWcGoodsFind(['no' => $value['out_no']]);
-                        if (!$wc_goods) {
-                            $this->rollbackTrans();
-                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail") . "：微程商品[" . $value['out_no'] . "]不存在");
-                        }
-                        if ($wc_goods['maxBuy'] > 0 && $wc_goods['maxBuy'] < $value['quantity']) {
-                            return $this->subCarFailResponse(100, $this->lang("VSubCar.make_order_fail") . "：" . $wc_goods['name'] . "购买数量超过限购数量");
-                        }
-                        // todo 添加库存校验
                         $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
                         if (!$mc) {
                             $this->rollbackTrans();
@@ -1416,8 +1406,31 @@ class ApiClient extends ReceiveBaseClient
                         if (is_object($mc) && method_exists($mc, 'toArray')) {
                             $mc = $mc->toArray();
                         }
+                        $outNo = trim(strval($value['out_no'] ?? ($mc['out_no'] ?? '')));
+                        if ($outNo === '') {
+                            $this->rollbackTrans();
+                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail") . "：微程商品编码不能为空");
+                        }
+                        $value['out_no'] = $outNo;
+                        $wc_goods = $this->getWcGoodsFind(['no' => $outNo]);
+                        if (!$wc_goods) {
+                            $this->rollbackTrans();
+                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail") . "：微程商品[" . $outNo . "]不存在");
+                        }
+                        if ($wc_goods['maxBuy'] > 0 && $wc_goods['maxBuy'] < $value['quantity']) {
+                            return $this->subCarFailResponse(100, $this->lang("VSubCar.make_order_fail") . "：" . $wc_goods['name'] . "购买数量超过限购数量");
+                        }
                         $mc['status'] = 1;
-                        $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $value['out_no']])->toArray();
+                        $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $outNo])->toArray();
+                        $selectedNo = trim(strval($value['no'] ?? ''));
+                        if ($selectedNo === '' && count($wc_goods_locals) === 1) {
+                            $selectedNo = trim(strval($wc_goods_locals[0]['no'] ?? ''));
+                        }
+                        if (in_array(intval($wc_goods['type']), [3, 5, 11], true) && $selectedNo === '') {
+                            $this->rollbackTrans();
+                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail") . "：微程组合、实物或房态商品缺少子商品编码no");
+                        }
+                        $value['no'] = $selectedNo;
 
                         $total_price = 0;
                         // 根据商品seller_price设置价格兜底
@@ -1520,9 +1533,6 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.under_stock"));
                     }
-                    if ($this->data['pay_type'] == 0 && !$hasCouponCode) {
-                        $mc['retail_price'] = 0;
-                    }
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $quantity = $value['quantity'];
                         $foreach_quantity = 1;
@@ -1592,24 +1602,9 @@ class ApiClient extends ReceiveBaseClient
                 actionLog($result, '事务结果');
                 if ($result) {
                     $this->commitTrans();
-                    if ($hasCouponCode) {
-                        $this->data['coupon_code'] = trim(strval($this->data['coupon_code']));
-                        $couponResult = $this->orderUseCoupon();
-                        if ($couponResult !== true) {
-                            $couponResult = obj2arr($couponResult);
-                            $state = is_array($couponResult) ? ($couponResult['state'] ?? 100) : 100;
-                            $msg = is_array($couponResult) ? ($couponResult['msg'] ?? $this->lang("VSubCar.make_order_fail")) : strval($couponResult);
-                            return $this->subCarFailResponse($state, $msg);
-                        }
-                        $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
-                        $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
-                    }
-                    $zeroPay = $this->completeZeroPayOrderIfNeeded($order_id, 'subcar_coupon_zero_pay');
+                    $zeroPay = $this->completeZeroPayOrderIfNeeded($order_id, 'subcar_zero_pay');
                     if (!($zeroPay['success'] ?? false)) {
                         return $this->subCarFailResponse(300, $zeroPay['msg'] ?? $this->lang("action_fail"));
-                    }
-                    if ($this->data['pay_type'] == 0 && !($zeroPay['handled'] ?? false)) {
-                        return $this->subCarFailResponse($hasCouponCode ? 100 : 200, $this->lang("VSubCar.pay_type_empty"));
                     }
                     $data = $zeroPay['order'] ?? $this->buildOrderPayActionData($this->order);
                     return $this->r(200, $this->lang("VSubCar.make_order_success"), $data);
