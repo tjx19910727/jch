@@ -643,27 +643,121 @@ class MachineTargetService
     }
 
     /**
-     * @param array{m_id?:mixed,date?:mixed,page?:mixed,pageNum?:mixed} $ctx
-     * @return array{state:int,msg:string,data:array<string,mixed>}
+     * @param mixed $ctx
+     * @return array
      */
-    public function statsList(array $ctx): array
+    public function statsList($ctx)
     {
+        $ctx = is_array($ctx) ? $ctx : [];
         $page = max(1, intval($ctx['page'] ?? 1));
         $pageNum = intval($ctx['pageNum'] ?? 25);
         if ($pageNum <= 0) {
             $pageNum = 25;
         }
 
-        $res = $this->statsCore($ctx, false);
-        if (($res['state'] ?? 100) !== 200) {
-            return $res;
+        $parsed = $this->parseMonthSelection($ctx['date'] ?? date('Y-m'), true);
+        if (($parsed['state'] ?? 100) !== 200) {
+            return ['state' => 100, 'msg' => strval($parsed['msg'] ?? '月份格式错误'), 'data' => []];
         }
 
-        $data = is_array($res['data'] ?? null) ? $res['data'] : [];
-        $fullList = is_array($data['list'] ?? null) ? $data['list'] : [];
-        $total = intval($data['total'] ?? count($fullList));
-        $list = array_slice($fullList, ($page - 1) * $pageNum, $pageNum);
-        $lastPage = $total > 0 ? intval(ceil($total / $pageNum)) : 0;
+        $months = is_array($parsed['months'] ?? null) ? $parsed['months'] : [];
+        $start = intval($parsed['start'] ?? 0);
+        $end = intval($parsed['end'] ?? 0);
+        $prevStart = intval($parsed['prevStart'] ?? 0);
+        $statsNow = time();
+        $statEnd = min($statsNow, $end);
+        $prevEnd = $this->resolveComparisonStatEnd($parsed, $statsNow);
+        $dayCount = max(1, intval($parsed['dayCount'] ?? 0));
+        $updatedAt = date('Y-m-d H:i:s', $statsNow);
+
+        $authWhere = is_array($ctx['auth_where'] ?? null) ? $ctx['auth_where'] : [];
+        $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
+        if ($allowedMids === []) {
+            return $this->emptyStatsListResult($page, $pageNum, $updatedAt);
+        }
+
+        $selectedMids = $this->normalizeMachineIdInput($ctx['m_id'] ?? '');
+        $hasMachineFilter = $selectedMids !== [];
+        $candidateMids = $hasMachineFilter
+            ? array_values(array_intersect($selectedMids, $allowedMids))
+            : $allowedMids;
+        if ($candidateMids === []) {
+            return $this->emptyStatsListResult($page, $pageNum, $updatedAt);
+        }
+
+        // 这里只加载目标配置。销售额、成本及排序交给数据库处理。
+        $targetByMonthMap = $this->queryEffectiveTargetAmountByMonthMap($candidateMids, $months);
+        $candidateTargetMap = $this->sumTargetAmountByMonthMap(
+            $candidateMids,
+            $months,
+            $targetByMonthMap
+        );
+        $baseMids = [];
+        $targetMap = [];
+        $paceMap = [];
+        foreach ($candidateMids as $mid) {
+            $mid = intval($mid);
+            $targetAmount = round((float) ($candidateTargetMap[$mid] ?? 0), 2);
+            if ($mid <= 0 || $targetAmount <= 0) {
+                continue;
+            }
+            $baseMids[] = $mid;
+            $targetMap[$mid] = $targetAmount;
+            $paceMap[$mid] = $this->calculateExpectedPace(
+                $targetByMonthMap[$mid] ?? [],
+                $months,
+                $statEnd,
+                $targetAmount
+            );
+        }
+        $baseMids = array_values(array_unique($baseMids));
+        if ($baseMids === []) {
+            return $this->emptyStatsListResult($page, $pageNum, $updatedAt);
+        }
+
+        $total = count($baseMids);
+        $rankRows = $this->queryStatsListPage(
+            $baseMids,
+            $targetMap,
+            $paceMap,
+            $start,
+            $statEnd,
+            $page,
+            $pageNum,
+            $ctx['sortName'] ?? '',
+            $ctx['sort'] ?? ''
+        );
+        $pageMids = [];
+        foreach ($rankRows as $row) {
+            $mid = intval($row['m_id'] ?? 0);
+            if ($mid > 0) {
+                $pageMids[] = $mid;
+            }
+        }
+
+        $fullChannelMap = $this->queryFullChannelAmountCostMap($pageMids);
+        $currentMap = $statEnd >= $start
+            ? $this->queryAmountCostMap($pageMids, $start, $statEnd)
+            : [];
+        $prevMap = $this->queryAmountCostMap($pageMids, $prevStart, $prevEnd);
+        $list = $this->buildStatsListRows(
+            $rankRows,
+            $targetMap,
+            $paceMap,
+            $fullChannelMap,
+            $currentMap,
+            $prevMap,
+            $dayCount
+        );
+        $onTrackCount = $this->queryStatsListOnTrackCount(
+            $baseMids,
+            $targetMap,
+            $paceMap,
+            $start,
+            $statEnd
+        );
+        $lastPage = intval(ceil($total / $pageNum));
+
         return [
             'state' => 200,
             'msg' => '查询成功',
@@ -673,8 +767,360 @@ class MachineTargetService
                 'per_page' => $pageNum,
                 'current_page' => $page,
                 'last_page' => $lastPage,
-                'on_track_count' => intval($data['on_track_count'] ?? 0),
-                'updated_at' => strval($data['updated_at'] ?? ''),
+                'on_track_count' => $onTrackCount,
+                'updated_at' => $updatedAt,
+            ],
+        ];
+    }
+
+    /**
+     * 数据库完成全局排序和分页，只返回当前页设备。
+     */
+    protected function queryStatsListPage(
+        $mIds,
+        $targetMap,
+        $paceMap,
+        $start,
+        $statEnd,
+        $page,
+        $pageNum,
+        $rawSortName,
+        $rawSort
+    ) {
+        $mIds = is_array($mIds) ? $mIds : [];
+        if ($mIds === []) {
+            return [];
+        }
+
+        $sortName = trim((string) $rawSortName);
+        $needSaleRank = in_array(
+            $sortName,
+            ['完成进度', '完成金额', '销售利润', '销售目标完成差额'],
+            true
+        );
+        $needCostRank = in_array($sortName, ['销售成本', '销售利润'], true);
+        $baseSql = $this->buildStatsListRankBaseSql(
+            $mIds,
+            $targetMap,
+            $paceMap,
+            $start,
+            $statEnd,
+            $needSaleRank,
+            $needCostRank
+        );
+        if ($baseSql === '') {
+            return [];
+        }
+
+        $sortExpressionMap = [
+            '完成进度' => 'IF(target_amount > 0, sale_amount / target_amount * 100, 0)',
+            '完成金额' => 'sale_amount',
+            '销售成本' => 'cost_amount',
+            '销售利润' => '(sale_amount - cost_amount)',
+            '销售目标' => 'target_amount',
+            '销售目标完成差额' => '(target_amount - sale_amount)',
+        ];
+        $sort = strtolower(trim((string) $rawSort));
+        if ($sort !== 'asc') {
+            $sort = 'desc';
+        }
+
+        $query = Db::table($baseSql . ' stats_target_rank');
+        if (isset($sortExpressionMap[$sortName])) {
+            $query->fieldRaw(
+                'stats_target_rank.*, '
+                . $sortExpressionMap[$sortName]
+                . ' AS stats_sort_value'
+            );
+            $query->order('stats_sort_value', $sort);
+        } else {
+            $query->field('stats_target_rank.*');
+        }
+        $query->order('m_id', 'desc');
+
+        $offset = (max(1, intval($page)) - 1) * max(1, intval($pageNum));
+        return $query
+            ->limit($offset, max(1, intval($pageNum)))
+            ->select()
+            ->toArray();
+    }
+
+    /**
+     * 在轨数量由数据库返回一个聚合值，不拉取全部设备统计结果。
+     */
+    protected function queryStatsListOnTrackCount($mIds, $targetMap, $paceMap, $start, $statEnd)
+    {
+        $mIds = is_array($mIds) ? $mIds : [];
+        if ($mIds === []) {
+            return 0;
+        }
+
+        $baseSql = $this->buildStatsListRankBaseSql(
+            $mIds,
+            $targetMap,
+            $paceMap,
+            $start,
+            $statEnd,
+            true,
+            false
+        );
+        if ($baseSql === '') {
+            return 0;
+        }
+
+        $rateExpression = 'IF(target_amount > 0, sale_amount / target_amount * 100, 0)';
+        $row = Db::table($baseSql . ' stats_target_progress')
+            ->fieldRaw(
+                'IFNULL(SUM(IF(('
+                . $rateExpression
+                . ' - expected_pace) >= 0, 1, 0)), 0) AS on_track_count'
+            )
+            ->find();
+
+        return intval($row['on_track_count'] ?? 0);
+    }
+
+    /**
+     * 构造一行一个设备的轻量排序数据源。
+     */
+    protected function buildStatsListRankBaseSql(
+        $mIds,
+        $targetMap,
+        $paceMap,
+        $start,
+        $statEnd,
+        $includeSale,
+        $includeCost
+    ) {
+        $mIds = is_array($mIds) ? array_values(array_unique(array_map('intval', $mIds))) : [];
+        $mIds = array_values(array_filter($mIds, function ($mid) {
+            return $mid > 0;
+        }));
+        if ($mIds === []) {
+            return '';
+        }
+
+        $targetExpression = $this->buildStatsListCaseExpression('m.m_id', $targetMap, 2);
+        $paceExpression = $this->buildStatsListCaseExpression('m.m_id', $paceMap, 2);
+        $query = Db::name('machine')
+            ->alias('m')
+            ->whereIn('m.m_id', $mIds);
+        $fields = [
+            'm.m_id',
+            'm.machine_id',
+            'm.machine_name',
+            $targetExpression . ' AS target_amount',
+            $paceExpression . ' AS expected_pace',
+        ];
+        if ($includeSale) {
+            $saleSql = $this->buildStatsListSaleAggregateSql($mIds, $start, $statEnd);
+            if ($saleSql !== '') {
+                $query->leftJoin(
+                    [$saleSql => 'stats_sale'],
+                    'stats_sale.m_id = m.m_id'
+                );
+                $fields[] = 'IFNULL(stats_sale.sale_amount, 0) AS sale_amount';
+            } else {
+                $fields[] = '0 AS sale_amount';
+            }
+        }
+        if ($includeCost) {
+            $costSql = $this->buildStatsListCostAggregateSql($mIds, $start, $statEnd);
+            if ($costSql !== '') {
+                $query->leftJoin(
+                    [$costSql => 'stats_cost'],
+                    'stats_cost.m_id = m.m_id'
+                );
+                $fields[] = 'IFNULL(stats_cost.cost_amount, 0) AS cost_amount';
+            } else {
+                $fields[] = '0 AS cost_amount';
+            }
+        }
+
+        return $query
+            ->fieldRaw(implode(',', $fields))
+            ->buildSql();
+    }
+
+    protected function buildStatsListSaleAggregateSql($mIds, $start, $end)
+    {
+        $mIds = is_array($mIds) ? array_values(array_unique(array_map('intval', $mIds))) : [];
+        $start = intval($start);
+        $end = intval($end);
+        if ($mIds === [] || $start <= 0 || $end <= 0 || $start > $end) {
+            return '';
+        }
+
+        return Db::name('sale_orders')
+            ->alias('stats_so')
+            ->whereIn('stats_so.m_id', $mIds)
+            ->where('stats_so.pay_status', 3)
+            ->where('stats_so.create_date', '>=', $start)
+            ->where('stats_so.create_date', '<=', $end)
+            ->fieldRaw(
+                'stats_so.m_id, '
+                . 'IFNULL(SUM(stats_so.total_price - stats_so.refund_amount), 0) AS sale_amount'
+            )
+            ->group('stats_so.m_id')
+            ->buildSql();
+    }
+
+    protected function buildStatsListCostAggregateSql($mIds, $start, $end)
+    {
+        $mIds = is_array($mIds) ? array_values(array_unique(array_map('intval', $mIds))) : [];
+        $start = intval($start);
+        $end = intval($end);
+        if ($mIds === [] || $start <= 0 || $end <= 0 || $start > $end) {
+            return '';
+        }
+
+        return Db::name('sale_orders')
+            ->alias('stats_cost_so')
+            ->leftJoin(
+                'sale_orders_details stats_sod',
+                'stats_sod.order_id = stats_cost_so.order_id'
+            )
+            ->whereIn('stats_cost_so.m_id', $mIds)
+            ->where('stats_cost_so.pay_status', 3)
+            ->where('stats_cost_so.create_date', '>=', $start)
+            ->where('stats_cost_so.create_date', '<=', $end)
+            ->fieldRaw(
+                'stats_cost_so.m_id, IFNULL(SUM(('
+                . 'IFNULL(stats_sod.success_quantity, 0) - IFNULL(stats_sod.refund_quantity, 0)'
+                . ') * IFNULL(stats_sod.cost_price, 0)), 0) AS cost_amount'
+            )
+            ->group('stats_cost_so.m_id')
+            ->buildSql();
+    }
+
+    protected function buildStatsListCaseExpression($field, $valueMap, $scale)
+    {
+        $valueMap = is_array($valueMap) ? $valueMap : [];
+        $parts = [];
+        foreach ($valueMap as $mid => $value) {
+            $mid = intval($mid);
+            if ($mid <= 0 || !is_numeric($value)) {
+                continue;
+            }
+            $parts[] = 'WHEN ' . $mid . ' THEN '
+                . number_format((float) $value, max(0, intval($scale)), '.', '');
+        }
+        if ($parts === []) {
+            return '0';
+        }
+
+        return 'CASE ' . $field . ' ' . implode(' ', $parts) . ' ELSE 0 END';
+    }
+
+    /**
+     * 当前页兼容字段继续沿用原统计口径。
+     */
+    protected function buildStatsListRows(
+        $rankRows,
+        $targetMap,
+        $paceMap,
+        $fullChannelMap,
+        $currentMap,
+        $prevMap,
+        $dayCount
+    ) {
+        $rankRows = is_array($rankRows) ? $rankRows : [];
+        $targetMap = is_array($targetMap) ? $targetMap : [];
+        $paceMap = is_array($paceMap) ? $paceMap : [];
+        $fullChannelMap = is_array($fullChannelMap) ? $fullChannelMap : [];
+        $currentMap = is_array($currentMap) ? $currentMap : [];
+        $prevMap = is_array($prevMap) ? $prevMap : [];
+        $list = [];
+        foreach ($rankRows as $row) {
+            $mid = intval($row['m_id'] ?? 0);
+            if ($mid <= 0) {
+                continue;
+            }
+
+            $targetAmount = round((float) ($targetMap[$mid] ?? 0), 2);
+            $fullChannel = $fullChannelMap[$mid] ?? ['amount' => 0, 'cost' => 0];
+            $current = $currentMap[$mid] ?? ['sale' => 0, 'cost' => 0];
+            $prev = $prevMap[$mid] ?? ['sale' => 0, 'cost' => 0];
+            $fullChannelAmount = round((float) ($fullChannel['amount'] ?? 0), 2);
+            $fullChannelCost = round((float) ($fullChannel['cost'] ?? 0), 2);
+            $saleAmount = round((float) ($current['sale'] ?? 0), 2);
+            $costAmount = round((float) ($current['cost'] ?? 0), 2);
+            $profitAmount = round($saleAmount - $costAmount, 2);
+            $prevSale = round((float) ($prev['sale'] ?? 0), 2);
+            $prevCost = round((float) ($prev['cost'] ?? 0), 2);
+            $prevProfit = round($prevSale - $prevCost, 2);
+            $achievementRate = $targetAmount > 0
+                ? round($saleAmount / $targetAmount * 100, 2)
+                : 0;
+            $costRate = $saleAmount > 0 ? round($costAmount / $saleAmount * 100, 2) : 0;
+            $profitMargin = $saleAmount > 0 ? round($profitAmount / $saleAmount * 100, 2) : 0;
+            $targetGapAmount = round(max($targetAmount - $saleAmount, 0), 2);
+            $expectedPace = array_key_exists($mid, $paceMap)
+                ? $paceMap[$mid]
+                : null;
+            $paceDelta = $expectedPace === null
+                ? null
+                : round($achievementRate - (float) $expectedPace, 2);
+            $status = $paceDelta !== null && $paceDelta >= 0 ? 'ON_TRACK' : 'BEHIND';
+            $turnoverRatio = $fullChannelCost > 0
+                ? round($saleAmount / $fullChannelCost, 2)
+                : 0;
+            $turnoverDays = $turnoverRatio > 0
+                ? round(max(1, intval($dayCount)) / $turnoverRatio, 1)
+                : 0;
+            $prevTurnoverRatio = $fullChannelCost > 0
+                ? round($prevSale / $fullChannelCost, 2)
+                : 0;
+            $prevTurnoverDays = $prevTurnoverRatio > 0
+                ? round(max(1, intval($dayCount)) / $prevTurnoverRatio, 1)
+                : 0;
+
+            $list[] = [
+                'm_id' => $mid,
+                'machine_id' => strval($row['machine_id'] ?? ''),
+                'machine_name' => strval($row['machine_name'] ?? ''),
+                'full_channel_amount' => $fullChannelAmount,
+                'full_channel_cost' => $fullChannelCost,
+                'sale_amount' => $saleAmount,
+                'cost_amount' => $costAmount,
+                'estimated_profit' => $profitAmount,
+                'cost_price' => $costAmount,
+                'profit_amount' => $profitAmount,
+                'target_amount' => $targetAmount,
+                'achievement_rate' => $achievementRate,
+                'turnover_ratio' => $turnoverRatio,
+                'turnover_days' => $turnoverDays,
+                'prev_sale_amount' => $prevSale,
+                'prev_cost_amount' => $prevCost,
+                'prev_profit_amount' => $prevProfit,
+                'prev_turnover_ratio' => $prevTurnoverRatio,
+                'prev_turnover_days' => $prevTurnoverDays,
+                'target_configured' => true,
+                'cost_rate' => $costRate,
+                'profit_margin' => $profitMargin,
+                'target_gap_amount' => $targetGapAmount,
+                'expected_pace' => $expectedPace,
+                'pace_delta' => $paceDelta,
+                'status' => $status,
+            ];
+        }
+
+        return $list;
+    }
+
+    protected function emptyStatsListResult($page, $pageNum, $updatedAt)
+    {
+        return [
+            'state' => 200,
+            'msg' => '查询成功',
+            'data' => [
+                'list' => [],
+                'total' => 0,
+                'per_page' => max(1, intval($pageNum)),
+                'current_page' => max(1, intval($page)),
+                'last_page' => 0,
+                'on_track_count' => 0,
+                'updated_at' => strval($updatedAt),
             ],
         ];
     }
