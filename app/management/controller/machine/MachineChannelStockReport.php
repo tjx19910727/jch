@@ -48,7 +48,7 @@ class MachineChannelStockReport extends Common
         $postData = input();
         $isOperating = $postData['is_operating'] ?? '';
         unset($postData['is_operating']);
-        $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like"]);
+        $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like"], 'mcs.');
         return $this->app->machineChannelStockReport->export($where,2,$isOperating);
     }
 }

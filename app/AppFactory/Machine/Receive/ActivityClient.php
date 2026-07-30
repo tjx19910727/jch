@@ -11,6 +11,7 @@ namespace app\AppFactory\Machine\Receive;
 
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Model\Revenue\RevenueOrderModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
 use app\AppFactory\Kernel\Service\Revenue\RevenueCouponService;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
@@ -118,24 +119,57 @@ class ActivityClient extends ReceiveBaseClient
      */
     public function useCoupon()
     {
-        $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
-        if (!$this->order) return $this->r(100, $this->lang("VActivityPickCode.order_no_data"));
-        if ($this->order['out_status'] != 1) return $this->r(100, $this->lang("VActivityPickCode."));
-
-        // 有优惠券码，重新处理订单数据
-        if (isset($this->data['coupon_code'])) {
-            try {
+        $orderId = intval($this->data['order_id']);
+        $couponCode = trim(strval($this->data['coupon_code']));
+        $this->startTrans();
+        try {
+            $this->order = SaleOrdersModel::where([
+                'order_id' => $orderId,
+                'm_id' => $this->machine['m_id'],
+            ])->lock(true)->find();
+            if (!$this->order) {
+                $this->rollbackTrans();
+                return $this->r(100, $this->lang("VActivityPickCode.order_no_data"));
+            }
+            $this->order = $this->order->toArray();
+            $used = $this->getActivityCouponUsedFind(
+                ['order_id' => $orderId],
+                'cu_id,code'
+            );
+            if ($used && is_object($used) && method_exists($used, 'toArray')) {
+                $used = $used->toArray();
+            }
+            $sameCoupon = $used && trim(strval($used['code'] ?? '')) === $couponCode;
+            $payStatus = intval($this->order['pay_status'] ?? 0);
+            if ($payStatus == 3) {
+                if (!$sameCoupon) {
+                    $this->rollbackTrans();
+                    return $this->rFail($this->lang("VOrderPay.pay_status3"));
+                }
+            } elseif ($payStatus != 1 || intval($this->order['out_status'] ?? 0) != 1) {
+                $this->rollbackTrans();
+                return $this->rFail("订单当前状态不允许使用优惠券");
+            }
+            if (!$sameCoupon) {
                 $result = $this->orderUseCoupon();
                 if ($result !== true) {
+                    $this->rollbackTrans();
                     return $result;
                 }
-                $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']],0,'*');
-            } catch (\Exception $e) {
-                actionException($e,1);
-                return $this->rTryCatch($e->getMessage());
             }
+            $this->commitTrans();
+        } catch (\Exception $e) {
+            $this->rollbackTrans();
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
         }
-        return $this->r(200,"操作成功",$this->order);
+
+        $zeroPay = $this->completeZeroPayOrderIfNeeded($orderId, 'use_coupon_zero_pay');
+        if (!($zeroPay['success'] ?? false)) {
+            return $this->r(300, $zeroPay['msg'] ?? $this->lang("action_fail"));
+        }
+        $data = $zeroPay['order'] ?? $this->buildOrderPayActionData($this->order);
+        return $this->r(200, "操作成功", $data);
     }
 
     /**
