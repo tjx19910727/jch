@@ -38,13 +38,20 @@ class RecommendSchemeService
         }
         $this->layoutChannelCount = count($details);
 
-        // 2. 获取布局模型（取channel_depth作为深度）
-        $model = MachineLayoutModelModel::getFind(['mlm_id' => intval($mlmId)], 'channel_depth');
+        // 2. 获取布局模型，使用模板配置的货道可用深度计算容量。
+        $model = MachineLayoutModelModel::getFind(
+            ['mlm_id' => intval($mlmId)],
+            'mlm_id,channel_depth'
+        );
         if (!$model) {
             $this->error = '布局模板不存在';
             return false;
         }
         $channelDepth = floatval($model['channel_depth'] ?? 0);
+        if ($channelDepth <= 0) {
+            $this->error = '布局模板货道深度未配置';
+            return false;
+        }
 
         // 3. 为每个商品计算兼容的货道
         $compatibleMap = []; // g_id => [{mld_id, channel_code, max_qty, pos_x, pos_y}]
@@ -64,9 +71,17 @@ class RecommendSchemeService
                 continue;
             }
 
-            $maxQty = $channelDepth > 0 && $goodsL > 0
-                ? intval(floor($channelDepth / $goodsL))
-                : 1;
+            $maxQty = $this->calculateChannelCapacity($channelDepth, $goodsL);
+            if ($maxQty <= 0) {
+                $this->skippedGoods[] = [
+                    'g_id' => $gId,
+                    'g_name' => $goods['g_name'] ?? '未知',
+                    'sku' => $goods['sku'] ?? '',
+                    'reason' => '商品长度超过模板货道可用深度（length='
+                        . $goodsL . ', channel_depth=' . $channelDepth . '）',
+                ];
+                continue;
+            }
 
             foreach ($details as $detail) {
                 $chW = floatval($detail['actual_width'] ?? 0);
@@ -80,7 +95,7 @@ class RecommendSchemeService
                 $compatibleMap[$gId][] = [
                     'mld_id' => intval($detail['mld_id']),
                     'channel_code' => $detail['channel_code'] ?? '',
-                    'max_qty' => max(1, $maxQty),
+                    'max_qty' => $maxQty,
                     'pos_x' => floatval($detail['pos_x'] ?? 0),
                     'pos_y' => floatval($detail['pos_y'] ?? 0),
                     'actual_width' => $chW,
@@ -99,6 +114,19 @@ class RecommendSchemeService
         $schemeDetails = $this->allocateByPriority($goodsList, $compatibleMap, $priorityType);
 
         return $schemeDetails;
+    }
+
+    /**
+     * 根据模板货道可用深度计算单货道理论容量。
+     */
+    protected function calculateChannelCapacity($channelDepth, $goodsLength)
+    {
+        $channelDepth = floatval($channelDepth);
+        $goodsLength = floatval($goodsLength);
+        if ($channelDepth <= 0 || $goodsLength <= 0) {
+            return 0;
+        }
+        return intval(floor($channelDepth / $goodsLength));
     }
 
     /**
