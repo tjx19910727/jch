@@ -1118,4 +1118,171 @@ class MachineClient extends TimeTaskBase
 
         return '处理成功';
     }
+
+    /**
+     * 定时任务-建议每15分钟执行一次，检查开机营业时间内持续离线超过30分钟的在营设备。
+     * 每天00:00-05:59为静默时段，不发送离线通知。
+     * 同一设备每天最多发送3次，两次通知至少间隔3小时。
+     * 命令示例：php think time_task machine checkOperatingOffline
+     *
+     * @return string
+     */
+    public function checkOperatingOffline()
+    {
+        try {
+            $now = time();
+            $offlineTimeout = 1800;
+            $noticeInterval = 10800;
+            $dailyNoticeLimit = 3;
+            $hour = intval(date('H', $now));
+            if ($hour < 6) {
+                actionLog(date('Y-m-d H:i:s', $now), '静默时段跳过在营设备离线巡检', 'checkOperatingOffline');
+                return '静默时段跳过';
+            }
+
+            $today = strtotime(date('Y-m-d', $now));
+            $yesterday = strtotime('-1 day', $today);
+            $todayKey = date('Ymd', $now);
+            $todayEnd = strtotime(date('Y-m-d 23:59:59', $now));
+
+            $query = Db::name('machine')->alias('m')
+                ->join('machine_on_off moo', 'moo.m_id = m.m_id', 'left')
+                ->where('m.is_operating', 1)
+                ->where('m.online', 2)
+                ->where('m.http_online', 2)
+                ->where('m.last_online_time', '>', 0)
+                ->where('m.last_online_time', '<=', $now - $offlineTimeout)
+                ->whereNotNull('moo.on_off_machine')
+                ->where('moo.on_off_machine', '<>', '')
+                ->where('moo.on_off_machine', '<>', '{}')
+                ->where('moo.status', 1);
+
+            if (env('CglPay.is_test')) {
+                // 测试环境仅检查指定设备，方便验证离线提醒逻辑。
+                $query = $query->where('m.machine_id', 'JCHM-H2D-0064');
+            }
+
+            $list = $query
+                ->field('m.m_id,m.machine_id,m.machine_name,m.online,m.http_online,m.is_operating,m.last_online_time,m.ao_id,moo.on_off_machine')
+                ->order('m.m_id desc')
+                ->select()
+                ->toArray();
+
+            if (!$list) {
+                return '无设备需要检查';
+            }
+
+            $flag = [];
+            foreach ($list as $item) {
+                $onOffMachine = $item['on_off_machine'];
+                if (is_string($onOffMachine)) {
+                    $onOffMachine = json_decode($onOffMachine, true);
+                }
+                if (!is_array($onOffMachine)) {
+                    continue;
+                }
+
+                // on_off_machine 下标：0=周一，1=周二，...，6=周日；
+                // 每日配置格式：关机时间,开机时间。
+                $parseBusinessWindow = function ($dayStart) use ($onOffMachine) {
+                    $weekKey = (string)(intval(date('N', $dayStart)) - 1);
+                    if (!array_key_exists($weekKey, $onOffMachine)) {
+                        return null;
+                    }
+
+                    $onOffTime = explode(',', strval($onOffMachine[$weekKey]));
+                    $shutdownTime = trim($onOffTime[0] ?? '');
+                    $startupTime = trim($onOffTime[1] ?? '');
+                    if (
+                        $shutdownTime === '' || $startupTime === '' ||
+                        strtolower($shutdownTime) === 'null' || strtolower($startupTime) === 'null' ||
+                        strtotime($shutdownTime) === false || strtotime($startupTime) === false
+                    ) {
+                        return null;
+                    }
+
+                    $shutdownSec = HourMinuteSec2int($shutdownTime);
+                    $startupSec = HourMinuteSec2int($startupTime);
+                    $nextDay = strtotime('+1 day', $dayStart);
+
+                    return [
+                        'start' => $dayStart + $startupSec,
+                        'end' => $shutdownSec <= $startupSec
+                            ? $nextDay + $shutdownSec
+                            : $dayStart + $shutdownSec,
+                    ];
+                };
+
+                // 凌晨可能仍属于昨天开始的跨天营业窗口，因此昨天、今天都要判断。
+                $businessWindow = null;
+                foreach ([$yesterday, $today] as $dayStart) {
+                    $window = $parseBusinessWindow($dayStart);
+                    if ($window && $now >= $window['start'] && $now <= $window['end']) {
+                        $businessWindow = $window;
+                        break;
+                    }
+                }
+                if (!$businessWindow) {
+                    continue;
+                }
+
+                // 如果设备在开机前已经离线，从本次开机时间开始计算，避免刚开机就立即提醒。
+                $lastOnlineTime = intval($item['last_online_time']);
+                $offlineStart = max($lastOnlineTime, $businessWindow['start']);
+                if ($now - $offlineStart < $offlineTimeout) {
+                    continue;
+                }
+
+                // 按自然日限制同一设备最多发送3次，并保证两次通知至少间隔3小时。
+                $dailyNoticeCacheKey = 'machine_operating_offline_notice:'
+                    . $item['m_id'] . ':'
+                    . $todayKey;
+                $dailyNoticeState = Cache::get($dailyNoticeCacheKey, []);
+                if (!is_array($dailyNoticeState)) {
+                    $dailyNoticeState = [];
+                }
+                $sentCount = intval($dailyNoticeState['count'] ?? 0);
+                $lastSentTime = intval($dailyNoticeState['last_sent_time'] ?? 0);
+                if ($sentCount >= $dailyNoticeLimit) {
+                    continue;
+                }
+                if ($lastSentTime > 0 && $now - $lastSentTime < $noticeInterval) {
+                    continue;
+                }
+
+                $item['offline_time'] = date('Y-m-d H:i:s', $lastOnlineTime);
+                $item['offline_minutes'] = intval(floor(($now - $offlineStart) / 60));
+                $this->machine = $item;
+                $this->message = [
+                    'errorCode' => '11103021',
+                    'msg' => '在营设备离线超过30分钟',
+                    'error_position' => 3,
+                ];
+                $flag[] = $this->errorCode();
+
+                $sentCount++;
+                $dailyCacheTtl = max($todayEnd - $now, 60);
+                Cache::set($dailyNoticeCacheKey, [
+                    'count' => $sentCount,
+                    'last_sent_time' => $now,
+                ], $dailyCacheTtl);
+                actionLog([
+                    'm_id' => $item['m_id'],
+                    'machine_id' => $item['machine_id'],
+                    'last_online_time' => date('Y-m-d H:i:s', $lastOnlineTime),
+                    'offline_start' => date('Y-m-d H:i:s', $offlineStart),
+                    'business_start' => date('Y-m-d H:i:s', $businessWindow['start']),
+                    'business_end' => date('Y-m-d H:i:s', $businessWindow['end']),
+                    'daily_sent_count' => $sentCount,
+                ], '发送在营设备持续离线提醒', 'checkOperatingOffline');
+            }
+
+            actionLog($flag, '处理在营设备持续离线提醒结果', 'checkOperatingOffline');
+        } catch (\Throwable $e) {
+            actionException($e, 1, 'checkOperatingOffline');
+            return '处理异常';
+        }
+
+        return '处理成功';
+    }
 }
