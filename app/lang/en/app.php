@@ -162,6 +162,7 @@ return [
             "120325000" => 'Head camera reading image malfunction - return command - analysis',
             "120325100" => 'Head camera reading image malfunction - return command - analysis',
             "1100101" => 'Device initialization failed',
+            "11103021" => "Operating device has been offline for more than 30 minutes",
         ],
     'VNotice' =>
         [
