@@ -126,6 +126,8 @@ class MachineTarget extends Common
             'date' => $postData['date'] ?? date('Y-m'),
             'page' => $postData['page'] ?? 1,
             'pageNum' => $postData['pageNum'] ?? 25,
+            'sort' => $postData['sort'] ?? '',
+            'sortName' => $postData['sortName'] ?? '',
             'auth_where' => $this->getWhere([]),
         ];
 
