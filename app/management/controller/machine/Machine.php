@@ -463,6 +463,21 @@ class Machine extends Common
                 $msgType = intval($postData['msgType']);
                 if (!isset($typeList[$msgType])) return returnValidate(lang("VMachine.msg_type_invalid"));
                 $postData['msgType'] = $typeList[$msgType];
+                if ($msgType === 4 && isset($postData['on_time'])) {
+                    if (!is_string($postData['on_time']) && !is_numeric($postData['on_time'])) {
+                        return returnValidate(lang("VMachine.on_time_format_invalid"));
+                    }
+                    $onTime = trim((string)$postData['on_time']);
+                    if ($onTime !== '') {
+                        if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/D', $onTime)) {
+                            return returnValidate(lang("VMachine.on_time_format_invalid"));
+                        }
+                        if (strcmp($onTime, date('H:i')) <= 0) {
+                            return returnValidate(lang("VMachine.on_time_must_be_later_today"));
+                        }
+                        $otherData['on_time'] = $onTime;
+                    }
+                }
                 if ($msgType === 9 || $msgType === 10) {
                     $otherData['status'] = $msgType === 9 ? 1 : 2;
                 }

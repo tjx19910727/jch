@@ -427,6 +427,8 @@ return [
         "msg_type_invalid" => "Invalid main control command type",
         "simplified_command_only" => "This command is only supported by simplified machines",
         "luxury_command_only" => "This command is only supported by luxury machines",
+        "on_time_format_invalid" => "Invalid automatic startup time format; use HH:mm",
+        "on_time_must_be_later_today" => "Automatic startup time must be later than the current time today",
     ],
 
     "VMachineLang" => [
