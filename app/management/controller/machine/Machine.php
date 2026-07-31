@@ -481,17 +481,17 @@ class Machine extends Common
                 if ($msgType === 9 || $msgType === 10) {
                     $otherData['status'] = $msgType === 9 ? 1 : 2;
                 }
-            }
 
-            if (isset($postData['msgType']) && $postData['msgType'] == 11) {
-                $channelCode = trim((string)($postData['channel_code'] ?? ''));
-                if ($channelCode === '') return returnValidate(lang('VMachineChannel.channel_code_require'));
-                $channel = $this->app->machineChannel->getMachineChannelFind([
-                    'machine_id' => $postData['machine_id'],
-                    'channel_code' => $channelCode,
-                ], 'mc_id');
-                if (!$channel) return returnValidate(lang('VMachineChannel.mc_data_empty'));
-                $otherData['channel_code'] = $channelCode;
+                if ($msgType == 11) {
+                    $channelCode = trim((string)($postData['channel_code'] ?? ''));
+                    if ($channelCode === '') return returnValidate(lang('VMachineChannel.channel_code_require'));
+                    $channel = $this->app->machineChannel->getMachineChannelFind([
+                        'machine_id' => $postData['machine_id'],
+                        'channel_code' => $channelCode,
+                    ], 'mc_id');
+                    if (!$channel) return returnValidate(lang('VMachineChannel.mc_data_empty'));
+                    $otherData['channel_code'] = $channelCode;
+                }
             }
 
             $machineLevelLimit = [
