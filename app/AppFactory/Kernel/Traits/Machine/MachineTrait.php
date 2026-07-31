@@ -1554,9 +1554,10 @@ trait MachineTrait
 
             $lastLog = $this->getRemoteRemovalLogFind(
                 ['m_id' => $mc['m_id'], 'mc_id' => $mc['mc_id']],
-                'id',
+                'id,creator,interrupted_at',
                 'id desc'
             );
+            $isInterruptedReport = $lastLog && intval($lastLog['interrupted_at'] ?? 0) > 0;
 
             $logData = [
                 'm_id' => $mc['m_id'],
@@ -1579,7 +1580,60 @@ trait MachineTrait
             }
 
             if ($successCount > 0) {
-                $this->deductMachineChannelStockAndSendUpdateMq($mc, $successCount, 'remoteRemovalEnd');
+                $currentStock = max(0, intval($mc['stock'] ?? 0));
+                $newStock = max(0, $currentStock - $successCount);
+                $updateMc = ['stock' => $newStock];
+                $shouldDisable = !$isInterruptedReport && $newStock <= 0;
+                if ($shouldDisable) {
+                    $updateMc['status'] = 3;
+                }
+                $this->updateMachineChannel($updateMc, ['mc_id' => $mc['mc_id']]);
+
+                $changeValue = min($successCount, $currentStock);
+                if ($changeValue > 0 && method_exists($this, 'addGoodsChange')) {
+                    $creator = intval($lastLog['creator'] ?? ($this->message['manager_id'] ?? 0));
+                    $goodsChange = [
+                        'm_id' => $mc['m_id'],
+                        'machine_id' => $mc['machine_id'],
+                        'machine_name' => $this->machine['machine_name'] ?? '',
+                        'mc_id' => $mc['mc_id'],
+                        'channel_code' => $mc['channel_code'],
+                        'mg_id' => $mc['mg_id'] ?? 0,
+                        'g_id' => $mc['g_id'] ?? 0,
+                        'g_name' => $mc['g_name'] ?? '',
+                        'gc_id' => $mc['gc_id'] ?? 0,
+                        'gc_name' => $mc['gc_name'] ?? '',
+                        'pic' => $mc['pic'] ?? '',
+                        'sku' => $mc['sku'] ?? '',
+                        'bar_code' => $mc['bar_code'] ?? '',
+                        'ao_id' => $this->machine['ao_id'] ?? 0,
+                        'creator' => $creator,
+                        'change_value' => $changeValue,
+                        'type' => 3,
+                        'desc' => '远程下架回收扣减',
+                        'position' => 1,
+                        'create_time' => time(),
+                    ];
+                    $this->addGoodsChange($goodsChange);
+
+                    if ($shouldDisable) {
+                        $goodsChange['desc'] = '远程下架回收完毕设置货道为BAD';
+                        $this->addGoodsChange($goodsChange);
+                    }
+                }
+
+                if (!empty($mc['machine_id'])) {
+                    $mqResult = $this->sendToMachine(
+                        ['machine_id' => $mc['machine_id']],
+                        'updateMc',
+                        ['mc_id' => intval($mc['mc_id'])]
+                    );
+                    actionLog(
+                        ['mc_id' => intval($mc['mc_id']), 'quantity' => $successCount, 'mq_result' => $mqResult],
+                        '远程下架上报扣减货道库存后下发updateMc',
+                        'remoteRemovalEnd'
+                    );
+                }
             }
 
             return 1;
