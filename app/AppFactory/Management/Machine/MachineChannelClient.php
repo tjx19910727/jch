@@ -1542,6 +1542,14 @@ class MachineChannelClient extends ManagementClient
             return $this->r(100, $this->lang("VMachineChannel.mc_empty_goods"));
         }
 
+        $machine = $this->getMachineFind(
+            ['m_id' => $mc['m_id']],
+            'recycle_box_remain_capacity'
+        );
+        if ($machine && intval($machine['recycle_box_remain_capacity']) === 0) {
+            return $this->r(100, '回收箱已满，无法下发');
+        }
+
         $lastChannelLog = $this->getRemoteRemovalLogFind(
             ['mc_id' => $mc['mc_id']],
             'id,created_at,reported_at,interrupted_at',
@@ -1554,6 +1562,8 @@ class MachineChannelClient extends ManagementClient
             }
         }
 
+        // 暂时取消同一台设备10分钟内只能执行一次远程下架回收的限制。
+        /*
         $lastLog = $this->getRemoteRemovalLogFind(
             [
                 ['m_id', '=', $mc['m_id']],
@@ -1565,6 +1575,7 @@ class MachineChannelClient extends ManagementClient
         if ($lastLog) {
             return $this->r(100, '同一台设备10分钟内只能执行一次远程下架回收');
         }
+        */
 
         $send = $this->sendToMachine(
             ['machine_id' => $mc['machine_id']],
@@ -1594,6 +1605,7 @@ class MachineChannelClient extends ManagementClient
             'success_count' => 0,
             'fail_count' => 0,
             'remark' => '下发remoteRemoval指令',
+            'creator' => $this->manager['manager_id'] ?? 0,
             'created_at' => time(),
             'reported_at' => 0,
             'interrupted_at' => 0,
