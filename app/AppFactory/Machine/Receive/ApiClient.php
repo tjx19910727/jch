@@ -661,16 +661,52 @@ class ApiClient extends ReceiveBaseClient
      */
     public function machineChannel()
     {
+        // ==================== 单货道多商品相关开始 ====================
+        $machineMultiGoodsEnabled = $this->isMachineMultiGoodsEnabled($this->machine['m_id']);
+        // ==================== 单货道多商品相关结束 ====================
         $where['m_id'] = $this->machine['m_id'];
         $where['is_hidden'] = 2;
+        $where[] = ['channel_position', '<>', 3];
         if (isset($this->data['mc_id']) && $this->data['mc_id']) $where['mc_id'] = $this->data['mc_id'];
         $channelField = "mc_id,m_id,machine_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,length,width,width2,height,height2,
         cost_price,market_price,retail_price,gift_points,x_axis,y_axis,shelf_way,cost_points,
-        slot_hole,capacity,frozen_stock,stock,is_gift,is_recommend,stock_warning,recoverable,heat,channel_position,fetch_mode,status";
+        slot_hole,capacity,frozen_stock,stock,is_gift,is_recommend,stock_warning,recoverable,heat,channel_position,fetch_mode,status,is_multi_goods";
         $mcList = $this->getMachineChannelList($where, 0, $channelField, 'channel_code asc');
         if ($mcList) {
             $mcList = $mcList->toArray();
+            // ==================== 单货道多商品相关开始 ====================
+            $batchMap = [];
+            if ($machineMultiGoodsEnabled && $mcList) {
+                $mcIds = array_values(array_filter(array_map('intval', array_column($mcList, 'mc_id'))));
+                if ($mcIds) {
+                    $batchField = 'b.batch_id,b.mc_id,b.g_id,b.sequence,b.stock,b.capacity,b.frozen_stock,b.sold_quantity,'
+                        . 'b.retail_price,b.gift_points,b.cost_points,b.stock_warning,b.batch_number,b.manufacture_time,'
+                        . 'b.expire_time,b.sell_by_date,b.status,b.replenishment_record_no,g.sku,g.g_name,g.pic,g.bar_code';
+                    $batchList = Db::name('channel_goods_batch')->alias('b')
+                        ->leftJoin('machine_channel mc', 'mc.mc_id = b.mc_id')
+                        ->leftJoin('goods g', 'g.g_id = b.g_id')
+                        ->whereIn('b.mc_id', $mcIds)
+                        ->where('mc.is_multi_goods', 1)
+                        ->whereIn('b.status', [2, 3])
+                        ->field($batchField)
+                        ->order('b.mc_id asc,b.sequence asc')
+                        ->select()
+                        ->toArray();
+                    foreach ($batchList as $batch) {
+                        $batchMap[intval($batch['mc_id'])][] = $batch;
+                    }
+                }
+            }
+            // ==================== 单货道多商品相关结束 ====================
             foreach ($mcList as $key => $mc) {
+                // ==================== 单货道多商品相关开始 ====================
+                $channelMultiGoodsEnabled = $machineMultiGoodsEnabled
+                    && intval($mc['is_multi_goods'] ?? 2) === 1;
+                $mc['is_multi_goods'] = $channelMultiGoodsEnabled ? 1 : 2;
+                $mc['batch_arr'] = $channelMultiGoodsEnabled
+                    ? ($batchMap[intval($mc['mc_id'])] ?? [])
+                    : [];
+                // ==================== 单货道多商品相关结束 ====================
                 $where = [];
                 $where[] = ['gc.start_time', "<=", time()];
                 $where['ag.g_id'] = $mc['g_id'];
