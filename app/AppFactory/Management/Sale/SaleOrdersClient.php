@@ -1784,7 +1784,7 @@ class SaleOrdersClient extends ManagementClient
 
         $segmentNo = $this->getSaleOrdersVideoSegmentNo($transactionVideo);
         return [[
-            'video_name' => $tradeNo . '_' . $segmentNo,
+            'video_name' => $tradeNo . '-' . $segmentNo,
             'transaction_video' => $transactionVideo,
             'segment_no' => $segmentNo,
         ]];
