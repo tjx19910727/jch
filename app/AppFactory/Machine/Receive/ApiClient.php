@@ -5092,9 +5092,15 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail('参数错误');
         }
 
-        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no');
+        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no,biz_status');
         if (!$order) {
             return $this->r(100, '单据不存在');
+        }
+        if (intval($order['biz_status']) === 1) {
+            $invalidReason = $this->getInvalidPreReplenishmentReason($order['id']);
+            if ($invalidReason !== '') {
+                return $this->r(100, $invalidReason);
+            }
         }
         $details = PreReplenishmentDetailModel::where([
             ['order_id', '=', $order['id']],
@@ -5215,9 +5221,15 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail('参数错误');
         }
 
-        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no,creator_id');
+        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no,creator_id,biz_status');
         if (!$order) {
             return $this->r(100, '单据不存在');
+        }
+        if (intval($order['biz_status']) === 1) {
+            $invalidReason = $this->getInvalidPreReplenishmentReason($order['id']);
+            if ($invalidReason !== '') {
+                return $this->r(100, $invalidReason);
+            }
         }
         $targetResult = $this->normalizePreReplenishmentTargetsV2($channels);
         if ($targetResult['error'] !== '') {

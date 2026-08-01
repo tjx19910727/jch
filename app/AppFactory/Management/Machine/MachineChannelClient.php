@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
@@ -24,7 +25,7 @@ use think\facade\Db;
 
 class MachineChannelClient extends ManagementClient
 {
-    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait;
+    use MachineTrait,MachineChannelTrait,MachineConfigTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait;
     use GoodsTrait,GoodsChangeTrait;
     use AuthManagerMachineTrait;
     use RemoteRemovalLogTrait;
@@ -936,6 +937,12 @@ class MachineChannelClient extends ManagementClient
             $batchArr = isset($postData['batch_arr']) ? $postData['batch_arr'] : [];
 
             if ($isMultiGoods) {
+                // ==================== 单货道多商品相关开始 ====================
+                if (!$this->isMachineMultiGoodsEnabled($mc['m_id'])) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '当前设备未开启单货道多商品功能');
+                }
+                // ==================== 单货道多商品相关结束 ====================
                 // 校验：batch_arr 至少 1 个（加上队首 ≥2）
                 if (empty($batchArr) || count($batchArr) < 1) {
                     $this->rollbackTrans();

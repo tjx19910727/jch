@@ -30,6 +30,15 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         // 编辑场景：传入 order_id，需要把该单下已有的货道也包含进来，并返回 plan_quantity
         $orderId = $postData['order_id'] ?? 0;
+        if ($orderId) {
+            $editingOrder = PreReplenishmentOrderModel::getFind(['id' => $orderId], 'id,biz_status');
+            if ($editingOrder && intval($editingOrder['biz_status']) === 1) {
+                $invalidReason = $this->getInvalidPreReplenishmentReason($orderId);
+                if ($invalidReason !== '') {
+                    return returnState(4004, $invalidReason);
+                }
+            }
+        }
 
         // 检查是否存在未补货的补货单
         $existingQuery = PreReplenishmentDetailModel::where([['machine_id', 'in', $machineIds]]);
@@ -281,9 +290,15 @@ class MachinePreReplenishmentClient extends ManagementClient
             return returnState(4001, '参数错误: id不能为空');
         }
 
-        $order = PreReplenishmentOrderModel::getFind(['id' => $id], 'id,record_no');
+        $order = PreReplenishmentOrderModel::getFind(['id' => $id], 'id,record_no,biz_status');
         if (!$order) {
             return returnState(4003, '单据不存在');
+        }
+        if (intval($order['biz_status']) === 1) {
+            $invalidReason = $this->getInvalidPreReplenishmentReason($id);
+            if ($invalidReason !== '') {
+                return returnState(4004, $invalidReason);
+            }
         }
 
         $logCount = PreReplenishmentLogModel::getCount(['record_no' => $order['record_no']]);
@@ -372,6 +387,13 @@ class MachinePreReplenishmentClient extends ManagementClient
         }
 
         $orderIds = array_column($list, 'id');
+        $unfinishedOrderIds = [];
+        foreach ($list as $item) {
+            if (intval($item['biz_status']) === 1) {
+                $unfinishedOrderIds[] = intval($item['id']);
+            }
+        }
+        $invalidMap = $this->getInvalidPreReplenishmentOrderMap($unfinishedOrderIds);
         $detailRows = PreReplenishmentDetailModel::where([['order_id', 'in', $orderIds]])
             ->field('order_id,machine_id,sku,plan_quantity')
             ->select()
@@ -409,6 +431,8 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'machine_names' => array_values($summary['machine_names']),
                 'sku_count' => count($summary['sku_map']),
                 'plan_total' => $summary['plan_total'],
+                'is_invalid' => isset($invalidMap[$item['id']]) ? 1 : 2,
+                'invalid_reason' => $invalidMap[$item['id']] ?? '',
             ];
         }
 
@@ -431,6 +455,9 @@ class MachinePreReplenishmentClient extends ManagementClient
         if (!$order) {
             return returnState(4003, '单据不存在');
         }
+        $invalidReason = intval($order['biz_status']) === 1
+            ? $this->getInvalidPreReplenishmentReason($id)
+            : '';
 
         $details = PreReplenishmentDetailModel::where(['order_id' => $id])->order('id asc')->select()->toArray();
         $logs = PreReplenishmentLogModel::where(['record_no' => $order['record_no']])->order('id asc')->select()->toArray();
@@ -698,7 +725,7 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         // ---- can_edit ----
         $logCount = PreReplenishmentLogModel::getCount(['record_no' => $order['record_no']]);
-        $canEdit = ($logCount == 0);
+        $canEdit = ($logCount == 0 && $invalidReason === '');
 
         // ---- summary ----
         $summary = [
@@ -720,6 +747,9 @@ class MachinePreReplenishmentClient extends ManagementClient
             'export_time'          => $order['export_time'],
             'remark'               => $order['remark'],
             'can_edit'             => $canEdit,
+            'can_finish'           => intval($order['biz_status']) === 1,
+            'is_invalid'           => $invalidReason !== '' ? 1 : 2,
+            'invalid_reason'       => $invalidReason,
             'summary'              => $summary,
             'device_progress'      => $deviceProgress,
             'material_details'     => array_values($materialMap),

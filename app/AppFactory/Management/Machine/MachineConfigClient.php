@@ -35,10 +35,12 @@ class MachineConfigClient extends ManagementClient
 
     public function updateMcV2($postData)
     {
-        $oldMc = $this->getMachineConfigFind(['mc_id' => $postData['mc_id']], 'mc_id,m_id,machine_id,remote_calibration');
+        $oldMc = $this->getMachineConfigFind(['mc_id' => $postData['mc_id']], 'mc_id,m_id,machine_id,remote_calibration,is_multi_goods');
         $oldMc = $oldMc ? $oldMc->toArray() : [];
         $oldRemoteCalibration = isset($oldMc['remote_calibration']) ? intval($oldMc['remote_calibration']) : null;
         $newRemoteCalibration = isset($postData['remote_calibration']) ? intval($postData['remote_calibration']) : null;
+        $oldIsMultiGoods = intval($oldMc['is_multi_goods'] ?? 2);
+        $newIsMultiGoods = array_key_exists('is_multi_goods', $postData) ? intval($postData['is_multi_goods']) : null;
 
         $result = $this->updateMachineConfig($postData);
         if ($result) {
@@ -64,6 +66,15 @@ class MachineConfigClient extends ManagementClient
 
             if ($machineId) {
                 $this->sendToMachine(['machine_id' => $machineId], 'updateMachineConfig');
+                // ==================== 单货道多商品相关开始 ====================
+                $closedChannels = [];
+                if ($oldIsMultiGoods === 1 && $newIsMultiGoods === 2 && !empty($oldMc['m_id'])) {
+                    $closedChannels = $this->closeMachineMultiGoods($oldMc['m_id']);
+                    if($closedChannels){
+                        $this->sendClosedMultiGoodsChannelUpdates($machineId, $closedChannels);
+                    }
+                }
+                // ==================== 单货道多商品相关结束 ====================
             }
         }
         return $this->rU($result);
@@ -77,9 +88,21 @@ class MachineConfigClient extends ManagementClient
                 validate(VMachineConfig::class)->scene("mcList")->check($value);
                 $result = $this->updateMachineConfig($value, ['m_id' => $value['m_id']]);
                 if ($result) {
-                    $mc = $this->getMachineConfigFind(['m_id' => $value['m_id']], "machine_id");
-                    $mc = $mc->toArray();
+                    $mc = $this->getMachineConfigFind(['m_id' => $value['m_id']], "machine_id,is_multi_goods");
+                    $mc = $mc ? $mc->toArray() : [];
                     $this->sendToMachine(['machine_id' => $mc['machine_id']],'updateMachineConfig');
+                    // ==================== 单货道多商品相关开始 ====================
+                    $closedChannels = [];
+                    if (intval($mc['is_multi_goods'] ?? 2) === 1
+                        && array_key_exists('is_multi_goods', $value)
+                        && intval($value['is_multi_goods']) === 2
+                    ) {
+                        $closedChannels = $this->closeMachineMultiGoods($value['m_id']);
+                        if($closedChannels){
+                            $this->sendClosedMultiGoodsChannelUpdates($mc['machine_id'], $closedChannels);
+                        }
+                    }
+                    // ==================== 单货道多商品相关结束 ====================
                 } else {
 //                    $this->rollbackTrans();
                     return $this->r(100, $this->lang("update_fail"), $value);
@@ -94,4 +117,19 @@ class MachineConfigClient extends ManagementClient
         }
     }
 
+    // ==================== 单货道多商品相关开始 ====================
+    private function sendClosedMultiGoodsChannelUpdates($machineId, array $channels)
+    {
+        foreach ($channels as $channel) {
+            if (intval($channel['channel_position'] ?? 1) === 3) {
+                continue;
+            }
+            $this->sendToMachine(
+                ['machine_id' => $machineId],
+                'updateMc',
+                ['mc_id' => $channel['mc_id']]
+            );
+        }
+    }
+    // ==================== 单货道多商品相关结束 ====================
 }

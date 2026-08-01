@@ -20,6 +20,7 @@ class VMachineConfig extends VCommon
         "mcList" => "require",
         "online_pay_success_tip" => "max:255",
         "run_mode" => "in:1,2",
+        "is_multi_goods" => "in:1,2",
     ];
 
     protected $message = [
@@ -30,18 +31,19 @@ class VMachineConfig extends VCommon
         "mcList.require" => "VMachineConfig.mcList_require",
         "online_pay_success_tip.max" => "VMachineConfig.online_pay_success_tip_max",
         "run_mode.in" => "VMachineConfig.run_mode_in",
+        "is_multi_goods.in" => "单货道多商品开关参数错误",
     ];
 
     protected $scene = [
         "add" => ["m_id", "machine_id", "online_pay_success_tip", "run_mode"],
-        "update" => ["mc_id", "online_pay_success_tip", "run_mode"],
+        "update" => ["mc_id", "online_pay_success_tip", "run_mode", "is_multi_goods"],
         "del" => ["mc_id"],
         "updateMoreMc" => ["mcList"],
-        "mcList" => ["m_id", "online_pay_success_tip", "run_mode"],
+        "mcList" => ["m_id", "online_pay_success_tip", "run_mode", "is_multi_goods"],
     ];
 
     public function sceneMcList()
     {
-        return $this->only(['m_id', 'online_pay_success_tip', 'run_mode'])->remove("m_id",'unique');
+        return $this->only(['m_id', 'online_pay_success_tip', 'run_mode', 'is_multi_goods'])->remove("m_id",'unique');
     }
 }

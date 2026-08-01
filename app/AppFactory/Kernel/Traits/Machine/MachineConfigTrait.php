@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 use app\AppFactory\Kernel\Model\Machine\MachineConfigModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use think\facade\Db;
 
 trait MachineConfigTrait
 {
@@ -47,6 +48,43 @@ trait MachineConfigTrait
         $result = MachineConfigModel::whereDel($where);
         return $result;
     }
+
+    // ==================== 单货道多商品相关开始 ====================
+    protected function isMachineMultiGoodsEnabled($mId)
+    {
+        return intval(MachineConfigModel::getFieldValue(
+            ['m_id' => intval($mId)],
+            'is_multi_goods'
+        )) === 1;
+    }
+
+    /**
+     * 关闭设备下已开启的多商品货道，调用方负责设备通知。
+     */
+    protected function closeMachineMultiGoods($mId)
+    {
+        $channels = Db::name('machine_channel')
+            ->where('m_id', intval($mId))
+            ->where('is_multi_goods', 1)
+            ->field('mc_id,machine_id,channel_position')
+            ->select()
+            ->toArray();
+        if (!$channels) {
+            return [];
+        }
+
+        $mcIds = array_column($channels, 'mc_id');
+        Db::name('channel_goods_batch')
+            ->whereIn('mc_id', $mcIds)
+            ->whereIn('status', [1, 2, 3])
+            ->update(['status' => 4]);
+        Db::name('machine_channel')
+            ->whereIn('mc_id', $mcIds)
+            ->update(['is_multi_goods' => 2]);
+
+        return $channels;
+    }
+    // ==================== 单货道多商品相关结束 ====================
 
     protected function syncMachineRecycleBoxCapacity($data, $where = [])
     {

@@ -196,6 +196,42 @@ trait MachinePreReplenishmentTrait
         return $recordNo;
     }
 
+    // ==================== 单货道多商品相关开始 ====================
+    protected function getInvalidPreReplenishmentReason($orderId)
+    {
+        $invalidMap = $this->getInvalidPreReplenishmentOrderMap([intval($orderId)]);
+        return $invalidMap[intval($orderId)] ?? '';
+    }
+
+    protected function getInvalidPreReplenishmentOrderMap(array $orderIds)
+    {
+        $orderIds = array_values(array_unique(array_filter(array_map('intval', $orderIds))));
+        if (!$orderIds) {
+            return [];
+        }
+
+        $invalidOrderIds = Db::name('pre_replenishment_detail')->alias('d')
+            ->leftJoin('machine_config c', 'c.m_id = d.m_id')
+            ->leftJoin('machine_channel mc', 'mc.mc_id = d.mc_id')
+            ->leftJoin(
+                'channel_goods_batch b',
+                'b.mc_id = d.mc_id AND b.g_id = d.g_id AND b.status IN (2,3)'
+            )
+            ->whereIn('d.order_id', $orderIds)
+            ->where('d.is_head', 2)
+            ->whereRaw(
+                '(IFNULL(c.is_multi_goods, 2) <> 1 '
+                . 'OR IFNULL(mc.is_multi_goods, 2) <> 1 '
+                . 'OR b.batch_id IS NULL)'
+            )
+            ->distinct(true)
+            ->column('d.order_id');
+
+        $invalidReason = '设备已关闭单货道多商品功能，该预补货单已失效，请在后台手动完结';
+        return array_fill_keys(array_map('intval', $invalidOrderIds), $invalidReason);
+    }
+    // ==================== 单货道多商品相关结束 ====================
+
     protected function resolveCompareStatus($planQuantity, $actualQuantity)
     {
         if ($actualQuantity === null) {

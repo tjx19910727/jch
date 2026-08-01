@@ -177,11 +177,18 @@ trait MachineChannelTrait
         $flag = [];
         $this->startTrans();
         try {
+            // ==================== 单货道多商品相关开始 ====================
+            $mcList = [];
+            $machineMultiGoodsEnabled = false;
+            if (isset($this->data['mcList'])) {
+                $mcList = json2arr($this->data['mcList']);
+                $machineMultiGoodsEnabled = $this->isMachineMultiGoodsEnabled($this->machine['m_id']);
+            }
+            // ==================== 单货道多商品相关结束 ====================
             if (isset($this->data['delList']) && $this->data['delList']) {
                 $flag[] = $this->delMachineChannel([['mc_id', 'in', $this->data['delList']]]);
             }
             if (isset($this->data['mcList'])) {
-                $mcList = json2arr($this->data['mcList']);
                 foreach ($mcList as $key => $value) {
                     $whereMc = [];
                     $batchArr = $value['batch_arr'] ?? [];
@@ -192,6 +199,12 @@ trait MachineChannelTrait
                         $batchArr = [];
                     }
                     $isMultiGoods = isset($value['is_multi_goods']) && intval($value['is_multi_goods']) === 1;
+                    // ==================== 单货道多商品相关开始 ====================
+                    if ($isMultiGoods && !$machineMultiGoodsEnabled) {
+                        $this->rollbackTrans();
+                        return $this->rFail('当前设备未开启单货道多商品功能');
+                    }
+                    // ==================== 单货道多商品相关结束 ====================
                     try {
                         validate(VChannel::class)->scene("subChannel")->check($value);
                     } catch (\Exception $e) {
