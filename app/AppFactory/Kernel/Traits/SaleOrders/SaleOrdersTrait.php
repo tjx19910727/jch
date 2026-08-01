@@ -1115,13 +1115,13 @@ trait SaleOrdersTrait
     }
 
     /**
-     * 例如 202607881554_2.mp4 => 2；无 _数字 后缀 => 0。
+     * 例如 202607881554-2.mp4 => 2；无 -数字 后缀 => 0。
      */
     protected function getSaleOrdersVideoSegmentNo($transactionVideo)
     {
         $videoPath = parse_url($transactionVideo, PHP_URL_PATH);
         $fileName = $videoPath ? pathinfo($videoPath, PATHINFO_FILENAME) : '';
-        if ($fileName !== '' && preg_match('/_(\d+)$/', $fileName, $matches)) return intval($matches[1]);
+        if ($fileName !== '' && preg_match('/-(\d+)$/', $fileName, $matches)) return intval($matches[1]);
         return 0;
     }
 
@@ -1161,7 +1161,7 @@ trait SaleOrdersTrait
             $videoTotal = max($videoTotal, intval($video['video_total']));
             $latestCreateTime = max($latestCreateTime, intval($video['create_time']));
             $videos[] = [
-                'video_name' => $video['trade_no'] . '_' . $segmentNo,
+                'video_name' => $video['trade_no'] . '-' . $segmentNo,
                 'transaction_video' => $video['transaction_video'],
                 'segment_no' => $segmentNo,
             ];
