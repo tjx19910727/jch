@@ -1120,7 +1120,7 @@ class MachineClient extends TimeTaskBase
     }
 
     /**
-     * 定时任务-建议每15分钟执行一次，检查开机营业时间内持续离线超过30分钟的在营设备。
+     * 定时任务-建议每15分钟执行一次，检查最近5天内上线过且在开机营业时间内持续离线超过30分钟的在营设备。
      * 每天00:00-05:59为静默时段，不发送离线通知。
      * 同一设备每天最多发送3次，两次通知至少间隔3小时。
      * 命令示例：php think time_task machine checkOperatingOffline
@@ -1132,6 +1132,7 @@ class MachineClient extends TimeTaskBase
         try {
             $now = time();
             $offlineTimeout = 1800;
+            $recentOnlineWindow = 5 * 86400;
             $noticeInterval = 10800;
             $dailyNoticeLimit = 3;
             $hour = intval(date('H', $now));
@@ -1150,7 +1151,7 @@ class MachineClient extends TimeTaskBase
                 ->where('m.is_operating', 1)
                 ->where('m.online', 2)
                 ->where('m.http_online', 2)
-                ->where('m.last_online_time', '>', 0)
+                ->where('m.last_online_time', '>=', $now - $recentOnlineWindow)
                 ->where('m.last_online_time', '<=', $now - $offlineTimeout)
                 ->whereNotNull('moo.on_off_machine')
                 ->where('moo.on_off_machine', '<>', '')
