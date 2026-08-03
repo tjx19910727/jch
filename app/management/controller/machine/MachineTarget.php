@@ -15,6 +15,7 @@ class MachineTarget extends Common
         $postData = input();
         $ctx = [
             'm_id' => $postData['m_id'] ?? '',
+            'manager_id' => $postData['manager_id'] ?? '',
             'date' => $postData['date'] ?? '',
             'page' => $postData['page'] ?? 1,
             'page_size' => $postData['page_size'] ?? 20,
@@ -39,6 +40,9 @@ class MachineTarget extends Common
             'target_amount' => $postData['target_amount'] ?? 0,
             'auth_where' => $this->getWhere([]),
         ];
+        if (array_key_exists('manager_id', $postData)) {
+            $ctx['manager_id'] = $postData['manager_id'];
+        }
 
         $svc = new MachineTargetService($this->app);
         $res = $svc->add($ctx);
@@ -59,6 +63,9 @@ class MachineTarget extends Common
             'target_amount' => $postData['target_amount'] ?? 0,
             'auth_where' => $this->getWhere([]),
         ];
+        if (array_key_exists('manager_id', $postData)) {
+            $ctx['manager_id'] = $postData['manager_id'];
+        }
 
         $svc = new MachineTargetService($this->app);
         $res = $svc->update($ctx);
@@ -90,6 +97,7 @@ class MachineTarget extends Common
         $postData = input();
         $ctx = [
             'date' => $postData['date'] ?? date('Y-m'),
+            'manager_id' => $postData['manager_id'] ?? '',
             'auth_where' => $this->getWhere([]),
         ];
 
@@ -106,6 +114,7 @@ class MachineTarget extends Common
         $postData = input();
         $ctx = [
             'm_id' => $postData['m_id'] ?? '',
+            'manager_id' => $postData['manager_id'] ?? '',
             'date' => $postData['date'] ?? date('Y-m'),
             'auth_where' => $this->getWhere([]),
         ];
@@ -123,6 +132,7 @@ class MachineTarget extends Common
         $postData = input();
         $ctx = [
             'm_id' => $postData['m_id'] ?? '',
+            'manager_id' => $postData['manager_id'] ?? '',
             'date' => $postData['date'] ?? date('Y-m'),
             'page' => $postData['page'] ?? 1,
             'pageNum' => $postData['pageNum'] ?? 25,
@@ -144,6 +154,7 @@ class MachineTarget extends Common
         $postData = input();
         $ctx = [
             'm_id' => $postData['m_id'] ?? '',
+            'manager_id' => $postData['manager_id'] ?? '',
             'date' => $postData['date'] ?? date('Y-m'),
             'auth_where' => $this->getWhere([]),
         ];
