@@ -38,6 +38,7 @@ use app\AppFactory\Kernel\Providers\Management\WxProvider;
 use app\AppFactory\Kernel\Providers\Management\MallProvider;
 use app\AppFactory\Kernel\Providers\Management\RemoteActionLogProvider;
 use app\AppFactory\Kernel\Providers\Management\WeiChengProvider;
+use app\AppFactory\Kernel\Providers\Management\WarehouseProvider;
 
 use app\AppFactory\Kernel\ServiceContainer;
 use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
@@ -97,6 +98,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Goods\GoodsCornerClient                $goodsCorner            商品角标信息
  * @property Goods\GoodsHitClient                   $goodsHit               商品点击
  * @property Goods\GoodsMultipleClient              $goodsMultiple          组合商品
+ * @property Warehouse\WarehouseTransClient         $warehouseTrans         仓库商品变化事件
  *
  * @property Hotel\HotelClient                      $hotel                  携程酒店
  * @property Inspection\InspectionStaffClient       $inspectionStaff        巡检人员
@@ -213,6 +215,7 @@ class Application extends ServiceContainer
         RemoteActionLogProvider::class,
         CardProvider::class,
         WeiChengProvider::class,
+        WarehouseProvider::class,
     ];
 
 }
