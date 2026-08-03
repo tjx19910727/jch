@@ -48,6 +48,20 @@ class AuthManager extends Common
     }
 
     /**
+     * 获取所有启用账户的简要列表
+     * @return mixed
+     */
+    public function getEnabledManagerList()
+    {
+        return $this->app->authManager->getList(
+            ['au.status' => 1],
+            0,
+            'au.manager_id,au.nickname',
+            'au.manager_id asc'
+        );
+    }
+
+    /**
      * 添加管理员
      * @return array|mixed|string
      */
