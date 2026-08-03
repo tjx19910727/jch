@@ -59,6 +59,24 @@ class MachineTargetService
         }
         $defaultTargetAmount = round((float) ($defaultTargetParse['amount'] ?? 0), 2);
 
+        // manager_id 未传或传空字符串时保持原负责人，显式传 0 时取消负责人。
+        $managerInputProvided = false;
+        $managerId = 0;
+        if (array_key_exists('manager_id', $ctx)) {
+            $managerParse = $this->parseTargetManagerId($ctx['manager_id'], true);
+            if (($managerParse['state'] ?? 100) !== 200) {
+                return ['state' => 100, 'msg' => strval($managerParse['msg'] ?? '负责人格式错误'), 'data' => []];
+            }
+            $managerInputProvided = !empty($managerParse['has_value']);
+            $managerId = intval($managerParse['manager_id'] ?? 0);
+            if ($managerInputProvided && $managerId > 0) {
+                $managerCheck = $this->validateTargetManager($managerId);
+                if (($managerCheck['state'] ?? 100) !== 200) {
+                    return ['state' => 100, 'msg' => strval($managerCheck['msg'] ?? '负责人不存在'), 'data' => []];
+                }
+            }
+        }
+
         $currentMonth = date('Y-m');
         foreach ($months as $month) {
             if (strval($month) < $currentMonth) {
@@ -111,6 +129,11 @@ class MachineTargetService
                 Db::name('machine_target_group')
                     ->duplicate(['target_amount', 'create_time'])
                     ->insertAll($defaultRows);
+            }
+
+            // 负责人是设备当前属性，和月度目标、默认目标独立保存。
+            if ($managerInputProvided) {
+                $this->saveMachineTargetManagers($mIds, $managerId);
             }
 
             Db::commit();
@@ -166,6 +189,27 @@ class MachineTargetService
 
         $authWhere = is_array($ctx['auth_where'] ?? null) ? $ctx['auth_where'] : [];
         $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
+        if ($allowedMids === []) {
+            return [
+                'state' => 200,
+                'msg' => '查询成功',
+                'data' => [
+                    'list' => [],
+                    'total' => 0,
+                    'page' => $page,
+                    'page_size' => $pageSize,
+                ],
+            ];
+        }
+
+        $managerFilter = $this->filterMachineIdsByTargetManager(
+            $allowedMids,
+            $ctx['manager_id'] ?? ''
+        );
+        if (($managerFilter['state'] ?? 100) !== 200) {
+            return ['state' => 100, 'msg' => strval($managerFilter['msg'] ?? '负责人格式错误'), 'data' => []];
+        }
+        $allowedMids = is_array($managerFilter['m_ids'] ?? null) ? $managerFilter['m_ids'] : [];
         if ($allowedMids === []) {
             return [
                 'state' => 200,
@@ -284,6 +328,7 @@ class MachineTargetService
         }
 
         $machineMap = $this->queryMachineBaseInfo($pageMids);
+        $managerMap = $this->queryMachineTargetManagerMap($pageMids);
         $list = [];
         foreach ($pageMids as $mid) {
             $prices = $monthMap[$mid] ?? [];
@@ -291,6 +336,7 @@ class MachineTargetService
             $priceList = array_values($prices);
             $machine = $machineMap[$mid] ?? ['machine_id' => '', 'machine_name' => ''];
             $default = $defaultMap[$mid] ?? [];
+            $targetManager = $managerMap[$mid] ?? $this->unassignedTargetManager();
             $machineInfo = [
                 'm_id' => $mid,
                 'machine_id' => strval($machine['machine_id'] ?? ''),
@@ -310,6 +356,9 @@ class MachineTargetService
                 'target_amount' => round((float) ($default['target_amount'] ?? 0), 2),
                 'target_month' => strval($default['months'] ?? ''),
                 'create_time' => intval($default['create_time'] ?? 0),
+                'manager_id' => intval($targetManager['manager_id'] ?? 0),
+                'manager_name' => strval($targetManager['manager_name'] ?? '未分配'),
+                'manager_account' => strval($targetManager['manager_account'] ?? ''),
             ];
         }
 
@@ -362,6 +411,8 @@ class MachineTargetService
             ->field('months,target_amount')
             ->order('months', 'desc')
             ->find();
+        $managerMap = $this->queryMachineTargetManagerMap([$mId]);
+        $targetManager = $managerMap[$mId] ?? $this->unassignedTargetManager();
 
         $date = [];
         $info = [];
@@ -390,6 +441,9 @@ class MachineTargetService
                 'info' => $info,
                 'target_amount' => round((float) ($defaultRow['target_amount'] ?? 0), 2),
                 'target_month' => strval($defaultRow['months'] ?? ''),
+                'manager_id' => intval($targetManager['manager_id'] ?? 0),
+                'manager_name' => strval($targetManager['manager_name'] ?? '未分配'),
+                'manager_account' => strval($targetManager['manager_account'] ?? ''),
             ],
         ];
     }
@@ -568,6 +622,22 @@ class MachineTargetService
             ];
         }
 
+        $managerFilter = $this->filterMachineIdsByTargetManager(
+            $allowedMids,
+            $ctx['manager_id'] ?? ''
+        );
+        $allowedMids = ($managerFilter['state'] ?? 100) === 200
+            && is_array($managerFilter['m_ids'] ?? null)
+            ? $managerFilter['m_ids']
+            : [];
+        if ($allowedMids === []) {
+            return [
+                'date' => implode(',', $months),
+                'months' => $months,
+                'list' => [],
+            ];
+        }
+
         $targetMap = $this->queryTargetAmountMap($allowedMids, $months);
         $configuredMids = [];
         foreach ($allowedMids as $mid) {
@@ -589,13 +659,19 @@ class MachineTargetService
             ->order('m_id', 'desc')
             ->select()
             ->toArray();
+        $managerMap = $this->queryMachineTargetManagerMap($configuredMids);
         $list = [];
         foreach ($rows as $row) {
+            $mid = intval($row['m_id'] ?? 0);
+            $targetManager = $managerMap[$mid] ?? $this->unassignedTargetManager();
             $list[] = [
-                'm_id' => intval($row['m_id'] ?? 0),
+                'm_id' => $mid,
                 'machine_id' => strval($row['machine_id'] ?? ''),
                 'machine_name' => strval($row['machine_name'] ?? ''),
                 'label' => strval($row['machine_id'] ?? '') . ' ' . strval($row['machine_name'] ?? ''),
+                'manager_id' => intval($targetManager['manager_id'] ?? 0),
+                'manager_name' => strval($targetManager['manager_name'] ?? '未分配'),
+                'manager_account' => strval($targetManager['manager_account'] ?? ''),
             ];
         }
 
@@ -676,6 +752,18 @@ class MachineTargetService
             return $this->emptyStatsListResult($page, $pageNum, $updatedAt);
         }
 
+        $managerFilter = $this->filterMachineIdsByTargetManager(
+            $allowedMids,
+            $ctx['manager_id'] ?? ''
+        );
+        if (($managerFilter['state'] ?? 100) !== 200) {
+            return ['state' => 100, 'msg' => strval($managerFilter['msg'] ?? '负责人格式错误'), 'data' => []];
+        }
+        $allowedMids = is_array($managerFilter['m_ids'] ?? null) ? $managerFilter['m_ids'] : [];
+        if ($allowedMids === []) {
+            return $this->emptyStatsListResult($page, $pageNum, $updatedAt);
+        }
+
         $selectedMids = $this->normalizeMachineIdInput($ctx['m_id'] ?? '');
         $hasMachineFilter = $selectedMids !== [];
         $candidateMids = $hasMachineFilter
@@ -740,6 +828,7 @@ class MachineTargetService
             ? $this->queryAmountCostMap($pageMids, $start, $statEnd)
             : [];
         $prevMap = $this->queryAmountCostMap($pageMids, $prevStart, $prevEnd);
+        $managerMap = $this->queryMachineTargetManagerMap($pageMids);
         $list = $this->buildStatsListRows(
             $rankRows,
             $targetMap,
@@ -747,7 +836,8 @@ class MachineTargetService
             $fullChannelMap,
             $currentMap,
             $prevMap,
-            $dayCount
+            $dayCount,
+            $managerMap
         );
         $onTrackCount = $this->queryStatsListOnTrackCount(
             $baseMids,
@@ -904,11 +994,13 @@ class MachineTargetService
         $paceExpression = $this->buildStatsListCaseExpression('m.m_id', $paceMap, 2);
         $query = Db::name('machine')
             ->alias('m')
+            ->leftJoin('machine_level_desc mld', 'mld.machine_level = m.machine_level')
             ->whereIn('m.m_id', $mIds);
         $fields = [
             'm.m_id',
             'm.machine_id',
             'm.machine_name',
+            "IFNULL(mld.pic, '') AS pic",
             $targetExpression . ' AS target_amount',
             $paceExpression . ' AS expected_pace',
         ];
@@ -1022,7 +1114,8 @@ class MachineTargetService
         $fullChannelMap,
         $currentMap,
         $prevMap,
-        $dayCount
+        $dayCount,
+        $managerMap
     ) {
         $rankRows = is_array($rankRows) ? $rankRows : [];
         $targetMap = is_array($targetMap) ? $targetMap : [];
@@ -1030,6 +1123,7 @@ class MachineTargetService
         $fullChannelMap = is_array($fullChannelMap) ? $fullChannelMap : [];
         $currentMap = is_array($currentMap) ? $currentMap : [];
         $prevMap = is_array($prevMap) ? $prevMap : [];
+        $managerMap = is_array($managerMap) ? $managerMap : [];
         $list = [];
         foreach ($rankRows as $row) {
             $mid = intval($row['m_id'] ?? 0);
@@ -1049,6 +1143,7 @@ class MachineTargetService
             $prevSale = round((float) ($prev['sale'] ?? 0), 2);
             $prevCost = round((float) ($prev['cost'] ?? 0), 2);
             $prevProfit = round($prevSale - $prevCost, 2);
+            $targetManager = $managerMap[$mid] ?? $this->unassignedTargetManager();
             $achievementRate = $targetAmount > 0
                 ? round($saleAmount / $targetAmount * 100, 2)
                 : 0;
@@ -1079,6 +1174,10 @@ class MachineTargetService
                 'm_id' => $mid,
                 'machine_id' => strval($row['machine_id'] ?? ''),
                 'machine_name' => strval($row['machine_name'] ?? ''),
+                'pic' => strval($row['pic'] ?? ''),
+                'manager_id' => intval($targetManager['manager_id'] ?? 0),
+                'manager_name' => strval($targetManager['manager_name'] ?? '未分配'),
+                'manager_account' => strval($targetManager['manager_account'] ?? ''),
                 'full_channel_amount' => $fullChannelAmount,
                 'full_channel_cost' => $fullChannelCost,
                 'sale_amount' => $saleAmount,
@@ -1142,6 +1241,7 @@ class MachineTargetService
         $title = [
             'machine_id' => '设备编号',
             'machine_name' => '设备名称',
+            'manager_name' => '负责人',
             'target_amount' => '目标金额',
             'full_channel_amount' => '上满货金额',
             'full_channel_cost' => '上满货成本',
@@ -1186,6 +1286,28 @@ class MachineTargetService
 
         $authWhere = is_array($ctx['auth_where'] ?? null) ? $ctx['auth_where'] : [];
         $allowedMids = $this->resolveAuthorizedMachineIds($authWhere);
+        if ($allowedMids === []) {
+            return [
+                'state' => 200,
+                'msg' => '查询成功',
+                'data' => $this->emptyStatsPayload(
+                    $months,
+                    $ctx['m_id'] ?? '',
+                    [],
+                    $queryScope,
+                    $updatedAt
+                ),
+            ];
+        }
+
+        $managerFilter = $this->filterMachineIdsByTargetManager(
+            $allowedMids,
+            $ctx['manager_id'] ?? ''
+        );
+        if (($managerFilter['state'] ?? 100) !== 200) {
+            return ['state' => 100, 'msg' => strval($managerFilter['msg'] ?? '负责人格式错误'), 'data' => []];
+        }
+        $allowedMids = is_array($managerFilter['m_ids'] ?? null) ? $managerFilter['m_ids'] : [];
         if ($allowedMids === []) {
             return [
                 'state' => 200,
@@ -1254,6 +1376,7 @@ class MachineTargetService
             ? $this->queryAmountCostMap($baseMids, $start, $statEnd)
             : [];
         $prevMap = $this->queryAmountCostMap($baseMids, $prevStart, $prevEnd);
+        $managerMap = $this->queryMachineTargetManagerMap($baseMids);
 
         $list = [];
         $sumCurrentSale = 0;
@@ -1283,6 +1406,7 @@ class MachineTargetService
             $prevSale = round((float) ($prev['sale'] ?? 0), 2);
             $prevCost = round((float) ($prev['cost'] ?? 0), 2);
             $prevProfit = round($prevSale - $prevCost, 2);
+            $targetManager = $managerMap[$mid] ?? $this->unassignedTargetManager();
 
             $achievementRate = $targetAmount > 0 ? round($saleAmount / $targetAmount * 100, 2) : 0;
             $costRate = $saleAmount > 0 ? round($costAmount / $saleAmount * 100, 2) : 0;
@@ -1308,6 +1432,9 @@ class MachineTargetService
                 'm_id' => $mid,
                 'machine_id' => strval($machine['machine_id'] ?? ''),
                 'machine_name' => strval($machine['machine_name'] ?? ''),
+                'manager_id' => intval($targetManager['manager_id'] ?? 0),
+                'manager_name' => strval($targetManager['manager_name'] ?? '未分配'),
+                'manager_account' => strval($targetManager['manager_account'] ?? ''),
                 'full_channel_amount' => $fullChannelAmount,
                 'full_channel_cost' => $fullChannelCost,
                 'sale_amount' => $saleAmount,
@@ -1451,6 +1578,9 @@ class MachineTargetService
                     'date' => implode('~', [$months[0], $months[count($months) - 1]]),
                     'months' => $months,
                     'm_id' => $baseMids,
+                    'manager_id' => !empty($managerFilter['has_filter'])
+                        ? intval($managerFilter['manager_id'] ?? 0)
+                        : '',
                 ],
                 'machineOptions' => $deviceOptions,
                 'query_scope' => $queryScope,
@@ -1921,6 +2051,202 @@ class MachineTargetService
 
         $mids = $query->column('m_id');
         return array_values(array_unique(array_map('intval', is_array($mids) ? $mids : [])));
+    }
+
+    /**
+     * 解析设备负责人。空值表示不修改/不筛选，0 表示未分配。
+     */
+    protected function parseTargetManagerId($raw, $allowEmpty = false)
+    {
+        if ($raw === null || (!is_array($raw) && !is_object($raw) && trim((string) $raw) === '')) {
+            if ($allowEmpty) {
+                return ['state' => 200, 'has_value' => false, 'manager_id' => 0];
+            }
+            return ['state' => 100, 'msg' => '负责人不能为空'];
+        }
+        if (is_array($raw) || is_object($raw)) {
+            return ['state' => 100, 'msg' => '负责人格式错误'];
+        }
+
+        $value = trim((string) $raw);
+        if (preg_match('/^\d+$/', $value) !== 1) {
+            return ['state' => 100, 'msg' => '负责人格式错误'];
+        }
+        $managerId = intval($value);
+        if ($managerId < 0 || $managerId > 2147483647) {
+            return ['state' => 100, 'msg' => '负责人超出允许范围'];
+        }
+
+        return ['state' => 200, 'has_value' => true, 'manager_id' => $managerId];
+    }
+
+    /**
+     * 新负责人必须是存在且启用的管理员账号。
+     */
+    protected function validateTargetManager($managerId)
+    {
+        $managerId = intval($managerId);
+        if ($managerId <= 0) {
+            return ['state' => 200, 'manager' => $this->unassignedTargetManager()];
+        }
+
+        $row = Db::name('auth_manager')
+            ->where('manager_id', '=', $managerId)
+            ->field('manager_id,nickname,account,status')
+            ->find();
+        if (!$row) {
+            return ['state' => 100, 'msg' => '负责人账号不存在'];
+        }
+        if (intval($row['status'] ?? 0) !== 1) {
+            return ['state' => 100, 'msg' => '负责人账号已禁用'];
+        }
+
+        return ['state' => 200, 'manager' => $row];
+    }
+
+    /**
+     * 同一设备只有一条当前负责人记录；显式写入 0 用于取消负责人。
+     */
+    protected function saveMachineTargetManagers($mIds, $managerId)
+    {
+        $mIds = is_array($mIds) ? array_values(array_unique(array_map('intval', $mIds))) : [];
+        $mIds = array_values(array_filter($mIds, function ($mid) {
+            return $mid > 0;
+        }));
+        if ($mIds === []) {
+            return 0;
+        }
+
+        $now = time();
+        $operatorId = intval($this->manager['manager_id'] ?? 0);
+        $rows = [];
+        foreach ($mIds as $mid) {
+            $rows[] = [
+                'm_id' => $mid,
+                'manager_id' => max(0, intval($managerId)),
+                'create_time' => $now,
+                'update_time' => $now,
+                'update_manager_id' => $operatorId,
+            ];
+        }
+
+        return Db::name('machine_target_manager')
+            ->duplicate(['manager_id', 'update_time', 'update_manager_id'])
+            ->insertAll($rows);
+    }
+
+    /**
+     * 负责人是设备级筛选：未分配包含没有关联记录和 manager_id=0 两种情况。
+     */
+    protected function filterMachineIdsByTargetManager($mIds, $rawManagerId)
+    {
+        $mIds = is_array($mIds) ? array_values(array_unique(array_map('intval', $mIds))) : [];
+        $mIds = array_values(array_filter($mIds, function ($mid) {
+            return $mid > 0;
+        }));
+        $parsed = $this->parseTargetManagerId($rawManagerId, true);
+        if (($parsed['state'] ?? 100) !== 200) {
+            return $parsed + ['m_ids' => []];
+        }
+        if (empty($parsed['has_value'])) {
+            return [
+                'state' => 200,
+                'has_filter' => false,
+                'manager_id' => 0,
+                'm_ids' => $mIds,
+            ];
+        }
+        if ($mIds === []) {
+            return [
+                'state' => 200,
+                'has_filter' => true,
+                'manager_id' => intval($parsed['manager_id'] ?? 0),
+                'm_ids' => [],
+            ];
+        }
+
+        $managerId = intval($parsed['manager_id'] ?? 0);
+        if ($managerId === 0) {
+            $assignedMids = Db::name('machine_target_manager')
+                ->whereIn('m_id', $mIds)
+                ->where('manager_id', '>', 0)
+                ->column('m_id');
+            $assignedMids = array_values(array_unique(array_map(
+                'intval',
+                is_array($assignedMids) ? $assignedMids : []
+            )));
+            $filteredMids = array_values(array_diff($mIds, $assignedMids));
+        } else {
+            $matchedMids = Db::name('machine_target_manager')
+                ->whereIn('m_id', $mIds)
+                ->where('manager_id', '=', $managerId)
+                ->column('m_id');
+            $matchedMids = array_values(array_unique(array_map(
+                'intval',
+                is_array($matchedMids) ? $matchedMids : []
+            )));
+            $filteredMids = array_values(array_intersect($mIds, $matchedMids));
+        }
+
+        return [
+            'state' => 200,
+            'has_filter' => true,
+            'manager_id' => $managerId,
+            'm_ids' => $filteredMids,
+        ];
+    }
+
+    /**
+     * 批量读取设备当前负责人，避免列表逐条查询管理员账号。
+     */
+    protected function queryMachineTargetManagerMap($mIds)
+    {
+        $mIds = is_array($mIds) ? array_values(array_unique(array_map('intval', $mIds))) : [];
+        $mIds = array_values(array_filter($mIds, function ($mid) {
+            return $mid > 0;
+        }));
+        if ($mIds === []) {
+            return [];
+        }
+
+        $map = [];
+        foreach ($mIds as $mid) {
+            $map[$mid] = $this->unassignedTargetManager();
+        }
+        $rows = Db::name('machine_target_manager')
+            ->alias('mtm')
+            ->leftJoin('auth_manager am', 'am.manager_id = mtm.manager_id')
+            ->whereIn('mtm.m_id', $mIds)
+            ->field('mtm.m_id,mtm.manager_id,am.nickname,am.account')
+            ->select()
+            ->toArray();
+        foreach ($rows as $row) {
+            $mid = intval($row['m_id'] ?? 0);
+            $managerId = intval($row['manager_id'] ?? 0);
+            if ($mid <= 0 || !isset($map[$mid]) || $managerId <= 0) {
+                continue;
+            }
+            $nickname = trim(strval($row['nickname'] ?? ''));
+            $account = trim(strval($row['account'] ?? ''));
+            $map[$mid] = [
+                'manager_id' => $managerId,
+                'manager_name' => $nickname !== ''
+                    ? $nickname
+                    : ($account !== '' ? $account : '负责人账号不存在'),
+                'manager_account' => $account,
+            ];
+        }
+
+        return $map;
+    }
+
+    protected function unassignedTargetManager()
+    {
+        return [
+            'manager_id' => 0,
+            'manager_name' => '未分配',
+            'manager_account' => '',
+        ];
     }
 
     /**
