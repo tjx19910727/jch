@@ -217,14 +217,33 @@ class WeiChengClient extends ManagementClient
 
     public function synchronizeGoodsAll()
     {
+        $startTime = microtime(true);
         $syncBatchNo = date('YmdHis');
         $wc_goods = $this->getWcGoodsList([['id', '>', '0'],['is_pub', '=', '1']])->toArray();
+        $successCount = 0;
+        $failureCount = 0;
+        $failureGoodsNos = [];
         foreach ($wc_goods as $v) {
             $res = $this->synchronizeGoods($v['no'], $v['type'], $syncBatchNo);
-            if (!$res['status']) continue;
+            if (!$res['status']) {
+                $failureCount++;
+                if (count($failureGoodsNos) < 100) $failureGoodsNos[] = $v['no'];
+                continue;
+            }
+            $successCount++;
         }
         $this->wcGoodsWriteLocal();
-        return returnState('200', '分类商品同步成功');
+        $summary = [
+            'sync_batch_no' => $syncBatchNo,
+            'total_count' => count($wc_goods),
+            'success_count' => $successCount,
+            'failure_count' => $failureCount,
+            'failure_goods_nos' => $failureGoodsNos,
+            'failure_goods_nos_truncated' => $failureCount > count($failureGoodsNos) ? 1 : 0,
+            'duration_ms' => intval((microtime(true) - $startTime) * 1000),
+        ];
+        actionLog($summary, '微程商品详情同步汇总', 'async_task_wc_goods_sync');
+        return returnState('200', '分类商品同步成功', $summary);
     }
 
     public function synchronizeGoods($goods_no, $type, $syncBatchNo = '')
