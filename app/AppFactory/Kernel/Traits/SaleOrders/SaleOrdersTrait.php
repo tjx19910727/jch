@@ -12,6 +12,7 @@ namespace app\AppFactory\Kernel\Traits\SaleOrders;
 
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersDetailsModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersModel;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersVideoModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelNightlyModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersUnclaimedModel;
@@ -1036,13 +1037,149 @@ trait SaleOrdersTrait
             actionLog($this->message, "远程出货视频保存地址记录执行");
             $sod_id = str_replace("remote_out_goods_", "", $this->message['trade_no']);
             $sod_id = intval($sod_id);
-            return $this->updateSaleOrdersDetails(['remote_out_goods_video' => $this->message['transaction_video']], ['sod_id' => $sod_id]);
+            $sod = SaleOrdersDetailsModel::getFind(['sod_id' => $sod_id], 'sod_id');
+            if (!$sod) return 1;
+            return Db::transaction(function () use ($sod_id) {
+                $this->saveSaleOrdersVideo(
+                    SaleOrdersVideoModel::TYPE_REMOTE_OUT_GOODS,
+                    $sod_id,
+                    $this->message['trade_no'],
+                    $this->message['transaction_video']
+                );
+                $lastVideo = $this->getLastSaleOrdersVideoPath(SaleOrdersVideoModel::TYPE_REMOTE_OUT_GOODS, $sod_id);
+                return $this->updateSaleOrdersDetails(['remote_out_goods_video' => $lastVideo], ['sod_id' => $sod_id]);
+            });
         }
         if (strstr($this->message['trade_no'], "door_open")) {
             actionLog($this->message, "开门视频保存地址记录执行");
             return MachineErrorCodeModel::update(['transaction_video' => $this->message['transaction_video']], ['trade_no' => $this->message['trade_no']]);
         }
-        return $this->updateSaleOrders(['transaction_video' => $this->message['transaction_video']], ['trade_no' => $this->message['trade_no']]);
+        $order = SaleOrdersModel::getFind(['trade_no' => $this->message['trade_no']], 'order_id,trade_no');
+        if (!$order) return 1;
+        return Db::transaction(function () use ($order) {
+            $this->saveSaleOrdersVideo(
+                SaleOrdersVideoModel::TYPE_SALE_ORDER,
+                $order['order_id'],
+                $order['trade_no'],
+                $this->message['transaction_video']
+            );
+            $lastVideo = $this->getLastSaleOrdersVideoPath(SaleOrdersVideoModel::TYPE_SALE_ORDER, $order['order_id']);
+            return $this->updateSaleOrders(['transaction_video' => $lastVideo], ['order_id' => $order['order_id']]);
+        });
+    }
+
+    /**
+     * 保存设备逐个上报的视频。旧设备不带分段后缀时按单视频处理。
+     */
+    protected function saveSaleOrdersVideo($videoType, $relationId, $tradeNo, $transactionVideo)
+    {
+        $transactionVideo = trim((string)$transactionVideo);
+        $host = (string)env('app.host');
+        $storedPath = $host !== '' ? str_replace($host, '', $transactionVideo) : $transactionVideo;
+        $segmentNo = $this->getSaleOrdersVideoSegmentNo($storedPath);
+        $videoTotal = intval($this->message['video_total'] ?? 0);
+        if ($videoTotal < 0) $videoTotal = 0;
+        if ($videoTotal > 127) $videoTotal = 127;
+        if ($segmentNo === 0 && $videoTotal === 0) $videoTotal = 1;
+
+        $where = [
+            'video_type' => intval($videoType),
+            'relation_id' => intval($relationId),
+            'video_hash' => md5($storedPath),
+        ];
+        $exists = SaleOrdersVideoModel::getFind($where, 'sov_id,video_total');
+        if ($exists) {
+            if ($videoTotal > intval($exists['video_total'])) {
+                SaleOrdersVideoModel::update(['video_total' => $videoTotal], ['sov_id' => $exists['sov_id']]);
+            }
+            return $exists;
+        }
+
+        try {
+            return SaleOrdersVideoModel::create([
+                'video_type' => intval($videoType),
+                'relation_id' => intval($relationId),
+                'trade_no' => $tradeNo,
+                'segment_no' => $segmentNo,
+                'machine_id' => $this->machine['machine_id'] ?? '',
+                'transaction_video' => $storedPath,
+                'video_hash' => md5($storedPath),
+                'video_total' => $videoTotal,
+            ]);
+        } catch (\Throwable $e) {
+            // 相同MQ消息并发重试时，由唯一索引保证只保存一条。
+            $exists = SaleOrdersVideoModel::getFind($where, 'sov_id');
+            if ($exists) return $exists;
+            throw $e;
+        }
+    }
+
+    /**
+     * 例如 202607881554-2.mp4 => 2；无 -数字 后缀 => 0。
+     */
+    protected function getSaleOrdersVideoSegmentNo($transactionVideo)
+    {
+        $videoPath = parse_url($transactionVideo, PHP_URL_PATH);
+        $fileName = $videoPath ? pathinfo($videoPath, PATHINFO_FILENAME) : '';
+        if ($fileName !== '' && preg_match('/-(\d+)$/', $fileName, $matches)) return intval($matches[1]);
+        return 0;
+    }
+
+    /**
+     * 原订单字段始终保存逻辑上的最后一段，避免旧回调重试将其覆盖回前面的分段。
+     */
+    protected function getLastSaleOrdersVideoPath($videoType, $relationId)
+    {
+        $video = SaleOrdersVideoModel::getFind(
+            ['video_type' => intval($videoType), 'relation_id' => intval($relationId)],
+            'transaction_video',
+            'segment_no desc,sov_id desc'
+        );
+        return $video ? $video['transaction_video'] : '';
+    }
+
+    /**
+     * 查询视频列表及上传完成状态，管理端轮询时使用。
+     */
+    public function getSaleOrdersVideoResult($videoType, $relationId)
+    {
+        $list = SaleOrdersVideoModel::getList(
+            ['video_type' => intval($videoType), 'relation_id' => intval($relationId)],
+            0,
+            'sov_id,trade_no,segment_no,transaction_video,video_total,create_time',
+            'segment_no asc,sov_id asc'
+        );
+        if (!$list || $list->isEmpty()) {
+            return ['has_records' => false, 'complete' => false, 'videos' => []];
+        }
+
+        $videos = [];
+        $videoTotal = 0;
+        $latestCreateTime = 0;
+        foreach ($list as $video) {
+            $segmentNo = intval($video['segment_no']);
+            $videoTotal = max($videoTotal, intval($video['video_total']));
+            $latestCreateTime = max($latestCreateTime, intval($video['create_time']));
+            $videos[] = [
+                'video_name' => $video['trade_no'] . '-' . $segmentNo,
+                'transaction_video' => $video['transaction_video'],
+                'segment_no' => $segmentNo,
+            ];
+        }
+
+        return [
+            'has_records' => true,
+            'complete' => $this->isSaleOrdersVideoUploadComplete($videoTotal, count($videos), $latestCreateTime),
+            'videos' => $videos,
+        ];
+    }
+
+    protected function isSaleOrdersVideoUploadComplete($videoTotal, $uploadedCount, $latestCreateTime = 0)
+    {
+        $videoTotal = intval($videoTotal);
+        if ($videoTotal > 0 && intval($uploadedCount) >= $videoTotal) return true;
+        $latestCreateTime = intval($latestCreateTime);
+        return $latestCreateTime > 0 && time() - $latestCreateTime > 60;
     }
 
 
