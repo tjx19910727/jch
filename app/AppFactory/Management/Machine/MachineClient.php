@@ -538,8 +538,9 @@ class MachineClient extends ManagementClient
         $item = $this->getMachineFind($where,$field, "", $with);
         if ($item) {
             $item = $item->toArray();
-            $configRunMode = $this->getMachineConfigFind(['m_id' => intval($item['m_id'])], 'run_mode');
-            $item['run_mode'] = $configRunMode ? intval($configRunMode['run_mode']) : 1;
+            $machineConfig = $this->getMachineConfigFind(['m_id' => intval($item['m_id'])], 'run_mode,is_multi_goods');
+            $item['run_mode'] = $machineConfig ? intval($machineConfig['run_mode']) : 1;
+            $item['is_multi_goods'] = $machineConfig && intval($machineConfig['is_multi_goods']) === 1 ? 1 : 2;
             $item['run_mode_desc'] = $item['run_mode'] === 2 ? '测试模式' : '生产模式';
             $item['last_operating_time'] = Db::name('machine_operating_log')
                 ->where('m_id', intval($item['m_id']))
