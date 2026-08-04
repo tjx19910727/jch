@@ -428,6 +428,8 @@ return [
         "msg_type_invalid" => "无效的主控指令类型",
         "simplified_command_only" => "该指令仅支持简易机",
         "luxury_command_only" => "该指令仅支持豪华机",
+        "on_time_format_invalid" => "自动开机时间格式错误，请使用HH:mm格式",
+        "on_time_must_be_later_today" => "自动开机时间必须晚于当天当前时间",
     ],
 
     "VMachineLang" => [

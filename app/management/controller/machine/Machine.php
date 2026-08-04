@@ -458,12 +458,39 @@ class Machine extends Common
                 10 => "shield",
                 11 => "autoRestocking",
             ];
+            if (empty($postData['machine_id'])) return returnValidate(lang("VMachine.machine_id_require"));
             if (isset($postData['msgType']) && (is_int($postData['msgType']) || ctype_digit((string)$postData['msgType']))) {
                 $msgType = intval($postData['msgType']);
                 if (!isset($typeList[$msgType])) return returnValidate(lang("VMachine.msg_type_invalid"));
                 $postData['msgType'] = $typeList[$msgType];
+                if ($msgType === 4 && isset($postData['on_time'])) {
+                    if (!is_string($postData['on_time']) && !is_numeric($postData['on_time'])) {
+                        return returnValidate(lang("VMachine.on_time_format_invalid"));
+                    }
+                    $onTime = trim((string)$postData['on_time']);
+                    if ($onTime !== '') {
+                        if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/D', $onTime)) {
+                            return returnValidate(lang("VMachine.on_time_format_invalid"));
+                        }
+                        if (strcmp($onTime, date('H:i')) <= 0) {
+                            return returnValidate(lang("VMachine.on_time_must_be_later_today"));
+                        }
+                        $otherData['on_time'] = $onTime;
+                    }
+                }
                 if ($msgType === 9 || $msgType === 10) {
                     $otherData['status'] = $msgType === 9 ? 1 : 2;
+                }
+
+                if ($msgType == 11) {
+                    $channelCode = trim((string)($postData['channel_code'] ?? ''));
+                    if ($channelCode === '') return returnValidate(lang('VMachineChannel.channel_code_require'));
+                    $channel = $this->app->machineChannel->getMachineChannelFind([
+                        'machine_id' => $postData['machine_id'],
+                        'channel_code' => $channelCode,
+                    ], 'mc_id');
+                    if (!$channel) return returnValidate(lang('VMachineChannel.mc_data_empty'));
+                    $otherData['channel_code'] = $channelCode;
                 }
             }
 
@@ -472,7 +499,6 @@ class Machine extends Common
             ];
             $resolvedMsgType = $postData['msgType'] ?? '';
             if (isset($machineLevelLimit[$resolvedMsgType])) {
-                if (empty($postData['machine_id'])) return returnValidate(lang("VMachine.machine_id_require"));
                 $machineLevel = MachineModel::where('machine_id', $postData['machine_id'])->value('machine_level');
                 if ($machineLevel === null) return returnValidate(lang("VMachine.machine_no_data"));
                 if (intval($machineLevel) !== $machineLevelLimit[$resolvedMsgType]) {
