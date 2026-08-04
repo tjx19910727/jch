@@ -85,8 +85,18 @@ trait MachinePreReplenishmentTrait
         }
 
         $channelMap = [];
+        $goodsSkuMap = [];
+        $channelGoodsIds = [];
         foreach ($channels as $channel) {
             $channelMap[$channel['m_id'] . '_' . $channel['mc_id']] = $channel;
+            if ((int)($channel['g_id'] ?? 0) > 0 && empty($channel['sku'])) {
+                $channelGoodsIds[] = (int)$channel['g_id'];
+            }
+        }
+        if ($channelGoodsIds) {
+            $goodsSkuMap = Db::name('goods')
+                ->whereIn('g_id', array_values(array_unique($channelGoodsIds)))
+                ->column('sku', 'g_id');
         }
 
         // ==================== 单货道多商品相关开始 ====================
@@ -134,7 +144,7 @@ trait MachinePreReplenishmentTrait
                 $gId = (int)$channel['g_id'];
                 $stock = (int)$channel['stock'];
                 $capacity = (int)$channel['capacity'];
-                $sku = $channel['sku'];
+                $sku = (string)($channel['sku'] ?: ($goodsSkuMap[$gId] ?? ''));
             } else {
                 if ((int)($channel['is_multi_goods'] ?? 2) !== 1 || $gId <= 0) {
                     return ['state' => 0, 'msg' => '货道非队首商品参数错误'];
@@ -145,7 +155,7 @@ trait MachinePreReplenishmentTrait
                 }
                 $stock = (int)$batch['stock'];
                 $capacity = (int)$batch['capacity'];
-                $sku = $batch['sku'] ?? '';
+                $sku = (string)($batch['sku'] ?? '');
             }
 
             $uniqueKey = $machineId . '_' . $channel['mc_id'] . '_' . $gId;
@@ -171,7 +181,7 @@ trait MachinePreReplenishmentTrait
                 'g_id' => $gId,
                 'is_head' => $isHead,
                 'channel_code' => $channel['channel_code'],
-                'sku' => $sku,
+                'sku' => (string)$sku,
                 'before_stock' => $stock,
                 'capacity' => $capacity,
                 'available_stock' => $availableStock,
