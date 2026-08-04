@@ -664,7 +664,10 @@ trait MachineChannelTrait
         Db::name('channel_goods_batch')
             ->where('mc_id', $mc_id)
             ->where('status', 1)
-            ->update(['status' => 3]);
+            ->update([
+                'status' => 3,
+                'stock' => 0,
+            ]);
 
         // 查找下一个等待中的批次
         $nextBatch = Db::name('channel_goods_batch')

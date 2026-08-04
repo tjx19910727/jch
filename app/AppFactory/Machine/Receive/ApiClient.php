@@ -1354,6 +1354,10 @@ class ApiClient extends ReceiveBaseClient
 
         $m = $this->getMachineFind($m_sel, 'factory,inventory_location');
 
+        // ==================== 单货道多商品相关开始 ====================
+        $machineMultiGoodsEnabled = $this->isMachineMultiGoodsEnabled($this->machine['m_id']);
+        // ==================== 单货道多商品相关结束 ====================
+
         $order = [
             "trade_no" => $trade_no,
             "m_id" => $this->machine['m_id'],
@@ -1491,6 +1495,23 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.channel_no_data"));
                     }
+                    // ==================== 单货道多商品相关开始 ====================
+                    if ($machineMultiGoodsEnabled && intval($mc['is_multi_goods'] ?? 2) === 1) {
+                        $headBatch = Db::name('channel_goods_batch')
+                            ->where([
+                                'mc_id' => $mc['mc_id'],
+                                'g_id' => $mc['g_id'],
+                                'status' => 1,
+                            ])
+                            ->field('batch_id')
+                            ->find();
+                        if (!$headBatch) {
+                            $this->rollbackTrans();
+                            return $this->subCarFailResponse(300, '当前货道多商品队首批次异常，请刷新货道后重试');
+                        }
+                        $mc['batch_id'] = intval($headBatch['batch_id']);
+                    }
+                    // ==================== 单货道多商品相关结束 ====================
                     $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']]);
 
                     if (!isset($value['channel_code']) && !$mc['mg_id']) {
@@ -1537,6 +1558,11 @@ class ApiClient extends ReceiveBaseClient
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                             'sod_ao_id' => $mg['ao_id'] ?? '',
                         ];
+                        // ==================== 单货道多商品相关开始 ====================
+                        if (!empty($mc['batch_id'])) {
+                            $details['batch_id'] = intval($mc['batch_id']);
+                        }
+                        // ==================== 单货道多商品相关结束 ====================
                         $details['retail_price'] = !empty($wc_order_no) ? $total_price : $mc['retail_price'];
                         $details['total_sod_price'] = bcmul($details['retail_price'], $quantity, 3);
                         $sod_id = $this->addSaleOrdersDetails($details);
