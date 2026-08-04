@@ -1122,7 +1122,7 @@ class MachineClient extends TimeTaskBase
     /**
      * 定时任务-建议每15分钟执行一次，检查最近5天内上线过且在开机营业时间内持续离线超过30分钟的在营设备。
      * 每天00:00-05:59为静默时段，不发送离线通知。
-     * 同一设备每天最多发送3次，两次通知至少间隔3小时。
+     * 同一设备每个自然日最多发送1次。
      * 命令示例：php think time_task machine checkOperatingOffline
      *
      * @return string
@@ -1133,8 +1133,6 @@ class MachineClient extends TimeTaskBase
             $now = time();
             $offlineTimeout = 1800;
             $recentOnlineWindow = 5 * 86400;
-            $noticeInterval = 10800;
-            $dailyNoticeLimit = 3;
             $hour = intval(date('H', $now));
             if ($hour < 6) {
                 actionLog(date('Y-m-d H:i:s', $now), '静默时段跳过在营设备离线巡检', 'checkOperatingOffline');
@@ -1234,20 +1232,11 @@ class MachineClient extends TimeTaskBase
                     continue;
                 }
 
-                // 按自然日限制同一设备最多发送3次，并保证两次通知至少间隔3小时。
+                // 按设备和自然日去重；非空的旧版计数缓存也视为当天已经发送。
                 $dailyNoticeCacheKey = 'machine_operating_offline_notice:'
                     . $item['m_id'] . ':'
                     . $todayKey;
-                $dailyNoticeState = Cache::get($dailyNoticeCacheKey, []);
-                if (!is_array($dailyNoticeState)) {
-                    $dailyNoticeState = [];
-                }
-                $sentCount = intval($dailyNoticeState['count'] ?? 0);
-                $lastSentTime = intval($dailyNoticeState['last_sent_time'] ?? 0);
-                if ($sentCount >= $dailyNoticeLimit) {
-                    continue;
-                }
-                if ($lastSentTime > 0 && $now - $lastSentTime < $noticeInterval) {
+                if (Cache::get($dailyNoticeCacheKey)) {
                     continue;
                 }
 
@@ -1261,12 +1250,8 @@ class MachineClient extends TimeTaskBase
                 ];
                 $flag[] = $this->errorCode();
 
-                $sentCount++;
                 $dailyCacheTtl = max($todayEnd - $now, 60);
-                Cache::set($dailyNoticeCacheKey, [
-                    'count' => $sentCount,
-                    'last_sent_time' => $now,
-                ], $dailyCacheTtl);
+                Cache::set($dailyNoticeCacheKey, 1, $dailyCacheTtl);
                 actionLog([
                     'm_id' => $item['m_id'],
                     'machine_id' => $item['machine_id'],
@@ -1274,7 +1259,7 @@ class MachineClient extends TimeTaskBase
                     'offline_start' => date('Y-m-d H:i:s', $offlineStart),
                     'business_start' => date('Y-m-d H:i:s', $businessWindow['start']),
                     'business_end' => date('Y-m-d H:i:s', $businessWindow['end']),
-                    'daily_sent_count' => $sentCount,
+                    'daily_sent_count' => 1,
                 ], '发送在营设备持续离线提醒', 'checkOperatingOffline');
             }
 
