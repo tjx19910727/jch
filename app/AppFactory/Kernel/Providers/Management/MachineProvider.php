@@ -43,13 +43,18 @@ use app\AppFactory\Management\Machine\OtaVersionClient;
 use app\AppFactory\Management\Machine\OtaVersionPlanClient;
 use app\AppFactory\Management\Machine\MachineViewClient;
 use app\AppFactory\Management\Machine\SimCardInfoClient;
+use app\AppFactory\Management\Machine\MachineLayoutModelClient;
 use app\AppFactory\Management\Machine\MachineServiceLogClient;
+use app\AppFactory\Management\Machine\MachineSchemeClient;
 
 class MachineProvider implements ServiceProviderInterface
 {
     public function register(Container $app)
     {
         // TODO: Implement register() method.
+        $app['machineLayoutModel'] = function ($app) {
+            return new MachineLayoutModelClient($app);
+        };
         $app['machineChannelReplenishment'] = function ($app) {
             return new MachineChannelReplenishmentClient($app);
         };
@@ -148,6 +153,10 @@ class MachineProvider implements ServiceProviderInterface
         };
         $app['simCardInfo'] = function ($app) {
             return new SimCardInfoClient($app);
+        };
+
+        $app['machineScheme'] = function ($app) {
+            return new MachineSchemeClient($app);
         };
 
     }

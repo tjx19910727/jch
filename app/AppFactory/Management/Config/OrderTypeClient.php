@@ -9,14 +9,16 @@ class OrderTypeClient extends ManagementClient
 {
     use OrderTypeTrait;
 
-    public function getList($where = [], $pageNum = 0, $field = "*", $order = "sort asc, order_type asc")
+    public function getList($where = [], $pageNum = 0, $field = "*", $order = "sort asc, order_type asc", $rQ = 1)
     {
-        return $this->rQ($this->getOrderTypeList($where, $pageNum, $field, $order));
+        $data = $this->getOrderTypeList($where, $pageNum, $field, $order);
+        return $rQ ? $this->rQ($data) : $data;
     }
 
-    public function getFind($where = [], $field = "*", $order = "ot_id desc")
+    public function getFind($where = [], $field = "*", $order = "ot_id desc", $rQ = 1)
     {
-        return $this->rQ($this->getOrderTypeFind($where, $field, $order));
+        $data = $this->getOrderTypeFind($where, $field, $order);
+        return $rQ ? $this->rQ($data) : $data;
     }
 
     public function addData($postData)

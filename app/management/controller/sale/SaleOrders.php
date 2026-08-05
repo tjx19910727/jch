@@ -35,12 +35,12 @@ class SaleOrders extends Common
             unset($postData['machine_group_id']);
             if (!$machineIds) return $this->app->machine->rNoData();
         }
-        //从首页跳转过来携带的是此参数，需要重置下
+        // 首页跳转使用 create_date，统一转换为订单列表的支付时间条件。
         if (!empty($postData['create_date']) && empty($postData['pay_time'])) {
             $postData['pay_time'] = $postData['create_date'];
         }
         unset($postData['create_date']);
-        $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
+        $where = $this->getWhere($postData,false,['trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in','run_mode'=>'in']);
         $where['raw'] = "pay_status in ('3', '7')";
         $authMch = $this->authMchCannel();
         if($authMch['status'] != 0){
@@ -60,8 +60,8 @@ class SaleOrders extends Common
         $hasCostPriceAuth = $this->hasCostPriceAuth();
 
         $costPriceField = $hasCostPriceAuth ? "cost_price" : "0 cost_price";
-        $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,a.m_id,a.machine_id,a.machine_level,
-        factory,inventory_location,has_hotel,refund_status,(total_price - refund_amount) total_price, (total_cost_points - refund_cost_points) total_cost_points, pay_code, mobile,{$costPriceField}";
+        $field = "order_id,trade_no,mch_no,total_quantity,total_price,total_points,discount_price,retail_price,out_status,http_out_status,order_type,pay_type,pay_method,user_id,out_trade_no,pay_status,pay_time,out_time,machine_name,a.m_id,a.machine_id,a.machine_level,a.run_mode,(CASE a.run_mode WHEN 2 THEN '测试模式' ELSE '生产模式' END) run_mode_desc,
+        factory,inventory_location,has_hotel,refund_status,(total_price - refund_amount) total_price, (total_cost_points - refund_cost_points) total_cost_points, pay_code, mobile,receipt,{$costPriceField}";
         if (!empty($machineIds)) $where[] = ['machine_id','in',$machineIds];
         if ($supplier) unset($where['ao_id']);
         if($this->manager['level'] > 3 && !in_array($this->manager['ao_id'], [0,1] )){
@@ -106,7 +106,12 @@ class SaleOrders extends Common
             $g_name = $postData['g_name'];
             unset($postData['g_name']);
         }
-        $where = $this->getWhere($postData,false,["trade_no" => "like","machine_id" => 'like',"machine_name" => 'like','factory'=>'in','inventory_location'=>'in']);
+        $where = $this->getWhere($postData,false,["trade_no" => "like","machine_id" => 'like',"machine_name" => 'like','factory'=>'in','inventory_location'=>'in','run_mode'=>'in']);
+        foreach ($where as $whereKey => $whereItem) {
+            if (is_array($whereItem) && isset($whereItem[0]) && $whereItem[0] === 'run_mode') {
+                $where[$whereKey][0] = 'so.run_mode';
+            }
+        }
         if ($sku) $where[] = ['sod.sku', 'like', '%'.$sku.'%'];
         if ($g_name) $where[] = ['sod.g_name', 'like', '%'.$g_name.'%'];
         $where['so.pay_status'] = 3;
@@ -129,7 +134,7 @@ class SaleOrders extends Common
         }
 
         $costPriceField = $hasCostPriceAuth ? "sod.cost_price" : "0 cost_price";
-        $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,so.refund_status,so.factory,so.inventory_location,
+        $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,so.transaction_video,so.order_type,so.pay_type,so.pay_method,so.pay_time,so.out_time,so.create_time,so.out_status,so.refund_status,so.factory,so.inventory_location,so.run_mode,(CASE so.run_mode WHEN 2 THEN '测试模式' ELSE '生产模式' END) run_mode_desc,
         sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,(sod.total_sod_price - sod.refund_amount) total_sod_price,(sod.total_sod_points - sod.refund_points) total_sod_points,(sod.total_sod_cost_points - sod.refund_cost_points) total_sod_cost_points,
         (sod.success_quantity) success_quantity,(sod.fail_quantity) fail_quantity,sod.deliver_pics,(sod.quantity) quantity,sod.refund_quantity,sod.refund_amount,(SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name,{$costPriceField}";
         // if ($postData['supplier']) unset($where['ao_id']);                                                                                                                                                                                                                                                                                                                                                                                                           
@@ -146,12 +151,17 @@ class SaleOrders extends Common
         $postData = input();
         $hasCostPriceAuth = $this->hasCostPriceAuth();
         $mIds = [];
+        $gIds = [];
         $machineIds = [];
         $sku = '';
         $g_name = '';
         if (isset($postData['m_id']) && $postData['m_id']) {
             $mIds = $this->parseExportGoodsListIds($postData['m_id']);
             unset($postData['m_id']);
+        }
+        if (isset($postData['g_id']) && $postData['g_id']) {
+            $gIds = $this->parseExportGoodsListIds($postData['g_id']);
+            unset($postData['g_id']);
         }
         if (isset($postData['machine_id']) && $postData['machine_id']) {
             $machineIds = $this->parseExportGoodsListIds($postData['machine_id']);
@@ -173,6 +183,7 @@ class SaleOrders extends Common
         // }
         $where['so.pay_status'] = 3;
         if ($mIds) $where[] = ['so.m_id', 'in', $mIds];
+        if ($gIds) $where[] = ['sod.g_id', 'in', $gIds];
         if (count($machineIds) > 1) $where[] = ['so.machine_id', 'in', $machineIds];
         if ($sku) $where[] = ['sod.sku', 'like', '%'.$sku.'%'];
         if ($g_name) $where[] = ['sod.g_name', 'like', '%'.$g_name.'%'];
@@ -322,7 +333,7 @@ class SaleOrders extends Common
             unset($postData['machine_group_id']);
             if (!$machineIds) return $this->app->machine->rNoData();
         }
-        $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in']);
+        $where = $this->getWhere($postData,false,["order_id" => "in",'trade_no' => "like","order_type" => "in","mch_no" => "like","machine_name" => "like","machine_id" => "like","pay_type" => "in",'factory'=>'in','inventory_location'=>'in','out_status'=>'in','run_mode'=>'in']);
         $authMch = $this->authMchCannel();
         if ($authMch['status'] != 0) {
             $orderIds = Db::name('sale_orders_details')
@@ -593,6 +604,7 @@ class SaleOrders extends Common
     {
         $postData = input();
         if (!isset($postData['create_date'])) $postData['create_date'] = date("Y-m-d",strtotime("-7 days")) . "~" . date("Y-m-d",strtotime("+1 days"));
+        $behaviorWhere = $this->formatBehaviorTrackingWhere($postData);
         $postData['pay_time'] = $postData['create_date'];
         unset($postData['create_date']);
         $where = $this->getWhere($postData,false,['machine_id' => "like","g_name" => "like"]);
@@ -603,7 +615,7 @@ class SaleOrders extends Common
             }
         }
         // $where['sod.ao_id'] = $this->manager['ao_id'];
-        return $this->app->saleOrders->saleDataCollect($where);
+        return $this->app->saleOrders->saleDataCollect($where,$behaviorWhere);
 
     }
 
@@ -642,7 +654,8 @@ class SaleOrders extends Common
         $where['so.pay_status'] = 3;
         //$where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
         actionLog($where,'查询条件');
-        return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20);
+        $behaviorWhere = $this->formatBehaviorTrackingWhere($postData);
+        return $this->app->saleOrders->saleDataCollectList($where,$postData['pageNum'] ?? 20,$behaviorWhere);
     }
 
     /**
@@ -660,8 +673,32 @@ class SaleOrders extends Common
             if ($mIds) $where[] = ['m_id', 'in', $mIds];
         }
         $where['so.pay_status'] = 3;
-        $where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
-        return $this->app->saleOrders->exportSaleDataCollect($where);
+        //$where['raw'] = 'so.ao_id = '. $this->manager['ao_id'].' or sod.sod_ao_id ='.$this->manager['ao_id'];
+        $behaviorWhere = $this->formatBehaviorTrackingWhere($postData);
+        return $this->app->saleOrders->exportSaleDataCollect($where,$behaviorWhere);
+    }
+
+    /**
+     * 将销售统计条件映射为商品行为埋点查询条件。
+     */
+    protected function formatBehaviorTrackingWhere($postData)
+    {
+        $fieldMap = [
+            'm_id' => 'm_id',
+            'machine_id' => 'machine_id',
+            'g_id' => 'goods_id',
+            'is_online' => 'is_online',
+            'create_date' => 'device_created_at',
+        ];
+        $behaviorPostData = [];
+        foreach ($fieldMap as $sourceField => $targetField) {
+            if (array_key_exists($sourceField, $postData)) {
+                $behaviorPostData[$targetField] = $postData[$sourceField];
+            }
+        }
+
+        $where = $this->getWhere($behaviorPostData, false, ['machine_id' => 'like'], 'gbt.');
+        return $this->formatAoIdWhereWithPrefix($where, 'm.');
     }
 
     /**
@@ -874,11 +911,19 @@ class SaleOrders extends Common
         return $this->app->saleOrders->getRemoteRecycleSodDetail(input());
     }
 
+    /**
+     * 获取远程出货步骤详情列表（按step正序）
+     */
+    public function remoteOutGoodsStepsDetail()
+    {
+        return $this->app->saleOrders->getRemoteOutGoodsStepsDetail(input());
+    }
+
     
     /**
      * 支付方式统计
-     * 统计各支付方式实收总额、总成本、利润额、平均售价、平均成本价
-     * where条件与订单列表接口一致，关联子订单表获取成本与数量
+     * 订单主表统计支付总额、退款总额与订单数，明细表统计成本与数量。
+     * where条件与订单列表接口一致。
      * @return array|string
      */
     public function payTypeStatistics()
@@ -924,38 +969,56 @@ class SaleOrders extends Common
             $where['so.ao_id'] = $this->manager['ao_id'];
         }
 
-        $query = Db::name('sale_orders')->alias('so')
-            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
-            ->where($where);
-
-        $summary = $query->field("
-            IFNULL(SUM(sod.total_sod_price - sod.refund_amount), 0) total_amount,
-            IFNULL(SUM(sod.cost_price * (sod.quantity - sod.refund_quantity)), 0) total_cost_price,
-            IFNULL(SUM(sod.quantity - sod.refund_quantity), 0) total_quantity,
-            IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift,
-            COUNT(DISTINCT so.order_id) total_orders")
+        $orderSummary = Db::name('sale_orders')->alias('so')
+            ->where($where)
+            ->field("
+            IFNULL(SUM(so.total_price), 0) total_amount,
+            IFNULL(SUM(so.refund_amount), 0) refund_amount,
+            COUNT(so.order_id) total_orders,
+            IFNULL(SUM(CASE WHEN so.refund_amount > 0 THEN 1 ELSE 0 END), 0) refund_orders")
             ->find();
-        if (!is_array($summary)) {
-            $summary = [];
+        if (!is_array($orderSummary)) {
+            $orderSummary = [];
         }
 
-        $totalAmount = round($summary['total_amount'] ?? 0, 2);
-        $totalCostPrice = round($summary['total_cost_price'] ?? 0, 2);
-        $totalQuantity = (int)($summary['total_quantity'] ?? 0);
-        $totalGift = (int)($summary['total_gift'] ?? 0);
-        $totalOrders = (int)($summary['total_orders'] ?? 0);
+        $detailSummary = Db::name('sale_orders')->alias('so')
+            ->join('sale_orders_details sod', 'sod.order_id = so.order_id', 'left')
+            ->where($where)
+            ->field("
+            IFNULL(SUM(sod.cost_price * (sod.quantity - sod.refund_quantity)), 0) total_cost_price,
+            IFNULL(SUM(sod.quantity), 0) total_quantity,
+            IFNULL(SUM(sod.refund_quantity), 0) refund_quantity,
+            IFNULL(SUM(CASE sod.is_gift WHEN 1 THEN sod.quantity ELSE 0 END), 0) total_gift")
+            ->find();
+        if (!is_array($detailSummary)) {
+            $detailSummary = [];
+        }
+
+        $totalAmount = round($orderSummary['total_amount'] ?? 0, 2);
+        $refundAmount = round($orderSummary['refund_amount'] ?? 0, 2);
+        $netAmount = round($totalAmount - $refundAmount, 2);
+        $totalOrders = (int)($orderSummary['total_orders'] ?? 0);
+        $refundOrders = (int)($orderSummary['refund_orders'] ?? 0);
+        $totalCostPrice = round($detailSummary['total_cost_price'] ?? 0, 2);
+        $totalQuantity = (int)($detailSummary['total_quantity'] ?? 0);
+        $refundQuantity = (int)($detailSummary['refund_quantity'] ?? 0);
+        $totalGift = (int)($detailSummary['total_gift'] ?? 0);
 
         // 汇总值
         $totalSaleQuantity = $totalQuantity - $totalGift;
+        $netSaleQuantity = $totalSaleQuantity - $refundQuantity;
 
         return returnData([
             'total_cost_price'      => $hasCostPriceAuth ? round($totalCostPrice, 2) : '--',
-            'profit_amount'         => $hasCostPriceAuth ? round($totalAmount - $totalCostPrice, 2) : '--',
-            'average_retail_price'  => $totalSaleQuantity > 0 ? round($totalAmount / $totalSaleQuantity, 2) : 0,
-            'average_cost_price'    => $hasCostPriceAuth ? ($totalSaleQuantity > 0 ? round($totalCostPrice / $totalSaleQuantity, 2) : 0) : '--',
+            'profit_amount'         => $hasCostPriceAuth ? round($netAmount - $totalCostPrice, 2) : '--',
+            'average_retail_price'  => $netSaleQuantity > 0 ? round($netAmount / $netSaleQuantity, 2) : 0,
+            'average_cost_price'    => $hasCostPriceAuth ? ($netSaleQuantity > 0 ? round($totalCostPrice / $netSaleQuantity, 2) : 0) : '--',
             'total_amount'          => round($totalAmount, 2),
+            'refund_amount'         => round($refundAmount, 2),
             'total_quantity'        => $totalSaleQuantity,
+            'refund_quantity'       => $refundQuantity,
             'total_orders'          => $totalOrders,
+            'refund_orders'         => $refundOrders,
         ]);
     }
 
@@ -967,6 +1030,26 @@ class SaleOrders extends Common
     public function stockDeduction()
     {
         return $this->app->saleOrders->manualDeductStock(input());
+    }
+
+    /**
+     * 指定设备重新打印订单小票
+     * @return array|string
+     */
+    public function printReceipt()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . 'printReceipt');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+
+        $frequencyKey = 'printReceipt:' . intval($postData['order_id']) . ':' . trim((string)$postData['machine_id']);
+        $check = checkFrequency($frequencyKey, 3);
+        if ($check !== true) return returnState(100, $check);
+
+        return $this->app->saleOrders->printOrderReceipt($postData);
     }
 
     /** 后台手动推送已支付订单到微程。 */

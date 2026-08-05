@@ -43,6 +43,7 @@ class MqConsumer
     {
         //手动发送ack
         $message->ack($message->getDeliveryTag());
+        $data = [];
         try {
             $data = $message->body;
             $data = json2arr($data);
@@ -67,11 +68,14 @@ class MqConsumer
 
             $updateResult = $this->updateMachineMqRecord(['status' => 2,'msg_id' => $data['msg_id']],['msg_id' => $data['msg_id']]);
             actionLog($updateResult,'修改MQ记录成功结果','DataUpload');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"DataUpload");
             actionLog($e->getTrace(), 'tryCatchTrace',"DataUpload");
-            $updateResult = $this->updateMachineMqRecord(['status' => 3,'msg_id' => $data['msg_id']],['msg_id' => $data['msg_id']]);
-            actionLog($updateResult,'修改MQ记录失败结果','DataUpload');
+            $msgId = is_array($data) ? ($data['msg_id'] ?? '') : '';
+            if ($msgId) {
+                $updateResult = $this->updateMachineMqRecord(['status' => 3,'msg_id' => $msgId],['msg_id' => $msgId]);
+                actionLog($updateResult,'修改MQ记录失败结果','DataUpload');
+            }
         }
     }
 
@@ -205,63 +209,11 @@ class MqConsumer
                 'row_count' => isset($data['list']) && is_array($data['list']) ? count($data['list']) : 0,
             ], '消息处理摘要', "export_message");
 
-            if ($jobType == 'wc_goods_sync') {
-                $app = AppFactory::management();
-                $goods_type = $data['goods_type'] ?? '';
-                if ($goods_type) {
-                    $syncRes = $app->weicheng->synchronizeGoodsTypes($goods_type);
-                } else {
-                    $syncRes = $app->weicheng->synchronizeGoodsTypesAll();
-                }
-                $syncResLog = $syncRes;
-                if (is_object($syncRes) && method_exists($syncRes, 'getData')) {
-                    $syncResLog = $syncRes->getData();
-                } elseif (is_object($syncRes) && method_exists($syncRes, 'getContent')) {
-                    $syncResLog = json2arr($syncRes->getContent());
-                }
-                actionLog($syncResLog, '微程分类同步结果', "export_message_sync");
-
-                $result = $app->weicheng->synchronizeGoodsAll();
-                $resultLog = $result;
-                if (is_object($result) && method_exists($result, 'getData')) {
-                    $resultLog = $result->getData();
-                } elseif (is_object($result) && method_exists($result, 'getContent')) {
-                    $resultLog = json2arr($result->getContent());
-                }
-                actionLog($resultLog, '微程同步处理结果', "export_message_syncAll");
-            } elseif ($jobType == 'sale_orders_export') {
+            if ($jobType == 'sale_orders_export') {
                 $app = AppFactory::timeTask();
                 if (!$app->export->makeSaleOrdersExcel($data)) {
                     throw new \RuntimeException('销售订单导出Excel生成失败');
                 }
-            } elseif ($jobType == 'goods_update') {
-                $gId = $data['g_id'] ?? 0;
-                if ($gId) {
-                    $mgList = Db::name('machine_goods')->where('g_id', $gId)->field('mg_id,machine_id')->select()->toArray();
-                    foreach ($mgList as $mg) {
-                        $machine = Db::name('machine')->where('machine_id', $mg['machine_id'])->field('machine_id,mac_address,signKey,online')->find();
-                        if ($machine && $machine['online'] == 1) {
-                            $key = $machine['signKey'] ?: env('api.md5Key');
-                            if ($key) {
-                                $app = AppFactory::machine(['machine_id' => $machine['machine_id'], 'key' => $key, 'mac' => $machine['mac_address'] ?? '']);
-                                $app->sendMq->sendMq('updateMg', ['mg_id' => $mg['mg_id']]);
-                            }
-                        }
-                    }
-
-                    $mcList = Db::name('machine_channel')->where('g_id', $gId)->field('mc_id,machine_id')->select()->toArray();
-                    foreach ($mcList as $mc) {
-                        $machine = Db::name('machine')->where('machine_id', $mc['machine_id'])->field('machine_id,mac_address,signKey,online')->find();
-                        if ($machine && $machine['online'] == 1) {
-                            $key = $machine['signKey'] ?: env('api.md5Key');
-                            if ($key) {
-                                $app = AppFactory::machine(['machine_id' => $machine['machine_id'], 'key' => $key, 'mac' => $machine['mac_address'] ?? '']);
-                                $app->sendMq->sendMq('updateMc', ['mc_id' => $mc['mc_id']]);
-                            }
-                        }
-                    }
-                }
-                actionLog(['g_id' => $gId], '商品更新-下发设备同步完成', 'export_message_goods_update');
             } elseif ($jobType == 'multi_sheet_export') {
                 $app = AppFactory::timeTask();
                 if (!$app->export->makeMultiSheetExcel($data)) {

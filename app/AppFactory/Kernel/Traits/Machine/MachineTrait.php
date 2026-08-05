@@ -718,6 +718,7 @@ trait MachineTrait
             'channel_code' => $payload['channel_code'],
             'quantity' => $payload['quantity'],
             'log_id' => $logId,
+            'manager_id' => $this->manager['manager_id'] ?? 0,
         ];
         $result = $this->sendToMachine(['machine_id' => $machineId], 'remoteOutGoods', $content);
         if (!is_object($result)) {
@@ -730,13 +731,306 @@ trait MachineTrait
         return $result;
     }
 
+    /**
+     * 远程出货步骤集，按 machine_level + 是否挂件 分组
+     * key = English步骤键, value = 中文描述
+     * 2_1: kalos_hang (machine_level=2, 挂件版)
+     * 2_0: kalos_normal (machine_level=2, 普通版)
+     * 1_1: kalosV3_hang (machine_level=1, 挂件版)
+     * 1_0: kalosV3_normal (machine_level=1, 普通版)
+     * @return array
+     */
+    protected function getRemoteOutGoodsStepSets()
+    {
+        return [
+            // ========== kalos_hang (machine_level=2, 挂件版) 31步 ==========
+            '2_1' => [
+                'check_discharge_box'              => '检测出料箱',
+                'start_channel_discharge'          => '开始货道出货',
+                'discharge_box_zero_to_standby'    => '出料箱回零并到待机位',
+                'discharge_box_recycle_close_door' => '出料箱回收并关闭取货门',
+                'z_axis_to_standby'                => 'Z轴回待机位',
+                'xy_axis_to_channel'               => 'XY轴移动到货道',
+                'z_axis_extend_to_pickup'          => 'Z轴伸出到取货位',
+                'suction_nozzle_open'              => '吸嘴打开',
+                'check_suction_pressure'           => '检测吸附压力',
+                'z_axis_to_suction_check'          => 'Z轴移动到吸附检测位',
+                'second_check_suction'             => '二次检测吸附',
+                'hang_z_axis_lift'                 => '挂件Z轴抬升',
+                'xy_axis_to_hang_discharge_box'    => 'XY轴移动到挂件出料箱上方',
+                'discharge_box_to_hang_position'   => '出料箱移动到挂件出货位',
+                'z_axis_descend_to_hang_drop'      => 'Z轴下放到挂件落料位',
+                'discharge_belt_reverse'           => '出料履带反转',
+                'hang_descend_to_drop_height'      => '挂件下降到落料高度',
+                'discharge_belt_stop'              => '出料履带停止',
+                'discharge_box_to_origin'          => '出料箱回原点',
+                'z_axis_to_hang_safe'              => 'Z轴回挂件安全位',
+                'suction_nozzle_close'             => '吸嘴关闭',
+                'z_axis_final_to_standby'          => 'Z轴最终回待机位',
+                'xy_axis_to_pickup_safe'           => 'XY轴移动到取货安全位',
+                'output_box_extend'                => '出货箱伸出',
+                'pickup_door_open'                 => '取货门打开',
+                'pickup_light_on'                  => '取货灯打开',
+                'check_pickup_complete'            => '检测取货完成',
+                'pickup_light_off'                 => '取货灯关闭',
+                'pickup_door_close'                => '取货门关闭',
+                'check_discharge_box_remaining'    => '检测出料箱剩余商品',
+                'output_box_to_standby'            => '出货箱回待机位',
+            ],
+            // ========== kalos_normal (machine_level=2, 普通版) 29步 ==========
+            '2_0' => [
+                'check_discharge_box'              => '检测出料箱',
+                'start_channel_discharge'          => '开始货道出货',
+                'discharge_box_zero_to_standby'    => '出料箱回零并到待机位',
+                'discharge_box_recycle_close_door' => '出料箱回收并关闭取货门',
+                'z_axis_to_standby'                => 'Z轴回待机位',
+                'xy_axis_to_channel'               => 'XY轴移动到货道',
+                'z_axis_extend_to_pickup'          => 'Z轴伸出到取货位',
+                'suction_nozzle_open'              => '吸嘴打开',
+                'check_suction_pressure'           => '检测吸附压力',
+                'z_axis_to_suction_check'          => 'Z轴移动到吸附检测位',
+                'second_check_suction'             => '二次检测吸附',
+                'z_axis_to_zero'                   => 'Z轴回零',
+                'xy_axis_to_discharge_box'         => 'XY轴移动到出料箱上方',
+                'discharge_belt_reverse'           => '出料履带反转',
+                'check_discharge_belt_sensor'      => '检测出料履带传感器',
+                'z_axis_descend_to_drop'           => 'Z轴下放到落料位',
+                'suction_nozzle_close'             => '吸嘴关闭',
+                'z_axis_to_standby_2'              => 'Z轴回待机位',
+                'discharge_belt_stop'              => '出料履带停止',
+                'z_axis_final_to_standby'          => 'Z轴最终回待机位',
+                'xy_axis_to_pickup_safe'           => 'XY轴移动到取货安全位',
+                'output_box_extend'                => '出货箱伸出',
+                'pickup_door_open'                 => '取货门打开',
+                'pickup_light_on'                  => '取货灯打开',
+                'check_pickup_complete'            => '检测取货完成',
+                'pickup_light_off'                 => '取货灯关闭',
+                'pickup_door_close'                => '取货门关闭',
+                'check_discharge_box_remaining'    => '检测出料箱剩余商品',
+                'output_box_to_standby'            => '出货箱回待机位',
+            ],
+            // ========== kalosV3_hang (machine_level=1, 挂件版) 22步 ==========
+            '1_1' => [
+                'check_discharge_box'              => '检测出料箱',
+                'start_channel_discharge'          => '开始货道出货',
+                'pickup_door_close'                => '取货门关闭',
+                'cover_door_close'                 => '罩门关闭',
+                'xy_axis_to_channel'               => 'XY轴移动到货道',
+                'x_axis_to_channel'                => 'X轴移动到货道',
+                'y_axis_to_channel'                => 'Y轴移动到货道',
+                'discharge_belt_early_start'       => '出料履带提前启动',
+                'channel_motor_discharge'          => '货道电机出货',
+                'xy_axis_to_safe'                  => 'XY轴回安全位',
+                'd0_linkage_discharge'             => 'D0联动出货',
+                'd0_belt_fallback_start'           => 'D0履带兜底启动',
+                'd0_discharge_belt_stop'           => 'D0出料履带停止',
+                'discharge_belt_start'             => '出料履带启动',
+                'x_axis_to_discharge'              => 'X轴移动到出货位',
+                'discharge_belt_stop'              => '出料履带停止',
+                'x_axis_to_pickup'                 => 'X轴移动到取货位',
+                'cover_door_open'                  => '罩门打开',
+                'y_axis_to_pickup_height'          => 'Y轴移动到取货高度',
+                'pickup_door_open'                 => '取货门打开',
+                'check_pickup_complete'            => '检测取货完成',
+                'y_axis_to_safe_height'            => 'Y轴回安全高度',
+            ],
+            // ========== kalosV3_normal (machine_level=1, 普通版) 22步 ==========
+            '1_0' => [
+                'check_discharge_box'              => '检测出料箱',
+                'start_channel_discharge'          => '开始货道出货',
+                'pickup_door_close'                => '取货门关闭',
+                'cover_door_close'                 => '罩门关闭',
+                'xy_axis_to_channel'               => 'XY轴移动到货道',
+                'x_axis_to_channel'                => 'X轴移动到货道',
+                'y_axis_to_channel'                => 'Y轴移动到货道',
+                'discharge_belt_early_start'       => '出料履带提前启动',
+                'channel_motor_discharge'          => '货道电机出货',
+                'xy_axis_to_safe'                  => 'XY轴回安全位',
+                'd0_linkage_discharge'             => 'D0联动出货',
+                'd0_belt_fallback_start'           => 'D0履带兜底启动',
+                'd0_discharge_belt_stop'           => 'D0出料履带停止',
+                'discharge_belt_start'             => '出料履带启动',
+                'x_axis_to_discharge'              => 'X轴移动到出货位',
+                'discharge_belt_stop'              => '出料履带停止',
+                'x_axis_to_pickup'                 => 'X轴移动到取货位',
+                'cover_door_open'                  => '罩门打开',
+                'y_axis_to_pickup_height'          => 'Y轴移动到取货高度',
+                'pickup_door_open'                 => '取货门打开',
+                'check_pickup_complete'            => '检测取货完成',
+                'y_axis_to_safe_height'            => 'Y轴回安全高度',
+            ],
+        ];
+    }
+
+    /**
+     * 处理远程出货步骤上报，目前已改为http接口，暂保留此方法以备MQ回执使用
+     * 根据 machine_level + is_hang 匹配步骤集，全量步骤默认status=2，
+     * 设备上报的key覆盖对应status，先删后插。
+     * @param int   $sodId 子单id
+     * @param array $steps 设备上报步骤 [['key'=>'xxx','status'=>1],...]
+     * @param int $managerId 管理员ID
+     */
+    protected function handleRemoteOutGoodsSteps($sodId, $steps, $managerId = 0)
+    {
+        try {
+            $machineMId = $this->machine['m_id'] ?? 0;
+            $machineId  = $this->machine['machine_id'] ?? '';
+            // 单条步骤转为数组
+            if (isset($steps['key'])) {
+                $steps = [$steps];
+            }
+
+            if (!$machineMId || !$machineId) {
+                $detail = $this->getSaleOrdersDetailsFind(['sod_id' => $sodId], 'order_id');
+                if ($detail) {
+                    $detail = is_object($detail) ? $detail->toArray() : $detail;
+                    $order  = $this->getSaleOrdersFind(['order_id' => $detail['order_id']], 'm_id,machine_id');
+                    if ($order) {
+                        $order      = is_object($order) ? $order->toArray() : $order;
+                        $machineMId = intval($order['m_id'] ?? 0);
+                        $machineId  = $order['machine_id'] ?? '';
+                    }
+                }
+            }
+
+            if (!$machineMId || !$machineId) {
+                actionLog(['sod_id' => $sodId], '远程出货步骤缺少m_id或machine_id', 'remoteOutGoodsSteps');
+                return;
+            }
+   
+            // 取 machine_level：优先 $this->machine，其次查库
+            $machineLevel = intval($this->machine['machine_level'] ?? 0);
+            if (!$machineLevel) {
+                $machineInfo  = $this->getMachineFind(['m_id' => $machineMId], 'machine_level');
+                $machineLevel = intval($machineInfo['machine_level'] ?? 0);
+            }
+
+            // 取是否挂件：优先消息中的 is_hang/hang，其次设备属性
+            $isHang = intval($this->message['is_hang'] ?? ($this->message['hang'] ?? ($this->machine['is_hang'] ?? 0)));
+
+            $setKey   = $machineLevel . '_' . ($isHang ? '1' : '0');
+            $stepSets = $this->getRemoteOutGoodsStepSets();
+            $stepSet  = $stepSets[$setKey] ?? [];
+
+            if (!$stepSet) {
+                actionLog(
+                    ['machine_level' => $machineLevel, 'is_hang' => $isHang, 'setKey' => $setKey],
+                    '远程出货步骤未匹配到步骤集',
+                    'remoteOutGoodsSteps'
+                );
+                return;
+            }
+
+            // 构建设备上报映射：key => ['status'=>, 'value'=>]
+            $reportedMap = [];
+            foreach ($steps as $step) {
+                $key = $step['key'] ?? '';
+                if ($key) {
+                    $reportedMap[$key] = [
+                        'status' => intval($step['status'] ?? 2),
+                        'value'  => $step['value'] ?? '',
+                    ];
+                }
+            }
+
+            $managerId = $managerId ?: ($this->manager['manager_id'] ?? 0);
+
+            // 先删除该 sod_id + 设备 下的旧步骤数据
+            Db::name('machine_remote_steps')->where([
+                'sod_id' => $sodId,
+                'm_id'   => $machineMId,
+            ])->delete();
+
+            // 按步骤集全量插入，默认status=2，上报过的覆盖
+            $insertRows = [];
+            $stepNum    = 0;
+            foreach ($stepSet as $stepKey => $stepDesc) {
+                $stepNum++;
+                $reported = $reportedMap[$stepKey] ?? null;
+                $status   = $reported ? $reported['status'] : 2;
+                $value    = $reported ? $reported['value'] : '';
+
+                $insertRows[] = [
+                    'm_id'       => $machineMId,
+                    'sod_id'     => $sodId,
+                    'name'       => $stepDesc,
+                    'machine_id' => $machineId,
+                    'key'        => $stepKey,
+                    'step'       => $stepNum,
+                    'status'     => $status ?: 2,
+                    'value'      => $value,
+                    'desc'       => $setKey.'-'.$stepDesc,
+                    'manager_id' => $managerId,
+                ];
+            }
+
+            if ($insertRows) {
+                Db::name('machine_remote_steps')->insertAll($insertRows);
+                actionLog(
+                    ['sod_id' => $sodId, 'set' => $setKey, 'total' => count($insertRows), 'reported' => count($reportedMap)],
+                    '远程出货步骤入库',
+                    'remoteOutGoodsSteps'
+                );
+            }
+        } catch (\Exception $e) {
+            actionException($e, 1, 'remoteOutGoodsSteps');
+        }
+    }
 
     public function remoteOutGoods(){
         actionLog($this->message, "远程出货接收mq");
         $status = intval($this->message['status'] ?? 0);
         $sodId = intval($this->message['sod_id'] ?? 0);
         $logId = intval($this->message['log_id'] ?? 0);
+        $reportedLogId = $logId;
+        if (!$reportedLogId && $sodId) {
+            $pendingHeadAction = RemoteActionLogModel::getFind([
+                ['sod_id', '=', $sodId],
+                ['type', 'in', ['continueOutGoods', 'recycGoods']],
+                ['status', 'in', [1, 2]],
+            ], 'id,type,status', 'id desc');
+            if ($pendingHeadAction) {
+                actionLog(
+                    ['sod_id' => $sodId, 'status' => $status],
+                    '机头商品处理回执缺少log_id，拒绝按普通远程出货处理',
+                    'headGoodsAction'
+                );
+                return false;
+            }
+        }
         [$logId, $log] = $this->resolveRemoteOutGoodsLog($logId, $sodId);
+        if ($reportedLogId && !$log) {
+            actionLog(
+                ['log_id' => $reportedLogId, 'sod_id' => $sodId, 'status' => $status],
+                '远程出货回执log_id无效',
+                'remoteOutGoods'
+            );
+            return false;
+        }
+        if ($log) {
+            $logSodId = intval($log['sod_id'] ?? 0);
+            $logMachineId = (string)($log['machine_id'] ?? '');
+            $currentMachineId = (string)($this->machine['machine_id'] ?? '');
+            if (($sodId && $logSodId && $sodId !== $logSodId)
+                || ($logMachineId !== '' && $currentMachineId !== '' && $logMachineId !== $currentMachineId)) {
+                actionLog(
+                    [
+                        'log_id' => $logId,
+                        'sod_id' => $sodId,
+                        'log_sod_id' => $logSodId,
+                        'machine_id' => $currentMachineId,
+                        'log_machine_id' => $logMachineId,
+                    ],
+                    '远程出货回执与动作日志不匹配',
+                    'remoteOutGoods'
+                );
+                return false;
+            }
+        }
+        $actionType = is_array($log) ? ($log['type'] ?? '') : '';
+        if (in_array($actionType, ['continueOutGoods', 'recycGoods'], true)) {
+            return $this->handleHeadGoodsActionReport($status, $logId, $log);
+        }
         if (!$sodId) {
             actionLog($this->message, "远程出货缺少sod_id", "remoteOutGoods");
             return $this->handleRemoteOutGoodsWithoutOrder($status, $logId, $log);
@@ -744,14 +1038,18 @@ trait MachineTrait
 
         $detail = $this->getSaleOrdersDetailsFind(
             ['sod_id' => $sodId],
-            'sod_id,channel_code,channel_position,success_quantity,fail_quantity,remote_out_goods_status'
+            'sod_id,channel_code,channel_position,quantity,success_quantity,fail_quantity,remote_out_goods_status'
         );
         if (!$detail) {
             actionLog(['sod_id' => $sodId], "远程出货未找到子订单", "remoteOutGoods");
             return $this->handleRemoteOutGoodsWithoutOrder($status, $logId, $log);
         }
         $detail = is_object($detail) ? $detail->toArray() : $detail;
-
+        // 处理远程出货步骤上报
+        $steps = $this->message['steps'] ?? $this->message['step'] ?? [];
+        if ($steps) {
+            $this->handleRemoteOutGoodsSteps($sodId, $steps);
+        }
         try {
             $this->startTrans();
 
@@ -811,8 +1109,15 @@ trait MachineTrait
                 $updateFields[] = 'channel_position';
 
                 if (in_array($status, [21, 3], true)) {
-                    $updateSod['success_quantity'] = intval($detail['success_quantity'] ?? 0) + 1;
-                    $updateSod['fail_quantity'] = max(0, intval($detail['fail_quantity'] ?? 0) - 1);
+                    $quantity = max(1, intval($detail['quantity'] ?? 0));
+                    $currentSuccess = max(0, intval($detail['success_quantity'] ?? 0));
+                    $nextSuccess = min($quantity, $currentSuccess + 1);
+                    $successIncrement = max(0, $nextSuccess - $currentSuccess);
+                    $updateSod['success_quantity'] = $nextSuccess;
+                    $updateSod['fail_quantity'] = max(
+                        0,
+                        intval($detail['fail_quantity'] ?? 0) - $successIncrement
+                    );
                     $updateFields[] = 'success_quantity';
                     $updateFields[] = 'fail_quantity';
                 }
@@ -857,24 +1162,124 @@ trait MachineTrait
         }
     }
 
+    /**
+     * 处理机头遗留商品的继续出货/直接回收回执。
+     *
+     * 这两类动作复用 remoteOutGoods 上报协议，但原订单已经完成库存结算，
+     * 因此这里只维护动作日志，不能再次修改订单、子单、退款、库存或
+     * remote_out_goods_status。
+     */
+    protected function handleHeadGoodsActionReport($status, $logId, array $log)
+    {
+        $status = intval($status);
+        $logId = intval($logId);
+        if (!$logId || !in_array($status, [2, 20, 21, 3, 4], true)) {
+            actionLog(
+                ['log_id' => $logId, 'status' => $status],
+                '机头商品处理回执参数无效',
+                'headGoodsAction'
+            );
+            return false;
+        }
+
+        try {
+            Db::startTrans();
+            $lockedLog = Db::name('remote_action_log')->where(['id' => $logId])->lock(true)->find();
+            if (!$lockedLog || !in_array($lockedLog['type'] ?? '', ['continueOutGoods', 'recycGoods'], true)) {
+                Db::rollback();
+                actionLog(['log_id' => $logId], '未找到机头商品处理日志', 'headGoodsAction');
+                return false;
+            }
+
+            $machineId = (string)($this->machine['machine_id'] ?? '');
+            if ($machineId !== '' && (string)$lockedLog['machine_id'] !== $machineId) {
+                Db::rollback();
+                actionLog(
+                    ['log_id' => $logId, 'log_machine_id' => $lockedLog['machine_id'], 'machine_id' => $machineId],
+                    '机头商品处理回执设备不匹配',
+                    'headGoodsAction'
+                );
+                return false;
+            }
+
+            $messageSodId = intval($this->message['sod_id'] ?? 0);
+            $logSodId = intval($lockedLog['sod_id'] ?? 0);
+            if (!$messageSodId || !$logSodId || $messageSodId !== $logSodId) {
+                Db::rollback();
+                actionLog(
+                    ['log_id' => $logId, 'message_sod_id' => $messageSodId, 'log_sod_id' => $logSodId],
+                    '机头商品处理回执sod_id不匹配',
+                    'headGoodsAction'
+                );
+                return false;
+            }
+
+            $currentStatus = intval($lockedLog['status'] ?? 0);
+            // 一个动作日志一旦成功或失败即为终态；重试必须创建新的 log_id。
+            if (in_array($currentStatus, [3, 4], true)) {
+                Db::commit();
+                actionLog(
+                    ['log_id' => $logId, 'type' => $lockedLog['type'], 'status' => $status, 'current_status' => $currentStatus],
+                    '机头商品处理重复终态回执，按幂等成功返回',
+                    'headGoodsAction'
+                );
+                return true;
+            }
+
+            // 2/20/21 都是执行中的过程状态；只有3/4是最终成功/失败。
+            $actionStatus = in_array($status, [2, 20, 21], true) ? 2 : $status;
+            $result = Db::name('remote_action_log')->where(['id' => $logId])->update([
+                'status' => $actionStatus,
+                'operator_at' => date('Y-m-d H:i:s'),
+            ]);
+            if ($result === false) {
+                Db::rollback();
+                return false;
+            }
+
+            Db::commit();
+            actionLog(
+                [
+                    'log_id' => $logId,
+                    'type' => $lockedLog['type'],
+                    'device_status' => $status,
+                    'action_status' => $actionStatus,
+                    'sod_id' => $logSodId,
+                ],
+                '机头商品处理回执完成',
+                'headGoodsAction'
+            );
+            return true;
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1, 'headGoodsAction');
+            return false;
+        }
+    }
+
     protected function resolveRemoteOutGoodsLog($logId, $sodId): array
     {
         $logId = intval($logId);
         $sodId = intval($sodId);
+        $hasExplicitLogId = $logId > 0;
         if (!$logId) {
             $tradeNo = trim((string)($this->message['trade_no'] ?? ''));
             if (strpos($tradeNo, 'remote_out_goods_') === 0) {
                 $logId = intval(str_replace('remote_out_goods_', '', $tradeNo));
+                $hasExplicitLogId = $logId > 0;
             }
         }
 
         $log = null;
         if ($logId) {
-            $log = RemoteActionLogModel::getFind(['id' => $logId], 'id,machine_id,channel_code,status,sod_id');
+            $log = RemoteActionLogModel::getFind(
+                ['id' => $logId],
+                'id,type,machine_id,order_id,sod_id,goods_id,channel_code,status'
+            );
             $log = is_object($log) ? $log->toArray() : $log;
         }
 
-        if (!$log && $sodId) {
+        if (!$log && !$hasExplicitLogId && $sodId) {
             $where = [
                 'type' => 'remoteOutGoods',
                 'sod_id' => $sodId,
@@ -884,7 +1289,11 @@ trait MachineTrait
             } elseif (!empty($this->machine['machine_id'])) {
                 $where['machine_id'] = $this->machine['machine_id'];
             }
-            $log = RemoteActionLogModel::getFind($where, 'id,machine_id,channel_code,status,sod_id', 'id desc');
+            $log = RemoteActionLogModel::getFind(
+                $where,
+                'id,type,machine_id,order_id,sod_id,goods_id,channel_code,status',
+                'id desc'
+            );
             $log = is_object($log) ? $log->toArray() : $log;
             if ($log) {
                 $logId = intval($log['id'] ?? 0);
@@ -1170,31 +1579,7 @@ trait MachineTrait
             }
 
             if ($successCount > 0) {
-                $newStock = intval($mc['stock']) - $successCount;
-                if ($newStock > 0) {
-                    $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $newStock]);
-                } else {
-                    $clearData = [
-                        'mc_id' => $mc['mc_id'],
-                        'mg_id' => 0,
-                        'g_id' => 0,
-                        'g_name' => '',
-                        'gc_id' => 0,
-                        'gc_name' => '',
-                        'pic' => '',
-                        'sku' => '',
-                        'bar_code' => '',
-                        'cost_price' => 0,
-                        'market_price' => 0,
-                        'retail_price' => 0,
-                        'gift_points' => 0,
-                        'stock' => 0,
-                        'frozen_stock' => 0,
-                    ];
-                    $this->updateMachineChannel($clearData);
-                }
-
-                $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => intval($mc['mc_id'])]);
+                $this->deductMachineChannelStockAndSendUpdateMq($mc, $successCount, 'remoteRemovalEnd');
             }
 
             return 1;
@@ -1202,6 +1587,51 @@ trait MachineTrait
             actionException($e, 1, 'remoteRemovalEnd');
             return 1;
         }
+    }
+
+    /**
+     * 扣减货道库存；库存不足时清空货道商品，并复用后台 updateMc MQ 同步设备货道信息。
+     * @param array $mc
+     * @param int $quantity
+     * @param string $logTag
+     * @return mixed
+     */
+    protected function deductMachineChannelStockAndSendUpdateMq($mc, $quantity, $logTag = 'DataUpload')
+    {
+        $quantity = intval($quantity);
+        if ($quantity <= 0 || empty($mc['mc_id'])) {
+            return true;
+        }
+
+        $newStock = intval($mc['stock'] ?? 0) - $quantity;
+        if ($newStock > 0) {
+            $result = $this->updateMachineChannel(['mc_id' => $mc['mc_id'], 'stock' => $newStock]);
+        } else {
+            $clearData = [
+                'mc_id' => $mc['mc_id'],
+                'mg_id' => 0,
+                'g_id' => 0,
+                'g_name' => '',
+                'gc_id' => 0,
+                'gc_name' => '',
+                'pic' => '',
+                'sku' => '',
+                'bar_code' => '',
+                'cost_price' => 0,
+                'market_price' => 0,
+                'retail_price' => 0,
+                'gift_points' => 0,
+                'stock' => 0,
+                'frozen_stock' => 0,
+            ];
+            $result = $this->updateMachineChannel($clearData);
+        }
+
+        if (!empty($mc['machine_id'])) {
+            $mqResult = $this->sendToMachine(['machine_id' => $mc['machine_id']], 'updateMc', ['mc_id' => intval($mc['mc_id'])]);
+            actionLog(['mc_id' => intval($mc['mc_id']), 'quantity' => $quantity, 'mq_result' => $mqResult], '扣减货道库存后下发updateMc', $logTag);
+        }
+        return $result;
     }
 
     // public function checkRecycleBox(){

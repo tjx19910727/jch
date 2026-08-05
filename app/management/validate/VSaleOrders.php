@@ -13,6 +13,7 @@ class VSaleOrders extends VCommon
 {
     protected $rule = [
         "order_id" => "require",
+        "machine_id" => "require|max:64",
         "refund" => "require",
         "payment_method" => "require",
         "payment_time" => "require",
@@ -24,6 +25,8 @@ class VSaleOrders extends VCommon
 
     protected $message = [
         "order_id.require" => "VSaleOrders.order_id_require",
+        "machine_id.require" => "请选择打印小票的目标设备",
+        "machine_id.max" => "目标设备编号长度不能超过64个字符",
         "refund.require" => "VSaleOrders.refund_require",
         "payment_method.require" => "VSaleOrders.offline_refund_payment_method_require",
         "payment_time.require" => "VSaleOrders.offline_refund_payment_time_require",
@@ -38,6 +41,7 @@ class VSaleOrders extends VCommon
 
     protected $scene = [
         "refund" => ["order_id", "refund"],
+        "printReceipt" => ["order_id", "machine_id"],
         "offlineRefund" => [
             "order_id",
             "refund",

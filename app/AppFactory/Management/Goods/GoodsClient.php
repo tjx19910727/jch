@@ -20,7 +20,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
-use app\AppFactory\RabbitMq\MqProducer;
+use app\AppFactory\RabbitMq\AsyncTaskProducer;
 use app\management\validate\VGoods;
 use think\facade\Db;
 
@@ -68,24 +68,14 @@ class GoodsClient extends ManagementClient
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
-        $list = $this->getSaleOrdersGoodsCountList($where, 0,
-            'g_id,g_name,totalPrice,totalQuantity,retail_price,pic',
-            // 'totalPrice desc,totalQuantity desc, g_id desc', '', '', 10);
-            'totalPrice desc', '', '', 10);
+        $list = $this->queryGoodsRanking($where, 1, 0, 10);
         if ($list) {
-            $list = $list->toArray();
-            $lang = input("lang");
-            if ($lang) {
-                $whereGl['lang'] = $lang;
-                foreach ($list as $key => $value) {
-                    $whereGl['g_id'] = $value['g_id'];
-                    $gl = $this->getGoodsLangFind($whereGl, 0, 'g_name');
-                    if ($gl) {
-                        $value['g_name'] = $gl['g_name'];
-                    }
-                    $list[$key] = $value;
-                }
+            $list = $this->formatGoodsRankingList($list)->toArray();
+            $fields = array_flip(['g_id', 'g_name', 'totalPrice', 'totalQuantity', 'retail_price', 'pic']);
+            foreach ($list as &$item) {
+                $item = array_intersect_key($item, $fields);
             }
+            unset($item);
         }
         return $this->rQ($list);
     }
@@ -171,8 +161,7 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        MqProducer::export([
-            'job_type' => 'goods_update',
+        AsyncTaskProducer::publish('goods_update', [
             'g_id' => $gId,
             'request_time' => date('Y-m-d H:i:s'),
             'manager_id' => $this->manager['manager_id'] ?? 0,
@@ -275,9 +264,10 @@ class GoodsClient extends ManagementClient
 
     public function exportRankingList($where)
     {
-        $list = $this->getSaleOrdersGoodsCountList($where, 0,
-            'g_name,totalPrice,totalQuantity,retail_price,pic',
-            'totalPrice desc,totalQuantity desc, g_id desc', '', '', 10);
+        if($this->manager['account']=='meichitu'){
+            $where[] = ['gc_name','like','%美驰图%'];
+        }
+        $list = $this->queryGoodsRanking($where, 1, 0, 10);
         if ($list) {
             $list = $list->toArray();
             $title = [
@@ -630,6 +620,8 @@ class GoodsClient extends ManagementClient
      */
     public function getRankingList($where = [], $pageNum = 0, $topType = 1)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
@@ -637,27 +629,19 @@ class GoodsClient extends ManagementClient
         $list = $this->queryGoodsRanking($where, $topType, $pageNum);
 
         if ($list) {
-            $lang = input("lang");
-            if ($lang) {
-                if ($pageNum) {
-                    $list = $list->each(function ($item) use ($lang) {
-                        $gl = $this->getGoodsLangFind(['lang' => $lang, 'g_id' => $item['g_id']], 0, 'g_name');
-                        if ($gl) {
-                            $item['g_name'] = $gl['g_name'];
-                        }
-                        return $item;
-                    });
-                } else {
-                    $list = $list->toArray();
-                    foreach ($list as $key => $value) {
-                        $gl = $this->getGoodsLangFind(['lang' => $lang, 'g_id' => $value['g_id']], 0, 'g_name');
-                        if ($gl) {
-                            $value['g_name'] = $gl['g_name'];
-                        }
-                        $list[$key] = $value;
-                    }
-                }
-            }
+            $list = $this->formatGoodsRankingList($list);
+        }
+
+        if ($pageNum === 0) {
+            $rows = $list ? $list->toArray() : [];
+            $total = count($rows);
+            $list = [
+                'total' => $total,
+                'per_page' => $total,
+                'current_page' => 1,
+                'last_page' => $total > 0 ? 1 : 0,
+                'data' => $rows,
+            ];
         }
 
         return $this->rQ($list);
@@ -667,21 +651,27 @@ class GoodsClient extends ManagementClient
     /**
      * 导出商品排行榜（V2）
      * @param array $where
+     * @param int $topType
+     * @param int $pageNum 排行前多少条，0 表示全部
      * @return array|\think\response\Json|string
      */
-    public function exportRankingListV2($where, $topType = 1)
+    public function exportRankingListV2($where, $topType = 1, $pageNum = 0)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if($this->manager['account']=='meichitu'){
             $where[] = ['gc_name','like','%美驰图%'];
         }
 
-        $list = $this->queryGoodsRanking($where, $topType, 0);
+        $list = $this->queryGoodsRanking($where, $topType, 0, $pageNum);
         if ($list) {
             $list = $list->toArray();
             $title = [
                 "g_name" => $this->lang("export.g_name"),
-                "totalPrice" => $this->lang("export.totalPrice"),
-                "totalQuantity" => $this->lang("export.totalQuantity"),
+                "totalPrice" => '实际销售额（扣除退款）',
+                "totalQuantity" => '实际销量（扣除退款）',
+                "totalRankPrice" => $this->lang("export.totalPrice"),
+                "totalRankQuantity" => $this->lang("export.totalQuantity"),
                 "totalDiscountPrice" => "优惠金额",
                 "totalRefundAmount" => "退款金额",
                 "totalRefundQuantity" => "退款数量",
@@ -1220,13 +1210,14 @@ class GoodsClient extends ManagementClient
      * @param array $where
      * @param int $topType
      * @param int $pageNum
+     * @param int $limit
      * @return \think\Collection|\think\Paginator
      */
-    private function queryGoodsRanking($where, $topType = 1, $pageNum = 0)
+    private function queryGoodsRanking($where, $topType = 1, $pageNum = 0, $limit = 0)
     {
-        $order = 'totalPrice desc,totalQuantity desc,g_id desc';
+        $order = 'totalPrice desc,totalQuantity desc,g_id desc,g_name asc';
         if ($topType == 2) {
-            $order = 'totalQuantity desc,totalPrice desc,g_id desc';
+            $order = 'totalQuantity desc,totalPrice desc,g_id desc,g_name asc';
         }
 
         $query = Db::name('sale_orders_details')->alias('sod')
@@ -1235,6 +1226,7 @@ class GoodsClient extends ManagementClient
             ->field([
                 'sod.g_id' => 'g_id',
                 'MAX(sod.g_name)' => 'g_name',
+                'MAX(sod.wc_order_no)' => 'wc_order_no',
                 'MAX(sod.pic)' => 'pic',
                 'MAX(sod.sku)' => 'sku',
                 'MAX(sod.gc_id)' => 'gc_id',
@@ -1242,13 +1234,15 @@ class GoodsClient extends ManagementClient
                 'ROUND(MAX(sod.cost_price),2)' => 'cost_price',
                 'ROUND(MAX(sod.market_price),2)' => 'market_price',
                 'ROUND(MAX(sod.retail_price),2)' => 'retail_price',
-                'ROUND(SUM(sod.total_sod_price),2)' => 'totalPrice',
-                'SUM(sod.quantity)' => 'totalQuantity',
+                'ROUND(SUM(sod.total_sod_price),2)' => 'totalRankPrice',
+                'SUM(sod.quantity)' => 'totalRankQuantity',
                 'ROUND(SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalRefundAmount',
                 'SUM(IFNULL(sod.refund_quantity,0))' => 'totalRefundQuantity',
+                'ROUND(SUM(sod.total_sod_price)-SUM(IFNULL(sod.refund_amount,0)),2)' => 'totalPrice',
+                'SUM(sod.quantity)-SUM(IFNULL(sod.refund_quantity,0))' => 'totalQuantity',
                 'ROUND(SUM(sod.discount_price),2)' => 'totalDiscountPrice',
             ])
-            ->group('sod.g_id')
+            ->group("sod.g_id,IF(sod.g_id = 0, sod.g_name, '')")
             ->having('ROUND(SUM(sod.total_sod_price), 2) > 0 AND SUM(sod.quantity) > 0')
             ->orderRaw($order);
 
@@ -1257,10 +1251,65 @@ class GoodsClient extends ManagementClient
         if ($pageNum) {
             $res = $query->paginate($pageNum, false, ["query" => request()->param()]);
         }else{
+            if ($limit > 0) {
+                $query->limit($limit);
+            }
             $res = $query->select();
         }
         
         return $res;
+    }
+
+    /**
+     * 统一处理排行榜商品编号与多语言名称。
+     * @param \think\Collection|\think\Paginator $list
+     * @return \think\Collection|\think\Paginator
+     */
+    private function formatGoodsRankingList($list)
+    {
+        $lang = input("lang");
+        return $list->each(function ($item) use ($lang) {
+            if (intval($item['g_id'] ?? 0) === 0) {
+                $onlineGoodsNo = $this->getGoodsRankingOnlineNo($item['wc_order_no'] ?? '');
+                if ($onlineGoodsNo !== '') {
+                    $item['g_id'] = $onlineGoodsNo;
+                }
+            } elseif ($lang) {
+                $gl = $this->getGoodsLangFind(['lang' => $lang, 'g_id' => $item['g_id']], 0, 'g_name');
+                if ($gl) {
+                    $item['g_name'] = $gl['g_name'];
+                }
+            }
+            unset($item['wc_order_no']);
+            return $item;
+        });
+    }
+
+    /**
+     * 从线上商品订单信息中获取商品编号。
+     * @param mixed $wcOrderNo
+     * @return string
+     */
+    private function getGoodsRankingOnlineNo($wcOrderNo)
+    {
+        if (is_string($wcOrderNo)) {
+            $wcOrderNo = json_decode($wcOrderNo, true);
+        }
+        if (!is_array($wcOrderNo)) {
+            return '';
+        }
+
+        foreach ($wcOrderNo as $key => $item) {
+            $no = is_array($item) ? trim(strval($item['no'] ?? '')) : '';
+            if ($no !== '') {
+                return $no;
+            }
+            if (is_string($key) && trim($key) !== '') {
+                return trim($key);
+            }
+        }
+
+        return '';
     }
 
     /**

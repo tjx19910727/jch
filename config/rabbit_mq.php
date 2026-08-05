@@ -16,26 +16,26 @@ return [
     // 设备签名密钥有效期提示，单位：秒。设备端应按收到后的经过时间判断，不依赖本机绝对时间。
     'machine_sign_key_expires_in' => 3600,
 
-    "AMQP" => [
-        "host" => "127.0.0.1",      // rabbitMQ IP
-        'port' => 5673,             // rabbitMQ 端口
-        'user' => 'dkm',            // rabbitMQ 账号
-        'password' => '123456'      // rabbitMQ 密码
-    ],
+    // "AMQP" => [
+    //     "host" => "127.0.0.1",      // rabbitMQ IP
+    //     'port' => 5673,             // rabbitMQ 端口
+    //     'user' => 'dkm',            // rabbitMQ 账号
+    //     'password' => '123456'      // rabbitMQ 密码
+    // ],
 
-    // 连接本地RabbitMQ
-    'AMQP_local' => [
-        'host' => '127.0.0.1',//连接rabbitmq,此为安装rabbitmq服务器port'=>'5672'
-        'port' => 5672,
-        'login' => 'dkm',
-        'password' => 'dkm123456',
-        'vhost' => '/',
-    ],
+    // // 连接本地RabbitMQ
+    // 'AMQP_local' => [
+    //     'host' => '127.0.0.1',//连接rabbitmq,此为安装rabbitmq服务器port'=>'5672'
+    //     'port' => 5672,
+    //     'login' => 'dkm',
+    //     'password' => 'dkm123456',
+    //     'vhost' => '/',
+    // ],
 
     // 服务器连接配置
     'AMQP_online' => [
-        'host' => '39.108.118.174',//  连接rabbitmq,   此为安装rabbitmq服务器port'=>'5672'
-        'port' => 15671,
+        'host' => '172.16.0.81',//  连接rabbitmq,   此为安装rabbitmq服务器port'=>'5672'81
+        'port' => 5672,
         'login' => 'kiosk',
         'password' => 'Kiosk&2019',
         'vhost' => 'kiosk',
@@ -57,6 +57,15 @@ return [
         'queue_name' => 'export_queue',
         'route_key' => 'export',
         'consumer_tag' => 'export',
+    ],
+
+    # 异步任务队列
+    'async_task_queue' => [
+        'exchange_name' => 'async_task_exchange',
+        'exchange_type' => 'topic',#主题
+        'queue_name' => 'async_task_queue',
+        'route_key' => 'async_task',
+        'consumer_tag' => 'async_task',
     ],
 
     # 发送设备信息队列

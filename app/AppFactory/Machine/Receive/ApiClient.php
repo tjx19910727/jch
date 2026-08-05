@@ -162,6 +162,8 @@ class ApiClient extends ReceiveBaseClient
     public $card_default_pwd = '123456';
     public $receipt_code1 = "/uploads/adv/20250618/41da4aa9c2e34fb84b123c8d39eba214.png";
     public $receipt_code2 = "/uploads/adv/20251022/0e543e3d6e1861bd59fed97194fd3f3f.jpg";
+    protected $refundGoodsSpecialCode = '0000';
+
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
@@ -931,6 +933,14 @@ class ApiClient extends ReceiveBaseClient
         $where["m_id"] = $this->machine['m_id'];
         $configField = "*";
         $data = $this->getMachineConfigFind($where, $configField);
+        if (!isset($data['run_mode']) || !in_array(intval($data['run_mode']), [1, 2], true)) {
+            $data['run_mode'] = 1;
+        } else {
+            $data['run_mode'] = intval($data['run_mode']);
+        }
+        if (!isset($data['online_pay_success_tip'])) {
+            $data['online_pay_success_tip'] = '';
+        }
         if (isset($data['pay_type']) && $data['pay_type']) {
             $pay_type = explode(",", $data['pay_type']);
             if ($pay_type) {
@@ -948,6 +958,27 @@ class ApiClient extends ReceiveBaseClient
             $data['cart_num_limit'] = $data['limit_quantity'];
         }
         return $this->rQ($data);
+    }
+
+    /**
+     * 设备上报修改自身运行模式：1生产模式，2测试模式
+     * @return array|\think\response\Json
+     */
+    public function reportMachineRunMode()
+    {
+        $runMode = intval($this->data['run_mode']);
+        $result = $this->updateMachineConfig([
+            'run_mode' => $runMode,
+        ], [
+            'm_id' => $this->machine['m_id'],
+        ]);
+        actionLog([
+            'machine_id' => $this->machine['machine_id'],
+            'run_mode' => $runMode,
+            'result' => $result,
+        ], '设备上报修改运行模式', 'reportMachineRunMode');
+
+        return $this->rU($result);
     }
 
     /**
@@ -2169,7 +2200,7 @@ class ApiClient extends ReceiveBaseClient
     /**
      * 设备 HTTP 上报回收箱商品数量变化。
      * operate: 1 回收箱添加商品；2 回收箱取出商品；3 回收箱清空
-     * type: 1 出货失败商品回收；2 远程回收；3 货道回收；4 后台退货退款
+     * type: 1 出货失败商品回收；2 远程回收；3 货道回收；4 超预取货失败
      * @return array|string
      */
     public function recycleBoxGoodsChange()
@@ -2182,6 +2213,10 @@ class ApiClient extends ReceiveBaseClient
             $recycleBoxChangeType = intval($this->data['type'] ?? 0);
             if (!in_array($recycleBoxChangeType, [1, 2, 3, 4], true)) {
                 return $this->r(300, '回收箱商品变化类型错误');
+            }
+            $machineChannel = $this->getRecycleBoxStockMachineChannel($operate, $recycleBoxChangeType);
+            if ($machineChannel === false) {
+                return $this->r(300, 'machine_channel不能为空');
             }
 
             if ($operate === 3) {
@@ -2231,7 +2266,8 @@ class ApiClient extends ReceiveBaseClient
                     $goodsChange['g_id'],
                     $operate,
                     $recycleBoxChangeType,
-                    $goodsChange['quantity']
+                    $goodsChange['quantity'],
+                    $machineChannel
                 );
             }
             $result = $this->checkFlag($flag);
@@ -2256,6 +2292,29 @@ class ApiClient extends ReceiveBaseClient
             actionException($e, 1, 'recycleBoxGoodsChange');
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    protected function getRecycleBoxStockMachineChannel($operate, $recycleBoxChangeType)
+    {
+        if (intval($operate) !== 1 || !in_array(intval($recycleBoxChangeType), [1, 4], true)) {
+            return [];
+        }
+
+        $machineChannelCode = trim(strval($this->data['machine_channel'] ?? ''));
+        if ($machineChannelCode === '') {
+            return false;
+        }
+
+        $field = 'mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code';
+        $machineChannel = $this->getMachineChannelFind([
+            'm_id' => $this->machine['m_id'],
+            'channel_code' => $machineChannelCode,
+        ], $field);
+        if ($machineChannel) {
+            return is_object($machineChannel) ? $machineChannel->toArray() : $machineChannel;
+        }
+
+        return false;
     }
 
     protected function buildRecycleBoxGoodsChangesFromInfo($goodsInfo)
@@ -2344,7 +2403,7 @@ class ApiClient extends ReceiveBaseClient
         return $total;
     }
 
-    protected function addRecycleBoxGoodsChangeLog($gId, $operate, $recycleBoxChangeType, $changeValue = 1)
+    protected function addRecycleBoxGoodsChangeLog($gId, $operate, $recycleBoxChangeType, $changeValue = 1, $machineChannel = [])
     {
         $goods = $this->getMachineGoodsFind(
             ['m_id' => $this->machine['m_id'], 'g_id' => $gId],
@@ -2357,6 +2416,11 @@ class ApiClient extends ReceiveBaseClient
             );
         }
         $goods = $goods ? (is_object($goods) ? $goods->toArray() : $goods) : [];
+        if ($machineChannel && intval($machineChannel['g_id'] ?? 0) === intval($gId)) {
+            $goods = array_merge($goods, array_filter($machineChannel, function ($value) {
+                return $value !== null && $value !== '';
+            }));
+        }
 
         $descKey = $operate === 2
             ? 'terminal_recycle_box_remove_goods_' . $recycleBoxChangeType
@@ -2369,8 +2433,8 @@ class ApiClient extends ReceiveBaseClient
             'm_id' => $this->machine['m_id'],
             'machine_id' => $this->machine['machine_id'],
             'machine_name' => $this->machine['machine_name'] ?? '',
-            'mc_id' => 0,
-            'channel_code' => '',
+            'mc_id' => intval($machineChannel['mc_id'] ?? 0),
+            'channel_code' => $machineChannel['channel_code'] ?? '',
             'mg_id' => $goods['mg_id'] ?? 0,
             'g_id' => $gId,
             'g_name' => $goods['g_name'] ?? '',
@@ -2505,6 +2569,7 @@ class ApiClient extends ReceiveBaseClient
         $rows = Db::name('machine_mq_record')
             ->where('machine_id', $this->machine['machine_id'])
             ->where('type', 2)
+            ->where('status', 2)
             ->where('create_time', '>=', time() - intval($seconds))
             ->order('mr_id', 'desc')
             ->limit(20)
@@ -2525,15 +2590,15 @@ class ApiClient extends ReceiveBaseClient
             if (!$payload || !isset($payload['msgType'])) {
                 continue;
             }
-            if ($payload['msgType'] === 'img' && ($payload['field'] ?? '') === 'screen_img') {
-                return [
-                    'msgType' => $payload['msgType'],
-                    'field' => $payload['field'],
-                    'msg_id' => $record['msg_id'] ?? ($row['msg_id'] ?? ''),
-                    'timestamp' => $record['timestamp'] ?? ($row['create_time'] ?? 0),
-                ];
-            }
             if (in_array($payload['msgType'], $restartTypes, true)) {
+                // HTTP 兜底只允许真正的重启命令，并原子标记为已消费，避免后续心跳重复返回。
+                $consumed = Db::name('machine_mq_record')
+                    ->where('mr_id', intval($row['mr_id']))
+                    ->where('status', 2)
+                    ->update(['status' => 4]);
+                if (!$consumed) {
+                    continue;
+                }
                 return [
                     'msgType' => $payload['msgType'],
                     'msg_id' => $record['msg_id'] ?? ($row['msg_id'] ?? ''),
@@ -5036,13 +5101,66 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 设备上报远程出货步骤状态（HTTP接口 /machine/receive/remoteStatus）
+     * 设备传入 sod_id + md_content（JSON字符串，key为步骤键，value=1成功/2失败）
+     * 内部转为步骤数组后调用 handleRemoteOutGoodsSteps 入库
+     * @return array|\think\response\Json
+     */
+    public function remoteStatus()
+    {
+        try {
+            $sodId = intval($this->data['sod_id'] ?? 0);
+            $mdContent = $this->data['md_content'] ?? '';
+            $managerId = intval($this->data['manager_id'] ?? 0);
+            if (!$sodId) {
+                return $this->rFail('sod_id不能为空');
+            }
+            
+            if (!$mdContent) {
+                return $this->rFail('md_content不能为空');
+            }
+
+            // 解析 md_content JSON 字符串为数组
+            if (is_string($mdContent)) {
+                $mdContent = json_decode($mdContent, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    actionLog(['sod_id' => $sodId, 'md_content_raw' => $this->data['md_content']], 'remoteStatus md_content json解析失败');
+                    return $this->rFail('md_content格式错误，需为JSON字符串');
+                }
+            }
+
+            if (!is_array($mdContent) || !$mdContent) {
+                return $this->rFail('md_content内容为空');
+            }
+
+            // 转换为步骤数组：[['key' => 'xxxx', 'status' => 1], ...]
+            $steps = [];
+            foreach ($mdContent as $key => $status) {
+                $steps[] = [
+                    'key' => $key,
+                    'status' => intval($status),
+                ];
+            }
+
+            actionLog(['sod_id' => $sodId, 'steps' => $steps,'manager_id' => $managerId], 'remoteStatus接收步骤数据','remoteStatus');
+
+            $this->handleRemoteOutGoodsSteps($sodId, $steps,$managerId);
+
+            return $this->r(200, 'SUCCESS');
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->rTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 设备提交客户退货日志。
      * 普通编码匹配当前设备订单号后四位；特殊编码仅跳过订单校验，不触发实际退款。
      */
     public function submitRefundGoodsLog()
     {
         $inputCode = trim((string)$this->data['input_code']);
-        $specialCode = trim((string)config('refund_goods.special_code')) ?? '0000';
+        $specialCode = $this->refundGoodsSpecialCode;
         $isSpecialCode = $specialCode !== ''
             && preg_match('/^\d{4}$/', $specialCode)
             && hash_equals($specialCode, $inputCode);
@@ -5069,9 +5187,9 @@ class ApiClient extends ReceiveBaseClient
             'input_code' => $inputCode,
             'verify_type' => $isSpecialCode ? 2 : 1,
             'verify_status' => $verifyStatus,
-            'pic_out_goods_box' => trim((string)$this->data['pic_out_goods_box']),
-            'video_out_goods_box' => trim((string)$this->data['video_out_goods_box']),
-            'video_refund_goods' => trim((string)$this->data['video_refund_goods']),
+            'pic_out_goods_box' => trim((string)($this->data['pic_out_goods_box'] ?? '')),
+            'video_out_goods_box' => trim((string)($this->data['video_out_goods_box'] ?? '')),
+            'video_refund_goods' => trim((string)($this->data['video_refund_goods'] ?? '')),
         ];
         $logId = $this->addMachineRefundGoodsLog($insert);
 

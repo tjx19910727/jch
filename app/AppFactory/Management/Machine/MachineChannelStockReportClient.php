@@ -27,16 +27,34 @@ class MachineChannelStockReportClient extends ManagementClient
      * @param string $group
      * @return array|string
      */
-    public function getMcsList($where,$pageNum = 0,$field = "*",$order = "",$group = "",$isOperating = "")
+    public function getMcsList($where,$pageNum = 0,$field = "*",$order = "",$group = "",$isOperating = null)
     {
         if (!$this->validateStockReportOperatingStatus($isOperating)) {
             return $this->rValidate('设备在营状态参数错误');
         }
-        $this->applyStockReportOperatingWhere($where, $isOperating);
+        $where = $this->applyStockReportOperatingWhere($where, $isOperating);
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
         if ($mIds) $where[] = ['m_id', 'in', $mIds];
         $data = $this->getMachineChannelStockReportList($where,$pageNum,$field,$order,$group);
         return $this->rQ($data);
+    }
+
+    /**
+     * 在营状态属于 machine 表，先换算成设备 ID 再筛选库存报表视图。
+     *
+     * @param array $where
+     * @param mixed $isOperating
+     * @param string $machineIdField
+     * @return array
+     */
+    protected function applyStockReportOperatingWhere($where, $isOperating, $machineIdField = 'm_id')
+    {
+        if (!in_array(intval($isOperating), [1, 2], true)) {
+            return $where;
+        }
+        $mIds = $this->getMachineColumn(['is_operating' => intval($isOperating)], 'm_id');
+        $where[] = [$machineIdField, 'in', $mIds ?: [0]];
+        return $where;
     }
 
     /**
@@ -47,7 +65,7 @@ class MachineChannelStockReportClient extends ManagementClient
      * @throws \PHPExcel_Exception
      * @throws \PHPExcel_Writer_Exception
      */
-    public function export($where,$eType = 1,$isOperating = "")
+    public function export($where,$eType = 1,$isOperating = null)
     {
         if (!$this->validateStockReportOperatingStatus($isOperating)) {
             return $this->rValidate('设备在营状态参数错误');
@@ -55,7 +73,7 @@ class MachineChannelStockReportClient extends ManagementClient
         $group = "";
         $field = "*";
         if ($eType == 1) {
-            $this->applyStockReportOperatingWhere($where, $isOperating);
+            $where = $this->applyStockReportOperatingWhere($where, $isOperating);
             $field = "sku,g_name,bar_code,model,gc_name,
         retail_price,
         sum(mc_stock) mc_stock,
@@ -67,7 +85,7 @@ class MachineChannelStockReportClient extends ManagementClient
             $list = $this->getMachineChannelStockReportList($where,0,$field,"total_stock desc",$group);
         }
         if ($eType == 2) {
-            $this->applyStockReportOperatingWhere($where, $isOperating, 'mcs.m_id');
+            $where = $this->applyStockReportOperatingWhere($where, $isOperating, 'mcs.m_id');
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) $where[] = ['mcs.m_id', 'in', $mIds];
             $where['mcs.ao_id'] = $this->manager['ao_id'];
@@ -115,9 +133,8 @@ class MachineChannelStockReportClient extends ManagementClient
         }
         return $this->rFail();
     }
-
     /**
-     * 库存报表只支持在营、在库、外售三种设备状态。
+     * 库存报表只支持在营、在库两种设备状态。
      * @param mixed $isOperating
      * @return bool
      */
@@ -126,21 +143,6 @@ class MachineChannelStockReportClient extends ManagementClient
         if ($isOperating === '' || $isOperating === null) {
             return true;
         }
-        return in_array(intval($isOperating), [1, 2, 3], true);
-    }
-
-    /**
-     * 将设备状态转换为视图已有的 m_id 条件，避免依赖视图字段结构。
-     * @param array $where
-     * @param mixed $isOperating
-     * @param string $machineIdField
-     */
-    private function applyStockReportOperatingWhere(&$where, $isOperating, $machineIdField = 'm_id')
-    {
-        if ($isOperating === '' || $isOperating === null) {
-            return;
-        }
-        $mIds = $this->getMachineColumn(['is_operating' => intval($isOperating)], 'm_id');
-        $where[] = [$machineIdField, 'in', $mIds ?: [0]];
+        return in_array(intval($isOperating), [1, 2], true);
     }
 }

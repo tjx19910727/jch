@@ -276,7 +276,14 @@ class RevenueRuleClient extends ManagementClient
         if (!is_array($config)) $config = [];
         $items = [];
         foreach ($config as $item) {
-            if (is_array($item)) $items[] = $this->normalizeConfigItem($item);
+            if (!is_array($item)) continue;
+            $gIds = $this->normalizeReceiverGIds($item['g_id'] ?? 0);
+            if ($gIds === false) $gIds = [0];
+            foreach ($gIds as $gId) {
+                $expandedItem = $item;
+                $expandedItem['g_id'] = $gId;
+                $items[] = $this->normalizeConfigItem($expandedItem);
+            }
         }
         return json_encode($items, JSON_UNESCAPED_UNICODE);
     }
@@ -293,17 +300,44 @@ class RevenueRuleClient extends ManagementClient
         }
         $percentTotals = [];
         foreach ($config as $item) {
-            if (!is_array($item) || intval($item['status'] ?? 1) !== 1) continue;
-            if (intval($item['calc_type'] ?? 0) !== 1) continue;
-            $gId = intval($item['g_id'] ?? 0);
+            if (!is_array($item)) continue;
             $mgId = intval($item['mg_id'] ?? 0);
-            $key = $gId . ':' . $mgId;
-            $percentTotals[$key] = ($percentTotals[$key] ?? 0) + floatval($item['calc_value'] ?? 0);
-            if ($percentTotals[$key] > 100) {
-                return $this->rFail("同一商品固定比例分账合计不能超过100%");
+            $gIds = $this->normalizeReceiverGIds($item['g_id'] ?? 0);
+            if ($gIds === false) return $this->rFail("接收方商品ID不合法");
+            if (count($gIds) > 1 && $mgId > 0) {
+                return $this->rFail("接收方选择多个商品时不能指定单一设备商品ID");
+            }
+            if (intval($item['status'] ?? 1) !== 1) continue;
+            if (intval($item['calc_type'] ?? 0) !== 1) continue;
+            foreach ($gIds as $gId) {
+                $key = $gId . ':' . $mgId;
+                $percentTotals[$key] = ($percentTotals[$key] ?? 0) + floatval($item['calc_value'] ?? 0);
+                if ($percentTotals[$key] > 100) {
+                    return $this->rFail("同一商品固定比例分账合计不能超过100%");
+                }
             }
         }
         return true;
+    }
+
+    protected function normalizeReceiverGIds($gIds)
+    {
+        if (is_string($gIds) && strpos($gIds, ',') !== false) {
+            $gIds = explode(',', $gIds);
+        } elseif (is_array($gIds)) {
+            return false;
+        } else {
+            $gIds = [$gIds];
+        }
+        if (!$gIds) return [0];
+        $result = [];
+        foreach ($gIds as $gId) {
+            if (!is_numeric($gId) || intval($gId) < 0) return false;
+            $gId = intval($gId);
+            if (!in_array($gId, $result, true)) $result[] = $gId;
+        }
+        sort($result);
+        return $result ?: [0];
     }
 
     protected function getConfigItems($rrcfgId)

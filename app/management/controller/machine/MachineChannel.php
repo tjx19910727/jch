@@ -146,8 +146,7 @@ class MachineChannel extends Common
     public function setWcGoods2Mc(){
         $m_id = input("m_id");
         $out_nos = input('out_nos');
-        $out_nos_arr = explode(',', $out_nos);
-        return $this->app->weicheng->setWcMachineChannelListsV2($m_id, $out_nos_arr);
+        return $this->app->weicheng->setWcMachineChannelListsV2($m_id, $out_nos ?? []);
     }
 
     public function getWcGoods2Mc()
@@ -225,5 +224,16 @@ class MachineChannel extends Common
             return returnValidate($e->getMessage());
         }
         return $this->app->machineChannel->remoteRemoval($postData);
+    }
+
+    /**
+     * 按货架层级导出货道数据
+     * @return array|\think\response\Json
+     */
+    public function exportByShelfLevel()
+    {
+        $m_id = input('m_id');
+        $hasCostPriceAuth = $this->hasCostPriceAuth();
+        return $this->app->machineChannel->exportMcByShelfLevel($m_id, $hasCostPriceAuth);
     }
 }

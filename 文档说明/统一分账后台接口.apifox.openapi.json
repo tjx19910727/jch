@@ -350,8 +350,11 @@
             "description": "接收方项标识。新增时可不传；传入时用于前端本地定位。"
           },
           "g_id": {
-            "type": "integer",
-            "description": "商品ID。rule_mode=4指定商品分账时使用，其他场景传0。"
+            "oneOf": [
+              {"type": "integer"},
+              {"type": "string", "pattern": "^[0-9]+(,[0-9]+)*$", "example": "700,701,702"}
+            ],
+            "description": "单个商品ID整数，或多个商品ID的逗号分隔字符串。rule_mode=4指定商品分账时使用；多商品字符串例如700,701,702，后端按商品展开为多条接收方规则。多商品时mg_id必须为0，其他场景传0。"
           },
           "mg_id": {
             "type": "integer",
@@ -715,8 +718,8 @@
           "settlement_type": 1,
           "receivers": [
             {
-              "g_id": 700,
-              "mg_id": 3870,
+              "g_id": "700,701",
+              "mg_id": 0,
               "receiver_ao_id": 17,
               "ra_id": 101,
               "manager_id": 146,
@@ -731,7 +734,15 @@
               "m_id": 407,
               "machine_id": "JCHM-H2D-0311",
               "g_id": 700,
-              "mg_id": 3870,
+              "mg_id": 0,
+              "sort": 0,
+              "status": 1
+            },
+            {
+              "m_id": 407,
+              "machine_id": "JCHM-H2D-0311",
+              "g_id": 701,
+              "mg_id": 0,
               "sort": 0,
               "status": 1
             }

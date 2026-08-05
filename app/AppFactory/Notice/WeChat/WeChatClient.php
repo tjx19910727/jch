@@ -130,6 +130,10 @@ class WeChatClient extends NoticeBaseClient
             'expire' => intval($expire),
             'sign' => $sign,
         ]);
-        return $host . '/wx/official/confirmStartupNotice?' . $query;
+        $errorCode = strval($this->config['replaceData']['error_info'] ?? '');
+        $path = $errorCode === '12202011'
+            ? '/wx/official/shutdownNotice'
+            : '/wx/official/confirmStartupNotice';
+        return $host . $path . '?' . $query;
     }
 }

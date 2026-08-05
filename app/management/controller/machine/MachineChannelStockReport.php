@@ -16,7 +16,7 @@ class MachineChannelStockReport extends Common
     public function getList()
     {
         $postData = input();
-        $isOperating = $postData['is_operating'] ?? '';
+        $isOperating = $postData['is_operating'] ?? null;
         unset($postData['is_operating']);
         $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like","g_name" => "like"]);
         $where['ao_id'] = $this->manager['ao_id'];
@@ -37,7 +37,7 @@ class MachineChannelStockReport extends Common
     public function exportBySku()
     {
         $postData = input();
-        $isOperating = $postData['is_operating'] ?? '';
+        $isOperating = $postData['is_operating'] ?? null;
         unset($postData['is_operating']);
         $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like"]);
         return $this->app->machineChannelStockReport->export($where,1,$isOperating);
@@ -46,7 +46,7 @@ class MachineChannelStockReport extends Common
     public function exportByMachine()
     {
         $postData = input();
-        $isOperating = $postData['is_operating'] ?? '';
+        $isOperating = $postData['is_operating'] ?? null;
         unset($postData['is_operating']);
         $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like"], 'mcs.');
         return $this->app->machineChannelStockReport->export($where,2,$isOperating);

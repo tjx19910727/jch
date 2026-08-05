@@ -61,6 +61,7 @@ class MachineClient extends ManagementClient
     public function addM($postData)
     {
         try {
+            unset($postData['run_mode']);
             $machine_group_id = 0;
             if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
                 $machine_group_id = explode(",", $postData['machine_group_id']);
@@ -101,6 +102,7 @@ class MachineClient extends ManagementClient
 
     public function updateM($postData)
     {
+        unset($postData['run_mode']);
         $machine_group_id = [];
         if (isset($postData['machine_group_id']) && $postData['machine_group_id']) {
             $machine_group_id = explode(",",$postData['machine_group_id']);
@@ -262,6 +264,9 @@ class MachineClient extends ManagementClient
         $monthEnd = strtotime(date('Y-m-t 23:59:59', $monthStart));
         $defaultSignal = ['rsrp' => -999, 'sinr' => -999, 'rsrp_level' => 0, 'sinr_level' => 0];
         return $this->rQ($this->getMachineList($where,$pageNum,$field,$order,function ($item) use ($defaultSignal, $month, $monthStart, $monthEnd) {
+            $configRunMode = $this->getMachineConfigFind(['m_id' => intval($item['m_id'])], 'run_mode');
+            $item['run_mode'] = $configRunMode ? intval($configRunMode['run_mode']) : 1;
+            $item['run_mode_desc'] = $item['run_mode'] === 2 ? '测试模式' : '生产模式';
             $item['last_operating_time'] = Db::name('machine_operating_log')
                 ->where('m_id', intval($item['m_id']))
                 ->order('id', 'desc')
@@ -424,6 +429,7 @@ class MachineClient extends ManagementClient
                 "address" => "详细地址",
                 "device_type" => "应用类型",
                 "machine_level" => "设备等级",
+                "run_mode" => "运行模式",
                 "is_operating" => "在营状态",
                 "status" => "设备状态",
                 "online" => "设备在离线",
@@ -523,6 +529,9 @@ class MachineClient extends ManagementClient
         $item = $this->getMachineFind($where,$field, "", $with);
         if ($item) {
             $item = $item->toArray();
+            $configRunMode = $this->getMachineConfigFind(['m_id' => intval($item['m_id'])], 'run_mode');
+            $item['run_mode'] = $configRunMode ? intval($configRunMode['run_mode']) : 1;
+            $item['run_mode_desc'] = $item['run_mode'] === 2 ? '测试模式' : '生产模式';
             $item['last_operating_time'] = Db::name('machine_operating_log')
                 ->where('m_id', intval($item['m_id']))
                 ->order('id', 'desc')
@@ -1717,6 +1726,8 @@ class MachineClient extends ManagementClient
      */
     public function getRankingList($where = [], $pageNum = 0, $topType = 1)
     {
+        $pageNum = max(0, intval($pageNum));
+
         if ($this->manager['pid'] > 0) {
             $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']], "m_id");
             if ($mIds) {
@@ -1758,16 +1769,32 @@ class MachineClient extends ManagementClient
             }
         }
 
+        if ($pageNum === 0) {
+            $rows = is_array($list) ? $list : [];
+            $total = count($rows);
+            $list = [
+                'total' => $total,
+                'per_page' => $total,
+                'current_page' => 1,
+                'last_page' => $total > 0 ? 1 : 0,
+                'data' => $rows,
+            ];
+        }
+
         return $this->rQ($list);
     }
     
     /**
      * 导出设备排行榜（V2）
      * @param array $where
+     * @param int $topType
+     * @param int $pageNum 排行前多少条，0 表示全部
      * @return array|\think\response\Json
      */
-    public function exportRankingListV2($where = [], $topType = 1)
+    public function exportRankingListV2($where = [], $topType = 1, $pageNum = 0)
     {
+        $pageNum = max(0, intval($pageNum));
+
         $mIds = $this->getAuthManagerMachineColumn(['manager_id' => $this->manager['manager_id']],"m_id");
         if ($mIds) {
             $where[] = ['m_id', 'in', $mIds];
@@ -1778,7 +1805,7 @@ class MachineClient extends ManagementClient
             $order = 'totalQuantity desc,totalPrice desc, m_id desc';
         }
 
-        $list = $this->queryMachineRanking($where, $order, 0);
+        $list = $this->queryMachineRanking($where, $order, 0, $pageNum);
         if ($list) {
             $list = $list->toArray();
             foreach ($list as $key => $item) {
@@ -1797,8 +1824,8 @@ class MachineClient extends ManagementClient
                 "machine_name" => "机器名称",
                 // "address" => "机器位置",
                 "street" => "机器位置",
-                "totalPrice" => "销售额",
-                "totalQuantity" => "销量",
+                "totalPrice" => "销售额(不包含退款金额)",
+                "totalQuantity" => "销量(不包含退款数量)",
                 "coupon_used" => "优惠券",
             ];
             $topTitle = "销售额-";
@@ -1829,8 +1856,10 @@ class MachineClient extends ManagementClient
                 'MAX(so.machine_name)' => 'machine_name',
                 'ROUND(SUM(IFNULL(so.refund_amount,0)),2)' => 'totalRefundAmount',
                 'SUM(IFNULL(so.refund_quantity,0))' => 'totalRefundQuantity',
-                'ROUND(SUM(so.total_price),2)' => 'totalPrice',
-                'SUM(so.total_quantity)' => 'totalQuantity',
+                'ROUND(SUM(so.total_price),2)' => 'totalRankPrice',
+                'SUM(so.total_quantity)' => 'totalRankQuantity',
+                'ROUND(SUM(so.total_price)-SUM(IFNULL(so.refund_amount,0)),2)' => 'totalPrice',
+                'SUM(so.total_quantity)-SUM(IFNULL(so.refund_quantity,0))' => 'totalQuantity',
                 'ROUND(SUM(so.discount_price),2)' => 'totalDiscountPrice',
                 'COUNT(so.order_id)' => 'order_num',
                 'COUNT((SELECT acu.cu_id FROM activity_coupon_used acu WHERE acu.order_id = so.order_id AND acu.status = 2))' => 'coupon_used',

@@ -16,6 +16,7 @@ use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleHotelNightlyModel;
 use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersUnclaimedModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Model\Machine\MachineConfigModel;
 use app\AppFactory\Kernel\Model\Machine\MachineLevelDescModel;
 use app\AppFactory\Kernel\Support\Validate\Api\VV2;
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
@@ -51,7 +52,7 @@ trait SaleOrdersTrait
         }
         return floatval($order['total_cost_points'] ?? 0) > 0;
     }
-    
+
     public function getDefaultOrderTypeNameMap()
     {
         return [
@@ -350,12 +351,44 @@ trait SaleOrdersTrait
      */
     public function addSaleOrders($insert)
     {
+        $insert = $this->appendSaleOrderRunMode($insert);
         $insert = $this->normalizeSaleOrderNonNegativeFields($insert);
         $insert = $this->appendRevenueCouponCode($insert);
         $order = SaleOrdersModel::create($insert);
         actionLog($this->getLS(), '生成订单SQL');
         actionLog($order, '生成订单结果');
         return $order->order_id;
+    }
+
+    /**
+     * 订单运行模式按下单时设备模式落快照，避免后续设备模式变更影响历史订单统计。
+     * @param array $order
+     * @return array
+     */
+    protected function appendSaleOrderRunMode($order)
+    {
+        if (isset($order['run_mode']) && in_array(intval($order['run_mode']), [1, 2])) {
+            $order['run_mode'] = intval($order['run_mode']);
+            return $order;
+        }
+
+        $runMode = 1;
+        $where = [];
+        if (!empty($order['m_id'])) {
+            $where['m_id'] = intval($order['m_id']);
+        } elseif (!empty($order['machine_id'])) {
+            $where['machine_id'] = $order['machine_id'];
+        }
+
+        if ($where) {
+            $configRunMode = MachineConfigModel::getFieldValue($where, 'run_mode');
+            if (in_array(intval($configRunMode), [1, 2])) {
+                $runMode = intval($configRunMode);
+            }
+        }
+
+        $order['run_mode'] = $runMode;
+        return $order;
     }
 
     /**
