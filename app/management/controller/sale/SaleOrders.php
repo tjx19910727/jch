@@ -10,6 +10,7 @@ namespace app\management\controller\sale;
 
 
 use app\management\controller\Common;
+use app\AppFactory\Kernel\Model\SaleOrders\SaleOrdersVideoModel;
 use think\facade\Db;
 
 class SaleOrders extends Common
@@ -246,14 +247,22 @@ class SaleOrders extends Common
     {
         $trade_no = input('trade_no');
         if(empty(input('status'))){
-            $order = $this->app->saleOrders->getFind(['trade_no' => $trade_no],'transaction_video,machine_id','',0);
+            $order = $this->app->saleOrders->getFind(['trade_no' => $trade_no],'order_id,trade_no,transaction_video,machine_id','',0);
             if (!$order) return returnState(100,lang("VSaleOrders.order_no_data"));
-            if (!$order['transaction_video']) {
+            $videoResult = $this->app->saleOrders->getSaleOrdersVideoResult(SaleOrdersVideoModel::TYPE_SALE_ORDER, $order['order_id']);
+            if (!$videoResult['has_records'] && !$order['transaction_video']) {
                 $otherData = ['trade_no' => $trade_no];
                 $result = $this->app->machine->sendToMachine(['machine_id' => $order['machine_id']],'transactionVideo',$otherData);
                 return is_object($result) ? returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result) :
                 $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
             }
+            if ($videoResult['has_records'] && !$videoResult['complete']) {
+                return returnState(200, '视频文件正在上传，请稍后重试');
+            }
+            $order['transaction_videos'] = $videoResult['has_records']
+                ? $videoResult['videos']
+                : $this->app->saleOrders->getLegacyTransactionVideos($order['trade_no'], $order['transaction_video']);
+            unset($order['order_id'], $order['trade_no']);
             return returnState(200,'查询成功',$order);
         }
         else{
@@ -274,14 +283,22 @@ class SaleOrders extends Common
                 $machine_id = input('machine_id');
                 $tmp = explode('_',$trade_no);
                 $real_sod_id = $tmp[count($tmp)-1];
-                $sod = $this->app->saleOrders->getSaleOrdersDetailsFind(['sod_id' => $real_sod_id], 'remote_out_goods_video');
+                $sod = $this->app->saleOrders->getSaleOrdersDetailsFind(['sod_id' => $real_sod_id], 'sod_id,remote_out_goods_video');
                 if (!$sod) return returnState(100,lang("VSaleOrders.order_no_data"));
-                if (!$sod['remote_out_goods_video']) {
+                $videoResult = $this->app->saleOrders->getSaleOrdersVideoResult(SaleOrdersVideoModel::TYPE_REMOTE_OUT_GOODS, $sod['sod_id']);
+                if (!$videoResult['has_records'] && !$sod['remote_out_goods_video']) {
                     $otherData = ['trade_no' => $trade_no];
                     $result = $this->app->machine->sendToMachine(['machine_id' => $machine_id], 'transactionVideo',$otherData);
                     return is_object($result) ? returnState(200,'正在从机器端获取视频文件，请稍做等待后下载',$result) :
                     $this->app->machine->rFail($this->app->machine->lang("VMachine." . $result));
                 }
+                if ($videoResult['has_records'] && !$videoResult['complete']) {
+                    return returnState(200, '视频文件正在上传，请稍后重试');
+                }
+                $sod['transaction_videos'] = $videoResult['has_records']
+                    ? $videoResult['videos']
+                    : $this->app->saleOrders->getLegacyTransactionVideos($trade_no, $sod['remote_out_goods_video']);
+                unset($sod['sod_id']);
                 return returnState(200,'查询成功',$sod);
             }
         }

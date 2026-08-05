@@ -841,6 +841,9 @@ class ActivityClient extends ReceiveBaseClient
     {
         $this->order = $this->getSaleOrdersFind(['order_id' => $this->data['order_id']]);
         if (!$this->order) return $this->r(300,$this->lang("VActivityLottery.order_no_data"));
+        if (!is_array($this->order)) {
+            $this->order = $this->order->toArray();
+        }
         if ($this->order['pay_status'] != 3) return $this->r(300,$this->lang("VActivityLottery.order_no_pay"));
         if ($this->order['out_status'] > 1) return $this->r(300,$this->lang("VActivityLottery.is_out_goods"));
         $whereDetails['order_id'] = $this->order['order_id'];

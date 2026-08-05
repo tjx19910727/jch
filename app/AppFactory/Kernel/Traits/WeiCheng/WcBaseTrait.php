@@ -75,7 +75,7 @@ trait WcBaseTrait
     }
 
 
-    public function weicheng_curl($url, $postFields = [], $header = [])
+    public function weicheng_curl($url, $postFields = [], $header = [], $logOptions = [])
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -92,21 +92,99 @@ trait WcBaseTrait
             curl_setopt($ch, CURLOPT_CAINFO, "D:\phpstudy_pro\wwwroot\backend\public\static\cacert.pem");
         }
         $response = curl_exec($ch);
+        $curlError = '';
         if (curl_errno($ch)) {
-            echo 'Curl error: ' . curl_error($ch);
+            $curlError = curl_error($ch);
+            echo 'Curl error: ' . $curlError;
         }
         $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        $this->addWcRequestLogs([
-            'request_url' => $url,
-            'request_headers' => $header ? json_encode($header) : json_encode(['Content-Type: application/x-www-form-urlencoded'], JSON_UNESCAPED_UNICODE),
-            'request_body' => json_encode($postFields, JSON_UNESCAPED_UNICODE),
-            'response_body' => $response,
-            'response_status' => $status,
-            'type' => 1,
-            'created_at' => date('Y-m-d H:i:s'),
-        ]);
+        if ($this->shouldWriteWcRequestLog($status, $curlError, $response, $logOptions)) {
+            $requestHeaders = $header ? $header : ['Content-Type: application/x-www-form-urlencoded'];
+            $requestBody = isset($logOptions['request_body']) ? $logOptions['request_body'] : $postFields;
+            $this->writeWcRequestLogSafely([
+                'request_url' => $this->sanitizeWcRequestUrl($url),
+                'request_headers' => $this->encodeWcRequestLogData($requestHeaders),
+                'request_body' => $this->encodeWcRequestLogData($requestBody),
+                'response_body' => $response,
+                'response_status' => $status,
+                'type' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+        curl_close($ch);
         return ['response' => $response, 'status' => $status];
+    }
+
+    /**
+     * 请求日志属于辅助能力，写入失败时降级到PHP错误日志，不中断业务请求。
+     */
+    protected function writeWcRequestLogSafely($logData)
+    {
+        try {
+            $this->addWcRequestLogs($logData);
+            return true;
+        } catch (\Throwable $e) {
+            $message = str_replace(["\r", "\n"], ' ', $e->getMessage());
+            error_log('[wc_request_logs] write failed: ' . substr($message, 0, 1000));
+            return false;
+        }
+    }
+
+    /**
+     * 批量同步可仅记录失败请求，其他调用默认保持全量记录。
+     */
+    protected function shouldWriteWcRequestLog($status, $curlError, $response, $logOptions)
+    {
+        $mode = isset($logOptions['mode']) ? $logOptions['mode'] : 'all';
+        if ($mode !== 'failure') return true;
+        if ($curlError !== '' || intval($status) !== 200) return true;
+
+        $expectedKey = isset($logOptions['expected_response_key']) ? $logOptions['expected_response_key'] : '';
+        if ($expectedKey === '') return false;
+        $responseData = json_decode($response, true);
+        return !is_array($responseData) || !isset($responseData[$expectedKey]);
+    }
+
+    /**
+     * 日志保留业务参数，但对认证信息和个人敏感字段脱敏。
+     */
+    protected function sanitizeWcRequestLogData($data)
+    {
+        if (!is_array($data)) return $data;
+        $sensitiveKeys = ['apikey', 'sign', 'token', 'code', 'phone', 'mobile', 'link_phone', 'identity_card'];
+        foreach ($data as $key => $value) {
+            $normalizedKey = strtolower(trim((string)$key));
+            if (is_int($key) && is_string($value) && stripos($value, 'token:') === 0) {
+                $data[$key] = 'token: ***';
+            } elseif (in_array($normalizedKey, $sensitiveKeys, true)) {
+                $data[$key] = '***';
+            } elseif (is_array($value)) {
+                $data[$key] = $this->sanitizeWcRequestLogData($value);
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * 非法UTF-8等编码异常时保留可编码字段，避免request_body再次变为空值。
+     */
+    protected function encodeWcRequestLogData($data)
+    {
+        $data = $this->sanitizeWcRequestLogData($data);
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE);
+        if ($json !== false) return $json;
+
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+        return $json !== false ? $json : '{}';
+    }
+
+    /**
+     * URL只保留接口定位信息，密钥、签名和加密载荷写入前统一脱敏。
+     */
+    protected function sanitizeWcRequestUrl($url)
+    {
+        return preg_replace('/([?&])(apikey|sign|data|token|code|phone)=([^&]*)/i', '$1$2=***', $url);
     }
 
     public function goodsTypesSync($goods_type, $nowPage = 1, $pageSize = 100)
@@ -119,7 +197,11 @@ trait WcBaseTrait
             'nowPage' => $nowPage,
         ];
         $postUrl = $this->goods_type_sync_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-        return $this->weicheng_curl($postUrl, []);
+        return $this->weicheng_curl($postUrl, [], [], [
+            'mode' => 'failure',
+            'expected_response_key' => 'data',
+            'request_body' => $data,
+        ]);
     }
 
     public function synchronizeGoodsLists2Db($goods_lists, $type, $syncBatchNo = '')
@@ -151,7 +233,11 @@ trait WcBaseTrait
             'type' => $type,
         ];
         $postUrl = $this->goods_sync_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-        return $this->weicheng_curl($postUrl, []);
+        return $this->weicheng_curl($postUrl, [], [], [
+            'mode' => 'failure',
+            'expected_response_key' => 'product',
+            'request_body' => $data,
+        ]);
     }
 
     public function synchronizeGoods2Db($updateData, $syncBatchNo = '')
@@ -293,7 +379,10 @@ trait WcBaseTrait
     {
         $this->initWcBase();
         $postUrl = $this->get_sms_code_url . "?phone=" . $phone . "&machine_code=" . $machine_id;
-        return $this->weicheng_curl($postUrl);
+        return $this->weicheng_curl($postUrl, [], [], ['request_body' => [
+            'phone' => $phone,
+            'machine_code' => $machine_id,
+        ]]);
     }
 
 
@@ -301,7 +390,11 @@ trait WcBaseTrait
     {
         $this->initWcBase();
         $postUrl = $this->phone_login_url . "?phone=" . $phone . "&machine_code=" . $machine_id . "&code=" . $code;
-        return $this->weicheng_curl($postUrl);
+        return $this->weicheng_curl($postUrl, [], [], ['request_body' => [
+            'phone' => $phone,
+            'machine_code' => $machine_id,
+            'code' => $code,
+        ]]);
     }
 
     public function wcUserSyncPoints($token, $integral, $op_type)
@@ -309,7 +402,10 @@ trait WcBaseTrait
         $this->initWcBase();
         $postUrl = $this->user_sync_points . "?op_type=" . $op_type . "&integral=" . (int)$integral;
         $header = array('token: ' . $token);
-        return $this->weicheng_curl($postUrl, [], $header);
+        return $this->weicheng_curl($postUrl, [], $header, ['request_body' => [
+            'op_type' => $op_type,
+            'integral' => (int)$integral,
+        ]]);
     }
 
 
@@ -317,7 +413,7 @@ trait WcBaseTrait
     {
         $this->initWcBase();
         $postUrl = $this->get_points_qrcode . "?integral=" . (int)$integral;
-        return $this->weicheng_curl($postUrl);
+        return $this->weicheng_curl($postUrl, [], [], ['request_body' => ['integral' => (int)$integral]]);
     }
 
     public function orderSync2Wc($order)
@@ -381,7 +477,7 @@ trait WcBaseTrait
             if(!empty($buy_date_range)) $data['buy_date_range'] = json_encode($buy_date_range);
             actionLog($data, "子订单同步数据");
             $postUrl = $this->order_add_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-            $res = $this->weicheng_curl($postUrl, []);
+            $res = $this->weicheng_curl($postUrl, [], [], ['request_body' => $data]);
             // $res['response'] = '{"order_no":"O757423599403734","orderNo":"O757423599403734","tickets":["68234301"],"tickets_new":[{"ticket":"68234301","num":1,"qr_code":"https://oss-weicheng.jchtechnologies.com/upload/2026/03/04/8c0ae373080843e4a6f358361e20bd21.jpg","qr_code_url":"https://oss-weicheng.jchtechnologies.com/upload/2026/03/04/8c0ae373080843e4a6f358361e20bd21.jpg"}],"ticket_check_style":0,"tip":"出库成功","status":"success"}';
             $res_arr = json_decode($res['response'] ?? '', true);
             if (!is_array($res_arr)) {
@@ -410,7 +506,7 @@ trait WcBaseTrait
                     'out_order_no' => $order['trade_no'] . '#' . $detail['sod_id'],
                 ];
                 $postUrl = $this->order_refund_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-                $flag[] =  $this->weicheng_curl($postUrl, []);
+                $flag[] =  $this->weicheng_curl($postUrl, [], [], ['request_body' => $data]);
                 actionLog($flag, "退款接口返回数据");
             }
         }
@@ -433,20 +529,22 @@ trait WcBaseTrait
 
         ];
         $postUrl = $this->order_refundPart_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-        return $this->weicheng_curl($postUrl, []);
+        return $this->weicheng_curl($postUrl, [], [], ['request_body' => $data]);
     }
 
     public function syncWcUserInfo($token)
     {
         $this->initWcBase();
         $header = array('token: ' . $token);
-        return $this->weicheng_curl($this->query_user_info_url, [], $header);
+        return $this->weicheng_curl($this->query_user_info_url, [], $header, [
+            'request_body' => ['operation' => 'query_user_info'],
+        ]);
     }
 
     public function wcLoginQrCode($machine_id)
     {
         $this->initWcBase();
         $postUrl = $this->query_login_qrcode_url . "?machine_code=" . $machine_id;
-        return $this->weicheng_curl($postUrl);
+        return $this->weicheng_curl($postUrl, [], [], ['request_body' => ['machine_code' => $machine_id]]);
     }
 }
