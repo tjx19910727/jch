@@ -239,7 +239,7 @@ class WeiChengClient extends ManagementClient
                 return ['status' => false, 'msg' => $result['response']];
             }
 
-            $updateData = $res['product'];
+            $updateData = $this->mergeAppointmentGoodsDaysInfo($res['product']);
             $updateData['get_data'] = $result['response'];
             if (isset($updateData['goods']))
                 $updateData['goods'] = json_encode($updateData['goods']);
@@ -258,6 +258,43 @@ class WeiChengClient extends ManagementClient
             return ['status' => $res];
         }
         return ['status' => false, 'msg' => $result['response']];;
+    }
+
+    /**
+     * 预约商品明细位于 appointment.goods，合并到商品快照供父表和本地表复用。
+     */
+    protected function mergeAppointmentGoodsDaysInfo($product)
+    {
+        if (!is_array($product)) return $product;
+
+        $appointmentGoods = isset($product['appointment']['goods']) && is_array($product['appointment']['goods'])
+            ? $product['appointment']['goods']
+            : [];
+        unset($product['appointment']);
+        if (!$appointmentGoods) return $product;
+
+        $goods = isset($product['goods']) && is_array($product['goods']) ? $product['goods'] : [];
+        $goodsIndex = [];
+        foreach ($goods as $index => $good) {
+            if (!empty($good['no'])) $goodsIndex[$good['no']] = $index;
+        }
+
+        foreach ($appointmentGoods as $appointmentGood) {
+            if (!is_array($appointmentGood) || intval($appointmentGood['type'] ?? 0) !== 1) continue;
+            if (!isset($appointmentGood['daysInfo']) || !is_array($appointmentGood['daysInfo'])) continue;
+
+            if (!isset($product['daysInfo'])) $product['daysInfo'] = $appointmentGood['daysInfo'];
+            $goodsNo = trim(strval($appointmentGood['no'] ?? ''));
+            if ($goodsNo !== '' && isset($goodsIndex[$goodsNo])) {
+                $goods[$goodsIndex[$goodsNo]] = array_merge($goods[$goodsIndex[$goodsNo]], $appointmentGood);
+                continue;
+            }
+            $goods[] = $appointmentGood;
+            if ($goodsNo !== '') $goodsIndex[$goodsNo] = count($goods) - 1;
+        }
+
+        if ($goods) $product['goods'] = $goods;
+        return $product;
     }
 
     protected function markWcGoodsMissingFromSync($syncBatchNo, $goodsType = 0)
