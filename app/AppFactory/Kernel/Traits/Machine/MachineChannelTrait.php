@@ -660,7 +660,28 @@ trait MachineChannelTrait
             return;
         }
 
-        // 当前队首批次标记为已结束
+        // 查找下一个等待中的批次
+        $nextBatch = Db::name('channel_goods_batch')
+            ->where('mc_id', $mc_id)
+            ->where('status', 2)
+            ->where('stock', '>', 0)
+            ->order('sequence asc')
+            ->find();
+
+        if (!$nextBatch) {
+            // 最后一批售罄后仍保留为当前队首，避免接口将其再次放入 batch_arr。
+            Db::name('channel_goods_batch')
+                ->where('mc_id', $mc_id)
+                ->where('status', 1)
+                ->update(['stock' => 0]);
+            $this->updateMachineChannel([
+                'stock' => 0,
+                'status' => 3,
+            ], ['mc_id' => $mc_id]);
+            return;
+        }
+
+        // 只有存在下一批时，当前队首才结束并退出队列。
         Db::name('channel_goods_batch')
             ->where('mc_id', $mc_id)
             ->where('status', 1)
@@ -668,19 +689,6 @@ trait MachineChannelTrait
                 'status' => 3,
                 'stock' => 0,
             ]);
-
-        // 查找下一个等待中的批次
-        $nextBatch = Db::name('channel_goods_batch')
-            ->where('mc_id', $mc_id)
-            ->where('status', 2)
-            ->order('sequence asc')
-            ->find();
-
-        if (!$nextBatch) {
-            // 无下一批次，货道设为 BAD
-            $this->updateMachineChannel(['status' => 3], ['mc_id' => $mc_id]);
-            return;
-        }
 
         // 切换到下一批次
         Db::name('channel_goods_batch')
