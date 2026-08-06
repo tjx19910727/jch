@@ -11,6 +11,7 @@ namespace app\AppFactory\Kernel\Traits\Machine;
 
 use app\AppFactory\Kernel\Model\Machine\MachineConfigModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
+use app\AppFactory\Kernel\Support\SubCarMixPolicy;
 
 trait MachineConfigTrait
 {
@@ -28,6 +29,7 @@ trait MachineConfigTrait
 
     public function addMachineConfig($insert)
     {
+        $insert = $this->normalizeSubCarMixConfig($insert);
         !isset($this->manager['manager_id']) ?: $insert['creator'] = $this->manager['manager_id'];
         $data = MachineConfigModel::create($insert);
         $this->syncMachineRecycleBoxCapacity($insert, ['mc_id' => $data->mc_id]);
@@ -36,6 +38,7 @@ trait MachineConfigTrait
 
     public function updateMachineConfig($update, $where = [], $field = [])
     {
+        $update = $this->normalizeSubCarMixConfig($update);
         !isset($this->manager['manager_id']) ?: $update['update_id'] = $this->manager['manager_id'];
         $result = MachineConfigModel::update($update, $where, $field);
         $this->syncMachineRecycleBoxCapacity($update, $where);
@@ -106,5 +109,21 @@ trait MachineConfigTrait
         ];
 
         return MachineModel::update($update);
+    }
+
+    /**
+     * machine_config 的收款策略 ID 统一按逗号分隔字符串保存。
+     */
+    protected function normalizeSubCarMixConfig($data)
+    {
+        if (array_key_exists('subcar_mix', $data)) {
+            $data['subcar_mix'] = intval($data['subcar_mix']);
+        }
+        foreach ([SubCarMixPolicy::OFFLINE_SP_IDS_FIELD, SubCarMixPolicy::ONLINE_SP_IDS_FIELD] as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = SubCarMixPolicy::normalizePayeeIds($data[$field]);
+            }
+        }
+        return $data;
     }
 }

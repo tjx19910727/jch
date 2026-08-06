@@ -1,0 +1,261 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "嘉潮汇管理后台 - 订单类型配置接口",
+    "description": "订单类型配置表 order_type 的增删改查接口。该表承接 sale_orders.order_type 当前硬编码展示配置，订单列表筛选和导出展示优先读取 order_type 表；表不存在或无数据时回退内置默认映射。配套 SQL：文档说明/order_type订单类型配置数据库变更.sql。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "{{baseUrl}}",
+      "description": "Apifox 环境变量 baseUrl"
+    }
+  ],
+  "security": [
+    {
+      "TokenAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "订单类型配置",
+      "description": "维护 sale_orders.order_type 对应的展示名称、启停状态和排序"
+    }
+  ],
+  "paths": {
+    "/management/config.order_type/getList": {
+      "post": {
+        "tags": ["订单类型配置"],
+        "summary": "订单类型配置列表",
+        "description": "分页查询 order_type 表。order_type_name、remark 支持模糊查询。",
+        "operationId": "orderTypeGetList",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/OrderTypeListRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/OrderTypeListSuccess"}}
+      }
+    },
+    "/management/config.order_type/getFind": {
+      "post": {
+        "tags": ["订单类型配置"],
+        "summary": "订单类型配置详情",
+        "description": "按 ot_id 或 order_type 查询单条订单类型配置。",
+        "operationId": "orderTypeGetFind",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/OrderTypeFindRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/OrderTypeFindSuccess"}}
+      }
+    },
+    "/management/config.order_type/add": {
+      "post": {
+        "tags": ["订单类型配置"],
+        "summary": "新增订单类型配置",
+        "description": "新增 order_type 记录。order_type 唯一，status 未传时默认启用。",
+        "operationId": "orderTypeAdd",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/OrderTypeAddRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonWriteSuccess"}}
+      }
+    },
+    "/management/config.order_type/update": {
+      "post": {
+        "tags": ["订单类型配置"],
+        "summary": "修改订单类型配置",
+        "description": "按 ot_id 修改订单类型配置。order_type 如提交则仍需保持唯一。",
+        "operationId": "orderTypeUpdate",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/OrderTypeUpdateRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonWriteSuccess"}}
+      }
+    },
+    "/management/config.order_type/del": {
+      "post": {
+        "tags": ["订单类型配置"],
+        "summary": "删除订单类型配置",
+        "description": "按 ot_id 删除订单类型配置。删除后该订单类型不会出现在启用下拉选项中；历史订单展示若表内无名称会回退内置默认映射或显示 订单类型#值。",
+        "operationId": "orderTypeDel",
+        "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
+        "requestBody": {"$ref": "#/components/requestBodies/OrderTypeDelRequest"},
+        "responses": {"200": {"$ref": "#/components/responses/CommonWriteSuccess"}}
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "TokenAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "token"
+      }
+    },
+    "parameters": {
+      "TokenHeader": {
+        "name": "token",
+        "in": "header",
+        "required": true,
+        "schema": {"type": "string", "example": "{{token}}"},
+        "description": "管理后台登录 token"
+      }
+    },
+    "requestBodies": {
+      "OrderTypeListRequest": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeListRequest"},
+            "examples": {
+              "分页查询": {
+                "value": {"pageNum": 20, "status": 1, "order_type_name": "优惠券"}
+              }
+            }
+          },
+          "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/OrderTypeListRequest"}}
+        }
+      },
+      "OrderTypeFindRequest": {
+        "required": false,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeFindRequest"},
+            "examples": {
+              "按配置ID": {"value": {"ot_id": 1}},
+              "按订单类型": {"value": {"order_type": 1}}
+            }
+          },
+          "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/OrderTypeFindRequest"}}
+        }
+      },
+      "OrderTypeAddRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeAddRequest"},
+            "examples": {
+              "新增订单类型": {
+                "value": {"order_type": 8, "order_type_name": "测试订单", "status": 1, "sort": 80, "remark": "测试订单类型"}
+              }
+            }
+          },
+          "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/OrderTypeAddRequest"}}
+        }
+      },
+      "OrderTypeUpdateRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeUpdateRequest"},
+            "examples": {
+              "停用订单类型": {"value": {"ot_id": 1, "status": 2}},
+              "修改名称": {"value": {"ot_id": 1, "order_type_name": "普通订单", "sort": 10}}
+            }
+          },
+          "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/OrderTypeUpdateRequest"}}
+        }
+      },
+      "OrderTypeDelRequest": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {"$ref": "#/components/schemas/OrderTypeDelRequest"},
+            "examples": {"删除": {"value": {"ot_id": 1}}}
+          },
+          "application/x-www-form-urlencoded": {"schema": {"$ref": "#/components/schemas/OrderTypeDelRequest"}}
+        }
+      }
+    },
+    "schemas": {
+      "OrderTypeListRequest": {
+        "type": "object",
+        "properties": {
+          "pageNum": {"type": "integer", "description": "分页条数；不传或0表示不分页"},
+          "ot_id": {"type": "integer", "description": "订单类型配置ID，可选"},
+          "order_type": {"type": "integer", "description": "订单类型值，可选"},
+          "order_type_name": {"type": "string", "description": "订单类型名称，支持模糊查询"},
+          "status": {"type": "integer", "description": "状态：1启用，2停用", "enum": [1, 2]},
+          "remark": {"type": "string", "description": "备注，支持模糊查询"}
+        }
+      },
+      "OrderTypeFindRequest": {
+        "type": "object",
+        "properties": {
+          "ot_id": {"type": "integer", "description": "订单类型配置ID"},
+          "order_type": {"type": "integer", "description": "订单类型值"}
+        }
+      },
+      "OrderTypeAddRequest": {
+        "type": "object",
+        "required": ["order_type", "order_type_name"],
+        "properties": {
+          "order_type": {"type": "integer", "description": "订单类型值，必须唯一"},
+          "order_type_name": {"type": "string", "description": "订单类型名称，最长50字符"},
+          "status": {"type": "integer", "description": "状态：1启用，2停用；默认1", "enum": [1, 2], "default": 1},
+          "sort": {"type": "integer", "description": "排序，越小越靠前；默认0"},
+          "remark": {"type": "string", "description": "备注，最长255字符"}
+        }
+      },
+      "OrderTypeUpdateRequest": {
+        "type": "object",
+        "required": ["ot_id"],
+        "properties": {
+          "ot_id": {"type": "integer", "description": "订单类型配置ID，必填"},
+          "order_type": {"type": "integer", "description": "订单类型值，可选；提交时必须唯一"},
+          "order_type_name": {"type": "string", "description": "订单类型名称，可选，最长50字符"},
+          "status": {"type": "integer", "description": "状态：1启用，2停用", "enum": [1, 2]},
+          "sort": {"type": "integer", "description": "排序，越小越靠前"},
+          "remark": {"type": "string", "description": "备注，最长255字符"}
+        }
+      },
+      "OrderTypeDelRequest": {
+        "type": "object",
+        "required": ["ot_id"],
+        "properties": {
+          "ot_id": {"type": "integer", "description": "订单类型配置ID，必填"}
+        }
+      }
+    },
+    "responses": {
+      "CommonWriteSuccess": {
+        "description": "写操作结果",
+        "content": {
+          "application/json": {
+            "schema": {"type": "object"},
+            "examples": {
+              "成功": {"value": {"state": 200, "msg": "操作成功", "data": 1}},
+              "失败": {"value": {"state": 100, "msg": "该订单类型已存在", "data": []}}
+            }
+          }
+        }
+      },
+      "OrderTypeListSuccess": {
+        "description": "列表查询成功",
+        "content": {
+          "application/json": {
+            "schema": {"type": "object"},
+            "example": {
+              "state": 200,
+              "msg": "success",
+              "data": {
+                "list": [
+                  {"ot_id": 1, "order_type": 1, "order_type_name": "普通订单", "status": 1, "sort": 10, "remark": "来源：sale_orders.order_type 现有展示逻辑", "creator": 0, "creator_nickname": "", "create_time": 1783311989, "update_time": 1783311989}
+                ],
+                "total": 1
+              }
+            }
+          }
+        }
+      },
+      "OrderTypeFindSuccess": {
+        "description": "详情查询成功",
+        "content": {
+          "application/json": {
+            "schema": {"type": "object"},
+            "example": {
+              "state": 200,
+              "msg": "success",
+              "data": {"ot_id": 1, "order_type": 1, "order_type_name": "普通订单", "status": 1, "sort": 10, "remark": "来源：sale_orders.order_type 现有展示逻辑", "creator": 0, "create_time": 1783311989, "update_time": 1783311989}
+            }
+          }
+        }
+      }
+    }
+  }
+}

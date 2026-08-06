@@ -40,6 +40,7 @@ trait SaleOrdersRefundTrait
 
     public function addSaleOrdersRefund($insert)
     {
+        $insert = $this->normalizeSaleOrderRefundNonNegativeFields($insert);
         !isset($this->manager['manager_id']) ? : $insert['creator'] = $this->manager['manager_id'];
         $sor = SaleOrdersRefundModel::create($insert);
         actionLog($this->getLS(),'生成退款记录结果');
@@ -48,7 +49,28 @@ trait SaleOrdersRefundTrait
 
     public function updateSaleOrdersRefund($update, $where = [], $field = [])
     {
+        $update = $this->normalizeSaleOrderRefundNonNegativeFields($update);
         return SaleOrdersRefundModel::update($update,$where,$field);
+    }
+
+    /**
+     * 退款金额与数量不得以负值落库。
+     */
+    protected function normalizeSaleOrderRefundNonNegativeFields($data)
+    {
+        if (is_object($data)) {
+            $data = method_exists($data, 'toArray') ? $data->toArray() : (array)$data;
+        }
+        if (!is_array($data)) return $data;
+
+        $fields = ['refund_amount', 'refund_quantity', 'refund_points', 'refund_cost_points'];
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $data) && is_numeric($data[$field])
+                && bccomp(strval($data[$field]), '0', 4) < 0) {
+                $data[$field] = '0.0000';
+            }
+        }
+        return $data;
     }
 
     /**

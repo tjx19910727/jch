@@ -15,11 +15,12 @@ use app\AppFactory\Kernel\Traits\Activity\ActivityGoodsTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityMachineTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
+use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class ActivityCouponClient extends ManagementClient
 {
-    use GoodsTrait,MachineTrait;
+    use GoodsTrait,MachineTrait,WcGoodsTrait;
     use ActivityGoodsTrait,ActivityMachineTrait;
     use ActivityCouponTrait, ActivityCouponUsedTrait;
 
@@ -40,7 +41,8 @@ class ActivityCouponClient extends ManagementClient
                 $ac['status'] = 3;
             }
             $whereA = ['a_type' => 1, "a_id" => $ac['c_id']];
-            $ac['goodsList'] = $this->getActivityGoodsList($whereA,0,'ag_id,g_id,g_name,sku,market_price,retail_price');
+            $ac['goodsList'] = $this->getActivityGoodsList(array_merge($whereA, ['goods_source' => 1]),0,'ag_id,g_id,g_name,sku,market_price,retail_price,goods_source,source_no');
+            $ac['onlineGoodsList'] = $this->getActivityGoodsList(array_merge($whereA, ['goods_source' => 2]),0,'ag_id,g_id,g_name,sku,market_price,retail_price,goods_source,source_no');
             $ac['machineList'] = $this->getActivityMachineList($whereA,0,'am_id,m_id,machine_id,machine_name');
             return $ac;
         }));
@@ -51,7 +53,8 @@ class ActivityCouponClient extends ManagementClient
         $ac = $this->getActivityCouponFind($where,$field);
         if ($ac) {
             $whereA = ['a_type' => 1, "a_id" => $ac['c_id']];
-            $ac['goodsList'] = $this->getActivityGoodsList($whereA,0,'ag_id,g_id,g_name,sku,market_price,retail_price');
+            $ac['goodsList'] = $this->getActivityGoodsList(array_merge($whereA, ['goods_source' => 1]),0,'ag_id,g_id,g_name,sku,market_price,retail_price,goods_source,source_no');
+            $ac['onlineGoodsList'] = $this->getActivityGoodsList(array_merge($whereA, ['goods_source' => 2]),0,'ag_id,g_id,g_name,sku,market_price,retail_price,goods_source,source_no');
             $ac['machineList'] = $this->getActivityMachineList($whereA,0,'am_id,m_id,machine_id,machine_name');
         }
         return $this->rQ($ac);
@@ -70,6 +73,7 @@ class ActivityCouponClient extends ManagementClient
         if (!isset($postData['url_day_count'])) $postData['url_day_count'] = 0;
         if (!isset($postData['url_coupon_count'])) $postData['url_coupon_count'] = 1;
         if (!isset($postData['need_oauth'])) $postData['need_oauth'] = 1;
+        $onlineGoodsList = [];
         if (isset($postData['machineList'])) {
             $machineList = $postData['machineList'];
             unset($postData['machineList']);
@@ -78,10 +82,14 @@ class ActivityCouponClient extends ManagementClient
             $goodsList = $postData['goodsList'];
             unset($postData['goodsList']);
         }
+        if (isset($postData['onlineGoodsList'])) {
+            $onlineGoodsList = $this->normalizeOnlineGoodsList($postData['onlineGoodsList']);
+            unset($postData['onlineGoodsList']);
+        }
         if ($postData['start_date'] && $postData['start_date'] <= strtotime(date("Y-m-d"))) {
             $postData['status'] = 2;
         }
-        if (isset($postData['code']) && $postData['code']) {
+        if (!empty($postData['code'])) {
             $check = $this->getActivityCouponFind(['code' => $postData['code'],'status' => 2],'c_id');
             if ($check) return $this->r(100,'当前优惠码已存在，不能重复使用');
         }
@@ -106,11 +114,22 @@ class ActivityCouponClient extends ManagementClient
                     }
                 }
                 if ($postData['designated_goods'] == 2 || $postData['designated_goods'] == 3) {
-                    $agResult = $this->addAg($insert, $goodsList);
-                    if ($agResult !== true) {
-                        $this->rollbackTrans();
-                        return $this->rFail($agResult);
+                    if ($goodsList) {
+                        $agResult = $this->addAg($insert, $goodsList);
+                        if ($agResult !== true) {
+                            $this->rollbackTrans();
+                            return $this->rFail($agResult);
+                        }
                     }
+                    if (!$goodsList && !$onlineGoodsList) {
+                        $this->rollbackTrans();
+                        return $this->rFail('请选择商品');
+                    }
+                }
+                $agResult = $this->addOnlineAg($insert, $onlineGoodsList);
+                if ($agResult !== true) {
+                    $this->rollbackTrans();
+                    return $this->rFail($agResult);
                 }
                 $this->commitTrans();
                 return $this->r(200, $this->lang("add_success"));
@@ -134,14 +153,26 @@ class ActivityCouponClient extends ManagementClient
         $machineList = [];
         $goodsList = [];
         unset($postData['ticket']);
+        $onlineGoodsList = [];
+        $hasOnlineGoodsList = false;
         if (isset($postData['machineList'])) {
             $machineList = $postData['machineList'];
         }
         if (isset($postData['goodsList'])) {
             $goodsList = $postData['goodsList'];
         }
+        if (isset($postData['onlineGoodsList'])) {
+            $hasOnlineGoodsList = true;
+            $onlineGoodsList = $this->normalizeOnlineGoodsList($postData['onlineGoodsList']);
+            unset($postData['onlineGoodsList']);
+        }
         if (isset($postData['code']) && $postData['code']) {
-            $check = $this->getActivityCouponFind(['code' => $postData['code'],['status','in',[1,2]]],'c_id');
+            // 更新时排除当前优惠券自身，仅拦截其他生效中/未开始的同码优惠券。
+            $check = $this->getActivityCouponFind([
+                'code' => $postData['code'],
+                ['status', 'in', [1, 2]],
+                ['c_id', '<>', $postData['c_id']],
+            ], 'c_id');
             if ($check) return $this->r(100,'当前优惠码已存在，不能重复使用');
         }
 
@@ -184,6 +215,14 @@ class ActivityCouponClient extends ManagementClient
                     $flag[] = 1;
                 }
             }
+            if ($hasOnlineGoodsList) {
+                $this->delActivityGoods(['a_id' => $postData['c_id'], 'a_type' => 1, 'goods_source' => 2]);
+                $agResult = $this->addOnlineAg($insert, $onlineGoodsList);
+                if ($agResult !== true) {
+                    $this->rollbackTrans();
+                    return $this->rFail($agResult);
+                }
+            }
             actionLog($flag,'修改结果集');
             $check = $this->checkFlag($flag);
             return $this->checkTrans($check);
@@ -192,6 +231,19 @@ class ActivityCouponClient extends ManagementClient
             actionException($e,1);
             return $this->rTryCatch($e->getMessage());
         }
+    }
+
+    /** 线上商品独立于 designated_goods，按逗号分隔字符串接收。 */
+    protected function normalizeOnlineGoodsList($value)
+    {
+        if (is_array($value)) return $value;
+        $value = trim(strval($value));
+        if ($value === '') return [];
+        $decoded = json_decode($value, true);
+        if (is_array($decoded)) return $decoded;
+        return array_values(array_filter(array_map('trim', explode(',', $value)), function ($item) {
+            return $item !== '';
+        }));
     }
 
     /**
@@ -214,7 +266,6 @@ class ActivityCouponClient extends ManagementClient
             return $this->rTryCatch($e->getMessage());
         }
     }
-
     /**
      * 获取优惠券微信领取链接
      * @param array $postData

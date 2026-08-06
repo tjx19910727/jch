@@ -12,7 +12,6 @@ class RevenuePayChannelModel extends BaseModel
     protected $schema = [
         "rpc_id" => "int",
         "pay_type" => "int",
-        "pay_channel" => "int",
         "channel_name" => "string",
         "status" => "int",
         "creator" => "int",

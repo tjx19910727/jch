@@ -156,7 +156,6 @@ class RevenueOrderClient extends ManagementClient
                 'pay_status',
                 'pay_time',
                 'pay_type',
-                'pay_channel',
                 'pay_method',
                 'sp_id',
                 'mch_no',
@@ -309,7 +308,7 @@ class RevenueOrderClient extends ManagementClient
 
     protected function applyMockPayFields($data)
     {
-        foreach (['pay_type', 'pay_channel', 'pay_method', 'sp_id'] as $field) {
+        foreach (['pay_type', 'pay_method', 'sp_id'] as $field) {
             if (isset($data[$field]) && $data[$field] !== '') {
                 $this->order[$field] = intval($data[$field]);
             }
