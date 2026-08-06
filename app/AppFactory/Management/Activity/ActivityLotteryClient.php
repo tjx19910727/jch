@@ -28,7 +28,16 @@ class ActivityLotteryClient extends ManagementClient
     {
         $al = $this->getActivityLotteryFind($where,$field,$order);
         $al['content'] = $this->getActivityLotteryContentList(['al_id' => $al['al_id']],0,'c_id,content_name,retain_num,probability,g_id,g_name,sku','c_id asc');
-        $al['config'] = $this->getActivityLotteryConfigList(['al_id' => $al['al_id']],0,'alc_id,active_num,active_type,gifts_num,designated_gift,button_pic','alc_id asc');
+        $config = $this->getActivityLotteryConfigList(['al_id' => $al['al_id']],0,'alc_id,active_num,active_type,gifts_num,designated_gift,button_pic','alc_id asc');
+        if ($config) {
+            foreach ($config as $index => $item) {
+                if (empty($item['designated_gift'])) {
+                    $item['designated_gift'] = '';
+                    $config[$index] = $item;
+                }
+            }
+        }
+        $al['config'] = $config;
         $al['machineList'] = $this->getActivityMachineList(['a_id' => $al['al_id'],'a_type' => 3],0,'m_id,machine_id,machine_name');
         return $this->r(200,'查询成功',$al);
     }
