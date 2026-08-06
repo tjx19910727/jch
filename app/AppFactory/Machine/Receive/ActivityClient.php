@@ -716,7 +716,7 @@ class ActivityClient extends ReceiveBaseClient
                 // 抽奖，循环活动内容，以中奖概率从小到大顺序排序，
                 foreach ($content as $key => $value) {
                     // 赠送指定商品
-                    if ($alc['designated_gif']) {
+                    if ($alc['designated_gift']) {
                         // 是赠送的商品，放入中奖列表队尾
                         if ($alc['designated_gift'] == $value['c_id']) {
                             $value['is_gift'] = 1;
