@@ -200,7 +200,9 @@ trait WcBaseTrait
                 'desc' => '',
                 'status' => 1,
                 'channel_code' => 'Z10',
-                'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
+                // 抢购/预约商品类型：daysInfo 由 mergeAppointmentGoodsDaysInfo 合并到顶层 wc_goods.daysInfo，
+                // 这里应取 $wc_goods['daysInfo']，而不是引用本分支中未定义的 $good
+                'daysInfo' => isset($wc_goods['daysInfo']) && !empty($wc_goods['daysInfo']) ? (is_string($wc_goods['daysInfo']) ? $wc_goods['daysInfo'] : json_encode($wc_goods['daysInfo'])) : '',
                 'isNeedReserve' => $wc_goods['isNeedReserve'] ?? '0',
                 'gift_points' => $wc_goods['gift_points'] ?? 0,
             ];
@@ -232,7 +234,9 @@ trait WcBaseTrait
                     'status' => 1,
                     'gift_points' => $good['present_integral'] ?? 0,
                     'channel_code' => 'Z10',
-                    'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
+                    // 抢购/预约商品：daysInfo 由 mergeAppointmentGoodsDaysInfo 合并到顶层 wc_goods.daysInfo，
+                    // 这里应取 $wc_goods['daysInfo']（避免引用本分支未定义的 $good）
+                    'daysInfo' => isset($wc_goods['daysInfo']) && !empty($wc_goods['daysInfo']) ? (is_string($wc_goods['daysInfo']) ? $wc_goods['daysInfo'] : json_encode($wc_goods['daysInfo'])) : '',
                 ];
                 if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($setData);
