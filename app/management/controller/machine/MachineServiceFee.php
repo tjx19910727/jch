@@ -31,6 +31,11 @@ class MachineServiceFee extends Common
         return $this->app->machineServiceFee->getPayMethods();
     }
 
+    public function getRenewNoticeStatus()
+    {
+        return $this->app->machineServiceFee->getRenewNoticeStatus();
+    }
+
     public function createPayQr()
     {
         return $this->app->machineServiceFee->createPayQr(input());

@@ -10,6 +10,7 @@ use app\AppFactory\Kernel\Support\Machine\MachineServiceFeePayConfigService;
 use app\AppFactory\Kernel\Support\Machine\MachineServiceFeeService;
 use app\AppFactory\Management\ManagementClient;
 use EasyWeChat\Factory as WxFactory;
+use think\facade\Cache;
 use think\facade\Db;
 
 class MachineServiceFeeClient extends ManagementClient
@@ -315,6 +316,52 @@ class MachineServiceFeeClient extends ManagementClient
     public function getPayMethods()
     {
         return $this->r(200, '查询成功', $this->availablePayMethods());
+    }
+
+    /**
+     * 登录后每日续费提醒：同一账号每个自然日最多一次返回status=1。
+     */
+    public function getRenewNoticeStatus()
+    {
+        try {
+            $managerId = intval($this->manager['manager_id'] ?? 0);
+            if ($managerId <= 0) {
+                throw new \RuntimeException('登录账户信息无效');
+            }
+
+            $noticeDate = date('Y-m-d');
+            $cacheKey = 'machine_service_fee_renew_notice:' . $managerId . ':' . $noticeDate;
+            if (Cache::has($cacheKey)) {
+                return $this->r(200, '查询成功', ['status' => 0]);
+            }
+
+            $permitted = $this->resolvePermittedMachineIds();
+            if ($permitted !== null && !$permitted) {
+                return $this->r(200, '查询成功', ['status' => 0]);
+            }
+
+            $now = time();
+            $query = Db::name('machine_service_fee')->alias('f')
+                ->join('machine m', 'm.m_id=f.m_id')
+                ->where('f.annual_fee_cent', '>', '0.00')
+                ->where('f.service_expire_at', '<=', MachineServiceFeeService::getRenewNoticeDeadline($now));
+            if ($permitted !== null) {
+                $query->where('f.m_id', 'in', $permitted);
+            }
+            if (!$query->count()) {
+                return $this->r(200, '查询成功', ['status' => 0]);
+            }
+
+            // 仅命中提醒时缓存，并在当天结束时自动失效。
+            $ttl = max(strtotime('tomorrow') - $now, 1);
+            if (!Cache::set($cacheKey, 1, $ttl)) {
+                throw new \RuntimeException('续费提醒缓存写入失败');
+            }
+            return $this->r(200, '查询成功', ['status' => 1]);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return $this->r(100, $e->getMessage());
+        }
     }
 
     public function createPayQr(array $postData)

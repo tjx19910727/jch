@@ -17,6 +17,8 @@ use think\facade\Db;
  */
 class MachineServiceFeeService
 {
+    const RENEW_NOTICE_BEFORE_DAYS = 5;
+
     const PAY_PENDING = 1;
     const PAY_PROCESSING = 2;
     const PAY_SUCCESS = 3;
@@ -133,6 +135,15 @@ class MachineServiceFeeService
             throw new \InvalidArgumentException('微信支付金额格式无效');
         }
         return bcdiv($cent, '100', 2);
+    }
+
+    /**
+     * 续费提醒从到期前5天开始，已到期设备也继续命中提醒范围。
+     */
+    public static function getRenewNoticeDeadline($now = null)
+    {
+        $now = $now === null ? time() : intval($now);
+        return $now + self::RENEW_NOTICE_BEFORE_DAYS * 86400;
     }
 
     /**
