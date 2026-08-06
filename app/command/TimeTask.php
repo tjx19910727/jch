@@ -35,6 +35,7 @@ class TimeTask extends Command
      * php /home/wwwroot/kiosk/think time_task machine checkOperatingShutdown   每隔15分钟检查设备超过关机时间30分钟后是否仍未关机，并发送异常提醒（每日每机一次）
      * php /home/wwwroot/kiosk/think time_task machine checkOperatingOffline    每隔15分钟检查开机营业时间内持续离线超过30分钟的在营设备，每台每个自然日最多提醒1次
      * php /home/wwwroot/kiosk/think time_task machine syncSimCardDayUsage     每天凌晨2点同步物联卡每日使用流量（查询3天前数据并更新sim_card_machine表）
+     * php /home/wwwroot/kiosk/think time_task machine closeExpiredServiceFeeOrders 每分钟关闭二维码已过期的设备服务费订单
      * php /home/wwwroot/kiosk/think time_task export clearExcel                清除超过3天的Excel，每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task coupon clearCouponUsed           清除已过期或已作废未使用的优惠券码，每天定时任务运行一次
      * php /home/wwwroot/kiosk/think time_task machineAutoRefund autoRefund     自动退款（出货超时/异常），每3分钟执行一次
@@ -55,6 +56,7 @@ class TimeTask extends Command
      *          checkOperatingShutdown      检查设备是否超时未关机并发送提醒
      *          checkOperatingOffline       检查开机营业时间内持续离线超过30分钟的在营设备并发送提醒
      *          syncSimCardDayUsage         每天凌晨2点同步物联卡每日使用流量
+     *          closeExpiredServiceFeeOrders 关闭过期设备服务费订单
      *      machineChannelStock
      *          countMcStock                统计库存报表，已废弃，使用实时获取
      *      goods：
