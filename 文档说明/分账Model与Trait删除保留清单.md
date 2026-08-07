@@ -8,7 +8,7 @@
 - 分账生效范围表：`revenue_rule_config_scope`
 - 分账订单表：`revenue_order`
 - 分账账户表：`revenue_account`
-- 分账支付渠道表：`revenue_pay_channel`
+- 分账触发支付类型表：`revenue_pay_channel`
 
 因此旧表 `revenue_rule_item`、`revenue_rule_item_tier`、`revenue_rule_machine`、`revenue_rule_coupon`、`revenue_rule_coupon_scope` 及其旧 Model/Trait 可以删除或保持不存在。删除后不影响 `/management/revenue.revenue_rule/getList` 和 `/management/revenue.revenue_rule/saveConfig`，前提是必须保留新配置相关 Model/Trait。
 
@@ -20,7 +20,7 @@
 | `app/AppFactory/Kernel/Model/Revenue/RevenueRuleConfigScopeModel.php` | `revenue_rule_config_scope` | 新分账生效设备/商品范围；`saveScope`、下单规则匹配、优惠券适用范围均依赖。 |
 | `app/AppFactory/Kernel/Model/Revenue/RevenueOrderModel.php` | `revenue_order` | 下单预生成分账记录、支付成功结算、退款联动、后台分账订单查询依赖。 |
 | `app/AppFactory/Kernel/Model/Revenue/RevenueAccountModel.php` | `revenue_account` | 分账接收账户；配置校验、下单计算、后台账户管理依赖。 |
-| `app/AppFactory/Kernel/Model/Revenue/RevenuePayChannelModel.php` | `revenue_pay_channel` | 控制哪些支付渠道触发分账；下单计算入口 `shouldCalculateRevenue()` 依赖。 |
+| `app/AppFactory/Kernel/Model/Revenue/RevenuePayChannelModel.php` | `revenue_pay_channel` | 控制哪些支付类型触发分账；下单计算入口 `shouldCalculateRevenue()` 依赖。 |
 
 ## 必须保留的 Trait
 
@@ -29,7 +29,7 @@
 | `app/AppFactory/Kernel/Traits/Revenue/RevenueRuleTrait.php` | 新配置 CRUD 统一入口；`RevenueRuleClient` 的 `saveConfig/saveScope/getList/getFind` 依赖。 |
 | `app/AppFactory/Kernel/Traits/Revenue/RevenueAccountTrait.php` | 后台分账账户管理和分账配置账户校验依赖。 |
 | `app/AppFactory/Kernel/Traits/Revenue/RevenueOrderTrait.php` | 后台分账订单查询、导出、详情依赖。 |
-| `app/AppFactory/Kernel/Traits/Revenue/RevenuePayChannelTrait.php` | 后台支付渠道开关管理依赖。 |
+| `app/AppFactory/Kernel/Traits/Revenue/RevenuePayChannelTrait.php` | 后台支付类型开关管理依赖。 |
 
 ## 可以删除或保持不存在的旧 Model
 

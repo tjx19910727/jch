@@ -224,7 +224,7 @@ class RevenueCalculator
             return false;
         }
 
-        $coupon = RevenueCouponService::findEnabledCouponByCode($couponCode);
+        $coupon = RevenueCouponService::findEnabledCouponByCode($couponCode, intval($this->order['pay_type'] ?? 0));
         if ($coupon && !is_array($coupon)) {
             $coupon = $coupon->toArray();
         }
@@ -289,6 +289,7 @@ class RevenueCalculator
                 continue;
             }
             $calc = $this->calculateCouponRuleItemAmount($item, $matched['base_amount']);
+            $calc = $this->applyCouponCostAssume($calc, $coupon);
             if (!$calc || bccomp($calc['income_amount'], '0.01', 2) < 0) {
                 continue;
             }
@@ -489,6 +490,29 @@ class RevenueCalculator
         return null;
     }
 
+    protected function applyCouponCostAssume($calc, array $coupon)
+    {
+        if (!$calc) {
+            return $calc;
+        }
+        $costAssume = intval($coupon['cost_assume'] ?? 0);
+        if (!in_array($costAssume, [1, 2], true)) {
+            return $calc;
+        }
+        $discountAmount = $this->getRevenueCouponDiscountAmount();
+        if (bccomp($discountAmount, '0.01', 2) < 0) {
+            return $calc;
+        }
+        $incomeAmount = bcsub($this->money($calc['income_amount'] ?? 0), $discountAmount, 2);
+        $calc['income_amount'] = $this->money($incomeAmount);
+        return $calc;
+    }
+
+    protected function getRevenueCouponDiscountAmount()
+    {
+        return $this->money($this->order['revenue_coupon_discount_amount'] ?? 0);
+    }
+
     protected function calculateTierSplitAmount(array $item, $baseAmount, $periodBefore, $periodAfter)
     {
         $tiers = $this->getItemTiers($item);
@@ -647,23 +671,23 @@ class RevenueCalculator
 
     protected function shouldCalculateRevenue()
     {
-        $payChannel = intval($this->order['pay_channel'] ?? 0);
-        if ($payChannel <= 0) {
-            $this->logRevenueConfig('支付渠道查询', [
-                'pay_channel' => $payChannel,
+        $payType = intval($this->order['pay_type'] ?? 0);
+        if ($payType <= 0) {
+            $this->logRevenueConfig('支付类型查询', [
+                'pay_type' => $payType,
                 'found_channel' => 0,
-                'skip_reason' => 'empty_pay_channel',
+                'skip_reason' => 'empty_pay_type',
             ]);
             return false;
         }
 
-        $channel = RevenuePayChannelModel::where(['pay_channel' => $payChannel, 'status' => 1])
+        $channel = RevenuePayChannelModel::where(['pay_type' => $payType, 'status' => 1])
             ->find();
         if ($channel && !is_array($channel)) {
             $channel = $channel->toArray();
         }
-        $this->logRevenueConfig('支付渠道查询', [
-            'pay_channel' => $payChannel,
+        $this->logRevenueConfig('支付类型查询', [
+            'pay_type' => $payType,
             'found_channel' => $channel ? 1 : 0,
             'rpc_id' => $channel ? intval($channel['rpc_id'] ?? 0) : 0,
         ]);
@@ -714,7 +738,54 @@ class RevenueCalculator
             $rule = $this->normalizeConfigRule($rule);
         }
         unset($rule);
-        return $rules;
+        return $this->filterRulesByPayType($rules);
+    }
+
+    protected function filterRulesByPayType(array $rules)
+    {
+        $result = [];
+        foreach ($rules as $rule) {
+            if ($this->ruleAllowsPayType($rule)) {
+                $result[] = $rule;
+            } else {
+                $this->logRevenueConfig('分账规则收款方式过滤', [
+                    'rule_mode' => intval($rule['rule_mode'] ?? 0),
+                    'rr_id' => intval($rule['rr_id'] ?? 0),
+                    'pay_type' => intval($this->order['pay_type'] ?? 0),
+                    'trigger_pay_types' => $this->getRuleTriggerPayTypes($rule),
+                ]);
+            }
+        }
+        return $result;
+    }
+
+    protected function ruleAllowsPayType(array $rule)
+    {
+        $payTypes = $this->getRuleTriggerPayTypes($rule);
+        if (!$payTypes) {
+            return true;
+        }
+        return in_array(intval($this->order['pay_type'] ?? 0), $payTypes, true);
+    }
+
+    protected function getRuleTriggerPayTypes(array $rule)
+    {
+        $payTypes = $rule['trigger_pay_types'] ?? [];
+        if (is_string($payTypes)) {
+            $decoded = json_decode($payTypes, true);
+            $payTypes = is_array($decoded) ? $decoded : explode(',', $payTypes);
+        }
+        if (!is_array($payTypes)) {
+            return [];
+        }
+        $result = [];
+        foreach ($payTypes as $payType) {
+            if ($payType === '' || $payType === null) continue;
+            $payType = intval($payType);
+            if (!in_array($payType, $result, true)) $result[] = $payType;
+        }
+        sort($result);
+        return $result;
     }
 
     protected function getScopeOrderRaw($mId, $gId, $mgId)
