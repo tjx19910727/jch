@@ -689,14 +689,18 @@ class GoodsClient extends ManagementClient
     }
 
     /**
-     * 按商品维度统计所有在营设备的上架、库存、货道与周期销量。
-     * 在营设备口径：machine.is_operating = 1，且设备/货道均为启用状态。
-     * 销售口径：当前商品在对应在营设备上的已支付订单明细数量。
+     * 按商品维度统计指定在营状态设备的上架、库存、货道与周期销量。
+     * 设备状态口径：machine.is_operating，默认 1（在营），且设备/货道均为启用状态。
+     * 销售口径：当前商品在对应状态设备上的已支付订单明细数量。
      * @param array $postData
      * @return array|\think\response\Json
      */
     public function getOperatingGoodsList($postData)
     {
+        if (!$this->validateOperatingGoodsStatus($postData)) {
+            return $this->rValidate('在营状态参数错误');
+        }
+
         $pageNum = intval($postData['pageNum'] ?? 0);
         $query = $this->buildOperatingGoodsQuery($postData);
         $query->orderRaw($this->getOperatingGoodsOrder($postData));
@@ -721,6 +725,10 @@ class GoodsClient extends ManagementClient
      */
     public function exportOperatingGoodsList($postData)
     {
+        if (!$this->validateOperatingGoodsStatus($postData)) {
+            return $this->rValidate('在营状态参数错误');
+        }
+
         unset($postData['page'], $postData['pageNum']);
         $query = $this->buildOperatingGoodsQuery($postData);
         $query->orderRaw($this->getOperatingGoodsOrder($postData));
@@ -764,7 +772,6 @@ class GoodsClient extends ManagementClient
         $query = Db::name('machine_channel')->alias('mc')
             ->join('machine m', 'm.m_id = mc.m_id')
             ->leftJoin('goods g', 'g.g_id = mc.g_id')
-            ->where('m.is_operating', 1)
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', '>', 0)
@@ -791,6 +798,8 @@ class GoodsClient extends ManagementClient
      */
     private function applyOperatingGoodsWhere(&$query, $postData)
     {
+        $query->where('m.is_operating', $this->getOperatingGoodsStatus($postData));
+
         $permittedMIds = $this->resolveGoodsOperatingPermittedMachineIds();
         if ($permittedMIds !== null) {
             if (!$permittedMIds) {
@@ -993,7 +1002,6 @@ class GoodsClient extends ManagementClient
         $query = Db::name('machine_channel')->alias('mc')
             ->join('machine m', 'm.m_id = mc.m_id')
             ->leftJoin('goods g', 'g.g_id = mc.g_id')
-            ->where('m.is_operating', 1)
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', 'in', $gIds)
@@ -1002,6 +1010,32 @@ class GoodsClient extends ManagementClient
 
         $this->applyOperatingGoodsWhere($query, $postData);
         return $query->select()->toArray();
+    }
+
+    /**
+     * 校验设备在营状态筛选值；不传时沿用原有在营设备口径。
+     * @param array $postData
+     * @return bool
+     */
+    private function validateOperatingGoodsStatus($postData)
+    {
+        if (!isset($postData['is_operating']) || $postData['is_operating'] === '') {
+            return true;
+        }
+
+        return in_array(intval($postData['is_operating']), [1, 2, 3], true);
+    }
+
+    /**
+     * 获取设备在营状态筛选值。
+     * @param array $postData
+     * @return int
+     */
+    private function getOperatingGoodsStatus($postData)
+    {
+        return isset($postData['is_operating']) && $postData['is_operating'] !== ''
+            ? intval($postData['is_operating'])
+            : 1;
     }
 
     /**

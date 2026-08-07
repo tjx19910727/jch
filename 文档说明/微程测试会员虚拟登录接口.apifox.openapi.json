@@ -1,0 +1,62 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "微程测试会员虚拟登录接口",
+    "version": "1.0.0",
+    "description": "仅CglPay.is_test=true时支持固定测试会员。生产环境始终调用微程真实接口。"
+  },
+  "paths": {
+    "/machine/receive/getWcSmSCode": {
+      "post": {
+        "summary": "获取微程短信验证码（支持测试手机号）",
+        "parameters": [{"name":"mac","in":"header","required":true,"schema":{"type":"string"}}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref":"#/components/schemas/SmsRequest"},
+              "examples": {"虚拟测试手机号":{"value":{"msg_id":"uuid","machine_id":"JCHM-H2D-0064","timestamp":1783307148,"phone":"13000000000","sign":"签名"}}}
+            }
+          }
+        },
+        "responses": {"200":{"description":"测试环境直接返回测试验证码已生成，不调用第三方短信接口"}}
+      }
+    },
+    "/machine/receive/wcLoginUser": {
+      "post": {
+        "summary": "微程会员登录（支持测试环境虚拟登录）",
+        "description": "测试环境使用13000000000和000000时返回本地虚拟登录结果，不调用微程登录、地址或积分同步接口。",
+        "parameters": [{"name":"mac","in":"header","required":true,"schema":{"type":"string"}}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {"$ref":"#/components/schemas/LoginRequest"},
+              "examples": {"虚拟登录":{"value":{"msg_id":"uuid","machine_id":"JCHM-H2D-0064","timestamp":1783307148,"phone":"13000000000","code":"000000","sign":"签名"}}}
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "登录结果",
+            "content": {"application/json":{"example":{"state":200,"msg":"success","data":{"success":true,"message":"登录成功","token":"virtual_test_hash","phone":"13000000000","virtual_login":true,"card_lists":[],"address_lists":[]}}}}
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SmsRequest": {
+        "type":"object",
+        "required":["msg_id","machine_id","timestamp","phone","sign"],
+        "properties":{"msg_id":{"type":"string"},"machine_id":{"type":"string"},"timestamp":{"type":"integer"},"phone":{"type":"string"},"sign":{"type":"string"}}
+      },
+      "LoginRequest": {
+        "type":"object",
+        "required":["msg_id","machine_id","timestamp","phone","code","sign"],
+        "properties":{"msg_id":{"type":"string"},"machine_id":{"type":"string"},"timestamp":{"type":"integer"},"phone":{"type":"string"},"code":{"type":"string"},"sign":{"type":"string"}}
+      }
+    }
+  }
+}

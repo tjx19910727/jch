@@ -11,8 +11,10 @@ namespace app\AppFactory\Pay\SaleOrders;
 
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 use app\AppFactory\Kernel\Support\AuthCode;
+use app\AppFactory\Kernel\Support\SubCarMixPolicy;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityFdUsedTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMqRecordTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\Payment\AfterOrderPaymentTrait;
@@ -37,6 +39,7 @@ use app\AppFactory\Pay\PayBaseClient;
 class PaymentClient extends PayBaseClient
 {
     use MachineTrait,
+        MachineConfigTrait,
         StrategyPayeeTrait,
         StrategyMachineTrait,
         WxPayTrait,AliPayTrait,JdCashierTrait,TripPay,
@@ -162,11 +165,45 @@ class PaymentClient extends PayBaseClient
                 $this->order['pay_code'] = $this->data['card_no'];
             }
 
+            $subCarMixSpIds = null;
+            $machineConfig = $this->getMachineConfigFind(['m_id' => $this->order['m_id']], '*');
+            if (is_object($machineConfig) && method_exists($machineConfig, 'toArray')) {
+                $machineConfig = $machineConfig->toArray();
+            }
+            $subCarMix = is_array($machineConfig)
+                ? intval($machineConfig['subcar_mix'] ?? SubCarMixPolicy::MIX_ALLOWED)
+                : SubCarMixPolicy::MIX_ALLOWED;
+            if ($subCarMix === SubCarMixPolicy::MIX_FORBIDDEN) {
+                $details = $this->getSaleOrdersDetailsList(
+                    ['order_id' => $this->order['order_id']],
+                    0,
+                    'wc_order_no,cost_price,retail_price,total_sod_price'
+                );
+                if (is_object($details) && method_exists($details, 'toArray')) $details = $details->toArray();
+                $goodsSource = SubCarMixPolicy::orderGoodsSource($details);
+                if ($goodsSource === SubCarMixPolicy::SOURCE_MIXED) {
+                    return $this->rFail($this->lang("VOrderPay.subcar_mix_mixed_goods"));
+                }
+                if ($goodsSource === SubCarMixPolicy::SOURCE_EMPTY) {
+                    return $this->rFail($this->lang("VOrderPay.subcar_mix_order_goods_empty"));
+                }
+                $spIdsField = $goodsSource === SubCarMixPolicy::SOURCE_ONLINE
+                    ? SubCarMixPolicy::ONLINE_SP_IDS_FIELD
+                    : SubCarMixPolicy::OFFLINE_SP_IDS_FIELD;
+                $subCarMixSpIds = SubCarMixPolicy::parsePayeeIds($machineConfig[$spIdsField] ?? '');
+                if (!$subCarMixSpIds) {
+                    return $this->rFail($this->lang("VOrderPay.subcar_mix_payee_empty"));
+                }
+            }
+
 
             $where['sm.s_type'] = 1;
             $where['sp.status'] = 1;
             $where['sp.payee_type'] = $this->order['pay_type'];
             $where['sm.m_id'] = $this->order['m_id'];
+            if (is_array($subCarMixSpIds)) {
+                $where[] = ['sp.sp_id', 'in', $subCarMixSpIds];
+            }
             if($this->machine['ao_id'] > 18){
                 $where['sm.ao_id'] = $this->machine['ao_id'];
             }

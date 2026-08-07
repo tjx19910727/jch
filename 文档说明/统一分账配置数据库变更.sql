@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS `revenue_rule_config` (
   `settlement_type` tinyint(1) NOT NULL DEFAULT '1' COMMENT '结算类型：1即时分账，2 T+N分账',
   `settlement_days` int(11) NOT NULL DEFAULT '0' COMMENT 'T+N天数',
   `coupon_id` int(11) NOT NULL DEFAULT '0' COMMENT '关联活动优惠券ID，rule_mode=5使用',
+  `cost_assume` tinyint(1) NOT NULL DEFAULT '0' COMMENT '优惠券成本承担方式：0无需承担成本，1分账方承担成本，2各自按分账比例承担成本',
+  `trigger_pay_types` varchar(255) NOT NULL DEFAULT '[]' COMMENT '策略触发收款方式pay_type列表JSON，空数组表示不限制',
   `receiver_config` mediumtext NOT NULL COMMENT '分账接收方配置JSON：账户、比例、固定金额、阶梯等',
   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态：1启用，2停用',
   `creator` int(11) DEFAULT NULL COMMENT '创建人',
@@ -58,6 +60,24 @@ SET @sql = IF(
   'SELECT ''revenue_rule_config.coupon_id already exists'' AS message'
 );
 PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = 'cost_assume'),
+  'ALTER TABLE `revenue_rule_config` ADD COLUMN `cost_assume` tinyint(1) NOT NULL DEFAULT ''0'' COMMENT ''优惠券成本承担方式：0无需承担成本，1分账方承担成本，2各自按分账比例承担成本'' AFTER `coupon_id`',
+  'SELECT ''revenue_rule_config.cost_assume already exists'' AS message'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+  NOT EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = 'trigger_pay_types'),
+  'ALTER TABLE `revenue_rule_config` ADD COLUMN `trigger_pay_types` varchar(255) NOT NULL DEFAULT ''[]'' COMMENT ''策略触发收款方式pay_type列表JSON，空数组表示不限制'' AFTER `cost_assume`',
+  'SELECT ''revenue_rule_config.trigger_pay_types already exists'' AS message'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+UPDATE `revenue_rule_config`
+SET `trigger_pay_types` = '[]'
+WHERE `trigger_pay_types` IS NULL OR `trigger_pay_types` = '';
 
 SET @sql = IF(
   EXISTS(SELECT 1 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = @db AND TABLE_NAME = 'revenue_rule_config' AND COLUMN_NAME = 'coupon_code'),

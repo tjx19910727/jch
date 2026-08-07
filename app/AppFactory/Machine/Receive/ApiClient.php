@@ -11,6 +11,7 @@ namespace app\AppFactory\Machine\Receive;
 
 
 use app\AppFactory\Kernel\ServiceContainer;
+use app\AppFactory\Kernel\Support\SubCarMixPolicy;
 use app\AppFactory\Kernel\Support\Trip\Trip;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponUsedTrait;
@@ -81,6 +82,7 @@ use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcUserLoginInfoTrait;
 use app\AppFactory\Kernel\Traits\Auth\AuthOrgMachineChannelTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
+use app\AppFactory\Kernel\Model\Payment\PayTypeModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentDetailModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentLogModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentOrderModel;
@@ -980,7 +982,7 @@ class ApiClient extends ReceiveBaseClient
             if ($pay_type) {
                 $sIds = $this->getStrategyMachineColumn(['m_id' => $this->machine['m_id'], 's_type' => 1], 's_id');
                 if ($sIds) {
-                    $payTypeList = $this->getStrategyPayeeList([['sp_id', 'in', $sIds], 'status' => 1], 0, 'sp_name,title,payee_type,ico');
+                    $payTypeList = $this->getStrategyPayeeList([['sp_id', 'in', $sIds], 'status' => 1], 0, 'sp_id,sp_name,title,payee_type,ico');
                     $data['payTypeList'] = $payTypeList;
                 }
             }
@@ -1345,7 +1347,6 @@ class ApiClient extends ReceiveBaseClient
     {
         //        if ($this->data['pay_type'] != 4 && $this->data['pay_type'] != 0) return $this->rFail($this->lang("VSubCar.pay_type_no_range"));
         if ($this->data['pay_method'] == "41") $this->data['pay_method'] = 1;
-        $hasCouponCode = isset($this->data['coupon_code']) && trim(strval($this->data['coupon_code'])) !== '';
         $trade_no = date("YmdHis") . $this->machine['m_id'] . $this->get_rand_string(6, "num");
         if ($this->data['pay_type'] == 5 && (!isset($this->data['mobile']) || !$this->data['mobile'])) return $this->subCarFailResponse(100, $this->lang("mobile_require"));
         $m_sel = [
@@ -1375,6 +1376,24 @@ class ApiClient extends ReceiveBaseClient
         $updateOrder = [];
         $this->startTrans();
         try {
+            if (!isset($this->data['carList']) || !$this->data['carList']) {
+                $this->rollbackTrans();
+                return $this->subCarFailResponse(100, "购物车不能为空");
+            }
+            $this->data['carList'] = json2arr($this->data['carList']);
+            $machineConfig = $this->getMachineConfigFind(['m_id' => $this->machine['m_id']], '*');
+            if (is_object($machineConfig) && method_exists($machineConfig, 'toArray')) {
+                $machineConfig = $machineConfig->toArray();
+            }
+            $subCarMix = is_array($machineConfig)
+                ? intval($machineConfig['subcar_mix'] ?? SubCarMixPolicy::MIX_ALLOWED)
+                : SubCarMixPolicy::MIX_ALLOWED;
+            if ($subCarMix === SubCarMixPolicy::MIX_FORBIDDEN
+                && SubCarMixPolicy::cartGoodsSource($this->data['carList']) === SubCarMixPolicy::SOURCE_MIXED) {
+                $this->rollbackTrans();
+                return $this->subCarFailResponse(100, $this->lang("VSubCar.subcar_mix_mixed_goods"));
+            }
+
             $real_channel_code = 'Z10';
             $order_id = $this->addSaleOrders($order);
             if ($order_id) {
@@ -1386,11 +1405,6 @@ class ApiClient extends ReceiveBaseClient
                 $updateOrder['total_price'] = 0;
                 $updateOrder['total_quantity'] = 0;
                 $updateOrder['total_cost_points'] = 0;
-                if (!isset($this->data['carList']) || !$this->data['carList']) {
-                    $this->rollbackTrans();
-                    return $this->subCarFailResponse(100, "购物车不能为空");
-                }
-                $this->data['carList'] = json2arr($this->data['carList']);
                 //carList数据结构：
                 //type=3 有早：[{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151411","no":"VC2507151415","order_date":["2026-03-07","2026-03-08","2026-03-09"]}]
                 //type=3 无早：[{"mc_id":186,"quantity":4,"channel_code":"Z10","out_no":"VC2507151411","no":"VC2507151414","order_date":["2026-03-11","2026-03-07","2026-03-08","2026-03-09"]}]
@@ -1402,17 +1416,47 @@ class ApiClient extends ReceiveBaseClient
                 //type = 11: [{"mc_id":186,"quantity":3,"channel_code":"Z10","out_no":"VC2507151415","no":"VC2507151415","order_date":""}]
                 $total_sod_points = 0;
                 foreach ($this->data['carList'] as $value) {
+                    $wc_order_no = [];
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
-                        $wc_goods = $this->getWcGoodsFind(['no' => $value['out_no']]);
+                        $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
+                        if (!$mc) {
+                            $this->rollbackTrans();
+                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail") . "：虚拟货道[" . $value['mc_id'] . "]不存在");
+                        }
+                        if (is_object($mc) && method_exists($mc, 'toArray')) {
+                            $mc = $mc->toArray();
+                        }
+                        $outNo = trim(strval($value['out_no'] ?? ($mc['out_no'] ?? '')));
+                        if ($outNo === '') {
+                            $this->rollbackTrans();
+                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail") . "：微程商品编码不能为空");
+                        }
+                        $value['out_no'] = $outNo;
+                        $wc_goods = $this->getWcGoodsFind(['no' => $outNo]);
+                        if (!$wc_goods) {
+                            $this->rollbackTrans();
+                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail") . "：微程商品[" . $outNo . "]不存在");
+                        }
                         if ($wc_goods['maxBuy'] > 0 && $wc_goods['maxBuy'] < $value['quantity']) {
                             return $this->subCarFailResponse(100, $this->lang("VSubCar.make_order_fail") . "：" . $wc_goods['name'] . "购买数量超过限购数量");
                         }
-                        // todo 添加库存校验
-                        $mc = $this->getWcMachineChannelFind(['mc_id' => $value['mc_id']]);
                         $mc['status'] = 1;
-                        $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $value['out_no']])->toArray();
+                        $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $outNo])->toArray();
+                        $selectedNo = trim(strval($value['no'] ?? ''));
+                        if ($selectedNo === '' && count($wc_goods_locals) === 1) {
+                            $selectedNo = trim(strval($wc_goods_locals[0]['no'] ?? ''));
+                        }
+                        if (in_array(intval($wc_goods['type']), [3, 5, 11], true) && $selectedNo === '') {
+                            $this->rollbackTrans();
+                            return $this->subCarFailResponse(300, $this->lang("VSubCar.make_order_fail") . "：微程组合、实物或房态商品缺少子商品编码no");
+                        }
+                        $value['no'] = $selectedNo;
 
                         $total_price = 0;
+                        // 根据商品seller_price设置价格兜底
+                        if (!empty($value['seller_price']) && floatval($value['seller_price']) > 0) {
+                            $total_price = floatval($value['seller_price']);
+                        }
                         if ($wc_goods['type'] == 1) { //抢购商品没有子商品，直接根据父商品计算价格
                             $total_price = $wc_goods['price'];
                         } elseif ($wc_goods['type'] == 5) {
@@ -1461,7 +1505,6 @@ class ApiClient extends ReceiveBaseClient
                             $other_wc_goods_locals = $this->getWcGoodsLocalList([['no', '<>', $value['no']], 'out_no' => $value['out_no']])->toArray();
                             $total_price += array_sum(array_column($other_wc_goods_locals, 'retail_price')) ?? 0;
                         }
-                        $wc_order_no = [];
                         foreach ($wc_goods_locals as $wc_goods_local) {
                             $wcLocalGid = $wc_goods_local['g_id'] ?? '9999';
                             $total_sod_points += $wc_goods_local['gift_points'];
@@ -1512,9 +1555,9 @@ class ApiClient extends ReceiveBaseClient
                         $mc['batch_id'] = intval($headBatch['batch_id']);
                     }
                     // ==================== 单货道多商品相关结束 ====================
-                    $mg = $this->getMachineGoodsFind(['mg_id' => $mc['mg_id']]);
+                    $mg = $this->getMachineGoodsFind(['mg_id' => ($mc['mg_id'] ?? 0)]);
 
-                    if (!isset($value['channel_code']) && !$mc['mg_id']) {
+                    if (!isset($value['channel_code']) && !($mc['mg_id'] ?? 0)) {
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.mg_id_require"));
                     }
@@ -1522,12 +1565,10 @@ class ApiClient extends ReceiveBaseClient
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.channel_status_no_3"));
                     }
+
                     if (isset($value['channel_code']) && $value['channel_code'] != 'Z10' &&  ($mc['stock'] < $value['quantity'])) {
                         $this->rollbackTrans();
                         return $this->subCarFailResponse(300, $this->lang("VSubCar.under_stock"));
-                    }
-                    if ($this->data['pay_type'] == 0 && !$hasCouponCode) {
-                        $mc['retail_price'] = 0;
                     }
                     if (isset($value['channel_code']) && $value['channel_code'] == 'Z10') {
                         $quantity = $value['quantity'];
@@ -1547,14 +1588,14 @@ class ApiClient extends ReceiveBaseClient
                             "g_id" => $mc['g_id'],
                             "g_name" => $mc['g_name'],
                             "pic" => $mc['pic'],
-                            "sku" => $mc['sku'],
+                            "sku" => $mc['sku'] ?? '',
                             "gc_id" => $mc['gc_id'],
                             "gc_name" => $mc['gc_name'],
                             "cost_price" => $mc['cost_price'] ?? 0,
                             "market_price" => $mc['market_price'] ?? 0,
                             "quantity" => $quantity,
                             "bar_code" => $mc['bar_code'] ?? '',
-                            'total_sod_cost_points' => bcmul($mc['cost_points'], $quantity, 3),
+                            'total_sod_cost_points' => bcmul(($mc['cost_points'] ?? 0), $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                             'sod_ao_id' => $mg['ao_id'] ?? '',
                         ];
@@ -1563,14 +1604,14 @@ class ApiClient extends ReceiveBaseClient
                             $details['batch_id'] = intval($mc['batch_id']);
                         }
                         // ==================== 单货道多商品相关结束 ====================
-                        $details['retail_price'] = !empty($wc_order_no) ? $total_price : $mc['retail_price'];
+                        $details['retail_price'] = !empty($wc_order_no) ? $total_price : ($mc['retail_price'] ?? 0);
                         $details['total_sod_price'] = bcmul($details['retail_price'], $quantity, 3);
                         $sod_id = $this->addSaleOrdersDetails($details);
 
                         if ($sod_id) {
-                            $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul($mc['cost_price'], $quantity, 2), 3);
-                            $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul($mc['market_price'], $quantity, 2), 3);
-                            $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul($mc['retail_price'], $quantity, 2), 3);
+                            $updateOrder['cost_price'] = bcadd($updateOrder['cost_price'], bcmul(($mc['cost_price'] ?? 0), $quantity, 2), 3);
+                            $updateOrder['market_price'] = bcadd($updateOrder['market_price'], bcmul(($mc['market_price'] ?? 0), $quantity, 2), 3);
+                            $updateOrder['retail_price'] = bcadd($updateOrder['retail_price'], bcmul(($mc['retail_price'] ?? 0), $quantity, 2), 3);
                             $updateOrder['quantity'] = bcadd($updateOrder['quantity'], $quantity);
                             $updateOrder['total_price'] = bcadd($updateOrder['total_price'], $details['total_sod_price'], 3);
                             $updateOrder['total_quantity'] = bcadd($updateOrder['total_quantity'], $quantity);
@@ -1603,24 +1644,9 @@ class ApiClient extends ReceiveBaseClient
                 actionLog($result, '事务结果');
                 if ($result) {
                     $this->commitTrans();
-                    if ($hasCouponCode) {
-                        $this->data['coupon_code'] = trim(strval($this->data['coupon_code']));
-                        $couponResult = $this->orderUseCoupon();
-                        if ($couponResult !== true) {
-                            $couponResult = obj2arr($couponResult);
-                            $state = is_array($couponResult) ? ($couponResult['state'] ?? 100) : 100;
-                            $msg = is_array($couponResult) ? ($couponResult['msg'] ?? $this->lang("VSubCar.make_order_fail")) : strval($couponResult);
-                            return $this->subCarFailResponse($state, $msg);
-                        }
-                        $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);
-                        $this->order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order_id], 0);
-                    }
-                    $zeroPay = $this->completeZeroPayOrderIfNeeded($order_id, 'subcar_coupon_zero_pay');
+                    $zeroPay = $this->completeZeroPayOrderIfNeeded($order_id, 'subcar_zero_pay');
                     if (!($zeroPay['success'] ?? false)) {
                         return $this->subCarFailResponse(300, $zeroPay['msg'] ?? $this->lang("action_fail"));
-                    }
-                    if ($this->data['pay_type'] == 0 && !($zeroPay['handled'] ?? false)) {
-                        return $this->subCarFailResponse($hasCouponCode ? 100 : 200, $this->lang("VSubCar.pay_type_empty"));
                     }
                     $data = $zeroPay['order'] ?? $this->buildOrderPayActionData($this->order);
                     return $this->r(200, $this->lang("VSubCar.make_order_success"), $data);
@@ -3142,15 +3168,7 @@ class ApiClient extends ReceiveBaseClient
     {
         $data = [
             'pay_type_list' => $this->getPayTypeOptions(),
-            'pay_channel_list' => [],
         ];
-
-        foreach ($this->getPayChannelNameMap() as $value => $label) {
-            $data['pay_channel_list'][] = [
-                'value' => intval($value),
-                'label' => $label,
-            ];
-        }
 
         return $this->r(200, 'success', $data);
     }
@@ -3422,6 +3440,13 @@ class ApiClient extends ReceiveBaseClient
      */
     public function getWcSmSCode()
     {
+        if ($this->isWcVirtualLoginRequest(false)) {
+            actionLog([
+                'phone' => $this->data['phone'],
+                'machine_id' => $this->data['machine_id'],
+            ], '微程测试会员跳过短信接口');
+            return $this->r(200, 'success', '测试验证码已生成');
+        }
         $res = $this->getSmsCode($this->data['phone'], $this->data['machine_id']);
         $response = json_decode($res['response'], true);
         if (isset($response['data'])) {
@@ -3439,6 +3464,9 @@ class ApiClient extends ReceiveBaseClient
      */
     public function getWcLoginUser()
     {
+        if ($this->isWcVirtualLoginRequest(true)) {
+            return $this->buildWcVirtualLoginResponse();
+        }
         $res = $this->wcLoginUser($this->data['phone'], $this->data['machine_id'], $this->data['code']);
         // $res['response'] = '{"success":true,"message":"登录成功","token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ7XCJ1c2VySWRcIjo3OTYyMjYwfSIsImV4cCI6MTc2ODgyOTIyOCwiaWF0IjoxNzY4ODI4NjI4fQ.LgquQkybzpcmJ1dgjAA3HsL7RA0iwgnV2slr-3C3pOE"}';
         actionLog($res, '登录微程返回内容');
@@ -3485,6 +3513,51 @@ class ApiClient extends ReceiveBaseClient
         $response['card_lists'] = $card_lists;
         $response['address_lists'] = $address_lists;
         return $this->r(200, "success", $response);
+    }
+
+    /**
+     * 测试环境微程虚拟会员凭据判断，生产环境始终返回false。
+     */
+    protected function isWcVirtualLoginRequest($checkCode = true)
+    {
+        // if (!filter_var(env('CglPay.is_test', false), FILTER_VALIDATE_BOOLEAN)) return false;
+        // $config = config('weicheng.virtual_login') ?: [];
+        // if (!filter_var($config['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN)) return false;
+        // if (trim(strval($this->data['phone'] ?? '')) !== trim(strval($config['phone'] ?? ''))) return false;
+        // if (!$checkCode) return true;
+        // return trim(strval($this->data['code'] ?? '')) === trim(strval($config['code'] ?? ''));
+        if(env('CglPay.is_test', true) && $this->data['code'] == '000000' ){
+            return true;
+        }
+    }
+
+    /**
+     * 构造本地虚拟登录结果，全程不请求微程登录、地址和积分接口。
+     */
+    protected function buildWcVirtualLoginResponse()
+    {
+        $phone = trim(strval($this->data['phone']));
+        $machineId = trim(strval($this->data['machine_id']));
+        $cardLists = $this->getCardList(['bind_id' => $phone]);
+        $cardLists = $cardLists && is_object($cardLists) && method_exists($cardLists, 'toArray') ? $cardLists->toArray() : (array)$cardLists;
+        $addressLists = $this->getWcUserAddressesList(['bind_id' => '13714759235']);
+        $addressLists = $addressLists && is_object($addressLists) && method_exists($addressLists, 'toArray') ? $addressLists->toArray() : (array)$addressLists;
+        $response = [
+            'success' => true,
+            'message' => '登录成功',
+            'token' => 'virtual_test_' . hash('sha256', $phone . '|' . $machineId . '|' . date('Y-m-d') . '|' . config('app.salt')),
+            'phone' => $phone,
+            'virtual_login' => true,
+            'card_lists' => array_values($cardLists),
+            'address_lists' => array_values($addressLists),
+        ];
+        actionLog([
+            'phone' => $phone,
+            'machine_id' => $machineId,
+            'card_count' => count($response['card_lists']),
+            'address_count' => count($response['address_lists']),
+        ], '微程测试会员虚拟登录成功');
+        return $this->r(200, 'success', $response);
     }
 
     /**
@@ -4034,6 +4107,7 @@ class ApiClient extends ReceiveBaseClient
                 'item_id' => intval($itemId),
                 'machine_id' => $machineId,
                 'maintainer_id' => trim($maintainerId),
+                'check_status' => 1, // 默认设置为1，表示已检查
                 'maintenance_time' => $maintenanceTime,
                 'notes' => '',
             ];
@@ -4048,7 +4122,7 @@ class ApiClient extends ReceiveBaseClient
         }
 
         // 构建 SQL 字符串用于日志记录
-        $columns = "`records_code`,`item_id`,`machine_id`,`maintainer_id`,`maintenance_time`,`notes`";
+        $columns = "`records_code`,`item_id`,`machine_id`,`maintainer_id`,`maintenance_time`,`check_status`,`notes`";
         $valueTuples = [];
         foreach ($insertAll as $row) {
             $v = [
@@ -4057,6 +4131,7 @@ class ApiClient extends ReceiveBaseClient
                 addslashes($row['machine_id']),
                 addslashes($row['maintainer_id']),
                 addslashes($row['maintenance_time']),
+                addslashes($row['check_status']),
                 addslashes($row['notes']),
             ];
             $valueTuples[] = "('" . implode("','", $v) . "')";
@@ -4795,7 +4870,6 @@ class ApiClient extends ReceiveBaseClient
             ])
             ->field('staff_id,staff_code,account_name')
             ->find();
-
         return $staff ?: [];
     }
 
@@ -5088,7 +5162,6 @@ class ApiClient extends ReceiveBaseClient
         }
     }
 
-    
     /**
      * 设备上报远程出货步骤状态（HTTP接口 /machine/receive/remoteStatus）
      * 设备传入 sod_id + md_content（JSON字符串，key为步骤键，value=1成功/2失败）
@@ -5593,7 +5666,7 @@ class ApiClient extends ReceiveBaseClient
     }
     // ==================== 单货道多商品预补货V2相关结束 ====================
 
-	/**
+    /**
      * 设备提交客户退货日志。
      * 普通编码匹配当前设备订单号后四位；特殊编码仅跳过订单校验，不触发实际退款。
      */

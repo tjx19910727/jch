@@ -22,11 +22,16 @@ use app\AppFactory\Kernel\Model\Machine\MachineLevelDescModel;
 use app\AppFactory\Kernel\Support\Validate\Api\VV2;
 use app\AppFactory\Kernel\Model\Machine\MachineErrorCodeModel;
 use app\AppFactory\Kernel\Model\Auth\AuthOrgMachineChannelModel;
+use app\AppFactory\Kernel\Traits\Payment\PayTypeTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\OrderTypeTrait;
 use think\facade\Db;
 
 trait SaleOrdersTrait
 {
-    /**
+    use PayTypeTrait;
+    use OrderTypeTrait;
+
+     /**
      * 判断订单是否必须走商场积分真实扣减，避免被普通0元购快捷路径截走。
      *
      * @param array|object $order
@@ -39,13 +44,46 @@ trait SaleOrdersTrait
         }
         if (!is_array($order)) return false;
 
-        return intval($order['pay_type'] ?? 0) === 9
-            || intval($order['order_type'] ?? 0) === 7
-            || floatval($order['total_cost_points'] ?? 0) > 0;
+        if (intval($order['pay_type'] ?? 0) === 9 || intval($order['order_type'] ?? 0) === 7) {
+            return true;
+        }
+        if (intval($order['coupon_id'] ?? 0) > 0
+            && bccomp(strval($order['total_price'] ?? 0), '0.01', 2) < 0) {
+            return false;
+        }
+        return floatval($order['total_cost_points'] ?? 0) > 0;
     }
 
-    public function getPayTypeNameMap()
+    public function getDefaultOrderTypeNameMap()
     {
+        return [
+            1 => '普通订单',
+            2 => '优惠券订单',
+            3 => '取货码订单',
+            4 => '付费抽奖订单',
+            5 => '满减满送订单',
+            6 => '叠加营销活动订单',
+            7 => '商场积分订单',
+        ];
+    }
+
+    public function getOrderTypeNameMap($onlyEnabled = false)
+    {
+        $tableMap = $this->getOrderTypeNameMapFromTable(false);
+        if ($tableMap) {
+            if ($onlyEnabled) return $this->getOrderTypeNameMapFromTable(true);
+            return $tableMap;
+        }
+        return $this->getDefaultOrderTypeNameMap();
+    }
+
+    public function getPayTypeNameMap($onlyEnabled = false)
+    {
+        $tableMap = $this->getPayTypeNameMapFromTable(false);
+        if ($tableMap) {
+            if ($onlyEnabled) return $this->getPayTypeNameMapFromTable(true);
+            return $tableMap;
+        }
         return config('payment.pay_type_map') ?: [];
     }
 
@@ -59,16 +97,18 @@ trait SaleOrdersTrait
         return config('payment.strategy_payee_type_map') ?: [];
     }
 
-    public function getPayChannelNameMap()
-    {
-        return config('payment.pay_channel_map') ?: [];
-    }
-
     public function formatPayType($payType, $defaultPrefix = '支付类型#')
     {
         $payType = intval($payType);
-        $map = $this->getPayTypeNameMap();
+        $map = $this->getPayTypeNameMap(false);
         return $map[$payType] ?? ($defaultPrefix . $payType);
+    }
+
+    public function formatOrderType($orderType, $defaultPrefix = '订单类型#')
+    {
+        $orderType = intval($orderType);
+        $map = $this->getOrderTypeNameMap(false);
+        return $map[$orderType] ?? ($defaultPrefix . $orderType);
     }
 
     public function formatPayMethod($payMethod, $defaultPrefix = '支付方式#')
@@ -80,7 +120,24 @@ trait SaleOrdersTrait
 
     public function getPayTypeOptions($values = [])
     {
-        $map = $this->getPayTypeNameMap();
+        $map = $this->getPayTypeNameMap(true);
+        if ($values) {
+            $map = array_intersect_key($map, array_flip(array_map('intval', $values)));
+        }
+
+        $data = [];
+        foreach ($map as $value => $label) {
+            $data[] = [
+                'value' => intval($value),
+                'label' => $label,
+            ];
+        }
+        return $data;
+    }
+
+    public function getOrderTypeOptions($values = [])
+    {
+        $map = $this->getOrderTypeNameMap(true);
         if ($values) {
             $map = array_intersect_key($map, array_flip(array_map('intval', $values)));
         }
@@ -296,8 +353,8 @@ trait SaleOrdersTrait
     public function addSaleOrders($insert)
     {
         $insert = $this->appendSaleOrderRunMode($insert);
+        $insert = $this->normalizeSaleOrderNonNegativeFields($insert);
         $insert = $this->appendRevenueCouponCode($insert);
-        $insert = $this->appendOrderPayChannel($insert);
         $order = SaleOrdersModel::create($insert);
         actionLog($this->getLS(), '生成订单SQL');
         actionLog($order, '生成订单结果');
@@ -344,8 +401,31 @@ trait SaleOrdersTrait
      */
     public function updateSaleOrders($update, $where = [], $field = [])
     {
-        $update = $this->appendOrderPayChannelForUpdate($update, $where, $field);
+        $update = $this->normalizeSaleOrderNonNegativeFields($update);
         return SaleOrdersModel::update($update, $where, $field);
+    }
+
+    /**
+     * 订单金额与数量字段不得以负值落库，差额类字段不在此处处理。
+     */
+    protected function normalizeSaleOrderNonNegativeFields($data)
+    {
+        if (is_object($data)) {
+            $data = method_exists($data, 'toArray') ? $data->toArray() : (array)$data;
+        }
+        if (!is_array($data)) return $data;
+
+        $fields = [
+            'cost_price', 'retail_price', 'total_price', 'discount_price', 'refund_amount',
+            'total_quantity', 'refund_quantity', 'total_points', 'total_cost_points',
+        ];
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $data) && is_numeric($data[$field])
+                && bccomp(strval($data[$field]), '0', 4) < 0) {
+                $data[$field] = '0.0000';
+            }
+        }
+        return $data;
     }
 
     /**
@@ -372,170 +452,6 @@ trait SaleOrdersTrait
         }
 
         return $order;
-    }
-
-    /**
-     * 自动补全订单分类（创建时）
-     * @param array $order
-     * @return array
-     */
-    protected function appendOrderPayChannel($order)
-    {
-        if (is_object($order)) {
-            $order = method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
-        }
-        if (!is_array($order)) {
-            return $order;
-        }
-        if (isset($order['pay_channel']) && intval($order['pay_channel']) > 0) {
-            if (empty($order['pay_channel_name'])) {
-                $order['pay_channel_name'] = $this->getPayChannelName(intval($order['pay_channel']));
-            }
-            return $order;
-        }
-        $result = $this->buildOrderPayChannel($order);
-        $order['pay_channel'] = $result['pay_channel'];
-        $order['pay_channel_name'] = $result['pay_channel_name'];
-        return $order;
-    }
-
-    /**
-     * 自动补全订单分类（更新时）
-     * @param array $update
-     * @param array $where
-     * @param array $field
-     * @return array
-     */
-    protected function appendOrderPayChannelForUpdate($update, array &$where, array &$field)
-    {
-        if (is_object($update)) {
-            $update = method_exists($update, 'toArray') ? $update->toArray() : (array)$update;
-        }
-        if (!is_array($update)) {
-            return $update;
-        }
-
-        $refreshPayChannel = intval($update['refresh_pay_channel'] ?? 0);
-        unset($update['refresh_pay_channel']);
-
-        // 显式传入 pay_channel 时，仅兜底补 pay_channel_name
-        if (isset($update['pay_channel']) && intval($update['pay_channel']) > 0) {
-            if (empty($update['pay_channel_name'])) {
-                $update['pay_channel_name'] = $this->getPayChannelName(intval($update['pay_channel']));
-                if ($field && !in_array('pay_channel_name', $field, true)) {
-                    $field[] = 'pay_channel_name';
-                }
-            }
-            unset($update['has_wc_order_no']);
-            return $update;
-        }
-
-        if (!$refreshPayChannel) {
-            unset($update['has_wc_order_no']);
-            return $update;
-        }
-
-        $orderId = intval($update['order_id'] ?? 0);
-        if ($orderId <= 0 && isset($where['order_id'])) {
-            $orderId = intval($where['order_id']);
-        }
-        if ($orderId <= 0 && !empty($update['trade_no'])) {
-            $orderId = intval($this->getSaleOrdersValue(['trade_no' => $update['trade_no']], 'order_id'));
-        }
-        if ($orderId <= 0 && !empty($where['trade_no'])) {
-            $orderId = intval($this->getSaleOrdersValue(['trade_no' => $where['trade_no']], 'order_id'));
-        }
-        if ($orderId <= 0) {
-            unset($update['has_wc_order_no']);
-            return $update;
-        }
-
-        $order = $this->getSaleOrdersFind(
-            ['order_id' => $orderId],
-            'order_id,order_type,pay_type,pay_method,total_cost_points,gift_points,total_points,acp_id,pay_channel,pay_channel_name'
-        );
-        if (!$order) {
-            unset($update['has_wc_order_no']);
-            return $update;
-        }
-
-        $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
-        $snapshot = array_merge($order, $update);
-        $snapshot['order_id'] = $orderId;
-        if (!array_key_exists('has_wc_order_no', $snapshot)) {
-            $snapshot['has_wc_order_no'] = $this->hasWcOrderNo($orderId) ? 1 : 0;
-        }
-
-        $result = $this->buildOrderPayChannel($snapshot);
-        $update['pay_channel'] = $result['pay_channel'];
-        $update['pay_channel_name'] = $result['pay_channel_name'];
-        unset($update['has_wc_order_no']);
-        if ($field) {
-            if (!in_array('pay_channel', $field, true)) {
-                $field[] = 'pay_channel';
-            }
-            if (!in_array('pay_channel_name', $field, true)) {
-                $field[] = 'pay_channel_name';
-            }
-        }
-        return $update;
-    }
-
-    /**
-     * 订单分类统一判定
-     * @param array $order
-     * @return array
-     */
-    public function buildOrderPayChannel(array $order)
-    {
-        $payType = intval($order['pay_type'] ?? 0);
-        $payMethod = intval($order['pay_method'] ?? 0);
-        $orderType = intval($order['order_type'] ?? 0);
-        $acpId = intval($order['acp_id'] ?? 0);
-        $totalCostPoints = floatval($order['total_cost_points'] ?? 0);
-        $giftPoints = floatval($order['gift_points'] ?? 0);
-        if ($giftPoints <= 0) {
-            $giftPoints = floatval($order['total_points'] ?? 0);
-        }
-
-        if ($payType === 20) {
-            return $this->formatPayChannel(6);
-        }
-        if ($totalCostPoints > 0) {
-            return $this->formatPayChannel(4);
-        }
-
-        $hasWcOrderNo = intval($order['has_wc_order_no'] ?? -1);
-        if ($hasWcOrderNo < 0) {
-            $orderId = intval($order['order_id'] ?? 0);
-            $hasWcOrderNo = $this->hasWcOrderNo($orderId) ? 1 : 0;
-        }
-
-        if ($giftPoints > 0 && !$hasWcOrderNo) {
-            return $this->formatPayChannel(3);
-        }
-        if ($hasWcOrderNo) {
-            return $this->formatPayChannel(1);
-        }
-        if ($payType === 7) {
-            return $this->formatPayChannel(2);
-        }
-        if ($orderType === 3 && $acpId > 0) {
-            return $this->formatPayChannel(5);
-        }
-        if (in_array($payType, [1, 11, 12], true)) {
-            return $this->formatPayChannel(7);
-        }
-        if (in_array($payType, [2, 21, 22], true)) {
-            return $this->formatPayChannel(8);
-        }
-        if (in_array($payMethod, [3, 4, 5], true) || in_array($payType, [4, 10, 33, 34, 35], true)) {
-            return $this->formatPayChannel(9);
-        }
-        if (in_array($payMethod, [6, 7], true) || in_array($payType, [36, 37], true)) {
-            return $this->formatPayChannel(10);
-        }
-        return $this->formatPayChannel(11);
     }
 
     /**
@@ -618,31 +534,6 @@ trait SaleOrdersTrait
             return empty($value);
         }
         return trim((string)$value) === '';
-    }
-
-    /**
-     * 获取分类名称
-     * @param int $payChannel
-     * @return string
-     */
-    protected function getPayChannelName($payChannel)
-    {
-        $map = $this->getPayChannelNameMap();
-        return $map[intval($payChannel)] ?? '其他';
-    }
-
-    /**
-     * 格式化分类结果
-     * @param int $payChannel
-     * @return array
-     */
-    protected function formatPayChannel($payChannel)
-    {
-        $payChannel = intval($payChannel);
-        return [
-            'pay_channel' => $payChannel,
-            'pay_channel_name' => $this->getPayChannelName($payChannel),
-        ];
     }
 
     public function joinSoSodColumn($where, $column, $group = "")
@@ -766,6 +657,7 @@ trait SaleOrdersTrait
      */
     public function addSaleOrdersDetails($insert)
     {
+        $insert = $this->normalizeSaleOrderDetailNonNegativeFields($insert);
         if (!isset($insert['sod_ao_id']) || intval($insert['sod_ao_id']) <= 0) {
             $insert['sod_ao_id'] = $this->resolveSaleOrderDetailAoId($insert);
         }
@@ -1027,7 +919,32 @@ trait SaleOrdersTrait
      */
     public function updateSaleOrdersDetails($update, $where = [], $field = [])
     {
+        $update = $this->normalizeSaleOrderDetailNonNegativeFields($update);
         return SaleOrdersDetailsModel::update($update, $where, $field);
+    }
+
+    /**
+     * 订单详情金额与数量字段不得以负值落库。
+     */
+    protected function normalizeSaleOrderDetailNonNegativeFields($data)
+    {
+        if (is_object($data)) {
+            $data = method_exists($data, 'toArray') ? $data->toArray() : (array)$data;
+        }
+        if (!is_array($data)) return $data;
+
+        $fields = [
+            'cost_price', 'retail_price', 'total_sod_price', 'discount_price', 'refund_amount',
+            'quantity', 'refund_quantity', 'success_quantity', 'fail_quantity',
+            'total_sod_points', 'total_sod_cost_points',
+        ];
+        foreach ($fields as $field) {
+            if (array_key_exists($field, $data) && is_numeric($data[$field])
+                && bccomp(strval($data[$field]), '0', 4) < 0) {
+                $data[$field] = '0.0000';
+            }
+        }
+        return $data;
     }
 
     /**
