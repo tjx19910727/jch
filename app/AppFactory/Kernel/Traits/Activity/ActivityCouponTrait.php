@@ -275,7 +275,7 @@ trait ActivityCouponTrait
                 //$this->order['details']转成数组
                 $order_details = is_array($this->order['details']) ? $this->order['details'] : $this->order['details']->toArray();
                 $eligibleDetails = array_values(array_filter($order_details, function ($detail) use ($ac) {
-                    return $this->couponDetailIsEligible($detail, $ac);
+                    return intval($detail['sod_id'] ?? 0) > 0 && $this->couponDetailIsEligible($detail, $ac);
                 }));
                 $eligiblePrice = '0.0000';
                 foreach ($eligibleDetails as $eligibleDetail) {
@@ -313,7 +313,7 @@ trait ActivityCouponTrait
                         $sodDiscountPrice = $this->clampCouponDiscount($sodDiscountPrice, $value['total_sod_price']);
                         actionLog($value,'优惠计算前商品数据');
                         actionLog($sodDiscountPrice,'商品优惠金额');
-                        if ($sodDiscountPrice < 0.01 && $key > 0) continue;
+                        if ($sodDiscountPrice < 0.01 && $key > 0 && isset($eligibleDetails[$key + 1])) continue;
                         $discount_price = bcsub($discount_price,$sodDiscountPrice,4);
                         $value['discount_price'] = $sodDiscountPrice;
                         $value['total_sod_price'] = $this->subtractCouponDiscount($value['total_sod_price'], $sodDiscountPrice);
