@@ -104,6 +104,7 @@ return [
             'make_order_details_fail' => 'Failed to generate order details',
             'make_order_success' => 'Order generation successful',
             'make_order_fail' => 'Order generation failed',
+            'subcar_mix_mixed_goods' => 'Online and offline goods cannot be placed in the same cart',
             'make_sale_hotel_fail' => 'Failed to generate hotel data',
             'make_hotel_nightly_fail' => 'Failed to generate daily price data',
             'goods_outing' => 'The order has been successfully created and is currently being shipped',

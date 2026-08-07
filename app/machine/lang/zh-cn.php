@@ -126,6 +126,7 @@ return [
         "make_order_details_fail" => "生成订单详情失败",
         "make_order_success" => "生成订单成功",
         "make_order_fail" => "生成订单失败",
+        "subcar_mix_mixed_goods" => "购物车不允许同时包含线上商品和线下商品",
         "make_sale_hotel_fail" => "生成酒店数据失败",
         "make_hotel_nightly_fail" => "生成每日价格数据失败",
 
