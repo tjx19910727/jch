@@ -12,7 +12,7 @@ class OfflineRevenueCalculator
     private array $accounts;
     private array $rules;
     private array $machineRules;
-    private array $enabledPayChannels;
+    private array $enabledPayTypes;
     private array $monthlyTurnover;
     private float $rentalAmount = 0.0;
     private float $productAmount = 0.0;
@@ -23,7 +23,7 @@ class OfflineRevenueCalculator
         $this->accounts = $fixture['accounts'];
         $this->rules = $fixture['rules'];
         $this->machineRules = $fixture['machine_rules'];
-        $this->enabledPayChannels = $fixture['enabled_pay_channels'];
+        $this->enabledPayTypes = $fixture['enabled_pay_types'];
         $this->monthlyTurnover = $fixture['monthly_turnover'];
     }
 
@@ -33,7 +33,7 @@ class OfflineRevenueCalculator
         $this->productAmount = 0.0;
         $this->rentalAmountsBySod = [];
         $records = [];
-        if (!in_array((int)$order['pay_channel'], $this->enabledPayChannels, true)) {
+        if (!in_array((int)$order['pay_type'], $this->enabledPayTypes, true)) {
             return [];
         }
 
@@ -328,7 +328,7 @@ function fixture(): array
             102 => ['ra_id' => 102, 'ao_id' => 2, 'manager_id' => 1002, 'account_type' => 'balance', 'account' => 'B_BALANCE'],
             103 => ['ra_id' => 103, 'ao_id' => 3, 'manager_id' => 1003, 'account_type' => 'balance', 'account' => 'C_BALANCE'],
         ],
-        'enabled_pay_channels' => [11],
+        'enabled_pay_types' => [1],
         'rules' => [
             200 => [
                 'rr_id' => 200,
@@ -527,7 +527,6 @@ function orderFixture(int $orderId, int $mId, float $total, array $details): arr
         'trade_no' => 'CODEX_REV_TEST_' . $orderId,
         'sp_id' => 9001,
         'pay_type' => 1,
-        'pay_channel' => 11,
         'pay_method' => 1,
         'm_id' => $mId,
         'machine_id' => 'CODEX-M-' . $mId,
@@ -564,27 +563,26 @@ $tests['普通分账：A设备销售A商品，A获得订单全额'] = function (
     assertMoney(100.0, $records[0]['income_amount'], '普通分账金额应为订单全额');
 };
 
-$tests['渠道关闭：不生成分账单'] = function () {
+$tests['支付类型关闭：不生成分账单'] = function () {
     $fixture = fixture();
-    $fixture['enabled_pay_channels'] = [];
+    $fixture['enabled_pay_types'] = [];
     $calc = new OfflineRevenueCalculator($fixture);
     $records = $calc->calculate(orderFixture(10011, 501, 100.0, [
         ['sod_id' => 11, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
     ]));
-    assertEquals(0, count($records), '渠道关闭时不应生成分账单');
+    assertEquals(0, count($records), '支付类型关闭时不应生成分账单');
 };
 
-$tests['渠道判断：读取订单pay_channel而非pay_type'] = function () {
+$tests['支付类型判断：读取订单pay_type'] = function () {
     $fixture = fixture();
-    $fixture['enabled_pay_channels'] = [12];
+    $fixture['enabled_pay_types'] = [12];
     $calc = new OfflineRevenueCalculator($fixture);
     $order = orderFixture(10028, 501, 100.0, [
         ['sod_id' => 28, 'sod_ao_id' => 1, 'quantity' => 1, 'retail_price' => 100.0, 'total_sod_price' => 100.0],
     ]);
     $order['pay_type'] = 1;
-    $order['pay_channel'] = 11;
     $records = $calc->calculate($order);
-    assertEquals(0, count($records), 'pay_type命中但pay_channel未命中时不应触发分账');
+    assertEquals(0, count($records), 'pay_type未命中时不应触发分账');
 };
 
 $tests['缺少普通规则：存在剩余金额时不生成普通分账'] = function () {
@@ -597,7 +595,7 @@ $tests['缺少普通规则：存在剩余金额时不生成普通分账'] = func
     assertEquals(0, count($records), '缺少普通规则时应允许未分配金额留在收款账户');
 };
 
-$tests['仅配置支付渠道：未配置任何分账策略不应中断'] = function () {
+$tests['仅配置支付类型：未配置任何分账策略不应中断'] = function () {
     $fixture = fixture();
     $fixture['machine_rules'][599] = [];
     $calc = new OfflineRevenueCalculator($fixture);

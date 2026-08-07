@@ -48,6 +48,8 @@ class AuthManagerRoleClient extends ManagementClient
         "/management/common/checkPwd",
         "/management/config.config/getFind",
         "/management/config.config_lang/getList",
+        "/management/auth.auth_manager/getEnabledManagerList",
+        "/management/config.pay_type/getList",
     ];
 
     /**

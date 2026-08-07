@@ -9,6 +9,7 @@
 
 namespace app\AppFactory\Kernel\Traits\WeiCheng;
 
+use app\AppFactory\Kernel\Service\WeiCheng\WcOrderSyncRetryService;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcGoodsTrait;
 use app\AppFactory\Kernel\Traits\WeiCheng\WcRequestLogsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
@@ -75,7 +76,7 @@ trait WcBaseTrait
     }
 
 
-    public function weicheng_curl($url, $postFields = [], $header = [])
+    public function weicheng_curl($url, $postFields = [], $header = [], $logOptions = [])
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -92,21 +93,99 @@ trait WcBaseTrait
             curl_setopt($ch, CURLOPT_CAINFO, "D:\phpstudy_pro\wwwroot\backend\public\static\cacert.pem");
         }
         $response = curl_exec($ch);
+        $curlError = '';
         if (curl_errno($ch)) {
-            echo 'Curl error: ' . curl_error($ch);
+            $curlError = curl_error($ch);
+            echo 'Curl error: ' . $curlError;
         }
         $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-        $this->addWcRequestLogs([
-            'request_url' => $url,
-            'request_headers' => $header ? json_encode($header) : json_encode(['Content-Type: application/x-www-form-urlencoded'], JSON_UNESCAPED_UNICODE),
-            'request_body' => json_encode($postFields, JSON_UNESCAPED_UNICODE),
-            'response_body' => $response,
-            'response_status' => $status,
-            'type' => 1,
-            'created_at' => date('Y-m-d H:i:s'),
-        ]);
+        if ($this->shouldWriteWcRequestLog($status, $curlError, $response, $logOptions)) {
+            $requestHeaders = $header ? $header : ['Content-Type: application/x-www-form-urlencoded'];
+            $requestBody = isset($logOptions['request_body']) ? $logOptions['request_body'] : $postFields;
+            $this->writeWcRequestLogSafely([
+                'request_url' => $this->sanitizeWcRequestUrl($url),
+                'request_headers' => $this->encodeWcRequestLogData($requestHeaders),
+                'request_body' => $this->encodeWcRequestLogData($requestBody),
+                'response_body' => $response,
+                'response_status' => $status,
+                'type' => 1,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+        }
+        curl_close($ch);
         return ['response' => $response, 'status' => $status];
+    }
+
+    /**
+     * 请求日志属于辅助能力，写入失败时降级到PHP错误日志，不中断业务请求。
+     */
+    protected function writeWcRequestLogSafely($logData)
+    {
+        try {
+            $this->addWcRequestLogs($logData);
+            return true;
+        } catch (\Throwable $e) {
+            $message = str_replace(["\r", "\n"], ' ', $e->getMessage());
+            error_log('[wc_request_logs] write failed: ' . substr($message, 0, 1000));
+            return false;
+        }
+    }
+
+    /**
+     * 批量同步可仅记录失败请求，其他调用默认保持全量记录。
+     */
+    protected function shouldWriteWcRequestLog($status, $curlError, $response, $logOptions)
+    {
+        $mode = isset($logOptions['mode']) ? $logOptions['mode'] : 'all';
+        if ($mode !== 'failure') return true;
+        if ($curlError !== '' || intval($status) !== 200) return true;
+
+        $expectedKey = isset($logOptions['expected_response_key']) ? $logOptions['expected_response_key'] : '';
+        if ($expectedKey === '') return false;
+        $responseData = json_decode($response, true);
+        return !is_array($responseData) || !isset($responseData[$expectedKey]);
+    }
+
+    /**
+     * 日志保留业务参数，但对认证信息和个人敏感字段脱敏。
+     */
+    protected function sanitizeWcRequestLogData($data)
+    {
+        if (!is_array($data)) return $data;
+        $sensitiveKeys = ['apikey', 'sign', 'token', 'code', 'phone', 'mobile', 'link_phone', 'identity_card'];
+        foreach ($data as $key => $value) {
+            $normalizedKey = strtolower(trim((string)$key));
+            if (is_int($key) && is_string($value) && stripos($value, 'token:') === 0) {
+                $data[$key] = 'token: ***';
+            } elseif (in_array($normalizedKey, $sensitiveKeys, true)) {
+                $data[$key] = '***';
+            } elseif (is_array($value)) {
+                $data[$key] = $this->sanitizeWcRequestLogData($value);
+            }
+        }
+        return $data;
+    }
+
+    /**
+     * 非法UTF-8等编码异常时保留可编码字段，避免request_body再次变为空值。
+     */
+    protected function encodeWcRequestLogData($data)
+    {
+        $data = $this->sanitizeWcRequestLogData($data);
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE);
+        if ($json !== false) return $json;
+
+        $json = json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PARTIAL_OUTPUT_ON_ERROR);
+        return $json !== false ? $json : '{}';
+    }
+
+    /**
+     * URL只保留接口定位信息，密钥、签名和加密载荷写入前统一脱敏。
+     */
+    protected function sanitizeWcRequestUrl($url)
+    {
+        return preg_replace('/([?&])(apikey|sign|data|token|code|phone)=([^&]*)/i', '$1$2=***', $url);
     }
 
     public function goodsTypesSync($goods_type, $nowPage = 1, $pageSize = 100)
@@ -119,7 +198,11 @@ trait WcBaseTrait
             'nowPage' => $nowPage,
         ];
         $postUrl = $this->goods_type_sync_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-        return $this->weicheng_curl($postUrl, []);
+        return $this->weicheng_curl($postUrl, [], [], [
+            'mode' => 'failure',
+            'expected_response_key' => 'data',
+            'request_body' => $data,
+        ]);
     }
 
     public function synchronizeGoodsLists2Db($goods_lists, $type, $syncBatchNo = '')
@@ -151,7 +234,11 @@ trait WcBaseTrait
             'type' => $type,
         ];
         $postUrl = $this->goods_sync_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-        return $this->weicheng_curl($postUrl, []);
+        return $this->weicheng_curl($postUrl, [], [], [
+            'mode' => 'failure',
+            'expected_response_key' => 'product',
+            'request_body' => $data,
+        ]);
     }
 
     public function synchronizeGoods2Db($updateData, $syncBatchNo = '')
@@ -200,7 +287,9 @@ trait WcBaseTrait
                 'desc' => '',
                 'status' => 1,
                 'channel_code' => 'Z10',
-                'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
+                // 抢购/预约商品类型：daysInfo 由 mergeAppointmentGoodsDaysInfo 合并到顶层 wc_goods.daysInfo，
+                // 这里应取 $wc_goods['daysInfo']，而不是引用本分支中未定义的 $good
+                'daysInfo' => isset($wc_goods['daysInfo']) && !empty($wc_goods['daysInfo']) ? (is_string($wc_goods['daysInfo']) ? $wc_goods['daysInfo'] : json_encode($wc_goods['daysInfo'])) : '',
                 'isNeedReserve' => $wc_goods['isNeedReserve'] ?? '0',
                 'gift_points' => $wc_goods['gift_points'] ?? 0,
             ];
@@ -232,7 +321,9 @@ trait WcBaseTrait
                     'status' => 1,
                     'gift_points' => $good['present_integral'] ?? 0,
                     'channel_code' => 'Z10',
-                    'daysInfo' => isset($good['daysInfo']) && !empty($good['daysInfo']) ? json_encode($good['daysInfo']) : '',
+                    // 抢购/预约商品：daysInfo 由 mergeAppointmentGoodsDaysInfo 合并到顶层 wc_goods.daysInfo，
+                    // 这里应取 $wc_goods['daysInfo']（避免引用本分支未定义的 $good）
+                    'daysInfo' => isset($wc_goods['daysInfo']) && !empty($wc_goods['daysInfo']) ? (is_string($wc_goods['daysInfo']) ? $wc_goods['daysInfo'] : json_encode($wc_goods['daysInfo'])) : '',
                 ];
                 if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($setData);
@@ -293,7 +384,10 @@ trait WcBaseTrait
     {
         $this->initWcBase();
         $postUrl = $this->get_sms_code_url . "?phone=" . $phone . "&machine_code=" . $machine_id;
-        return $this->weicheng_curl($postUrl);
+        return $this->weicheng_curl($postUrl, [], [], ['request_body' => [
+            'phone' => $phone,
+            'machine_code' => $machine_id,
+        ]]);
     }
 
 
@@ -301,7 +395,11 @@ trait WcBaseTrait
     {
         $this->initWcBase();
         $postUrl = $this->phone_login_url . "?phone=" . $phone . "&machine_code=" . $machine_id . "&code=" . $code;
-        return $this->weicheng_curl($postUrl);
+        return $this->weicheng_curl($postUrl, [], [], ['request_body' => [
+            'phone' => $phone,
+            'machine_code' => $machine_id,
+            'code' => $code,
+        ]]);
     }
 
     public function wcUserSyncPoints($token, $integral, $op_type)
@@ -309,7 +407,10 @@ trait WcBaseTrait
         $this->initWcBase();
         $postUrl = $this->user_sync_points . "?op_type=" . $op_type . "&integral=" . (int)$integral;
         $header = array('token: ' . $token);
-        return $this->weicheng_curl($postUrl, [], $header);
+        return $this->weicheng_curl($postUrl, [], $header, ['request_body' => [
+            'op_type' => $op_type,
+            'integral' => (int)$integral,
+        ]]);
     }
 
 
@@ -317,7 +418,7 @@ trait WcBaseTrait
     {
         $this->initWcBase();
         $postUrl = $this->get_points_qrcode . "?integral=" . (int)$integral;
-        return $this->weicheng_curl($postUrl);
+        return $this->weicheng_curl($postUrl, [], [], ['request_body' => ['integral' => (int)$integral]]);
     }
 
     public function orderSync2Wc($order)
@@ -326,27 +427,72 @@ trait WcBaseTrait
         if (!$details) return true;
         $details = $details->toArray();
         foreach ($details as $detail) {
-            $wc_order_no = $this->orderDetailSync2Wc($order, $detail);
-            $wc_order_no_json = json_encode($wc_order_no);
-            $this->updateSaleOrdersDetails(['wc_order_no' => $wc_order_no_json], ['sod_id' => $detail['sod_id']]);
+            if (empty($detail['wc_order_no'])) continue;
+            $this->syncWcOrderDetailWithRetry($order, $detail);
         }
-        //返回true是为了不影响正常出货流程
+        // 微程同步失败只进入重试队列，不影响支付成功和设备出货。
         return true;
+    }
+
+    /**
+     * 同步一个微程订单明细并维护失败重试任务。
+     * 手动推送时 resetFinal=true，可将已转人工任务重新进入三次重试周期。
+     */
+    public function syncWcOrderDetailWithRetry($order, $detail, $resetFinal = false)
+    {
+        $order = is_object($order) && method_exists($order, 'toArray') ? $order->toArray() : (array)$order;
+        $detail = is_object($detail) && method_exists($detail, 'toArray') ? $detail->toArray() : (array)$detail;
+        $wcOrderNo = json_decode($detail['wc_order_no'] ?? '', true) ?: [];
+        $failure = '';
+        $retryQueued = false;
+        try {
+            $wcOrderNo = $this->orderDetailSync2Wc($order, $detail);
+            $this->updateSaleOrdersDetails(
+                ['wc_order_no' => json_encode($wcOrderNo, JSON_UNESCAPED_UNICODE)],
+                ['sod_id' => $detail['sod_id']]
+            );
+            $failure = $this->getWcOrderSyncFailure($wcOrderNo);
+        } catch (\Throwable $e) {
+            $failure = $e->getMessage();
+            actionException($e, 1, $resetFinal ? 'wcOrderManualSync' : 'wcOrderInitialSync');
+        }
+
+        try {
+            $retryService = new WcOrderSyncRetryService();
+            if ($failure === '') {
+                $retryService->markSuccessBySodId($detail['sod_id'], $wcOrderNo);
+            } else {
+                $retryQueued = (bool)$retryService->enqueue($order, $detail, $failure, $wcOrderNo, $resetFinal);
+            }
+        } catch (\Throwable $e) {
+            // 数据库升级缺失等入队异常也不能影响支付或手动操作的主结果。
+            actionException($e, 1, 'wcOrderSyncEnqueue');
+        }
+
+        return [
+            'success' => $failure === '',
+            'error' => $failure,
+            'retry_queued' => $retryQueued,
+            'wc_order_no' => $wcOrderNo,
+        ];
     }
 
     public function orderDetailSync2Wc($order, $detail)
     {
         $this->initWcBase();
+        $wc_order_no = json_decode($detail['wc_order_no'] ?? '{}', true) ?: [];
         $wc_machine_channel = $this->getWcMachineChannelFind(['mc_id' => $detail['mc_id']]);
-        if (!$wc_machine_channel) return true;
+        if (!$wc_machine_channel) return $wc_order_no;
         $wc_machine_channel = $wc_machine_channel->toArray();
         $wc_goods_locals = $this->getWcGoodsLocalList(['out_no' => $wc_machine_channel['out_no']]);
-        if (!$wc_goods_locals) return true;
+        if (!$wc_goods_locals) return $wc_order_no;
         $wc_goods_locals = $wc_goods_locals->toArray();
-        $wc_order_no = json_decode($detail['wc_order_no'] ?? '{}', true) ?: [];
 
         $buy_date_range = [];
         foreach($wc_order_no as $no => $value) {
+            if (!is_array($value)) continue;
+            // 已同步成功的子商品不重复请求，保证组合商品部分成功场景幂等。
+            if (!empty($value['order_no'])) continue;
             if(!empty($value['order_date'])) {
                 if(count($value['order_date']) == 1){
                     $buy_date_range = [
@@ -381,21 +527,47 @@ trait WcBaseTrait
             if(!empty($buy_date_range)) $data['buy_date_range'] = json_encode($buy_date_range);
             actionLog($data, "子订单同步数据");
             $postUrl = $this->order_add_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-            $res = $this->weicheng_curl($postUrl, []);
+            $res = $this->weicheng_curl($postUrl, [], [], ['request_body' => $data]);
             // $res['response'] = '{"order_no":"O757423599403734","orderNo":"O757423599403734","tickets":["68234301"],"tickets_new":[{"ticket":"68234301","num":1,"qr_code":"https://oss-weicheng.jchtechnologies.com/upload/2026/03/04/8c0ae373080843e4a6f358361e20bd21.jpg","qr_code_url":"https://oss-weicheng.jchtechnologies.com/upload/2026/03/04/8c0ae373080843e4a6f358361e20bd21.jpg"}],"ticket_check_style":0,"tip":"出库成功","status":"success"}';
             $res_arr = json_decode($res['response'] ?? '', true);
             if (!is_array($res_arr)) {
                 actionLog(['detail' => $detail, 'response' => $res['response'] ?? ''], "子订单同步失败：微程返回格式异常");
                 $wc_order_no[$no]['order_no'] = '';
+                $wc_order_no[$no]['sync_error'] = '微程返回格式异常，HTTP状态码：' . intval($res['status'] ?? 0);
+                $wc_order_no[$no]['response'] = $res['response'] ?? '';
             } elseif (($res_arr['status'] ?? '') == "fail") {
                 actionLog($detail, "子订单同步失败" . ($res_arr['tip'] ?? ''));
                 $wc_order_no[$no]['order_no'] = '';
+                $wc_order_no[$no]['sync_error'] = $res_arr['tip'] ?? '微程返回失败';
+                $wc_order_no[$no]['response'] = $res_arr;
             } else {
                 $wc_order_no[$no]['order_no'] = $res_arr['order_no'] ?? '';
                 $wc_order_no[$no]['response'] = $res_arr;
+                if (empty($wc_order_no[$no]['order_no'])) {
+                    $wc_order_no[$no]['sync_error'] = '微程成功响应缺少order_no';
+                } else {
+                    unset($wc_order_no[$no]['sync_error']);
+                }
             }
         }
         return $wc_order_no;
+    }
+
+    /** 返回尚未同步成功的子商品错误摘要；空字符串表示全部成功。 */
+    public function getWcOrderSyncFailure($wcOrderNo)
+    {
+        if (!is_array($wcOrderNo)) return '微程订单数据格式异常';
+        $errors = [];
+        $goodsCount = 0;
+        foreach ($wcOrderNo as $goodsNo => $item) {
+            if (!is_array($item)) continue;
+            $goodsCount++;
+            if (empty($item['order_no'])) {
+                $errors[] = (string)$goodsNo . '：' . ($item['sync_error'] ?? '未返回微程订单号');
+            }
+        }
+        if ($goodsCount === 0) return '微程订单中没有可同步的子商品';
+        return implode('；', $errors);
     }
 
     public function orderRefundSync2Wc($order, $detail)
@@ -410,7 +582,7 @@ trait WcBaseTrait
                     'out_order_no' => $order['trade_no'] . '#' . $detail['sod_id'],
                 ];
                 $postUrl = $this->order_refund_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-                $flag[] =  $this->weicheng_curl($postUrl, []);
+                $flag[] =  $this->weicheng_curl($postUrl, [], [], ['request_body' => $data]);
                 actionLog($flag, "退款接口返回数据");
             }
         }
@@ -433,20 +605,22 @@ trait WcBaseTrait
 
         ];
         $postUrl = $this->order_refundPart_url . "?apikey=" . $this->config['apikey'] . "&sign=" . $this->getSign($data) . "&data=" . $this->getDecptData($data);
-        return $this->weicheng_curl($postUrl, []);
+        return $this->weicheng_curl($postUrl, [], [], ['request_body' => $data]);
     }
 
     public function syncWcUserInfo($token)
     {
         $this->initWcBase();
         $header = array('token: ' . $token);
-        return $this->weicheng_curl($this->query_user_info_url, [], $header);
+        return $this->weicheng_curl($this->query_user_info_url, [], $header, [
+            'request_body' => ['operation' => 'query_user_info'],
+        ]);
     }
 
     public function wcLoginQrCode($machine_id)
     {
         $this->initWcBase();
         $postUrl = $this->query_login_qrcode_url . "?machine_code=" . $machine_id;
-        return $this->weicheng_curl($postUrl);
+        return $this->weicheng_curl($postUrl, [], [], ['request_body' => ['machine_code' => $machine_id]]);
     }
 }

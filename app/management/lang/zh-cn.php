@@ -428,6 +428,8 @@ return [
         "msg_type_invalid" => "无效的主控指令类型",
         "simplified_command_only" => "该指令仅支持简易机",
         "luxury_command_only" => "该指令仅支持豪华机",
+        "on_time_format_invalid" => "自动开机时间格式错误，请使用HH:mm格式",
+        "on_time_must_be_later_today" => "自动开机时间必须晚于当天当前时间",
     ],
 
     "VMachineLang" => [
@@ -462,6 +464,9 @@ return [
         "mcList_require" => "批量配置列表参数不能为空",
         "run_mode_in" => "设备模式参数错误",
         "online_pay_success_tip_max" => "线上商品支付成功提示不能超过255个字符",
+        "subcar_mix_in" => "是否允许混合下单仅支持1或2",
+        "subcar_offline_sp_ids_invalid" => "线下商品收款策略ID格式错误",
+        "subcar_online_sp_ids_invalid" => "线上商品收款策略ID格式错误",
     ],
     "VMachineConfigLang" => [
         "mcl_id_require" => "设备配置多语言ID不能为空",

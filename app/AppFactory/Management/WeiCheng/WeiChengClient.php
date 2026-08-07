@@ -217,14 +217,33 @@ class WeiChengClient extends ManagementClient
 
     public function synchronizeGoodsAll()
     {
+        $startTime = microtime(true);
         $syncBatchNo = date('YmdHis');
         $wc_goods = $this->getWcGoodsList([['id', '>', '0'],['is_pub', '=', '1']])->toArray();
+        $successCount = 0;
+        $failureCount = 0;
+        $failureGoodsNos = [];
         foreach ($wc_goods as $v) {
             $res = $this->synchronizeGoods($v['no'], $v['type'], $syncBatchNo);
-            if (!$res['status']) continue;
+            if (!$res['status']) {
+                $failureCount++;
+                if (count($failureGoodsNos) < 100) $failureGoodsNos[] = $v['no'];
+                continue;
+            }
+            $successCount++;
         }
         $this->wcGoodsWriteLocal();
-        return returnState('200', '分类商品同步成功');
+        $summary = [
+            'sync_batch_no' => $syncBatchNo,
+            'total_count' => count($wc_goods),
+            'success_count' => $successCount,
+            'failure_count' => $failureCount,
+            'failure_goods_nos' => $failureGoodsNos,
+            'failure_goods_nos_truncated' => $failureCount > count($failureGoodsNos) ? 1 : 0,
+            'duration_ms' => intval((microtime(true) - $startTime) * 1000),
+        ];
+        actionLog($summary, '微程商品详情同步汇总', 'async_task_wc_goods_sync');
+        return returnState('200', '分类商品同步成功', $summary);
     }
 
     public function synchronizeGoods($goods_no, $type, $syncBatchNo = '')
@@ -239,7 +258,7 @@ class WeiChengClient extends ManagementClient
                 return ['status' => false, 'msg' => $result['response']];
             }
 
-            $updateData = $res['product'];
+            $updateData = $this->mergeAppointmentGoodsDaysInfo($res['product']);
             $updateData['get_data'] = $result['response'];
             if (isset($updateData['goods']))
                 $updateData['goods'] = json_encode($updateData['goods']);
@@ -258,6 +277,43 @@ class WeiChengClient extends ManagementClient
             return ['status' => $res];
         }
         return ['status' => false, 'msg' => $result['response']];;
+    }
+
+    /**
+     * 预约商品明细位于 appointment.goods，合并到商品快照供父表和本地表复用。
+     */
+    protected function mergeAppointmentGoodsDaysInfo($product)
+    {
+        if (!is_array($product)) return $product;
+
+        $appointmentGoods = isset($product['appointment']['goods']) && is_array($product['appointment']['goods'])
+            ? $product['appointment']['goods']
+            : [];
+        unset($product['appointment']);
+        if (!$appointmentGoods) return $product;
+
+        $goods = isset($product['goods']) && is_array($product['goods']) ? $product['goods'] : [];
+        $goodsIndex = [];
+        foreach ($goods as $index => $good) {
+            if (!empty($good['no'])) $goodsIndex[$good['no']] = $index;
+        }
+
+        foreach ($appointmentGoods as $appointmentGood) {
+            if (!is_array($appointmentGood) || intval($appointmentGood['type'] ?? 0) !== 1) continue;
+            if (!isset($appointmentGood['daysInfo']) || !is_array($appointmentGood['daysInfo'])) continue;
+
+            if (!isset($product['daysInfo'])) $product['daysInfo'] = $appointmentGood['daysInfo'];
+            $goodsNo = trim(strval($appointmentGood['no'] ?? ''));
+            if ($goodsNo !== '' && isset($goodsIndex[$goodsNo])) {
+                $goods[$goodsIndex[$goodsNo]] = array_merge($goods[$goodsIndex[$goodsNo]], $appointmentGood);
+                continue;
+            }
+            $goods[] = $appointmentGood;
+            if ($goodsNo !== '') $goodsIndex[$goodsNo] = count($goods) - 1;
+        }
+
+        if ($goods) $product['goods'] = $goods;
+        return $product;
     }
 
     protected function markWcGoodsMissingFromSync($syncBatchNo, $goodsType = 0)

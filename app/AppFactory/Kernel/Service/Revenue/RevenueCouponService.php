@@ -52,8 +52,12 @@ class RevenueCouponService
         throw new \Exception("生成唯一优惠券编码失败，请稍后重试");
     }
 
-    public static function findEnabledCouponByCode($couponCode, $field = '*')
+    public static function findEnabledCouponByCode($couponCode, $payType = 0, $field = '*')
     {
+        if (is_string($payType) && $field === '*') {
+            $field = $payType;
+            $payType = 0;
+        }
         $activityCoupon = self::findActivityCouponByCode($couponCode);
         if (!$activityCoupon) {
             return null;
@@ -69,8 +73,35 @@ class RevenueCouponService
         if (!is_array($config)) {
             $config = $config->toArray();
         }
+        if (intval($payType) > 0 && !self::configAllowsPayType($config, intval($payType))) {
+            return null;
+        }
         $config['rr_id'] = intval($config['rrcfg_id']);
         return self::mergeActivityCouponData($config, $activityCoupon, $couponCode);
+    }
+
+    protected static function configAllowsPayType(array $config, $payType)
+    {
+        $payTypes = self::normalizeTriggerPayTypes($config['trigger_pay_types'] ?? []);
+        if (!$payTypes) return true;
+        return in_array(intval($payType), $payTypes, true);
+    }
+
+    protected static function normalizeTriggerPayTypes($payTypes)
+    {
+        if (is_string($payTypes)) {
+            $decoded = json_decode($payTypes, true);
+            $payTypes = is_array($decoded) ? $decoded : explode(',', $payTypes);
+        }
+        if (!is_array($payTypes)) return [];
+        $result = [];
+        foreach ($payTypes as $payType) {
+            if ($payType === '' || $payType === null) continue;
+            $payType = intval($payType);
+            if (!in_array($payType, $result, true)) $result[] = $payType;
+        }
+        sort($result);
+        return $result;
     }
 
     public static function checkUsable(array $coupon)

@@ -64,7 +64,9 @@ trait BalancePayTrait
             }elseif($this->order['pay_status'] == 1){
                 $this->startTrans();
                 try {
-                    $result = $this->paymentSuccessful();
+                    $settlementResult = $this->settlementRevenue();
+                    $paymentResult = $this->paymentSuccessful();
+                    $result = flag_check([$settlementResult, $paymentResult]);
                     if ($result) {
                         $this->commitTrans();
                         return $this->r(200, $this->lang("VOrderPay.pay_status3"), [
@@ -145,7 +147,9 @@ trait BalancePayTrait
                     return $this->rFail("记录余额变更日志失败");
                 }
             }
-            $result = $this->paymentSuccessful();
+            $settlementResult = $this->settlementRevenue();
+            $paymentResult = $this->paymentSuccessful();
+            $result = flag_check([$settlementResult, $paymentResult]);
             if ($result) {
                 $this->commitTrans();
                 return $this->r(200, $this->lang("VOrderPay.pay_status3"), [
