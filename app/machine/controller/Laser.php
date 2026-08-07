@@ -11,12 +11,12 @@ namespace app\machine\controller;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Machine\Application as MachineApplication;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
 use app\AppFactory\Kernel\Traits\Goods\GoodsBehaviorTrackingTrait;
 use app\AppFactory\Kernel\Traits\Laser\LaserResourceTrait;
-use app\AppFactory\Kernel\Util\SignUtil;
 use app\BaseController;
 use app\AppFactory\Kernel\Traits\ReturnTrait;
 use app\management\validate\VCommon;
@@ -32,6 +32,11 @@ class Laser extends BaseController
     protected $machineId = '';
 
     /**
+     * @var MachineApplication
+     */
+    protected $machineApp;
+
+    /**
      * 初始化公共验签
      */
     protected function initialize()
@@ -40,22 +45,18 @@ class Laser extends BaseController
         try {
             $this->signData = input();
             unset($this->signData['file']);
-
-            if (!isset($this->signData['sign'])) {
-                returnState(100, Lang::get('VLaser.check_sign_fail'))->send();
-                die();
-            }
-
             $this->machineId = $this->signData['machine_id'] ?? '';
-            $signKey = '';
-            if ($this->machineId && !env('CglPay.is_test')) {
-                $signKey = MachineModel::getFieldValue(['machine_id' => $this->machineId], 'signKey');
-            }
-            if (!$signKey) {
-                $signKey = env('api.md5Key');
-            }
-            if (!SignUtil::checkSign($this->signData, $signKey) && !env('CglPay.is_test')) {
-                returnState(100, Lang::get('VLaser.check_sign_fail'))->send();
+            $this->machineApp = AppFactory::machine([
+                'machine_id' => $this->machineId,
+                'data' => $this->signData,
+                'mac' => $this->request->header('mac'),
+            ]);
+
+            // uploadImage 由 H5 调用，只保留生产环境验签；其他 Laser 接口按设备请求校验。
+            $isH5 = strtolower((string)$this->request->action()) === 'uploadimage';
+            $checkResult = $this->machineApp->laser->checkRequest($isH5);
+            if ($checkResult !== true) {
+                $checkResult->send();
                 die();
             }
         } catch (\Exception $e) {
@@ -290,6 +291,15 @@ class Laser extends BaseController
             actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
+    }
+
+    /**
+     * 设备通过 HTTP 上报视频录制状态。
+     * @return array|\think\response\Json
+     */
+    public function reportVideoRecordStatus()
+    {
+        return $this->machineApp->laser->reportStatus();
     }
 
 }

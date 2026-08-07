@@ -109,6 +109,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\MachineCheckStockClient        $machineCheckStock      库存盘点详情
  * @property Machine\MachineCheckStockCountClient   $machineCheckStockCount      库存盘点汇总
  * @property Machine\MachineClient                  $machine                设备基础信息
+ * @property Machine\MachineVideoRecordClient       $machineVideoRecord     设备视频录制
  * @property Machine\MachineConfigClient            $machineConfig          设备配置信息
  * @property Machine\MachineConfigLangClient        $machineConfigLang      设备配置语言信息
  * @property Machine\MachineErrorCodeClient         $machineErrorCode       设备错误码信息
