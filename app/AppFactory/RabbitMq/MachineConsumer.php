@@ -42,7 +42,7 @@ class MachineConsumer
             $data = $message->body;
             $data = json2arr($data);
             //手动发送ack
-            $message->ack($message->getDeliveryTag());
+            $message->ack();
 
         } catch (\Exception $e) {
             actionException($e,1);
