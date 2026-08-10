@@ -32,6 +32,47 @@ class AdvertisementPushClient extends ManagementClient
     }
 
     /**
+     * 以设备为主表获取广告统计，包含当前有效广告数为 0 的设备。
+     *
+     * @param array $where
+     * @param int $pageNum
+     * @param int|string $isZero 1=无有效广告，2=有有效广告
+     * @param int|string $isAdvertised 1=投放过，2=从未投放过
+     * @return mixed
+     */
+    public function getAdvertisementMachineGroupList($where, $pageNum = 0, $isZero = 0, $isAdvertised = '')
+    {
+        $advertisedCondition = "EXISTS(SELECT 1 FROM advertisement_push ap_history WHERE ap_history.m_id = a.m_id AND ap_history.push_type = 1)";
+        $playableCondition = "ap.push_type = 1 AND ap.status < 3 AND ap.start_date <= UNIX_TIMESTAMP() AND (ap.end_date > UNIX_TIMESTAMP(CURDATE()) OR (ap.end_date = UNIX_TIMESTAMP(CURDATE()) AND ap.end_time >= HOUR(CURTIME())*3600 + MINUTE(CURTIME())*60 + SECOND(CURTIME())))";
+        $advertisementCount = "(SELECT COUNT(*) FROM advertisement_push ap WHERE ap.m_id = a.m_id AND {$playableCondition})";
+        $rawConditions = [];
+
+        // 保留原 getGroupList 中已投放设备，同时补入在营且从未投放的设备。
+        $rawConditions[] = "(a.is_operating = 1 OR {$advertisedCondition})";
+        if (isset($where['raw']) && $where['raw'] !== '') {
+            $rawConditions[] = '(' . $where['raw'] . ')';
+            unset($where['raw']);
+        }
+        if ((string)$isZero === '1') {
+            $rawConditions[] = "{$advertisementCount} = 0";
+        } elseif ((string)$isZero === '2') {
+            $rawConditions[] = "{$advertisementCount} > 0";
+        }
+        if ((string)$isAdvertised === '1') {
+            $rawConditions[] = $advertisedCondition;
+        } elseif ((string)$isAdvertised === '2') {
+            $rawConditions[] = "NOT {$advertisedCondition}";
+        }
+        if ($rawConditions) {
+            $where['raw'] = implode(' AND ', $rawConditions);
+        }
+
+        $field = "a.m_id,a.machine_name,a.machine_id,{$advertisementCount} AS adv_num,CASE WHEN {$advertisedCondition} THEN 1 ELSE 2 END AS is_advertised";
+        $data = MachineModel::getList($where, $pageNum, $field, 'adv_num asc,a.m_id desc');
+        return $this->rQ($data);
+    }
+
+    /**
      * 获取当前有效广告数为0的在营设备列表
      *
      * @param array $where
@@ -41,20 +82,7 @@ class AdvertisementPushClient extends ManagementClient
      */
     public function getZeroAdvertisementMachineList($where, $pageNum = 0, $isAdvertised = '')
     {
-        $advertisedCondition = "EXISTS(SELECT 1 FROM advertisement_push ap_history WHERE ap_history.m_id = a.m_id AND ap_history.push_type = 1)";
-        $playableCondition = "ap.status < 3 AND ap.start_date <= UNIX_TIMESTAMP() AND (ap.end_date > UNIX_TIMESTAMP(CURDATE()) OR (ap.end_date = UNIX_TIMESTAMP(CURDATE()) AND ap.end_time >= HOUR(CURTIME())*3600 + MINUTE(CURTIME())*60 + SECOND(CURTIME())))";
-        $zeroAdvertisementCondition = "NOT EXISTS(SELECT 1 FROM advertisement_push ap WHERE ap.m_id = a.m_id AND ap.push_type = 1 AND {$playableCondition})";
-
-        if ((string)$isAdvertised === '1') {
-            $zeroAdvertisementCondition .= " AND {$advertisedCondition}";
-        } elseif ((string)$isAdvertised === '2') {
-            $zeroAdvertisementCondition .= " AND NOT {$advertisedCondition}";
-        }
-
-        $where['raw'] = $zeroAdvertisementCondition;
-        $field = "a.m_id,a.machine_name,a.machine_id,0 AS adv_num,CASE WHEN {$advertisedCondition} THEN 1 ELSE 2 END is_advertised";
-        $data = MachineModel::getList($where, $pageNum, $field, 'a.m_id desc');
-        return $this->rQ($data);
+        return $this->getAdvertisementMachineGroupList($where, $pageNum, 1, $isAdvertised);
     }
 
     /**
