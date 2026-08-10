@@ -28,8 +28,8 @@ class ReceiveBaseClient extends MachineBaseClient
     public $noCheckMac = ["logoutH5",'test'];
     protected $signKeyBootstrapHandled = false;
     protected $signKeyBootstrapFailed = false;
-    // 同一设备 signKey 最小重发间隔，单位：秒。
-    protected $signKeyResendCooldown = 60;
+    // 同一设备 signKey 最小重发间隔兜底值，需短于设备首次认证重试窗口。
+    protected $signKeyResendCooldown = 5;
 
     public function __construct(ServiceContainer $app)
     {
@@ -179,8 +179,8 @@ class ReceiveBaseClient extends MachineBaseClient
                 }
 
                 if ($signKey) {
-                    $cooldown = intval($this->signKeyResendCooldown);
-                    if ($cooldown < 10) $cooldown = 60;
+                    $cooldown = intval(config('rabbit_mq.machine_sign_key_resend_cooldown') ?: $this->signKeyResendCooldown);
+                    if ($cooldown < 1) $cooldown = 5;
                     $cooldownKey = $this->machine['machine_id'] . '.signKeyResend';
                     if (!$this->acquireSignKeyResendLock($cooldownKey, $cooldown)) {
                         actionLog([
