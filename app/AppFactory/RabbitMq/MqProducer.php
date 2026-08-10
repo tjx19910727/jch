@@ -9,7 +9,7 @@
 namespace app\AppFactory\RabbitMq;
 
 
-use app\AppFactory\AppFactory;
+use app\AppFactory\Kernel\Model\Machine\MachineMqRecordModel;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
@@ -24,11 +24,16 @@ class MqProducer
      */
     public static function dataSend($data, $machine_id)
     {
+        $connection = null;
+        $channel = null;
         try {
             $param = config('rabbit_mq.' . env("RabbitMq.config_name"));
             $amqpDetail = config('rabbit_mq.dataSend_queue');
+            if (!$param || !$amqpDetail) {
+                throw new \RuntimeException('RabbitMQ configuration is incomplete');
+            }
             if (strpos($amqpDetail['route_key'], ".")) {
-                $temp = explode(".", $amqpDetail);
+                $temp = explode(".", $amqpDetail['route_key']);
                 foreach ($temp as $key => $value) {
                     $value = $value . "/" . $machine_id;
                     $temp[$key] = $value;
@@ -45,7 +50,9 @@ class MqProducer
                 $param['password'],
                 $param['vhost']
             );
-            $connection->isConnected() or die("Cannot connect to the broker \n");
+            if (!$connection->isConnected()) {
+                throw new \RuntimeException('Cannot connect to the RabbitMQ broker');
+            }
 
             $channel = $connection->channel();
             /**
@@ -119,25 +126,13 @@ class MqProducer
             $messageProps['expiration'] = $expiration;
             $message = new AMQPMessage($messageBody, $messageProps);
 
-            $channel->set_ack_handler(function (AMQPMessage $message){
-                $message = json2arr($message->getBody());
-                $config = [
-                    "machine_id" => $message['machine_id'],
-//                    "key" => env("app.md5Key")
-                ];
-                actionLog($message,'异步发布者确认信息');
-                $app = AppFactory::machine($config);
-                $app->sendMq->confirmSend($message,2);
+            $channel->set_ack_handler(function (AMQPMessage $message) {
+                $payload = json2arr($message->getBody());
+                self::recordPublishStatus($payload, 2, '异步发布者确认信息');
             });
-            $channel->set_nack_handler(function (AMQPMessage $message){
-                $message = json2arr($message->getBody());
-                $config = [
-                    "machine_id" => $message['machine_id'],
-//                    "key" => env("app.md5Key")
-                ];
-                actionLog($message,'异步丢失消息回调数据');
-                $app = AppFactory::machine($config);
-                $app->sendMq->confirmSend($message,3);
+            $channel->set_nack_handler(function (AMQPMessage $message) {
+                $payload = json2arr($message->getBody());
+                self::recordPublishStatus($payload, 3, '异步丢失消息回调数据');
             });
             /**
              * 发送消息
@@ -149,12 +144,54 @@ class MqProducer
             $channel->basic_publish($message, $amqpDetail['exchange_name'], $amqpDetail['route_key']);
             $channel->wait_for_pending_acks(1);
 //            $channel->tx_commit();
-            $channel->close();
-            $connection->close();
             return true;
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            self::recordPublishStatus($data, 3, 'MQ消息发布失败');
             actionException($e,1);
             return returnTryCatch($e->getMessage());
+        } finally {
+            if ($channel) {
+                try {
+                    $channel->close();
+                } catch (\Throwable $e) {
+                    actionException($e, 1);
+                }
+            }
+            if ($connection) {
+                try {
+                    $connection->close();
+                } catch (\Throwable $e) {
+                    actionException($e, 1);
+                }
+            }
+        }
+    }
+
+    /**
+     * 发布确认只更新消息记录，避免再次构建设备客户端触发业务副作用。
+     *
+     * @param array $payload
+     * @param int $status
+     * @param string $logTitle
+     */
+    private static function recordPublishStatus($payload, $status, $logTitle)
+    {
+        if (!is_array($payload)) {
+            return;
+        }
+        $msgId = isset($payload['msg_id']) ? $payload['msg_id'] : '';
+        $machineId = isset($payload['machine_id']) ? $payload['machine_id'] : '';
+        actionLog(['msg_id' => $msgId, 'machine_id' => $machineId, 'status' => $status], $logTitle);
+        if (!$msgId || !$machineId) {
+            return;
+        }
+        try {
+            MachineMqRecordModel::update(
+                ['status' => $status],
+                ['msg_id' => $msgId, 'machine_id' => $machineId]
+            );
+        } catch (\Throwable $e) {
+            actionException($e, 1);
         }
     }
 
