@@ -28,9 +28,45 @@ class ActivityLotteryClient extends ManagementClient
     {
         $al = $this->getActivityLotteryFind($where,$field,$order);
         $al['content'] = $this->getActivityLotteryContentList(['al_id' => $al['al_id']],0,'c_id,content_name,retain_num,probability,g_id,g_name,sku','c_id asc');
-        $al['config'] = $this->getActivityLotteryConfigList(['al_id' => $al['al_id']],0,'alc_id,active_num,active_type,gifts_num,designated_gift,button_pic','alc_id asc');
+        $config = $this->getActivityLotteryConfigList(['al_id' => $al['al_id']],0,'alc_id,active_num,active_type,gifts_num,designated_gift,button_pic','alc_id asc');
+        $content = $al['content'] ? $al['content']->toArray() : [];
+        $contentIndexById = [];
+        foreach ($content as $index => $item) {
+            $contentIndexById[(int)$item['c_id']] = $index;
+        }
+        if ($config) {
+            foreach ($config as $index => $item) {
+                $giftId = (int)($item['designated_gift'] ?? 0);
+                if ($giftId > 0 && isset($contentIndexById[$giftId])) {
+                    $item['designated_gift'] = $contentIndexById[$giftId];
+                } else {
+                    $item['designated_gift'] = '';
+                }
+                $config[$index] = $item;
+            }
+        }
+        $al['config'] = $config;
         $al['machineList'] = $this->getActivityMachineList(['a_id' => $al['al_id'],'a_type' => 3],0,'m_id,machine_id,machine_name');
         return $this->r(200,'查询成功',$al);
+    }
+
+    /**
+     * 管理端提交 content 数组下标，数据库统一保存 activity_lottery_content.c_id。
+     * 未选择赠品时保留空值，由数据库按现有规则处理。
+     */
+    protected function resolveDesignatedGiftId($value, array $content)
+    {
+        if ($value === '' || $value === null) {
+            return $value;
+        }
+        if (!is_numeric($value)) {
+            throw new \InvalidArgumentException('赠送指定奖励格式错误');
+        }
+        $contentIndex = (int)$value;
+        if ($contentIndex < 0 || !isset($content[$contentIndex]['c_id'])) {
+            throw new \InvalidArgumentException('赠送指定奖励不存在');
+        }
+        return (int)$content[$contentIndex]['c_id'];
     }
     /**
      * 添加付费抽奖活动
@@ -85,10 +121,7 @@ class ActivityLotteryClient extends ManagementClient
                         $this->rollbackTrans();
                         return $this->rValidate($e->getMessage());
                     }
-                    if ($kv['designated_gift'] > 0) {
-                        $designated_gift = $content[$kv['designated_gift']]['c_id'];
-                        $kv['designated_gift'] = "$designated_gift";
-                    }
+                    $kv['designated_gift'] = $this->resolveDesignatedGiftId($kv['designated_gift'] ?? '', $content);
                     $insertConfig = $kv;
                     $insertConfig['al_id'] = "$al_id";
                     $insertConfigAll[] = $insertConfig;
@@ -165,6 +198,7 @@ class ActivityLotteryClient extends ManagementClient
             if ($config) {
                 $insertConfigAll = [];
                 foreach ($config as $conK => $conV) {
+                    $conV['designated_gift'] = $this->resolveDesignatedGiftId($conV['designated_gift'] ?? '', $content);
                     if (isset($conV['alc_id'])) {
                         $this->updateActivityLotteryConfig($conV);
                     } else {

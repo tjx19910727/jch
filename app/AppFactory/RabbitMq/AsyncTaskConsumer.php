@@ -100,7 +100,7 @@ class AsyncTaskConsumer
                 'result' => $result,
             ], '异步任务处理结果', 'async_task_message');
 
-            $message->ack($message->getDeliveryTag());
+            $message->ack();
         } catch (\Throwable $e) {
             actionLog(
                 $e->getFile() . '_' . $e->getLine() . '_' . $e->getMessage(),
@@ -108,7 +108,7 @@ class AsyncTaskConsumer
                 'async_task_message'
             );
             actionLog($e->getTrace(), 'tryCatchTrace', 'async_task_message');
-            $message->ack($message->getDeliveryTag());
+            $message->ack();
         }
     }
 }
