@@ -85,7 +85,7 @@ class MachineTarget extends Common
         }
 
         $svc = new MachineTargetService($this->app);
-        $res = $svc->detail($mId, $this->getWhere([]));
+        $res = $svc->detail($mId, $this->getWhere([]), $postData['date'] ?? '');
         return returnState(intval($res['state'] ?? 100), strval($res['msg'] ?? '查询失败'), $res['data'] ?? []);
     }
 
