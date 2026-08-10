@@ -39,6 +39,19 @@ trait MachinePreReplenishmentTrait
                 if (!is_array($batch)) {
                     continue;
                 }
+                $isHead = isset($batch['is_head'])
+                    ? (int)$batch['is_head'] === 1
+                    : (isset($batch['status']) && (int)$batch['status'] === 1);
+                if ($isHead) {
+                    $headIndex = count($result) - 1;
+                    if (array_key_exists('plan_quantity', $batch)) {
+                        $result[$headIndex]['plan_quantity'] = $batch['plan_quantity'];
+                    }
+                    if (empty($result[$headIndex]['g_id']) && !empty($batch['g_id'])) {
+                        $result[$headIndex]['g_id'] = (int)$batch['g_id'];
+                    }
+                    continue;
+                }
                 $result[] = [
                     'machine_id' => $item['machine_id'] ?? '',
                     'mc_id' => $item['mc_id'] ?? 0,

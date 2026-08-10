@@ -159,8 +159,26 @@ class MachinePreReplenishmentClient extends ManagementClient
                         'available_stock' => $batchAvailableStock,
                         'plan_quantity' => $orderPlanQtyMap[$batchPlanKey] ?? 0,
                         'sequence' => (int)$batch['sequence'],
+                        'is_head' => 2,
+                        'status' => (int)$batch['status'],
                     ];
                 }
+
+                array_unshift($batchArr, [
+                    'g_id' => (int)$gId,
+                    'sku' => $channel['sku'] ?? '',
+                    'g_name' => $channel['g_name'] ?? '',
+                    'image_url' => $channel['pic'] ?? '',
+                    'before_stock' => (int)$channel['stock'],
+                    'capacity' => (int)$channel['capacity'],
+                    'available_stock' => $availableStock,
+                    'plan_quantity' => $orderPlanQtyMap[$mcKey . '_' . (int)$gId . '_1']
+                        ?? $orderPlanQtyMap[$mcKey . '_0_1']
+                        ?? 0,
+                    'sequence' => 1,
+                    'is_head' => 1,
+                    'status' => 1,
+                ]);
             }
             // ==================== 单货道多商品相关结束 ====================
 
