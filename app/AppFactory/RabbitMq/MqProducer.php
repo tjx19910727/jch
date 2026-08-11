@@ -32,15 +32,19 @@ class MqProducer
             if (!$param || !$amqpDetail) {
                 throw new \RuntimeException('RabbitMQ configuration is incomplete');
             }
+            // 队列名可按设备版本附加MAC，但设备端routing key始终只绑定machine_id。
+            $routingMachineId = isset($data['machine_id']) && $data['machine_id'] !== ''
+                ? $data['machine_id']
+                : $machine_id;
             if (strpos($amqpDetail['route_key'], ".")) {
                 $temp = explode(".", $amqpDetail['route_key']);
                 foreach ($temp as $key => $value) {
-                    $value = $value . "/" . $machine_id;
+                    $value = $value . "/" . $routingMachineId;
                     $temp[$key] = $value;
                 }
                 $amqpDetail['route_key'] = implode(".", $temp);
             } else {
-                $amqpDetail['route_key'] .= "/" . $machine_id;
+                $amqpDetail['route_key'] .= "/" . $routingMachineId;
             }
             $amqpDetail['queue_name'] = $amqpDetail['queue_name'] . "_" . $machine_id;
             $connection = new AMQPStreamConnection(

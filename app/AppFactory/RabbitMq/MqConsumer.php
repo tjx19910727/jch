@@ -69,6 +69,12 @@ class MqConsumer
             if (!is_array($data) || empty($data['msg_id']) || empty($data['machine_id'])) {
                 throw new \InvalidArgumentException('MQ顶层数据缺少msg_id或machine_id');
             }
+            if ($this->isAuthRequest($data)) {
+                $this->logAuthStage($data, 'REQUEST_RECEIVED', [
+                    'queue_wait_ms' => $this->getQueueWaitMilliseconds($data),
+                    'redelivered' => $message->isRedelivered(),
+                ]);
+            }
             if (!empty($data['msg_id']) && !empty($data['machine_id'])) {
                 $processed = $this->getMachineMqRecordFind([
                     'msg_id' => $data['msg_id'],
@@ -104,6 +110,12 @@ class MqConsumer
                 }
             }
         } catch (\Throwable $e) {
+            if ($this->isAuthRequest($data)) {
+                $this->logAuthStage($data, 'CONSUME_FAILED', [
+                    'error_type' => get_class($e),
+                    'retryable' => !($e instanceof \InvalidArgumentException) && !$message->isRedelivered(),
+                ]);
+            }
             $this->logConsumerExceptionSafely($e);
             $this->recordMachineMqStatusSafely($data, 3);
             // 认证/格式错误属于永久错误；其他瞬时异常最多重试一次。
@@ -124,6 +136,36 @@ class MqConsumer
         }
         // ACK异常直接交给消费循环处理，关闭连接后由Broker重新投递。
         $message->ack();
+    }
+
+    /**
+     * 无签名且携带MAC的消息为设备认证握手请求。
+     */
+    protected function isAuthRequest($data)
+    {
+        return is_array($data) && !empty($data['mac']) && empty($data['sign']);
+    }
+
+    /**
+     * 认证日志只记录定位字段，不记录signKey或完整报文。
+     */
+    protected function logAuthStage($data, $stage, $extra = [])
+    {
+        if (!is_array($data)) return;
+        $summary = array_merge([
+            'auth_stage' => $stage,
+            'machine_id' => $data['machine_id'] ?? '',
+            'msg_id' => $data['msg_id'] ?? '',
+        ], is_array($extra) ? $extra : []);
+        $this->actionLogSafely($summary, 'MQ认证阶段', 'DataUploadAuth');
+    }
+
+    protected function getQueueWaitMilliseconds($data)
+    {
+        $timestamp = intval($data['timestamp'] ?? 0);
+        if ($timestamp <= 0) return null;
+        if ($timestamp < 100000000000) $timestamp *= 1000;
+        return max(0, intval(round(microtime(true) * 1000)) - $timestamp);
     }
 
     /**
@@ -190,6 +232,12 @@ class MqConsumer
         *创建通道
         */
         $channel = $connection->channel();
+        $this->actionLogSafely([
+            'consumer_stage' => 'STARTED',
+            'queue_name' => $amqpDetail['queue_name'],
+            'consumer_tag' => $amqpDetail['consumer_tag'],
+            'prefetch_count' => 1,
+        ], 'MQ消费者状态', 'DataUploadConsumer');
         /**
         * 设置消费者(Consumer)客户端同时只处理一条队列
         *这样是告诉RabbitMQ，再同一时刻，不要发送超过1条消息给一个消费者(Consumer)，
@@ -220,6 +268,11 @@ class MqConsumer
                 $channel->wait();
             }
         } finally {
+            $this->actionLogSafely([
+                'consumer_stage' => 'STOPPED',
+                'queue_name' => $amqpDetail['queue_name'],
+                'consumer_tag' => $amqpDetail['consumer_tag'],
+            ], 'MQ消费者状态', 'DataUploadConsumer');
             $this->shutdownSafely($channel, $connection);
         }
     }

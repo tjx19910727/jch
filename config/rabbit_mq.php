@@ -18,6 +18,9 @@ return [
     // 后台下发到设备的 MQ 消息过期时间，单位：毫秒
     'data_send_expiration_ms' => 180 * 1000,
 
+    // 需短于设备首次认证重试窗口，允许首个回包丢失后及时重发。
+    'machine_sign_key_resend_cooldown' => 5,
+
     // 设备 HTTP 请求 timestamp 允许落后服务器的秒数
     'machine_receive_timestamp_tolerance' => 180,
 
