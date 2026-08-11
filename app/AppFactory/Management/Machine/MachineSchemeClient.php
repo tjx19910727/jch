@@ -463,13 +463,14 @@ class MachineSchemeClient extends ManagementClient
         if (!$scheme) return $this->rFail("方案不存在");
 
         $details = $this->getMachineChannelSchemeDetailList(['mcs_id' => $mcsId])->toArray();
+        $details = $this->appendGoodsPics($details);
 
         // 解析被跳过的商品JSON
         $skippedGoods = [];
         if (!empty($scheme['skipped_goods'])) {
             $decoded = json_decode($scheme['skipped_goods'], true);
             if (is_array($decoded)) {
-                $skippedGoods = $decoded;
+                $skippedGoods = $this->appendGoodsPics($decoded);
             }
         }
 
@@ -482,6 +483,41 @@ class MachineSchemeClient extends ManagementClient
         }
 
         return $this->r(200, "查询成功", $result);
+    }
+
+    /**
+     * 按商品ID批量补充当前商品主图，兼容历史方案明细。
+     */
+    protected function appendGoodsPics($items)
+    {
+        if (!is_array($items) || !$items) return [];
+
+        $gIds = [];
+        foreach ($items as $item) {
+            $gId = intval($item['g_id'] ?? 0);
+            if ($gId > 0) $gIds[$gId] = $gId;
+        }
+
+        $picMap = [];
+        if ($gIds) {
+            $goodsList = $this->getGoodsList(
+                [['g_id', 'in', array_values($gIds)]],
+                0,
+                'g_id,pic'
+            );
+            if (is_array($goodsList) || $goodsList instanceof \Traversable) {
+                foreach ($goodsList as $goods) {
+                    $picMap[intval($goods['g_id'])] = $goods['pic'] ?? '';
+                }
+            }
+        }
+
+        foreach ($items as &$item) {
+            $gId = intval($item['g_id'] ?? 0);
+            $item['pic'] = $picMap[$gId] ?? ($item['pic'] ?? '');
+        }
+        unset($item);
+        return $items;
     }
 
     /**
