@@ -688,8 +688,10 @@ class RevenueCalculator
         }
         $this->logRevenueConfig('支付类型查询', [
             'pay_type' => $payType,
+            'pay_method' => intval($this->order['pay_method'] ?? 0),
             'found_channel' => $channel ? 1 : 0,
             'rpc_id' => $channel ? intval($channel['rpc_id'] ?? 0) : 0,
+            'skip_reason' => $channel ? '' : 'no_enabled_pay_type',
         ]);
         if (!$channel) return false;
         $this->revenuePayChannel = $channel;
