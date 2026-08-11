@@ -117,8 +117,9 @@ class ReceiveBaseClient extends MachineBaseClient
             $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0);
             $this->order = $order;
             actionLog(['order_id' => $order['order_id'], 'reason' => $reason], '设备端0元单免支付完成');
-            $success = $this->paymentSuccessful();
-            $result = $this->checkTrans($success, 0);
+            $settlementSuccess = $this->settlementRevenue();
+            $paymentSuccess = $this->paymentSuccessful();
+            $result = $this->checkTrans(flag_check([$settlementSuccess, $paymentSuccess]), 0);
             if (!$result) {
                 return ['handled' => true, 'success' => false, 'msg' => $this->lang("action_fail")];
             }

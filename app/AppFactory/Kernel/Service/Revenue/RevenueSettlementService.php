@@ -18,9 +18,18 @@ class RevenueSettlementService
             ->select()
             ->toArray();
         $flag = [1];
-        $flag[] = $this->deductCouponUsage(intval($orderId));
+        try {
+            $flag[] = $this->deductCouponUsage(intval($orderId));
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            actionLog([
+                'order_id' => intval($orderId),
+                'error' => $e->getMessage(),
+            ], '分账优惠券核销异常，分账结算继续执行', 'RevenueSettlementService');
+            $flag[] = true;
+        }
         foreach ($records as $record) {
-            $flag[] = $this->settleRecord(intval($record['ro_id']), $payTime, false, false);
+            $flag[] = $this->settleRecord(intval($record['ro_id']), $payTime, false, true);
         }
         return flag_check($flag);
     }
@@ -28,7 +37,7 @@ class RevenueSettlementService
     public function markPaymentFailed($orderId)
     {
         RevenueOrderModel::where(['order_id' => intval($orderId)])
-            ->whereIn('status', [0, 2])
+            ->where(['status' => 0])
             ->update(['status' => 3, 'update_time' => time()]);
         return true;
     }
@@ -116,12 +125,15 @@ class RevenueSettlementService
 
     protected function deductCouponUsage($orderId)
     {
+        Db::startTrans();
+        try {
         $records = RevenueOrderModel::where(['order_id' => intval($orderId), 'rule_mode' => 5, 'status' => 0])
             ->field('rrcfg_id')
             ->group('rrcfg_id')
             ->select()
             ->toArray();
         if (!$records) {
+            Db::commit();
             return true;
         }
 
@@ -137,8 +149,12 @@ class RevenueSettlementService
             if (!is_array($config)) $config = $config->toArray();
             $this->deductActivityCouponUsage($orderId, intval($config['coupon_id'] ?? 0));
         }
-
+        Db::commit();
         return true;
+        } catch (\Exception $e) {
+            Db::rollback();
+            throw $e;
+        }
     }
 
     protected function deductActivityCouponUsage($orderId, $couponId)
@@ -151,16 +167,35 @@ class RevenueSettlementService
         if (!$order || empty($order['revenue_coupon_code'])) {
             throw new \Exception("订单未绑定分账优惠券编码");
         }
-        if (ActivityCouponUsedModel::where(['order_id' => intval($orderId), 'c_id' => $couponId, 'status' => 2])->find()) {
-            return true;
-        }
-
         $coupon = ActivityCouponModel::where(['c_id' => $couponId])->lock(true)->find();
         if (!$coupon) throw new \Exception("关联活动优惠券不存在");
         if (!is_array($coupon)) $coupon = $coupon->toArray();
         $code = trim(strval($order['revenue_coupon_code']));
+        $orderUsed = ActivityCouponUsedModel::where([
+                'order_id' => intval($orderId),
+                'c_id' => $couponId,
+                'code_type' => 2,
+            ])
+            ->lock(true)
+            ->find();
+        if ($orderUsed) {
+            $orderUsed = !is_array($orderUsed) ? $orderUsed->toArray() : $orderUsed;
+            if (intval($orderUsed['status'] ?? 0) === 2) {
+                return true;
+            }
+        }
+        $usedLimit = intval($coupon['used_limit'] ?? 0);
+        if (!empty($coupon['code']) && $usedLimit > 0) {
+            $usedCount = ActivityCouponUsedModel::where(['c_id' => $couponId, 'status' => 2])->count();
+            if ($usedCount >= $usedLimit) {
+                throw new \Exception("优惠券已无可用次数");
+            }
+        }
         $used = ActivityCouponUsedModel::where(['c_id' => $couponId, 'code' => $code])->lock(true)->find();
         $used = $used && !is_array($used) ? $used->toArray() : $used;
+        if ($orderUsed) {
+            $used = $orderUsed;
+        }
         if (!$used && !empty($coupon['code']) && trim(strval($coupon['code'])) !== $code) {
             throw new \Exception("订单分账优惠券编码与活动优惠券不匹配");
         }
@@ -196,9 +231,9 @@ class RevenueSettlementService
             ActivityCouponUsedModel::create($usedData);
         }
 
-        if (!empty($coupon['code']) && intval($coupon['used_limit'] ?? 0) > 0) {
+        if (!empty($coupon['code']) && $usedLimit > 0) {
             $usedCount = ActivityCouponUsedModel::where(['c_id' => $couponId, 'status' => 2])->count();
-            if ($usedCount >= intval($coupon['used_limit'])) {
+            if ($usedCount >= $usedLimit) {
                 ActivityCouponModel::where(['c_id' => $couponId])->update(['status' => 3, 'update_time' => time()]);
             }
         }
