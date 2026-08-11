@@ -508,13 +508,13 @@ trait MachineChannelReplenishmentTrait
 
         $goods = GoodsModel::getFind(
             ['g_id' => $headBatch['g_id']],
-            'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price'
+            'g_id,g_name,gc_id,gc_name,pic,sku,bar_code,cost_price,market_price,retail_price,sell_by_date'
         );
         $goods = $goods ? (is_object($goods) ? $goods->toArray() : $goods) : [];
 
         $machineGoods = MachineGoodsModel::getFind(
             ['m_id' => $this->machine['m_id'], 'g_id' => $headBatch['g_id']],
-            'mg_id,gift_points'
+            'mg_id,intergral_rate,gift_points'
         );
         $machineGoods = $machineGoods ? (is_object($machineGoods) ? $machineGoods->toArray() : $machineGoods) : [];
 
@@ -533,11 +533,16 @@ trait MachineChannelReplenishmentTrait
             'retail_price' => $headBatch['retail_price'] ?? ($goods['retail_price'] ?? 0),
             'gift_points' => $headBatch['gift_points'] ?? ($machineGoods['gift_points'] ?? 0),
             'cost_points' => $headBatch['cost_points'] ?? 0,
+            'intergral_rate' => $machineGoods['intergral_rate'] ?? 0,
             'stock_warning' => max(0, intval($headBatch['stock_warning'] ?? 0)),
             'capacity' => $headBatch['capacity'] ?? 0,
             'stock' => $headBatch['stock'] ?? 0,
             'frozen_stock' => $headBatch['frozen_stock'] ?? 0,
             'batch_number' => $headBatch['batch_number'] ?? '',
+            'manufacture_time' => $headBatch['manufacture_time'] ?? 0,
+            'expire_time' => $headBatch['expire_time'] ?? 0,
+            'sell_by_date' => $headBatch['sell_by_date'] ?? ($goods['sell_by_date'] ?? 0),
+            'status' => (int)($headBatch['stock'] ?? 0) > 0 ? 1 : 3,
             'is_multi_goods' => 1,
         ]);
     }
