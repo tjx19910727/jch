@@ -69,20 +69,29 @@ class MqClient extends ReceiveBaseClient
     public function __construct(ServiceContainer $app)
     {
         parent::__construct($app);
-        if (!isset($this->data['mac']) && !isset($this->data['sign']))
-            json(['state' => 100,"msg" => '缺少签名'])->send();
+        if ($this->isSignKeyBootstrapHandled()) {
+            return;
+        }
+        if (!isset($this->data['sign'])) {
+            throw new \InvalidArgumentException('非认证MQ消息缺少签名');
+        }
         if (isset($this->data['sign']) && $this->checkSign($this->data) !== true) {
-            actionLog($this->data,'验签失败',"DataUpload");
-            throw new \RuntimeException('MQ消息验签失败');
+            actionLog([
+                'machine_id' => $this->data['machine_id'] ?? '',
+                'msg_id' => $this->data['msg_id'] ?? '',
+            ],'验签失败',"DataUpload");
+            throw new \InvalidArgumentException('MQ消息验签失败');
         }
         $this->message = json2arr($this->data['data'] ?? "");
         actionLog($this->message, '消息数据', "DataUpload");
-        if (!$this->message)
-            json(['state' => 100,"msg" => 'message数据为空'])->send();
+        if (!$this->message) {
+            throw new \InvalidArgumentException('MQ message数据为空');
+        }
         try {
             validate(VReport::class)->scene('onMessage')->check($this->data);
         } catch (\Exception $e) {
             actionLog($e->getMessage(), '数据格式错误', 'DataUpload');
+            throw new \InvalidArgumentException('MQ顶层数据格式错误', 0, $e);
         }
         $this->dataRecord(2);
     }
@@ -98,6 +107,9 @@ class MqClient extends ReceiveBaseClient
     public function onMessage()
     {
         try {
+            if ($this->isSignKeyBootstrapHandled()) {
+                return true;
+            }
             if ($this->message) {
                 $func_name = $this->message['msgType'] ?? "";
                 if (method_exists(self::class, $func_name)) {
@@ -105,16 +117,19 @@ class MqClient extends ReceiveBaseClient
                         validate(VReport::class)->scene($this->message['msgType'])->check($this->message);
                     } catch (\Exception $e) {
                         actionLog($e->getMessage(), '数据格式错误', 'DataUpload');
-                        return 1;
+                        throw new \InvalidArgumentException('数据格式错误', 0, $e);
                     }
-                    return $this->$func_name();
+                    // 历史处理方法返回值不统一，运输层只以是否抛出异常判断成败。
+                    $this->$func_name();
+                    return true;
                 }
                 actionLog($this->message,'没有对应的消息类型');
+                throw new \InvalidArgumentException('没有对应的MQ消息类型');
             }
-            return 1;
-        } catch (\Exception $e) {
+            throw new \InvalidArgumentException('MQ message数据为空');
+        } catch (\Throwable $e) {
             actionException($e,1);
-            return 1;
+            throw $e;
         }
     }
 

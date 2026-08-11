@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Traits\Machine\MachineOnlineDetailsTrait;
 use app\AppFactory\Machine\MachineBaseClient;
 use app\AppFactory\RabbitMq\MqProducer;
 use think\exception\ValidateException;
+use think\facade\Cache;
 use think\facade\Filesystem;
 use think\facade\Request;
 
@@ -25,6 +26,10 @@ class ReceiveBaseClient extends MachineBaseClient
 
     public $message = [];
     public $noCheckMac = ["logoutH5",'test'];
+    protected $signKeyBootstrapHandled = false;
+    protected $signKeyBootstrapFailed = false;
+    // 同一设备 signKey 最小重发间隔，单位：秒。
+    protected $signKeyResendCooldown = 60;
 
     public function __construct(ServiceContainer $app)
     {
@@ -37,8 +42,14 @@ class ReceiveBaseClient extends MachineBaseClient
         if (!in_array($action,$this->noCheckMac)) {
             $checkMac = $this->checkMac($this->config['mac'] ?? "");
             if ($checkMac !== true) {
-                actionLog($this->config, "上报的数据", "mac_check");
+                actionLog([
+                    'machine_id' => $this->config['machine_id'] ?? '',
+                    'transport' => $this->config['transport'] ?? 'http',
+                ], "上报的数据", "mac_check");
                 actionLog($checkMac, "Mac验证失败", "mac_check");
+                if (($this->config['transport'] ?? '') === 'mq') {
+                    throw new \InvalidArgumentException('MQ设备Mac验证失败');
+                }
                 $checkMac->send();
                 die();
             }
@@ -46,6 +57,13 @@ class ReceiveBaseClient extends MachineBaseClient
 
         $set = $this->setSignKey();
         if ($set !== true) {
+            if (($this->config['transport'] ?? '') === 'mq') {
+                if ($this->signKeyBootstrapFailed) {
+                    throw new \RuntimeException('MQ signKey下发失败');
+                }
+                $this->signKeyBootstrapHandled = true;
+                return;
+            }
             $set->send();
             die();
         }
@@ -152,18 +170,25 @@ class ReceiveBaseClient extends MachineBaseClient
     {
         if (isset($this->data['mac']) && !isset($this->data['sign'])) {
             try {
-                actionLog($this->data, "上报的数据","setSignKey");
                 actionLog(['mac_address' => $this->machine['mac_address'], "mac" => $this->data['mac']], "系统-终端Mac地址","setSignKey");
                 $signKey = $this->machine['signKey'];
-                // SignKey为空或SignKeyTime超过3600秒，生成新的Key并下发
+                // SignKey 只在设备尚未分配时生成，重试认证复用已有 Key。
                 if (!$signKey) {
                     $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
                     $this->updateMachine(['m_id' => $this->machine['m_id'], 'signKey' => $signKey, 'signKeyTime' => time()]);
                 }
-                actionLog(['machine' => $this->machine], "设备","setSignKey");
-                actionLog(['signKey' => $signKey], "SignKey","setSignKey");
 
                 if ($signKey) {
+                    $cooldown = intval($this->signKeyResendCooldown);
+                    if ($cooldown < 10) $cooldown = 60;
+                    $cooldownKey = $this->machine['machine_id'] . '.signKeyResend';
+                    if (!$this->acquireSignKeyResendLock($cooldownKey, $cooldown)) {
+                        actionLog([
+                            'machine_id' => $this->machine['machine_id'],
+                            'cooldown' => $cooldown,
+                        ], 'signKey重发已限流', "setSignKey");
+                        return $this->r(200, '认证信息已下发，请使用sign重试');
+                    }
                     $now = time();
                     $expiresIn = intval(config('rabbit_mq.machine_sign_key_expires_in') ?: 3600);
                     if ($expiresIn < 300) $expiresIn = 3600;
@@ -179,23 +204,78 @@ class ReceiveBaseClient extends MachineBaseClient
                         "expires_at" => $now + $expiresIn,
                         "timestamp_tolerance" => $timestampTolerance,
                     ];
-                    actionLog($data, '发送至MQ服务器的数据',"setSignKey");
-                    // 记录实际下发的认证消息，保证发布确认可按同一个 msg_id 更新状态。
+                    actionLog([
+                        'msg_id' => $data['msg_id'],
+                        'machine_id' => $data['machine_id'],
+                        'expires_in' => $data['expires_in'],
+                    ], '发送signKey至MQ服务器',"setSignKey");
                     $this->dataRecord(2, 2, $data);
 
                     actionLog($this->mqQueue,'下发队列名',"setSignKey");
                     $result = MqProducer::dataSend($data, $this->mqQueue);
                     actionLog($result, '发送结果',"setSignKey");
+                    if ($result !== true) {
+                        $this->releaseSignKeyResendLock($cooldownKey);
+                        $this->signKeyBootstrapFailed = true;
+                        return $this->rTryCatch('下发signKey失败');
+                    }
                     @cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 5);
-                    actionLog(@cache($this->machine['machine_id'] . ".signKey"), $this->machine['machine_id'] . '生成SignKey',"setSignKey");
+                    actionLog(['machine_id' => $this->machine['machine_id']], '设备signKey已缓存',"setSignKey");
                     return $this->r(200,'处理成功');
                 }
             } catch (\Exception $e) {
+                if (isset($cooldownKey)) {
+                    $this->releaseSignKeyResendLock($cooldownKey);
+                }
+                $this->signKeyBootstrapFailed = true;
                 actionException($e,1);
                 return $this->rTryCatch($e->getMessage());
             }
         }
         return true;
+    }
+
+    /**
+     * 优先使用 Redis SET NX EX 原子限流，其他缓存驱动保持兼容降级。
+     */
+    protected function acquireSignKeyResendLock($key, $ttl)
+    {
+        try {
+            $store = Cache::store();
+            $handler = $store->handler();
+            $cacheKey = $store->getCacheKey($key);
+            if (class_exists('Redis') && $handler instanceof \Redis) {
+                return (bool)$handler->set($cacheKey, 1, ['nx', 'ex' => $ttl]);
+            }
+            if (class_exists('Predis\\Client') && $handler instanceof \Predis\Client) {
+                return (string)$handler->set($cacheKey, 1, 'EX', $ttl, 'NX') === 'OK';
+            }
+            if ($store->has($key)) {
+                return false;
+            }
+            return $store->set($key, 1, $ttl);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            throw new \RuntimeException('signKey限流锁获取失败', 0, $e);
+        }
+    }
+
+    protected function releaseSignKeyResendLock($key)
+    {
+        try {
+            return Cache::store()->delete($key);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            return false;
+        }
+    }
+
+    /**
+     * MQ 无签名消息只能完成认证握手，不能继续执行业务。
+     */
+    public function isSignKeyBootstrapHandled()
+    {
+        return $this->signKeyBootstrapHandled;
     }
 
 
