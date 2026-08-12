@@ -284,7 +284,7 @@ class WarehouseTransClient extends ManagementClient
 
         $normalizedDetails = [];
         $shouldParseDetails = in_array($type, [1, 2], true)
-            || ($type === 3 && array_key_exists('details', $postData) && $postData['details'] !== null && $postData['details'] !== []);
+            || (in_array($type, [3, 4], true) && array_key_exists('details', $postData) && $postData['details'] !== null && $postData['details'] !== []);
         if ($shouldParseDetails) {
             $details = $postData['details'] ?? [];
             if (!is_array($details) || !$details) return $this->r(100, '商品明细不能为空');
@@ -384,7 +384,7 @@ class WarehouseTransClient extends ManagementClient
         $goodsMap = [];
         foreach ($goodsRows as $goods) $goodsMap[strval($goods['sku'])] = intval($goods['g_id']);
 
-        if ($type === 3 && $requestedDetails) {
+        if (in_array($type, [3, 4], true) && $requestedDetails) {
             $allowedGoodsIds = array_flip(array_values($goodsMap));
             foreach ($requestedDetails as $goodsId => &$requestedDetail) {
                 if (!isset($allowedGoodsIds[intval($goodsId)])) {
@@ -416,7 +416,7 @@ class WarehouseTransClient extends ManagementClient
                 'remark' => $this->buildDetailRemark($type, $recordNo),
             ];
         }
-        if ($type === 3 && $requestedDetails) $details = $requestedDetails;
+        if (in_array($type, [3, 4], true) && $requestedDetails) $details = $requestedDetails;
         if (!$details) {
             throw new \Exception($type === 3 ? '该预补货单没有可退料商品' : '该预补货单没有可出库商品');
         }
