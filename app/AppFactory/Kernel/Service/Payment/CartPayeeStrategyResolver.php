@@ -10,6 +10,11 @@ use think\facade\Db;
  */
 class CartPayeeStrategyResolver
 {
+    /**
+     * 嘉潮汇平台组织ID：线上商品(Z10)默认归属于该组织的收款策略。
+     */
+    const JCH_ORG_AO_ID = 17;
+
     public static function resolve($machine, array $cartList, $payType = 0)
     {
         if (is_object($machine) && method_exists($machine, 'toArray')) $machine = $machine->toArray();
@@ -40,7 +45,8 @@ class CartPayeeStrategyResolver
             if (!is_array($cartItem)) return self::fail('购物车商品格式错误', 'cart_item_invalid');
             $channelCode = trim(strval($cartItem['channel_code'] ?? ''));
             if ($channelCode === 'Z10') {
-                $legacy = self::getLegacyStrategies($machineId, 0, $machineAoId, $payType, $onlineLegacyIds);
+                // 线上商品默认配置为嘉潮汇组织的收款策略
+                $legacy = self::getLegacyStrategies($machineId, self::JCH_ORG_AO_ID, $machineAoId, $payType, $onlineLegacyIds);
                 if (!$legacy) return self::fail('当前线上商品未配置可用收款策略', 'legacy_strategy_unavailable');
                 $itemCandidates = array_map('intval', array_column($legacy, 'sp_id'));
                 $candidateIds = $candidateIds === null
@@ -70,7 +76,12 @@ class CartPayeeStrategyResolver
                 : null;
             if (!$goods) return self::fail('当前商品未配置设备商品信息', 'machine_goods_not_found');
 
-            $goodsAoId = intval($goods['ao_id'] ?? 0);
+            // 收款策略按商品库商品(goods)归属组织校验：商品g属于组织A，即使上架到组织B的设备，
+            // 也应使用归属于商品组织A的收款策略
+            $goodsAoId = intval($goods['g_id'] ?? 0) > 0
+                ? intval(Db::name('goods')->where('g_id', intval($goods['g_id']))->value('ao_id'))
+                : 0;
+            if ($goodsAoId <= 0) $goodsAoId = intval($goods['ao_id'] ?? 0);
             $hasGoodsStrategyConfig = false;
             $explicitStrategies = self::getGoodsStrategies(
                 $mgId,
@@ -139,12 +150,12 @@ class CartPayeeStrategyResolver
             ->where(['sm.m_id' => $machineId, 'sm.s_type' => 1, 'sp.status' => 1]);
         if (is_array($allowedSpIds)) $query->where('sp.sp_id', 'in', $allowedSpIds);
         if ($payType > 0) $query->where('sp.payee_type', 'in', self::compatiblePayTypes($payType));
-        if ($goodsAoId > 18) {
+        if ($goodsAoId > 0) {
             $orgRows = (clone $query)->where('sm.ao_id', $goodsAoId)
                 ->field('sp.sp_id,sp.sp_name,sp.title,sp.payee_type,sp.ico,sp.ao_id,sm.sort')->order('sm.sort asc')->select()->toArray();
             if ($orgRows) return $orgRows;
         }
-        if ($machineAoId > 18) $query->where('sm.ao_id', $machineAoId);
+        if ($machineAoId > 0) $query->where('sm.ao_id', $machineAoId);
         return $query->field('sp.sp_id,sp.sp_name,sp.title,sp.payee_type,sp.ico,sp.ao_id,sm.sort')
             ->order('sm.sort asc')->select()->toArray();
     }

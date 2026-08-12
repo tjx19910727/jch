@@ -157,19 +157,23 @@ class MachineGoodsClient extends ManagementClient
     {
         if (!$spIds) return true;
         $mg = [];
-        if (!empty($postData['mg_id'])) $mg = obj2arr($this->getMachineGoodsFind(['mg_id' => $postData['mg_id']], 'mg_id,ao_id'));
-        $goodsAoId = intval($postData['ao_id'] ?? ($mg['ao_id'] ?? 0));
-        if ($goodsAoId <= 0 && !empty($postData['g_id'])) {
-            $goodsAoId = intval($this->getGoodsValue(['g_id' => $postData['g_id']], 'ao_id'));
+        if (!empty($postData['mg_id'])) $mg = obj2arr($this->getMachineGoodsFind(['mg_id' => $postData['mg_id']], 'mg_id,g_id,ao_id'));
+        // 收款策略按商品库商品(goods)所属组织归属：商品g属于组织A，即使上架到组织B的设备，
+        // 配置g的收款策略也应归属于商品组织A，而非设备组织B
+        $gId = intval($postData['g_id'] ?? ($mg['g_id'] ?? 0));
+        $goodsAoId = 0;
+        if ($gId > 0) {
+            $goodsAoId = intval($this->getGoodsValue(['g_id' => $gId], 'ao_id'));
         }
+        if ($goodsAoId <= 0) $goodsAoId = intval($postData['ao_id'] ?? ($mg['ao_id'] ?? 0));
         $strategies = Db::name('strategy_payee')->where('sp_id', 'in', $spIds)->where('status', 1)
             ->field('sp_id,ao_id')->select()->toArray();
         if (count($strategies) !== count($spIds)) return $this->rFail('存在无效或已停用的收款策略');
-        // foreach ($strategies as $strategy) {
-        //     if (intval($strategy['ao_id'] ?? 0) > 0 && $goodsAoId > 0 && intval($strategy['ao_id']) !== $goodsAoId) {
-        //         return $this->rFail('收款策略与设备商品所属组织不匹配');
-        //     }
-        // }
+        foreach ($strategies as $strategy) {
+            if (intval($strategy['ao_id'] ?? 0) > 0 && $goodsAoId > 0 && intval($strategy['ao_id']) !== $goodsAoId) {
+                return $this->rFail('收款策略与商品所属组织不匹配');
+            }
+        }
         return true;
     }
 
@@ -189,7 +193,8 @@ class MachineGoodsClient extends ManagementClient
     }
 
     /**
-     * 返回设备商品所属组织当前启用的收款策略。
+     * 返回商品库商品所属组织当前启用的收款策略。
+     * 商品g属于组织A，即使上架到组织B的设备，配置的收款策略也归属于商品组织A。
      */
     public function getOrganizationPayeeStrategies($postData)
     {
@@ -203,7 +208,10 @@ class MachineGoodsClient extends ManagementClient
             return $this->rFail('无权查询该设备商品的收款策略');
         }
 
-        $aoId = intval($goods['ao_id'] ?? 0);
+        // 按商品库商品(goods)归属组织查询可用收款策略
+        $gId = intval($goods['g_id'] ?? 0);
+        $aoId = $gId > 0 ? intval($this->getGoodsValue(['g_id' => $gId], 'ao_id')) : 0;
+        if ($aoId <= 0) $aoId = intval($goods['ao_id'] ?? 0);
         if ($aoId <= 0) return $this->rFail('设备商品未配置所属组织');
         $organizationName = Db::name('auth_organization')->where('ao_id', $aoId)->value('organization_name') ?: '';
         $strategies = Db::name('strategy_payee')->where(['ao_id' => $aoId, 'status' => 1])
