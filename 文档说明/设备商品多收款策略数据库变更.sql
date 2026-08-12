@@ -1,5 +1,5 @@
 -- 设备商品多收款策略数据库变更
--- 执行前请确认 machine_goods.sp_id 已存在；该字段暂时保留用于旧接口兼容和迁移回退。
+-- 商品与收款策略关系全部保存于关联表，不修改 machine_goods 表。
 
 CREATE TABLE IF NOT EXISTS `machine_goods_payee_strategy` (
   `id` int unsigned NOT NULL AUTO_INCREMENT COMMENT '主键',
@@ -14,17 +14,6 @@ CREATE TABLE IF NOT EXISTS `machine_goods_payee_strategy` (
   KEY `idx_mg_status_sort` (`mg_id`,`status`,`sort`),
   KEY `idx_sp_id` (`sp_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='设备商品收款策略关联表';
-
--- 将上一版单策略配置迁移为第一条关联配置，可重复执行。
-INSERT INTO `machine_goods_payee_strategy`
-  (`mg_id`,`sp_id`,`sort`,`status`,`create_time`,`update_time`)
-SELECT `mg_id`,`sp_id`,1,1,NOW(),NOW()
-FROM `machine_goods`
-WHERE `sp_id` > 0
-ON DUPLICATE KEY UPDATE
-  `status` = VALUES(`status`),
-  `sort` = VALUES(`sort`),
-  `update_time` = VALUES(`update_time`);
 
 -- 执行后核验：同一商品允许多条策略，但同一 mg_id + sp_id 不允许重复。
 SELECT mg_id, COUNT(*) AS strategy_count,

@@ -64,7 +64,7 @@ class CartPayeeStrategyResolver
 
             $mgId = intval($channel['mg_id'] ?? 0);
             $goods = $mgId > 0
-                ? Db::name('machine_goods')->where(['mg_id' => $mgId, 'm_id' => $machineId])->field('mg_id,ao_id,g_id,g_name,sp_id')->find()
+                ? Db::name('machine_goods')->where(['mg_id' => $mgId, 'm_id' => $machineId])->field('mg_id,ao_id,g_id,g_name')->find()
                 : null;
             if (!$goods) return self::fail('当前商品未配置设备商品信息', 'machine_goods_not_found');
 
@@ -72,7 +72,6 @@ class CartPayeeStrategyResolver
             $hasGoodsStrategyConfig = false;
             $explicitStrategies = self::getGoodsStrategies(
                 $mgId,
-                intval($goods['sp_id'] ?? 0),
                 $payType,
                 $hasGoodsStrategyConfig
             );
@@ -148,7 +147,7 @@ class CartPayeeStrategyResolver
             ->order('sm.sort asc')->select()->toArray();
     }
 
-    private static function getGoodsStrategies($mgId, $legacySpId, $payType, &$configured)
+    private static function getGoodsStrategies($mgId, $payType, &$configured)
     {
         $configured = Db::name('machine_goods_payee_strategy')->where(['mg_id' => $mgId, 'status' => 1])->count() > 0;
         $query = Db::name('machine_goods_payee_strategy')->alias('mgps')
@@ -157,14 +156,7 @@ class CartPayeeStrategyResolver
         if ($payType > 0) $query->where('sp.payee_type', 'in', self::compatiblePayTypes($payType));
         $rows = $query->field('sp.sp_id,sp.sp_name,sp.title,sp.payee_type,sp.ico,sp.ao_id,sp.status')
             ->order('mgps.sort asc,mgps.id asc')->select()->toArray();
-        if ($configured) return $rows;
-        if ($legacySpId <= 0) return [];
-
-        $configured = true;
-        $legacy = Db::name('strategy_payee')->where(['sp_id' => $legacySpId, 'status' => 1]);
-        if ($payType > 0) $legacy->where('payee_type', 'in', self::compatiblePayTypes($payType));
-        $row = $legacy->field('sp_id,sp_name,title,payee_type,ico,ao_id,status')->find();
-        return $row ? [$row] : [];
+        return $rows;
     }
 
     private static function getStrategiesByIds(array $ids, $payType)

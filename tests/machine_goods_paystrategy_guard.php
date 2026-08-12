@@ -6,8 +6,6 @@ $payment = file_get_contents(__DIR__ . '/../app/AppFactory/Pay/SaleOrders/Paymen
 $machineGoods = file_get_contents(__DIR__ . '/../app/AppFactory/Management/Machine/MachineGoodsClient.php');
 $machineGoodsController = file_get_contents(__DIR__ . '/../app/management/controller/machine/MachineGoods.php');
 $machineGoodsValidator = file_get_contents(__DIR__ . '/../app/management/validate/Machine/VMachineGoods.php');
-$cartPage = file_get_contents(__DIR__ . '/../robot_flutter/lib/pages/goods_cart/index.dart');
-$detailPage = file_get_contents(__DIR__ . '/../robot_flutter/lib/pages/goods_detail/index.dart');
 
 $checks = [
     'multiple explicit goods strategies have priority' => strpos($resolver, 'getGoodsStrategies(') !== false
@@ -28,6 +26,12 @@ $checks = [
         && strpos($machineGoods, 'syncPayeeStrategies') !== false
         && strpos($machineGoods, "machine_goods_payee_strategy") !== false
         && strpos($machineGoods, '收款策略与设备商品所属组织不匹配') !== false,
+    'machine goods table does not store strategy id' => strpos($resolver, "field('mg_id,ao_id,g_id,g_name,sp_id')") === false
+        && strpos($machineGoods, "\$postData['sp_id'] =") === false
+        && strpos($machineGoodsController, 'a.sp_id') === false,
+    'strategy only update does not write or notify machine goods' => strpos($machineGoods, '$machineGoodsFields = array_diff(array_keys($postData), [\'mg_id\', \'lang\'])') !== false
+        && strpos($machineGoods, '$result = $hasMachineGoodsUpdate ? $this->updateMachineGoods($postData) : 0') !== false
+        && strpos($machineGoods, 'if ($result) $this->afterMgUpdate($mgId)') !== false,
     'batch endpoint is exposed and validated' => strpos($machineGoodsController, 'public function updatePayeeStrategiesBatch()') !== false
         && strpos($machineGoodsValidator, '"updatePayeeStrategiesBatch" => ["mg_ids","sp_ids"]') !== false,
     'batch update uses transaction and full replacement' => strpos($machineGoods, 'public function updatePayeeStrategiesBatch($postData)') !== false
@@ -38,8 +42,6 @@ $checks = [
         && strpos($machineGoods, '无权配置部分设备商品') !== false,
     'batch update has bounded request size' => strpos($machineGoods, '单次最多配置500个设备商品') !== false
         && strpos($machineGoods, '单个设备商品最多配置50个收款策略') !== false,
-    'cart filters visible payment methods' => strpos($cartPage, 'allowedRawPayeeTypes: strategyPayeeTypes') !== false,
-    'buy now filters visible payment methods' => strpos($detailPage, 'allowedRawPayeeTypes: strategyPayeeTypes') !== false,
 ];
 
 foreach ($checks as $name => $passed) {

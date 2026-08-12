@@ -5,8 +5,7 @@ SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLUMN_DEFAULT
 FROM information_schema.COLUMNS
 WHERE TABLE_SCHEMA = DATABASE()
   AND (
-    (TABLE_NAME = 'machine_goods' AND COLUMN_NAME = 'sp_id')
-    OR (TABLE_NAME = 'sale_orders' AND COLUMN_NAME = 'sp_id')
+    (TABLE_NAME = 'sale_orders' AND COLUMN_NAME = 'sp_id')
     OR (
       TABLE_NAME = 'sale_orders_details'
       AND COLUMN_NAME IN ('source_sp_id', 'effective_sp_id', 'payee_source')
@@ -15,7 +14,6 @@ WHERE TABLE_SCHEMA = DATABASE()
 ORDER BY TABLE_NAME, ORDINAL_POSITION;
 
 SELECT
-  SUM(CASE WHEN TABLE_NAME = 'machine_goods' AND COLUMN_NAME = 'sp_id' THEN 1 ELSE 0 END) AS machine_goods_sp_id,
   SUM(CASE WHEN TABLE_NAME = 'sale_orders' AND COLUMN_NAME = 'sp_id' THEN 1 ELSE 0 END) AS sale_orders_sp_id,
   SUM(CASE WHEN TABLE_NAME = 'sale_orders_details' AND COLUMN_NAME = 'source_sp_id' THEN 1 ELSE 0 END) AS details_source_sp_id,
   SUM(CASE WHEN TABLE_NAME = 'sale_orders_details' AND COLUMN_NAME = 'effective_sp_id' THEN 1 ELSE 0 END) AS details_effective_sp_id,

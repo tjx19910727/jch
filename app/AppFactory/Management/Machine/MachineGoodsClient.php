@@ -96,7 +96,7 @@ class MachineGoodsClient extends ManagementClient
         $check = $this->validatePayeeStrategies($postData, $spIds);
         if ($check !== true) return $check;
         unset($postData['sp_ids']);
-        $postData['sp_id'] = $spIds ? intval($spIds[0]) : 0;
+        unset($postData['sp_id']);
         $this->startTrans();
         try {
             $mg_id = $this->addMachineGoods($postData);
@@ -120,12 +120,14 @@ class MachineGoodsClient extends ManagementClient
         if ($check !== true) return $check;
         $mgId = intval($postData['mg_id']);
         unset($postData['sp_ids']);
-        if ($hasStrategyInput) $postData['sp_id'] = $spIds ? intval($spIds[0]) : 0;
+        unset($postData['sp_id']);
+        $machineGoodsFields = array_diff(array_keys($postData), ['mg_id', 'lang']);
+        $hasMachineGoodsUpdate = !empty($machineGoodsFields);
         $this->startTrans();
         try {
-            $result = $this->updateMachineGoods($postData);
+            $result = $hasMachineGoodsUpdate ? $this->updateMachineGoods($postData) : 0;
             if ($hasStrategyInput) $this->syncPayeeStrategies($mgId, $spIds);
-            if ($result || $hasStrategyInput) $this->afterMgUpdate($mgId);
+            if ($result) $this->afterMgUpdate($mgId);
             $this->commitTrans();
             return $this->r(200, $this->lang('update_success'));
         } catch (\Exception $e) {
@@ -205,10 +207,6 @@ class MachineGoodsClient extends ManagementClient
             foreach ($goodsList as $goods) {
                 $mgId = intval($goods['mg_id']);
                 $this->syncPayeeStrategies($mgId, $spIds);
-                $this->updateMachineGoods([
-                    'mg_id' => $mgId,
-                    'sp_id' => $spIds ? intval($spIds[0]) : 0,
-                ]);
             }
             $this->commitTrans();
         } catch (\Exception $e) {
@@ -216,13 +214,6 @@ class MachineGoodsClient extends ManagementClient
             return $this->rFail($e->getMessage());
         }
 
-        foreach ($goodsList as $goods) {
-            try {
-                $this->afterMgUpdate(intval($goods['mg_id']));
-            } catch (\Exception $e) {
-                actionException($e, 1);
-            }
-        }
         return $this->r(200, $this->lang('action_success'), [
             'updated_count' => count($goodsList),
             'mg_ids' => $mgIds,

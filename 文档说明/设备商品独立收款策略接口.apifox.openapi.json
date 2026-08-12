@@ -42,7 +42,7 @@
         "tags": ["MachineGoodsPayStrategy"],
         "summary": "设备商品列表（新增收款策略字段）",
         "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
-        "responses": {"200": {"description": "列表项新增 sp_ids、sp_names、payee_types、strategies_status；单值字段保留兼容"}}
+        "responses": {"200": {"description": "列表项新增 sp_ids、sp_names、payee_types、strategies_status，全部来源于关联表"}}
       }
     },
     "/management/machine.machine_goods/getFind": {
@@ -51,7 +51,7 @@
         "summary": "设备商品详情（新增收款策略字段）",
         "parameters": [{"$ref": "#/components/parameters/TokenHeader"}],
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"type": "object", "required": ["mg_id"], "properties": {"mg_id": {"type": "integer"}}}}}},
-        "responses": {"200": {"description": "详情新增 sp_ids、sp_names、payee_types、strategies_status；单值字段保留兼容"}}
+        "responses": {"200": {"description": "详情新增 sp_ids、sp_names、payee_types、strategies_status，全部来源于关联表"}}
       }
     },
     "/management/machine.machine_goods/add": {
@@ -160,7 +160,7 @@
           "machine_id": {"type": "string"}, "g_id": {"type": "integer"}, "g_name": {"type": "string"},
           "ao_id": {"type": "integer"},
           "sp_ids": {"type": "array", "items": {"type": "integer", "minimum": 1}, "uniqueItems": true, "description": "独立收款策略ID列表，顺序即优先级；空数组表示不配置", "example": [18, 21]},
-          "sp_id": {"type": "integer", "minimum": 0, "deprecated": true, "description": "旧版单策略兼容参数；同时传 sp_ids 时以 sp_ids 为准"}
+          "sp_id": {"type": "integer", "minimum": 0, "deprecated": true, "description": "旧版请求兼容参数；转换为单元素集合写入关联表，不写machine_goods；同时传sp_ids时以sp_ids为准"}
         }
       },
       "MachineGoodsPayeeBatchRequest": {
