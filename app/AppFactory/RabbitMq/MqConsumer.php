@@ -170,6 +170,8 @@ class MqConsumer
 
     /**
      * MQ记录失败不能打断消息确认流程。
+     * 更新影响0行时尝试补录幂等记录，确保 status=2 可被后续重投命中，
+     * 避免业务已执行但记录缺失导致消息重投后重复执行。
      *
      * @param array $data
      * @param int $status
@@ -183,6 +185,28 @@ class MqConsumer
                 ['msg_id' => $data['msg_id'], 'machine_id' => $data['machine_id']]
             );
             $this->actionLogSafely($result, '修改MQ记录状态结果', 'DataUpload');
+
+            // 更新影响0行说明记录未落库，补录带status的幂等记录防止重投重复执行
+            if ($result === false || intval($result) === 0) {
+                $existed = $this->getMachineMqRecordFind([
+                    'msg_id' => $data['msg_id'],
+                    'machine_id' => $data['machine_id'],
+                ], 'mr_id');
+                if (!$existed) {
+                    $this->addMachineMqRecord([
+                        'm_id' => intval($data['m_id'] ?? 0),
+                        'machine_id' => $data['machine_id'],
+                        'machine_name' => strval($data['machine_name'] ?? ''),
+                        'msg_id' => $data['msg_id'],
+                        'path' => strval($data['path'] ?? 'dataUpload'),
+                        'content' => json_encode($data),
+                        'from' => 2,
+                        'type' => 1,
+                        'status' => $status,
+                    ]);
+                    $this->actionLogSafely(['msg_id' => $data['msg_id']], 'MQ状态记录缺失已补录', 'DataUpload');
+                }
+            }
         } catch (\Throwable $e) {
             error_log('MQ record status update failed: ' . $e->getMessage());
         }
@@ -398,11 +422,9 @@ class MqConsumer
         } catch (\Throwable $e) {
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"export_message");
             actionLog($e->getTrace(), 'tryCatchTrace',"export_message");
-            $exportId = is_array($data) ? intval($data['export_id'] ?? 0) : 0;
-            if ($exportId) {
-                AppFactory::timeTask()->export->updateExportLog(['export_id' => $exportId, 'status' => 4]);
-            }
-            $message->ack();
+            // 失败消息 requeue 重投，由 exportRedeliverExceeded 在超限后收走并标记失败，
+            // 避免瞬时故障（DB抖动/文件系统忙）导致导出静默失败。
+            $message->nack(false, true);
         }
     }
 
