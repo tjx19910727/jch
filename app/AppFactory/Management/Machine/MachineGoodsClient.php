@@ -59,6 +59,16 @@ class MachineGoodsClient extends ManagementClient
         return $this->r(200, $this->lang("query_success"), $data);
     }
 
+    /**
+     * 使用与列表一致的 a 别名查询设备商品详情，兼容字段中的关联子查询。
+     */
+    public function getMgFind($where, $field = "*")
+    {
+        $list = $this->getMachineGoodsList($where, 0, $field);
+        $data = $list && !$list->isEmpty() ? $list->first() : null;
+        return $this->rQ($data);
+    }
+
     public function getGcList($where)
     {
         $tree = [];
@@ -155,11 +165,11 @@ class MachineGoodsClient extends ManagementClient
         $strategies = Db::name('strategy_payee')->where('sp_id', 'in', $spIds)->where('status', 1)
             ->field('sp_id,ao_id')->select()->toArray();
         if (count($strategies) !== count($spIds)) return $this->rFail('存在无效或已停用的收款策略');
-        foreach ($strategies as $strategy) {
-            if (intval($strategy['ao_id'] ?? 0) > 0 && $goodsAoId > 0 && intval($strategy['ao_id']) !== $goodsAoId) {
-                return $this->rFail('收款策略与设备商品所属组织不匹配');
-            }
-        }
+        // foreach ($strategies as $strategy) {
+        //     if (intval($strategy['ao_id'] ?? 0) > 0 && $goodsAoId > 0 && intval($strategy['ao_id']) !== $goodsAoId) {
+        //         return $this->rFail('收款策略与设备商品所属组织不匹配');
+        //     }
+        // }
         return true;
     }
 
@@ -176,6 +186,39 @@ class MachineGoodsClient extends ManagementClient
                 'update_time' => date('Y-m-d H:i:s'),
             ]);
         }
+    }
+
+    /**
+     * 返回设备商品所属组织当前启用的收款策略。
+     */
+    public function getOrganizationPayeeStrategies($postData)
+    {
+        $mgId = intval($postData['mg_id'] ?? 0);
+        $goods = Db::name('machine_goods')->where('mg_id', $mgId)
+            ->field('mg_id,m_id,g_id,g_name,ao_id')->find();
+        if (!$goods) return $this->rFail('设备商品不存在或已删除');
+
+        $permittedMachineIds = $this->resolvePermittedMachineIdsForBatch();
+        if ($permittedMachineIds !== null && !in_array(intval($goods['m_id']), $permittedMachineIds, true)) {
+            return $this->rFail('无权查询该设备商品的收款策略');
+        }
+
+        $aoId = intval($goods['ao_id'] ?? 0);
+        if ($aoId <= 0) return $this->rFail('设备商品未配置所属组织');
+        $organizationName = Db::name('auth_organization')->where('ao_id', $aoId)->value('organization_name') ?: '';
+        $strategies = Db::name('strategy_payee')->where(['ao_id' => $aoId, 'status' => 1])
+            ->field('sp_id,sp_name,title,payee_type,ico,status,ao_id')
+            ->order('sp_id', 'desc')->select()->toArray();
+
+        return $this->r(200, $this->lang('query_success'), [
+            'mg_id' => $mgId,
+            'm_id' => intval($goods['m_id']),
+            'g_id' => intval($goods['g_id']),
+            'g_name' => $goods['g_name'],
+            'ao_id' => $aoId,
+            'organization_name' => $organizationName,
+            'strategies' => array_values($strategies),
+        ]);
     }
 
     /**

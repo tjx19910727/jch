@@ -10,6 +10,9 @@ $machineGoodsValidator = file_get_contents(__DIR__ . '/../app/management/validat
 $checks = [
     'multiple explicit goods strategies have priority' => strpos($resolver, 'getGoodsStrategies(') !== false
         && strpos($resolver, "'goods_explicit'") !== false,
+    'resolver accepts thinkphp machine model' => strpos($resolver, 'public static function resolve($machine, array $cartList, $payType = 0)') !== false
+        && strpos($resolver, "method_exists(\$machine, 'toArray')") !== false
+        && strpos($resolver, "'machine_invalid'") !== false,
     'cart strategies use set intersection' => strpos($resolver, 'array_intersect($candidateIds, $itemCandidates)') !== false,
     'legacy organization strategy remains supported' => strpos($resolver, "where('sm.ao_id', \$goodsAoId)") !== false,
     'legacy online offline strategy scope remains supported' => strpos($resolver, 'SubCarMixPolicy::ONLINE_SP_IDS_FIELD') !== false
@@ -26,6 +29,9 @@ $checks = [
         && strpos($machineGoods, 'syncPayeeStrategies') !== false
         && strpos($machineGoods, "machine_goods_payee_strategy") !== false
         && strpos($machineGoods, '收款策略与设备商品所属组织不匹配') !== false,
+    'machine goods detail uses aliased list query' => strpos($machineGoodsController, 'getMgFind($where, $this->field)') !== false
+        && strpos($machineGoods, 'public function getMgFind($where, $field = "*")') !== false
+        && strpos($machineGoods, 'getMachineGoodsList($where, 0, $field)') !== false,
     'machine goods table does not store strategy id' => strpos($resolver, "field('mg_id,ao_id,g_id,g_name,sp_id')") === false
         && strpos($machineGoods, "\$postData['sp_id'] =") === false
         && strpos($machineGoodsController, 'a.sp_id') === false,
@@ -34,6 +40,10 @@ $checks = [
         && strpos($machineGoods, 'if ($result) $this->afterMgUpdate($mgId)') !== false,
     'batch endpoint is exposed and validated' => strpos($machineGoodsController, 'public function updatePayeeStrategiesBatch()') !== false
         && strpos($machineGoodsValidator, '"updatePayeeStrategiesBatch" => ["mg_ids","sp_ids"]') !== false,
+    'organization strategy endpoint uses goods organization and is read only' => strpos($machineGoodsController, 'public function getOrganizationPayeeStrategies()') !== false
+        && strpos($machineGoodsValidator, '"getOrganizationPayeeStrategies" => ["mg_id"]') !== false
+        && strpos($machineGoods, "where(['ao_id' => \$aoId, 'status' => 1])") !== false
+        && strpos($machineGoods, "'strategies' => array_values(\$strategies)") !== false,
     'batch update uses transaction and full replacement' => strpos($machineGoods, 'public function updatePayeeStrategiesBatch($postData)') !== false
         && strpos($machineGoods, '$this->startTrans()') !== false
         && strpos($machineGoods, '$this->syncPayeeStrategies($mgId, $spIds)') !== false

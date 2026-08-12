@@ -278,3 +278,41 @@ WHERE @parent_node_id IS NOT NULL
 SELECT node_id,pid,name,url,is_button,data_auth,permission_action,status
 FROM auth_node
 WHERE url = @node_url;
+
+-- 查询设备商品所属组织当前启用收款策略接口权限节点。
+SET @parent_node_id := (
+    SELECT node_id FROM auth_node
+    WHERE url = '/management/machine.machine_goods/getList'
+    ORDER BY node_id ASC LIMIT 1
+);
+SET @node_url := '/management/machine.machine_goods/getOrganizationPayeeStrategies';
+SET @node_name := '查询设备商品所属组织收款策略';
+SET @now_time := UNIX_TIMESTAMP();
+
+UPDATE auth_node
+SET pid = @parent_node_id,
+    name = @node_name,
+    `desc` = '根据设备商品所属组织查询当前启用的收款策略',
+    type = 2,
+    is_auth = 1,
+    is_button = 0,
+    data_auth = 1,
+    permission_action = 'view',
+    status = 1,
+    update_time = @now_time
+WHERE url = @node_url;
+
+INSERT INTO auth_node (
+    pid,name,icon,url,`desc`,sort,type,is_auth,is_button,
+    data_auth,permission_action,status,create_time,update_time
+)
+SELECT @parent_node_id,@node_name,'',@node_url,
+       '根据设备商品所属组织查询当前启用的收款策略',
+       101,2,1,0,1,'view',1,@now_time,@now_time
+FROM DUAL
+WHERE @parent_node_id IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM auth_node WHERE url = @node_url);
+
+SELECT node_id,pid,name,url,is_button,data_auth,permission_action,status
+FROM auth_node
+WHERE url = @node_url;

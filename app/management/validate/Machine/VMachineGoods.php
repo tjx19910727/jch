@@ -43,6 +43,7 @@ class VMachineGoods extends VCommon
     protected $scene = [
         "add" => ["m_id","machine_id",'g_id',"g_name","sp_id","sp_ids"],
         "update" => ["mg_id","sp_id","sp_ids"],
+        "getOrganizationPayeeStrategies" => ["mg_id"],
         "updatePayeeStrategiesBatch" => ["mg_ids","sp_ids"],
         "updateMore" => ["mg_id"],
         "del" => ["mg_id"],

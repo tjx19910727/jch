@@ -10,8 +10,10 @@ use think\facade\Db;
  */
 class CartPayeeStrategyResolver
 {
-    public static function resolve(array $machine, array $cartList, $payType = 0)
+    public static function resolve($machine, array $cartList, $payType = 0)
     {
+        if (is_object($machine) && method_exists($machine, 'toArray')) $machine = $machine->toArray();
+        if (!is_array($machine)) return self::fail('设备信息格式错误', 'machine_invalid');
         if (!$cartList) return self::fail('购物车不能为空', 'cart_empty');
 
         $machineId = intval($machine['m_id'] ?? 0);

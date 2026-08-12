@@ -41,7 +41,7 @@ class MachineGoods extends Common
     {
         $postData = input();
         $where = $this->getWhere($postData, false, []);
-        return $this->app->machineGoods->getFind($where, $this->field);
+        return $this->app->machineGoods->getMgFind($where, $this->field);
     }
 
     /**
@@ -109,6 +109,20 @@ class MachineGoods extends Common
             return returnValidate($e->getMessage());
         }
         return $this->app->machineGoods->updateMg($postData);
+    }
+
+    /**
+     * 查询设备商品所属组织当前可用的收款策略。
+     */
+    public function getOrganizationPayeeStrategies()
+    {
+        $postData = input();
+        try {
+            $this->validate($postData, $this->validatePath . '.getOrganizationPayeeStrategies');
+        } catch (\Exception $e) {
+            return returnValidate($e->getMessage());
+        }
+        return $this->app->machineGoods->getOrganizationPayeeStrategies($postData);
     }
 
     public function updateMoreByWhere()
