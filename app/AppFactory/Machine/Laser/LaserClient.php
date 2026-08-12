@@ -21,7 +21,7 @@ class LaserClient extends BaseClient
      */
     public function checkRequest($isH5 = false)
     {
-        if (env('CglPay.is_test')) return true;
+        //if (env('CglPay.is_test')) return true;
 
         $data = $this->getRequestData();
         try {
@@ -69,7 +69,16 @@ class LaserClient extends BaseClient
 
         $signKey = $machine ? trim((string)$machine['signKey']) : '';
         if ($signKey === '') $signKey = env('api.md5Key');
-        if (!SignUtil::checkSign($data, $signKey)) {
+        $signValid = SignUtil::checkSign($data, $signKey);
+        if (!$signValid && strtolower((string)request()->action()) === 'uploadbehaviortracking') {
+            // Flutter jsonEncode 保留中文和斜杠，仅此嵌套数据接口兼容该签名格式。
+            $signValid = SignUtil::checkSign(
+                $data,
+                $signKey,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            );
+        }
+        if (!$signValid) {
             return returnState(100, lang('VLaser.check_sign_fail'));
         }
 
