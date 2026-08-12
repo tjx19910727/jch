@@ -362,6 +362,8 @@ class MqProducer
              * AMQPMessage::DELIVERY_MODE_NON_PERSISTENT = 1; 不持久化AMOPMessage: :DELIVERY_MODE_PERSISTENT = 2: 持久化
              */
             $message = new AMQPMessage($messageBody, array('content_type' => 'text/plain', 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT));
+            // 启用发布确认，避免大消息发布中途失败被静默丢弃
+            $channel->confirm_select();
             /**
              * 发送消息
              * mSg// AMQP消息内容
@@ -370,6 +372,7 @@ class MqProducer
              *
              */
             $channel->basic_publish($message, $amqpDetail['exchange_name'], $amqpDetail['route_key']);
+            $channel->wait_for_pending_acks(5);
 
             $channel->close();
             $connection->close();

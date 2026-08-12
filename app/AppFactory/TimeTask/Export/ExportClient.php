@@ -12,6 +12,8 @@ namespace app\AppFactory\TimeTask\Export;
 use app\AppFactory\Kernel\Support\Excel;
 use app\AppFactory\Kernel\Traits\Export\ExportLogTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\OrderTypeTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersRefundTrait;
+use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\TimeTask\TimeTaskBase;
 use think\facade\Db;
 
@@ -19,6 +21,7 @@ class ExportClient extends TimeTaskBase
 {
     use ExportLogTrait;
     use OrderTypeTrait;
+    use SaleOrdersTrait, SaleOrdersRefundTrait;
 
     protected function buildSqlCaseByMap($column, $map, $defaultPrefix)
     {
@@ -162,6 +165,151 @@ class ExportClient extends TimeTaskBase
             $result = Excel::exportExcel($list, $title, $filename, 0,
                 $data['otherData']['startRow'] ?? 1,
                 $data['otherData']['merge'] ?? []);
+            $this->updateExportLog([
+                'export_id' => $exportId,
+                'file_name' => $filename,
+                'file_path' => $result,
+                'export_time' => time(),
+                'status' => 2,
+            ]);
+            return true;
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+            if ($exportId) $this->updateExportLog(['export_id' => $exportId, 'status' => 4]);
+        }
+        return false;
+    }
+
+    /**
+     * 商品交易列表导出（条件导出：消费端按筛选条件查询生成Excel，避免超大MQ消息）
+     * @param $data
+     * @return bool
+     */
+    public function makeGoodsSoExcel($data)
+    {
+        $exportId = 0;
+        try {
+            $data = json2arr($data);
+            $exportId = intval($data['export_id'] ?? 0);
+            $where = isset($data['where']) && is_array($data['where']) ? $data['where'] : [];
+            $hasCostPriceAuth = !empty($data['has_cost_price_auth']);
+            $costPriceField = $hasCostPriceAuth ? 'sod.cost_price' : '0 cost_price';
+            $refundCostPriceField = $hasCostPriceAuth ? 'sod.cost_price' : '0 cost_price';
+            $soOrderTypeCase = $this->buildOrderTypeCaseSql('so.order_type');
+
+            $field = "so.machine_id,so.machine_name,so.trade_no,so.mch_no,sod.sku,sod.g_name,sod.channel_code,sod.retail_price,sod.discount_price,
+        sod.total_sod_price,sod.total_sod_cost_points,sod.total_sod_points,so.factory,so.inventory_location,
+            (CASE so.out_status WHEN 2 THEN '已发出货命令' WHEN 3 THEN '设备已接收' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
+            {$soOrderTypeCase} order_type,
+            (CASE so.pay_type 
+            WHEN 0 THEN '免支付' 
+            WHEN 1 THEN '微信' 
+            WHEN 2 THEN '支付宝'
+            WHEN 4 THEN '京东收银'
+            WHEN 5 THEN '会员支付'
+            WHEN 6 THEN '丽呈线上支付'
+            WHEN 7 THEN '机器人线上支付'
+            WHEN 8 THEN '八达通COGOLINK'
+            ELSE '' END) pay_type,
+            (CASE so.pay_method 
+            WHEN 0 THEN '免支付' 
+            WHEN 1 THEN '扫码支付' 
+            WHEN 41 THEN '扫码支付' 
+            WHEN 2 THEN '被扫支付'
+            ELSE '' END) pay_method,
+            (CASE so.out_status 
+                WHEN 1 THEN '正常'
+                WHEN 2 THEN '已发出货指令'
+                WHEN 3 THEN '设备已接收'
+                WHEN 4 THEN (CASE WHEN so.refund_amount > 0 THEN so.refund_amount ELSE '正常' END)
+                WHEN 5 THEN '出货失败'
+                WHEN 6 THEN '未取商品'
+                END 
+            ) order_status,
+            FROM_UNIXTIME(so.pay_time,'%Y-%m-%d %H:%i:%s') pay_time,
+            FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
+            (sod.quantity) quantity,
+            (sod.success_quantity) success_quantity,
+            (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name,{$costPriceField}";
+            $list = $this->getSaleOrdersDetailsJoinOrderList($where, 0, $field);
+            if (!$list) {
+                if ($exportId) $this->updateExportLog(['export_id' => $exportId, 'status' => 4]);
+                return false;
+            }
+            $list = $list->toArray();
+
+            // 合并已退款数据（与页面商品交易列表保持一致）
+            $where['sor.status'] = 2;
+            if (isset($where[0][0]) && strpos($where[0][0], "create_time") !== false) $where[0][0] = "sor.update_time";
+            $refundField = "sor.machine_id,sor.machine_name,sor.trade_no,so.mch_no,so.factory,so.inventory_location,sod.sku,sor.g_name,sor.channel_code,sod.retail_price,sod.discount_price,(0-sor.refund_amount) total_sod_price,
+                            (0-sod.refund_cost_points) total_sod_cost_points,(0-sod.refund_points) total_sod_points,
+                            (CASE so.out_status WHEN 1 THEN '待取货' WHEN 2 THEN '已发出货命令' WHEN 3 THEN '设备已接收' WHEN 4 THEN '出货成功' WHEN 5 THEN '出货失败' END) out_status,
+                        {$soOrderTypeCase} order_type,
+                        (CASE so.pay_type 
+                        WHEN 0 THEN '免支付' 
+                        WHEN 1 THEN '微信' 
+                        WHEN 2 THEN '支付宝'
+                        WHEN 4 THEN '京东收银'
+                        WHEN 5 THEN '会员支付'
+                        WHEN 6 THEN '丽呈线上支付'
+                        WHEN 7 THEN '机器人线上支付'
+                        WHEN 8 THEN '八达通COGOLINK'
+                        ELSE '' END) pay_type,
+                        (CASE so.pay_method 
+                        WHEN 0 THEN '免支付' 
+                        WHEN 1 THEN '扫码支付' 
+                        WHEN 41 THEN '扫码支付' 
+                        WHEN 2 THEN '被扫支付'
+                        ELSE '' END) pay_method,
+                        ('已退款') order_status,
+                        FROM_UNIXTIME(sor.update_time,'%Y-%m-%d %H:%i:%s') pay_time,
+                        FROM_UNIXTIME(so.out_time,'%Y-%m-%d %H:%i:%s') out_time,
+                        (sor.refund_quantity) quantity,
+                        (sod.success_quantity) success_quantity,
+                        (SELECT organization_name FROM auth_organization ao WHERE ao.ao_id = sod.sod_ao_id) organization_name,{$refundCostPriceField}";
+            $refund = $this->getSaleOrdersRefundListJoinSoSod($where, 0, $refundField);
+            if ($refund) $list = array_merge($list, $refund->toArray());
+
+            $title = [
+                "machine_id" => "设备编号",
+                "machine_name" => "设备名称",
+                "trade_no" => "交易号",
+                "mch_no" => "支付编号",
+                "sku" => "SKU",
+                "g_name" => "商品名称",
+                "channel_code" => "槽位",
+                "retail_price" => "单价",
+                "discount_price" => "优惠价",
+                "total_sod_price" => "支付金额",
+                "total_sod_cost_points" => "消费积分",
+                "total_sod_points" => "赠送积分",
+                'factory' => "所属工厂",
+                'inventory_location' => "库存地点",
+                "out_status" => "出货状态",
+                "order_status" => "订单状态",
+                "order_type" => "订单类型",
+                "pay_type" => "支付类型",
+                "pay_method" => "支付方式",
+                "pay_time" => "支付时间",
+                "out_time" => "出货时间",
+                "quantity" => "商品总数",
+                "success_quantity" => "出货成功数量",
+                "organization_name" => "所属组织",
+            ];
+            if ($hasCostPriceAuth) $title['cost_price'] = "成本价";
+            // 发布端文件名已包含 YmdHis，此处不再追加时间，避免双时间戳
+            $filename = $data['filename'] ?? ('商品交易列表-' . date('YmdHis'));
+            actionLog([
+                'export_id' => $exportId,
+                'filename' => $filename,
+                'title_count' => count($title),
+                'row_count' => count($list),
+            ], '商品交易导出Excel的数据摘要');
+
+            $result = Excel::exportExcel($list, $title, $filename, 0,
+                $data['otherData']['startRow'] ?? 1,
+                $data['otherData']['merge'] ?? [],
+                $data['otherData'] ?? []);
             $this->updateExportLog([
                 'export_id' => $exportId,
                 'file_name' => $filename,
