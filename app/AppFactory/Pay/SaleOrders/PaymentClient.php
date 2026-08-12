@@ -197,20 +197,29 @@ class PaymentClient extends PayBaseClient
             }
 
 
-            $where['sm.s_type'] = 1;
-            $where['sp.status'] = 1;
-            $where['sp.payee_type'] = $this->order['pay_type'];
-            $where['sm.m_id'] = $this->order['m_id'];
-            if (is_array($subCarMixSpIds)) {
-                $where[] = ['sp.sp_id', 'in', $subCarMixSpIds];
-            }
-            if($this->machine['ao_id'] > 18){
-                $where['sm.ao_id'] = $this->machine['ao_id'];
-            }
-            $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');
-            if ((!is_array($this->strategyPayee) || !$this->strategyPayee) && in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
-                $where['sp.payee_type'] = $this->getCompatiblePayeeType($this->order['pay_type']);
+            if (intval($this->order['sp_id'] ?? 0) > 0) {
+                $where = [
+                    'sp_id' => intval($this->order['sp_id']),
+                    'status' => 1,
+                    'payee_type' => intval($this->order['pay_type']),
+                ];
+                $this->strategyPayee = $this->getStrategyPayeeContentDirect($where, '*');
+                if ((!is_array($this->strategyPayee) || !$this->strategyPayee) && in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
+                    $where['payee_type'] = $this->getCompatiblePayeeType($this->order['pay_type']);
+                    $this->strategyPayee = $this->getStrategyPayeeContentDirect($where, '*');
+                }
+            } else {
+                $where['sm.s_type'] = 1;
+                $where['sp.status'] = 1;
+                $where['sp.payee_type'] = $this->order['pay_type'];
+                $where['sm.m_id'] = $this->order['m_id'];
+                if (is_array($subCarMixSpIds)) $where[] = ['sp.sp_id', 'in', $subCarMixSpIds];
+                if($this->machine['ao_id'] > 18) $where['sm.ao_id'] = $this->machine['ao_id'];
                 $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');
+                if ((!is_array($this->strategyPayee) || !$this->strategyPayee) && in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
+                    $where['sp.payee_type'] = $this->getCompatiblePayeeType($this->order['pay_type']);
+                    $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');
+                }
             }
             if (!is_array($this->strategyPayee)) return $this->strategyPayee;
             if (!in_array($this->strategyPayee['payee_type'],array_keys($this->paymentType))) {

@@ -110,6 +110,29 @@ trait StrategyPayeeTrait
     }
 
     /**
+     * 按已固化的策略ID直接读取收款配置，不要求仍存在设备策略绑定。
+     */
+    public function getStrategyPayeeContentDirect($where, $field = "*")
+    {
+        $payee = $this->getStrategyPayeeFind($where, $field);
+        if (!$payee) return $this->rFail($this->lang("StrategyPayee.payee_config_no_data"));
+        $payee = obj2arr($payee);
+        $content = json2arr($payee['content'] ?? '');
+        if (!$content) return $this->rFail($this->lang("StrategyPayee.payee_config_no_json"));
+        $payeeType = intval($payee['payee_type'] ?? 0);
+        if (!isset($this->vClass[$payeeType], $this->scene[$payeeType])) {
+            return $this->rFail($this->lang("StrategyPayee.payee_config_no_data"));
+        }
+        $content['sp_id'] = intval($payee['sp_id']);
+        try {
+            validate($this->vClass[$payeeType])->scene($this->scene[$payeeType])->check($content);
+        } catch (ValidateException $e) {
+            return $this->rValidate($e->getMessage());
+        }
+        return array_merge($payee, $content);
+    }
+
+    /**
      * 通过设备ID跟支付类型查询支付配置
      * @param $m_id
      * @param $payee_type

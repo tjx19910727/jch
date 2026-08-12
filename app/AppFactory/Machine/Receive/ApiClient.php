@@ -11,6 +11,7 @@ namespace app\AppFactory\Machine\Receive;
 
 
 use app\AppFactory\Kernel\ServiceContainer;
+use app\AppFactory\Kernel\Service\Payment\CartPayeeStrategyResolver;
 use app\AppFactory\Kernel\Support\SubCarMixPolicy;
 use app\AppFactory\Kernel\Support\Trip\Trip;
 use app\AppFactory\Kernel\Traits\Activity\ActivityCouponTrait;
@@ -961,6 +962,25 @@ class ApiClient extends ReceiveBaseClient
     }
 
     /**
+     * 结算前按购物车商品解析本次可用收款方式。
+     */
+    public function resolveCartPayTypes()
+    {
+        $cartList = json2arr($this->data['carList'] ?? []);
+        $result = CartPayeeStrategyResolver::resolve($this->machine, is_array($cartList) ? $cartList : []);
+        if (intval($result['state'] ?? 100) !== 200) {
+            return $this->r(100, $result['msg'] ?? '收款策略解析失败', [
+                'error_code' => $result['error_code'] ?? 'strategy_resolve_failed',
+            ]);
+        }
+        return $this->rQ([
+            'effective_sp_id' => intval($result['effective_sp_id']),
+            'strategy_source' => $result['strategy_source'],
+            'payTypeList' => $result['pay_type_list'],
+        ]);
+    }
+
+    /**
      * 设备上报修改自身运行模式：1生产模式，2测试模式
      * @return array|\think\response\Json
      */
@@ -1341,6 +1361,19 @@ class ApiClient extends ReceiveBaseClient
                 return $this->subCarFailResponse(100, "购物车不能为空");
             }
             $this->data['carList'] = json2arr($this->data['carList']);
+            $payeeResolution = CartPayeeStrategyResolver::resolve(
+                $this->machine,
+                $this->data['carList'],
+                intval($this->data['pay_type'])
+            );
+            if (intval($payeeResolution['state'] ?? 100) !== 200) {
+                $this->rollbackTrans();
+                return $this->subCarFailResponse(100, $payeeResolution['msg'] ?? '收款策略解析失败');
+            }
+            $payeeItemMap = [];
+            foreach ($payeeResolution['items'] as $payeeItem) {
+                $payeeItemMap[intval($payeeItem['mc_id'])] = $payeeItem;
+            }
             $machineConfig = $this->getMachineConfigFind(['m_id' => $this->machine['m_id']], '*');
             if (is_object($machineConfig) && method_exists($machineConfig, 'toArray')) {
                 $machineConfig = $machineConfig->toArray();
@@ -1541,6 +1574,9 @@ class ApiClient extends ReceiveBaseClient
                             'total_sod_cost_points' => bcmul(($mc['cost_points'] ?? 0), $quantity, 3),
                             'wc_order_no' => !empty($wc_order_no) ? json_encode($wc_order_no) : '', //微程商品信息
                             'sod_ao_id' => $mg['ao_id'] ?? '',
+                            'source_sp_id' => intval($payeeItemMap[intval($mc['mc_id'])]['source_sp_id'] ?? 0),
+                            'effective_sp_id' => intval($payeeResolution['effective_sp_id']),
+                            'payee_source' => strval($payeeItemMap[intval($mc['mc_id'])]['payee_source'] ?? 'legacy'),
                         ];
                         $details['retail_price'] = !empty($wc_order_no) ? $total_price : ($mc['retail_price'] ?? 0);
                         $details['total_sod_price'] = bcmul($details['retail_price'], $quantity, 3);
@@ -1573,6 +1609,7 @@ class ApiClient extends ReceiveBaseClient
         $this->startTrans();
         try {
             if ($updateOrder) {
+                $updateOrder['sp_id'] = intval($payeeResolution['effective_sp_id']);
                 $updateOrder['retail_price'] = $updateOrder['total_price'];
                 $flag[] = $this->updateSaleOrders($updateOrder);
                 $this->order = $this->getSaleOrdersFind(['order_id' => $order_id]);

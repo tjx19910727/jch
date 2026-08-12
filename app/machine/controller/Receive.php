@@ -462,6 +462,19 @@ class Receive extends Common
     }
 
     /**
+     * 结算前解析购物车可用支付方式。
+     */
+    public function resolveCartPayTypes()
+    {
+        try {
+            return $this->app->api->resolveCartPayTypes();
+        } catch (\Exception $e) {
+            actionException($e, 1);
+            return returnTryCatch($e->getMessage());
+        }
+    }
+
+    /**
      * 提交货道信息
      * @return array|string
      */
