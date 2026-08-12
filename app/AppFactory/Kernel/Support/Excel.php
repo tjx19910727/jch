@@ -158,7 +158,7 @@ class Excel
         $imageHeight = (int)($otherData['imageHeight'] ?? 70);
         $tempDir = null;
         if ($imageFields) {
-            $tempDir = root_path() . 'public/uploads/excel_img/' . date('Ymd') . '/';
+            $tempDir = root_path() . 'public/uploads/excel_img_export/' . date('Ymd') . '/';
             if (!is_dir($tempDir)) {
                 @mkdir($tempDir, 0777, true);
             }
@@ -335,7 +335,7 @@ class Excel
         $imageHeight = (int)($otherData['imageHeight'] ?? 70);
         $tempDir = null;
         if ($imageFields) {
-            $tempDir = root_path() . 'public/uploads/excel_img/' . date('Ymd') . '/';
+            $tempDir = root_path() . 'public/uploads/excel_img_export/' . date('Ymd') . '/';
             if (!is_dir($tempDir)) {
                 @mkdir($tempDir, 0777, true);
             }

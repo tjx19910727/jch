@@ -179,6 +179,16 @@ class RevenueRuleClient extends ManagementClient
         if (intval($merged['settlement_type'] ?? 1) === 2 && intval($merged['settlement_days'] ?? 0) < 1) {
             return $this->rFail("T+N 分账天数必须大于0");
         }
+        if (isset($merged['cost_assume']) && !in_array(intval($merged['cost_assume']), [0, 1, 2], true)) {
+            return $this->rFail("优惠券成本承担方式不合法");
+        }
+        if (array_key_exists('trigger_pay_types', $data)) {
+            $normalizePayTypes = $this->normalizeTriggerPayTypes($data['trigger_pay_types']);
+            if ($normalizePayTypes === false) {
+                return $this->rFail("触发收款方式不合法");
+            }
+            $data['trigger_pay_types'] = $normalizePayTypes;
+        }
         if (intval($merged['rule_mode'] ?? 0) === 5) {
             $couponCheck = $this->normalizeConfigCouponData($data, $merged, $isUpdate);
             if ($couponCheck !== true) return $couponCheck;
@@ -214,20 +224,47 @@ class RevenueRuleClient extends ManagementClient
         $save = [];
         foreach ([
             'config_name', 'rule_mode', 'base_type', 'turnover_type', 'tier_calc_mode',
-            'settlement_type', 'settlement_days', 'coupon_id', 'receiver_config', 'status',
+            'settlement_type', 'settlement_days', 'coupon_id', 'cost_assume', 'trigger_pay_types', 'receiver_config', 'status',
         ] as $field) {
             if (array_key_exists($field, $data)) $save[$field] = $data[$field];
         }
         if (isset($data['receivers']) && !isset($save['receiver_config'])) $save['receiver_config'] = $data['receivers'];
         if (isset($save['receiver_config'])) $save['receiver_config'] = $this->encodeReceiverConfig($save['receiver_config']);
+        if (isset($save['trigger_pay_types']) && is_array($save['trigger_pay_types'])) {
+            $save['trigger_pay_types'] = json_encode($save['trigger_pay_types'], JSON_UNESCAPED_UNICODE);
+        }
         if (!$isUpdate) {
-            foreach (['base_type' => 1, 'turnover_type' => 1, 'tier_calc_mode' => 1, 'settlement_type' => 1, 'settlement_days' => 0, 'status' => 1] as $field => $value) {
+            foreach (['base_type' => 1, 'turnover_type' => 1, 'tier_calc_mode' => 1, 'settlement_type' => 1, 'settlement_days' => 0, 'cost_assume' => 0, 'status' => 1] as $field => $value) {
                 if (!isset($save[$field])) $save[$field] = $value;
             }
             if (!isset($save['receiver_config'])) $save['receiver_config'] = '[]';
+            if (!isset($save['trigger_pay_types'])) $save['trigger_pay_types'] = '[]';
         }
         if (isset($save['settlement_type']) && intval($save['settlement_type']) === 1) $save['settlement_days'] = 0;
         return $save;
+    }
+
+    protected function normalizeTriggerPayTypes($payTypes)
+    {
+        if ($payTypes === '' || $payTypes === null) return [];
+        if (is_string($payTypes)) {
+            $decoded = json_decode($payTypes, true);
+            if (is_array($decoded)) {
+                $payTypes = $decoded;
+            } else {
+                $payTypes = explode(',', $payTypes);
+            }
+        }
+        if (!is_array($payTypes)) return false;
+        $result = [];
+        foreach ($payTypes as $payType) {
+            if ($payType === '' || $payType === null) continue;
+            if (!is_numeric($payType) || intval($payType) < 0) return false;
+            $payType = intval($payType);
+            if (!in_array($payType, $result, true)) $result[] = $payType;
+        }
+        sort($result);
+        return $result;
     }
 
     protected function encodeReceiverConfig($config)
@@ -239,7 +276,14 @@ class RevenueRuleClient extends ManagementClient
         if (!is_array($config)) $config = [];
         $items = [];
         foreach ($config as $item) {
-            if (is_array($item)) $items[] = $this->normalizeConfigItem($item);
+            if (!is_array($item)) continue;
+            $gIds = $this->normalizeReceiverGIds($item['g_id'] ?? 0);
+            if ($gIds === false) $gIds = [0];
+            foreach ($gIds as $gId) {
+                $expandedItem = $item;
+                $expandedItem['g_id'] = $gId;
+                $items[] = $this->normalizeConfigItem($expandedItem);
+            }
         }
         return json_encode($items, JSON_UNESCAPED_UNICODE);
     }
@@ -256,17 +300,44 @@ class RevenueRuleClient extends ManagementClient
         }
         $percentTotals = [];
         foreach ($config as $item) {
-            if (!is_array($item) || intval($item['status'] ?? 1) !== 1) continue;
-            if (intval($item['calc_type'] ?? 0) !== 1) continue;
-            $gId = intval($item['g_id'] ?? 0);
+            if (!is_array($item)) continue;
             $mgId = intval($item['mg_id'] ?? 0);
-            $key = $gId . ':' . $mgId;
-            $percentTotals[$key] = ($percentTotals[$key] ?? 0) + floatval($item['calc_value'] ?? 0);
-            if ($percentTotals[$key] > 100) {
-                return $this->rFail("同一商品固定比例分账合计不能超过100%");
+            $gIds = $this->normalizeReceiverGIds($item['g_id'] ?? 0);
+            if ($gIds === false) return $this->rFail("接收方商品ID不合法");
+            if (count($gIds) > 1 && $mgId > 0) {
+                return $this->rFail("接收方选择多个商品时不能指定单一设备商品ID");
+            }
+            if (intval($item['status'] ?? 1) !== 1) continue;
+            if (intval($item['calc_type'] ?? 0) !== 1) continue;
+            foreach ($gIds as $gId) {
+                $key = $gId . ':' . $mgId;
+                $percentTotals[$key] = ($percentTotals[$key] ?? 0) + floatval($item['calc_value'] ?? 0);
+                if ($percentTotals[$key] > 100) {
+                    return $this->rFail("同一商品固定比例分账合计不能超过100%");
+                }
             }
         }
         return true;
+    }
+
+    protected function normalizeReceiverGIds($gIds)
+    {
+        if (is_string($gIds) && strpos($gIds, ',') !== false) {
+            $gIds = explode(',', $gIds);
+        } elseif (is_array($gIds)) {
+            return false;
+        } else {
+            $gIds = [$gIds];
+        }
+        if (!$gIds) return [0];
+        $result = [];
+        foreach ($gIds as $gId) {
+            if (!is_numeric($gId) || intval($gId) < 0) return false;
+            $gId = intval($gId);
+            if (!in_array($gId, $result, true)) $result[] = $gId;
+        }
+        sort($result);
+        return $result ?: [0];
     }
 
     protected function getConfigItems($rrcfgId)
@@ -417,6 +488,8 @@ class RevenueRuleClient extends ManagementClient
 
     protected function formatConfigRow(array $row)
     {
+        $row['cost_assume'] = intval($row['cost_assume'] ?? 0);
+        $row['trigger_pay_types'] = $this->normalizeConfigPayTypesForResponse($row['trigger_pay_types'] ?? []);
         $row['receivers'] = isset($row['receiver_config']) ? json_decode($row['receiver_config'], true) : [];
         if (!is_array($row['receivers'])) $row['receivers'] = [];
         if (intval($row['rule_mode'] ?? 0) === 5 && intval($row['coupon_id'] ?? 0) > 0) {
@@ -429,6 +502,12 @@ class RevenueRuleClient extends ManagementClient
             }
         }
         return $row;
+    }
+
+    protected function normalizeConfigPayTypesForResponse($payTypes)
+    {
+        $result = $this->normalizeTriggerPayTypes($payTypes);
+        return $result === false ? [] : $result;
     }
 
     protected function formatScopeRows($data)

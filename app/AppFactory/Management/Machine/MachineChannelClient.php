@@ -24,6 +24,10 @@ use think\facade\Db;
 
 class MachineChannelClient extends ManagementClient
 {
+    const REMOTE_REMOVAL_STATUS_REMOTE = 0;
+    const REMOTE_REMOVAL_STATUS_INTERRUPT = 1;
+    const REMOTE_REMOVAL_WAIT_REPORT_SECONDS = 1800;
+
     use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait;
     use GoodsTrait,GoodsChangeTrait;
     use AuthManagerMachineTrait;
@@ -1368,9 +1372,35 @@ class MachineChannelClient extends ManagementClient
         //把货道的channel_position设置成设备相同的vending_machine_type
         $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
         $list = $list->toArray();
+        $remoteRemovalStatusMap = [];
+        $mcIds = array_values(array_unique(array_filter(array_map('intval', array_column($list, 'mc_id')))));
+        if ($mcIds) {
+            $latestLogIds = Db::name('remote_removal_log')
+                ->whereIn('mc_id', $mcIds)
+                ->where('created_at', '>=', time() - self::REMOTE_REMOVAL_WAIT_REPORT_SECONDS)
+                ->group('mc_id')
+                ->column('MAX(id) AS id');
+            if ($latestLogIds) {
+                $latestLogs = Db::name('remote_removal_log')
+                    ->whereIn('id', $latestLogIds)
+                    ->field('mc_id,reported_at,interrupted_at')
+                    ->select()
+                    ->toArray();
+                foreach ($latestLogs as $latestLog) {
+                    $status = self::REMOTE_REMOVAL_STATUS_REMOTE;
+                    if (intval($latestLog['reported_at']) === 0
+                        && intval($latestLog['interrupted_at']) === 0) {
+                        $status = self::REMOTE_REMOVAL_STATUS_INTERRUPT;
+                    }
+                    $remoteRemovalStatusMap[intval($latestLog['mc_id'])] = $status;
+                }
+            }
+        }
         foreach ($list as $key => $value) {
             $value['manufacture_time'] = $value['manufacture_time'] ? date("Y-m-d", $value['manufacture_time']) : '';
             $value['gift_points'] = round($value['gift_points']);
+            $mcId = intval($value['mc_id'] ?? 0);
+            $value['remote_removal_status'] = intval($remoteRemovalStatusMap[$mcId] ?? self::REMOTE_REMOVAL_STATUS_REMOTE);
             $list[$key] = $value;
         }
         // foreach ($list as $key => &$value) {
@@ -1512,6 +1542,28 @@ class MachineChannelClient extends ManagementClient
             return $this->r(100, $this->lang("VMachineChannel.mc_empty_goods"));
         }
 
+        $machine = $this->getMachineFind(
+            ['m_id' => $mc['m_id']],
+            'recycle_box_remain_capacity'
+        );
+        if ($machine && intval($machine['recycle_box_remain_capacity']) === 0) {
+            return $this->r(100, '回收箱已满，无法下发');
+        }
+
+        $lastChannelLog = $this->getRemoteRemovalLogFind(
+            ['mc_id' => $mc['mc_id']],
+            'id,created_at,reported_at,interrupted_at',
+            'id desc'
+        );
+        if ($lastChannelLog && intval($lastChannelLog['reported_at']) === 0) {
+            $lastOperateAt = intval($lastChannelLog['interrupted_at']) ?: intval($lastChannelLog['created_at']);
+            if ($lastOperateAt > time() - self::REMOTE_REMOVAL_WAIT_REPORT_SECONDS) {
+                return $this->r(100, '上次指令未执行完毕，请稍后再试');
+            }
+        }
+
+        // 暂时取消同一台设备10分钟内只能执行一次远程下架回收的限制。
+        /*
         $lastLog = $this->getRemoteRemovalLogFind(
             [
                 ['m_id', '=', $mc['m_id']],
@@ -1523,6 +1575,7 @@ class MachineChannelClient extends ManagementClient
         if ($lastLog) {
             return $this->r(100, '同一台设备10分钟内只能执行一次远程下架回收');
         }
+        */
 
         $send = $this->sendToMachine(
             ['machine_id' => $mc['machine_id']],
@@ -1552,14 +1605,82 @@ class MachineChannelClient extends ManagementClient
             'success_count' => 0,
             'fail_count' => 0,
             'remark' => '下发remoteRemoval指令',
+            'creator' => $this->manager['manager_id'] ?? 0,
             'created_at' => time(),
             'reported_at' => 0,
+            'interrupted_at' => 0,
         ];
         $this->addRemoteRemovalLog($insert);
 
         return $this->r(200, $this->lang('action_success'), [
             'mc_id' => intval($mc['mc_id']),
             'channel_code' => $mc['channel_code'],
+            'remote_removal_status' => self::REMOTE_REMOVAL_STATUS_INTERRUPT,
+        ]);
+    }
+
+    /**
+     * 中断远程下架货道商品回收
+     * 兼容旧设备，沿用远程下架的参数结构。
+     * @param array $postData
+     * @return array|string
+     */
+    public function interruptRemoteRemoval($postData)
+    {
+        $mc = $this->getMachineChannelFind(
+            ['mc_id' => $postData['mc_id']],
+            'mc_id,m_id,machine_id,channel_code'
+        );
+        if (!$mc) {
+            return $this->r(100, $this->lang('VMachineChannel.mc_data_empty'));
+        }
+        $mc = $mc->toArray();
+
+        $lastLog = $this->getRemoteRemovalLogFind(
+            ['mc_id' => $mc['mc_id']],
+            'id,reported_at,interrupted_at',
+            'id desc'
+        );
+        if (!$lastLog || intval($lastLog['reported_at']) > 0) {
+            return $this->r(100, '当前没有可中断的远程下架任务');
+        }
+        if (intval($lastLog['interrupted_at']) > 0) {
+            return $this->r(100, '中断下架指令已下发，请等待设备上报');
+        }
+
+        $send = $this->sendToMachine(
+            ['machine_id' => $mc['machine_id']],
+            'interruptRemoteRemoval',
+            [
+                'mc_id' => intval($mc['mc_id']),
+                'channel_code' => $mc['channel_code'],
+                'manager_id' => $this->manager['manager_id'],
+            ]
+        );
+
+        if (!$send || is_string($send)) {
+            return $this->r(100, is_string($send) ? $send : $this->lang('action_fail'));
+        }
+        if (is_array($send) && isset($send['state']) && intval($send['state']) != 200) {
+            return $this->r(100, $send['msg'] ?? $this->lang('action_fail'));
+        }
+
+        $this->updateRemoteRemovalLog(
+            [
+                'interrupted_at' => time(),
+                'remark' => '下发interruptRemoteRemoval指令',
+            ],
+            [
+                'id' => $lastLog['id'],
+                'reported_at' => 0,
+                'interrupted_at' => 0,
+            ]
+        );
+
+        return $this->r(200, $this->lang('action_success'), [
+            'mc_id' => intval($mc['mc_id']),
+            'channel_code' => $mc['channel_code'],
+            'remote_removal_status' => self::REMOTE_REMOVAL_STATUS_REMOTE,
         ]);
     }
 

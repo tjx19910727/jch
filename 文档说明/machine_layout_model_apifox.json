@@ -1,0 +1,2412 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "设备型号布局模板API",
+    "description": "设备型号布局模板管理、设备等级模板关联、货道推荐上架方案接口 - 管理端。管理端接口默认需要 header token={{token}}。",
+    "version": "1.0.0",
+    "x-test-data": {
+      "database": "127.0.0.1:3306/jch",
+      "description": "已在本地jch库写入以下测试数据，用于模板管理、machine_level关联、推荐上架方案接口联调。mlm_id以本地库实际写入值为准。",
+      "machine_level_templates": [
+        {
+          "machine_level": 1,
+          "machine_level_name": "综合版",
+          "model_code": "TEST_LAYOUT_LEVEL_1_STANDARD",
+          "model_name": "测试-综合版标准四货道",
+          "total_rows": 4,
+          "total_cols": 4,
+          "custom_channel_widths": "",
+          "calculated_widths": [
+            97.75,
+            97.75,
+            97.75,
+            97.75
+          ],
+          "detail_count": 16,
+          "save_request_example": {
+            "model_name": "测试-综合版标准四货道",
+            "model_code": "TEST_LAYOUT_LEVEL_1_STANDARD",
+            "inner_width": 420,
+            "inner_height": 360,
+            "inner_depth": 380,
+            "shelf_thickness": 5,
+            "divider_thickness": 3,
+            "left_indent": 10,
+            "right_indent": 10,
+            "channel_width": 80,
+            "total_cols": 4,
+            "custom_channel_widths": "",
+            "channel_height": 80,
+            "channel_depth": 380
+          }
+        },
+        {
+          "machine_level": 2,
+          "machine_level_name": "豪华版",
+          "model_code": "TEST_LAYOUT_LEVEL_2_MIXED",
+          "model_name": "测试-豪华版混合宽货道",
+          "total_rows": 5,
+          "total_cols": 6,
+          "custom_channel_widths": "[{\"col_index\":1,\"width\":80},{\"col_index\":3,\"width\":120}]",
+          "calculated_widths": [
+            80,
+            72.5,
+            120,
+            72.5,
+            72.5,
+            72.5
+          ],
+          "detail_count": 30,
+          "save_request_example": {
+            "model_name": "测试-豪华版混合宽货道",
+            "model_code": "TEST_LAYOUT_LEVEL_2_MIXED",
+            "inner_width": 520,
+            "inner_height": 450,
+            "inner_depth": 420,
+            "shelf_thickness": 5,
+            "divider_thickness": 2,
+            "left_indent": 10,
+            "right_indent": 10,
+            "channel_width": 70,
+            "total_cols": 6,
+            "custom_channel_widths": "[{\"col_index\":1,\"width\":80},{\"col_index\":3,\"width\":120}]",
+            "channel_height": 85,
+            "channel_depth": 420
+          }
+        },
+        {
+          "machine_level": 2,
+          "machine_level_name": "豪华版",
+          "model_code": "TEST_LAYOUT_LEVEL_2_M127_BIG_GOODS",
+          "model_name": "测试-m_id127豪华版大件商品模板",
+          "mlm_id": 6,
+          "total_rows": 3,
+          "total_cols": 3,
+          "custom_channel_widths": "[{\"col_index\":1,\"width\":220}]",
+          "calculated_widths": [
+            220,
+            216,
+            216
+          ],
+          "detail_count": 9,
+          "save_request_example": {
+            "model_name": "测试-m_id127豪华版大件商品模板",
+            "model_code": "TEST_LAYOUT_LEVEL_2_M127_BIG_GOODS",
+            "inner_width": 680,
+            "inner_height": 500,
+            "inner_depth": 360,
+            "shelf_thickness": 5,
+            "divider_thickness": 2,
+            "left_indent": 12,
+            "right_indent": 12,
+            "channel_width": 200,
+            "total_cols": 3,
+            "custom_channel_widths": "[{\"col_index\":1,\"width\":220}]",
+            "channel_height": 160,
+            "channel_depth": 360
+          }
+        },
+        {
+          "machine_level": 3,
+          "machine_level_name": "一代机器",
+          "model_code": "TEST_LAYOUT_LEVEL_3_SINGLE_CUSTOM",
+          "model_name": "测试-一代机器单列定宽",
+          "total_rows": 4,
+          "total_cols": 5,
+          "custom_channel_widths": "[{\"col_index\":2,\"width\":55}]",
+          "calculated_widths": [
+            95.25,
+            55,
+            95.25,
+            95.25,
+            95.25
+          ],
+          "detail_count": 20,
+          "save_request_example": {
+            "model_name": "测试-一代机器单列定宽",
+            "model_code": "TEST_LAYOUT_LEVEL_3_SINGLE_CUSTOM",
+            "inner_width": 460,
+            "inner_height": 330,
+            "inner_depth": 360,
+            "shelf_thickness": 4,
+            "divider_thickness": 2,
+            "left_indent": 8,
+            "right_indent": 8,
+            "channel_width": 75,
+            "total_cols": 5,
+            "custom_channel_widths": "[{\"col_index\":2,\"width\":55}]",
+            "channel_height": 75,
+            "channel_depth": 360
+          }
+        },
+        {
+          "machine_level": 4,
+          "machine_level_name": "灵动立式机",
+          "model_code": "TEST_LAYOUT_LEVEL_4_MULTI_CUSTOM",
+          "model_name": "测试-灵动立式多列定宽",
+          "total_rows": 5,
+          "total_cols": 8,
+          "custom_channel_widths": "[{\"col_index\":1,\"width\":90},{\"col_index\":4,\"width\":70},{\"col_index\":8,\"width\":110}]",
+          "calculated_widths": [
+            90,
+            74.4,
+            74.4,
+            70,
+            74.4,
+            74.4,
+            74.4,
+            110
+          ],
+          "detail_count": 40,
+          "save_request_example": {
+            "model_name": "测试-灵动立式多列定宽",
+            "model_code": "TEST_LAYOUT_LEVEL_4_MULTI_CUSTOM",
+            "inner_width": 680,
+            "inner_height": 520,
+            "inner_depth": 450,
+            "shelf_thickness": 6,
+            "divider_thickness": 2,
+            "left_indent": 12,
+            "right_indent": 12,
+            "channel_width": 70,
+            "total_cols": 8,
+            "custom_channel_widths": "[{\"col_index\":1,\"width\":90},{\"col_index\":4,\"width\":70},{\"col_index\":8,\"width\":110}]",
+            "channel_height": 90,
+            "channel_depth": 450
+          }
+        }
+      ],
+      "relation_request_examples": [
+        {
+          "machine_level": 1,
+          "model_code": "TEST_LAYOUT_LEVEL_1_STANDARD"
+        },
+        {
+          "machine_level": 2,
+          "model_code": "TEST_LAYOUT_LEVEL_2_MIXED"
+        },
+        {
+          "machine_level": 2,
+          "model_code": "TEST_LAYOUT_LEVEL_2_M127_BIG_GOODS",
+          "mlm_id": 6
+        },
+        {
+          "machine_level": 3,
+          "model_code": "TEST_LAYOUT_LEVEL_3_SINGLE_CUSTOM"
+        },
+        {
+          "machine_level": 4,
+          "model_code": "TEST_LAYOUT_LEVEL_4_MULTI_CUSTOM"
+        }
+      ],
+      "recommend_scheme_use_cases": [
+        {
+          "name": "m_id=127当前已上架商品生成豪华版布局建议",
+          "machine": {
+            "m_id": 127,
+            "machine_id": "JCHM-H2D-0064",
+            "machine_level": 2
+          },
+          "template": {
+            "mlm_id": 6,
+            "model_code": "TEST_LAYOUT_LEVEL_2_M127_BIG_GOODS"
+          },
+          "current_listed_goods": [
+            {
+              "g_id": 1028,
+              "g_name": "雷霆幻影",
+              "sku": "0N0KB-KB71129-01",
+              "retail_price": 99,
+              "available_qty": 1,
+              "length": 100,
+              "width": 200,
+              "height": 150
+            }
+          ],
+          "get_recommend_scheme_request_example": {
+            "m_id": 127,
+            "machine_id": "JCHM-H2D-0064",
+            "mlm_id": 6,
+            "priority_type": "quantity",
+            "goods_list": [
+              {
+                "g_id": 1028,
+                "quantity": 1
+              }
+            ]
+          },
+          "generated_scheme": {
+            "mcs_id": 2,
+            "status": 1,
+            "total_goods": 1,
+            "total_amount": 99,
+            "details": [
+              {
+                "channel_code": "A01",
+                "mld_id": 116,
+                "g_id": 1028,
+                "g_name": "雷霆幻影",
+                "sku": "0N0KB-KB71129-01",
+                "quantity": 1,
+                "retail_price": 99,
+                "total_amount": 99,
+                "pos_x": 12,
+                "pos_y": 0
+              }
+            ]
+          },
+          "confirm_scheme_request_example": {
+            "mcs_id": 2,
+            "note": "只确认方案状态，不做真实上架"
+          },
+          "apply_scheme_request_example": {
+            "mcs_id": 2,
+            "note": "真实上架。当前m_id=127真实货道是0103，如果方案货道仍是A01，会返回方案货道不存在：A01"
+          }
+        }
+      ]
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000",
+      "description": "开发环境"
+    }
+  ],
+  "paths": {
+    "/management/machine.machine_layout_model/getList": {
+      "post": {
+        "summary": "获取布局模板列表",
+        "description": "分页查询设备型号布局模板列表。每条记录同时返回 machine_level 和对应的 machine_level_desc 设备等级说明。",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "per_page": {
+                          "type": "integer",
+                          "example": 20
+                        },
+                        "current_page": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/MachineLayoutModel"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pageNum": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "分页参数，0=不分页"
+                  },
+                  "model_name": {
+                    "type": "string",
+                    "description": "型号名称(模糊搜索)"
+                  },
+                  "machine_level": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "设备等级，精确查询"
+                  }
+                },
+                "example": {
+                  "pageNum": 15,
+                  "machine_level": 1
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pageNum": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "分页参数，0=不分页"
+                  },
+                  "model_name": {
+                    "type": "string",
+                    "description": "型号名称(模糊搜索)"
+                  },
+                  "machine_level": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "设备等级，精确查询"
+                  }
+                },
+                "example": {
+                  "pageNum": 15,
+                  "machine_level": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_layout_model/save": {
+      "post": {
+        "summary": "新增/编辑布局模板",
+        "description": "新增或编辑设备型号布局模板，保存后自动生成布局明细",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "model_name",
+                  "model_code",
+                  "inner_width",
+                  "inner_height",
+                  "inner_depth",
+                  "channel_width",
+                  "channel_height",
+                  "channel_depth"
+                ],
+                "properties": {
+                  "mlm_id": {
+                    "type": "integer",
+                    "description": "主键ID，新增时不传或传0，编辑时传对应ID"
+                  },
+                  "model_name": {
+                    "type": "string",
+                    "description": "设备型号名称",
+                    "example": "WH-50A"
+                  },
+                  "model_code": {
+                    "type": "string",
+                    "description": "型号编码",
+                    "example": "WH50A"
+                  },
+                  "inner_width": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "内部总宽度(mm)",
+                    "example": 500
+                  },
+                  "inner_height": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "内部总高度(mm)",
+                    "example": 600
+                  },
+                  "inner_depth": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "内部总深度(mm)",
+                    "example": 400
+                  },
+                  "shelf_thickness": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "层板厚度(mm)，默认0",
+                    "example": 3
+                  },
+                  "divider_thickness": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "挡板厚度(mm)，默认0",
+                    "example": 2
+                  },
+                  "left_indent": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "挡板左缩进(mm)，默认0",
+                    "example": 10
+                  },
+                  "right_indent": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "挡板右缩进(mm)，默认0",
+                    "example": 10
+                  },
+                  "channel_width": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "标准货道宽度(mm)。未传total_cols时用于自动推算货道数量；传total_cols时仅作为兼容字段，实际宽度按自定义列宽和剩余空间均分计算",
+                    "example": 60
+                  },
+                  "total_cols": {
+                    "type": "integer",
+                    "description": "手动定义货道数量。传入后按固定货道数量生成每层货道；不传或小于等于0时兼容旧逻辑按标准货道宽度自动推算",
+                    "example": 6
+                  },
+                  "custom_channel_widths": {
+                    "type": "string",
+                    "description": "自定义单个或多个货道宽度JSON。格式示例：[{\"col_index\":1,\"width\":80},{\"col_index\":3,\"width\":120}]。未指定的货道宽度按剩余空间和剩余货道数量均分",
+                    "example": "[{\"col_index\":1,\"width\":80},{\"col_index\":3,\"width\":120}]"
+                  },
+                  "channel_height": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "标准货道高度(mm)",
+                    "example": 80
+                  },
+                  "channel_depth": {
+                    "type": "number",
+                    "format": "float",
+                    "description": "标准货道深度(mm)",
+                    "example": 400
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ]
+      }
+    },
+    "/management/machine.machine_layout_model/getDetail": {
+      "post": {
+        "summary": "获取布局模板详情",
+        "description": "获取单个布局模板的详情，包含 machine_level、对应的 machine_level_desc 设备等级说明及全部布局明细（货道坐标）。",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/MachineLayoutModel"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "details": {
+                              "type": "array",
+                              "description": "布局明细列表",
+                              "items": {
+                                "$ref": "#/components/schemas/MachineLayoutDetail"
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mlm_id": {
+                    "type": "integer",
+                    "description": "布局模板ID"
+                  }
+                },
+                "required": [
+                  "mlm_id"
+                ]
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mlm_id": {
+                    "type": "integer",
+                    "description": "布局模板ID"
+                  }
+                },
+                "required": [
+                  "mlm_id"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_layout_model/del": {
+      "post": {
+        "summary": "删除布局模板",
+        "description": "删除指定的布局模板及其所有布局明细",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mlm_id"
+                ],
+                "properties": {
+                  "mlm_id": {
+                    "type": "integer",
+                    "description": "布局模板ID",
+                    "example": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ]
+      }
+    },
+    "/management/machine.machine_layout_model/recalc": {
+      "post": {
+        "summary": "重新计算布局",
+        "description": "手动触发重新计算指定布局模板的货道布局明细",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mlm_id"
+                ],
+                "properties": {
+                  "mlm_id": {
+                    "type": "integer",
+                    "description": "布局模板ID",
+                    "example": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ]
+      }
+    },
+    "/management/machine.machine_layout_model/getLevelLayoutRel": {
+      "post": {
+        "summary": "获取设备等级关联的布局模板列表",
+        "description": "根据设备等级查询已关联的布局模板",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "rel_list": {
+                          "type": "array",
+                          "description": "关联记录列表",
+                          "items": {
+                            "$ref": "#/components/schemas/MachineLevelLayoutRel"
+                          }
+                        },
+                        "model_list": {
+                          "type": "array",
+                          "description": "布局模板列表",
+                          "items": {
+                            "$ref": "#/components/schemas/MachineLayoutModel"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "machine_level": {
+                    "type": "integer",
+                    "description": "设备等级（关联machine_level_desc.machine_level）"
+                  }
+                },
+                "required": [
+                  "machine_level"
+                ]
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "machine_level": {
+                    "type": "integer",
+                    "description": "设备等级（关联machine_level_desc.machine_level）"
+                  }
+                },
+                "required": [
+                  "machine_level"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_layout_model/saveLevelLayoutRel": {
+      "post": {
+        "summary": "保存设备等级与布局模板的关联",
+        "description": "全量替换指定设备等级关联的布局模板（先删后增）",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "machine_level",
+                  "mlm_ids"
+                ],
+                "properties": {
+                  "machine_level": {
+                    "type": "integer",
+                    "description": "设备等级",
+                    "example": 1
+                  },
+                  "mlm_ids": {
+                    "type": "array",
+                    "description": "布局模板ID数组",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "example": [
+                      1,
+                      2,
+                      3,
+                      4
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "example": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ]
+      }
+    },
+    "/management/machine.machine_scheme/getRecommendScheme": {
+      "post": {
+        "summary": "生成或获取推荐上架方案",
+        "description": "根据设备、布局模板和必须上架商品列表计算推荐上架方案。goods_lists 可选；未传或为空时，接口默认使用 machine_goods 中 m_id 对应且 is_shelf=1 的已上架商品作为 goods_lists。每次调用会取消同一m_id、mlm_id、priority_type下旧的待确认方案并重新生成，避免goods_lists变化后复用旧方案。会校验布局模板必须绑定当前设备machine_level。适配规则：商品width/height不能超过模板货道actual_width/actual_height；channel_depth / goods.length计算单货道最大可放数量；同一商品可按剩余数量分配到多个兼容货道。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "m_id",
+                  "mlm_id"
+                ],
+                "properties": {
+                  "m_id": {
+                    "type": "integer",
+                    "description": "设备ID",
+                    "example": 127
+                  },
+                  "machine_id": {
+                    "type": "string",
+                    "description": "设备编号，用于写入方案主表，建议传",
+                    "example": "JCHM-H2D-0064"
+                  },
+                  "mlm_id": {
+                    "type": "integer",
+                    "description": "布局模板ID，需已生成machine_layout_detail",
+                    "example": 6
+                  },
+                  "priority_type": {
+                    "type": "string",
+                    "enum": [
+                      "amount",
+                      "sku",
+                      "quantity"
+                    ],
+                    "default": "amount",
+                    "description": "推荐优先级，默认amount",
+                    "example": "quantity"
+                  },
+                  "goods_lists": {
+                    "type": "array",
+                    "description": "必须上架商品列表。可选；未传或为空时，后端默认取 machine_goods 中 m_id 对应且 is_shelf=1 的商品。后端使用 g_id 查询商品资料，quantity表示计划可上架数量。兼容旧字段 goods_list。",
+                    "items": {
+                      "$ref": "#/components/schemas/GoodsRecommendInput"
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "m_id_127_quantity": {
+                  "summary": "m_id=127当前已上架商品推荐",
+                  "value": {
+                    "m_id": 127,
+                    "machine_id": "JCHM-H2D-0064",
+                    "mlm_id": 6,
+                    "priority_type": "quantity",
+                    "goods_lists": [
+                      {
+                        "g_id": 1028,
+                        "quantity": 1
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "m_id",
+                  "mlm_id"
+                ],
+                "properties": {
+                  "m_id": {
+                    "type": "integer",
+                    "description": "设备ID",
+                    "example": 127
+                  },
+                  "machine_id": {
+                    "type": "string",
+                    "description": "设备编号，用于写入方案主表，建议传",
+                    "example": "JCHM-H2D-0064"
+                  },
+                  "mlm_id": {
+                    "type": "integer",
+                    "description": "布局模板ID，需已生成machine_layout_detail",
+                    "example": 6
+                  },
+                  "priority_type": {
+                    "type": "string",
+                    "enum": [
+                      "amount",
+                      "sku",
+                      "quantity"
+                    ],
+                    "default": "amount",
+                    "description": "推荐优先级，默认amount",
+                    "example": "quantity"
+                  },
+                  "goods_lists": {
+                    "type": "array",
+                    "description": "必须上架商品列表。可选；未传或为空时，后端默认取 machine_goods 中 m_id 对应且 is_shelf=1 的商品。后端使用 g_id 查询商品资料，quantity表示计划可上架数量。兼容旧字段 goods_list。",
+                    "items": {
+                      "$ref": "#/components/schemas/GoodsRecommendInput"
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "m_id_127_quantity": {
+                  "summary": "m_id=127当前已上架商品推荐",
+                  "value": {
+                    "m_id": 127,
+                    "machine_id": "JCHM-H2D-0064",
+                    "mlm_id": 6,
+                    "priority_type": "quantity",
+                    "goods_lists": [
+                      {
+                        "g_id": 1028,
+                        "quantity": 1
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/RecommendSchemeResponseData"
+                    }
+                  }
+                },
+                "examples": {
+                  "generated": {
+                    "summary": "方案生成成功",
+                    "value": {
+                      "state": 200,
+                      "msg": "方案生成成功",
+                      "data": {
+                        "mcs_id": 2,
+                        "scheme": {
+                          "total_goods": 1,
+                          "total_amount": 99,
+                          "total_sku": 1
+                        },
+                        "details": [
+                          {
+                            "mld_id": 116,
+                            "channel_code": "A01",
+                            "g_id": 1028,
+                            "g_name": "雷霆幻影",
+                            "sku": "0N0KB-KB71129-01",
+                            "retail_price": 99,
+                            "quantity": 1,
+                            "total_amount": 99,
+                            "pos_x": 12,
+                            "pos_y": 0
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "exists": {
+                    "summary": "已有待确认方案",
+                    "value": {
+                      "state": 200,
+                      "msg": "查询成功（已有方案）",
+                      "data": {
+                        "mcs_id": 2,
+                        "scheme": {
+                          "mcs_id": 2,
+                          "m_id": 127,
+                          "mlm_id": 6,
+                          "status": 1
+                        },
+                        "details": []
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "业务失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    }
+                  }
+                },
+                "examples": {
+                  "missing_param": {
+                    "summary": "参数不完整",
+                    "value": {
+                      "state": 100,
+                      "msg": "参数不完整"
+                    }
+                  },
+                  "bad_goods_lists": {
+                    "summary": "goods_lists格式错误",
+                    "value": {
+                      "state": 100,
+                      "msg": "goods_lists格式错误"
+                    }
+                  },
+                  "invalid_goods": {
+                    "summary": "商品不存在或ID无效",
+                    "value": {
+                      "state": 100,
+                      "msg": "商品不存在或ID无效"
+                    }
+                  },
+                  "no_layout_detail": {
+                    "summary": "模板未生成明细",
+                    "value": {
+                      "state": 100,
+                      "msg": "布局模板未生成货道明细"
+                    }
+                  },
+                  "not_compatible": {
+                    "summary": "商品无法适配货道",
+                    "value": {
+                      "state": 100,
+                      "msg": "所选商品无法适配任何货道"
+                    }
+                  },
+                  "template_level_mismatch": {
+                    "summary": "模板不属于当前设备等级",
+                    "value": {
+                      "state": 100,
+                      "msg": "布局模板不属于当前设备等级"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ]
+      }
+    },
+    "/management/machine.machine_scheme/getList": {
+      "post": {
+        "summary": "获取推荐上架方案列表",
+        "description": "分页查询推荐上架方案。支持按设备编号模糊搜索、按状态过滤。",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "分页或列表数据，结构由rQ返回",
+                      "properties": {
+                        "data": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/MachineChannelScheme"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pageNum": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "分页参数，0=不分页"
+                  },
+                  "machine_id": {
+                    "type": "string",
+                    "description": "设备编号模糊搜索"
+                  },
+                  "status": {
+                    "type": "integer",
+                    "enum": [
+                      1,
+                      2,
+                      3,
+                      4
+                    ],
+                    "description": "方案状态：1待确认，2已确认，3已取消，4已上架"
+                  }
+                }
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "pageNum": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "分页参数，0=不分页"
+                  },
+                  "machine_id": {
+                    "type": "string",
+                    "description": "设备编号模糊搜索"
+                  },
+                  "status": {
+                    "type": "integer",
+                    "enum": [
+                      1,
+                      2,
+                      3
+                    ],
+                    "description": "方案状态：1待确认，2已确认，3已取消，4已上架"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_scheme/getDetail": {
+      "post": {
+        "summary": "获取推荐上架方案详情",
+        "description": "查询方案主表、方案明细，以及被跳过商品列表。",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/SchemeDetailResponseData"
+                    }
+                  }
+                },
+                "examples": {
+                  "m_id_127": {
+                    "summary": "m_id=127方案详情",
+                    "value": {
+                      "state": 200,
+                      "msg": "查询成功",
+                      "data": {
+                        "scheme": {
+                          "mcs_id": 2,
+                          "m_id": 127,
+                          "mlm_id": 6,
+                          "status": 1
+                        },
+                        "details": [
+                          {
+                            "mcsd_id": 2,
+                            "mcs_id": 2,
+                            "mld_id": 116,
+                            "channel_code": "A01",
+                            "g_id": 1028,
+                            "g_name": "雷霆幻影",
+                            "sku": "0N0KB-KB71129-01",
+                            "quantity": 1,
+                            "retail_price": 99,
+                            "total_amount": 99,
+                            "pos_x": 12,
+                            "pos_y": 0,
+                            "status": 1
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "业务失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    }
+                  }
+                },
+                "examples": {
+                  "empty_id": {
+                    "summary": "方案ID不能为空",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案ID不能为空"
+                    }
+                  },
+                  "not_found": {
+                    "summary": "方案不存在",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案不存在"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mcs_id": {
+                    "type": "integer",
+                    "description": "方案ID"
+                  }
+                },
+                "required": [
+                  "mcs_id"
+                ]
+              }
+            },
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "mcs_id": {
+                    "type": "integer",
+                    "description": "方案ID"
+                  }
+                },
+                "required": [
+                  "mcs_id"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/management/machine.machine_scheme/confirmScheme": {
+      "post": {
+        "summary": "确认推荐上架方案（仅保存）",
+        "description": "可选的人工确认步骤。仅将方案主表和明细状态改为2，不更新真实machine_channel、不写库存、不发送updateMc。当前业务可在getRecommendScheme成功后直接调用applyScheme；保留本接口用于兼容原确认流程。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mcs_id"
+                ],
+                "properties": {
+                  "mcs_id": {
+                    "type": "integer",
+                    "description": "待确认方案ID",
+                    "example": 2
+                  }
+                }
+              },
+              "examples": {
+                "m_id_127": {
+                  "summary": "确认m_id=127方案",
+                  "value": {
+                    "mcs_id": 2
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mcs_id"
+                ],
+                "properties": {
+                  "mcs_id": {
+                    "type": "integer",
+                    "description": "待确认方案ID",
+                    "example": 2
+                  }
+                }
+              },
+              "examples": {
+                "m_id_127": {
+                  "summary": "确认m_id=127方案",
+                  "value": {
+                    "mcs_id": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "确认成功",
+                    "value": {
+                      "state": 200,
+                      "msg": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "业务失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    }
+                  }
+                },
+                "examples": {
+                  "empty_id": {
+                    "summary": "方案ID不能为空",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案ID不能为空"
+                    }
+                  },
+                  "bad_status": {
+                    "summary": "状态不允许确认",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案状态不允许确认"
+                    }
+                  },
+                  "empty_detail": {
+                    "summary": "方案明细为空",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案明细为空"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ]
+      }
+    },
+    "/management/machine.machine_scheme/cancelScheme": {
+      "post": {
+        "summary": "取消推荐上架方案",
+        "description": "取消待确认方案，将方案主表和明细状态更新为3。只有status=1的方案允许取消。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mcs_id"
+                ],
+                "properties": {
+                  "mcs_id": {
+                    "type": "integer",
+                    "description": "待取消方案ID",
+                    "example": 2
+                  }
+                }
+              },
+              "examples": {
+                "m_id_127": {
+                  "summary": "取消m_id=127方案",
+                  "value": {
+                    "mcs_id": 2
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mcs_id"
+                ],
+                "properties": {
+                  "mcs_id": {
+                    "type": "integer",
+                    "description": "待取消方案ID",
+                    "example": 2
+                  }
+                }
+              },
+              "examples": {
+                "m_id_127": {
+                  "summary": "取消m_id=127方案",
+                  "value": {
+                    "mcs_id": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "取消成功",
+                    "value": {
+                      "state": 200,
+                      "msg": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "业务失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    }
+                  }
+                },
+                "examples": {
+                  "empty_id": {
+                    "summary": "方案ID不能为空",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案ID不能为空"
+                    }
+                  },
+                  "bad_status": {
+                    "summary": "状态不允许取消",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案状态不允许取消"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ]
+      }
+    },
+    "/management/machine.machine_scheme/applyScheme": {
+      "post": {
+        "summary": "方案真实上架",
+        "description": "将待确认（status=1）或已确认（status=2）的方案写入真实设备货道，可在getRecommendScheme成功后携带返回的mcs_id直接调用。接口会校验方案内所有channel_code都能在该设备machine_channel中找到；任一货道缺失则整体失败，不做半更新。成功后补全商品基础字段、retail_price、stock、out_fail_stock，记录goods_change，将方案和明细状态更新为4已上架，并在事务提交后发送updateMc到设备。已上架方案禁止重复执行。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mcs_id"
+                ],
+                "properties": {
+                  "mcs_id": {
+                    "type": "integer",
+                    "description": "待确认或已确认方案ID，方案状态允许1或2",
+                    "example": 2
+                  }
+                }
+              },
+              "examples": {
+                "m_id_127": {
+                  "summary": "真实上架m_id=127方案",
+                  "value": {
+                    "mcs_id": 2
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "mcs_id"
+                ],
+                "properties": {
+                  "mcs_id": {
+                    "type": "integer",
+                    "description": "待确认或已确认方案ID，方案状态允许1或2",
+                    "example": 2
+                  }
+                }
+              },
+              "examples": {
+                "m_id_127": {
+                  "summary": "真实上架m_id=127方案",
+                  "value": {
+                    "mcs_id": 2
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "真实上架成功",
+                    "value": {
+                      "state": 200,
+                      "msg": "操作成功"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "业务失败",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "integer",
+                      "description": "业务状态码，200表示成功，100表示业务失败",
+                      "example": 200
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "响应消息",
+                      "example": "查询成功"
+                    }
+                  }
+                },
+                "examples": {
+                  "empty_id": {
+                    "summary": "方案ID不能为空",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案ID不能为空"
+                    }
+                  },
+                  "bad_status": {
+                    "summary": "方案状态不允许上架或已经上架",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案状态不允许真实上架"
+                    }
+                  },
+                  "missing_channel": {
+                    "summary": "方案货道不存在",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案货道不存在：A01"
+                    }
+                  },
+                  "goods_missing": {
+                    "summary": "方案商品不存在",
+                    "value": {
+                      "state": 100,
+                      "msg": "方案商品不存在：1028"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "token": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "token",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "{{token}}"
+            },
+            "description": "管理端登录令牌"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MachineLevelLayoutRel": {
+        "type": "object",
+        "description": "设备等级与布局模板关联表",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "主键ID"
+          },
+          "machine_level": {
+            "type": "integer",
+            "description": "设备等级"
+          },
+          "mlm_id": {
+            "type": "integer",
+            "description": "布局模板ID"
+          },
+          "create_time": {
+            "type": "integer",
+            "description": "创建时间戳"
+          },
+          "update_time": {
+            "type": "integer",
+            "description": "更新时间戳"
+          }
+        }
+      },
+      "MachineLayoutModel": {
+        "type": "object",
+        "description": "设备型号布局模板",
+        "properties": {
+          "mlm_id": {
+            "type": "integer",
+            "description": "主键ID"
+          },
+          "model_name": {
+            "type": "string",
+            "description": "设备型号名称"
+          },
+          "machine_level": {
+            "type": "integer",
+            "description": "设备等级，关联 machine_level_desc.machine_level"
+          },
+          "machine_level_desc": {
+            "type": "string",
+            "description": "设备等级说明，取自 machine_level_desc.name；未配置说明时返回空字符串"
+          },
+          "model_code": {
+            "type": "string",
+            "description": "型号编码"
+          },
+          "inner_width": {
+            "type": "number",
+            "format": "float",
+            "description": "内部总宽度(mm)"
+          },
+          "inner_height": {
+            "type": "number",
+            "format": "float",
+            "description": "内部总高度(mm)"
+          },
+          "inner_depth": {
+            "type": "number",
+            "format": "float",
+            "description": "内部总深度(mm)"
+          },
+          "shelf_thickness": {
+            "type": "number",
+            "format": "float",
+            "description": "层板厚度(mm)"
+          },
+          "divider_thickness": {
+            "type": "number",
+            "format": "float",
+            "description": "挡板厚度(mm)"
+          },
+          "left_indent": {
+            "type": "number",
+            "format": "float",
+            "description": "挡板左缩进(mm)"
+          },
+          "right_indent": {
+            "type": "number",
+            "format": "float",
+            "description": "挡板右缩进(mm)"
+          },
+          "channel_width": {
+            "type": "number",
+            "format": "float",
+            "description": "标准货道宽度(mm)。未传total_cols时用于自动推算货道数量"
+          },
+          "custom_channel_widths": {
+            "type": "string",
+            "description": "自定义货道宽度JSON。格式：[{\"col_index\":1,\"width\":80}]"
+          },
+          "channel_height": {
+            "type": "number",
+            "format": "float",
+            "description": "标准货道高度(mm)"
+          },
+          "channel_depth": {
+            "type": "number",
+            "format": "float",
+            "description": "标准货道深度(mm)"
+          },
+          "remain_strategy": {
+            "type": "integer",
+            "description": "剩余空间策略 1=均匀分配",
+            "default": 1
+          },
+          "total_rows": {
+            "type": "integer",
+            "description": "计算后的总行数"
+          },
+          "total_cols": {
+            "type": "integer",
+            "description": "货道总列数。可由接口传入固定，也可由系统按标准货道宽度推算"
+          },
+          "actual_channel_width": {
+            "type": "number",
+            "format": "float",
+            "description": "平均货道宽度(mm)。存在自定义列宽时，各货道真实宽度以details.actual_width为准"
+          },
+          "status": {
+            "type": "integer",
+            "description": "状态 1=启用 0=禁用",
+            "default": 1
+          },
+          "create_time": {
+            "type": "integer",
+            "description": "创建时间戳"
+          },
+          "update_time": {
+            "type": "integer",
+            "description": "更新时间戳"
+          }
+        }
+      },
+      "MachineLayoutDetail": {
+        "type": "object",
+        "description": "布局明细（货道位置）",
+        "properties": {
+          "mld_id": {
+            "type": "integer",
+            "description": "主键ID"
+          },
+          "mlm_id": {
+            "type": "integer",
+            "description": "所属布局模板ID"
+          },
+          "row_index": {
+            "type": "integer",
+            "description": "行号(从1开始)"
+          },
+          "col_index": {
+            "type": "integer",
+            "description": "列号(从1开始)"
+          },
+          "channel_code": {
+            "type": "string",
+            "description": "货道编码(如A01、B03)",
+            "example": "A01"
+          },
+          "pos_x": {
+            "type": "number",
+            "format": "float",
+            "description": "左上角X坐标(距左边框mm)"
+          },
+          "pos_y": {
+            "type": "number",
+            "format": "float",
+            "description": "左上角Y坐标(距顶部mm)"
+          },
+          "actual_width": {
+            "type": "number",
+            "format": "float",
+            "description": "实际货道宽度(mm)"
+          },
+          "actual_height": {
+            "type": "number",
+            "format": "float",
+            "description": "实际货道高度(mm)"
+          },
+          "create_time": {
+            "type": "integer",
+            "description": "创建时间戳"
+          }
+        }
+      },
+      "BaseResponse": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "integer",
+            "description": "业务状态码，200表示成功，100表示业务失败",
+            "example": 200
+          },
+          "msg": {
+            "type": "string",
+            "description": "响应消息",
+            "example": "查询成功"
+          }
+        }
+      },
+      "GoodsRecommendInput": {
+        "type": "object",
+        "required": [
+          "g_id",
+          "quantity"
+        ],
+        "properties": {
+          "g_id": {
+            "type": "integer",
+            "description": "商品ID，后端会从goods表读取名称、SKU、售价、长宽高",
+            "example": 1028
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "计划参与推荐的可上架数量，通常取当前设备已上架商品的可补数量，例如capacity-stock-frozen_stock",
+            "example": 1
+          }
+        }
+      },
+      "MachineChannelScheme": {
+        "type": "object",
+        "description": "货道推荐上架方案主表",
+        "properties": {
+          "mcs_id": {
+            "type": "integer",
+            "description": "方案ID",
+            "example": 2
+          },
+          "machine_id": {
+            "type": "string",
+            "description": "设备编号",
+            "example": "JCHM-H2D-0064"
+          },
+          "m_id": {
+            "type": "integer",
+            "description": "设备主键ID",
+            "example": 127
+          },
+          "mlm_id": {
+            "type": "integer",
+            "description": "布局模板ID",
+            "example": 6
+          },
+          "scheme_name": {
+            "type": "string",
+            "description": "方案名称",
+            "example": "推荐方案-20260704120000"
+          },
+          "priority_type": {
+            "type": "string",
+            "enum": [
+              "amount",
+              "sku",
+              "quantity"
+            ],
+            "description": "推荐优先级：amount=金额优先，sku=SKU覆盖优先，quantity=数量/兼容货道优先",
+            "example": "quantity"
+          },
+          "total_goods": {
+            "type": "integer",
+            "description": "推荐上架商品总数量",
+            "example": 1
+          },
+          "total_amount": {
+            "type": "number",
+            "format": "float",
+            "description": "推荐方案总金额",
+            "example": 99
+          },
+          "total_sku": {
+            "type": "integer",
+            "description": "推荐方案涉及SKU数量",
+            "example": 1
+          },
+          "skipped_goods": {
+            "type": "string",
+            "description": "被跳过商品JSON，通常为长宽高未配置的商品"
+          },
+          "status": {
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "description": "方案状态：1待确认，2已确认，3已取消，4已上架",
+            "example": 1
+          },
+          "create_time": {
+            "type": "integer",
+            "description": "创建时间戳"
+          },
+          "update_time": {
+            "type": "integer",
+            "description": "更新时间戳"
+          }
+        }
+      },
+      "MachineChannelSchemeDetail": {
+        "type": "object",
+        "description": "货道推荐上架方案明细",
+        "properties": {
+          "mcsd_id": {
+            "type": "integer",
+            "description": "方案明细ID"
+          },
+          "mcs_id": {
+            "type": "integer",
+            "description": "方案ID",
+            "example": 2
+          },
+          "mld_id": {
+            "type": "integer",
+            "description": "布局模板明细ID，对应machine_layout_detail.mld_id",
+            "example": 116
+          },
+          "channel_code": {
+            "type": "string",
+            "description": "推荐货道编码",
+            "example": "A01"
+          },
+          "g_id": {
+            "type": "integer",
+            "description": "商品ID",
+            "example": 1028
+          },
+          "g_name": {
+            "type": "string",
+            "description": "商品名称",
+            "example": "雷霆幻影"
+          },
+          "sku": {
+            "type": "string",
+            "description": "商品SKU",
+            "example": "0N0KB-KB71129-01"
+          },
+          "retail_price": {
+            "type": "number",
+            "format": "float",
+            "description": "销售价",
+            "example": 99
+          },
+          "quantity": {
+            "type": "integer",
+            "description": "建议上架数量",
+            "example": 1
+          },
+          "total_amount": {
+            "type": "number",
+            "format": "float",
+            "description": "明细金额小计",
+            "example": 99
+          },
+          "pos_x": {
+            "type": "number",
+            "format": "float",
+            "description": "货道X坐标",
+            "example": 12
+          },
+          "pos_y": {
+            "type": "number",
+            "format": "float",
+            "description": "货道Y坐标",
+            "example": 0
+          },
+          "status": {
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3,
+              4
+            ],
+            "description": "明细状态：1待确认，2已确认，3已取消，4已上架",
+            "example": 1
+          },
+          "create_time": {
+            "type": "integer",
+            "description": "创建时间戳"
+          },
+          "update_time": {
+            "type": "integer",
+            "description": "更新时间戳"
+          }
+        }
+      },
+      "RecommendSchemeResponseData": {
+        "type": "object",
+        "properties": {
+          "mcs_id": {
+            "type": "integer",
+            "description": "方案ID",
+            "example": 2
+          },
+          "scheme": {
+            "type": "object",
+            "description": "方案汇总；新生成方案返回汇总字段，已有方案返回完整主表字段",
+            "properties": {
+              "total_goods": {
+                "type": "integer",
+                "description": "推荐数量合计",
+                "example": 1
+              },
+              "total_amount": {
+                "type": "number",
+                "format": "float",
+                "description": "推荐金额合计",
+                "example": 99
+              },
+              "total_sku": {
+                "type": "integer",
+                "description": "SKU数量",
+                "example": 1
+              }
+            }
+          },
+          "details": {
+            "type": "array",
+            "description": "推荐货道明细",
+            "items": {
+              "$ref": "#/components/schemas/MachineChannelSchemeDetail"
+            }
+          },
+          "warn_skipped_goods": {
+            "type": "array",
+            "description": "被跳过商品列表，商品长宽高缺失或为0时返回",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "SchemeDetailResponseData": {
+        "type": "object",
+        "properties": {
+          "scheme": {
+            "$ref": "#/components/schemas/MachineChannelScheme"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MachineChannelSchemeDetail"
+            }
+          },
+          "warn_skipped_goods": {
+            "type": "array",
+            "description": "被跳过商品列表",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "token": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "token",
+        "description": "管理端登录令牌，请在请求Header中传 token，Apifox可使用全局变量 {{token}}。"
+      }
+    }
+  },
+  "security": [
+    {
+      "token": []
+    }
+  ]
+}

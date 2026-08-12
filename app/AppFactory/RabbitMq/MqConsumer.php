@@ -30,9 +30,29 @@ class MqConsumer
      */
     public function shutdown(AMQPChannel $channel, AMQPStreamConnection $connection)
     {
-        $channel->close();
-        $connection->close();
-        Log::write("closed", 3);
+        $this->shutdownSafely($channel, $connection);
+    }
+
+    /**
+     * 每轮消费结束立即释放连接，避免重连时累积shutdown回调和旧连接引用。
+     */
+    protected function shutdownSafely(AMQPChannel $channel, AMQPStreamConnection $connection)
+    {
+        try {
+            if ($channel->is_open()) $channel->close();
+        } catch (\Throwable $e) {
+            error_log('RabbitMQ channel close failed: ' . $e->getMessage());
+        }
+        try {
+            if ($connection->isConnected()) $connection->close();
+        } catch (\Throwable $e) {
+            error_log('RabbitMQ connection close failed: ' . $e->getMessage());
+        }
+        try {
+            Log::write("closed", 3);
+        } catch (\Throwable $e) {
+            error_log('RabbitMQ close log failed: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -41,38 +61,114 @@ class MqConsumer
      */
     public function process_message(AMQPMessage $message)
     {
-        //手动发送ack
-        $message->ack($message->getDeliveryTag());
+        $data = [];
+        $alreadyProcessed = false;
         try {
             $data = $message->body;
             $data = json2arr($data);
-            if (isset($data['data'])) {
-                $actionData = json2arr($data['data']);
-                if (isset($actionData['msgType']) && $actionData['msgType'] != "heartbeat")
-                    actionLog($data, '消息处理', "DataUpload");
+            if (!is_array($data) || empty($data['msg_id']) || empty($data['machine_id'])) {
+                throw new \InvalidArgumentException('MQ顶层数据缺少msg_id或machine_id');
             }
-            $config = [
-                "machine_id" => $data['machine_id'],
-//                "key" => cache($data['machine_id'] . ".signKey"),
-                "data" => $data,
-                "mac" => $data['mac'] ?? "",
-            ];
-            $app = AppFactory::machine($config);
-            $result = $app->mq->onMessage();
-            if (isset($data['data'])) {
+            if (!empty($data['msg_id']) && !empty($data['machine_id'])) {
+                $processed = $this->getMachineMqRecordFind([
+                    'msg_id' => $data['msg_id'],
+                    'machine_id' => $data['machine_id'],
+                    'from' => 2,
+                    'type' => 1,
+                    'status' => 2,
+                ]);
+                if ($processed) {
+                    $alreadyProcessed = true;
+                }
+            }
+            if (!$alreadyProcessed && isset($data['data'])) {
                 $actionData = json2arr($data['data']);
                 if (isset($actionData['msgType']) && $actionData['msgType'] != "heartbeat")
-                    actionLog($result, '处理结果','DataUpload');
+                    $this->actionLogSafely($data, '消息处理', "DataUpload");
             }
 
-            $updateResult = $this->updateMachineMqRecord(['status' => 2,'msg_id' => $data['msg_id']],['msg_id' => $data['msg_id']]);
-            actionLog($updateResult,'修改MQ记录成功结果','DataUpload');
-        } catch (\Exception $e) {
-            actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"DataUpload");
-            actionLog($e->getTrace(), 'tryCatchTrace',"DataUpload");
-            $updateResult = $this->updateMachineMqRecord(['status' => 3,'msg_id' => $data['msg_id']],['msg_id' => $data['msg_id']]);
-            actionLog($updateResult,'修改MQ记录失败结果','DataUpload');
+            if (!$alreadyProcessed) {
+                $config = [
+                    "machine_id" => $data['machine_id'],
+//                    "key" => cache($data['machine_id'] . ".signKey"),
+                    "data" => $data,
+                    "mac" => $data['mac'] ?? "",
+                    "transport" => "mq",
+                ];
+                $app = AppFactory::machine($config);
+                $result = $app->mq->onMessage();
+                if (isset($data['data'])) {
+                    $actionData = json2arr($data['data']);
+                    if (isset($actionData['msgType']) && $actionData['msgType'] != "heartbeat")
+                        $this->actionLogSafely($result, '处理结果','DataUpload');
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logConsumerExceptionSafely($e);
+            $this->recordMachineMqStatusSafely($data, 3);
+            // 认证/格式错误属于永久错误；其他瞬时异常最多重试一次。
+            $isPermanent = $e instanceof \InvalidArgumentException;
+            $requeue = !$isPermanent && !$message->isRedelivered();
+            $message->nack($requeue, false);
+            return;
         }
+
+        if ($alreadyProcessed) {
+            $this->actionLogSafely([
+                'msg_id' => $data['msg_id'],
+                'machine_id' => $data['machine_id'],
+            ], '跳过已成功处理的MQ重投消息', 'DataUpload');
+        } else {
+            // 状态记录属于旁路审计，失败不能阻止已完成业务消息 ACK。
+            $this->recordMachineMqStatusSafely($data, 2);
+        }
+        // ACK异常直接交给消费循环处理，关闭连接后由Broker重新投递。
+        $message->ack();
+    }
+
+    /**
+     * MQ记录失败不能打断消息确认流程。
+     *
+     * @param array $data
+     * @param int $status
+     */
+    protected function recordMachineMqStatusSafely($data, $status)
+    {
+        if (!is_array($data) || empty($data['msg_id']) || empty($data['machine_id'])) return;
+        try {
+            $result = $this->updateMachineMqRecord(
+                ['status' => $status, 'msg_id' => $data['msg_id']],
+                ['msg_id' => $data['msg_id'], 'machine_id' => $data['machine_id']]
+            );
+            $this->actionLogSafely($result, '修改MQ记录状态结果', 'DataUpload');
+        } catch (\Throwable $e) {
+            error_log('MQ record status update failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 日志故障不得阻塞 ACK/NACK。
+     */
+    protected function actionLogSafely($data, $remark = '', $logName = '')
+    {
+        try {
+            actionLog($data, $remark, $logName);
+        } catch (\Throwable $e) {
+            error_log('MQ action log failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * 异常日志采用失败隔离，避免异常处理自身再次抛错。
+     */
+    protected function logConsumerExceptionSafely(\Throwable $e)
+    {
+        $this->actionLogSafely(
+            $e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),
+            'tryCatchMessage',
+            'DataUpload'
+        );
+        $this->actionLogSafely($e->getTrace(), 'tryCatchTrace', 'DataUpload');
     }
 
     /**
@@ -83,19 +179,13 @@ class MqConsumer
     {
         $param = config('rabbit_mq.' . env("RabbitMq.config_name"));
         if (!$param) {
-            die("获取不到RabbitMQ【" . env("RabbitMq.config_name") . "】的连接配置参数 \n");
+            throw new \RuntimeException("获取不到RabbitMQ【" . env("RabbitMq.config_name") . "】的连接配置参数");
         }
         $amqpDetail = config('rabbit_mq.dataUpload_queue');
         if (!$amqpDetail) {
-            die("获取不到终端上传相关配置参数【dataUpload_queue】 \n");
+            throw new \RuntimeException("获取不到终端上传相关配置参数【dataUpload_queue】");
         }
-        $connection = new AMQPStreamConnection(
-            $param['host'],
-            $param['port'],
-            $param['login'],
-            $param['password'],
-            $param['vhost']
-        );
+        $connection = MqConnectionFactory::create($param);
         /**
         *创建通道
         */
@@ -124,10 +214,13 @@ class MqConsumer
          * callback: :回调逻辑处理函数,PHP回调 array($this，process message') 调用本对象的process message方法
          */
         $channel->basic_consume($amqpDetail['queue_name'], $amqpDetail['consumer_tag'], false, false, false, false, array($this, 'process_message'));
-        register_shutdown_function(array($this, 'shutdown'), $channel, $connection);
-        // 阻塞队列监听事件
-        while (count($channel->callbacks)) {
-            $channel->wait();
+        try {
+            // 阻塞队列监听事件
+            while (count($channel->callbacks)) {
+                $channel->wait();
+            }
+        } finally {
+            $this->shutdownSafely($channel, $connection);
         }
     }
 
@@ -139,19 +232,13 @@ class MqConsumer
     {
         $param = config('rabbit_mq.' . env("RabbitMq.config_name"));
         if (!$param) {
-            die("获取不到RabbitMQ【" . env("RabbitMq.config_name") . "】的连接配置参数 \n");
+            throw new \RuntimeException("获取不到RabbitMQ【" . env("RabbitMq.config_name") . "】的连接配置参数");
         }
         $amqpDetail = config('rabbit_mq.export_queue');
         if (!$amqpDetail) {
-            die("获取不到终端上传相关配置参数【export_queue】 \n");
+            throw new \RuntimeException("获取不到终端上传相关配置参数【export_queue】");
         }
-        $connection = new AMQPStreamConnection(
-            $param['host'],
-            $param['port'],
-            $param['login'],
-            $param['password'],
-            $param['vhost']
-        );
+        $connection = MqConnectionFactory::create($param);
         /**
         *创建通道
         */
@@ -180,10 +267,13 @@ class MqConsumer
          * callback: :回调逻辑处理函数,PHP回调 array($this，export_message') 调用本对象的export_message方法
          */
         $channel->basic_consume($amqpDetail['queue_name'], $amqpDetail['consumer_tag'], false, false, false, false, array($this, 'export_message'));
-        register_shutdown_function(array($this, 'shutdown'), $channel, $connection);
-        // 阻塞队列监听事件
-        while (count($channel->callbacks)) {
-            $channel->wait();
+        try {
+            // 阻塞队列监听事件
+            while (count($channel->callbacks)) {
+                $channel->wait();
+            }
+        } finally {
+            $this->shutdownSafely($channel, $connection);
         }
     }
 
@@ -221,7 +311,7 @@ class MqConsumer
                     throw new \RuntimeException('导出Excel生成失败');
                 }
             }
-            $message->ack($message->getDeliveryTag());
+            $message->ack();
         } catch (\Throwable $e) {
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"export_message");
             actionLog($e->getTrace(), 'tryCatchTrace',"export_message");
@@ -229,7 +319,7 @@ class MqConsumer
             if ($exportId) {
                 AppFactory::timeTask()->export->updateExportLog(['export_id' => $exportId, 'status' => 4]);
             }
-            $message->ack($message->getDeliveryTag());
+            $message->ack();
         }
     }
 }

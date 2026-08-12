@@ -427,6 +427,8 @@ return [
         "msg_type_invalid" => "Invalid main control command type",
         "simplified_command_only" => "This command is only supported by simplified machines",
         "luxury_command_only" => "This command is only supported by luxury machines",
+        "on_time_format_invalid" => "Invalid automatic startup time format; use HH:mm",
+        "on_time_must_be_later_today" => "Automatic startup time must be later than the current time today",
     ],
 
     "VMachineLang" => [
@@ -461,6 +463,9 @@ return [
         "mcList_require" => "Batch configuration list parameter cannot be empty",
         "run_mode_in" => "Device run mode out of range",
         "online_pay_success_tip_max" => "The online payment success message cannot exceed 255 characters",
+        "subcar_mix_in" => "Mixed ordering only supports 1 or 2",
+        "subcar_offline_sp_ids_invalid" => "Invalid offline goods payee strategy IDs",
+        "subcar_online_sp_ids_invalid" => "Invalid online goods payee strategy IDs",
     ],
     "VMachineConfigLang" => [
         "mcl_id_require" => "Device configuration multilingual ID cannot be empty",

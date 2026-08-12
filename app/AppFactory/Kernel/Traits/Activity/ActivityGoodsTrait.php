@@ -69,6 +69,32 @@ trait ActivityGoodsTrait
         return true;
     }
 
+    /** 保存微程线上商品活动关联，source_no 使用微程父商品 out_no。 */
+    public function addOnlineAg($insert, $onlineGoodsList)
+    {
+        $onlineGoodsList = json2arr($onlineGoodsList);
+        if (!$onlineGoodsList) return true;
+        foreach ($onlineGoodsList as $item) {
+            $sourceNo = is_array($item) ? trim(strval($item['source_no'] ?? $item['out_no'] ?? '')) : trim(strval($item));
+            if ($sourceNo === '') return '线上商品编码不能为空';
+            $goods = $this->getWcGoodsFind(['no' => $sourceNo]);
+            if (!$goods) return '查无线上商品信息：' . $sourceNo;
+            $goods = is_object($goods) && method_exists($goods, 'toArray') ? $goods->toArray() : (array)$goods;
+            $where = array_merge($insert, ['goods_source' => 2, 'source_no' => $sourceNo]);
+            if (!$this->getActivityGoodsFind($where)) {
+                $this->addActivityGoods(array_merge($where, [
+                    'g_id' => 0,
+                    'g_name' => $goods['name'] ?? '',
+                    'pic' => $goods['pic'] ?? '',
+                    'sku' => $sourceNo,
+                    'market_price' => $goods['price'] ?? 0,
+                    'retail_price' => $goods['price'] ?? 0,
+                ]));
+            }
+        }
+        return true;
+    }
+
     public function addActivityGoodsMore($all)
     {
         $ag = new ActivityGoodsModel();

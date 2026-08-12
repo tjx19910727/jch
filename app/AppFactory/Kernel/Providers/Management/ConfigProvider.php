@@ -17,6 +17,8 @@ use app\AppFactory\Management\Config\ConfigLangClient;
 use app\AppFactory\Management\Config\ConfigPerformanceClient;
 use app\AppFactory\Management\Config\ConfigSceneClient;
 use app\AppFactory\Management\Config\ConfigSizeClient;
+use app\AppFactory\Management\Config\OrderTypeClient;
+use app\AppFactory\Management\Config\PayTypeClient;
 
 class ConfigProvider implements ServiceProviderInterface
 {
@@ -40,6 +42,12 @@ class ConfigProvider implements ServiceProviderInterface
         };
         $app['configScene'] = function ($app) {
             return new ConfigSceneClient($app);
+        };
+        $app['payType'] = function ($app) {
+            return new PayTypeClient($app);
+        };
+        $app['orderType'] = function ($app) {
+            return new OrderTypeClient($app);
         };
     }
 }

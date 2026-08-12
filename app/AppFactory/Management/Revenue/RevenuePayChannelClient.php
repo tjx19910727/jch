@@ -3,19 +3,17 @@
 namespace app\AppFactory\Management\Revenue;
 
 use app\AppFactory\Kernel\Traits\Revenue\RevenuePayChannelTrait;
-use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Management\ManagementClient;
 
 class RevenuePayChannelClient extends ManagementClient
 {
     use RevenuePayChannelTrait;
     use RevenuePayTypeDescTrait;
-    use SaleOrdersTrait;
 
     public function addData($postData)
     {
         unset($postData['payee_type'], $postData['settlement_type'], $postData['settlement_days']);
-        $this->normalizePayChannelData($postData);
+        $this->normalizePayTypeData($postData);
         $check = $this->checkData($postData);
         if ($check !== true) return $check;
         if (!isset($postData['status'])) $postData['status'] = 1;
@@ -26,7 +24,7 @@ class RevenuePayChannelClient extends ManagementClient
     {
         unset($postData['payee_type'], $postData['settlement_type'], $postData['settlement_days']);
         if (empty($postData['rpc_id'])) return $this->rFail("分账渠道配置ID不能为空");
-        $this->normalizePayChannelData($postData);
+        $this->normalizePayTypeData($postData);
         $check = $this->checkData($postData, true);
         if ($check !== true) return $check;
         $rpcId = intval($postData['rpc_id']);
@@ -55,21 +53,13 @@ class RevenuePayChannelClient extends ManagementClient
 
     protected function checkData(&$data, $isUpdate = false)
     {
-        if (!$isUpdate || isset($data['pay_channel'])) {
-            if (!isset($data['pay_channel']) || intval($data['pay_channel']) <= 0) {
-                return $this->rFail("分账支付渠道不能为空，请传入pay_channel或可映射的pay_type");
+        if (!$isUpdate || isset($data['pay_type'])) {
+            if (!isset($data['pay_type']) || $data['pay_type'] === '') {
+                return $this->rFail("支付类型不能为空");
             }
-            $where = ['pay_channel' => intval($data['pay_channel'])];
-            $exists = $this->getRevenuePayChannelFind($where, 'rpc_id');
-            if ($exists && (!$isUpdate || intval($exists['rpc_id']) !== intval($data['rpc_id'] ?? 0))) {
-                return $this->rFail("该支付渠道已配置分账渠道");
-            }
-        }
-        if (isset($data['pay_type']) && $data['pay_type'] !== '') {
             $payType = intval($data['pay_type']);
             if ($payType < 0) return $this->rFail("支付类型不合法");
-            $where = ['pay_type' => $payType];
-            $exists = $this->getRevenuePayChannelFind($where, 'rpc_id');
+            $exists = $this->getRevenuePayChannelFind(['pay_type' => $payType], 'rpc_id');
             if ($exists && (!$isUpdate || intval($exists['rpc_id']) !== intval($data['rpc_id'] ?? 0))) {
                 return $this->rFail("该支付类型已配置分账渠道");
             }
@@ -80,23 +70,11 @@ class RevenuePayChannelClient extends ManagementClient
         return true;
     }
 
-    protected function normalizePayChannelData(&$data)
+    protected function normalizePayTypeData(&$data)
     {
         if (!is_array($data)) return;
-        if ((!isset($data['pay_channel']) || intval($data['pay_channel']) <= 0)
-            && isset($data['pay_type'])
-            && $data['pay_type'] !== '') {
-            $result = $this->buildOrderPayChannel([
-                'pay_type' => intval($data['pay_type']),
-                'has_wc_order_no' => 0,
-            ]);
-            $data['pay_channel'] = intval($result['pay_channel'] ?? 0);
-            if (empty($data['channel_name'])) {
-                $data['channel_name'] = $result['pay_channel_name'] ?? '';
-            }
-        }
-        if (isset($data['pay_channel']) && intval($data['pay_channel']) > 0 && empty($data['channel_name'])) {
-            $data['channel_name'] = $this->getPayChannelName(intval($data['pay_channel']));
+        if (isset($data['pay_type']) && $data['pay_type'] !== '' && empty($data['channel_name'])) {
+            $data['channel_name'] = $this->formatPayType(intval($data['pay_type']));
         }
     }
 }

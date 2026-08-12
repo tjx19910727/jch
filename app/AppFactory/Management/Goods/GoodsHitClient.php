@@ -337,7 +337,15 @@ class GoodsHitClient extends ManagementClient
             if ($field == 'g_id') $value[0] = 'gbt.goods_id';
             if ($field == 'm_id') $value[0] = 'gbt.m_id';
             if ($field == 'machine_id') $value[0] = 'gbt.machine_id';
-            if ($field == 'sku') $value[0] = Db::raw('IF(gbt.is_online = 1, wg.out_no, g.sku)');
+            if ($field == 'sku') {
+                $value[0] = Db::raw(
+                    'IF('
+                    . 'gbt.is_online = 1,'
+                    . 'CONVERT(wg.out_no USING utf8mb4) COLLATE utf8mb4_unicode_ci,'
+                    . 'CONVERT(g.sku USING utf8mb4) COLLATE utf8mb4_unicode_ci'
+                    . ')'
+                );
+            }
             if ($field == 'create_time') {
                 $value[0] = 'gbt.device_created_at';
             }

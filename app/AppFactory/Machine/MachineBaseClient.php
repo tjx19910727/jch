@@ -32,7 +32,12 @@ class MachineBaseClient extends BaseClient
         parent::__construct($app);
         actionLog($this->config,'接收数据2--');
         $this->machine = $this->getMachineFind(['machine_id' => $this->config['machine_id']]);
-        if (!$this->machine) die(json_encode(['state' => 100, "msg" => $this->lang("query_machine_no_data")],320));
+        if (!$this->machine) {
+            if (($this->config['transport'] ?? '') === 'mq') {
+                throw new \InvalidArgumentException('MQ设备不存在');
+            }
+            die(json_encode(['state' => 100, "msg" => $this->lang("query_machine_no_data")],320));
+        }
         // 20250612 设备离线状态，修改为在线状态前，将启动时间重置为当前的时间
         if ($this->machine['online'] != 1) {
             if (function_exists("updateMachineInfo") || method_exists($this,"updateMachineInfo")) {
@@ -118,9 +123,11 @@ class MachineBaseClient extends BaseClient
      * 记录接收到的上报数据
      * @param int $from  数据来源，1：API，2：MQ
      * @param int $type  消息类型，1：接收，2：发送
+     * @param array|null $recordData 需要记录的实际消息，默认使用当前请求数据
      */
-    public function dataRecord($from = 1,$type = 1)
+    public function dataRecord($from = 1,$type = 1,$recordData = null)
     {
+        $recordData = is_array($recordData) ? $recordData : $this->data;
         $controller = request()->controller();
         $action = request()->action();
         $path = "";
@@ -131,20 +138,20 @@ class MachineBaseClient extends BaseClient
             if (isset($this->message['data']) && $this->message['data']) {
                 $path = json2arr($this->message['data'])['msgType'] ?? "";
             }
-            if (isset($this->data['data']) && $this->data['data']) {
-                $path = json2arr($this->data['data'])['msgType'] ?? "";
+            if (isset($recordData['data']) && $recordData['data']) {
+                $path = json2arr($recordData['data'])['msgType'] ?? "";
             }
         }
-        if ($path != "heartbeat") {
-            $msg = $this->getMachineMqRecordFind(['msg_id' => $this->data['msg_id']]);
+        if ($path != "heartbeat" && !empty($recordData['msg_id'])) {
+            $msg = $this->getMachineMqRecordFind(['msg_id' => $recordData['msg_id']]);
             if (!$msg) {
                 $insertMqRecord = [
                     "m_id" => $this->machine['m_id'],
                     "machine_id" => $this->machine['machine_id'],
                     "machine_name" => $this->machine['machine_name'],
-                    "msg_id" => $this->data['msg_id'],
+                    "msg_id" => $recordData['msg_id'],
                     "path" => $path,
-                    "content" => json_encode($this->data),
+                    "content" => json_encode($this->maskMqRecordSensitiveData($recordData)),
                     "from" => $from,
                     "type" => $type,
                 ];
@@ -152,5 +159,16 @@ class MachineBaseClient extends BaseClient
             }
         }
 
+    }
+
+    /**
+     * MQ记录不持久化可直接用于设备认证的密钥。
+     */
+    protected function maskMqRecordSensitiveData($data)
+    {
+        if (is_array($data) && array_key_exists('signKey', $data)) {
+            $data['signKey'] = '[MASKED]';
+        }
+        return $data;
     }
 }

@@ -131,8 +131,9 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Machine\OtaVersionClient               $otaVersion             OTA固件版本
  * @property Machine\OtaVersionPlanClient           $otaVersionPlan         OTA固件发布计划
  * @property Machine\SimCardInfoClient              $simCardInfo            物联卡基础信息
+ * @property Machine\MachineLayoutModelClient        $machineLayoutModel      设备型号布局模板
  * @property Machine\MachineServiceLogClient        $machineServiceLog      设备运行日志
- * @property Mall\MallClient                        $mall                   商场管理
+ * @property Machine\MachineSchemeClient            $machineScheme          货道推荐上架方案
  * @property RemoteActionLog\RemoteActionLogClient  $remoteActionLog        远程操作日志管理
  *
  * @property Card\CardClient                        $card                   商场管理会员卡
@@ -147,6 +148,8 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Revenue\RevenueRuleClient              $revenueRule            分账策略
  * @property Revenue\RevenueOrderClient             $revenueOrder           分账订单
  * @property Revenue\RevenuePayChannelClient        $revenuePayChannel      分账收款渠道
+ * @property Config\PayTypeClient                   $payType                支付类型配置
+ * @property Config\OrderTypeClient                 $orderType              订单类型配置
  *
  * @property Template\TemplateClient                $template               模板
  * @property Template\TemplatePluginsClient         $templatePlugins        模板组件
