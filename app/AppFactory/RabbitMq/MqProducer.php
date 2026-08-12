@@ -10,7 +10,6 @@ namespace app\AppFactory\RabbitMq;
 
 
 use app\AppFactory\Kernel\Model\Machine\MachineMqRecordModel;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
 class MqProducer
@@ -47,13 +46,7 @@ class MqProducer
                 $amqpDetail['route_key'] .= "/" . $routingMachineId;
             }
             $amqpDetail['queue_name'] = $amqpDetail['queue_name'] . "_" . $machine_id;
-            $connection = new AMQPStreamConnection(
-                $param['host'],
-                $param['port'],
-                $param['login'],
-                $param['password'],
-                $param['vhost']
-            );
+            $connection = MqConnectionFactory::create($param);
             if (!$connection->isConnected()) {
                 throw new \RuntimeException('Cannot connect to the RabbitMQ broker');
             }
@@ -208,6 +201,8 @@ class MqProducer
      */
     public static function dataUpload($data)
     {
+        $connection = null;
+        $channel = null;
         $param = config('rabbit_mq.' . env("RabbitMq.config_name"));
         $amqpDetail = config('rabbit_mq.dataUpload_queue');
 
@@ -223,13 +218,7 @@ class MqProducer
 //        }
 //        $amqpDetail['queue_name'] = $amqpDetail['queue_name'] . "_" . $machine_id;
 
-        $connection = new AMQPStreamConnection(
-            $param['host'],
-            $param['port'],
-            $param['login'],
-            $param['password'],
-            $param['vhost']
-        );
+        $connection = MqConnectionFactory::create($param);
         $channel = $connection->channel();
         /**
          * 创建队列(Queue)
@@ -288,8 +277,12 @@ class MqProducer
          */
         $channel->basic_publish($message, $amqpDetail['exchange_name'], $amqpDetail['route_key']);
 
-        $channel->close();
-        $connection->close();
+        try {
+            $channel->close();
+            $connection->close();
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+        }
         return "OK";
     }
 
@@ -302,17 +295,16 @@ class MqProducer
      */
     public static function export($data)
     {
+        $connection = null;
+        $channel = null;
         try {
             $param = config('rabbit_mq.' . env("RabbitMq.config_name"));
             $amqpDetail = config('rabbit_mq.export_queue');
+            if (!$param || !$amqpDetail) {
+                throw new \RuntimeException('RabbitMQ configuration is incomplete');
+            }
 
-            $connection = new AMQPStreamConnection(
-                $param['host'],
-                $param['port'],
-                $param['login'],
-                $param['password'],
-                $param['vhost']
-            );
+            $connection = MqConnectionFactory::create($param);
             $channel = $connection->channel();
             /**
              * 创建队列(Queue)
@@ -374,12 +366,25 @@ class MqProducer
             $channel->basic_publish($message, $amqpDetail['exchange_name'], $amqpDetail['route_key']);
             $channel->wait_for_pending_acks(5);
 
-            $channel->close();
-            $connection->close();
             return "OK";
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             actionException($e,1);
             return $e->getMessage();
+        } finally {
+            if ($channel) {
+                try {
+                    $channel->close();
+                } catch (\Throwable $e) {
+                    actionException($e, 1);
+                }
+            }
+            if ($connection) {
+                try {
+                    $connection->close();
+                } catch (\Throwable $e) {
+                    actionException($e, 1);
+                }
+            }
         }
     }
 }
