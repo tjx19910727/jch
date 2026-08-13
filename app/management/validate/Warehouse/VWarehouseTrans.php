@@ -29,6 +29,7 @@ class VWarehouseTrans extends VCommon
 
     protected $scene = [
         'add' => ['type', 'record_no', 'material_manager_id', 'business_at', 'remark'],
+        'exportTransDetails' => ['id' => 'integer|gt:0', 'trans_id' => 'max:32'],
         'getPreReplenishmentGoodsList' => ['record_no' => 'require|max:32'],
     ];
 }
