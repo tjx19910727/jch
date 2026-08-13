@@ -19,6 +19,7 @@ use app\AppFactory\Kernel\Providers\Management\ConfigProvider;
 use app\AppFactory\Kernel\Providers\Management\EarthProvider;
 use app\AppFactory\Kernel\Providers\Management\EmailProvider;
 use app\AppFactory\Kernel\Providers\Management\ExportProvider;
+use app\AppFactory\Kernel\Providers\Management\FaultNoticeProvider;
 use app\AppFactory\Kernel\Providers\Management\GoodsProvider;
 use app\AppFactory\Kernel\Providers\Management\HotelProvider;
 use app\AppFactory\Kernel\Providers\Management\IndexProvider;
@@ -88,6 +89,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Email\EmailConfigClient                $emailConfig            邮箱配置
  * @property Email\EmailTemplateClient              $emailTemplate          邮件模板配置
  * @property Email\EmailTemplateLogClient           $emailTemplateLog       邮件模板通知日志
+ * @property FaultNotice\FaultNoticeClient          $faultNotice            故障码重构模块
  *
  * @property Goods\GoodsClient                      $goods                  商品信息
  * @property Goods\GoodsLangClient                  $goodsLang              商品多语言信息
@@ -197,6 +199,7 @@ class Application extends ServiceContainer
         EarthProvider::class,
         EmailProvider::class,
         ExportProvider::class,
+        FaultNoticeProvider::class,
         LoginProvider::class,
         HotelProvider::class,
         InspectionProvider::class,
