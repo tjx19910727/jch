@@ -55,14 +55,6 @@ class Laser extends BaseController
                 $signKey = env('api.md5Key');
             }
             $signValid = SignUtil::checkSign($this->signData, $signKey);
-            if (!$signValid && strtolower($this->request->action()) === 'uploadbehaviortracking') {
-                // Flutter jsonEncode 保留中文和斜杠，仅此嵌套数据接口兼容该签名格式。
-                $signValid = SignUtil::checkSign(
-                    $this->signData,
-                    $signKey,
-                    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
-                );
-            }
             if (!$signValid && !env('CglPay.is_test')) {
                 returnState(100, Lang::get('VLaser.check_sign_fail'))->send();
                 die();

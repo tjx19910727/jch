@@ -80,14 +80,14 @@ class MachineBaseClient extends BaseClient
     public function getMqQueue()
     {
         $this->mqQueue = $this->machine['machine_id'];
-        actionLog($this->machine['version'],'设备版本号');
-        if (isset($this->machine['version']) && $this->machine['version']) {
-            $versionArr = explode(".", $this->machine['version']);
-            // 版本号小于0.2.12时，采用旧的MQ队列，大于等于0.2.12时，MQ队列名称增加MAC地址标示
-            if (isset($versionArr[0]) && $versionArr[0] == 0 && isset($versionArr[1]) && $versionArr[1] >= 2 && isset($versionArr[2]) &&  $versionArr[2] >= 12) {
-                $this->mqQueue = $this->machine['machine_id'] . "_" . str_replace(":","_",$this->machine['mac_address']);
-                actionLog($this->mqQueue,'增加了Mac地址的MQ队列名');
-            }
+        $version = strval($this->machine['version'] ?? '');
+        actionLog($version,'设备版本号');
+        // 版本号 0.2.12 及以上（主版本0、次版本>=2、修订>=12）时，
+        // 队列名附加MAC地址；正则严格校验数字格式，避免残缺版本号误判
+        if (preg_match('/^0\.(\d+)\.(\d+)/', $version, $m)
+            && intval($m[1]) >= 2 && intval($m[2]) >= 12) {
+            $this->mqQueue = $this->machine['machine_id'] . "_" . str_replace(":","_",$this->machine['mac_address']);
+            actionLog($this->mqQueue,'增加了Mac地址的MQ队列名');
         }
     }
 
