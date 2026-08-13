@@ -75,12 +75,23 @@ trait AfterOrderRefundTrait
         if ($refundList) {
             foreach ($refundList as $key => $refundItem) {
                 $value = Db::name('revenue_order')->where(['ro_id' => intval($refundItem['ro_id'])])->find();
-                if (!$value || intval($value['status'] ?? 0) <= 0) {
+                if (!$value) {
                     RevenueOrderRefundModel::update([
                         'ror_id' => intval($refundItem['ror_id']),
                         'status' => 3,
                     ]);
                     return $this->r(100,'查无可退款分账订单');
+                }
+                if (intval($value['status'] ?? 0) === 0) {
+                    Db::name('revenue_order')->where(['ro_id' => intval($value['ro_id'])])->update([
+                        'status' => 4,
+                        'update_time' => time(),
+                    ]);
+                    RevenueOrderRefundModel::update([
+                        'ror_id' => intval($refundItem['ror_id']),
+                        'status' => 2,
+                    ]);
+                    continue;
                 }
                 $update = [];
                 $update['update_time'] = time();
@@ -222,7 +233,7 @@ trait AfterOrderRefundTrait
         $updateOrder = [
             "order_id" => $this->order['order_id'],
             "refund_status" => 2,
-            "refund_amount" => $this->order['refund_amount'] + $this->data['refundAmount'],
+            "refund_amount" => bcadd($this->order['refund_amount'], $this->refund['refund_amount'], 3),
             "refund_quantity" => $this->order['refund_quantity'],
             'refund_cost_points' => $this->order['refund_cost_points'] + $this->refund['refund_cost_points'] ?? 0
         ];

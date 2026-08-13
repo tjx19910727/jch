@@ -28,8 +28,8 @@ class ReceiveBaseClient extends MachineBaseClient
     public $noCheckMac = ["logoutH5",'test'];
     protected $signKeyBootstrapHandled = false;
     protected $signKeyBootstrapFailed = false;
-    // 同一设备 signKey 最小重发间隔，单位：秒。
-    protected $signKeyResendCooldown = 60;
+    // 同一设备 signKey 最小重发间隔兜底值，需短于设备首次认证重试窗口。
+    protected $signKeyResendCooldown = 5;
 
     public function __construct(ServiceContainer $app)
     {
@@ -42,6 +42,9 @@ class ReceiveBaseClient extends MachineBaseClient
         if (!in_array($action,$this->noCheckMac)) {
             $checkMac = $this->checkMac($this->config['mac'] ?? "");
             if ($checkMac !== true) {
+                if (($this->config['transport'] ?? '') === 'mq') {
+                    $this->logMqAuthStage('MAC_REJECTED');
+                }
                 actionLog([
                     'machine_id' => $this->config['machine_id'] ?? '',
                     'transport' => $this->config['transport'] ?? 'http',
@@ -114,8 +117,9 @@ class ReceiveBaseClient extends MachineBaseClient
             $order['details'] = $this->getSaleOrdersDetailsList(['order_id' => $order['order_id']], 0);
             $this->order = $order;
             actionLog(['order_id' => $order['order_id'], 'reason' => $reason], '设备端0元单免支付完成');
-            $success = $this->paymentSuccessful();
-            $result = $this->checkTrans($success, 0);
+            $settlementSuccess = $this->settlementRevenue();
+            $paymentSuccess = $this->paymentSuccessful();
+            $result = $this->checkTrans(flag_check([$settlementSuccess, $paymentSuccess]), 0);
             if (!$result) {
                 return ['handled' => true, 'success' => false, 'msg' => $this->lang("action_fail")];
             }
@@ -179,10 +183,11 @@ class ReceiveBaseClient extends MachineBaseClient
                 }
 
                 if ($signKey) {
-                    $cooldown = intval($this->signKeyResendCooldown);
-                    if ($cooldown < 10) $cooldown = 60;
+                    $cooldown = intval(config('rabbit_mq.machine_sign_key_resend_cooldown') ?: $this->signKeyResendCooldown);
+                    if ($cooldown < 1) $cooldown = 5;
                     $cooldownKey = $this->machine['machine_id'] . '.signKeyResend';
                     if (!$this->acquireSignKeyResendLock($cooldownKey, $cooldown)) {
+                        $this->logMqAuthStage('SIGNKEY_RATE_LIMITED', ['cooldown' => $cooldown]);
                         actionLog([
                             'machine_id' => $this->machine['machine_id'],
                             'cooldown' => $cooldown,
@@ -215,10 +220,16 @@ class ReceiveBaseClient extends MachineBaseClient
                     $result = MqProducer::dataSend($data, $this->mqQueue);
                     actionLog($result, '发送结果',"setSignKey");
                     if ($result !== true) {
+                        $this->logMqAuthStage('PUBLISH_FAILED');
                         $this->releaseSignKeyResendLock($cooldownKey);
                         $this->signKeyBootstrapFailed = true;
                         return $this->rTryCatch('下发signKey失败');
                     }
+                    $this->logMqAuthStage('SIGNKEY_PUBLISHED', [
+                        'auth_msg_id' => $data['msg_id'],
+                        'expires_in' => $expiresIn,
+                    ]);
+                    $this->markMqAuthConfirmationPending($data['msg_id']);
                     @cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 5);
                     actionLog(['machine_id' => $this->machine['machine_id']], '设备signKey已缓存',"setSignKey");
                     return $this->r(200,'处理成功');
@@ -276,6 +287,48 @@ class ReceiveBaseClient extends MachineBaseClient
     public function isSignKeyBootstrapHandled()
     {
         return $this->signKeyBootstrapHandled;
+    }
+
+    /**
+     * 记录MQ认证阶段摘要，禁止写入认证密钥和完整报文。
+     */
+    protected function logMqAuthStage($stage, $extra = [])
+    {
+        try {
+            $summary = array_merge([
+                'auth_stage' => $stage,
+                'machine_id' => $this->config['machine_id'] ?? '',
+                'request_msg_id' => $this->data['msg_id'] ?? '',
+            ], is_array($extra) ? $extra : []);
+            actionLog($summary, 'MQ认证阶段', 'DataUploadAuth');
+        } catch (\Throwable $e) {
+            error_log('MQ auth stage log failed: ' . $e->getMessage());
+        }
+    }
+
+    protected function markMqAuthConfirmationPending($authMsgId)
+    {
+        try {
+            cache($this->machine['machine_id'] . '.mqAuthTracePending', $authMsgId, 300);
+        } catch (\Throwable $e) {
+            error_log('MQ auth trace marker failed: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * signKey下发后的首条成功签名消息作为认证闭环确认，避免每条业务消息重复记录。
+     */
+    protected function logMqAuthenticatedOnce()
+    {
+        try {
+            $key = $this->machine['machine_id'] . '.mqAuthTracePending';
+            $authMsgId = cache($key);
+            if (!$authMsgId) return;
+            $this->logMqAuthStage('DEVICE_AUTHENTICATED', ['auth_msg_id' => $authMsgId]);
+            cache($key, null);
+        } catch (\Throwable $e) {
+            error_log('MQ auth confirmation log failed: ' . $e->getMessage());
+        }
     }
 
 

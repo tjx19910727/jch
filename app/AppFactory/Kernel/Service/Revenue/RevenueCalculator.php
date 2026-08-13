@@ -19,6 +19,8 @@ class RevenueCalculator
     protected $rentalAmount = '0';
     protected $productAmount = '0';
     protected $couponAmount = '0';
+    protected $couponCostBaseAmount = '0';
+    protected $couponCostRemaining = '0';
     protected $rentalAmountsBySod = [];
     protected $revenuePayChannel = [];
 
@@ -29,6 +31,8 @@ class RevenueCalculator
         $this->rentalAmount = '0';
         $this->productAmount = '0';
         $this->couponAmount = '0';
+        $this->couponCostBaseAmount = '0';
+        $this->couponCostRemaining = '0';
         $this->rentalAmountsBySod = [];
         $this->revenuePayChannel = [];
         if (!$this->shouldCalculateRevenue()) {
@@ -277,6 +281,8 @@ class RevenueCalculator
 
         $allocatedAmount = '0.00';
         $hasRecord = false;
+        $this->couponCostBaseAmount = $this->money($matched['base_amount']);
+        $this->couponCostRemaining = $this->getRevenueCouponDiscountAmount();
         foreach ($items as $item) {
             $account = $this->getAccountById(intval($item['ra_id']));
             if (!$account) {
@@ -503,7 +509,27 @@ class RevenueCalculator
         if (bccomp($discountAmount, '0.01', 2) < 0) {
             return $calc;
         }
-        $incomeAmount = bcsub($this->money($calc['income_amount'] ?? 0), $discountAmount, 2);
+        $incomeAmount = $this->money($calc['income_amount'] ?? 0);
+        $baseAmount = $this->couponCostBaseAmount;
+        if (bccomp($baseAmount, '0.00', 2) <= 0 || bccomp($this->couponCostRemaining, '0.00', 2) <= 0) {
+            return $calc;
+        }
+        $costAmount = $this->money(bcmul(
+            $discountAmount,
+            bcdiv($incomeAmount, $baseAmount, 6),
+            6
+        ));
+        if (bccomp($costAmount, $this->couponCostRemaining, 2) > 0) {
+            $costAmount = $this->couponCostRemaining;
+        }
+        if (bccomp($costAmount, $incomeAmount, 2) > 0) {
+            $costAmount = $incomeAmount;
+        }
+        $this->couponCostRemaining = bcsub($this->couponCostRemaining, $costAmount, 2);
+        $incomeAmount = bcsub($incomeAmount, $costAmount, 2);
+        if (bccomp($incomeAmount, '0.00', 2) < 0) {
+            $incomeAmount = '0.00';
+        }
         $calc['income_amount'] = $this->money($incomeAmount);
         return $calc;
     }
@@ -568,7 +594,7 @@ class RevenueCalculator
     protected function saveRecords()
     {
         $locked = RevenueOrderModel::where(['order_id' => $this->order['order_id']])
-            ->where('status', '>', 0)
+            ->whereIn('status', [1, 2])
             ->find();
         if ($locked) {
             throw new \Exception("订单已存在非待支付分账记录，不允许重算");
@@ -665,6 +691,8 @@ class RevenueCalculator
     protected function clearPendingRecords()
     {
         if (empty($this->order['order_id'])) return true;
+        RevenueOrderModel::where(['order_id' => $this->order['order_id'], 'status' => 3])
+            ->update(['status' => 4, 'update_time' => time()]);
         RevenueOrderModel::where(['order_id' => $this->order['order_id'], 'status' => 0])->delete();
         return true;
     }
