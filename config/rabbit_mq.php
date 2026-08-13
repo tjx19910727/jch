@@ -9,11 +9,14 @@
 return [
     // RabbitMQ连接可靠性配置：读写超时需大于心跳周期的2倍
     'connection_timeout' => 3,
-    'read_write_timeout' => 65,
-    'heartbeat' => 30,
+    'read_write_timeout' => 125,
+    'heartbeat' => 60,
     'keepalive' => true,
     'consumer_reconnect_initial_delay' => 1,
     'consumer_reconnect_max_delay' => 30,
+
+    // 导出消息最大重投次数，超过后收走消息避免无限循环
+    'export_max_redeliver' => 3,
 
     // 后台下发到设备的 MQ 消息过期时间，单位：毫秒
     'data_send_expiration_ms' => 180 * 1000,

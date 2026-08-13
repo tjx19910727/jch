@@ -44,13 +44,7 @@ class AsyncTaskConsumer
             die("获取不到异步任务相关配置参数【async_task_queue】 \n");
         }
 
-        $connection = new AMQPStreamConnection(
-            $param['host'],
-            $param['port'],
-            $param['login'],
-            $param['password'],
-            $param['vhost']
-        );
+        $connection = MqConnectionFactory::create($param);
         $channel = $connection->channel();
         $channel->basic_qos(0, 1, false);
 
@@ -67,10 +61,34 @@ class AsyncTaskConsumer
             false,
             [$this, 'process_message']
         );
-        register_shutdown_function([$this, 'shutdown'], $channel, $connection);
+        try {
+            while (count($channel->callbacks)) {
+                $channel->wait();
+            }
+        } finally {
+            $this->shutdownSafely($channel, $connection);
+        }
+    }
 
-        while (count($channel->callbacks)) {
-            $channel->wait();
+    /**
+     * 每轮消费结束立即释放连接，避免连接假死时泄漏与关闭异常。
+     */
+    protected function shutdownSafely(AMQPChannel $channel, AMQPStreamConnection $connection)
+    {
+        try {
+            if ($channel->is_open()) $channel->close();
+        } catch (\Throwable $e) {
+            error_log('RabbitMQ async channel close failed: ' . $e->getMessage());
+        }
+        try {
+            if ($connection->isConnected()) $connection->close();
+        } catch (\Throwable $e) {
+            error_log('RabbitMQ async connection close failed: ' . $e->getMessage());
+        }
+        try {
+            Log::write('closed', 3);
+        } catch (\Throwable $e) {
+            error_log('RabbitMQ async close log failed: ' . $e->getMessage());
         }
     }
 
