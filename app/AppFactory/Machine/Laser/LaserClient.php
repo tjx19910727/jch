@@ -21,7 +21,7 @@ class LaserClient extends BaseClient
      */
     public function checkRequest($isH5 = false)
     {
-        //if (env('CglPay.is_test')) return true;
+        if (env('CglPay.is_test')) return true;
 
         $data = $this->getRequestData();
         try {
