@@ -47,6 +47,22 @@ class WarehouseTrans extends Common
         return $this->app->warehouseTrans->getTransFind($where);
     }
 
+    /**
+     * 导出仓库变化单的商品明细。
+     */
+    public function exportTransDetails()
+    {
+        $postData = input();
+        if (empty($postData['id']) && empty($postData['trans_id'])) {
+            return returnState(100, '仓库变化记录ID或单号不能为空');
+        }
+        $where = [];
+        if (!empty($postData['id'])) $where[] = ['id', '=', intval($postData['id'])];
+        if (!empty($postData['trans_id'])) $where[] = ['trans_id', '=', trim(strval($postData['trans_id']))];
+        $where = $this->authNodeWhere($where);
+        return $this->app->warehouseTrans->exportTransDetails($where);
+    }
+
     public function getPreReplenishmentGoodsList()
     {
         $postData = input();

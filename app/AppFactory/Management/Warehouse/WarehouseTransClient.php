@@ -171,6 +171,69 @@ class WarehouseTransClient extends ManagementClient
         return $this->rQ($trans);
     }
 
+    /**
+     * 导出单个仓库变化单的商品明细。
+     * @param array $where 主单查询条件（id 或 trans_id）
+     * @return array|\think\response\Json
+     */
+    public function exportTransDetails($where)
+    {
+        $trans = $this->getWarehouseTransFind($where, 'id,trans_id,type,record_no,business_at,manager_name,material_manager_name,remark,created_at');
+        if (!$trans) return $this->rFail('仓库变化记录不存在');
+        $trans = is_object($trans) && method_exists($trans, 'toArray') ? $trans->toArray() : $trans;
+
+        $details = $this->getWarehouseTransDetailsList(['warehouse_trans_id' => intval($trans['id'])]);
+        $details = $details ? (is_object($details) && method_exists($details, 'toArray') ? $details->toArray() : $details) : [];
+        if (!$details) return $this->rFail('该仓库变化单没有商品明细');
+        $details = $this->attachGoodsPicToDetails($details);
+
+        $typeText = $this->typeNames[intval($trans['type'])] ?? '未知';
+        $list = [];
+        foreach ($details as $detail) {
+            $list[] = [
+                'trans_id' => strval($trans['trans_id']),
+                'type_text' => $typeText,
+                'record_no' => strval($trans['record_no'] ?? ''),
+                'business_at' => strval($trans['business_at'] ?? ''),
+                'pic' => strval($detail['pic'] ?? ''),
+                'goods_name' => strval($detail['goods_name'] ?? ''),
+                'sku' => strval($detail['sku'] ?? ''),
+                'bar_code' => strval($detail['bar_code'] ?? ''),
+                'source_stocks' => intval($detail['source_stocks'] ?? 0),
+                'changed' => intval($detail['changed'] ?? 0),
+                'now_stocks' => intval($detail['now_stocks'] ?? 0),
+                'material_manager_name' => strval($trans['material_manager_name'] ?? ''),
+                'manager_name' => strval($trans['manager_name'] ?? ''),
+                'detail_remark' => strval($detail['remark'] ?? ''),
+                'created_at' => strval($trans['created_at'] ?? ''),
+            ];
+        }
+
+        $title = [
+            'trans_id' => '仓库单号',
+            'type_text' => '类型',
+            'record_no' => '预补货单号',
+            'business_at' => '业务时间',
+            'pic' => '商品图片',
+            'goods_name' => '商品名称',
+            'sku' => 'SKU',
+            'bar_code' => '条码',
+            'source_stocks' => '变化前库存',
+            'changed' => '变化数量',
+            'now_stocks' => '变化后库存',
+            'material_manager_name' => '物料操作人',
+            'manager_name' => '经办人',
+            'detail_remark' => '明细备注',
+            'created_at' => '创建时间',
+        ];
+        $filename = '仓库变化单详情-' . strval($trans['trans_id']) . '-' . date('YmdHis');
+        return $this->sendToExport('仓库管理-仓库变化单详情', $filename, $title, $list, [
+            'imageFields' => ['pic'],
+            'imageWidth' => 120,
+            'imageHeight' => 80,
+        ]);
+    }
+
     public function getPreReplenishmentGoodsList($recordNo)
     {
         $aoId = intval($this->manager['ao_id'] ?? 0);
@@ -463,8 +526,44 @@ class WarehouseTransClient extends ManagementClient
         if (is_object($trans) && method_exists($trans, 'toArray')) $trans = $trans->toArray();
         $trans['type_text'] = $this->typeNames[intval($trans['type'])] ?? '未知';
         $details = $this->getWarehouseTransDetailsList(['warehouse_trans_id' => intval($trans['id'])]);
-        $trans['details'] = $details ? $details->toArray() : [];
+        $details = $details ? (is_object($details) && method_exists($details, 'toArray') ? $details->toArray() : $details) : [];
+        $trans['details'] = $this->attachGoodsPicToDetails($details);
         return $trans;
+    }
+
+    /**
+     * 为仓库变化明细批量附加商品图片（pic），按 goods_id 批量查询后合并。
+     * @param array $details
+     * @return array
+     */
+    protected function attachGoodsPicToDetails($details)
+    {
+        if (!$details) return $details;
+
+        $goodsIds = [];
+        foreach ($details as $detail) {
+            $goodsId = intval($detail['goods_id'] ?? 0);
+            if ($goodsId > 0) $goodsIds[$goodsId] = $goodsId;
+        }
+
+        $picMap = [];
+        if ($goodsIds) {
+            $goodsRows = GoodsModel::whereIn('g_id', array_values($goodsIds))
+                ->field('g_id,pic')
+                ->select()
+                ->toArray();
+            foreach ($goodsRows as $goods) {
+                $picMap[intval($goods['g_id'])] = strval($goods['pic'] ?? '');
+            }
+        }
+
+        foreach ($details as &$detail) {
+            $goodsId = intval($detail['goods_id'] ?? 0);
+            $detail['pic'] = $picMap[$goodsId] ?? '';
+        }
+        unset($detail);
+
+        return $details;
     }
 
     protected function acquireTransNoLock()
