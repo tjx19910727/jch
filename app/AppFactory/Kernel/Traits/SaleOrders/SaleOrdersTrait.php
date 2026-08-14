@@ -986,25 +986,38 @@ trait SaleOrdersTrait
     }
 
     /**
-     * 保存设备逐个上报的视频。旧设备不带分段后缀时按单视频处理。
+     * 保存设备逐个上报的视频。旧设备未上报 segment_no 时按单视频处理。
      */
     protected function saveSaleOrdersVideo($videoType, $relationId, $tradeNo, $transactionVideo)
     {
         $transactionVideo = trim((string)$transactionVideo);
         $host = (string)env('app.host');
         $storedPath = $host !== '' ? str_replace($host, '', $transactionVideo) : $transactionVideo;
-        $segmentNo = $this->getSaleOrdersVideoSegmentNo($storedPath);
+        $segmentNo = isset($this->message['segment_no']) ? intval($this->message['segment_no']) : 0;
         $videoTotal = intval($this->message['video_total'] ?? 0);
         if ($videoTotal < 0) $videoTotal = 0;
         if ($videoTotal > 127) $videoTotal = 127;
         if ($segmentNo === 0 && $videoTotal === 0) $videoTotal = 1;
 
-        $where = [
+        $businessWhere = [
+            'video_type' => intval($videoType),
+            'trade_no' => $tradeNo,
+            'segment_no' => $segmentNo,
+        ];
+        $exists = SaleOrdersVideoModel::getFind($businessWhere, 'sov_id,video_total', 'sov_id desc');
+        if ($exists) {
+            if ($videoTotal > intval($exists['video_total'])) {
+                SaleOrdersVideoModel::update(['video_total' => $videoTotal], ['sov_id' => $exists['sov_id']]);
+            }
+            return $exists;
+        }
+
+        $pathWhere = [
             'video_type' => intval($videoType),
             'relation_id' => intval($relationId),
             'video_hash' => md5($storedPath),
         ];
-        $exists = SaleOrdersVideoModel::getFind($where, 'sov_id,video_total');
+        $exists = SaleOrdersVideoModel::getFind($pathWhere, 'sov_id,video_total');
         if ($exists) {
             if ($videoTotal > intval($exists['video_total'])) {
                 SaleOrdersVideoModel::update(['video_total' => $videoTotal], ['sov_id' => $exists['sov_id']]);
@@ -1025,21 +1038,11 @@ trait SaleOrdersTrait
             ]);
         } catch (\Throwable $e) {
             // 相同MQ消息并发重试时，由唯一索引保证只保存一条。
-            $exists = SaleOrdersVideoModel::getFind($where, 'sov_id');
+            $exists = SaleOrdersVideoModel::getFind($businessWhere, 'sov_id', 'sov_id desc');
+            if (!$exists) $exists = SaleOrdersVideoModel::getFind($pathWhere, 'sov_id');
             if ($exists) return $exists;
             throw $e;
         }
-    }
-
-    /**
-     * 例如 202607881554-2.mp4 => 2；无 -数字 后缀 => 0。
-     */
-    protected function getSaleOrdersVideoSegmentNo($transactionVideo)
-    {
-        $videoPath = parse_url($transactionVideo, PHP_URL_PATH);
-        $fileName = $videoPath ? pathinfo($videoPath, PATHINFO_FILENAME) : '';
-        if ($fileName !== '' && preg_match('/-(\d+)$/', $fileName, $matches)) return intval($matches[1]);
-        return 0;
     }
 
     /**
@@ -1077,12 +1080,15 @@ trait SaleOrdersTrait
             $segmentNo = intval($video['segment_no']);
             $videoTotal = max($videoTotal, intval($video['video_total']));
             $latestCreateTime = max($latestCreateTime, intval($video['create_time']));
-            $videos[] = [
+            $videoKey = $video['trade_no'] . ':' . $segmentNo;
+            // 兼容过滤上线前已产生的重复数据，同一业务分段只返回最新一条。
+            $videos[$videoKey] = [
                 'video_name' => $video['trade_no'] . '-' . $segmentNo,
                 'transaction_video' => $video['transaction_video'],
                 'segment_no' => $segmentNo,
             ];
         }
+        $videos = array_values($videos);
 
         return [
             'has_records' => true,

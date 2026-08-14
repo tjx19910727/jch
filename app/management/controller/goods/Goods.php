@@ -59,9 +59,9 @@ class Goods extends Common
     }
 
     /**
-     * 获取设备货道商品列表
-     * 传入 m_id（如：11,22,33）时仅返回这些设备货道上的商品；
-     * m_id 未传或为空时返回全部商品。
+     * 获取设备商品库商品列表
+     * 传入 m_id（如：11,22,33）时仅返回这些设备商品库中的商品；
+     * 可传入 gc_id 按商品分类筛选；m_id 未传或为空时返回全部商品。
      * @return mixed
      */
     public function getMcList()
@@ -82,8 +82,8 @@ class Goods extends Common
         }));
 
         if ($mIds) {
-            $whereMc[] = ['m_id','in',$mIds];
-            $gIds = $this->app->machineChannel->getMachineChannelColumn($whereMc,'g_id');
+            $whereMg[] = ['m_id','in',$mIds];
+            $gIds = $this->app->machineGoods->getMachineGoodsColumn($whereMg,'g_id');
             $gIds = array_values(array_unique(array_filter($gIds)));
             if (!$gIds) {
                 $where[] = ['g_id','=',0];
