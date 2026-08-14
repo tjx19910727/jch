@@ -34,19 +34,38 @@ class CartPayeeStrategyResolver
         if ($subCarMix === SubCarMixPolicy::MIX_FORBIDDEN && $goodsSource === SubCarMixPolicy::SOURCE_MIXED) {
             return self::fail('线上商品与线下商品不能同时下单，请分开结算', 'goods_source_conflict');
         }
-        $offlineLegacyIds = $subCarMix === SubCarMixPolicy::MIX_FORBIDDEN
-            ? SubCarMixPolicy::parsePayeeIds($machineConfig[SubCarMixPolicy::OFFLINE_SP_IDS_FIELD] ?? '')
-            : null;
-        $onlineLegacyIds = $subCarMix === SubCarMixPolicy::MIX_FORBIDDEN
-            ? SubCarMixPolicy::parsePayeeIds($machineConfig[SubCarMixPolicy::ONLINE_SP_IDS_FIELD] ?? '')
-            : null;
+        $offlineLegacyIds = null;
+        $offlineFallbackToMachineOrg = false;
+        if ($subCarMix === SubCarMixPolicy::MIX_FORBIDDEN) {
+            $configuredOfflineIds = SubCarMixPolicy::parsePayeeIds(
+                $machineConfig[SubCarMixPolicy::OFFLINE_SP_IDS_FIELD] ?? ''
+            );
+            // 禁止混合不等于禁止线下收款：空白名单完整回退设备所属组织的原收款策略。
+            $offlineLegacyIds = $configuredOfflineIds ?: null;
+            $offlineFallbackToMachineOrg = !$configuredOfflineIds;
+        }
+        $onlineLegacyIds = null;
+        if ($subCarMix === SubCarMixPolicy::MIX_FORBIDDEN) {
+            $configuredOnlineIds = SubCarMixPolicy::parsePayeeIds(
+                $machineConfig[SubCarMixPolicy::ONLINE_SP_IDS_FIELD] ?? ''
+            );
+            // 空线上白名单使用嘉潮汇组织(ao_id=17)在当前设备上的原收款策略。
+            $onlineLegacyIds = $configuredOnlineIds ?: null;
+        }
 
         foreach ($cartList as $cartItem) {
             if (!is_array($cartItem)) return self::fail('购物车商品格式错误', 'cart_item_invalid');
             $channelCode = trim(strval($cartItem['channel_code'] ?? ''));
             if ($channelCode === 'Z10') {
                 // 线上商品默认配置为嘉潮汇组织的收款策略
-                $legacy = self::getLegacyStrategies($machineId, self::JCH_ORG_AO_ID, $machineAoId, $payType, $onlineLegacyIds);
+                $legacy = self::getLegacyStrategies(
+                    $machineId,
+                    self::JCH_ORG_AO_ID,
+                    $machineAoId,
+                    $payType,
+                    $onlineLegacyIds,
+                    false
+                );
                 if (!$legacy) return self::fail('当前线上商品未配置可用收款策略', 'legacy_strategy_unavailable');
                 $itemCandidates = array_map('intval', array_column($legacy, 'sp_id'));
                 $candidateIds = $candidateIds === null
@@ -101,7 +120,8 @@ class CartPayeeStrategyResolver
                 $itemCandidates = array_map('intval', array_column($explicitStrategies, 'sp_id'));
                 $source = 'goods_explicit';
             } else {
-                $legacy = self::getLegacyStrategies($machineId, $goodsAoId, $machineAoId, $payType, $offlineLegacyIds);
+                $legacyGoodsAoId = $offlineFallbackToMachineOrg ? 0 : $goodsAoId;
+                $legacy = self::getLegacyStrategies($machineId, $legacyGoodsAoId, $machineAoId, $payType, $offlineLegacyIds);
                 if (!$legacy) return self::fail('当前商品未配置可用收款策略，请联系管理员', 'legacy_strategy_unavailable');
                 $itemCandidates = array_map('intval', array_column($legacy, 'sp_id'));
                 $source = 'legacy';
@@ -142,7 +162,7 @@ class CartPayeeStrategyResolver
         ];
     }
 
-    private static function getLegacyStrategies($machineId, $goodsAoId, $machineAoId, $payType, $allowedSpIds = null)
+    private static function getLegacyStrategies($machineId, $goodsAoId, $machineAoId, $payType, $allowedSpIds = null, $fallbackToMachineOrg = true)
     {
         if (is_array($allowedSpIds) && !$allowedSpIds) return [];
         $query = Db::name('strategy_machine')->alias('sm')
@@ -154,6 +174,7 @@ class CartPayeeStrategyResolver
             $orgRows = (clone $query)->where('sm.ao_id', $goodsAoId)
                 ->field('sp.sp_id,sp.sp_name,sp.title,sp.payee_type,sp.ico,sp.ao_id,sm.sort')->order('sm.sort asc')->select()->toArray();
             if ($orgRows) return $orgRows;
+            if (!$fallbackToMachineOrg) return [];
         }
         if ($machineAoId > 0) $query->where('sm.ao_id', $machineAoId);
         return $query->field('sp.sp_id,sp.sp_name,sp.title,sp.payee_type,sp.ico,sp.ao_id,sm.sort')

@@ -166,6 +166,7 @@ class PaymentClient extends PayBaseClient
             }
 
             $subCarMixSpIds = null;
+            $goodsSource = SubCarMixPolicy::SOURCE_EMPTY;
             $machineConfig = $this->getMachineConfigFind(['m_id' => $this->order['m_id']], '*');
             if (is_object($machineConfig) && method_exists($machineConfig, 'toArray')) {
                 $machineConfig = $machineConfig->toArray();
@@ -191,9 +192,7 @@ class PaymentClient extends PayBaseClient
                     ? SubCarMixPolicy::ONLINE_SP_IDS_FIELD
                     : SubCarMixPolicy::OFFLINE_SP_IDS_FIELD;
                 $subCarMixSpIds = SubCarMixPolicy::parsePayeeIds($machineConfig[$spIdsField] ?? '');
-                if (!$subCarMixSpIds) {
-                    return $this->rFail($this->lang("VOrderPay.subcar_mix_payee_empty"));
-                }
+                if (!$subCarMixSpIds) $subCarMixSpIds = null;
             }
 
 
@@ -214,7 +213,13 @@ class PaymentClient extends PayBaseClient
                 $where['sp.payee_type'] = $this->order['pay_type'];
                 $where['sm.m_id'] = $this->order['m_id'];
                 if (is_array($subCarMixSpIds)) $where[] = ['sp.sp_id', 'in', $subCarMixSpIds];
-                if($this->machine['ao_id'] > 18) $where['sm.ao_id'] = $this->machine['ao_id'];
+                if ($subCarMix === SubCarMixPolicy::MIX_FORBIDDEN && $subCarMixSpIds === null) {
+                    $where['sm.ao_id'] = $goodsSource === SubCarMixPolicy::SOURCE_ONLINE
+                        ? 17
+                        : intval($this->machine['ao_id'] ?? 0);
+                } elseif (intval($this->machine['ao_id'] ?? 0) > 18) {
+                    $where['sm.ao_id'] = intval($this->machine['ao_id']);
+                }
                 $this->strategyPayee = $this->getStrategyPayeeContent($where,'sp.*','');
                 if ((!is_array($this->strategyPayee) || !$this->strategyPayee) && in_array(intval($this->order['pay_type']), [11, 12, 21, 22], true)) {
                     $where['sp.payee_type'] = $this->getCompatiblePayeeType($this->order['pay_type']);
