@@ -77,6 +77,19 @@ class MachinePreReplenishmentClient extends ManagementClient
             ->select()
             ->toArray();
 
+        // 批量查询商品库存（可用库存/锁定库存）
+        $channelGIds = array_values(array_unique(array_filter(array_column($channelList, 'g_id'))));
+        $goodsStockMap = [];
+        if ($channelGIds) {
+            $goodsRows = GoodsModel::where([['g_id', 'in', $channelGIds]])
+                ->field('g_id,stocks,locked_stocks')
+                ->select()
+                ->toArray();
+            foreach ($goodsRows as $goods) {
+                $goodsStockMap[intval($goods['g_id'])] = $goods;
+            }
+        }
+
         $channelMap = [];
         $salesCache = [];
         foreach ($channelList as $channel) {
@@ -94,6 +107,11 @@ class MachinePreReplenishmentClient extends ManagementClient
             $gId = $channel['g_id'] ?? 0;
             $mcId = $channel['mc_id'];
 
+            // 商品库存：锁定库存 + 可用库存（stocks - locked_stocks）
+            $goodsStock = $goodsStockMap[intval($gId)] ?? [];
+            $goodsStocks = intval($goodsStock['stocks'] ?? 0);
+            $goodsLockedStocks = intval($goodsStock['locked_stocks'] ?? 0);
+
             $channelMap[$channel['m_id']][] = [
                 'mc_id' => $mcId,
                 'channel_code' => $channel['channel_code'],
@@ -105,8 +123,11 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'available_stock' => $availableStock,
                 'plan_quantity' => $orderPlanQtyMap[$mcKey] ?? 0,
                 'g_id' => $gId,
+                'locked_stocks' => $goodsLockedStocks,
+                'available_stocks' => max(0, $goodsStocks - $goodsLockedStocks),
             ];
         }
+
 
         $result = [];
         foreach ($machineList as $machine) {
