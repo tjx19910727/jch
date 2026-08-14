@@ -474,49 +474,4 @@ class MqConsumer
         return false;
     }
 
-    /**
-     * 判断导出消息重投次数是否超过上限（默认3次），超限后收走消息避免无限重投。
-     *
-     * @param AMQPMessage $message
-     * @param int $exportId
-     * @return bool
-     */
-    protected function exportRedeliverExceeded(AMQPMessage $message, $exportId)
-    {
-        $maxRedeliver = max(1, intval(config('rabbit_mq.export_max_redeliver') ?: 3));
-        $redeliverCount = 0;
-        // x-death 位于 application_headers（AMQPTable）内，不在消息顶层 properties
-        if ($message->has('application_headers')) {
-            try {
-                $headers = $message->get('application_headers');
-                $native = is_object($headers) && method_exists($headers, 'getNativeData')
-                    ? $headers->getNativeData()
-                    : (array)$headers;
-                if (isset($native['x-death']) && is_array($native['x-death'])) {
-                    foreach ($native['x-death'] as $death) {
-                        if (is_array($death) && isset($death['count'])) {
-                            $redeliverCount += intval($death['count']);
-                        }
-                    }
-                }
-            } catch (\Throwable $e) {
-                actionLog($e->getMessage(), '读取x-death头失败', "export_message");
-            }
-        }
-        if ($redeliverCount === 0 && $message->isRedelivered()) {
-            $redeliverCount = 1;
-        }
-        if ($redeliverCount >= $maxRedeliver) {
-            actionLog([
-                'export_id' => $exportId,
-                'redeliver_count' => $redeliverCount,
-                'max_redeliver' => $maxRedeliver,
-            ], '导出消息重投超限，已收走消息', "export_message");
-            if ($exportId) {
-                AppFactory::timeTask()->export->updateExportLog(['export_id' => $exportId, 'status' => 4]);
-            }
-            return true;
-        }
-        return false;
-    }
 }
