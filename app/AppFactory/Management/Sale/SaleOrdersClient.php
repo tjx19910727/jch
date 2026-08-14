@@ -1601,11 +1601,10 @@ class SaleOrdersClient extends ManagementClient
         $transactionVideo = trim((string)$transactionVideo);
         if ($transactionVideo === '') return [];
 
-        $segmentNo = $this->getSaleOrdersVideoSegmentNo($transactionVideo);
         return [[
-            'video_name' => $tradeNo . '-' . $segmentNo,
+            'video_name' => $tradeNo . '-0',
             'transaction_video' => $transactionVideo,
-            'segment_no' => $segmentNo,
+            'segment_no' => 0,
         ]];
     }
 
