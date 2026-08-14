@@ -360,18 +360,6 @@ class MachinePreReplenishmentClient extends ManagementClient
             ->select()
             ->toArray();
 
-        $skuList = array_values(array_unique(array_filter(array_column($detailRows, 'sku'))));
-        $goodsRows = $skuList ? GoodsModel::whereIn('sku', $skuList)
-            ->field('g_id,g_name,sku,stocks')
-            ->select()
-            ->toArray() : [];
-        $goodsMap = [];
-        foreach ($goodsRows as $goods) {
-            $sku = strval($goods['sku']);
-            if (!isset($goodsMap[$sku])) $goodsMap[$sku] = [];
-            $goodsMap[$sku][] = $goods;
-        }
-
         $summaryMap = [];
         foreach ($detailRows as $row) {
             if (!isset($summaryMap[$row['order_id']])) {
@@ -385,10 +373,7 @@ class MachinePreReplenishmentClient extends ManagementClient
                 $summaryMap[$row['order_id']]['machine_names'][$row['machine_id']] = $row['machine_id'];
             }
             if ($row['sku']) {
-                if (!isset($summaryMap[$row['order_id']]['sku_map'][$row['sku']])) {
-                    $summaryMap[$row['order_id']]['sku_map'][$row['sku']] = 0;
-                }
-                $summaryMap[$row['order_id']]['sku_map'][$row['sku']] += intval($row['plan_quantity']);
+                $summaryMap[$row['order_id']]['sku_map'][$row['sku']] = $row['sku'];
             }
             $summaryMap[$row['order_id']]['plan_total'] += $row['plan_quantity'];
         }
@@ -396,20 +381,6 @@ class MachinePreReplenishmentClient extends ManagementClient
         $result = [];
         foreach ($list as $item) {
             $summary = $summaryMap[$item['id']] ?? ['machine_names' => [], 'sku_map' => [], 'plan_total' => 0];
-            $goodsList = [];
-            foreach ($summary['sku_map'] as $sku => $planQuantity) {
-                $matches = $goodsMap[$sku] ?? [];
-                $goods = count($matches) === 1 ? $matches[0] : [];
-                $stocks = intval($goods['stocks'] ?? 0);
-                $goodsList[] = [
-                    'g_id' => intval($goods['g_id'] ?? 0),
-                    'g_name' => strval($goods['g_name'] ?? ''),
-                    'sku' => strval($sku),
-                    'plan_quantity' => intval($planQuantity),
-                    'stocks' => $stocks,
-                    'goods_match_status' => count($matches) === 1 ? 1 : (count($matches) > 1 ? 2 : 0),
-                ];
-            }
             $result[] = [
                 'id' => $item['id'],
                 'record_no' => $item['record_no'],
@@ -421,7 +392,6 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'machine_names' => array_values($summary['machine_names']),
                 'sku_count' => count($summary['sku_map']),
                 'plan_total' => $summary['plan_total'],
-                'goods_list' => $goodsList,
             ];
         }
 
@@ -447,17 +417,6 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         $details = PreReplenishmentDetailModel::where(['order_id' => $id])->order('id asc')->select()->toArray();
         $logs = PreReplenishmentLogModel::where(['record_no' => $order['record_no']])->order('id asc')->select()->toArray();
-
-        $detailSkuList = array_values(array_unique(array_filter(array_column($details, 'sku'))));
-        $detailGoodsRows = $detailSkuList ? GoodsModel::whereIn('sku', $detailSkuList)
-            ->field('sku,stocks,locked_stocks')
-            ->select()->toArray() : [];
-        $detailGoodsMap = [];
-        foreach ($detailGoodsRows as $goods) {
-            $sku = strval($goods['sku']);
-            if (!isset($detailGoodsMap[$sku])) $detailGoodsMap[$sku] = [];
-            $detailGoodsMap[$sku][] = $goods;
-        }
 
         // 批量查询设备和货道信息
         $machineIds = array_values(array_unique(array_column($details, 'machine_id')));
@@ -604,13 +563,8 @@ class MachinePreReplenishmentClient extends ManagementClient
             $gId = $channel['g_id'] ?? 0;
             $gIdKey = $gId ? (string)$gId : ($d['sku'] ?? '');
             if (!isset($materialMap[$gIdKey])) {
-                $materialSku = strval($channel['sku'] ?? $d['sku'] ?? '');
-                $goodsMatches = $detailGoodsMap[$materialSku] ?? [];
-                $materialGoods = count($goodsMatches) === 1 ? $goodsMatches[0] : [];
-                $materialStocks = intval($materialGoods['stocks'] ?? 0);
-                $materialLockedStocks = intval($materialGoods['locked_stocks'] ?? 0);
                 $materialMap[$gIdKey] = [
-                    'sku'          => $materialSku,
+                    'sku'          => $channel['sku'] ?? $d['sku'] ?? '',
                     'g_name'       => $channel['g_name'] ?? '',
                     'image_url'    => $channel['pic'] ?? '',
                     'bar_code'     => $channel['bar_code'] ?? '',
@@ -618,8 +572,6 @@ class MachinePreReplenishmentClient extends ManagementClient
                     'quantity'     => 0,
                     'device_count' => 0,
                     'channel_count'=> 0,
-                    'locked_stocks'=> $materialLockedStocks,
-                    'available_stocks' => max(0, $materialStocks - $materialLockedStocks),
                     '_device_ids'  => [],
                 ];
             }
@@ -769,17 +721,6 @@ class MachinePreReplenishmentClient extends ManagementClient
         }
         $orderMap = array_column($orders, null, 'id');
 
-        $exportSkuList = array_values(array_unique(array_filter(array_column($details, 'sku'))));
-        $exportGoodsRows = $exportSkuList ? GoodsModel::whereIn('sku', $exportSkuList)
-            ->field('sku,stocks,locked_stocks')
-            ->select()->toArray() : [];
-        $exportGoodsMap = [];
-        foreach ($exportGoodsRows as $goods) {
-            $sku = strval($goods['sku']);
-            if (!isset($exportGoodsMap[$sku])) $exportGoodsMap[$sku] = [];
-            $exportGoodsMap[$sku][] = $goods;
-        }
-
         $mids = array_values(array_unique(array_column($details, 'm_id')));
         $mcs = array_values(array_unique(array_column($details, 'mc_id')));
         $channelMap = [];
@@ -801,20 +742,13 @@ class MachinePreReplenishmentClient extends ManagementClient
             $groupKey = ($order['record_no'] ?? '') . '|' . $gId;
             if (!isset($groupRows[$groupKey])) {
                 $recordNo = trim((string)($order['record_no'] ?? ''));
-                $sku = strval($row['sku'] ?? '');
-                $goodsMatches = $exportGoodsMap[$sku] ?? [];
-                $goods = count($goodsMatches) === 1 ? $goodsMatches[0] : [];
-                $stocks = intval($goods['stocks'] ?? 0);
-                $lockedStocks = intval($goods['locked_stocks'] ?? 0);
                 $groupRows[$groupKey] = [
                     'record_no' => $order['record_no'] ?? '',
                     'order_bar_code_image' => $recordNo === '' ? '' : ('https://bwipjs-api.metafloor.com/?bcid=code128&includetext=true&scale=2&text=' . urlencode($recordNo)),
                     'goods_name' => $channel['g_name'] ?? '',
                     'goods_pic' => $channel['pic'] ?? '',
-                    'sku' => $sku,
+                    'sku' => $row['sku'] ?? '',
                     'plan_quantity' => 0,
-                    'locked_stocks' => $lockedStocks,
-                    'available_stocks' => max(0, $stocks - $lockedStocks),
                     'actual_quantity' => 0,
                     'actual_has_value' => false,
                     'creator_name' => $order['creator_name'] ?? '',
@@ -853,8 +787,6 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'col_d' => (int)($item['plan_quantity'] ?? 0),
                 'col_e' => $item['creator_name'] ?? '',
                 'col_f' => $item['created_at'] ?? '',
-                'col_g' => (int)($item['locked_stocks'] ?? 0),
-                'col_h' => (int)($item['available_stocks'] ?? 0),
             ];
         }
 
@@ -866,8 +798,6 @@ class MachinePreReplenishmentClient extends ManagementClient
             'col_d' => $recordBarCodeImageForHeader,
             'col_e' => '',
             'col_f' => '',
-            'col_g' => '',
-            'col_h' => '',
         ];
         // 第3行: 商品标题
         array_unshift($list, [
@@ -877,8 +807,6 @@ class MachinePreReplenishmentClient extends ManagementClient
             'col_d' => '领料数量',
             'col_e' => '创建人',
             'col_f' => '创建时间',
-            'col_g' => '锁定库存',
-            'col_h' => '可用库存',
         ]);
         $filename = '预补货领料表-' . date('YmdHis');
 
@@ -945,8 +873,6 @@ class MachinePreReplenishmentClient extends ManagementClient
             'col_d' => '创建人',
             'col_e' => '创建时间',
             'col_f' => '近30天销售额',
-            'col_g' => '锁定库存',
-            'col_h' => '可用库存',
         ];
 
         foreach ($machineIdGroups as $machineId => $rows) {
@@ -960,17 +886,10 @@ class MachinePreReplenishmentClient extends ManagementClient
                 // 查询近30天销售额，仅在首次遇到该g_id时查询
                 if (!isset($goodsMap[$gIdKey])) {
                     $sales30Days = $gId ? $this->getSalesAmount($machineId, $gId) : 0;
-                    $sku = strval($row['sku'] ?? '');
-                    $goodsMatches = $exportGoodsMap[$sku] ?? [];
-                    $goods = count($goodsMatches) === 1 ? $goodsMatches[0] : [];
-                    $stocks = intval($goods['stocks'] ?? 0);
-                    $lockedStocks = intval($goods['locked_stocks'] ?? 0);
                     $goodsMap[$gIdKey] = [
                         'g_name' => $channel['g_name'] ?? '',
-                        'sku' => $sku,
+                        'sku' => $row['sku'] ?? '',
                         'plan_quantity' => 0,
-                        'locked_stocks' => $lockedStocks,
-                        'available_stocks' => max(0, $stocks - $lockedStocks),
                         'creator_name' => $order['creator_name'] ?? '',
                         'created_at' => $order['created_at'] ?? '',
                         'sales_30_days' => $sales30Days,
@@ -990,8 +909,6 @@ class MachinePreReplenishmentClient extends ManagementClient
                     'col_d' => $item['creator_name'],
                     'col_e' => $item['created_at'],
                     'col_f' => $item['sales_30_days'] ?? 0,
-                    'col_g' => $item['locked_stocks'],
-                    'col_h' => $item['available_stocks'],
                 ];
             }
             $sheetName = $machineId;
