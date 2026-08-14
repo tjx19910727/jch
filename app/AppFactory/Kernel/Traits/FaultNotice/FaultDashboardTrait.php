@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Kernel\Traits\FaultNotice;
 
+use app\AppFactory\Kernel\Support\FaultNotice\FaultWechatTemplate;
 use think\facade\Db;
 
 /**
@@ -170,7 +171,8 @@ trait FaultDashboardTrait
     protected function faultWechatLogQuery()
     {
         return $this->applyFaultDashboardScope(
-            Db::name('wx_template_log')->alias('wtl')->where('wtl.template_type', 'mFault'),
+            Db::name('wx_template_log')->alias('wtl')
+                ->whereIn('wtl.template_type', FaultWechatTemplate::types()),
             'wtl'
         );
     }

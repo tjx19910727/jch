@@ -303,6 +303,10 @@ trait FaultSettingTrait
 
     protected function getFaultLevelStrategyDefaults()
     {
+        $configured = config('fault_notice.level_strategy_defaults');
+        if (is_array($configured) && isset($configured[1], $configured[2], $configured[3])) {
+            return $configured;
+        }
         return [
             1 => [
                 'level' => 1,

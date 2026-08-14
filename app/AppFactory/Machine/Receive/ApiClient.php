@@ -716,7 +716,8 @@ class ApiClient extends ReceiveBaseClient
                 "error_position" => $this->data['error_position'] ?? "",
                 "creator_id" => $this->data['creator_id'] ?? 0,
             ];
-            $this->errorCode();
+//            $this->errorCode();
+            $this->reportFaultCode();
             return $this->r(200, $this->lang("action_success"));
         } catch (\Exception $e) {
             actionException($e, 1);

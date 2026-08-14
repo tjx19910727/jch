@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Kernel\Traits\FaultNotice;
 
+use app\AppFactory\Kernel\Support\FaultNotice\FaultWechatTemplate;
 use think\facade\Db;
 
 /**
@@ -61,9 +62,9 @@ trait FaultEventTrait
             ->alias('wtl')
             ->leftJoin('auth_manager am', 'am.manager_id = wtl.manager_id')
             ->where('wtl.me_id', $meId)
-            ->where('wtl.template_type', 'mFault')
+            ->whereIn('wtl.template_type', FaultWechatTemplate::types())
             ->field(
-                "wtl.wtl_id,wtl.wt_id,wtl.template_name,wtl.manager_id," .
+                "wtl.wtl_id,wtl.wt_id,wtl.template_type,wtl.template_name,wtl.manager_id," .
                 "COALESCE(NULLIF(wtl.nickname,''),NULLIF(am.nickname,''),'') AS receiver_name," .
                 "COALESCE(NULLIF(am.account,''),'') AS receiver_account," .
                 "wtl.send_status,wtl.confirm_status,wtl.confirm_time,wtl.remark,wtl.create_time"
@@ -139,11 +140,11 @@ trait FaultEventTrait
             "COALESCE((SELECT GROUP_CONCAT(DISTINCT mgg.mg_name ORDER BY mgg.id SEPARATOR ',') " .
             "FROM machine_group_mg mgg WHERE mgg.m_id = mec.m_id),'') AS machine_group_name," .
             "(SELECT COUNT(*) FROM wx_template_log wtl " .
-            "WHERE wtl.me_id = mec.me_id AND wtl.template_type = 'mFault') AS notice_receiver_count," .
+            "WHERE wtl.me_id = mec.me_id AND wtl.template_type IN ('mFault','mOffline','mShipmentFailed')) AS notice_receiver_count," .
             "(SELECT COUNT(*) FROM wx_template_log wtl " .
-            "WHERE wtl.me_id = mec.me_id AND wtl.template_type = 'mFault' AND wtl.send_status = 1) AS notice_success_count," .
+            "WHERE wtl.me_id = mec.me_id AND wtl.template_type IN ('mFault','mOffline','mShipmentFailed') AND wtl.send_status = 1) AS notice_success_count," .
             "(SELECT COUNT(*) FROM wx_template_log wtl " .
-            "WHERE wtl.me_id = mec.me_id AND wtl.template_type = 'mFault' AND wtl.send_status <> 1) AS notice_failed_count";
+            "WHERE wtl.me_id = mec.me_id AND wtl.template_type IN ('mFault','mOffline','mShipmentFailed') AND wtl.send_status <> 1) AS notice_failed_count";
     }
 
     protected function applyFaultEventScope($query)
@@ -426,6 +427,7 @@ trait FaultEventTrait
         return [
             'notice_id' => intval($item['wtl_id'] ?? 0),
             'wt_id' => intval($item['wt_id'] ?? 0),
+            'template_type' => strval($item['template_type'] ?? ''),
             'template_name' => strval($item['template_name'] ?? ''),
             'channel' => 'wechat',
             'channel_name' => '微信公众号',
@@ -457,6 +459,7 @@ trait FaultEventTrait
             'frequency_limited' => '触发频率限制',
             'template_invalid' => '微信模板无效',
             'no_receiver' => '没有匹配的接收人',
+            'wechat_send_failed' => '微信公众号发送失败',
             'wechat_unbound' => '接收人未绑定微信',
             'wechat_account_mismatch' => '微信公众号不匹配',
         ];

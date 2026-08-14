@@ -8,7 +8,7 @@
 -- 3. 不增加外键，不依赖事务。
 -- 4. auth_manager_notice_config保留，但新故障通知流程不再读取。
 -- 5. 本文件只包含表结构和固定三级故障等级初始化，不初始化组织配置、分类和故障码。
--- 6. ALTER TABLE部分按一次性升级脚本编写，执行前请先备份相关表。
+-- 6. machine_fault_category尚未建表，本文件直接提供最终CREATE TABLE，不需要该表的ALTER/UPDATE迁移语句。
 
 SET NAMES utf8mb4;
 
@@ -80,13 +80,14 @@ ON DUPLICATE KEY UPDATE
 
 -- ------------------------------------------------------------
 -- 4. 故障分类
--- 新增/编辑分类时，从当前组织已启用的mFault微信模板中选择wt_id。
+-- 新增/编辑分类时，只保存代码白名单中的template_type。
+-- 微信template_id和body固定配置在config/fault_notice.php，不再关联wx_template.wt_id。
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `machine_fault_category` (
   `category_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '故障分类ID',
   `ao_id` int(11) NOT NULL DEFAULT '0' COMMENT '组织ID',
   `category_name` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '故障分类名称',
-  `wt_id` int(11) NOT NULL DEFAULT '0' COMMENT '微信故障模板ID，对应wx_template.wt_id',
+  `template_type` varchar(30) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'mFault' COMMENT '固定微信模板类型：mFault、mOffline、mShipmentFailed',
   `status` tinyint(1) NOT NULL DEFAULT '1' COMMENT '状态：1启用，2停用',
   `sort` int(11) NOT NULL DEFAULT '99' COMMENT '排序，越小越靠前',
   `creator` int(11) NOT NULL DEFAULT '0' COMMENT '创建人manager_id',
@@ -96,7 +97,7 @@ CREATE TABLE IF NOT EXISTS `machine_fault_category` (
   PRIMARY KEY (`category_id`),
   UNIQUE KEY `uk_ao_category_name` (`ao_id`,`category_name`) USING BTREE,
   KEY `idx_ao_status_sort` (`ao_id`,`status`,`sort`) USING BTREE,
-  KEY `idx_wt_id` (`wt_id`) USING BTREE
+  KEY `idx_template_type` (`template_type`) USING BTREE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='故障分类及微信模板配置表';
 
 -- ------------------------------------------------------------

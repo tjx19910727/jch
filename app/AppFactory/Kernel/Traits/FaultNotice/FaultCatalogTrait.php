@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Kernel\Traits\FaultNotice;
 
+use app\AppFactory\Kernel\Support\FaultNotice\FaultWechatTemplate;
 use think\facade\Db;
 
 /**
@@ -17,12 +18,10 @@ trait FaultCatalogTrait
         $aoId = $this->getFaultCatalogAoId();
         $rows = Db::name('machine_fault_category')
             ->alias('mfc')
-            ->leftJoin('wx_template wt', 'wt.wt_id = mfc.wt_id')
             ->where('mfc.ao_id', $aoId)
             ->field(
-                "mfc.category_id,mfc.category_name,mfc.wt_id,mfc.status,mfc.sort," .
-                "mfc.update_time,COALESCE(wt.template_name,'') AS template_name," .
-                "COALESCE(wt.status,0) AS template_status," .
+                "mfc.category_id,mfc.category_name,mfc.template_type,mfc.status,mfc.sort," .
+                "mfc.update_time," .
                 "(SELECT COUNT(*) FROM machine_error_code_notice_rule mecnr " .
                 "WHERE mecnr.ao_id = mfc.ao_id AND mecnr.category_id = mfc.category_id) AS fault_count"
             )
@@ -55,14 +54,13 @@ trait FaultCatalogTrait
                 'mfc.ao_id = mecnr.ao_id AND mfc.category_id = mecnr.category_id'
             )
             ->leftJoin('machine_fault_level mfl', 'mfl.level = mecnr.level')
-            ->leftJoin('wx_template wt', 'wt.wt_id = mfc.wt_id')
             ->where('mecnr.ao_id', $aoId)
             ->field(
                 "mecnr.error_code,mecnr.error_name,mecnr.wechat_text,mecnr.category_id," .
                 "mecnr.level,mecnr.status,mecnr.notice_enabled,mecnr.update_time," .
                 "COALESCE(mfc.category_name,'') AS category_name," .
-                "COALESCE(mfc.status,0) AS category_status,COALESCE(mfc.wt_id,0) AS wt_id," .
-                "COALESCE(wt.template_name,'') AS template_name," .
+                "COALESCE(mfc.status,0) AS category_status," .
+                "COALESCE(mfc.template_type,'') AS template_type," .
                 "COALESCE(mfl.grade,mecnr.level) AS grade," .
                 "COALESCE(mfl.level_name,'') AS level_name,COALESCE(mfl.color,'') AS color"
             );
@@ -118,7 +116,6 @@ trait FaultCatalogTrait
 
     public function getFaultCatalogFormOptionsData()
     {
-        $aoId = $this->getFaultCatalogAoId();
         $levels = Db::name('machine_fault_level')
             ->field('level,grade,level_name,color')
             ->whereIn('level', [1, 2, 3])
@@ -132,18 +129,6 @@ trait FaultCatalogTrait
                 ['level' => 3, 'grade' => 3, 'level_name' => '提示', 'color' => '#1677FF'],
             ];
         }
-        $templates = Db::name('wx_template')
-            ->alias('wt')
-            ->innerJoin('wx_official wo', 'wo.id = wt.wx_id')
-            ->where('wt.ao_id', $aoId)
-            ->where('wt.template_type', 'mFault')
-            ->where('wt.status', 1)
-            ->where('wo.status', 1)
-            ->field('wt.wt_id,wt.template_name,wt.wx_id,wo.wx_name')
-            ->order('wt.update_time desc,wt.wt_id desc')
-            ->select()
-            ->toArray();
-
         return [
             'levels' => array_map(function ($row) {
                 return [
@@ -153,14 +138,7 @@ trait FaultCatalogTrait
                     'color' => strval($row['color']),
                 ];
             }, $levels),
-            'wechat_templates' => array_map(function ($row) {
-                return [
-                    'wt_id' => intval($row['wt_id']),
-                    'template_name' => strval($row['template_name']),
-                    'wx_id' => intval($row['wx_id']),
-                    'wx_name' => strval($row['wx_name']),
-                ];
-            }, $templates),
+            'wechat_templates' => FaultWechatTemplate::options(),
         ];
     }
 
@@ -341,13 +319,13 @@ trait FaultCatalogTrait
         if (mb_strlen($name, 'UTF-8') > 50) {
             throw new \InvalidArgumentException('故障分类名称不能超过50个字符');
         }
-        $wtId = intval($params['wt_id'] ?? 0);
-        if (!$this->findAvailableFaultCatalogTemplate($wtId)) {
-            throw new \InvalidArgumentException('微信故障模板不存在或不可用');
+        $templateType = trim(strval($params['template_type'] ?? ''));
+        if (!FaultWechatTemplate::isValid($templateType)) {
+            throw new \InvalidArgumentException('微信故障模板类型不支持');
         }
         return [
             'category_name' => $name,
-            'wt_id' => $wtId,
+            'template_type' => $templateType,
             'sort' => max(0, intval($params['sort'] ?? 99)),
         ];
     }
@@ -440,24 +418,6 @@ trait FaultCatalogTrait
         ])->find();
     }
 
-    protected function findAvailableFaultCatalogTemplate($wtId)
-    {
-        $wtId = intval($wtId);
-        if ($wtId <= 0) {
-            return [];
-        }
-        return (array)Db::name('wx_template')
-            ->alias('wt')
-            ->innerJoin('wx_official wo', 'wo.id = wt.wx_id')
-            ->where('wt.wt_id', $wtId)
-            ->where('wt.ao_id', $this->getFaultCatalogAoId())
-            ->where('wt.template_type', 'mFault')
-            ->where('wt.status', 1)
-            ->where('wo.status', 1)
-            ->field('wt.wt_id')
-            ->find();
-    }
-
     protected function findAndFormatFaultCatalogCode($errorCode)
     {
         $data = $this->getFaultCatalogCodeListData(['keyword' => $errorCode]);
@@ -473,13 +433,11 @@ trait FaultCatalogTrait
     {
         $row = Db::name('machine_fault_category')
             ->alias('mfc')
-            ->leftJoin('wx_template wt', 'wt.wt_id = mfc.wt_id')
             ->where('mfc.ao_id', $this->getFaultCatalogAoId())
             ->where('mfc.category_id', intval($categoryId))
             ->field(
-                "mfc.category_id,mfc.category_name,mfc.wt_id,mfc.status,mfc.sort," .
-                "mfc.update_time,COALESCE(wt.template_name,'') AS template_name," .
-                "COALESCE(wt.status,0) AS template_status," .
+                "mfc.category_id,mfc.category_name,mfc.template_type,mfc.status,mfc.sort," .
+                "mfc.update_time," .
                 "(SELECT COUNT(*) FROM machine_error_code_notice_rule mecnr " .
                 "WHERE mecnr.ao_id = mfc.ao_id AND mecnr.category_id = mfc.category_id) AS fault_count"
             )
@@ -489,12 +447,15 @@ trait FaultCatalogTrait
 
     protected function formatFaultCatalogCategory($row)
     {
+        $templateType = strval($row['template_type'] ?? '');
+        $template = FaultWechatTemplate::find($templateType);
         return [
             'category_id' => intval($row['category_id'] ?? 0),
             'category_name' => strval($row['category_name'] ?? ''),
-            'wt_id' => intval($row['wt_id'] ?? 0),
-            'template_name' => strval($row['template_name'] ?? ''),
-            'template_status' => intval($row['template_status'] ?? 0),
+            'template_type' => $templateType,
+            'template_name' => strval($template['template_name'] ?? ''),
+            'template_display_name' => strval($template['display_name'] ?? ''),
+            'template_status' => FaultWechatTemplate::isValid($templateType) ? 1 : 2,
             'status' => intval($row['status'] ?? 1),
             'status_name' => intval($row['status'] ?? 1) === 1 ? '启用' : '停用',
             'sort' => intval($row['sort'] ?? 99),
@@ -508,6 +469,8 @@ trait FaultCatalogTrait
 
     protected function formatFaultCatalogCode($row)
     {
+        $templateType = strval($row['template_type'] ?? '');
+        $template = FaultWechatTemplate::find($templateType);
         return [
             'error_code' => strval($row['error_code'] ?? ''),
             'error_name' => strval($row['error_name'] ?? ''),
@@ -515,8 +478,9 @@ trait FaultCatalogTrait
             'category_id' => intval($row['category_id'] ?? 0),
             'category_name' => strval($row['category_name'] ?? ''),
             'category_status' => intval($row['category_status'] ?? 0),
-            'wt_id' => intval($row['wt_id'] ?? 0),
-            'template_name' => strval($row['template_name'] ?? ''),
+            'template_type' => $templateType,
+            'template_name' => strval($template['template_name'] ?? ''),
+            'template_display_name' => strval($template['display_name'] ?? ''),
             'level' => intval($row['level'] ?? 0),
             'grade' => intval($row['grade'] ?? 0),
             'level_name' => strval($row['level_name'] ?? ''),

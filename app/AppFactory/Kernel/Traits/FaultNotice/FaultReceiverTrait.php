@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Kernel\Traits\FaultNotice;
 
+use app\AppFactory\Kernel\Support\FaultNotice\FaultWechatTemplate;
 use think\facade\Db;
 
 /**
@@ -272,17 +273,14 @@ trait FaultReceiverTrait
         $categoryIds = array_values(array_unique(array_map('intval', $categoryIds)));
         $rows = Db::name('machine_fault_category')
             ->alias('mfc')
-            ->innerJoin('wx_template wt', 'wt.wt_id = mfc.wt_id')
             ->where('mfc.ao_id', $this->getFaultReceiverAoId())
             ->where('mfc.status', 1)
-            ->where('wt.status', 1)
-            ->where('wt.template_type', 'mFault')
-            ->where('wt.wx_id', $wxId)
+            ->whereIn('mfc.template_type', FaultWechatTemplate::types())
             ->whereIn('mfc.category_id', $categoryIds)
             ->column('mfc.category_id');
         $validIds = array_values(array_unique(array_map('intval', $rows)));
         if (count($validIds) !== count($categoryIds)) {
-            throw new \InvalidArgumentException('故障分类不存在、已停用或模板公众号与接收人不一致');
+            throw new \InvalidArgumentException('故障分类不存在、已停用或模板类型不可用');
         }
     }
 
@@ -295,20 +293,17 @@ trait FaultReceiverTrait
                 'machine_fault_category mfc',
                 'mfc.ao_id = mecnr.ao_id AND mfc.category_id = mecnr.category_id'
             )
-            ->innerJoin('wx_template wt', 'wt.wt_id = mfc.wt_id')
             ->where('mecnr.ao_id', $this->getFaultReceiverAoId())
             ->where('mecnr.status', 1)
             ->where('mfc.status', 1)
-            ->where('wt.status', 1)
-            ->where('wt.template_type', 'mFault')
-            ->where('wt.wx_id', $wxId)
+            ->whereIn('mfc.template_type', FaultWechatTemplate::types())
             ->whereIn('mecnr.error_code', $errorCodes)
             ->column('mecnr.error_code');
         $validCodes = array_values(array_unique(array_map('strval', $rows)));
         sort($validCodes);
         sort($errorCodes);
         if ($validCodes !== $errorCodes) {
-            throw new \InvalidArgumentException('故障码不存在、已停用或模板公众号与接收人不一致');
+            throw new \InvalidArgumentException('故障码不存在、已停用或模板类型不可用');
         }
     }
 
