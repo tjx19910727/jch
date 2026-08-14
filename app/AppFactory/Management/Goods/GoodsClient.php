@@ -35,6 +35,7 @@ class GoodsClient extends ManagementClient
 
     public function addG($postData)
     {
+        unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
         $g_id = $this->addGoods($postData);
         if ($g_id) {
             $insertLang = [
@@ -109,6 +110,9 @@ class GoodsClient extends ManagementClient
      */
     public function updateForEdit($postData)
     {
+        if (array_key_exists('stocks', $postData) || array_key_exists('locked_stocks', $postData) || array_key_exists('available_stocks', $postData)) {
+            return $this->r(100, '商品库存不允许通过商品编辑接口修改');
+        }
         $gId = $postData['g_id'] ?? 0;
         if (!$gId) {
             return $this->r(100, '参数有误');

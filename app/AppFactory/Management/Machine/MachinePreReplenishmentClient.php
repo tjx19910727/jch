@@ -2,6 +2,7 @@
 
 namespace app\AppFactory\Management\Machine;
 
+use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineChannelModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\Machine\PreReplenishmentDetailModel;
@@ -194,6 +195,15 @@ class MachinePreReplenishmentClient extends ManagementClient
                 return returnState(5000, '系统错误');
             }
 
+            $this->adjustPreOrderLockedStocks(
+                $recordNo,
+                $orderId,
+                [],
+                $this->buildPlanQuantityMap($insertDetails),
+                1,
+                '创建预补货单锁定库存'
+            );
+
             Db::commit();
             return returnState(200, '创建成功', [
                 'id' => $orderId,
@@ -215,7 +225,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             return returnState(4001, '参数错误: id不能为空');
         }
 
-        $order = PreReplenishmentOrderModel::getFind(['id' => $id], 'id,record_no');
+        $order = PreReplenishmentOrderModel::getFind(['id' => $id], 'id,record_no,biz_status');
         if (!$order) {
             return returnState(4003, '单据不存在');
         }
@@ -223,6 +233,9 @@ class MachinePreReplenishmentClient extends ManagementClient
         $logCount = PreReplenishmentLogModel::getCount(['record_no' => $order['record_no']]);
         if ($logCount > 0) {
             return returnState(4004, '该补货单已进行补货，不允许修改');
+        }
+        if (Db::name('warehouse_trans')->where(['record_no' => $order['record_no'], 'type' => 4])->count()) {
+            return returnState(4004, '该补货单已进行仓库出库，不允许修改');
         }
 
         $details = $this->normalizeDetails($postData['details'] ?? []);
@@ -237,6 +250,11 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         Db::startTrans();
         try {
+            $lockedOrder = PreReplenishmentOrderModel::where(['id' => $id])->lock(true)->find();
+            if (!$lockedOrder || intval($lockedOrder['biz_status']) !== 1) {
+                throw new \Exception('只有未补货的单据才能修改');
+            }
+            $oldDetails = PreReplenishmentDetailModel::where(['order_id' => $id])->select()->toArray();
             $updateResult = PreReplenishmentOrderModel::update([
                 'id' => $id,
                 'remark' => $postData['remark'] ?? '',
@@ -259,6 +277,16 @@ class MachinePreReplenishmentClient extends ManagementClient
                 Db::rollback();
                 return returnState(5000, '系统错误');
             }
+
+
+            $this->adjustPreOrderLockedStocks(
+                strval($order['record_no']),
+                intval($id),
+                $this->buildPlanQuantityMap($oldDetails),
+                $this->buildPlanQuantityMap($insertDetails),
+                2,
+                '修改预补货单调整锁定库存'
+            );
 
             Db::commit();
             return returnState(200, '修改成功', ['id' => $id]);
@@ -311,6 +339,18 @@ class MachinePreReplenishmentClient extends ManagementClient
             ->select()
             ->toArray();
 
+        $skuList = array_values(array_unique(array_filter(array_column($detailRows, 'sku'))));
+        $goodsRows = $skuList ? GoodsModel::whereIn('sku', $skuList)
+            ->field('g_id,g_name,sku,stocks,locked_stocks')
+            ->select()
+            ->toArray() : [];
+        $goodsMap = [];
+        foreach ($goodsRows as $goods) {
+            $sku = strval($goods['sku']);
+            if (!isset($goodsMap[$sku])) $goodsMap[$sku] = [];
+            $goodsMap[$sku][] = $goods;
+        }
+
         $summaryMap = [];
         foreach ($detailRows as $row) {
             if (!isset($summaryMap[$row['order_id']])) {
@@ -324,7 +364,10 @@ class MachinePreReplenishmentClient extends ManagementClient
                 $summaryMap[$row['order_id']]['machine_names'][$row['machine_id']] = $row['machine_id'];
             }
             if ($row['sku']) {
-                $summaryMap[$row['order_id']]['sku_map'][$row['sku']] = $row['sku'];
+                if (!isset($summaryMap[$row['order_id']]['sku_map'][$row['sku']])) {
+                    $summaryMap[$row['order_id']]['sku_map'][$row['sku']] = 0;
+                }
+                $summaryMap[$row['order_id']]['sku_map'][$row['sku']] += intval($row['plan_quantity']);
             }
             $summaryMap[$row['order_id']]['plan_total'] += $row['plan_quantity'];
         }
@@ -332,6 +375,23 @@ class MachinePreReplenishmentClient extends ManagementClient
         $result = [];
         foreach ($list as $item) {
             $summary = $summaryMap[$item['id']] ?? ['machine_names' => [], 'sku_map' => [], 'plan_total' => 0];
+            $goodsList = [];
+            foreach ($summary['sku_map'] as $sku => $planQuantity) {
+                $matches = $goodsMap[$sku] ?? [];
+                $goods = count($matches) === 1 ? $matches[0] : [];
+                $stocks = intval($goods['stocks'] ?? 0);
+                $lockedStocks = intval($goods['locked_stocks'] ?? 0);
+                $goodsList[] = [
+                    'g_id' => intval($goods['g_id'] ?? 0),
+                    'g_name' => strval($goods['g_name'] ?? ''),
+                    'sku' => strval($sku),
+                    'plan_quantity' => intval($planQuantity),
+                    'stocks' => $stocks,
+                    'locked_stocks' => $lockedStocks,
+                    'available_stocks' => max(0, $stocks - $lockedStocks),
+                    'goods_match_status' => count($matches) === 1 ? 1 : (count($matches) > 1 ? 2 : 0),
+                ];
+            }
             $result[] = [
                 'id' => $item['id'],
                 'record_no' => $item['record_no'],
@@ -343,6 +403,7 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'machine_names' => array_values($summary['machine_names']),
                 'sku_count' => count($summary['sku_map']),
                 'plan_total' => $summary['plan_total'],
+                'goods_list' => $goodsList,
             ];
         }
 
@@ -939,6 +1000,7 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'quantity' => $quantity,
                 'report_time' => $reportTime,
                 'raw_payload' => arr2json($postData),
+                'event_id' => $postData['msg_id'] ?? '',
             ]);
 
             if (!$result) {
@@ -997,6 +1059,22 @@ class MachinePreReplenishmentClient extends ManagementClient
                 throw new \Exception('预补货单状态更新失败');
             }
 
+            $details = PreReplenishmentDetailModel::where(['order_id' => $id])->select()->toArray();
+            $remainingMap = $this->buildPlanQuantityMap($details);
+            $issuedMap = $this->getPreOrderIssuedQuantityMap(strval($order['record_no']));
+            foreach ($remainingMap as $sku => &$quantity) {
+                $quantity = max(0, intval($quantity) - intval($issuedMap[$sku] ?? 0));
+            }
+            unset($quantity);
+            $this->adjustPreOrderLockedStocks(
+                strval($order['record_no']),
+                intval($id),
+                $remainingMap,
+                [],
+                4,
+                '手动完结预补货单释放剩余锁定库存'
+            );
+
             Db::commit();
             return returnState(200, '预补货单完结成功', ['affected' => $affected]);
         } catch (\Exception $e) {
@@ -1052,9 +1130,25 @@ class MachinePreReplenishmentClient extends ManagementClient
         if ($order['biz_status'] != 1) {
             return returnState(4004, '只有未补货的单据才能删除');
         }
+        if (Db::name('warehouse_trans')->where(['record_no' => $order['record_no'], 'type' => 4])->count()) {
+            return returnState(4004, '该补货单已进行仓库出库，不允许删除');
+        }
 
         Db::startTrans();
         try {
+            $lockedOrder = PreReplenishmentOrderModel::where(['id' => $id])->lock(true)->find();
+            if (!$lockedOrder || intval($lockedOrder['biz_status']) !== 1) {
+                throw new \Exception('只有未补货的单据才能删除');
+            }
+            $details = PreReplenishmentDetailModel::where(['order_id' => $id])->select()->toArray();
+            $this->adjustPreOrderLockedStocks(
+                strval($order['record_no']),
+                intval($id),
+                $this->buildPlanQuantityMap($details),
+                [],
+                5,
+                '删除预补货单释放锁定库存'
+            );
             PreReplenishmentDetailModel::whereDel(['order_id' => $id]);
             PreReplenishmentOrderModel::whereDel(['id' => $id]);
             Db::commit();
@@ -1089,5 +1183,77 @@ class MachinePreReplenishmentClient extends ManagementClient
         $result = $query->field('COALESCE(SUM(sod.total_sod_price), 0) - COALESCE(SUM(sod.refund_amount), 0) AS sales_amount')
             ->find();
         return round((float)($result['sales_amount'] ?? 0), 2);
+    }
+
+    protected function buildPlanQuantityMap($details)
+    {
+        $map = [];
+        foreach ($details as $detail) {
+            $sku = trim(strval($detail['sku'] ?? ''));
+            if ($sku === '') continue;
+            if (!isset($map[$sku])) $map[$sku] = 0;
+            $map[$sku] += intval($detail['plan_quantity'] ?? 0);
+        }
+        return $map;
+    }
+
+    protected function getPreOrderIssuedQuantityMap($recordNo)
+    {
+        $rows = Db::name('warehouse_trans_details')->alias('d')
+            ->join('warehouse_trans t', 't.id = d.warehouse_trans_id')
+            ->where(['t.record_no' => $recordNo, 't.type' => 4])
+            ->field('d.sku,SUM(-d.changed) issued_quantity')
+            ->group('d.sku')
+            ->select()
+            ->toArray();
+        $map = [];
+        foreach ($rows as $row) $map[strval($row['sku'])] = intval($row['issued_quantity']);
+        return $map;
+    }
+
+    protected function adjustPreOrderLockedStocks($recordNo, $orderId, $oldMap, $newMap, $changeType, $remark)
+    {
+        $skuList = array_values(array_unique(array_merge(array_keys($oldMap), array_keys($newMap))));
+        sort($skuList, SORT_STRING);
+        foreach ($skuList as $sku) {
+            $changeQuantity = intval($newMap[$sku] ?? 0) - intval($oldMap[$sku] ?? 0);
+            if ($changeQuantity === 0) continue;
+
+            $goods = GoodsModel::where(['sku' => $sku])
+                ->field('g_id,sku,stocks,locked_stocks,ao_id')
+                ->lock(true)
+                ->find();
+            if (!$goods) throw new \Exception('预补货商品SKU ' . $sku . ' 未关联goods商品');
+            $goods = $goods->toArray();
+            $beforeLocked = intval($goods['locked_stocks'] ?? 0);
+            $afterLocked = $beforeLocked + $changeQuantity;
+            $stocks = intval($goods['stocks'] ?? 0);
+            if ($afterLocked < 0) throw new \Exception('商品SKU ' . $sku . ' 锁定库存释放数量异常');
+            if ($afterLocked > $stocks) {
+                throw new \Exception('商品SKU ' . $sku . ' 可用库存不足，当前可用库存为' . max(0, $stocks - $beforeLocked));
+            }
+
+            $updated = GoodsModel::where(['g_id' => intval($goods['g_id']), 'locked_stocks' => $beforeLocked])
+                ->update(['locked_stocks' => $afterLocked]);
+            if (!$updated) throw new \Exception('商品SKU ' . $sku . ' 锁定库存更新失败');
+
+            $inserted = Db::name('goods_stock_lock_log')->insert([
+                'business_event_key' => 'PR:' . $recordNo . ':' . intval($changeType) . ':' . intval($goods['g_id']) . ':' . bin2hex(random_bytes(8)),
+                'ao_id' => intval($goods['ao_id'] ?? ($this->manager['ao_id'] ?? 0)),
+                'goods_id' => intval($goods['g_id']),
+                'sku' => strval($sku),
+                'record_no' => strval($recordNo),
+                'order_id' => intval($orderId),
+                'change_type' => intval($changeType),
+                'change_quantity' => $changeQuantity,
+                'before_locked_stocks' => $beforeLocked,
+                'after_locked_stocks' => $afterLocked,
+                'manager_id' => intval($this->manager['manager_id'] ?? 0),
+                'manager_name' => strval($this->manager['nickname'] ?? ($this->manager['account'] ?? '')),
+                'remark' => $remark,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+            if (!$inserted) throw new \Exception('商品SKU ' . $sku . ' 锁定库存流水写入失败');
+        }
     }
 }

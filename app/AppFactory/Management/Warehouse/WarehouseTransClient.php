@@ -60,7 +60,7 @@ class WarehouseTransClient extends ManagementClient
             foreach ($goodsIds as $goodsId) {
                 $requestDetail = $normalized['details'][$goodsId];
                 $goods = GoodsModel::where(['g_id' => $goodsId])
-                    ->field('g_id,g_name,sku,bar_code,stocks,status')
+                    ->field('g_id,g_name,sku,bar_code,stocks,locked_stocks,status')
                     ->lock(true)
                     ->find();
                 if (!$goods) throw new \Exception('商品ID ' . $goodsId . ' 不存在');
@@ -69,9 +69,18 @@ class WarehouseTransClient extends ManagementClient
                 $quantity = intval($requestDetail['quantity']);
                 $changed = in_array($normalized['type'], [1, 3], true) ? $quantity : -$quantity;
                 $sourceStocks = intval($goods['stocks'] ?? 0);
+                $sourceLockedStocks = intval($goods['locked_stocks'] ?? 0);
                 $nowStocks = $sourceStocks + $changed;
+                $lockedChanged = $normalized['type'] === 4 ? -$quantity : 0;
+                $nowLockedStocks = $sourceLockedStocks + $lockedChanged;
                 if ($nowStocks < 0) {
                     throw new \Exception('商品 ' . ($goods['g_name'] ?: $goodsId) . ' 库存不足，当前库存为' . $sourceStocks);
+                }
+                if ($normalized['type'] === 2 && $nowStocks < $sourceLockedStocks) {
+                    throw new \Exception('商品 ' . ($goods['g_name'] ?: $goodsId) . ' 可用库存不足，当前可用库存为' . max(0, $sourceStocks - $sourceLockedStocks));
+                }
+                if ($nowLockedStocks < 0) {
+                    throw new \Exception('商品 ' . ($goods['g_name'] ?: $goodsId) . ' 锁定库存不足，当前锁定库存为' . $sourceLockedStocks);
                 }
 
                 if (in_array($normalized['type'], [3, 4], true)) {
@@ -84,8 +93,14 @@ class WarehouseTransClient extends ManagementClient
                     );
                 }
 
-                $updated = GoodsModel::where(['g_id' => $goodsId, 'stocks' => $sourceStocks])
-                    ->update(['stocks' => $nowStocks]);
+                $updated = GoodsModel::where([
+                    'g_id' => $goodsId,
+                    'stocks' => $sourceStocks,
+                    'locked_stocks' => $sourceLockedStocks,
+                ])->update([
+                    'stocks' => $nowStocks,
+                    'locked_stocks' => $nowLockedStocks,
+                ]);
                 if (!$updated) throw new \Exception('商品 ' . ($goods['g_name'] ?: $goodsId) . ' 库存更新失败');
 
                 $detailRows[] = [
@@ -97,6 +112,9 @@ class WarehouseTransClient extends ManagementClient
                     'source_stocks' => $sourceStocks,
                     'changed' => $changed,
                     'now_stocks' => $nowStocks,
+                    'source_locked_stocks' => $sourceLockedStocks,
+                    'locked_changed' => $lockedChanged,
+                    'now_locked_stocks' => $nowLockedStocks,
                     'remark' => $requestDetail['remark'] ?? null,
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -126,6 +144,23 @@ class WarehouseTransClient extends ManagementClient
             unset($detailRow);
             if (Db::name('warehouse_trans_details')->insertAll($detailRows) !== count($detailRows)) {
                 throw new \Exception('仓库变化明细写入失败');
+            }
+
+            if ($normalized['type'] === 4) {
+                foreach ($detailRows as $detailRow) {
+                    $this->insertStockLockLog([
+                        'ao_id' => $aoId,
+                        'goods_id' => intval($detailRow['goods_id']),
+                        'sku' => strval($detailRow['sku']),
+                        'record_no' => strval($normalized['record_no']),
+                        'order_id' => $preOrderId,
+                        'change_type' => 3,
+                        'change_quantity' => intval($detailRow['locked_changed']),
+                        'before_locked_stocks' => intval($detailRow['source_locked_stocks']),
+                        'after_locked_stocks' => intval($detailRow['now_locked_stocks']),
+                        'remark' => '预补货仓库出库释放锁定库存',
+                    ]);
+                }
             }
 
             if ($preOrderId > 0) {
@@ -256,7 +291,7 @@ class WarehouseTransClient extends ManagementClient
             return strval($row['sku'] ?? '');
         }, $rows))));
         $goodsRows = $skuList ? GoodsModel::whereIn('sku', $skuList)
-            ->field('g_id,g_name,sku,bar_code,pic,stocks,status')
+            ->field('g_id,g_name,sku,bar_code,pic,stocks,locked_stocks,status')
             ->select()
             ->toArray() : [];
         $goodsMap = [];
@@ -277,6 +312,8 @@ class WarehouseTransClient extends ManagementClient
                 'bar_code' => strval($goods['bar_code'] ?? ''),
                 'pic' => strval($goods['pic'] ?? ''),
                 'stocks' => intval($goods['stocks'] ?? 0),
+                'locked_stocks' => intval($goods['locked_stocks'] ?? 0),
+                'available_stocks' => max(0, intval($goods['stocks'] ?? 0) - intval($goods['locked_stocks'] ?? 0)),
                 'goods_status' => isset($goods['status']) ? intval($goods['status']) : 0,
                 'is_goods_linked' => $goodsId > 0 ? 1 : 0,
                 'plan_quantity' => $planQuantity,
@@ -597,5 +634,16 @@ class WarehouseTransClient extends ManagementClient
     protected function generateIdempotencyKey()
     {
         return 'WT' . date('YmdHis') . bin2hex(random_bytes(8));
+    }
+
+    protected function insertStockLockLog($data)
+    {
+        $data['business_event_key'] = 'WT:' . strval($data['record_no']) . ':' . intval($data['goods_id']) . ':' . bin2hex(random_bytes(8));
+        $data['manager_id'] = intval($this->manager['manager_id'] ?? 0);
+        $data['manager_name'] = strval($this->manager['nickname'] ?? ($this->manager['account'] ?? ''));
+        $data['created_at'] = date('Y-m-d H:i:s');
+        if (!Db::name('goods_stock_lock_log')->insert($data)) {
+            throw new \Exception('锁定库存流水写入失败');
+        }
     }
 }
