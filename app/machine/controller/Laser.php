@@ -54,7 +54,8 @@ class Laser extends BaseController
             if (!$signKey) {
                 $signKey = env('api.md5Key');
             }
-            if (!SignUtil::checkSign($this->signData, $signKey) && !env('CglPay.is_test')) {
+            $signValid = SignUtil::checkSign($this->signData, $signKey);
+            if (!$signValid && !env('CglPay.is_test')) {
                 returnState(100, Lang::get('VLaser.check_sign_fail'))->send();
                 die();
             }

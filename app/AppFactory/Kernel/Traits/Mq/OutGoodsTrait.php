@@ -368,7 +368,14 @@ trait OutGoodsTrait
      */
     protected function handleCoupon()
     {
-        $used = $this->getActivityCouponUsedFind(['order_id' => $this->order['order_id']],'c_id,code,code_type');
+        $couponId = intval($this->order['coupon_id'] ?? 0);
+        if ($couponId <= 0) {
+            return;
+        }
+        $used = $this->getActivityCouponUsedFind([
+            'order_id' => $this->order['order_id'],
+            'c_id' => $couponId,
+        ],'c_id,code,code_type');
         if ($used) {
             $flag = [];
             // 出货成功才算是使用优惠券成功

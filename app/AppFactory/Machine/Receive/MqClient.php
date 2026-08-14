@@ -82,6 +82,9 @@ class MqClient extends ReceiveBaseClient
             ],'验签失败',"DataUpload");
             throw new \InvalidArgumentException('MQ消息验签失败');
         }
+        if (isset($this->data['sign'])) {
+            $this->logMqAuthenticatedOnce();
+        }
         $this->message = json2arr($this->data['data'] ?? "");
         actionLog($this->message, '消息数据', "DataUpload");
         if (!$this->message) {

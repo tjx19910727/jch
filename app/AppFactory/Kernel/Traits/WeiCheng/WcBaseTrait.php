@@ -269,6 +269,7 @@ trait WcBaseTrait
 
         $resourceDomain = $wc_goods['resourceDomain'];
         $resourcesArray = json_decode($wc_goods['resourcesArray'], true) ?? [];
+        $wcGoodsDaysInfo = $this->getWcGoodsLocalDaysInfo($wc_goods);
         $pic = '';
         if($wc_goods['type']  == 1) {//抢购商品没有子商品信息，这里构造wc_goods_local数据
             $wc_goods_local = $this->getWcGoodsLocalFind(['no' => $wc_goods['no'], 'out_no' => $wc_goods['no']]);
@@ -289,7 +290,7 @@ trait WcBaseTrait
                 'channel_code' => 'Z10',
                 // 抢购/预约商品类型：daysInfo 由 mergeAppointmentGoodsDaysInfo 合并到顶层 wc_goods.daysInfo，
                 // 这里应取 $wc_goods['daysInfo']，而不是引用本分支中未定义的 $good
-                'daysInfo' => isset($wc_goods['daysInfo']) && !empty($wc_goods['daysInfo']) ? (is_string($wc_goods['daysInfo']) ? $wc_goods['daysInfo'] : json_encode($wc_goods['daysInfo'])) : '',
+                'daysInfo' => $wcGoodsDaysInfo,
                 'isNeedReserve' => $wc_goods['isNeedReserve'] ?? '0',
                 'gift_points' => $wc_goods['gift_points'] ?? 0,
             ];
@@ -323,7 +324,7 @@ trait WcBaseTrait
                     'channel_code' => 'Z10',
                     // 抢购/预约商品：daysInfo 由 mergeAppointmentGoodsDaysInfo 合并到顶层 wc_goods.daysInfo，
                     // 这里应取 $wc_goods['daysInfo']（避免引用本分支未定义的 $good）
-                    'daysInfo' => isset($wc_goods['daysInfo']) && !empty($wc_goods['daysInfo']) ? (is_string($wc_goods['daysInfo']) ? $wc_goods['daysInfo'] : json_encode($wc_goods['daysInfo'])) : '',
+                    'daysInfo' => $wcGoodsDaysInfo,
                 ];
                 if (!$wc_goods_local) {
                     $this->addWcGoodsLocal($setData);
@@ -359,7 +360,7 @@ trait WcBaseTrait
                 //单独处理一下daysInfo
                 $combindSetData['daysInfo'] = '';
                 if(($wc_goods['type'] == 3 ||$wc_goods['type'] == 11) && $combindSetData['g_id'] == 9999){
-                    $combindSetData['daysInfo'] = $wc_goods['daysInfo'];
+                    $combindSetData['daysInfo'] = $wcGoodsDaysInfo;
                     //对daysInfo处理一下，stock=surplus_stock
                     $daysInfo = json_decode($combindSetData['daysInfo'], true);
                     if (isset($daysInfo['stock'])) {
@@ -378,6 +379,36 @@ trait WcBaseTrait
             }
         }
         return true;
+    }
+
+    /**
+     * 兼容旧预约房快照：daysInfo 未提取到父字段时，从原始 get_data 回退读取。
+     */
+    protected function getWcGoodsLocalDaysInfo($wcGoods)
+    {
+        $daysInfo = isset($wcGoods['daysInfo']) ? $wcGoods['daysInfo'] : '';
+        if (is_array($daysInfo) && !empty($daysInfo)) return json_encode($daysInfo);
+        if (is_string($daysInfo) && $daysInfo !== '') {
+            $decodedDaysInfo = json_decode($daysInfo, true);
+            if (is_array($decodedDaysInfo) && !empty($decodedDaysInfo)) return $daysInfo;
+        }
+
+        $getData = isset($wcGoods['get_data']) ? json_decode($wcGoods['get_data'], true) : [];
+        $product = isset($getData['product']) && is_array($getData['product']) ? $getData['product'] : [];
+        if (isset($product['daysInfo']) && is_array($product['daysInfo']) && !empty($product['daysInfo'])) {
+            return json_encode($product['daysInfo']);
+        }
+
+        $appointmentGoods = isset($product['appointment']['goods']) && is_array($product['appointment']['goods'])
+            ? $product['appointment']['goods']
+            : [];
+        foreach ($appointmentGoods as $appointmentGood) {
+            if (!is_array($appointmentGood) || intval(isset($appointmentGood['type']) ? $appointmentGood['type'] : 0) !== 1) continue;
+            if (isset($appointmentGood['daysInfo']) && is_array($appointmentGood['daysInfo']) && !empty($appointmentGood['daysInfo'])) {
+                return json_encode($appointmentGood['daysInfo']);
+            }
+        }
+        return '';
     }
 
     public function getSmsCode($phone, $machine_id)
