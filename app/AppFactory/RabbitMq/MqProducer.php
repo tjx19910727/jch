@@ -10,7 +10,6 @@ namespace app\AppFactory\RabbitMq;
 
 
 use app\AppFactory\Kernel\Model\Machine\MachineMqRecordModel;
-use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Message\AMQPMessage;
 
 class MqProducer
@@ -32,24 +31,22 @@ class MqProducer
             if (!$param || !$amqpDetail) {
                 throw new \RuntimeException('RabbitMQ configuration is incomplete');
             }
+            // 队列名可按设备版本附加MAC，但设备端routing key始终只绑定machine_id。
+            $routingMachineId = isset($data['machine_id']) && $data['machine_id'] !== ''
+                ? $data['machine_id']
+                : $machine_id;
             if (strpos($amqpDetail['route_key'], ".")) {
                 $temp = explode(".", $amqpDetail['route_key']);
                 foreach ($temp as $key => $value) {
-                    $value = $value . "/" . $machine_id;
+                    $value = $value . "/" . $routingMachineId;
                     $temp[$key] = $value;
                 }
                 $amqpDetail['route_key'] = implode(".", $temp);
             } else {
-                $amqpDetail['route_key'] .= "/" . $machine_id;
+                $amqpDetail['route_key'] .= "/" . $routingMachineId;
             }
             $amqpDetail['queue_name'] = $amqpDetail['queue_name'] . "_" . $machine_id;
-            $connection = new AMQPStreamConnection(
-                $param['host'],
-                $param['port'],
-                $param['login'],
-                $param['password'],
-                $param['vhost']
-            );
+            $connection = MqConnectionFactory::create($param);
             if (!$connection->isConnected()) {
                 throw new \RuntimeException('Cannot connect to the RabbitMQ broker');
             }
@@ -204,6 +201,8 @@ class MqProducer
      */
     public static function dataUpload($data)
     {
+        $connection = null;
+        $channel = null;
         $param = config('rabbit_mq.' . env("RabbitMq.config_name"));
         $amqpDetail = config('rabbit_mq.dataUpload_queue');
 
@@ -219,13 +218,7 @@ class MqProducer
 //        }
 //        $amqpDetail['queue_name'] = $amqpDetail['queue_name'] . "_" . $machine_id;
 
-        $connection = new AMQPStreamConnection(
-            $param['host'],
-            $param['port'],
-            $param['login'],
-            $param['password'],
-            $param['vhost']
-        );
+        $connection = MqConnectionFactory::create($param);
         $channel = $connection->channel();
         /**
          * 创建队列(Queue)
@@ -284,8 +277,12 @@ class MqProducer
          */
         $channel->basic_publish($message, $amqpDetail['exchange_name'], $amqpDetail['route_key']);
 
-        $channel->close();
-        $connection->close();
+        try {
+            $channel->close();
+            $connection->close();
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+        }
         return "OK";
     }
 
@@ -298,17 +295,16 @@ class MqProducer
      */
     public static function export($data)
     {
+        $connection = null;
+        $channel = null;
         try {
             $param = config('rabbit_mq.' . env("RabbitMq.config_name"));
             $amqpDetail = config('rabbit_mq.export_queue');
+            if (!$param || !$amqpDetail) {
+                throw new \RuntimeException('RabbitMQ configuration is incomplete');
+            }
 
-            $connection = new AMQPStreamConnection(
-                $param['host'],
-                $param['port'],
-                $param['login'],
-                $param['password'],
-                $param['vhost']
-            );
+            $connection = MqConnectionFactory::create($param);
             $channel = $connection->channel();
             /**
              * 创建队列(Queue)
@@ -358,6 +354,8 @@ class MqProducer
              * AMQPMessage::DELIVERY_MODE_NON_PERSISTENT = 1; 不持久化AMOPMessage: :DELIVERY_MODE_PERSISTENT = 2: 持久化
              */
             $message = new AMQPMessage($messageBody, array('content_type' => 'text/plain', 'delivery_mode' => AMQPMessage::DELIVERY_MODE_PERSISTENT));
+            // 启用发布确认，避免大消息发布中途失败被静默丢弃
+            $channel->confirm_select();
             /**
              * 发送消息
              * mSg// AMQP消息内容
@@ -366,13 +364,27 @@ class MqProducer
              *
              */
             $channel->basic_publish($message, $amqpDetail['exchange_name'], $amqpDetail['route_key']);
+            $channel->wait_for_pending_acks(5);
 
-            $channel->close();
-            $connection->close();
             return "OK";
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             actionException($e,1);
             return $e->getMessage();
+        } finally {
+            if ($channel) {
+                try {
+                    $channel->close();
+                } catch (\Throwable $e) {
+                    actionException($e, 1);
+                }
+            }
+            if ($connection) {
+                try {
+                    $connection->close();
+                } catch (\Throwable $e) {
+                    actionException($e, 1);
+                }
+            }
         }
     }
 }

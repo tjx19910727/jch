@@ -298,6 +298,9 @@ class ActivityClient extends ReceiveBaseClient
 
     protected function applyRevenueCouponDiscountToDetails(array $details, $discountAmount)
     {
+        $details = array_values(array_filter($details, function ($detail) {
+            return intval($detail['sod_id'] ?? 0) > 0;
+        }));
         if (!$details) {
             return $this->rFail("优惠券适用订单明细为空");
         }
@@ -312,10 +315,7 @@ class ActivityClient extends ReceiveBaseClient
         $remainDiscount = bcadd(strval($discountAmount), '0', 2);
         $count = count($details);
         foreach ($details as $index => $detail) {
-            $sodId = intval($detail['sod_id'] ?? 0);
-            if ($sodId <= 0) {
-                continue;
-            }
+            $sodId = intval($detail['sod_id']);
             $detailAmount = bcadd(strval($detail['total_sod_price'] ?? 0), '0', 2);
             $scopeAmount = bcadd(strval($detail['_scope_amount'] ?? $detailAmount), '0', 2);
             if ($index === $count - 1) {

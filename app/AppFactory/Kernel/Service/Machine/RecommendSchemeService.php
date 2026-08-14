@@ -66,6 +66,7 @@ class RecommendSchemeService
                     'g_id' => $gId,
                     'g_name' => $goods['g_name'] ?? '未知',
                     'sku' => $goods['sku'] ?? '',
+                    'pic' => $goods['pic'] ?? '',
                     'reason' => '长宽高未配置或为0（length=' . $goodsL . ', width=' . $goodsW . ', height=' . $goodsH . '）',
                 ];
                 continue;
@@ -77,6 +78,7 @@ class RecommendSchemeService
                     'g_id' => $gId,
                     'g_name' => $goods['g_name'] ?? '未知',
                     'sku' => $goods['sku'] ?? '',
+                    'pic' => $goods['pic'] ?? '',
                     'reason' => '商品长度超过模板货道可用深度（length='
                         . $goodsL . ', channel_depth=' . $channelDepth . '）',
                 ];
@@ -155,6 +157,7 @@ class RecommendSchemeService
                 'g_id' => $gId,
                 'g_name' => $goods['g_name'] ?? '',
                 'sku' => $goods['sku'] ?? '',
+                'pic' => $goods['pic'] ?? '',
                 'cost_price' => floatval($goods['cost_price'] ?? 0),
                 'retail_price' => floatval($goods['retail_price'] ?? 0),
                 'length' => floatval($goods['length'] ?? 0),
@@ -208,6 +211,7 @@ class RecommendSchemeService
                         'g_id' => $item['g_id'],
                         'g_name' => $item['g_name'],
                         'sku' => $item['sku'],
+                        'pic' => $item['pic'],
                         'cost_price' => $item['cost_price'],
                         'retail_price' => $item['retail_price'],
                         'length' => $item['length'],
@@ -245,7 +249,7 @@ class RecommendSchemeService
         if (!$gIds) return [];
 
         $goods = GoodsModel::whereIn('g_id', $gIds)
-            ->field('g_id,g_name,sku,cost_price,retail_price,length,width,height')
+            ->field('g_id,g_name,sku,pic,cost_price,retail_price,length,width,height')
             ->select()
             ->toArray();
 
@@ -256,6 +260,7 @@ class RecommendSchemeService
                 'g_id' => $gId,
                 'g_name' => $g['g_name'] ?? '',
                 'sku' => $g['sku'] ?? '',
+                'pic' => $g['pic'] ?? '',
                 'cost_price' => floatval($g['cost_price'] ?? 0),
                 'retail_price' => floatval($g['retail_price'] ?? 0),
                 'length' => floatval($g['length'] ?? 0),

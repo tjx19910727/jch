@@ -17,12 +17,13 @@ class SignUtil
      * @param $key
      * @return string
      */
-    public static function makeSign($data,$key)
+    public static function makeSign($data,$key,$jsonOptions = 0)
     {
         ksort($data);
         $signArr = [];
         foreach ($data as $k => $value) {
-            if (is_array($value)) $value = json_encode($value);
+            if (is_object($value) && method_exists($value, 'toArray')) $value = $value->toArray();
+            if (is_array($value) || is_object($value)) $value = json_encode($value, $jsonOptions);
             $signArr[] = $k . "=" . $value;
         }
         $signArr[] = "key=" . $key;
@@ -37,13 +38,22 @@ class SignUtil
      * @param $key
      * @return bool
      */
-    public static function checkSign($data,$key)
+    public static function checkSign($data,$key,$jsonOptions = 0)
     {
         actionLog($data,$key);
+        if (!is_array($data) || !isset($data['sign'])) return false;
         $sign = $data['sign'];
         unset($data['sign']);
-        $makeSign = self::makeSign($data,$key);
+        $makeSign = self::makeSign($data,$key,$jsonOptions);
         if ($makeSign == $sign) return true;
+        if ($jsonOptions === 0) {
+            $compatibleSign = self::makeSign(
+                $data,
+                $key,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+            );
+            if ($compatibleSign == $sign) return true;
+        }
         return false;
     }
 }

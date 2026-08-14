@@ -28,6 +28,7 @@ class DataUpload extends Command
         while (true) {
             $startedAt = time();
             try {
+                $output->writeln('RabbitMQ消费者启动：queue=dataUpload_queue');
                 $consumer = new MqConsumer();
                 $consumer->dataUpload();
                 throw new \RuntimeException('RabbitMQ消费者监听已意外结束');
@@ -37,7 +38,8 @@ class DataUpload extends Command
                 } catch (\Throwable $logException) {
                     error_log('MQ reconnect log failed: ' . $logException->getMessage());
                 }
-                $output->writeln('RabbitMQ消费者异常，' . $retryDelay . '秒后重连：' . $e->getMessage());
+                $output->writeln('RabbitMQ消费者异常退出：queue=dataUpload_queue，运行时长=' . (time() - $startedAt)
+                    . '秒，' . $retryDelay . '秒后重连：' . $e->getMessage());
             }
 
             // 稳定运行超过一分钟后从最短退避重新开始。
