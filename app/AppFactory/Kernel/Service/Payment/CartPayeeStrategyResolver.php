@@ -176,7 +176,13 @@ class CartPayeeStrategyResolver
             if ($orgRows) return $orgRows;
             if (!$fallbackToMachineOrg) return [];
         }
-        if ($machineAoId > 0) $query->where('sm.ao_id', $machineAoId);
+        if ($machineAoId > 0) {
+            $machineOrgRows = (clone $query)->where('sm.ao_id', $machineAoId)
+                ->field('sp.sp_id,sp.sp_name,sp.title,sp.payee_type,sp.ico,sp.ao_id,sm.sort')->order('sm.sort asc')->select()->toArray();
+            if ($machineOrgRows) return $machineOrgRows;
+        }
+        // 兼容历史数据：多数设备的 strategy_machine.ao_id 仍为总部(1)，与设备/商品所属组织不一致。
+        // 按组织过滤无结果时，回退到仅按设备(m_id)查询，与原有 getStrategyPayeeContentByMachineId 行为保持一致。
         return $query->field('sp.sp_id,sp.sp_name,sp.title,sp.payee_type,sp.ico,sp.ao_id,sm.sort')
             ->order('sm.sort asc')->select()->toArray();
     }
@@ -185,6 +191,7 @@ class CartPayeeStrategyResolver
     {
         $configured = Db::name('machine_goods_payee_strategy')->where(['mg_id' => $mgId, 'status' => 1])->count() > 0;
         $query = Db::name('machine_goods_payee_strategy')->alias('mgps')
+
             ->join('strategy_payee sp', 'sp.sp_id=mgps.sp_id')
             ->where(['mgps.mg_id' => $mgId, 'mgps.status' => 1, 'sp.status' => 1]);
         if ($payType > 0) $query->where('sp.payee_type', 'in', self::compatiblePayTypes($payType));
