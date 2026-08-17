@@ -16,7 +16,8 @@ class Goods extends Common
 {
     protected $field = "g_id,g_name,gc_id,gc_name,g_type,`model`,bar_code,`sku`,`sku2`,
     banner,pic,cost_price,market_price,retail_price,intergral_rate,manufacturer,service_phone,performance,sell_channel,exter_url,expire_notice,sell_by_date,
-    is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,status,ao_id,creator,create_time,update_time";
+    is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,stocks,locked_stocks,
+    (stocks-locked_stocks) available_stocks,status,ao_id,creator,create_time,update_time";
     protected $validatePath = 'app\management\validate\VGoods.';
 
     /**
@@ -122,6 +123,7 @@ class Goods extends Common
     public function add()
     {
         $postData = input();
+        unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
         try { $this->validate($postData,$this->validatePath . 'add');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->goods->addG($postData);
         return $result;
@@ -134,6 +136,9 @@ class Goods extends Common
     public function update()
     {
         $postData = input();
+        if (array_key_exists('stocks', $postData) || array_key_exists('locked_stocks', $postData) || array_key_exists('available_stocks', $postData)) {
+            return returnState(100, '商品库存不允许通过商品编辑接口修改');
+        }
         try { $this->validate($postData,$this->validatePath . 'update');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->goods->updateForEdit($postData);
         //$result = $this->app->goods->update($postData);

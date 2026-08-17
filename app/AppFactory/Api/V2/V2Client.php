@@ -36,6 +36,7 @@ use app\AppFactory\Kernel\Traits\Card\CardTrait;
 use think\db\exception\DataNotFoundException;
 use think\db\exception\DbException;
 use think\db\exception\ModelNotFoundException;
+use think\facade\Db;
 
 class V2Client extends V2BaseClient
 {
@@ -554,6 +555,14 @@ class V2Client extends V2BaseClient
 
         $updateOrder = [];
         $this->startTrans();
+        $lockedPickCode = Db::name('activity_pick_code')
+            ->where(['apc_id' => $pickCode['apc_id'], 'pick_type' => 3])
+            ->lock(true)
+            ->find();
+        if (!$lockedPickCode || (int)$lockedPickCode['status'] !== 1) {
+            $this->rollbackTrans();
+            return $this->returnData(19, $this->lang("msg.19") . ": " . $this->lang("use_pick_code.status2"));
+        }
         if ($this->order['total_price'] > 0) {
             $flag[] = $this->countIncome();
         }
@@ -603,10 +612,18 @@ class V2Client extends V2BaseClient
                 $whereMc['status'] = 1;
                 foreach ($details as $key => $value) {
                     // 原货道冻结库存释放到正常库存
-                    $flag[] = $this->setMachineChannelInc(['mc_id' => $value['mc_id']], 'stock', $value['quantity']);
-                    actionLog($this->getLS(), '【SQL】增加旧货道库存值');
-                    $flag[] = $this->setMachineChannelDec(['mc_id' => $value['mc_id']], 'frozen_stock', $value['quantity']);
-                    actionLog($this->getLS(), '【SQL】减少旧货道冻结库存');
+                    $oldChannelUpdated = Db::name('machine_channel')
+                        ->where('mc_id', $value['mc_id'])
+                        ->where('frozen_stock', '>=', $value['quantity'])
+                        ->update([
+                            'stock' => Db::raw('stock + ' . (int)$value['quantity']),
+                            'frozen_stock' => Db::raw('frozen_stock - ' . (int)$value['quantity']),
+                        ]);
+                    if (!$oldChannelUpdated) {
+                        $this->rollbackTrans();
+                        return $this->returnData(39, $this->lang("msg.39") . " : " . $value['g_name']);
+                    }
+                    $flag[] = $oldChannelUpdated;
 
                     // 查询新货道信息
                     $whereMc['g_id'] = $value['g_id'];
@@ -625,7 +642,15 @@ class V2Client extends V2BaseClient
                         return $this->returnData(39, $this->lang("msg.39") . " : " . $value['g_name']);
                     }
                     // 减新货道库存
-                    $flag[] = $this->setMachineChannelDec(['mc_id' => $mc['mc_id']], 'stock', $value['quantity']);
+                    $newChannelUpdated = Db::name('machine_channel')
+                        ->where('mc_id', $mc['mc_id'])
+                        ->where('stock', '>=', $value['quantity'])
+                        ->dec('stock', $value['quantity'])->update();
+                    if (!$newChannelUpdated) {
+                        $this->rollbackTrans();
+                        return $this->returnData(39, $this->lang("msg.39") . " : " . $value['g_name']);
+                    }
+                    $flag[] = $newChannelUpdated;
                     actionLog($this->getLS(), '【SQL】减新货道冻结库存');
 
                     // 修改订单详情数据
@@ -641,7 +666,15 @@ class V2Client extends V2BaseClient
             else {
                 // 减货道冻结库存，修改订单详情数据
                 foreach ($details as $key => $value) {
-                    $flag[] = $this->setMachineChannelDec(['mc_id' => $value['mc_id']],'frozen_stock',$value['quantity']);
+                    $frozenUpdated = Db::name('machine_channel')
+                        ->where('mc_id', $value['mc_id'])
+                        ->where('frozen_stock', '>=', $value['quantity'])
+                        ->dec('frozen_stock', $value['quantity'])->update();
+                    if (!$frozenUpdated) {
+                        $this->rollbackTrans();
+                        return $this->returnData(39, $this->lang("msg.39") . " : " . $value['g_name']);
+                    }
+                    $flag[] = $frozenUpdated;
                     actionLog($this->getLS(),'【SQL】减货道冻结库存');
                     $updateSod['success_quantity'] = $value['quantity'];
                     $updateSod['sod_id'] = $value['sod_id'];

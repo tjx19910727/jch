@@ -796,7 +796,7 @@ trait SaleOrdersTrait
                 'mc_id,channel_code,frozen_stock,stock,shelf_way,channel_position,manufacture_time,sell_by_date,
                         mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
                         cost_price,market_price',
-                "stock desc"
+                "stock desc,mc_id asc"
             );
             actionLog($this->getLS(), '【SQL】查询设备货架');
             if (!$mc) return $this->returnData(10, $this->lang("msg." . 10));
@@ -817,6 +817,14 @@ trait SaleOrdersTrait
             $insertSod['discount_price'] = 0;
             $insertSod['retail_price'] = bcdiv($dv['item_price'], 100, 3);
             foreach ($mc as $mck => $mcv) {
+                $lockedMc = Db::name('machine_channel')
+                    ->where(['mc_id' => $mcv['mc_id'], 'status' => 1])
+                    ->field('mc_id,stock,frozen_stock')
+                    ->lock(true)
+                    ->find();
+                if (!$lockedMc || (int)$lockedMc['stock'] <= 0) continue;
+                $mcv['stock'] = (int)$lockedMc['stock'];
+                $mcv['frozen_stock'] = (int)$lockedMc['frozen_stock'];
                 $insertDetails = array_merge($mcv, $insertSod);
                 unset($insertDetails['frozen_stock'], $insertDetails['stock']);
                 $totalQuantity = 0;
@@ -838,22 +846,26 @@ trait SaleOrdersTrait
                         $insertDetails['is_gift'] = 1;
                     }
                     $dv['quantity'] = bcsub($dv['quantity'], $insertDetails['quantity']);
-                    $updateMc = [
-                        'frozen_stock' => bcadd($mcv['frozen_stock'], $insertDetails['quantity']),
-                        'stock' => bcsub($mcv['stock'], $insertDetails['quantity']),
-                        "mc_id" => $mcv['mc_id'],
-                    ];
                     $flag[] = $this->addSaleOrdersDetails($insertDetails);
                     actionLog($this->getLS(), '生成订单详情');
-                    $flag[] = $this->updateMachineChannel($updateMc);
                     $this->order['cost_price'] = bcadd($this->order['cost_price'], $insertDetails['cost_price'], 3);
                     $this->order['market_price'] = bcadd($this->order['market_price'], $insertDetails['market_price'], 3);
                     $this->order['retail_price'] = bcadd($this->order['retail_price'], $insertDetails['retail_price'], 3);
                 }
+                $flag[] = Db::name('machine_channel')
+                    ->where('mc_id', $mcv['mc_id'])
+                    ->where('stock', '>=', $totalQuantity)
+                    ->update([
+                        'stock' => Db::raw('stock - ' . (int)$totalQuantity),
+                        'frozen_stock' => Db::raw('frozen_stock + ' . (int)$totalQuantity),
+                    ]);
                 //                $this->order['total_quantity'] = bcadd($this->order['total_quantity'], $insertDetails['quantity'], 3);
                 $insertDetails = [];
                 if ($dv['quantity'] == 0)
                     break;
+            }
+            if ((int)$dv['quantity'] > 0) {
+                return $this->returnData(14, $this->lang("msg." . 14) . "：" . $this->lang("reserve_order.under_stock"));
             }
             //            $this->order['total_price'] = bcadd($this->order['total_price'], bcdiv($dv['charge_amount'], 100, 3), 3);
             //            $this->order['discount_price'] = bcadd($this->order['discount_price'], bcdiv($dv['discount_amount'], 100, 3), 3);
