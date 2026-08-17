@@ -473,4 +473,5 @@ class MqConsumer
         }
         return false;
     }
+
 }
