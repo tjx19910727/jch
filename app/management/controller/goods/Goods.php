@@ -136,9 +136,10 @@ class Goods extends Common
     public function update()
     {
         $postData = input();
-        if (array_key_exists('stocks', $postData) || array_key_exists('locked_stocks', $postData) || array_key_exists('available_stocks', $postData)) {
-            return returnState(100, '商品库存不允许通过商品编辑接口修改');
-        }
+        //'商品库存不允许通过商品编辑接口修改'
+        if (array_key_exists('stocks', $postData)) unset($postData['stocks']);
+        if (array_key_exists('locked_stocks', $postData)) unset($postData['locked_stocks']);
+        
         try { $this->validate($postData,$this->validatePath . 'update');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->goods->updateForEdit($postData);
         //$result = $this->app->goods->update($postData);
