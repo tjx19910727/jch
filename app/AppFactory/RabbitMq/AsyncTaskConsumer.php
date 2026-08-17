@@ -209,6 +209,7 @@ class AsyncTaskConsumer
     public function process_message(AMQPMessage $message)
     {
         $data = [];
+        $acknowledged = false;
         try {
             $data = json2arr($message->body);
             $taskId = $data['task_id'] ?? '';
@@ -226,9 +227,16 @@ class AsyncTaskConsumer
                 ], '异步任务已完成，跳过重复执行', 'async_task_message');
             } else {
                 $handler = AsyncTaskHandlerFactory::make($taskType);
+
+                // 微程商品同步允许人工重新触发，先ACK避免耗时处理期间连接断开导致整批任务重复执行。
+                if ($taskType === 'wc_goods_sync') {
+                    $message->ack();
+                    $acknowledged = true;
+                }
+
                 $result = $handler->handle($data['payload'] ?? [], $data);
 
-                // 先记录完成状态再ACK，覆盖业务成功但连接已被Broker断开的场景。
+                // 保留完成缓存，用于过滤相同task_id被重复发布的情况。
                 $completionCachePersisted = $this->markTaskCompleted($taskType, $taskId);
 
                 actionLog([
@@ -242,8 +250,10 @@ class AsyncTaskConsumer
             $this->logProcessException($e);
         }
 
-        // ACK异常向外抛出触发消费者重连，避免在catch中重复ACK。
-        $message->ack();
+        // 未提前ACK的任务在处理结束后统一ACK，异常向外抛出触发消费者重连。
+        if (!$acknowledged) {
+            $message->ack();
+        }
     }
 
     /**
