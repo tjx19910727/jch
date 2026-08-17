@@ -139,7 +139,7 @@ class Goods extends Common
         //'商品库存不允许通过商品编辑接口修改'
         if (array_key_exists('stocks', $postData)) unset($postData['stocks']);
         if (array_key_exists('locked_stocks', $postData)) unset($postData['locked_stocks']);
-        
+        if (array_key_exists('available_stocks', $postData)) unset($postData['available_stocks']);
         try { $this->validate($postData,$this->validatePath . 'update');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->goods->updateForEdit($postData);
         //$result = $this->app->goods->update($postData);
