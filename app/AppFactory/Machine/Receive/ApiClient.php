@@ -2615,45 +2615,6 @@ class ApiClient extends ReceiveBaseClient
         $order = $this->getSaleOrdersFind(['trade_no' => $this->data['trade_no']]);
         if (!$order) return $this->r(300, $this->lang("VSaleOrders.order_not_data"));
         $this->order = is_object($order) ? (method_exists($order,'toArray') ? $order->toArray() : (array)$order) : $order;
-        
-        // ★ 幂等保护：订单已出货成功（out_status=4）或设备已通过HTTP上报出货（http_out_status=3）
-        // 或子订单已有成功出货数量时，不再下发outGoods指令，避免MQ恢复后重复出货。
-        $outStatus = intval($this->order['out_status'] ?? 0);
-        $httpOutStatus = intval($this->order['http_out_status'] ?? 0);
-        if ($outStatus === 4 || $httpOutStatus === 3) {
-            actionLog([
-                'trade_no' => $this->order['trade_no'] ?? '',
-                'out_status' => $outStatus,
-                'http_out_status' => $httpOutStatus,
-            ], 'requireOutGoods命中幂等保护，拒绝重复出货', 'requireOutGoods');
-            return $this->r(200, 'success', [
-                'msgType' => 'outGoods',
-                'trade_no' => $this->order['trade_no'],
-                'can_out_goods' => false,
-                'reason' => 'order already out',
-            ]);
-        }
-        // 子订单已有成功/失败出货数量，说明已出货过，拒绝重复
-        $doneDetail = $this->getSaleOrdersDetailsFind(
-            [
-                'order_id' => $this->order['order_id'],
-                ['success_quantity', '>', 0],
-            ],
-            'sod_id'
-        );
-        if ($doneDetail) {
-            actionLog([
-                'trade_no' => $this->order['trade_no'] ?? '',
-                'sod_id' => $doneDetail['sod_id'] ?? 0,
-            ], 'requireOutGoods命中子订单成功出货幂等保护', 'requireOutGoods');
-            return $this->r(200, 'success', [
-                'msgType' => 'outGoods',
-                'trade_no' => $this->order['trade_no'],
-                'can_out_goods' => false,
-                'reason' => 'order detail already out',
-            ]);
-        }
-
         $details = $this->order['details'] ?? $this->getSaleOrdersDetailsList(['order_id' => $this->order['order_id']])->toArray();
         if (!$details || !is_array($details)) {
             return $this->r(100, 'failed', []);
@@ -3133,28 +3094,6 @@ class ApiClient extends ReceiveBaseClient
         }
 
         $order = is_object($order) ? (method_exists($order, 'toArray') ? $order->toArray() : (array)$order) : $order;
-
-        // ★ 优化：当订单已支付成功、已下发outGoods指令（out_status=2）但超过60秒设备未回执时，
-        // 说明MQ通道可能异常（设备未消费到outGoods指令）。
-        // 返回 require_out_goods=1 标记，引导设备改用HTTP /requireOutGoods 主动拉取出货指令，
-        // 避免MQ故障时出货指令永久丢失导致订单卡死。
-        $requireOutGoods = 0;
-        $payTime = intval($order['pay_time'] ?? 0);
-        if (intval($order['pay_status'] ?? 0) === 3
-            && in_array(intval($order['out_status'] ?? 0), [2, 3], true)
-            && intval($order['http_out_status'] ?? 1) === 1
-            && $payTime > 0
-            && (time() - $payTime) > 60) {
-            $requireOutGoods = 1;
-            actionLog([
-                'trade_no' => $order['trade_no'] ?? '',
-                'order_id' => $order['order_id'] ?? 0,
-                'out_status' => $order['out_status'] ?? 0,
-                'pay_time' => $payTime,
-                'elapsed' => time() - $payTime,
-            ], '订单出货超时未回执，引导设备走HTTP requireOutGoods 兜底', 'getOrderPayStatus');
-        }
-        $order['require_out_goods'] = $requireOutGoods;
         $order['now_time'] = time();
         return $this->r(200, 'success', $order);
     }
@@ -5033,22 +4972,23 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail('参数错误');
         }
 
-        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no,creator_id');
-        if (!$order) {
-            return $this->r(100, '单据不存在');
-        }
-
-        $anyDetail = PreReplenishmentDetailModel::where([
-            ['order_id', '=', $order['id']],
-            ['machine_id', '=', $machineId],
-            ['order_count', '>=', 1],
-        ])->find();
-        if ($anyDetail) {
-            return $this->r(100, '您已经预补货了，如需重新补货联系客服处理');
-        }
-
         $this->startTrans();
         try {
+            $order = PreReplenishmentOrderModel::where(['record_no' => $recordNo])
+                ->field('id,record_no,creator_id')->lock(true)->find();
+            if (!$order) {
+                $this->rollbackTrans();
+                return $this->r(100, '单据不存在');
+            }
+            $anyDetail = PreReplenishmentDetailModel::where([
+                ['order_id', '=', $order['id']],
+                ['machine_id', '=', $machineId],
+                ['order_count', '>=', 1],
+            ])->find();
+            if ($anyDetail) {
+                $this->rollbackTrans();
+                return $this->r(100, '您已经预补货了，如需重新补货联系客服处理');
+            }
             foreach ($channel as $item) {
                 $mcId     = (int)($item['mc_id'] ?? 0);
                 $quantity = (int)($item['quantity'] ?? 0);
