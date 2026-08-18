@@ -131,7 +131,7 @@ trait MachinePreReplenishmentTrait
         $channels = [];
         if ($mIds) {
             $channels = MachineChannelModel::where([['m_id', 'in', $mIds]])
-                ->field('m_id,mc_id,channel_code,sku,g_name,pic,bar_code,g_id,stock,frozen_stock,out_fail_stock,capacity,is_multi_goods')
+                ->field('m_id,mc_id,channel_code,channel_position,sku,g_name,pic,bar_code,g_id,stock,frozen_stock,out_fail_stock,capacity,is_multi_goods')
                 ->select()
                 ->toArray();
         }
@@ -174,6 +174,12 @@ trait MachinePreReplenishmentTrait
             }
 
             $channel = $channelMap[$channelKey];
+            if ((int)($channel['channel_position'] ?? 0) !== 1) {
+                return [
+                    'state' => 0,
+                    'msg' => '预补货仅支持主柜货道:' . $machineId . '-' . $channel['channel_code'],
+                ];
+            }
             $isMultiGoods = !empty($machineMultiGoodsMap[(int)$machine['m_id']])
                 && (int)($channel['is_multi_goods'] ?? 2) === 1;
 
