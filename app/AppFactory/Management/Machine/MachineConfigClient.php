@@ -35,6 +35,9 @@ class MachineConfigClient extends ManagementClient
 
     public function updateMcV2($postData)
     {
+        if (intval($postData['is_only_octopus'] ?? 0) === 1 && (string)($postData['pay_type'] ?? '') !== '8') {
+            return $this->r(100, '开启仅支持八达通后，支付类型只能选择CoGoLink(八达通POS机)支付');
+        }
         $oldMc = $this->getMachineConfigFind(['mc_id' => $postData['mc_id']], 'mc_id,m_id,machine_id,remote_calibration');
         $oldMc = $oldMc ? $oldMc->toArray() : [];
         $oldRemoteCalibration = isset($oldMc['remote_calibration']) ? intval($oldMc['remote_calibration']) : null;
