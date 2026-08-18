@@ -710,8 +710,11 @@ trait MachineTrait
         ], $logData);
         $logId = $this->addRALog($logData);
 
+        $isWithoutOrder = intval($payload['sod_id']) <= 0;
+        $videoKey = $isWithoutOrder ? ('remote_out_goods_log_' . $logId) : '';
+
         $content = [
-            'trade_no' => $payload['trade_no'] ?: ('remote_out_goods_' . $logId),
+            'trade_no' => $payload['trade_no'] ?: ($videoKey ?: ('remote_out_goods_' . $logId)),
             'sod_id' => $payload['sod_id'],
             'main' => $payload['main'],
             'outGoods' => $payload['outGoods'],
@@ -720,6 +723,11 @@ trait MachineTrait
             'log_id' => $logId,
             'manager_id' => $this->manager['manager_id'] ?? 0,
         ];
+        if ($videoKey !== '') {
+            // 无订单远程出货视频按动作日志唯一归属，旧设备会忽略新字段。
+            $content['video_scene'] = 'remote_action_log';
+            $content['video_key'] = $videoKey;
+        }
         $result = $this->sendToMachine(['machine_id' => $machineId], 'remoteOutGoods', $content);
         if (!is_object($result)) {
             $this->updateRALog(
