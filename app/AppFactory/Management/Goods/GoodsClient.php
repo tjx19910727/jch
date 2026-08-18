@@ -764,7 +764,7 @@ class GoodsClient extends ManagementClient
         $query = Db::name('machine_channel')->alias('mc')
             ->join('machine m', 'm.m_id = mc.m_id')
             ->leftJoin('goods g', 'g.g_id = mc.g_id')
-            ->where('m.is_operating', 1)
+            ->where('m.is_operating', '>', 0)
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', '>', 0)
