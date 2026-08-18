@@ -170,6 +170,8 @@ class MqConsumer
 
     /**
      * MQ记录失败不能打断消息确认流程。
+     * 更新影响0行时尝试补录幂等记录，确保 status=2 可被后续重投命中，
+     * 避免业务已执行但记录缺失导致消息重投后重复执行。
      *
      * @param array $data
      * @param int $status
@@ -183,6 +185,28 @@ class MqConsumer
                 ['msg_id' => $data['msg_id'], 'machine_id' => $data['machine_id']]
             );
             $this->actionLogSafely($result, '修改MQ记录状态结果', 'DataUpload');
+
+            // 更新影响0行说明记录未落库，补录带status的幂等记录防止重投重复执行
+            if ($result === false || intval($result) === 0) {
+                $existed = $this->getMachineMqRecordFind([
+                    'msg_id' => $data['msg_id'],
+                    'machine_id' => $data['machine_id'],
+                ], 'mr_id');
+                if (!$existed) {
+                    $this->addMachineMqRecord([
+                        'm_id' => intval($data['m_id'] ?? 0),
+                        'machine_id' => $data['machine_id'],
+                        'machine_name' => strval($data['machine_name'] ?? ''),
+                        'msg_id' => $data['msg_id'],
+                        'path' => strval($data['path'] ?? 'dataUpload'),
+                        'content' => json_encode($data),
+                        'from' => 2,
+                        'type' => 1,
+                        'status' => $status,
+                    ]);
+                    $this->actionLogSafely(['msg_id' => $data['msg_id']], 'MQ状态记录缺失已补录', 'DataUpload');
+                }
+            }
         } catch (\Throwable $e) {
             error_log('MQ record status update failed: ' . $e->getMessage());
         }
@@ -331,7 +355,7 @@ class MqConsumer
     }
 
     /**
-     * 消息处理
+     * 消息处理（幂等+最大重投限制）
      * @param $message
      */
     public function export_message(AMQPMessage $message)
@@ -340,13 +364,38 @@ class MqConsumer
         try {
             $data = $message->body;
             $data = json2arr($data);
+            if (!is_array($data)) {
+                $message->ack();
+                return;
+            }
+            $exportId = intval($data['export_id'] ?? 0);
             $jobType = $data['job_type'] ?? 'export';
             actionLog([
                 'job_type' => $jobType,
-                'export_id' => $data['export_id'] ?? 0,
+                'export_id' => $exportId,
                 'filename' => $data['filename'] ?? '',
                 'row_count' => isset($data['list']) && is_array($data['list']) ? count($data['list']) : 0,
             ], '消息处理摘要', "export_message");
+
+            // 幂等：已完成（status=2）的导出直接 ack 跳过，避免重复重投重复执行
+            // 查询失败时按未完成处理，避免 DB 抖动误跳过真正未处理的任务
+            if ($exportId) {
+                try {
+                    $exportLogStatus = Db::name('export_log')->where('export_id', $exportId)->value('status');
+                    if (intval($exportLogStatus) === 2) {
+                        $message->ack();
+                        return;
+                    }
+                } catch (\Throwable $e) {
+                    actionLog($e->getMessage(), '幂等查询export_log失败，继续处理', "export_message");
+                }
+            }
+
+            // 最大重投次数限制：超过阈值则收走消息并标记失败，避免无限重投循环
+            if ($this->exportRedeliverExceeded($message, $exportId)) {
+                $message->ack();
+                return;
+            }
 
             if ($jobType == 'sale_orders_export') {
                 $app = AppFactory::timeTask();
@@ -358,6 +407,11 @@ class MqConsumer
                 if (!$app->export->makeMultiSheetExcel($data)) {
                     throw new \RuntimeException('多Sheet导出Excel生成失败');
                 }
+            } elseif ($jobType == 'goods_so_export') {
+                $app = AppFactory::timeTask();
+                if (!$app->export->makeGoodsSoExcel($data)) {
+                    throw new \RuntimeException('商品交易列表导出Excel生成失败');
+                }
             } else {
                 $app = AppFactory::timeTask();
                 if (!$app->export->makeExcel($data)) {
@@ -368,11 +422,56 @@ class MqConsumer
         } catch (\Throwable $e) {
             actionLog($e->getFile() . "_" . $e->getLine() . "_" . $e->getMessage(),'tryCatchMessage',"export_message");
             actionLog($e->getTrace(), 'tryCatchTrace',"export_message");
-            $exportId = is_array($data) ? intval($data['export_id'] ?? 0) : 0;
+            // 失败消息 requeue 重投，由 exportRedeliverExceeded 在超限后收走并标记失败，
+            // 避免瞬时故障（DB抖动/文件系统忙）导致导出静默失败。
+            $message->nack(false, true);
+        }
+    }
+
+    /**
+     * 判断导出消息重投次数是否超过上限（默认3次），超限后收走消息避免无限重投。
+     *
+     * @param AMQPMessage $message
+     * @param int $exportId
+     * @return bool
+     */
+    protected function exportRedeliverExceeded(AMQPMessage $message, $exportId)
+    {
+        $maxRedeliver = max(1, intval(config('rabbit_mq.export_max_redeliver') ?: 3));
+        $redeliverCount = 0;
+        // x-death 位于 application_headers（AMQPTable）内，不在消息顶层 properties
+        if ($message->has('application_headers')) {
+            try {
+                $headers = $message->get('application_headers');
+                $native = is_object($headers) && method_exists($headers, 'getNativeData')
+                    ? $headers->getNativeData()
+                    : (array)$headers;
+                if (isset($native['x-death']) && is_array($native['x-death'])) {
+                    foreach ($native['x-death'] as $death) {
+                        if (is_array($death) && isset($death['count'])) {
+                            $redeliverCount += intval($death['count']);
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                actionLog($e->getMessage(), '读取x-death头失败', "export_message");
+            }
+        }
+        if ($redeliverCount === 0 && $message->isRedelivered()) {
+            $redeliverCount = 1;
+        }
+        if ($redeliverCount >= $maxRedeliver) {
+            actionLog([
+                'export_id' => $exportId,
+                'redeliver_count' => $redeliverCount,
+                'max_redeliver' => $maxRedeliver,
+            ], '导出消息重投超限，已收走消息', "export_message");
             if ($exportId) {
                 AppFactory::timeTask()->export->updateExportLog(['export_id' => $exportId, 'status' => 4]);
             }
-            $message->ack();
+            return true;
         }
+        return false;
     }
+
 }
