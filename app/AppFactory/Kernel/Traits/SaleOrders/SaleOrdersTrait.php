@@ -998,7 +998,20 @@ trait SaleOrdersTrait
      */
     public function transactionVideo()
     {
-        if (strstr($this->message['trade_no'], "remote_out_goods")) {
+        $tradeNo = trim((string)($this->message['trade_no'] ?? ''));
+        $videoScene = trim((string)($this->message['video_scene'] ?? ''));
+        $reportedLogId = intval($this->message['log_id'] ?? 0);
+        if ($videoScene === 'remote_action_log' && $reportedLogId > 0) {
+            return $this->saveRemoteActionLogVideo('remote_out_goods_log_' . $reportedLogId, $reportedLogId);
+        }
+        if (preg_match('/^remote_out_goods_log_([1-9]\d*)$/', $tradeNo, $matches)) {
+            return $this->saveRemoteActionLogVideo($tradeNo, intval($matches[1]));
+        }
+        if (strpos($tradeNo, 'remote_out_goods_log_') === 0) {
+            actionLog($this->message, '无订单远程出货视频标识格式无效', 'transactionVideo');
+            return 1;
+        }
+        if (strstr($tradeNo, "remote_out_goods")) {
             actionLog($this->message, "远程出货视频保存地址记录执行");
             $sod_id = str_replace("remote_out_goods_", "", $this->message['trade_no']);
             $sod_id = intval($sod_id);
@@ -1034,7 +1047,123 @@ trait SaleOrdersTrait
     }
 
     /**
-     * 保存设备逐个上报的视频。旧设备未上报 segment_no 时按单视频处理。
+     * 将无订单远程出货视频分段幂等合并到 remote_action_log。
+     */
+    protected function saveRemoteActionLogVideo($tradeNo, $logId = 0)
+    {
+        $logId = intval($logId);
+        $transactionVideo = trim((string)($this->message['transaction_video'] ?? ''));
+        if ($logId <= 0 || $transactionVideo === '' || $transactionVideo === 'no_data') {
+            actionLog($this->message, '无订单远程出货视频回调参数无效', 'transactionVideo');
+            return 1;
+        }
+
+        $host = (string)env('app.host');
+        $storedPath = $host !== '' ? str_replace($host, '', $transactionVideo) : $transactionVideo;
+        $segmentNo = isset($this->message['segment_no'])
+            ? max(0, intval($this->message['segment_no']))
+            : $this->getSaleOrdersVideoSegmentNo($storedPath);
+        $videoTotal = intval($this->message['video_total'] ?? 0);
+        if ($videoTotal < 0) $videoTotal = 0;
+        if ($videoTotal > 127) $videoTotal = 127;
+        if ($segmentNo === 0 && $videoTotal === 0) $videoTotal = 1;
+
+        Db::startTrans();
+        try {
+            $log = Db::name('remote_action_log')->where(['id' => $logId])->lock(true)->find();
+            $machineId = (string)($this->machine['machine_id'] ?? '');
+            $reportedVideoKey = trim((string)($this->message['video_key'] ?? ''));
+            if (!$log
+                || ($log['type'] ?? '') !== 'remoteOutGoods'
+                || intval($log['sod_id'] ?? 0) !== 0
+                || $machineId === ''
+                || (string)$log['machine_id'] !== $machineId
+                || ($reportedVideoKey !== '' && $reportedVideoKey !== $tradeNo)) {
+                Db::rollback();
+                actionLog([
+                    'log_id' => $logId,
+                    'machine_id' => $machineId,
+                ], '无订单远程出货视频与动作日志不匹配', 'transactionVideo');
+                return 1;
+            }
+
+            $payload = json_decode((string)($log['transaction_video'] ?? ''), true);
+            $segments = is_array($payload) && isset($payload['segments']) && is_array($payload['segments'])
+                ? $payload['segments']
+                : [];
+            if (!$segments && !empty($log['transaction_video']) && !is_array($payload)) {
+                $legacyPath = trim((string)$log['transaction_video']);
+                $segments[] = [
+                    'segment_no' => 0,
+                    'url' => $legacyPath,
+                    'hash' => md5($legacyPath),
+                ];
+            }
+
+            $videoHash = md5($storedPath);
+            $merged = [];
+            $mergedHashes = [];
+            foreach ($segments as $segment) {
+                $path = trim((string)($segment['url'] ?? $segment['transaction_video'] ?? ''));
+                if ($path === '') continue;
+                $number = max(0, intval($segment['segment_no'] ?? 0));
+                $hash = (string)($segment['hash'] ?? md5($path));
+                if (isset($mergedHashes[$hash])) continue;
+                $merged[$number] = [
+                    'segment_no' => $number,
+                    'url' => $path,
+                    'hash' => $hash,
+                ];
+                $mergedHashes[$hash] = $number;
+            }
+            // 同一分段重试时以最新成功地址替换，不重复增加 video_count。
+            if (isset($mergedHashes[$videoHash]) && $mergedHashes[$videoHash] !== $segmentNo) {
+                unset($merged[$mergedHashes[$videoHash]]);
+            }
+            $merged[$segmentNo] = [
+                'segment_no' => $segmentNo,
+                'url' => $storedPath,
+                'hash' => $videoHash,
+            ];
+            ksort($merged, SORT_NUMERIC);
+            $segments = array_values($merged);
+            $videoTotal = max($videoTotal, intval($log['video_total'] ?? 0));
+            $videoCount = count($segments);
+            $videoStatus = $videoTotal > 0 && $videoCount >= $videoTotal ? 2 : 1;
+            $videoPayload = [
+                'version' => 1,
+                'video_key' => $tradeNo,
+                'segments' => $segments,
+            ];
+            $encodedVideo = json_encode($videoPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($encodedVideo === false) {
+                Db::rollback();
+                actionLog(['log_id' => $logId], '无订单远程出货视频JSON编码失败', 'transactionVideo');
+                return false;
+            }
+
+            $result = Db::name('remote_action_log')->where(['id' => $logId])->update([
+                'transaction_video' => $encodedVideo,
+                'video_total' => $videoTotal,
+                'video_count' => $videoCount,
+                'video_status' => $videoStatus,
+                'video_updated_at' => date('Y-m-d H:i:s'),
+            ]);
+            if ($result === false) {
+                Db::rollback();
+                return false;
+            }
+            Db::commit();
+            return true;
+        } catch (\Exception $e) {
+            Db::rollback();
+            actionException($e, 1, 'transactionVideo');
+            return false;
+        }
+    }
+
+    /**
+     * 保存设备逐个上报的视频。旧设备不带分段后缀时按单视频处理。
      */
     protected function saveSaleOrdersVideo($videoType, $relationId, $tradeNo, $transactionVideo)
     {

@@ -39,6 +39,17 @@
                 "$ref": "#/components/schemas/OperatingGoodsListRequest"
               },
               "examples": {
+                "deviceSkuSearch": {
+                  "summary": "按设备、SKU和在营状态分页查询",
+                  "value": {
+                    "m_id": "588",
+                    "sku": "1606100760",
+                    "g_name": "示例商品",
+                    "page": 1,
+                    "pageNum": 15,
+                    "is_operating": 1
+                  }
+                },
                 "pageSearch": {
                   "summary": "分页查询并按库存倒序",
                   "value": {
@@ -91,6 +102,14 @@
                         "per_page": 20,
                         "current_page": 1,
                         "last_page": 4,
+                        "request_params": {
+                          "m_id": "588",
+                          "sku": "1606100760",
+                          "g_name": "示例商品",
+                          "page": 1,
+                          "pageNum": 15,
+                          "is_operating": 1
+                        },
                         "data": [
                           {
                             "g_id": 2088,
@@ -523,6 +542,10 @@
             "type": "integer",
             "description": "最后一页",
             "example": 4
+          },
+          "request_params": {
+            "$ref": "#/components/schemas/OperatingGoodsListRequest",
+            "description": "本次查询已生效的业务参数，包含默认分页和在营状态，不包含token"
           },
           "data": {
             "type": "array",
