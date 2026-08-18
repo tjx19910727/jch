@@ -764,10 +764,10 @@ class GoodsClient extends ManagementClient
         $query = Db::name('machine_channel')->alias('mc')
             ->join('machine m', 'm.m_id = mc.m_id')
             ->leftJoin('goods g', 'g.g_id = mc.g_id')
-            ->where('m.is_operating', '>', 0)
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', '>', 0)
+
             ->fieldRaw('
                 mc.g_id,
                 MAX(IFNULL(NULLIF(g.g_name, ""), mc.g_name)) AS g_name,
@@ -791,6 +791,10 @@ class GoodsClient extends ManagementClient
      */
     private function applyOperatingGoodsWhere(&$query, $postData)
     {
+        if (isset($postData['is_operating']) && $postData['is_operating'] !== '') {
+            $query->where('m.is_operating', '=', intval($postData['is_operating']));
+        }
+
         $permittedMIds = $this->resolveGoodsOperatingPermittedMachineIds();
         if ($permittedMIds !== null) {
             if (!$permittedMIds) {
@@ -799,6 +803,7 @@ class GoodsClient extends ManagementClient
                 $query->where('mc.m_id', 'in', $permittedMIds);
             }
         }
+
 
         $gIds = $this->parseOperatingGoodsIds($postData['g_id'] ?? []);
         if ($gIds) {
@@ -993,10 +998,10 @@ class GoodsClient extends ManagementClient
         $query = Db::name('machine_channel')->alias('mc')
             ->join('machine m', 'm.m_id = mc.m_id')
             ->leftJoin('goods g', 'g.g_id = mc.g_id')
-            ->where('m.is_operating', 1)
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', 'in', $gIds)
+
             ->field('mc.mc_id,mc.mg_id,mc.m_id,mc.machine_id,m.machine_name,m.ao_id,mc.g_id,mc.channel_code,mc.channel_name,mc.stock,mc.capacity,mc.frozen_stock,mc.sku')
             ->order('mc.g_id desc,mc.m_id asc,mc.channel_code asc,mc.mc_id asc');
 
