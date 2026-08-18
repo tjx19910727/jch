@@ -20,7 +20,6 @@ use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersGoodsCountTrait;
 use app\AppFactory\Management\ManagementClient;
-use app\AppFactory\RabbitMq\AsyncTaskProducer;
 use app\management\validate\VGoods;
 use think\facade\Db;
 
@@ -165,11 +164,9 @@ class GoodsClient extends ManagementClient
             }
         }
 
-        AsyncTaskProducer::publish('goods_update', [
-            'g_id' => $gId,
-            'request_time' => date('Y-m-d H:i:s'),
-            'manager_id' => $this->manager['manager_id'] ?? 0,
-        ]);
+        if ($priceChanged && ($selectedMgIds || $selectedMcIds)) {
+            $this->pushGoodsUpdateV2($gId, $selectedMgIds, $selectedMcIds);
+        }
 
         return $this->r(200, 'success', $result);
     }
@@ -264,6 +261,58 @@ class GoodsClient extends ManagementClient
             return $item !== '';
         });
         return array_values(array_unique($idList));
+    }
+
+    /**
+     * 商品价格覆盖后，将受影响的设备商品和货道放入旧商品同步队列。
+     *
+     * @param int $gId
+     * @param array $mgIds
+     * @param array $mcIds
+     * @return bool
+     */
+    protected function pushGoodsUpdateV2($gId, $mgIds, $mcIds)
+    {
+        $redis = null;
+        try {
+            $task = json_encode([
+                'version' => 2,
+                'type' => 'goods_price_update',
+                'g_id' => (int)$gId,
+                'mg_ids' => array_values($mgIds),
+                'mc_ids' => array_values($mcIds),
+                'request_time' => date('Y-m-d H:i:s'),
+                'manager_id' => $this->manager['manager_id'] ?? 0,
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            if ($task === false) {
+                throw new \RuntimeException('Failed to encode goods update V2 task');
+            }
+
+            $redis = new \Redis();
+            $config = config('redis');
+            $redis->connect($config['host'], $config['port'], $config['timeout'], $config['reserved'], $config['retry_interval']);
+            if (isset($config['password']) && $config['password']) {
+                $redis->auth($config['password']);
+            }
+            $result = $redis->lPush('updateGoods', $task);
+            if ($result === false) {
+                throw new \RuntimeException('Failed to push goods update V2 task');
+            }
+            $redis->expire('updateGoods', 300);
+            actionLog($task, '商品价格覆盖写入Redis队列', 'pushGoodsUpdateV2');
+            return true;
+        } catch (\Throwable $e) {
+            actionException($e, 1, 'pushGoodsUpdateV2');
+            return false;
+        } finally {
+            if ($redis) {
+                try {
+                    $redis->close();
+                } catch (\Throwable $e) {
+                    actionException($e, 1, 'pushGoodsUpdateV2Close');
+                }
+            }
+        }
     }
 
     public function exportRankingList($where)
