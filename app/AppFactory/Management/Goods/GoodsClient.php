@@ -857,6 +857,7 @@ class GoodsClient extends ManagementClient
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', '>', 0)
+
             ->fieldRaw('
                 mc.g_id,
                 MAX(IFNULL(NULLIF(g.g_name, ""), mc.g_name)) AS g_name,
@@ -890,6 +891,7 @@ class GoodsClient extends ManagementClient
                 $query->where('mc.m_id', 'in', $permittedMIds);
             }
         }
+
 
         $gIds = $this->parseOperatingGoodsIds($postData['g_id'] ?? []);
         if ($gIds) {
@@ -1087,6 +1089,7 @@ class GoodsClient extends ManagementClient
             ->where('m.status', 1)
             ->where('mc.status', 1)
             ->where('mc.g_id', 'in', $gIds)
+
             ->field('mc.mc_id,mc.mg_id,mc.m_id,mc.machine_id,m.machine_name,m.ao_id,mc.g_id,mc.channel_code,mc.channel_name,mc.stock,mc.capacity,mc.frozen_stock,mc.sku')
             ->order('mc.g_id desc,mc.m_id asc,mc.channel_code asc,mc.mc_id asc');
 
