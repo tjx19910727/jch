@@ -19,7 +19,6 @@ class MachineChannelStockReport extends Common
         $isOperating = $postData['is_operating'] ?? null;
         unset($postData['is_operating']);
         $where = $this->getWhere($postData,false,['machine_id' => "like","sku" => "like","g_name" => "like"]);
-        $where['ao_id'] = $this->manager['ao_id'];
         $field = "sku,g_name,bar_code,model,
         sum(mc_stock) mc_stock,
         sum(pre_stock) pre_stock,
