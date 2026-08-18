@@ -183,6 +183,7 @@ use app\AppFactory\Kernel\Traits\Config\ConfigTrait;
  * @property Wx\WxTemplateLogClient                 $wxTemplateLog          微信公众号消息模板通知日志
  * @property Machine\MachineAppSettingsClient       $machineAppSettings     设备应用配置
  * @property Machine\MachineCalibrationConfigClient $machineCalibrationConfig 设备校准配置
+ * @property Machine\MachineServiceFeeClient        $machineServiceFee        设备服务年费
  *
  *
  * @package app\AppFactory\Management

@@ -22,6 +22,8 @@ use app\AppFactory\Kernel\Traits\Machine\MachineTrait;
 use app\AppFactory\Kernel\Traits\SaleOrders\SaleOrdersTrait;
 use app\AppFactory\Kernel\Traits\Send\ToManagerTrait;
 use app\AppFactory\Kernel\Support\SimiotService\Simiot;
+use app\AppFactory\Kernel\Model\Machine\MachineServiceFeeOrderModel;
+use app\AppFactory\Kernel\Support\Machine\MachineServiceFeeService;
 use app\AppFactory\TimeTask\TimeTaskBase;
 use think\cache\driver\Redis;
 use think\db\exception\DataNotFoundException;
@@ -42,6 +44,21 @@ class MachineClient extends TimeTaskBase
 
     public $machine = [];
     public $message = [];
+
+    /**
+     * 每分钟清理已超过二维码有效期的设备服务费订单。
+     */
+    public function closeExpiredServiceFeeOrders()
+    {
+        $count = MachineServiceFeeOrderModel::where('pay_status', MachineServiceFeeService::PAY_PROCESSING)
+            ->where('qr_expire_at', '>', 0)
+            ->where('qr_expire_at', '<=', time())
+            ->update([
+                'pay_status' => MachineServiceFeeService::PAY_CLOSED,
+                'update_time' => time(),
+            ]);
+        return '已关闭过期设备服务费订单：' . intval($count) . '笔';
+    }
 
     /**
      * 定时任务，每天定时一次，结算昨天在线时长

@@ -15,6 +15,7 @@ use app\AppFactory\Kernel\Providers\Pay\PosProvider;
 use app\AppFactory\Kernel\Providers\Pay\JdCashierProvider;
 use app\AppFactory\Kernel\Providers\Pay\SaleOrdersProvider;
 use app\AppFactory\Kernel\Providers\Pay\WxProvider;
+use app\AppFactory\Kernel\Providers\Pay\ServiceFeeProvider;
 use app\AppFactory\Kernel\ServiceContainer;
 
 /**
@@ -25,6 +26,8 @@ use app\AppFactory\Kernel\ServiceContainer;
  * @property Notify\PosClient                                             $posNotify       POS机刷卡支付回调处理
  * @property Notify\WxClient                                              $wxNotify        微信回调处理
  * @property Notify\CoGoLinkClient                                        $CoGoLink        CoGoLink回调处理
+ * @property Notify\ServiceFeeWxClient                                    $serviceFeeWxNotify  设备服务费微信回调
+ * @property Notify\ServiceFeeAliClient                                   $serviceFeeAliNotify 设备服务费支付宝回调
  * @package app\AppFactory\Pay
  */
 class Application extends ServiceContainer
@@ -36,5 +39,6 @@ class Application extends ServiceContainer
         WxProvider::class,
         CoGoLinkProvider::class,
         SaleOrdersProvider::class,
+        ServiceFeeProvider::class,
     ];
 }
