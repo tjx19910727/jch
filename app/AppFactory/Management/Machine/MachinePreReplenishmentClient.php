@@ -95,6 +95,7 @@ class MachinePreReplenishmentClient extends ManagementClient
         }
 
         $channelList = MachineChannelModel::where([['m_id', 'in', $mIds]])
+            ->where('g_id', '>', 0)
             ->field('m_id,mc_id,channel_code,stock,frozen_stock,out_fail_stock,capacity,sku,g_name,pic,bar_code,g_id,is_multi_goods')
             ->order('mc_id asc')
             ->select()

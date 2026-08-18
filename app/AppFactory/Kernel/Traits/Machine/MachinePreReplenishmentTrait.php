@@ -192,6 +192,12 @@ trait MachinePreReplenishmentTrait
                 }
 
                 $targetGId = $this->resolvePreReplenishmentTargetGId($item, $beforeGId);
+                if ($targetGId <= 0) {
+                    return [
+                        'state' => 0,
+                        'msg' => '空货道预补货必须选择商品:' . $machineId . '-' . $channel['channel_code'],
+                    ];
+                }
                 $targetGoods = $goodsMap[$targetGId] ?? null;
                 if (!$targetGoods) {
                     return ['state' => 0, 'msg' => '预补货商品不存在:' . $targetGId];
