@@ -1432,7 +1432,7 @@ class Receive extends Common
     public function getPreReplenishmentDetail()
     {
         try {
-            return $this->app->api->getPreReplenishmentDetail();
+            return $this->app->api->getPreReplenishmentDetailV2();
         } catch (\Exception $e) {
             actionException($e, 1);
             return returnTryCatch($e->getMessage());
@@ -1446,7 +1446,7 @@ class Receive extends Common
     public function confirmPreReplenishment()
     {
         try {
-            return $this->app->api->confirmPreReplenishment();
+            return $this->app->api->confirmPreReplenishmentV2();
         } catch (\Exception $e) {
             actionException($e, 1);
             return returnTryCatch($e->getMessage());

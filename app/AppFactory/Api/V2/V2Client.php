@@ -307,6 +307,24 @@ class V2Client extends V2BaseClient
                     $updateMc['stock'] = bcadd($mc['stock'], $dv['quantity']);
                     $flag[] = $this->updateMachineChannel($updateMc);
                     actionLog($this->getLS(), '修改货架库存');
+                    //单货道多商品功能开始
+                    if (!empty($dv['batch_id'])) {
+                        $batch = Db::name('channel_goods_batch')
+                            ->where('batch_id', $dv['batch_id'])
+                            ->field('batch_id,stock,frozen_stock')
+                            ->find();
+                        if ($batch) {
+                            $updateBatch = [
+                                'stock' => bcadd($batch['stock'], $dv['quantity']),
+                                'frozen_stock' => $batch['frozen_stock'] > $dv['quantity'] ? bcsub($batch['frozen_stock'], $dv['quantity']) : 0,
+                            ];
+                            $flag[] = Db::name('channel_goods_batch')
+                                ->where('batch_id', $dv['batch_id'])
+                                ->update($updateBatch);
+                            actionLog($this->getLS(), '修改批次库存');
+                        }
+                    }
+                    //单货道多商品功能结束
                 }
             }
             actionLog($flag, '修改结果');
@@ -652,6 +670,8 @@ class V2Client extends V2BaseClient
                     }
                     $flag[] = $newChannelUpdated;
                     actionLog($this->getLS(), '【SQL】减新货道冻结库存');
+                    //单货道多商品功能
+                    $this->trySwitchNextBatch($mc['mc_id']);
 
                     // 修改订单详情数据
                     unset($mc['stock']);
@@ -676,6 +696,8 @@ class V2Client extends V2BaseClient
                     }
                     $flag[] = $frozenUpdated;
                     actionLog($this->getLS(),'【SQL】减货道冻结库存');
+                    //单货道多商品功能
+                    $this->trySwitchNextBatch($value['mc_id']);
                     $updateSod['success_quantity'] = $value['quantity'];
                     $updateSod['sod_id'] = $value['sod_id'];
                     $flag[] = $this->updateSaleOrdersDetails($updateSod);

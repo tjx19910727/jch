@@ -391,7 +391,7 @@ trait MachineTrait
             $m = $m->toArray();
             // 判断不在线且不处于空闲状态的设备并下发通知
             $unqualified = array_filter($m,function($v , $k){
-                return $v['online']==2||$v['current_status']=!'normal';
+                return $v['online']==2||$v['current_status']!='normal';
             },ARRAY_FILTER_USE_BOTH);
             if(!empty($unqualified)){
                 $unmachine = '';
@@ -1134,6 +1134,8 @@ trait MachineTrait
                 $flag[] = $this->updateMachineChannel($updateMc);
                 if ($changeValue > 0) {
                     $this->addRemoteOutGoodsChange($mc, $changeValue);
+                    //单货道多少功能
+                    $this->trySwitchNextBatch($mc['mc_id']);
                 }
                 if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
@@ -1366,6 +1368,8 @@ trait MachineTrait
                 $flag[] = $this->updateMachineChannel($updateMc);
                 if ($changeValue > 0) {
                     $this->addRemoteOutGoodsChange($mc, $changeValue);
+                    //单货道多商品功能
+                    $this->trySwitchNextBatch($mc['mc_id']);
                 }
                 if ($this->shouldSendRemoteOutGoodsUnderstockNotice($mc, $newStock)) {
                     $understockNotice = [$this->machine ?? [], $mc, $newStock];
@@ -1530,6 +1534,10 @@ trait MachineTrait
             );
             if (!$mc) {
                 actionLog($whereMc, 'remoteRemovalEnd未找到货道', 'DataUpload');
+                return 1;
+            }
+            if (!method_exists($this, 'addGoodsChange')) {
+                actionLog($mc, '远程下架回收缺少商品变化记录方法', 'remoteRemovalEnd');
                 return 1;
             }
             $mc = $mc->toArray();

@@ -28,8 +28,16 @@ class MachinePreReplenishmentClient extends ManagementClient
             return returnState(4001, '参数错误: machine_ids不能为空');
         }
 
-        // 编辑场景：传入 order_id，需要把该单下已有的货道也包含进来，并返回 plan_quantity
         $orderId = $postData['order_id'] ?? 0;
+        if ($orderId) {
+            $editingOrder = PreReplenishmentOrderModel::getFind(['id' => $orderId], 'id,biz_status');
+            if ($editingOrder && intval($editingOrder['biz_status']) === 1) {
+                $invalidReason = $this->getInvalidPreReplenishmentReason($orderId);
+                if ($invalidReason !== '') {
+                    return returnState(4004, $invalidReason);
+                }
+            }
+        }
 
         // 检查是否存在未补货的补货单
         $existingQuery = PreReplenishmentDetailModel::where([['machine_id', 'in', $machineIds]]);
@@ -48,16 +56,24 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
         }
         $orderMcIds = [];
-        $orderPlanQtyMap = [];
+        $orderDetailByChannel = [];
+        $orderDetailByBatch = [];
+        $selectedGoodsIds = [];
         if ($orderId) {
             $orderDetails = PreReplenishmentDetailModel::where(['order_id' => $orderId])
-                ->field('m_id,machine_id,mc_id,plan_quantity')
+                ->field('m_id,machine_id,mc_id,batch_id,target_batch_id,batch_sequence,before_g_id,before_sku,g_id,sku,is_head,plan_quantity')
                 ->select()
                 ->toArray();
             foreach ($orderDetails as $d) {
                 $mcKey = $d['m_id'] . '_' . $d['mc_id'];
                 $orderMcIds[$mcKey] = true;
-                $orderPlanQtyMap[$mcKey] = (int)$d['plan_quantity'];
+                if ((int)($d['batch_id'] ?? 0) > 0) {
+                    $orderDetailByBatch[(int)$d['batch_id']] = $d;
+                } else {
+                    $orderDetailByChannel[$mcKey] = $d;
+                }
+                $selectedGoodsIds[] = $d['before_g_id'] ?? 0;
+                $selectedGoodsIds[] = $d['g_id'] ?? 0;
             }
         }
 
@@ -71,63 +87,159 @@ class MachinePreReplenishmentClient extends ManagementClient
         }
 
         $mIds = array_column($machineList, 'm_id');
+        $machineMultiGoodsMap = [];
+        $machineConfigRows = Db::name('machine_config')->whereIn('m_id', $mIds)
+            ->field('m_id,is_multi_goods')->select()->toArray();
+        foreach ($machineConfigRows as $configRow) {
+            $machineMultiGoodsMap[(int)$configRow['m_id']] = (int)($configRow['is_multi_goods'] ?? 2) === 1;
+        }
+
         $channelList = MachineChannelModel::where([['m_id', 'in', $mIds]])
-            ->field('m_id,mc_id,channel_code,stock,capacity,sku,g_name,pic,g_id')
+            ->field('m_id,mc_id,channel_code,stock,frozen_stock,out_fail_stock,capacity,sku,g_name,pic,bar_code,g_id,is_multi_goods')
             ->order('mc_id asc')
             ->select()
             ->toArray();
 
-        // 批量查询商品库存（可用库存/锁定库存）
-        $channelGIds = array_values(array_unique(array_filter(array_column($channelList, 'g_id'))));
-        $goodsStockMap = [];
-        if ($channelGIds) {
-            $goodsRows = GoodsModel::where([['g_id', 'in', $channelGIds]])
-                ->field('g_id,stocks,locked_stocks')
-                ->select()
-                ->toArray();
-            foreach ($goodsRows as $goods) {
-                $goodsStockMap[intval($goods['g_id'])] = $goods;
+        $multiMcIds = [];
+        foreach ($channelList as $channel) {
+            $selectedGoodsIds[] = $channel['g_id'] ?? 0;
+            if (!empty($machineMultiGoodsMap[(int)$channel['m_id']])
+                && (int)($channel['is_multi_goods'] ?? 2) === 1) {
+                $multiMcIds[] = (int)$channel['mc_id'];
             }
         }
+        $queueResult = $this->getActiveChannelGoodsBatchMap($multiMcIds);
+
+        foreach ($queueResult['queues'] as $queue) {
+            foreach ($queue as $batch) {
+                $selectedGoodsIds[] = $batch['g_id'] ?? 0;
+            }
+        }
+        $selectedGoodsMap = $this->getPreReplenishmentGoodsMap($selectedGoodsIds);
 
         $channelMap = [];
         $salesCache = [];
         foreach ($channelList as $channel) {
-            $availableStock = $channel['capacity'] - $channel['stock'];
-            if ($availableStock < 0) {
-                $availableStock = 0;
-            }
-
-            // 过滤：可补数量大于0 或者 属于该订单已有的货道
             $mcKey = $channel['m_id'] . '_' . $channel['mc_id'];
-            if ($availableStock <= 0 && !isset($orderMcIds[$mcKey])) {
+            $mcId = (int)$channel['mc_id'];
+            $isMultiGoods = !empty($machineMultiGoodsMap[(int)$channel['m_id']])
+                && (int)($channel['is_multi_goods'] ?? 2) === 1;
+
+            if (!$isMultiGoods) {
+                $orderDetail = $orderDetailByChannel[$mcKey] ?? [];
+                $goodsContext = $this->resolvePreReplenishmentGoodsContext($orderDetail, $channel, $selectedGoodsMap);
+                $availableStock = $goodsContext['is_change_goods']
+                    ? (int)$channel['capacity']
+                    : max(0, (int)$channel['capacity'] - (int)$channel['stock'] - (int)($channel['frozen_stock'] ?? 0));
+                $canChangeGoods = (int)$channel['capacity'] > 0
+                    && (int)($channel['frozen_stock'] ?? 0) <= 0
+                    && (int)($channel['out_fail_stock'] ?? 0) <= 0;
+                if ($availableStock <= 0 && !isset($orderMcIds[$mcKey]) && !$canChangeGoods) {
+                    continue;
+                }
+                $targetGoods = $goodsContext['target_goods'];
+                $channelMap[$channel['m_id']][] = [
+                    'mc_id' => $mcId,
+                    'channel_code' => $channel['channel_code'],
+                    'batch_id' => 0,
+                    'target_batch_id' => 0,
+                    'batch_sequence' => 0,
+                    'sequence' => 0,
+                    'is_head' => 1,
+                    'g_id' => $goodsContext['g_id'],
+                    'after_g_id' => $goodsContext['g_id'],
+                    'sku' => $targetGoods['sku'],
+                    'g_name' => $targetGoods['g_name'],
+                    'image_url' => $targetGoods['image_url'],
+                    'bar_code' => $targetGoods['bar_code'],
+                    'before_g_id' => $goodsContext['before_g_id'],
+                    'before_sku' => $goodsContext['before_sku'],
+                    'before_goods' => $goodsContext['before_goods'],
+                    'target_goods' => $targetGoods,
+                    'is_change_goods' => $goodsContext['is_change_goods'] ? 1 : 0,
+                    'can_change_goods' => $canChangeGoods ? 1 : 0,
+                    'before_stock' => (int)$channel['stock'],
+                    'capacity' => (int)$channel['capacity'],
+                    'available_stock' => $availableStock,
+                    'plan_quantity' => (int)($orderDetail['plan_quantity'] ?? 0),
+                    'is_multi_goods' => 2,
+                    'batch_arr' => [],
+                ];
                 continue;
             }
 
-            $gId = $channel['g_id'] ?? 0;
-            $mcId = $channel['mc_id'];
+            $queue = $queueResult['queues'][$mcId] ?? [];
+            $batchError = $queueResult['errors'][$mcId] ?? '';
+            if ($queue && (int)$queue[0]['g_id'] !== (int)$channel['g_id']) {
+                $queue = [];
+                $batchError = '多商品货道队首与货道商品不一致';
+            }
+            if (!$queue) {
+                $channelMap[$channel['m_id']][] = [
+                    'mc_id' => $mcId,
+                    'channel_code' => $channel['channel_code'],
+                    'is_multi_goods' => 1,
+                    'batch_arr' => [],
+                    'batch_error' => $batchError ?: '多商品货道批次队列异常',
+                ];
+                continue;
+            }
 
-            // 商品库存：锁定库存 + 可用库存（stocks - locked_stocks）
-            $goodsStock = $goodsStockMap[intval($gId)] ?? [];
-            $goodsStocks = intval($goodsStock['stocks'] ?? 0);
-            $goodsLockedStocks = intval($goodsStock['locked_stocks'] ?? 0);
+            $batchArr = [];
+            $queueFrozen = false;
+            foreach ($queue as $index => $batch) {
+                $batchId = (int)$batch['batch_id'];
+                $orderDetail = $orderDetailByBatch[$batchId] ?? [];
+                $sourceGoods = $selectedGoodsMap[(int)$batch['g_id']] ?? $batch;
+                $goodsContext = $this->resolvePreReplenishmentGoodsContext($orderDetail, $sourceGoods, $selectedGoodsMap);
+                $isChangeGoods = $goodsContext['is_change_goods'];
+                $availableStock = $isChangeGoods
+                    ? (int)$batch['capacity']
+                    : max(0, (int)$batch['capacity'] - (int)$batch['stock'] - (int)$batch['frozen_stock']);
+                $canChangeGoods = (int)$batch['capacity'] > 0
+                    && (int)$batch['frozen_stock'] <= 0
+                    && ($index !== 0 || (int)($channel['out_fail_stock'] ?? 0) <= 0);
+                if ((int)$batch['frozen_stock'] > 0) {
+                    $queueFrozen = true;
+                }
+                $targetGoods = $goodsContext['target_goods'];
+                $batchArr[] = [
+                    'batch_id' => $batchId,
+                    'target_batch_id' => (int)($orderDetail['target_batch_id'] ?? 0),
+                    'batch_sequence' => $index + 1,
+                    'sequence' => $index + 1,
+                    'status' => (int)$batch['status'],
+                    'is_head' => $index === 0 ? 1 : 2,
+                    'before_g_id' => $goodsContext['before_g_id'],
+                    'before_sku' => $goodsContext['before_sku'],
+                    'g_id' => $goodsContext['g_id'],
+                    'after_g_id' => $goodsContext['g_id'],
+                    'sku' => $targetGoods['sku'],
+                    'g_name' => $targetGoods['g_name'],
+                    'image_url' => $targetGoods['image_url'],
+                    'bar_code' => $targetGoods['bar_code'],
+                    'before_goods' => $goodsContext['before_goods'],
+                    'target_goods' => $targetGoods,
+                    'is_change_goods' => $isChangeGoods ? 1 : 0,
+                    'can_change_goods' => $canChangeGoods ? 1 : 0,
+                    'before_stock' => (int)$batch['stock'],
+                    'frozen_stock' => (int)$batch['frozen_stock'],
+                    'capacity' => (int)$batch['capacity'],
+                    'available_stock' => $availableStock,
+                    'plan_quantity' => (int)($orderDetail['plan_quantity'] ?? 0),
+                ];
+            }
 
-            $channelMap[$channel['m_id']][] = [
+            $headItem = $batchArr[0];
+            $channelMap[$channel['m_id']][] = array_merge($headItem, [
                 'mc_id' => $mcId,
                 'channel_code' => $channel['channel_code'],
-                'sku' => $channel['sku'],
-                'g_name' => $channel['g_name'],
-                'image_url' => $channel['pic'],
-                'before_stock' => $channel['stock'],
-                'capacity' => $channel['capacity'],
-                'available_stock' => $availableStock,
-                'plan_quantity' => $orderPlanQtyMap[$mcKey] ?? 0,
-                'g_id' => $gId,
-                'locked_stocks' => $goodsLockedStocks,
-                'available_stocks' => max(0, $goodsStocks - $goodsLockedStocks),
-            ];
+                'is_multi_goods' => 1,
+                'can_pre_replenish' => $queueFrozen ? 2 : 1,
+                'batch_error' => $queueFrozen ? '多商品货道存在冻结库存，暂不允许预补货' : '',
+                'batch_arr' => $batchArr,
+            ]);
         }
-
 
         $result = [];
         foreach ($machineList as $machine) {
@@ -216,15 +328,6 @@ class MachinePreReplenishmentClient extends ManagementClient
                 return returnState(5000, '系统错误');
             }
 
-            $this->adjustPreOrderLockedStocks(
-                $recordNo,
-                $orderId,
-                [],
-                $this->buildPlanQuantityMap($insertDetails),
-                1,
-                '创建预补货单锁定库存'
-            );
-
             Db::commit();
             return returnState(200, '创建成功', [
                 'id' => $orderId,
@@ -250,13 +353,25 @@ class MachinePreReplenishmentClient extends ManagementClient
         if (!$order) {
             return returnState(4003, '单据不存在');
         }
+        if (intval($order['biz_status']) !== 1) {
+            return returnState(4004, '只有未完成的预补货单允许修改');
+        }
+        if (intval($order['biz_status']) === 1) {
+            $invalidReason = $this->getInvalidPreReplenishmentReason($id);
+            if ($invalidReason !== '') {
+                return returnState(4004, $invalidReason);
+            }
+        }
 
         $logCount = PreReplenishmentLogModel::getCount(['record_no' => $order['record_no']]);
         if ($logCount > 0) {
             return returnState(4004, '该补货单已进行补货，不允许修改');
         }
-        if (Db::name('warehouse_trans')->where(['record_no' => $order['record_no'], 'type' => 4])->count()) {
-            return returnState(4004, '该补货单已进行仓库出库，不允许修改');
+        $confirmedCount = PreReplenishmentDetailModel::where(['order_id' => $id])
+            ->where('order_count', '>=', 1)
+            ->count();
+        if ($confirmedCount > 0) {
+            return returnState(4004, '该补货单已确认或手动完结，不允许修改');
         }
 
         $details = $this->normalizeDetails($postData['details'] ?? []);
@@ -264,18 +379,26 @@ class MachinePreReplenishmentClient extends ManagementClient
             return returnState(4001, '参数错误: 明细不能为空');
         }
 
-        $checkResult = $this->buildOrderDetails($details);
+        $originalDetails = PreReplenishmentDetailModel::where(['order_id' => $id])
+            ->field('machine_id,mc_id,batch_id,batch_sequence,before_g_id,before_sku,g_id,sku,is_head')
+            ->select()
+            ->toArray();
+        $originalDetailMap = [];
+        foreach ($originalDetails as $originalDetail) {
+            if ((int)($originalDetail['batch_id'] ?? 0) > 0) {
+                $originalDetailMap['batch:' . (int)$originalDetail['batch_id']] = $originalDetail;
+            } else {
+                $originalDetailMap['channel:' . $originalDetail['machine_id'] . '_' . $originalDetail['mc_id']] = $originalDetail;
+            }
+        }
+
+        $checkResult = $this->buildOrderDetails($details, $originalDetailMap);
         if ($checkResult['state'] !== 1) {
             return returnState(4001, $checkResult['msg']);
         }
 
         Db::startTrans();
         try {
-            $lockedOrder = PreReplenishmentOrderModel::where(['id' => $id])->lock(true)->find();
-            if (!$lockedOrder || intval($lockedOrder['biz_status']) !== 1) {
-                throw new \Exception('只有未补货的单据才能修改');
-            }
-            $oldDetails = PreReplenishmentDetailModel::where(['order_id' => $id])->select()->toArray();
             $updateResult = PreReplenishmentOrderModel::update([
                 'id' => $id,
                 'remark' => $postData['remark'] ?? '',
@@ -298,16 +421,6 @@ class MachinePreReplenishmentClient extends ManagementClient
                 Db::rollback();
                 return returnState(5000, '系统错误');
             }
-
-
-            $this->adjustPreOrderLockedStocks(
-                strval($order['record_no']),
-                intval($id),
-                $this->buildPlanQuantityMap($oldDetails),
-                $this->buildPlanQuantityMap($insertDetails),
-                2,
-                '修改预补货单调整锁定库存'
-            );
 
             Db::commit();
             return returnState(200, '修改成功', ['id' => $id]);
@@ -355,6 +468,13 @@ class MachinePreReplenishmentClient extends ManagementClient
         }
 
         $orderIds = array_column($list, 'id');
+        $unfinishedOrderIds = [];
+        foreach ($list as $item) {
+            if (intval($item['biz_status']) === 1) {
+                $unfinishedOrderIds[] = intval($item['id']);
+            }
+        }
+        $invalidMap = $this->getInvalidPreReplenishmentOrderMap($unfinishedOrderIds);
         $detailRows = PreReplenishmentDetailModel::where([['order_id', 'in', $orderIds]])
             ->field('order_id,machine_id,sku,plan_quantity')
             ->select()
@@ -372,7 +492,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             if ($row['machine_id']) {
                 $summaryMap[$row['order_id']]['machine_names'][$row['machine_id']] = $row['machine_id'];
             }
-            if ($row['sku']) {
+            if ($row['sku'] && (int)$row['plan_quantity'] > 0) {
                 $summaryMap[$row['order_id']]['sku_map'][$row['sku']] = $row['sku'];
             }
             $summaryMap[$row['order_id']]['plan_total'] += $row['plan_quantity'];
@@ -392,6 +512,8 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'machine_names' => array_values($summary['machine_names']),
                 'sku_count' => count($summary['sku_map']),
                 'plan_total' => $summary['plan_total'],
+                'is_invalid' => isset($invalidMap[$item['id']]) ? 1 : 2,
+                'invalid_reason' => $invalidMap[$item['id']] ?? '',
             ];
         }
 
@@ -414,6 +536,9 @@ class MachinePreReplenishmentClient extends ManagementClient
         if (!$order) {
             return returnState(4003, '单据不存在');
         }
+        $invalidReason = intval($order['biz_status']) === 1
+            ? $this->getInvalidPreReplenishmentReason($id)
+            : '';
 
         $details = PreReplenishmentDetailModel::where(['order_id' => $id])->order('id asc')->select()->toArray();
         $logs = PreReplenishmentLogModel::where(['record_no' => $order['record_no']])->order('id asc')->select()->toArray();
@@ -441,6 +566,22 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
         }
 
+        // ==================== 单货道多商品相关开始 ====================
+        $detailGoodsMap = [];
+        $detailGoodsIds = [];
+        foreach ($details as $detail) {
+            $detailGoodsIds[] = $detail['before_g_id'] ?? 0;
+            $detailGoodsIds[] = $detail['g_id'] ?? 0;
+        }
+        $detailGoodsIds = array_values(array_filter(array_unique($detailGoodsIds)));
+        if ($detailGoodsIds) {
+            $detailGoods = GoodsModel::where([['g_id', 'in', $detailGoodsIds]])
+                ->field('g_id,sku,g_name,pic,bar_code')
+                ->select()->toArray();
+            $detailGoodsMap = array_column($detailGoods, null, 'g_id');
+        }
+        // ==================== 单货道多商品相关结束 ====================
+
         // 日志按 device+machine 统计 reported_count
         $logReportedMap = [];
         foreach ($logs as $log) {
@@ -466,6 +607,11 @@ class MachinePreReplenishmentClient extends ManagementClient
             $mid     = $d['machine_id'];
             $mcId    = $d['mc_id'];
             $channel = $channelMap[$mcId] ?? [];
+            $sourceGoods = $detailGoodsMap[(int)($d['before_g_id'] ?? 0)] ?? $channel;
+            $goodsContext = $this->resolvePreReplenishmentGoodsContext($d, $sourceGoods, $detailGoodsMap);
+            $beforeGoods = $goodsContext['before_goods'];
+            $goods = $goodsContext['target_goods'];
+            $gId = (int)$goodsContext['g_id'];
             $machine = $machineMap[$mid] ?? [];
             $planQty = (int)$d['plan_quantity'];
             $actualQty = isset($d['actual_quantity']) ? (int)$d['actual_quantity'] : null;
@@ -498,13 +644,17 @@ class MachinePreReplenishmentClient extends ManagementClient
             // 找出最新的上报时间
             $reportTime = null;
             foreach ($logs as $log) {
-                if ($log['machine_id'] === $mid && ($log['channel_code'] ?? '') === ($d['channel_code'] ?? '')) {
+                if ($log['machine_id'] === $mid
+                    && ($log['channel_code'] ?? '') === ($d['channel_code'] ?? '')
+                    && ($log['sku'] ?? '') === ($d['sku'] ?? '')) {
                     $reportTime = $log['report_time'];
                 }
             }
 
             // ---- compare_status 文本映射 ----
-            $availableStock = ($d['capacity'] ?? 0) - ($d['before_stock'] ?? 0);
+            $availableStock = isset($d['available_stock'])
+                ? (int)$d['available_stock']
+                : (($d['capacity'] ?? 0) - ($d['before_stock'] ?? 0));
             if ($availableStock < 0) $availableStock = 0;
 
             $compareStatusText = 'pending';
@@ -525,7 +675,7 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
 
             // ---- replenishment_compare detail ----
-            $gId = $channel['g_id'] ?? 0;
+            $gId = $gId ?: (int)($channel['g_id'] ?? 0);
             $salesKey = $mid . '_' . $mcId . '_' . $gId;
             if (!isset($salesCache[$salesKey])) {
                 $salesCache[$salesKey] = ($gId && $mcId) ? $this->getSalesAmount($mid, $gId, 30, $mcId) : 0;
@@ -534,13 +684,24 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'id'                 => $d['id'],
                 'm_id'               => $machine['m_id'] ?? 0,
                 'mc_id'              => $mcId,
+                'batch_id'           => (int)($d['batch_id'] ?? 0),
+                'target_batch_id'    => (int)($d['target_batch_id'] ?? 0),
+                'batch_sequence'     => (int)($d['batch_sequence'] ?? 0),
+                'g_id'               => $gId,
+                'after_g_id'         => $gId,
+                'before_g_id'        => (int)$goodsContext['before_g_id'],
+                'before_sku'         => $goodsContext['before_sku'] ?: $beforeGoods['sku'],
+                'is_head'            => (int)($d['is_head'] ?? 1),
                 'machine_id'         => $mid,
                 'machine_name'       => $machine['machine_name'] ?? $mid,
                 'channel_code'       => $d['channel_code'],
                 'sku'                => $d['sku'],
-                'g_name'             => $channel['g_name'] ?? '',
-                'image_url'          => $channel['pic'] ?? '',
-                'bar_code'           => $channel['bar_code'] ?? '',
+                'g_name'             => $goods['g_name'] ?? '',
+                'image_url'          => $goods['pic'] ?? '',
+                'bar_code'           => $goods['bar_code'] ?? '',
+                'before_goods'       => $beforeGoods,
+                'target_goods'       => $goods,
+                'is_change_goods'    => $goodsContext['is_change_goods'] ? 1 : 0,
                 'model'              => '',
                 'before_stock'       => $d['before_stock'] ?? 0,
                 'capacity'           => $d['capacity'] ?? 0,
@@ -560,24 +721,25 @@ class MachinePreReplenishmentClient extends ManagementClient
             $compareGroups[$mid][] = $compareDetail;
 
             // ---- material_details (按 g_id 聚合) ----
-            $gId = $channel['g_id'] ?? 0;
-            $gIdKey = $gId ? (string)$gId : ($d['sku'] ?? '');
-            if (!isset($materialMap[$gIdKey])) {
-                $materialMap[$gIdKey] = [
-                    'sku'          => $channel['sku'] ?? $d['sku'] ?? '',
-                    'g_name'       => $channel['g_name'] ?? '',
-                    'image_url'    => $channel['pic'] ?? '',
-                    'bar_code'     => $channel['bar_code'] ?? '',
-                    'model'        => '',
-                    'quantity'     => 0,
-                    'device_count' => 0,
-                    'channel_count'=> 0,
-                    '_device_ids'  => [],
-                ];
+            if ($planQty > 0) {
+                $gIdKey = $gId ? (string)$gId : ($d['sku'] ?? '');
+                if (!isset($materialMap[$gIdKey])) {
+                    $materialMap[$gIdKey] = [
+                        'sku'          => $goods['sku'] ?? $d['sku'] ?? '',
+                        'g_name'       => $goods['g_name'] ?? '',
+                        'image_url'    => $goods['pic'] ?? '',
+                        'bar_code'     => $goods['bar_code'] ?? '',
+                        'model'        => '',
+                        'quantity'     => 0,
+                        'device_count' => 0,
+                        'channel_count'=> 0,
+                        '_device_ids'  => [],
+                    ];
+                }
+                $materialMap[$gIdKey]['quantity'] += $planQty;
+                $materialMap[$gIdKey]['channel_count']++;
+                $materialMap[$gIdKey]['_device_ids'][$mid] = true;
             }
-            $materialMap[$gIdKey]['quantity'] += $planQty;
-            $materialMap[$gIdKey]['channel_count']++;
-            $materialMap[$gIdKey]['_device_ids'][$mid] = true;
 
             $planTotal += $planQty;
             $actualTotal += ($actualQty ?? 0);
@@ -665,12 +827,20 @@ class MachinePreReplenishmentClient extends ManagementClient
 
         // ---- can_edit ----
         $logCount = PreReplenishmentLogModel::getCount(['record_no' => $order['record_no']]);
-        $canEdit = ($logCount == 0);
+        $confirmedCount = PreReplenishmentDetailModel::where(['order_id' => $id])
+            ->where('order_count', '>=', 1)
+            ->count();
+        $canEdit = ((int)$order['biz_status'] === 1
+            && $logCount == 0
+            && $confirmedCount == 0
+            && $invalidReason === '');
 
         // ---- summary ----
         $summary = [
             'device_count'   => count($deviceProgress),
-            'channel_count'  => count($details),
+            'channel_count'  => count(array_unique(array_map(function ($detail) {
+                return $detail['machine_id'] . '_' . $detail['mc_id'];
+            }, $details))),
             'plan_total'     => $planTotal,
             'actual_total'   => $actualTotal,
             'abnormal_count' => $abnormalTotal,
@@ -685,6 +855,9 @@ class MachinePreReplenishmentClient extends ManagementClient
             'export_time'          => $order['export_time'],
             'remark'               => $order['remark'],
             'can_edit'             => $canEdit,
+            'can_finish'           => intval($order['biz_status']) === 1,
+            'is_invalid'           => $invalidReason !== '' ? 1 : 2,
+            'invalid_reason'       => $invalidReason,
             'summary'              => $summary,
             'device_progress'      => $deviceProgress,
             'material_details'     => array_values($materialMap),
@@ -704,7 +877,7 @@ class MachinePreReplenishmentClient extends ManagementClient
         }
 
         $details = PreReplenishmentDetailModel::where([['order_id', 'in', $orderIds]])
-            ->field('id,order_id,m_id,machine_id,mc_id,channel_code,sku,plan_quantity,actual_quantity,compare_status')
+            ->field('id,order_id,m_id,machine_id,mc_id,g_id,is_head,channel_code,sku,plan_quantity,actual_quantity,compare_status')
             ->order('id asc')
             ->select()
             ->toArray();
@@ -734,19 +907,34 @@ class MachinePreReplenishmentClient extends ManagementClient
             }
         }
 
+        // ==================== 单货道多商品相关开始 ====================
+        $exportGoodsMap = [];
+        $exportGoodsIds = array_values(array_filter(array_unique(array_column($details, 'g_id'))));
+        if ($exportGoodsIds) {
+            $exportGoods = GoodsModel::where([['g_id', 'in', $exportGoodsIds]])
+                ->field('g_id,g_name,pic,sku')
+                ->select()->toArray();
+            $exportGoodsMap = array_column($exportGoods, null, 'g_id');
+        }
+        // ==================== 单货道多商品相关结束 ====================
+
         $groupRows = [];
         foreach ($details as $row) {
+            if ((int)($row['plan_quantity'] ?? 0) <= 0) {
+                continue;
+            }
             $order = $orderMap[$row['order_id']] ?? [];
             $channel = $channelMap[$row['m_id'] . '_' . $row['mc_id']] ?? [];
-            $gId = $channel['g_id'] ?? 0;
+            $gId = (int)($row['g_id'] ?? 0) ?: (int)($channel['g_id'] ?? 0);
+            $goods = $exportGoodsMap[$gId] ?? $channel;
             $groupKey = ($order['record_no'] ?? '') . '|' . $gId;
             if (!isset($groupRows[$groupKey])) {
                 $recordNo = trim((string)($order['record_no'] ?? ''));
                 $groupRows[$groupKey] = [
                     'record_no' => $order['record_no'] ?? '',
                     'order_bar_code_image' => $recordNo === '' ? '' : ('https://bwipjs-api.metafloor.com/?bcid=code128&includetext=true&scale=2&text=' . urlencode($recordNo)),
-                    'goods_name' => $channel['g_name'] ?? '',
-                    'goods_pic' => $channel['pic'] ?? '',
+                    'goods_name' => $goods['g_name'] ?? '',
+                    'goods_pic' => $goods['pic'] ?? '',
                     'sku' => $row['sku'] ?? '',
                     'plan_quantity' => 0,
                     'actual_quantity' => 0,
@@ -756,11 +944,11 @@ class MachinePreReplenishmentClient extends ManagementClient
                 ];
             }
 
-            if ($groupRows[$groupKey]['goods_name'] === '' && !empty($channel['g_name'])) {
-                $groupRows[$groupKey]['goods_name'] = $channel['g_name'];
+            if ($groupRows[$groupKey]['goods_name'] === '' && !empty($goods['g_name'])) {
+                $groupRows[$groupKey]['goods_name'] = $goods['g_name'];
             }
-            if ($groupRows[$groupKey]['goods_pic'] === '' && !empty($channel['pic'])) {
-                $groupRows[$groupKey]['goods_pic'] = $channel['pic'];
+            if ($groupRows[$groupKey]['goods_pic'] === '' && !empty($goods['pic'])) {
+                $groupRows[$groupKey]['goods_pic'] = $goods['pic'];
             }
 
             $groupRows[$groupKey]['plan_quantity'] += (int)($row['plan_quantity'] ?? 0);
@@ -850,6 +1038,7 @@ class MachinePreReplenishmentClient extends ManagementClient
         // Sheet 2+: 按设备分组，每设备一个Sheet
         $machineIdGroups = [];
         foreach ($details as $row) {
+            if ((int)($row['plan_quantity'] ?? 0) <= 0) continue;
             $machineId = $row['machine_id'] ?? '';
             if ($machineId === '') continue;
             $machineIdGroups[$machineId][] = $row;
@@ -881,13 +1070,14 @@ class MachinePreReplenishmentClient extends ManagementClient
             foreach ($rows as $row) {
                 $order = $orderMap[$row['order_id']] ?? [];
                 $channel = $channelMap[$row['m_id'] . '_' . $row['mc_id']] ?? [];
-                $gId = $channel['g_id'] ?? 0;
+                $gId = (int)($row['g_id'] ?? 0) ?: (int)($channel['g_id'] ?? 0);
+                $goods = $exportGoodsMap[$gId] ?? $channel;
                 $gIdKey = $gId ? (string)$gId : ($row['sku'] ?? '');
                 // 查询近30天销售额，仅在首次遇到该g_id时查询
                 if (!isset($goodsMap[$gIdKey])) {
                     $sales30Days = $gId ? $this->getSalesAmount($machineId, $gId) : 0;
                     $goodsMap[$gIdKey] = [
-                        'g_name' => $channel['g_name'] ?? '',
+                        'g_name' => $goods['g_name'] ?? '',
                         'sku' => $row['sku'] ?? '',
                         'plan_quantity' => 0,
                         'creator_name' => $order['creator_name'] ?? '',
@@ -896,8 +1086,8 @@ class MachinePreReplenishmentClient extends ManagementClient
                     ];
                 }
                 $goodsMap[$gIdKey]['plan_quantity'] += (int)($row['plan_quantity'] ?? 0);
-                if (empty($goodsMap[$gIdKey]['g_name']) && !empty($channel['g_name'])) {
-                    $goodsMap[$gIdKey]['g_name'] = $channel['g_name'];
+                if (empty($goodsMap[$gIdKey]['g_name']) && !empty($goods['g_name'])) {
+                    $goodsMap[$gIdKey]['g_name'] = $goods['g_name'];
                 }
             }
             $deviceList = [];
@@ -988,7 +1178,6 @@ class MachinePreReplenishmentClient extends ManagementClient
                 'quantity' => $quantity,
                 'report_time' => $reportTime,
                 'raw_payload' => arr2json($postData),
-                'event_id' => $postData['msg_id'] ?? '',
             ]);
 
             if (!$result) {
@@ -1047,22 +1236,6 @@ class MachinePreReplenishmentClient extends ManagementClient
                 throw new \Exception('预补货单状态更新失败');
             }
 
-            $details = PreReplenishmentDetailModel::where(['order_id' => $id])->select()->toArray();
-            $remainingMap = $this->buildPlanQuantityMap($details);
-            $issuedMap = $this->getPreOrderIssuedQuantityMap(strval($order['record_no']));
-            foreach ($remainingMap as $sku => &$quantity) {
-                $quantity = max(0, intval($quantity) - intval($issuedMap[$sku] ?? 0));
-            }
-            unset($quantity);
-            $this->adjustPreOrderLockedStocks(
-                strval($order['record_no']),
-                intval($id),
-                $remainingMap,
-                [],
-                4,
-                '手动完结预补货单释放剩余锁定库存'
-            );
-
             Db::commit();
             return returnState(200, '预补货单完结成功', ['affected' => $affected]);
         } catch (\Exception $e) {
@@ -1118,25 +1291,9 @@ class MachinePreReplenishmentClient extends ManagementClient
         if ($order['biz_status'] != 1) {
             return returnState(4004, '只有未补货的单据才能删除');
         }
-        if (Db::name('warehouse_trans')->where(['record_no' => $order['record_no'], 'type' => 4])->count()) {
-            return returnState(4004, '该补货单已进行仓库出库，不允许删除');
-        }
 
         Db::startTrans();
         try {
-            $lockedOrder = PreReplenishmentOrderModel::where(['id' => $id])->lock(true)->find();
-            if (!$lockedOrder || intval($lockedOrder['biz_status']) !== 1) {
-                throw new \Exception('只有未补货的单据才能删除');
-            }
-            $details = PreReplenishmentDetailModel::where(['order_id' => $id])->select()->toArray();
-            $this->adjustPreOrderLockedStocks(
-                strval($order['record_no']),
-                intval($id),
-                $this->buildPlanQuantityMap($details),
-                [],
-                5,
-                '删除预补货单释放锁定库存'
-            );
             PreReplenishmentDetailModel::whereDel(['order_id' => $id]);
             PreReplenishmentOrderModel::whereDel(['id' => $id]);
             Db::commit();
@@ -1171,77 +1328,5 @@ class MachinePreReplenishmentClient extends ManagementClient
         $result = $query->field('COALESCE(SUM(sod.total_sod_price), 0) - COALESCE(SUM(sod.refund_amount), 0) AS sales_amount')
             ->find();
         return round((float)($result['sales_amount'] ?? 0), 2);
-    }
-
-    protected function buildPlanQuantityMap($details)
-    {
-        $map = [];
-        foreach ($details as $detail) {
-            $sku = trim(strval($detail['sku'] ?? ''));
-            if ($sku === '') continue;
-            if (!isset($map[$sku])) $map[$sku] = 0;
-            $map[$sku] += intval($detail['plan_quantity'] ?? 0);
-        }
-        return $map;
-    }
-
-    protected function getPreOrderIssuedQuantityMap($recordNo)
-    {
-        $rows = Db::name('warehouse_trans_details')->alias('d')
-            ->join('warehouse_trans t', 't.id = d.warehouse_trans_id')
-            ->where(['t.record_no' => $recordNo, 't.type' => 4])
-            ->field('d.sku,SUM(-d.changed) issued_quantity')
-            ->group('d.sku')
-            ->select()
-            ->toArray();
-        $map = [];
-        foreach ($rows as $row) $map[strval($row['sku'])] = intval($row['issued_quantity']);
-        return $map;
-    }
-
-    protected function adjustPreOrderLockedStocks($recordNo, $orderId, $oldMap, $newMap, $changeType, $remark)
-    {
-        $skuList = array_values(array_unique(array_merge(array_keys($oldMap), array_keys($newMap))));
-        sort($skuList, SORT_STRING);
-        foreach ($skuList as $sku) {
-            $changeQuantity = intval($newMap[$sku] ?? 0) - intval($oldMap[$sku] ?? 0);
-            if ($changeQuantity === 0) continue;
-
-            $goods = GoodsModel::where(['sku' => $sku])
-                ->field('g_id,sku,stocks,locked_stocks,ao_id')
-                ->lock(true)
-                ->find();
-            if (!$goods) throw new \Exception('预补货商品SKU ' . $sku . ' 未关联goods商品');
-            $goods = $goods->toArray();
-            $beforeLocked = intval($goods['locked_stocks'] ?? 0);
-            $afterLocked = $beforeLocked + $changeQuantity;
-            $stocks = intval($goods['stocks'] ?? 0);
-            if ($afterLocked < 0) throw new \Exception('商品SKU ' . $sku . ' 锁定库存释放数量异常');
-            if ($afterLocked > $stocks) {
-                throw new \Exception('商品SKU ' . $sku . ' 可用库存不足，当前可用库存为' . max(0, $stocks - $beforeLocked));
-            }
-
-            $updated = GoodsModel::where(['g_id' => intval($goods['g_id']), 'locked_stocks' => $beforeLocked])
-                ->update(['locked_stocks' => $afterLocked]);
-            if (!$updated) throw new \Exception('商品SKU ' . $sku . ' 锁定库存更新失败');
-
-            $inserted = Db::name('goods_stock_lock_log')->insert([
-                'business_event_key' => 'PR:' . $recordNo . ':' . intval($changeType) . ':' . intval($goods['g_id']) . ':' . bin2hex(random_bytes(8)),
-                'ao_id' => intval($goods['ao_id'] ?? ($this->manager['ao_id'] ?? 0)),
-                'goods_id' => intval($goods['g_id']),
-                'sku' => strval($sku),
-                'record_no' => strval($recordNo),
-                'order_id' => intval($orderId),
-                'change_type' => intval($changeType),
-                'change_quantity' => $changeQuantity,
-                'before_locked_stocks' => $beforeLocked,
-                'after_locked_stocks' => $afterLocked,
-                'manager_id' => intval($this->manager['manager_id'] ?? 0),
-                'manager_name' => strval($this->manager['nickname'] ?? ($this->manager['account'] ?? '')),
-                'remark' => $remark,
-                'created_at' => date('Y-m-d H:i:s'),
-            ]);
-            if (!$inserted) throw new \Exception('商品SKU ' . $sku . ' 锁定库存流水写入失败');
-        }
     }
 }

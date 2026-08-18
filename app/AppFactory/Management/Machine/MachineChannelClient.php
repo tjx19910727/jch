@@ -14,6 +14,7 @@ use app\AppFactory\Kernel\Traits\Auth\AuthManagerMachineTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsChangeTrait;
 use app\AppFactory\Kernel\Traits\Goods\GoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineChannelTrait;
+use app\AppFactory\Kernel\Traits\Machine\MachineConfigTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineGoodsTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineInfoTrait;
 use app\AppFactory\Kernel\Traits\Machine\MachineMainRelationTrait;
@@ -28,7 +29,7 @@ class MachineChannelClient extends ManagementClient
     const REMOTE_REMOVAL_STATUS_INTERRUPT = 1;
     const REMOTE_REMOVAL_WAIT_REPORT_SECONDS = 1800;
 
-    use MachineTrait,MachineChannelTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait;
+    use MachineTrait,MachineChannelTrait,MachineConfigTrait,MachineGoodsTrait,MachineInfoTrait,MachineMainRelationTrait;
     use GoodsTrait,GoodsChangeTrait;
     use AuthManagerMachineTrait;
     use RemoteRemovalLogTrait;
@@ -905,7 +906,7 @@ class MachineChannelClient extends ManagementClient
      */
     public function updateMc($postData)
     {
-        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,channel_position,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,out_fail_stock,status');
+        $mc = $this->getMachineChannelFind(['mc_id' => $postData['mc_id']],'m_id,channel_position,machine_id,mc_id,channel_code,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,stock,capacity,out_fail_stock,status');
         if (!$mc) return $this->r(100, $this->lang("VMachineChannel.mc_no_data"));
         $mc = obj2arr($mc);
         //如果是货道是边柜，查询主柜信息
@@ -935,6 +936,99 @@ class MachineChannelClient extends ManagementClient
 
         $this->startTrans();
         try {
+            // ========== 多商品批次处理 ==========
+            $isMultiGoods = isset($postData['is_multi_goods']) && intval($postData['is_multi_goods']) === 1;
+            $batchArr = isset($postData['batch_arr']) ? $postData['batch_arr'] : [];
+
+            if ($isMultiGoods) {
+                // ==================== 单货道多商品相关开始 ====================
+                if (!$this->isMachineMultiGoodsEnabled($mc['m_id'])) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '当前设备未开启单货道多商品功能');
+                }
+                // ==================== 单货道多商品相关结束 ====================
+                // 校验：batch_arr 至少 1 个（加上队首 ≥2）
+                if (empty($batchArr) || count($batchArr) < 1) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '开启多商品模式必须设置多个商品');
+                }
+                // 校验：队首商品必须有 g_id
+                if (!isset($postData['g_id']) || intval($postData['g_id'] ?? 0) <= 0) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '开启多商品模式必须设置商品');
+                }
+                // 多商品模式下，machine_channel.capacity 只保存队首商品容量；总容量按各批次容量相加。
+                $totalStock = intval($postData['stock'] ?? 0);
+                $headCapacity = intval($postData['capacity'] ?? ($mc['capacity'] ?? 0));
+                if ($headCapacity <= 0) {
+                    $headCapacity = intval($postData['stock'] ?? 0);
+                }
+                if (intval($postData['stock'] ?? 0) > $headCapacity) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '队首商品库存不能超过队首容量');
+                }
+                $totalCapacity = $headCapacity;
+                $checkGoodsIds = [];
+                foreach ($batchArr as $item) {
+                    $itemStock = intval($item['stock'] ?? 0);
+                    $itemCapacity = intval($item['capacity'] ?? $itemStock);
+                    if ($itemCapacity <= 0) {
+                        $itemCapacity = $itemStock;
+                    }
+                    if ($itemStock > $itemCapacity) {
+                        $this->rollbackTrans();
+                        return $this->r(100, '批次商品库存不能超过该商品容量');
+                    }
+                    $totalStock += $itemStock;
+                    $totalCapacity += $itemCapacity;
+                    if (isset($item['g_id']) && intval($item['g_id'] ?? 0) > 0) {
+                        $checkGoodsIds[] = $item['g_id'];
+                    }
+                }
+                if(count($checkGoodsIds) != count($batchArr)) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '开启多商品模式必须设置有效的商品');
+                }
+                if ($totalStock > $totalCapacity) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '批次商品总库存(' . $totalStock . ')超过批次总容量(' . $totalCapacity . ')');
+                }
+
+                // 构建队首数据（来自 $postData）
+                $headData = [
+                    'g_id'             => $postData['g_id'] ?? 0,
+                    'stock'            => $postData['stock'] ?? 0,
+                    'capacity'         => $headCapacity,
+                    'retail_price'     => $postData['retail_price'] ?? 0,
+                    'gift_points'      => $postData['gift_points'] ?? 0,
+                    'cost_points'      => $postData['cost_points'] ?? 0,
+                    'stock_warning'    => $postData['stock_warning'] ?? 0,
+                    'manufacture_time' => $postData['manufacture_time'] ?? 0,
+                    'batch_number'     => $postData['batch_number'] ?? '',
+                ];
+
+                $headBatch = $this->saveChannelGoodsBatch($mc['mc_id'], $headData, $batchArr);
+                if (!$headBatch) {
+                    $this->rollbackTrans();
+                    return $this->r(100, '保存多商品批次失败');
+                }
+                // machine_channel 只保存队首商品快照。
+                $postData['stock']          = $headBatch['stock'];
+                $postData['frozen_stock']   = $headBatch['frozen_stock'];
+                $postData['capacity']       = $headBatch['capacity'];
+                $postData['retail_price']   = $headBatch['retail_price'];
+                $postData['gift_points']    = $headBatch['gift_points'];
+                $postData['cost_points']    = $headBatch['cost_points'];
+                $postData['stock_warning']  = $headBatch['stock_warning'];
+                $postData['is_multi_goods'] = 1;
+                // 队首 g_id 跟 postData 不一致时，更新 postData 的商品信息
+                if (isset($headBatch['g_id']) && $headBatch['g_id'] != ($postData['g_id'] ?? 0)) {
+                    $postData['g_id'] = $headBatch['g_id'];
+                    $postData['mg_id'] = $this->getMachineGoodsValue(['m_id' => $mc['m_id'], 'g_id' => $headBatch['g_id']], 'mg_id') ?? 0;
+                }
+            }
+            // ========== 多商品批次处理结束 ==========
+
             $newGId = isset($postData['g_id']) ? intval($postData['g_id']) : null;
             $oldGId = intval($mc['g_id'] ?? 0);
             $isChangingGoods = $newGId !== null && $newGId !== $oldGId;
@@ -1038,6 +1132,7 @@ class MachineChannelClient extends ManagementClient
                 }
             }
 
+            unset($postData['batch_arr']);
             $result = $this->updateMachineChannel($postData);
             if (!$result) {
                 $this->rollbackTrans();
@@ -1372,8 +1467,11 @@ class MachineChannelClient extends ManagementClient
         //把货道的channel_position设置成设备相同的vending_machine_type
         $list = $this->getMachineChannelList($where,$pageNum,$field,$order);
         $list = $list->toArray();
+        $isPaginated = $pageNum && isset($list['data']) && is_array($list['data']);
+        $listData = $isPaginated ? $list['data'] : $list;
+
         $remoteRemovalStatusMap = [];
-        $mcIds = array_values(array_unique(array_filter(array_map('intval', array_column($list, 'mc_id')))));
+        $mcIds = array_values(array_unique(array_filter(array_map('intval', array_column($listData, 'mc_id')))));
         if ($mcIds) {
             $latestLogIds = Db::name('remote_removal_log')
                 ->whereIn('mc_id', $mcIds)
@@ -1396,12 +1494,82 @@ class MachineChannelClient extends ManagementClient
                 }
             }
         }
-        foreach ($list as $key => $value) {
+
+        $multiGoodsMcIds = [];
+        foreach ($listData as $key => $value) {
+            if (!is_array($value)) {
+                continue;
+            }
             $value['manufacture_time'] = $value['manufacture_time'] ? date("Y-m-d", $value['manufacture_time']) : '';
             $value['gift_points'] = round($value['gift_points']);
+            // ==================== 单货道多商品相关开始 ====================
+            $value['batch_arr'] = [];
+            if (intval($value['is_multi_goods'] ?? 2) === 1 && !empty($value['mc_id'])) {
+                $multiGoodsMcIds[] = intval($value['mc_id']);
+                $value['batch_arr'][] = [
+                    'g_id' => intval($value['g_id'] ?? 0),
+                    'sku' => $value['sku'] ?? '',
+                    'g_name' => $value['g_name'] ?? '',
+                    'pic' => $value['pic'] ?? '',
+                    'bar_code' => $value['bar_code'] ?? '',
+                    'stock' => intval($value['stock'] ?? 0),
+                    'frozen_stock' => intval($value['frozen_stock'] ?? 0),
+                    'capacity' => intval($value['capacity'] ?? 0),
+                    'retail_price' => $value['retail_price'] ?? 0,
+                    'gift_points' => $value['gift_points'],
+                    'cost_points' => $value['cost_points'] ?? 0,
+                    'stock_warning' => intval($value['stock_warning'] ?? 0),
+                    'batch_number' => $value['batch_number'] ?? '',
+                    'manufacture_time' => $value['manufacture_time'],
+                    'expire_time' => intval($value['expire_time'] ?? 0),
+                    'sell_by_date' => intval($value['sell_by_date'] ?? 0),
+                    'sequence' => 1,
+                    'status' => 1,
+                ];
+            }
+            // ==================== 单货道多商品相关结束 ====================
             $mcId = intval($value['mc_id'] ?? 0);
             $value['remote_removal_status'] = intval($remoteRemovalStatusMap[$mcId] ?? self::REMOTE_REMOVAL_STATUS_REMOTE);
-            $list[$key] = $value;
+            $listData[$key] = $value;
+        }
+
+        // ==================== 单货道多商品相关开始 ====================
+        if ($multiGoodsMcIds) {
+            $batchRows = Db::name('channel_goods_batch')->alias('b')
+                ->leftJoin('goods g', 'g.g_id = b.g_id')
+                ->whereIn('b.mc_id', array_values(array_unique($multiGoodsMcIds)))
+                ->whereIn('b.status', [2, 3])
+                ->field('b.mc_id,b.g_id,b.sequence,b.stock,b.frozen_stock,b.capacity,b.retail_price,b.gift_points,b.cost_points,b.stock_warning,b.batch_number,b.manufacture_time,b.expire_time,b.sell_by_date,b.status,g.sku,g.g_name,g.pic,g.bar_code')
+                ->order('b.mc_id asc,b.sequence asc')
+                ->select()
+                ->toArray();
+
+            $batchMap = [];
+            foreach ($batchRows as $batch) {
+                $batchMcId = intval($batch['mc_id']);
+                $batch['manufacture_time'] = !empty($batch['manufacture_time'])
+                    ? date('Y-m-d', $batch['manufacture_time'])
+                    : '';
+                $batch['gift_points'] = round($batch['gift_points'] ?? 0);
+                unset($batch['mc_id']);
+                $batchMap[$batchMcId][] = $batch;
+            }
+
+            foreach ($listData as $key => $value) {
+                if (!is_array($value) || intval($value['is_multi_goods'] ?? 2) !== 1) {
+                    continue;
+                }
+                $listData[$key]['batch_arr'] = array_merge(
+                    $value['batch_arr'],
+                    $batchMap[intval($value['mc_id'] ?? 0)] ?? []
+                );
+            }
+        }
+        // ==================== 单货道多商品相关结束 ====================
+        if ($isPaginated) {
+            $list['data'] = $listData;
+        } else {
+            $list = $listData;
         }
         // foreach ($list as $key => &$value) {
         //     if (!isset($value['channel_code'])) {
@@ -1532,12 +1700,18 @@ class MachineChannelClient extends ManagementClient
     {
         $mc = $this->getMachineChannelFind(
             ['mc_id' => $postData['mc_id']],
-            'mc_id,m_id,machine_id,channel_code,mg_id,g_id,sku,stock'
+            'mc_id,m_id,machine_id,channel_code,mg_id,g_id,sku,stock,is_multi_goods'
         );
         if (!$mc) {
             return $this->r(100, $this->lang("VMachineChannel.mc_data_empty"));
         }
         $mc = $mc->toArray();
+
+        // 单货道多商品模式不允许远程下架回收
+        if (isset($mc['is_multi_goods']) && intval($mc['is_multi_goods']) === 1) {
+            return $this->r(100, '单货道多商品模式下不支持远程下架回收');
+        }
+
         if (intval($mc['g_id']) <= 0) {
             return $this->r(100, $this->lang("VMachineChannel.mc_empty_goods"));
         }

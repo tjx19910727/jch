@@ -180,7 +180,7 @@ trait OutGoodsTrait
                 $where['channel_code'] = $channel_code;
                 $where['success_quantity'] = 0;
                 $where['fail_quantity'] = 0;
-                $sod = $this->getSaleOrdersDetailsFind($where,'sod_id','sod_id asc');
+                $sod = $this->getSaleOrdersDetailsFind($where,'sod_id,batch_id,quantity','sod_id asc');
                 if (!$sod) continue;
                 if ($sod) {
                     unset($where);
@@ -209,9 +209,41 @@ trait OutGoodsTrait
                     if ($this->order['apc_id'] && $this->getActivityPickCodeValue(['order_id' => $this->order['order_id']],'pick_type') == 3) {
                         $updateMc['frozen_stock'] = bcsub($mc['frozen_stock'],$success);
                         $stock = $mc['stock'];
+                        //单货道多商品开始
+                        if (!empty($sod['batch_id'])) {
+                            $batch = Db::name('channel_goods_batch')
+                                ->where('batch_id', $sod['batch_id'])
+                                ->field('batch_id,stock,frozen_stock,sold_quantity')
+                                ->find();
+                            if ($batch) {
+                                $flag[] = Db::name('channel_goods_batch')
+                                    ->where('batch_id', $sod['batch_id'])
+                                    ->update([
+                                        'frozen_stock' => $batch['frozen_stock'] > $success ? bcsub($batch['frozen_stock'], $success) : 0,
+                                        'sold_quantity' => bcadd($batch['sold_quantity'], $success),
+                                    ]);
+                            }
+                        }
+                        //单货道多商品结束
                     } else {
                         $updateMc['stock'] = bcsub($mc['stock'], $success);
                         $stock = $updateMc['stock'];
+                        //单货道多商品开始
+                        if (!empty($sod['batch_id'])) {
+                            $batch = Db::name('channel_goods_batch')
+                                ->where('batch_id', $sod['batch_id'])
+                                ->field('batch_id,stock,frozen_stock,sold_quantity')
+                                ->find();
+                            if ($batch) {
+                                $flag[] = Db::name('channel_goods_batch')
+                                    ->where('batch_id', $sod['batch_id'])
+                                    ->update([
+                                        'stock' => $batch['stock'] > $success ? bcsub($batch['stock'], $success) : 0,
+                                        'sold_quantity' => bcadd($batch['sold_quantity'], $success),
+                                    ]);
+                            }
+                        }
+                        //单货道多商品结束
                     }
                     // 库存达到货道库存预警值
                     actionLog($mc,"货道数据",'OutGoods');
@@ -274,6 +306,21 @@ trait OutGoodsTrait
                     $currentStock = isset($updateMc['stock']) ? intval($updateMc['stock']) : intval($mc['stock']);
                     $updateMc['stock'] = max(0, $currentStock - $fail);
                     $updateMc['out_fail_stock'] = max(0, intval($mc['out_fail_stock'] ?? 0)) + $fail;
+                    //单货道多商品开始
+                    if (!empty($sod['batch_id'])) {
+                        $batch = Db::name('channel_goods_batch')
+                            ->where('batch_id', $sod['batch_id'])
+                            ->field('batch_id,stock')
+                            ->find();
+                        if ($batch && intval($batch['stock']) > 0) {
+                            $flag[] = Db::name('channel_goods_batch')
+                                ->where('batch_id', $sod['batch_id'])
+                                ->update([
+                                    'stock' => max(0, intval($batch['stock']) - $fail),
+                                ]);
+                        }
+                    }
+                    //单货道多商品结束
 
                     // 出货失败发送通知
                     try {
@@ -302,6 +349,10 @@ trait OutGoodsTrait
                     $updateMc['mc_id'] = $mc['mc_id'];
                     $flag[] = $this->updateMachineChannel($updateMc);
                     actionLog($this->getLS(),'【SQL】修改设备货道','OutGoods');
+                    // 多商品FIFO：出货后尝试切换下一批次
+                    if (method_exists($this, 'trySwitchNextBatch')) {
+                        $this->trySwitchNextBatch($mc['mc_id']);
+                    }
                 }
             }
         }
