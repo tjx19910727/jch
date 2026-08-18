@@ -12,6 +12,7 @@ namespace app\AppFactory\Machine;
 use app\AppFactory\Kernel\Providers\Machine\ReceiveProvider;
 use app\AppFactory\Kernel\Providers\Machine\RobotProvider;
 use app\AppFactory\Kernel\Providers\Machine\SendProvider;
+use app\AppFactory\Kernel\Providers\Machine\LaserProvider;
 use app\AppFactory\Kernel\ServiceContainer;
 
 /**
@@ -22,6 +23,7 @@ use app\AppFactory\Kernel\ServiceContainer;
  * @property Receive\SaleOrdersClient           $saleOrders     订单数据上报
  * @property Receive\HotelClient                $hotel          酒店
  * @property Receive\RobotClient                $robot          机器人相关
+ * @property Laser\LaserClient                  $laser          Laser设备请求与业务处理
  *
  * @property Send\MqClient                      $sendMq         Mq数据下发
  * @package app\AppFactory\DataUpload
@@ -32,5 +34,6 @@ class Application extends ServiceContainer
         ReceiveProvider::class,
         SendProvider::class,
         RobotProvider::class,
+        LaserProvider::class,
     ];
 }

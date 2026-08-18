@@ -11,15 +11,16 @@ namespace app\machine\controller;
 
 
 use app\AppFactory\AppFactory;
+use app\AppFactory\Machine\Application as MachineApplication;
 use app\AppFactory\Kernel\Model\Goods\GoodsModel;
 use app\AppFactory\Kernel\Model\Machine\MachineModel;
 use app\AppFactory\Kernel\Model\WeiCheng\WcGoodsLocalModel;
 use app\AppFactory\Kernel\Traits\Goods\GoodsBehaviorTrackingTrait;
 use app\AppFactory\Kernel\Traits\Laser\LaserResourceTrait;
-use app\AppFactory\Kernel\Util\SignUtil;
 use app\BaseController;
 use app\AppFactory\Kernel\Traits\ReturnTrait;
 use app\management\validate\VCommon;
+use think\facade\Db;
 use think\facade\Filesystem;
 use think\facade\Lang;
 
@@ -32,6 +33,11 @@ class Laser extends BaseController
     protected $machineId = '';
 
     /**
+     * @var MachineApplication
+     */
+    protected $machineApp;
+
+    /**
      * 初始化公共验签
      */
     protected function initialize()
@@ -40,23 +46,18 @@ class Laser extends BaseController
         try {
             $this->signData = input();
             unset($this->signData['file']);
-
-            if (!isset($this->signData['sign'])) {
-                returnState(100, Lang::get('VLaser.check_sign_fail'))->send();
-                die();
-            }
-
             $this->machineId = $this->signData['machine_id'] ?? '';
-            $signKey = '';
-            if ($this->machineId && !env('CglPay.is_test')) {
-                $signKey = MachineModel::getFieldValue(['machine_id' => $this->machineId], 'signKey');
-            }
-            if (!$signKey) {
-                $signKey = env('api.md5Key');
-            }
-            $signValid = SignUtil::checkSign($this->signData, $signKey);
-            if (!$signValid && !env('CglPay.is_test')) {
-                returnState(100, Lang::get('VLaser.check_sign_fail'))->send();
+            $this->machineApp = AppFactory::machine([
+                'machine_id' => $this->machineId,
+                'data' => $this->signData,
+                'mac' => $this->request->header('mac'),
+            ]);
+
+            // uploadImage 由 H5 调用，只保留生产环境验签；其他 Laser 接口按设备请求校验。
+            $isH5 = strtolower((string)$this->request->action()) === 'uploadimage';
+            $checkResult = $this->machineApp->laser->checkRequest($isH5);
+            if ($checkResult !== true) {
+                $checkResult->send();
                 die();
             }
         } catch (\Exception $e) {
@@ -76,6 +77,8 @@ class Laser extends BaseController
                 return returnState(100, Lang::get('VLaser.file_require'));
             }
 
+            $imageCount = $this->getImageCount($signData);
+
             //通过trade_no获取订单id
             if(empty($signData['trade_no'])){
                 return returnState(100, Lang::get('VLaser.trade_no_require'));
@@ -85,6 +88,13 @@ class Laser extends BaseController
             // if (!$order) {
             //     return returnState(100, Lang::get('VLaser.order_not_found'));
             // }
+            if ($imageCount > 0) {
+                return $this->uploadMultipleImages($file, $order, $machineId, $imageCount);
+            }
+            if (is_array($file)) {
+                return returnState(100, Lang::get('VLaser.single_file_only'));
+            }
+
             validate(VCommon::class)->scene('file')->check(['file' => $file]);
             validate(VCommon::class)
                 ->rule(['image' => 'fileSize:5242880'])
@@ -129,18 +139,32 @@ class Laser extends BaseController
             ];
             $resId = $this->addLaserResource($insert);
 
-            $app = AppFactory::machine(['machine_id' => $machineId]);
-            $mqResult = $app->sendMq->sendMq('laserImage', [
-                'filepath' => $insert['file_path'],
-                'res_id' => $resId,
-            ]);
-            $mqResult = obj2arr($mqResult);
-            if (!isset($mqResult['state']) || intval($mqResult['state']) !== 200) {
-                return returnState(300, Lang::get('VLaser.upload_image_fail'), [
+            try {
+                $app = AppFactory::machine(['machine_id' => $machineId]);
+                $mqResult = $app->sendMq->sendMq('laserImage', [
+                    'filepath' => $insert['file_path'],
+                    'res_id' => $resId,
+                ]);
+                $mqResult = obj2arr($mqResult);
+                if (!isset($mqResult['state']) || intval($mqResult['state']) !== 200) {
+                    // MQ仅用于实时通知；发送失败时保留已上传图片，由设备HTTP轮询兜底。
+                    actionLog([
+                        'machine_id' => $machineId,
+                        'trade_no' => $this->signData['trade_no'] ?? '',
+                        'res_id' => $resId,
+                        'file_path' => $insert['file_path'],
+                        'mq_result' => $mqResult,
+                    ], '镭射机单图MQ下发失败，等待HTTP轮询兜底', 'laserImageMqFail');
+                }
+            } catch (\Throwable $mqException) {
+                actionException($mqException, 1, 'laserImageMqFail');
+                actionLog([
+                    'machine_id' => $machineId,
+                    'trade_no' => $this->signData['trade_no'] ?? '',
                     'res_id' => $resId,
                     'file_path' => $insert['file_path'],
-                    'mq_result' => $mqResult,
-                ]);
+                    'mq_error' => $mqException->getMessage(),
+                ], '镭射机单图MQ下发异常，等待HTTP轮询兜底', 'laserImageMqFail');
             }
             return returnState(200, Lang::get('VLaser.upload_image_success'), [
                 'res_id' => $resId,
@@ -169,6 +193,36 @@ class Laser extends BaseController
                 return returnState(100, Lang::get('VLaser.trade_no_require'));
             }
 
+            $imageCount = $this->getImageCount($this->signData);
+
+            if ($imageCount > 0) {
+                // 设备端无需感知批次ID：先定位该订单最新的多图批次，再返回整批图片。
+                $latest = $this->getLaserResourceFind(
+                    [
+                        ['trade_no', '=', $tradeNo],
+                        ['upload_batch_id', '>', 0],
+                    ],
+                    'upload_batch_id',
+                    'res_id desc'
+                );
+                if (!$latest) {
+                    return returnStateV2(200, 'fail', []);
+                }
+                $batchId = intval($latest['upload_batch_id'] ?? 0);
+                $field = 'res_id,file_path,type,file_name,`desc`,length,width,size,order_id,trade_no,create_time';
+                $images = $this->getLaserResourceList(
+                    ['trade_no' => $tradeNo, 'upload_batch_id' => $batchId],
+                    0,
+                    $field,
+                    'res_id asc'
+                );
+                $images = obj2arr($images);
+                if (!$images) {
+                    return returnStateV2(200, 'fail', []);
+                }
+                return returnState(200, 'success', $images);
+            }
+
             $field = 'res_id,file_path,type,file_name,`desc`,length,width,size,order_id,trade_no,create_time';
             $data = $this->getLaserResourceFind(['trade_no' => $tradeNo], $field, 'res_id desc');
             if (!$data) {
@@ -180,6 +234,188 @@ class Laser extends BaseController
             actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
+    }
+
+    /**
+     * 多图上传：整批校验后保存，最多9张，并以一次MQ消息通知设备。
+     * @param mixed $uploadedFiles
+     * @param array $order
+     * @param string $machineId
+     * @param int $imageCount image_count标准化后的有效图片数，最大9
+     * @return array|string|\think\response\Json
+     * @throws \Exception
+     */
+    protected function uploadMultipleImages($uploadedFiles, $order, $machineId, $imageCount)
+    {
+        $files = is_array($uploadedFiles) ? array_values($uploadedFiles) : [$uploadedFiles];
+        $fileCount = count($files);
+        if ($fileCount < 1) {
+            return returnState(100, Lang::get('VLaser.file_require'));
+        }
+        if ($fileCount > 9) {
+            return returnState(100, Lang::get('VLaser.multiple_files_limit'));
+        }
+        if ($fileCount > $imageCount) {
+            return returnState(100, Lang::get('VLaser.image_count_mismatch'), [
+                'image_count' => $imageCount,
+                'uploaded_count' => $fileCount,
+            ]);
+        }
+        $tradeNo = $this->signData['trade_no'] ?? '';
+        $batchId = 0;
+
+        // 全部文件先通过校验，避免某张不合法时已经产生部分上传数据。
+        $imageInfoList = [];
+        foreach ($files as $index => $imageFile) {
+            validate(VCommon::class)->scene('file')->check(['file' => $imageFile]);
+            validate(VCommon::class)
+                ->rule(['image' => 'fileSize:5242880'])
+                ->scene('uploadImage')
+                ->check(['image' => $imageFile]);
+            $imageInfo = @getimagesize($imageFile->getRealPath());
+            if (!$imageInfo) {
+                return returnState(300, Lang::get('VLaser.get_image_info_fail'), [
+                    'image_index' => $index + 1,
+                ]);
+            }
+            $imageInfoList[] = $imageInfo;
+        }
+
+        $folder = input('folder', 'laser/' . date('Ymd'));
+        $diskName = env('fileSystem.diskName');
+        $disk = Filesystem::disk($diskName);
+        $diskUrl = Filesystem::getDiskConfig($diskName, 'url');
+        if (is_array($diskUrl)) {
+            $diskUrl = '';
+        }
+
+        $createTime = time();
+        $savedNames = [];
+        $resources = [];
+        $transactionStarted = false;
+
+        try {
+            Db::startTrans();
+            $transactionStarted = true;
+            foreach ($files as $index => $imageFile) {
+                $saveName = $disk->putFile($folder, $imageFile);
+                if (is_array($saveName)) {
+                    $saveName = $saveName['saveName'] ?? $saveName['savename'] ?? '';
+                }
+                if (!is_string($saveName) || $saveName === '') {
+                    throw new \RuntimeException(Lang::get('VLaser.upload_image_fail'));
+                }
+                $savedNames[] = $saveName;
+
+                $imageInfo = $imageInfoList[$index];
+                $insert = [
+                    'file_path' => $diskUrl . str_replace('\\', '/', $saveName),
+                    'type' => 1,
+                    'file_name' => $imageFile->getOriginalName(),
+                    'desc' => $this->signData['desc'] ?? '',
+                    'length' => $imageInfo[1] ?? 0,
+                    'width' => $imageInfo[0] ?? 0,
+                    'size' => intval($imageFile->getSize()),
+                    'order_id' => intval($order['order_id'] ?? 0),
+                    'trade_no' => $tradeNo,
+                    'upload_batch_id' => 0,
+                    'create_time' => $createTime,
+                ];
+                $resId = $this->addLaserResource($insert);
+                if (!$resId) {
+                    throw new \RuntimeException(Lang::get('VLaser.upload_image_fail'));
+                }
+                if ($batchId === 0) {
+                    // 复用首张图片的自增资源ID作为批次ID，天然递增且并发下不会重复。
+                    $batchId = intval($resId);
+                }
+                $updateResult = $this->updateLaserResource(
+                    ['upload_batch_id' => $batchId],
+                    ['res_id' => intval($resId)]
+                );
+                if ($updateResult === false) {
+                    throw new \RuntimeException(Lang::get('VLaser.upload_image_fail'));
+                }
+                $insert['upload_batch_id'] = $batchId;
+                $resource = $insert;
+                unset($resource['upload_batch_id']);
+                $resource['res_id'] = intval($resId);
+                $resources[] = $resource;
+            }
+
+            Db::commit();
+            $transactionStarted = false;
+        } catch (\Exception $e) {
+            if ($transactionStarted) {
+                Db::rollback();
+            }
+            foreach ($savedNames as $saveName) {
+                try {
+                    $disk->delete($saveName);
+                } catch (\Throwable $cleanupException) {
+                    actionException($cleanupException, 1);
+                }
+            }
+            throw $e;
+        }
+
+        $batchCount = count($resources);
+
+        $mqImages = [];
+        foreach ($resources as $resource) {
+            $mqImages[] = [
+                'res_id' => $resource['res_id'],
+                'filepath' => $resource['file_path'],
+            ];
+        }
+        try {
+            $app = AppFactory::machine(['machine_id' => $machineId]);
+            $mqResult = $app->sendMq->sendMq('laserImages', [
+                'images' => $mqImages,
+            ]);
+            $mqResult = obj2arr($mqResult);
+            if (!isset($mqResult['state']) || intval($mqResult['state']) !== 200) {
+                // MQ仅用于实时通知；发送失败时保留整批图片，由设备HTTP轮询最新批次兜底。
+                actionLog([
+                    'machine_id' => $machineId,
+                    'trade_no' => $tradeNo,
+                    'image_count' => $batchCount,
+                    'res_ids' => array_column($resources, 'res_id'),
+                    'mq_result' => $mqResult,
+                ], '镭射机批次图片MQ下发失败，等待HTTP轮询兜底', 'laserImagesMqFail');
+            }
+        } catch (\Throwable $mqException) {
+            actionException($mqException, 1, 'laserImagesMqFail');
+            actionLog([
+                'machine_id' => $machineId,
+                'trade_no' => $tradeNo,
+                'image_count' => $batchCount,
+                'res_ids' => array_column($resources, 'res_id'),
+                'mq_error' => $mqException->getMessage(),
+            ], '镭射机批次图片MQ下发异常，等待HTTP轮询兜底', 'laserImagesMqFail');
+        }
+
+        return returnState(200, Lang::get('VLaser.upload_image_success'), [
+            'image_count' => $batchCount,
+            'images' => $resources,
+        ]);
+    }
+
+    /**
+     * image_count不传、非数字或小于等于0时走第一版单图流程；正数走批次上传，允许少传但最多9张。
+     * @return int 0表示旧单图流程，1至9表示本次允许上传的最大图片数
+     */
+    protected function getImageCount(array $data)
+    {
+        $value = $data['image_count'] ?? 0;
+        if (!is_numeric($value)) {
+            return 0;
+        }
+        $imageCount = intval($value);
+        if ($imageCount <= 0) {
+            return 0;
+        }
+        return min($imageCount, 9);
     }
 
     /**
@@ -291,6 +527,15 @@ class Laser extends BaseController
             actionException($e, 1);
             return returnTryCatch($e->getMessage());
         }
+    }
+
+    /**
+     * 设备通过 HTTP 上报视频录制状态。
+     * @return array|\think\response\Json
+     */
+    public function reportVideoRecordStatus()
+    {
+        return $this->machineApp->laser->reportStatus();
     }
 
 }
