@@ -72,6 +72,7 @@ use app\AppFactory\Kernel\Traits\Wx\WxOfficialLoginTrait;
 use app\AppFactory\Kernel\Traits\Wx\WxOfficialTrait;
 use app\AppFactory\RabbitMq\MqProducer;
 use app\machine\validate\VReceive;
+use think\facade\Cache;
 use think\facade\Db;
 use think\facade\View;
 use app\AppFactory\AppFactory;
@@ -3468,6 +3469,79 @@ class ApiClient extends ReceiveBaseClient
         if ($this->isWcVirtualLoginRequest(true)) {
             return $this->buildWcVirtualLoginResponse();
         }
+
+        // 幂等保护：同一设备+同一验证码在120秒内重复提交（设备HTTP超时重试）时，
+        // 直接返回首次登录结果，避免重复调用微程登录、重复同步卡积分。
+        $idemKey = 'wc_login_idem_' . md5(($this->data['machine_id'] ?? '') . '_' . ($this->data['phone'] ?? '') . '_' . ($this->data['code'] ?? ''));
+        try {
+            $cached = Cache::get($idemKey);
+            if (is_string($cached) && $cached !== '') {
+                $cachedData = json2arr($cached);
+                if (is_array($cachedData)) {
+                    actionLog([
+                        'machine_id' => $this->data['machine_id'] ?? '',
+                        'phone' => $this->data['phone'] ?? '',
+                        'code' => $this->data['code'] ?? '',
+                    ], '命中微程登录幂等缓存，直接返回首次登录结果');
+                    return $this->r(200, 'success', $cachedData);
+                }
+            }
+        } catch (\Throwable $e) {
+            // 缓存故障不影响登录主流程
+            actionException($e, 1);
+        }
+
+        // 第二层兜底：Redis 缓存失效/不可用时，查询 machine_mq_record 数据库
+        // 检查同一设备最近120秒内是否已成功处理过相同手机号+验证码的登录请求。
+        // 若存在则说明是设备超时重试，拒绝重复调用微程，避免重复登录和重复同步卡积分。
+        try {
+            $dupRecord = Db::name('machine_mq_record')
+                ->where('machine_id', $this->machine['machine_id'])
+                ->where('path', '/wcLoginUser')
+                ->where('create_time', '>=', time() - 120)
+                ->where('status', 2)
+                ->where('content', 'like', '%' . $this->data['phone'] . '%')
+                ->where('content', 'like', '%' . $this->data['code'] . '%')
+                ->order('mr_id', 'asc')
+                ->find();
+            if ($dupRecord) {
+                // 尝试从 wc_user_login_info 表取回首次登录完整数据返回，避免用户必须重新获取验证码
+                $loginInfo = $this->getWcUserLoginInfoFind(
+                    [
+                        'machine_id' => $this->machine['machine_id'],
+                        'phone' => $this->data['phone'] ?? '',
+                    ],
+                    'wuli_id,login_data,create_time',
+                    'wuli_id desc'
+                );
+                $cachedLoginData = null;
+                if ($loginInfo) {
+                    $decodedLogin = json_decode($loginInfo['login_data'] ?? '', true);
+                    if (is_array($decodedLogin)) {
+                        $cachedLoginData = $decodedLogin;
+                        $cachedLoginData['from_db_fallback'] = true;
+                    }
+                }
+                actionLog([
+                    'machine_id' => $this->data['machine_id'] ?? '',
+                    'phone' => $this->data['phone'] ?? '',
+                    'code' => $this->data['code'] ?? '',
+                    'dup_mr_id' => $dupRecord['mr_id'] ?? 0,
+                    'from_db_fallback' => $cachedLoginData !== null,
+                ], '检测到重复验证码登录请求（数据库兜底）');
+                if ($cachedLoginData) {
+                    return $this->r(200, 'success', $cachedLoginData);
+                }
+                return $this->r(200, 'failed', [
+                    'success' => false,
+                    'message' => '验证码已使用，请重新获取验证码',
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // 数据库查询失败不影响登录主流程
+            actionException($e, 1);
+        }
+
         $res = $this->wcLoginUser($this->data['phone'], $this->data['machine_id'], $this->data['code']);
         // $res['response'] = '{"success":true,"message":"登录成功","token":"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJ7XCJ1c2VySWRcIjo3OTYyMjYwfSIsImV4cCI6MTc2ODgyOTIyOCwiaWF0IjoxNzY4ODI4NjI4fQ.LgquQkybzpcmJ1dgjAA3HsL7RA0iwgnV2slr-3C3pOE"}';
         actionLog($res, '登录微程返回内容');
@@ -3488,6 +3562,7 @@ class ApiClient extends ReceiveBaseClient
         if (!$card_lists) {
             $response['card_lists'] = [];
             $response['address_lists'] = $address_lists;
+            $this->cacheWcLoginIdempotentResult($idemKey, $response);
             return $this->r(200, "success", $response);
         }
         $card_lists = $card_lists->toArray();
@@ -3513,7 +3588,22 @@ class ApiClient extends ReceiveBaseClient
         $card_lists = $this->getCardList(['bind_id' => $this->data['phone']])->toArray();
         $response['card_lists'] = $card_lists;
         $response['address_lists'] = $address_lists;
+        $this->cacheWcLoginIdempotentResult($idemKey, $response);
         return $this->r(200, "success", $response);
+    }
+
+    /**
+     * 缓存微程登录幂等结果，缓存故障不影响登录主流程。
+     * @param string $idemKey
+     * @param array $response
+     */
+    protected function cacheWcLoginIdempotentResult($idemKey, $response)
+    {
+        try {
+            Cache::set($idemKey, json_encode($response, JSON_UNESCAPED_UNICODE), 120);
+        } catch (\Throwable $e) {
+            actionException($e, 1);
+        }
     }
 
     /**
