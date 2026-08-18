@@ -29,7 +29,11 @@ class ReceiveBaseClient extends MachineBaseClient
     protected $signKeyBootstrapHandled = false;
     protected $signKeyBootstrapFailed = false;
     // 同一设备 signKey 最小重发间隔，单位：秒。
-    protected $signKeyResendCooldown = 60;
+    // 默认20秒，可通过 config/rabbit_mq.php 的 sign_key_resend_cooldown 覆盖。
+    // 调小可加速设备重新认证恢复，避免用户付款后长时间等待出货；但不能低于10秒。
+    protected $signKeyResendCooldown = 20;
+    // 冷却期内设备仍未认证时，最多强制重发 signKey 的次数（避免死循环）。
+    protected $signKeyForceResendThreshold = 5;
 
     public function __construct(ServiceContainer $app)
     {
@@ -92,7 +96,7 @@ class ReceiveBaseClient extends MachineBaseClient
         if ($this->isMallPointsExchangeOrder($order)) {
             return [
                 'handled' => false,
-                'success' => true,
+                'success' => false,
                 'order' => $this->buildOrderPayActionData($order, true, false),
             ];
         }
@@ -176,51 +180,48 @@ class ReceiveBaseClient extends MachineBaseClient
                 if (!$signKey) {
                     $signKey = md5($this->data['mac'] . time() . env("api.md5Key"));
                     $this->updateMachine(['m_id' => $this->machine['m_id'], 'signKey' => $signKey, 'signKeyTime' => time()]);
+                } else {
+                    // 复用已有Key时也刷新过期时间，避免旧Key在长时间未认证后被判超时
+                    $this->updateMachine(['m_id' => $this->machine['m_id'], 'signKeyTime' => time()]);
                 }
 
                 if ($signKey) {
                     $cooldown = intval($this->signKeyResendCooldown);
-                    if ($cooldown < 10) $cooldown = 60;
+                    // 支持通过 config/rabbit_mq.php 覆盖冷却期，便于按需调整认证恢复速度
+                    $configCooldown = intval(config('rabbit_mq.sign_key_resend_cooldown') ?: 0);
+                    if ($configCooldown > 0) $cooldown = $configCooldown;
+                    // 下限10秒，防止设备高频重试导致队列/DB压力过大
+                    if ($cooldown < 10) $cooldown = 10;
                     $cooldownKey = $this->machine['machine_id'] . '.signKeyResend';
                     if (!$this->acquireSignKeyResendLock($cooldownKey, $cooldown)) {
-                        actionLog([
-                            'machine_id' => $this->machine['machine_id'],
-                            'cooldown' => $cooldown,
-                        ], 'signKey重发已限流', "setSignKey");
-                        return $this->r(200, '认证信息已下发，请使用sign重试');
+                        // 冷却期内设备重复请求认证，可能是上一次signKey下发失败/未消费。
+                        // 改进：不得只返回字符串（MQ单向场景设备收不到），
+                        // 而应复用已有signKey强制重发，确保设备能拿到key完成认证。
+                        $resendKey = $this->machine['machine_id'] . '.signKeyForceResend';
+                        $forceCount = intval(cache($resendKey) ?: 0);
+                        if ($forceCount < $this->signKeyForceResendThreshold) {
+                            cache($resendKey, $forceCount + 1, $cooldown);
+                            actionLog([
+                                'machine_id' => $this->machine['machine_id'],
+                                'cooldown' => $cooldown,
+                                'force_resend' => $forceCount + 1,
+                            ], 'signKey重发已限流，复用已有Key强制重发', "setSignKey");
+                            // 复用缓存/数据库中的signKey重新投递MQ，保证设备能收到
+                            $resendSignKey = $this->machine['signKey'] ?: ($signKey ?: cache($this->machine['machine_id'] . '.signKey'));
+                            if ($resendSignKey) {
+                                $this->dispatchSignKey($resendSignKey);
+                                return $this->r(200, '认证信息已下发，请使用sign重试');
+                            }
+                        } else {
+                            actionLog([
+                                'machine_id' => $this->machine['machine_id'],
+                                'cooldown' => $cooldown,
+                                'force_resend' => $forceCount,
+                            ], 'signKey强制重发次数已达上限，停止重发', "setSignKey");
+                            return $this->r(200, '认证信息已下发，请使用sign重试');
+                        }
                     }
-                    $now = time();
-                    $expiresIn = intval(config('rabbit_mq.machine_sign_key_expires_in') ?: 3600);
-                    if ($expiresIn < 300) $expiresIn = 3600;
-                    $timestampTolerance = intval(config('rabbit_mq.machine_receive_timestamp_tolerance') ?: 180);
-                    if ($timestampTolerance < 120) $timestampTolerance = 120;
-                    $data = [
-                        "msg_id" => uniqid(),
-                        "timestamp" => $now,
-                        "server_time" => $now,
-                        "machine_id" => $this->machine['machine_id'],
-                        "signKey" => $signKey,
-                        "expires_in" => $expiresIn,
-                        "expires_at" => $now + $expiresIn,
-                        "timestamp_tolerance" => $timestampTolerance,
-                    ];
-                    actionLog([
-                        'msg_id' => $data['msg_id'],
-                        'machine_id' => $data['machine_id'],
-                        'expires_in' => $data['expires_in'],
-                    ], '发送signKey至MQ服务器',"setSignKey");
-                    $this->dataRecord(2, 2, $data);
-
-                    actionLog($this->mqQueue,'下发队列名',"setSignKey");
-                    $result = MqProducer::dataSend($data, $this->mqQueue);
-                    actionLog($result, '发送结果',"setSignKey");
-                    if ($result !== true) {
-                        $this->releaseSignKeyResendLock($cooldownKey);
-                        $this->signKeyBootstrapFailed = true;
-                        return $this->rTryCatch('下发signKey失败');
-                    }
-                    @cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 5);
-                    actionLog(['machine_id' => $this->machine['machine_id']], '设备signKey已缓存',"setSignKey");
+                    $this->dispatchSignKey($signKey);
                     return $this->r(200,'处理成功');
                 }
             } catch (\Exception $e) {
@@ -232,6 +233,49 @@ class ReceiveBaseClient extends MachineBaseClient
                 return $this->rTryCatch($e->getMessage());
             }
         }
+        return true;
+    }
+
+    /**
+     * 组装并投递 signKey 到设备 MQ 队列。
+     * @param string $signKey
+     * @return mixed
+     */
+    protected function dispatchSignKey($signKey)
+    {
+        $now = time();
+        $expiresIn = intval(config('rabbit_mq.machine_sign_key_expires_in') ?: 3600);
+        if ($expiresIn < 300) $expiresIn = 3600;
+        $timestampTolerance = intval(config('rabbit_mq.machine_receive_timestamp_tolerance') ?: 180);
+        if ($timestampTolerance < 120) $timestampTolerance = 120;
+        $data = [
+            "msg_id" => uniqid(),
+            "timestamp" => $now,
+            "server_time" => $now,
+            "machine_id" => $this->machine['machine_id'],
+            "signKey" => $signKey,
+            "expires_in" => $expiresIn,
+            "expires_at" => $now + $expiresIn,
+            "timestamp_tolerance" => $timestampTolerance,
+        ];
+        actionLog([
+            'msg_id' => $data['msg_id'],
+            'machine_id' => $data['machine_id'],
+            'expires_in' => $data['expires_in'],
+        ], '发送signKey至MQ服务器',"setSignKey");
+        $this->dataRecord(2, 2, $data);
+
+        actionLog($this->mqQueue,'下发队列名',"setSignKey");
+        $result = MqProducer::dataSend($data, $this->mqQueue);
+        actionLog($result, '发送结果',"setSignKey");
+        if ($result !== true) {
+            $cooldownKey = $this->machine['machine_id'] . '.signKeyResend';
+            $this->releaseSignKeyResendLock($cooldownKey);
+            $this->signKeyBootstrapFailed = true;
+            return $this->rTryCatch('下发signKey失败');
+        }
+        @cache($this->machine['machine_id'] . ".signKey", $signKey, 3600 * 5);
+        actionLog(['machine_id' => $this->machine['machine_id']], '设备signKey已缓存',"setSignKey");
         return true;
     }
 

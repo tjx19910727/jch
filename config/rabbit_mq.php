@@ -18,6 +18,12 @@ return [
     // 后台下发到设备的 MQ 消息过期时间，单位：毫秒
     'data_send_expiration_ms' => 180 * 1000,
 
+    // 设备 signKey 最小重发冷却间隔，单位：秒。
+    // 设备在冷却期内重复请求认证时，会复用已有signKey强制重发MQ（限流 signKeyForceResendThreshold 次）。
+    // 调小（如10~20秒）可加速设备认证恢复，避免用户付款后长时间等待出货；但不能低于10秒。
+    // 建议值：20（默认值，已在 ReceiveBaseClient 中），若设备认证间题频繁可下探到10。
+    'sign_key_resend_cooldown' => 20,
+
     // 设备 HTTP 请求 timestamp 允许落后服务器的秒数
     'machine_receive_timestamp_tolerance' => 180,
 
