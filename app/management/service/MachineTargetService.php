@@ -78,21 +78,35 @@ class MachineTargetService
         }
 
         $currentMonth = date('Y-m');
+        $validMonths = [];
+        $validPriceList = [];
+        $validMonthPriceMap = [];
         foreach ($months as $month) {
             if (strval($month) < $currentMonth) {
-                return ['state' => 100, 'msg' => '设置月份不能小于当前月', 'data' => []];
+                continue;
             }
+            $month = strval($month);
+            $monthPrice = round((float) ($monthPriceMap[$month] ?? 0), 2);
+            $validMonths[] = $month;
+            $validPriceList[] = $monthPrice;
+            $validMonthPriceMap[$month] = $monthPrice;
         }
+        $months = $validMonths;
+        $priceList = $validPriceList;
+        $monthPriceMap = $validMonthPriceMap;
 
         sort($mIds);
         sort($months);
 
         Db::startTrans();
         try {
-            Db::name('machine_target_monthly')
-                ->whereIn('m_id', $mIds)
-                ->where('month', '>=', $currentMonth)
-                ->delete();
+            // 历史月份会被直接忽略；没有可保存月份时，不清空设备已有的当前及未来配置。
+            if ($months !== []) {
+                Db::name('machine_target_monthly')
+                    ->whereIn('m_id', $mIds)
+                    ->where('month', '>=', $currentMonth)
+                    ->delete();
+            }
 
             $rows = [];
             foreach ($months as $month) {
@@ -377,7 +391,7 @@ class MachineTargetService
     /**
      * @return array{state:int,msg:string,data:array<string,mixed>}
      */
-    public function detail(int $mId, array $authWhere = []): array
+    public function detail(int $mId, array $authWhere = [], $rawDate = ''): array
     {
         if ($mId <= 0) {
             return ['state' => 100, 'msg' => 'm_id不能为空', 'data' => []];
@@ -392,9 +406,21 @@ class MachineTargetService
         }
 
         $currentMonth = date('Y-m');
+        $startMonth = $currentMonth;
+        $dateRaw = trim((string) $rawDate);
+        if ($dateRaw !== '') {
+            if (!preg_match('/^\s*(\d{4}-(0[1-9]|1[0-2]))\s*[~～]\s*(\d{4}-(0[1-9]|1[0-2]))\s*$/', $dateRaw, $match)) {
+                return ['state' => 100, 'msg' => '日期格式错误，示例：2026-01~2026-08', 'data' => []];
+            }
+            if ($match[1] > $match[3]) {
+                return ['state' => 100, 'msg' => '开始月份不能大于结束月份', 'data' => []];
+            }
+            $startMonth = $match[1];
+        }
+
         $rows = Db::name('machine_target_monthly')
             ->where('m_id', '=', $mId)
-            ->where('month', '>=', $currentMonth)
+            ->where('month', '>=', $startMonth)
             ->field('month, IFNULL(MAX(target_amount),0) as target_amount')
             ->group('month')
             ->order('month', 'asc')

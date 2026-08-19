@@ -796,7 +796,7 @@ trait SaleOrdersTrait
                 'mc_id,channel_code,frozen_stock,stock,shelf_way,channel_position,manufacture_time,sell_by_date,
                         mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number,
                         cost_price,market_price',
-                "stock desc"
+                "stock desc,mc_id asc"
             );
             actionLog($this->getLS(), '【SQL】查询设备货架');
             if (!$mc) return $this->returnData(10, $this->lang("msg." . 10));
@@ -817,6 +817,14 @@ trait SaleOrdersTrait
             $insertSod['discount_price'] = 0;
             $insertSod['retail_price'] = bcdiv($dv['item_price'], 100, 3);
             foreach ($mc as $mck => $mcv) {
+                $lockedMc = Db::name('machine_channel')
+                    ->where(['mc_id' => $mcv['mc_id'], 'status' => 1])
+                    ->field('mc_id,stock,frozen_stock')
+                    ->lock(true)
+                    ->find();
+                if (!$lockedMc || (int)$lockedMc['stock'] <= 0) continue;
+                $mcv['stock'] = (int)$lockedMc['stock'];
+                $mcv['frozen_stock'] = (int)$lockedMc['frozen_stock'];
                 $insertDetails = array_merge($mcv, $insertSod);
                 unset($insertDetails['frozen_stock'], $insertDetails['stock']);
                 $totalQuantity = 0;
@@ -838,22 +846,26 @@ trait SaleOrdersTrait
                         $insertDetails['is_gift'] = 1;
                     }
                     $dv['quantity'] = bcsub($dv['quantity'], $insertDetails['quantity']);
-                    $updateMc = [
-                        'frozen_stock' => bcadd($mcv['frozen_stock'], $insertDetails['quantity']),
-                        'stock' => bcsub($mcv['stock'], $insertDetails['quantity']),
-                        "mc_id" => $mcv['mc_id'],
-                    ];
                     $flag[] = $this->addSaleOrdersDetails($insertDetails);
                     actionLog($this->getLS(), '生成订单详情');
-                    $flag[] = $this->updateMachineChannel($updateMc);
                     $this->order['cost_price'] = bcadd($this->order['cost_price'], $insertDetails['cost_price'], 3);
                     $this->order['market_price'] = bcadd($this->order['market_price'], $insertDetails['market_price'], 3);
                     $this->order['retail_price'] = bcadd($this->order['retail_price'], $insertDetails['retail_price'], 3);
                 }
+                $flag[] = Db::name('machine_channel')
+                    ->where('mc_id', $mcv['mc_id'])
+                    ->where('stock', '>=', $totalQuantity)
+                    ->update([
+                        'stock' => Db::raw('stock - ' . (int)$totalQuantity),
+                        'frozen_stock' => Db::raw('frozen_stock + ' . (int)$totalQuantity),
+                    ]);
                 //                $this->order['total_quantity'] = bcadd($this->order['total_quantity'], $insertDetails['quantity'], 3);
                 $insertDetails = [];
                 if ($dv['quantity'] == 0)
                     break;
+            }
+            if ((int)$dv['quantity'] > 0) {
+                return $this->returnData(14, $this->lang("msg." . 14) . "：" . $this->lang("reserve_order.under_stock"));
             }
             //            $this->order['total_price'] = bcadd($this->order['total_price'], bcdiv($dv['charge_amount'], 100, 3), 3);
             //            $this->order['discount_price'] = bcadd($this->order['discount_price'], bcdiv($dv['discount_amount'], 100, 3), 3);
@@ -986,25 +998,38 @@ trait SaleOrdersTrait
     }
 
     /**
-     * 保存设备逐个上报的视频。旧设备不带分段后缀时按单视频处理。
+     * 保存设备逐个上报的视频。旧设备未上报 segment_no 时按单视频处理。
      */
     protected function saveSaleOrdersVideo($videoType, $relationId, $tradeNo, $transactionVideo)
     {
         $transactionVideo = trim((string)$transactionVideo);
         $host = (string)env('app.host');
         $storedPath = $host !== '' ? str_replace($host, '', $transactionVideo) : $transactionVideo;
-        $segmentNo = $this->getSaleOrdersVideoSegmentNo($storedPath);
+        $segmentNo = isset($this->message['segment_no']) ? intval($this->message['segment_no']) : 0;
         $videoTotal = intval($this->message['video_total'] ?? 0);
         if ($videoTotal < 0) $videoTotal = 0;
         if ($videoTotal > 127) $videoTotal = 127;
         if ($segmentNo === 0 && $videoTotal === 0) $videoTotal = 1;
 
-        $where = [
+        $businessWhere = [
+            'video_type' => intval($videoType),
+            'trade_no' => $tradeNo,
+            'segment_no' => $segmentNo,
+        ];
+        $exists = SaleOrdersVideoModel::getFind($businessWhere, 'sov_id,video_total', 'sov_id desc');
+        if ($exists) {
+            if ($videoTotal > intval($exists['video_total'])) {
+                SaleOrdersVideoModel::update(['video_total' => $videoTotal], ['sov_id' => $exists['sov_id']]);
+            }
+            return $exists;
+        }
+
+        $pathWhere = [
             'video_type' => intval($videoType),
             'relation_id' => intval($relationId),
             'video_hash' => md5($storedPath),
         ];
-        $exists = SaleOrdersVideoModel::getFind($where, 'sov_id,video_total');
+        $exists = SaleOrdersVideoModel::getFind($pathWhere, 'sov_id,video_total');
         if ($exists) {
             if ($videoTotal > intval($exists['video_total'])) {
                 SaleOrdersVideoModel::update(['video_total' => $videoTotal], ['sov_id' => $exists['sov_id']]);
@@ -1025,21 +1050,11 @@ trait SaleOrdersTrait
             ]);
         } catch (\Throwable $e) {
             // 相同MQ消息并发重试时，由唯一索引保证只保存一条。
-            $exists = SaleOrdersVideoModel::getFind($where, 'sov_id');
+            $exists = SaleOrdersVideoModel::getFind($businessWhere, 'sov_id', 'sov_id desc');
+            if (!$exists) $exists = SaleOrdersVideoModel::getFind($pathWhere, 'sov_id');
             if ($exists) return $exists;
             throw $e;
         }
-    }
-
-    /**
-     * 例如 202607881554-2.mp4 => 2；无 -数字 后缀 => 0。
-     */
-    protected function getSaleOrdersVideoSegmentNo($transactionVideo)
-    {
-        $videoPath = parse_url($transactionVideo, PHP_URL_PATH);
-        $fileName = $videoPath ? pathinfo($videoPath, PATHINFO_FILENAME) : '';
-        if ($fileName !== '' && preg_match('/-(\d+)$/', $fileName, $matches)) return intval($matches[1]);
-        return 0;
     }
 
     /**
@@ -1077,12 +1092,15 @@ trait SaleOrdersTrait
             $segmentNo = intval($video['segment_no']);
             $videoTotal = max($videoTotal, intval($video['video_total']));
             $latestCreateTime = max($latestCreateTime, intval($video['create_time']));
-            $videos[] = [
+            $videoKey = $video['trade_no'] . ':' . $segmentNo;
+            // 兼容过滤上线前已产生的重复数据，同一业务分段只返回最新一条。
+            $videos[$videoKey] = [
                 'video_name' => $video['trade_no'] . '-' . $segmentNo,
                 'transaction_video' => $video['transaction_video'],
                 'segment_no' => $segmentNo,
             ];
         }
+        $videos = array_values($videos);
 
         return [
             'has_records' => true,

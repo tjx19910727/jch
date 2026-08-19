@@ -90,6 +90,24 @@ trait MachineChannelReplenishmentTrait
         $repRows = [];
         $this->startTrans();
         try {
+            $recordNo = trim(strval($this->data['record_no'] ?? ''));
+            $preOrder = null;
+            if ($recordNo !== '') {
+                $preOrder = PreReplenishmentOrderModel::where(['record_no' => $recordNo])->lock(true)->find();
+                if (!$preOrder) {
+                    $this->rollbackTrans();
+                    return $this->rFail('预补货单不存在');
+                }
+                $confirmed = PreReplenishmentDetailModel::where([
+                    ['order_id', '=', $preOrder['id']],
+                    ['machine_id', '=', $this->machine['machine_id']],
+                    ['order_count', '>=', 1],
+                ])->count();
+                if ($confirmed) {
+                    $this->rollbackTrans();
+                    return $this->rFail('该设备已完成预补货，请勿重复上报');
+                }
+            }
             $mcIds = array_keys($repMap);
             $mcField = 'mc_id,m_id,channel_code,capacity,stock,frozen_stock,mg_id,g_id,g_name,gc_id,gc_name,pic,sku,bar_code,batch_number';
             $mcList = MachineChannelModel::where([
@@ -211,7 +229,6 @@ trait MachineChannelReplenishmentTrait
                     $mc['stock'] += $value['quantity'];
                 }
 
-                $recordNo = $this->data['record_no'] ?? '';
                 if ($recordNo) {
                     $syncQuantity = $value['quantity'];
                     if (isset($value['standby_quantity'])) {
@@ -219,6 +236,12 @@ trait MachineChannelReplenishmentTrait
                     }
                     if ($syncQuantity != 0) {
                         $flag[] = $this->syncByTerminalReplenishmentRecordNo($recordNo, $mc, $syncQuantity, $this->data);
+                        $flag[] = PreReplenishmentDetailModel::where([
+                            'order_id' => $preOrder['id'],
+                            'machine_id' => $this->machine['machine_id'],
+                            'channel_code' => $mc['channel_code'],
+                            'sku' => $mc['sku'],
+                        ])->update(['order_count' => 1]);
                     }
                 }
 

@@ -43,8 +43,20 @@ class GoodsClient extends TimeTaskBase
                     $data = $redis->rPop("updateGoods");
                     if ($data) {
                         actionLog($data,'修改商品信息后','updateGoodsSynchronization');
-                        $this->synchronizationGoods($data);
-                        $this->synchronizationMgMc($data);
+                        $task = json_decode($data, true);
+                        if (is_array($task)
+                            && (int)($task['version'] ?? 0) === 2
+                            && ($task['type'] ?? '') === 'goods_price_update') {
+                            if (!empty($task['mg_ids']) && is_array($task['mg_ids'])) {
+                                $this->synchronizationGoodsV2($task);
+                            }
+                            if (!empty($task['mc_ids']) && is_array($task['mc_ids'])) {
+                                $this->synchronizationMgMcV2($task);
+                            }
+                        } else {
+                            $this->synchronizationGoods($data);
+                            $this->synchronizationMgMc($data);
+                        }
                     }
                 }
                 sleep(1);
@@ -165,6 +177,95 @@ class GoodsClient extends TimeTaskBase
                 return $this->rTryCatch($e->getMessage());
             }
         }
+    }
+
+    /**
+     * 商品价格覆盖后，只通知本次勾选记录所在的设备更新商品库。
+     *
+     * @param array $task
+     * @return int
+     */
+    protected function synchronizationGoodsV2($task)
+    {
+        $gId = (int)($task['g_id'] ?? 0);
+        if ($gId <= 0) {
+            return 0;
+        }
+
+        $mgIds = $this->filterGoodsUpdateV2Ids($task['mg_ids'] ?? []);
+        if (!$mgIds) {
+            return 0;
+        }
+
+        $machineIds = $this->getMachineGoodsColumn([
+            ['mg_id', 'in', $mgIds],
+        ], 'machine_id') ?: [];
+        $machineIds = array_values(array_unique(array_filter($machineIds)));
+        if (!$machineIds) {
+            return 0;
+        }
+
+        $sendCount = 0;
+        foreach ($machineIds as $machineId) {
+            $result = $this->sendToMachine(['machine_id' => $machineId], 'updateGoods', ['g_id' => $gId]);
+            actionLog($result, $machineId . '商品库V2更新发送结果', 'synchronizationGoodsV2');
+            $sendCount++;
+        }
+        return $sendCount;
+    }
+
+    /**
+     * 商品价格覆盖后，只通知本次勾选的货道更新。
+     * 价格数据已由管理端编辑接口更新，此处不再覆盖数据库。
+     *
+     * @param array $task
+     * @return array
+     */
+    protected function synchronizationMgMcV2($task)
+    {
+        $resultCount = [
+            'machine_channel_count' => 0,
+        ];
+
+        $mcIds = $this->filterGoodsUpdateV2Ids($task['mc_ids'] ?? []);
+        if ($mcIds) {
+            $machineChannels = $this->getMachineChannelList([
+                ['mc_id', 'in', $mcIds],
+            ], 0, 'mc_id,machine_id');
+            if ($machineChannels) {
+                foreach ($machineChannels->toArray() as $machineChannelItem) {
+                    $result = $this->sendToMachine(
+                        ['machine_id' => $machineChannelItem['machine_id']],
+                        'updateMc',
+                        ['mc_id' => $machineChannelItem['mc_id']]
+                    );
+                    actionLog($result, $machineChannelItem['machine_id'] . '货道V2更新发送结果', 'synchronizationMgMcV2');
+                    $resultCount['machine_channel_count']++;
+                }
+            }
+        }
+
+        actionLog([
+            'task' => $task,
+            'result' => $resultCount,
+        ], '商品价格覆盖V2同步完成', 'synchronizationMgMcV2');
+        return $resultCount;
+    }
+
+    /**
+     * @param mixed $ids
+     * @return array
+     */
+    protected function filterGoodsUpdateV2Ids($ids)
+    {
+        if (!is_array($ids)) {
+            return [];
+        }
+        $ids = array_map('intval', $ids);
+        $ids = array_filter($ids, function ($id) {
+            return $id > 0;
+        });
+        return array_values($ids);
     }
 
     /**

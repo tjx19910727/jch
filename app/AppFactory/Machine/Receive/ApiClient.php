@@ -4973,22 +4973,23 @@ class ApiClient extends ReceiveBaseClient
             return $this->rFail('参数错误');
         }
 
-        $order = PreReplenishmentOrderModel::getFind(['record_no' => $recordNo], 'id,record_no,creator_id');
-        if (!$order) {
-            return $this->r(100, '单据不存在');
-        }
-
-        $anyDetail = PreReplenishmentDetailModel::where([
-            ['order_id', '=', $order['id']],
-            ['machine_id', '=', $machineId],
-            ['order_count', '>=', 1],
-        ])->find();
-        if ($anyDetail) {
-            return $this->r(100, '您已经预补货了，如需重新补货联系客服处理');
-        }
-
         $this->startTrans();
         try {
+            $order = PreReplenishmentOrderModel::where(['record_no' => $recordNo])
+                ->field('id,record_no,creator_id')->lock(true)->find();
+            if (!$order) {
+                $this->rollbackTrans();
+                return $this->r(100, '单据不存在');
+            }
+            $anyDetail = PreReplenishmentDetailModel::where([
+                ['order_id', '=', $order['id']],
+                ['machine_id', '=', $machineId],
+                ['order_count', '>=', 1],
+            ])->find();
+            if ($anyDetail) {
+                $this->rollbackTrans();
+                return $this->r(100, '您已经预补货了，如需重新补货联系客服处理');
+            }
             foreach ($channel as $item) {
                 $mcId     = (int)($item['mc_id'] ?? 0);
                 $quantity = (int)($item['quantity'] ?? 0);

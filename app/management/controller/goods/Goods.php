@@ -16,7 +16,8 @@ class Goods extends Common
 {
     protected $field = "g_id,g_name,gc_id,gc_name,g_type,`model`,bar_code,`sku`,`sku2`,
     banner,pic,cost_price,market_price,retail_price,intergral_rate,manufacturer,service_phone,performance,sell_channel,exter_url,expire_notice,sell_by_date,
-    is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,status,ao_id,creator,create_time,update_time";
+    is_gift,is_recommend,recoverable,heat,release_time,length,width,height,group_quantity,stocks,locked_stocks,
+    (stocks-locked_stocks) available_stocks,status,ao_id,creator,create_time,update_time";
     protected $validatePath = 'app\management\validate\VGoods.';
 
     /**
@@ -59,9 +60,9 @@ class Goods extends Common
     }
 
     /**
-     * 获取设备货道商品列表
-     * 传入 m_id（如：11,22,33）时仅返回这些设备货道上的商品；
-     * m_id 未传或为空时返回全部商品。
+     * 获取设备商品库商品列表
+     * 传入 m_id（如：11,22,33）时仅返回这些设备商品库中的商品；
+     * 可传入 gc_id 按商品分类筛选；m_id 未传或为空时返回全部商品。
      * @return mixed
      */
     public function getMcList()
@@ -82,8 +83,8 @@ class Goods extends Common
         }));
 
         if ($mIds) {
-            $whereMc[] = ['m_id','in',$mIds];
-            $gIds = $this->app->machineChannel->getMachineChannelColumn($whereMc,'g_id');
+            $whereMg[] = ['m_id','in',$mIds];
+            $gIds = $this->app->machineGoods->getMachineGoodsColumn($whereMg,'g_id');
             $gIds = array_values(array_unique(array_filter($gIds)));
             if (!$gIds) {
                 $where[] = ['g_id','=',0];
@@ -122,6 +123,7 @@ class Goods extends Common
     public function add()
     {
         $postData = input();
+        unset($postData['stocks'], $postData['locked_stocks'], $postData['available_stocks']);
         try { $this->validate($postData,$this->validatePath . 'add');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->goods->addG($postData);
         return $result;
@@ -134,6 +136,10 @@ class Goods extends Common
     public function update()
     {
         $postData = input();
+        //'商品库存不允许通过商品编辑接口修改'
+        if (array_key_exists('stocks', $postData)) unset($postData['stocks']);
+        if (array_key_exists('locked_stocks', $postData)) unset($postData['locked_stocks']);
+        if (array_key_exists('available_stocks', $postData)) unset($postData['available_stocks']);
         try { $this->validate($postData,$this->validatePath . 'update');} catch (\Exception $e) { return returnValidate($e->getMessage());}
         $result = $this->app->goods->updateForEdit($postData);
         //$result = $this->app->goods->update($postData);

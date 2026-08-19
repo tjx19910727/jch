@@ -99,6 +99,7 @@ class RemoteActionLogClient extends ManagementClient
             'status_name' => '状态',
             'operator_at' => '操作时间',
             'manager_id' => '操作人ID',
+            'manager_name' => '操作人',
         ];
         $filename = '远程出货记录-' . date('YmdHis');
 
@@ -116,6 +117,7 @@ class RemoteActionLogClient extends ManagementClient
         return Db::name('remote_action_log')->alias('ral')
             ->leftJoin('machine m', 'm.machine_id = ral.machine_id')
             ->leftJoin('sale_orders so', 'so.order_id = ral.order_id')
+            ->leftJoin('auth_manager am', 'am.manager_id = ral.manager_id')
             ->where($where)
             ->whereIn('ral.type', ['remoteOutGoods', 'continueOutGoods']);
     }
@@ -127,7 +129,8 @@ class RemoteActionLogClient extends ManagementClient
     {
         return 'ral.id,ral.machine_id,m.m_id,m.machine_name,ral.type,ral.msgType,
             ral.order_id,so.trade_no,ral.sod_id,ral.goods_id,ral.channel_code,
-            ral.status,ral.operator_at,ral.manager_id,ral.field';
+            ral.status,ral.operator_at,ral.manager_id,
+            IFNULL(NULLIF(am.nickname, \'\'), am.account) manager_name,ral.field';
     }
 
     /**
