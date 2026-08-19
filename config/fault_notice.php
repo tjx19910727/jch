@@ -13,7 +13,10 @@ return [
             'template_name' => '设备异常提醒',
             'display_name' => '设备异常提醒（通用模板）',
             'template_no' => '43033',
+            // 正式公众号模板ID。
             'template_id' => 'frqumju8oA7N8msUrhliHpDd18j2le-DxLGlz5jWz8g',
+            // CglPay.is_test=true时使用；当前先与正式环境保持一致。
+            'test_template_id' => 'frqumju8oA7N8msUrhliHpDd18j2le-DxLGlz5jWz8g',
             'body' => [
                 ['设备编码' => ['value' => '{{machine_id}}', 'field' => 'character_string16']],
                 ['设备名称' => ['value' => '{{machine_name}}', 'field' => 'thing6']],
@@ -29,6 +32,7 @@ return [
             'display_name' => '售货机离线通知',
             'template_no' => '52646',
             'template_id' => 'AmyBb6IW_AdP5OxcqBniqRdV5o7aUa36XJgphWOCZLs',
+            'test_template_id' => 'AmyBb6IW_AdP5OxcqBniqRdV5o7aUa36XJgphWOCZLs',
             'body' => [
                 ['设备名称' => ['value' => '{{machine_name}}', 'field' => 'thing1']],
                 ['设备编号' => ['value' => '{{machine_id}}', 'field' => 'character_string2']],
@@ -41,6 +45,7 @@ return [
             'display_name' => '售货机出货失败通知',
             'template_no' => '51500',
             'template_id' => 'xG3sxjGyzj0RBTi7RfsHZZNo73sr6W-raLTpTdx4Pp0',
+            'test_template_id' => 'xG3sxjGyzj0RBTi7RfsHZZNo73sr6W-raLTpTdx4Pp0',
             'body' => [
                 ['设备编号' => ['value' => '{{machine_id}}', 'field' => 'character_string1']],
                 // 设备只上报故障码：订单编号字段复用为原始故障码。

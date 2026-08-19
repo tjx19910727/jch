@@ -135,6 +135,7 @@ class FaultReportService
         if (!FaultWechatTemplate::isValid($templateType)) {
             return $this->updateEventNotice($meId, 4, 'template_invalid');
         }
+        $templateId = FaultWechatTemplate::getTemplateId($templateType);
         $receivers = $this->getMatchedReceivers(
             $aoId,
             intval($machine['m_id']),
@@ -152,7 +153,7 @@ class FaultReportService
                 'wx_id' => intval($receiver['wx_id']),
                 'template_name' => strval($templateConfig['template_name']),
                 'template_type' => $templateType,
-                'template_id' => strval($templateConfig['template_id']),
+                'template_id' => $templateId,
                 'url' => '',
                 'miniprogram' => '',
                 'body' => json_encode($templateConfig['body'], JSON_UNESCAPED_UNICODE),
